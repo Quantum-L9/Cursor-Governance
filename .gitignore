@@ -1,2 +1,39 @@
+# ============================================
+# 🧠 Cursor Governance System .gitignore
+# ============================================
+
+# 🗂️ OS-Specific Files
 .DS_Store
+Thumbs.db
+
+# ⚙️ Editor Config Files
+.vscode/
+.idea/
+*.swp
+
+# 🧩 Runtime Governance Artifacts
+.governance_active
 Governance_Dashboard.md
+meta_index.md
+
+# 🧰 Generated Logs or Backups
+*.log
+*.bak
+*.tmp
+*.old
+
+# 🧬 Environment / System Data
+.env
+.env.*
+__pycache__/
+*.pyc
+
+# 🚀 Node & Build Files (if added later)
+node_modules/
+dist/
+build/
+
+# ============================================
+# Only track governance definitions, configs,
+# and enforcement/automation scripts
+# ============================================
