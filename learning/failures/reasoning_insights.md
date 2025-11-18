@@ -1,3 +1,48 @@
+---
+# === SUITE 6 CANONICAL HEADER ===
+suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+version: "1.0.0"
+component_id: "INT-LRN-003"
+component_name: "Reasoning Insights - Meta-Learning Analysis"
+layer: "intelligence"
+domain: "learning"
+type: "analysis_log"
+status: "active"
+created: "2025-11-17T00:00:00Z"
+updated: "2025-11-17T00:00:00Z"
+author: "Learning System"
+maintainer: "Igor Beylin"
+
+# === GOVERNANCE METADATA ===
+governance_level: "standard"
+compliance_required: true
+audit_trail: true
+security_classification: "internal"
+
+# === TECHNICAL METADATA ===
+dependencies: ["INT-LRN-001", "INT-LRN-002"]
+integrates_with: ["repeated-mistakes.md", "formal_lesson_extractor.py"]
+data_sources: ["lessons_review_log.jsonl", "audit_log.jsonl"]
+outputs: ["meta_insights", "implementation_gap_analysis"]
+
+# === OPERATIONAL METADATA ===
+execution_mode: "automated"
+monitoring_required: true
+logging_level: "info"
+performance_tier: "batch"
+
+# === BUSINESS METADATA ===
+purpose: "Track meta-level insights from learning system analysis to identify implementation gaps and measure prevention effectiveness"
+summary: "Automated analysis log tracking daily and weekly meta-insights from formal lessons, identifying patterns of repeated mistakes despite documentation, and measuring the effectiveness of prevention protocols"
+business_value: "Enables continuous improvement of learning system by identifying gaps between lesson documentation and actual prevention"
+success_metrics: ["implementation_gap_reduction >= 0.20", "prevention_effectiveness >= 0.80", "repeated_lesson_rate <= 0.10"]
+
+# === TAGS & CLASSIFICATION ===
+tags: ["meta-learning", "insights", "analysis", "prevention", "effectiveness"]
+keywords: ["reasoning", "insights", "meta-analysis", "implementation gaps", "prevention effectiveness"]
+related_components: ["INT-LRN-001", "INT-LRN-002", "INT-ML-001"]
+---
+
 ## Reasoning Insights from Lessons Learned
 
 

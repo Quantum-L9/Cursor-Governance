@@ -1,4 +1,3 @@
-````markdown
 ---
 title: N8N Execution Protocol
 version: 1.0.0
@@ -9,6 +8,7 @@ tags: [n8n, automation, execution, cursor, mcp]
 domain: workflow-orchestration
 type: protocol
 production_ready: true
+
 ---
 
 ## 🎯 Purpose
