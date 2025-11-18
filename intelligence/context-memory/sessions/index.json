@@ -1,0 +1,1180 @@
+{
+  "sessions": [
+    {
+      "timestamp": "2025-11-11T18:00:03.239347",
+      "hour": "2025-11-11-18",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-11-18.json"
+    },
+    {
+      "timestamp": "2025-11-11T19:00:04.043493",
+      "hour": "2025-11-11-19",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-11-19.json"
+    },
+    {
+      "timestamp": "2025-11-11T20:00:01.023592",
+      "hour": "2025-11-11-20",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-11-20.json"
+    },
+    {
+      "timestamp": "2025-11-11T21:00:05.652791",
+      "hour": "2025-11-11-21",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-11-21.json"
+    },
+    {
+      "timestamp": "2025-11-11T22:00:04.682672",
+      "hour": "2025-11-11-22",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-11-22.json"
+    },
+    {
+      "timestamp": "2025-11-11T23:00:02.606716",
+      "hour": "2025-11-11-23",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-11-23.json"
+    },
+    {
+      "timestamp": "2025-11-12T00:00:01.572490",
+      "hour": "2025-11-12-00",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-12-00.json"
+    },
+    {
+      "timestamp": "2025-11-12T01:00:05.778247",
+      "hour": "2025-11-12-01",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-12-01.json"
+    },
+    {
+      "timestamp": "2025-11-12T02:00:06.334106",
+      "hour": "2025-11-12-02",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-12-02.json"
+    },
+    {
+      "timestamp": "2025-11-12T02:19:57.061726",
+      "hour": "2025-11-12-02",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-12-02.json"
+    },
+    {
+      "timestamp": "2025-11-12T03:00:05.961651",
+      "hour": "2025-11-12-03",
+      "project": "cursor-load-pack",
+      "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+      "file": "2025-11-12-03.json"
+    },
+    {
+      "timestamp": "2025-11-12T04:00:05.766402",
+      "hour": "2025-11-12-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-04.json"
+    },
+    {
+      "timestamp": "2025-11-12T05:00:03.104789",
+      "hour": "2025-11-12-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-05.json"
+    },
+    {
+      "timestamp": "2025-11-12T06:00:04.976927",
+      "hour": "2025-11-12-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-06.json"
+    },
+    {
+      "timestamp": "2025-11-12T07:00:05.981226",
+      "hour": "2025-11-12-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-07.json"
+    },
+    {
+      "timestamp": "2025-11-12T08:00:01.182183",
+      "hour": "2025-11-12-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-08.json"
+    },
+    {
+      "timestamp": "2025-11-12T09:00:03.063766",
+      "hour": "2025-11-12-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-09.json"
+    },
+    {
+      "timestamp": "2025-11-12T10:00:05.798431",
+      "hour": "2025-11-12-10",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-10.json"
+    },
+    {
+      "timestamp": "2025-11-12T11:00:03.814587",
+      "hour": "2025-11-12-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-11.json"
+    },
+    {
+      "timestamp": "2025-11-12T12:00:06.229712",
+      "hour": "2025-11-12-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-12.json"
+    },
+    {
+      "timestamp": "2025-11-12T13:00:05.675437",
+      "hour": "2025-11-12-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-13.json"
+    },
+    {
+      "timestamp": "2025-11-12T14:01:57.190773",
+      "hour": "2025-11-12-14",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-14.json"
+    },
+    {
+      "timestamp": "2025-11-12T15:00:06.705801",
+      "hour": "2025-11-12-15",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-15.json"
+    },
+    {
+      "timestamp": "2025-11-12T16:02:18.625370",
+      "hour": "2025-11-12-16",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-16.json"
+    },
+    {
+      "timestamp": "2025-11-12T17:00:02.597975",
+      "hour": "2025-11-12-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-17.json"
+    },
+    {
+      "timestamp": "2025-11-12T18:00:06.230546",
+      "hour": "2025-11-12-18",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-18.json"
+    },
+    {
+      "timestamp": "2025-11-12T19:08:03.098321",
+      "hour": "2025-11-12-19",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-19.json"
+    },
+    {
+      "timestamp": "2025-11-12T20:00:01.817547",
+      "hour": "2025-11-12-20",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-20.json"
+    },
+    {
+      "timestamp": "2025-11-12T21:00:00.360247",
+      "hour": "2025-11-12-21",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-21.json"
+    },
+    {
+      "timestamp": "2025-11-12T22:00:03.923086",
+      "hour": "2025-11-12-22",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-22.json"
+    },
+    {
+      "timestamp": "2025-11-12T23:08:54.636743",
+      "hour": "2025-11-12-23",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-12-23.json"
+    },
+    {
+      "timestamp": "2025-11-13T00:00:02.023424",
+      "hour": "2025-11-13-00",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-00.json"
+    },
+    {
+      "timestamp": "2025-11-13T01:00:05.434016",
+      "hour": "2025-11-13-01",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-01.json"
+    },
+    {
+      "timestamp": "2025-11-13T02:00:05.366135",
+      "hour": "2025-11-13-02",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-02.json"
+    },
+    {
+      "timestamp": "2025-11-13T03:00:04.372447",
+      "hour": "2025-11-13-03",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-03.json"
+    },
+    {
+      "timestamp": "2025-11-13T04:06:57.528990",
+      "hour": "2025-11-13-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-04.json"
+    },
+    {
+      "timestamp": "2025-11-13T05:02:22.164610",
+      "hour": "2025-11-13-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-05.json"
+    },
+    {
+      "timestamp": "2025-11-13T06:03:22.295387",
+      "hour": "2025-11-13-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-06.json"
+    },
+    {
+      "timestamp": "2025-11-13T07:04:22.501649",
+      "hour": "2025-11-13-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-07.json"
+    },
+    {
+      "timestamp": "2025-11-13T08:00:01.667702",
+      "hour": "2025-11-13-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-08.json"
+    },
+    {
+      "timestamp": "2025-11-13T09:00:01.409623",
+      "hour": "2025-11-13-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-09.json"
+    },
+    {
+      "timestamp": "2025-11-13T10:07:24.814553",
+      "hour": "2025-11-13-10",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-10.json"
+    },
+    {
+      "timestamp": "2025-11-13T11:00:01.225642",
+      "hour": "2025-11-13-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-11.json"
+    },
+    {
+      "timestamp": "2025-11-13T11:09:26.587627",
+      "hour": "2025-11-13-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-11.json"
+    },
+    {
+      "timestamp": "2025-11-13T12:00:06.856672",
+      "hour": "2025-11-13-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-12.json"
+    },
+    {
+      "timestamp": "2025-11-13T13:06:32.188196",
+      "hour": "2025-11-13-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-13.json"
+    },
+    {
+      "timestamp": "2025-11-13T14:00:02.104946",
+      "hour": "2025-11-13-14",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-14.json"
+    },
+    {
+      "timestamp": "2025-11-13T15:03:37.819263",
+      "hour": "2025-11-13-15",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-15.json"
+    },
+    {
+      "timestamp": "2025-11-13T16:00:38.419128",
+      "hour": "2025-11-13-16",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-16.json"
+    },
+    {
+      "timestamp": "2025-11-13T17:00:03.140957",
+      "hour": "2025-11-13-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-17.json"
+    },
+    {
+      "timestamp": "2025-11-13T18:00:00.279105",
+      "hour": "2025-11-13-18",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-18.json"
+    },
+    {
+      "timestamp": "2025-11-13T19:00:01.167193",
+      "hour": "2025-11-13-19",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-19.json"
+    },
+    {
+      "timestamp": "2025-11-13T20:06:55.258564",
+      "hour": "2025-11-13-20",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-20.json"
+    },
+    {
+      "timestamp": "2025-11-13T21:00:05.545285",
+      "hour": "2025-11-13-21",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-21.json"
+    },
+    {
+      "timestamp": "2025-11-13T22:00:02.702807",
+      "hour": "2025-11-13-22",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-22.json"
+    },
+    {
+      "timestamp": "2025-11-13T23:04:27.182286",
+      "hour": "2025-11-13-23",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-13-23.json"
+    },
+    {
+      "timestamp": "2025-11-14T00:00:01.184225",
+      "hour": "2025-11-14-00",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-00.json"
+    },
+    {
+      "timestamp": "2025-11-14T01:08:03.733432",
+      "hour": "2025-11-14-01",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-01.json"
+    },
+    {
+      "timestamp": "2025-11-14T02:09:10.743546",
+      "hour": "2025-11-14-02",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-02.json"
+    },
+    {
+      "timestamp": "2025-11-14T03:02:21.760390",
+      "hour": "2025-11-14-03",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-03.json"
+    },
+    {
+      "timestamp": "2025-11-14T04:05:49.427114",
+      "hour": "2025-11-14-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-04.json"
+    },
+    {
+      "timestamp": "2025-11-14T05:11:51.146455",
+      "hour": "2025-11-14-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-05.json"
+    },
+    {
+      "timestamp": "2025-11-14T06:00:59.698977",
+      "hour": "2025-11-14-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-06.json"
+    },
+    {
+      "timestamp": "2025-11-14T06:27:04.879395",
+      "hour": "2025-11-14-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-06.json"
+    },
+    {
+      "timestamp": "2025-11-14T07:00:02.946245",
+      "hour": "2025-11-14-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-07.json"
+    },
+    {
+      "timestamp": "2025-11-14T08:00:03.346602",
+      "hour": "2025-11-14-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-08.json"
+    },
+    {
+      "timestamp": "2025-11-14T09:00:02.987629",
+      "hour": "2025-11-14-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-09.json"
+    },
+    {
+      "timestamp": "2025-11-14T10:00:04.893945",
+      "hour": "2025-11-14-10",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-10.json"
+    },
+    {
+      "timestamp": "2025-11-14T11:00:00.690547",
+      "hour": "2025-11-14-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-11.json"
+    },
+    {
+      "timestamp": "2025-11-14T12:00:03.020017",
+      "hour": "2025-11-14-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-12.json"
+    },
+    {
+      "timestamp": "2025-11-14T13:00:01.244989",
+      "hour": "2025-11-14-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-13.json"
+    },
+    {
+      "timestamp": "2025-11-14T14:00:01.950584",
+      "hour": "2025-11-14-14",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-14.json"
+    },
+    {
+      "timestamp": "2025-11-14T15:14:19.159196",
+      "hour": "2025-11-14-15",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-15.json"
+    },
+    {
+      "timestamp": "2025-11-14T16:11:14.227736",
+      "hour": "2025-11-14-16",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-16.json"
+    },
+    {
+      "timestamp": "2025-11-14T17:00:00.954467",
+      "hour": "2025-11-14-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-17.json"
+    },
+    {
+      "timestamp": "2025-11-14T18:00:02.194819",
+      "hour": "2025-11-14-18",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-18.json"
+    },
+    {
+      "timestamp": "2025-11-14T19:00:01.062956",
+      "hour": "2025-11-14-19",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-19.json"
+    },
+    {
+      "timestamp": "2025-11-14T20:02:55.110613",
+      "hour": "2025-11-14-20",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-20.json"
+    },
+    {
+      "timestamp": "2025-11-14T21:00:05.076771",
+      "hour": "2025-11-14-21",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-21.json"
+    },
+    {
+      "timestamp": "2025-11-14T22:00:03.111480",
+      "hour": "2025-11-14-22",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-22.json"
+    },
+    {
+      "timestamp": "2025-11-14T23:01:25.785865",
+      "hour": "2025-11-14-23",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-14-23.json"
+    },
+    {
+      "timestamp": "2025-11-15T00:00:02.242676",
+      "hour": "2025-11-15-00",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-00.json"
+    },
+    {
+      "timestamp": "2025-11-15T01:00:04.155498",
+      "hour": "2025-11-15-01",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-01.json"
+    },
+    {
+      "timestamp": "2025-11-15T02:06:50.073560",
+      "hour": "2025-11-15-02",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-02.json"
+    },
+    {
+      "timestamp": "2025-11-15T03:10:49.542815",
+      "hour": "2025-11-15-03",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-03.json"
+    },
+    {
+      "timestamp": "2025-11-15T04:06:26.479012",
+      "hour": "2025-11-15-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-04.json"
+    },
+    {
+      "timestamp": "2025-11-15T05:00:09.658576",
+      "hour": "2025-11-15-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-05.json"
+    },
+    {
+      "timestamp": "2025-11-15T06:08:11.459421",
+      "hour": "2025-11-15-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-06.json"
+    },
+    {
+      "timestamp": "2025-11-15T07:09:55.949165",
+      "hour": "2025-11-15-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-07.json"
+    },
+    {
+      "timestamp": "2025-11-15T08:00:01.713317",
+      "hour": "2025-11-15-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-08.json"
+    },
+    {
+      "timestamp": "2025-11-15T09:13:11.602116",
+      "hour": "2025-11-15-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-09.json"
+    },
+    {
+      "timestamp": "2025-11-15T10:04:07.166490",
+      "hour": "2025-11-15-10",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-10.json"
+    },
+    {
+      "timestamp": "2025-11-15T11:10:10.819324",
+      "hour": "2025-11-15-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-11.json"
+    },
+    {
+      "timestamp": "2025-11-15T12:06:54.081883",
+      "hour": "2025-11-15-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-12.json"
+    },
+    {
+      "timestamp": "2025-11-15T13:10:47.293714",
+      "hour": "2025-11-15-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-13.json"
+    },
+    {
+      "timestamp": "2025-11-15T14:00:03.862094",
+      "hour": "2025-11-15-14",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-14.json"
+    },
+    {
+      "timestamp": "2025-11-15T15:00:00.548774",
+      "hour": "2025-11-15-15",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-15.json"
+    },
+    {
+      "timestamp": "2025-11-15T16:05:48.066987",
+      "hour": "2025-11-15-16",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-16.json"
+    },
+    {
+      "timestamp": "2025-11-15T17:00:02.122622",
+      "hour": "2025-11-15-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-17.json"
+    },
+    {
+      "timestamp": "2025-11-15T17:22:52.832991",
+      "hour": "2025-11-15-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-17.json"
+    },
+    {
+      "timestamp": "2025-11-15T18:00:03.304233",
+      "hour": "2025-11-15-18",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-18.json"
+    },
+    {
+      "timestamp": "2025-11-15T19:00:06.051153",
+      "hour": "2025-11-15-19",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-19.json"
+    },
+    {
+      "timestamp": "2025-11-15T20:00:04.133759",
+      "hour": "2025-11-15-20",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-20.json"
+    },
+    {
+      "timestamp": "2025-11-15T21:00:05.751852",
+      "hour": "2025-11-15-21",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-21.json"
+    },
+    {
+      "timestamp": "2025-11-15T22:00:01.547815",
+      "hour": "2025-11-15-22",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-22.json"
+    },
+    {
+      "timestamp": "2025-11-15T23:08:10.885618",
+      "hour": "2025-11-15-23",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-15-23.json"
+    },
+    {
+      "timestamp": "2025-11-16T00:00:01.033337",
+      "hour": "2025-11-16-00",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-00.json"
+    },
+    {
+      "timestamp": "2025-11-16T01:08:12.611900",
+      "hour": "2025-11-16-01",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-01.json"
+    },
+    {
+      "timestamp": "2025-11-16T02:06:57.463571",
+      "hour": "2025-11-16-02",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-02.json"
+    },
+    {
+      "timestamp": "2025-11-16T03:14:14.515870",
+      "hour": "2025-11-16-03",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-03.json"
+    },
+    {
+      "timestamp": "2025-11-16T04:10:58.423730",
+      "hour": "2025-11-16-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-04.json"
+    },
+    {
+      "timestamp": "2025-11-16T05:14:21.785985",
+      "hour": "2025-11-16-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-05.json"
+    },
+    {
+      "timestamp": "2025-11-16T06:10:40.514568",
+      "hour": "2025-11-16-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-06.json"
+    },
+    {
+      "timestamp": "2025-11-16T07:10:48.600170",
+      "hour": "2025-11-16-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-07.json"
+    },
+    {
+      "timestamp": "2025-11-16T08:00:00.573624",
+      "hour": "2025-11-16-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-08.json"
+    },
+    {
+      "timestamp": "2025-11-16T09:00:05.285544",
+      "hour": "2025-11-16-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-09.json"
+    },
+    {
+      "timestamp": "2025-11-16T10:00:03.350746",
+      "hour": "2025-11-16-10",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-10.json"
+    },
+    {
+      "timestamp": "2025-11-16T11:00:00.648096",
+      "hour": "2025-11-16-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-11.json"
+    },
+    {
+      "timestamp": "2025-11-16T12:00:05.170132",
+      "hour": "2025-11-16-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-12.json"
+    },
+    {
+      "timestamp": "2025-11-16T13:00:04.115975",
+      "hour": "2025-11-16-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-13.json"
+    },
+    {
+      "timestamp": "2025-11-16T14:00:00.725459",
+      "hour": "2025-11-16-14",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-14.json"
+    },
+    {
+      "timestamp": "2025-11-16T15:02:30.063977",
+      "hour": "2025-11-16-15",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-15.json"
+    },
+    {
+      "timestamp": "2025-11-16T16:00:02.622920",
+      "hour": "2025-11-16-16",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-16.json"
+    },
+    {
+      "timestamp": "2025-11-16T17:01:37.783932",
+      "hour": "2025-11-16-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-17.json"
+    },
+    {
+      "timestamp": "2025-11-16T18:00:00.413550",
+      "hour": "2025-11-16-18",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-18.json"
+    },
+    {
+      "timestamp": "2025-11-16T19:00:00.216125",
+      "hour": "2025-11-16-19",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-19.json"
+    },
+    {
+      "timestamp": "2025-11-16T20:00:00.266936",
+      "hour": "2025-11-16-20",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-20.json"
+    },
+    {
+      "timestamp": "2025-11-16T21:02:52.504605",
+      "hour": "2025-11-16-21",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-21.json"
+    },
+    {
+      "timestamp": "2025-11-16T22:00:00.493887",
+      "hour": "2025-11-16-22",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-22.json"
+    },
+    {
+      "timestamp": "2025-11-16T23:00:04.230906",
+      "hour": "2025-11-16-23",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-16-23.json"
+    },
+    {
+      "timestamp": "2025-11-17T00:00:00.806584",
+      "hour": "2025-11-17-00",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-00.json"
+    },
+    {
+      "timestamp": "2025-11-17T01:00:00.225729",
+      "hour": "2025-11-17-01",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-01.json"
+    },
+    {
+      "timestamp": "2025-11-17T02:00:01.307662",
+      "hour": "2025-11-17-02",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-02.json"
+    },
+    {
+      "timestamp": "2025-11-17T03:14:38.730720",
+      "hour": "2025-11-17-03",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-03.json"
+    },
+    {
+      "timestamp": "2025-11-17T04:04:42.688299",
+      "hour": "2025-11-17-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-04.json"
+    },
+    {
+      "timestamp": "2025-11-17T05:00:33.554584",
+      "hour": "2025-11-17-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-05.json"
+    },
+    {
+      "timestamp": "2025-11-17T06:00:00.766920",
+      "hour": "2025-11-17-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-06.json"
+    },
+    {
+      "timestamp": "2025-11-17T07:00:16.675721",
+      "hour": "2025-11-17-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-07.json"
+    },
+    {
+      "timestamp": "2025-11-17T08:00:02.334980",
+      "hour": "2025-11-17-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-08.json"
+    },
+    {
+      "timestamp": "2025-11-17T09:02:12.381456",
+      "hour": "2025-11-17-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-09.json"
+    },
+    {
+      "timestamp": "2025-11-17T10:04:04.522013",
+      "hour": "2025-11-17-10",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-10.json"
+    },
+    {
+      "timestamp": "2025-11-17T11:10:56.521927",
+      "hour": "2025-11-17-11",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-11.json"
+    },
+    {
+      "timestamp": "2025-11-17T12:02:34.031385",
+      "hour": "2025-11-17-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-12.json"
+    },
+    {
+      "timestamp": "2025-11-17T13:02:28.718476",
+      "hour": "2025-11-17-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-13.json"
+    },
+    {
+      "timestamp": "2025-11-17T14:00:00.822496",
+      "hour": "2025-11-17-14",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-14.json"
+    },
+    {
+      "timestamp": "2025-11-17T15:04:41.649452",
+      "hour": "2025-11-17-15",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-15.json"
+    },
+    {
+      "timestamp": "2025-11-17T16:00:00.917188",
+      "hour": "2025-11-17-16",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-16.json"
+    },
+    {
+      "timestamp": "2025-11-17T17:00:00.749587",
+      "hour": "2025-11-17-17",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-17.json"
+    },
+    {
+      "timestamp": "2025-11-17T18:00:00.933483",
+      "hour": "2025-11-17-18",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-18.json"
+    },
+    {
+      "timestamp": "2025-11-17T19:15:07.546529",
+      "hour": "2025-11-17-19",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-19.json"
+    },
+    {
+      "timestamp": "2025-11-17T20:00:05.357731",
+      "hour": "2025-11-17-20",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-20.json"
+    },
+    {
+      "timestamp": "2025-11-17T21:00:01.291687",
+      "hour": "2025-11-17-21",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-21.json"
+    },
+    {
+      "timestamp": "2025-11-17T22:00:02.653681",
+      "hour": "2025-11-17-22",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-22.json"
+    },
+    {
+      "timestamp": "2025-11-17T23:00:05.426111",
+      "hour": "2025-11-17-23",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-17-23.json"
+    },
+    {
+      "timestamp": "2025-11-18T00:00:00.736831",
+      "hour": "2025-11-18-00",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-00.json"
+    },
+    {
+      "timestamp": "2025-11-18T01:00:05.397545",
+      "hour": "2025-11-18-01",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-01.json"
+    },
+    {
+      "timestamp": "2025-11-18T02:00:04.263052",
+      "hour": "2025-11-18-02",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-02.json"
+    },
+    {
+      "timestamp": "2025-11-18T03:00:03.275991",
+      "hour": "2025-11-18-03",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-03.json"
+    },
+    {
+      "timestamp": "2025-11-18T04:00:05.455277",
+      "hour": "2025-11-18-04",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-04.json"
+    },
+    {
+      "timestamp": "2025-11-18T05:13:33.800162",
+      "hour": "2025-11-18-05",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-05.json"
+    },
+    {
+      "timestamp": "2025-11-18T06:05:23.832665",
+      "hour": "2025-11-18-06",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-06.json"
+    },
+    {
+      "timestamp": "2025-11-18T07:10:13.939832",
+      "hour": "2025-11-18-07",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-07.json"
+    },
+    {
+      "timestamp": "2025-11-18T08:00:00.854349",
+      "hour": "2025-11-18-08",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-08.json"
+    },
+    {
+      "timestamp": "2025-11-18T09:00:05.579911",
+      "hour": "2025-11-18-09",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-09.json"
+    },
+    {
+      "timestamp": "2025-11-18T12:00:05.671829",
+      "hour": "2025-11-18-12",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-12.json"
+    },
+    {
+      "timestamp": "2025-11-18T13:00:05.078962",
+      "hour": "2025-11-18-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-13.json"
+    },
+    {
+      "timestamp": "2025-11-18T13:35:57.657993",
+      "hour": "2025-11-18-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-13.json"
+    },
+    {
+      "timestamp": "2025-11-18T13:40:47.297827",
+      "hour": "2025-11-18-13",
+      "project": "cursor-load-pack",
+      "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+      "file": "2025-11-18-13.json"
+    }
+  ]
+}

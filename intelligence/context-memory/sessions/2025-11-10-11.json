@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-11-10T11:00:05.303879",
+  "hour": "2025-11-10-11",
+  "message_count": 217,
+  "project": "cursor-load-pack",
+  "summary": "69599914550781, \"totalLinesAdded\": 9509, \"totalLinesRemoved\": 37, \"filesChangedCount\": 36, \"subtitle",
+  "key_actions": [
+    "created the symlink"
+  ],
+  "decisions": [],
+  "files_modified": [
+    ".claude.json",
+    ".prompt_no_summaries.md",
+    "00_INDEX.md",
+    "01.json",
+    "01_HighVelocityActivator.md",
+    "01_MASTER_PREF_ENGINE.yaml",
+    "01_YNP_Mode_Universal.md",
+    "01_dispatch_rules.yaml",
+    "01_tx_model_schema.md",
+    "02_IGOR_BEYLIN_Integrated_Prompt_Styling.md"
+  ],
+  "next_steps": [],
+  "context_signals": {
+    "has_code": true,
+    "has_commits": true,
+    "has_errors": true,
+    "has_completion": true,
+    "has_questions": true,
+    "is_planning": true
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "agent": "Universal Governance Kernel",
+  "component_id": "FND-LG-002",
+  "agent_version": "6.0.0",
+  "governance_kernel": "6.0",
+  "rules_enforced": [
+    "R003",
+    "R001",
+    "R004",
+    "R002"
+  ],
+  "snapshot_required": true,
+  "override_enabled": true,
+  "linter_verified": true,
+  "last_validated": "2025-10-28",
+  "escalation_path": "Chair_Override",
+  "policy_anchor": "universal-kernel.md",
+  "roles_declared": [
+    "governance_core"
+  ],
+  "layer": "foundation",
+  "status": "active",
+  "tags": [
+    "governance_runtime",
+    "kernel",
+    "enforcement",
+    "fol",
+    "universal",
+    "core"
+  ]
+}

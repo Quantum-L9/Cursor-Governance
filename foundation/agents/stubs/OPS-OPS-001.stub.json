@@ -1,0 +1,28 @@
+{
+  "agent": "Operational Oversight System",
+  "component_id": "OPS-OPS-001",
+  "agent_version": "6.0.0",
+  "governance_kernel": "6.0",
+  "rules_enforced": [
+    "R003",
+    "R001",
+    "R004"
+  ],
+  "snapshot_required": true,
+  "override_enabled": true,
+  "linter_verified": true,
+  "last_validated": "2025-10-28",
+  "escalation_path": "Chair_Override",
+  "policy_anchor": "universal-kernel.md",
+  "roles_declared": [
+    "autonomous_operations"
+  ],
+  "layer": "operations",
+  "status": "active",
+  "tags": [
+    "autonomous_operation",
+    "anomaly_response",
+    "operational_oversight",
+    "governance_runtime"
+  ]
+}

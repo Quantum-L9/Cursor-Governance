@@ -1,0 +1,290 @@
+{
+  "generated_at": "2025-11-17T20:24:29.353653",
+  "candidate_count": 4,
+  "candidates": [
+    {
+      "id": "FL_20251117_user_correction",
+      "type": "mistake",
+      "category": "User Correction",
+      "pattern_count": 41,
+      "first_seen": "2025-10-10",
+      "last_seen": "2025-11-15",
+      "hashes": [
+        "8afa468c7c92",
+        "cad9a084bc49",
+        "a39763e2666d",
+        "d22724a959e1",
+        "b4bf86ee8593",
+        "cb685fd1b920",
+        "00b58606bdf3",
+        "115f5d51d196",
+        "aa9f798e09f0",
+        "5a5e17cb14f4",
+        "5bdaaf3640ea",
+        "3d17f8946e77",
+        "a942d8ece37f",
+        "ca5f526417cb",
+        "5425e0ec8769",
+        "0bd75d0fda13",
+        "b53b3f58f416",
+        "6efbb577890c",
+        "959befd6f69d",
+        "1e1814632d43",
+        "fa7d7faef949",
+        "e9406208211d",
+        "4a9ca0d91a1d",
+        "29091410d579",
+        "de7dc4ded47b",
+        "21368f6670c8",
+        "6ddf38fad083",
+        "8bce17220968",
+        "e4cd3005471f",
+        "7081368b7cbc",
+        "4c55798cf1f4",
+        "3d6ac504c914",
+        "66c033f0e447",
+        "4169a81e4468",
+        "03c69e06cc03",
+        "b1613b24dbcc",
+        "caf0d9612865",
+        "36fa0b8f9f8f",
+        "585e02e11fe5",
+        "0eb686fcff77",
+        "ddf5e133e5d1"
+      ],
+      "raw_patterns": [
+        {
+          "hash": "8afa468c7c92",
+          "type": "mistake",
+          "content": "User correction detected in conversation",
+          "context": "38c42a74-4227-4ed4-a12a-7a7cfcf48979",
+          "timestamp": "2025-10-10T01:18:44.728105"
+        },
+        {
+          "hash": "cad9a084bc49",
+          "type": "mistake",
+          "content": "User correction detected in conversation",
+          "context": "d49d3929-6b1a-4004-b64e-42b3d9d1667d",
+          "timestamp": "2025-10-10T01:18:44.729362"
+        },
+        {
+          "hash": "a39763e2666d",
+          "type": "mistake",
+          "content": "User correction detected in conversation",
+          "context": "f5b603b9-cabe-4e03-bae0-e27b00c4e60c",
+          "timestamp": "2025-10-10T01:18:44.732281"
+        },
+        {
+          "hash": "d22724a959e1",
+          "type": "mistake",
+          "content": "User correction detected in conversation",
+          "context": "c69f2594-60a1-4130-bc01-62a17c69342e",
+          "timestamp": "2025-10-10T01:18:44.738146"
+        },
+        {
+          "hash": "b4bf86ee8593",
+          "type": "mistake",
+          "content": "User correction detected in conversation",
+          "context": "38147033-a87e-4672-aa6b-5dd5e70af244",
+          "timestamp": "2025-10-10T01:18:44.738460"
+        }
+      ],
+      "severity": "HIGH",
+      "status": "pending_review",
+      "generated_at": "2025-11-17T20:24:29.353173",
+      "lesson_template": {
+        "title": "User Correction Pattern (41 occurrences)",
+        "mistake": "[REVIEW REQUIRED] Multiple user correction issues detected",
+        "impact": "Occurred 41 times between 2025-10-10 and 2025-11-15",
+        "prevention": "[REVIEW REQUIRED] Analyze patterns and define prevention protocol",
+        "rule": "[REVIEW REQUIRED] Create enforcement rule",
+        "date_added": "2025-11-17"
+      }
+    },
+    {
+      "id": "FL_20251117_general",
+      "type": "solution",
+      "category": "General",
+      "pattern_count": 33,
+      "first_seen": "2025-10-10",
+      "last_seen": "2025-11-15",
+      "hashes": [
+        "133ca6141c7e",
+        "31ffa46fb9dc",
+        "b8f088b39257",
+        "c3592e9cbdb7",
+        "92144cc68195",
+        "af193eb51db8",
+        "01eb52fc9742",
+        "c915ed96537d",
+        "33be3303e80d",
+        "ec7f800c9385",
+        "ad9e96270988",
+        "d83f3a1b5ee8",
+        "ce535c7a0664",
+        "03ec3a82d5db",
+        "f27253a3b49c",
+        "3e993dce63fe",
+        "d5c537b0d5e9",
+        "6c4da88a132e",
+        "7918beb5e5c7",
+        "c35565fc2096",
+        "56270305ae49",
+        "baf497cc93eb",
+        "bf0ece0482e6",
+        "3a42c72a0458",
+        "6aeba6ac0c7c",
+        "b7e1df219b8d",
+        "c03772add8d4",
+        "059a50c7e143",
+        "beb5e152ffe9",
+        "de394acc809d",
+        "665b51323514",
+        "2153415fa937",
+        "e6b79ab765c9"
+      ],
+      "raw_patterns": [
+        {
+          "hash": "133ca6141c7e",
+          "type": "solution",
+          "content": "Successful solution detected",
+          "context": "9ab678bf-846d-44b1-8923-a0dd767e26ae",
+          "timestamp": "2025-10-10T01:18:44.737674"
+        },
+        {
+          "hash": "31ffa46fb9dc",
+          "type": "solution",
+          "content": "Successful solution detected",
+          "context": "c69f2594-60a1-4130-bc01-62a17c69342e",
+          "timestamp": "2025-10-10T01:18:44.738194"
+        },
+        {
+          "hash": "b8f088b39257",
+          "type": "solution",
+          "content": "Successful solution detected",
+          "context": "ac8fc8d2-0a48-4d33-8fe6-f6081521467e",
+          "timestamp": "2025-10-10T01:18:44.738859"
+        },
+        {
+          "hash": "c3592e9cbdb7",
+          "type": "solution",
+          "content": "Successful solution detected",
+          "context": "ab5a66f3-dc86-43e9-8a05-d19163ed4dd5",
+          "timestamp": "2025-10-10T01:18:44.746572"
+        },
+        {
+          "hash": "92144cc68195",
+          "type": "solution",
+          "content": "Successful solution detected",
+          "context": "a3963549-2949-4e7a-b787-1a763cac65b2",
+          "timestamp": "2025-10-10T01:18:44.746709"
+        }
+      ],
+      "severity": "HIGH",
+      "status": "pending_review",
+      "generated_at": "2025-11-17T20:24:29.353191",
+      "lesson_template": {
+        "title": "General Pattern (33 occurrences)",
+        "mistake": "[REVIEW REQUIRED] Multiple general issues detected",
+        "impact": "Occurred 33 times between 2025-10-10 and 2025-11-15",
+        "prevention": "[REVIEW REQUIRED] Analyze patterns and define prevention protocol",
+        "rule": "[REVIEW REQUIRED] Create enforcement rule",
+        "date_added": "2025-11-17"
+      }
+    },
+    {
+      "id": "FL_20251117_supabase_auth",
+      "type": "mistake",
+      "category": "Supabase Auth",
+      "pattern_count": 4,
+      "first_seen": "2025-10-10",
+      "last_seen": "2025-11-10",
+      "hashes": [
+        "1e76652eeeb6",
+        "45ca2bd2171d",
+        "07849c2681a0",
+        "4e4acbca2c35"
+      ],
+      "raw_patterns": [
+        {
+          "hash": "1e76652eeeb6",
+          "type": "mistake",
+          "content": "Detected auth related issue",
+          "context": "403",
+          "timestamp": "2025-10-10T01:18:44.737958"
+        },
+        {
+          "hash": "45ca2bd2171d",
+          "type": "mistake",
+          "content": "Detected auth related issue",
+          "context": "401",
+          "timestamp": "2025-10-10T01:18:44.738572"
+        },
+        {
+          "hash": "07849c2681a0",
+          "type": "mistake",
+          "content": "Detected supabase related issue",
+          "context": "supabase.*error",
+          "timestamp": "2025-10-10T01:18:44.738715"
+        },
+        {
+          "hash": "4e4acbca2c35",
+          "type": "mistake",
+          "content": "Detected supabase related issue",
+          "context": "supabase.*auth",
+          "timestamp": "2025-11-10T13:15:10.086653"
+        }
+      ],
+      "severity": "MEDIUM",
+      "status": "pending_review",
+      "generated_at": "2025-11-17T20:24:29.353199",
+      "lesson_template": {
+        "title": "Supabase Auth Pattern (4 occurrences)",
+        "mistake": "[REVIEW REQUIRED] Multiple supabase auth issues detected",
+        "impact": "Occurred 4 times between 2025-10-10 and 2025-11-10",
+        "prevention": "[REVIEW REQUIRED] Analyze patterns and define prevention protocol",
+        "rule": "[REVIEW REQUIRED] Create enforcement rule",
+        "date_added": "2025-11-17"
+      }
+    },
+    {
+      "id": "FL_20251117_n8n_issue",
+      "type": "mistake",
+      "category": "N8N Issue",
+      "pattern_count": 2,
+      "first_seen": "2025-10-10",
+      "last_seen": "2025-10-10",
+      "hashes": [
+        "bd29dd8c553e",
+        "aa0ee6659b48"
+      ],
+      "raw_patterns": [
+        {
+          "hash": "bd29dd8c553e",
+          "type": "mistake",
+          "content": "Detected n8n related issue",
+          "context": "n8n.*error",
+          "timestamp": "2025-10-10T01:18:44.738164"
+        },
+        {
+          "hash": "aa0ee6659b48",
+          "type": "mistake",
+          "content": "Detected n8n related issue",
+          "context": "node.*error",
+          "timestamp": "2025-10-10T01:18:44.738169"
+        }
+      ],
+      "severity": "LOW",
+      "status": "pending_review",
+      "generated_at": "2025-11-17T20:24:29.353207",
+      "lesson_template": {
+        "title": "N8N Issue Pattern (2 occurrences)",
+        "mistake": "[REVIEW REQUIRED] Multiple n8n issue issues detected",
+        "impact": "Occurred 2 times between 2025-10-10 and 2025-10-10",
+        "prevention": "[REVIEW REQUIRED] Analyze patterns and define prevention protocol",
+        "rule": "[REVIEW REQUIRED] Create enforcement rule",
+        "date_added": "2025-11-17"
+      }
+    }
+  ]
+}

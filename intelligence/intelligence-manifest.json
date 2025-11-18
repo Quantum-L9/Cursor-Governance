@@ -1,0 +1,23 @@
+{
+  "suite": "10X Governance Suite v1.0",
+  "layer": "Governance Intelligence Layer",
+  "generated": "2025-10-06T17:16:11Z",
+  "autonomy_mode": "nonstop",
+  "ynp_mode": "Heavy Forge",
+  "dependencies": {
+    "ops": "/ops/",
+    "cursor": "/.cursor/",
+    "security": "/security/",
+    "pipeline": "/pipeline/"
+  },
+  "files": [
+    "adaptive-reasoning.md",
+    "system-reflection.md",
+    "improvement-loop.md",
+    "meta-audit.md"
+  ],
+  "telemetry": {
+    "audit_log": "/ops/logs/meta_audit.json",
+    "reasoning_metrics": "/ops/logs/reasoning_metrics.json"
+  }
+}

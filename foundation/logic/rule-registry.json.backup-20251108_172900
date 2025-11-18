@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "suite": "Cursor Governance Suite 6 (Unified)",
+    "version": "6.0.0",
+    "component_id": "FND-LG-003",
+    "component_name": "Governance Rule Registry",
+    "layer": "foundation",
+    "domain": "rule_management",
+    "type": "registry",
+    "status": "active",
+    "created": "2025-10-28T00:00:00Z",
+    "updated": "2025-10-28T00:00:00Z",
+    "author": "Igor Beylin",
+    "maintainer": "Igor Beylin",
+    "governance_level": "critical",
+    "compliance_required": true,
+    "audit_trail": true,
+    "security_classification": "restricted",
+    "suite_1_origin": "11_Governance_Rule_Registry.json",
+    "migration_notes": "Enhanced with Suite 6 metadata and expanded rule capabilities"
+  },
+  "rules": [
+    {
+      "id": "R001",
+      "description": "Only Mack may be DefaultAgent",
+      "fol": "∀x. Agent(x) → DefaultAgent(x) = Mack",
+      "type": "hardgate",
+      "priority": "critical",
+      "enforced_by": "Universal Governance Kernel v6.0",
+      "created": "2025-10-28T00:00:00Z",
+      "last_validated": "2025-10-28T00:00:00Z"
+    },
+    {
+      "id": "R002",
+      "description": "Copilot cannot be default",
+      "fol": "¬∃x. Copilot(x) ∧ DefaultAgent(x)",
+      "type": "block",
+      "priority": "high",
+      "enforced_by": "Universal Governance Kernel v6.0",
+      "created": "2025-10-28T00:00:00Z",
+      "last_validated": "2025-10-28T00:00:00Z"
+    },
+    {
+      "id": "R003",
+      "description": "Override must come from Chair",
+      "fol": "∃x. Chair(x) ∧ Override(x) → CanChangeAgent(y)",
+      "type": "override",
+      "priority": "critical",
+      "enforced_by": "Universal Governance Kernel v6.0",
+      "created": "2025-10-28T00:00:00Z",
+      "last_validated": "2025-10-28T00:00:00Z"
+    },
+    {
+      "id": "R004",
+      "description": "Suite 6 canonical headers required",
+      "fol": "∀f. File(f) ∧ GovernanceFile(f) → HasCanonicalHeader(f)",
+      "type": "validation",
+      "priority": "high",
+      "enforced_by": "Universal Governance Kernel v6.0",
+      "created": "2025-10-28T00:00:00Z",
+      "last_validated": "2025-10-28T00:00:00Z"
+    }
+  ],
+  "rule_categories": {
+    "hardgate": "Critical rules that block execution",
+    "block": "Rules that prevent specific actions",
+    "override": "Rules that allow authorized exceptions",
+    "validation": "Rules that ensure compliance",
+    "monitoring": "Rules that track behavior"
+  },
+  "enforcement_levels": {
+    "critical": "Immediate blocking with alert",
+    "high": "Blocking with warning",
+    "medium": "Warning with logging",
+    "low": "Logging only"
+  }
+}

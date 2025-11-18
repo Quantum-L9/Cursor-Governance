@@ -1,0 +1,29 @@
+{
+  "agent": "Meta Learning Log",
+  "component_id": "INT-ML-001",
+  "agent_version": "6.0.0",
+  "governance_kernel": "6.0",
+  "rules_enforced": [
+    "R003",
+    "R001",
+    "R004"
+  ],
+  "snapshot_required": true,
+  "override_enabled": true,
+  "linter_verified": true,
+  "last_validated": "2025-10-28",
+  "escalation_path": "Chair_Override",
+  "policy_anchor": "universal-kernel.md",
+  "roles_declared": [
+    "meta-governance"
+  ],
+  "layer": "intelligence",
+  "status": "active",
+  "tags": [
+    "meta-learning",
+    "reasoning-log",
+    "alignment",
+    "prompt-refinement",
+    "knowledge-compounding"
+  ]
+}

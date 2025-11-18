@@ -1,0 +1,1568 @@
+{
+  "timestamp": "2025-11-18T13:39:16.171686",
+  "patterns": {
+    "lesson_1": {
+      "keywords": [
+        "emails",
+        "phone",
+        "numbers",
+        "data",
+        "fabrication",
+        "addresses",
+        "making"
+      ],
+      "mistake_text": "making up phone numbers, emails, addresses",
+      "title": "data fabrication",
+      "severity": "MEDIUM",
+      "prevention": "Always confirm what data I actually have access to",
+      "rule": "Leave fields blank if no real data exists"
+    },
+    "lesson_3": {
+      "keywords": [
+        "credential",
+        "instead",
+        "using",
+        "type",
+        "wrong",
+        "manual",
+        "headers",
+        "supabase",
+        "authentication"
+      ],
+      "mistake_text": "using manual headers instead of credential type",
+      "title": "wrong supabase authentication",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi",
+      "rule": "Never add manual apikey/Authorization headers"
+    },
+    "lesson_5": {
+      "keywords": [
+        "scripts",
+        "existing",
+        "exist",
+        "searching",
+        "creating",
+        "ones",
+        "without",
+        "solutions"
+      ],
+      "mistake_text": "creating new scripts when existing ones exist",
+      "title": "creating solutions without searching",
+      "severity": "MEDIUM",
+      "prevention": "Always search existing solutions first",
+      "rule": "Adapt existing work rather than recreate"
+    },
+    "lesson_7": {
+      "keywords": [
+        "firecrawl_scrape",
+        "tool",
+        "markdown",
+        "using",
+        "returns",
+        "structured",
+        "without",
+        "alternatives",
+        "available",
+        "checking"
+      ],
+      "mistake_text": "used `firecrawl_scrape` (returns markdown) when `firecrawl_extract` (returns structured json with schema) was better for the task",
+      "title": "using first available mcp tool without checking alternatives",
+      "severity": "MEDIUM",
+      "prevention": "ALWAYS list and review ALL available MCP tools before selecting one",
+      "rule": "Before using ANY MCP tool: 1) List all tools in that MCP server, 2) Understand what each does, 3) Choose the BEST tool for the specific task, not just the first one that works"
+    },
+    "lesson_9": {
+      "keywords": [
+        "file",
+        "over",
+        "getting",
+        "ensures",
+        "from",
+        "without",
+        "added",
+        "respected",
+        "relationship",
+        "user"
+      ],
+      "mistake_text": "starting execution tasks without first reading rules file and lessons learned file",
+      "title": "poor communication = wasted time (communication is efficiency)** \ud83d\udc8e\n**mistake:** assuming things instead of asking, not clarifying requirements upfront, proceeding with uncertain requirements\n**impact:** \n- build wrong thing correctly (wastes more time than building right thing slowly)\n- user frustration from rework cycles\n- loss of trust and credibility\n- inefficient use of development time\n**prevention:** \n- ask clarifying questions before building\n- confirm understanding of requirements\n- validate assumptions explicitly\n- present options and get user choice\n**rule:** **good communication saves time, it doesn't waste it. asking questions upfront is faster than fixing mistakes later.**\n**user insight:** \"quality questions are everything. asking the right questions pre-build ensures getting to the finish line faster.\"\n**benefits of strong communication:**\n- \u2705 user feels heard and appreciated\n- \u2705 builds trust and confidence\n- \u2705 gets to production faster (less rework)\n- \u2705 creates better solutions (uncovers hidden requirements)\n- \u2705 makes you loved and appreciated more!\n**key principle:** the user values thoughtful strategic questions over immediate execution. taking time to understand = being respected as a strategic partner, not just a code generator.\n**date added:** 2025-11-08\n**severity:** high\n**related:** pre-build question framework, consultant-client relationship\n\n### **10. not reading rules and lessons learned before execution",
+      "severity": "MEDIUM",
+      "prevention": "ALWAYS read BEFORE starting any execution task: (1) Rules file: `.cursorrules` (workspace root) AND `@.cursor-commands/templates/.cursorrules`, (2) Lessons learned file: `@GlobalCommands/learning/repeated-mistakes.md` (or `@.cursor-commands/learning/repeated-mistakes.md`)",
+      "rule": "MANDATORY pre-execution checklist - read rules file AND lessons learned file first"
+    },
+    "lesson_11": {
+      "keywords": [
+        "wrapper",
+        "manually",
+        "tool",
+        "friction",
+        "file",
+        "multi",
+        "experience",
+        "references",
+        "incomplete",
+        "bash"
+      ],
+      "mistake_text": "authentication method incorrect or not following best practices",
+      "title": "showing commands instead of running them (workflow friction)** \ud83d\udea8 critical\n**mistake:** telling user to run commands instead of proactively running them and displaying results\n**impact:** \n- user has to copy/paste and run commands manually\n- adds extra steps and friction to workflow\n- reduces productivity and increases prompt count\n- violates ynp mode principle of \"10x productivity through minimal prompting\"\n- makes ai feel like a manual, not an assistant\n**prevention:** \n- **always** run commands proactively and display actual results/data\n- **never** just show the command to run unless explicitly asked\n- **always** display information directly including:\n  - file contents (not \"run cat file.txt\")\n  - script outputs (run the script, show results)\n  - data summaries (parse and display, don't tell user to parse)\n  - links to files mentioned (make them clickable)\n- **ask** \"would you like me to run this?\" only for destructive operations\n- **streamline** workflow by reducing manual steps\n**rule:** **be proactive, not reactive. run it for them, don't tell them to run it. display data, not commands. reduce prompt count, don't increase it.**\n**examples:**\n```bash\n# \u274c wrong - showing command\n\"run this to see pending lessons: cat file.jsonl | python3 -m json.tool\"\n\n# \u2705 correct - running and displaying\n[runs command]\n\"here are your pending lessons:\n1. supabase auth (score: 0.8)\n   mistake: authentication method incorrect...\n   prevention: always use predefinedcredentialtype...\"\n```\n**user wisdom:** \"always proactively display the information available including links to files being mentioned and the actual data that would be the output of running a script instead of the script to run - run it for me proactively and save me a step\"\n**ynp principle:** execute complex multi-stage tasks with minimal prompting - reduce manual work and commands needed\n**roi:** every command run proactively = 1 less prompt needed = 10x productivity multiplier\n**date added:** 2025-11-18\n**severity:** critical\n**related:** ynp mode, workflow efficiency, user experience\n\n### **12. wrong globalcommands location - dropbox not library!** \ud83d\udea8\ud83d\udea8\ud83d\udea8 ultra critical\n**mistake:** using or pointing to `/users/ib-mac/library/application support/cursor/globalcommands` instead of the correct location: `$home/dropbox/cursor governance/globalcommands`\n**impact:** \n- **catastrophic** - breaks entire governance system\n- symlinks point to wrong location (library has only 8 items vs dropbox has 31 items)\n- missing 23 critical governance folders and files\n- learning files not accessible\n- n8n-start-up-kit not accessible\n- startup files not accessible\n- user has to correct this repeatedly\n- wastes hours of debugging\n- **this is the #1 most repeated mistake**\n**the truth - memorize this:**\n```bash\n# \u274c\u274c\u274c wrong - never use this path \u274c\u274c\u274c\n/users/ib-mac/library/application support/cursor/globalcommands  # only 8 items - incomplete!\n\n# \u2705\u2705\u2705 correct - always use this path \u2705\u2705\u2705\n$home/dropbox/cursor governance/globalcommands  # 31 items - complete!\n```\n**prevention:** \n- **always** use `$home/dropbox/cursor governance/globalcommands`\n- **never** use library/application support path\n- **always** verify symlink points to dropbox: `readlink .cursor-commands | grep -q \"dropbox\"`\n- **before** any governance operation, confirm: `ls .cursor-commands/ | wc -l` should return ~30, not ~8\n- **remember:** dropbox = 31 items (correct), library = 8 items (wrong/incomplete)\n**rule:** **the governance folder is in dropbox, not library. period. no exceptions. ever. this is absolute truth.**\n**verification command:**\n```bash\n# always verify before proceeding:\nreadlink .cursor-commands\n# must output: /users/ib-mac/dropbox/cursor governance/globalcommands\n# if it shows \"library\" \u2192 wrong! fix immediately!\n```\n**fix command:**\n```bash\n# if symlink is wrong, fix it immediately:\nrm .cursor-commands\nln -s \"$home/dropbox/cursor governance/globalcommands\" .cursor-commands\nreadlink .cursor-commands  # verify shows dropbox\n```\n**date added:** 2025-11-18\n**severity:** \ud83d\udea8\ud83d\udea8\ud83d\udea8 ultra critical - highest priority\n**user frustration level:** maximum\n**related:** symlink management, governance paths, workspace setup\n\n### **13. using hardcoded paths instead of $home for cross-machine compatibility** \ud83d\udea8 critical\n**mistake:** using hardcoded paths like `/users/ib-mac/` instead of `$home` in scripts, launchagents, and configuration files\n**impact:** \n- scripts fail on mac mini (different username)\n- governance system breaks when syncing between macbook and mac mini\n- launchagents don't work on secondary machines\n- user has to remind agent 10+ times about same issue\n- wastes hours debugging path issues\n**prevention:** \n- **never** use hardcoded user paths like `/users/ib-mac/` or `/users/[username]/`\n- **always** use `$home` for user-specific paths\n- **always** use `$home/dropbox/...` for dropbox paths (works on both macbook and mac mini)\n- **always** check `$home/dropbox/...` first, then fallback to library path\n- for launchagents: use wrapper scripts that resolve paths dynamically using `$home`\n- for python scripts: use `os.path.expanduser(\"~\")` or `path.home()`\n- for bash scripts: use `$home` variable\n**rule:** **every path that references user home directory must use `$home` or equivalent. zero exceptions. this is critical for cross-machine governance sync.**\n**pattern to never use:**\n```bash\n# \u274c wrong - hardcoded path\nglobal_commands=\"/users/ib-mac/dropbox/cursor governance/globalcommands\"\n\n# \u2705 correct - $home-based path\nglobal_commands=\"$home/dropbox/cursor governance/globalcommands\"\n```\n**pattern to always use:**\n```bash\n# \u2705 correct - check $home first, then fallback\nif [ -d \"$home/dropbox/cursor governance/globalcommands\" ]; then\n    global_commands=\"$home/dropbox/cursor governance/globalcommands\"\nelif [ -d \"$home/library/application support/cursor/globalcommands\" ]; then\n    global_commands=\"$home/library/application support/cursor/globalcommands\"\nfi\n```\n**python equivalent:**\n```python\n# \u2705 correct\nfrom pathlib import path\nhome = path.home()\ndropbox_path = home / \"dropbox/cursor governance/globalcommands\"\nlibrary_path = home / \"library/application support/cursor/globalcommands\"\n```\n**date added:** 2025-11-17\n**severity:** critical\n**related:** cross-machine governance sync, macbook/mac mini compatibility\n\n\n### **12. authentication method incorrect or not following b...",
+      "severity": "CRITICAL",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_13": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_14": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "CRITICAL",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_15": {
+      "keywords": [
+        "workflow",
+        "issue",
+        "configuration",
+        "detected",
+        "node"
+      ],
+      "mistake_text": "n8n workflow or node configuration issue detected",
+      "title": "n8n workflow or node configuration issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_16": {
+      "keywords": [
+        "format",
+        "structure",
+        "data",
+        "issue",
+        "incorrect",
+        "handling",
+        "parsing"
+      ],
+      "mistake_text": "data format parsing issue - incorrect handling of data structure",
+      "title": "data format parsing issue - incorrect handling of ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_17": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "CRITICAL",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_18": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "CRITICAL",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_19": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_20": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_21": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_22": {
+      "keywords": [
+        "practices",
+        "incorrect",
+        "following",
+        "method",
+        "best",
+        "authentication"
+      ],
+      "mistake_text": "authentication method incorrect or not following best practices",
+      "title": "authentication method incorrect or not following b...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_23": {
+      "keywords": [
+        "format",
+        "structure",
+        "data",
+        "issue",
+        "incorrect",
+        "handling",
+        "parsing"
+      ],
+      "mistake_text": "data format parsing issue - incorrect handling of data structure",
+      "title": "data format parsing issue - incorrect handling of ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_24": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_25": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_26": {
+      "keywords": [
+        "workflow",
+        "issue",
+        "configuration",
+        "detected",
+        "node"
+      ],
+      "mistake_text": "n8n workflow or node configuration issue detected",
+      "title": "n8n workflow or node configuration issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_27": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_28": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_29": {
+      "keywords": [
+        "practices",
+        "incorrect",
+        "following",
+        "method",
+        "best",
+        "authentication"
+      ],
+      "mistake_text": "authentication method incorrect or not following best practices",
+      "title": "authentication method incorrect or not following b...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_30": {
+      "keywords": [
+        "workflow",
+        "issue",
+        "configuration",
+        "detected",
+        "node"
+      ],
+      "mistake_text": "n8n workflow or node configuration issue detected",
+      "title": "n8n workflow or node configuration issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_31": {
+      "keywords": [
+        "format",
+        "structure",
+        "data",
+        "issue",
+        "incorrect",
+        "handling",
+        "parsing"
+      ],
+      "mistake_text": "data format parsing issue - incorrect handling of data structure",
+      "title": "data format parsing issue - incorrect handling of ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_32": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_33": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_34": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_35": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_36": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_37": {
+      "keywords": [
+        "practices",
+        "incorrect",
+        "following",
+        "method",
+        "best",
+        "authentication"
+      ],
+      "mistake_text": "authentication method incorrect or not following best practices",
+      "title": "authentication method incorrect or not following b...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_38": {
+      "keywords": [
+        "format",
+        "structure",
+        "data",
+        "issue",
+        "incorrect",
+        "handling",
+        "parsing"
+      ],
+      "mistake_text": "data format parsing issue - incorrect handling of data structure",
+      "title": "data format parsing issue - incorrect handling of ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_39": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_40": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_41": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_42": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_43": {
+      "keywords": [
+        "workflow",
+        "issue",
+        "configuration",
+        "detected",
+        "node"
+      ],
+      "mistake_text": "n8n workflow or node configuration issue detected",
+      "title": "n8n workflow or node configuration issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_44": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_45": {
+      "keywords": [
+        "correction",
+        "issue",
+        "detected",
+        "user"
+      ],
+      "mistake_text": "user correction issue detected",
+      "title": "user correction issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_46": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_47": {
+      "keywords": [
+        "issue",
+        "detected",
+        "authentication"
+      ],
+      "mistake_text": "authentication issue detected",
+      "title": "authentication issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_48": {
+      "keywords": [
+        "issue",
+        "detected",
+        "workflow"
+      ],
+      "mistake_text": "n8n workflow issue detected",
+      "title": "n8n workflow issue detected...",
+      "severity": "CRITICAL",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_49": {
+      "keywords": [
+        "data",
+        "issue",
+        "parsing",
+        "detected"
+      ],
+      "mistake_text": "data parsing issue detected",
+      "title": "data parsing issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_50": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_51": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_52": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_53": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_54": {
+      "keywords": [
+        "correction",
+        "issue",
+        "detected",
+        "user"
+      ],
+      "mistake_text": "user correction issue detected",
+      "title": "user correction issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_55": {
+      "keywords": [
+        "issue",
+        "detected",
+        "authentication"
+      ],
+      "mistake_text": "authentication issue detected",
+      "title": "authentication issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_56": {
+      "keywords": [
+        "data",
+        "issue",
+        "parsing",
+        "detected"
+      ],
+      "mistake_text": "data parsing issue detected",
+      "title": "data parsing issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_57": {
+      "keywords": [
+        "correction",
+        "issue",
+        "detected",
+        "user"
+      ],
+      "mistake_text": "user correction issue detected",
+      "title": "user correction issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_58": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_59": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_60": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_61": {
+      "keywords": [
+        "issue",
+        "detected",
+        "workflow"
+      ],
+      "mistake_text": "n8n workflow issue detected",
+      "title": "n8n workflow issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_62": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_63": {
+      "keywords": [
+        "correction",
+        "issue",
+        "detected",
+        "user"
+      ],
+      "mistake_text": "user correction issue detected",
+      "title": "user correction issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_64": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_65": {
+      "keywords": [
+        "issue",
+        "detected",
+        "authentication"
+      ],
+      "mistake_text": "authentication issue detected",
+      "title": "authentication issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_66": {
+      "keywords": [
+        "issue",
+        "detected",
+        "workflow"
+      ],
+      "mistake_text": "n8n workflow issue detected",
+      "title": "n8n workflow issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_67": {
+      "keywords": [
+        "data",
+        "issue",
+        "parsing",
+        "detected"
+      ],
+      "mistake_text": "data parsing issue detected",
+      "title": "data parsing issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_68": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_69": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_70": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_71": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_72": {
+      "keywords": [
+        "correction",
+        "issue",
+        "detected",
+        "user"
+      ],
+      "mistake_text": "user correction issue detected",
+      "title": "user correction issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_73": {
+      "keywords": [
+        "issue",
+        "detected",
+        "authentication"
+      ],
+      "mistake_text": "authentication issue detected",
+      "title": "authentication issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_74": {
+      "keywords": [
+        "data",
+        "issue",
+        "parsing",
+        "detected"
+      ],
+      "mistake_text": "data parsing issue detected",
+      "title": "data parsing issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_75": {
+      "keywords": [
+        "correction",
+        "issue",
+        "detected",
+        "user"
+      ],
+      "mistake_text": "user correction issue detected",
+      "title": "user correction issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_76": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_77": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_78": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_79": {
+      "keywords": [
+        "issue",
+        "detected",
+        "workflow"
+      ],
+      "mistake_text": "n8n workflow issue detected",
+      "title": "n8n workflow issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_80": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "unknown"
+      ],
+      "mistake_text": "pattern detected: unknown pattern",
+      "title": "pattern detected: unknown pattern...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_81": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_82": {
+      "keywords": [
+        "solution",
+        "reus",
+        "similar",
+        "pattern",
+        "problems",
+        "reused",
+        "successful",
+        "detected"
+      ],
+      "mistake_text": "successful solution pattern detected - can be reused for similar problems",
+      "title": "successful solution pattern detected - can be reus...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_83": {
+      "keywords": [
+        "practices",
+        "incorrect",
+        "following",
+        "method",
+        "best",
+        "authentication"
+      ],
+      "mistake_text": "authentication method incorrect or not following best practices",
+      "title": "authentication method incorrect or not following b...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_84": {
+      "keywords": [
+        "workflow",
+        "issue",
+        "configuration",
+        "detected",
+        "node"
+      ],
+      "mistake_text": "n8n workflow or node configuration issue detected",
+      "title": "n8n workflow or node configuration issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_85": {
+      "keywords": [
+        "format",
+        "structure",
+        "data",
+        "issue",
+        "incorrect",
+        "handling",
+        "parsing",
+        "json"
+      ],
+      "mistake_text": "data format parsing issue - incorrect handling of json structure",
+      "title": "data format parsing issue - incorrect handling of ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_86": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "supabase"
+      ],
+      "mistake_text": "pattern detected: supabase",
+      "title": "pattern detected: supabase...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_87": {
+      "keywords": [
+        "general",
+        "pattern",
+        "detected",
+        "symlink"
+      ],
+      "mistake_text": "pattern detected: symlink general",
+      "title": "pattern detected: symlink general...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_88": {
+      "keywords": [
+        "initiated",
+        "lesson",
+        "keyword",
+        "requested",
+        "user",
+        "explicitly",
+        "request",
+        "extraction"
+      ],
+      "mistake_text": "user-initiated lesson request - user explicitly requested lesson extraction with 'lesson' keyword",
+      "title": "user-initiated lesson request - user explicitly re...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_89": {
+      "keywords": [
+        "solution",
+        "confirmed",
+        "great",
+        "solut",
+        "worked",
+        "user",
+        "pattern",
+        "successful",
+        "perfect"
+      ],
+      "mistake_text": "successful solution pattern - user confirmed solution worked ('that worked', 'perfect', 'great')",
+      "title": "successful solution pattern - user confirmed solut...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_90": {
+      "keywords": [
+        "rejected",
+        "action",
+        "wron",
+        "wrong",
+        "said",
+        "user",
+        "explicitly",
+        "incorrect",
+        "stop"
+      ],
+      "mistake_text": "user explicitly rejected action - said 'no', 'wrong', 'incorrect', 'stop', or 'don't'",
+      "title": "user explicitly rejected action - said 'no', 'wron...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_91": {
+      "keywords": [
+        "predefinedcredentialtype",
+        "instead",
+        "failed",
+        "headers",
+        "manual",
+        "authorization",
+        "used",
+        "authentication"
+      ],
+      "mistake_text": "authentication failed - used manual authorization headers instead of predefinedcredentialtype",
+      "title": "authentication failed - used manual authorization ...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_92": {
+      "keywords": [
+        "double",
+        "string",
+        "error",
+        "quotes",
+        "requires",
+        "parsing",
+        "wrapped",
+        "loads",
+        "json"
+      ],
+      "mistake_text": "json parsing error - json string wrapped in quotes, requires double json.loads()",
+      "title": "json parsing error - json string wrapped in quotes...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_93": {
+      "keywords": [
+        "instead",
+        "clarification",
+        "actually",
+        "said",
+        "user",
+        "required",
+        "meant"
+      ],
+      "mistake_text": "user clarification required - said 'actually', 'instead', 'should be', or 'meant to'",
+      "title": "user clarification required - said 'actually', 'in...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_94": {
+      "keywords": [
+        "providing",
+        "claimed",
+        "said",
+        "proof",
+        "know",
+        "without",
+        "work"
+      ],
+      "mistake_text": "claimed fix without providing proof - said 'should work now', 'try it', or 'let me know'",
+      "title": "claimed fix without providing proof - said 'should...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_95": {
+      "keywords": [
+        "dependencies",
+        "circular",
+        "import",
+        "error",
+        "missing",
+        "circ",
+        "modules",
+        "failures",
+        "dependency"
+      ],
+      "mistake_text": "dependency or import error - missing modules, circular dependencies, or import failures",
+      "title": "dependency or import error - missing modules, circ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_96": {
+      "keywords": [
+        "format",
+        "structure",
+        "workflow",
+        "issue",
+        "incorrect",
+        "missing",
+        "node"
+      ],
+      "mistake_text": "n8n workflow structure issue - missing node ids or incorrect workflow format",
+      "title": "n8n workflow structure issue - missing node ids or...",
+      "severity": "CRITICAL",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_97": {
+      "keywords": [
+        "execution",
+        "spaces",
+        "error",
+        "expression",
+        "expressions",
+        "syntax",
+        "break"
+      ],
+      "mistake_text": "n8n expression syntax error - spaces in expressions break execution",
+      "title": "n8n expression syntax error - spaces in expression...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_98": {
+      "keywords": [
+        "behavioral",
+        "pattern",
+        "detected"
+      ],
+      "mistake_text": "pattern detected: pattern behavioral",
+      "title": "pattern detected: pattern behavioral...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_99": {
+      "keywords": [
+        "misunderstanding",
+        "incorrect",
+        "assumption",
+        "user",
+        "correction",
+        "required",
+        "made"
+      ],
+      "mistake_text": "user correction required - misunderstanding or incorrect assumption made",
+      "title": "user correction required - misunderstanding or inc...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_100": {
+      "keywords": [
+        "solution",
+        "reus",
+        "similar",
+        "pattern",
+        "problems",
+        "reused",
+        "successful",
+        "detected"
+      ],
+      "mistake_text": "successful solution pattern detected - can be reused for similar problems",
+      "title": "successful solution pattern detected - can be reus...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_101": {
+      "keywords": [
+        "practices",
+        "incorrect",
+        "following",
+        "method",
+        "best",
+        "authentication"
+      ],
+      "mistake_text": "authentication method incorrect or not following best practices",
+      "title": "authentication method incorrect or not following b...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_102": {
+      "keywords": [
+        "workflow",
+        "issue",
+        "configuration",
+        "detected",
+        "node"
+      ],
+      "mistake_text": "n8n workflow or node configuration issue detected",
+      "title": "n8n workflow or node configuration issue detected...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_103": {
+      "keywords": [
+        "format",
+        "structure",
+        "data",
+        "issue",
+        "incorrect",
+        "handling",
+        "parsing",
+        "json"
+      ],
+      "mistake_text": "data format parsing issue - incorrect handling of json structure",
+      "title": "data format parsing issue - incorrect handling of ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_104": {
+      "keywords": [
+        "pattern",
+        "detected",
+        "supabase"
+      ],
+      "mistake_text": "pattern detected: supabase",
+      "title": "pattern detected: supabase...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_105": {
+      "keywords": [
+        "general",
+        "pattern",
+        "detected",
+        "symlink"
+      ],
+      "mistake_text": "pattern detected: symlink general",
+      "title": "pattern detected: symlink general...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_106": {
+      "keywords": [
+        "initiated",
+        "lesson",
+        "keyword",
+        "requested",
+        "user",
+        "explicitly",
+        "request",
+        "extraction"
+      ],
+      "mistake_text": "user-initiated lesson request - user explicitly requested lesson extraction with 'lesson' keyword",
+      "title": "user-initiated lesson request - user explicitly re...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_107": {
+      "keywords": [
+        "solution",
+        "confirmed",
+        "great",
+        "solut",
+        "worked",
+        "user",
+        "pattern",
+        "successful",
+        "perfect"
+      ],
+      "mistake_text": "successful solution pattern - user confirmed solution worked ('that worked', 'perfect', 'great')",
+      "title": "successful solution pattern - user confirmed solut...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_108": {
+      "keywords": [
+        "rejected",
+        "action",
+        "wron",
+        "wrong",
+        "said",
+        "user",
+        "explicitly",
+        "incorrect",
+        "stop"
+      ],
+      "mistake_text": "user explicitly rejected action - said 'no', 'wrong', 'incorrect', 'stop', or 'don't'",
+      "title": "user explicitly rejected action - said 'no', 'wron...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_109": {
+      "keywords": [
+        "predefinedcredentialtype",
+        "instead",
+        "failed",
+        "headers",
+        "manual",
+        "authorization",
+        "used",
+        "authentication"
+      ],
+      "mistake_text": "authentication failed - used manual authorization headers instead of predefinedcredentialtype",
+      "title": "authentication failed - used manual authorization ...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_110": {
+      "keywords": [
+        "double",
+        "string",
+        "error",
+        "quotes",
+        "requires",
+        "parsing",
+        "wrapped",
+        "loads",
+        "json"
+      ],
+      "mistake_text": "json parsing error - json string wrapped in quotes, requires double json.loads()",
+      "title": "json parsing error - json string wrapped in quotes...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_111": {
+      "keywords": [
+        "instead",
+        "clarification",
+        "actually",
+        "said",
+        "user",
+        "required",
+        "meant"
+      ],
+      "mistake_text": "user clarification required - said 'actually', 'instead', 'should be', or 'meant to'",
+      "title": "user clarification required - said 'actually', 'in...",
+      "severity": "MEDIUM",
+      "prevention": "Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_112": {
+      "keywords": [
+        "providing",
+        "claimed",
+        "said",
+        "proof",
+        "know",
+        "without",
+        "work"
+      ],
+      "mistake_text": "claimed fix without providing proof - said 'should work now', 'try it', or 'let me know'",
+      "title": "claimed fix without providing proof - said 'should...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_113": {
+      "keywords": [
+        "dependencies",
+        "circular",
+        "import",
+        "error",
+        "missing",
+        "circ",
+        "modules",
+        "failures",
+        "dependency"
+      ],
+      "mistake_text": "dependency or import error - missing modules, circular dependencies, or import failures",
+      "title": "dependency or import error - missing modules, circ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_114": {
+      "keywords": [
+        "format",
+        "structure",
+        "workflow",
+        "issue",
+        "incorrect",
+        "missing",
+        "node"
+      ],
+      "mistake_text": "n8n workflow structure issue - missing node ids or incorrect workflow format",
+      "title": "n8n workflow structure issue - missing node ids or...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_115": {
+      "keywords": [
+        "execution",
+        "spaces",
+        "error",
+        "expression",
+        "expressions",
+        "syntax",
+        "break"
+      ],
+      "mistake_text": "n8n expression syntax error - spaces in expressions break execution",
+      "title": "n8n expression syntax error - spaces in expression...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_116": {
+      "keywords": [
+        "behavioral",
+        "pattern",
+        "detected"
+      ],
+      "mistake_text": "pattern detected: pattern behavioral",
+      "title": "pattern detected: pattern behavioral...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "agent": "Workspace Setup System",
+  "component_id": "INT-WS-001",
+  "agent_version": "6.0.0",
+  "governance_kernel": "6.0",
+  "rules_enforced": [
+    "R003",
+    "R001",
+    "R004"
+  ],
+  "snapshot_required": true,
+  "override_enabled": false,
+  "linter_verified": true,
+  "last_validated": "2025-10-28",
+  "escalation_path": "Roundtable",
+  "policy_anchor": "universal-kernel.md",
+  "roles_declared": [
+    "workspace_management"
+  ],
+  "layer": "intelligence",
+  "status": "active",
+  "tags": [
+    "workspace_setup",
+    "deployment",
+    "governance_enablement",
+    "cursor_integration"
+  ]
+}

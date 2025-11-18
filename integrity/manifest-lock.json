@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-10-06T17:22:56Z",
+  "roots": [
+    ".cursor",
+    "commands",
+    "pipeline",
+    "security",
+    "ops",
+    "intelligence"
+  ],
+  "excludes": [
+    "integrity"
+  ],
+  "files": [],
+  "notes": "Run integrity/system-check.sh --snapshot to build the initial manifest with hashes and base64 content."
+}
