@@ -1,0 +1,256 @@
+# ============================================================================
+# GMP TODO Schema — Machine-Readable Validation Contract
+# Version: 1.0.0
+# Updated: 2026-01-02
+# ============================================================================
+# 
+# PURPOSE:
+# - Validate TODO plans before GMP execution
+# - Enable CI/automation to check TODO structure
+# - Provide autocomplete hints for editors
+#
+# USAGE:
+# - CI can parse and validate TODO plans against this schema
+# - Editors can provide autocomplete for TODO fields
+# - Reports can be auto-generated from validated TODOs
+# ============================================================================
+
+schema_version: "1.0"
+schema_name: "gmp-todo"
+
+# =============================================================================
+# TODO ITEM SCHEMA
+# =============================================================================
+
+todo_item:
+  description: "A single TODO item in a GMP execution plan"
+  
+  required:
+    id:
+      type: string
+      pattern: "^T[0-9]+$"
+      description: "Unique identifier like T1, T2, T3"
+      example: "T1"
+    
+    file:
+      type: string
+      format: absolute_path
+      description: "Absolute path to file being modified"
+      example: "/Users/ib-mac/Projects/L9/core/agents/executor.py"
+    
+    lines:
+      type: string
+      pattern: "^[0-9]+-[0-9]+$"
+      description: "Line range in format 'start-end'"
+      example: "44-52"
+    
+    action:
+      type: enum
+      values:
+        - Replace    # Replace existing code
+        - Insert     # Insert new code
+        - Delete     # Delete existing code
+        - Wrap       # Wrap existing code with new code
+      description: "Type of modification"
+    
+    target:
+      type: string
+      description: "Symbol name (function, class, variable) being modified"
+      example: "execute_task()"
+    
+    change:
+      type: string
+      description: "Human-readable description of the change"
+      example: "Add timeout parameter with default of 30s"
+
+  optional:
+    gate:
+      type: string
+      enum:
+        - py_compile
+        - lint
+        - type-check
+        - tests
+        - none
+      default: "none"
+      description: "Validation gate that must pass after this TODO"
+    
+    imports:
+      type: list
+      items:
+        type: string
+      default: []
+      description: "Imports to add (empty list or NONE if no imports)"
+      example: ["from asyncio import timeout", "import httpx"]
+    
+    depends_on:
+      type: list
+      items:
+        type: string
+        pattern: "^T[0-9]+$"
+      default: []
+      description: "List of TODO IDs that must complete first"
+      example: ["T1", "T2"]
+    
+    rollback:
+      type: string
+      description: "How to undo this change if needed"
+      example: "Revert to original function signature"
+
+# =============================================================================
+# TODO PLAN SCHEMA
+# =============================================================================
+
+todo_plan:
+  description: "Complete TODO plan for a GMP execution"
+  
+  required:
+    gmp_id:
+      type: string
+      pattern: "^GMP-[0-9]+$"
+      description: "GMP identifier"
+      example: "GMP-25"
+    
+    title:
+      type: string
+      description: "Human-readable title"
+      example: "Add Rate Limiting to API Client"
+    
+    tier:
+      type: enum
+      values:
+        - KERNEL
+        - RUNTIME
+        - INFRA
+        - UX
+      description: "L9 tier classification"
+    
+    todos:
+      type: list
+      items:
+        ref: todo_item
+      min_items: 1
+      description: "List of TODO items"
+
+  optional:
+    source:
+      type: enum
+      values:
+        - user_prompt
+        - l_cto
+        - gmp_action_file
+      description: "Where this plan originated"
+    
+    priority:
+      type: enum
+      values:
+        - "🔴"  # Critical
+        - "🟠"  # High
+        - "🟡"  # Medium
+        - "🔵"  # Low
+      description: "Priority level"
+    
+    file_budget:
+      type: object
+      properties:
+        may_modify:
+          type: list
+          items:
+            type: string
+        may_not_modify:
+          type: list
+          items:
+            type: string
+      description: "Explicit file modification constraints"
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+
+validation_rules:
+  
+  no_ambiguous_language:
+    description: "TODO descriptions must not use ambiguous words"
+    forbidden_words:
+      - "maybe"
+      - "likely"
+      - "should"
+      - "consider"
+      - "possibly"
+      - "might"
+      - "could"
+      - "perhaps"
+    error: "TODO '{id}' contains ambiguous language: '{word}'"
+  
+  unique_ids:
+    description: "All TODO IDs must be unique within a plan"
+    error: "Duplicate TODO ID: '{id}'"
+  
+  valid_line_range:
+    description: "Line range start must be <= end"
+    error: "TODO '{id}' has invalid line range: {lines}"
+  
+  protected_files_explicit:
+    description: "Protected files must have explicit TODO entries"
+    protected_patterns:
+      - "core/kernels/kernel_loader.py"
+      - "core/agents/executor.py"
+      - "memory/substrate_service.py"
+      - "runtime/websocket_orchestrator.py"
+      - "docker-compose.yml"
+      - "kernels/**/*.yaml"
+    error: "Protected file '{file}' requires explicit TODO entry"
+  
+  dependency_order:
+    description: "depends_on references must exist and not be circular"
+    error: "TODO '{id}' depends on non-existent or circular reference: '{dep}'"
+
+# =============================================================================
+# EXAMPLE VALID TODO PLAN
+# =============================================================================
+
+example:
+  gmp_id: "GMP-##"
+  title: "Add Rate Limiting to API Client"
+  tier: "RUNTIME"
+  source: "user_prompt"
+  priority: "🟠"
+  file_budget:
+    may_modify:
+      - "/Users/ib-mac/Projects/L9/api/client.py"
+      - "/Users/ib-mac/Projects/L9/tests/api/test_client.py"
+    may_not_modify:
+      - "/Users/ib-mac/Projects/L9/core/kernels/**"
+      - "/Users/ib-mac/Projects/L9/docker-compose.yml"
+  todos:
+    - id: "T1"
+      file: "/Users/ib-mac/Projects/L9/api/client.py"
+      lines: "1-5"
+      action: "Insert"
+      target: "imports"
+      change: "Add rate limiter import"
+      imports:
+        - "from runtime.rate_limiter import RateLimiter"
+    
+    - id: "T2"
+      file: "/Users/ib-mac/Projects/L9/api/client.py"
+      lines: "44-52"
+      action: "Wrap"
+      target: "fetch_data()"
+      change: "Wrap with rate limiter decorator"
+      gate: "py_compile"
+      depends_on: ["T1"]
+    
+    - id: "T3"
+      file: "/Users/ib-mac/Projects/L9/tests/api/test_client.py"
+      lines: "100-100"
+      action: "Insert"
+      target: "test_rate_limiting"
+      change: "Add test for rate limiting behavior"
+      gate: "tests"
+      depends_on: ["T2"]
+
+
+
+
+

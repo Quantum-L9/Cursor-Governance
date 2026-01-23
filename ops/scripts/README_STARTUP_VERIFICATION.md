@@ -64,7 +64,7 @@ The `verify-startup-files.sh` script verifies that all 20 files required at sess
 3. `.suite6-config.json`
 
 ### Reasoning Profiles (3 files)
-4. `profiles/reasoning_n8n.md`
+4. `profiles/reasoning_L9.md`
 5. `profiles/reasoning_docs.md`
 6. `profiles/reasoning_technical_operations.md`
 

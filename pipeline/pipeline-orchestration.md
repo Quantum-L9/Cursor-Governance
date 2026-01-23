@@ -22,7 +22,7 @@ security_classification: "internal"
 # === TECHNICAL METADATA ===
 dependencies: []
 integrates_with: ["INT-ORC-001", "EXE-WF-001", "EXE-OP-001", "PIP-002", "PIP-003"]
-api_endpoints: ["n8n_api"]
+api_endpoints: ["l9_api"]
 data_sources: ["workflow_configs", "environment_variables"]
 outputs: ["deployment_logs", "rollback_plans", "verification_reports"]
 
@@ -33,8 +33,8 @@ logging_level: "info"
 performance_tier: "batch"
 
 # === BUSINESS METADATA ===
-purpose: "Direct the entire N8N workflow pipeline lifecycle from preparation through deployment, rollback, and verification"
-summary: "10X Governance Layer orchestrating complete N8N workflow pipeline lifecycle ensuring compliance with reasoning, security, and operational health rules"
+purpose: "Direct the entire L9 orchestration pipeline lifecycle from preparation through deployment, rollback, and verification"
+summary: "10X Governance Layer orchestrating complete L9 orchestration pipeline lifecycle ensuring compliance with reasoning, security, and operational health rules"
 business_value: "Ensures reliable workflow deployment with automatic rollback and compliance verification"
 success_metrics: ["deployment_success_rate >= 0.95", "rollback_success_rate >= 0.99", "compliance_rate >= 1.0"]
 
@@ -43,8 +43,8 @@ suite_2_origin: "pipeline-orchestration.md v1.0.0"
 migration_notes: "Enhanced with Suite 6 structure and comprehensive pipeline orchestration capabilities"
 
 # === TAGS & CLASSIFICATION ===
-tags: ["pipeline", "orchestration", "deployment", "n8n", "governance"]
-keywords: ["pipeline", "orchestration", "deployment", "n8n", "workflow", "rollback"]
+tags: ["pipeline", "orchestration", "deployment", "l9", "governance"]
+keywords: ["pipeline", "orchestration", "deployment", "l9", "workflow", "rollback"]
 related_components: ["INT-ORC-001", "EXE-WF-001", "EXE-OP-001", "PIP-002", "PIP-003"]
 startup_required: false
 mode_type: "pipeline"
@@ -53,7 +53,7 @@ mode_type: "pipeline"
 # Pipeline Orchestration — 10X Governance Layer
 
 ## Objective
-Directs the entire N8N workflow pipeline lifecycle from preparation through deployment, rollback, and verification. Ensures compliance with reasoning, security, and operational health rules.
+Directs the entire L9 orchestration pipeline lifecycle from preparation through deployment, rollback, and verification. Ensures compliance with reasoning, security, and operational health rules.
 
 ## Governance Links
 - Orchestrator: .cursor/profiles/orchestrator.md
@@ -65,7 +65,7 @@ Directs the entire N8N workflow pipeline lifecycle from preparation through depl
 1. **Initialize**: Load environment and verify required variables.
 2. **Preflight**: Execute pre-deploy checks via `preflight-check` command.
 3. **Validation**: Trigger `pipeline_validate.md` to verify version, credentials, and node structure.
-4. **Deployment**: Push workflow through N8N CLI or API endpoint.
+4. **Deployment**: Push workflow through L9 API endpoint.
 5. **Verification**: Confirm all nodes online; call `monitoring-layer.md` post-deploy check.
 6. **Rollback (if necessary)**: Revert to last stable version and log action.
 

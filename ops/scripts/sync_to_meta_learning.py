@@ -129,6 +129,23 @@ class MetaLearningSyncer:
         # Append to meta-learning log
         self._append_to_meta_learning_log(entries)
         
+        # Log to learning audit logger (lessons go to learning/ folder, not intelligence/)
+        try:
+            import sys
+            sys.path.insert(0, str(Path(__file__).parent))
+            from intelligence_audit_logger import LearningAuditLogger
+            audit_logger = LearningAuditLogger()
+            for learning in new_learnings:
+                audit_logger.log_lesson_addition(
+                    lesson_type=learning.get('type', 'unknown'),
+                    content=learning.get('content', ''),
+                    source_file=f"ops/logs/memory_index.json",
+                    source_type='extracted',
+                    metadata={'hash': learning.get('hash'), 'context': learning.get('context')}
+                )
+        except Exception as e:
+            print(f"⚠️  Audit logging failed (non-critical): {e}")
+        
         # Mark as synced
         for learning in new_learnings:
             self.synced_hashes.add(learning['hash'])

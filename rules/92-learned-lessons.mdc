@@ -1,0 +1,513 @@
+---
+description: "Critical lessons learned from repeated mistakes. These rules prevent known failure patterns."
+alwaysApply: true
+---
+
+# Learned Lessons — Critical Prevention Rules
+
+These are **hard-won lessons** from repeated mistakes. Violating these wastes hours.
+
+> **Source of Truth:** `.cursor-commands/learning/failures/repeated-mistakes.md`
+> This file is the condensed always-applied enforcement layer.
+
+---
+
+## 🚨 ULTRA-CRITICAL: Path Rules
+
+### GlobalCommands Location — DROPBOX NOT LIBRARY
+
+```bash
+# ❌❌❌ WRONG — NEVER USE ❌❌❌
+/Users/ib-mac/Library/Application Support/Cursor/GlobalCommands
+
+# ✅✅✅ CORRECT — ALWAYS USE ✅✅✅
+$HOME/Dropbox/Cursor Governance/GlobalCommands
+```
+
+**Rule:** The governance folder is in Dropbox, NOT Library. Period. No exceptions.
+
+### Use $HOME, Never Hardcoded Paths
+
+- **NEVER** use `/Users/ib-mac/` in scripts, configs, or LaunchAgents
+- **ALWAYS** use `$HOME` for user-specific paths
+- For Python: `Path.home()` or `os.path.expanduser("~")`
+- For bash: `$HOME`
+
+### Docker Compose — ROOT File Only
+
+```bash
+# ❌ WRONG
+docker-compose -f docs/docker-compose.yaml up -d  # Broken relative paths!
+
+# ✅ CORRECT
+cd /Users/ib-mac/Projects/L9 && docker-compose up -d  # Uses ROOT docker-compose.yml
+```
+
+**Rule:** Always use ROOT `docker-compose.yml` (gitignored but present). The docs version is reference only.
+
+---
+
+## 🔴 CRITICAL: Execution Rules
+
+### Surgical Edits Only
+
+When modifying existing files:
+
+1. **NEVER rewrite/recreate entire files** — use search_replace for targeted edits
+2. **Add imports surgically** at file tops with minimal context
+3. **Add routes/registrations** with minimal surrounding context
+4. **Preserve existing formatting** and style
+
+If a file needs more than ~10 surgical edits, ask before proceeding.
+
+**Exception:** New files that don't exist yet can be created with write tool.
+
+### Run Commands, Don't Show Them
+
+- **ALWAYS** run commands proactively and display actual results
+- **NEVER** just show the command to run unless explicitly asked
+- Be proactive, not reactive. Display data, not commands.
+- File contents → read and display, don't say "run cat file.txt"
+- Script outputs → run the script, show results
+- **ASK** "Would you like me to run this?" only for destructive operations
+
+### Ask Strategic Questions First
+
+- **NEVER** build first, ask questions later
+- **ALWAYS** ask clarifying questions BEFORE building
+- 5-10 minutes of strategic questioning saves 4-8 hours of rework
+
+**Critical Pre-Build Questions:**
+- Q1: "What does success look like when this is done?"
+- Q5: "Are placeholders acceptable or prohibited?"
+- Q7: "What data do we have access to?"
+- Q14: "Should this have confidence scores? If yes, how calculated?"
+
+**User Wisdom:** "The user always asks your opinion and expects you to suggest things they haven't thought of yet. ASK MORE EXCELLENT QUESTIONS."
+
+---
+
+## 🔴 CRITICAL: Verification Rules
+
+### Never Claim Fixed Without Proof
+
+- **ALWAYS** provide evidence before claiming success
+- Show command outputs or file contents as proof
+- Run tests and show results
+- Never say "fixed" without demonstrating it works
+- **ALWAYS make filenames clickable links** — format as `path/to/file.py` so user can click to open directly
+- Never make user hunt through folder tree to find the file
+
+### Search Before Creating
+
+- **ALWAYS** search existing solutions first
+- Adapt existing work rather than recreate
+- Check if similar code/scripts already exist
+
+---
+
+## 🔴 CRITICAL: Data Integrity
+
+### Never Fabricate Data
+
+- **NEVER** make up phone numbers, emails, addresses, or any data
+- Leave fields blank if no real data exists
+- Confirm what data you actually have access to
+- Fabrication breaks user trust
+
+---
+
+## 🔴 CRITICAL: Intent Understanding
+
+### "Display" Means Symlink, Not Documentation
+
+When user says "display X in sidebar/left margin":
+- ❌ DON'T create documentation about X
+- ✅ DO create a symlink to make folder visible in IDE
+
+**Rule:** Listen to INTENT — when user wants to SEE/BROWSE files, they want folder access, not docs.
+
+### MCP Tool Selection
+
+Before using ANY MCP tool:
+1. List all tools in that MCP server
+2. Understand what each does
+3. Choose the BEST tool for the specific task, not just the first one that works
+
+**Example:** `firecrawl_extract` (structured JSON) is often better than `firecrawl_scrape` (markdown).
+
+### "Show Me" Means File Link, Not Inline Content
+
+When user says "show me" a file:
+- ❌ DON'T regenerate or display file contents inline in chat
+- ✅ DO provide a clickable file path link (e.g., `path/to/file.yaml`)
+
+**Rule:** "Show me" = clickable link. Saves tokens, lets user navigate directly in IDE.
+
+---
+
+## 🔴 CRITICAL: Communication
+
+### Good Communication = Efficiency
+
+- Asking questions upfront is FASTER than fixing mistakes later
+- Build wrong thing correctly = wastes more time than building right thing slowly
+- Quality questions prevent rework cycles
+
+**Benefits:**
+- ✅ User feels heard and appreciated
+- ✅ Gets to production faster (less rework)
+- ✅ Creates better solutions (uncovers hidden requirements)
+- ✅ Builds trust and credibility
+
+---
+
+## Pre-Execution Checklist
+
+Before ANY execution task:
+
+1. ✅ Paths use `$HOME` not hardcoded usernames
+2. ✅ Docker commands use ROOT `docker-compose.yml`
+3. ✅ File edits are surgical (search_replace, not rewrite)
+4. ✅ Existing solutions searched first
+5. ✅ Evidence ready before claiming success
+6. ✅ No data fabrication
+7. ✅ Intent understood (display = symlink, not docs)
+8. ✅ Strategic questions asked before complex builds
+
+---
+
+## Reference
+
+- **Full lesson database:** `.cursor-commands/learning/failures/repeated-mistakes.md`
+- **Meta-insights:** `.cursor-commands/learning/failures/reasoning_insights.md`
+
+When user says "show me" a file:
+- ❌ DON'T regenerate or display file contents inline in chat
+- ✅ DO provide a clickable file path link (e.g., `path/to/file.yaml`)
+
+**Rule:** "Show me" = clickable link. Saves tokens, lets user navigate directly in IDE.
+
+---
+
+## 🚨 ULTRA-CRITICAL: File Operations
+
+### NEVER Move, Rename, or Relocate Files Without Permission
+
+- **NEVER** move files from one location to another unless explicitly asked
+- **NEVER** rename files unless explicitly asked
+- **NEVER** reorganize directory structures without permission
+- **NEVER** "clean up" or "fix" file locations you think are wrong
+- If files appear to be in a "wrong" location, **ASK** before moving them
+
+**Rule:** User organizes their own files. Agent copies/creates where instructed. Agent does NOT relocate.
+
+### Copy Means Copy, Not Move
+
+When user says "copy files to X":
+- ✅ DO copy to destination X
+- ❌ DON'T move files afterward
+- ❌ DON'T reorganize after copying
+- ❌ DON'T question the user's folder structure
+
+**Lesson:** 2026-01-04 — Moved files from `igor/audit-tools/Current Config/` without permission. User had intentionally created that subdirectory.
+
+---
+
+## 🔴 CRITICAL: Never Undo User Deletions
+
+### If User Deletes Content, It's Intentional
+
+When the user deletes content (shown in attached_files diff):
+- ❌ **NEVER** re-add the deleted content
+- ❌ **NEVER** assume it was accidental
+- ❌ **NEVER** "restore" what was removed
+- ✅ **DO** treat deletion as intentional
+- ✅ **DO** ask if unclear whether deletion was intentional
+
+**Rule:** User deletions are intentional. Agent does NOT restore.
+
+**Lesson:** 2026-01-14 — User removed Future GMPs section from TODO.md. Agent attempted to re-add it. User had intentionally removed it.
+
+---
+
+## 🟢 POSITIVE PATTERNS: What Works Well
+
+### Recognize Successful Solution Signals
+
+When user says:
+- "that worked"
+- "perfect"
+- "great"
+- "exactly"
+- "✅"
+
+**This means:** The approach was correct. Note the pattern for reuse.
+
+### Solutions With Proof Get Trust
+
+When providing solutions:
+- ✅ Show exit codes
+- ✅ Show test results
+- ✅ Show verification output
+- ✅ Provide clickable file links
+
+**Rule:** Proof builds trust. "It should work" loses trust. Evidence wins.
+
+### Reusable Solution Patterns (40+ occurrences)
+
+These approaches consistently succeed:
+1. **Run commands proactively** — Don't tell user to run, just run and show results
+2. **Provide clickable paths** — `path/to/file.py` not "the file in the folder"
+3. **Ask clarifying questions BEFORE building** — 5 min questions saves 4 hrs rework
+4. **Search existing solutions first** — Adapt, don't recreate
+5. **Show evidence before claiming success** — Exit codes, test output, file contents
+
+---
+
+## 🔴 CRITICAL: Recognize Repeat-Mistake Signals
+
+### When User Shows Frustration About Repetition
+
+If user says any of these:
+- "I told you"
+- "again"
+- "still happening"
+- "we already discussed this"
+- "how many times"
+
+**STOP immediately and:**
+1. Apologize for the repetition
+2. Search `repeated-mistakes.md` for the pattern
+3. Ask: "What's the correct approach here?"
+4. Do NOT proceed until clarified
+
+**Rule:** These phrases = you're repeating a known mistake. Don't defend, don't proceed. Stop and correct.
+
+**Lesson:** 2026-01-19 — Extracted from 43 user correction patterns spanning Oct 2025 - Jan 2026.
+
+---
+
+## 🔴 CRITICAL: No Silent Placeholders
+
+### Never Add Placeholders Without Explicit Disclosure
+
+- **NEVER** add placeholder/aspirational items to configs, policies, or code without telling user
+- **NEVER** assume "we might need this later" justifies silent addition
+- **ALWAYS** explicitly state: "I'm adding X as a placeholder because [coding reason]"
+- **ONLY** add placeholders if there's a **justifiable coding reason** (e.g., interface completeness, test stub)
+
+**Before adding any placeholder:**
+1. Ask yourself: "Does this thing actually exist in the codebase?"
+2. If NO: Don't add it, OR explicitly tell user and get approval
+
+**Examples of violations:**
+- Adding `database_write` tool to policy when no such tool exists
+- Adding `future_feature_flag` to config without user request
+- Including "TODO: implement later" items without disclosure
+
+**Rule:** Real items only. Placeholders require explicit disclosure + justification.
+
+**Lesson:** 2026-01-19 — Added `database_write` and `database_migrate` to high_risk_tools.yaml as "aspirational" tools. User caught it. These tools don't exist.
+
+---
+
+## 🔴 CRITICAL: Memory Client Architecture
+
+### cursor_memory_client.py is a NETWORK CLIENT ONLY
+
+- **NO local-only fallback mode** — requires server to be running
+- **MCP server** = primary connection
+- **HTTP API** = fallback if MCP fails
+- If BOTH are down → ALL operations FAIL
+
+**When you see 404 errors:**
+- ❌ Does NOT mean "works locally"
+- ✅ Means the endpoint FAILED
+- ✅ The operation did NOT succeed
+
+**Never say:**
+- ❌ "commands still work for local operations"
+- ❌ "the client still runs locally"
+
+**Always say:**
+- ✅ "memory server unavailable, operation failed"
+- ✅ "will retry when server is up"
+
+**Lesson:** 2026-01-19 — Incorrectly claimed memory operations "still work for local operations" after seeing 404. User corrected: there IS no local mode.
+
+---
+
+## 🚨 ULTRA-CRITICAL: Folder/File Deletion Rules
+
+### NEVER Delete Folders Without Explicit User Approval
+
+- **NEVER** delete entire folders with `rm -rf` or similar without **explicit user approval**
+- **NEVER** assume a folder is "orphaned" or "duplicate" and delete it
+- **"Nothing imports it"** is NOT sufficient justification for deletion
+- Orphaned code may be: in-progress work, alternative implementation, intentionally preserved, future work
+
+**Before ANY folder deletion:**
+1. **STOP** — Do not execute `rm -rf` or folder deletion
+2. **SHOW** — List the folder contents, line counts, and purpose
+3. **EXPLAIN** — State why you believe it should be deleted
+4. **ASK** — "Do I have your explicit approval to delete this folder?"
+5. **WAIT** — Only proceed after receiving explicit "yes, delete it" or equivalent
+
+**Approval phrases that authorize deletion:**
+- "yes, delete it"
+- "approved, remove the folder"
+- "go ahead and delete"
+- User explicitly types the `rm` command themselves
+
+**Non-approval phrases (DO NOT proceed):**
+- Silence
+- "let me check"
+- "maybe"
+- General conversation about cleanup
+
+**Examples of violation:**
+- ❌ "Nothing imports `core/symbolic_computation/`, so I deleted it" → WRONG
+- ❌ "This looks like a duplicate of services/, removing it" → WRONG
+- ❌ "Cleaning up orphaned code" without asking → WRONG
+
+**Rule:** User owns the codebase. Agent does NOT delete folders without explicit approval. Period.
+
+**Lesson:** 2026-01-20 — Deleted `core/symbolic_computation/` (8 files, ~1,200 lines) because "nothing imports it." User corrected: that's not sufficient justification. Code may be valuable even if not currently imported. Folder restored from git.
+
+---
+
+## 🟢 Python Version: VPS runs Python 3.12
+
+### Modern Union Syntax (`|`) is PREFERRED
+
+**VPS runs Python 3.12.** The modern `|` syntax is fully supported and preferred.
+
+```python
+# ✅✅✅ PREFERRED — Modern, clean syntax ✅✅✅
+def foo(x: str | None = None) -> dict | None:
+    ...
+
+# ✅ ALSO VALID — Older style, still works
+from typing import Optional
+def foo(x: Optional[str] = None) -> Optional[dict]:
+    ...
+```
+
+**Rule:** Use modern `str | None` syntax. It's cleaner and VPS supports it.
+
+**Historical note:** Prior to 2026-01-21, this rule incorrectly stated VPS ran Python 3.9, leading to unnecessary conversions from `|` to `Union[]`. That was outdated information — VPS has been Python 3.12.
+
+---
+
+## 🔴 CRITICAL: No Union Type Aliases for Protocol Groups
+
+### Union[Protocol1, Protocol2] is USELESS for Protocols
+
+**NEVER create "protocol group" type aliases:**
+
+```python
+# ❌❌❌ WRONG — Semantically useless ❌❌❌
+MemoryProtocols = Union[CacheClient, GraphClient, VectorStore, MemoryRepository]
+KernelProtocols = Union[KernelValidator, KernelDiscovery, IntegrityVerifier]
+```
+
+**Why it's wrong:**
+- `Union[A, B, C]` means "accepts any ONE of these" — never useful for protocols
+- You ALWAYS want a **specific** protocol, not "any from this family"
+- No function would ever accept "either a CacheClient OR a GraphClient" — nonsensical
+- They serve NO typing purpose — just "documentation groupings"
+- They pollute `__all__` and confuse LLMs who copy the pattern
+
+**Correct approach:**
+```python
+# ✅✅✅ CORRECT — Just export individual protocols ✅✅✅
+__all__ = [
+    "CacheClient",
+    "GraphClient", 
+    "VectorStore",
+    "MemoryRepository",
+]
+# NO Union type alias needed
+```
+
+**Rule:** Individual protocols in `__all__`. NO Union "grouping" aliases. DELETE them if found.
+
+**Lesson:** 2026-01-20 — Removed `MemoryProtocols`, `KernelProtocols`, `AgentProtocols`, `ObservabilityProtocols` union aliases from `core/abstractions/*.py`. They served no typing purpose.
+
+---
+
+## 🚨 ULTRA-CRITICAL: No Destructive API Calls Without Approval
+
+### Server Rebuild = DESTRUCTIVE
+
+**Effective: 2026-01-21**
+
+NEVER execute these without explicit user approval:
+- `POST /servers/{id}/actions/rebuild` — Wipes server entirely
+- `DELETE /servers/{id}` — Destroys server
+- Any Hetzner/cloud API that modifies infrastructure state
+
+**Before ANY infrastructure modification:**
+1. **PROPOSE** — "I recommend rebuilding C1 to fix SSH. This will wipe and reinstall Ubuntu 24.04."
+2. **WAIT** — Do not proceed until user says "yes" or "approved"
+3. **EXECUTE** — Only after explicit approval
+
+**Approval phrases that authorize destructive ops:**
+- "yes, rebuild it"
+- "approved"
+- "go ahead"
+- User explicitly runs the command themselves
+
+**Lesson:** 2026-01-21 — Rebuilt C1 server via Hetzner API without asking. User had not approved. This was a critical governance violation.
+
+
+---
+
+## 🔴 CRITICAL: Search Before Create
+
+### Check Existing Code Before Creating New Files
+
+**Effective: 2026-01-21**
+
+Before creating ANY new file that implements functionality:
+
+1. **SEARCH** — Check if similar functionality already exists
+2. **ASK** — "Should I integrate into existing [file] or create new?"
+3. **INTEGRATE** — Prefer updating existing code over creating duplicates
+
+**Anti-pattern detected:**
+- PR #30 created `memory/deduplication.py` (new DeduplicationEngine)
+- BUT `memory/consolidation.py` already has `_run_deduplication()` method
+- Result: Duplicate implementations, integration work needed
+
+**Correct approach:**
+```python
+# memory/consolidation.py — UPDATE EXISTING
+from memory.deduplication import DeduplicationEngine
+
+async def _run_deduplication(self, batch_size, sleep_ms):
+    engine = DeduplicationEngine(...)  # Use new engine
+    return await engine.deduplicate_packets(...)
+```
+
+**Rule:** INTEGRATE into existing code. Do NOT create parallel implementations.
+
+**Lesson:** 2026-01-21 — PR #30 created separate deduplication.py instead of enhancing consolidation.py's existing `_run_deduplication()`. Required post-merge integration work.
+
+---
+
+## 🟢 L9 Terminology: "Factory" is Accepted
+
+### Factory = Function That Creates Configured Instances
+
+**Confirmed: 2026-01-21**
+
+In L9 codebase, "factory" is an accepted technical term:
+- `create_redis_client()` — factory function
+- `create_memory_substrate_service()` — factory function
+- `get_tool_registry()` — factory/singleton creator
+
+**Usage:** Functions that create and configure service instances.
+
+**Location:** `config/di_config.py` contains canonical factory functions.

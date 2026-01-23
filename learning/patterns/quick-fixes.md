@@ -80,23 +80,23 @@ if isinstance(content, str) and content.startswith('"'):
 }
 ```
 
-### **Missing Node IDs in n8n**
-**Problem:** Workflow import fails due to missing IDs
-**Quick Fix:** Add `"id": "nodeName"` to nodes
+### **Missing Node IDs in YAML Specs**
+**Problem:** YAML spec import fails due to missing IDs
+**Quick Fix:** Add `id:` field to all nodes/specs
 **Time:** 30 seconds per node
 
 ### **Expression Syntax Errors**
-**Problem:** Spaces in expressions break n8n
+**Problem:** Spaces in Jinja/template expressions break parsing
 **Quick Fix:** Remove spaces
 **Time:** 1 second
-**Before:** `{{ $vars.KEY }}`
-**After:** `{{$vars.KEY}}`
+**Before:** `{{ vars.KEY }}`
+**After:** `{{vars.KEY}}`
 
-### **Wrong n8n URL**
-**Problem:** Using wrong instance URL
-**Quick Fix:** Check Configuration/.env
+### **Wrong L9 API URL**
+**Problem:** Using wrong instance URL (localhost vs production)
+**Quick Fix:** Check .env or environment variables
 **Time:** 10 seconds
-**Command:** `grep "N8N_BASE_URL" Configuration/.env`
+**Command:** `grep "L9_BASE_URL" .env`
 
 ### **User Wants Folder Access**
 **Problem:** User says "display folder in sidebar/left margin"
@@ -118,17 +118,18 @@ if isinstance(content, str) and content.startswith('"'):
 
 ### **Quick Diagnostic Commands:**
 ```bash
-# Check JSON format
+# Check JSON/YAML format
 file yourfile.json
+python -c "import yaml; yaml.safe_load(open('yourfile.yaml'))"
 
-# Check n8n credentials
-grep "N8N_" Configuration/.env
+# Check L9 credentials
+grep "L9_\|OPENAI_\|ANTHROPIC_" .env
 
-# Validate workflow
-bash scripts/validate-n8n-headers.sh workflow.json
+# Validate YAML spec
+python -m codegen_agent.pipeline_validator yourspec.yaml
 ```
 
 ---
 
-**Last Updated:** 2025-11-18T00:00:00Z  
+**Last Updated:** 2026-01-22T00:00:00Z  
 **Success Rate:** 95% when applied correctly

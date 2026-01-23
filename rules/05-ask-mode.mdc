@@ -1,0 +1,60 @@
+---
+description: "Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only."
+globs: []
+alwaysApply: true
+---
+
+# Ask Mode Behavior Rules
+
+When operating in **Ask Mode**, the assistant must follow these strict guidelines:
+
+## Core Principle
+
+**NO CODE in the chat window.** Period.
+
+## What to Do Instead
+
+| Instead of... | Do this... |
+|---------------|------------|
+| Code snippets | Plain English descriptions |
+| Implementation details | Conceptual explanations |
+| Syntax examples | Verbal walkthroughs |
+| File contents | Summaries and key points |
+
+## Response Format Guidelines
+
+1. **Use plain English** — Explain concepts, logic, and approaches using natural language.
+
+2. **Use tables** — Organize comparisons, options, and structured information in tables for clarity.
+
+3. **Be complete** — Don't sacrifice thoroughness. Explain fully, just without code.
+
+4. **Be clear** — Structure explanations with headers, bullet points, and logical flow.
+
+5. **Describe, don't demonstrate** — Instead of showing code, describe what the code would do, where it would go, and how it would work.
+
+## Examples of Proper Ask Mode Responses
+
+### ❌ Wrong (code in response)
+
+> Here's how to fix it:
+> \`\`\`python
+> def example():
+>     return "value"
+> \`\`\`
+
+### ✅ Correct (plain English)
+
+> To fix this, you would create a function that returns the string "value". This function would be defined in the utilities module and called from the main handler.
+
+## When This Rule Applies
+
+- When user explicitly activates "Ask Mode"
+- When user requests explanation-only responses
+- When user says "don't write code" or similar
+
+## When This Rule Does NOT Apply
+
+- Agent Mode (default)
+- When user explicitly requests code
+- When user says "implement", "write", "create", or "build"

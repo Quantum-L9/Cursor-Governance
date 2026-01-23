@@ -1,0 +1,231 @@
+---
+description: "Slash command recognition and execution for L9 governance protocols"
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Slash Command Recognition
+
+When the user types a message starting with `/` followed by a command name, this is a **slash command** that triggers a governance protocol.
+
+## Recognition Pattern
+
+If user message matches: `/commandname` or `/command-name` or `/command_name`
+
+Then:
+1. Read the corresponding file: `.cursor-commands/commands/{commandname}.md`
+2. Execute the protocol defined in that file
+3. Follow all steps, phases, and output formats specified
+
+## Available Slash Commands
+
+| Command | File | Description |
+|---------|------|-------------|
+| `/ynp` | `commands/ynp.md` | Yes No Proceed - decision framework |
+| `/gmp` | `commands/gmp.md` | Governance Managed Process - phased execution |
+| `/lcto` | `commands/lcto.md` | L CTO mode - strategic technical decisions |
+| `/forge` | `commands/forge.md` | Forge mode - rapid multi-GMP execution |
+| `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
+| `/analyze` | `commands/analyze.md` | Codebase analysis |
+| `/evaluate` | `commands/evaluate.md` | Code quality evaluation |
+| `/analyze+evaluate` or `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
+| `/plan` | `commands/plan.md` | Create execution plan |
+| `/spec` | `commands/spec.md` | Generate specification |
+| `/wire` | `commands/wire.md` | Wire/integrate components |
+| `/confirm-wiring` | `commands/confirm-wiring.md` | Integration audit - verify fully wired |
+| `/consolidate` | `commands/consolidate.md` | Consolidate code/files |
+| `/refactor-sweep` | `commands/refactor-sweep.md` | Systematic refactoring |
+| `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
+| `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
+| `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
+| `/harvest` | `commands/harvest.md` | Harvest insights from conversation |
+| `/governance` | `commands/governance.md` | Governance check and enforcement |
+| `/rules` | `commands/rules.md` | List and manage rules |
+| `/mem` | `commands/mem.md` | Memory-aware execution: READ → EXECUTE with SEARCH → WRITE |
+| `/violation` | `commands/violation.md` | Report governance violation |
+| `/ci` | `commands/ci.md` | CI/CD pipeline operations |
+| `/pipeline_kickstart` | `commands/pipeline_kickstart.md` | Start pipeline from scratch |
+| `/pipeline_precommit` | `commands/pipeline_precommit.md` | Pre-commit checks |
+| `/pipeline_midstream` | `commands/pipeline_midstream.md` | Mid-pipeline operations |
+| `/init` | `commands/initialize-new-workspace.md` | Initialize new workspace |
+| `/index` | `commands/index.md` | Export repo indexes + load to Neo4j graph |
+| `/start-session` | `commands/start-session.md` | Cursor session startup - load governance, workflow state |
+| `/end-session` | `commands/end-session.md` | Close session - save context, create handoff |
+
+## Execution Protocol
+
+When a slash command is detected:
+
+1. **Read the command file** from `.cursor-commands/commands/`
+2. **Parse the YAML header** for metadata (auto_chain, before_chain, governance_level, etc.)
+3. **INJECT MEMORY CONTEXT** — Search VPS memory for preferences, lessons, context
+4. **Execute the protocol** following all steps in the markdown body
+5. **Produce the specified output format** as defined in the command file
+6. **Run before_chain** if specified (typically `/extract-chat` for VPS memory capture)
+7. **Auto-chain** to the next command if `auto_chain` is specified in metadata
+
+## 🔒 LOCKED: Execution Flow (v1.0)
+
+**All significant commands follow this LOCKED execution flow:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE: READ                                                            │
+│  ───────────                                                            │
+│  Inject preferences and context from L9 memory via MCP server          │
+│                                                                         │
+│  python3 cursor_memory_client.py search "preferences [command]"         │
+│  python3 cursor_memory_client.py search "Igor [domain] patterns"         │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE: SEARCH                                                          │
+│  ─────────────                                                          │
+│  Search for information relevant to the specific task                   │
+│                                                                         │
+│  python3 cursor_memory_client.py search "[task keywords]"               │
+│  python3 cursor_memory_client.py search "lessons errors [component]"    │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 0: PLAN                                                          │
+│  ─────────────                                                          │
+│  Lock TODO plan before any execution                                    │
+│                                                                         │
+│  • Define scope boundaries                                              │
+│  • List files to modify with line ranges                                │
+│  • Specify actions (Insert/Replace/Delete/Wrap)                         │
+│  • No "maybe", "likely", "should"                                       │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE 1-6: EXECUTE (with continuous SEARCH)                            │
+│  ───────────────────────────────────────────                            │
+│  Execute TODO plan with SEARCH before major decisions                   │
+│                                                                         │
+│  Phase 1: Baseline Confirmation                                         │
+│  Phase 2: Implementation                                                │
+│  Phase 3: Enforcement                                                   │
+│  Phase 4: Validation                                                    │
+│  Phase 5: Recursive Verification                                        │
+│  Phase 6: Final Audit + Report                                          │
+│                                                                         │
+│  → SEARCH when uncertain                                                │
+│  → SEARCH before destructive operations                                 │
+│  → SEARCH when encountering errors                                      │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│  PHASE: WRITE                                                           │
+│  ────────────                                                           │
+│  Extract learnings to L9 memory via MCP server (/extract-chat)        │
+│                                                                         │
+│  • Lessons learned                                                      │
+│  • Insights discovered                                                  │
+│  • Error patterns and fixes                                             │
+│  • New preferences detected                                             │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│  CHAIN: /ynp (or /gmp)                                                  │
+│  ─────────────────────                                                  │
+│  Recommend next action                                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Compact Form
+
+```
+READ → SEARCH → PLAN (Phase 0) → EXECUTE (Phase 1-6 with SEARCH) → WRITE
+```
+
+## Memory Injection Protocol
+
+**BEFORE executing any command**, search L9 memory via MCP server:
+
+```bash
+# 1. Preferences and patterns for this command type (via MCP search_memory tool)
+python3 agents/cursor/cursor_memory_client.py search "preferences [command_name]"
+
+# 2. Lessons and errors relevant to task (via MCP search_memory tool)
+python3 agents/cursor/cursor_memory_client.py search "lessons errors [task_keywords]"
+
+# 3. Context-specific knowledge (via MCP search_memory tool)
+python3 agents/cursor/cursor_memory_client.py search "[domain] [component] patterns"
+```
+
+**Note:** All searches use MCP server (PRIMARY). Client falls back to HTTP only if MCP unreachable.
+
+### Injection Output Format
+
+```
+## 🧠 MEMORY CONTEXT INJECTED
+
+### Preferences
+- [preference 1]
+- [preference 2]
+
+### Relevant Lessons
+- [lesson 1]
+- [lesson 2]
+
+### Context
+- [context item]
+
+📍 Proceeding with command execution...
+```
+
+## Commands with Full Memory Loop
+
+| Command | Memory Inject | Execute | Extract | Chain |
+|---------|---------------|---------|---------|-------|
+| `/gmp` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/forge` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/analyze` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/evaluate` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/wire` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/confirm-wiring` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/spec` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/consolidate` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/harvest` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/governance` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/reasoning` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/refactor-sweep` | ✅ | ✅ | `/extract-chat` | `/gmp` |
+| `/mem` | ✅ | ✅ (with SEARCH) | `/extract-chat` | `/ynp` |
+
+## What Gets Injected (READ)
+
+- **Preferences:** Igor's coding style, formatting rules, tool choices
+- **Lessons:** Past mistakes to avoid, patterns that worked
+- **Context:** Architecture decisions, prior work on related components
+- **Constraints:** Protected files, governance rules from memory
+
+## What Gets Extracted (WRITE)
+
+- **Lessons:** Mistakes, corrections, patterns discovered
+- **Insights:** Strategic decisions, architecture choices
+- **Preferences:** User corrections, new coding style preferences
+- **Errors:** Error patterns and their fixes
+
+## Example
+
+User types: `/gmp`
+
+Agent action:
+1. Read `.cursor-commands/commands/gmp.md`
+2. Execute GMP protocol (Phase 0 → Phase 6)
+3. Produce GMP report in specified format
+4. Chain to `/ynp` if auto_chain specified
+
+## Variations
+
+Commands may be typed with variations:
+- `/analyze+evaluate` → `commands/analyze_evaluate.md`
+- `/analyze-evaluate` → `commands/analyze_evaluate.md`
+- `/analyzeEvaluate` → `commands/analyze_evaluate.md`
+
+Normalize to underscore format for file lookup.
+
+## CRITICAL: Always Read the File
+
+**NEVER** execute a slash command from memory. **ALWAYS** read the actual command file to ensure you have the current protocol version.

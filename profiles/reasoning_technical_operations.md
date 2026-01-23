@@ -240,7 +240,7 @@ Use relevant protocols:
 
 1. **List**: Show all tools in that MCP server
    - Command: Check tool registry or documentation
-   - Example: List all firecrawl tools, all n8n-mcp tools, etc.
+   - Example: List all firecrawl tools, all L9-mcp tools, etc.
 
 2. **Compare**: Create quick comparison matrix
    - What does each tool do?
@@ -261,7 +261,7 @@ Use relevant protocols:
 
 **Example:**
 ```
-Task: Extract structured data from n8n docs
+Task: Extract structured data from L9 docs
 
 Step 1 - List:
 - firecrawl_scrape (HTML → markdown)
@@ -287,7 +287,7 @@ Step 4 - Validate:
 ✅ Fits data pipeline requirements
 
 Step 5 - Execute:
-Using firecrawl_extract with custom schema for n8n node documentation
+Using firecrawl_extract with custom schema for L9 node documentation
 ```
 
 ### 🌐 API Integration Protocol
@@ -325,7 +325,7 @@ Cursor gives you context — use it. Don't just think in abstract. Think in code
 This profile integrates with:
 - `orchestrator.md` — for task delegation and execution order
 - `reasoning_docs.md` — for strategic document analysis
-- `reasoning_n8n.md` — for n8n-specific operations
+- `reasoning_L9.md` — for L9-specific operations
 - `operational-health.md` — for system health monitoring
 - `workflow-governance.md` — for workflow validation
 

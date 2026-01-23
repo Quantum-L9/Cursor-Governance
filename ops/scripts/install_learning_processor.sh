@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Version: 1.0.0
 # Purpose: Install LaunchAgent for automatic learning processing
-# Runs every hour after chat exports complete
+# Runs daily at 6 PM EST as final step in recursive learning pipeline
 
 set -e
 
@@ -29,8 +29,13 @@ cat <<EOF > "$PLIST"
         <string>$SCRIPT_DIR/process_learnings.sh</string>
     </array>
     
-    <key>StartInterval</key>
-    <integer>3600</integer>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>18</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
     
     <key>RunAtLoad</key>
     <true/>
@@ -54,7 +59,7 @@ launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
 
 echo "✅ Learning Processor LaunchAgent installed!"
-echo "📊 Runs every hour to process chat exports"
+echo "📊 Runs daily at 6 PM EST to process chat exports (final step in recursive learning)"
 echo "📝 Logs: $LOG_FILE"
 echo ""
 echo "🔧 Management commands:"

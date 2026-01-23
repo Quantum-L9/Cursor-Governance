@@ -74,7 +74,7 @@ maintainer: "Igor Beylin"
 - Impact: Valid lessons rejected due to format, not content
 
 #### 3. **Pattern Grouping Too Narrow** (HIGH)
-- Only groups by 4 categories: user_correction, supabase_auth, n8n_issue, json_issue
+- Only groups by 4 categories: user_correction, supabase_auth, L9_issue, json_issue
 - Requires 2+ patterns per group
 - Impact: Many valid patterns not grouped
 

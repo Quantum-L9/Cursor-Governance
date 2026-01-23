@@ -15,8 +15,8 @@
 # maintainer: "Igor Beylin"
 #
 # === BUSINESS METADATA ===
-# purpose: "Install LaunchAgent for real-time pre-execution checker daemon"
-# summary: "Schedules pre_execution_checker_daemon.py to run continuously (KeepAlive: true)"
+# purpose: "Install LaunchAgent for real-time pre-execution checker "
+# summary: "Schedules pre_execution_checker_.py to run continuously (KeepAlive: true)"
 # business_value: "Enables real-time mistake prevention"
 #
 
@@ -27,8 +27,8 @@ GLOBAL_COMMANDS="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PLIST_NAME="com.cursor.pre-execution-checker"
 PLIST_FILE="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
 # Use $HOME-based path for cross-machine compatibility (MacBook and Mac Mini)
-WRAPPER_SCRIPT="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/pre_execution_checker_daemon_wrapper.sh"
-LOG_FILE="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/logs/pre_execution_checker_daemon.log"
+WRAPPER_SCRIPT="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/pre_execution_checker__wrapper.sh"
+LOG_FILE="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/logs/pre_execution_checker_.log"
 
 echo "🔧 Installing Pre-Execution Checker LaunchAgent..."
 echo "   Wrapper: $WRAPPER_SCRIPT"
@@ -37,7 +37,7 @@ echo "   Log: $LOG_FILE"
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
 
-# Create plist file (KeepAlive: true for always-running daemon)
+# Create plist file (KeepAlive: true for always-running )
 cat > "$PLIST_FILE" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

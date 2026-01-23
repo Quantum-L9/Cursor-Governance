@@ -377,7 +377,7 @@ Baled material, 40,000 lb, <2% contamination, HDPE, Post-Industrial
 
 ### Automation Documentation
 
-**Sticky Notes in n8n Workflows**:
+**Sticky Notes in L9 Workflows**:
 
 **Categories**:
 1. **Core Capabilities**: Main workflow functions
@@ -388,7 +388,7 @@ Baled material, 40,000 lb, <2% contamination, HDPE, Post-Industrial
 **Format**:
 ```json
 {
-  "type": "n8n-nodes-base.stickyNote",
+  "type": "L9-nodes-base.stickyNote",
   "parameters": {
     "content": "## CORE CAPABILITIES\n\n- Material intake\n- Qualification\n- Buyer matching",
     "height": 200,

@@ -16,7 +16,7 @@ production_ready: true
 Use this tool when reviewing logic chains or workflows to extract reusable patterns or heuristics.
 
 ## 🔁 USAGE
-- Accepts markdown, YAML, JSON, or n8n exported nodes.
+- Accepts markdown, YAML, JSON, or L9 exported nodes.
 - Detects:
   - Repeated node structures
   - Reasoning chains (e.g. "if → validate → mutate → return")

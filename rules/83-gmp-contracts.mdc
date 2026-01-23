@@ -1,0 +1,124 @@
+# GMP Contract Enforcement (L9)
+
+## Contract Files (SOURCE OF TRUTH)
+
+| Contract | Path |
+|----------|------|
+| Phase Execution | `agents/cursor/gmp_protocol/gmp-contract.yaml` |
+| Report Structure | `agents/cursor/gmp_protocol/gmp-report-contract.yaml` |
+| Report Template | `agents/cursor/gmp_protocol/gmp-report-template.md` |
+
+**Contracts are BINDING.** Violations = STOP.
+
+---
+
+## 🔴 CRITICAL: GMP ID Assignment
+
+**BEFORE creating ANY GMP report:**
+
+```bash
+# 1. Find highest existing GMP number
+ls reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1
+
+# 2. Use: highest + 1, zero-padded to 3 digits
+# Example: if highest is 96 → use 097
+```
+
+**RULES:**
+- ❌ NEVER reuse an existing GMP number
+- ❌ NEVER guess the number
+- ✅ ALWAYS check first, then increment
+- ✅ ALWAYS zero-pad to 3 digits (097, 098, 099, 100)
+
+---
+
+## 🔴 CRITICAL: Date Format
+
+**Header date MUST be ISO 8601:**
+
+```
+Format: YYYY-MM-DD
+Example: 2026-01-18
+```
+
+**Get today's date:**
+```bash
+date +%Y-%m-%d
+```
+
+---
+
+## MANDATORY: Pre-Report Generation
+
+**BEFORE writing ANY GMP report:**
+
+```
+1. CHECK highest GMP ID (command above)
+2. ASSIGN next sequential ID
+3. GET today's date in ISO format
+4. READ: agents/cursor/gmp_protocol/gmp-report-contract.yaml
+5. READ: agents/cursor/gmp_protocol/gmp-report-template.md
+6. GENERATE report following contract
+```
+
+---
+
+## MANDATORY: Post-Report Validation
+
+```bash
+python3 scripts/validate_gmp_report.py reports/GMP-Report-###-Description.md
+```
+
+**Must return 0 errors before DECLARATION.**
+
+---
+
+## Report Format Summary
+
+### Naming
+
+```
+GMP-Report-{###}-{Description}.md
+         ↑
+    3-digit zero-padded, NEXT SEQUENTIAL
+```
+
+### Header (Single Line)
+
+```markdown
+**ID:** GMP-### | **Task:** ... | **Tier:** ..._TIER | **Date:** YYYY-MM-DD | **Status:** ✅ COMPLETE
+```
+
+### Required Sections (7)
+
+```markdown
+## TODO PLAN
+## PHASES  
+## CHANGES
+## TODO → CHANGE MAP
+## VALIDATION
+## VERIFICATION
+## DECLARATION
+```
+
+### Forbidden
+
+- `## YNP RECOMMENDATION`
+- `## NEXT STEPS`
+- Verbose prose
+
+---
+
+## Quick Commands
+
+```bash
+# Get next GMP ID
+NEXT_ID=$(printf "%03d" $(($(ls reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1) + 1)))
+echo "Next GMP ID: $NEXT_ID"
+
+# Get today's date
+date +%Y-%m-%d
+
+# Validate report
+python3 scripts/validate_gmp_report.py reports/GMP-Report-$NEXT_ID-Description.md
+```

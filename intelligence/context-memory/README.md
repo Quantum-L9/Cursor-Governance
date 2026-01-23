@@ -1,3 +1,28 @@
+---
+# === SUITE 6 CANONICAL HEADER ===
+suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+version: "1.0.0"
+component_id: "INT-CM-001"
+component_name: "Context Memory System"
+layer: "intelligence"
+domain: "context_memory"
+type: "documentation"
+status: "active"
+created: "2025-11-08T00:00:00Z"
+updated: "2025-11-08T00:00:00Z"
+author: "Igor Beylin"
+maintainer: "Igor Beylin"
+
+# === GOVERNANCE METADATA ===
+governance_level: "medium"
+compliance_required: true
+audit_trail: true
+
+# === BUSINESS METADATA ===
+purpose: "Long-term memory system for AI sessions through automated context capture"
+summary: "Provides session continuity by capturing and restoring context across AI sessions"
+---
+
 # Context Memory System
 
 **Provides long-term memory for AI sessions through automated context capture and restoration.**

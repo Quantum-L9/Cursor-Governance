@@ -135,9 +135,13 @@ class LearningFileUpdater:
         
         if mistakes:
             self._update_mistakes_file(mistakes)
+            # Log to audit system
+            self._log_to_audit(mistakes, 'mistake')
         
         if solutions:
             self._update_quick_fixes(solutions)
+            # Log to audit system
+            self._log_to_audit(solutions, 'solution')
         
         # Mark as applied
         for learning in pending:
@@ -147,6 +151,24 @@ class LearningFileUpdater:
         self._save_memory_index()
         
         print(f"✅ Applied {len(pending)} learnings to files")
+    
+    def _log_to_audit(self, learnings: List[Dict[str, Any]], lesson_type: str):
+        """Log additions to learning audit system"""
+        try:
+            import sys
+            sys.path.insert(0, str(Path(__file__).parent))
+            from intelligence_audit_logger import LearningAuditLogger
+            audit_logger = LearningAuditLogger()
+            for learning in learnings:
+                audit_logger.log_lesson_addition(
+                    lesson_type=lesson_type,
+                    content=learning.get('content', ''),
+                    source_file="ops/logs/memory_index.json",
+                    source_type='learning_updater',
+                    metadata={'hash': learning.get('hash'), 'context': learning.get('context')}
+                )
+        except Exception as e:
+            print(f"⚠️  Audit logging failed (non-critical): {e}")
     
     def _update_mistakes_file(self, mistakes: List[Dict[str, Any]]):
         """Update repeated mistakes file"""

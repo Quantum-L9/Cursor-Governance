@@ -81,21 +81,19 @@ mode_type: "learning"
 ```
 
 ### **Working Solution**
-```json
-// CORRECT - Use n8n's built-in Supabase credential type
-{
-  "parameters": {
-    "authentication": "predefinedCredentialType",
-    "nodeCredentialType": "supabaseApi",
-    "sendHeaders": false,
-    "sendQuery": false
-  }
-}
+```python
+# CORRECT - Use Supabase client with proper authentication
+from supabase import create_client
+
+supabase = create_client(
+    os.environ["SUPABASE_URL"],
+    os.environ["SUPABASE_SERVICE_KEY"]  # Service key for server-side ops
+)
 ```
 
 ### **Key Insight**
 - **NEVER** use manual headers for Supabase
-- **ALWAYS** use n8n's built-in Supabase API credential type
+- **ALWAYS** use the official Supabase client library
 - **NEVER** assume manual headers will work
 
 ### **Prevention**
@@ -115,11 +113,11 @@ mode_type: "learning"
 
 ## 🔧 **Common Authentication Issues & Solutions**
 
-### **Issue: Wrong n8n Instance URL**
-**Solution:** Always read from Configuration/.env
+### **Issue: Wrong L9 API URL**
+**Solution:** Always read from .env
 ```bash
-grep "N8N_BASE_URL" Configuration/.env
-# Must be: https://ibeylin.app.n8n.cloud
+grep "L9_BASE_URL" .env
+# Must be: https://l9.igorbeylin.com for production
 ```
 
 ### **Issue: Expression Syntax Errors**
@@ -133,12 +131,37 @@ grep "N8N_BASE_URL" Configuration/.env
 ```
 
 ### **Issue: Missing API Keys**
-**Solution:** Check Configuration/.env file
+**Solution:** Check L9 VPS .env file
 ```bash
-grep "N8N_API_KEY\|SUPABASE" Configuration/.env
+# On VPS
+ssh admin@157.180.73.53 "grep 'MCP_API_KEY\|SUPABASE' /opt/l9/.env"
+
+# Local
+grep "MCP_API_KEY\|L9_" .env
 ```
 
 ---
 
-**Last Updated:** 2025-01-29T16:00:00Z  
+## 🔐 **L9 VPS Authentication**
+
+### **Primary Method: cursor_memory_client.py**
+```bash
+python3 agents/cursor/cursor_memory_client.py health  # Check auth
+python3 agents/cursor/cursor_memory_client.py search "query"  # Uses MCP_API_KEY_C
+```
+
+### **API Keys**
+| Key | Purpose | Location |
+|-----|---------|----------|
+| `MCP_API_KEY_C` | Cursor agent auth | VPS .env |
+| `MCP_API_KEY_L` | L-CTO agent auth | VPS .env |
+
+### **Never Use**
+- ~~n8n predefinedCredentialType~~ (deprecated)
+- ~~Manual Authorization headers~~ (use client library)
+- ~~Local Docker for production~~ (VPS only)
+
+---
+
+**Last Updated:** 2026-01-20T16:00:00Z  
 **Success Rate:** 100% when applied correctly

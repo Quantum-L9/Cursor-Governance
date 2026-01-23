@@ -1,0 +1,232 @@
+---
+# === SUITE 6 CANONICAL HEADER ===
+suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+version: "2.0.0"
+component_id: "INT-WS-003"
+component_name: "Session End Protocol - L9 Enterprise Edition v2"
+layer: "intelligence"
+domain: "workspace_management"
+enforcement_level: active
+type: "executable_protocol"
+status: "active"
+created: "2026-01-07T00:00:00Z"
+updated: "2026-01-16T00:00:00Z"
+author: "Igor Beylin"
+maintainer: "Igor Beylin"
+sister_file: "setup-new-workspace.yaml"
+changelog_url: "CHANGELOG.md#v2.0.0"
+---
+
+# SESSION END PROTOCOL v2.0
+# Structured handoff for reliable session resume
+# Total: 5 phases | Duration: ~1 min
+
+# ═══════════════════════════════════════════════════════════
+# EXECUTION SUMMARY
+# ═══════════════════════════════════════════════════════════
+# Phase 1: PICKUP_CONTEXT - Structured handoff packet (REQUIRED)
+# Phase 2: LESSONS - Extract lessons/errors (IF ANY)
+# Phase 3: GIT_STATE - Capture uncommitted work (AUTO)
+# Phase 4: WORKFLOW_STATE - Update Next Steps (REQUIRED)
+# Phase 5: CONFIRMATION - Display summary (AUTO)
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 1: PICKUP CONTEXT (Structured Handoff)
+# ═══════════════════════════════════════════════════════════
+phase_1_pickup_context:
+  name: "Write Structured Pickup Context"
+  priority: 1
+  required: true
+  description: |
+    Write a structured pickup_context packet that enables reliable session resume.
+    This is THE MOST IMPORTANT part - it tells future sessions exactly where to continue.
+  
+  template: |
+    PICKUP|date={YYYY-MM-DD}|task={current_task}|files={file1,file2,file3}|next={next_action}|blocker={blocker_or_none}|gmps={GMP-XX,GMP-YY}|outcome={success|partial|blocked}
+  
+  example: |
+    PICKUP|date=2026-01-16|task=WMToGraphSync bidirectional sync|files=api/server.py,core/integration/wm_to_graph_sync.py,runtime/Dockerfile|next=Deploy container detection fix to VPS|blocker=none|gmps=GMP-68|outcome=success
+  
+  command: |
+    python3 agents/cursor/cursor_memory_client.py write \
+      "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
+      --kind pickup_context
+  
+  fields:
+    date: "YYYY-MM-DD format"
+    task: "What was being worked on (single phrase)"
+    files: "Top 3-5 files modified (comma-separated)"
+    next: "Single most important next action"
+    blocker: "What's blocking progress, or 'none'"
+    gmps: "GMP IDs completed this session (comma-separated)"
+    outcome: "success|partial|blocked"
+  
+  search_at_resume: |
+    python3 agents/cursor/cursor_memory_client.py search "PICKUP|" --limit 3
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 2: LESSONS & ERRORS (If Any)
+# ═══════════════════════════════════════════════════════════
+phase_2_lessons:
+  name: "Extract Lessons and Errors"
+  priority: 2
+  required: false
+  description: "Only write if significant lessons or errors occurred"
+  
+  lesson_template: |
+    LESSON|topic={topic}|learned={what_was_learned}|context={when_this_applies}
+  
+  error_template: |
+    ERROR|type={error_type}|cause={root_cause}|fix={how_fixed}
+  
+  commands:
+    lesson: |
+      python3 agents/cursor/cursor_memory_client.py write \
+        "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" \
+        --kind lesson
+    
+    error: |
+      python3 agents/cursor/cursor_memory_client.py write \
+        "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" \
+        --kind error
+  
+  examples:
+    lesson: "LESSON|topic=governance|learned=ContextVar must be set via async context manager before handler calls|context=FastAPI routes with RLS"
+    error: "ERROR|type=container_detection|cause=/.dockerenv missing in slim images|fix=Use L9_CONTAINER_ENV=true env var"
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 3: GIT STATE (Automated)
+# ═══════════════════════════════════════════════════════════
+phase_3_git_state:
+  name: "Capture Git State"
+  priority: 3
+  required: true
+  auto: true
+  description: "Automatically capture git state for context"
+  
+  command: |
+    # Run these commands to gather git state:
+    BRANCH=$(git branch --show-current)
+    COMMIT=$(git log -1 --format="%h %s")
+    UNCOMMITTED=$(git status --short | wc -l | tr -d ' ')
+    STAGED=$(git diff --cached --name-only | wc -l | tr -d ' ')
+    
+    # Write to memory if uncommitted changes exist
+    if [ "$UNCOMMITTED" -gt 0 ]; then
+      python3 agents/cursor/cursor_memory_client.py write \
+        "GIT|branch=$BRANCH|commit=$COMMIT|uncommitted=$UNCOMMITTED|staged=$STAGED" \
+        --kind git_state
+    fi
+  
+  display: |
+    IF uncommitted > 0:
+      ⚠️ Uncommitted changes: {count} files
+      Branch: {branch}
+      Last commit: {commit}
+      → Ask: "Commit before closing? [Y/N]"
+    ELSE:
+      ✅ Working tree clean
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 4: WORKFLOW STATE UPDATE
+# ═══════════════════════════════════════════════════════════
+phase_4_workflow_state:
+  name: "Update workflow_state.md"
+  priority: 4
+  required: true
+  description: "Ensure workflow_state.md has accurate next steps"
+  
+  updates:
+    - section: "COMPLETED THIS SESSION"
+      action: "Add bullet points for work done"
+      format: "- ✅ {GMP-ID}: {Brief description}"
+    
+    - section: "Next Steps (Current Session)"
+      action: "Replace with 3-5 actionable items for next session"
+      format: |
+        1. {Most important next action}
+        2. {Second priority}
+        3. {Third priority}
+    
+    - section: "Recent Sessions (7-day window)"
+      action: "Add entry at TOP"
+      format: "- ✅ YYYY-MM-DD: {Brief summary of session}"
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 5: CONFIRMATION
+# ═══════════════════════════════════════════════════════════
+phase_5_confirmation:
+  name: "Session End Confirmation"
+  priority: 5
+  required: true
+  auto: true
+  
+  output_template: |
+    ╔═══════════════════════════════════════════════════════════╗
+    ║           ✅ SESSION CLOSED - HANDOFF COMPLETE           ║
+    ╚═══════════════════════════════════════════════════════════╝
+    
+    📦 PICKUP CONTEXT STORED
+    ├─ Task: {task}
+    ├─ Files: {files}
+    ├─ Next: {next_action}
+    ├─ GMPs: {gmps}
+    └─ Outcome: {outcome}
+    
+    📝 LESSONS: {lesson_count} written
+    🔧 ERRORS: {error_count} documented
+    
+    📂 GIT STATE
+    ├─ Branch: {branch}
+    ├─ Uncommitted: {uncommitted_count} files
+    └─ Last commit: {commit}
+    
+    🎯 NEXT SESSION RESUME:
+       python3 agents/cursor/cursor_memory_client.py search "PICKUP|"
+    
+    👋 Ready to resume anytime.
+
+# ═══════════════════════════════════════════════════════════
+# QUICK REFERENCE
+# ═══════════════════════════════════════════════════════════
+quick_reference:
+  minimal_end: |
+    # Minimum viable session end (30 seconds)
+    python3 agents/cursor/cursor_memory_client.py write \
+      "PICKUP|date=$(date +%Y-%m-%d)|task=TASK|files=FILES|next=NEXT|blocker=none|gmps=none|outcome=success" \
+      --kind pickup_context
+  
+  resume_search: |
+    # At next session start
+    python3 agents/cursor/cursor_memory_client.py search "PICKUP|" --limit 3
+  
+  memory_kinds:
+    - pickup_context: "Session handoff (MOST IMPORTANT)"
+    - lesson: "What was learned"
+    - error: "Errors encountered and fixed"
+    - git_state: "Uncommitted work snapshot"
+
+# ═══════════════════════════════════════════════════════════
+# ANTI-PATTERNS
+# ═══════════════════════════════════════════════════════════
+anti_patterns:
+  - "❌ DON'T write free-form text (hard to search)"
+  - "❌ DON'T skip pickup_context (breaks resume)"
+  - "❌ DON'T leave workflow_state.md without next steps"
+  - "❌ DON'T forget uncommitted changes"
+  
+  do:
+    - "✅ DO use structured PICKUP| format"
+    - "✅ DO keep task/next to single phrases"
+    - "✅ DO update Next Steps in workflow_state.md"
+    - "✅ DO run git status before closing"
+
+# ═══════════════════════════════════════════════════════════
+# SEARCH PATTERNS FOR RESUME
+# ═══════════════════════════════════════════════════════════
+resume_searches:
+  recent_pickup: "PICKUP|"
+  recent_lessons: "LESSON|"
+  recent_errors: "ERROR|"
+  by_date: "PICKUP|date=2026-01-"
+  by_gmp: "gmps=GMP-68"

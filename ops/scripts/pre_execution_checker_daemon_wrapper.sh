@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Wrapper script for pre-execution checker daemon
+# Wrapper script for pre-execution checker 
 # Resolves paths dynamically for cross-machine compatibility
 #
 
@@ -18,5 +18,5 @@ else
 fi
 
 # Execute the daemon script
-exec "$GLOBAL_COMMANDS/ops/scripts/pre_execution_checker_daemon.py"
+exec python3 "$GLOBAL_COMMANDS/ops/scripts/pre_execution_checker_daemon.py"
 

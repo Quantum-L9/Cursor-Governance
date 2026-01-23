@@ -461,10 +461,10 @@ class MemoryAggregator:
                 "severity": "MEDIUM"
             },
             "repetition_indicator": {
-                "patterns": [r"(?i)\b(i (told|said|asked|reminded) you|again|still|still.*happening)\b"],
+                "patterns": [r"(?i)\b(i (told|said|asked|reminded) you|again|still|still.*happening|wtf|fuck|dick|can'?t believe you)\b"],
                 "confidence_base": 0.90,
                 "severity": "HIGH",
-                "pattern_type": "behavioral"  # Indicates repeated mistake
+                "pattern_type": "behavioral"  # Indicates repeated mistake or frustration
             },
             "understanding_gap": {
                 "patterns": [r"(?i)\b(misunderstood|didn'?t understand|not what i meant|confused)\b"],

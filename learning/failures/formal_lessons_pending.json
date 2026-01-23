@@ -248,9 +248,9 @@
       }
     },
     {
-      "id": "FL_20251117_n8n_issue",
+      "id": "FL_20251117_workflow_issue",
       "type": "mistake",
-      "category": "N8N Issue",
+      "category": "Workflow Issue (Legacy)",
       "pattern_count": 2,
       "first_seen": "2025-10-10",
       "last_seen": "2025-10-10",
@@ -262,27 +262,28 @@
         {
           "hash": "bd29dd8c553e",
           "type": "mistake",
-          "content": "Detected n8n related issue",
-          "context": "n8n.*error",
+          "content": "Detected workflow configuration issue (legacy n8n pattern)",
+          "context": "workflow.*error",
           "timestamp": "2025-10-10T01:18:44.738164"
         },
         {
           "hash": "aa0ee6659b48",
           "type": "mistake",
-          "content": "Detected n8n related issue",
+          "content": "Detected node configuration issue (legacy n8n pattern)",
           "context": "node.*error",
           "timestamp": "2025-10-10T01:18:44.738169"
         }
       ],
       "severity": "LOW",
-      "status": "pending_review",
+      "status": "deprecated",
       "generated_at": "2025-11-17T20:24:29.353207",
+      "deprecation_note": "n8n deprecated 2026-01-01. Pattern remains valid for L9 agent workflow configs.",
       "lesson_template": {
-        "title": "N8N Issue Pattern (2 occurrences)",
-        "mistake": "[REVIEW REQUIRED] Multiple n8n issue issues detected",
+        "title": "Workflow Issue Pattern (2 occurrences)",
+        "mistake": "[DEPRECATED] Legacy workflow issues - now handled by L9 agent system",
         "impact": "Occurred 2 times between 2025-10-10 and 2025-10-10",
-        "prevention": "[REVIEW REQUIRED] Analyze patterns and define prevention protocol",
-        "rule": "[REVIEW REQUIRED] Create enforcement rule",
+        "prevention": "For L9: Validate YAML specs with pipeline_validator.py before loading",
+        "rule": "Check spec structure before agent registration",
         "date_added": "2025-11-17"
       }
     }

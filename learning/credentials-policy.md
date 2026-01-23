@@ -57,7 +57,7 @@ Ensure that all credentials within the environment comply with least-privilege p
 
 ## Governance Integration
 - `.cursor/rules.json`: Enforces environment credential sync.
-- `environment/n8n-env-variable-audit.csv`: Primary verification source for key scope, status, and rotation dates.
+- `.env` and `environment/*.csv`: Primary verification source for key scope, status, and rotation dates.
 - `.cursor/profiles/security-access.md`: Governs access and redaction.
 
 ## Rules
@@ -67,7 +67,7 @@ Ensure that all credentials within the environment comply with least-privilege p
 4. **Redaction:** Any detected raw keys are replaced with token references automatically.
 
 ## Anomaly Detection
-- Scans all N8N workflows and environment variables for anomalies using reasoning logic.
+- Scans L9 VPS environment variables for anomalies using reasoning logic.
 - Identifies mismatched, leaked, or invalid credentials.
 - Performs autonomous remediation via `api-key-verification.md` and `env_validator.py`.
 

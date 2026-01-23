@@ -3,8 +3,8 @@ title: Workflow Architecture Annotator
 version: 1.0.0
 created: 2025-10-14
 owner: Igor Beylin
-source: n8n exports + reasoning_n8n.md + ai_reasoning blocks
-tags: [n8n, explainer, annotation, reasoning, documentation]
+source: L9 exports + reasoning_L9.md + ai_reasoning blocks
+tags: [L9, explainer, annotation, reasoning, documentation]
 domain: automation
 type: explainer
 production_ready: true
@@ -13,7 +13,7 @@ production_ready: true
 # 🔍 BLOCK 01 — Purpose & Summary
 
 ## Purpose
-Provide human-readable explanation of any `.n8n.json` workflow: structure, nodes, logic flow, and failure paths.
+Provide human-readable explanation of any `.L9.json` workflow: structure, nodes, logic flow, and failure paths.
 
 ## Summary
 Analyzes node purposes, relationships, execution flow and reasoning layers (ai_reasoning). Outputs detailed architectural doc with reasoning highlights.
@@ -22,7 +22,7 @@ Analyzes node purposes, relationships, execution flow and reasoning layers (ai_r
 
 # 🧭 BLOCK 02 — Annotator Flow
 
-1. Load `.n8n.json` file
+1. Load `.L9.json` file
 2. Parse nodes and flows:
    - Identify entry points, LLM nodes, split/merge logic, terminal nodes
 3. Annotate:
@@ -40,7 +40,7 @@ Analyzes node purposes, relationships, execution flow and reasoning layers (ai_r
 
 ```yaml
 workflow_explainer:
-  input: "workflows/*.n8n.json"
+  input: "workflows/*.L9.json"
   output: "docs/workflow-explained.md"
   metadata: true
   node_analysis: true
@@ -51,6 +51,6 @@ workflow_explainer:
 
 # 📂 BLOCK 04 — Companion Assets
 
-- `reasoning_n8n.md` — overlays logic heuristics per node
+- `reasoning_L9.md` — overlays logic heuristics per node
 - `session_status.md` — links recent edits and reasoning notes
 - `ai_reasoning/` — optional folder for node-level thoughts

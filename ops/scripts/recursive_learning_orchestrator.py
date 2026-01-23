@@ -231,24 +231,9 @@ class RecursiveLearningOrchestrator:
         except Exception as e:
             print(f"   ⚠️  Error: {e}")
         
-        # Step 4: Update memory compounding
-        print("\n4️⃣  Updating Memory Compounding...")
-        try:
-            result = subprocess.run(
-                ['python3', str(SCRIPT_DIR / 'memory_compounding.py'), '--evolve'],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.returncode == 0:
-                print("   ✅ Memory compounding updated")
-            else:
-                print(f"   ⚠️  Error: {result.stderr[:100]}")
-        except Exception as e:
-            print(f"   ⚠️  Error: {e}")
-        
-        # Step 5: Check component health
-        print("\n5️⃣  Checking Component Health...")
+        # Step 4: Check component health
+        # Note: Memory compounding is handled by learning processing pipeline (nightly)
+        print("\n4️⃣  Checking Component Health...")
         component_health = self.check_all_components()
         
         healthy_count = len([h for h in component_health.values() if h['status'] == 'healthy'])

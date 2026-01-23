@@ -23,11 +23,11 @@ GlobalCommands/
 ├── learning/          # Learning system files
 │   ├── repeated-mistakes.md
 │   ├── quick-fixes.md
-│   ├── n8n-ai-agent-patterns.md
-│   └── n8n-configs/
+│   ├── L9-ai-agent-patterns.md
+│   └── L9-configs/
 ├── profiles/          # Reasoning profiles
 │   ├── reasoning_docs.md
-│   ├── reasoning_n8n.md
+│   ├── reasoning_L9.md
 │   ├── reasoning_technical_operations.md
 │   └── orchestrator.md
 ├── ops/              # Operations scripts
@@ -66,7 +66,7 @@ GlobalCommands/
 │   ├── agent-profile.modular-reasoning.v1.0.md
 │   └── 17 more prompt templates
 ├── templates/       # Template files (.cursorrules)
-├── n8n research/   # Node research database
+├── L9 research/   # Node research database
 └── README.md       # This file
 ```
 
@@ -84,10 +84,10 @@ GlobalCommands/
 ### Learning System
 - [`learning/repeated-mistakes.md`](learning/repeated-mistakes.md) - Critical mistakes to never repeat
 - [`learning/quick-fixes.md`](learning/quick-fixes.md) - Fast solution patterns
-- [`learning/n8n-ai-agent-patterns.md`](learning/n8n-ai-agent-patterns.md) - AI Agent node patterns
+- [`learning/L9-ai-agent-patterns.md`](learning/L9-ai-agent-patterns.md) - AI Agent node patterns
 
 ### Reasoning Profiles
-- [`profiles/reasoning_n8n.md`](profiles/reasoning_n8n.md) - n8n workflow reasoning
+- [`profiles/reasoning_L9.md`](profiles/reasoning_L9.md) - L9 orchestration reasoning
 - [`profiles/reasoning_technical_operations.md`](profiles/reasoning_technical_operations.md) - Technical decisions
 - [`profiles/orchestrator.md`](profiles/orchestrator.md) - Central coordinator
 
@@ -100,14 +100,14 @@ GlobalCommands/
 ### Reference in Prompts
 ```markdown
 @.GlobalCommands/learning/repeated-mistakes.md
-@.GlobalCommands/n8n research/[node_name].md
-@.GlobalCommands/profiles/reasoning_n8n.md
+@.GlobalCommands/L9 research/[node_name].md
+@.GlobalCommands/profiles/reasoning_L9.md
 ```
 
 ### Node Research Database
 Save node research findings to:
 ```
-@.GlobalCommands/n8n research/[node_name].md
+@.GlobalCommands/L9 research/[node_name].md
 ```
 
 ## 📊 Migration Status

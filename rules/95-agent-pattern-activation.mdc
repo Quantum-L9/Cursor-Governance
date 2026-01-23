@@ -1,0 +1,104 @@
+# Agent Pattern System Auto-Activation
+
+## ALWAYS ACTIVE: Subsystem Detection
+
+Before ANY code modification, automatically detect the relevant subsystem:
+
+| Trigger | Subsystem | Approval |
+|---------|-----------|----------|
+| Files in `api/auth.py`, `core/*auth*`, `*permission*`, `*credential*` | **auth** | 🔴 HUMAN REQUIRED |
+| Files in `core/tools/*`, `runtime/tool*`, `*registry*` | **tools** | 🟡 Auto if risk ≤ 20 |
+| Files in `memory/retrieval*`, `*embedding*`, `*search*` | **memory_retrieval** | 🟡 Auto if risk ≤ 25 |
+| All other code files | **code_mutation** | 🟢 Auto if tests pass |
+
+## Pre-Task Checklist
+
+Before starting ANY implementation:
+
+1. **Detect Subsystem** — What domain does this touch?
+2. **Check Approval Model** — Does this require human approval?
+3. **Note High-Risk Triggers** — Are any of these present?
+4. **Start CMTS Tracking** — Log the mutation
+
+## Integration Points
+
+### For /gmp Command
+```
+1. Detect subsystem from prompt + files
+2. Load config/subsystems/{subsystem}.yaml
+3. Execute N1-N9 pipeline with policy
+4. Track in CMTS
+5. Enforce approval model
+```
+
+### For Any Code Edit
+```
+1. Check if files match auth/tools/memory patterns
+2. If auth: STOP and request human approval
+3. If tools/memory: Check risk score
+4. Log to CMTS for audit trail
+```
+
+## Quick Reference
+
+### Auth Subsystem (CRITICAL)
+- **ALWAYS** requires human approval
+- Any change to login, permissions, tokens, sessions
+- Never auto-approve auth changes
+
+### Tools Subsystem
+- Tool registry modifications
+- Capability changes
+- High-risk if: modifies external state, accesses secrets, destructive ops
+
+### Memory Retrieval Subsystem
+- Search/ranking algorithm changes
+- Embedding model changes
+- High-risk if: changes index schema, modifies RLS
+
+### Code Mutation Subsystem (DEFAULT)
+- General code changes
+- Auto-approve if: 80%+ test coverage, no guardrail violations
+
+## Enforcement
+
+When a task is detected as auth-related:
+```
+🔴 AUTH SUBSYSTEM DETECTED
+
+This change touches authentication/authorization.
+Per auth.yaml policy: HUMAN APPROVAL REQUIRED
+
+Changes proposed:
+- [list changes]
+
+Awaiting your explicit approval to proceed.
+```
+
+## CMTS Auto-Tracking
+
+For every file modification:
+```python
+# Automatic - no manual action needed
+tracking_id = await cmts.start_mutation(
+    subsystem=detected_subsystem,
+    files=files_to_modify,
+    agent_id="cursor_agent",
+)
+# ... do work ...
+await cmts.complete_mutation(tracking_id, status, commit_sha)
+```
+
+## Usage in Prompts
+
+You can explicitly specify subsystem:
+```
+/gmp --subsystem=auth "Add MFA support"
+/gmp --subsystem=tools "Register new capability"
+```
+
+Or let it auto-detect:
+```
+/gmp "Add login rate limiting"  # Auto-detects: auth
+/gmp "Improve search ranking"   # Auto-detects: memory_retrieval
+```

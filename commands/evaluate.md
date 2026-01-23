@@ -1,110 +1,105 @@
 ---
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "6.0.0"
-component_id: "CMD-007"
-component_name: "Comprehensive Project Evaluation Command"
-layer: "intelligence"
-domain: "evaluation"
-type: "command"
-status: "active"
-created: "2025-01-27T00:00:00Z"
-updated: "2025-01-27T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: []
-integrates_with: ["CMD-001", "CMD-002"]
-api_endpoints: []
-data_sources: ["project_structure", "completion_status"]
-outputs: ["evaluation_reports", "gap_analyses", "refinement_plans"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "on-demand"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "batch"
-
-# === BUSINESS METADATA ===
-purpose: "Execute comprehensive project evaluation and refinement"
-summary: "Chain command combining Project Completion Agent + Folder Analysis + Ultimate Master Guide for complete project evaluation, gap identification, and refinement opportunities"
-business_value: "Provides comprehensive project evaluation in single command, identifying gaps and refinement opportunities efficiently"
-success_metrics: ["evaluation_completeness >= 0.95", "gap_detection_rate >= 0.90", "refinement_quality >= 0.88"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "evaluate- Comprehensive Project Evaluation.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive evaluation capabilities"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["evaluation", "analysis", "project-completion", "refinement", "command"]
-keywords: ["evaluate", "evaluation", "project", "analysis", "refinement", "gaps"]
-related_components: ["CMD-001", "CMD-002"]
-startup_required: false
-mode_type: "command"
+name: evaluate
+version: "7.0.0"
+description: "Deep evaluation — compliance, health, gaps, actionable TODOs"
+auto_chain: ynp
 ---
 
-name: evaluate
-description: Execute comprehensive project evaluation, refinement, and gap analysis
+# /evaluate — Deep Evaluation
 
-# `/evaluate` - Comprehensive Project Evaluation
+## WHAT IT DOES
 
-**Execute complete project evaluation, refinement, and gap analysis**
+Comprehensive audit across 6 dimensions → actionable GMP TODOs:
 
-## Execution Chain
+1. **Workflow State** — Phase, TODOs, blockers
+2. **Tier Health** — KERNEL/RUNTIME/INFRA/UX compliance
+3. **GMP Compliance** — Phase gates, missing steps
+4. **Code Quality** — L9 patterns, anti-patterns
+5. **Dependencies** — Imports, circular refs, orphans
+6. **Gaps** — What's missing vs production-ready
 
-### Step 1: Project Status Analysis
-**Source:** `@UNIFIED_PROMPT_TOOLKIT/01_CORE_PROMPTS/01_High_Velocity_Prompts/project_completion_agent.prompt.md`
+---
 
-- Determine current project status (% complete per phase)
-- Identify gaps between current state and launch-ready state
-- Flag consolidation opportunities, duplicates, organizational issues
-- Generate prioritized action plan with specific deliverables
+## EXECUTION
 
-### Step 2: Folder Structure Analysis
-**Source:** `@UNIFIED_PROMPT_TOOLKIT/02_N8N_OPERATIONS/13_N8N_Reasoning/folder-analysis-prompt.md`
-
-- Execute 7-block reasoning analysis (Abductive + Deductive + Inductive)
-- Detect duplicates, near-duplicates, empty folders
-- Validate naming conventions, header compliance, structure
-- Generate consolidation recommendations with impact scores
-
-### Step 3: Comprehensive System Assessment
-**Source:** `@UNIFIED_PROMPT_TOOLKIT/02_N8N_OPERATIONS/09_N8N_Power_Commands/ultimate-master-guide.md`
-
-- Deep system analysis
-- Dependency mapping
-- Performance profiling
-- Security auditing
-
-## Usage
+### 1. STATE_SYNC
 
 ```
-/evaluate [target]
-
-Examples:
-/evaluate @UNIFIED_PROMPT_TOOLKIT/
-/evaluate current-project
-/evaluate workspace-structure
+Read workflow_state.md:
+- Current PHASE (0-6)
+- Active TODOs
+- Priority queue (🔴/🟠/🟡/🔵)
 ```
 
-## Output Format
+### 2. TIER CLASSIFICATION
 
-- **Executive Summary** - Project status overview
-- **Detailed Findings** - Duplicates, gaps, opportunities
-- **Prioritized Action Plan** - High/Medium/Low priority actions
-- **Execution Checklist** - Specific file moves/renames
-- **Impact Assessment** - Risk scores and dependencies
-- **Your Next Prompt** - Suggested follow-up actions
+| Tier | Rigor |
+|------|-------|
+| KERNEL | FULL — every function traced |
+| RUNTIME | HIGH — public APIs + error paths |
+| INFRA | DEPLOYMENT — wiring + env vars |
+| UX | STANDARD — structure + tests |
 
-## Reference
-- Project Completion Agent: `@UNIFIED_PROMPT_TOOLKIT/01_CORE_PROMPTS/01_High_Velocity_Prompts/project_completion_agent.prompt.md`
-- Folder Analysis: `@UNIFIED_PROMPT_TOOLKIT/02_N8N_OPERATIONS/13_N8N_Reasoning/folder-analysis-prompt.md`
-- Ultimate Master Guide: `@UNIFIED_PROMPT_TOOLKIT/02_N8N_OPERATIONS/09_N8N_Power_Commands/ultimate-master-guide.md`
+### 3. L9 HEALTH CHECKS
 
+| Check | Required |
+|-------|----------|
+| structlog | Not logging/print |
+| httpx | Not requests/aiohttp |
+| async I/O | Async def for I/O |
+| pydantic v2 | model_config, not Config |
+| packet logging | Critical ops → PacketEnvelope |
+| error handling | try/except + recovery |
+| timeouts | External calls have timeout |
+
+### 4. ANTI-PATTERNS
+
+| Pattern | Severity |
+|---------|----------|
+| Bare except | 🔴 |
+| sync in async | 🔴 |
+| global state | 🟠 |
+| missing types | 🟡 |
+| no docstring | 🟡 |
+
+### 5. GAP ANALYSIS
+
+```
+Production-ready requires:
+├── All L9 patterns ✅
+├── No anti-patterns
+├── Tests exist + pass
+├── Docs complete
+└── GMP phases 0-6 done
+```
+
+---
+
+## OUTPUT FORMAT
+
+```markdown
+## 📊 EVALUATE: {target}
+
+**Tier:** {tier}
+**Health Score:** {0-100}%
+
+### L9 Compliance
+| Pattern | Status | Location |
+|---------|--------|----------|
+
+### Anti-Patterns
+| Issue | Severity | File:Line |
+|-------|----------|-----------|
+
+### Gaps
+| Gap | Priority | Fix |
+|-----|----------|-----|
+
+### GMP TODOs (Batched)
+| # | Scope | Files | Priority |
+|---|-------|-------|----------|
+```
+
+→ **Auto-chains to /ynp**
+
+--- End Command ---

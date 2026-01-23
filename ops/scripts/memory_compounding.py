@@ -258,6 +258,10 @@ class MemoryCompounding:
     
     def evolve_patterns(self):
         """Evolve patterns: improve weights, decay unused patterns, merge similar patterns"""
+        # Auto-initialize any new patterns from memory_index that aren't yet tracked
+        # This ensures new patterns are automatically registered for weight tracking
+        self.initialize_weights_from_memory()
+        
         # Decay unused patterns (reduce weight by 0.1 per week of non-use)
         current_time = datetime.now()
         for pattern_hash, pattern_data in self.pattern_weights.items():

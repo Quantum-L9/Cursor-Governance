@@ -890,9 +890,9 @@ class FormalLessonExtractor:
                 self._log_to_audit(lesson)
         
         print(f"\n✅ Quality Assessment Complete:")
-        print(f"   High Quality (>=0.85): {len([l for l in self.accepted_lessons if l.get('quality_score', 0) >= 0.85])}")
-        print(f"   Medium Quality (0.70-0.85): {len(self.review_lessons)}")
-        print(f"   Low Quality (<0.70): {len(self.rejected_lessons)}")
+        print(f"   High Quality (>={QUALITY_THRESHOLDS['high_quality']}): {len([l for l in self.accepted_lessons if l.get('quality_score', 0) >= QUALITY_THRESHOLDS['high_quality']])}")
+        print(f"   Medium Quality ({QUALITY_THRESHOLDS['medium_quality']}-{QUALITY_THRESHOLDS['high_quality']}): {len(self.review_lessons)}")
+        print(f"   Low Quality (<{QUALITY_THRESHOLDS['medium_quality']}): {len(self.rejected_lessons)}")
     
     def integrate_lessons(self):
         """Integrate accepted lessons into repeated-mistakes.md"""
@@ -1215,7 +1215,7 @@ def main():
             extractor._log_to_review(lesson)
         
         if extractor.review_lessons:
-            print(f"\n📋 {len(extractor.review_lessons)} lessons logged for review (quality 0.7-0.85)")
+            print(f"\n📋 {len(extractor.review_lessons)} lessons logged for review (quality {QUALITY_THRESHOLDS['medium_quality']}-{QUALITY_THRESHOLDS['high_quality']})")
             print(f"   Review log: {REVIEW_LOG_FILE}")
         
         # Run meta-analysis
