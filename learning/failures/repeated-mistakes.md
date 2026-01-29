@@ -1,17 +1,17 @@
 ---
 suite: "L9 Cursor Governance"
-version: "8.1.0"
+version: "8.3.0"
 component_id: "LRN-001"
 component_name: "Critical Lessons Database"
 status: "active"
-updated: "2026-01-20T15:56:08Z"
+updated: "2026-01-24T21:00:00Z"
 governance_level: "critical"
 startup_required: true
 ---
 
-# L9 CRITICAL LESSONS — Priority-Ordered (v8.1)
+# L9 CRITICAL LESSONS — Priority-Ordered (v8.3)
 
-> **18 lessons** | Priority-ordered | Token-optimized
+> **19 lessons** | Priority-ordered | Token-optimized
 > **Load at session start. Enforce always.**
 
 ---
@@ -47,7 +47,7 @@ startup_required: true
 
 ---
 
-## 🔴 TIER 2: CRITICAL (10 lessons)
+## 🔴 TIER 2: CRITICAL (11 lessons)
 
 ### **5. ASK QUESTIONS FIRST** 🔴 CRITICAL
 **Rule:** 5 min questions saves 4 hrs rework (48-96x ROI)
@@ -109,31 +109,39 @@ startup_required: true
 **Wrong:** `00:00:00Z`, made-up dates, wrong timezone
 **MCP-ID:** `lesson-014-real-timestamps`
 
+### **15. PR ADOPTION = GIT MERGE** 🔴 CRITICAL
+**Rule:** MERGE the PR to adopt files. Git handles file transfer.
+**Wrong:** Read PR diff → manually write each file → close PR (files orphaned!)
+**Right:** Analyze PR → `gh pr merge` → Git brings files automatically
+**Cherry-pick:** `/harvest` diff → `git apply --include='{path}'` → close PR
+**Key:** NEVER manually write files from PR diff. Merge first, close after.
+**MCP-ID:** `lesson-015-pr-merge-first`
+
 ---
 
-## 🟡 TIER 3: HIGH (3 lessons)
+## 🟡 TIER 3: HIGH (4 lessons)
 
-### **15. SEARCH BEFORE CREATING** 🟡 HIGH
+### **16. SEARCH BEFORE CREATING** 🟡 HIGH
 **Rule:** Check existing solutions before creating new ones
-**MCP-ID:** `lesson-015-search-first`
+**MCP-ID:** `lesson-016-search-first`
 
-### **16. MCP TOOL SELECTION** 🟡 HIGH
+### **17. MCP TOOL SELECTION** 🟡 HIGH
 **Rule:** List ALL tools in MCP server, pick BEST not first
 **Perplexity:** `search` (quick), `reason` (complex), `deep_research` (reports)
-**MCP-ID:** `lesson-016-mcp-tools`
+**MCP-ID:** `lesson-017-mcp-tools`
 
-### **17. DISPLAY = SYMLINK** 🟢 MEDIUM
+### **18. DISPLAY = SYMLINK** 🟢 MEDIUM
 **Rule:** "Show in sidebar" means folder access via symlink, not docs
-**MCP-ID:** `lesson-017-display-intent`
+**MCP-ID:** `lesson-018-display-intent`
 
-### **18. PERPLEXITY TOOLS** 🟢 MEDIUM
+### **19. PERPLEXITY TOOLS** 🟢 MEDIUM
 **Rule:** Use correct Perplexity tool for task type
 **Tools:**
 - `search` — Quick lookups, simple facts, current versions
 - `reason` — Multi-step analysis, comparisons, complex reasoning
 - `deep_research` — Comprehensive reports, in-depth research
 **Benefit:** Bypasses training cutoff — gets real-time web data with citations
-**MCP-ID:** `lesson-018-perplexity-tools`
+**MCP-ID:** `lesson-019-perplexity-tools`
 
 ---
 
@@ -173,23 +181,21 @@ Before ANY execution task:
 | 12 | READ RULES FIRST | 🔴 CRITICAL | Load governance before execution |
 | 13 | ROOT DOCKER-COMPOSE | 🔴 CRITICAL | Use root docker-compose.yml |
 | 14 | REAL TIMESTAMPS | 🔴 CRITICAL | date -u → 2026-01-20T15:56:08Z |
-| 15 | SEARCH FIRST | 🟡 HIGH | Check existing before creating |
-| 16 | MCP TOOLS | 🟡 HIGH | Pick BEST tool, not first |
-| 17 | DISPLAY = SYMLINK | 🟢 MEDIUM | Sidebar = folder access |
-| 18 | PERPLEXITY TOOLS | 🟢 MEDIUM | search/reason/deep_research by task |
+| 15 | PR MERGE FIRST | 🔴 CRITICAL | `gh pr merge` to adopt, never manual write |
+| 16 | SEARCH FIRST | 🟡 HIGH | Check existing before creating |
+| 17 | MCP TOOLS | 🟡 HIGH | Pick BEST tool, not first |
+| 18 | DISPLAY = SYMLINK | 🟢 MEDIUM | Sidebar = folder access |
+| 19 | PERPLEXITY TOOLS | 🟢 MEDIUM | search/reason/deep_research by task |
 
 || Auto-detected Issues | 25 | AI Pattern Detection | ✅ Active |
 ---
 
-**Last Updated:** 2026-01-23T05:00:03Z  
-**Version:** 8.2.0  
-**Changes:** Added Perplexity tools lesson #18  
+**Last Updated:** 2026-01-25T05:00:04Z  
+**Version:** 8.3.0  
 **Changes:** 
-- Merged NO FABRICATION + COMMUNICATION into NO PLACEHOLDERS (#7)
-- Removed N8N AUTH (deprecated, replaced with L9 AUTH)
-- Updated FRUSTRATION: incident report + harden rule, no apologies, ask to undo
-- Updated INVESTIGATE: Check Neo4j graphs, not just postgres
-- Verified TIMESTAMPS format correct
+- Added #15 PR MERGE FIRST — git handles file transfer, never manual write from PR diff
+- Renumbered lessons 16-19 (was 15-18)
+- Updated /pr command v9.0.0 with git-native adoption workflow
 
 
 ### **19. Successful solution pattern detected - can be reus...**
@@ -303,3 +309,17 @@ Before ANY execution task:
 **Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
 **Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
 **Date Added:** 2026-01-23
+
+### **35. n8n workflow structure issue - missing node IDs or...**
+**Mistake:** n8n workflow structure issue - missing node IDs or incorrect workflow format
+**Impact:** Occurred 1 time(s) | Date range: 2026-01-24 to 2026-01-24 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-01-25
+
+### **36. Pattern detected: Pattern Behavioral...**
+**Mistake:** Pattern detected: Pattern Behavioral
+**Impact:** Occurred 1 time(s) | Date range: 2026-01-24 to 2026-01-24 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-01-25

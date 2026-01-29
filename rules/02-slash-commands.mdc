@@ -21,36 +21,37 @@ Then:
 
 | Command | File | Description |
 |---------|------|-------------|
-| `/ynp` | `commands/ynp.md` | Yes No Proceed - decision framework |
-| `/gmp` | `commands/gmp.md` | Governance Managed Process - phased execution |
-| `/lcto` | `commands/lcto.md` | L CTO mode - strategic technical decisions |
-| `/forge` | `commands/forge.md` | Forge mode - rapid multi-GMP execution |
-| `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
 | `/analyze` | `commands/analyze.md` | Codebase analysis |
-| `/evaluate` | `commands/evaluate.md` | Code quality evaluation |
-| `/analyze+evaluate` or `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
-| `/plan` | `commands/plan.md` | Create execution plan |
-| `/spec` | `commands/spec.md` | Generate specification |
-| `/wire` | `commands/wire.md` | Wire/integrate components |
+| `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
+| `/ci` | `commands/ci.md` | CI/CD operations |
+| `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
 | `/confirm-wiring` | `commands/confirm-wiring.md` | Integration audit - verify fully wired |
 | `/consolidate` | `commands/consolidate.md` | Consolidate code/files |
-| `/refactor-sweep` | `commands/refactor-sweep.md` | Systematic refactoring |
-| `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
-| `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
-| `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
-| `/harvest` | `commands/harvest.md` | Harvest insights from conversation |
-| `/governance` | `commands/governance.md` | Governance check and enforcement |
-| `/rules` | `commands/rules.md` | List and manage rules |
-| `/mem` | `commands/mem.md` | Memory-aware execution: READ → EXECUTE with SEARCH → WRITE |
-| `/violation` | `commands/violation.md` | Report governance violation |
-| `/ci` | `commands/ci.md` | CI/CD pipeline operations |
-| `/pipeline_kickstart` | `commands/pipeline_kickstart.md` | Start pipeline from scratch |
-| `/pipeline_precommit` | `commands/pipeline_precommit.md` | Pre-commit checks |
-| `/pipeline_midstream` | `commands/pipeline_midstream.md` | Mid-pipeline operations |
-| `/init` | `commands/initialize-new-workspace.md` | Initialize new workspace |
-| `/index` | `commands/index.md` | Export repo indexes + load to Neo4j graph |
-| `/start-session` | `commands/start-session.md` | Cursor session startup - load governance, workflow state |
 | `/end-session` | `commands/end-session.md` | Close session - save context, create handoff |
+| `/evaluate` | `commands/evaluate.md` | Code quality evaluation |
+| `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
+| `/extract-from-chat` | `commands/extract-from-chat.md` | Extract from chat (alternate) |
+| `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
+| `/forge` | `commands/forge.md` | Forge mode - rapid multi-GMP execution |
+| `/gap-analysis` | `commands/gap-analysis.md` | Gap analysis for PRs/features |
+| `/gmp` | `commands/gmp.md` | Governance Managed Process - phased execution |
+| `/governance` | `commands/governance.md` | Governance check and enforcement |
+| `/harvest` | `commands/harvest.md` | Harvest patterns from code/conversation |
+| `/index` | `commands/index.md` | Export repo indexes + load to Neo4j graph |
+| `/lcto` | `commands/lcto.md` | L CTO mode - strategic technical decisions |
+| `/mem` | `commands/mem.md` | Memory-aware execution |
+| `/plan` | `commands/plan.md` | Create execution plan |
+| `/pr` | `commands/pr.md` | PR analysis and gap assessment |
+| `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
+| `/refactor-sweep` | `commands/refactor-sweep.md` | Systematic refactoring |
+| `/rules` | `commands/rules.md` | List and manage rules |
+| `/spec` | `commands/spec.md` | Generate specification |
+| `/start-session` | `commands/start-session.md` | Cursor session startup |
+| `/violation` | `commands/violation.md` | Report governance violation |
+| `/wire` | `commands/wire.md` | Wire/integrate components |
+| `/wire-into-lifespan` | `commands/wire-into-lifespan.md` | Wire into FastAPI lifespan |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
+| `/ynp` | `commands/ynp.md` | Yes No Proceed - decision framework |
 
 ## Execution Protocol
 
@@ -179,19 +180,33 @@ python3 agents/cursor/cursor_memory_client.py search "[domain] [component] patte
 
 | Command | Memory Inject | Execute | Extract | Chain |
 |---------|---------------|---------|---------|-------|
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/gmp` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/forge` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/analyze` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/evaluate` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/wire` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/confirm-wiring` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/spec` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/consolidate` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/harvest` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/governance` | ✅ | ✅ | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/reasoning` | ✅ | ✅ | `/extract-chat` | `/ynp` |
 | `/refactor-sweep` | ✅ | ✅ | `/extract-chat` | `/gmp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/mem` | ✅ | ✅ (with SEARCH) | `/extract-chat` | `/ynp` |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
+| `/pr` | ✅ | ✅ | `/extract-chat` | `/ynp` |
 
 ## What Gets Injected (READ)
 

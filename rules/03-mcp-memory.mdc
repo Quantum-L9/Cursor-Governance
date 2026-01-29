@@ -1,21 +1,57 @@
 ---
-description: "L9 Memory Stack - PostgreSQL, Neo4j, Redis, pgvector integration"
+description: "L9 Memory Stack - C1 PRIMARY server, PostgreSQL, Neo4j, Redis, pgvector"
 globs: ["**/*"]
 alwaysApply: true
 ---
 
-# PRIMARY METHOD: MCP Server (all operations flow through ingestion/retrieval pipeline)
-python3 agents/cursor/cursor_memory_client.py search "query"      # Uses MCP search_memory tool
-python3 agents/cursor/cursor_memory_client.py write "content" --kind lesson  # Uses MCP save_memory tool
-python3 agents/cursor/cursor_memory_client.py inject "task"       # Uses MCP tools
-python3 agents/cursor/cursor_memory_client.py health              # Checks MCP server health
+# 🚨 C1 IS THE PRIMARY MEMORY SERVER
 
-# FALLBACK ONLY: HTTP/REST API (deprecated, use only if MCP unreachable)
-# Client automatically falls back to HTTP if MCP server fails
+**Effective: 2026-01-24**
+
+All memory operations go through **C1 Hetzner Server** (46.62.243.82).
+
+## C1 Memory Endpoints
+
+| Service | Endpoint | Purpose |
+|---------|----------|---------|
+| **MCP Memory** | `http://46.62.243.82:30902` | PRIMARY - All memory read/write |
+| **L9 API** | `http://46.62.243.82:30080` | API gateway, MCP proxy |
+| **PostgreSQL** | `46.62.243.82:30432` | PacketStore + pgvector |
+| **Neo4j** | `http://46.62.243.82:30474` | Knowledge graph |
+| **Redis** | `46.62.243.82:30379` | Session cache |
+
+## Environment Configuration
+
+```bash
+# .env for C1 Memory (PRIMARY)
+C1_API_URL=http://46.62.243.82:30080
+C1_MCP_URL=http://46.62.243.82:30902
+C1_NEO4J_URL=bolt://46.62.243.82:30687
+C1_POSTGRES_DSN=postgresql://l9_user:C1_Postgres-2026!@46.62.243.82:30432/l9_memory
+C1_REDIS_URL=redis://46.62.243.82:30379
+```
+
+## Memory Client Commands (Use C1)
+
+```bash
+# PRIMARY METHOD: MCP Server on C1
+python3 agents/cursor/cursor_memory_client.py health              # Check C1 MCP health
+python3 agents/cursor/cursor_memory_client.py search "query"      # Search via MCP
+python3 agents/cursor/cursor_memory_client.py write "content" --kind lesson  # Write via MCP
+python3 agents/cursor/cursor_memory_client.py inject "task"       # Context injection
+python3 agents/cursor/cursor_memory_client.py stats               # Memory statistics
+```
+
+**Note:** The client uses `L9_API_URL` environment variable. Override to point to C1:
+```bash
+export L9_API_URL=http://46.62.243.82:30080
+```
+
+---
 
 # L9 Memory Stack Integration
 
-You have access to a **full memory stack** beyond Cursor's native memory:
+You have access to a **full memory stack** on C1:
 
 1. **PostgreSQL + PacketStore** — Persistent memories, lessons, audit trail
 2. **pgvector** — Semantic embeddings for finding similar solutions
@@ -34,7 +70,7 @@ You have access to a **full memory stack** beyond Cursor's native memory:
 
 ## 🔍 Neo4j REPO GRAPH — Know Where Everything Is
 
-The L9 codebase structure is indexed in Neo4j. **Query it instead of searching!**
+The L9 codebase structure is indexed in Neo4j on C1. **Query it instead of searching!**
 
 ### What's In The Graph
 ```
@@ -117,17 +153,22 @@ memory_search(
 
 At the START of each session, you SHOULD:
 
-1. **Query Neo4j Repo Graph:**
+1. **Check C1 Memory Health:**
+   - Run `python3 agents/cursor/cursor_memory_client.py health`
+   - Verify MCP endpoint is reachable
+   - If unhealthy, note in session context
+
+2. **Query Neo4j Repo Graph:**
    - Get familiar with current codebase structure
    - Know where key modules are located
    - Understand import relationships
 
-2. **Check Redis for session context:**
+3. **Check Redis for session context:**
    - Recent conversation summaries
    - Active TODO items
    - Current phase/state
 
-3. **Query PostgreSQL/pgvector if relevant:**
+4. **Query PostgreSQL/pgvector if relevant:**
    - Lessons learned for current workspace
    - Patterns relevant to current task
    - Past solutions to similar problems
@@ -200,13 +241,13 @@ Check your available MCP tools for:
 ```
 Question Type?
 │
-├─► "Where is X?" / "What uses Y?" ──► Neo4j Repo Graph
+├─► "Where is X?" / "What uses Y?" ──► Neo4j Repo Graph (C1)
 │
-├─► "Have we done this before?" ──► pgvector semantic search
+├─► "Have we done this before?" ──► pgvector semantic search (C1)
 │
-├─► Need to remember for THIS session ──► Redis
+├─► Need to remember for THIS session ──► Redis (C1)
 │
-├─► Need to remember FOREVER ──► PostgreSQL PacketStore
+├─► Need to remember FOREVER ──► PostgreSQL PacketStore (C1)
 │
 └─► User preference/correction ──► Cursor native update_memory
 ```
@@ -222,6 +263,7 @@ Before session ends (if detectable), save to Redis:
 ## 🚀 Proactive Behavior
 
 **DO:**
+- Check C1 memory health at session start
 - Check Redis for context at session start
 - Update Redis after significant milestones
 - Store lessons in MCP-Memory after GMP completion
@@ -233,35 +275,36 @@ Before session ends (if detectable), save to Redis:
 - Store trivial information
 - Forget to check for existing context
 
-## Integration with L9 Stack
+## Integration with L9 Stack (C1)
 
-This rule integrates with:
+This rule integrates with C1 services:
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `cursor_memory_kernel.py` | `core/governance/` | Python memory module |
-| `mcp_memory/` | `mcp_memory/src/` | MCP memory server |
-| `memory/substrate_service.py` | `memory/` | PacketStore + pgvector |
-| `runtime/redis_client.py` | `runtime/` | Redis client |
-| Neo4j | Docker container | Repo graph database |
+| Component | C1 Location | Purpose |
+|-----------|-------------|---------|
+| MCP Memory Server | `46.62.243.82:30902` | Memory read/write API |
+| L9 API | `46.62.243.82:30080` | API gateway |
+| PostgreSQL | `46.62.243.82:30432` | PacketStore + pgvector |
+| Neo4j | `46.62.243.82:30474` | Knowledge graph |
+| Redis | `46.62.243.82:30379` | Session cache |
 
 ## Example: Session Start (Full Stack)
 
 ```
 # At session start, full context load:
-1. Read workflow_state.md (always - file-based)
-2. Query Neo4j: Get repo structure overview for current area
-3. Check Redis: cursor:session:current:context
-4. Query pgvector: Related lessons for current task type
-5. Proceed with STATE_SYNC complete + graph awareness
+1. Check C1 health: python3 agents/cursor/cursor_memory_client.py health
+2. Read workflow_state.md (always - file-based)
+3. Query Neo4j (C1): Get repo structure overview for current area
+4. Check Redis (C1): cursor:session:current:context
+5. Query pgvector (C1): Related lessons for current task type
+6. Proceed with STATE_SYNC complete + graph awareness
 ```
 
 ## Example: After GMP Completion
 
 ```
 # After completing GMP-31:
-1. Update Redis with completion status
-2. Store lessons learned in PostgreSQL PacketStore
+1. Update Redis (C1) with completion status
+2. Store lessons learned in PostgreSQL PacketStore (C1)
 3. Update workflow_state.md
 4. Save session context to Redis for next time
 5. (If new patterns discovered) Update repo graph in Neo4j
@@ -277,7 +320,7 @@ This rule integrates with:
    codebase_search("tool registry location")
 
 ✅ NEW WAY (instant):
-   Query Neo4j: MATCH (f:File) WHERE f.name CONTAINS 'registry' 
+   Query Neo4j (C1): MATCH (f:File) WHERE f.name CONTAINS 'registry' 
                 AND f.path CONTAINS 'tool' RETURN f.path
    → "core/tools/registry_adapter.py"
 ```
@@ -286,7 +329,7 @@ This rule integrates with:
 
 Run `/index` or `python3 tools/export_repo_indexes.py` to regenerate.
 
-L9 has **33 repo index files** at `readme/repo-index/`:
+L9 has **33 repo index files** at `reports/repo-index/`:
 
 ### Core Indexes
 | Index File | Contents | Use For |
@@ -351,7 +394,7 @@ To load indexes into Neo4j for relationship queries:
 
 ```python
 # scripts/load_indexes_to_neo4j.py (to be created)
-# Reads from readme/repo-index/*.txt
+# Reads from reports/repo-index/*.txt
 # Creates nodes: File, Class, Function, Module
 # Creates relationships: CONTAINS, IMPORTS, INHERITS
 ```

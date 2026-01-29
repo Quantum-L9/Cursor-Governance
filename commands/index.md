@@ -29,10 +29,11 @@ python tools/export_repo_indexes.py
 
 ## INDEX FILES
 
-Location: `readme/repo-index/`
+Location: `reports/repo-index/`
 
 | File | Contents |
 |------|----------|
+| readme_manifest.txt | All READMEs with descriptions |
 | class_definitions.txt | All classes with paths |
 | function_signatures.txt | All functions |
 | imports.txt | Import graph |
@@ -49,14 +50,17 @@ Location: `readme/repo-index/`
 Before searching codebase, check indexes:
 
 ```bash
+# Find README for a module
+grep "memory/" reports/repo-index/readme_manifest.txt
+
 # Find class
-grep "ClassName" readme/repo-index/class_definitions.txt
+grep "ClassName" reports/repo-index/class_definitions.txt
 
 # Find function
-grep "function_name" readme/repo-index/function_signatures.txt
+grep "function_name" reports/repo-index/function_signatures.txt
 
 # Find route
-grep "POST /api" readme/repo-index/route_handlers.txt
+grep "POST /api" reports/repo-index/route_handlers.txt
 ```
 
 ---
@@ -73,7 +77,7 @@ grep "POST /api" readme/repo-index/route_handlers.txt
 | routes | N |
 | tests | N |
 
-**Location:** readme/repo-index/
+**Location:** reports/repo-index/
 ```
 
 --- End Command ---

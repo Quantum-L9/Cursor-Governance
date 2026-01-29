@@ -358,7 +358,8 @@ class SessionStartup:
 
     Cursor Kernel Check:
         - Checks if Cursor workflow kernel exists (agents/cursor/cursor_workflow_kernel.yaml)
-        - Verifies kernel file is readable and valid YAML
+        - Checks if Cursor memory kernel exists (agents/cursor/cursor_memory_kernel.yaml)
+        - Verifies both kernel files are readable and valid YAML
         - Computes SHA256 hash for integrity verification
     """
 
@@ -472,6 +473,13 @@ class SessionStartup:
                 "CURSOR-KERNEL-001",
                 required=True,  # This is LAW
                 description="Cursor workflow kernel - binding behavioral contract",
+            ),
+            # Cursor memory kernel (BINDING CONTRACT)
+            StartupFile(
+                "agents/cursor/cursor_memory_kernel.yaml",
+                "CURSOR-KERNEL-002",
+                required=True,  # This is LAW
+                description="Cursor memory kernel - memory utilization contract",
             ),
             # GMP Protocol - Phase contracts
             StartupFile(
@@ -683,57 +691,63 @@ class SessionStartup:
 
     def check_cursor_workflow_kernel(self) -> KernelReadinessResult:
         """
-        Check Cursor workflow kernel readiness.
+        Check Cursor kernels readiness (workflow + memory).
         
         Verifies:
-        1. Cursor workflow kernel file exists: agents/cursor/cursor_workflow_kernel.yaml
-        2. Kernel file is readable and valid YAML
+        1. Cursor workflow kernel exists: agents/cursor/cursor_workflow_kernel.yaml
+        2. Cursor memory kernel exists: agents/cursor/cursor_memory_kernel.yaml
+        3. Both kernel files are readable and valid YAML
 
         Returns:
             KernelReadinessResult with readiness status
         """
         errors: list[str] = []
         kernel_hashes: Dict[str, str] = {}
-
-        # Check Cursor workflow kernel file exists (top-level in agents/cursor/)
-        cursor_kernel_path = self.root / "agents" / "cursor" / "cursor_workflow_kernel.yaml"
         
-        if not cursor_kernel_path.exists():
-            errors.append(f"Cursor workflow kernel not found: {cursor_kernel_path}")
-            return KernelReadinessResult(
-                kernels_ready=False,
-                kernel_state="NOT_FOUND",
-                kernel_count=0,
-                errors=errors,
-            )
-
-        # Verify file is readable and compute hash
-        try:
-            import hashlib
-            data = cursor_kernel_path.read_bytes()
-            kernel_hashes[str(cursor_kernel_path.relative_to(self.root))] = hashlib.sha256(
-                data
-            ).hexdigest()
+        # Define required cursor kernels
+        cursor_kernels = [
+            ("cursor_workflow_kernel.yaml", "Cursor workflow kernel"),
+            ("cursor_memory_kernel.yaml", "Cursor memory kernel"),
+        ]
+        
+        import hashlib
+        import yaml
+        
+        kernels_found = 0
+        
+        for kernel_file, kernel_name in cursor_kernels:
+            kernel_path = self.root / "agents" / "cursor" / kernel_file
             
-            # Basic YAML validation
+            if not kernel_path.exists():
+                errors.append(f"{kernel_name} not found: {kernel_path}")
+                continue
+            
+            # Verify file is readable and compute hash
             try:
-                import yaml
-                yaml.safe_load(data)
+                data = kernel_path.read_bytes()
+                kernel_hashes[str(kernel_path.relative_to(self.root))] = hashlib.sha256(
+                    data
+                ).hexdigest()
+                
+                # Basic YAML validation
+                try:
+                    yaml.safe_load(data)
+                    kernels_found += 1
+                except Exception as e:
+                    errors.append(f"{kernel_name} YAML invalid: {e}")
             except Exception as e:
-                errors.append(f"Cursor kernel YAML invalid: {e}")
-        except Exception as e:
-            errors.append(f"Failed to read Cursor kernel: {e}")
+                errors.append(f"Failed to read {kernel_name}: {e}")
 
-        # Determine readiness
-        kernels_ready = len(errors) == 0
+        # Determine readiness (both kernels must be valid)
+        kernels_ready = len(errors) == 0 and kernels_found == len(cursor_kernels)
         kernel_state = "READY" if kernels_ready else "ERROR"
 
         result = KernelReadinessResult(
             kernels_ready=kernels_ready,
             kernel_state=kernel_state,
-            kernel_count=1 if kernels_ready else 0,
+            kernel_count=kernels_found,
             kernel_hash_snapshot=kernel_hashes,
-            integrity_verified=len(kernel_hashes) == 1,
+            integrity_verified=len(kernel_hashes) == len(cursor_kernels),
             errors=errors,
         )
 
@@ -742,7 +756,7 @@ class SessionStartup:
         logger.info(
             "session_startup.cursor_kernel_check",
             kernels_ready=kernels_ready,
-            kernel_path=str(cursor_kernel_path.relative_to(self.root)),
+            kernel_count=kernels_found,
             kernel_state=kernel_state,
             errors=errors,
         )

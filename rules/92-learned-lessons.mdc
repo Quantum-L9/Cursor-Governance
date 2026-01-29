@@ -511,3 +511,42 @@ In L9 codebase, "factory" is an accepted technical term:
 **Usage:** Functions that create and configure service instances.
 
 **Location:** `config/di_config.py` contains canonical factory functions.
+
+---
+
+## 🔴 CRITICAL: Copy Complete Code, Don't Rewrite
+
+### If Code Exists in Document, COPY It — Don't Regenerate
+
+**Effective: 2026-01-25**
+
+When a research document, chat transcript, or reference file contains **complete code**:
+
+1. **COPY** — Extract the code as-is using copy/paste or file write
+2. **DO NOT REWRITE** — Never manually retype or regenerate existing code
+3. **REFERENCE** — Cite source file and line numbers
+
+**Anti-pattern detected:**
+- User provides document with 600+ lines of production code
+- Agent starts "writing" the code manually instead of copying
+- Result: Duplicated effort, potential transcription errors, wasted time
+
+**This violates:**
+- "Search Before Create" rule (code already exists)
+- "Surgical Edits Only" principle (unnecessary work)
+- Efficiency expectations (copy is instant, rewrite takes minutes)
+
+**Correct approach for /harvest:**
+```markdown
+## 🌾 HARVEST
+
+| # | Pattern | Source | Lines | Target |
+|---|---------|--------|-------|--------|
+| 1 | ClassName | doc.md | 100-250 | 1_file.py |
+
+Instructions: Copy lines 100-250 from doc.md → paste into 1_file.py
+```
+
+**Rule:** If code exists, COPY it. Rewriting existing code is a governance violation.
+
+**Lesson:** 2026-01-25 — Attempted to manually rewrite code from Tool Discovery-2.md instead of providing copy/paste instructions. User corrected: "harvesting = extracting code into a folder, not rewriting it."

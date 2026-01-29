@@ -1,129 +1,262 @@
----
 name: gmp
-version: "3.2.0"
-description: "Governance Managed Process — phased execution with audit trail"
+version: "5.0.0"
+description: "Governance Managed Process — constitutional execution for semantic, lifecycle, or protected changes"
 auto_chain: ynp
+
+# /gmp — Governance Managed Process (Canonical)
+
+NON-NEGOTIABLE PRINCIPLES
+
+1. /gmp is for SEMANTIC change only
+2. If code can be harvested → /gmp is NOT allowed
+3. No scope drift, no side quests, no cleanup
+4. Evidence > intuition
+5. STOP is a valid outcome
+
 ---
 
-# /gmp — Governance Managed Process
+USAGE
 
-## USAGE
-
-```
-/gmp "task description"
+/gmp "explicit task description"
 /gmp --scope-file path/to/scope.yaml
-```
 
-## CHAIN
-
-```
-/gmp → Phase 0-6 → REPORT → workflow_state.md → /ynp
-```
+If task description is vague → STOP → request clarification.
 
 ---
 
-## MODIFICATION LOCK
+POSITION IN TOOLCHAIN
 
-| ❌ FORBIDDEN | ✅ ALLOWED |
-|--------------|------------|
-| Modify files not in TODO | Implement exact TODO |
-| Create files outside scope | Operate within phases |
-| Fix adjacent issues | Report in format |
-| Skip phases | STOP if ambiguous |
+IDEA
+ ↓
+/refactor-sweep      (risk + eligibility)
+ ↓
+Decision
+ ├─ Mechanical → /harvest-use
+ ├─ Structural → /wire
+ └─ Semantic / lifecycle → /gmp
 
----
-
-## PHASES
-
-| # | Phase | Purpose |
-|---|-------|---------|
-| 0 | PLAN | Lock TODO, scope boundaries |
-| 0.5 | HARVEST | Analyze provided files, extract patterns |
-| 1 | BASELINE | Verify files/lines exist |
-| 2 | IMPLEMENT | Execute TODO only |
-| 3 | ENFORCE | Add guards, fail-fast |
-| 4 | VALIDATE | py_compile, ruff, tests |
-| 5 | RECURSE | Verify no scope drift |
-| 6 | FINALIZE | Report + memory write |
+/gmp is the FINAL gate.
 
 ---
 
-## TODO FORMAT
+CHAIN
 
+/gmp
+→ PHASE 0: SCOPE LOCK
+→ PHASE 1: EVIDENCE INTAKE (🧠 MEMORY READ FIRST)
+→ PHASE 2: BASELINE VERIFICATION
+→ PHASE 3: SEMANTIC IMPLEMENTATION
+→ PHASE 4: ENFORCEMENT
+→ PHASE 5: VALIDATION
+→ PHASE 5.5: 🧠 MEMORY WRITE
+→ PHASE 6: FINALIZE + GMP REPORT
+→ STOP → /ynp
+
+---
+
+PHASE 0 — SCOPE LOCK (ABSOLUTE)
+
+Lock WHAT will change and NOTHING else.
+
+Required output:
+
+## GMP SCOPE LOCK
+
+GMP ID: GMP-XXX
+Tier: KERNEL | RUNTIME | INFRA | UX
+
+TODO PLAN (LOCKED)
 | T# | File | Lines | Action | Description |
 |----|------|-------|--------|-------------|
-| T1 | path/file.py | 44-52 | Replace | Change X to Y |
 
-**Actions:** `Create | Insert | Replace | Delete | Wrap`
+FILE BUDGET
+- MAY: files in TODO only
+- MAY NOT: everything else
 
----
+⏸️ Awaiting explicit CONFIRM
 
-## TIER CLASSIFICATION
-
-| Tier | Examples |
-|------|----------|
-| KERNEL | executor.py, websocket_orchestrator.py |
-| RUNTIME | tool_registry.py, redis_client.py |
-| INFRA | docker-compose.yml, deploy/ |
-| UX | frontend/, scripts/ |
+NO CONFIRM → NO EXECUTION
 
 ---
 
-## PROTECTED FILES
+PHASE 1 — EVIDENCE INTAKE (READ-ONLY)
 
+🧠 MEMORY READ (MANDATORY FIRST STEP)
+
+Before ANY file reading, search L9 memory for context:
+
+```bash
+# Search for related work, patterns, lessons
+python3 agents/cursor/cursor_memory_client.py search "[task keywords]"
+python3 agents/cursor/cursor_memory_client.py search "lessons errors [component]"
+python3 agents/cursor/cursor_memory_client.py search "[domain] patterns"
 ```
+
+Output format:
+
+## 🧠 MEMORY CONTEXT
+
+### Related Work Found
+- [prior GMP or task if any]
+
+### Relevant Patterns
+- [patterns from memory]
+
+### Lessons to Apply
+- [lessons/errors to avoid]
+
+📍 Proceeding with evidence collection...
+
+---
+
+Then collect:
+- relevant files
+- prior patterns
+- harvested artifacts (if provided)
+
+RULES
+- NO transformation
+- NO rewriting
+- NO synthesis
+
+If equivalent code already exists → STOP → recommend /harvest-use
+
+---
+
+PHASE 2 — BASELINE VERIFICATION
+
+Verify:
+- files exist
+- line ranges are correct
+- imports resolve
+- assumptions hold
+
+Any failure → STOP → return to Phase 0
+
+---
+
+PHASE 3 — SEMANTIC IMPLEMENTATION
+
+Allowed actions ONLY:
+- behavior change explicitly described in TODO
+- lifecycle change explicitly described
+- contract change explicitly described
+
+FORBIDDEN:
+- reformatting
+- renaming
+- cleanup
+- “while I’m here”
+- mechanical changes suitable for harvest
+
+All edits must map 1:1 to TODO items.
+
+---
+
+PHASE 4 — ENFORCEMENT
+
+Add:
+- guards
+- assertions
+- fail-fast checks
+ONLY if explicitly required by TODO.
+
+No proactive hardening.
+
+---
+
+PHASE 5 — VALIDATION (FAIL-FAST)
+
+Run:
+- python3 -m py_compile
+- ruff (if applicable)
+- tests (if applicable)
+
+RULE
+- ANY failure → STOP
+- DO NOT patch forward
+- Return failure with evidence
+
+---
+
+PHASE 5.5 — MEMORY WRITE (MANDATORY BEFORE FINALIZE)
+
+🧠 MEMORY WRITE (REQUIRED)
+
+Before finalizing, write learnings to L9 memory:
+
+```bash
+# Write what was accomplished (include tags in content)
+python3 agents/cursor/cursor_memory_client.py write "GMP-XXX: [summary of changes]. Tags: gmp, [component]" --kind lesson
+
+# Write any patterns discovered
+python3 agents/cursor/cursor_memory_client.py write "[pattern discovered]. Tags: [domain], pattern" --kind pattern
+
+# Write any errors/fixes for future reference  
+python3 agents/cursor/cursor_memory_client.py write "[error encountered and fix]. Tags: error, [component]" --kind lesson
+```
+
+Output format:
+
+## 🧠 MEMORY WRITTEN
+
+- ✅ GMP summary saved
+- ✅ Patterns saved (if any)
+- ✅ Lessons saved (if any)
+
+📍 Proceeding to finalize...
+
+---
+
+PHASE 6 — FINALIZE (INLINE ALWAYS)
+
+Inline report:
+
+## GMP-XXX COMPLETE
+
+Tier: {tier}
+Status: PASS | FAIL
+
+TODO EXECUTION
+| T# | File | Status |
+|----|------|--------|
+
+VALIDATION
+| Check | Result |
+|------|--------|
+
+NEXT STEP
+/ynp
+
+Scripted report generation is OPTIONAL and ON-DEMAND only.
+
+---
+
+PROTECTED FILES (HARD GATE)
+
 runtime/websocket_orchestrator.py
 core/agents/executor.py
 memory/substrate_service.py
 docker-compose.yml
 core/singleton_registry.py
-```
 
-→ Require dedicated KERNEL GMP with approval
-
----
-
-## SCOPE LOCK OUTPUT
-
-```markdown
-## GMP SCOPE LOCK
-
-**GMP ID:** GMP-XXX
-**Tier:** KERNEL | RUNTIME | INFRA | UX
-
-### TODO PLAN (LOCKED)
-| T# | File | Lines | Action | Description |
-|----|------|-------|--------|-------------|
-
-### FILE BUDGET
-- MAY: [files in TODO]
-- MAY NOT: [protected]
-
-⏸️ AWAITING: "CONFIRM"
-```
+→ Require KERNEL-tier GMP with explicit approval
 
 ---
 
-## REPORT (Phase 6)
-
-```bash
-python3 scripts/generate_gmp_report.py \
-  --task "description" \
-  --tier RUNTIME_TIER \
-  --todo "T1|file|lines|action|desc" \
-  --validation "py_compile|✅" \
-  --update-workflow
-```
-
----
-
-## STOP CONDITIONS
+STOP CONDITIONS (ENFORCED)
 
 | Condition | Action |
-|-----------|--------|
-| TODO underspecified | STOP → clarify |
-| Protected file | STOP → KERNEL GMP |
-| Ambiguous intent | STOP → /analyze first |
-| Assumption fails | Re-run Phase 0 |
+|----------|--------|
+| Mechanical change detected | STOP → /harvest-use |
+| TODO ambiguous | STOP |
+| Scope drift | STOP |
+| Validation failure | STOP |
+| Protected file without approval | STOP |
 
---- End Command ---
+---
+
+CORE TRUTH
+
+/gmp is expensive by design.
+If it feels heavy, that means it’s working.
