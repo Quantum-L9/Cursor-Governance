@@ -1,6 +1,6 @@
 ---
 name: rules
-version: "1.0.0"
+version: "1.1.0"
 description: "List and manage governance rules"
 auto_chain: null
 ---
@@ -58,6 +58,18 @@ core/singleton_registry.py
 | async I/O | Yes |
 | pydantic v2 | Yes |
 | type hints | Yes |
+
+---
+
+## SLASH COMMAND RULES (ADR-0100)
+
+| Rule | Detail |
+|------|--------|
+| Execution path | DAG only — agent reads DAG file and walks nodes |
+| CLI executors | **NEVER create** `workflows/*_executor.py` for slash commands |
+| Command file size | ~30-40 lines — minimal trigger, not full instructions |
+| Instructions live in | DAG node `action` fields, not the command `.md` file |
+| Frontmatter required | `dag:` (DAG ID) and `dag_file:` (path to DAG `.py`) |
 
 ---
 

@@ -104,6 +104,32 @@ Calculate time since last session:
 🟡 LOW — Backlog, future work
 ```
 
+### 6. INDEX FRESHNESS CHECK (Optional)
+
+Check if repo indexes need refresh:
+
+```bash
+# Check index file ages
+ls -la reports/repo-index/*.txt | head -5
+
+# If indexes older than 24h or significant code changes detected:
+python3 tools/export_repo_indexes.py
+# This automatically runs:
+#   1. Generate index files
+#   2. Ingest to memory (pgvector)
+#   3. Load to Neo4j (if configured)
+```
+
+**When to refresh indexes:**
+- After major code changes (new files, refactors)
+- If indexes >24h old
+- Before deep codebase exploration
+
+**Skip if:**
+- Quick session
+- Indexes recently updated
+- Working on single file
+
 ---
 
 ## OUTPUT — STATE_SYNC Block

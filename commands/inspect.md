@@ -1,231 +1,65 @@
 name: inspect
-version: "1.0.0"
-description: "Unified first-touch inspection — understand, evaluate, and route components deterministically"
+version: "3.0.0"
+description: "Inspect code before it enters L9 — external code gate + existing file audit"
 auto_chain: ynp
-
-# /inspect — Unified Analysis + Evaluation + Routing
-
-NON-NEGOTIABLE
-- READ-ONLY
-- NO code modification
-- NO fixes
-- NO wiring
-- NO harvesting
-- This command DECIDES, it does NOT ACT
-
----
-
-PURPOSE
-
-Provide a single, deterministic entry point to:
-
-1. Understand a component
-2. Evaluate its health and compliance
-3. Quantify impact and risk
-4. Decide the correct NEXT command
-5. STOP
-
-This replaces:
-/analyze
-/evaluate
-/analyze+evaluate
-
----
-
-USAGE
-
-/inspect path/to/file.py
-/inspect ModuleName
-/inspect ServiceName
-
----
-
-POSITION IN TOOLCHAIN
-
-UNKNOWN COMPONENT
- ↓
-/inspect          ← YOU ARE HERE
- ↓
-Decision
- ├─ Harvestable → /harvest-analyze
- ├─ Mechanical change → /refactor-sweep
- ├─ Structural wiring → /wire
- ├─ Semantic / lifecycle → /gmp
- └─ Healthy → STOP
-
----
-
-CHAIN
-
-/inspect
-→ CLASSIFY
-→ ORIENT
-→ STRUCTURE + FLOW
-→ COMPLIANCE + HEALTH
-→ IMPACT SCORING
-→ ROUTING DECISION
-→ REPORT
-→ STOP
-
----
-
-PHASE 1 — CLASSIFY (WHAT IS THIS?)
-
-Classify the target:
-
-TYPE:
-MODULE | SERVICE | AGENT | ROUTER | TOOL | KERNEL | CONFIG
-
-TIER:
-KERNEL | RUNTIME | INFRA | UX
-
-If classification is ambiguous → STOP → ask clarification.
-
----
-
-PHASE 2 — ORIENT (30-SECOND UNDERSTANDING)
-
-Answer explicitly:
-- What does this do?
-- Where does it sit in the system?
-- Who calls it?
-- What does it depend on?
-
-Produce a short orientation summary.
-
----
-
-PHASE 3 — STRUCTURE & FLOW
-
-STRUCTURE MAP:
-- files
-- classes
-- functions
-- exports
-
-FLOW TRACE:
-Entry → Handler → Service → Storage / External
-          ↓
-     Governance / Guards
-
-HOTSPOTS:
-| File | Why hot |
-|------|---------|
-
----
-
-PHASE 4 — COMPLIANCE & HEALTH (L9 CANON)
-
-Evaluate against L9 rules:
-
-STRUCTURAL
-- correct layer placement
-- no bootstrap logic in runtime
-- no lifecycle mutation outside GMP
-
-ASYNC
-- async I/O correctness
-- no sync leakage
-- proper timeouts
-
-QUALITY
-- logging (no print)
-- error handling
-- types
-- tests exist
-
-ANTI-PATTERNS
-| Pattern | Severity | Location |
-
----
-
-PHASE 5 — IMPACT SCORING
-
-Compute:
-
-Impact Score =
-(downstream_blocked × 2)
-+ upstream_unlocked
-+ cross-layer risk
-
-Classify:
-LOW | MEDIUM | HIGH | CRITICAL
-
----
-
-PHASE 6 — ROUTING DECISION (THE POINT)
-
-Make ONE explicit decision:
-
-| Condition | Route |
-|---------|------|
-| Code can be reused verbatim | /harvest-analyze |
-| Mechanical refactor only | /refactor-sweep |
-| Wiring / registration missing | /wire |
-| Behavior / lifecycle change | /gmp |
-| No action required | STOP |
-
-No mixed outcomes.
-No “could also”.
-
----
-
-PHASE 7 — REPORT (INLINE ONLY)
-
-## 🔍 INSPECT REPORT: {target}
-
-### Classification
-Type: {TYPE}
-Tier: {TIER}
-
-### Orientation
-{what/where/who}
-
-### Structure & Flow
-{tree}
-{flow}
-
-### Health Summary
-| Dimension | Status |
-|----------|--------|
-| Structure | ✅/❌ |
-| Async | ✅/❌ |
-| Compliance | ✅/❌ |
-| Tests | ✅/❌ |
-
-### Impact
-Score: {N}
-Level: LOW / MEDIUM / HIGH / CRITICAL
-
-### Decision
-➡️ NEXT COMMAND: `/harvest-analyze | /refactor-sweep | /wire | /gmp | STOP`
-
-### Rationale
-(1–3 bullet points, factual)
-
----
-
-STOP CONDITION
-
-After REPORT:
-- STOP
-- Do NOT chain automatically
-- Await user confirmation
-
----
-
-ANTI-PATTERNS
-
-❌ fixing while inspecting
-❌ suggesting code edits
-❌ combining multiple routes
-❌ skipping classification
-❌ soft recommendations
-
----
-
-CORE PRINCIPLE
-
-Inspect first.
-Act second.
-Never mix the two.
+dag: inspect-v1
+dag_file: workflows/dags/inspect_dag.py
+
+# /inspect — Code Gate & File Audit
+
+**DAG-ENFORCED.** Execute the `inspect-v1` DAG.
+
+## Usage
+
+```
+/inspect current_work/02-13-2026/guide.md    # External code — validate before import
+/inspect path/to/proposed_file.py             # File not yet in repo
+/inspect core/tools/registry_adapter.py       # Existing file audit
+```
+
+## What It Does
+
+### External Code (markdown, non-repo files)
+1. Extracts Python code blocks from markdown
+2. Validates imports against actual L9 modules
+3. Checks ADR compliance (structlog, no print, no f-string SQL, etc.)
+4. Detects hardcoded config values
+5. Parses AST structure (classes, functions, hotspots)
+6. Gates: `FIX-BEFORE-IMPORT` or `/harvest-analyze`
+
+### Existing Files
+1. Classifies type (MODULE, SERVICE, AGENT, etc.) and tier
+2. Parses AST for structure map
+3. Runs same compliance checks
+4. Routes to `/refactor-sweep`, `/wire`, `/gmp`, or `STOP`
+
+## Execution
+
+```python
+from workflows.dags.inspect_dag import run_inspect
+result = await run_inspect("current_work/02-13-2026/guide.md")
+print(result.report)
+```
+
+## Validators Wired In
+
+| Validator | Source | Checks |
+|-----------|--------|--------|
+| Import validation | `tools/validation/validate_external_code.py` | Non-existent L9 imports |
+| ADR compliance | `tools/validation/validate_external_code.py` | print(), logging, f-string SQL, random |
+| Config drift | `tools/validation/validate_external_code.py` | Hardcoded values vs config_constants |
+| AST structure | Built-in | Classes, functions, long functions, syntax errors |
+| DORA check | Built-in | Missing `__dora_meta__` |
+| Async safety | Built-in | `time.sleep()` in async functions |
+
+## Flow
+
+```
+START → classify → orient → structure → compliance → impact → routing → report → END
+```
+
+## Key Files
+
+- **DAG**: `workflows/dags/inspect_dag.py`
+- **Validator**: `tools/validation/validate_external_code.py`
+- **Makefile**: `make validate-external-code FILE=path`

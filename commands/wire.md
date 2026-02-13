@@ -1,237 +1,98 @@
+---
 name: wire
-version: "10.2.0"
-description: "Structural wiring repair with semantic guards. Fix refs, exports, and registrations — NOT a correctness proof."
+version: "12.0.0"
+description: "TRIGGER ONLY — Invokes wire_executor.py for enforceable wiring"
 auto_chain: ynp
-
-# /wire — Component Wiring (Canonical)
-
-IMPORTANT
-/ wire is a STRUCTURAL REPAIR command.
-It fixes references and exports.
-It does NOT prove runtime correctness.
-Runtime proof REQUIRES /verify-component.
-
+dag_executor: core/codegen/wire_executor.py
 ---
 
-USAGE
+# /wire — Component Wiring (v12.0.0)
 
-/wire path/to/component.py
-/wire ModuleName
+## THIS IS A TRIGGER ONLY
 
----
+`/wire` invokes the Wire Executor DAG. All logic lives in the executor.
 
-CHAIN
+## INVOCATION
 
-/wire
-→ DISCOVERY
-→ ANALYSIS
-→ PLAN
-→ EXECUTE
-→ VALIDATE
-→ RE-DISCOVERY
-→ REPORT
+```bash
+python3 core/codegen/wire_executor.py <component>
+```
 
----
+## WHAT THE DAG DOES (AUTONOMOUS)
 
-PHASE 1 — DISCOVERY (EXHAUSTIVE)
+```
+┌─────────────────────────────────────────────────────────┐
+│  DISCOVERY        │ Find ALL references with rg        │
+├─────────────────────────────────────────────────────────┤
+│  ANALYSIS         │ Classify component type            │
+├─────────────────────────────────────────────────────────┤
+│  PLAN             │ Create surgical action list        │
+├─────────────────────────────────────────────────────────┤
+│  EXECUTE          │ Apply fixes (NO user confirmation) │
+├─────────────────────────────────────────────────────────┤
+│  VALIDATE         │ py_compile + import test           │
+├─────────────────────────────────────────────────────────┤
+│  RE-DISCOVERY     │ Confirm all refs fixed             │
+├─────────────────────────────────────────────────────────┤
+│  CONFIRM-WIRING   │ Full verification pass             │
+├─────────────────────────────────────────────────────────┤
+│  GENERATE-REPORT  │ GMP report via script              │
+├─────────────────────────────────────────────────────────┤
+│  COMMIT           │ Stage + commit (NO PUSH)           │
+└─────────────────────────────────────────────────────────┘
+```
 
-Find ALL references to the target component.
+## FEATURES
 
-Commands:
-rg "{component}" --type py -n
-rg "from .*{component}|import .*{component}" --type py -n
+- **Fully autonomous** — No user confirmation gates
+- **Protected file detection** — Auto-escalates to /gmp
+- **Semantic refusals** — Blocks dangerous patterns
+- **Auto-report** — Uses canonical report generator
+- **Safe commit** — Commits locally, does NOT push
 
-Collect EVERY occurrence.
-No sampling. No assumptions.
+## USAGE
 
-Output table:
-| File | Line | Ref Type | Status |
-|------|------|----------|--------|
-| service.py | 12 | import | ❌ |
-| loader.py | 41 | usage | ❌ |
+```bash
+# Wire a module
+python3 core/codegen/wire_executor.py core/tools/registry.py
 
-If no references are found → STOP → report “unused component”.
+# Wire by import path
+python3 core/codegen/wire_executor.py memory.substrate_service
 
----
+# Check status
+python3 core/codegen/wire_executor.py --status
 
-PHASE 2 — ANALYSIS (STRUCTURAL + CONTEXT)
+# Resume if interrupted
+python3 core/codegen/wire_executor.py --resume
 
-Classify the component:
+# Reset state
+python3 core/codegen/wire_executor.py --reset
+```
 
-- module
-- class
-- function
-- service
-- route
-- tool
-- config
+## STATE FILE
 
-Apply required checks:
+Execution state is persisted to `.wire_executor_state.json`
 
-| Type | Required Structure |
-|-----|--------------------|
-| Module | file exists, __init__.py exports |
-| Class | imported, instantiated, reachable |
-| Service | registered, lifecycle-safe |
-| Route | exported, mounted |
-| Tool | registered, discoverable |
-| Config | loader exists, path valid |
+If interrupted, resume with `--resume`.
 
-If classification is ambiguous → STOP → request clarification.
+## PROTECTED FILES (AUTO-ESCALATE)
 
----
+If these files need changes, executor auto-escalates to /gmp:
+- `core/agents/executor.py`
+- `runtime/websocket_orchestrator.py`
+- `memory/substrate_service.py`
+- `docker-compose.yml`
+- `Dockerfile`
 
-PHASE 3 — PLAN (MINIMAL + EXPLICIT)
+## OUTPUT
 
-Create a numbered, surgical plan.
+The executor produces:
+1. Terminal progress for each step
+2. GMP report at `reports/GMP-Report-*.md`
+3. Local commit (no push)
 
-Rules:
-- One action = one edit
-- No speculative changes
-- No batching
+## ENFORCEMENT
 
-Plan table:
-| # | Action | File | Change |
-|---|--------|------|--------|
-| W1 | Fix import path | service.py:12 | old → new |
-| W2 | Add export | module/__init__.py | from .x import Y |
-| W3 | Register component | registry.py | add Y |
+The DAG is MANDATORY. The slash command is just a trigger.
 
-If plan requires refactor → STOP → escalate to /gmp.
-
----
-
-PHASE 4 — EXECUTE (SURGICAL ONLY)
-
-Constraints:
-- StrReplace / Insert only
-- Preserve formatting
-- Preserve logic
-- No rewrites
-
-If execution would:
-- change behavior
-- add side effects
-- restructure logic
-
-→ STOP → escalate to /gmp.
-
----
-
-PHASE 5 — VALIDATE (LOCAL STRUCTURE)
-
-Run ALL:
-
-python3 -m py_compile {modified_files}
-python3 -c "from {package} import {component}"
-pytest tests/{package}/ -v
-
-Purpose:
-- syntax safety
-- obvious import correctness
-- wiring-level test coverage
-
-This does NOT prove runtime safety.
-
----
-
-PHASE 6 — RE-DISCOVERY (STRUCTURAL CONFIRMATION)
-
-Repeat PHASE 1.
-
-Confirm:
-- all previous ❌ refs are now ✅
-- no new broken refs introduced
-- no duplicate or shadowed imports
-
-If ANY unresolved reference remains → FAIL.
-
----
-
-POST-CONDITION (MANDATORY)
-
-After /wire completes, you MUST run:
-
-/verify-component {component}
-
-If /verify-component fails:
-/wire is INCOMPLETE.
-Do NOT claim success.
-
----
-
-SEMANTIC REFUSALS (HARD STOPS)
-
-STOP IMMEDIATELY if wiring would:
-
-- introduce import-time side effects
-- cause DB / network access at import time
-- wire sync code into async-only paths
-- violate bootstrap vs runtime boundaries
-- mutate global state at import
-- rely on implicit side effects
-
-Escalate to /gmp with evidence.
-
----
-
-PROTECTED FILES (DO NOT TOUCH)
-
-If changes are required in ANY of these → STOP → /gmp:
-
-- core/agents/executor.py
-- runtime/websocket_orchestrator.py
-- memory/substrate_service.py
-- any Dockerfile
-- docker-compose.yml
-
----
-
-OUTPUT FORMAT
-
-## 🔌 WIRE: {component}
-
-| Metric | Value |
-|------|-------|
-| References found | N |
-| References fixed | N |
-| Exports added | N |
-| Files modified | N |
-
-### Actions
-| # | Action | File | Status |
-|---|--------|------|--------|
-| W1 | Fix import | service.py | ✅ |
-
-### Validation
-| Check | Status |
-|------|--------|
-| py_compile | ✅ |
-| import test | ✅ |
-| tests | ✅ |
-
-### Post-Condition
-/verify-component REQUIRED
-
----
-
-SUCCESS CRITERIA
-
-/ wire may declare STRUCTURAL SUCCESS only if:
-
-- all references resolve
-- no broken imports remain
-- no protected files touched
-- no semantic refusals triggered
-
-Runtime correctness is explicitly OUT OF SCOPE.
-
----
-
-ENFORCEMENT
-
-If unsure → STOP.
-If ambiguous → STOP.
-If unsafe → STOP.
-
-Evidence over confidence.
+All step ordering, validation, and reporting is handled by the executor.

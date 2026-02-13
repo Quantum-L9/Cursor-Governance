@@ -550,3 +550,57 @@ Instructions: Copy lines 100-250 from doc.md → paste into 1_file.py
 **Rule:** If code exists, COPY it. Rewriting existing code is a governance violation.
 
 **Lesson:** 2026-01-25 — Attempted to manually rewrite code from Tool Discovery-2.md instead of providing copy/paste instructions. User corrected: "harvesting = extracting code into a folder, not rewriting it."
+
+---
+
+## 🔴 CRITICAL: Never Hide Violations with noqa Comments
+
+### noqa = "I'm Hiding a Problem, Not Fixing It"
+
+**Effective: 2026-01-31**
+
+When asked to fix ADR/linter violations:
+
+1. **FIX THE CODE** — Actually change the code to comply
+2. **DO NOT add `# noqa` comments** — This hides the problem, doesn't fix it
+3. **ASK if unsure** — "Should I fix these properly or is hiding acceptable?"
+
+**Anti-pattern detected (2026-01-31):**
+- User asked to fix 715 ADR violations "fast and token-efficient"
+- Agent added `# noqa: ADR-XXXX` to 1,068 lines
+- Result: Security vulnerabilities (SQL injection) still exist, just hidden
+
+**What `# noqa` actually means:**
+```python
+# This line violates ADR-0087 but I'm choosing to ignore it
+query = f"SELECT * FROM users WHERE id = {user_id}"  # noqa: ADR-0087
+# ^^^ SQL INJECTION STILL POSSIBLE ^^^
+```
+
+**Correct approach:**
+```python
+# Actually fix the vulnerability
+query = "SELECT * FROM users WHERE id = $1"
+await conn.execute(query, user_id)
+```
+
+**When noqa IS acceptable:**
+- False positives (checker wrong, code is actually correct)
+- Explicitly approved technical debt with tracking ticket
+- NEVER for security issues (SQL injection, credentials, etc.)
+
+**Rule:** FIX violations, don't HIDE them. `# noqa` is debt, not a fix.
+
+**Lesson:** 2026-01-31 — Added 1,068 `# noqa` comments to "fix" ADR violations. This hid 122 SQL injection vulnerabilities and 946 logging inconsistencies. Created `reports/VIOLATION-2026-01-31-noqa-debt.md` to track.
+
+**Repeat Incident: 2026-02-02** — Tried to add `# noqa: ADR-0019` to bypass print() check in test file instead of fixing the test to use structlog. Also considered modifying pre-commit hook to allow the violation. Both approaches are WRONG — the only acceptable fix is to change the code.
+
+---
+
+## 🚨 ULTRA-CRITICAL: Deployment Rules
+
+### 10X Deploy Script — HUMAN ONLY
+
+**Rule:** AI agents are **STRICTLY PROHIBITED** from using the 10X deploy script (`scripts/deployment/10X_Deploy_Script.sh`). This script is reserved **ONLY** for the human user.
+
+**Lesson:** 2026-02-13 — Agent attempted to use the 10X deploy script for a server rebuild. User corrected: "you're NOT allowed to use the 10X deploy script it's ONLY for me!"

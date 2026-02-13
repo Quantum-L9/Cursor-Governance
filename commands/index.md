@@ -22,7 +22,7 @@ Generate/update repo index files for fast lookup:
 ## EXECUTION
 
 ```bash
-python tools/export_repo_indexes.py
+python3 tools/export_repo_indexes.py
 ```
 
 ---

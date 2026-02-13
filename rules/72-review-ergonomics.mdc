@@ -38,28 +38,31 @@ alwaysApply: false
 **MANDATORY:** All GMP reports must follow this naming pattern:
 
 ```
-Report_GMP-##-Description.md
+GMP-Report-XXX-Description-Here.md
 ```
 
 **Components:**
-- `Report_` — Fixed prefix
-- `GMP-##` — GMP ID number (e.g., GMP-11, GMP-22)
-- `-Description` — Kebab-case description of the GMP
+- `GMP-Report-` — Fixed prefix (required)
+- `XXX` — GMP ID number (e.g., 129, AUDIT)
+- `-Description-Here` — Kebab-case description of the GMP
 - `.md` — Markdown extension
 
 **Examples:**
-- ✅ `Report_GMP-11-Igor-Command-Interface.md`
-- ✅ `Report_GMP-22-Governance-Python-Engine.md`
-- ✅ `Report_GMP-AUDIT-Combined-Orchestrators.md`
+- ✅ `GMP-Report-129-Memory-Pipeline-Governance.md`
+- ✅ `GMP-Report-128-Adapt-Mcp-Tools-Enhancements.md`
+- ✅ `GMP-Report-AUDIT-Combined-Orchestrators.md`
 
 **Anti-patterns:**
-- ❌ `GMP_Report_GMP-11.md` (wrong prefix format)
-- ❌ `exec_report_gmp_l2_metadata.md` (legacy format)
-- ❌ `GMP-Report-Emma-Substrate.md` (wrong prefix)
+- ❌ `Report_GMP-129-...` (reversed, underscore)
+- ❌ `GMP_Report_129-...` (underscores)
+- ❌ `gmp-report-129-...` (lowercase)
 
 **Path:** All reports stored in `/reports/`
 
+**CI Enforcement:** `ci/check_report_naming.py` validates naming convention.
+
 ---
+
 
 ## Cursor Brief Policy
 
@@ -71,7 +74,7 @@ Report_GMP-##-Description.md
 - Temporary reference docs during debugging
 
 **When NOT to create a brief (use GMP report instead):**
-- Any change that modifies code — use `/reports/Report_GMP-##-Description.md`
+- Any change that modifies code — use `/reports/GMP-Report-##-Description.md`
 - Any execution with TODO plan — use GMP report
 - Post-deployment verification — use GMP report
 

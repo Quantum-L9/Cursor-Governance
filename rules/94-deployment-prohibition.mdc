@@ -1,0 +1,19 @@
+---
+description: Prohibits AI agents from using the 10X deployment script.
+globs: scripts/deployment/10X_Deploy_Script.sh
+alwaysApply: true
+---
+
+# 🚨 ULTRA-CRITICAL: 10X Deploy Script Prohibition
+
+## Rule
+AI agents are **STRICTLY PROHIBITED** from executing the 10X deployment script. This script is reserved **ONLY** for the human user (Igor).
+
+## Details
+- **Forbidden Script**: `scripts/deployment/10X_Deploy_Script.sh`
+- **Reason**: The script performs high-impact, potentially destructive operations on production infrastructure (C1 VPS) that require direct human supervision.
+- **Enforcement**: Never call this script via `Shell` or any other tool. If a deployment is needed, inform the user and wait for them to execute it.
+
+## Anti-Pattern
+❌ **BAD**: AI agent runs `./scripts/deployment/10X_Deploy_Script.sh` to fix a server issue.
+✅ **GOOD**: AI agent informs the user: "The server rebuild requires the 10X deploy script. Please run it manually to proceed."

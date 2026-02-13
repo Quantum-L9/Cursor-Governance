@@ -286,18 +286,87 @@ Available in `profiles/`:
 
 ---
 
+## 💾 MCP Memory Stack (C1 Hetzner)
+
+**Source of Truth**: `memory/MCP-MEMORY-CAPSULE.md`
+**Client**: `agents/cursor/cursor_memory_client.py`
+**Quick Reference**: `mcp_memory/QUICK_REFERENCE.md`
+
+### Architecture
+
+```
+Cursor IDE → HTTPS → Caddy (VPS 157.180.73.53) → l9-api (port 8000)
+                                                    ├─ /mcp/tools (list tools)
+                                                    ├─ /mcp/call (execute tool)
+                                                    └─ MemorySubstrateService → PostgreSQL + pgvector
+```
+
+### CLI Commands
+
+```bash
+python3 agents/cursor/cursor_memory_client.py health          # Check C1 health
+python3 agents/cursor/cursor_memory_client.py search "query"  # Semantic search
+python3 agents/cursor/cursor_memory_client.py write "content" --kind lesson  # Store memory
+python3 agents/cursor/cursor_memory_client.py stats           # Memory statistics
+python3 agents/cursor/cursor_memory_client.py inject "task"   # Context injection
+```
+
+### MCP Tools
+
+| Tool                        | Purpose                |
+| --------------------------- | ---------------------- |
+| `save_memory`               | Store with embedding   |
+| `search_memory`             | Semantic search        |
+| `get_memory_stats`          | Statistics             |
+| `graph_query`               | Neo4j Cypher queries   |
+| `graph_get_entity`          | Get entity by type/ID  |
+| `get_context_injection`     | Auto-context for tasks |
+| `extract_session_learnings` | Extract patterns       |
+| `query_temporal`            | Time-based queries     |
+
+### Pipeline
+
+Writes to 4 tables: `packet_store`, `memory_embeddings`, `knowledge_facts`, `reasoning_traces`
+**Pipeline:** `main_dag` | **Latency:** 650-1800ms
+
+### Environment (Local `.env`)
+
+```bash
+L9_API_URL=https://157.180.73.53:9001
+L9_EXECUTOR_API_KEY=<MCP_API_KEY_C from VPS>
+```
+
+### Governance
+
+| Caller | Key             | Read         | Write    | Delete   |
+| ------ | --------------- | ------------ | -------- | -------- |
+| L-CTO  | `MCP_API_KEY_L` | All memories | All      | All      |
+| Cursor | `MCP_API_KEY_C` | All memories | Own only | Own only |
+
+**Kinds:** `fact`, `insight`, `lesson`, `milestone`, `preference`, `pattern`
+**Scopes:** `developer` (shared), `l-private` (L only), `global`
+
+---
+
 ## ⚡ Slash Commands
 
-Available globally (registered in `~/Library/Application Support/Cursor/GlobalCommands/commands/`):
+Available globally (registered in `.cursor-commands/commands/`):
 
 | Command | File | Purpose |
 |---------|------|---------|
+| `/gmp` | `gmp.md` | Governance Managed Process - phased execution |
+| `/harvest` | `harvest.md` | Extract code from documents via sed |
+| `/wire` | `wire.md` | Wire/integrate components |
 | `/reasoning` | `reasoning.md` | L9 Multi-Modal Reasoning |
 | `/forge` | `forge.md` | Heavy implementation mode |
 | `/ynp` | `ynp.md` | Yes/No/Partial evaluation |
 | `/consolidate` | `consolidate.md` | File consolidation |
-| `/analyze-toolkit` | `analyze-toolkit.md` | Toolkit analysis |
+| `/analyze` | `analyze.md` | Codebase analysis |
 | `/evaluate` | `evaluate.md` | Comprehensive project evaluation |
+| `/start-session` | `start-session.md` | Initialize session context |
+| `/end-session` | `end-session.md` | Close session, extract learnings |
+
+See `.cursor/rules/02-slash-commands.mdc` for full registry.
 
 ---
 
@@ -370,6 +439,10 @@ launchctl list | grep -E "tenx|cursor"
 ## 🔍 Quick Capability Lookup
 
 **Need to:**
+- **Store a lesson/insight?** → `python3 agents/cursor/cursor_memory_client.py write "content" --kind lesson`
+- **Search past solutions?** → `python3 agents/cursor/cursor_memory_client.py search "query"`
+- **Check memory health?** → `python3 agents/cursor/cursor_memory_client.py health`
+- **Inject context?** → `python3 agents/cursor/cursor_memory_client.py inject "task"`
 - **Assess risk?** → `foundation/logic/probabilistic_engine.py`
 - **Combine evidence?** → Bayesian weighted ensemble
 - **Score confidence?** → Temperature-calibrated Bayesian

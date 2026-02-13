@@ -61,7 +61,7 @@ Each audit must answer, in the prompt or notes:
 After completing any GMP execution (partial or full), you MUST:
 
 1. **Generate a production report** following canonical structure
-2. **Save to `/reports/`** with naming: `GMP_Report_<GMP-ID>.md`
+2. **Save to `/reports/`** with naming: `GMP-Report-<GMP-ID>.md`
 3. **Include required sections:**
    - Header (GMP ID, Title, Tier, Date, Status)
    - TODO Plan (locked)
@@ -84,7 +84,7 @@ After completing any GMP execution (partial or full), you MUST:
 ### Report Template Reference
 
 Use existing reports as templates:
-- `reports/GMP_Report_GMP-11.md` — Full execution example
-- `reports/GMP_Report_GMP-16.md` — Closed-loop learning example
+- `reports/GMP-Report-111-Example-Description.md` — Full execution example
+- `reports/GMP-Report-116-Example-Description.md` — Closed-loop learning example
 
 **Rationale:** Reports provide audit trail and document changes for future reference.

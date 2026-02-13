@@ -14,8 +14,8 @@ All memory operations go through **C1 Hetzner Server** (46.62.243.82).
 
 | Service | Endpoint | Purpose |
 |---------|----------|---------|
-| **MCP Memory** | `http://46.62.243.82:30902` | PRIMARY - All memory read/write |
-| **L9 API** | `http://46.62.243.82:30080` | API gateway, MCP proxy |
+| **MCP Memory** | `http://46.62.243.82/memory/` | PRIMARY - All memory read/write |
+| **L9 API** | `http://46.62.243.82` | API gateway, MCP proxy |
 | **PostgreSQL** | `46.62.243.82:30432` | PacketStore + pgvector |
 | **Neo4j** | `http://46.62.243.82:30474` | Knowledge graph |
 | **Redis** | `46.62.243.82:30379` | Session cache |
@@ -24,11 +24,15 @@ All memory operations go through **C1 Hetzner Server** (46.62.243.82).
 
 ```bash
 # .env for C1 Memory (PRIMARY)
-C1_API_URL=http://46.62.243.82:30080
-C1_MCP_URL=http://46.62.243.82:30902
-C1_NEO4J_URL=bolt://46.62.243.82:30687
-C1_POSTGRES_DSN=postgresql://l9_user:C1_Postgres-2026!@46.62.243.82:30432/l9_memory
-C1_REDIS_URL=redis://46.62.243.82:30379
+# NOTE: Actual credentials loaded from .env - see .env.example
+# C1_HOST, POSTGRES_USER, POSTGRES_PASSWORD, NEO4J_PASSWORD defined in .env
+
+C1_HOST=46.62.243.82  # C1 Hetzner server IP
+C1_API_URL=http://${C1_HOST}
+# C1_MCP_URL removed — MCP Memory accessed via L9 API at http://${C1_HOST}/memory/
+C1_NEO4J_URL=bolt://${C1_HOST}:30687
+C1_POSTGRES_DSN=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@46.62.243.82:30432/l9_memory
+C1_REDIS_URL=redis://${C1_HOST}:30379
 ```
 
 ## Memory Client Commands (Use C1)
@@ -44,7 +48,7 @@ python3 agents/cursor/cursor_memory_client.py stats               # Memory stati
 
 **Note:** The client uses `L9_API_URL` environment variable. Override to point to C1:
 ```bash
-export L9_API_URL=http://46.62.243.82:30080
+export L9_API_URL=http://46.62.243.82
 ```
 
 ---
@@ -281,8 +285,8 @@ This rule integrates with C1 services:
 
 | Component | C1 Location | Purpose |
 |-----------|-------------|---------|
-| MCP Memory Server | `46.62.243.82:30902` | Memory read/write API |
-| L9 API | `46.62.243.82:30080` | API gateway |
+| MCP Memory Server | `46.62.243.82/memory/` | Memory read/write API |
+| L9 API | `46.62.243.82` | API gateway |
 | PostgreSQL | `46.62.243.82:30432` | PacketStore + pgvector |
 | Neo4j | `46.62.243.82:30474` | Knowledge graph |
 | Redis | `46.62.243.82:30379` | Session cache |

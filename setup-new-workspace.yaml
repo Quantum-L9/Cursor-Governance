@@ -9,7 +9,7 @@ domain: "workspace_management"
 type: "executable_protocol"
 status: "active"
 created: "2025-11-18T03:20:00Z"
-updated: "2025-11-23T12:20:00Z"
+updated: "2026-02-11T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
 
@@ -81,7 +81,7 @@ preflight:
       blocking: true
 
 # ═══════════════════════════════════════════════════════════
-#   PHASE 2: MANDATORY STARTUP SEQUENCE (36 FILES)
+#   PHASE 2: MANDATORY STARTUP SEQUENCE
 # ═══════════════════════════════════════════════════════════
 
 startup_sequence:
@@ -155,6 +155,27 @@ startup_sequence:
     skip: "only_if_checked_in_last_10_minutes"
     enforcement: "100%"
   
+  # ─────────────────────────────────────────────────────────
+  # STEP 3.5: MCP Memory Health Check
+  # ─────────────────────────────────────────────────────────
+  step_3_5:
+    name: "MCP Memory Health Check"
+    command: "python3 agents/cursor/cursor_memory_client.py health"
+    component_id: "MCP-HEALTH-001"
+    purpose: "Verify C1 MCP memory server is reachable"
+    duration_seconds: 15
+    skip: never
+    enforcement: "100%"
+    blocking: false
+    on_failure: "warn"
+    reference_files:
+      - "memory/MCP-MEMORY-CAPSULE.md"
+      - "mcp_memory/QUICK_REFERENCE.md"
+    troubleshooting:
+      - "Check L9_API_URL in local .env (should be https://157.180.73.53:9001)"
+      - "Check L9_EXECUTOR_API_KEY matches VPS MCP_API_KEY_C"
+      - "VPS may need restart: ssh root@157.180.73.53 'cd /opt/l9 && docker compose restart l9-api'"
+
   # ─────────────────────────────────────────────────────────
   # STEP 4-4.8: Startup Files (5 files)
   # ─────────────────────────────────────────────────────────
@@ -563,7 +584,6 @@ verification:
   manual_checks:
     file_counts:
       learning_files: 12
-      l9_start_up_kit: 7
       reasoning_profiles: 3
       operating_modes: 3
       slash_commands: 6
@@ -598,10 +618,9 @@ final_verification:
   expected_tests: 7
   expected_status: "SETUP ALIGNMENT: PERFECT"
   components_verified:
-    - "12+ learning files in organized structure"
-    - "5 subdirectories (failures, patterns, solutions, l9_lessons_learned, l9-configs)"
-    - "7 L9 start-up kit files"
-    - "3 LaunchAgent services running"
+    - "Learning files in organized structure (failures, patterns, solutions)"
+    - "3 learning subdirectories (failures, patterns, solutions)"
+    - "LaunchAgent services running (when configured)"
     - "All scripts have Suite 6 headers"
 
 # ═══════════════════════════════════════════════════════════
@@ -628,13 +647,13 @@ enforcement:
       penalty: "BLOCK_EXECUTION"
       severity: "CRITICAL"
     
-    - rule: "All 36 mandatory files MUST be accessible"
+    - rule: "All mandatory startup files MUST be accessible"
       penalty: "BLOCK_EXECUTION"
       severity: "CRITICAL"
   
   pre_execution_checklist:
     - "✅ Preflight checks passed"
-    - "✅ All 36 mandatory files read"
+    - "✅ All mandatory startup files read"
     - "✅ Pending lessons reviewed"
     - "✅ Intelligence systems activated"
     - "✅ Verification passed"
@@ -644,7 +663,7 @@ enforcement:
     - metric: "setup_completion_time"
       target: "<15 minutes"
     - metric: "files_loaded"
-      target: "36/36"
+      target: "mandatory files accessible"
     - metric: "verification_success"
       target: "100%"
     - metric: "enforcement_compliance"
@@ -655,13 +674,11 @@ enforcement:
 # ═══════════════════════════════════════════════════════════
 
 quick_reference:
-  total_files: 36
   total_duration: "~15 minutes"
   
   file_breakdown:
     startup_files: 5
     learning_files: 12
-    l9_start_up_kit: 7
     reasoning_profiles: 3
     operating_modes: 3
     slash_commands: 6
@@ -745,8 +762,7 @@ success_confirmation:
     - Session Startup Protocol
     - Governance rules (workspace + GlobalCommands)
     - Reasoning Stack ACTIVATED
-    - 12 learning files (recursive)
-    - 7 L9 start-up kit files
+    - Learning files (recursive: failures, patterns, solutions)
     - 5 startup files
     - 3 reasoning profiles
     - 3 operating modes

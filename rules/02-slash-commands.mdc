@@ -38,6 +38,7 @@ Then:
 | `/governance` | `commands/governance.md` | Governance check and enforcement |
 | `/harvest` | `commands/harvest.md` | Harvest patterns from code/conversation |
 | `/index` | `commands/index.md` | Export repo indexes + load to Neo4j graph |
+| `/inspect` | `commands/inspect.md` | Code gate — validate external code before import + existing file audit |
 | `/lcto` | `commands/lcto.md` | L CTO mode - strategic technical decisions |
 | `/mem` | `commands/mem.md` | Memory-aware execution |
 | `/plan` | `commands/plan.md` | Create execution plan |
@@ -49,7 +50,10 @@ Then:
 | `/start-session` | `commands/start-session.md` | Cursor session startup |
 | `/violation` | `commands/violation.md` | Report governance violation |
 | `/wire` | `commands/wire.md` | Wire/integrate components |
+| `/readme` | `commands/readme-dag.md` | README generation pipeline via DAG |
 | `/wire-into-lifespan` | `commands/wire-into-lifespan.md` | Wire into FastAPI lifespan |
+| `/dag-authoring` | `commands/dag-authoring.md` | Create/update DAGs the PROPER way |
+| `/update-command` | `commands/update-command.md` | Update slash commands to minimal triggers |
 | `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
 | `/ynp` | `commands/ynp.md` | Yes No Proceed - decision framework |
 
@@ -180,44 +184,6 @@ python3 agents/cursor/cursor_memory_client.py search "[domain] [component] patte
 
 | Command | Memory Inject | Execute | Extract | Chain |
 |---------|---------------|---------|---------|-------|
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/gmp` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/forge` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/analyze` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/evaluate` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/wire` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/confirm-wiring` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/spec` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/consolidate` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/harvest` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/governance` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/reasoning` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-| `/refactor-sweep` | ✅ | ✅ | `/extract-chat` | `/gmp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/mem` | ✅ | ✅ (with SEARCH) | `/extract-chat` | `/ynp` |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan (NO manual writing) |
-| `/pr` | ✅ | ✅ | `/extract-chat` | `/ynp` |
-
-## What Gets Injected (READ)
-
-- **Preferences:** Igor's coding style, formatting rules, tool choices
-- **Lessons:** Past mistakes to avoid, patterns that worked
-- **Context:** Architecture decisions, prior work on related components
-- **Constraints:** Protected files, governance rules from memory
-
-## What Gets Extracted (WRITE)
-
-- **Lessons:** Mistakes, corrections, patterns discovered
 - **Insights:** Strategic decisions, architecture choices
 - **Preferences:** User corrections, new coding style preferences
 - **Errors:** Error patterns and their fixes

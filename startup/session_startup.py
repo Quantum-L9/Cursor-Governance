@@ -2,7 +2,7 @@
 L9 Core Governance - Session Startup Protocol
 ==============================================
 
-Executable session startup protocol.
+Executable session startup protocol (multi-repo; no project-specific or n8n assets).
 Converts patterns from profiles/session-startup-protocol.md into
 programmatic preflight checks and mandatory file loading.
 
@@ -15,7 +15,7 @@ Key capabilities:
 - Returns structured status (not just instructions)
 - Tracks loaded components for debugging
 
-Version: 3.2.0
+Version: 3.4.0
 GMP: GMP-95 Session Startup Enhancement
 
 Harvested from:
@@ -23,6 +23,11 @@ Harvested from:
 - integrity/hash-verifier.py (SHA256 file verification)
 - ops/scripts/verify-startup-files.sh (extended file list)
 - .cursor/rules/*.mdc (20 critical rules)
+
+v3.4.0 Changes:
+- Added MCP memory health check (check_mcp_memory_health)
+- Added MCP-MEMORY-CAPSULE.md and QUICK_REFERENCE.md to mandatory files
+- Added mcp_memory_healthy field to StartupResult
 
 v3.2.0 Changes:
 - Improved regex to capture ALL lessons (not just 8)
@@ -340,6 +345,8 @@ class StartupResult:
     # Index generation (v3.3)
     indexes_generated: bool = False
     indexes_count: int = 0
+    # MCP memory health (v3.4)
+    mcp_memory_healthy: bool = False
 
 
 class SessionStartup:
@@ -501,6 +508,20 @@ class SessionStartup:
                 "CURSOR-GMP-003",
                 required=False,
                 description="GMP report template for generation",
+            ),
+            # MCP Memory Capsule (source of truth for memory wiring)
+            StartupFile(
+                "memory/MCP-MEMORY-CAPSULE.md",
+                "MCP-CAPSULE-001",
+                required=False,
+                description="MCP Memory architecture, endpoints, pipeline, governance",
+            ),
+            # MCP Memory Quick Reference
+            StartupFile(
+                "mcp_memory/QUICK_REFERENCE.md",
+                "MCP-QREF-001",
+                required=False,
+                description="MCP Memory CLI commands, tools, troubleshooting",
             ),
             # Cursor memory client documentation
             StartupFile(
@@ -843,6 +864,9 @@ class SessionStartup:
                 else:
                     self._warnings.append(f"Cursor kernel: {err}")
 
+        # Check MCP memory health (v3.4)
+        mcp_memory_healthy = self.check_mcp_memory_health()
+
         # Determine status
         critical_failures = [e for e in self._errors if "CRITICAL" in e]
         if critical_failures:
@@ -868,6 +892,7 @@ class SessionStartup:
             rules_loaded=rules_loaded,
             indexes_generated=indexes_generated,
             indexes_count=indexes_count,
+            mcp_memory_healthy=mcp_memory_healthy,
             duration_ms=duration_ms,
         )
 
@@ -889,6 +914,7 @@ class SessionStartup:
             rules_loaded=rules_loaded,
             indexes_generated=indexes_generated,
             indexes_count=indexes_count,
+            mcp_memory_healthy=mcp_memory_healthy,
         )
     
     def _calc_duration_ms(self, start_time: datetime) -> int:
@@ -1069,6 +1095,62 @@ class SessionStartup:
         )
         
         return rules
+
+    def check_mcp_memory_health(self) -> bool:
+        """
+        Check MCP memory server health via cursor_memory_client.py.
+
+        Runs: python3 agents/cursor/cursor_memory_client.py health
+        Returns True if server is reachable, False otherwise.
+
+        Version: 3.4.0
+        """
+        client_path = self.root / "agents" / "cursor" / "cursor_memory_client.py"
+
+        if not client_path.exists():
+            logger.warning(
+                "session_startup.mcp_memory_client_not_found",
+                path=str(client_path),
+            )
+            self._warnings.append("MCP memory client not found — memory operations unavailable")
+            return False
+
+        try:
+            result = subprocess.run(
+                ["python3", str(client_path), "health"],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=str(self.root),
+                timeout=15,
+            )
+
+            if result.returncode == 0:
+                logger.info(
+                    "session_startup.mcp_memory_healthy",
+                    stdout=result.stdout.strip()[:200],
+                )
+                return True
+            else:
+                logger.warning(
+                    "session_startup.mcp_memory_unhealthy",
+                    exit_code=result.returncode,
+                    stderr=result.stderr.strip()[:200],
+                )
+                self._warnings.append("MCP memory server unreachable — memory operations will fail")
+                return False
+
+        except subprocess.TimeoutExpired:
+            logger.warning("session_startup.mcp_memory_timeout")
+            self._warnings.append("MCP memory health check timed out (15s)")
+            return False
+        except Exception as e:
+            logger.warning(
+                "session_startup.mcp_memory_error",
+                error=str(e),
+            )
+            self._warnings.append(f"MCP memory health check error: {e}")
+            return False
 
     def run_index_export(self) -> tuple[bool, int]:
         """
