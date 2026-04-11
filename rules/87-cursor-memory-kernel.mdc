@@ -1,0 +1,157 @@
+---
+description: "Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle"
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Cursor Memory Kernel Enforcement
+
+**Effective: 2026-02-14**
+
+The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source** for all Cursor memory behavior. This rule enforces its contracts.
+
+---
+
+## Before ANY Memory Operation
+
+1. **Scope:** Always use `scope: "cursor"` for writes. Search across `["cursor", "developer", "global"]`.
+2. **Kind:** Use the correct kind from the kernel YAML: `preference`, `lesson`, `error`, `insight`, `note`, `rule`.
+3. **Endpoint:** Direct MCP at `http://46.62.243.82:9002` (bypass nginx). Fallback: `http://46.62.243.82/memory`.
+4. **Tags:** Include meaningful tags. At minimum: `["cursor", <kind>]`. For lessons: `["governance", "repeated-mistake", <tier>]`.
+
+---
+
+## Session Start (MUST DO)
+
+When starting a session (whether via `/start-session` or manually):
+
+1. **Health check:** `python3 .cursor/memory/cursor_memory_client.py health`
+2. **Inject 5-layer context:** `python3 .cursor/memory/cursor_memory_client.py inject "current task"`
+3. **Load system prompt:** Read `agents/cursor/cursor_system_prompt.md` for identity and rules
+4. **Activate session hooks:** `CursorSessionHooks.on_session_start()` is available for session continuity
+5. **Read workflow_state.md** for current phase and next steps
+
+---
+
+## On User Correction (MUST DO)
+
+When the user corrects a mistake:
+
+1. **Extract lesson immediately** — do not wait for session end
+2. **Dedupe-check:** `python3 .cursor/memory/cursor_memory_client.py search "lesson topic"` to avoid duplicates
+3. **Write to memory:** `python3 .cursor/memory/cursor_memory_client.py write "LESSON: ..." --kind lesson --scope cursor`
+4. **Update repeated-mistakes.md** if the lesson is significant enough for the curated list
+
+---
+
+## On Error (MUST DO)
+
+When hitting an error during execution:
+
+1. **Check memory first:** `python3 .cursor/memory/cursor_memory_client.py search "error description"` — a solution may already exist
+2. **If solution found:** Apply it. Do not debug from scratch.
+3. **If no solution:** Debug normally, then write the fix to memory for next time.
+
+---
+
+## Memory Write Format (MUST FOLLOW)
+
+**Atomic writes only.** One fact per memory write. No prose blobs.
+
+### Why
+
+- Atomic = directly searchable. "mypy install macos" finds the exact packet.
+- Prose blobs require the distiller to re-process (wasted LLM tokens).
+- Pre-classified packets skip distiller processing entirely.
+
+### Format
+
+Each write = one terse, pre-classified fact:
+
+```bash
+python3 .cursor/memory/cursor_memory_client.py write \
+  "_require_X() guard pattern fixes nullable service attrs. Helper raises RuntimeError if None, caller uses local var." \
+  --kind lesson --scope cursor
+```
+
+### Rules
+
+1. **One fact per write.** If you have 4 lessons, make 4 separate writes.
+2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
+3. **Pre-classify.** Use the correct `--kind` (lesson, insight, error, note, rule, preference).
+4. **Tags matter.** Add `--tags` with specific keywords for retrieval.
+5. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
+
+### Anti-pattern (NEVER do this)
+
+```bash
+# BAD: One big blob with everything
+python3 .cursor/memory/cursor_memory_client.py write \
+  "SESSION: 2026-02-16. WORK: Fixed 2,584 ruff errors. LESSONS: (1) _require_X() pattern... (2) mypy install... (3) ruff --statistics..." \
+  --kind note
+```
+
+### Correct pattern
+
+```bash
+# GOOD: Atomic writes — one fact each
+python3 .cursor/memory/cursor_memory_client.py write \
+  "_require_X() guard pattern fixes nullable service attrs. Helper raises RuntimeError if None, caller uses local var." \
+  --kind lesson --scope cursor
+
+python3 .cursor/memory/cursor_memory_client.py write \
+  "mypy on Homebrew Python 3.12: pip install --user --break-system-packages. Binary at ~/Library/Python/3.12/bin/mypy." \
+  --kind lesson --scope cursor
+
+python3 .cursor/memory/cursor_memory_client.py write \
+  "ruff --statistics for error categorization. grep -P unavailable on macOS." \
+  --kind lesson --scope cursor
+
+python3 .cursor/memory/cursor_memory_client.py write \
+  "union-attr errors are real NoneType crash risks. Fixing them = runtime safety, not just type noise." \
+  --kind insight --scope cursor
+```
+
+---
+
+## After Significant Work (MUST DO)
+
+After completing a GMP, major refactor, or multi-file change:
+
+1. **Extract atomic facts** — identify each distinct lesson, insight, error fix, or preference from the work
+2. **Write each as a separate memory** — one `cursor_memory_client.py write` per fact (see Memory Write Format above)
+3. **Record tool actions:** If session hooks are active, `on_action()` records automatically. Otherwise, note significant actions manually.
+
+---
+
+## Session End
+
+1. **Promote high-confidence items:** `CursorSessionHooks.on_session_end(promote=True)` escalates decisions and errors to long-term memory
+2. **Write atomic memories** — NOT one big session summary blob (see Memory Write Format above)
+3. **Update workflow_state.md** with next steps
+
+---
+
+## Enforcement Checklist (from kernel YAML)
+
+Before committing, verify:
+
+- [ ] All memory writes use `scope: "cursor"` (not `developer`, not `agent`)
+- [ ] All searches include `scopes: ["cursor", "developer", "global"]`
+- [ ] `project_id` is `"l9-default"` in all MCP calls
+- [ ] No hardcoded credentials in any agent file (ADR-0090)
+- [ ] Lessons from user corrections are written to memory immediately
+- [ ] Error solutions are checked in memory before debugging from scratch
+
+---
+
+## Reference Files
+
+| File | Purpose |
+|------|---------|
+| `agents/cursor/cursor_memory_kernel.yaml` | Authoritative memory behavior contract |
+| `.cursor/memory/cursor_memory_client.py` | CLI for all memory operations |
+| `agents/cursor/cursor_session_hooks.py` | Session lifecycle hooks |
+| `agents/cursor/cursor_system_prompt.md` | Identity and memory scope rules |
+
+**HTTP writes are PROHIBITED** — bypasses MCP pipeline. Use `.cursor/memory/cursor_memory_client.py` only.

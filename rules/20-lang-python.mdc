@@ -4,7 +4,7 @@ globs:
   - "**/*.py"
   - "!**/migrations/*.py"
   - "!**/tests/**/*.py"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Python Language Rules for L9 OS Core Runtime

@@ -5,7 +5,7 @@ globs:
   - "**/*.test.tsx"
   - "**/*.test.py"
   - "**/__tests__/**/*"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Testing & QA Rules for L9 OS

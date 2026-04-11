@@ -100,6 +100,16 @@ Relationships:
 | "Show all agent classes" | `MATCH (c:Class)-[:INHERITS]->(:Class {name: 'BaseAgent'}) RETURN c` |
 | "What files are in core/tools/?" | `MATCH (f:File) WHERE f.path STARTS WITH 'core/tools/' RETURN f` |
 
+### Retrieval Order (from cursor_retrieval_kernel.py)
+
+**ALWAYS follow this 3-tier retrieval order:**
+
+1. **Working memory** (same session cache) — FASTEST. Check Redis session context first.
+2. **Long-term memory** (semantic search via MCP) — FAST. `python3 agents/cursor/cursor_memory_client.py search "query"`
+3. **Repo scan** (grep/codebase_search) — SLOWEST, last resort.
+
+**NEVER skip to repo scan without checking memory first.**
+
 ### PROACTIVE: Query Graph Before Searching
 **Before using grep/codebase_search**, consider:
 1. Is this a "where is X?" question? → Query Neo4j graph

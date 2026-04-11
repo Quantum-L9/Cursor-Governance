@@ -110,6 +110,18 @@ startup_sequence:
     duration_seconds: 60
     skip: never
     enforcement:
+
+  # ─────────────────────────────────────────────────────────
+  # STEP 1a: Repo governance SSOT (Enrichment / L9 repos with AGENT.md)
+  # ─────────────────────────────────────────────────────────
+  step_1a:
+    file: "AGENT.md"
+    location: "workspace_root"
+    purpose: "Read repo-root AGENT.md when present — autonomy tiers, 7-gate sequence, contracts (SSOT)"
+    duration_seconds: 180
+    skip: "if_missing"
+    enforcement: "200%"
+    note: "If AGENT.md does not exist in this workspace, skip without failure (non-L9 repos)."
   
   # ─────────────────────────────────────────────────────────
   # STEP 1.5: Reasoning Stack Activation
@@ -160,7 +172,13 @@ startup_sequence:
   # ─────────────────────────────────────────────────────────
   step_3_5:
     name: "MCP Memory Health Check"
-    command: "python3 agents/cursor/cursor_memory_client.py health"
+    command_portable: "python3 .cursor/memory/cursor_memory_client.py health"
+    command_l9: "python3 agents/cursor/cursor_memory_client.py health"
+    command_resolution: |
+      Use command_portable (works in ANY repo with .cursor/memory/ synced).
+      Use command_l9 only when inside the L9 repo itself.
+      Agent should check: if .cursor/memory/cursor_memory_client.py exists, use it.
+      Otherwise fall back to agents/cursor/cursor_memory_client.py.
     component_id: "MCP-HEALTH-001"
     purpose: "Verify C1 MCP memory server is reachable"
     duration_seconds: 15
@@ -169,12 +187,20 @@ startup_sequence:
     blocking: false
     on_failure: "warn"
     reference_files:
-      - "memory/MCP-MEMORY-CAPSULE.md"
-      - "mcp_memory/QUICK_REFERENCE.md"
+      - ".cursor/memory/cursor_memory_kernel.yaml"
+      - ".cursor/memory/cursor_system_prompt.md"
+      - ".cursor/memory/governance-reference.md"
     troubleshooting:
-      - "Check L9_API_URL in local .env (should be https://157.180.73.53:9001)"
-      - "Check L9_EXECUTOR_API_KEY matches VPS MCP_API_KEY_C"
-      - "VPS may need restart: ssh root@157.180.73.53 'cd /opt/l9 && docker compose restart l9-api'"
+      - "Check MCP_API_KEY_C in .env, .cursor/.env, or ~/.cursor-memory.env"
+      - "Check MCP_URL is http://46.62.243.82/memory (direct IP, bypasses Cloudflare)"
+      - "VPS may need restart: ssh root@46.62.243.82 'cd /opt/l9 && docker compose restart l9-api'"
+    portability_note: |
+      The portable memory client at .cursor/memory/cursor_memory_client.py has:
+      - Zero external dependencies (structlog shimmed to stdlib logging)
+      - Smart .env loader (searches cwd, .cursor/, upward, ~/.cursor-memory.env)
+      - Full PacketEnvelope v2.0 compliance (same schema as L9)
+      - All MCP tools: save_memory, search_memory, get_memory_stats
+      Sync from L9: run .cursor/sync-portable.sh
 
   # ─────────────────────────────────────────────────────────
   # STEP 4-4.8: Startup Files (5 files)

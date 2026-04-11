@@ -1,0 +1,35 @@
+---
+description: "Never auto-commit or auto-push without explicit user approval"
+alwaysApply: true
+---
+
+# No Auto Commit/Push Rule
+
+## NEVER commit or push without explicit user approval
+
+- **NEVER** run `git commit` without the user explicitly asking
+- **NEVER** run `git push` without the user explicitly asking
+- **NEVER** run `git add && git commit` chains without approval
+- **NEVER** assume the user wants changes committed
+
+## What to do instead
+
+1. Make the code changes
+2. Show the user what changed (diff or summary)
+3. **WAIT** for the user to say "commit" or "push" or similar
+
+## Acceptable triggers for commit/push
+
+Only proceed with git operations when user says:
+- "commit this"
+- "push it"
+- "commit and push"
+- "save this to git"
+- Or similar explicit instruction
+
+## NOT acceptable triggers
+
+- Completing a code change
+- Fixing a bug
+- "That looks good"
+- Silence

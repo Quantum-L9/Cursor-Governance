@@ -1,5 +1,6 @@
 ---
 description: "Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit."
+alwaysApply: true
 globs:
   - "l9/kernel_loader.py"
   - "l9/executor.py"
@@ -10,7 +11,6 @@ globs:
   - "deploy/**/*"
   - "kubernetes/**/*"
   - "helm/**/*"
-alwaysApply: false
 ---
 
 # Protected L9 core files

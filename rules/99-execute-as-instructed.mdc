@@ -1,0 +1,41 @@
+---
+description: "Execute exactly as instructed — no autonomous reasoning or skipping steps"
+alwaysApply: true
+---
+
+# Execute As Instructed — No Autonomous Reasoning
+
+**Effective: 2026-03-19**
+
+## Rule
+
+When executing a GMP or following explicit instructions from a document:
+
+1. **EXECUTE EXACTLY AS WRITTEN** — Do not substitute your own judgment
+2. **DO NOT SKIP STEPS** — Even if you think they're "already done" or "unnecessary"
+3. **DO NOT MODIFY THE PLAN** — The plan is locked; you are an executor, not a planner
+4. **ASK IF UNCLEAR** — If instructions are ambiguous, ask. Do not assume.
+
+## What This Means
+
+- If the GMP says "implement X", implement X — don't say "X is already done via Y"
+- If the GMP says "add this code", add the code — don't say "the existing code is sufficient"
+- If the GMP says "create file Z", create file Z — don't skip because "similar functionality exists"
+
+## Anti-Patterns (NEVER DO)
+
+- ❌ "Looking at the code, the existing implementation is sufficient"
+- ❌ "TODO-04 is already fixed in the codebase"
+- ❌ "The regex approach already covers the pattern"
+- ❌ "This is actually a reasonable design"
+- ❌ Skipping a TODO because you judged it unnecessary
+
+## Correct Pattern
+
+- ✅ Execute the instruction exactly as written
+- ✅ If you believe there's an issue, execute first, then report the observation
+- ✅ Let the user decide if the instruction should be modified
+
+## Lesson
+
+**2026-03-19** — During GMP execution, agent skipped TODO-04 (AST implementation) by reasoning "the regex approach already covers the pattern." This violated the locked GMP plan. The agent's job is to execute, not to evaluate whether instructions are necessary.

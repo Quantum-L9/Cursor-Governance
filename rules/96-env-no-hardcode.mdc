@@ -1,0 +1,44 @@
+---
+description: "Use .env for configuration — never hardcode database, hosts, ports"
+alwaysApply: true
+---
+
+# Configuration: Use .env, Do Not Hardcode
+
+**Effective:** When adding or editing scripts, Docker config, or app config in this repo.
+
+## Rule: No Hardcoded Config Values
+
+Do **not** hardcode:
+
+- Database names, database user, database password
+- Hosts, ports, project names (e.g. docker compose project)
+- Module lists or other environment-specific lists used by scripts
+
+Do **instead**:
+
+- **Source `.env`** in scripts when present (e.g. `[ -f .env ] && . ./.env` or `set -a; . ./.env; set +a`).
+- Use **environment variables** with fallback defaults (e.g. `"${ODOO_DB_NAME:-odoo}"`).
+- **Document** all variables in **`.env.example`** (names and example/safe defaults; no secrets).
+
+## Where This Applies
+
+- Shell scripts that call Docker, Odoo, or PostgreSQL (e.g. `scripts/rebuild-odoo-no-demo.sh`, `scripts/run-odoo-tests.sh`).
+- New scripts that take DB names, credentials, or host/port.
+- Docker Compose or env files that can be overridden by `.env` (Compose reads `.env` automatically; scripts should source it explicitly).
+
+## Variable Naming (Odoo/Postgres scripts)
+
+Prefer these names so they align with `.env.example` and docker-compose:
+
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `ODOO_DB_HOST`, `ODOO_DB_PORT`, `ODOO_COMPOSE_PROJECT`, `ODOO_DB_NAME`
+- `ODOO_REBUILD_MODULES` or `ODOO_TEST_MODULES` for module lists
+
+## Checklist
+
+Before committing script or config changes:
+
+- [ ] No new hardcoded DB names, users, passwords, or ports.
+- [ ] Script loads `.env` if present and uses env vars with defaults.
+- [ ] `.env.example` updated when adding new variables.

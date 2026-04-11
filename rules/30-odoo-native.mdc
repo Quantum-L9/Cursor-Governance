@@ -1,0 +1,332 @@
+---
+description: "Odoo-native code patterns for PlastOS modules: ORM, recordsets, domains, actions"
+alwaysApply: true
+globs: ["plasticos_*/**/*.py", "plasticos_*/**/*.xml"]
+---
+
+# Odoo-Native Code Patterns (PlastOS)
+
+**Scope:** All `plasticos_*` modules in this repository.
+
+Write **Odoo-native code**, not Python-with-Odoo-imports. The ORM is the language.
+
+---
+
+## Core Principle
+
+Odoo is a **framework**, not a library. Code should leverage Odoo's ORM, recordsets, and declarative patterns — not fight them with raw Python.
+
+---
+
+## Recordset Operations (Use ORM, Not Python)
+
+### Iteration & Filtering
+
+```python
+# ❌ WRONG — Python-with-Odoo-imports
+partner_ids = []
+for rec in self:
+    if rec.partner_id:
+        partner_ids.append(rec.partner_id.id)
+partners = self.env["res.partner"].browse(partner_ids)
+
+# ✅ CORRECT — Odoo-native
+partners = self.mapped("partner_id")
+```
+
+```python
+# ❌ WRONG — Python list comprehension
+active_intakes = [i for i in intakes if i.status == "active"]
+
+# ✅ CORRECT — Recordset filtering
+active_intakes = intakes.filtered(lambda i: i.status == "active")
+# OR with domain:
+active_intakes = intakes.filtered_domain([("status", "=", "active")])
+```
+
+### Aggregation
+
+```python
+# ❌ WRONG — Python sum()
+total = sum([rec.amount for rec in self])
+
+# ✅ CORRECT — Odoo mapped + sum
+total = sum(self.mapped("amount"))
+```
+
+### Sorting
+
+```python
+# ❌ WRONG — Python sorted()
+sorted_recs = sorted(records, key=lambda r: r.date, reverse=True)
+
+# ✅ CORRECT — Recordset sorted()
+sorted_recs = records.sorted("date", reverse=True)
+```
+
+### Existence Checks
+
+```python
+# ❌ WRONG — Python truthiness confusion
+if partner_id:  # This checks the ID integer, not the record
+
+# ✅ CORRECT — Recordset truthiness
+if rec.partner_id:  # Empty recordset is falsy
+    ...
+```
+
+---
+
+## Field Definitions (Declarative, Not Imperative)
+
+### Computed Fields
+
+```python
+# ❌ WRONG — Missing decorator, manual loop
+def _compute_total(self):
+    for rec in self:
+        rec.total = rec.qty * rec.price
+
+# ✅ CORRECT — Proper depends decorator
+@api.depends("qty", "price")
+def _compute_total(self):
+    for rec in self:
+        rec.total = rec.qty * rec.price
+```
+
+### Related Fields (Use `related=`, Not Computed)
+
+```python
+# ❌ WRONG — Computed field for simple relation traversal
+partner_name = fields.Char(compute="_compute_partner_name")
+
+def _compute_partner_name(self):
+    for rec in self:
+        rec.partner_name = rec.partner_id.name
+
+# ✅ CORRECT — Related field
+partner_name = fields.Char(related="partner_id.name", string="Partner Name")
+```
+
+### Selection Fields (Use Selection, Not Char)
+
+```python
+# ❌ WRONG — Free-text status
+status = fields.Char()
+
+# ✅ CORRECT — Constrained selection
+status = fields.Selection([
+    ("draft", "Draft"),
+    ("active", "Active"),
+    ("closed", "Closed"),
+], default="draft", required=True)
+```
+
+---
+
+## Model Inheritance Patterns
+
+### Extension (`_inherit` only)
+
+```python
+# ✅ CORRECT — Extend existing model
+class ResPartnerPlastOS(models.Model):
+    _inherit = "res.partner"
+    
+    intake_count = fields.Integer(compute="_compute_intake_count")
+```
+
+### Delegation (`_inherits`)
+
+```python
+# ✅ CORRECT — Composition via delegation
+class ProductTemplate(models.Model):
+    _name = "product.template"
+    _inherits = {"product.product": "product_id"}
+```
+
+### New Model (`_name` + `_description`)
+
+```python
+# ✅ CORRECT — New model with proper metadata
+class PlasticosIntake(models.Model):
+    _name = "plasticos.intake"
+    _description = "Material Intake"
+    _order = "create_date desc"
+```
+
+---
+
+## Search & Browse (Use Domains, Not SQL)
+
+### Domain Syntax
+
+```python
+# ❌ WRONG — Raw SQL
+self.env.cr.execute("SELECT id FROM res_partner WHERE supplier_rank > 0")
+
+# ✅ CORRECT — Domain search
+suppliers = self.env["res.partner"].search([("supplier_rank", ">", 0)])
+```
+
+### Complex Domains
+
+```python
+# ✅ CORRECT — OR conditions with pipe
+domain = [
+    "|",
+    ("supplier_profile_id", "in", profile_ids),
+    ("buyer_profile_id", "in", profile_ids),
+]
+```
+
+### Search with Limit
+
+```python
+# ✅ CORRECT — Efficient single-record lookup
+partner = self.env["res.partner"].search([("email", "=", email)], limit=1)
+```
+
+---
+
+## CRUD Operations
+
+### Create
+
+```python
+# ✅ CORRECT — Dict-based create
+intake = self.env["plasticos.intake"].create({
+    "partner_id": partner.id,
+    "status": "draft",
+})
+```
+
+### Write
+
+```python
+# ✅ CORRECT — Recordset write
+self.write({"status": "active"})
+
+# ✅ CORRECT — Direct assignment (single field)
+self.status = "active"
+```
+
+### Unlink
+
+```python
+# ✅ CORRECT — Recordset unlink
+obsolete_records.unlink()
+```
+
+---
+
+## Action Returns (Window Actions)
+
+### Standard Pattern
+
+```python
+def action_view_intakes(self):
+    """Navigate to intakes for this partner."""
+    self.ensure_one()
+    return {
+        "type": "ir.actions.act_window",
+        "name": f"Intakes — {self.name}",
+        "res_model": "plasticos.intake",
+        "view_mode": "list,form",
+        "domain": [("partner_id", "=", self.id)],
+        "context": {"default_partner_id": self.id},
+    }
+```
+
+### Single Record Form
+
+```python
+def action_view_profile(self):
+    self.ensure_one()
+    return {
+        "type": "ir.actions.act_window",
+        "name": "Material Profile",
+        "res_model": "plasticos.material.profile",
+        "res_id": self.material_profile_id.id,
+        "view_mode": "form",
+        "target": "current",
+    }
+```
+
+### Notification (No Window)
+
+```python
+def action_feature_disabled(self):
+    return {
+        "type": "ir.actions.client",
+        "tag": "display_notification",
+        "params": {
+            "title": "Feature Disabled",
+            "message": "This feature is handled externally.",
+            "type": "warning",
+        },
+    }
+```
+
+---
+
+## XML Data Files
+
+### Use `noupdate="1"` for Reference Data
+
+```xml
+<odoo noupdate="1">
+    <record id="stage_active_supplier" model="crm.stage">
+        <field name="name">Active Supplier</field>
+        <field name="sequence">50</field>
+    </record>
+</odoo>
+```
+
+### External IDs for Lookups
+
+```python
+# ✅ CORRECT — Safe external ID lookup
+stage = self.env.ref("plasticos_crm_bridge.stage_active_supplier", raise_if_not_found=False)
+if stage:
+    self.stage_id = stage
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+| Anti-Pattern | Odoo-Native Alternative |
+|---|---|
+| `for id in ids: browse(id)` | `browse(ids)` — single call |
+| `rec.field_id.id` in domain | `rec.field_id` — recordset coerces |
+| `len(recordset) > 0` | `if recordset:` — truthy check |
+| `recordset[0]` | `recordset[:1]` — safe slice |
+| Raw SQL for reads | `search()` with domain |
+| `@api.one` | Removed in Odoo 13+ — use `for rec in self:` |
+| `@api.multi` | Removed in Odoo 13+ — implicit |
+
+---
+
+## Odoo 19 Specifics
+
+- **No `@api.one` or `@api.multi`** — these were removed in Odoo 13.
+- **Use `fields.Command`** for One2many/Many2many writes:
+  ```python
+  self.write({"line_ids": [fields.Command.create({"name": "New"})]})
+  ```
+- **Flush carefully** — `env.flush_all()` is expensive; prefer targeted `flush_model()`.
+- **Use `with_context()`** for temporary context, not direct `env.context` mutation.
+
+---
+
+## Enforcement
+
+Before committing Odoo model code, verify:
+
+- [ ] No raw Python loops where `mapped()`, `filtered()`, `sorted()` work
+- [ ] No raw SQL for standard CRUD — use ORM
+- [ ] Computed fields have `@api.depends` decorator
+- [ ] Related fields use `related=` not computed
+- [ ] Actions return proper dict structure
+- [ ] External IDs used for data lookups, not hardcoded IDs

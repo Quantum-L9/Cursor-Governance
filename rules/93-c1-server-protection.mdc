@@ -1,3 +1,8 @@
+---
+description: "C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval."
+alwaysApply: true
+---
+
 # C1 Server Protection Rules
 
 ## 🚨 ULTRA-CRITICAL: Docker File Protection

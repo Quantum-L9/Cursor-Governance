@@ -1,0 +1,82 @@
+---
+description: "Git push requires explicit user approval — never auto-push"
+alwaysApply: true
+---
+
+# Git Push Approval Policy
+
+**Effective: 2026-03-06**
+
+## Rule: Never Push Without Explicit Approval
+
+Git push operations require **explicit user approval** before execution.
+
+### Approval Required For
+
+- `git push` (any branch)
+- `git push origin <branch>`
+- `git push -u origin <branch>`
+- `git push --force` (EXTRA CAUTION)
+- Any command that sends commits to a remote repository
+
+### Approval Phrases That Authorize Push
+
+- "push"
+- "commit push"
+- "push it"
+- "git push"
+- "push to staging"
+- "push to origin"
+- User explicitly types the push command
+
+### What To Do Instead
+
+1. **Commit locally** — Always allowed without approval
+2. **Show what would be pushed** — `git log origin/branch..HEAD`
+3. **Ask for approval** — "Ready to push. Should I proceed?"
+4. **Wait for explicit confirmation** — Do not assume approval
+
+### Example Workflow
+
+```
+# ✅ CORRECT
+Agent: Changes committed locally (abc1234). Push to staging?
+User: yes push
+Agent: [executes git push]
+
+# ❌ WRONG
+Agent: [commits and immediately pushes without asking]
+```
+
+### Exception: Explicit Request in Same Message
+
+If user says "commit and push" or "commit push" in their request, this counts as pre-approval:
+
+```
+User: fix the bug and commit push
+Agent: [fix, commit, push] — Approved by "commit push" in request
+```
+
+### Force Push — Extra Caution
+
+Force push (`--force`, `-f`) requires:
+1. Explicit mention of "force" in user request
+2. Confirmation of branch name
+3. Warning about consequences
+
+```
+# User must explicitly say "force push"
+User: force push to staging
+Agent: Warning: Force push will overwrite remote history. Confirm?
+User: yes
+Agent: [executes git push --force]
+```
+
+## Rationale
+
+- Pushes are irreversible in shared repositories
+- User may want to review commits before pushing
+- CI/CD pipelines trigger on push — user controls timing
+- Prevents accidental pushes to wrong branches
+
+**Lesson:** 2026-03-06 — Established policy to ensure user controls when code reaches remote repositories.

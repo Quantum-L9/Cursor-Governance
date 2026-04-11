@@ -1,0 +1,42 @@
+---
+description: "Where cursor memory and wiring live: .cursor-commands in every repo, executables in governance. Applies to all repos (global)."
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Cursor memory and wiring — repo vs governance
+
+**Effective:** 2026-02-15  
+**Scope:** All repos using this .cursor-commands (Odoo, L9, domain-specific, etc.)
+
+## Rule: split of responsibility
+
+| Location | Contains | Examples |
+|----------|----------|----------|
+| **.cursor-commands** (in each repo) | Command definitions, rules, memory/behavior specs, what to run and when | `commands/end-session.md`, `commands/mem.md`, `rules/03-mcp-memory.mdc`, payloads and conditions |
+| **Governance** (separate repo/workspace) | Cursor wiring executables and scripts | `agents/cursor/cursor_memory_client.py`, `scripts/workflow/update_workflow_state.py`, `agents/cursor/cursor_session_hooks.py` |
+
+- **All memory-related files** (command specs, rules, pipeline docs) belong in **.cursor-commands** in the repo.
+- **Cursor wiring/plumbing/enhancements** (the code that runs memory write, workflow state, session hooks) live in **governance**, not in domain repos.
+
+## Domain-specific repos (e.g. Odoo)
+
+- Repos such as **Odoo_19_ReBoot** are **domain-specific** (Odoo, product, etc.).
+- Do **not** expect `agents/cursor/` or `scripts/workflow/` inside the repo.
+- When a command (e.g. `/end-session`, `/mem`) requires the memory client or workflow script:
+  1. **If governance path is available** (e.g. `$GOVERNANCE_ROOT`, or workspace has governance): run the executable from that path.
+  2. **If not**: document the exact payload or command in the handoff (e.g. `.workflows/SESSION_HANDOFF.md` under a "Memory write (run from governance)" section) so it can be run from a governance workspace later.
+- **Do not skip** memory write; either run it via governance or record the payload for later.
+
+## /end-session in non-governance repos
+
+1. Update workflow state: use governance script path if available; otherwise append session summary to local handoff only.
+2. Memory write: run `cursor_memory_client.py write ...` from governance path, or add the exact `python3 agents/cursor/cursor_memory_client.py write "..." --kind note` to the handoff file.
+3. Redis session context: call MCP `cache_set_session_context` if available.
+4. Handoff: always create or update the handoff (e.g. `.workflows/SESSION_HANDOFF.md`) with completed, next steps, and optional memory payload.
+
+## Summary
+
+- **.cursor-commands** = what and when (rules, commands, payloads).
+- **Governance** = how (executables and wiring).
+- In domain repos, either invoke governance executables by path or document the intended call in the handoff.

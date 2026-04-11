@@ -1,3 +1,8 @@
+---
+description: "L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow."
+alwaysApply: true
+---
+
 # VPS Rules
 
 ## VPS Reference — L9 Production

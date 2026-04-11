@@ -604,3 +604,143 @@ await conn.execute(query, user_id)
 **Rule:** AI agents are **STRICTLY PROHIBITED** from using the 10X deploy script (`scripts/deployment/10X_Deploy_Script.sh`). This script is reserved **ONLY** for the human user.
 
 **Lesson:** 2026-02-13 — Agent attempted to use the 10X deploy script for a server rebuild. User corrected: "you're NOT allowed to use the 10X deploy script it's ONLY for me!"
+
+---
+
+## 🚨 ULTRA-CRITICAL: PR Merge Rules
+
+### Git-Native Merge ONLY — Never Manual File Write
+
+**Effective: 2026-02-16**
+**Policy:** `config/policies/pr_merge_policy.yaml`
+
+When merging PRs, **ALWAYS** use git-native methods:
+
+```bash
+# ✅✅✅ CORRECT — Git handles file transfer ✅✅✅
+gh pr merge {number} --squash --delete-branch
+
+# ✅ ALSO CORRECT — Local rebase for conflicts
+git fetch origin {branch}:pr-branch && git rebase origin/main && git merge
+
+# ❌❌❌ WRONG — NEVER DO THIS ❌❌❌
+# Read PR diff → Manually write each file with Write tool
+```
+
+**Rule:** MERGE THE PR = ADOPT THE FILES. Git handles file transfer. NEVER manually write PR files.
+
+**Why this matters:**
+- Manual write loses git attribution and history
+- Manual write is error-prone (copy mistakes, missed files)
+- Manual write bypasses CI screening on the merge commit
+- Git merge is atomic and auditable
+
+**Merge Methods (in order of preference):**
+
+1. **GitHub Merge:** `gh pr merge {number} --squash --delete-branch`
+   - Use when: PR mergeable, CI passes
+
+2. **Local Rebase Merge:**
+   ```bash
+   git stash && git fetch origin {branch}:pr-branch
+   git checkout pr-branch && git rebase origin/main
+   git checkout main && git merge pr-branch
+   git push origin main && git stash pop
+   ```
+   - Use when: Merge conflicts OR CI infrastructure failures
+
+3. **Cherry-Pick:** `git apply --include='{path}'`
+   - Use when: Partial adoption via `/harvest`
+
+**Violation Response:**
+1. Revert manual changes
+2. Re-merge via git
+3. Write lesson to memory
+
+**Lesson:** 2026-02-16 — Established policy after PR #111 merge demonstrated correct workflow: rebase to resolve conflicts, push to main, let git handle file transfer. CI screens inbound code on main branch.
+
+---
+
+## 🔴 CRITICAL: No Exclusions to Hide Violations
+
+### Fix Issues, Don't Add Exclusions
+
+**Effective: 2026-02-16**
+
+When pre-commit hooks or CI checks fail:
+
+1. **FIX THE CODE** — Actually resolve the violation
+2. **DO NOT add exclusions** — `grep -v`, `--exclude`, filter patterns create tech debt
+3. **Whitelist via docstring** — If a file legitimately needs patterns (CI detection scripts), document it IN THE FILE
+
+**Anti-pattern detected (2026-02-16):**
+- Pre-commit hook failed on `ci/check_hardcoded_credentials.py`
+- Agent added `grep -v '^ci/check_'` exclusion to pre-commit hook
+- Result: Tech debt — exclusion hides the WHY
+
+**Correct approach for CI detection scripts:**
+```python
+#!/usr/bin/env python3
+"""
+Check for hardcoded credentials (ADR-0090).
+
+This is a CI DETECTION SCRIPT that scans the codebase for violations.
+It intentionally contains credential patterns (regex) to detect them.
+
+Whitelist: This file is excluded from ADR-0090 checks because it must
+contain detection patterns like `postgresql://.*:.*@` to find violations.
+"""
+```
+
+**Why docstring whitelisting is better:**
+- Self-documenting: The file explains WHY it's special
+- Auditable: Anyone reading the file understands its purpose
+- No hidden exclusions: No need to hunt through hook scripts
+
+**Rule:** FIX issues, don't EXCLUDE them. Exclusions = tech debt. Whitelists belong IN the file.
+
+**Lesson:** 2026-02-16 — Added `grep -v '^ci/check_'` to pre-commit hook to hide false positive. User corrected: "you are NOT ALLOWED to add exclusions — fix the issues, don't let shit enter the repo."
+
+---
+
+## 🚨 ULTRA-CRITICAL: Git Push Prohibition
+
+### NEVER Push Without Explicit User Request
+
+**Effective: 2026-03-17**
+
+- **NEVER** run `git push` unless the user explicitly says "push", "push it", "push to remote", or similar
+- **NEVER** chain `git commit && git push` — commit is OK, push requires separate approval
+- **NEVER** assume the user wants to push after committing
+- **ALWAYS** wait for explicit push instruction
+
+**Allowed without asking:**
+- `git add`
+- `git commit`
+- `git status`
+- `git diff`
+- `git log`
+
+**REQUIRES explicit user request:**
+- `git push` (any form)
+- `git push origin`
+- `git push -u origin`
+- `git push --force` (NEVER without explicit request)
+
+**Anti-pattern (2026-03-17):**
+- Agent made code fix
+- Agent committed AND pushed without being asked
+- User had not verified the change was correct
+- Result: Bad code pushed to remote, deployment triggered
+
+**Rule:** COMMIT ≠ PUSH. Commit locally is safe. Push is deployment. WAIT FOR EXPLICIT PUSH REQUEST.
+
+**Lesson:** 2026-03-17 — Pushed multiple times without explicit request. User corrected forcefully.
+
+---
+
+## 🚨 ULTRA-CRITICAL: Existing Code Is Source of Truth
+
+**Effective: 2026-03-18** — Full rule in `91-existing-code-source-of-truth.mdc`
+
+**Lesson:** 2026-03-18 — Changed `workflow_automations.xml` field references (`carrier_id`, `supplier_ready`, `appointment_requested`) to match newer Python models instead of the reverse. User corrected: "why didn't you change the automation to match the codebase instead of butchering my codebase to match a new file!?" Required 3 rounds of corrections.

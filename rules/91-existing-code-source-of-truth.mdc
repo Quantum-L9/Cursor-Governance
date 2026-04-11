@@ -1,0 +1,64 @@
+---
+description: "Existing code is source of truth — new code adapts to established patterns"
+alwaysApply: true
+---
+
+# Existing Code Is Source of Truth
+
+**Effective: 2026-03-18**
+
+When fixing a field name mismatch between two files, the **existing/established code wins**. New code adapts to it — never the reverse.
+
+## Before Any Field Name Fix
+
+1. **`git log --oneline -5 -- <fileA>` and `git log --oneline -5 -- <fileB>`** — determine which is older
+2. **Identify the established file** — the one with deeper history is the source of truth
+3. **Change the newer file** to match the older one
+
+## Before Committing to a Rename Direction
+
+Search ALL consumers of the field name before making any edit:
+
+- Python models (field definitions)
+- XML views (`<field name="..."/>`)
+- XML domains (`filter_domain`, `filter_pre_domain`)
+- Email templates (`{{ object.field_name }}`)
+- Migration scripts (column renames)
+- Server action code (inline Python in XML)
+- Cron XML (model references)
+- Security CSV (model_id references)
+
+## Stop Signals
+
+- **Cascade into 4+ files** in the "wrong" direction = STOP, you're probably changing the wrong file
+- **Changing XML automation code to match a Python model** = STOP, check git history first
+- **The file you're changing has more consumers than the alternative** = STOP, reverse direction
+
+## Anti-Pattern
+
+```
+# ❌ WRONG: Changed established XML to match new Python
+workflow_automations.xml: carrier_id → trucker_id  (XML is older!)
+workflow_automations.xml: supplier_ready → ready_for_pickup  (XML is older!)
+workflow_automations.xml: appointment_requested → appt_requested  (XML is older!)
+
+# ✅ CORRECT: Changed new Python to match established XML
+stock_picking_automation.py: trucker_id → carrier_id
+purchase_order_automation.py: ready_for_pickup → supplier_ready
+sale_order_automation.py: appt_requested → appointment_requested
+```
+
+## Decision Flow
+
+```
+File A uses `foo`, File B uses `bar`
+  ↓
+git log -- fileA → older (established)
+git log -- fileB → newer
+  ↓
+Search all consumers of `foo` vs `bar`
+  ↓
+Change `bar` → `foo` in File B + its consumers
+  ↓
+NEVER touch File A
+```

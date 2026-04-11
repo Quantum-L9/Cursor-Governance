@@ -1,0 +1,35 @@
+---
+description: "Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/."
+globs: ["**/Constellation.Gate/**", "**/constellation-gate/**"]
+alwaysApply: true
+---
+
+# Constellation.Gate — workspace session summary (2026-04-11, updated)
+
+**Source:** Cursor chat covering Suite 6 setup, `.gitignore` policy, commits, and symlink handling.  
+**Intent:** Keep GitHub clean, clones reproducible, and **exactly one** GlobalCommands symlink tree on disk.
+
+## Single workspace root (required)
+
+1. **Open Cursor at the repository root:** the folder named **`Constellation.Gate`** that **contains** `constellation-gate/`, not the inner folder alone.
+2. **Run PHASE 3 installation only from that root:**  
+   `env-manager.py sync "$(pwd)"` and `setup_workspace_symlinks.sh` with `cwd` = that root.
+3. **Do not** run the same installation again from **`constellation-gate/`** — that creates a second `.cursor-commands` and duplicates the whole GlobalCommands tree in the explorer.
+4. **Local files at root (gitignored):** `.cursorrules`, `.suite6-config.json` — synced/copied from GlobalCommands / env-manager; **`workspace_path`** in `.suite6-config.json` should be the **repo root** path.
+
+## Symlinks (untracked)
+
+- **Only at repo root:** `.cursor-commands` → `GlobalCommands` (rules live at `.cursor-commands/rules/`, commands at `.cursor-commands/commands/`). Suite 6 **does not** create `.cursor/commands` or `.cursor/rules` (redundant duplicate).
+- **Never commit** the symlink; regenerate after clone via `setup_workspace_symlinks.sh` from the **same** root.
+
+## `current_work/`
+
+Working notes may live under `constellation-gate/current_work/` or elsewhere; they are not a substitute for the symlink location. Ignore repo-root scratch dirs with a **root** `.gitignore` if needed.
+
+## Quick checklist
+
+| Item | Track in git? |
+|------|----------------|
+| `.cursor-commands` (repo root only) | **No** — gitignore + regenerate locally |
+| `.cursorrules`, `.suite6-config.json` at repo root | **No** — gitignore |
+| Root `.gitignore` for the above | **Yes** |

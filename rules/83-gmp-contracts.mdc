@@ -1,3 +1,8 @@
+---
+description: "GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation."
+alwaysApply: true
+---
+
 # GMP Contract Enforcement (L9)
 
 ## Contract Files (SOURCE OF TRUTH)

@@ -1,0 +1,64 @@
+---
+description: "Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia."
+alwaysApply: true
+---
+
+# Cursor + Redis Session Context (no amnesia)
+
+Use the L9 Redis context cache from Cursor so the agent can resume across sessions and avoid amnesia.
+
+## MCP tools (use these from Cursor)
+
+| Tool | When to use | Args |
+|------|--------------|------|
+| **cache_get_session_context** | Start of session, or when user says "resume" / "what were we doing?" | `session_id` (optional; defaults to daily session) |
+| **cache_set_session_context** | End of session, or after completing a task / before a long gap | `context` (required), `session_id` (optional), `ttl` (optional, default 86400) |
+
+- **Session ID:** If omitted, both tools use the same daily session ID (UUID5 from `cursor-session-{YYYY-MM-DD}`), so today’s context is shared.
+- **Context shape (for set):** e.g. `{ "summary": "...", "files_touched": [...], "current_task": "...", "decisions": [...], "next_steps": [...] }`.
+
+## Agent behavior (rule to add)
+
+Add this to your Cursor rules (e.g. `.cursor-commands/rules/04-cursor-redis-session.mdc` or paste into an existing MCP/memory rule):
+
+```markdown
+# Redis Session Context (Cursor – no amnesia)
+
+## Session start / resume
+- At session start, or when the user says "resume" / "what were we doing?" / "remember where we left off":
+  - Call MCP tool **cache_get_session_context** (session_id optional).
+  - If the result has `success: true` and `data`, summarize it briefly and use it: e.g. "Previous context: ... Current task: ... Next steps: ...".
+  - This avoids amnesia across restarts or long gaps.
+
+## Session end / milestones
+- When the user is done, or after completing a significant task, or before a long break:
+  - Call MCP tool **cache_set_session_context** with a **context** object containing at least:
+    - **summary**: 1–3 sentence summary of what was done.
+    - **files_touched**: list of paths modified or created.
+    - **current_task**: what we were working on.
+    - **decisions**: important decisions made.
+    - **next_steps**: 2–5 concrete next steps (for the next session).
+  - Optionally set **ttl** (seconds; default 86400 = 24h).
+
+## Implementation note
+- Memory from server (MCP) is used for long-term storage; Redis session context is for fast, short-term session state so Cursor doesn’t get amnesia.
+```
+
+## REST fallback (no MCP)
+
+If MCP is unavailable, the client can use the cache REST API:
+
+- **GET** `/api/v1/memory/cache/session/context/{session_id}` — get session context
+- **POST** `/api/v1/memory/cache/session/context` — body: `{ "session_id": "...", "context": { ... }, "ttl": 86400 }`
+
+Or run:
+
+```bash
+python3 agents/cursor/cursor_memory_client.py cache-session
+python3 agents/cursor/cursor_memory_client.py cache-set-session '{"summary":"...","next_steps":[...]}'
+```
+
+## Backend
+
+- **Storage:** Redis key `cursor:session:{session_id}:context` (stringified JSON), TTL 24h by default.
+- **Server:** Same Redis as the rest of L9 (e.g. C1); cache router is under `api/memory/cache.py`; MCP handlers in `mcp_memory/src/mcp_server.py` (cache_get_session_context, cache_set_session_context).

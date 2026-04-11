@@ -1,0 +1,61 @@
+---
+description: "NEVER push to git without explicit user request. This is the #1 rule for this project."
+alwaysApply: true
+---
+
+# 🚨 #1 RULE: NEVER PUSH WITHOUT EXPLICIT REQUEST
+
+## The Rule
+
+**NEVER run `git push` unless the user explicitly says "push", "push it", "push to remote", or similar.**
+
+This is non-negotiable. No exceptions. No "I thought you wanted me to push."
+
+## What You CAN Do Without Asking
+
+- `git add`
+- `git commit`
+- `git status`
+- `git diff`
+- `git log`
+- `git fetch`
+- `git branch`
+
+## What REQUIRES Explicit User Request
+
+- `git push` (any form)
+- `git push origin`
+- `git push -u origin HEAD`
+- `git push --force` (EXTREMELY dangerous — requires explicit request)
+
+## Why This Matters
+
+1. **Push = Deployment** — In this project, pushing to `staging` triggers Odoo.sh deployment
+2. **No Undo** — Once pushed, the code is live and visible to others
+3. **User Verification** — User needs to verify changes before they go to remote
+4. **Commit ≠ Push** — Committing locally is safe and reversible. Pushing is not.
+
+## Correct Workflow
+
+```
+1. Make changes
+2. git add + git commit (OK to do without asking)
+3. STOP and tell user: "Changes committed locally. Ready to push when you say so."
+4. WAIT for user to say "push" or "push it"
+5. Only then: git push
+```
+
+## Anti-Pattern (What NOT To Do)
+
+```bash
+# ❌❌❌ WRONG — NEVER DO THIS ❌❌❌
+git add -A && git commit -m "fix something" && git push
+
+# ✅✅✅ CORRECT ✅✅✅
+git add -A && git commit -m "fix something"
+# Then STOP and wait for user to request push
+```
+
+## Lesson Learned
+
+**2026-03-17** — Agent pushed multiple commits without explicit request, triggering unwanted deployments. User was extremely clear this must never happen again.

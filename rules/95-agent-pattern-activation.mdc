@@ -1,3 +1,8 @@
+---
+description: "Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations."
+alwaysApply: true
+---
+
 # Agent Pattern System Auto-Activation
 
 ## ALWAYS ACTIVE: Subsystem Detection
