@@ -84,20 +84,32 @@ logger = logging.getLogger(__name__)
 # Configuration
 # =============================================================================
 
-# MCP-Memory API endpoint (via Cloudflare/Caddy or local)
+# MCP-Memory API endpoint — C1 Hetzner server is PRIMARY
+# Endpoint: http://46.62.243.82/memory (via nginx → l9-api → MCP)
 MCP_MEMORY_URL = os.environ.get(
-    "MCP_MEMORY_URL", 
-    "https://l9.quantumaipartners.com/mcp/memory"
+    "MCP_MEMORY_URL",
+    f"http://{os.environ.get('C1_HOST', '46.62.243.82')}/memory"
 )
 
 # Default user_id for Cursor-originated lessons
 DEFAULT_USER_ID = os.environ.get("MCP_USER_ID", "cursor")
 
-# Paths
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent  # L9 root
-REPEATED_MISTAKES_PATH = PROJECT_ROOT / ".cursor-commands/learning/failures/repeated-mistakes.md"
-MEMORY_INDEX_PATH = PROJECT_ROOT / ".cursor-commands/ops/logs/memory_index.json"
-MIGRATION_LOG_PATH = PROJECT_ROOT / ".cursor-commands/ops/logs/mcp_migration.jsonl"
+# Paths — use $HOME, NEVER hardcoded usernames
+_HOME = Path.home()
+_GLOBAL_COMMANDS = _HOME / "Dropbox" / "Cursor Governance" / "GlobalCommands"
+
+# L9 project root — configurable via env var
+_L9_ROOT_STR = os.environ.get("L9_PROJECT_ROOT", "")
+if not _L9_ROOT_STR:
+    for _candidate in [_HOME / "Projects" / "L9", _HOME / "Projects" / "l9"]:
+        if _candidate.exists():
+            _L9_ROOT_STR = str(_candidate)
+            break
+PROJECT_ROOT = Path(_L9_ROOT_STR) if _L9_ROOT_STR else _HOME / "Projects" / "L9"
+
+REPEATED_MISTAKES_PATH = PROJECT_ROOT / ".cursor-commands" / "learning" / "failures" / "repeated-mistakes.md"
+MEMORY_INDEX_PATH = _GLOBAL_COMMANDS / "ops" / "logs" / "memory_index.json"
+MIGRATION_LOG_PATH = _GLOBAL_COMMANDS / "ops" / "logs" / "mcp_migration.jsonl"
 
 # Confidence thresholds
 MIN_CONFIDENCE_FOR_MIGRATION = 0.7

@@ -1,23 +1,26 @@
 ---
 name: pr
-version: "9.0.0"
-description: "PR analysis with INLINE presentation, git-native adoption"
+version: "12.0.0"
+description: "PR analysis with code review comments, gap analysis, deep evaluation, merge blockers, and git-native adoption"
 before_chain: rules
 auto_chain: ynp
 strict_mode: true
 workflow_injection: true
+policy_file: "config/policies/pr_merge_policy.yaml"
 ---
 
-# /pr — PR Analysis & Gap Assessment (INLINE MODE)
+# /pr — PR Analysis & Gap Assessment (INTELLIGENCE MODE)
 
 ## USAGE
 
 ```
-/pr #45              # Analyze specific PR
+/pr #45              # Analyze specific PR with full intelligence
 /pr #45,#46          # Batch analyze (sequential)
 ```
 
 ## 🚨 CRITICAL: ADOPTION = MERGE (NOT MANUAL WRITE)
+
+**Policy:** `config/policies/pr_merge_policy.yaml`
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -25,38 +28,29 @@ workflow_injection: true
 │  Git handles file transfer. NEVER manually write PR files.           │
 │                                                                      │
 │  ❌ WRONG: Read diff → Write each file manually                      │
-│  ✅ RIGHT: Analyze → Merge PR → Git brings in files automatically    │
+│  ✅ RIGHT: Analyze → Approve → Merge PR → Git brings in files        │
+│                                                                      │
+│  VIOLATION: Manual file write from PR diff = CRITICAL governance     │
+│             violation. Revert and re-merge via git.                  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
-
-**Anti-pattern detected:** Agent reads PR diff, then manually creates each file. This is WRONG.
-
-**Correct workflow:**
-1. Analyze PR (inline)
-2. If adopt → `gh pr merge` (git brings files)
-3. If cherry-pick → `/harvest` diff first, then apply selectively
 
 ---
 
 ## 🔄 EXECUTION MODEL (ADR-0059 + ADR-0060)
 
 ```
-ANALYSIS (Inline)                     ADOPTION (Git-Native)
+ANALYSIS (Intelligence)               ADOPTION (Git-Native)
 ┌─────────────────────────┐           ┌─────────────────────────┐
-│ Phases 0-5: Analysis    │           │ MERGE: gh pr merge      │
+│ Phases 0-6: Analysis    │           │ MERGE: gh pr merge      │
 │ Present findings INLINE │  ──YNP──► │ CHERRY: /harvest + git  │
 │ Recommend action        │           │ Git does file transfer  │
 └─────────────────────────┘           └─────────────────────────┘
 ```
 
-**Key Rules:**
-1. Analysis = INLINE (no file generation)
-2. Adoption = GIT MERGE (not manual write)
-3. Cherry-pick = /harvest first, then selective apply
-
 ---
 
-## 📋 INLINE OUTPUT FORMAT
+## 📋 INLINE OUTPUT FORMAT (v10.0.0)
 
 Present analysis directly in chat using this structure:
 
@@ -64,27 +58,70 @@ Present analysis directly in chat using this structure:
 ## PR #{number} Analysis: {title}
 
 **Author:** @{author} | **Files:** {count} | **Tier:** {tier}
+**📏 Size:** {LOC_total} lines ({status_size}) | **🔒 Protected:** {count_protected} files touched
 
-### 📊 File Status
+### 🗨️ Review Comments Summary
+- **Reviews:** {review_count} ({approved}/{changes_requested}/{commented})
+- **Unresolved threads:** {unresolved_count}
+- **Key reviewer concerns:** {bullet_list_of_concerns}
 
-| File | Status | Confidence | Notes |
-|------|--------|------------|-------|
-| `path/file.py` | ✅/⚠️/🆕/🔄 | XX% | ... |
+### 📊 File Status & Delta
 
-### ✅ Adopt ({count})
-- `file1.py` — reason
-- `file2.py` — reason
+| File | Status | LOC (Repo/PR) | Delta | Alignment | Notes |
+|------|--------|---------------|-------|-----------|-------|
+| `path/file.py` | ✅/⚠️/🆕/🔄 | 100/120 | +20 | 95% | ... |
 
-### ❌ Skip ({count})
-- `file3.py` — already exists at `existing/path.py`
+### 🔒 Protected Surface Check
+- `file1.py` — **LCTO Approval Required**
+- `file2.py` — **Subsystem Protected**
 
-### 🔧 Realign ({count})
-- `file4.py` — PR uses X, repo uses Y
+### 🎯 Alignment & Suggested Fixes
+- **Alignment Score:** {avg_alignment}%
+- **Misalignment:** PR uses `print()`, repo uses `structlog`
+- **Suggested Fix:** Replace `print` with `logger.info` in `file.py:45`
+
+### 📐 Gap Analysis (vs target)
+
+| Dimension | Coverage % | Gap % |
+|-----------|------------|-------|
+| Structure | N% | N% |
+| Error handling | N% | N% |
+| Security posture | N% | N% |
+| Tests / verification | N% | N% |
+| ... | ... | ... |
+
+### 🔍 Deep Evaluation
+
+| Metric | Score |
+|--------|-------|
+| Structure | N% |
+| Quality | N% |
+| Compliance | N% |
+| Tech Debt | N% |
+
+**Auto-Fix Candidates:**
+- 🤖 AUTO: {list}
+- 🔧 SEMI: {list}
+- 👤 MANUAL: {list}
+
+### 💥 Impact & Regression
+- **Impact:** Affects {count} downstream files (via `imports.txt`)
+- **Regression Check:** Touched files covered by {test_count} tests. Status: {test_status}
+
+### 🚫 Merge Blockers ({count})
+| # | Blocker | Source | Severity | Resolution |
+|---|---------|--------|----------|------------|
+
+### ⚠️ Merge Warnings ({count})
+| # | Warning | Source | Notes |
+|---|---------|--------|-------|
+
+**Merge Verdict:** ✅ MERGE / ⚠️ MERGE WITH CONDITIONS / 🚫 BLOCKED
 
 ### /ynp
 
-**YES:** Merge PR (11 files, no conflicts)
-**NO:** None
+**YES:** Merge PR (zero blockers, alignment high)
+**NO:** Block (blockers present — list what must be resolved)
 **PROCEED:** `gh pr merge {number} --squash --delete-branch`
 ```
 
@@ -93,8 +130,8 @@ Present analysis directly in chat using this structure:
 ## FLOW (GATED)
 
 ```
-/rules → MEMORY INJECT → DISCOVERY → INDEX SCAN → DEEP RESEARCH → GAP ANALYSIS → INLINE PRESENTATION → USER CONFIRM → [OPTIONAL REPORT]
-         [GATE 1]        [GATE 2]    [GATE 3]     [GATE 4]        [GATE 5]       [GATE 6]              [GATE 7]       [GATE 8]
+/rules → MEMORY INJECT → CONFIG LOAD → DISCOVERY + REVIEW COMMENTS → INDEX SCAN → INTELLIGENCE ANALYSIS → GAP + DEEP EVAL → MERGE BLOCKERS → INLINE PRESENTATION → USER CONFIRM
+         [GATE 1]        [GATE 2]      [GATE 3]                       [GATE 4]     [GATE 5]                [GATE 6]           [GATE 7]        [GATE 8]               [GATE 9]
 ```
 
 ---
@@ -106,341 +143,271 @@ python3 agents/cursor/cursor_memory_client.py search "PR merge lessons errors"
 python3 agents/cursor/cursor_memory_client.py search "{pr_component} patterns"
 ```
 
-**GATE 1:** Memory search executed or "no results" stated.
+---
+
+## 🔒 PHASE 1: CONFIG LOAD [GATE 2]
+
+Load review policies, merge policy, and protected file lists:
+
+```bash
+cat config/policies/pr_merge_policy.yaml    # MANDATORY: Merge workflow rules
+cat .github/pr_review_config.yaml           # Size limits, audit scopes
+cat config/policies/protected_files.yaml    # Protected file definitions
+```
+
+**GATE 2:** Merge policy, size limits, protected files, and audit scopes loaded into context.
 
 ---
 
-## 🔒 PHASE 1: DISCOVERY [GATE 2]
+## 🔒 PHASE 2: DISCOVERY + REVIEW COMMENTS [GATE 3]
 
 ```bash
 gh pr view {number} --json title,author,files,additions,deletions,baseRefName,headRefName
-gh pr view {number} --json files --jq '.files[].path'
+gh pr diff {number} --stat
 gh pr diff {number}
 ```
 
-**GATE 2:** PR metadata fetched, files listed, tier classified.
+### 🗨️ Code Review Comments (MANDATORY)
 
----
-
-## 🔒 PHASE 2: INDEX SCAN [GATE 3]
-
-Query indexes BEFORE grep/rg:
+**Always read review comments before evaluating.** Reviewers may have flagged blockers, requested changes, or approved with conditions.
 
 ```bash
-grep -i "{ClassName}" readme/repo-index/class_definitions.txt
-grep -i "{function}" readme/repo-index/function_signatures.txt
-grep "{route}" readme/repo-index/route_handlers.txt
+# Fetch all review comments (inline code comments)
+gh api repos/{owner}/{repo}/pulls/{number}/comments --jq '.[] | {path: .path, line: .line, body: .body, author: .user.login, created: .created_at}'
+
+# Fetch top-level review threads (approve/request-changes/comment)
+gh api repos/{owner}/{repo}/pulls/{number}/reviews --jq '.[] | {state: .state, body: .body, author: .user.login}'
 ```
 
-**GATE 3:** At least 3 indexes queried with evidence.
+Extract from review comments:
+- **Requested changes** — these are potential merge blockers
+- **Unresolved threads** — open conversations that need resolution
+- **Approval conditions** — "LGTM but fix X first"
+- **Flagged risks** — reviewer-identified concerns about security, performance, or correctness
+
+Carry these forward into Phase 5 (Intelligence Analysis) and Phase 6 (Gap + Deep Eval).
+
+**GATE 3:** PR metadata fetched, LOC deltas calculated, tier classified, **review comments extracted**.
 
 ---
 
-## 🔒 PHASE 3: DEEP RESEARCH [GATE 4]
+## 🔒 PHASE 3: INDEX SCAN [GATE 4]
 
-For "not found" items:
+Query indexes to find existing versions and dependencies:
 
 ```bash
-rg -i "{concept}" --type py -l
-rg "{pattern}" {suspected_file}
+grep -i "{ClassName}" reports/repo-index/class_definitions.txt
+grep -i "{function}" reports/repo-index/function_signatures.txt
+grep "{path}" reports/repo-index/imports.txt
+grep "{path}" reports/repo-index/test_catalog.txt
 ```
 
-**GATE 4:** All gaps researched with evidence.
+---
+
+## 🔒 PHASE 4: INTELLIGENCE ANALYSIS [GATE 5]
+
+Perform the 7-section intelligence audit:
+
+1.  **Size Check:** Compare additions/deletions against `size_limits` in `pr_review_config.yaml`.
+2.  **Protected Check:** Cross-reference changed files with `protected_files` in config.
+3.  **LOC Delta:** Calculate per-file churn (repo vs PR).
+4.  **Alignment Score:** Compare PR patterns (error handling, logging, async) with repo standards.
+5.  **Suggested Fixes:** Identify ADR violations (e.g., ADR-0019 print check) and propose fixes.
+6.  **Impact Analysis:** Trace downstream effects using `imports.txt`.
+7.  **Regression Check:** Identify relevant tests from `test_catalog.txt`.
+8.  **Review Comment Integration:** Cross-reference reviewer-flagged issues from Phase 2 with findings above. Reviewer concerns that align with detected gaps get elevated priority.
 
 ---
 
-## 🔒 PHASE 4: GAP ANALYSIS [GATE 5]
+## 🔒 PHASE 5: GAP ANALYSIS + DEEP EVALUATION [GATE 6]
 
-Classify EVERY file:
+Combines `/gap-analysis` dimensions with `/analyze+evaluate` cross-referencing on PR-touched files.
 
-| Status | Meaning |
-|--------|---------|
-| ✅ EXISTS | Identical in repo |
-| ⚠️ PARTIAL | Some functionality exists |
-| 🆕 NEW | Not in repo |
-| 🔄 CONFLICTS | Different implementation |
+### Gap Analysis (from /gap-analysis)
 
-Confidence scores required (95%+, 80-94%, 60-79%, <60% flagged).
+For each file touched by the PR, score against target state:
 
-**GATE 5:** Every file has status + confidence + evidence.
+| Dimension | Coverage % |
+|-----------|------------|
+| Structure | N% |
+| Lifecycle | N% |
+| Async / Concurrency | N% |
+| Error handling | N% |
+| Observability | N% |
+| Configuration | N% |
+| Security posture | N% |
+| Tests / verification | N% |
+
+Report only gaps where **Gap % > 0** (target − current).
+
+### Deep Evaluation (from /analyze+evaluate)
+
+Cross-reference structure issues with compliance gaps:
+
+| Metric | Score |
+|--------|-------|
+| Structure | N% |
+| Quality | N% |
+| Compliance | N% |
+| Tech Debt | N% |
+
+### Auto-Fix Classification
+
+| Category | Time | Criteria |
+|----------|------|----------|
+| 🤖 AUTO | <1min | imports, formatting, bare except, missing `ondelete=` |
+| 🔧 SEMI | 1-5min | docstrings, timeouts, packet logging, ACL tightening |
+| 👤 MANUAL | >5min | refactoring, architecture, security model redesign |
 
 ---
 
-## 🔒 PHASE 5: INLINE PRESENTATION [GATE 6]
+## 🔒 PHASE 6: MERGE BLOCKERS [GATE 7]
 
-**Present analysis INLINE using format above. NO file generation.**
+Synthesize all prior phases into a definitive **merge/block** verdict.
 
-**GATE 6:** Analysis presented inline with YNP recommendation.
+### Blocker Sources
+
+Aggregate blockers from ALL phases:
+
+| Source | Blocker Type | Examples |
+|--------|-------------|----------|
+| **Review comments** (Phase 2) | Requested changes, unresolved threads | "Fix SQL injection on line 45" |
+| **Protected files** (Phase 4) | Missing LCTO/subsystem approval | `executor.py` touched without approval |
+| **Alignment** (Phase 4) | ADR violations in PR code | `print()` instead of `structlog` |
+| **Gap analysis** (Phase 5) | Critical security/test gaps | 0% test coverage on new endpoints |
+| **Deep eval** (Phase 5) | Quality below threshold | Structure < 50% or Compliance < 50% |
+| **CI failures** (if applicable) | Code failures (not infra) | Test failures, lint errors |
+
+### Merge Blocker Report
+
+```markdown
+### 🚫 Merge Blockers ({count})
+| # | Blocker | Source | Severity | Resolution |
+|---|---------|--------|----------|------------|
+| 1 | ... | Review comment / Gap / Protected / CI | CRITICAL/HIGH/MEDIUM | What needs to happen |
+
+### ⚠️ Merge Warnings ({count})
+| # | Warning | Source | Notes |
+|---|---------|--------|-------|
+| 1 | ... | ... | Non-blocking but should be addressed |
+```
+
+**Merge verdict:**
+- **✅ MERGE** — Zero blockers, warnings acceptable
+- **⚠️ MERGE WITH CONDITIONS** — Zero blockers, warnings should be tracked
+- **🚫 BLOCKED** — One or more blockers must be resolved first
 
 ---
 
-## 🔒 PHASE 6: USER CONFIRMATION [GATE 7]
+## 🔒 PHASE 7: INLINE PRESENTATION [GATE 8]
+
+**Present analysis INLINE using v12.0.0 format. NO file generation.**
+
+Include ALL sections: file delta, protected check, alignment, gap analysis, deep eval, merge blockers, and /ynp recommendation.
+
+---
+
+## 🔒 PHASE 8: USER CONFIRMATION [GATE 9]
 
 Wait for user to:
 - **Confirm:** "yes" / "proceed" / "merge"
 - **Modify:** User provides corrections
 - **Reject:** "no" / "stop"
 
-**GATE 7:** User response received.
-
 ---
 
-## 🔒 PHASE 7: EXECUTION + OPTIONAL REPORT [GATE 8]
+## 🔒 PHASE 9: EXECUTION [GATE 10]
 
-After user confirms, choose ONE path:
+After user confirms, use git-native adoption per `config/policies/pr_merge_policy.yaml`:
 
-### PATH A: FULL MERGE (Most Common)
-
-**Use when:** All/most files should be adopted
+### Method 1: GitHub Merge (Preferred)
 
 ```bash
-# Git brings in ALL files automatically
 gh pr merge {number} --squash --delete-branch -b "{summary}"
 ```
 
-✅ Files appear in repo via git. No manual writing needed.
+Use when: PR is mergeable and CI passes (or CI failures are infrastructure-only).
 
-### PATH B: CHERRY-PICK (Selective Adoption)
-
-**Use when:** Only some files wanted, others should be skipped
+### Method 2: Local Rebase Merge (Conflicts or CI Issues)
 
 ```bash
-# Step 1: /harvest the diff to extract wanted changes
+# 1. Stash local changes
+git stash push -m "WIP before PR {number} merge"
+
+# 2. Fetch and checkout PR branch
+git fetch origin {pr_branch}:pr-{number}-branch
+git checkout pr-{number}-branch
+
+# 3. Rebase on main
+git rebase origin/main
+# Resolve conflicts if any, then: git add . && git rebase --continue
+
+# 4. Merge to main
+git checkout main
+git merge pr-{number}-branch --no-edit -m "{commit_message}"
+
+# 5. Push (triggers CI on main)
+git push origin main
+
+# 6. Cleanup
+git branch -d pr-{number}-branch
+git stash pop
+```
+
+Use when: PR has merge conflicts OR GitHub merge blocked by CI infrastructure issues.
+
+### Method 3: Cherry-Pick (Partial Adoption)
+
+```bash
 gh pr diff {number} > /tmp/pr_{number}.diff
-
-# Step 2: Apply selectively (git handles files)
 git apply --include='{path/to/wanted/*}' /tmp/pr_{number}.diff
-
-# Step 3: Close PR without merge
-gh pr close {number} --comment "Cherry-picked: {files}. Skipped: {files}."
 ```
 
-### PATH C: CLOSE WITHOUT MERGE
-
-**Use when:** PR rejected or superseded
-
-```bash
-gh pr close {number} --comment "{reason}"
-```
-
----
-
-### 🚫 FORBIDDEN: Manual File Writing
-
-```
-❌ NEVER DO THIS:
-   1. Read PR diff
-   2. Manually create file with Write tool
-   3. Repeat for each file
-   
-✅ ALWAYS DO THIS:
-   1. Analyze PR
-   2. Merge (git transfers files) OR cherry-pick (git apply)
-   3. Done
-```
-
----
-
-### If report requested (OPTIONAL):
-
-```bash
-python3 scripts/workflow/generate_gmp_report.py \
-  --pr {number} \
-  --title "{title}" \
-  --adopted {count} \
-  --skipped {count} \
-  --realigned {count} \
-  --tier {TIER} \
-  --notes "{key findings}"
-```
-
-### Save lessons:
-
-```bash
-python3 agents/cursor/cursor_memory_client.py write \
-  "PR #{number}: {key_finding}" --kind lesson
-```
-
-**GATE 8:** PR merged/closed via git, lessons saved, report generated if requested.
+Use when: Only specific files needed (via `/harvest`).
 
 ---
 
 ## 🚨 ENFORCEMENT RULES
 
-| Rule | Response |
-|------|----------|
-| Skip Memory Injection | ❌ BLOCK |
-| Skip Index Scan | ❌ BLOCK |
-| File without status/confidence | ❌ BLOCK |
-| Generate report mid-analysis | ❌ VIOLATION (ADR-0059) |
-| Proceed without user confirm | ❌ VIOLATION |
-| **Manual file write from PR diff** | ❌ VIOLATION (use git merge/apply) |
-| Close PR before merge when adopting | ❌ VIOLATION (merge first!) |
+| Rule | Response | Severity |
+|------|----------|----------|
+| Skip Config Load | ❌ BLOCK | HIGH |
+| Skip Protected Check | ❌ BLOCK | HIGH |
+| **Skip Review Comments** | ❌ BLOCK | **HIGH** |
+| No LOC Delta | ❌ BLOCK | MEDIUM |
+| No Alignment Score | ❌ BLOCK | MEDIUM |
+| **No Gap Analysis** | ❌ BLOCK | **MEDIUM** |
+| **No Merge Blocker Assessment** | ❌ BLOCK | **HIGH** |
+| **Manual file write from PR diff** | ❌ VIOLATION | **CRITICAL** |
+| Missing protected file approval | ❌ BLOCK | HIGH |
+
+### Violation Response
+
+If **manual file write** detected:
+1. Revert the manual changes
+2. Re-merge via git (Method 1, 2, or 3)
+3. Write lesson to memory: `python3 agents/cursor/cursor_memory_client.py write "LESSON: ..." --kind lesson`
 
 ---
 
-## REPORT GENERATION (ON-DEMAND ONLY)
+## 📋 CI FAILURE HANDLING
 
-**Reports are NOT generated during analysis.** Per ADR-0059:
+### Infrastructure Failures (Proceed with Local Merge)
 
-```bash
-# Only run if user explicitly requests a report
-python3 scripts/workflow/generate_gmp_report.py \
-  --pr {number} \
-  --title "{title}" \
-  --adopted {count} \
-  --skipped {count} \
-  --realigned {count}
-```
+Indicators:
+- `steps: 0` in job details (job failed before running)
+- Runner allocation timeout
+- Workflow syntax errors
 
-**When to generate:**
-- User explicitly requests report
-- Audit/compliance requirement
-- Historical record needed
+Action: Use Method 2 (Local Rebase Merge) — code is sound, CI infra is broken.
 
-**When NOT to generate:**
-- Quick PR analysis (inline sufficient)
-- Simple merge (no complexity)
-- User didn't ask
+### Code Failures (Fix Before Merge)
 
----
+Indicators:
+- Test failures with stack traces
+- Lint/type errors in changed files
+- ADR violations in PR code
 
-## EXAMPLE: Quick PR Analysis (Full Merge)
-
-```
-User: /pr #51
-
-Agent:
-## PR #51 Analysis: Spring Cleaning - Track All TODOs
-
-**Author:** @cryptoxdog | **Files:** 11 | **Tier:** RUNTIME
-
-### 📊 File Status
-
-| File | Status | Confidence | Notes |
-|------|--------|------------|-------|
-| `core/governance/validation.py` | ⚠️ PARTIAL | 95% | Adds GMP-100 tag |
-| `memory/consolidation.py` | ⚠️ PARTIAL | 95% | Adds GMP-118 tag |
-| ... (9 more files) | | | |
-
-### ✅ Adopt (11)
-All 11 files — TODO tagging only, no behavior changes
-
-### ❌ Skip (0)
-None
-
-### 🔧 Realign (0)
-None
-
-### /ynp
-
-**YES:** Merge PR (git brings in 11 files automatically)
-**NO:** None
-**PROCEED:** `gh pr merge 51 --squash --delete-branch`
-
----
-
-User: proceed
-
-Agent: [executes: gh pr merge 51 --squash --delete-branch]
-✅ PR #51 merged. Git transferred 11 files. No manual writing.
-```
-
----
-
-## EXAMPLE: Cherry-Pick (Selective Adoption)
-
-```
-User: /pr #52
-
-Agent:
-## PR #52 Analysis: New DI System
-
-**Files:** 8 | **Tier:** KERNEL
-
-### ✅ Adopt (5)
-- `core/di/*.py` — new DI framework
-
-### ❌ Skip (3)
-- `config/settings.py` — conflicts with our config
-- `tests/test_old.py` — outdated test patterns
-
-### /ynp
-
-**YES:** Cherry-pick 5 files (skip 3)
-**PROCEED:** `/harvest` diff → selective apply
-
----
-
-User: cherry-pick the 5
-
-Agent: 
-[Step 1: Harvest diff]
-gh pr diff 52 > /tmp/pr_52.diff
-
-[Step 2: Apply wanted files only]
-git apply --include='core/di/*' /tmp/pr_52.diff
-
-[Step 3: Close PR]
-gh pr close 52 --comment "Cherry-picked: core/di/*. Skipped: config/settings.py, tests/test_old.py"
-
-✅ 5 files adopted via git apply. PR closed.
-```
-
----
-
-## ANTI-PATTERN: What NOT To Do
-
-```
-❌ WRONG (actual mistake from PR #52):
-
-User: proceed with adoption
-
-Agent:
-1. Read diff for file1.py
-2. Write file1.py manually ← WRONG
-3. Read diff for file2.py  
-4. Write file2.py manually ← WRONG
-... repeat 8 times...
-5. Close PR without merging ← NOW FILES ARE ORPHANED
-
-✅ CORRECT:
-
-User: proceed with adoption
-
-Agent:
-1. gh pr merge 52 --squash --delete-branch
-   ← Git transfers ALL files in one command
-2. Done
-```
-
----
-
-## STOP CONDITIONS
-
-| Condition | Action |
-|-----------|--------|
-| KERNEL_TIER touched | Flag, continue |
-| >100 files | Suggest breaking PR |
-| Confidence <60% | Flag for user |
-| Conflicts found | Present options |
-
----
-
-## REFERENCE
-
-- **ADR-0059:** Inline Analysis with Script-Generated Reports
-- **ADR-0060:** Git-Native PR Adoption (merge/apply, not manual write)
-- **Report Script:** `scripts/workflow/generate_gmp_report.py`
-- **Workflow Script:** `scripts/workflow/update_workflow_state.py`
-- **/harvest:** Use for extracting selective changes from PR diff
-
----
-
-## LESSONS LEARNED (2026-01-24)
-
-**Mistake:** PR #52 analysis → manually wrote 8 files → closed PR → files orphaned from git history.
-
-**Fix:** ALWAYS merge BEFORE close. Git handles file transfer. Manual write = violation.
+Action: Fix failures first, then merge.
 
 --- End Command ---

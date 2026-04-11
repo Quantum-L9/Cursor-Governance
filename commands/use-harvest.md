@@ -3,7 +3,7 @@ name: use-harvest
 version: "2.0.0"
 description: "TRIGGER ONLY — Invokes use_harvest_executor.py for deployment"
 auto_chain: wire
-dag_executor: workflows/use_harvest_executor.py
+dag_executor: .cursor-commands/workflows/use_harvest_executor.py
 ---
 
 # /use-harvest — Deploy Harvested Code (v2.0.0)
@@ -15,7 +15,7 @@ dag_executor: workflows/use_harvest_executor.py
 ## INVOCATION
 
 ```bash
-python3 workflows/use_harvest_executor.py path/to/harvested/
+python3 .cursor-commands/workflows/use_harvest_executor.py path/to/harvested/
 ```
 
 ## WHAT THE DAG DOES (AUTONOMOUS)
@@ -50,13 +50,13 @@ python3 workflows/use_harvest_executor.py path/to/harvested/
 
 ```bash
 # Deploy harvested files
-python3 workflows/use_harvest_executor.py current_work/harvested/01-25-2026/Implementation/
+python3 .cursor-commands/workflows/use_harvest_executor.py current_work/harvested/01-25-2026/Implementation/
 
 # Check status
-python3 workflows/use_harvest_executor.py --status
+python3 .cursor-commands/workflows/use_harvest_executor.py --status
 
 # Resume if interrupted
-python3 workflows/use_harvest_executor.py --resume
+python3 .cursor-commands/workflows/use_harvest_executor.py --resume
 ```
 
 ## HARVEST_TABLE.md FORMAT
@@ -74,7 +74,7 @@ The executor reads this format:
 
 After deployment completes, run:
 ```bash
-python3 workflows/wire_executor.py {deployed_module}
+python3 .cursor-commands/workflows/wire_executor.py {deployed_module}
 ```
 
 Or use `/wire` to fix imports and exports.

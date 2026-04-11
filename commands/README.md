@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Generate subsystem READMEs via enforced DAG pipeline"
 auto_chain: ynp
 dag: readme-pipeline-v1
-dag_file: workflows/session/dags/readme_pipeline_dag.py
+dag_file: .cursor-commands/workflows/dags/readme_pipeline_dag.py
 ---
 
 # /readme — README Generation Pipeline (DAG-Enforced)
@@ -14,7 +14,7 @@ dag_file: workflows/session/dags/readme_pipeline_dag.py
 This command triggers the `readme-pipeline-v1` DAG.
 
 ```python
-from workflows.session.dags import README_PIPELINE_DAG
+from .cursor_commands.workflows.dags import README_PIPELINE_DAG
 # DAG handles: gap analysis → config enrichment → generate → validate → report
 ```
 
@@ -42,7 +42,7 @@ from workflows.session.dags import README_PIPELINE_DAG
 |------|---------|
 | `config/subsystems/readme_config.yaml` | Subsystem definitions |
 | `scripts/generate_subsystem_readmes.py` | Generator script |
-| `workflows/session/dags/readme_pipeline_dag.py` | DAG definition |
+| `.cursor-commands/workflows/dags/readme_pipeline_dag.py` | DAG definition |
 | `*/README.md` | Output (~65-70 files) |
 
 ---
@@ -52,7 +52,7 @@ from workflows.session.dags import README_PIPELINE_DAG
 ### Start the DAG
 ```bash
 # View DAG structure
-python3 -c "from workflows.session.dags import README_PIPELINE_DAG; print(README_PIPELINE_DAG.to_mermaid())"
+python3 -c "from .cursor_commands.workflows.dags import README_PIPELINE_DAG; print(README_PIPELINE_DAG.to_mermaid())"
 ```
 
 ### Phase 1: Gap Analysis

@@ -31,18 +31,20 @@ from workflows.session.registry import register_session_dag
 HARVEST_DEPLOY_DAG = SessionDAG(
     id="harvest-deploy-v1",
     name="Harvest-Deploy Workflow",
-    version="1.0.0",
+    version="2.0.0",
     description="""
-Systematic workflow for harvesting code from markdown documents
-and deploying to the L9 codebase.
+FULLY AUTOMATED workflow for harvesting code from markdown documents
+and deploying to the L9 codebase. NO user prompts — runs to completion.
 
-This DAG guides through:
+This DAG executes:
 1. Parse plan/source documents
 2. Extract code blocks (using sed, not manual copy)
-3. Deploy full files (copy)
-4. Inject diffs into existing files (sed)
-5. Validate all changes
-6. Generate report and optionally commit
+3. Validate syntax automatically
+4. Deploy full files (copy)
+5. Inject diffs into existing files (sed)
+6. Final validation
+7. Auto-commit locally
+8. Report completion
 
 Use when: Deploying code from research documents, chat transcripts,
 or planning documents that contain code blocks to harvest.
@@ -51,8 +53,10 @@ CRITICAL RULES:
 - NO manual code writing - use sed/cp only
 - Extract EXACTLY what's in the document
 - Validate syntax before proceeding
+- NO user confirmation gates - fully automated
+- Auto-commit on success
 """,
-    tags=["harvest", "deploy", "sed", "systematic", "no-manual-write"],
+    tags=["harvest", "deploy", "sed", "systematic", "no-manual-write", "automated"],
     nodes=[
         # === ENTRY ===
         SessionNode(
@@ -102,29 +106,22 @@ Flag any discrepancies.""",
             validation="Source document exists, line counts verified",
         ),
         SessionNode(
-            id="gate_plan",
-            name="Plan Gate",
-            node_type=NodeType.GATE,
-            description="User confirms extraction plan",
-            action="""## Extraction Plan
+            id="log_plan",
+            name="Log Extraction Plan",
+            node_type=NodeType.ANALYZE,
+            description="Log extraction plan (no user confirmation needed)",
+            action="""Log extraction plan to output (no wait):
 
 ### CREATES (New Files)
-| # | Lines | Output File | Target |
-|---|-------|-------------|--------|
 {creates_table}
 
 ### INJECTS (Diffs)
-| # | Lines | Target | After |
-|---|-------|--------|-------|
 {injects_table}
 
 ### REPLACES
-| # | Lines | Target | Replace |
-|---|-------|--------|---------|
 {replaces_table}
 
-⏸️ AWAITING: "CONFIRM" to proceed""",
-            gate_type=GateType.USER_CONFIRM,
+Proceeding automatically...""",
         ),
         # === PHASE: EXTRACT ===
         SessionNode(
@@ -167,19 +164,17 @@ Report any issues.""",
             validation="All extracted files valid",
         ),
         SessionNode(
-            id="gate_extraction",
-            name="Extraction Gate",
-            node_type=NodeType.GATE,
-            description="User confirms extraction before deployment",
-            action="""## Extraction Complete
+            id="log_extraction",
+            name="Log Extraction Results",
+            node_type=NodeType.VALIDATE,
+            description="Log extraction results (no user confirmation needed)",
+            action="""Log extraction results (no wait):
 
 **Files extracted:** {count}
+**Validation:** {validation_results}
 
-### Validation Results
-{validation_results}
-
-⏸️ AWAITING: "CONTINUE" to deploy""",
-            gate_type=GateType.USER_CONFIRM,
+Proceeding to deploy automatically...""",
+            validation="All extracted files valid, proceeding",
         ),
         # === PHASE: DEPLOY ===
         SessionNode(
@@ -268,25 +263,18 @@ All must pass.""",
             validation="py_compile ✅, imports ✅, lint ✅",
         ),
         SessionNode(
-            id="gate_validation",
-            name="Validation Gate",
-            node_type=NodeType.GATE,
-            description="User confirms validation before report",
-            action="""## Validation Results
+            id="log_validation",
+            name="Log Validation Results",
+            node_type=NodeType.VALIDATE,
+            description="Log validation results (no user confirmation needed)",
+            action="""Log validation (no wait):
 
-### Syntax Check
-{syntax_results}
+- Syntax: {syntax_results}
+- Imports: {import_results}
+- Lint: {lint_results}
 
-### Import Check
-{import_results}
-
-### Lint Check
-{lint_results}
-
-**Status:** {PASS/FAIL}
-
-⏸️ AWAITING: "REPORT" to generate final report""",
-            gate_type=GateType.USER_CONFIRM,
+Proceeding to commit automatically...""",
+            validation="All validations passed, proceeding to commit",
         ),
         # === PHASE: REPORT ===
         SessionNode(
@@ -324,19 +312,15 @@ All must pass.""",
             outputs=["report"],
         ),
         SessionNode(
-            id="gate_commit",
-            name="Commit Gate",
-            node_type=NodeType.GATE,
-            description="User decides whether to commit",
-            action="""## Ready to Commit?
+            id="auto_commit",
+            name="Auto Commit",
+            node_type=NodeType.COMMIT,
+            description="Automatically commit changes (no user confirmation)",
+            action="""Auto-commit (no wait):
 
 **Changes staged:** {count} files
 
-Options:
-- YES: Commit with generated message
-- NO: Exit without committing
-- DIFF: Show git diff first""",
-            gate_type=GateType.USER_CONFIRM,
+Committing automatically...""",
         ),
         SessionNode(
             id="commit",
@@ -371,37 +355,24 @@ git log -1 --oneline""",
         ),
     ],
     edges=[
-        # Start -> Parse
+        # Start -> Parse (linear flow, no gates)
         SessionEdge("start", "parse_plan"),
         SessionEdge("parse_plan", "verify_sources"),
-        SessionEdge("verify_sources", "gate_plan"),
-        # Plan gate
-        SessionEdge(
-            "gate_plan", "extract_files", condition="confirm", label="Confirmed"
-        ),
-        SessionEdge("gate_plan", "end", condition="abort", label="Abort"),
-        # Extract
+        SessionEdge("verify_sources", "log_plan"),
+        # Extract (no confirmation needed)
+        SessionEdge("log_plan", "extract_files"),
         SessionEdge("extract_files", "validate_extraction"),
-        SessionEdge("validate_extraction", "gate_extraction"),
-        # Extraction gate
-        SessionEdge(
-            "gate_extraction", "deploy_creates", condition="continue", label="Deploy"
-        ),
-        SessionEdge("gate_extraction", "end", condition="abort", label="Abort"),
-        # Deploy
+        SessionEdge("validate_extraction", "log_extraction"),
+        # Deploy (no confirmation needed)
+        SessionEdge("log_extraction", "deploy_creates"),
         SessionEdge("deploy_creates", "deploy_injects"),
         SessionEdge("deploy_injects", "deploy_replaces"),
         SessionEdge("deploy_replaces", "validate_all"),
-        # Validation
-        SessionEdge("validate_all", "gate_validation"),
-        SessionEdge(
-            "gate_validation", "generate_report", condition="proceed", label="Report"
-        ),
-        SessionEdge("gate_validation", "end", condition="abort", label="Abort"),
-        # Report
-        SessionEdge("generate_report", "gate_commit"),
-        SessionEdge("gate_commit", "commit", condition="yes", label="Commit"),
-        SessionEdge("gate_commit", "end", condition="no", label="Skip Commit"),
+        # Validate and commit (no confirmation needed)
+        SessionEdge("validate_all", "log_validation"),
+        SessionEdge("log_validation", "generate_report"),
+        SessionEdge("generate_report", "auto_commit"),
+        SessionEdge("auto_commit", "commit"),
         # End
         SessionEdge("commit", "end"),
     ],

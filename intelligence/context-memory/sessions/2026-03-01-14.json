@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-03-01T14:47:52.732492",
+  "hour": "2026-03-01-14",
+  "message_count": 1322,
+  "project": "cursor-load-pack",
+  "summary": "0 is 98% complete! Build adds Neo4j AuraDB semantic layer (credentials provided) + Bayesian reasonin",
+  "key_actions": [
+    "created the symlink",
+    "created successfully (not pushed as requested)\"",
+    "added and co\\u2026\""
+  ],
+  "decisions": [],
+  "files_modified": [
+    ".claude.json",
+    ".env.cursor.example",
+    ".env.example",
+    ".env.local",
+    ".env.template",
+    ".env.vps",
+    ".env.vps.example",
+    ".env.vps.template",
+    ".gitleaks.toml",
+    ".index_hashes.json"
+  ],
+  "next_steps": [],
+  "context_signals": {
+    "has_code": true,
+    "has_commits": true,
+    "has_errors": true,
+    "has_completion": true,
+    "has_questions": true,
+    "is_planning": true
+  }
+}

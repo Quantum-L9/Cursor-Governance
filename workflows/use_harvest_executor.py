@@ -59,7 +59,16 @@ from pathlib import Path
 # Configuration
 # =============================================================================
 
-REPO_ROOT = Path(__file__).parent.parent
+def _find_repo_root() -> Path:
+    """Auto-detect git repo root from CWD — repo/folder agnostic."""
+    cwd = Path.cwd().resolve()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / ".git").exists():
+            return parent
+    return cwd
+
+
+REPO_ROOT = _find_repo_root()
 REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 STATE_FILE = REPO_ROOT / ".use_harvest_executor_state.json"
 
@@ -211,21 +220,23 @@ class UseHarvestExecutor:
                         continue
 
                     pattern = parts[1].strip("`")
-                    target = parts[3].strip("`")
+                    staged_name = parts[3].strip("`")
 
-                    # Find the actual source file
-                    source_file = harvest_dir / target
+                    # Find the actual source file (HARVEST_TABLE Target column = staged basename)
+                    source_file = harvest_dir / staged_name
                     if not source_file.exists():
-                        # Try with number prefix
                         for f in harvest_dir.glob(f"{num}_*"):
                             source_file = f
                             break
+
+                    # Deploy path: Pattern column holds repo-relative path when present
+                    deploy_rel = pattern if "/" in pattern else staged_name
 
                     items.append(
                         {
                             "number": num,
                             "source_file": str(source_file),
-                            "target_path": target if "/" in target else "",
+                            "target_path": deploy_rel,
                             "action": "CREATE",
                             "status": "pending",
                         }

@@ -1,17 +1,17 @@
 ---
 suite: "L9 Cursor Governance"
-version: "8.3.0"
+version: "8.6.0"
 component_id: "LRN-001"
 component_name: "Critical Lessons Database"
 status: "active"
-updated: "2026-01-24T21:00:00Z"
+updated: "2026-02-01T02:30:00Z"
 governance_level: "critical"
 startup_required: true
 ---
 
-# L9 CRITICAL LESSONS — Priority-Ordered (v8.3)
+# L9 CRITICAL LESSONS — Priority-Ordered (v8.4)
 
-> **19 lessons** | Priority-ordered | Token-optimized
+> **23 lessons** | Priority-ordered | Token-optimized
 > **Load at session start. Enforce always.**
 
 ---
@@ -47,7 +47,7 @@ startup_required: true
 
 ---
 
-## 🔴 TIER 2: CRITICAL (11 lessons)
+## 🔴 TIER 2: CRITICAL (15 lessons)
 
 ### **5. ASK QUESTIONS FIRST** 🔴 CRITICAL
 **Rule:** 5 min questions saves 4 hrs rework (48-96x ROI)
@@ -116,6 +116,52 @@ startup_required: true
 **Cherry-pick:** `/harvest` diff → `git apply --include='{path}'` → close PR
 **Key:** NEVER manually write files from PR diff. Merge first, close after.
 **MCP-ID:** `lesson-015-pr-merge-first`
+
+### **20. VERIFY PATHS EXIST** 🔴 CRITICAL
+**Rule:** ALWAYS verify file/path exists BEFORE referencing it in docs, configs, or responses
+**Wrong:** "Set REDIS_PASSWORD in .env.c1" (file doesn't exist — fabricated)
+**Right:** `ls .env*` first → then reference only files that actually exist
+**Verification:** Use `ls`, `glob`, or `cat` to confirm path before citing
+**Key:** Assuming naming conventions = fabrication. VERIFY FIRST.
+**Incident:** 2026-01-31 — Agent fabricated `.env.c1` path, broke trust
+**MCP-ID:** `lesson-020-verify-paths`
+
+### **21. TRACE ALL DEPENDENCIES** 🔴 CRITICAL
+**Rule:** After ANY change, find ALL code that references the changed entity and update it
+**Wrong:** Add `--requirepass` to Redis but don't update healthcheck (breaks container)
+**Right:** `grep -r "redis-cli" .` → find healthcheck → update with `-a password`
+**Checklist:**
+1. What did I change?
+2. What else references this? (`grep -r`)
+3. Update ALL references
+4. Verify end-to-end
+**Key:** 95% done = NOT DONE. 100% or it ships broken.
+**Incident:** 2026-01-31 — Added Redis auth, missed healthcheck, would fail in prod
+**ADR:** ADR-0000 (Core Philosophy)
+**MCP-ID:** `lesson-021-trace-dependencies`
+
+### **22. DEFINITION OF DONE** 🔴 CRITICAL
+**Rule:** Before claiming DONE, verify ALL Definition of Done criteria are met
+**DoD Checklist:**
+1. Code complete (no TODOs/FIXMEs)
+2. Dependencies traced (`grep -r` for changed entities)
+3. Tests pass (show actual output, not "should work")
+4. Evidence provided (exit code 0, actual command output)
+5. Healthchecks updated (if auth/config changed)
+**Wrong:** "Fixed!" with no verification
+**Right:** "Fixed. Test output: [paste]. Exit code: 0. Grep shows 3 refs, all updated."
+**ADR:** ADR-0091 (Definition of Done)
+**MCP-ID:** `lesson-022-definition-of-done`
+
+### **23. NO NOQA BYPASS** 🔴 CRITICAL
+**Rule:** NEVER add `# noqa` comments to bypass ADR/lint rules — FIX the actual code
+**Wrong:** "ADR check fails, let me add # noqa: ADR-0019 to suppress it"
+**Wrong:** "Pre-commit hook catches print(), let me modify the hook to allow it"
+**Right:** "ADR check fails for print() — I need to replace print() with structlog"
+**Key:** `# noqa` = hiding violations, not fixing them. Workarounds corrupt the codebase.
+**The test:** If removing the noqa would break the build, the code is STILL BROKEN.
+**Incident:** 2026-02-02 — Tried to add noqa comments to bypass ADR-0019 print() violation instead of fixing test file to use proper logging
+**MCP-ID:** `lesson-023-no-noqa-bypass`
 
 ---
 
@@ -188,9 +234,10 @@ Before ANY execution task:
 | 19 | PERPLEXITY TOOLS | 🟢 MEDIUM | search/reason/deep_research by task |
 
 || Auto-detected Issues | 25 | AI Pattern Detection | ✅ Active |
+|| Auto-detected Issues | 3 | AI Pattern Detection | ✅ Active |
 ---
 
-**Last Updated:** 2026-01-25T05:00:04Z  
+**Last Updated:** 2026-03-28T05:00:01Z  
 **Version:** 8.3.0  
 **Changes:** 
 - Added #15 PR MERGE FIRST — git handles file transfer, never manual write from PR diff
@@ -323,3 +370,66 @@ Before ANY execution task:
 **Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
 **Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
 **Date Added:** 2026-01-25
+### **37. Hiding violations with noqa instead of fixing them**
+**Mistake:** Added 1,068 `# noqa: ADR-XXXX` comments to hide ADR violations instead of actually fixing the code. This left 122 SQL injection vulnerabilities and 946 logging inconsistencies in place.
+**Impact:** Occurred 1 time(s) | Date range: 2026-01-31 to 2026-01-31 | CRITICAL - Security vulnerabilities hidden, not fixed
+**Prevention:** When asked to fix violations: FIX THE CODE, not hide it with comments. ASK if hiding is acceptable before adding noqa. NEVER hide security issues (SQL injection, credentials).
+**Rule:** `# noqa` = technical debt, not a fix. Only acceptable for: (1) false positives, (2) explicitly approved debt with tracking. NEVER for security issues.
+**Date Added:** 2026-01-31
+
+
+### **38. n8n workflow structure issue - missing node IDs or...**
+**Mistake:** n8n workflow structure issue - missing node IDs or incorrect workflow format
+**Impact:** Occurred 2 time(s) | Date range: 2026-02-13 to 2026-02-13 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-02-14
+
+### **39. Pattern detected: Error Relationship...**
+**Mistake:** Pattern detected: Error Relationship
+**Impact:** Occurred 1 time(s) | Date range: 2026-02-16 to 2026-02-16 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-02-17
+
+### **40. Dependency or import error - missing modules, circ...**
+**Mistake:** Dependency or import error - missing modules, circular dependencies, or import failures
+**Impact:** Occurred 1 time(s) | Date range: 2026-02-22 to 2026-02-22 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-02-23
+
+### **41. Dependency or import error - missing modules, circ...**
+**Mistake:** Dependency or import error - missing modules, circular dependencies, or import failures
+**Impact:** Occurred 1 time(s) | Date range: 2026-03-04 to 2026-03-04 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-03-05
+
+### **42. Pattern detected: Error Relationship...**
+**Mistake:** Pattern detected: Error Relationship
+**Impact:** Occurred 3 time(s) | Date range: 2026-03-11 to 2026-03-11 | Requires user correction or rework | MEDIUM frequency - moderate impact
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-03-12
+
+### **43. n8n expression syntax error - spaces in expression...**
+**Mistake:** n8n expression syntax error - spaces in expressions break execution
+**Impact:** Occurred 2 time(s) | Date range: 2026-03-18 to 2026-03-18 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-03-19
+
+### **44. Hardcoded path used instead of $HOME - breaks cros...**
+**Mistake:** Hardcoded path used instead of $HOME - breaks cross-machine compatibility
+**Impact:** Occurred 2 time(s) | Date range: 2026-03-18 to 2026-03-18 | Requires user correction or rework
+**Prevention:** Review pattern context before proceeding | Check existing lessons for similar patterns
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-03-19
+
+### **45. Authentication failed - used manual Authorization ...**
+**Mistake:** Authentication failed - used manual Authorization headers instead of predefinedCredentialType
+**Impact:** Occurred 2 time(s) | Date range: 2026-03-26 to 2026-03-26 | Requires user correction or rework
+**Prevention:** Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers
+**Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
+**Date Added:** 2026-03-28

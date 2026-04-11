@@ -1,7 +1,8 @@
 ---
 name: consolidate
-version: "1.0.0"
+version: "1.1.0"
 description: "Consolidate scattered code/files"
+before_chain: rules
 auto_chain: ynp
 ---
 

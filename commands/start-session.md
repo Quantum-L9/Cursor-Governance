@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "2.0.0"
+version: "2.1.0"
 description: "Initialize Cursor session with full context + C1 memory health"
 auto_chain: null
 ---
@@ -12,7 +12,7 @@ auto_chain: null
 Full preflight check before starting work:
 
 1. **Check C1 Memory Health**
-2. **Load Memory Operations Reference** (`agents/cursor/docs/CURSOR-MEMORY-CLIENT.md`)
+2. **Load Memory Operations Reference** (`.cursor/memory/CURSOR-MEMORY-CLIENT.md`)
 3. Read workflow_state.md
 4. Load memory context from C1
 5. Extract GMP Queue from TODO.md
@@ -53,6 +53,26 @@ This provides:
 - Troubleshooting steps
 - Governance rules stored in memory
 
+**Step 0c: Load Cursor system prompt identity**
+
+```bash
+# Read Cursor identity and memory scope rules
+cat agents/cursor/cursor_system_prompt.md
+```
+
+This provides:
+- Cursor's identity within L9
+- Memory scope rules (write: `cursor`, search: `cursor`, `developer`, `global`)
+- RLS enforcement details
+- Required behaviors for memory operations
+
+**Step 0d: Load governance reference**
+
+```bash
+# Read governance quick reference
+cat agents/cursor/governance-reference.md
+```
+
 ### 1. WORKFLOW STATE
 
 ```bash
@@ -80,7 +100,14 @@ Extract:
 - MEDIUM priority items (🟠)
 - Blocked items
 
-### 3. MEMORY INJECT — From C1
+### 3. REDIS SESSION CONTEXT (resume from last window)
+
+**Call MCP tool `cache_get_session_context`** (session_id optional). If the result has `success: true` and `data`, display it as "Previous session context" so we can resume:
+
+- **summary**, **next_steps**, **in_progress**, **open_questions**, **files_touched**
+- Use this to avoid amnesia when the user opened a new window after /end-session or a milestone save.
+
+### 4. MEMORY INJECT — From C1
 
 ```bash
 # Search C1 memory for context
@@ -89,14 +116,14 @@ python3 agents/cursor/cursor_memory_client.py search "active context Igor"
 python3 agents/cursor/cursor_memory_client.py inject "session startup"
 ```
 
-### 4. TIME CONTEXT
+### 5. TIME CONTEXT
 
 Calculate time since last session:
 - Parse "Recent Sessions" dates from workflow_state.md
 - If >24h gap: Flag "context may be stale"
 - If >7d gap: Recommend deeper memory search
 
-### 5. PRIORITY CHECK
+### 6. PRIORITY CHECK
 
 ```
 🔴 HIGH — Blocking issues, active GMPs
@@ -120,6 +147,15 @@ python3 tools/export_repo_indexes.py
 #   3. Load to Neo4j (if configured)
 ```
 
+**Neo4j graph awareness:**
+
+```bash
+# Check graph node counts for awareness
+python3 agents/cursor/cursor_neo4j_query.py --count-nodes
+```
+
+This gives the agent awareness of the current graph state (node counts by type: File, Class, Function, Module) at session start. Requires `NEO4J_PASSWORD` env var.
+
 **When to refresh indexes:**
 - After major code changes (new files, refactors)
 - If indexes >24h old
@@ -142,8 +178,11 @@ python3 tools/export_repo_indexes.py
 |-------|--------|
 | C1 MCP Health | ✅ healthy / ⚠️ degraded / ❌ unhealthy |
 | Memory Ops Reference | ✅ loaded (CURSOR-MEMORY-CLIENT.md) |
+| System Prompt | ✅ loaded (cursor_system_prompt.md) |
+| Governance Reference | ✅ loaded (governance-reference.md) |
 | workflow_state.md | ✅ loaded |
 | TODO.md | ✅ parsed |
+| Neo4j Graph | ✅ {N} nodes / ⚠️ unavailable |
 | Time since last | {X hours/days} |
 
 ### State (from workflow_state.md)

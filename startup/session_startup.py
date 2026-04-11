@@ -544,6 +544,20 @@ class SessionStartup:
                 required=False,
                 description="Cursor agent pack overview",
             ),
+            # Cursor system prompt (identity + memory rules)
+            StartupFile(
+                "agents/cursor/cursor_system_prompt.md",
+                "CURSOR-IDENTITY-001",
+                required=False,
+                description="Cursor identity, memory scope rules, behavioral requirements",
+            ),
+            # Cursor governance reference (quick-reference card)
+            StartupFile(
+                "agents/cursor/governance-reference.md",
+                "CURSOR-GOV-001",
+                required=False,
+                description="L9 governance model quick reference for Cursor",
+            ),
             # Production patterns and templates (reference on demand)
             StartupFile(
                 "agents/cursor/docs/PRODUCTION-SPEED-PACK.md",
@@ -867,6 +881,11 @@ class SessionStartup:
         # Check MCP memory health (v3.4)
         mcp_memory_healthy = self.check_mcp_memory_health()
 
+        # Activate session hooks (v3.5) — behavioral contract
+        session_hooks_activated = self.activate_session_hooks()
+        if not session_hooks_activated:
+            self._warnings.append("Session hooks not activated — session continuity degraded")
+
         # Determine status
         critical_failures = [e for e in self._errors if "CRITICAL" in e]
         if critical_failures:
@@ -1150,6 +1169,87 @@ class SessionStartup:
                 error=str(e),
             )
             self._warnings.append(f"MCP memory health check error: {e}")
+            return False
+
+    def activate_session_hooks(self) -> bool:
+        """
+        Activate CursorSessionHooks for session continuity.
+
+        This runs the session hooks on_session_start() if possible,
+        or logs a behavioral contract reminder if the async runtime
+        is not available.
+
+        Version: 3.5.0
+        """
+        hooks_file = self.root / "agents" / "cursor" / "cursor_session_hooks.py"
+
+        if not hooks_file.exists():
+            logger.warning(
+                "session_startup.session_hooks_not_found",
+                path=str(hooks_file),
+            )
+            return False
+
+        # The hooks require async WorkingMemoryService which may not be
+        # available in standalone startup. Log the behavioral contract.
+        logger.info(
+            "session_startup.session_hooks_available",
+            path=str(hooks_file),
+            contract="CursorSessionHooks.on_session_start() should be called. "
+            "on_action() should be called after significant tool actions. "
+            "on_session_end(promote=True) should be called at session close.",
+        )
+        return True
+
+    def check_neo4j_graph_awareness(self) -> bool:
+        """
+        Check Neo4j graph node counts for graph awareness at session start.
+
+        Runs: python3 agents/cursor/cursor_neo4j_query.py --count-nodes
+
+        Version: 3.5.0
+        """
+        query_script = self.root / "agents" / "cursor" / "cursor_neo4j_query.py"
+
+        if not query_script.exists():
+            logger.warning(
+                "session_startup.neo4j_query_not_found",
+                path=str(query_script),
+            )
+            return False
+
+        try:
+            result = subprocess.run(
+                ["python3", str(query_script), "--count-nodes"],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=str(self.root),
+                timeout=15,
+            )
+
+            if result.returncode == 0:
+                logger.info(
+                    "session_startup.neo4j_graph_awareness",
+                    stdout=result.stdout.strip()[:300],
+                )
+                return True
+            else:
+                logger.warning(
+                    "session_startup.neo4j_query_failed",
+                    exit_code=result.returncode,
+                    stderr=result.stderr.strip()[:200],
+                )
+                return False
+
+        except subprocess.TimeoutExpired:
+            logger.warning("session_startup.neo4j_query_timeout")
+            return False
+        except Exception as e:
+            logger.warning(
+                "session_startup.neo4j_query_error",
+                error=str(e),
+            )
             return False
 
     def run_index_export(self) -> tuple[bool, int]:

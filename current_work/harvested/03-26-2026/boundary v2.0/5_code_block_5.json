@@ -1,0 +1,17 @@
+// path: configs/boundary_settings.json
+// filename: boundary_settings.json
+// purpose: Default runtime settings for the boundary package
+// dependencies/interfaces: Can be loaded by host runtime
+
+{
+  "schema_version": "transport.v1",
+  "require_signature": false,
+  "allowed_packet_types": ["request", "command", "delegation", "replay_request"],
+  "allowed_actions": ["match", "sync", "admin", "replay", "enrich", "enrichbatch", "discover", "converge", "enrich_and_sync"],
+  "allowed_clock_skew_seconds": 30,
+  "max_packet_bytes": 262144,
+  "max_hop_depth": 64,
+  "max_delegation_depth": 8,
+  "max_attachments": 32,
+  "default_priority": 5
+}

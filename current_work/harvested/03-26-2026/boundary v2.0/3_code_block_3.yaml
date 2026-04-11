@@ -1,0 +1,24 @@
+# path: deployment/docker-compose.yml
+# filename: docker-compose.yml
+# purpose: Local deployment manifest for testing boundary-enabled node runtime
+# dependencies/interfaces: Assumes a host node image imports engine.boundary package
+
+version: "3.9"
+
+services:
+  l9-node:
+    image: python:3.12-slim
+    container_name: l9-boundary-node
+    working_dir: /app
+    command: >
+      sh -lc "python -c 'import json; print(json.dumps({\"status\":\"ready\",\"module\":\"boundary-pack\"}))'"
+    env_file:
+      - .env.example
+    volumes:
+      - ../:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,77 +1,49 @@
 ---
 name: confirm-wiring
-version: "1.0.0"
-description: "Verify component is fully wired — no orphan refs"
+version: "2.0.0"
+description: "Verify component is fully wired — no orphan refs, no runtime failures"
 auto_chain: ynp
+dag: confirm-wiring-v1
+dag_file: .cursor-commands/workflows/dags/confirm_wiring_dag.py
 ---
 
 # /confirm-wiring — Integration Audit
 
-## WHAT IT DOES
+**DAG-ENFORCED.** Execute the `confirm-wiring-v1` DAG.
 
-Verify a component is fully wired:
+## Usage
 
-1. All imports resolve
-2. All exports consumed
-3. All tests exist
-4. No orphan references
-
----
-
-## EXECUTION
-
-### 1. VERIFY IMPORTS
-
-```bash
-python3 -c "from {package} import {component}"
+```
+/confirm-wiring core/tools/registry_adapter.py       # Verify a file
+/confirm-wiring memory.consolidation                  # Verify a module
+/confirm-wiring RegistryAdapter                       # Verify a component
 ```
 
-### 2. VERIFY EXPORTS
+## What It Does
 
-Check `__init__.py` exports match usage.
+1. **Resolve imports** — `python3 -c "from {package} import *"`
+2. **Try-run** — `make try-run FILE={file}` (syntax + import + execution)
+3. **Verify exports** — Check `__init__.py` exports
+4. **Find consumers** — `rg` for all importers
+5. **Verify tests** — Find and run tests
 
-### 3. VERIFY CONSUMERS
+## Execution
 
-```bash
-rg "from.*{component}|import.*{component}" --type py -l
+```python
+from .cursor_commands.workflows.dags.confirm_wiring_dag import CONFIRM_WIRING_DAG
+# Follow each node's action field in sequence
 ```
 
-### 4. VERIFY TESTS
+The DAG contains all instructions. Follow each node's `action` field exactly.
 
-```bash
-ls tests/{package}/test_{component}.py
-pytest tests/{package}/test_{component}.py -v
+## Flow
+
+```
+START → resolve_imports → try_run → verify_exports → find_consumers → verify_tests → report
 ```
 
----
+## Key Files
 
-## OUTPUT
-
-```markdown
-## ✅ WIRING CONFIRMED: {component}
-
-| Check | Status |
-|-------|--------|
-| Imports resolve | ✅ |
-| Exports consumed | ✅ |
-| Tests exist | ✅ |
-| Tests pass | ✅ |
-
-**Consumers:** {list}
-**Orphans:** None
-```
-
-OR
-
-```markdown
-## ❌ WIRING INCOMPLETE: {component}
-
-| Issue | Location | Fix |
-|-------|----------|-----|
-| Missing import | file.py:10 | Add import |
-| No test | — | Create test |
-
-→ Run /wire to fix
-```
-
---- End Command ---
+- **DAG**: `.cursor-commands/workflows/dags/confirm_wiring_dag.py`
+- **Try-Run**: `tools/validation/try_run.py`
+- **Makefile**: `make try-run FILE=path`

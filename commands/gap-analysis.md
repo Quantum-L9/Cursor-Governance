@@ -1,7 +1,8 @@
 ---
 name: gap-analysis
-version: "1.0.0"
+version: "1.1.0"
 description: "Identify gaps vs target state"
+before_chain: rules
 auto_chain: ynp
 ---
 

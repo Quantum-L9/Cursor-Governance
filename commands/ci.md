@@ -1,7 +1,8 @@
 ---
 name: ci
-version: "1.0.0"
+version: "1.1.0"
 description: "CI/CD pipeline operations"
+before_chain: rules
 auto_chain: ynp
 ---
 

@@ -3,7 +3,7 @@ name: migrate
 version: "1.0.0"
 description: "TRIGGER ONLY — Invokes migrate_executor.py for autonomous code migration"
 auto_chain: ynp
-dag_executor: workflows/migrate_executor.py
+dag_executor: .cursor-commands/workflows/migrate_executor.py
 ---
 
 In plain English: 
@@ -13,7 +13,7 @@ When to use it:
 Use /migrate when you have a pattern like old_name that needs to become new_name across many files — function renames, import path changes, class renames, etc.
 
 Example:
-python3 workflows/migrate_executor.py "from core.old_module" "from core.new_module"
+python3 .cursor-commands/workflows/migrate_executor.py "from core.old_module" "from core.new_module"
 
 This will find all 47 files with that import, sed-replace them all, validate with py_compile, and commit (no push).
 
@@ -28,7 +28,7 @@ This will find all 47 files with that import, sed-replace them all, validate wit
 ## INVOCATION
 
 ```bash
-python3 workflows/migrate_executor.py "old_pattern" "new_pattern"
+python3 .cursor-commands/workflows/migrate_executor.py "old_pattern" "new_pattern"
 ```
 
 ## WHAT THE DAG DOES (FULLY AUTONOMOUS)
@@ -68,22 +68,22 @@ python3 workflows/migrate_executor.py "old_pattern" "new_pattern"
 
 ```bash
 # Simple replacement
-python3 workflows/migrate_executor.py "old_name" "new_name"
+python3 .cursor-commands/workflows/migrate_executor.py "old_name" "new_name"
 
 # Import migration
-python3 workflows/migrate_executor.py "from old.module" "from new.module"
+python3 .cursor-commands/workflows/migrate_executor.py "from old.module" "from new.module"
 
 # Function rename
-python3 workflows/migrate_executor.py "old_function(" "new_function("
+python3 .cursor-commands/workflows/migrate_executor.py "old_function(" "new_function("
 
 # Check status
-python3 workflows/migrate_executor.py --status
+python3 .cursor-commands/workflows/migrate_executor.py --status
 
 # Resume if interrupted
-python3 workflows/migrate_executor.py --resume
+python3 .cursor-commands/workflows/migrate_executor.py --resume
 
 # Reset state
-python3 workflows/migrate_executor.py --reset
+python3 .cursor-commands/workflows/migrate_executor.py --reset
 ```
 
 ## STATE FILE

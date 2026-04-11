@@ -3,7 +3,7 @@ name: lint-fix
 version: "1.0.0"
 description: "TRIGGER ONLY — Invokes lint_fix_executor.py for systematic lint fixes"
 auto_chain: ynp
-dag_executor: workflows/lint_fix_executor.py
+dag_executor: .cursor-commands/workflows/lint_fix_executor.py
 ---
 
 # /lint-fix — Systematic Lint Fixing (v1.0.0)
@@ -15,8 +15,8 @@ dag_executor: workflows/lint_fix_executor.py
 ## INVOCATION
 
 ```bash
-python3 workflows/lint_fix_executor.py
-python3 workflows/lint_fix_executor.py --only B904 N811
+python3 .cursor-commands/workflows/lint_fix_executor.py
+python3 .cursor-commands/workflows/lint_fix_executor.py --only B904 N811
 ```
 
 ## WHAT THE DAG DOES (AUTONOMOUS)
@@ -61,16 +61,16 @@ python3 workflows/lint_fix_executor.py --only B904 N811
 
 ```bash
 # Fix all lint errors
-python3 workflows/lint_fix_executor.py
+python3 .cursor-commands/workflows/lint_fix_executor.py
 
 # Fix only specific codes
-python3 workflows/lint_fix_executor.py --only B904 N811
+python3 .cursor-commands/workflows/lint_fix_executor.py --only B904 N811
 
 # Check status
-python3 workflows/lint_fix_executor.py --status
+python3 .cursor-commands/workflows/lint_fix_executor.py --status
 
 # Resume if interrupted
-python3 workflows/lint_fix_executor.py --resume
+python3 .cursor-commands/workflows/lint_fix_executor.py --resume
 ```
 
 ## OUTPUT

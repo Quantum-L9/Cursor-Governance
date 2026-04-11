@@ -1,7 +1,7 @@
 ---
 name: index
-version: "1.0.0"
-description: "Export repo indexes for fast lookup"
+version: "1.1.0"
+description: "Export repo indexes for fast lookup - repo-agnostic"
 auto_chain: null
 ---
 
@@ -9,43 +9,62 @@ auto_chain: null
 
 ## WHAT IT DOES
 
-Generate/update repo index files for fast lookup:
+Generate/update repo index files for fast lookup. Works in any repo.
 
-- Class definitions
-- Function signatures
-- Imports graph
-- Route handlers
-- Test catalog
+## Execution (Repo-Agnostic)
 
----
+Run from **current workspace (repo) root**. Indexes are written to this repo's `reports/repo-index/`.
 
-## EXECUTION
+### Resolution Order for Generator Script
+
+1. `.cursor/workflows-synced/scripts/export_repo_indexes.py` (synced)
+2. `scripts/repo_generators/export_repo_indexes.py` (repo-local)
+3. Manual generation (see below)
+
+### Run Command
 
 ```bash
-python3 tools/export_repo_indexes.py
+# If synced script exists:
+python3 .cursor/workflows-synced/scripts/export_repo_indexes.py
+
+# Or if repo has local script:
+python3 scripts/repo_generators/export_repo_indexes.py
+
+# Or manual generation (see Manual Index Generation below)
 ```
 
----
-
-## INDEX FILES
+## Index Files
 
 Location: `reports/repo-index/`
 
 | File | Contents |
 |------|----------|
-| readme_manifest.txt | All READMEs with descriptions |
-| class_definitions.txt | All classes with paths |
-| function_signatures.txt | All functions |
-| imports.txt | Import graph |
-| route_handlers.txt | API routes |
-| test_catalog.txt | All tests |
-| inheritance_graph.txt | Class hierarchy |
-| method_catalog.txt | Class methods |
-| pydantic_models.txt | BaseModel subclasses |
+| `readme_manifest.txt` | All READMEs with descriptions |
+| `class_definitions.txt` | All classes with paths |
+| `function_signatures.txt` | All functions |
+| `imports.txt` | Import graph |
+| `route_handlers.txt` | API routes |
+| `test_catalog.txt` | All tests |
+| `inheritance_graph.txt` | Class hierarchy |
+| `method_catalog.txt` | Class methods |
+| `pydantic_models.txt` | BaseModel subclasses |
 
----
+### Odoo-Specific Indexes
 
-## USAGE
+For Odoo repos, additional indexes:
+
+| File | Contents |
+|------|----------|
+| `odoo_model_registry.txt` | Odoo model definitions |
+| `odoo_xml_data_files.txt` | XML data files by module |
+| `odoo_security_groups.txt` | Security groups |
+| `odoo_email_templates.txt` | Email templates |
+| `odoo_cron_jobs.txt` | Cron jobs |
+| `odoo_automations.txt` | Automated actions |
+| `odoo_module_dependencies.txt` | Module dependency graph |
+| `odoo_views.txt` | View files by module |
+
+## Usage
 
 Before searching codebase, check indexes:
 
@@ -59,13 +78,31 @@ grep "ClassName" reports/repo-index/class_definitions.txt
 # Find function
 grep "function_name" reports/repo-index/function_signatures.txt
 
-# Find route
+# Find route (non-Odoo)
 grep "POST /api" reports/repo-index/route_handlers.txt
+
+# Find Odoo model
+grep "plasticos.transaction" reports/repo-index/odoo_model_registry.txt
 ```
 
----
+## Manual Index Generation
 
-## OUTPUT
+If no generator script exists, generate indexes manually:
+
+```bash
+mkdir -p reports/repo-index
+
+# Model/class definitions
+grep -rn "class " --include="*.py" . | grep -v __pycache__ > reports/repo-index/class_definitions.txt
+
+# Function signatures
+grep -rn "def " --include="*.py" . | grep -v __pycache__ > reports/repo-index/function_signatures.txt
+
+# For Odoo repos:
+grep -r "_name = " --include="*.py" . | grep -v __pycache__ > reports/repo-index/odoo_model_registry.txt
+```
+
+## Output
 
 ```markdown
 ## 📇 INDEX UPDATED
@@ -74,10 +111,7 @@ grep "POST /api" reports/repo-index/route_handlers.txt
 |-------|---------|
 | classes | N |
 | functions | N |
-| routes | N |
-| tests | N |
+| models | N |
 
 **Location:** reports/repo-index/
 ```
-
---- End Command ---

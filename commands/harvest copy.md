@@ -3,7 +3,7 @@ name: harvest
 version: "3.0.0"
 description: "Extract code from documents using sed — NEVER write/type code manually"
 auto_chain: use-harvest
-dag_executor: workflows/harvest_executor.py
+dag_executor: .cursor-commands/workflows/harvest_executor.py
 ---
 
 # /harvest — Code Extraction (v3.0.0)
@@ -129,7 +129,7 @@ After extraction, report a summary table:
 
 After harvest completes, run `/use-harvest` or:
 ```bash
-python3 workflows/use_harvest_executor.py {harvest_dir}
+python3 .cursor-commands/workflows/use_harvest_executor.py {harvest_dir}
 ```
 
 ---

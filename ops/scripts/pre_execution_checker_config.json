@@ -1,35 +1,35 @@
 {
-  "timestamp": "2026-01-28T21:52:59.991934",
+  "timestamp": "2026-04-11T12:56:22.463872",
   "patterns": {
     "lesson_1": {
       "keywords": [
-        "added",
-        "orphaned",
-        "current",
-        "grep",
-        "multi",
-        "dropbox",
-        "25t05",
-        "cursor",
-        "claim",
-        "complex"
+        "0091",
+        "proactive",
+        "data",
+        "exists",
+        "authentication",
+        "yaml",
+        "user",
+        "type",
+        "lesson",
+        "mistakes"
       ],
       "mistake_text": "successful solution pattern detected - can be reused for similar problems",
-      "title": "no overstep** \ud83d\udea8 ultra\n**rule:** if approach/tool fails \u2192 fix it or ask user \u2014 never bypass silently\n**wrong:** \"tool failed, let me just do it myself\"\n**right:** \"tool failed. should i: 1) fix prompt, 2) use alternative, 3) you do it?\"\n**on violation:** write incident report \u2192 harden rule \u2192 ask if user wants changes undone (don't auto-undo)\n**mcp-id:** `lesson-001-no-overstep`\n\n### **2. vps read-only** \ud83d\udea8 ultra\n**rule:** ask \u2192 wait \u2192 execute for any vps infrastructure change\n**allowed:** docker ps/logs/inspect, cat, ls, grep, curl get\n**forbidden:** docker run/compose/stop/rm, file edits, volume changes\n**key:** \"fix it\" \u2260 approval. each command needs explicit \"yes\"/\"approved\"\n**mcp-id:** `lesson-002-vps-readonly`\n\n### **3. dropbox not library** \ud83d\udea8 ultra\n**rule:** globalcommands at `$home/dropbox/cursor governance/globalcommands`\n**wrong:** `/users/ib-mac/library/application support/cursor/globalcommands`\n**verify:** `ls .cursor-commands/ | wc -l` \u2192 should be ~30, not ~8\n**mcp-id:** `lesson-003-dropbox-not-library`\n\n### **4. vps memory only** \ud83d\udea8 ultra\n**rule:** use `cursor_memory_client.py` for all memory operations\n**client:** `python3 agents/cursor/cursor_memory_client.py [search|write|stats]`\n**also:** check neo4j graphs for repo data (not just postgres)\n**wrong:** `docker exec l9-postgres psql` \u2014 local dev only\n**mcp-id:** `lesson-004-vps-memory`\n\n---\n\n## \ud83d\udd34 tier 2: critical (11 lessons)\n\n### **5. ask questions first** \ud83d\udd34 critical\n**rule:** 5 min questions saves 4 hrs rework (48-96x roi)\n**key:** never build first, ask later. always ask first, build second.\n**mcp-id:** `lesson-005-ask-first`\n\n### **6. run commands, don't show** \ud83d\udd34 critical\n**rule:** be proactive \u2014 run commands and display results\n**wrong:** \"run this command: `cat file.txt`\"\n**right:** *actually runs command and shows output*\n**exception:** ask before destructive operations only\n**mcp-id:** `lesson-006-run-commands`\n\n### **7. no placeholders** \ud83d\udd34 critical\n**rule:** never leave blank fields or use placeholder/fabricated data\n**if missing:** notify user \"field x is missing\" \u2192 ask \"how should i fill this?\"\n**key:** ties to #5 \u2014 ask clarifying questions instead of guessing or leaving blank\n**mcp-id:** `lesson-007-no-placeholders`\n\n### **8. proof required** \ud83d\udd34 critical\n**rule:** never claim \"fixed\" without showing evidence\n**key:** show command output, file contents, test results as proof\n**mcp-id:** `lesson-008-proof-required`\n\n### **9. investigate first** \ud83d\udd34 critical\n**rule:** check vps memory + neo4j graphs (not just postgres) before claims\n**banned:** \"may not be implemented\", \"likely generated\", \"probably exists\"\n**right:** \"i checked [path] and found [files]\", \"vps memory shows...\"\n**mcp-id:** `lesson-009-investigate-first`\n\n### **10. use $home always** \ud83d\udd34 critical\n**rule:** never hardcode `/users/ib-mac/` in scripts or configs\n**python:** `path.home()` or `os.path.expanduser(\"~\")`\n**bash:** `$home`\n**mcp-id:** `lesson-010-use-home`\n\n### **11. frustration response** \ud83d\udd34 critical\n**rule:** \"i told you\"/\"again\"/\"still happening\" \u2192 stop immediately\n**response protocol:**\n1. write incident report documenting what went wrong\n2. harden the rule you broke to prevent repeat\n3. ask if user wants changes undone (don't auto-undo \u2014 ties to #1)\n**key:** no apologies needed. take corrective action.\n**mcp-id:** `lesson-011-frustration-response`\n\n### **12. read rules first** \ud83d\udd34 critical\n**rule:** load governance files before any execution task\n**files:** `.cursorrules`, `repeated-mistakes.md`, `workflow_state.md`\n**mcp-id:** `lesson-012-read-rules`\n\n### **13. root docker-compose** \ud83d\udd34 critical\n**rule:** use l9 root `docker-compose.yml`, never `docs/docker-compose.yaml`\n**key:** docs/ version has broken relative paths\n**mcp-id:** `lesson-013-root-docker`\n\n### **14. real timestamps** \ud83d\udd34 critical\n**rule:** run `date -u +\"%y-%m-%dt%h:%m:%sz\"` for all timestamps\n**example output:** `2026-01-20t15:56:08z` (correct)\n**wrong:** `00:00:00z`, made-up dates, wrong timezone\n**mcp-id:** `lesson-014-real-timestamps`\n\n### **15. pr adoption = git merge** \ud83d\udd34 critical\n**rule:** merge the pr to adopt files. git handles file transfer.\n**wrong:** read pr diff \u2192 manually write each file \u2192 close pr (files orphaned!)\n**right:** analyze pr \u2192 `gh pr merge` \u2192 git brings files automatically\n**cherry-pick:** `/harvest` diff \u2192 `git apply --include='{path}'` \u2192 close pr\n**key:** never manually write files from pr diff. merge first, close after.\n**mcp-id:** `lesson-015-pr-merge-first`\n\n---\n\n## \ud83d\udfe1 tier 3: high (4 lessons)\n\n### **16. search before creating** \ud83d\udfe1 high\n**rule:** check existing solutions before creating new ones\n**mcp-id:** `lesson-016-search-first`\n\n### **17. mcp tool selection** \ud83d\udfe1 high\n**rule:** list all tools in mcp server, pick best not first\n**perplexity:** `search` (quick), `reason` (complex), `deep_research` (reports)\n**mcp-id:** `lesson-017-mcp-tools`\n\n### **18. display = symlink** \ud83d\udfe2 medium\n**rule:** \"show in sidebar\" means folder access via symlink, not docs\n**mcp-id:** `lesson-018-display-intent`\n\n### **19. perplexity tools** \ud83d\udfe2 medium\n**rule:** use correct perplexity tool for task type\n**tools:**\n- `search` \u2014 quick lookups, simple facts, current versions\n- `reason` \u2014 multi-step analysis, comparisons, complex reasoning\n- `deep_research` \u2014 comprehensive reports, in-depth research\n**benefit:** bypasses training cutoff \u2014 gets real-time web data with citations\n**mcp-id:** `lesson-019-perplexity-tools`\n\n---\n\n## \ud83d\udd34 l9 auth\n\n**rule:** all authentication uses l9 vps stack. no external auth systems.\n\n---\n\n## \ud83d\udccb pre-execution checklist\n\nbefore any execution task:\n- [ ] asked clarifying questions (no placeholders/blanks)?\n- [ ] paths use `$home` not hardcoded?\n- [ ] using vps memory client, not local docker?\n- [ ] checked neo4j graphs for repo data?\n- [ ] not overstepping user's chosen approach?\n- [ ] have evidence ready before claiming success?\n\n---\n\n## \ud83d\udcca quick reference table\n\n| # | lesson | tier | key rule |\n|---|--------|------|----------|\n| 1 | no overstep | \ud83d\udea8 ultra | if tool fails \u2192 fix or ask, don't bypass |\n| 2 | vps read-only | \ud83d\udea8 ultra | ask \u2192 wait \u2192 execute for vps changes |\n| 3 | dropbox not library | \ud83d\udea8 ultra | globalcommands in dropbox, not library |\n| 4 | vps memory only | \ud83d\udea8 ultra | cursor_memory_client.py + neo4j graphs |\n| 5 | ask questions first | \ud83d\udd34 critical | 5 min questions saves 4 hrs rework |\n| 6 | run commands | \ud83d\udd34 critical | execute proactively, show results |\n| 7 | no placeholders | \ud83d\udd34 critical | notify gap + ask how to fill |\n| 8 | proof required | \ud83d\udd34 critical | show evidence before claiming fixed |\n| 9 | investigate first | \ud83d\udd34 critical | check vps memory + neo4j, never speculate |\n| 10 | use $home | \ud83d\udd34 critical | never hardcode /users/ib-mac/ |\n| 11 | frustration response | \ud83d\udd34 critical | incident report \u2192 harden rule \u2192 ask to undo |\n| 12 | read rules first | \ud83d\udd34 critical | load governance before execution |\n| 13 | root docker-compose | \ud83d\udd34 critical | use root docker-compose.yml |\n| 14 | real timestamps | \ud83d\udd34 critical | date -u \u2192 2026-01-20t15:56:08z |\n| 15 | pr merge first | \ud83d\udd34 critical | `gh pr merge` to adopt, never manual write |\n| 16 | search first | \ud83d\udfe1 high | check existing before creating |\n| 17 | mcp tools | \ud83d\udfe1 high | pick best tool, not first |\n| 18 | display = symlink | \ud83d\udfe2 medium | sidebar = folder access |\n| 19 | perplexity tools | \ud83d\udfe2 medium | search/reason/deep_research by task |\n\n|| auto-detected issues | 25 | ai pattern detection | \u2705 active |\n---\n\n**last updated:** 2026-01-25t05:00:04z  \n**version:** 8.3.0  \n**changes:** \n- added #15 pr merge first \u2014 git handles file transfer, never manual write from pr diff\n- renumbered lessons 16-19 (was 15-18)\n- updated /pr command v9.0.0 with git-native adoption workflow\n\n\n### **19. successful solution pattern detected - can be reus...",
+      "title": "no overstep** \ud83d\udea8 ultra\n**rule:** if approach/tool fails \u2192 fix it or ask user \u2014 never bypass silently\n**wrong:** \"tool failed, let me just do it myself\"\n**right:** \"tool failed. should i: 1) fix prompt, 2) use alternative, 3) you do it?\"\n**on violation:** write incident report \u2192 harden rule \u2192 ask if user wants changes undone (don't auto-undo)\n**mcp-id:** `lesson-001-no-overstep`\n\n### **2. vps read-only** \ud83d\udea8 ultra\n**rule:** ask \u2192 wait \u2192 execute for any vps infrastructure change\n**allowed:** docker ps/logs/inspect, cat, ls, grep, curl get\n**forbidden:** docker run/compose/stop/rm, file edits, volume changes\n**key:** \"fix it\" \u2260 approval. each command needs explicit \"yes\"/\"approved\"\n**mcp-id:** `lesson-002-vps-readonly`\n\n### **3. dropbox not library** \ud83d\udea8 ultra\n**rule:** globalcommands at `$home/dropbox/cursor governance/globalcommands`\n**wrong:** `/users/ib-mac/library/application support/cursor/globalcommands`\n**verify:** `ls .cursor-commands/ | wc -l` \u2192 should be ~30, not ~8\n**mcp-id:** `lesson-003-dropbox-not-library`\n\n### **4. vps memory only** \ud83d\udea8 ultra\n**rule:** use `cursor_memory_client.py` for all memory operations\n**client:** `python3 agents/cursor/cursor_memory_client.py [search|write|stats]`\n**also:** check neo4j graphs for repo data (not just postgres)\n**wrong:** `docker exec l9-postgres psql` \u2014 local dev only\n**mcp-id:** `lesson-004-vps-memory`\n\n---\n\n## \ud83d\udd34 tier 2: critical (15 lessons)\n\n### **5. ask questions first** \ud83d\udd34 critical\n**rule:** 5 min questions saves 4 hrs rework (48-96x roi)\n**key:** never build first, ask later. always ask first, build second.\n**mcp-id:** `lesson-005-ask-first`\n\n### **6. run commands, don't show** \ud83d\udd34 critical\n**rule:** be proactive \u2014 run commands and display results\n**wrong:** \"run this command: `cat file.txt`\"\n**right:** *actually runs command and shows output*\n**exception:** ask before destructive operations only\n**mcp-id:** `lesson-006-run-commands`\n\n### **7. no placeholders** \ud83d\udd34 critical\n**rule:** never leave blank fields or use placeholder/fabricated data\n**if missing:** notify user \"field x is missing\" \u2192 ask \"how should i fill this?\"\n**key:** ties to #5 \u2014 ask clarifying questions instead of guessing or leaving blank\n**mcp-id:** `lesson-007-no-placeholders`\n\n### **8. proof required** \ud83d\udd34 critical\n**rule:** never claim \"fixed\" without showing evidence\n**key:** show command output, file contents, test results as proof\n**mcp-id:** `lesson-008-proof-required`\n\n### **9. investigate first** \ud83d\udd34 critical\n**rule:** check vps memory + neo4j graphs (not just postgres) before claims\n**banned:** \"may not be implemented\", \"likely generated\", \"probably exists\"\n**right:** \"i checked [path] and found [files]\", \"vps memory shows...\"\n**mcp-id:** `lesson-009-investigate-first`\n\n### **10. use $home always** \ud83d\udd34 critical\n**rule:** never hardcode `/users/ib-mac/` in scripts or configs\n**python:** `path.home()` or `os.path.expanduser(\"~\")`\n**bash:** `$home`\n**mcp-id:** `lesson-010-use-home`\n\n### **11. frustration response** \ud83d\udd34 critical\n**rule:** \"i told you\"/\"again\"/\"still happening\" \u2192 stop immediately\n**response protocol:**\n1. write incident report documenting what went wrong\n2. harden the rule you broke to prevent repeat\n3. ask if user wants changes undone (don't auto-undo \u2014 ties to #1)\n**key:** no apologies needed. take corrective action.\n**mcp-id:** `lesson-011-frustration-response`\n\n### **12. read rules first** \ud83d\udd34 critical\n**rule:** load governance files before any execution task\n**files:** `.cursorrules`, `repeated-mistakes.md`, `workflow_state.md`\n**mcp-id:** `lesson-012-read-rules`\n\n### **13. root docker-compose** \ud83d\udd34 critical\n**rule:** use l9 root `docker-compose.yml`, never `docs/docker-compose.yaml`\n**key:** docs/ version has broken relative paths\n**mcp-id:** `lesson-013-root-docker`\n\n### **14. real timestamps** \ud83d\udd34 critical\n**rule:** run `date -u +\"%y-%m-%dt%h:%m:%sz\"` for all timestamps\n**example output:** `2026-01-20t15:56:08z` (correct)\n**wrong:** `00:00:00z`, made-up dates, wrong timezone\n**mcp-id:** `lesson-014-real-timestamps`\n\n### **15. pr adoption = git merge** \ud83d\udd34 critical\n**rule:** merge the pr to adopt files. git handles file transfer.\n**wrong:** read pr diff \u2192 manually write each file \u2192 close pr (files orphaned!)\n**right:** analyze pr \u2192 `gh pr merge` \u2192 git brings files automatically\n**cherry-pick:** `/harvest` diff \u2192 `git apply --include='{path}'` \u2192 close pr\n**key:** never manually write files from pr diff. merge first, close after.\n**mcp-id:** `lesson-015-pr-merge-first`\n\n### **20. verify paths exist** \ud83d\udd34 critical\n**rule:** always verify file/path exists before referencing it in docs, configs, or responses\n**wrong:** \"set redis_password in .env.c1\" (file doesn't exist \u2014 fabricated)\n**right:** `ls .env*` first \u2192 then reference only files that actually exist\n**verification:** use `ls`, `glob`, or `cat` to confirm path before citing\n**key:** assuming naming conventions = fabrication. verify first.\n**incident:** 2026-01-31 \u2014 agent fabricated `.env.c1` path, broke trust\n**mcp-id:** `lesson-020-verify-paths`\n\n### **21. trace all dependencies** \ud83d\udd34 critical\n**rule:** after any change, find all code that references the changed entity and update it\n**wrong:** add `--requirepass` to redis but don't update healthcheck (breaks container)\n**right:** `grep -r \"redis-cli\" .` \u2192 find healthcheck \u2192 update with `-a password`\n**checklist:**\n1. what did i change?\n2. what else references this? (`grep -r`)\n3. update all references\n4. verify end-to-end\n**key:** 95% done = not done. 100% or it ships broken.\n**incident:** 2026-01-31 \u2014 added redis auth, missed healthcheck, would fail in prod\n**adr:** adr-0000 (core philosophy)\n**mcp-id:** `lesson-021-trace-dependencies`\n\n### **22. definition of done** \ud83d\udd34 critical\n**rule:** before claiming done, verify all definition of done criteria are met\n**dod checklist:**\n1. code complete (no todos/fixmes)\n2. dependencies traced (`grep -r` for changed entities)\n3. tests pass (show actual output, not \"should work\")\n4. evidence provided (exit code 0, actual command output)\n5. healthchecks updated (if auth/config changed)\n**wrong:** \"fixed!\" with no verification\n**right:** \"fixed. test output: [paste]. exit code: 0. grep shows 3 refs, all updated.\"\n**adr:** adr-0091 (definition of done)\n**mcp-id:** `lesson-022-definition-of-done`\n\n### **23. no noqa bypass** \ud83d\udd34 critical\n**rule:** never add `# noqa` comments to bypass adr/lint rules \u2014 fix the actual code\n**wrong:** \"adr check fails, let me add # noqa: adr-0019 to suppress it\"\n**wrong:** \"pre-commit hook catches print(), let me modify the hook to allow it\"\n**right:** \"adr check fails for print() \u2014 i need to replace print() with structlog\"\n**key:** `# noqa` = hiding violations, not fixing them. workarounds corrupt the codebase.\n**the test:** if removing the noqa would break the build, the code is still broken.\n**incident:** 2026-02-02 \u2014 tried to add noqa comments to bypass adr-0019 print() violation instead of fixing test file to use proper logging\n**mcp-id:** `lesson-023-no-noqa-bypass`\n\n---\n\n## \ud83d\udfe1 tier 3: high (4 lessons)\n\n### **16. search before creating** \ud83d\udfe1 high\n**rule:** check existing solutions before creating new ones\n**mcp-id:** `lesson-016-search-first`\n\n### **17. mcp tool selection** \ud83d\udfe1 high\n**rule:** list all tools in mcp server, pick best not first\n**perplexity:** `search` (quick), `reason` (complex), `deep_research` (reports)\n**mcp-id:** `lesson-017-mcp-tools`\n\n### **18. display = symlink** \ud83d\udfe2 medium\n**rule:** \"show in sidebar\" means folder access via symlink, not docs\n**mcp-id:** `lesson-018-display-intent`\n\n### **19. perplexity tools** \ud83d\udfe2 medium\n**rule:** use correct perplexity tool for task type\n**tools:**\n- `search` \u2014 quick lookups, simple facts, current versions\n- `reason` \u2014 multi-step analysis, comparisons, complex reasoning\n- `deep_research` \u2014 comprehensive reports, in-depth research\n**benefit:** bypasses training cutoff \u2014 gets real-time web data with citations\n**mcp-id:** `lesson-019-perplexity-tools`\n\n---\n\n## \ud83d\udd34 l9 auth\n\n**rule:** all authentication uses l9 vps stack. no external auth systems.\n\n---\n\n## \ud83d\udccb pre-execution checklist\n\nbefore any execution task:\n- [ ] asked clarifying questions (no placeholders/blanks)?\n- [ ] paths use `$home` not hardcoded?\n- [ ] using vps memory client, not local docker?\n- [ ] checked neo4j graphs for repo data?\n- [ ] not overstepping user's chosen approach?\n- [ ] have evidence ready before claiming success?\n\n---\n\n## \ud83d\udcca quick reference table\n\n| # | lesson | tier | key rule |\n|---|--------|------|----------|\n| 1 | no overstep | \ud83d\udea8 ultra | if tool fails \u2192 fix or ask, don't bypass |\n| 2 | vps read-only | \ud83d\udea8 ultra | ask \u2192 wait \u2192 execute for vps changes |\n| 3 | dropbox not library | \ud83d\udea8 ultra | globalcommands in dropbox, not library |\n| 4 | vps memory only | \ud83d\udea8 ultra | cursor_memory_client.py + neo4j graphs |\n| 5 | ask questions first | \ud83d\udd34 critical | 5 min questions saves 4 hrs rework |\n| 6 | run commands | \ud83d\udd34 critical | execute proactively, show results |\n| 7 | no placeholders | \ud83d\udd34 critical | notify gap + ask how to fill |\n| 8 | proof required | \ud83d\udd34 critical | show evidence before claiming fixed |\n| 9 | investigate first | \ud83d\udd34 critical | check vps memory + neo4j, never speculate |\n| 10 | use $home | \ud83d\udd34 critical | never hardcode /users/ib-mac/ |\n| 11 | frustration response | \ud83d\udd34 critical | incident report \u2192 harden rule \u2192 ask to undo |\n| 12 | read rules first | \ud83d\udd34 critical | load governance before execution |\n| 13 | root docker-compose | \ud83d\udd34 critical | use root docker-compose.yml |\n| 14 | real timestamps | \ud83d\udd34 critical | date -u \u2192 2026-01-20t15:56:08z |\n| 15 | pr merge first | \ud83d\udd34 critical | `gh pr merge` to adopt, never manual write |\n| 16 | search first | \ud83d\udfe1 high | check existing before creating |\n| 17 | mcp tools | \ud83d\udfe1 high | pick best tool, not first |\n| 18 | display = symlink | \ud83d\udfe2 medium | sidebar = folder access |\n| 19 | perplexity tools | \ud83d\udfe2 medium | search/reason/deep_research by task |\n\n|| auto-detected issues | 25 | ai pattern detection | \u2705 active |\n|| auto-detected issues | 3 | ai pattern detection | \u2705 active |\n---\n\n**last updated:** 2026-03-28t05:00:01z  \n**version:** 8.3.0  \n**changes:** \n- added #15 pr merge first \u2014 git handles file transfer, never manual write from pr diff\n- renumbered lessons 16-19 (was 15-18)\n- updated /pr command v9.0.0 with git-native adoption workflow\n\n\n### **19. successful solution pattern detected - can be reus...",
       "severity": "CRITICAL",
       "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
       "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
     },
     "lesson_20": {
       "keywords": [
-        "failed",
-        "headers",
         "authentication",
+        "headers",
+        "used",
         "manual",
-        "predefinedcredentialtype",
-        "instead",
         "authorization",
-        "used"
+        "instead",
+        "predefinedcredentialtype",
+        "failed"
       ],
       "mistake_text": "authentication failed - used manual authorization headers instead of predefinedcredentialtype",
       "title": "authentication failed - used manual authorization ...",
@@ -39,15 +39,15 @@
     },
     "lesson_21": {
       "keywords": [
-        "perfect",
+        "worked",
         "successful",
-        "great",
+        "user",
         "solut",
         "solution",
-        "worked",
         "confirmed",
-        "user",
-        "pattern"
+        "great",
+        "pattern",
+        "perfect"
       ],
       "mistake_text": "successful solution pattern - user confirmed solution worked ('that worked', 'perfect', 'great')",
       "title": "successful solution pattern - user confirmed solut...",
@@ -57,15 +57,15 @@
     },
     "lesson_22": {
       "keywords": [
-        "action",
         "said",
-        "incorrect",
+        "wrong",
+        "user",
         "stop",
+        "incorrect",
         "wron",
         "explicitly",
         "rejected",
-        "wrong",
-        "user"
+        "action"
       ],
       "mistake_text": "user explicitly rejected action - said 'no', 'wrong', 'incorrect', 'stop', or 'don't'",
       "title": "user explicitly rejected action - said 'no', 'wron...",
@@ -75,9 +75,9 @@
     },
     "lesson_23": {
       "keywords": [
-        "pattern",
+        "detected",
         "behavioral",
-        "detected"
+        "pattern"
       ],
       "mistake_text": "pattern detected: pattern behavioral",
       "title": "pattern detected: pattern behavioral...",
@@ -87,15 +87,15 @@
     },
     "lesson_24": {
       "keywords": [
-        "wrapped",
-        "loads",
         "quotes",
+        "double",
+        "json",
+        "wrapped",
+        "parsing",
         "requires",
         "string",
-        "parsing",
-        "json",
-        "error",
-        "double"
+        "loads",
+        "error"
       ],
       "mistake_text": "json parsing error - json string wrapped in quotes, requires double json.loads()",
       "title": "json parsing error - json string wrapped in quotes...",
@@ -105,13 +105,13 @@
     },
     "lesson_25": {
       "keywords": [
+        "syntax",
         "break",
         "expression",
-        "expressions",
-        "syntax",
+        "spaces",
         "execution",
         "error",
-        "spaces"
+        "expressions"
       ],
       "mistake_text": "n8n expression syntax error - spaces in expressions break execution",
       "title": "n8n expression syntax error - spaces in expression...",
@@ -121,12 +121,12 @@
     },
     "lesson_26": {
       "keywords": [
+        "actually",
+        "required",
         "said",
+        "user",
         "meant",
         "instead",
-        "actually",
-        "user",
-        "required",
         "clarification"
       ],
       "mistake_text": "user clarification required - said 'actually', 'instead', 'should be', or 'meant to'",
@@ -137,13 +137,13 @@
     },
     "lesson_27": {
       "keywords": [
-        "missing",
-        "incorrect",
         "structure",
+        "node",
         "format",
+        "incorrect",
         "issue",
         "workflow",
-        "node"
+        "missing"
       ],
       "mistake_text": "n8n workflow structure issue - missing node ids or incorrect workflow format",
       "title": "n8n workflow structure issue - missing node ids or...",
@@ -153,12 +153,12 @@
     },
     "lesson_28": {
       "keywords": [
-        "providing",
-        "said",
-        "proof",
-        "claimed",
         "work",
+        "said",
         "know",
+        "claimed",
+        "proof",
+        "providing",
         "without"
       ],
       "mistake_text": "claimed fix without providing proof - said 'should work now', 'try it', or 'let me know'",
@@ -169,10 +169,10 @@
     },
     "lesson_29": {
       "keywords": [
-        "pattern",
         "detected",
         "general",
-        "symlink"
+        "symlink",
+        "pattern"
       ],
       "mistake_text": "pattern detected: symlink general",
       "title": "pattern detected: symlink general...",
@@ -185,10 +185,10 @@
         "request",
         "extraction",
         "keyword",
-        "initiated",
-        "explicitly",
         "user",
         "lesson",
+        "explicitly",
+        "initiated",
         "requested"
       ],
       "mistake_text": "user-initiated lesson request - user explicitly requested lesson extraction with 'lesson' keyword",
@@ -201,14 +201,14 @@
       "keywords": [
         "code",
         "successful",
-        "proof",
-        "solution",
         "test",
-        "pattern",
         "results",
+        "solution",
         "provided",
-        "verification",
-        "exit"
+        "proof",
+        "pattern",
+        "exit",
+        "verification"
       ],
       "mistake_text": "successful solution pattern - solution provided with proof (exit code, test results, verification)",
       "title": "successful solution pattern - solution provided wi...",
@@ -218,15 +218,15 @@
     },
     "lesson_32": {
       "keywords": [
-        "missing",
+        "circular",
         "import",
         "modules",
-        "circular",
-        "dependencies",
-        "circ",
-        "dependency",
         "failures",
-        "error"
+        "dependencies",
+        "error",
+        "circ",
+        "missing",
+        "dependency"
       ],
       "mistake_text": "dependency or import error - missing modules, circular dependencies, or import failures",
       "title": "dependency or import error - missing modules, circ...",
@@ -236,15 +236,15 @@
     },
     "lesson_33": {
       "keywords": [
-        "happening",
         "said",
-        "again",
+        "user",
+        "mistake",
         "repeated",
         "told",
+        "again",
+        "happening",
         "still",
-        "detected",
-        "user",
-        "mistake"
+        "detected"
       ],
       "mistake_text": "repeated mistake detected - user said 'i told you', 'again', or 'still happening'",
       "title": "repeated mistake detected - user said 'i told you'...",
@@ -254,15 +254,15 @@
     },
     "lesson_34": {
       "keywords": [
-        "perfect",
+        "worked",
         "successful",
-        "great",
+        "user",
         "solut",
         "solution",
-        "worked",
         "confirmed",
-        "user",
-        "pattern"
+        "great",
+        "pattern",
+        "perfect"
       ],
       "mistake_text": "successful solution pattern - user confirmed solution worked ('that worked', 'perfect', 'great')",
       "title": "successful solution pattern - user confirmed solut...",
@@ -272,13 +272,13 @@
     },
     "lesson_35": {
       "keywords": [
-        "missing",
-        "incorrect",
         "structure",
+        "node",
         "format",
+        "incorrect",
         "issue",
         "workflow",
-        "node"
+        "missing"
       ],
       "mistake_text": "n8n workflow structure issue - missing node ids or incorrect workflow format",
       "title": "n8n workflow structure issue - missing node ids or...",
@@ -288,14 +288,163 @@
     },
     "lesson_36": {
       "keywords": [
-        "pattern",
+        "detected",
         "behavioral",
-        "detected"
+        "pattern"
       ],
       "mistake_text": "pattern detected: pattern behavioral",
       "title": "pattern detected: pattern behavioral...",
       "severity": "MEDIUM",
       "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_37": {
+      "keywords": [
+        "comments",
+        "code",
+        "actually",
+        "logging",
+        "violations",
+        "hiding",
+        "added",
+        "them",
+        "inconsistencies",
+        "hide"
+      ],
+      "mistake_text": "added 1,068 `# noqa: adr-xxxx` comments to hide adr violations instead of actually fixing the code. this left 122 sql injection vulnerabilities and 946 logging inconsistencies in place.",
+      "title": "hiding violations with noqa instead of fixing them",
+      "severity": "MEDIUM",
+      "prevention": "When asked to fix violations: FIX THE CODE, not hide it with comments. ASK if hiding is acceptable before adding noqa. NEVER hide security issues (SQL injection, credentials).",
+      "rule": "`# noqa` = technical debt, not a fix. Only acceptable for: (1) false positives, (2) explicitly approved debt with tracking. NEVER for security issues."
+    },
+    "lesson_38": {
+      "keywords": [
+        "structure",
+        "node",
+        "format",
+        "incorrect",
+        "issue",
+        "workflow",
+        "missing"
+      ],
+      "mistake_text": "n8n workflow structure issue - missing node ids or incorrect workflow format",
+      "title": "n8n workflow structure issue - missing node ids or...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_39": {
+      "keywords": [
+        "detected",
+        "relationship",
+        "error",
+        "pattern"
+      ],
+      "mistake_text": "pattern detected: error relationship",
+      "title": "pattern detected: error relationship...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_40": {
+      "keywords": [
+        "circular",
+        "import",
+        "modules",
+        "failures",
+        "dependencies",
+        "error",
+        "circ",
+        "missing",
+        "dependency"
+      ],
+      "mistake_text": "dependency or import error - missing modules, circular dependencies, or import failures",
+      "title": "dependency or import error - missing modules, circ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_41": {
+      "keywords": [
+        "circular",
+        "import",
+        "modules",
+        "failures",
+        "dependencies",
+        "error",
+        "circ",
+        "missing",
+        "dependency"
+      ],
+      "mistake_text": "dependency or import error - missing modules, circular dependencies, or import failures",
+      "title": "dependency or import error - missing modules, circ...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_42": {
+      "keywords": [
+        "detected",
+        "relationship",
+        "error",
+        "pattern"
+      ],
+      "mistake_text": "pattern detected: error relationship",
+      "title": "pattern detected: error relationship...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_43": {
+      "keywords": [
+        "syntax",
+        "break",
+        "expression",
+        "spaces",
+        "execution",
+        "error",
+        "expressions"
+      ],
+      "mistake_text": "n8n expression syntax error - spaces in expressions break execution",
+      "title": "n8n expression syntax error - spaces in expression...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_44": {
+      "keywords": [
+        "hardcoded",
+        "home",
+        "used",
+        "compatibility",
+        "breaks",
+        "cross",
+        "machine",
+        "instead",
+        "cros",
+        "path"
+      ],
+      "mistake_text": "hardcoded path used instead of $home - breaks cross-machine compatibility",
+      "title": "hardcoded path used instead of $home - breaks cros...",
+      "severity": "MEDIUM",
+      "prevention": "Review pattern context before proceeding | Check existing lessons for similar patterns",
+      "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
+    },
+    "lesson_45": {
+      "keywords": [
+        "authentication",
+        "headers",
+        "used",
+        "manual",
+        "authorization",
+        "instead",
+        "predefinedcredentialtype",
+        "failed"
+      ],
+      "mistake_text": "authentication failed - used manual authorization headers instead of predefinedcredentialtype",
+      "title": "authentication failed - used manual authorization ...",
+      "severity": "MEDIUM",
+      "prevention": "Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers",
       "rule": "Apply prevention protocol before execution | Check existing lessons | Verify approach"
     }
   }

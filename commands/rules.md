@@ -1,101 +1,115 @@
 ---
 name: rules
-version: "1.1.0"
-description: "List and manage governance rules"
+version: "2.2.0"
+description: "List ALL governance rules from .cursor/rules/ with status"
 auto_chain: null
 ---
 
-# /rules — Governance Rules
+# /rules — Governance Rules (v2.1.0)
 
-## WHAT IT DOES
+## EXECUTION
 
-List and check governance rules.
+When `/rules` is invoked, read ALL `.mdc` files from `.cursor/rules/` and report:
+
+### Step 1: Count and List
+
+```bash
+# Count total rules
+ls .cursor/rules/*.mdc | wc -l
+
+# List rules with alwaysApply: true
+grep -l "alwaysApply: true" .cursor/rules/*.mdc | xargs -I{} basename {}
+
+# List rules WITHOUT alwaysApply: true
+grep -L "alwaysApply: true" .cursor/rules/*.mdc | xargs -I{} basename {}
+```
+
+### Step 2: Output Format
+
+```markdown
+## 📜 GOVERNANCE RULES
+
+**Total:** {count} rules | **Always-Applied:** {count} | **Context-Only:** {count}
+
+### ✅ Always-Applied Rules (loaded every session)
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | 00-global.mdc | L9 global rules |
+| 2 | 30-odoo-native.mdc | Odoo-native patterns |
+| ... | ... | ... |
+
+### ⚠️ Context-Only Rules (loaded when matching globs)
+
+| # | File | Trigger |
+|---|------|---------|
+| 1 | 10-lang-typescript.mdc | `**/*.ts` files |
+| ... | ... | ... |
+
+### 🔴 Rules Without Frontmatter (need fixing)
+
+| # | File |
+|---|------|
+| 1 | ... |
+```
+
+---
+
+## CRITICAL ODOO RULES (Always-Applied)
+
+| File | Purpose |
+|------|---------|
+| `30-odoo-native.mdc` | ORM patterns, recordsets, domains, actions |
+| `95-plasticos-equipment-policy.mdc` | Equipment wiring requirements |
+
+---
+
+## CRITICAL SAFETY RULES (Always-Applied)
+
+| File | Purpose |
+|------|---------|
+| `01-git-push-prohibition.mdc` | NEVER push without explicit request |
+| `96-git-push-approval.mdc` | Git push requires approval |
+| `99-no-auto-commit.mdc` | Never auto-commit |
+| `99-execute-as-instructed.mdc` | Execute exactly as instructed |
+| `91-existing-code-source-of-truth.mdc` | Existing code wins |
+| `92-learned-lessons.mdc` | Critical prevention rules |
+
+---
+
+## HOW TO ENABLE A RULE
+
+Add this frontmatter to any `.mdc` file:
+
+```yaml
+---
+description: "Brief description of the rule"
+alwaysApply: true
+---
+```
+
+Or for context-triggered rules:
+
+```yaml
+---
+description: "Brief description"
+alwaysApply: false
+globs: ["**/*.py", "plasticos_*/**/*"]
+---
+```
 
 ---
 
 ## RULE CATEGORIES
 
-### KERNEL_TIER
-- Protected files require approval
-- Full GMP phases required
-- No shortcuts
-
-### RUNTIME_TIER
-- GMP recommended
-- Tests required
-- Docs for public APIs
-
-### INFRA_TIER
-- Deployment manifest required
-- Rollback plan required
-- Smoke tests required
-
-### UX_TIER
-- Standard GMP
-- Tests recommended
-
----
-
-## PROTECTED FILES
-
-```
-runtime/websocket_orchestrator.py
-core/agents/executor.py
-memory/substrate_service.py
-memory/substrate_dag.py
-docker-compose.yml
-core/singleton_registry.py
-```
-
----
-
-## REQUIRED PATTERNS
-
-| Pattern | Required |
-|---------|----------|
-| structlog | Yes |
-| httpx | Yes |
-| async I/O | Yes |
-| pydantic v2 | Yes |
-| type hints | Yes |
-
----
-
-## SLASH COMMAND RULES (ADR-0100)
-
-| Rule | Detail |
-|------|--------|
-| Execution path | DAG only — agent reads DAG file and walks nodes |
-| CLI executors | **NEVER create** `workflows/*_executor.py` for slash commands |
-| Command file size | ~30-40 lines — minimal trigger, not full instructions |
-| Instructions live in | DAG node `action` fields, not the command `.md` file |
-| Frontmatter required | `dag:` (DAG ID) and `dag_file:` (path to DAG `.py`) |
-
----
-
-## FORBIDDEN PATTERNS
-
-| Pattern | Why |
-|---------|-----|
-| Bare except | Hides errors |
-| sync in async | Blocks event loop |
-| global state | Hard to test |
-| print() | Use structlog |
-
----
-
-## OUTPUT
-
-```markdown
-## 📜 RULES
-
-### Active Rules
-| Rule | Scope | Enforcement |
-|------|-------|-------------|
-
-### Violations in Scope
-| Violation | File | Fix |
-|-----------|------|-----|
-```
-
---- End Command ---
+| Prefix | Category | Examples |
+|--------|----------|----------|
+| `00-09` | Global | Core rules, git, slash commands |
+| `10-29` | Language | Python, TypeScript |
+| `30-39` | Framework | Odoo, React |
+| `40-49` | Domain | Business logic |
+| `50-59` | QA | Testing |
+| `60-69` | Anti-patterns | What NOT to do |
+| `70-79` | Workflow | CI/CD, reviews |
+| `80-89` | GMP | Governance process |
+| `90-99` | Protection | Lessons, policies |

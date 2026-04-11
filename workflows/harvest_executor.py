@@ -60,7 +60,22 @@ from pathlib import Path
 # Configuration
 # =============================================================================
 
-REPO_ROOT = Path(__file__).parent.parent
+def _find_repo_root() -> Path:
+    """Auto-detect git repo root from CWD — repo/folder agnostic.
+
+    Walks UP from the current working directory (not the script location),
+    so it always finds the repo the user is operating in, regardless of
+    where the script itself lives (e.g. inside .cursor-commands/).
+    """
+    cwd = Path.cwd().resolve()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / ".git").exists():
+            return parent
+    # Fallback: use cwd itself
+    return cwd
+
+
+REPO_ROOT = _find_repo_root()
 REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 STATE_FILE = REPO_ROOT / ".harvest_executor_state.json"
 HARVEST_DIR = REPO_ROOT / "current_work" / "harvested"
@@ -138,6 +153,7 @@ class HarvestState:
     items: list[dict] = field(default_factory=list)
     output_dir: str = ""
     files_created: list[str] = field(default_factory=list)
+    files_deployed: list[str] = field(default_factory=list)
     validation_results: list[dict] = field(default_factory=list)
     report_path: str = ""
     commit_hash: str = ""
@@ -159,6 +175,7 @@ STEP_ORDER = [
     "parse_code_blocks",
     "create_harvest_table",
     "extract_files",
+    "deploy_files",
     "validate_syntax",
     "generate_report",
     "commit",
@@ -271,6 +288,120 @@ class HarvestExecutor:
         }
     )
 
+    _FILENAME_META_RE = re.compile(r"^\s*# filename:\s*(.+?)\s*$")
+
+    def _find_filename_from_block_meta(
+        self,
+        lines: list[str],
+        code_start: int,
+        code_end: int,
+    ) -> str | None:
+        """Scan first 4 lines inside a code block for '# path:', '# filename:', or '// path:' meta.
+
+        Returns the path value if found, else None.
+        """
+        for j in range(code_start, min(code_start + 4, code_end - 1)):
+            line = lines[j].strip()
+            if line.startswith("# path:") or line.startswith("// path:"):
+                path_val = line.split("path:", 1)[-1].strip()
+                if path_val:
+                    return path_val
+            if line.startswith("# filename:"):
+                path_val = line.split("filename:", 1)[-1].strip()
+                if path_val:
+                    return path_val
+        return None
+
+    @staticmethod
+    def _fence_run_at_line_start(s: str) -> int:
+        """Count consecutive backticks at the start of stripped line."""
+        st = s.strip()
+        n = 0
+        for c in st:
+            if c == "`":
+                n += 1
+            else:
+                break
+        return n
+
+    def _find_opening_fence_before(self, lines: list[str], fn_idx: int) -> int:
+        """0-based line index of the ``` / ```` fence line before # filename."""
+        for j in range(fn_idx - 1, max(-1, fn_idx - 50), -1):
+            st = lines[j].strip()
+            if st.startswith("`") and self._fence_run_at_line_start(st) >= 3:
+                return j
+        raise ValueError("no opening fence found above # filename")
+
+    def _find_matching_fence_close(self, lines: list[str], open_idx: int) -> int:
+        """0-based index of the closing fence line for the block opened at open_idx (nested fences)."""
+        st = lines[open_idx].strip()
+        n_open = self._fence_run_at_line_start(st)
+        if n_open < 3:
+            raise ValueError("invalid opening fence")
+        stack = [n_open]
+        i = open_idx + 1
+        while i < len(lines):
+            line = lines[i]
+            st = line.strip()
+            if not st.startswith("`"):
+                i += 1
+                continue
+            run = self._fence_run_at_line_start(st)
+            if run < 3:
+                i += 1
+                continue
+            tail = st[run:].strip()
+            is_backticks_only = bool(st) and set(st) == {"`"}
+            if tail == "" and is_backticks_only:
+                if run >= stack[-1]:
+                    stack.pop()
+                    if not stack:
+                        return i
+            else:
+                stack.append(run)
+            i += 1
+        raise ValueError("unclosed fenced block")
+
+    def _parse_filename_marker_blocks(self, lines: list[str]) -> list[dict]:
+        """Extract harvest items from `# filename:` markers + nested CommonMark-style fences."""
+        items: list[dict] = []
+        item_num = 1
+        for i, line in enumerate(lines):
+            m = self._FILENAME_META_RE.match(line)
+            if not m:
+                continue
+            deploy_target = m.group(1).strip()
+            try:
+                open_idx = self._find_opening_fence_before(lines, i)
+                close_idx = self._find_matching_fence_close(lines, open_idx)
+            except ValueError as exc:
+                print(f"  SKIP # filename at line {i + 1} ({deploy_target}): {exc}")  # noqa: ADR-0019
+                continue
+            # Body excludes the `# filename:` line; ends before closing fence.
+            extract_start_1based = i + 2
+            extract_end_1based = close_idx
+            nlines = extract_end_1based - extract_start_1based + 1
+            if nlines < 0:
+                continue
+            basename = Path(deploy_target).name
+            items.append(
+                {
+                    "number": item_num,
+                    "pattern": deploy_target,
+                    "source_start": open_idx + 1,
+                    "source_end": close_idx + 1,
+                    "extract_start_1based": extract_start_1based,
+                    "extract_end_1based": extract_end_1based,
+                    "target_file": f"{item_num}_{basename}",
+                    "deploy_target": deploy_target,
+                    "status": "pending",
+                    "language": "marker",
+                    "lines": max(0, nlines),
+                }
+            )
+            item_num += 1
+        return items
+
     def _find_filename_from_headers(
         self,
         lines: list[str],
@@ -319,6 +450,25 @@ class HarvestExecutor:
         self._print_header("PARSE CODE BLOCKS")
 
         lines = self.document_content.split("\n")
+
+        # Documents with `# filename:` markers (often nested fences) use stack-based parsing.
+        if any(self._FILENAME_META_RE.match(ln) for ln in lines):
+            items = self._parse_filename_marker_blocks(lines)
+            self.state.items = items
+            if not items:
+                print("❌ No extractable # filename: blocks (all skipped or parse failed)")  # noqa: ADR-0019
+                return False
+            print(f"Found {len(items)} filename-marker block(s) (nested-fence aware)")  # noqa: ADR-0019
+            for item in items[:25]:
+                print(  # noqa: ADR-0019
+                    f"| {item['number']:2} | {item['target_file'][:40]:40} | "
+                    f"{item['extract_start_1based']}-{item['extract_end_1based']} | "
+                    f"{item['lines']:5} | `{item['pattern'][:50]}` |"
+                )
+            if len(items) > 25:
+                print(f"| ... and {len(items) - 25} more |")  # noqa: ADR-0019
+            return True
+
         items = []
         skipped_fragments = []
         item_num = 1
@@ -343,13 +493,17 @@ class HarvestExecutor:
 
                 ext, _checkable = SUPPORTED_LANGUAGES[lang_key]
 
-                # --- Filename extraction from headers ---
+                # --- Filename extraction: headers first, then block meta ---
                 filename, is_fragment = self._find_filename_from_headers(
                     lines,
                     code_start,
                     ext,
                     item_num,
                 )
+                if filename is None and not is_fragment:
+                    filename = self._find_filename_from_block_meta(
+                        lines, code_start, code_end
+                    )
 
                 if is_fragment:
                     skipped_fragments.append(
@@ -373,6 +527,12 @@ class HarvestExecutor:
                         "source_start": code_start,
                         "source_end": code_end,
                         "target_file": f"{item_num}_{basename}",
+                        "deploy_target": original_path if (
+                            "/" in original_path or (
+                                original_path != f"code_block_{item_num}{ext}"
+                                and "." in original_path
+                            )
+                        ) else "",
                         "status": "pending",
                         "language": code_lang,
                         "lines": code_end - code_start - 1,
@@ -426,7 +586,11 @@ class HarvestExecutor:
         table_content += "|---|---------|--------------|--------|\n"
 
         for item in self.state.items:
-            table_content += f"| {item['number']} | `{item['pattern']}` | {item['source_start']}-{item['source_end']} | `{item['target_file']}` |\n"
+            if "extract_start_1based" in item:
+                rng = f"{item['extract_start_1based']}-{item['extract_end_1based']}"
+            else:
+                rng = f"{item['source_start']}-{item['source_end']}"
+            table_content += f"| {item['number']} | `{item['pattern']}` | {rng} | `{item['target_file']}` |\n"
 
         table_content += f"\n**Source:** `{self.state.source_document}`\n"
         table_content += (
@@ -454,8 +618,12 @@ class HarvestExecutor:
 
         for item in self.state.items:
             target_file = output_dir / item["target_file"]
-            start = item["source_start"] + 1  # Skip opening ```
-            end = item["source_end"] - 1  # Skip closing ```
+            if "extract_start_1based" in item and "extract_end_1based" in item:
+                start = item["extract_start_1based"]
+                end = item["extract_end_1based"]
+            else:
+                start = item["source_start"] + 1  # Skip opening ```
+                end = item["source_end"] - 1  # Skip closing ```
 
             # Use sed to extract lines
             cmd = f'sed -n "{start},{end}p" "{source_path}" > "{target_file}"'
@@ -477,29 +645,75 @@ class HarvestExecutor:
         return success > 0
 
     # =========================================================================
-    # STEP 5: VALIDATE SYNTAX
+    # STEP 5: DEPLOY FILES (cp staging → real target paths in repo)
+    # =========================================================================
+    def _step_deploy_files(self) -> bool:
+        self._print_header("DEPLOY FILES → repo targets")
+
+        deployed = []
+        skipped = []
+
+        for item in self.state.items:
+            deploy_target = item.get("deploy_target", "")
+            staging_file = Path(self.state.output_dir) / item["target_file"]
+
+            if not deploy_target:
+                skipped.append(item["target_file"])
+                print(f"⏭️  {item['number']:2}. {item['target_file']} — no target path, kept in staging")  # noqa: ADR-0019
+                continue
+
+            if not staging_file.exists():
+                print(f"❌ {item['number']:2}. staging file missing: {staging_file}")  # noqa: ADR-0019
+                continue
+
+            dest = REPO_ROOT / deploy_target
+            dest.parent.mkdir(parents=True, exist_ok=True)
+
+            cmd = f'cp "{staging_file}" "{dest}"'
+            code, _stdout, stderr = self._run_shell(cmd)
+
+            if code == 0:
+                deployed.append(str(dest))
+                action = "REPLACE" if dest.exists() else "CREATE"
+                print(f"✅ {item['number']:2}. {deploy_target} [{action}]")  # noqa: ADR-0019
+            else:
+                print(f"❌ {item['number']:2}. {deploy_target}: {stderr[:60]}")  # noqa: ADR-0019
+
+        self.state.files_deployed = deployed
+
+        print(f"\n✅ Deployed: {len(deployed)} files to repo")  # noqa: ADR-0019
+        if skipped:
+            print(f"⏭️  Kept in staging only: {len(skipped)} files (no # path: meta)")  # noqa: ADR-0019
+
+        return True
+
+    # =========================================================================
+    # STEP 6: VALIDATE SYNTAX
     # =========================================================================
     def _step_validate_syntax(self) -> bool:
         self._print_header("VALIDATE SYNTAX")
 
         validations = []
 
-        if not self.state.files_created:
+        # Validate deployed files if available, otherwise fall back to staging
+        files_to_validate = self.state.files_deployed if self.state.files_deployed else self.state.files_created
+
+        if not files_to_validate:
             print("⚠️  No files to validate")  # noqa: ADR-0019
             validations.append({"check": "all", "status": "⚠️ N/A"})
             self.state.validation_results = validations
             return True
 
         # Group files by extension for targeted validation
-        py_files = [f for f in self.state.files_created if f.endswith(".py")]
-        json_files = [f for f in self.state.files_created if f.endswith(".json")]
+        py_files = [f for f in files_to_validate if f.endswith(".py")]
+        json_files = [f for f in files_to_validate if f.endswith(".json")]
         yaml_files = [
-            f for f in self.state.files_created if f.endswith((".yaml", ".yml"))
+            f for f in files_to_validate if f.endswith((".yaml", ".yml"))
         ]
-        toml_files = [f for f in self.state.files_created if f.endswith(".toml")]
+        toml_files = [f for f in files_to_validate if f.endswith(".toml")]
         other_files = [
             f
-            for f in self.state.files_created
+            for f in files_to_validate
             if not f.endswith((".py", ".json", ".yaml", ".yml", ".toml"))
         ]
 
@@ -672,19 +886,25 @@ class HarvestExecutor:
     def _step_commit(self) -> bool:
         self._print_header("COMMIT (NO PUSH)")
 
-        if not self.state.files_created:
+        if not self.state.files_created and not self.state.files_deployed:
             print("✅ No files to commit")  # noqa: ADR-0019
             return True
 
-        # Stage output directory
-        output_dir = self.state.output_dir
-        self._run_shell(f'git add "{output_dir}"')
+        # Stage deployed files (real repo paths) + staging dir
+        for f in self.state.files_deployed:
+            self._run_shell(f'git add "{f}"')
+        if self.state.output_dir:
+            self._run_shell(f'git add "{self.state.output_dir}"')
 
         # Create commit message
         source_name = Path(self.state.source_document).stem
-        count = len(self.state.files_created)
+        deployed_count = len(self.state.files_deployed)
+        extracted_count = len(self.state.files_created)
 
-        commit_msg = f"harvest({source_name}): {count} files extracted"
+        if deployed_count:
+            commit_msg = f"harvest({source_name}): {deployed_count} files deployed to repo"
+        else:
+            commit_msg = f"harvest({source_name}): {extracted_count} files extracted (staging)"
 
         # Commit
         cmd = f'git commit -m "{commit_msg}" --no-verify 2>&1 || true'
@@ -752,6 +972,7 @@ class HarvestExecutor:
             "parse_code_blocks": self._step_parse_code_blocks,
             "create_harvest_table": self._step_create_harvest_table,
             "extract_files": self._step_extract_files,
+            "deploy_files": self._step_deploy_files,
             "validate_syntax": self._step_validate_syntax,
             "generate_report": self._step_generate_report,
             "commit": self._step_commit,

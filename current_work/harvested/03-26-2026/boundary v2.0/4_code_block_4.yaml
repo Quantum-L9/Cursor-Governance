@@ -1,0 +1,34 @@
+# path: deployment/prometheus.rules.yml
+# filename: prometheus.rules.yml
+# purpose: Alerting rules for boundary packet validation and replay/delegation safety
+# dependencies/interfaces: Expects host runtime to emit compatible metrics
+
+groups:
+  - name: l9-boundary-alerts
+    rules:
+      - alert: L9BoundaryPacketRejectSpike
+        expr: increase(l9_packets_rejected_total[5m]) > 25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Boundary packet rejections spiking"
+          description: "Packet rejections exceeded threshold in the last 5 minutes."
+
+      - alert: L9BoundaryDelegationFailureSpike
+        expr: increase(l9_delegation_failures_total[10m]) > 10
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Delegation failures elevated"
+          description: "Delegation failures crossed threshold in the last 10 minutes."
+
+      - alert: L9BoundaryReplayFailures
+        expr: increase(l9_replay_failures_total[15m]) > 5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Replay failures detected"
+          description: "Replay flow failures crossed threshold."

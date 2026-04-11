@@ -3,7 +3,7 @@ version: "1.0.0"
 description: "Update slash commands to be minimal triggers"
 auto_chain: ynp
 dag: slash-command-update-v1
-dag_file: workflows/session/dags/slash_command_update_dag.py
+dag_file: .cursor-commands/workflows/dags/slash_command_update_dag.py
 
 # /update-command — Minimize Slash Commands
 
@@ -22,7 +22,7 @@ dag_file: workflows/session/dags/slash_command_update_dag.py
 Load and execute the DAG:
 
 ```python
-from workflows.session.dags import SLASH_COMMAND_UPDATE_DAG
+from .cursor_commands.workflows.dags import SLASH_COMMAND_UPDATE_DAG
 # Follow each node's action field in sequence
 ```
 
@@ -30,6 +30,6 @@ The DAG contains all instructions. Follow each node's `action` field exactly.
 
 ## Key Files
 
-- **DAG**: `workflows/session/dags/slash_command_update_dag.py`
+- **DAG**: `.cursor-commands/workflows/dags/slash_command_update_dag.py`
 - **Commands**: `.cursor-commands/commands/*.md`
 - **Registry**: `.cursor/rules/02-slash-commands.mdc`

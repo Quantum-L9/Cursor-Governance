@@ -1,7 +1,8 @@
 ---
 name: spec
-version: "7.0.0"
+version: "7.1.0"
 description: "Generate specification before building"
+before_chain: rules
 auto_chain: ynp
 ---
 
@@ -90,5 +91,21 @@ specs/{project}-spec.md
 ```
 
 → **Auto-chains to /ynp** (recommends /forge or /gmp)
+
+---
+
+## Future: IR Engine Integration
+
+The IR engine (`ir_engine/`) can enhance spec generation:
+
+- **`SemanticCompiler`** (`ir_engine/semantic_compiler.py`) converts natural language descriptions into structured `IRGraph` representations, extracting requirements, constraints, and dependencies automatically.
+- **`UnifiedController.compile_only(text, context)`** provides a single entry point for NL-to-IR compilation.
+
+When wired, `/spec` could use `SemanticCompiler` to:
+1. Parse the user's NL description into structured intent
+2. Auto-detect constraints and dependencies from the IRGraph
+3. Pre-populate the spec template with machine-extracted requirements
+
+**Status:** Not yet wired. The `UnifiedController` is complete (v2.0.0) and exported from `orchestration/`. Integration requires calling `compile_only()` during the "GATHER CONTEXT" phase and feeding the IRGraph into spec template generation.
 
 --- End Command ---

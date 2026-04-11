@@ -1,0 +1,53 @@
+# path: pyproject.toml
+# filename: pyproject.toml
+# purpose: Build, dependency, lint, and test configuration for the boundary module pack
+# dependencies/interfaces: Python 3.12+, pydantic v2, pytest
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "l9-boundary-pack"
+version = "1.0.0"
+description = "Canonical constellation boundary runtime for TransportPacket ingress, validation, response, delegation, replay, and memory mapping."
+readme = "docs/BOUNDARY_ARCHITECTURE.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+authors = [
+  { name = "L9 Platform" }
+]
+dependencies = [
+  "pydantic>=2.8,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9.0",
+  "pytest-cov>=6.0,<7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true

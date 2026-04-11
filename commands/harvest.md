@@ -1,10 +1,11 @@
 ---
 name: harvest
-version: "3.1.0"
+version: "3.2.0"
 description: "Extract code from documents using sed — NEVER write/type code manually"
+before_chain: rules
 auto_chain: use-harvest
 dag: harvest-deploy-v1
-dag_file: workflows/dags/harvest_deploy_dag.py
+dag_file: .cursor-commands/workflows/dags/harvest_deploy_dag.py
 ---
 
 # /harvest — Code Extraction via sed
@@ -27,7 +28,7 @@ dag_file: workflows/dags/harvest_deploy_dag.py
 Load and execute the DAG:
 
 ```python
-from workflows.dags.harvest_deploy_dag import HARVEST_DEPLOY_DAG
+from .cursor_commands.workflows.dags.harvest_deploy_dag import HARVEST_DEPLOY_DAG
 # Follow each node's action field in sequence
 ```
 
@@ -35,6 +36,6 @@ The DAG contains all instructions. Follow each node's `action` field exactly.
 
 ## Key Files
 
-- **DAG**: `workflows/dags/harvest_deploy_dag.py`
-- **CLI**: `python3 workflows/harvest_executor.py path/to/doc.md` (standalone alternative)
+- **DAG**: `.cursor-commands/workflows/dags/harvest_deploy_dag.py`
+- **CLI**: `python3 .cursor-commands/workflows/harvest_executor.py path/to/doc.md` (standalone alternative)
 - **Next step**: `/use-harvest` after extraction completes

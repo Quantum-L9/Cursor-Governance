@@ -1,12 +1,13 @@
 ---
 name: wire
-version: "12.0.0"
+version: "12.2.0"
 description: "TRIGGER ONLY — Invokes wire_executor.py for enforceable wiring"
+before_chain: rules
 auto_chain: ynp
-dag_executor: core/codegen/wire_executor.py
+dag_executor: .cursor/workflows-synced/wire_executor.py
 ---
 
-# /wire — Component Wiring (v12.0.0)
+# /wire — Component Wiring (v12.1.0)
 
 ## THIS IS A TRIGGER ONLY
 
@@ -15,7 +16,7 @@ dag_executor: core/codegen/wire_executor.py
 ## INVOCATION
 
 ```bash
-python3 core/codegen/wire_executor.py <component>
+python3 .cursor/workflows-synced/wire_executor.py <component>
 ```
 
 ## WHAT THE DAG DOES (AUTONOMOUS)
@@ -54,19 +55,19 @@ python3 core/codegen/wire_executor.py <component>
 
 ```bash
 # Wire a module
-python3 core/codegen/wire_executor.py core/tools/registry.py
+python3 .cursor-commands/workflows/wire_executor.py core/tools/registry.py
 
 # Wire by import path
-python3 core/codegen/wire_executor.py memory.substrate_service
+python3 .cursor-commands/workflows/wire_executor.py memory.substrate_service
 
 # Check status
-python3 core/codegen/wire_executor.py --status
+python3 .cursor-commands/workflows/wire_executor.py --status
 
 # Resume if interrupted
-python3 core/codegen/wire_executor.py --resume
+python3 .cursor-commands/workflows/wire_executor.py --resume
 
 # Reset state
-python3 core/codegen/wire_executor.py --reset
+python3 .cursor-commands/workflows/wire_executor.py --reset
 ```
 
 ## STATE FILE

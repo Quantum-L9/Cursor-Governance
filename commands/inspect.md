@@ -3,7 +3,7 @@ version: "3.0.0"
 description: "Inspect code before it enters L9 — external code gate + existing file audit"
 auto_chain: ynp
 dag: inspect-v1
-dag_file: workflows/dags/inspect_dag.py
+dag_file: .cursor-commands/workflows/dags/inspect_dag.py
 
 # /inspect — Code Gate & File Audit
 
@@ -36,7 +36,7 @@ dag_file: workflows/dags/inspect_dag.py
 ## Execution
 
 ```python
-from workflows.dags.inspect_dag import run_inspect
+from .cursor_commands.workflows.dags.inspect_dag import run_inspect
 result = await run_inspect("current_work/02-13-2026/guide.md")
 print(result.report)
 ```
@@ -60,6 +60,6 @@ START → classify → orient → structure → compliance → impact → routin
 
 ## Key Files
 
-- **DAG**: `workflows/dags/inspect_dag.py`
+- **DAG**: `.cursor-commands/workflows/dags/inspect_dag.py`
 - **Validator**: `tools/validation/validate_external_code.py`
 - **Makefile**: `make validate-external-code FILE=path`

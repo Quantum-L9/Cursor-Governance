@@ -1,8 +1,9 @@
 ---
 name: violation
-version: "1.0.0"
+version: "1.1.0"
 description: "Report governance violation"
-auto_chain: null
+before_chain: rules
+auto_chain: ynp
 ---
 
 # /violation — Report Violation

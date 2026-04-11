@@ -1,0 +1,208 @@
+// path: contracts/packet-envelope.schema.json
+// filename: packet-envelope.schema.json
+// purpose: JSON Schema contract for canonical TransportPacket wire format
+// dependencies/interfaces: Matches engine/boundary/transport_codec.py models
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://l9.local/contracts/packet-envelope.schema.json",
+  "title": "TransportPacket",
+  "type": "object",
+  "required": [
+    "header",
+    "address",
+    "tenant",
+    "payload",
+    "security",
+    "governance",
+    "delegation_chain",
+    "hop_trace",
+    "lineage",
+    "attachments"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "header": {
+      "type": "object",
+      "required": [
+        "packet_id",
+        "packet_type",
+        "action",
+        "version",
+        "schema_version",
+        "created_at",
+        "priority",
+        "retry_count",
+        "replay_mode"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "packet_id": { "type": "string", "format": "uuid" },
+        "packet_type": {
+          "type": "string",
+          "enum": [
+            "request",
+            "response",
+            "event",
+            "command",
+            "delegation",
+            "failure",
+            "compensation",
+            "replay_request",
+            "replay_response"
+          ]
+        },
+        "action": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "schema_version": { "type": "string", "minLength": 1 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "not_before": { "type": ["string", "null"], "format": "date-time" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "deadline_ms": { "type": ["integer", "null"], "minimum": 1 },
+        "idempotency_key": { "type": ["string", "null"] },
+        "trace_id": { "type": ["string", "null"] },
+        "correlation_id": { "type": ["string", "null"] },
+        "causation_id": { "type": ["string", "null"], "format": "uuid" },
+        "retry_count": { "type": "integer", "minimum": 0 },
+        "replay_mode": { "type": "boolean" }
+      }
+    },
+    "address": {
+      "type": "object",
+      "required": ["source_node", "destination_node"],
+      "additionalProperties": false,
+      "properties": {
+        "source_node": { "type": "string", "minLength": 1 },
+        "destination_node": { "type": "string", "minLength": 1 },
+        "reply_to": { "type": ["string", "null"] }
+      }
+    },
+    "tenant": {
+      "type": "object",
+      "required": ["actor", "originator", "org_id"],
+      "additionalProperties": false,
+      "properties": {
+        "actor": { "type": "string", "minLength": 1 },
+        "on_behalf_of": { "type": ["string", "null"] },
+        "originator": { "type": "string", "minLength": 1 },
+        "org_id": { "type": "string", "minLength": 1 },
+        "user_id": { "type": ["string", "null"] }
+      }
+    },
+    "payload": {
+      "type": "object"
+    },
+    "security": {
+      "type": "object",
+      "required": [
+        "content_hash",
+        "envelope_hash",
+        "classification",
+        "encryption_status",
+        "pii_fields"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "envelope_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "signature": { "type": ["string", "null"] },
+        "signing_key_id": { "type": ["string", "null"] },
+        "classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"]
+        },
+        "encryption_status": {
+          "type": "string",
+          "enum": ["plaintext", "encrypted", "envelope-only"]
+        },
+        "pii_fields": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "required": ["intent", "compliance_tags", "redaction_applied", "audit_required"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": { "type": "string", "minLength": 1 },
+        "compliance_tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "retention_days": { "type": ["integer", "null"], "minimum": 1 },
+        "redaction_applied": { "type": "boolean" },
+        "audit_required": { "type": "boolean" },
+        "data_subject_id": { "type": ["string", "null"] }
+      }
+    },
+    "delegation_chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["delegator", "delegatee", "scope", "delegated_at"],
+        "additionalProperties": false,
+        "properties": {
+          "delegator": { "type": "string", "minLength": 1 },
+          "delegatee": { "type": "string", "minLength": 1 },
+          "scope": {
+            "type": "array",
+            "items": { "type": "string" },
+            "uniqueItems": true,
+            "minItems": 1
+          },
+          "delegated_at": { "type": "string", "format": "date-time" },
+          "proof": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "hop_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node", "action", "status", "at"],
+        "additionalProperties": false,
+        "properties": {
+          "node": { "type": "string", "minLength": 1 },
+          "action": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["received", "validated", "processing", "delegated", "completed", "failed"]
+          },
+          "at": { "type": "string", "format": "date-time" },
+          "detail": { "type": ["string", "null"] },
+          "signature": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "required": ["root_id", "generation"],
+      "additionalProperties": false,
+      "properties": {
+        "parent_id": { "type": ["string", "null"], "format": "uuid" },
+        "root_id": { "type": "string", "format": "uuid" },
+        "generation": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["attachment_id", "media_type", "uri", "content_hash", "encrypted", "size_bytes"],
+        "additionalProperties": false,
+        "properties": {
+          "attachment_id": { "type": "string", "format": "uuid" },
+          "media_type": { "type": "string", "minLength": 1 },
+          "uri": { "type": "string", "minLength": 1 },
+          "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "encrypted": { "type": "boolean" },
+          "size_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

@@ -41,13 +41,45 @@ Session learnings MUST be written through the **canonical memory path** so they 
 
 - **Path:** `cursor_memory_client.py write` → MCP `save_memory` → main pipeline (`write_packet` → SubstrateDAG) → PostgreSQL + Neo4j + pgvector.
 
+**Write atomic memories — one fact per write, not one big blob.**
+See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for the full spec.
+
 ```bash
+# One write per fact. Pre-classify with --kind. Terse, no preamble.
 python3 agents/cursor/cursor_memory_client.py write \
-  "SESSION: {date}. WORK: {summary}. LESSONS: {lessons}" \
-  --kind note
+  "{terse fact 1}" \
+  --kind lesson --scope cursor
+
+python3 agents/cursor/cursor_memory_client.py write \
+  "{terse fact 2}" \
+  --kind insight --scope cursor
 ```
 
-### 3. HANDOFF
+### 3. REDIS SESSION CONTEXT (cache_set_session_context)
+
+**Call MCP tool `cache_set_session_context`** so the next window can resume from this handoff. Use the same structure as the handoff below.
+
+- **context** (required): JSON object with:
+  - `summary`: 1–2 sentence summary of session work
+  - `completed`: list of tasks completed
+  - `in_progress`: list with status if any
+  - `next_steps`: 2–5 concrete next steps
+  - `open_questions`: list if any
+  - `files_touched`: list of paths modified (optional but useful)
+- **session_id**: omit (daily session)
+- **ttl**: omit (default 86400)
+
+This step is mandatory: without it, the next window will not have this handoff in Redis.
+
+### 3b. SESSION HOOKS TEARDOWN
+
+If session hooks were activated at `/start-session`, close them now:
+
+- Call `CursorSessionHooks.on_session_end(repo_id="l9", branch="main", promote=True)` to escalate high-confidence items to long-term memory
+- This promotes recent decisions and errors-to-avoid into persistent storage
+- Reference: `agents/cursor/cursor_session_hooks.py`
+
+### 4. HANDOFF
 
 ```markdown
 ## Session Handoff
@@ -81,10 +113,11 @@ python3 agents/cursor/cursor_memory_client.py write \
 ### Handoff
 - workflow_state.md updated ✅
 - Memory written ✅
+- Redis session context saved (cache_set_session_context) ✅
 - Next steps defined ✅
 
-### Resume with
-→ /start-session
+### When you open a new window
+→ Use **/start-session** to load Redis context + workflow_state + memory and resume.
 ```
 
 → **Auto-chains to /extract-chat**

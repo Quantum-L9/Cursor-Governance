@@ -98,8 +98,8 @@ check_directory() {
 echo -e "${BLUE}--- CORE GOVERNANCE FILES ---${NC}"
 echo ""
 
-# Step 1: .cursorrules (optional - governance works via .suite6-config.json)
-check_file ".cursorrules" "Core governance rules" "Core" "true"
+# Step 1: .cursorrules — REQUIRED (skip: never in setup YAML)
+check_file ".cursorrules" "Core governance rules" "Core"
 
 # Step 2: Learning files directory
 check_directory ".cursor-commands/learning" "Learning files directory (GlobalCommands)"
@@ -113,8 +113,8 @@ check_file ".cursor-commands/startup/system_capabilities.md" "System Capabilitie
 echo -e "${BLUE}--- REASONING PROFILES ---${NC}"
 echo ""
 
-# Step 5: reasoning_n8n.md
-check_file ".cursor-commands/profiles/reasoning_n8n.md" "n8n Reasoning Profile" "INT-RSN-001"
+# Step 5: reasoning_l9.md — REQUIRED (skip: never, enforcement: 200% in setup YAML)
+check_file ".cursor-commands/profiles/reasoning_l9.md" "L9 Reasoning Profile" "INT-RSN-001"
 
 # Step 6: reasoning_docs.md
 check_file ".cursor-commands/profiles/reasoning_docs.md" "Document Reasoning Profile" "INT-RSN-002"
