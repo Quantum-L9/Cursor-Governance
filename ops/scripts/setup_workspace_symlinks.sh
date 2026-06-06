@@ -87,6 +87,8 @@ remove_repo_duplicate "$WORKSPACE_DIR/.cursor/skills" ".cursor/skills"
 install_session_end_governance_hook() {
   local hook_src="$GLOBAL_COMMANDS/ops/hooks/session_end_governance_backup.sh"
   local hook_link="$HOME/.cursor/hooks/governance-backup.sh"
+  local session_start_src="$GLOBAL_COMMANDS/ops/hooks/session_start_code_graph_health.sh"
+  local session_start_link="$HOME/.cursor/hooks/code-graph-health.sh"
   local hooks_json="$HOME/.cursor/hooks.json"
   local template="$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
 
@@ -98,6 +100,13 @@ install_session_end_governance_hook() {
   mkdir -p "$HOME/.cursor/hooks"
   chmod +x "$hook_src"
   link_or_update "$hook_link" "$hook_src" "~/.cursor/hooks/governance-backup.sh"
+
+  if [ -f "$session_start_src" ]; then
+    chmod +x "$session_start_src"
+    link_or_update "$session_start_link" "$session_start_src" "~/.cursor/hooks/code-graph-health.sh"
+  else
+    echo "WARN: sessionStart hook missing: $session_start_src"
+  fi
 
   python3 - "$hooks_json" "$template" <<'PY'
 import json
@@ -126,7 +135,7 @@ if hooks_json.exists():
     data = existing
 hooks_json.parent.mkdir(parents=True, exist_ok=True)
 hooks_json.write_text(json.dumps(data, indent=2) + "\n")
-print(f"OK: sessionEnd hook registered in {hooks_json}")
+print(f"OK: governance hooks registered in {hooks_json}")
 PY
 }
 

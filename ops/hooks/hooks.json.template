@@ -1,6 +1,12 @@
 {
   "version": 1,
   "hooks": {
+    "sessionStart": [
+      {
+        "command": "./hooks/code-graph-health.sh",
+        "timeout": 15
+      }
+    ],
     "sessionEnd": [
       {
         "command": "./hooks/governance-backup.sh",
