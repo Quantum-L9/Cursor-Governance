@@ -7,7 +7,7 @@ role: documentation_grounding
 tags: [l9, context7, documentation, libraries, frameworks, sdk, api, current_docs]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.1.0
 updated: 2026-06-06
 ---
 
@@ -19,10 +19,26 @@ Ground implementation decisions in current upstream documentation before writing
 
 This skill exists to reduce "debug hell": check the docs before the first implementation attempt, not after code fails.
 
+## Auto-Invoke Triggers (mandatory)
+
+**Do not wait for "use context7".** When any trigger matches, load this skill and call Context7 MCP **before** the first implementation edit.
+
+| Domain | Invoke when | Seed `libraryName` |
+|--------|-------------|---------------------|
+| FastAPI / ASGI | routes, middleware, deps, Pydantic v2, lifespan, OpenAPI | `FastAPI`, `Starlette`, `Pydantic` |
+| Neo4j | Cypher, Python driver, graph sync/scoring | `Neo4j Python Driver`, `Neo4j` |
+| pytest | fixtures, markers, parametrize, plugins, asyncio tests | `pytest`, `pytest-asyncio` |
+| GitHub Actions | workflow YAML, expressions, composite actions, `gh` CLI | `GitHub Actions` |
+| New software | unfamiliar SDK, platform, plugin, MCP server, CLI | official product name |
+| Dev tooling | Docker, pre-commit, ruff, semgrep, MCP SDK, CI tools | tool's official name |
+
+Also auto-invoke when: version-specific API, migration syntax, deprecated patterns, or errors suggesting stale/wrong API shape.
+
 ## When To Use
 
 Use this skill when any of these are true:
 
+- Any **Auto-Invoke Trigger** row above matches the task.
 - The task mentions a library, framework, package, SDK, API, plugin, or tool whose current usage may matter.
 - The code depends on version-specific behavior, deprecated APIs, migration syntax, or new framework conventions.
 - The user asks to integrate, configure, upgrade, migrate, refactor around, or fix code using third-party tooling.

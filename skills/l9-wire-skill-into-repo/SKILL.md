@@ -17,6 +17,7 @@ A skill is **not complete** until agents can discover it. Run as the **final ste
 | `skill-path` | yes | Absolute or repo-relative path to skill folder |
 | `description` | yes | Lowercase what + when (same text used in all registries) |
 | `scope` | yes | `global` or `project` |
+| `invocation` | yes (L9 global) | `auto` (no `disable-model-invocation`) or `explicit` (`disable-model-invocation: true`) — sets the `AUTONOMY_MANIFEST.yaml` tier |
 | `preload-subagents` | no | Which subagents should preload via `skills:` frontmatter |
 
 If any required field is missing, stop and ask — do not guess registry rows.
@@ -55,6 +56,7 @@ Task Progress:
 |--------|-----------------|
 | `.claude/README.md` L9 Global Skills / Project Skills tables | Skill index |
 | `AGENTS.md` Agent Skills table | Cross-tool index |
+| `.cursor-commands/skills/AUTONOMY_MANIFEST.yaml` `tiers` | L9 invocation tier (auto vs explicit) — **mandatory for every L9 global skill** |
 | `.claude/agents/*.md` `skills:` frontmatter | Subagent preload |
 | `CLAUDE.md` Imports/References | Foundational skills only |
 
@@ -87,6 +89,13 @@ Use identical trigger text everywhere.
 ```
 
 **`AGENTS.md`** — match existing column format; include global path for L9 skills.
+
+**`AUTONOMY_MANIFEST.yaml`** (every L9 global skill — mandatory). Add the skill to exactly one tier under `tiers`, keyed by `invocation`:
+
+- `invocation: auto` (no `disable-model-invocation` in `SKILL.md`) → append to `tiers.auto_invoke` with a `use_when:` that mirrors the description's *when* triggers.
+- `invocation: explicit` (`disable-model-invocation: true`) → append to `tiers.explicit_only` with a one-line `reason:`.
+
+Never list a skill in both tiers. If the skill is removed, delete its tier entry. Project (`plasticos-*`) skills are **not** added to the manifest.
 
 **Subagents** — update `skills:` only when preload required (see adapter).
 

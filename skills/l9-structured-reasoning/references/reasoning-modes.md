@@ -7,11 +7,12 @@ role: reasoning_kernel
 tags: [reasoning, modes, strategic, debugging, complexity]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-04
+version: 1.1.0
+updated: 2026-06-06
 sources:
   - 01_reasoning_engine.kernel.yaml
   - 07_reasoning_engine_extended.kernel.yaml
+  - harvested: core-thinking-mode (Suite-5 legacy, numeric complexity rubric)
 --- /SKILL_META ---
 
 Purpose:
@@ -48,6 +49,26 @@ When abductive and deductive contradict → surface both with confidence per mod
 | Moderate | Deductive + Abductive | 2 |
 | Complex | All three ADI modes | 3 |
 | Highly complex | Iterative multi-modal + meta-reasoning | 5 |
+
+### Complexity Scoring (numeric)
+
+When the qualitative tier is unclear, score the task, then route via the table above.
+
+| Factor | Points |
+|--------|--------|
+| Files affected | 1 file +1 · 2–5 files +3 · 6+ files +5 |
+| Unknowns | +1 per unclear requirement |
+| Integrations | +2 per system/module boundary crossed |
+| Risk | safe +0 · moderate +2 · high (irreversible/protected file) +4 |
+| Testing | unit +1 · integration +2 · end-to-end +3 |
+
+| Total | Tier | Route |
+|-------|------|-------|
+| 1–3 | Simple | Rapid / Deductive, single pass |
+| 4–7 | Moderate → Complex | Block protocol B1–B7; add ADI modes as needed |
+| 8–10+ | Highly complex | Full block protocol + B8/B9, meta-reasoning, ToTh for high-stakes |
+
+**Mid-task escalation:** re-score and step up the tier when the score rises — e.g. new unknowns surface, the change spreads past ~5 files, or a protected/irreversible target enters scope.
 
 ## Task → Mode Mapping
 

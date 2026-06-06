@@ -12,6 +12,7 @@
 
 - [ ] Listed in `.claude/README.md` correct table (L9 Global vs Project)
 - [ ] Listed in `AGENTS.md` Skills table with matching name
+- [ ] **L9 global skill present in `AUTONOMY_MANIFEST.yaml` — exactly one tier (`auto_invoke` if auto-invoked, else `explicit_only`); never both**
 - [ ] Subagent `skills:` updated only when preload required
 - [ ] Trigger text consistent across registries
 - [ ] No duplicate rows

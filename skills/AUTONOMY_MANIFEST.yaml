@@ -37,6 +37,8 @@ tiers:
       use_when: "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
     - skill: "l9-update-agent-docs"
       use_when: "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
+    - skill: "l9-code-graph-rag-mcp"
+      use_when: "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
 
   explicit_only:
     - skill: "l9-forge"

@@ -20,6 +20,24 @@
 
 Match existing column headers in the target file.
 
+## AUTONOMY_MANIFEST.yaml — L9 invocation tier (mandatory for L9 globals)
+
+Auto-invoked skill (no `disable-model-invocation`) → under `tiers.auto_invoke`:
+
+```yaml
+    - skill: "l9-{name}"
+      use_when: "{when triggers, mirroring the SKILL.md description}"
+```
+
+Explicit-only skill (`disable-model-invocation: true`) → under `tiers.explicit_only`:
+
+```yaml
+    - skill: "l9-{name}"
+      reason: "{why it is explicit-only / high blast radius}"
+```
+
+One tier only — never both. Remove the entry when the skill is deleted.
+
 ## Subagent frontmatter
 
 ```yaml

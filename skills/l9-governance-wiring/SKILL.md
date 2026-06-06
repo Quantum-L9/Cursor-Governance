@@ -433,3 +433,42 @@ globs: ["**/*.py", "plasticos_*/**/*"]
 | `70-79` | Workflow | CI/CD, reviews |
 | `80-89` | GMP | Governance process |
 | `90-99` | Protection | Lessons, policies |
+
+---
+
+<!-- harvested-from: infrastructure-security-audit + infrastructure-credentials-manage (Suite-5 legacy) -->
+
+# Secret & Credential Hygiene (manual cross-check)
+
+A fast manual pass that **complements** automated CI (gitleaks, semgrep, `security.yml` pip-audit/Trivy, pre-commit secret hooks). Run when touching configs, env files, DSNs, or new integrations. Enforces the PlasticOS hard rule *"No credentials in code"*.
+
+## Secret patterns to flag
+
+| Pattern | Indicates |
+|---------|-----------|
+| `API_KEY = "..."` / `password: "..."` | Hardcoded secret literal |
+| `sk-...` | OpenAI / LLM API key |
+| `xoxb-...` / `xoxp-...` | Slack token |
+| `ghp_...` / `gho_...` | GitHub token |
+| `AKIA...` | AWS access key id |
+| `postgresql://user:pass@host` | DB credentials in URL/DSN |
+| `-----BEGIN ... PRIVATE KEY-----` | Private key material |
+
+## Severity matrix
+
+| Severity | Examples | Action |
+|----------|----------|--------|
+| 🔴 Critical | Live key/secret in tracked code | Block; rotate the secret immediately |
+| 🟡 High | Secret in history or logs | Fix before merge |
+| 🟠 Medium | Exposed endpoint missing rate-limit / input validation | Review |
+| 🟢 Low | Verbose error messages, no request-id tracking | Optional |
+
+## Env-var hygiene checklist
+
+- [ ] All credentials read from env / system params — never literals
+- [ ] No placeholders left in code (`YOUR_API_KEY`, `API_KEY_HERE`, `CHANGEME`)
+- [ ] `.env*` is in `.gitignore`; an `.env.example` documents required vars
+- [ ] Logs are sanitized — no secrets in log output
+- [ ] Secrets confirmed absent from committed history for the touched files
+
+Fail closed: if a 🔴 is found, stop and surface it before any commit/push.
