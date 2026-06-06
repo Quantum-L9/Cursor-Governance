@@ -1,8 +1,11 @@
 ---
 name: start-session
-version: "2.1.0"
-description: "Initialize Cursor session with full context + C1 memory health"
+version: "2.2.0"
+description: "Initialize Cursor session — governance wiring gate, then context + C1 memory health"
 auto_chain: null
+auto_chain_on_fail:
+  check: governance_wiring
+  chain: wire governance
 ---
 
 # /start-session — Session Startup
@@ -11,6 +14,7 @@ auto_chain: null
 
 Full preflight check before starting work:
 
+0. **Governance wiring gate** — `.cursor-commands` SSOT + `sessionEnd` hook (auto-chains `/wire governance` if FAIL)
 1. **Check C1 Memory Health**
 2. **Load Memory Operations Reference** (`.cursor/memory/CURSOR-MEMORY-CLIENT.md`)
 3. Read workflow_state.md
@@ -21,6 +25,39 @@ Full preflight check before starting work:
 ---
 
 ## EXECUTION
+
+### 0. GOVERNANCE WIRING GATE (MANDATORY — blocking)
+
+Run **before** any other step. Uses Dropbox SSOT path so it works even when `.cursor-commands` is missing.
+
+```bash
+GC="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+[ -d "$HOME/Dropbox/cursor governance/GlobalCommands" ] && GC="$HOME/Dropbox/cursor governance/GlobalCommands"
+
+bash "$GC/ops/scripts/check_governance_wiring.sh" "$(pwd)"
+```
+
+| Result | Action |
+|--------|--------|
+| Exit 0 (`RESULT: PASS`) | Continue to Step 0a |
+| Exit 1 (`RESULT: FAIL`) | **Auto-chain `/wire governance`** — do not skip |
+
+**On FAIL — run repair immediately (no user confirmation):**
+
+```bash
+bash "$GC/ops/scripts/wire_governance_workspace.sh" "$(pwd)"
+```
+
+This runs `setup_workspace_symlinks.sh` (repo symlinks + `~/.cursor/hooks.json` sessionEnd hook) and re-checks.
+
+**Re-run check after repair.** Session is **blocked** until `RESULT: PASS`.
+
+Pass criteria:
+- `.cursor-commands` symlink → Dropbox `GlobalCommands`
+- `.cursor/governance/CANONICAL_LAW.md` → Dropbox law file
+- No `.cursor/commands` or `.cursor/skills` duplicates in repo
+- `sessionEnd` hook registered in `~/.cursor/hooks.json`
+- `~/.cursor/hooks/governance-backup.sh` → SSOT backup script
 
 ### 0. PREFLIGHT — C1 Memory Health + Reference Docs
 
@@ -176,6 +213,7 @@ This gives the agent awareness of the current graph state (node counts by type: 
 ### Preflight
 | Check | Status |
 |-------|--------|
+| Governance wiring + sessionEnd hook | ✅ PASS / 🔧 repaired via /wire governance |
 | C1 MCP Health | ✅ healthy / ⚠️ degraded / ❌ unhealthy |
 | Memory Ops Reference | ✅ loaded (CURSOR-MEMORY-CLIENT.md) |
 | System Prompt | ✅ loaded (cursor_system_prompt.md) |

@@ -9,7 +9,7 @@ domain: "workspace_management"
 type: "executable_protocol"
 status: "active"
 created: "2025-11-18T03:20:00Z"
-updated: "2026-02-11T00:00:00Z"
+updated: "2026-06-06T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
 
@@ -39,6 +39,8 @@ canonical_paths:
   canonical_law: "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md"
   path_resolver: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/resolve_governance_paths.sh"
   setup_symlinks: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"
+  check_governance_wiring: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh"
+  wire_governance_workspace: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh"
   validate_symlinks: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh"
   env_manager: "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py"
   github_backup_remote: "cryptoxdog/Cursor-Governance"
@@ -100,6 +102,29 @@ preflight:
       command: "pwd"
       validation: "not_empty"
       blocking: true
+
+# ═══════════════════════════════════════════════════════════
+#   GOVERNANCE WIRING GATE (before startup sequence)
+# ═══════════════════════════════════════════════════════════
+
+governance_wiring_gate:
+  required: true
+  blocking: true
+  description: |
+    Every repo must use Dropbox GlobalCommands via .cursor-commands and have sessionEnd
+    governance backup hook active. Auto-chains /wire governance on failure.
+  check_command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)"'
+  on_fail:
+    chain: "/wire governance"
+    repair_command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
+  pass_output: "RESULT: PASS — governance wiring + sessionEnd hook active"
+  fail_output: "RESULT: FAIL — run /wire governance"
+  verifies:
+    - ".cursor-commands symlink → Dropbox GlobalCommands"
+    - ".cursor/governance/CANONICAL_LAW.md → Dropbox CANONICAL_LAW.md"
+    - "No forbidden .cursor/commands or .cursor/skills in repo"
+    - "sessionEnd hook in ~/.cursor/hooks.json"
+    - "~/.cursor/hooks/governance-backup.sh → SSOT backup script"
 
 # ═══════════════════════════════════════════════════════════
 #   PHASE 2: MANDATORY STARTUP SEQUENCE
@@ -537,6 +562,13 @@ startup_sequence:
 # ═══════════════════════════════════════════════════════════
 
 installation:
+  step_0:
+    name: "Governance Wiring Gate"
+    command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)" || bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
+    expected_output: "RESULT: PASS — governance wiring + sessionEnd hook active"
+    blocking: true
+    on_fail_chain: "/wire governance"
+
   step_1:
     name: "Wire Governance Symlinks"
     command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
@@ -757,6 +789,8 @@ quick_reference:
     intelligence_templates: 1
   
   critical_commands:
+    check_wiring: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)"'
+    wire_governance: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
     wire: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
     validate: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
     setup: 'python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py" sync "$(pwd)"'

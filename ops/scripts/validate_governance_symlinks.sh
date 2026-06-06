@@ -95,6 +95,14 @@ for s in l9-structured-reasoning l9-skill-compiler l9-wire-skill-into-repo l9-cr
 done
 
 echo ""
+echo "=== sessionEnd hook (full gate: check_governance_wiring.sh) ==="
+if bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WORKSPACE" >/dev/null 2>&1; then
+  pass "governance wiring + sessionEnd hook active"
+else
+  warn "governance wiring or sessionEnd hook incomplete — run /wire governance"
+fi
+
+echo ""
 if [ $FAIL -eq 0 ]; then
   echo "RESULT: PASS — GlobalCommands only via .cursor-commands"
   exit 0

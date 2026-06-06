@@ -1,17 +1,37 @@
 ---
 name: wire
-version: "12.2.0"
-description: "TRIGGER ONLY — Invokes wire_executor.py for enforceable wiring"
+version: "12.3.0"
+description: "TRIGGER ONLY — governance workspace wiring OR wire_executor.py for code components"
 before_chain: rules
 auto_chain: ynp
 dag_executor: .cursor/workflows-synced/wire_executor.py
 ---
 
-# /wire — Component Wiring (v12.1.0)
+# /wire — Component Wiring (v12.3.0)
 
 ## THIS IS A TRIGGER ONLY
 
-`/wire` invokes the Wire Executor DAG. All logic lives in the executor.
+`/wire` invokes either **governance workspace wiring** (special case) or the **Wire Executor DAG** for code components.
+
+## GOVERNANCE WORKSPACE (run first on new/existing repos)
+
+Ensures `.cursor-commands` points at Dropbox GlobalCommands SSOT and `sessionEnd` backup hook is active.
+
+```bash
+# Check only (exit 1 if miswired)
+bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)"
+
+# Repair + re-check (what /wire governance runs)
+bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"
+```
+
+**Aliases:** `/wire governance`, `/wire governance-workspace`, `/wire .cursor-commands`
+
+**Does NOT use `wire_executor.py`.** Runs `setup_workspace_symlinks.sh` (symlinks + hook install) then `check_governance_wiring.sh`.
+
+**Auto-chained from `/start-session`** when the check fails — session cannot proceed until PASS.
+
+## CODE COMPONENT WIRING
 
 ## INVOCATION
 

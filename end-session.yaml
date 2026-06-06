@@ -10,16 +10,54 @@ enforcement_level: active
 type: "executable_protocol"
 status: "active"
 created: "2026-01-07T00:00:00Z"
-updated: "2026-01-16T00:00:00Z"
+updated: "2026-06-06T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
-sister_file: "setup-new-workspace.yaml"
+sister_file: "start-session.yaml"
 changelog_url: "CHANGELOG.md#v2.0.0"
+execution_mode: "manual_and_automatic"
 ---
 
 # SESSION END PROTOCOL v2.0
 # Structured handoff for reliable session resume
-# Total: 5 phases | Duration: ~1 min
+# Total: 6 phases | Duration: ~1 min
+
+# ═══════════════════════════════════════════════════════════
+# TRIGGERS (dual path — automatic + manual)
+# ═══════════════════════════════════════════════════════════
+triggers:
+  sessionEnd:
+    type: cursor_hook
+    event: sessionEnd
+    enabled: true
+    fail_open: true
+    hook_script: "$GLOBAL_COMMANDS/ops/hooks/session_end_governance_backup.sh"
+    hook_link: "$HOME/.cursor/hooks/governance-backup.sh"
+    hooks_config: "$HOME/.cursor/hooks.json"
+    template: "$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
+    installed_by: "$GLOBAL_COMMANDS/ops/scripts/setup_workspace_symlinks.sh"
+    runs: "phase_5_governance_github only"
+    commit_message: "chore(governance): session-end sync $(date +%Y-%m-%d)"
+    log: "$HOME/.cursor-governance/backup.log"
+    verify: "tail -5 $HOME/.cursor-governance/backup.log"
+
+  end_session:
+    type: slash_command
+    command: "/end-session"
+    command_file: "commands/end-session.md"
+    protocol: "end-session.yaml"
+    runs: "all phases (1–6)"
+    commit_message: "chore(governance): end-session $(date +%Y-%m-%d)"
+    invoke: "Type /end-session in Cursor chat"
+
+  governance_backup_only:
+    type: shell
+    description: "Manual Phase 5 only — no handoff/memory steps"
+    command: |
+      bash .cursor-commands/ops/scripts/backup_to_github.sh \
+        "chore(governance): manual backup $(date +%Y-%m-%d)"
+    aliases:
+      - "make governance-backup"
 
 # ═══════════════════════════════════════════════════════════
 # EXECUTION SUMMARY
@@ -29,6 +67,7 @@ changelog_url: "CHANGELOG.md#v2.0.0"
 # Phase 3: GIT_STATE - Capture uncommitted work (AUTO)
 # Phase 4: WORKFLOW_STATE - Update Next Steps (REQUIRED)
 # Phase 5: GOVERNANCE_GITHUB - Push GlobalCommands to Cursor-Governance (REQUIRED)
+#   → automatic: sessionEnd hook | manual: /end-session or governance_backup_only
 # Phase 6: CONFIRMATION - Display summary (AUTO)
 
 # ═══════════════════════════════════════════════════════════
@@ -160,14 +199,25 @@ phase_5_governance_github:
   name: "Backup GlobalCommands to GitHub"
   priority: 5
   required: true
+  triggers:
+    automatic: triggers.sessionEnd
+    manual:
+      - triggers.end_session
+      - triggers.governance_backup_only
   description: |
     Push Dropbox SSOT (.cursor-commands / GlobalCommands) to cryptoxdog/Cursor-Governance.
-    Also runs automatically via sessionEnd hook after setup_workspace_symlinks.sh.
+    Runs on sessionEnd hook (automatic) or via /end-session / manual backup command.
   command: |
     bash .cursor-commands/ops/scripts/backup_to_github.sh \
       "chore(governance): end-session $(date +%Y-%m-%d)"
   skip_env: GOVERNANCE_BACKUP_SKIP=1
   log: "$HOME/.cursor-governance/backup.log"
+  verify:
+    log: "tail -5 $HOME/.cursor-governance/backup.log"
+    github: "gh api repos/cryptoxdog/Cursor-Governance/commits --jq '.[0].sha'"
+    pass_criteria:
+      - "New log lines with today's timestamp (sessionEnd hook fired)"
+      - "OK: pushed... or OK: nothing to commit — Dropbox SSOT matches index"
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 6: CONFIRMATION
@@ -207,6 +257,10 @@ phase_6_confirmation:
 # QUICK REFERENCE
 # ═══════════════════════════════════════════════════════════
 quick_reference:
+  triggers:
+    automatic: "Close Cursor window → sessionEnd hook → ~/.cursor-governance/backup.log"
+    manual_full: "/end-session — all phases + governance backup"
+    manual_backup: "bash .cursor-commands/ops/scripts/backup_to_github.sh"
   minimal_end: |
     # Minimum viable session end (30 seconds)
     python3 agents/cursor/cursor_memory_client.py write \
