@@ -1,13 +1,13 @@
 ---
 name: l9-wire-skill-into-repo
-description: Registers new or updated agent skills into repo discovery tables, subagent preload lists, and related agent docs after skill creation. Use immediately after l9-create-skill or l9-skill-compiler finishes, when the user asks to wire or register a skill, or when a skill pack exists but is not yet discoverable.
+description: Registers new or updated agent skills into repo discovery tables, subagent preload lists, and related agent docs after skill creation. Use immediately after l9-skill-compiler finishes, when the user asks to wire or register a skill, or when a skill pack exists but is not yet discoverable.
 ---
 
 # Wire Skill Into Repo (L9)
 
 ## Purpose
 
-A skill is **not complete** until agents can discover it. Run as the **final step** after `l9-create-skill` or `l9-skill-compiler` deliver a skill pack.
+A skill is **not complete** until agents can discover it. Run as the **final step** after `l9-skill-compiler` delivers a skill pack.
 
 ## Inputs (gather first)
 
@@ -112,7 +112,6 @@ Templates: [references/registry-templates.md](references/registry-templates.md)
 
 | Upstream | When |
 |----------|------|
-| `l9-create-skill` | After Phase 4, before complete |
 | `l9-skill-compiler` | After build, before validation sign-off |
 
 ## Additional resources

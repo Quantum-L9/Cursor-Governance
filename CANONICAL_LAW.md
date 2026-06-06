@@ -91,7 +91,7 @@ Skip one session: `GOVERNANCE_BACKUP_SKIP=1`
 
 ## 6. Wire skills
 
-- New global skill → `l9-wire-skill-into-repo` after `l9-create-skill`
+- New global skill → `l9-skill-compiler`, then `l9-wire-skill-into-repo`
 - New PlasticOS skill → repo `.claude/skills/plasticos-*` (not GlobalCommands)
 
 ## 7. Anti-patterns
