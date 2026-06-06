@@ -1,42 +1,39 @@
 $schema: cursor-global-rules-manifest/1.0
-generated_utc: '2026-04-11T18:47:40Z'
-rules_directory: /Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules
+generated_utc: '2026-06-06T22:27:59Z'
+rules_directory: /Users/ib-mac/IB-Odoo_19 (LOCAL)/IB-Odoo_19/.cursor-commands/rules
 purpose: Machine-readable index of GlobalCommands/rules/*.mdc for agents and tooling.
 summary:
-  total_mdc_files: 48
-  always_apply_true: 37
-  always_apply_false: 11
+  total_mdc_files: 51
+  always_apply_true: 39
+  always_apply_false: 12
   no_boolean_always_apply: 0
   fractions:
-    always_apply_true: 37/48
-    always_apply_false: 11/48
-    no_boolean_always_apply: 0/48
+    always_apply_true: 39/51
+    always_apply_false: 12/51
+    no_boolean_always_apply: 0/51
   identity_holds: true
 rules:
 - file: 00-global.mdc
-  description: 'Primary global rules for the L9 Secure AI OS monorepo: architecture
-    invariants, safety, and universal coding standards.'
+  description: 'Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding
+    standards.'
   always_apply: true
   globs: null
   first_heading: L9 Secure AI OS – Global Rules
   has_yaml_frontmatter: true
 - file: 01-git-push-prohibition.mdc
-  description: 'NEVER push to git without explicit user request. This is the #1 rule
-    for this project.'
+  description: 'NEVER push to git without explicit user request. This is the #1 rule for this project.'
   always_apply: true
   globs: null
   first_heading: '🚨 #1 RULE: NEVER PUSH WITHOUT EXPLICIT REQUEST'
   has_yaml_frontmatter: true
 - file: 01-vps-rules.mdc
-  description: 'L9 production VPS reference: SSH, paths, Docker stack, Caddy routes,
-    and local edit → push → pull workflow.'
+  description: 'L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.'
   always_apply: true
   globs: null
   first_heading: VPS Rules
   has_yaml_frontmatter: true
 - file: 02-slash-commands.mdc
-  description: Slash command recognition and execution - repo-agnostic governance
-    protocols
+  description: Slash command recognition and execution - repo-agnostic governance protocols
   always_apply: true
   globs:
   - '**/*'
@@ -50,15 +47,14 @@ rules:
   first_heading: 🚨 C1 IS THE PRIMARY MEMORY SERVER
   has_yaml_frontmatter: true
 - file: 04-cursor-redis-session.mdc
-  description: Redis session context via MCP (cache_get_session_context / cache_set_session_context)
-    to resume work and avoid cross-session amnesia.
+  description: Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid
+    cross-session amnesia.
   always_apply: true
   globs: null
   first_heading: Cursor + Redis Session Context (no amnesia)
   has_yaml_frontmatter: true
 - file: 05-ask-mode.mdc
-  description: Behavioral rules for Ask Mode in Cursor - no code generation, plain
-    English explanations only.
+  description: Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
   always_apply: true
   globs: []
   first_heading: Ask Mode Behavior Rules
@@ -74,8 +70,7 @@ rules:
   first_heading: TypeScript/React Language Rules for L9 OS Frontend
   has_yaml_frontmatter: true
 - file: 20-lang-python.mdc
-  description: Python rules for AI OS runtime, agents, orchestration, and backend
-    services.
+  description: Python rules for AI OS runtime, agents, orchestration, and backend services.
   always_apply: true
   globs:
   - '**/*.py'
@@ -83,17 +78,22 @@ rules:
   - '!**/tests/**/*.py'
   first_heading: Python Language Rules for L9 OS Core Runtime
   has_yaml_frontmatter: true
+- file: 22-context7-auto-invoke.mdc
+  description: Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new
+    platforms/tools.
+  always_apply: true
+  globs: null
+  first_heading: Context7 Auto-Invoke (External Docs)
+  has_yaml_frontmatter: true
 - file: 25-python-dora-header.mdc
-  description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__
-    block per codegen contract.'
+  description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
   always_apply: true
   globs:
   - '**/*.py'
   first_heading: 'Python L9 Module Structure: Three-Block System'
   has_yaml_frontmatter: true
 - file: 30-framework-react.mdc
-  description: React UI rules for AI OS control panels, consoles, and visualization
-    surfaces.
+  description: React UI rules for AI OS control panels, consoles, and visualization surfaces.
   always_apply: false
   globs:
   - apps/web/**/*.tsx
@@ -103,8 +103,7 @@ rules:
   first_heading: React Framework Rules for L9 OS UI
   has_yaml_frontmatter: true
 - file: 30-odoo-native.mdc
-  description: 'Odoo-native code patterns for PlastOS modules: ORM, recordsets, domains,
-    actions'
+  description: 'Odoo-native code patterns for PlastOS modules: ORM, recordsets, domains, actions'
   always_apply: true
   globs:
   - plasticos_*/**/*.py
@@ -112,8 +111,7 @@ rules:
   first_heading: Odoo-Native Code Patterns (PlastOS)
   has_yaml_frontmatter: true
 - file: 40-domain-autonomy.mdc
-  description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes,
-    escalation, and irreversible action constraints.'
+  description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.'
   always_apply: false
   globs:
   - src/agents/**/*.ts
@@ -121,6 +119,17 @@ rules:
   - src/autonomy/**/*
   - packages/agents/**/*
   first_heading: Autonomous Agent & Autonomy Domain Rules
+  has_yaml_frontmatter: true
+- file: 43-lang-postgresql.mdc
+  description: PostgreSQL schema, query, migration, and safety invariants.
+  always_apply: false
+  globs:
+  - '**/*.sql'
+  - '**/migrations/**/*.sql'
+  - '**/schema.sql'
+  - '**/seed.sql'
+  - '**/alembic/**/*.py'
+  first_heading: PostgreSQL invariants
   has_yaml_frontmatter: true
 - file: 50-qa-testing.mdc
   description: Testing and QA rules for AI OS agents, runtimes, and integrations.
@@ -133,8 +142,8 @@ rules:
   first_heading: Testing & QA Rules for L9 OS
   has_yaml_frontmatter: true
 - file: 60-anti-patterns.mdc
-  description: Common anti-patterns and mistakes across TypeScript, Python, React,
-    FastAPI, security, and testing, with side-by-side corrections.
+  description: Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side
+    corrections.
   always_apply: true
   globs: null
   first_heading: Cross-stack anti-patterns
@@ -153,8 +162,7 @@ rules:
   first_heading: Secrets and dependencies (L9)
   has_yaml_frontmatter: true
 - file: 65-observability-performance.mdc
-  description: Observability and performance rules for L9 runtime, agents, memory,
-    and orchestration.
+  description: Observability and performance rules for L9 runtime, agents, memory, and orchestration.
   always_apply: false
   globs:
   - l9/runtime/**/*
@@ -164,8 +172,7 @@ rules:
   first_heading: Observability and performance (L9)
   has_yaml_frontmatter: true
 - file: 70-tool-efficiency.mdc
-  description: 'Developer tooling efficiency: terminal usage, command batching, context
-    budgeting, and Cursor tool ergonomics.'
+  description: 'Developer tooling efficiency: terminal usage, command batching, context budgeting, and Cursor tool ergonomics.'
   always_apply: true
   globs: null
   first_heading: Tool efficiency and workflow
@@ -209,22 +216,20 @@ rules:
   first_heading: AI safety policy (L9)
   has_yaml_frontmatter: true
 - file: 80-gmp-execution.mdc
-  description: 'GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective
-    runs for L9 repo changes.'
+  description: 'GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.'
   always_apply: true
   globs: null
   first_heading: GMP v1.7 execution rules (L9)
   has_yaml_frontmatter: true
 - file: 81-gmp-audit.mdc
-  description: 'GMP audit and verification rules: canonical and guide prompts mapped
-    to L9 PRs and workspaces.'
+  description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
   always_apply: true
   globs: null
   first_heading: GMP audit and verification (L9)
   has_yaml_frontmatter: true
 - file: 82-deployment-manifest.mdc
-  description: Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7
-    and GMP orchestrator prompts.
+  description: Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator
+    prompts.
   always_apply: false
   globs:
   - docker-compose.yml
@@ -235,45 +240,40 @@ rules:
   first_heading: Deployment & orchestrator manifests (L9)
   has_yaml_frontmatter: true
 - file: 83-gmp-contracts.mdc
-  description: 'GMP contract enforcement: binding report paths, sequential GMP IDs,
-    ISO dates, and post-write validation.'
+  description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
   always_apply: true
   globs: null
   first_heading: GMP Contract Enforcement (L9)
   has_yaml_frontmatter: true
 - file: 84-cursor-governance-wiring.mdc
-  description: 'Where cursor memory and wiring live: .cursor-commands in every repo,
-    executables in governance. Applies to all repos (global).'
+  description: 'Where cursor memory and wiring live: .cursor-commands in every repo, executables in governance. Applies to
+    all repos (global).'
   always_apply: true
   globs:
   - '**/*'
   first_heading: Cursor memory and wiring — repo vs governance
   has_yaml_frontmatter: true
 - file: 85-workflow-state-bridge.mdc
-  description: 'Bridge Cursor runs to workflow_state.md: enforce state sync, phases,
-    and next-step alignment for the L9 repo.'
+  description: 'Bridge Cursor runs to workflow_state.md: enforce state sync, phases, and next-step alignment for the L9 repo.'
   always_apply: true
   globs: null
   first_heading: workflow_state.md bridge (L9)
   has_yaml_frontmatter: true
 - file: 86-module-tier-mapping.mdc
-  description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right
-    GMP module prompts per tier.
+  description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.
   always_apply: true
   globs: null
   first_heading: Module ↔ tier mapping (L9)
   has_yaml_frontmatter: true
 - file: 87-cursor-memory-kernel.mdc
-  description: Cursor Memory Kernel enforcement — authoritative source for memory
-    operations, scopes, and session lifecycle
+  description: Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle
   always_apply: true
   globs:
   - '**/*'
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
 - file: 87-wire-workflow-guard.mdc
-  description: Guardrails for wiring changes between kernels, executors, orchestrators,
-    and infra in the L9 OS.
+  description: Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
   always_apply: false
   globs:
   - l9/**/orchestrator*.py
@@ -284,24 +284,21 @@ rules:
   first_heading: Wiring and workflow guards (L9)
   has_yaml_frontmatter: true
 - file: 88-perplexity-run-harness.mdc
-  description: 'L9-specific Perplexity/Cursor harness: enforce surgical edits, no
-    manual fallbacks, and batch spec generation.'
+  description: 'L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.'
   always_apply: true
   globs: null
   first_heading: Perplexity ↔ L9 run harness
   has_yaml_frontmatter: true
 - file: 89-constellation-gate-workspace-session.mdc
-  description: 'Constellation.Gate (2026-04-11): Suite 6 workspace setup, git layout,
-    and why Cursor symlinks stay out of git.'
+  description: 'Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.'
   always_apply: true
   globs:
   - '**/Constellation.Gate/**'
   - '**/constellation-gate/**'
-  first_heading: Constellation.Gate — workspace session summary (2026-04-11)
+  first_heading: Constellation.Gate — workspace session summary (2026-04-11, updated)
   has_yaml_frontmatter: true
 - file: 90-protected-core.mdc
-  description: 'Protected L9 core and infra files: require separate Phase 0 plan and
-    dedicated GMP runs before any edit.'
+  description: 'Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.'
   always_apply: true
   globs:
   - l9/kernel_loader.py
@@ -322,15 +319,14 @@ rules:
   first_heading: Existing Code Is Source of Truth
   has_yaml_frontmatter: true
 - file: 92-learned-lessons.mdc
-  description: Critical lessons learned from repeated mistakes. These rules prevent
-    known failure patterns.
+  description: Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.
   always_apply: true
   globs: null
   first_heading: Learned Lessons — Critical Prevention Rules
   has_yaml_frontmatter: true
 - file: 93-c1-server-protection.mdc
-  description: 'C1 server protection: no Docker, deploy, or .env changes and no remote
-    git operations without explicit user approval.'
+  description: 'C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user
+    approval.'
   always_apply: true
   globs: null
   first_heading: C1 Server Protection Rules
@@ -342,8 +338,7 @@ rules:
   first_heading: '🚨 ULTRA-CRITICAL: 10X Deploy Script Prohibition'
   has_yaml_frontmatter: true
 - file: 95-agent-pattern-activation.mdc
-  description: 'Agent pattern auto-activation: detect subsystem (auth, tools, memory,
-    code) and required approval before mutations.'
+  description: 'Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations.'
   always_apply: true
   globs: null
   first_heading: Agent Pattern System Auto-Activation
@@ -374,30 +369,34 @@ rules:
   globs: null
   first_heading: Git Push Approval Policy
   has_yaml_frontmatter: true
-- file: 97-graph-engine-architecture.mdc
-  description: 'Graph Engine architecture: chassis contract, gates, Cypher security,
-    action handlers'
+- file: 97-governance-ssot-paths.mdc
+  description: 'Governance SSOT path contract — $HOME/Dropbox only; never hardcode /Users/ or machine-specific paths. Authority:
+    CANONICAL_LAW.md §9.'
   always_apply: true
   globs: null
-  first_heading: null
+  first_heading: Governance SSOT Path Contract
+  has_yaml_frontmatter: true
+- file: 97-graph-engine-architecture.mdc
+  description: 'Graph Engine architecture: chassis contract, gates, Cypher security, action handlers'
+  always_apply: true
+  globs: null
+  first_heading: ''
   has_yaml_frontmatter: true
 - file: 98-odoo-sh-staging.mdc
-  description: 'Odoo.sh staging reference: instance URL, build ID, SSH access, and
-    shell commands for Odoo 19.'
+  description: 'Odoo.sh staging reference: instance URL, build ID, SSH access, and shell commands for Odoo 19.'
   always_apply: true
   globs: null
   first_heading: Odoo.sh Staging Environment
   has_yaml_frontmatter: true
 - file: 99-execute-as-instructed.mdc
-  description: Execute exactly as instructed — no autonomous reasoning or skipping
-    steps
+  description: Execute exactly as instructed — no autonomous reasoning or skipping steps
   always_apply: true
   globs: null
   first_heading: Execute As Instructed — No Autonomous Reasoning
   has_yaml_frontmatter: true
 - file: 99-incident-report.mdc
-  description: 'Governance incident reports: unauthorized deletion, VPS overstepping,
-    corrective actions, and permanent enforcement lessons.'
+  description: 'Governance incident reports: unauthorized deletion, VPS overstepping, corrective actions, and permanent enforcement
+    lessons.'
   always_apply: true
   globs: null
   first_heading: 'Incident Report: Unauthorized File Deletion'

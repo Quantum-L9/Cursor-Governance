@@ -100,6 +100,12 @@ uv lock                    # regenerate lockfile
 - Always use `uv run` to execute commands — never activate venvs manually
 - Commit both `pyproject.toml` and `uv.lock`
 
+## Dev container
+
+- Never activate a venv manually — `uv run` resolves from `uv.lock`.
+- Add `uv sync` to `postCreateCommand` in `devcontainer.json` so rebuilds restore the locked environment.
+- Never regenerate `uv.lock` without `uv lock`.
+
 ## References
 
 - [mattpocock/skills — TDD skill](https://github.com/mattpocock/skills) — vertical-slice TDD philosophy

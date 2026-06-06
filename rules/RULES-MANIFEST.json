@@ -1,17 +1,17 @@
 {
   "$schema": "cursor-global-rules-manifest/1.0",
-  "generated_utc": "2026-04-11T18:47:40Z",
-  "rules_directory": "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules",
+  "generated_utc": "2026-06-06T22:27:59Z",
+  "rules_directory": "/Users/ib-mac/IB-Odoo_19 (LOCAL)/IB-Odoo_19/.cursor-commands/rules",
   "purpose": "Machine-readable index of GlobalCommands/rules/*.mdc for agents and tooling.",
   "summary": {
-    "total_mdc_files": 48,
-    "always_apply_true": 37,
-    "always_apply_false": 11,
+    "total_mdc_files": 51,
+    "always_apply_true": 39,
+    "always_apply_false": 12,
     "no_boolean_always_apply": 0,
     "fractions": {
-      "always_apply_true": "37/48",
-      "always_apply_false": "11/48",
-      "no_boolean_always_apply": "0/48"
+      "always_apply_true": "39/51",
+      "always_apply_false": "12/51",
+      "no_boolean_always_apply": "0/51"
     },
     "identity_holds": true
   },
@@ -21,7 +21,7 @@
       "description": "Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards.",
       "always_apply": true,
       "globs": null,
-      "first_heading": "L9 Secure AI OS – Global Rules",
+      "first_heading": "L9 Secure AI OS \u2013 Global Rules",
       "has_yaml_frontmatter": true
     },
     {
@@ -29,12 +29,12 @@
       "description": "NEVER push to git without explicit user request. This is the #1 rule for this project.",
       "always_apply": true,
       "globs": null,
-      "first_heading": "🚨 #1 RULE: NEVER PUSH WITHOUT EXPLICIT REQUEST",
+      "first_heading": "\ud83d\udea8 #1 RULE: NEVER PUSH WITHOUT EXPLICIT REQUEST",
       "has_yaml_frontmatter": true
     },
     {
       "file": "01-vps-rules.mdc",
-      "description": "L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.",
+      "description": "L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit \u2192 push \u2192 pull workflow.",
       "always_apply": true,
       "globs": null,
       "first_heading": "VPS Rules",
@@ -57,7 +57,7 @@
       "globs": [
         "**/*"
       ],
-      "first_heading": "🚨 C1 IS THE PRIMARY MEMORY SERVER",
+      "first_heading": "\ud83d\udea8 C1 IS THE PRIMARY MEMORY SERVER",
       "has_yaml_frontmatter": true
     },
     {
@@ -99,6 +99,14 @@
         "!**/tests/**/*.py"
       ],
       "first_heading": "Python Language Rules for L9 OS Core Runtime",
+      "has_yaml_frontmatter": true
+    },
+    {
+      "file": "22-context7-auto-invoke.mdc",
+      "description": "Auto-invoke Context7 MCP before coding on external libraries \u2014 FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.",
+      "always_apply": true,
+      "globs": null,
+      "first_heading": "Context7 Auto-Invoke (External Docs)",
       "has_yaml_frontmatter": true
     },
     {
@@ -146,6 +154,20 @@
         "packages/agents/**/*"
       ],
       "first_heading": "Autonomous Agent & Autonomy Domain Rules",
+      "has_yaml_frontmatter": true
+    },
+    {
+      "file": "43-lang-postgresql.mdc",
+      "description": "PostgreSQL schema, query, migration, and safety invariants.",
+      "always_apply": false,
+      "globs": [
+        "**/*.sql",
+        "**/migrations/**/*.sql",
+        "**/schema.sql",
+        "**/seed.sql",
+        "**/alembic/**/*.py"
+      ],
+      "first_heading": "PostgreSQL invariants",
       "has_yaml_frontmatter": true
     },
     {
@@ -258,7 +280,7 @@
     },
     {
       "file": "80-gmp-execution.mdc",
-      "description": "GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.",
+      "description": "GMP v1.7 action workflow: enforce Phases 0\u20136, quick actions, and corrective runs for L9 repo changes.",
       "always_apply": true,
       "globs": null,
       "first_heading": "GMP v1.7 execution rules (L9)",
@@ -301,7 +323,7 @@
       "globs": [
         "**/*"
       ],
-      "first_heading": "Cursor memory and wiring — repo vs governance",
+      "first_heading": "Cursor memory and wiring \u2014 repo vs governance",
       "has_yaml_frontmatter": true
     },
     {
@@ -317,12 +339,12 @@
       "description": "Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.",
       "always_apply": true,
       "globs": null,
-      "first_heading": "Module ↔ tier mapping (L9)",
+      "first_heading": "Module \u2194 tier mapping (L9)",
       "has_yaml_frontmatter": true
     },
     {
       "file": "87-cursor-memory-kernel.mdc",
-      "description": "Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle",
+      "description": "Cursor Memory Kernel enforcement \u2014 authoritative source for memory operations, scopes, and session lifecycle",
       "always_apply": true,
       "globs": [
         "**/*"
@@ -349,18 +371,18 @@
       "description": "L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.",
       "always_apply": true,
       "globs": null,
-      "first_heading": "Perplexity ↔ L9 run harness",
+      "first_heading": "Perplexity \u2194 L9 run harness",
       "has_yaml_frontmatter": true
     },
     {
       "file": "89-constellation-gate-workspace-session.mdc",
-      "description": "Constellation.Gate (2026-04-11): Suite 6 workspace setup, git layout, and why Cursor symlinks stay out of git.",
+      "description": "Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.",
       "always_apply": true,
       "globs": [
         "**/Constellation.Gate/**",
         "**/constellation-gate/**"
       ],
-      "first_heading": "Constellation.Gate — workspace session summary (2026-04-11)",
+      "first_heading": "Constellation.Gate \u2014 workspace session summary (2026-04-11, updated)",
       "has_yaml_frontmatter": true
     },
     {
@@ -383,7 +405,7 @@
     },
     {
       "file": "91-existing-code-source-of-truth.mdc",
-      "description": "Existing code is source of truth — new code adapts to established patterns",
+      "description": "Existing code is source of truth \u2014 new code adapts to established patterns",
       "always_apply": true,
       "globs": null,
       "first_heading": "Existing Code Is Source of Truth",
@@ -394,7 +416,7 @@
       "description": "Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.",
       "always_apply": true,
       "globs": null,
-      "first_heading": "Learned Lessons — Critical Prevention Rules",
+      "first_heading": "Learned Lessons \u2014 Critical Prevention Rules",
       "has_yaml_frontmatter": true
     },
     {
@@ -410,7 +432,7 @@
       "description": "Prohibits AI agents from using the 10X deployment script.",
       "always_apply": true,
       "globs": "scripts/deployment/10X_Deploy_Script.sh",
-      "first_heading": "🚨 ULTRA-CRITICAL: 10X Deploy Script Prohibition",
+      "first_heading": "\ud83d\udea8 ULTRA-CRITICAL: 10X Deploy Script Prohibition",
       "has_yaml_frontmatter": true
     },
     {
@@ -434,15 +456,15 @@
     },
     {
       "file": "95-test-fix-policy.mdc",
-      "description": "Never skip tests to avoid failures — fix the underlying issue",
+      "description": "Never skip tests to avoid failures \u2014 fix the underlying issue",
       "always_apply": true,
       "globs": null,
-      "first_heading": "Test Fix Policy — Never Skip, Always Fix",
+      "first_heading": "Test Fix Policy \u2014 Never Skip, Always Fix",
       "has_yaml_frontmatter": true
     },
     {
       "file": "96-env-no-hardcode.mdc",
-      "description": "Use .env for configuration — never hardcode database, hosts, ports",
+      "description": "Use .env for configuration \u2014 never hardcode database, hosts, ports",
       "always_apply": true,
       "globs": null,
       "first_heading": "Configuration: Use .env, Do Not Hardcode",
@@ -450,10 +472,18 @@
     },
     {
       "file": "96-git-push-approval.mdc",
-      "description": "Git push requires explicit user approval — never auto-push",
+      "description": "Git push requires explicit user approval \u2014 never auto-push",
       "always_apply": true,
       "globs": null,
       "first_heading": "Git Push Approval Policy",
+      "has_yaml_frontmatter": true
+    },
+    {
+      "file": "97-governance-ssot-paths.mdc",
+      "description": "Governance SSOT path contract \u2014 $HOME/Dropbox only; never hardcode /Users/ or machine-specific paths. Authority: CANONICAL_LAW.md \u00a79.",
+      "always_apply": true,
+      "globs": null,
+      "first_heading": "Governance SSOT Path Contract",
       "has_yaml_frontmatter": true
     },
     {
@@ -461,7 +491,7 @@
       "description": "Graph Engine architecture: chassis contract, gates, Cypher security, action handlers",
       "always_apply": true,
       "globs": null,
-      "first_heading": null,
+      "first_heading": "",
       "has_yaml_frontmatter": true
     },
     {
@@ -474,10 +504,10 @@
     },
     {
       "file": "99-execute-as-instructed.mdc",
-      "description": "Execute exactly as instructed — no autonomous reasoning or skipping steps",
+      "description": "Execute exactly as instructed \u2014 no autonomous reasoning or skipping steps",
       "always_apply": true,
       "globs": null,
-      "first_heading": "Execute As Instructed — No Autonomous Reasoning",
+      "first_heading": "Execute As Instructed \u2014 No Autonomous Reasoning",
       "has_yaml_frontmatter": true
     },
     {

@@ -1,13 +1,13 @@
 # GlobalCommands rules manifest
 
-Generated: `2026-04-11T18:47:40Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules`.
+Generated: `2026-06-06T22:27:59Z` (UTC). Folder: `/Users/ib-mac/IB-Odoo_19 (LOCAL)/IB-Odoo_19/.cursor-commands/rules`.
 
 ## Counts
 
 | Bucket | Count |
 |--------|------:|
-| `alwaysApply: true` | **37** |
-| `alwaysApply: false` | **11** |
+| `alwaysApply: true` | **39** |
+| `alwaysApply: false` | **12** |
 | No boolean `alwaysApply` | **0** |
 
 ## File index
@@ -21,10 +21,12 @@ Generated: `2026-04-11T18:47:40Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor G
 - `05-ask-mode.mdc` — alwaysApply **true** — Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
 - `10-lang-typescript.mdc` — alwaysApply **false** — TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
 - `20-lang-python.mdc` — alwaysApply **true** — Python rules for AI OS runtime, agents, orchestration, and backend services.
+- `22-context7-auto-invoke.mdc` — alwaysApply **true** — Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.
 - `25-python-dora-header.mdc` — alwaysApply **true** — L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.
 - `30-framework-react.mdc` — alwaysApply **false** — React UI rules for AI OS control panels, consoles, and visualization surfaces.
 - `30-odoo-native.mdc` — alwaysApply **true** — Odoo-native code patterns for PlastOS modules: ORM, recordsets, domains, actions
 - `40-domain-autonomy.mdc` — alwaysApply **false** — Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.
+- `43-lang-postgresql.mdc` — alwaysApply **false** — PostgreSQL schema, query, migration, and safety invariants.
 - `50-qa-testing.mdc` — alwaysApply **true** — Testing and QA rules for AI OS agents, runtimes, and integrations.
 - `60-anti-patterns.mdc` — alwaysApply **true** — Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections.
 - `61-secrets-and-dependencies.mdc` — alwaysApply **false** — Secrets handling and dependency/supply-chain rules for L9.
@@ -44,7 +46,7 @@ Generated: `2026-04-11T18:47:40Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor G
 - `87-cursor-memory-kernel.mdc` — alwaysApply **true** — Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle
 - `87-wire-workflow-guard.mdc` — alwaysApply **false** — Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
 - `88-perplexity-run-harness.mdc` — alwaysApply **true** — L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.
-- `89-constellation-gate-workspace-session.mdc` — alwaysApply **true** — Constellation.Gate (2026-04-11): Suite 6 workspace setup, git layout, and why Cursor symlinks stay out of git.
+- `89-constellation-gate-workspace-session.mdc` — alwaysApply **true** — Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.
 - `90-protected-core.mdc` — alwaysApply **true** — Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.
 - `91-existing-code-source-of-truth.mdc` — alwaysApply **true** — Existing code is source of truth — new code adapts to established patterns
 - `92-learned-lessons.mdc` — alwaysApply **true** — Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.
@@ -55,6 +57,7 @@ Generated: `2026-04-11T18:47:40Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor G
 - `95-test-fix-policy.mdc` — alwaysApply **true** — Never skip tests to avoid failures — fix the underlying issue
 - `96-env-no-hardcode.mdc` — alwaysApply **true** — Use .env for configuration — never hardcode database, hosts, ports
 - `96-git-push-approval.mdc` — alwaysApply **true** — Git push requires explicit user approval — never auto-push
+- `97-governance-ssot-paths.mdc` — alwaysApply **true** — Governance SSOT path contract — $HOME/Dropbox only; never hardcode /Users/ or machine-specific paths. Authority: CANONICAL_LAW.md §9.
 - `97-graph-engine-architecture.mdc` — alwaysApply **true** — Graph Engine architecture: chassis contract, gates, Cypher security, action handlers
 - `98-odoo-sh-staging.mdc` — alwaysApply **true** — Odoo.sh staging reference: instance URL, build ID, SSH access, and shell commands for Odoo 19.
 - `99-execute-as-instructed.mdc` — alwaysApply **true** — Execute exactly as instructed — no autonomous reasoning or skipping steps
