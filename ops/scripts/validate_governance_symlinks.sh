@@ -81,6 +81,14 @@ if [ -d "$WORKSPACE/.cursor/rules" ]; then
 fi
 
 echo ""
+echo "=== Path contract (CANONICAL_LAW §9) ==="
+if bash "$SCRIPT_DIR/validate_governance_no_hardcoded_paths.sh"; then
+  pass "no hardcoded machine paths in ops/hooks/rules"
+else
+  fail "hardcoded machine paths detected — run validate_governance_no_hardcoded_paths.sh"
+fi
+
+echo ""
 echo "=== L9 skills (.cursor-commands/skills) ==="
 for s in l9-structured-reasoning l9-skill-compiler l9-wire-skill-into-repo l9-create-skill l9-update-agent-docs l9-gmp-protocol; do
   [ -f "$GC/skills/$s/SKILL.md" ] && pass "$s" || fail "missing $s"

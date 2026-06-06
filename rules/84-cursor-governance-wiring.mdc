@@ -35,6 +35,11 @@ alwaysApply: true
 3. Redis session context: call MCP `cache_set_session_context` if available.
 4. Handoff: always create or update the handoff (e.g. `.workflows/SESSION_HANDOFF.md`) with completed, next steps, and optional memory payload.
 
+## Path contract (CANONICAL_LAW §9)
+
+All governance paths use **`$HOME/Dropbox/...`** via `resolve_governance_paths.sh`.  
+Never hardcode `/Users/` or `/home/` machine paths. See `@.cursor-commands/rules/97-governance-ssot-paths.mdc`.
+
 ## Summary
 
 - **.cursor-commands** = what and when (rules, commands, payloads).
