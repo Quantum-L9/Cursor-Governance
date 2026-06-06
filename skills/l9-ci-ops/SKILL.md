@@ -4,6 +4,8 @@ description: CI/CD operations (status, fix, gates) and CI policy authoring
 disable-model-invocation: true
 ---
 
+> For multi-job failures, load [references/parallel-ci-triage.md](references/parallel-ci-triage.md) — split independent failing jobs across parallel subagents.
+
 ---
 name: ci
 version: "1.1.0"

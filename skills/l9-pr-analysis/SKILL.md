@@ -3,6 +3,8 @@ name: l9-pr-analysis
 description: Analyze pull requests, review comments, merge blockers, gap status, and adoption strategy. Use when the user asks about a PR, merge decision, review findings, or PR readiness.
 ---
 
+> To keep a PR merge-ready (fix CI, address comments, resolve conflicts in a loop), load [references/pr-babysitting.md](references/pr-babysitting.md).
+
 ---
 name: pr
 version: "12.0.0"

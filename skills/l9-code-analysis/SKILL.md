@@ -3,6 +3,8 @@ name: l9-code-analysis
 description: Rapidly analyze, deeply evaluate, or combine analysis and evaluation for code targets. Use when exploring unfamiliar code, auditing structure, mapping flows, identifying hotspots, or assessing quality before edits.
 ---
 
+> For broad/parallel work, load [references/parallel-subagent-patterns.md](references/parallel-subagent-patterns.md) — parallel `explore` exploration, 5-agent onboarding doc, and four-lens (security/perf/correctness/readability) parallel review.
+
 ---
 name: analyze
 version: "7.0.0"

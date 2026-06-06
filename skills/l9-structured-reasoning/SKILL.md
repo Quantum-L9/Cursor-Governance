@@ -17,6 +17,8 @@ sources:
   - reasoning_think_strategy.kernel.yaml
 ---
 
+> Folded techniques: [references/systematic-debugging.md](references/systematic-debugging.md) (reproduce → isolate → hypothesize → verify; git bisect) and [references/best-of-n-parallel.md](references/best-of-n-parallel.md) (parallel best-of-n-runner strategies for high-uncertainty decisions).
+
 # Structured Reasoning
 
 ## Purpose
