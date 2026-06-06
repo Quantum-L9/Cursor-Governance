@@ -77,8 +77,10 @@ Preflight (5 gates) → Complexity (Block 0) → Objective → Context → Decom
 Load references only when relevant:
 
 - `references/first-order-gates.md` — cardinal rule, five gates, proceed protocol, anti-patterns
-- `references/reasoning-protocol.md` — block 0–7 + anticipate-and-deliver + B8/B9 extensions
-- `references/reasoning-modes.md` — strategic/rapid/deep/creative, ADI workflow, complexity routing
+- `references/reasoning-protocol.md` — block 0–7 + anticipate-and-deliver + B8/B9/B11 extensions
+- `references/reasoning-modes.md` — depth tiers, escalation, strategic/rapid/deep/creative, ADI, complexity routing
+- `references/implementation-plan-template.md` — Block 9 YAML plan skeleton
+- `references/success-metrics-template.md` — Block 11 measurable acceptance criteria
 - `references/analysis-modes.md` — rapid/comprehensive/dependency/performance analysis workflows
 - `references/confidence-and-contingency.md` — confidence scale, Block 5 gate, ToTh, RAFA, bias mitigation
 - `references/validation-checklist.md` — pass/fail gates before delivery

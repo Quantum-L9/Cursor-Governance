@@ -68,6 +68,8 @@ Load `references/phase-contracts.md` for the per-phase input/output contract.
 - `references/phase-contracts.md` — compressed per-phase (0–6) input/output/exit contracts.
 - `references/modification-lock.md` — constraints, modification-lock semantics, protected paths, and the three evidence-validation categories.
 - `references/evidence-report.md` — the signed report contract (sections, numbering, final declaration) with the PlasticOS report shape.
+- `references/pipeline-composition.md` — multi-step pipeline YAML, stage failure policy, parallel groups, rollback triggers.
+- `references/lifecycle-pipelines.md` — Discover / Build / Ship / Check lifecycle, PlasticOS make mapping, decision tree.
 - `docs/gmp_protocol/` — canonical long-form source: `cursor-gmp-canonical.md` plus `cursor-phase-0..6-*.md` and `gmp-report-template.md`.
 
 ## Validation Requirements

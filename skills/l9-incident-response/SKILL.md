@@ -7,13 +7,17 @@ role: skill_entrypoint
 tags: [l9, incident, ops, postmortem, sev]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.1.0
 updated: 2026-06-06
 ---
 
 # Incident Response
 
 Handle production incidents systematically.
+
+## Reference Map
+
+- `references/rollback-playbook.md` — rollback-first decision tree, forensic snapshot, escalation ladder, MTTR report skeleton.
 
 ## Severity Levels
 

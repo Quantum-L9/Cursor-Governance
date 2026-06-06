@@ -7,8 +7,10 @@ role: validation_contract
 tags: [skill, validation, quality_gates, zero_stub, packaging]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-06-04
+version: 1.3.0
+updated: 2026-06-06
+sources:
+  - harvested: _framework-standards (Suite-5 legacy, design principles appendix)
 --- /SKILL_META ---
 
 Purpose:
@@ -110,6 +112,17 @@ Reject the Skill if it contains:
 - [ ] bloated control plane
 - [ ] partial artifact delivery
 - [ ] `agents/openai.yaml` created (use `SKILL.md` metadata + repo wiring instead)
+
+## Design Principles (command / skill authoring)
+
+Harvested from Suite-5 command standards — apply when compiling or reviewing skills:
+
+- [ ] **Composable** — works alone and chains with related skills without hidden deps.
+- [ ] **Fail fast** — prerequisites checked before long execution; clear error on missing input.
+- [ ] **Idempotent when possible** — repeat runs safe; same inputs → same outcome.
+- [ ] **Self-documenting output** — deliverable states what happened and suggested next step.
+- [ ] **Progressive enhancement** — simple path works; advanced behavior optional via references/scripts.
+- [ ] **Dry-run or validate step** before destructive ops when applicable.
 
 ## Packaging Readiness
 

@@ -47,7 +47,7 @@ Use this skill when the user asks to optimize performance, reduce load times, fi
    - Verify fonts use `font-display: swap` and are preloaded.
    - Check for render-blocking CSS or JavaScript.
 
-6. **Generate recommendations** — produce a prioritized list of optimizations ranked by impact (High / Medium / Low) with estimated effort for each.
+6. **Generate recommendations** — produce a prioritized list of optimizations ranked by impact (High / Medium / Low) with estimated effort for each. Use [references/bottleneck-report-template.md](references/bottleneck-report-template.md) for ranked output.
 
 ## Notes
 

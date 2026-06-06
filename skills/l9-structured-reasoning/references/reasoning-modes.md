@@ -7,12 +7,13 @@ role: reasoning_kernel
 tags: [reasoning, modes, strategic, debugging, complexity]
 owner: igor_beylin
 status: active
-version: 1.1.0
+version: 1.2.0
 updated: 2026-06-06
 sources:
   - 01_reasoning_engine.kernel.yaml
   - 07_reasoning_engine_extended.kernel.yaml
   - harvested: core-thinking-mode (Suite-5 legacy, numeric complexity rubric)
+  - harvested: core-quick-reason, core-REASONING_MODES_GUIDE (Suite-5 legacy, depth tiers + escalation)
 --- /SKILL_META ---
 
 Purpose:
@@ -20,6 +21,16 @@ Mode routing layer — select the right reasoning depth and modality for the tas
 -->
 
 # Reasoning Modes
+
+## Depth Tiers (Daily Routing)
+
+| Tier | Alias | Time budget | Files | Unknowns | Use when |
+|------|-------|-------------|-------|----------|----------|
+| **Rapid** | quick-reason | 3–5 min | 1–3 | Clear | Daily fixes, docs, single-system edits |
+| **Moderate** | think / lite | 8–10 min | 3–8 | Some | Features, integrations, multi-file refactors |
+| **Deep** | deep-reason | 15–30 min | 8+ | Many | Architecture, high-risk production, unclear scope |
+
+**Default:** start Rapid; escalate when triggers fire (below). Target mix: ~90% Rapid · ~9% Moderate · ~1% Deep.
 
 ## Primary Modes (Task Routing)
 
@@ -29,6 +40,28 @@ Mode routing layer — select the right reasoning depth and modality for the tas
 | **Rapid** | Time-critical decisions, crisis response, quick diagnostics | Flag that depth is traded for speed; NOT for irreversible ops |
 | **Deep analysis** | Root cause, multi-factor evaluation, debugging, regression | Seek disconfirming evidence; do not stop at first plausible explanation |
 | **Creative** | Innovation, design decisions, novel problem structures | Generate ≥2 alternatives before recommending one |
+
+## Depth Selection Flow
+
+```text
+Is the task obvious and low-risk?
+  YES → Rapid
+  NO → Does it span multiple systems or have unknowns?
+    NO → Rapid
+    YES → Major architecture or irreversible production risk?
+      NO → Moderate
+      YES → Deep
+```
+
+Escalate mid-task when: elapsed time exceeds tier budget · files affected > 5 · protected path enters scope · new unknowns appear. De-escalate only when scope shrinks with evidence.
+
+## Escalation Triggers (Rapid → Moderate → Deep)
+
+| From | Escalate when |
+|------|----------------|
+| Rapid | >5 min elapsed · >3 files · integration boundary · risk above safe |
+| Moderate | Architecture decision required · 8+ files · irreversible prod change |
+| Deep | N/A — already maximum depth |
 
 ## ADI Multi-Modal Workflow
 
@@ -99,6 +132,15 @@ Low confidence: B7 below threshold → B8 → retry B4-B6 → B7 → deliver
 Stuck:        B8 → tool investigation → simplify → resume B3
 Crisis:       Rapid → B1 → B4 abbreviated → B5 → B7 → deliver with caveat
 ```
+
+## Tier Comparison
+
+| | Rapid | Moderate | Deep |
+|---|-------|----------|------|
+| Block protocol | Abbreviated B1–B7 | B1–B7 + gate | Full B0–B9 + metrics |
+| Rollback plan | Optional | Required for destructive | Required + tested |
+| Alternatives | 1 path OK | ≥2 for architecture | ≥2 mandatory |
+| Investigation (B8) | Only if stuck | If stuck | Proactive on complex |
 
 ## Hard Rules
 

@@ -7,12 +7,13 @@ role: reasoning_kernel
 tags: [reasoning, blocks, protocol, synthesis, planning]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-04
+version: 1.1.0
+updated: 2026-06-06
 sources:
   - 01_reasoning_engine.kernel.yaml
   - 07_reasoning_engine_extended.kernel.yaml
   - reasoning_think_strategy.kernel.yaml
+  - harvested: core-thinking-mode Block 8 (Suite-5 legacy, anti-stuck protocol)
 --- /SKILL_META ---
 
 Purpose:
@@ -151,15 +152,24 @@ Checks include:
 
 Use when confidence is low or ambiguity blocks progress:
 
-- Use search/read tools to resolve ambiguity
-- Do not guess when tools can verify
-- Simplify or restate problem → resume at Block 3
+1. State what is known vs unknown (explicit lists)
+2. List 3 independent ways to resolve the unknown
+3. Execute all 3 in parallel (grep, read, search, codebase tools)
+4. If still stuck → ask user; do not fabricate
+
+Additional tactics:
+
+- Simplify or restate the problem → resume at Block 3
+- Try alternate search terms (≥3 queries)
+- Use git bisect when regression timing is known (`references/systematic-debugging.md`)
+
+Skip in Express/Rapid tier unless actually stuck.
 
 ---
 
 ### Block 9 — Implementation Plan (coding tasks)
 
-Required before writing code for non-trivial work:
+Required before writing code for non-trivial work. Fill `references/implementation-plan-template.md`.
 
 - Critical path and dependencies
 - Files to create / modify / delete
@@ -167,6 +177,16 @@ Required before writing code for non-trivial work:
 - Rollback plan for destructive changes
 
 **Invariant:** No destructive operations without Block 9 or equivalent plan.
+
+---
+
+### Block 11 — Success Metrics (moderate+ / high-stakes)
+
+Before marking complete, fill `references/success-metrics-template.md`.
+
+- 3–5 measurable acceptance criteria
+- Each criterion names verification method
+- Quality gates tied to repo CI when applicable
 
 ## Invariants
 
