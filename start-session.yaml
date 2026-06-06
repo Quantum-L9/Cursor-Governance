@@ -346,52 +346,52 @@ startup_sequence:
     enforcement: "200%"
   
   # ─────────────────────────────────────────────────────────
-  # STEP 10-14: Slash Commands (6 files)
+  # STEP 10-14: Skills (migrated from slash commands)
   # ─────────────────────────────────────────────────────────
   step_10:
-    file: "commands/reasoning.md"
+    file: "skills/l9-structured-reasoning/SKILL.md"
     component_id: "CMD-002"
-    purpose: "Enable /reasoning slash command"
+    purpose: "Enable reasoning skill (/reasoning + structured reasoning kernel)"
     duration_seconds: 120
     skip: never
     enforcement: "200%"
   
   step_10_5:
-    file: "commands/ynp.md"
+    file: "skills/l9-ynp/SKILL.md"
     component_id: "CMD-001"
-    purpose: "Enable /ynp slash command"
+    purpose: "Enable YNP skill (Your Next Play routing)"
     duration_seconds: 60
     skip: never
     enforcement: "200%"
   
   step_11:
-    file: "commands/forge.md"
+    file: "skills/l9-forge/SKILL.md"
     component_id: "CMD-004"
-    purpose: "Enable /forge slash command"
+    purpose: "Enable /forge skill (autonomous GMP execution)"
     duration_seconds: 60
     skip: never
     enforcement: "200%"
   
   step_12:
-    file: "commands/consolidate.md"
+    file: "skills/l9-code-maintenance/SKILL.md"
     component_id: "CMD-005"
-    purpose: "Enable /consolidate slash command"
+    purpose: "Enable code maintenance skill (consolidate, lint-fix, migrate, clean)"
     duration_seconds: 60
     skip: never
     enforcement: "200%"
   
   step_13:
-    file: "commands/analyze.md"
+    file: "skills/l9-code-analysis/SKILL.md"
     component_id: "CMD-006"
-    purpose: "Enable /analyze-toolkit slash command"
+    purpose: "Enable code analysis skill (analyze, evaluate, analyze+evaluate)"
     duration_seconds: 60
     skip: never
     enforcement: "200%"
   
   step_14:
-    file: "commands/evaluate.md"
+    file: "skills/l9-gmp-protocol/SKILL.md"
     component_id: "CMD-007"
-    purpose: "Enable /evaluate slash command"
+    purpose: "Enable GMP protocol skill (deterministic phased execution)"
     duration_seconds: 60
     skip: never
     enforcement: "200%"

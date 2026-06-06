@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "2.2.0"
+version: "2.3.0"
 description: "Initialize Cursor session — governance wiring gate, then context + C1 memory health"
 auto_chain: null
 auto_chain_on_fail:
@@ -17,9 +17,9 @@ Full preflight check before starting work:
 0. **Governance wiring gate** — `.cursor-commands` SSOT + `sessionEnd` hook (auto-chains `/wire governance` if FAIL)
 1. **Check C1 Memory Health**
 2. **Load Memory Operations Reference** (`.cursor/memory/CURSOR-MEMORY-CLIENT.md`)
-3. Read workflow_state.md
-4. Load memory context from C1
-5. Extract GMP Queue from TODO.md
+3. **Redis session context** — resume from last `/end-session` handoff
+4. Load memory context from C1 (PICKUP packets, lessons)
+5. Extract GMP Queue from TODO.md (if present)
 6. Identify priorities
 
 ---
@@ -110,24 +110,17 @@ This provides:
 cat agents/cursor/governance-reference.md
 ```
 
-### 1. WORKFLOW STATE
+### 1. REDIS SESSION CONTEXT (resume from last window)
+
+**Call MCP tool `cache_get_session_context`** (session_id optional). If the result has `success: true` and `data`, display it as "Previous session context" so we can resume:
+
+- **summary**, **next_steps**, **in_progress**, **open_questions**, **files_touched**
+- Use this to avoid amnesia when the user opened a new window after /end-session or a milestone save.
+
+### 2. GMP QUEUE — From TODO.md (optional)
 
 ```bash
-# Read current state
-cat workflow_state.md
-```
-
-Extract ALL fields per 85-workflow-state-bridge.mdc:
-- **PHASE** (0-6)
-- **Context summary**
-- **Last 3 recent changes**
-- **Open questions**
-- **Next steps** (2-5 items)
-
-### 2. GMP QUEUE — From TODO.md
-
-```bash
-# Parse TODO.md for pending GMPs
+# Parse TODO.md for pending GMPs (skip if file absent)
 grep -E "^\s*-\s*\[.\]\s*(GMP|HIGH|MEDIUM)" TODO.md | head -10
 ```
 
@@ -137,30 +130,24 @@ Extract:
 - MEDIUM priority items (🟠)
 - Blocked items
 
-### 3. REDIS SESSION CONTEXT (resume from last window)
-
-**Call MCP tool `cache_get_session_context`** (session_id optional). If the result has `success: true` and `data`, display it as "Previous session context" so we can resume:
-
-- **summary**, **next_steps**, **in_progress**, **open_questions**, **files_touched**
-- Use this to avoid amnesia when the user opened a new window after /end-session or a milestone save.
-
-### 4. MEMORY INJECT — From C1
+### 3. MEMORY INJECT — From C1
 
 ```bash
 # Search C1 memory for context
+python3 agents/cursor/cursor_memory_client.py search "PICKUP|" --limit 3
 python3 agents/cursor/cursor_memory_client.py search "recent lessons"
 python3 agents/cursor/cursor_memory_client.py search "active context Igor"
 python3 agents/cursor/cursor_memory_client.py inject "session startup"
 ```
 
-### 5. TIME CONTEXT
+### 4. TIME CONTEXT
 
 Calculate time since last session:
-- Parse "Recent Sessions" dates from workflow_state.md
+- Parse `date=` from the most recent `PICKUP|` memory hit, or Redis session context timestamp
 - If >24h gap: Flag "context may be stale"
 - If >7d gap: Recommend deeper memory search
 
-### 6. PRIORITY CHECK
+### 5. PRIORITY CHECK
 
 ```
 🔴 HIGH — Blocking issues, active GMPs
@@ -218,25 +205,27 @@ This gives the agent awareness of the current graph state (node counts by type: 
 | Memory Ops Reference | ✅ loaded (CURSOR-MEMORY-CLIENT.md) |
 | System Prompt | ✅ loaded (cursor_system_prompt.md) |
 | Governance Reference | ✅ loaded (governance-reference.md) |
-| workflow_state.md | ✅ loaded |
-| TODO.md | ✅ parsed |
+| Redis session context | ✅ loaded / ⚠️ none |
+| TODO.md | ✅ parsed / ⚠️ absent |
 | Neo4j Graph | ✅ {N} nodes / ⚠️ unavailable |
 | Time since last | {X hours/days} |
 
-### State (from workflow_state.md)
-**Phase:** {0-6}
-**Context:** {1-2 sentence summary}
+### Resume Context
+**Summary:** {from Redis or latest PICKUP|}
 
-**Last 3 Changes:**
-1. {change 1}
-2. {change 2}
-3. {change 3}
+**Next Steps:**
+1. {next step 1}
+2. {next step 2}
+3. {next step 3}
+
+**In Progress:**
+- {item} — {status}
 
 **Open Questions:**
 - {question 1}
 - {question 2}
 
-### GMP Queue (from TODO.md)
+### GMP Queue (from TODO.md, if present)
 | Priority | GMP/Task | Status |
 |----------|----------|--------|
 | 🔴 | {HIGH item 1} | pending |
@@ -244,14 +233,10 @@ This gives the agent awareness of the current graph state (node counts by type: 
 | 🟠 | {MEDIUM item} | pending |
 
 ### Memory Context (from C1)
+- PICKUP packets: {count} loaded
 - Preferences: {count} loaded
 - Lessons: {count} loaded
 - Warnings: {any relevant}
-
-### Next Steps (from workflow_state.md)
-1. {next step 1}
-2. {next step 2}
-3. {next step 3}
 
 ### Ready For
 → `/ynp` — Get recommendation on what to do next
@@ -270,9 +255,9 @@ For fast startup without full memory load:
 ```
 
 Only does:
-1. Read workflow_state.md
-2. Show Phase + Next Steps
-3. Skip memory inject
+1. Load Redis session context (if any)
+2. Search latest `PICKUP|` from C1
+3. Skip full memory inject
 
 ---
 
@@ -286,18 +271,17 @@ Only does:
 |-------|--------|
 | C1 MCP Health | ✅ healthy |
 | Memory Ops Reference | ✅ loaded |
-| workflow_state.md | ✅ loaded |
-| TODO.md | ✅ parsed |
+| Redis session context | ✅ loaded |
+| TODO.md | ⚠️ absent |
 | Time since last | 3 hours |
 
-### State
-**Phase:** 2 (IMPLEMENT)
-**Context:** Working on C1 memory migration, updating rules and commands.
+### Resume Context
+**Summary:** Working on C1 memory migration, updating rules and commands.
 
-**Last 3 Changes:**
-1. 2026-01-24: Updated 03-mcp-memory.mdc with C1 endpoints
-2. 2026-01-24: Enhanced /start-session with health check
-3. 2026-01-23: Completed GMP-119 singleton refactor
+**Next Steps:**
+1. Complete C1 memory documentation
+2. Test memory client against C1
+3. Update /start-session command
 
 **Open Questions:**
 - Should we migrate all scripts to C1 URLs?
@@ -309,14 +293,10 @@ Only does:
 | 🟠 | Legacy code cleanup | pending |
 
 ### Memory Context (from C1)
+- PICKUP packets: 1 loaded
 - Preferences: 5 loaded
 - Lessons: 3 loaded
 - Warnings: None relevant
-
-### Next Steps
-1. Complete C1 memory documentation
-2. Test memory client against C1
-3. Update /start-session command
 
 ### Ready For
 → `/ynp` — Get recommendation

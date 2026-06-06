@@ -1,0 +1,59 @@
+version: 1
+purpose: "Document Cursor-native skill autonomy tiers for GlobalCommands."
+principle: "Skills are selected by Cursor from SKILL.md descriptions; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets."
+
+cursor_discovery:
+  enabled_by:
+    - "~/.cursor/skills symlinked to GlobalCommands/skills"
+    - "skill folder contains SKILL.md"
+    - "frontmatter name matches folder name"
+    - "description states what the skill does and when to use it"
+  automatic_invocation:
+    rule: "available unless disable-model-invocation: true is present"
+  explicit_invocation:
+    rule: "set disable-model-invocation: true for high-blast-radius or lifecycle-boundary skills"
+
+tiers:
+  auto_invoke:
+    - skill: "l9-context7-docs"
+      use_when: "current library, framework, SDK, API, or version-specific documentation could prevent implementation mistakes"
+    - skill: "l9-structured-reasoning"
+      use_when: "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
+    - skill: "l9-gmp-protocol"
+      use_when: "work must be phased, auditable, traceable, or touches protected/high-risk areas"
+    - skill: "l9-plan"
+      use_when: "scope is unclear, requirements need decomposition, or implementation needs a plan/spec first"
+    - skill: "l9-code-analysis"
+      use_when: "exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots"
+    - skill: "l9-gap-analysis"
+      use_when: "assessing readiness, missing pieces, compliance drift, or percent-complete status"
+    - skill: "l9-pr-analysis"
+      use_when: "reviewing PRs, merge blockers, review comments, or PR readiness"
+    - skill: "l9-ynp"
+      use_when: "work just completed, priorities are unclear, or the user asks what to do next"
+
+  explicit_only:
+    - skill: "l9-forge"
+      reason: "zero-pause batch execution"
+    - skill: "l9-harvest-pipeline"
+      reason: "sed/cp harvest deployment pipeline"
+    - skill: "l9-governance-wiring"
+      reason: "symlinks, hooks, and governance backup"
+    - skill: "l9-end-session"
+      reason: "session lifecycle boundary"
+    - skill: "l9-update-command"
+      reason: "meta tooling that changes command/skill structure"
+
+  do_not_migrate_to_skills:
+    - item: "commands/violation.md"
+      reason: "violation handling belongs in always-applied rules or hooks, not optional skill context"
+    - item: "commands/mem.md"
+      reason: "memory plumbing belongs in MCP/client workflow documentation, not a model-selected skill"
+    - item: "commands/start-session.md"
+      reason: "session startup is lifecycle/bootstrap behavior; skills do not auto-run at IDE startup"
+    - item: "commands/emma-repo-commands/"
+      reason: "repo-specific Emma wiring; omit from GlobalCommands"
+    - item: "commands/workflow executors/"
+      reason: "obsolete duplicate executor folder; prefer Cursor-native skill instructions and optional skill-local scripts only when needed"
+    - item: "commands/dora-commands/"
+      reason: "unwired legacy DORA commands; archive or rebuild only if aligned to the current stack"

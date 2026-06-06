@@ -1,7 +1,7 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "2.0.0"
+version: "2.1.0"
 component_id: "INT-WS-003"
 component_name: "Session End Protocol - L9 Enterprise Edition v2"
 layer: "intelligence"
@@ -18,9 +18,9 @@ changelog_url: "CHANGELOG.md#v2.0.0"
 execution_mode: "manual_and_automatic"
 ---
 
-# SESSION END PROTOCOL v2.0
+# SESSION END PROTOCOL v2.1
 # Structured handoff for reliable session resume
-# Total: 6 phases | Duration: ~1 min
+# Total: 5 phases | Duration: ~1 min
 
 # ═══════════════════════════════════════════════════════════
 # TRIGGERS (dual path — automatic + manual)
@@ -36,7 +36,7 @@ triggers:
     hooks_config: "$HOME/.cursor/hooks.json"
     template: "$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
     installed_by: "$GLOBAL_COMMANDS/ops/scripts/setup_workspace_symlinks.sh"
-    runs: "phase_5_governance_github only"
+    runs: "phase_4_governance_github only"
     commit_message: "chore(governance): session-end sync $(date +%Y-%m-%d)"
     log: "$HOME/.cursor-governance/backup.log"
     verify: "tail -5 $HOME/.cursor-governance/backup.log"
@@ -44,15 +44,15 @@ triggers:
   end_session:
     type: slash_command
     command: "/end-session"
-    command_file: "commands/end-session.md"
+    command_file: "skills/l9-end-session/SKILL.md"
     protocol: "end-session.yaml"
-    runs: "all phases (1–6)"
+    runs: "all phases (1–5)"
     commit_message: "chore(governance): end-session $(date +%Y-%m-%d)"
     invoke: "Type /end-session in Cursor chat"
 
   governance_backup_only:
     type: shell
-    description: "Manual Phase 5 only — no handoff/memory steps"
+    description: "Manual Phase 4 only — no handoff/memory steps"
     command: |
       bash .cursor-commands/ops/scripts/backup_to_github.sh \
         "chore(governance): manual backup $(date +%Y-%m-%d)"
@@ -65,10 +65,9 @@ triggers:
 # Phase 1: PICKUP_CONTEXT - Structured handoff packet (REQUIRED)
 # Phase 2: LESSONS - Extract lessons/errors (IF ANY)
 # Phase 3: GIT_STATE - Capture uncommitted work (AUTO)
-# Phase 4: WORKFLOW_STATE - Update Next Steps (REQUIRED)
-# Phase 5: GOVERNANCE_GITHUB - Push GlobalCommands to Cursor-Governance (REQUIRED)
+# Phase 4: GOVERNANCE_GITHUB - Push GlobalCommands to Cursor-Governance (REQUIRED)
 #   → automatic: sessionEnd hook | manual: /end-session or governance_backup_only
-# Phase 6: CONFIRMATION - Display summary (AUTO)
+# Phase 5: CONFIRMATION - Display summary (AUTO)
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 1: PICKUP CONTEXT (Structured Handoff)
@@ -168,36 +167,11 @@ phase_3_git_state:
       ✅ Working tree clean
 
 # ═══════════════════════════════════════════════════════════
-# PHASE 4: WORKFLOW STATE UPDATE
+# PHASE 4: GOVERNANCE GITHUB BACKUP
 # ═══════════════════════════════════════════════════════════
-phase_4_workflow_state:
-  name: "Update workflow_state.md"
-  priority: 4
-  required: true
-  description: "Ensure workflow_state.md has accurate next steps"
-  
-  updates:
-    - section: "COMPLETED THIS SESSION"
-      action: "Add bullet points for work done"
-      format: "- ✅ {GMP-ID}: {Brief description}"
-    
-    - section: "Next Steps (Current Session)"
-      action: "Replace with 3-5 actionable items for next session"
-      format: |
-        1. {Most important next action}
-        2. {Second priority}
-        3. {Third priority}
-    
-    - section: "Recent Sessions (7-day window)"
-      action: "Add entry at TOP"
-      format: "- ✅ YYYY-MM-DD: {Brief summary of session}"
-
-# ═══════════════════════════════════════════════════════════
-# PHASE 5: GOVERNANCE GITHUB BACKUP
-# ═══════════════════════════════════════════════════════════
-phase_5_governance_github:
+phase_4_governance_github:
   name: "Backup GlobalCommands to GitHub"
-  priority: 5
+  priority: 4
   required: true
   triggers:
     automatic: triggers.sessionEnd
@@ -220,11 +194,11 @@ phase_5_governance_github:
       - "OK: pushed... or OK: nothing to commit — Dropbox SSOT matches index"
 
 # ═══════════════════════════════════════════════════════════
-# PHASE 6: CONFIRMATION
+# PHASE 5: CONFIRMATION
 # ═══════════════════════════════════════════════════════════
-phase_6_confirmation:
+phase_5_confirmation:
   name: "Session End Confirmation"
-  priority: 6
+  priority: 5
   required: true
   auto: true
   
@@ -283,13 +257,13 @@ quick_reference:
 anti_patterns:
   - "❌ DON'T write free-form text (hard to search)"
   - "❌ DON'T skip pickup_context (breaks resume)"
-  - "❌ DON'T leave workflow_state.md without next steps"
+  - "❌ DON'T skip cache_set_session_context (breaks cross-window resume)"
   - "❌ DON'T forget uncommitted changes"
   
   do:
     - "✅ DO use structured PICKUP| format"
     - "✅ DO keep task/next to single phrases"
-    - "✅ DO update Next Steps in workflow_state.md"
+    - "✅ DO write next_steps into Redis session context and PICKUP packet"
     - "✅ DO run git status before closing"
 
 # ═══════════════════════════════════════════════════════════
