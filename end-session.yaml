@@ -28,7 +28,8 @@ changelog_url: "CHANGELOG.md#v2.0.0"
 # Phase 2: LESSONS - Extract lessons/errors (IF ANY)
 # Phase 3: GIT_STATE - Capture uncommitted work (AUTO)
 # Phase 4: WORKFLOW_STATE - Update Next Steps (REQUIRED)
-# Phase 5: CONFIRMATION - Display summary (AUTO)
+# Phase 5: GOVERNANCE_GITHUB - Push GlobalCommands to Cursor-Governance (REQUIRED)
+# Phase 6: CONFIRMATION - Display summary (AUTO)
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 1: PICKUP CONTEXT (Structured Handoff)
@@ -153,11 +154,27 @@ phase_4_workflow_state:
       format: "- ✅ YYYY-MM-DD: {Brief summary of session}"
 
 # ═══════════════════════════════════════════════════════════
-# PHASE 5: CONFIRMATION
+# PHASE 5: GOVERNANCE GITHUB BACKUP
 # ═══════════════════════════════════════════════════════════
-phase_5_confirmation:
-  name: "Session End Confirmation"
+phase_5_governance_github:
+  name: "Backup GlobalCommands to GitHub"
   priority: 5
+  required: true
+  description: |
+    Push Dropbox SSOT (.cursor-commands / GlobalCommands) to cryptoxdog/Cursor-Governance.
+    Also runs automatically via sessionEnd hook after setup_workspace_symlinks.sh.
+  command: |
+    bash .cursor-commands/ops/scripts/backup_to_github.sh \
+      "chore(governance): end-session $(date +%Y-%m-%d)"
+  skip_env: GOVERNANCE_BACKUP_SKIP=1
+  log: "$HOME/.cursor-governance/backup.log"
+
+# ═══════════════════════════════════════════════════════════
+# PHASE 6: CONFIRMATION
+# ═══════════════════════════════════════════════════════════
+phase_6_confirmation:
+  name: "Session End Confirmation"
+  priority: 6
   required: true
   auto: true
   

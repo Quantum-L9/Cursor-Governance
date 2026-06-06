@@ -27,6 +27,22 @@ api_endpoints: []
 data_sources: ["GlobalCommands"]
 outputs: [".suite6-config.json", ".cursor-commands/", "verification_reports"]
 
+# ═══════════════════════════════════════════════════════════
+#   CANONICAL PATHS (SSOT — Dropbox, not GitHub)
+# ═══════════════════════════════════════════════════════════
+# Edit governance under Dropbox only. GitHub is backup (backup_to_github.sh).
+# macOS: "cursor governance" and "Cursor Governance" resolve to the same folder.
+
+canonical_paths:
+  governance_root: "$HOME/Dropbox/Cursor Governance"
+  global_commands: "$HOME/Dropbox/Cursor Governance/GlobalCommands"
+  canonical_law: "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md"
+  path_resolver: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/resolve_governance_paths.sh"
+  setup_symlinks: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"
+  validate_symlinks: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh"
+  env_manager: "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py"
+  github_backup_remote: "cryptoxdog/Cursor-Governance"
+
 # === OPERATIONAL METADATA ===
 execution_mode: "manual"
 monitoring_required: true
@@ -60,9 +76,14 @@ total_duration_minutes: 15
 
 preflight:
   required_checks:
-    - name: "Suite 6 Directory Exists"
-      command: 'test -d "$HOME/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)"'
-      error_message: "Suite 6 not found in Dropbox"
+    - name: "GlobalCommands SSOT Exists"
+      command: 'test -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" || test -d "$HOME/Dropbox/cursor governance/GlobalCommands"'
+      error_message: "Dropbox GlobalCommands not found — SSOT must live under $HOME/Dropbox/Cursor Governance/"
+      blocking: true
+
+    - name: "Canonical Law Present"
+      command: 'test -f "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md" || test -f "$HOME/Dropbox/cursor governance/CANONICAL_LAW.md"'
+      error_message: "CANONICAL_LAW.md missing from Dropbox governance root"
       blocking: true
     
     - name: "Python 3 Installed"
@@ -517,19 +538,30 @@ startup_sequence:
 
 installation:
   step_1:
-    name: "Sync Suite 6 Configuration"
-    command: 'python3 "$HOME/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/environment/env-manager.py" sync "$(pwd)"'
-    expected_output: ".suite6-config.json created"
-    blocking: true
-  
-  step_2:
-    name: "Create Symlinks"
-    command: 'bash "$HOME/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/ops/scripts/setup_workspace_symlinks.sh"'
-    expected_output: "Symlink created"
+    name: "Wire Governance Symlinks"
+    command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
+    expected_output: "RESULT: PASS — GlobalCommands only via .cursor-commands"
     blocking: true
     verification:
       - 'test -L .cursor-commands'
-      - 'readlink .cursor-commands | grep -q "Dropbox/Cursor Governance/GlobalCommands"'
+      - '! test -e .cursor/commands'
+      - '! test -e .cursor/skills'
+      - 'test -d .cursor/governance && ! test -L .cursor/governance'
+      - 'test -L .cursor/governance/CANONICAL_LAW.md'
+      - '! test -e .cursor/governance/GlobalCommands'
+      - 'readlink .cursor-commands | grep -qi "GlobalCommands"'
+
+  step_2:
+    name: "Sync Workspace Configuration"
+    command: 'python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py" sync "$(pwd)"'
+    expected_output: ".suite6-config.json created"
+    blocking: true
+
+  step_3:
+    name: "Validate Governance Alignment"
+    command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
+    expected_output: "RESULT: PASS — GlobalCommands only via .cursor-commands"
+    blocking: true
 
 # ═══════════════════════════════════════════════════════════
 #   PHASE 4: INTELLIGENCE SYSTEMS ACTIVATION
@@ -625,7 +657,16 @@ verification:
         must_contain: '"governance_enabled": true'
       - path: ".cursor-commands"
         must_be_symlink: true
-        must_point_to: "Dropbox/Cursor Governance/GlobalCommands"
+        must_point_to: "GlobalCommands"
+      - path: ".cursor-commands"
+        must_be_symlink: true
+        must_point_to: "GlobalCommands"
+      - path: ".cursor/governance/CANONICAL_LAW.md"
+        must_be_symlink: true
+        must_point_to: "CANONICAL_LAW.md"
+      - path: ".cursor/governance"
+        must_be_directory: true
+        must_not_contain: "GlobalCommands"
     
     launchagents:
       - name: "com.tenx.chat-export"
@@ -716,16 +757,19 @@ quick_reference:
     intelligence_templates: 1
   
   critical_commands:
-    setup: 'python3 "$HOME/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/environment/env-manager.py" sync "$(pwd)"'
-    symlink: 'bash "$HOME/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/ops/scripts/setup_workspace_symlinks.sh"'
-    verify: "bash .cursor-commands/ops/scripts/verify-startup-files.sh"
+    wire: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
+    validate: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
+    setup: 'python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py" sync "$(pwd)"'
+    verify_startup: "bash .cursor-commands/ops/scripts/verify-startup-files.sh"
     activate_learning: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_learnings.sh"'
     activate_context: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_context.sh"'
+    backup_github: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/backup_to_github.sh"'
   
   troubleshooting:
     yaml_missing: "python3 -m pip install pyyaml"
-    wrong_symlink: 'rm .cursor-commands && ln -s "$HOME/Dropbox/Cursor Governance/GlobalCommands" .cursor-commands'
-    verify_symlink: 'readlink .cursor-commands'
+    rewire_all: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
+    verify_symlink: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
+    never: "Do not rsync from git clone into Dropbox — Dropbox GlobalCommands is SSOT"
 
 # ═══════════════════════════════════════════════════════════
 #   AUTOMATION SUPPORT

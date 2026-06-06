@@ -15,6 +15,7 @@ Clean session close:
 2. Extract learnings to memory (via canonical pipeline; see `docs/MEMORY_PIPELINE_MAP.md`)
 3. Create handoff summary
 4. List next steps
+5. **Backup GlobalCommands to GitHub** (`cryptoxdog/Cursor-Governance`)
 
 ---
 
@@ -79,7 +80,19 @@ If session hooks were activated at `/start-session`, close them now:
 - This promotes recent decisions and errors-to-avoid into persistent storage
 - Reference: `agents/cursor/cursor_session_hooks.py`
 
-### 4. HANDOFF
+### 4. GOVERNANCE GITHUB BACKUP (mandatory)
+
+Push Dropbox SSOT (everything under `@.cursor-commands/`) to the governance repo:
+
+```bash
+bash .cursor-commands/ops/scripts/backup_to_github.sh "chore(governance): end-session $(date +%Y-%m-%d)"
+```
+
+Or: `/governance-backup` / `make governance-backup` (PlasticOS).
+
+Also runs automatically on **sessionEnd** after `setup_workspace_symlinks.sh` (see `~/.cursor/hooks.json`).
+
+### 5. HANDOFF
 
 ```markdown
 ## Session Handoff
@@ -115,6 +128,7 @@ If session hooks were activated at `/start-session`, close them now:
 - Memory written ✅
 - Redis session context saved (cache_set_session_context) ✅
 - Next steps defined ✅
+- GlobalCommands pushed to Cursor-Governance ✅
 
 ### When you open a new window
 → Use **/start-session** to load Redis context + workflow_state + memory and resume.
