@@ -1,17 +1,17 @@
 {
   "$schema": "cursor-global-rules-manifest/1.0",
-  "generated_utc": "2026-06-06T22:27:59Z",
-  "rules_directory": "/Users/ib-mac/IB-Odoo_19 (LOCAL)/IB-Odoo_19/.cursor-commands/rules",
+  "generated_utc": "2026-06-06T22:30:31Z",
+  "rules_directory": "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules",
   "purpose": "Machine-readable index of GlobalCommands/rules/*.mdc for agents and tooling.",
   "summary": {
-    "total_mdc_files": 51,
+    "total_mdc_files": 53,
     "always_apply_true": 39,
-    "always_apply_false": 12,
+    "always_apply_false": 14,
     "no_boolean_always_apply": 0,
     "fractions": {
-      "always_apply_true": "39/51",
-      "always_apply_false": "12/51",
-      "no_boolean_always_apply": "0/51"
+      "always_apply_true": "39/53",
+      "always_apply_false": "14/53",
+      "no_boolean_always_apply": "0/53"
     },
     "identity_holds": true
   },
@@ -26,10 +26,10 @@
     },
     {
       "file": "01-git-push-prohibition.mdc",
-      "description": "NEVER push to git without explicit user request. This is the #1 rule for this project.",
+      "description": "NEVER commit or push to git without explicit user request. Push is #1 deployment risk.",
       "always_apply": true,
       "globs": null,
-      "first_heading": "\ud83d\udea8 #1 RULE: NEVER PUSH WITHOUT EXPLICIT REQUEST",
+      "first_heading": "\ud83d\udea8 #1 RULE: NEVER COMMIT OR PUSH WITHOUT EXPLICIT REQUEST",
       "has_yaml_frontmatter": true
     },
     {
@@ -181,6 +181,40 @@
         "**/__tests__/**/*"
       ],
       "first_heading": "Testing & QA Rules for L9 OS",
+      "has_yaml_frontmatter": true
+    },
+    {
+      "file": "51-qa-playwright.mdc",
+      "description": "Playwright E2E test invariants for web UI flows.",
+      "always_apply": false,
+      "globs": [
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/e2e/**/*.ts",
+        "**/e2e/**/*.tsx",
+        "playwright.config.ts",
+        "playwright.config.js"
+      ],
+      "first_heading": "Playwright E2E invariants",
+      "has_yaml_frontmatter": true
+    },
+    {
+      "file": "52-qa-jest.mdc",
+      "description": "Jest unit test invariants for TypeScript and JavaScript.",
+      "always_apply": false,
+      "globs": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.js",
+        "**/*.test.jsx",
+        "**/__tests__/**/*.ts",
+        "**/__tests__/**/*.tsx",
+        "**/__tests__/**/*.js",
+        "**/__tests__/**/*.jsx",
+        "jest.config.ts",
+        "jest.config.js"
+      ],
+      "first_heading": "Jest unit test invariants",
       "has_yaml_frontmatter": true
     },
     {

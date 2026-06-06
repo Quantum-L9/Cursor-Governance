@@ -1,0 +1,34 @@
+---
+description: "Playwright E2E test invariants for web UI flows."
+globs:
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/e2e/**/*.ts"
+  - "**/e2e/**/*.tsx"
+  - "playwright.config.ts"
+  - "playwright.config.js"
+alwaysApply: false
+---
+
+# Playwright E2E invariants
+
+## Selectors and stability
+
+- Prefer `data-testid` or semantic selectors (`getByRole`, `getByLabel`) — not CSS/XPath fragility.
+- Use Playwright auto-waiting — avoid arbitrary `sleep` or fixed timeouts.
+
+## Test design
+
+- Cover critical user flows (login, checkout, registration) — not visual style assertions.
+- Group with `test.describe`; setup in `test.beforeEach`.
+- Limit to **3–5 focused tests** per file.
+- Assert both success and error paths.
+
+## Isolation
+
+- Mock external APIs with `page.route` for deterministic tests.
+- Base tests on user stories or documented flows — not implementation details.
+
+## TypeScript
+
+- If `tsconfig.json` or `.ts` test files exist, use `.ts` syntax and types.

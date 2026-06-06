@@ -1,20 +1,21 @@
 ---
-description: "NEVER push to git without explicit user request. This is the #1 rule for this project."
+description: "NEVER commit or push to git without explicit user request. Push is #1 deployment risk."
 alwaysApply: true
 ---
 
-# 🚨 #1 RULE: NEVER PUSH WITHOUT EXPLICIT REQUEST
+# 🚨 #1 RULE: NEVER COMMIT OR PUSH WITHOUT EXPLICIT REQUEST
 
 ## The Rule
 
-**NEVER run `git push` unless the user explicitly says "push", "push it", "push to remote", or similar.**
+- **NEVER** run `git commit` unless the user explicitly asks ("commit", "commit this", "commit and push", etc.).
+- **NEVER** run `git push` unless the user explicitly says "push", "push it", "push to remote", or similar.
 
-This is non-negotiable. No exceptions. No "I thought you wanted me to push."
+This is non-negotiable. No exceptions. No "I thought you wanted me to commit/push."
+
+See also: `99-no-auto-commit.mdc`, `96-git-push-approval.mdc`.
 
 ## What You CAN Do Without Asking
 
-- `git add`
-- `git commit`
 - `git status`
 - `git diff`
 - `git log`
@@ -23,6 +24,8 @@ This is non-negotiable. No exceptions. No "I thought you wanted me to push."
 
 ## What REQUIRES Explicit User Request
 
+- `git add` followed by `git commit` (or any `git commit`)
+- `git add && git commit` chains
 - `git push` (any form)
 - `git push origin`
 - `git push -u origin HEAD`
@@ -30,19 +33,21 @@ This is non-negotiable. No exceptions. No "I thought you wanted me to push."
 
 ## Why This Matters
 
-1. **Push = Deployment** — In this project, pushing to `staging` triggers Odoo.sh deployment
-2. **No Undo** — Once pushed, the code is live and visible to others
-3. **User Verification** — User needs to verify changes before they go to remote
-4. **Commit ≠ Push** — Committing locally is safe and reversible. Pushing is not.
+1. **Push = Deployment** — In many repos, pushing triggers CI/CD or Odoo.sh deploy
+2. **Commit needs review** — User must verify the diff before it is recorded
+3. **No Undo on remote** — Once pushed, the code is visible and may deploy
+4. **Commit ≠ Push** — Both require separate explicit approval unless user says "commit and push" in one request
 
 ## Correct Workflow
 
 ```
 1. Make changes
-2. git add + git commit (OK to do without asking)
-3. STOP and tell user: "Changes committed locally. Ready to push when you say so."
-4. WAIT for user to say "push" or "push it"
-5. Only then: git push
+2. Show the user what changed (diff or summary)
+3. WAIT for user to say "commit" or "commit and push"
+4. Only then: git add + git commit
+5. STOP and tell user: "Committed locally. Ready to push when you say so."
+6. WAIT for user to say "push" or "push it"
+7. Only then: git push
 ```
 
 ## Anti-Pattern (What NOT To Do)
@@ -51,11 +56,18 @@ This is non-negotiable. No exceptions. No "I thought you wanted me to push."
 # ❌❌❌ WRONG — NEVER DO THIS ❌❌❌
 git add -A && git commit -m "fix something" && git push
 
-# ✅✅✅ CORRECT ✅✅✅
+# ❌ WRONG — commit without being asked
 git add -A && git commit -m "fix something"
-# Then STOP and wait for user to request push
+
+# ✅✅✅ CORRECT ✅✅✅
+# [show diff, wait for "commit"]
+git add -A && git commit -m "fix something"
+# [wait for "push"]
+git push
 ```
 
 ## Lesson Learned
 
 **2026-03-17** — Agent pushed multiple commits without explicit request, triggering unwanted deployments. User was extremely clear this must never happen again.
+
+**2026-06-06** — Aligned with `99-no-auto-commit.mdc`: commit also requires explicit user approval.

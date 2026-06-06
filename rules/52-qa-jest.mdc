@@ -1,0 +1,38 @@
+---
+description: "Jest unit test invariants for TypeScript and JavaScript."
+globs:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.test.js"
+  - "**/*.test.jsx"
+  - "**/__tests__/**/*.ts"
+  - "**/__tests__/**/*.tsx"
+  - "**/__tests__/**/*.js"
+  - "**/__tests__/**/*.jsx"
+  - "jest.config.ts"
+  - "jest.config.js"
+alwaysApply: false
+---
+
+# Jest unit test invariants
+
+## Scope
+
+- Test business logic and utilities — not framework internals.
+- Mock **external** dependencies (API, DB, network) with `jest.mock()` **before** imports.
+- Do not mock internal logic under test.
+
+## Coverage per file
+
+- Valid inputs, invalid inputs, and edge cases (null, undefined, wrong types).
+- Limit to **3–5 focused tests** per file for maintainability.
+- Group related cases in `describe` blocks with behavior-describing names.
+
+## Assertions
+
+- Assert observable outcomes — not private implementation state.
+- Use `jest.clearAllMocks()` in `beforeEach` when mocks are shared.
+
+## TypeScript
+
+- If the project uses TypeScript, type mocks (`jest.Mock`) and test data explicitly.

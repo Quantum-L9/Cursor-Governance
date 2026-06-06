@@ -1,19 +1,19 @@
 # GlobalCommands rules manifest
 
-Generated: `2026-06-06T22:27:59Z` (UTC). Folder: `/Users/ib-mac/IB-Odoo_19 (LOCAL)/IB-Odoo_19/.cursor-commands/rules`.
+Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules`.
 
 ## Counts
 
 | Bucket | Count |
 |--------|------:|
 | `alwaysApply: true` | **39** |
-| `alwaysApply: false` | **12** |
+| `alwaysApply: false` | **14** |
 | No boolean `alwaysApply` | **0** |
 
 ## File index
 
 - `00-global.mdc` — alwaysApply **true** — Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards.
-- `01-git-push-prohibition.mdc` — alwaysApply **true** — NEVER push to git without explicit user request. This is the #1 rule for this project.
+- `01-git-push-prohibition.mdc` — alwaysApply **true** — NEVER commit or push to git without explicit user request. Push is #1 deployment risk.
 - `01-vps-rules.mdc` — alwaysApply **true** — L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.
 - `02-slash-commands.mdc` — alwaysApply **true** — Slash command recognition and execution - repo-agnostic governance protocols
 - `03-mcp-memory.mdc` — alwaysApply **true** — L9 Memory Stack - C1 PRIMARY server, PostgreSQL, Neo4j, Redis, pgvector
@@ -28,6 +28,8 @@ Generated: `2026-06-06T22:27:59Z` (UTC). Folder: `/Users/ib-mac/IB-Odoo_19 (LOCA
 - `40-domain-autonomy.mdc` — alwaysApply **false** — Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.
 - `43-lang-postgresql.mdc` — alwaysApply **false** — PostgreSQL schema, query, migration, and safety invariants.
 - `50-qa-testing.mdc` — alwaysApply **true** — Testing and QA rules for AI OS agents, runtimes, and integrations.
+- `51-qa-playwright.mdc` — alwaysApply **false** — Playwright E2E test invariants for web UI flows.
+- `52-qa-jest.mdc` — alwaysApply **false** — Jest unit test invariants for TypeScript and JavaScript.
 - `60-anti-patterns.mdc` — alwaysApply **true** — Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections.
 - `61-secrets-and-dependencies.mdc` — alwaysApply **false** — Secrets handling and dependency/supply-chain rules for L9.
 - `65-observability-performance.mdc` — alwaysApply **false** — Observability and performance rules for L9 runtime, agents, memory, and orchestration.

@@ -29,12 +29,20 @@ Git push operations require **explicit user approval** before execution.
 - "push to origin"
 - User explicitly types the push command
 
+### Approval Required For Commits
+
+- `git commit` (any form)
+- `git add && git commit` chains
+- See `99-no-auto-commit.mdc` for full commit policy
+
 ### What To Do Instead
 
-1. **Commit locally** — Always allowed without approval
-2. **Show what would be pushed** — `git log origin/branch..HEAD`
-3. **Ask for approval** — "Ready to push. Should I proceed?"
-4. **Wait for explicit confirmation** — Do not assume approval
+1. **Show the diff** — Let the user review changes before any commit
+2. **Wait for commit approval** — User must say "commit", "commit this", or "commit and push"
+3. **Commit locally** — Only after explicit commit approval
+4. **Show what would be pushed** — `git log origin/branch..HEAD`
+5. **Ask for push approval** — "Ready to push. Should I proceed?"
+6. **Wait for explicit confirmation** — Do not assume approval
 
 ### Example Workflow
 

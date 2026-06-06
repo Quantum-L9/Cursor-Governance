@@ -703,28 +703,28 @@ contain detection patterns like `postgresql://.*:.*@` to find violations.
 
 ---
 
-## 🚨 ULTRA-CRITICAL: Git Push Prohibition
+## 🚨 ULTRA-CRITICAL: No Auto Commit or Push
 
-### NEVER Push Without Explicit User Request
+### NEVER Commit or Push Without Explicit User Request
 
-**Effective: 2026-03-17**
+**Effective: 2026-03-17** (commit alignment: 2026-06-06) — Full rules: `99-no-auto-commit.mdc`, `01-git-push-prohibition.mdc`, `96-git-push-approval.mdc`
 
+- **NEVER** run `git commit` unless the user explicitly asks ("commit", "commit this", "commit and push", etc.)
 - **NEVER** run `git push` unless the user explicitly says "push", "push it", "push to remote", or similar
-- **NEVER** chain `git commit && git push` — commit is OK, push requires separate approval
-- **NEVER** assume the user wants to push after committing
-- **ALWAYS** wait for explicit push instruction
+- **NEVER** chain `git add && git commit` or `git commit && git push` without approval
+- **NEVER** assume the user wants to commit after finishing a fix, or push after committing
+- **ALWAYS** show the diff and wait for explicit commit instruction, then wait again for push
 
 **Allowed without asking:**
-- `git add`
-- `git commit`
 - `git status`
 - `git diff`
 - `git log`
+- `git fetch`
+- `git branch`
 
 **REQUIRES explicit user request:**
+- `git commit` (any form)
 - `git push` (any form)
-- `git push origin`
-- `git push -u origin`
 - `git push --force` (NEVER without explicit request)
 
 **Anti-pattern (2026-03-17):**
@@ -733,9 +733,10 @@ contain detection patterns like `postgresql://.*:.*@` to find violations.
 - User had not verified the change was correct
 - Result: Bad code pushed to remote, deployment triggered
 
-**Rule:** COMMIT ≠ PUSH. Commit locally is safe. Push is deployment. WAIT FOR EXPLICIT PUSH REQUEST.
+**Rule:** Neither commit nor push is automatic. Show changes → wait for commit → wait for push.
 
 **Lesson:** 2026-03-17 — Pushed multiple times without explicit request. User corrected forcefully.
+**Lesson:** 2026-06-06 — `01-git-push-prohibition` incorrectly allowed commit without ask; aligned to `99-no-auto-commit`.
 
 ---
 
