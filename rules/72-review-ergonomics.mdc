@@ -12,7 +12,27 @@ alwaysApply: false
 ## PR size and scope
 
 - Prefer **small, focused PRs** over large mixed changes.
+- Target **≤400 LOC** per PR when practical; split larger work into reviewable chunks.
 - If a change grows beyond a reasonable diff size, consider splitting into separate, reviewable chunks.
+
+---
+
+## Commit message format
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description`
+
+| Type | Use for |
+|------|---------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `test` | Tests only |
+| `refactor` | Code change, no behavior change |
+| `ci` | CI/CD changes |
+| `chore` | Maintenance |
+
+- Breaking changes: `type!:` prefix or `BREAKING CHANGE:` footer.
+- Commit messages describe **intent** only — they do not authorize `git commit` or `git push` (see `99-no-auto-commit.mdc`, `96-git-push-approval.mdc`).
 
 ---
 

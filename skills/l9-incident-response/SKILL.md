@@ -18,6 +18,7 @@ Handle production incidents systematically.
 ## Reference Map
 
 - `references/rollback-playbook.md` — rollback-first decision tree, forensic snapshot, escalation ladder, MTTR report skeleton.
+- `references/network-troubleshoot.md` — read-only developer network diagnostics (DNS, TLS, proxy, registry failures).
 
 ## Severity Levels
 

@@ -8,7 +8,7 @@ role: skill_entrypoint
 tags: [l9, python, tdd, uv, testing]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.1.0
 updated: 2026-06-06
 ---
 

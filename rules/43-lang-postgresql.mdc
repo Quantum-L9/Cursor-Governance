@@ -1,0 +1,54 @@
+---
+description: "PostgreSQL schema, query, migration, and safety invariants."
+globs:
+  - "**/*.sql"
+  - "**/migrations/**/*.sql"
+  - "**/schema.sql"
+  - "**/seed.sql"
+  - "**/alembic/**/*.py"
+alwaysApply: false
+---
+
+# PostgreSQL invariants
+
+## Schema
+
+- Use `TIMESTAMPTZ` for timestamps — not `TIMESTAMP` without timezone.
+- UUID for public IDs; `BIGSERIAL` for internal keys when appropriate.
+- `NOT NULL` by default — nullable only when intentional.
+- Foreign keys with explicit `ON DELETE` behavior.
+- Check constraints for domain invariants.
+
+## Queries
+
+- Parameterized queries always — never string-interpolate user input into SQL.
+- `SELECT` explicit columns — never `SELECT *` in application code.
+- `LIMIT` on potentially large result sets.
+- Run `EXPLAIN ANALYZE` before shipping complex queries.
+
+## Indexes
+
+- Index every foreign-key column.
+- `CREATE INDEX CONCURRENTLY` on live tables (non-blocking).
+- Partial indexes for frequently filtered subsets.
+- Remove unused indexes.
+
+## Migrations
+
+- Versioned files (e.g. `V001__create_table.sql`).
+- Large column additions: multi-step with backfill.
+- Test rollback before deploying.
+- No schema changes during peak traffic.
+
+## Transactions
+
+- Explicit `BEGIN`/`COMMIT` for multi-statement changes.
+- Set `statement_timeout` to prevent runaway queries.
+- `SELECT ... FOR UPDATE` when row locking is required.
+
+## Forbidden
+
+- `SELECT *` in app queries.
+- String-interpolated SQL.
+- Plaintext passwords stored in the database.
+- `TRUNCATE` in application code paths.

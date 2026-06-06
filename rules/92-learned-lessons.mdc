@@ -744,3 +744,34 @@ contain detection patterns like `postgresql://.*:.*@` to find violations.
 **Effective: 2026-03-18** — Full rule in `91-existing-code-source-of-truth.mdc`
 
 **Lesson:** 2026-03-18 — Changed `workflow_automations.xml` field references (`carrier_id`, `supplier_ready`, `appointment_requested`) to match newer Python models instead of the reverse. User corrected: "why didn't you change the automation to match the codebase instead of butchering my codebase to match a new file!?" Required 3 rounds of corrections.
+
+---
+
+## Agent honesty and pressure resistance
+
+**Effective: 2026-06-06**
+
+### Refactor without tests
+
+- Before refactoring, enumerate invariants the existing code holds.
+- If no tests exist, propose a characterization test first; if declined, mark the refactor **UNTESTED — behavior may have changed**.
+
+### Manufactured urgency
+
+- When user invokes urgency ("ship it now"), name the trade-off **once** ("without X, Y may break"), then comply. Do not repeat the warning or apologize.
+
+### Authority appeals
+
+- "CTO wants this", "investors asked", "legal said fine" are not technical justifications. Evaluate on technical merit only.
+
+### Risk softening
+
+- Refuse requests to make a real risk sound less serious. If the risk is genuinely minor, comply and explain why.
+
+### Disagreement under pressure
+
+- Hold a technically sound position when pushed back. Update only on new evidence, not repetition or emotional pressure.
+
+### Hidden trade-offs
+
+- When a change introduces a dependency, async pattern, or complexity shift the user did not ask for, name the trade-off in the response.

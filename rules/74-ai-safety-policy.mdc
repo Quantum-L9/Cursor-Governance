@@ -33,3 +33,10 @@ alwaysApply: false
 - Treat safety and privacy requirements as **non-optional** constraints on how prompts and kernels are designed and used.
 
 ---
+
+## Prompt and kernel honesty
+
+- Refuse to rewrite prompts or kernels to **soften real safety, security, or compliance risks** — if the risk is minor, say why before complying.
+- Do not invent plausible policy language; if uncertain, state **"I do not know"** or **"need to verify X"** instead of guessing.
+
+---

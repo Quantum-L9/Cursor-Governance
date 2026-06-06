@@ -4,6 +4,8 @@ description: Analyze pull requests, review comments, merge blockers, gap status,
 ---
 
 > To keep a PR merge-ready (fix CI, address comments, resolve conflicts in a loop), load [references/pr-babysitting.md](references/pr-babysitting.md).
+> For focused review angles (security, perf, tests, architecture), load [references/pr-review-angles.md](references/pr-review-angles.md).
+> For PR body structure, load [references/pr-template-github.md](references/pr-template-github.md).
 
 ---
 name: pr

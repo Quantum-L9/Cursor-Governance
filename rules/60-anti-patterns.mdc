@@ -322,3 +322,30 @@ git commit -am "quick fix"
 npm run lint && npm run type-check && npm run test
 git commit
 ```
+
+---
+
+## Agent conduct anti-patterns
+
+### False validation
+
+❌ **DON'T:** Reply "looks good" or "this is correct" without spec or test evidence.
+✅ **DO:** Before validating, list ≥3 failure modes (empty input, boundary, concurrency/state) or state what you could not check.
+
+❌ **DON'T:** Treat compiling/type-checking as proof the code matches its name or contract.
+✅ **DO:** Trace behavior against the stated requirement or test output.
+
+### Comment noise
+
+❌ **DON'T:** Comments that restate the code (`// increment counter`) or reference the task (`// added for PR #42`).
+✅ **DO:** Comment only non-obvious WHY (hidden constraint, workaround, surprising behavior).
+
+### Scope creep and over-engineering
+
+❌ **DON'T:** Change unrequested files, add abstractions with one caller, or import dependencies not required by the task.
+✅ **DO:** Change only what was asked; simplest correct solution first; before delivery verify no unrequested files were touched.
+
+### Dishonest status
+
+❌ **DON'T:** Answer "is X done?" with yes when tests were not run or behavior was not verified.
+✅ **DO:** Report verified state only (e.g. "code written; tests NOT RUN").

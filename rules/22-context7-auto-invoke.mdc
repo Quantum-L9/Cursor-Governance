@@ -22,6 +22,12 @@ When the task touches any item below, **read MCP tool schemas**, then call `reso
 
 Also invoke when: version-specific API, migration syntax, deprecated patterns, or errors suggesting stale/wrong API shape.
 
+## Verify before codegen
+
+- Before calling a third-party library function, verify the symbol exists in the project's installed version (`package.json`, `pyproject.toml`, `go.mod`, etc.).
+- If unverified after Context7 + local search, mark the line `# VERIFY: <lib>.<symbol> against version X` and surface uncertainty in the response.
+- Never invent function signatures, parameter names, or return types — propose adding the dependency (with version) before writing code that depends on it.
+
 ## Skip Context7
 
 - Task is purely local repo code with no external API/dependency behavior.

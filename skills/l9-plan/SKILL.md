@@ -12,6 +12,8 @@ auto_chain: ynp
 
 # /plan — Execution Planning
 
+For engineering ticket structure (acceptance criteria, GWT scenarios), load [references/engineering-ticket-template.md](references/engineering-ticket-template.md).
+
 ## WHAT IT DOES
 
 Create structured plan before implementation:
