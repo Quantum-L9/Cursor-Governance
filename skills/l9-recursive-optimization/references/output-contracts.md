@@ -6,8 +6,8 @@ role: output_contract
 tags: [recursive, output, deliverables]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-06
+version: 1.0.1
+updated: 2026-06-07
 /L9_META -->
 
 # Output Contracts
@@ -43,9 +43,10 @@ Do NOT deliver summary-only when pack contract requires complete files.
 Deliver:
 
 1. Alignment report (abbreviated if converged with zero critical/high — still list passes run)
-2. Revised artifacts for every section that was improved
-3. Before/after violation count if alignment ran twice
-4. Convergence block
+2. **Delta table** — file/section, severity, before, after, rationale
+3. Revised artifact sections for every improvement (full file only when `persist=apply`)
+4. Before/after violation count if alignment ran twice
+5. Convergence block
 
 ## Presentation Order
 

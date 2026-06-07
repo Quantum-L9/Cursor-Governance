@@ -6,8 +6,8 @@ role: mode_router
 tags: [recursive, alignment, improvement, optimization, routing]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-06
+version: 1.0.1
+updated: 2026-06-07
 /L9_META -->
 
 # Mode Routing
@@ -31,7 +31,8 @@ Select align, improve, or optimize before running passes.
 | recursive alignment, align against contract, alignment audit | align |
 | recursive improvement, improve this pack/prompt, strengthen enforceability | improve |
 | recursive optimization, recursively optimize/harden/converge | optimize |
-| fix violations / implement corrections | improve or optimize + explicit implement OK |
+| fix violations / implement corrections | improve or optimize + `persist=apply` |
+| generate delta, what improved | optimize + report-only (default persist) |
 
 ## Decision Rules
 
@@ -47,7 +48,7 @@ Select align, improve, or optimize before running passes.
 2. If zero critical/high violations and user did not request improvement → deliver alignment report only; convergence `converged`.
 3. If violations exist → run improvement protocol on affected sections only.
 4. Re-run alignment on changed sections; escalate severity if regression detected.
-5. Stop when alignment finds no new material issues and improvement passes add no leverage.
+5. Stop when alignment finds no new material issues, improvement passes add no leverage, or 3 align→improve cycles complete (whichever first).
 
 ## Conflicts
 

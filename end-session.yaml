@@ -77,8 +77,16 @@ phase_1_pickup_context:
   priority: 1
   required: true
   description: |
-    Write a structured pickup_context packet that enables reliable session resume.
-    This is THE MOST IMPORTANT part - it tells future sessions exactly where to continue.
+    Write structured pickup to memory-bank/activeContext.md (T0 SSOT) and optional Graphiti episode.
+    Legacy C1 PICKUP writes are deprecated.
+  
+  memory_bank_update: |
+    Update memory-bank/activeContext.md with: task, files touched, next action, blockers, GMP IDs, outcome.
+  
+  graphiti_optional: |
+    When GRAPHITI_MEMORY_ENABLED=1:
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+      --body "PICKUP|date={DATE}|task={TASK}|..." --kind pickup_context
   
   template: |
     PICKUP|date={YYYY-MM-DD}|task={current_task}|files={file1,file2,file3}|next={next_action}|blocker={blocker_or_none}|gmps={GMP-XX,GMP-YY}|outcome={success|partial|blocked}
@@ -101,7 +109,10 @@ phase_1_pickup_context:
     outcome: "success|partial|blocked"
   
   search_at_resume: |
-    python3 agents/cursor/cursor_memory_client.py search "PICKUP|" --limit 3
+    # T0 SSOT first
+    cat memory-bank/activeContext.md
+    # Then Graphiti (when enabled)
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 2: LESSONS & ERRORS (If Any)

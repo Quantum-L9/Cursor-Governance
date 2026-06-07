@@ -43,6 +43,7 @@ Required sections (numbered; merge/rename to match the actual change but cover a
 4. **VALIDATION** — gate results: `py_compile`, import test, ruff, XML, `make pr-check`, unit tests (X passed).
 5. **INVARIANTS CHECK** — protected systems untouched, no scope drift, repo guardrails honored.
 6. **DECLARATION** — the verbatim final declaration.
+7. **GRAPHITI MEMORY EVIDENCE** (when Graphiti enabled) — episodes written, `group_id`, supersedes/conflicts counts, `memory-bank` updated, token spend (T1), circuit state, `MEMORY_PREFETCH` cited in Phase 0.
 
 The canonical 10-section finalization layout (Change Summary, Locked TODO Plan, Ground Truth, Files Modified, Implementation Evidence, Governance Updates, Tests Run, Validation Results, Invariants Check, Final Declaration) is acceptable when a fuller record is warranted — see `docs/gmp_protocol/cursor-phase-6-finalization.md`.
 

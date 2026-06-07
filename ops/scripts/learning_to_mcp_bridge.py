@@ -493,8 +493,19 @@ class LearningToMCPBridge:
 
 def main():
     import argparse
+    import sys
+
+    if "--force-legacy-c1" not in sys.argv:
+        print(
+            "DEPRECATED: C1 writes disabled. Use Graphiti:\n"
+            "  python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap\n"
+            "Pass --force-legacy-c1 to run this bridge anyway.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     
     parser = argparse.ArgumentParser(description='Learning to MCP-Memory Bridge')
+    parser.add_argument('--force-legacy-c1', action='store_true', help='Allow C1 writes (deprecated)')
     parser.add_argument('--migrate-gold', action='store_true', help='Migrate gold lessons from repeated-mistakes.md')
     parser.add_argument('--ingest-extracted', action='store_true', help='Ingest patterns from memory_index.json')
     parser.add_argument('--full-sync', action='store_true', help='Full sync: gold + extracted')

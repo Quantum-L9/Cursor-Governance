@@ -6,8 +6,8 @@ role: validation_contract
 tags: [recursive, validation, quality_gates]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-06
+version: 1.0.1
+updated: 2026-06-07
 /L9_META -->
 
 # Validation Checklist
@@ -25,6 +25,8 @@ Fail-closed gates before delivering recursive optimization output.
 ## Alignment Gates
 
 - [ ] Context lock completed (pass 1)
+- [ ] Generic passes G1–G8 run (generic-artifact-passes.md)
+- [ ] Skill-pack overlay run when artifact is a skill
 - [ ] Applicable L9 passes run or marked N/A with reason
 - [ ] Every violation has id, severity, evidence, correction
 - [ ] Unknowns listed — not invented

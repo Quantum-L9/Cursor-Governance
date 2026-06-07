@@ -20,10 +20,10 @@ Clean session close: structured PICKUP context, canonical memory extraction, Red
 
 ## Core Contract
 
-`PICKUP → MEMORY → REDIS → HOOKS → GOVERNANCE BACKUP → HANDOFF`
+`PICKUP → MEMORY-BANK (T0) → GRAPHITI (T1) → REDIS → HOOKS → GOVERNANCE BACKUP → HANDOFF`
 
-1. **PICKUP** — write structured handoff packet to C1 memory.
-2. **MEMORY** — atomic learnings via canonical pipeline (one fact per write).
+1. **PICKUP** — update `memory-bank/activeContext.md` (T0 SSOT); optional Graphiti episode when enabled.
+2. **MEMORY** — Graphiti atomic writes via `graphiti_memory_client.py` (C1 legacy read-only).
 3. **REDIS** — `cache_set_session_context` for next-window resume (mandatory).
 4. **HOOKS** — teardown session hooks if activated at start.
 5. **GOVERNANCE** — backup GlobalCommands to GitHub.

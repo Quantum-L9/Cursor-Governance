@@ -6,8 +6,8 @@ role: convergence_schema
 tags: [recursive, convergence, output]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-06
+version: 1.0.1
+updated: 2026-06-07
 /L9_META -->
 
 # Convergence Block
@@ -21,6 +21,9 @@ Required closing section for every recursive optimization delivery. Proves wheth
 ```yaml
 convergence_status: converged | partial | blocked
 recursive_passes_run: <integer>
+align_improve_cycles_run: <integer>
+max_cycles: 3
+cycles_exhausted: true | false
 same_output_after_multiple_passes: true | false
 remaining_unknowns: []
 minimum_safe_next_action: <string>
@@ -68,6 +71,6 @@ violations_deferred: <integer>
 
 ## Convergence Rule
 
-Stop only when another full pass produces no material improvement. If convergence cannot be reached without invention, halt with `blocked` and state the exact blocker.
+Stop when another full pass produces no material improvement, or when `align_improve_cycles_run` reaches `max_cycles` (default 3). If not converged at cycle cap, set `convergence_status: partial` and `cycles_exhausted: true`. If convergence cannot be reached without invention, halt with `blocked` and state the exact blocker.
 
 Do not show intermediate passes in final delivery unless user requests them.

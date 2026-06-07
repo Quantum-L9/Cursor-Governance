@@ -217,36 +217,27 @@ startup_sequence:
   # STEP 3.5: MCP Memory Health Check
   # ─────────────────────────────────────────────────────────
   step_3_5:
-    name: "MCP Memory Health Check"
-    command_portable: "python3 .cursor/memory/cursor_memory_client.py health"
-    command_l9: "python3 agents/cursor/cursor_memory_client.py health"
+    name: "Graphiti Memory Health + Prefetch"
+    command_primary: "python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health"
+    command_resolve: "python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve"
+    command_legacy_c1: "python3 .cursor/memory/cursor_memory_client.py health"
     command_resolution: |
-      Use command_portable (works in ANY repo with .cursor/memory/ synced).
-      Use command_l9 only when inside the L9 repo itself.
-      Agent should check: if .cursor/memory/cursor_memory_client.py exists, use it.
-      Otherwise fall back to agents/cursor/cursor_memory_client.py.
-    component_id: "MCP-HEALTH-001"
-    purpose: "Verify C1 MCP memory server is reachable"
-    duration_seconds: 15
+      Primary: Graphiti CLI when GRAPHITI_MEMORY_ENABLED=1 and ~/.cursor/graphiti.env exists.
+      Legacy C1 health is advisory only (read-only).
+      Prefetch is automatic via sessionStart orchestrator hook.
+    component_id: "GRAPHITI-HEALTH-001"
+    purpose: "Verify Graphiti VPS reachable; resolve workspace group_id; read memory-bank/activeContext.md"
+    duration_seconds: 20
     skip: never
     enforcement: "100%"
     blocking: false
     on_failure: "warn"
     reference_files:
-      - ".cursor/memory/cursor_memory_kernel.yaml"
-      - ".cursor/memory/cursor_system_prompt.md"
-      - ".cursor/memory/governance-reference.md"
-    troubleshooting:
-      - "Check MCP_API_KEY_C in .env, .cursor/.env, or ~/.cursor-memory.env"
-      - "Check MCP_URL is http://46.62.243.82/memory (direct IP, bypasses Cloudflare)"
-      - "VPS may need restart: ssh root@46.62.243.82 'cd /opt/l9 && docker compose restart l9-api'"
-    portability_note: |
-      The portable memory client at .cursor/memory/cursor_memory_client.py has:
-      - Zero external dependencies (structlog shimmed to stdlib logging)
-      - Smart .env loader (searches cwd, .cursor/, upward, ~/.cursor-memory.env)
-      - Full PacketEnvelope v2.0 compliance (same schema as L9)
-      - All MCP tools: save_memory, search_memory, get_memory_stats
-      Sync from L9: run .cursor/sync-portable.sh
+      - ".cursor-commands/ops/graphiti/graphiti.env.example"
+      - ".cursor-commands/ops/graphiti/DEPLOY.md"
+      - "memory-bank/activeContext.md"
+      - ".cursor-commands/rules/03-graphiti-memory.mdc"
+    resume_ssot: "memory-bank/activeContext.md (T0) before Graphiti search"
 
   # ─────────────────────────────────────────────────────────
   # STEP 4-4.8: Startup Files (5 files)

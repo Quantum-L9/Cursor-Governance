@@ -20,6 +20,8 @@ def load_state(conv_id: str) -> dict:
 def gates_enabled() -> bool:
     import os
 
+    if "GRAPHITI_WRITE_GATES" in os.environ:
+        return os.environ.get("GRAPHITI_WRITE_GATES", "0") == "1"
     env_path = Path.home() / ".cursor" / "graphiti.env"
     if env_path.is_file():
         for line in env_path.read_text(encoding="utf-8").splitlines():
@@ -52,20 +54,37 @@ def gmp_prompt(text: str) -> bool:
     return bool(re.search(r"GMP|phase\s*[0-6]|modification lock|TODO plan", text, re.I))
 
 
+READ_ONLY_TOOLS = frozenset(
+    {
+        "Read",
+        "Grep",
+        "Glob",
+        "SemanticSearch",
+        "ListDir",
+        "TaskExplore",
+        "Shell",
+        "mcp",
+    }
+)
+
+
 def pre_tool_use(payload: str) -> dict:
     if not gates_enabled():
         return {"permission": "allow"}
     data = json.loads(payload) if payload.strip() else {}
+    tool = data.get("tool_name") or data.get("toolName") or ""
+    if tool in READ_ONLY_TOOLS or tool.startswith("mcp_"):
+        return {"permission": "allow"}
     conv = data.get("conversation_id") or data.get("conversationId") or "default"
     state = load_state(str(conv))
-    if memory_ok(state):
-        return {"permission": "allow"}
     prompt = json.dumps(data)
     if gmp_prompt(prompt) and "gmp:phase_lock" not in (state.get("memory_satisfied_for") or []):
         return {
             "permission": "deny",
-            "user_message": "Graphiti gate: GMP requires prefetch + conflicts check (gmp:phase_lock). Run graphiti_memory_client.py inject/search first.",
+            "user_message": "Graphiti gate: GMP requires prefetch + conflicts check (gmp:phase_lock). Run graphiti_memory_client.py phase-lock first.",
         }
+    if memory_ok(state):
+        return {"permission": "allow"}
     return {
         "permission": "deny",
         "user_message": "Graphiti gate: Write blocked until memory prefetch satisfied. Run Graphiti search or satisfy prefetch.",

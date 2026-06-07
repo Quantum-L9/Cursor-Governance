@@ -114,7 +114,8 @@ install_session_end_governance_hook() {
   fi
 
   if [ -f "$orchestrator_src" ]; then
-    chmod +x "$orchestrator_src" "$GLOBAL_COMMANDS/ops/hooks/graphiti_common.sh"
+    chmod +x "$orchestrator_src" "$GLOBAL_COMMANDS/ops/hooks/graphiti_common.sh" \
+      "$GLOBAL_COMMANDS/ops/hooks/graphiti_gate_runner.sh" 2>/dev/null || true
     link_or_update "$orchestrator_link" "$orchestrator_src" "~/.cursor/hooks/session-start-memory-orchestrator.sh"
   fi
 

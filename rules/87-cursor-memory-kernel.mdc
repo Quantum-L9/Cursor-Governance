@@ -6,6 +6,8 @@ alwaysApply: true
 
 # Cursor Memory Kernel Enforcement
 
+**Updated: 2026-06-07** — Resume SSOT is **`memory-bank/`** (T0) + **Graphiti** (T1/T2). C1 L9 **decommissioned**; Graphiti at `/opt/graphiti-cursor` via SSH tunnel. See `03-graphiti-memory.mdc`.
+
 **Effective: 2026-02-14**
 
 The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source** for all Cursor memory behavior. This rule enforces its contracts.
@@ -16,7 +18,7 @@ The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source
 
 1. **Scope:** Always use `scope: "cursor"` for writes. Search across `["cursor", "developer", "global"]`.
 2. **Kind:** Use the correct kind from the kernel YAML: `preference`, `lesson`, `error`, `insight`, `note`, `rule`.
-3. **Endpoint:** Direct MCP at `http://46.62.243.82:9002` (bypass nginx). Fallback: `http://46.62.243.82/memory`.
+3. **Endpoint:** Graphiti VPS via `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py` (SSH tunnel `http://127.0.0.1:8100/mcp/`). C1 legacy `:9002` / `/memory` **read-only retired**.
 4. **Tags:** Include meaningful tags. At minimum: `["cursor", <kind>]`. For lessons: `["governance", "repeated-mistake", <tier>]`.
 
 ---
@@ -25,11 +27,9 @@ The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source
 
 When starting a session (whether via `/start-session` or manually):
 
-1. **Health check:** `python3 .cursor/memory/cursor_memory_client.py health`
-2. **Inject 5-layer context:** `python3 .cursor/memory/cursor_memory_client.py inject "current task"`
-3. **Load system prompt:** Read `agents/cursor/cursor_system_prompt.md` for identity and rules
-4. **Activate session hooks:** `CursorSessionHooks.on_session_start()` is available for session continuity
-5. **Read workflow_state.md** for current phase and next steps
+1. **Health check:** `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health`
+2. **Inject context:** `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py inject "current task"`
+3. **Read T0 SSOT:** `memory-bank/activeContext.md`
 
 ---
 
@@ -38,8 +38,8 @@ When starting a session (whether via `/start-session` or manually):
 When the user corrects a mistake:
 
 1. **Extract lesson immediately** — do not wait for session end
-2. **Dedupe-check:** `python3 .cursor/memory/cursor_memory_client.py search "lesson topic"` to avoid duplicates
-3. **Write to memory:** `python3 .cursor/memory/cursor_memory_client.py write "LESSON: ..." --kind lesson --scope cursor`
+2. **Dedupe-check:** `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "lesson topic"`
+3. **Write to memory:** `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write "LESSON: ..." --kind lesson`
 4. **Update repeated-mistakes.md** if the lesson is significant enough for the curated list
 
 ---
@@ -48,7 +48,7 @@ When the user corrects a mistake:
 
 When hitting an error during execution:
 
-1. **Check memory first:** `python3 .cursor/memory/cursor_memory_client.py search "error description"` — a solution may already exist
+1. **Check memory first:** `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "error description"`
 2. **If solution found:** Apply it. Do not debug from scratch.
 3. **If no solution:** Debug normally, then write the fix to memory for next time.
 
@@ -69,9 +69,9 @@ When hitting an error during execution:
 Each write = one terse, pre-classified fact:
 
 ```bash
-python3 .cursor/memory/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "_require_X() guard pattern fixes nullable service attrs. Helper raises RuntimeError if None, caller uses local var." \
-  --kind lesson --scope cursor
+  --kind lesson
 ```
 
 ### Rules
@@ -86,7 +86,7 @@ python3 .cursor/memory/cursor_memory_client.py write \
 
 ```bash
 # BAD: One big blob with everything
-python3 .cursor/memory/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "SESSION: 2026-02-16. WORK: Fixed 2,584 ruff errors. LESSONS: (1) _require_X() pattern... (2) mypy install... (3) ruff --statistics..." \
   --kind note
 ```
@@ -95,21 +95,21 @@ python3 .cursor/memory/cursor_memory_client.py write \
 
 ```bash
 # GOOD: Atomic writes — one fact each
-python3 .cursor/memory/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "_require_X() guard pattern fixes nullable service attrs. Helper raises RuntimeError if None, caller uses local var." \
-  --kind lesson --scope cursor
+  --kind lesson
 
-python3 .cursor/memory/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "mypy on Homebrew Python 3.12: pip install --user --break-system-packages. Binary at ~/Library/Python/3.12/bin/mypy." \
-  --kind lesson --scope cursor
+  --kind lesson
 
-python3 .cursor/memory/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "ruff --statistics for error categorization. grep -P unavailable on macOS." \
-  --kind lesson --scope cursor
+  --kind lesson
 
-python3 .cursor/memory/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "union-attr errors are real NoneType crash risks. Fixing them = runtime safety, not just type noise." \
-  --kind insight --scope cursor
+  --kind insight
 ```
 
 ---
@@ -119,7 +119,7 @@ python3 .cursor/memory/cursor_memory_client.py write \
 After completing a GMP, major refactor, or multi-file change:
 
 1. **Extract atomic facts** — identify each distinct lesson, insight, error fix, or preference from the work
-2. **Write each as a separate memory** — one `cursor_memory_client.py write` per fact (see Memory Write Format above)
+2. **Write each as a separate memory** — one `graphiti_memory_client.py write` per fact (see Memory Write Format above)
 3. **Record tool actions:** If session hooks are active, `on_action()` records automatically. Otherwise, note significant actions manually.
 
 ---
@@ -150,8 +150,5 @@ Before committing, verify:
 | File | Purpose |
 |------|---------|
 | `agents/cursor/cursor_memory_kernel.yaml` | Authoritative memory behavior contract |
-| `.cursor/memory/cursor_memory_client.py` | CLI for all memory operations |
-| `agents/cursor/cursor_session_hooks.py` | Session lifecycle hooks |
-| `agents/cursor/cursor_system_prompt.md` | Identity and memory scope rules |
-
-**HTTP writes are PROHIBITED** — bypasses MCP pipeline. Use `.cursor/memory/cursor_memory_client.py` only.
+| `.cursor-commands/ops/graphiti/graphiti_memory_client.py` | CLI for Graphiti memory (health, search, write, inject, bootstrap) |
+| `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |

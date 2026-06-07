@@ -117,6 +117,54 @@ PY
 fi
 
 echo ""
+echo "=== Graphiti memory (GLOBAL-001) ==="
+GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
+if [ -f "$GRAPHITI_CLI" ]; then
+  pass "graphiti_memory_client.py present"
+  if python3 -c "import yaml; yaml.safe_load(open('$GC/ops/graphiti/group_registry.yaml'))" 2>/dev/null; then
+    pass "group_registry.yaml valid"
+  else
+    fail "group_registry.yaml invalid"
+  fi
+  if python3 "$GRAPHITI_CLI" resolve >/dev/null 2>&1; then
+    pass "graphiti resolve exits 0"
+  else
+    fail "graphiti resolve failed"
+  fi
+  if [ -f "$HOME/.cursor/graphiti.env" ]; then
+    pass "~/.cursor/graphiti.env exists"
+  else
+    echo "  WARN: ~/.cursor/graphiti.env missing (copy graphiti.env.example)"
+  fi
+  if grep -q "session-start-memory-orchestrator" "$HOOKS_JSON" 2>/dev/null; then
+    pass "sessionStart orchestrator registered"
+  else
+    fail "sessionStart orchestrator not in hooks.json"
+  fi
+  GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
+  if [ -f "$GATE_LIB" ] && grep -q "gmp:phase_lock" "$GATE_LIB"; then
+    pass "GMP gate matcher present in graphiti_gate_lib.py"
+  else
+    fail "GMP gate matcher missing"
+  fi
+  if bash "$GC/ops/graphiti/test_gate_e2e_full.sh" >/dev/null 2>&1; then
+    pass "graphiti gate E2E full self-test"
+  elif bash "$GC/ops/graphiti/test_gate_e2e.sh" >/dev/null 2>&1; then
+    pass "graphiti gate E2E self-test (minimal)"
+  else
+    fail "graphiti gate E2E self-test"
+  fi
+else
+  fail "Graphiti CLI missing: $GRAPHITI_CLI"
+fi
+
+if [ -d "$WORKSPACE/memory-bank" ]; then
+  pass "memory-bank/ directory present"
+else
+  echo "  WARN: memory-bank/ missing — run setup_workspace_symlinks.sh"
+fi
+
+echo ""
 if [ $FAIL -eq 0 ]; then
   echo "RESULT: PASS — governance wiring + sessionEnd hook active"
   exit 0

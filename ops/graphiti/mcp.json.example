@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "graphiti-memory": {
-      "url": "http://100.x.x.x:8100/mcp/",
+      "url": "http://127.0.0.1:8100/mcp/",
       "headers": {
         "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
       }

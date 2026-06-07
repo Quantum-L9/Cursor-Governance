@@ -23,6 +23,6 @@ When active:
 
 Default (`GRAPHITI_WRITE_GATES=0`): advisory prefetch only — no Write blocking.
 
-## GMP Phase 0
+Runbook: `ops/graphiti/GATES-002-ACTIVATION.md`
 
 Must cite Graphiti prefetch episode names and run `graphiti_memory_client.py conflicts` before plan lock.

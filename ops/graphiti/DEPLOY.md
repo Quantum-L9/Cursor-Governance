@@ -1,35 +1,63 @@
-# Graphiti VPS Deploy — Human Steps (Phase 0)
+# Graphiti VPS Deploy — C1 post-L9 (locked)
 
-## Prerequisites
+**Host:** `46.62.243.82` (Hetzner C1)  
+**Install path:** `/opt/graphiti-cursor`  
+**Prerequisite:** L9 stack decommissioned (`/opt/l9` archived; no `l9-*` containers)  
+**Mac access:** SSH tunnel (Tailscale **out of scope**)
 
-- VPS with Docker; Neo4j 5.26 + Graphiti MCP
-- Tailscale on VPS and Mac
-- OpenAI API key (extraction only)
+## Ports (loopback on VPS)
 
-## Deploy
+| Service | Bind | Notes |
+|---------|------|-------|
+| Graphiti MCP | `127.0.0.1:8100` | Maps container 8000 |
+| Neo4j bolt | `127.0.0.1:7687` | DB `graphiti_cursor` |
+| Neo4j browser | `127.0.0.1:7474` | Optional admin |
+
+## Deploy on C1
 
 ```bash
-cd GlobalCommands/ops/graphiti
-cp graphiti.env.example graphiti.env   # on VPS — fill secrets
+ssh -i ~/.ssh/Hetzner-C1-nopass root@46.62.243.82
+mkdir -p /opt/graphiti-cursor
+cd /opt/graphiti-cursor
+# Copy docker-compose.yml from GlobalCommands/ops/graphiti/
+cp graphiti.env.example graphiti.env   # fill OPENAI_API_KEY, tokens — NEVER commit
 docker compose up -d
 curl -sf -H "Authorization: Bearer $GRAPHITI_MCP_TOKEN" http://127.0.0.1:8100/healthcheck
-cypher-shell -a bolt://127.0.0.1:7687 "RETURN 1"
 ```
-
-Confirm default namespace: Graphiti MCP may use `"default"` or `"main"` — both are **forbidden** in production (`group_registry.yaml`).
 
 ## Mac client
 
 ```bash
-cp graphiti.env.example ~/.cursor/graphiti.env   # fill Tailscale IP + token
-# Merge mcp.json.example into ~/.cursor/mcp.json
+# Terminal 1 — tunnel
+ssh -N -L 8100:127.0.0.1:8100 -i ~/.ssh/Hetzner-C1-nopass root@46.62.243.82
+
+# Terminal 2 — env
+cp GlobalCommands/ops/graphiti/graphiti.env.example ~/.cursor/graphiti.env
+# GRAPHITI_MCP_URL=http://127.0.0.1:8100/mcp/
+# GRAPHITI_MCP_TOKEN=<same as VPS>
+# GRAPHITI_MEMORY_ENABLED=1
+# GRAPHITI_WRITE_GATES=0
+
 bash GlobalCommands/ops/scripts/setup_workspace_symlinks.sh "$(pwd)"
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
 ```
 
-## Verify namespace
+## Verify
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run --group-id sandbox-test
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py phase-lock
+bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ```
+
+## Warnings
+
+- **No** C1 PacketStore / L9 MCP migration — bootstrap fresh per repo
+- PlasticOS buyer-match Neo4j is separate (not this stack)
+- Constellation Gate hub (ADR-002) is separate from Graphiti memory hooks
+- Forbidden Graphiti groups: `main`, `default`, `test` (see `group_registry.yaml`)
+
+## L9 decommission record
+
+- **2026-06-07:** `/opt/l9` → `/opt/l9.archived-20260607`; all `l9-*` containers stopped

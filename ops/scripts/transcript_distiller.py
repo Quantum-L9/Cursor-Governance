@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Transcript Distiller — batch text-to-memory pipeline for L9.
 
+DEPRECATED for new writes (2026-06-06): ingest target is Graphiti VPS via
+`ops/graphiti/graphiti_memory_client.py bootstrap`. This script remains for
+offline C1 read/migration with --force-legacy-c1 only.
+
 General-purpose offline pipeline that:
 1. Reads text files (transcripts, ADRs, READMEs, GMP reports, etc.)
 2. Chunks them via L9's ChunkView (content-addressed, deterministic)

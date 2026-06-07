@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, recursive, alignment, improvement, optimization, convergence, audit, hardening]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-06
+version: 1.0.1
+updated: 2026-06-07
 sources:
   - Recursive Alignment.md
   - Recursive Improvement.md
@@ -26,13 +26,21 @@ Recursively align, improve, and converge artifact groups until they are complete
 |------|--------|------------|------|
 | **align** | Read-only audit vs active contract | Recursive Alignment | [alignment-protocol.md](references/alignment-protocol.md) |
 | **improve** | Transform artifacts in place | Recursive Improvement | [improvement-protocol.md](references/improvement-protocol.md) |
-| **optimize** (default) | Align → improve gaps → converge | Both protocols | mode-routing + both refs |
+| **optimize** (default) | Align → improve gaps → converge | Both protocols | [mode-routing.md](references/mode-routing.md) + both protocol refs |
 
 **Align** reports violations; it does not rewrite source. **Improve** rewrites artifacts while preserving intent. **Optimize** runs alignment first, improves material gaps, then re-aligns until convergence.
 
+## Inputs
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| artifact group | yes | Files, folder, pack, or pasted content |
+| mode | no | `align` \| `improve` \| `optimize` (default) |
+| persist | no | `report` (default) = revised content in response only; `apply` = write changes to disk |
+
 ## Authority Order
 
-1. Explicit user instruction (mode, scope, implement-or-not).
+1. Explicit user instruction (mode, scope, persist-or-report).
 2. Provided artifact group as primary source of truth.
 3. Active architecture contract — L9 rules when applicable; workspace rules (`AGENTS.md`, `INVARIANTS.md`, module rules) in PlasticOS repos.
 4. This skill's references.
@@ -44,16 +52,17 @@ Recursively align, improve, and converge artifact groups until they are complete
 2. **Preserve intent** — scope, required outputs, interfaces, and architecture boundaries MUST NOT drift.
 3. **L9 context when relevant** — TransportPacket, Gate-only egress, authority boundaries. Load [l9-context-rules.md](references/l9-context-rules.md).
 4. **No silent behavior change** — improvement mode MUST NOT weaken constraints or add unrequested scope.
-5. **No implementation** unless user explicitly requests code changes.
-6. **Convergence required** — every delivery ends with a convergence block. Load [convergence-block.md](references/convergence-block.md).
-7. **Output shape** — alignment → report; improvement → revised artifact group; optimize → both when gaps were fixed. Load [output-contracts.md](references/output-contracts.md).
+5. **Persist boundary** — improve/optimize MAY rewrite artifacts in the response; write to disk only when `persist=apply` or user explicitly requests file changes. Audits and deltas default to report-only.
+6. **Cycle bound** — max 3 align→improve cycles per invocation; then deliver with `partial` or `blocked` if not converged.
+7. **Convergence required** — every delivery ends with a convergence block. Load [convergence-block.md](references/convergence-block.md).
+8. **Output shape** — alignment → report; improvement → revised artifact group; optimize → delta report + revised sections when gaps fixed. Load [output-contracts.md](references/output-contracts.md).
 
 ## Compact Workflow
 
 ```text
 Route mode → Lock context (pass 1) → Run alignment and/or improvement passes (1–10)
-→ Validation gates → Convergence check → Re-run if material improvement remains
-→ Deliver output contract + convergence block
+→ Validation gates → Convergence check → Re-run if material improvement remains (max 3 cycles)
+→ Deliver delta + output contract + convergence block
 ```
 
 ### Optimize sequence (default)
@@ -61,8 +70,10 @@ Route mode → Lock context (pass 1) → Run alignment and/or improvement passes
 ```text
 Context lock → Alignment passes 1–10 → Violation report
 → Improvement passes 1–10 on gaps → Re-align critical/high
-→ Convergence → Deliver
+→ Convergence → Deliver (max 3 cycles)
 ```
+
+When artifact is a skill pack, also align against `l9-skill-compiler` [skill-pack-contract.md](../l9-skill-compiler/references/skill-pack-contract.md).
 
 ## Resource Map
 
@@ -74,6 +85,7 @@ Load references only when relevant:
 - [references/l9-context-rules.md](references/l9-context-rules.md) — L9 non-negotiables when artifact touches nodes/Gate/transport
 - [references/convergence-block.md](references/convergence-block.md) — required convergence fields per mode
 - [references/output-contracts.md](references/output-contracts.md) — alignment report vs improved pack deliverables
+- [references/generic-artifact-passes.md](references/generic-artifact-passes.md) — coverage, provenance, compression (non-L9 artifacts)
 - [references/validation-checklist.md](references/validation-checklist.md) — fail-closed gates before delivery
 
 ## Validation

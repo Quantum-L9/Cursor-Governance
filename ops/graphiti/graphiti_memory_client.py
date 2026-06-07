@@ -293,6 +293,36 @@ def cmd_conflicts(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _state_path() -> Path:
+    conv = os.environ.get("CURSOR_CONVERSATION_ID", "default")
+    state_dir = Path.home() / ".cursor" / "graphiti-state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir / f"{conv}.json"
+
+
+def _append_satisfied(key: str) -> dict:
+    path = _state_path()
+    data: dict = {}
+    if path.is_file():
+        data = json.loads(path.read_text(encoding="utf-8"))
+    satisfied = data.setdefault("memory_satisfied_for", [])
+    if key not in satisfied:
+        satisfied.append(key)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return {"state_file": str(path), "memory_satisfied_for": satisfied}
+
+
+def cmd_phase_lock(_args: argparse.Namespace) -> int:
+    """Run conflicts check and mark gmp:phase_lock in session state."""
+    load_env()
+    rc = cmd_conflicts(_args)
+    if rc != 0:
+        return rc
+    result = _append_satisfied("gmp:phase_lock")
+    print(json.dumps({"phase_lock": "granted", **result}, indent=2))
+    return 0
+
+
 def cmd_prune(args: argparse.Namespace) -> int:
     from prune import run_prune_report
 
@@ -323,6 +353,7 @@ def main() -> int:
     p_stats = sub.add_parser("stats")
     p_stats.add_argument("--group", default=None)
     sub.add_parser("conflicts")
+    sub.add_parser("phase-lock")
     p_prune = sub.add_parser("prune")
     p_prune.add_argument("--dry-run", action="store_true")
     p_prune.add_argument("--apply", action="store_true")
@@ -337,6 +368,7 @@ def main() -> int:
         "bootstrap": cmd_bootstrap,
         "stats": cmd_stats,
         "conflicts": cmd_conflicts,
+        "phase-lock": cmd_phase_lock,
         "prune": cmd_prune,
     }
     try:

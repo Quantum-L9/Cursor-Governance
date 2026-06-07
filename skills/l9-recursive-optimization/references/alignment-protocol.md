@@ -6,8 +6,8 @@ role: alignment_protocol
 tags: [recursive, alignment, audit, l9, violations]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-06
+version: 1.0.1
+updated: 2026-06-07
 sources:
   - Recursive Alignment.md
 /L9_META -->
@@ -37,6 +37,10 @@ Load [l9-context-rules.md](l9-context-rules.md). Violations are critical unless 
 Inspect: artifact type, target repo/pack, declared purpose, node role, ownership boundary, expected outputs.
 
 Output: normalized context record, unknowns, scope boundary.
+
+### Pass 1b — Generic artifact alignment
+
+Load [generic-artifact-passes.md](generic-artifact-passes.md). Run passes G1–G8 for all artifact types. For skill packs, include skill-compiler contract overlay.
 
 ### Pass 2 — Transport alignment (L9)
 

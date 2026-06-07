@@ -2,8 +2,9 @@
 # GATES-002 E2E — verify gate deny/allow via forced state file (no MCP required)
 set -euo pipefail
 REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
-# shellcheck source=graphiti_common.sh
-source "$(dirname "$REAL_HOOK")/graphiti_common.sh"
+GC_ROOT="$(cd "$(dirname "$REAL_HOOK")/.." && pwd)"
+# shellcheck source=../hooks/graphiti_common.sh
+source "$GC_ROOT/hooks/graphiti_common.sh"
 graphiti_resolve_cli
 GATE_LIB="$(dirname "$GRAPHITI_CLI")/graphiti_gate_lib.py"
 STATE_DIR="$HOME/.cursor/graphiti-state"

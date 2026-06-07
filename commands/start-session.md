@@ -1,7 +1,7 @@
 ---
 name: start-session
 version: "2.3.0"
-description: "Initialize Cursor session — governance wiring gate, then context + C1 memory health"
+description: "Initialize Cursor session — governance wiring gate, Graphiti prefetch + memory-bank T0"
 auto_chain: null
 auto_chain_on_fail:
   check: governance_wiring
@@ -15,10 +15,10 @@ auto_chain_on_fail:
 Full preflight check before starting work:
 
 0. **Governance wiring gate** — `.cursor-commands` SSOT + `sessionEnd` hook (auto-chains `/wire governance` if FAIL)
-1. **Check C1 Memory Health**
-2. **Load Memory Operations Reference** (`.cursor/memory/CURSOR-MEMORY-CLIENT.md`)
+1. **Graphiti memory** — health/resolve + read `memory-bank/activeContext.md` (T0 SSOT); sessionStart orchestrator prefetches when enabled
+2. **Legacy C1** — read-only advisory health (deprecated writes)
 3. **Redis session context** — resume from last `/end-session` handoff
-4. Load memory context from C1 (PICKUP packets, lessons)
+4. Load Graphiti/C1 context (PICKUP packets, lessons)
 5. Extract GMP Queue from TODO.md (if present)
 6. Identify priorities
 
@@ -59,56 +59,33 @@ Pass criteria:
 - `sessionEnd` hook registered in `~/.cursor/hooks.json`
 - `~/.cursor/hooks/governance-backup.sh` → SSOT backup script
 
-### 0. PREFLIGHT — C1 Memory Health + Reference Docs
+### 0. PREFLIGHT — Graphiti Memory + memory-bank (T0)
 
-**Step 0a: Check C1 MCP server**
+**Step 0a: Graphiti health + group resolve**
 
 ```bash
-# Check C1 MCP server is reachable
-python3 agents/cursor/cursor_memory_client.py health
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
 ```
 
 | Status | Meaning | Action |
 |--------|---------|--------|
-| ✅ healthy | C1 MCP responding | Proceed normally |
-| ⚠️ degraded | MCP down, API up | Note: Memory writes may fail |
-| ❌ unhealthy | Both down | Warn user, proceed without memory |
+| ✅ healthy | Graphiti VPS reachable | Proceed; prefetch runs via sessionStart hook when `GRAPHITI_MEMORY_ENABLED=1` |
+| ❌ unhealthy | VPS down or env missing | Warn; read `memory-bank/activeContext.md` only; see `ops/graphiti/DEPLOY.md` |
 
-**If unhealthy:** Continue session but note in output that memory operations are unavailable.
-
-**Step 0b: Load Memory Operations Reference**
+**Step 0b: T0 resume SSOT**
 
 ```bash
-# Read memory client documentation for reference
-cat agents/cursor/docs/CURSOR-MEMORY-CLIENT.md
+cat memory-bank/activeContext.md 2>/dev/null || echo "(scaffold on first wire)"
 ```
 
-This provides:
-- C1 architecture diagram
-- Write/Search/Retrieve flow
-- All 27 commands available
-- Troubleshooting steps
-- Governance rules stored in memory
-
-**Step 0c: Load Cursor system prompt identity**
+**Step 0c: Legacy C1 (advisory, read-only)**
 
 ```bash
-# Read Cursor identity and memory scope rules
-cat agents/cursor/cursor_system_prompt.md
+python3 .cursor/memory/cursor_memory_client.py health 2>/dev/null || true
 ```
 
-This provides:
-- Cursor's identity within L9
-- Memory scope rules (write: `cursor`, search: `cursor`, `developer`, `global`)
-- RLS enforcement details
-- Required behaviors for memory operations
-
-**Step 0d: Load governance reference**
-
-```bash
-# Read governance quick reference
-cat agents/cursor/governance-reference.md
-```
+C1 writes are deprecated — use Graphiti `graphiti_memory_client.py` per `03-graphiti-memory.mdc`.
 
 ### 1. REDIS SESSION CONTEXT (resume from last window)
 

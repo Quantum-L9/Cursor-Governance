@@ -52,12 +52,22 @@
     },
     {
       "file": "03-mcp-memory.mdc",
-      "description": "L9 Memory Stack - C1 PRIMARY server, PostgreSQL, Neo4j, Redis, pgvector",
+      "description": "DEPRECATED — superseded by 03-graphiti-memory.mdc (C1 read-only)",
+      "always_apply": false,
+      "globs": [
+        "**/*"
+      ],
+      "first_heading": "\ud83d\udea8 C1 IS THE PRIMARY MEMORY SERVER (LEGACY \u2014 DEPRECATED)",
+      "has_yaml_frontmatter": true
+    },
+    {
+      "file": "03-graphiti-memory.mdc",
+      "description": "Graphiti VPS memory — prefetch, memory-bank T0, episode contract",
       "always_apply": true,
       "globs": [
         "**/*"
       ],
-      "first_heading": "\ud83d\udea8 C1 IS THE PRIMARY MEMORY SERVER",
+      "first_heading": "Graphiti Global Memory",
       "has_yaml_frontmatter": true
     },
     {

@@ -5,6 +5,8 @@ alwaysApply: true
 
 # C1 Server Protection Rules
 
+> **Memory writes:** C1 memory endpoints are **deprecated** — use Graphiti (`03-graphiti-memory.mdc`). C1 infra protection rules below still apply for Docker/deploy.
+
 ## 🚨 ULTRA-CRITICAL: Docker File Protection
 
 **Effective: 2026-01-31**

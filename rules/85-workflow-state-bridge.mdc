@@ -5,6 +5,8 @@ alwaysApply: true
 
 # workflow_state.md bridge (L9)
 
+**Updated: 2026-06-06** — **`memory-bank/activeContext.md`** is the resume SSOT for Cursor sessions. `workflow_state.md` is legacy where still present.
+
 ## State sync required before edits
 
 - Before making ANY code changes, always:

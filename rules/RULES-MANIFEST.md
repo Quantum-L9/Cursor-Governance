@@ -16,7 +16,8 @@ Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor G
 - `01-git-push-prohibition.mdc` — alwaysApply **true** — NEVER commit or push to git without explicit user request. Push is #1 deployment risk.
 - `01-vps-rules.mdc` — alwaysApply **true** — L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.
 - `02-slash-commands.mdc` — alwaysApply **true** — Slash command recognition and execution - repo-agnostic governance protocols
-- `03-mcp-memory.mdc` — alwaysApply **true** — L9 Memory Stack - C1 PRIMARY server, PostgreSQL, Neo4j, Redis, pgvector
+- `03-mcp-memory.mdc` — alwaysApply **false** — DEPRECATED — superseded by 03-graphiti-memory.mdc (C1 read-only)
+- `03-graphiti-memory.mdc` — alwaysApply **true** — Graphiti VPS memory — prefetch, memory-bank T0, episode contract
 - `04-cursor-redis-session.mdc` — alwaysApply **true** — Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia.
 - `05-ask-mode.mdc` — alwaysApply **true** — Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
 - `10-lang-typescript.mdc` — alwaysApply **false** — TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
@@ -60,8 +61,11 @@ Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor G
 - `96-env-no-hardcode.mdc` — alwaysApply **true** — Use .env for configuration — never hardcode database, hosts, ports
 - `96-git-push-approval.mdc` — alwaysApply **true** — Git push requires explicit user approval — never auto-push
 - `97-governance-ssot-paths.mdc` — alwaysApply **true** — Governance SSOT path contract — $HOME/Dropbox only; never hardcode /Users/ or machine-specific paths. Authority: CANONICAL_LAW.md §9.
+- `97-graph-layer-boundary.mdc` — alwaysApply **true** — Graph layer boundary — code-graph vs Graphiti vs Neo4j PlasticOS
 - `97-graph-engine-architecture.mdc` — alwaysApply **true** — Graph Engine architecture: chassis contract, gates, Cypher security, action handlers
+- `98-graphiti-memory-gate.mdc` — alwaysApply **false** — Graphiti write gates (GATES-002) — active when GRAPHITI_WRITE_GATES=1
 - `98-odoo-sh-staging.mdc` — alwaysApply **true** — Odoo.sh staging reference: instance URL, build ID, SSH access, and shell commands for Odoo 19.
+- `99-graphiti-temporal.mdc` — alwaysApply **true** — Graphiti temporal episodes — supersedes, conflicts, prune policy
 - `99-execute-as-instructed.mdc` — alwaysApply **true** — Execute exactly as instructed — no autonomous reasoning or skipping steps
 - `99-incident-report.mdc` — alwaysApply **true** — Governance incident reports: unauthorized deletion, VPS overstepping, corrective actions, and permanent enforcement lessons.
 - `99-no-auto-commit.mdc` — alwaysApply **true** — Never auto-commit or auto-push without explicit user approval

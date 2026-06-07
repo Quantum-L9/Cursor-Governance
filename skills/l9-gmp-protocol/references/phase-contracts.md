@@ -38,6 +38,7 @@ Each phase ends with its named status line and proceeds only if the exit gate is
   ```
   Requires `code_graph_health.sh` exit 0. Writes `.cursor/code-graph-phase0-evidence.json` (4h TTL). Attach impact/importer summary to the locked plan. Skip when all TODOs are grep-only (known files, views, tests, docs) — declare `CODE_GRAPH_BASELINE: SKIPPED`.
 - **Exit:** "Phase 0 complete. TODO PLAN locked. ADRs consulted: [list]. CODE_GRAPH_BASELINE: COMPLETE | SKIPPED | BLOCKED." Stop for approval if scope is high-risk or ambiguous.
+- **MEMORY_PREFETCH (Graphiti):** run `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts` and cite prefetch episode names in Phase 0 output. Field: `MEMORY_PREFETCH: <episode names>`.
 
 ## Phase 1 — Baseline Confirmation
 
