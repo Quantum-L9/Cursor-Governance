@@ -1,3 +1,15 @@
+<!-- L9_META
+l9_schema: 1
+parent: l9-wire-skill-into-repo
+layer: reference
+role: layout_detection
+tags: [wiring, registry, layout, detection]
+owner: igor_beylin
+status: active
+version: 1.1.0
+updated: 2026-06-06
+/L9_META -->
+
 # Layout Detection
 
 Run from the repository root. Stop at the first matching profile or merge when multiple coexist.

@@ -1,41 +1,43 @@
 ---
 name: l9-update-command
-description: Minimize slash commands to DAG triggers via slash-command-update workflow
+description: minimize slash commands to dag triggers via slash-command-update workflow. use when reducing a command to a thin trigger or auditing dag-trigger commands.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, commands, dag, meta]
+owner: igor_beylin
+status: active
+version: 2.0.0
+updated: 2026-06-06
 disable-model-invocation: true
 ---
 
-name: update-command
-version: "1.0.0"
-description: "Update slash commands to be minimal triggers"
-auto_chain: ynp
-dag: slash-command-update-v1
-dag_file: .cursor-commands/workflows/dags/slash_command_update_dag.py
+# Update Command — Minimize Slash Commands
 
-# /update-command — Minimize Slash Commands
+## Purpose
 
-**DAG-ENFORCED.** Execute the `slash-command-update-v1` DAG.
+Reduce slash commands to minimal DAG triggers. All execution logic lives in the DAG, not the command file.
 
-## Usage
+## Core Contract
 
-```
-/update-command readme     # Reduce /readme command
-/update-command wire       # Reduce /wire command
-/update-command --all      # Audit all DAG-trigger commands
-```
+**DAG-ENFORCED.** Execute `slash-command-update-v1` DAG — follow each node's `action` field exactly.
 
-## Execution
+Load [references/update-command-workflow.md](references/update-command-workflow.md).
 
-Load and execute the DAG:
+## Resource Map
 
-```python
-from .cursor_commands.workflows.dags import SLASH_COMMAND_UPDATE_DAG
-# Follow each node's action field in sequence
-```
+- [references/update-command-workflow.md](references/update-command-workflow.md) — DAG invocation and key files.
 
-The DAG contains all instructions. Follow each node's `action` field exactly.
+## Authority Order
 
-## Key Files
+1. User target command name.
+2. DAG: `.cursor-commands/workflows/dags/slash_command_update_dag.py`
+3. Commands registry: `.cursor-commands/commands/*.md`
 
-- **DAG**: `.cursor-commands/workflows/dags/slash_command_update_dag.py`
-- **Commands**: `.cursor-commands/commands/*.md`
-- **Registry**: `.cursor/rules/02-slash-commands.mdc`
+## Validation
+
+Command file after update MUST be trigger-only (invocation + DAG pointer, no embedded workflow logic).
+
+## Failure Handling
+
+If DAG file missing → STOP and report `Unknown` path.

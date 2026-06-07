@@ -1,3 +1,15 @@
+<!-- L9_META
+l9_schema: 1
+parent: l9-wire-skill-into-repo
+layer: reference
+role: registry_templates
+tags: [wiring, registry, templates, manifest]
+owner: igor_beylin
+status: active
+version: 1.1.0
+updated: 2026-06-06
+/L9_META -->
+
 # Registry Templates (L9)
 
 ## L9 global skill — `.claude/README.md`

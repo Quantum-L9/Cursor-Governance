@@ -1,21 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: l9-incident-response
+<!-- L9_META
+l9_schema: 1
+parent: l9-incident-response
 layer: reference
 role: incident_kernel
 tags: [incident, rollback, emergency, recovery, sev]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
-sources:
-  - harvested: pipelines-fix, pipelines-emergency-rollback (Suite-5 legacy, Cursor-native rewrite)
---- /SKILL_META ---
-
-Purpose:
-Rollback-first incident response — decision tree, forensic backup, escalation ladder.
--->
+/L9_META -->
 
 # Rollback Playbook
 

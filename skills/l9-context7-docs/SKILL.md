@@ -7,7 +7,7 @@ role: documentation_grounding
 tags: [l9, context7, documentation, libraries, frameworks, sdk, api, current_docs]
 owner: igor_beylin
 status: active
-version: 1.1.0
+version: 1.1.1
 updated: 2026-06-06
 ---
 
@@ -18,6 +18,23 @@ updated: 2026-06-06
 Ground implementation decisions in current upstream documentation before writing code when a library, framework, SDK, API, or version-specific behavior matters.
 
 This skill exists to reduce "debug hell": check the docs before the first implementation attempt, not after code fails.
+
+## Core Contract
+
+| Step | Tool | Limit |
+|------|------|-------|
+| Resolve | `resolve-library-id` | ≤3 calls per question |
+| Query | `query-docs` | ≤3 calls per question |
+| Apply | Summarize constraints | No long doc dumps |
+| Report | `Context7 checked: /org/project` | Required for implementation tasks |
+
+## Authority Order
+
+1. Repo patterns and invariants — win when valid and current.
+2. Context7 upstream docs — win when repo pattern is stale or deprecated.
+3. User-stated version or library ID.
+4. This skill's MCP flow below.
+5. `Unknown` — ask or choose safest minimal implementation; label uncertainty.
 
 ## Auto-Invoke Triggers (mandatory)
 
@@ -127,3 +144,18 @@ Applied in: {file or implementation area}
 ```
 
 If Context7 has no useful match, say so once and continue with repo-grounded evidence.
+
+## Resource Map
+
+No `references/` folder — MCP flow and output discipline live in this file. Read MCP tool descriptors from `user-Context7` before calling `resolve-library-id` or `query-docs`.
+
+## Validation
+
+MCP tool schemas MUST be read before first call. Queries MUST NOT include secrets, credentials, or proprietary payloads. Implementation responses MUST include library ID and actionable constraints — not pasted documentation.
+
+## Failure Handling
+
+- No library match after 3 resolve attempts → say once; continue repo-grounded.
+- Ambiguous library/version → ask user or pick closest match with stated uncertainty.
+- Pure local/Odoo task → skip Context7 per repo precedence rules.
+- MCP unavailable → note once; rely on repo rules and official docs URLs if known.

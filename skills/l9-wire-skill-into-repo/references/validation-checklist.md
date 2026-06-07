@@ -1,3 +1,15 @@
+<!-- L9_META
+l9_schema: 1
+parent: l9-wire-skill-into-repo
+layer: reference
+role: validation_checklist
+tags: [wiring, validation, checklist, registry]
+owner: igor_beylin
+status: active
+version: 1.1.0
+updated: 2026-06-06
+/L9_META -->
+
 # Wiring Validation Checklist (L9)
 
 ## Skill pack

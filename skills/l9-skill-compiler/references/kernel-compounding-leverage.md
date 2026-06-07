@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: compounding_kernel
 tags: [skill, leverage, compounding, scoring, decision_rules]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Compresses the compounding leverage rule that a good Skill design should improve future moves, not add isolated obligations.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # Compounding Leverage Kernel
 

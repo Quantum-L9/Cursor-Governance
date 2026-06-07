@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, skill, compiler, control_plane, zero_stub, standalone]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-06-04
+version: 1.2.1
+updated: 2026-06-06
 ---
 
 # Strict Skill Compiler
@@ -18,6 +18,26 @@ updated: 2026-06-04
 Compile prompts, SOPs, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into clean reusable Skill packs.
 
 The generated Skill must stand alone. Do not assume the executing agent has any external Skill creator protocol, hidden conventions, prior memory, or platform-specific build workflow unless the user explicitly supplies it.
+
+## Core Contract
+
+| Mode | Output | Load |
+|------|--------|------|
+| discuss | Options, trade-offs | [references/output-modes.md](references/output-modes.md) |
+| design | File tree, resource map | [references/file-contract.md](references/file-contract.md) |
+| analyze | Gap report vs contract | [references/skill-pack-contract.md](references/skill-pack-contract.md) |
+| build / rebuild | Complete skill pack | all refs + [validation-checklist.md](references/validation-checklist.md) |
+| package | Archive-ready pack | validation-checklist |
+
+Mandatory final step: **`l9-wire-skill-into-repo`**.
+
+## Authority Order
+
+1. Source material and explicit user objective.
+2. [references/skill-pack-contract.md](references/skill-pack-contract.md) — standalone protocol.
+3. [references/meta-standard.md](references/meta-standard.md) — metadata and frontmatter.
+4. Kernel references for reasoning, zero-stub, and leverage filters.
+5. `Unknown` — fail closed; do not fabricate paths, tools, or assets.
 
 ## Operating Rules
 
@@ -55,23 +75,23 @@ Reference files in `references/` may use HTML-comment metadata blocks. Do not du
 
 For the metadata contract, load `references/meta-standard.md`.
 
-## Reference Map
+## Resource Map
 
 Load references only when relevant:
 
-- `references/project-adapters.md`: repo-local wiring adapters (e.g. `.claude/adapters/plasticos-repo-wiring.md`) — loaded by **`l9-wire-skill-into-repo`** Step 3.
-- `references/skill-pack-contract.md`: complete standalone Skill creation, analysis, rebuild, validation, and packaging protocol.
-- `references/meta-standard.md`: file metadata and first-class primitive rules.
-- `references/file-contract.md`: file and folder responsibilities, routing, and resource placement rules.
-- `references/output-modes.md`: response contracts for discuss, design, analyze, build, rebuild, and package modes.
-- `references/validation-checklist.md`: final validation gates before presenting or packaging a Skill.
-- `references/kernel-agent-state.md`: deterministic output discipline, no drift, fail-closed behavior, and explicit-write rules.
-- `references/kernel-first-order-thinking.md`: highest-leverage sequencing and five gates.
-- `references/kernel-compounding-leverage.md`: compounding leverage scoring and decision thresholds.
-- `references/kernel-ynp-next-prompt.md`: one-next-prompt discipline for reducing turns after deliverables.
-- `references/kernel-zero-stub-build.md`: complete-artifact enforcement and anti-scaffold checks.
-- `references/kernel-reasoning-think-strategy.md`: objective-to-delivery reasoning flow.
-- `references/kernel-igoros-insights.md`: scoped hydration, bounded execution, meaning compression, and operational convergence.
+- [references/project-adapters.md](references/project-adapters.md): repo-local wiring adapters — loaded by **`l9-wire-skill-into-repo`** Step 3.
+- [references/skill-pack-contract.md](references/skill-pack-contract.md): complete standalone Skill creation, analysis, rebuild, validation, and packaging protocol.
+- [references/meta-standard.md](references/meta-standard.md): file metadata and first-class primitive rules.
+- [references/file-contract.md](references/file-contract.md): file and folder responsibilities, routing, and resource placement rules.
+- [references/output-modes.md](references/output-modes.md): response contracts for discuss, design, analyze, build, rebuild, and package modes.
+- [references/validation-checklist.md](references/validation-checklist.md): final validation gates before presenting or packaging a Skill.
+- [references/kernel-agent-state.md](references/kernel-agent-state.md): deterministic output discipline, no drift, fail-closed behavior, and explicit-write rules.
+- [references/kernel-first-order-thinking.md](references/kernel-first-order-thinking.md): highest-leverage sequencing and five gates.
+- [references/kernel-compounding-leverage.md](references/kernel-compounding-leverage.md): compounding leverage scoring and decision thresholds.
+- [references/kernel-ynp-next-prompt.md](references/kernel-ynp-next-prompt.md): one-next-prompt discipline for reducing turns after deliverables.
+- [references/kernel-zero-stub-build.md](references/kernel-zero-stub-build.md): complete-artifact enforcement and anti-scaffold checks.
+- [references/kernel-reasoning-think-strategy.md](references/kernel-reasoning-think-strategy.md): objective-to-delivery reasoning flow.
+- [references/kernel-igoros-insights.md](references/kernel-igoros-insights.md): scoped hydration, bounded execution, meaning compression, and operational convergence.
 
 ## Validation
 

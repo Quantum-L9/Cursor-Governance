@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: zero_stub_kernel
 tags: [skill, zero_stub, complete_artifacts, validation, quality]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Compresses complete-artifact enforcement rules so generated Skill packs do not contain dummy scaffolds, unwired resources, or partial deliverables.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # Zero-Stub Build Kernel
 

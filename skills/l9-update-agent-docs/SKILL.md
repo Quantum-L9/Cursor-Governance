@@ -7,13 +7,35 @@ role: skill_entrypoint
 tags: [l9, docs, agents, ci, maintenance]
 owner: igor_beylin
 status: active
-version: 2.0.0
+version: 2.0.1
 updated: 2026-06-06
 ---
 
 # Update Agent Documentation (L9)
 
-Regenerate root-level agent instruction files so coding agents write CI-passing code and review agents flag real issues (not false positives).
+## Purpose
+
+Regenerate root-level agent instruction files so coding agents write CI-passing code and review agents flag real issues (not false positives). Surgical edits only — every metric from repo ground truth.
+
+## Core Contract
+
+| Step | Target files | Source |
+|------|--------------|--------|
+| 1 Inventory | Modules/packages | Project adapter if present |
+| 2 CI audit | `.github/workflows/*` | Blocking vs non-blocking tables |
+| 3 Pre-commit | `.pre-commit-config.yaml` | Hook count and exclusions |
+| 4 Domain patterns | Adapter scripts | Odoo/domain checks when wired |
+| 5 Lint config | `pyproject.toml`, etc. | Rules, ignores, line length |
+| 6 False positives | CI + pre-commit + lint | Documented exclusions |
+| 7 Write | `AGENTS.md`, `ARCHITECTURE.md`, `INVARIANTS.md`, `CLAUDE.md` | Preserve structure |
+
+## Authority Order
+
+1. Actual repo files — workflows, hooks, manifests, module counts.
+2. Project adapter (`.claude/adapters/*-update-agent-docs.md`) when present.
+3. `.claude/README.md` for skill registry sync.
+4. This skill's execution protocol below.
+5. `Unknown` — mark metric as `TBD`; never fabricate counts.
 
 ## When to Use
 
@@ -91,9 +113,25 @@ When skills change, verify **`l9-wire-skill-into-repo`** gates were followed (`.
 
 Sync skill tables from `.claude/README.md` (L9 global + project skills).
 
+## Resource Map
+
+No `references/` folder — protocol lives in this file. Load project adapters when present:
+
+- `.claude/adapters/{repo}-update-agent-docs.md`
+- `.claude/adapters/plasticos-update-agent-docs.md` (PlasticOS / Odoo 19)
+
+Wiring verification: `.claude/adapters/plasticos-repo-wiring.md` when skills changed.
+
 ## Validation
 
-After updating, verify counts match repo state (modules, hooks, jobs). Cross-reference `AGENTS.md`, `CLAUDE.md`, `INVARIANTS.md`, `ARCHITECTURE.md`.
+After updating, verify counts match repo state (modules, hooks, jobs). Cross-reference `AGENTS.md`, `CLAUDE.md`, `INVARIANTS.md`, `ARCHITECTURE.md`. Documented false positives MUST cite exclusion location.
+
+## Failure Handling
+
+- Adapter missing for domain repo → run generic steps; note domain gaps in summary.
+- Count mismatch after edit → re-audit source files; do not ship stale numbers.
+- User asked to commit → present diff for review; do not commit unless explicitly requested.
+- Skill registry drift → run **`l9-wire-skill-into-repo`** checklist before updating skill tables.
 
 ## Stop Condition
 

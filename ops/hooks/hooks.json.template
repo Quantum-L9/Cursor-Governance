@@ -12,6 +12,19 @@
         "command": "./hooks/governance-backup.sh",
         "timeout": 120
       }
+    ],
+    "preToolUse": [
+      {
+        "command": "./hooks/pre-tool-use-code-graph-gate.sh",
+        "matcher": "Write|StrReplace|search_replace|EditNotebook|ApplyPatch",
+        "timeout": 10
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "./hooks/before-mcp-code-graph-gate.sh",
+        "timeout": 10
+      }
     ]
   }
 }

@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: file_contract
 tags: [skill, files, folders, routing, resources]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-06-04
---- /SKILL_META ---
-
-Purpose:
-Defines responsibilities and routing rules for each file and folder type in a reusable Skill pack.
--->
+version: 1.2.1
+updated: 2026-06-06
+/L9_META -->
 
 # File Contract
 

@@ -8,7 +8,7 @@ tags: [l9, mcp, code-graph, rag, token_discipline, plasticos]
 owner: igor_beylin
 status: active
 version: 1.0.0
-updated: 2026-06-06
+updated: 2026-06-07
 sources:
   - er77/code-graph-rag-mcp@v2.7.15
   - assets/user-execution-guide.md
@@ -118,7 +118,10 @@ Copy-paste for users (agent must follow scope):
 
 ## Resource Map
 
+- [`assets/plasticos-trigger-matrix.md`](assets/plasticos-trigger-matrix.md) — **when to read from graph** vs grep/read; path patterns; GMP Phase 0 triggers.
 - [`assets/user-execution-guide.md`](assets/user-execution-guide.md) — install, seed, verify, token-minimal prompts, troubleshooting.
+- [`scripts/code_graph_gmp_baseline.sh`](scripts/code_graph_gmp_baseline.sh) — GMP Phase 0 evidence generator (CLI).
+- [`scripts/code_graph_plasticos_gate.py`](scripts/code_graph_plasticos_gate.py) — shared hook/gate logic.
 - [`scripts/code_graph_batch_index.sh`](scripts/code_graph_batch_index.sh) — deterministic index loop.
 - [`scripts/code_graph_health.sh`](scripts/code_graph_health.sh) — health probe.
 - [`scripts/code_graph_cli.py`](scripts/code_graph_cli.py) — low-level tool invocation.

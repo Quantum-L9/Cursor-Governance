@@ -1,108 +1,56 @@
 ---
 name: l9-ynp
-description: Synthesize the single highest-leverage next action from current context. Use after completing work, when priorities are unclear, or when the user asks what to do next.
+description: synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, ynp, next-action, leverage, priority]
+owner: igor_beylin
+status: active
+version: 2.0.0
+updated: 2026-06-06
 ---
 
----
-name: ynp
-version: "8.1.0"
-description: "Your Next Play — synthesize highest-leverage next action"
-auto_chain: null
-scope: "local_cursor_only"
----
+# Your Next Play (YNP)
 
-# /ynp — Your Next Play
+## Purpose
 
-## WHAT IT DOES
+Synthesize the **single highest-leverage next action** from current context. Recommend only — do not auto-execute unless the user explicitly asks to run the recommended command.
 
-Synthesizes the **single highest-leverage next action** from current context.
+## Core Contract
 
-**Rules:**
-- Recommend the next play; do not auto-execute unless the user explicitly asks to run it
-- Batch related TODOs (3 in one GMP > 3 separate runs)
-- Harvest context first (check what's already in chat)
+| Input | Output | Scope |
+|-------|--------|-------|
+| Chat context, workflow state, recent outputs | One primary action + confidence + alternates | Local file ops, slash commands, GMP — not VPS/SSH/production deploy |
 
----
+Load workflow detail: [references/ynp-workflow.md](references/ynp-workflow.md).
 
-## EXECUTION
+## Authority Order
 
-### 1. CONTEXT HARVEST
+1. Explicit user priority or "what next" request.
+2. Highest-severity open blocker in context (CI, merge blockers, failed gates).
+3. Locked TODO plan or workflow_state when present.
+4. This skill's references.
+5. `Unknown` — ask clarifying question when confidence <70%.
 
-```
-SCAN:
-├── Chat context (files provided, referenced, pasted)
-├── workflow_state.md (PHASE, TODOs, blockers)
-├── Recent GMP outputs
-└── Reusable assets
-```
+## Compact Workflow
 
-### 2. REASONING SYNTHESIS
+1. **Harvest** — chat context, workflow_state, recent GMP outputs, reusable assets.
+2. **Synthesize** — abductive/deductive/inductive reasoning on candidates.
+3. **Score** — confidence ≥90% strong | 80–89% recommend | 70–79% caveats | <70% ask.
+4. **Deliver** — one primary play, scope, alternates if blocked.
 
-Apply multi-modal reasoning:
-- **Abductive:** What patterns suggest the best path?
-- **Deductive:** What rules/constraints apply?
-- **Inductive:** What worked before in similar situations?
+## Resource Map
 
-### 3. CANDIDATE GENERATION
+- [references/ynp-workflow.md](references/ynp-workflow.md) — execution steps, tier routing, output format, stop conditions.
 
-| Tier | Commands |
-|------|----------|
-| KERNEL | `/gmp` (protected files) |
-| RUNTIME | `/gmp`, `/wire`, `/refactor-sweep` |
-| INFRA | `/gmp` (docker, deploy) |
-| UX | `/gmp`, quick edits |
-| GOVERNANCE | `/rules`, `/governance` |
+## Validation
 
-### 4. CONFIDENCE SCORING
+Exactly one primary recommendation. Confidence MUST be stated. Batch related TODOs (3 in one GMP > 3 separate runs).
 
-| Score | Action |
-|-------|--------|
-| ≥90% | Strong recommendation |
-| 80-89% | Recommend, ask confirmation |
-| 70-79% | Recommend with caveats |
-| <70% | Need more info, ask questions |
+## Failure Handling
 
----
-
-## OUTPUT FORMAT
-
-```markdown
-## 🎯 YNP: {action_title}
-
-**Confidence:** {score}%
-**Time:** {estimate}
-**Tier:** KERNEL | RUNTIME | INFRA | UX
-
-### Primary
-{command} — {why this is highest leverage}
-
-### Scope
-- Files: {list}
-- TODOs: {batched items}
-
-### Alternates (if blocked)
-1. {alt1}
-2. {alt2}
-```
-
----
-
-## SCOPE BOUNDARY
-
-| ✅ IN SCOPE | ❌ OUT OF SCOPE |
-|-------------|-----------------|
-| Local file ops | VPS/SSH |
-| Local tests | Docker management |
-| GMP execution | Production deploys |
-| Slash commands | Remote env changes |
-
----
-
-## STOP CONDITIONS
-
-- Ambiguous context → Ask clarifying question
-- Multiple equal-priority items → Present options
-- Protected file without approval → Route to KERNEL GMP
-- Confidence <70% → Gather more info first
-
---- End Command ---
+- Ambiguous context → ask clarifying question.
+- Multiple equal-priority items → present ranked options with trade-offs.
+- Protected file without approval → route to KERNEL GMP.
+- Confidence <70% → gather more info; do not guess.

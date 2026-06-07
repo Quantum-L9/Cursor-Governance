@@ -1,226 +1,60 @@
 ---
 name: l9-ci-ops
-description: CI/CD operations (status, fix, gates) and CI policy authoring
+description: ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, ci, github-actions, pr-check, policy, triage]
+owner: igor_beylin
+status: active
+version: 2.0.0
+updated: 2026-06-06
 disable-model-invocation: true
 ---
 
-> For multi-job failures, load [references/parallel-ci-triage.md](references/parallel-ci-triage.md) — split independent failing jobs across parallel subagents.
+# CI/CD Operations
 
----
-name: ci
-version: "1.1.0"
-description: "CI/CD pipeline operations"
-before_chain: rules
-auto_chain: ynp
----
+## Purpose
 
-# /ci — CI/CD Operations
+Operate CI/CD for the current repo: check pipeline status, fix failing gates, enumerate required gates from ground truth, and define new regression-prevention policies (policy-only mode).
 
-## USAGE
+## Core Contract
 
-```
-/ci status              # Check pipeline status
-/ci run                 # Trigger CI run
-/ci fix                 # Fix CI failures
-/ci gates               # List required gates
-```
+| Mode | Mutates code | Runs CI | Load |
+|------|--------------|---------|------|
+| status | no | read-only | [ci-fix-workflow.md](references/ci-fix-workflow.md) § Status |
+| fix | yes | local verify required | [ci-fix-workflow.md](references/ci-fix-workflow.md) + [parallel-ci-triage.md](references/parallel-ci-triage.md) when multi-job |
+| gates | no | no | [plasticos-ci-adapter.md](references/plasticos-ci-adapter.md) or repo `ci.yml` |
+| ci-policy | no (config only) | no | [ci-policy-authoring.md](references/ci-policy-authoring.md) |
 
----
+## Authority Order
 
-## GATES
+1. User request and failing log excerpt / run ID.
+2. Repo ground truth: `.github/workflows/ci.yml`, `Makefile` (`pr-check`), `AGENTS.md` CI section if present.
+3. This skill's references.
+4. `Unknown` — do not invent gate tables.
 
-| Gate | Command | Required |
-|------|---------|----------|
-| Lint | `ruff check .` | ✅ |
-| Types | `mypy .` | ✅ |
-| Tests | `pytest` | ✅ |
-| Security | `semgrep` | ✅ |
-| Build | `docker build` | For deploy |
+## Compact Workflow
 
----
+1. **Detect repo** — PlasticOS loads [plasticos-ci-adapter.md](references/plasticos-ci-adapter.md); else read `ci.yml` + README.
+2. **Route mode** — status | fix | gates | ci-policy per Core Contract.
+3. **Fix path** — identify → categorize → fix → `make pr-check` (PlasticOS) or repo-equivalent → `make push` (never raw `git push` on PlasticOS).
+4. **Policy path** — define → mechanism → scope → register → STOP (no code fixes).
 
-## FIX WORKFLOW
+## Resource Map
 
-### 1. IDENTIFY FAILURES
+- [references/ci-fix-workflow.md](references/ci-fix-workflow.md) — status, fix, output format.
+- [references/ci-policy-authoring.md](references/ci-policy-authoring.md) — regression policy authoring (no code fixes).
+- [references/parallel-ci-triage.md](references/parallel-ci-triage.md) — parallel subagents for independent job failures.
+- [references/plasticos-ci-adapter.md](references/plasticos-ci-adapter.md) — `make pr-check`, tier jobs, push workflow.
 
-```bash
-gh run list --limit 5
-gh run view {id} --log-failed
-```
+## Validation
 
-### 2. CATEGORIZE
+Before declaring fix complete: local command matching the failed gate MUST pass. On PlasticOS: `make pr-check` MUST pass before `make push`.
 
-| Type | Fix |
-|------|-----|
-| Lint | `ruff check --fix` |
-| Type | Fix annotations |
-| Test | Fix code or test |
-| Security | Address finding |
+## Failure Handling
 
-### 3. FIX & VERIFY
-
-```bash
-ruff check --fix .
-pytest tests/ -v
-git add . && git commit -m "fix: CI failures"
-```
-
----
-
-## OUTPUT
-
-```markdown
-## 🔄 CI STATUS
-
-| Gate | Status | Details |
-|------|--------|---------|
-| Lint | ✅ | 0 errors |
-| Tests | ❌ | 2 failed |
-
-### Failures
-| Test | Error |
-|------|-------|
-| test_x | AssertionError |
-
-### Fix Plan
-1. {action}
-```
-
---- End Command ---
-
-name: ci-policy
-version: "1.0.0"
-description: "Add regression-prevention rules to CI — encode patterns as enforceable gates"
-auto_chain: n
-
-# /ci-policy — CI Governance & Regression Prevention
-
-RULES (ABSOLUTE)
-
-- NO code fixes
-- NO refactors
-- NO CI execution
-- NO guessing intent
-- This command DEFINES policy only
-
----
-
-USAGE
-
-/ci-policy "ban print() usage"
-/ci-policy "no sync I/O in async code"
-/ci-policy "require timeouts on httpx calls"
-/ci-policy --from-incident INC-2026-01
-
----
-
-PURPOSE
-
-Convert an architectural rule or learned constraint into:
-- a CI-enforced gate
-- a permanent regression blocker
-
-Once added, CI will fail if the rule is violated.
-
----
-
-CHAIN
-
-/ci-policy
-→ DEFINE RULE
-→ SELECT ENFORCEMENT MECHANISM
-→ SCOPE TARGETS
-→ REGISTER POLICY
-→ REPORT
-→ STOP
-
----
-
-PHASE 1 — DEFINE RULE (EXPLICIT)
-
-Extract:
-- Rule statement (plain language)
-- Forbidden pattern OR required pattern
-- Rationale (1–2 lines, factual)
-
-Example:
-Rule: "No print() in runtime code"
-Pattern: `print(`
-Scope: `api/, core/, runtime/`
-
-If rule is vague → STOP.
-
----
-
-PHASE 2 — SELECT ENFORCEMENT MECHANISM
-
-Choose ONE:
-
-| Mechanism | Use When |
-|---------|----------|
-| ruff rule | lintable syntax |
-| custom ruff plugin | repeated pattern |
-| semgrep rule | structural / security |
-| pytest regression test | behavioral |
-| grep gate | simple forbidden text |
-
-No hybrid mechanisms.
-
----
-
-PHASE 3 — SCOPE TARGETS
-
-Define:
-- directories
-- file types
-- exclusions (tests, scripts, etc.)
-
-Example:
-- include: `api/**.py`
-- exclude: `tests/**`
-
----
-
-PHASE 4 — REGISTER POLICY
-
-Add rule to:
-- CI config
-- lint config
-- security ruleset
-- or tests
-
-Rules:
-- Minimal surface area
-- Deterministic failure
-- Clear error message
-
-NO other CI changes allowed.
-
----
-
-PHASE 5 — REPORT (INLINE ONLY)
-
-## CI POLICY ADDED
-
-Rule:
-“No print() in runtime code”
-
-Enforcement:
-ruff custom rule
-
-Scope:
-api/, core/, runtime/
-
-Failure Message:
-“print() is forbidden in runtime code — use logger”
-
-Status:
-Registered (not executed)
-
----
-
-STOP CONDITION
-
-After report:
-- STOP
-- CI will enforce on next run
+- Missing run ID or logs → STOP; ask user or run `gh run list --limit 5`.
+- Single-job failure → fix in main agent; do not spawn parallel triage.
+- Policy intent vague → STOP at Phase 1 of ci-policy.
+- Ground truth missing → label `Unknown`; do not use generic gate tables.

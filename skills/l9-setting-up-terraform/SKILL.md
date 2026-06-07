@@ -8,13 +8,33 @@ role: skill_entrypoint
 tags: [l9, terraform, iac, infrastructure, ops]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
 ---
 
 # Setup Terraform
 
-Use this skill when the user asks to set up Terraform, infrastructure as code, cloud provisioning, or IaC.
+## Purpose
+
+Bootstrap Terraform IaC: project structure, provider config, variables, modules, remote state, gitignore rules, and optional CI plan/apply pipeline.
+
+## Core Contract
+
+| Step | Artifact |
+|------|----------|
+| Structure | `main.tf`, `variables.tf`, `outputs.tf`, `providers.tf` |
+| State | Remote backend + locking |
+| Secrets | `.tfvars` gitignored — never committed |
+| CI | fmt, validate, plan on PR; apply on merge with gate |
+| Modules | Reusable patterns under `modules/` |
+
+## Authority Order
+
+1. Explicit cloud provider, region, and environment separation model.
+2. Existing `infra/` or Terraform files in repo.
+3. Provider documentation for pinned versions.
+4. This skill's steps below.
+5. `Unknown` — ask before `terraform apply` to production state.
 
 ## Steps
 
@@ -92,3 +112,18 @@ Use this skill when the user asks to set up Terraform, infrastructure as code, c
 - Use workspaces or separate state files for dev/staging/prod.
 - Pin provider versions to avoid breaking changes.
 - Run `terraform fmt` before committing.
+
+## Resource Map
+
+No `references/` folder — structure templates and CI notes live in this file.
+
+## Validation
+
+Provider versions MUST be pinned. State files and `.tfvars` with secrets MUST be gitignored. Remote state MUST have locking enabled. `terraform fmt -check` and `validate` MUST pass before apply.
+
+## Failure Handling
+
+- Provider/cloud unknown → ask user; do not assume AWS.
+- Existing state → import or migrate plan required; never init duplicate state for same env.
+- Secrets in `.tfvars` committed → STOP; rotate secrets and fix gitignore.
+- Apply requested without plan review → run plan first; require explicit approval for prod.

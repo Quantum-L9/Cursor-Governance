@@ -1,3 +1,15 @@
+<!-- L9_META
+l9_schema: 1
+parent: l9-incident-response
+layer: reference
+role: diagnostic_playbook
+tags: [incident, network, dns, tls, proxy, diagnostics]
+owner: igor_beylin
+status: active
+version: 1.1.0
+updated: 2026-06-06
+/L9_META -->
+
 # Network troubleshooting (developer diagnostics)
 
 Use for **developer network failures** — not production incident mitigation. Read-only by default.

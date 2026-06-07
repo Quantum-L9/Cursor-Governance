@@ -1,13 +1,14 @@
----
-skill_schema: 1
+<!-- L9_META
+l9_schema: 1
+parent: l9-gmp-protocol
 layer: reference
 role: report_contract
 tags: [gmp, evidence, report, declaration]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-06-04
----
+version: 1.2.0
+updated: 2026-06-06
+/L9_META -->
 
 # Evidence Report Contract
 

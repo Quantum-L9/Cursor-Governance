@@ -1,21 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: validation_contract
 tags: [skill, validation, quality_gates, zero_stub, packaging]
 owner: igor_beylin
 status: active
-version: 1.3.0
+version: 1.3.1
 updated: 2026-06-06
-sources:
-  - harvested: _framework-standards (Suite-5 legacy, design principles appendix)
---- /SKILL_META ---
-
-Purpose:
-Defines the validation gates required before a Skill pack may be presented, rebuilt, or packaged.
--->
+/L9_META -->
 
 # Validation Checklist
 

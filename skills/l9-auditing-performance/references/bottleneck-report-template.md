@@ -1,21 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: l9-auditing-performance
+<!-- L9_META
+l9_schema: 1
+parent: l9-auditing-performance
 layer: reference
 role: report_template
 tags: [performance, bottleneck, profiling, optimization]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
-sources:
-  - harvested: analysis-performance-profile (Suite-5 legacy, stripped n8n/vendor metrics)
---- /SKILL_META ---
-
-Purpose:
-Ranked bottleneck report after profiling — web, API, DB, or batch jobs.
--->
+/L9_META -->
 
 # Bottleneck Report Template
 

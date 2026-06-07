@@ -89,6 +89,10 @@ install_session_end_governance_hook() {
   local hook_link="$HOME/.cursor/hooks/governance-backup.sh"
   local session_start_src="$GLOBAL_COMMANDS/ops/hooks/session_start_code_graph_health.sh"
   local session_start_link="$HOME/.cursor/hooks/code-graph-health.sh"
+  local pre_tool_src="$GLOBAL_COMMANDS/ops/hooks/pre_tool_use_code_graph_gate.sh"
+  local pre_tool_link="$HOME/.cursor/hooks/pre-tool-use-code-graph-gate.sh"
+  local before_mcp_src="$GLOBAL_COMMANDS/ops/hooks/before_mcp_code_graph_gate.sh"
+  local before_mcp_link="$HOME/.cursor/hooks/before-mcp-code-graph-gate.sh"
   local hooks_json="$HOME/.cursor/hooks.json"
   local template="$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
 
@@ -106,6 +110,20 @@ install_session_end_governance_hook() {
     link_or_update "$session_start_link" "$session_start_src" "~/.cursor/hooks/code-graph-health.sh"
   else
     echo "WARN: sessionStart hook missing: $session_start_src"
+  fi
+
+  if [ -f "$pre_tool_src" ]; then
+    chmod +x "$pre_tool_src"
+    link_or_update "$pre_tool_link" "$pre_tool_src" "~/.cursor/hooks/pre-tool-use-code-graph-gate.sh"
+  else
+    echo "WARN: preToolUse hook missing: $pre_tool_src"
+  fi
+
+  if [ -f "$before_mcp_src" ]; then
+    chmod +x "$before_mcp_src"
+    link_or_update "$before_mcp_link" "$before_mcp_src" "~/.cursor/hooks/before-mcp-code-graph-gate.sh"
+  else
+    echo "WARN: beforeMCPExecution hook missing: $before_mcp_src"
   fi
 
   python3 - "$hooks_json" "$template" <<'PY'

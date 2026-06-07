@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: convergence_kernel
 tags: [skill, convergence, scoped_hydration, bounded_execution, meaning_compression]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Compresses scoped hydration and operational convergence principles that prevent Skill packs from becoming bloated or overfit.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # IgorOS Insights Kernel
 

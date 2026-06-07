@@ -1,13 +1,14 @@
----
-skill_schema: 1
+<!-- L9_META
+l9_schema: 1
+parent: l9-gmp-protocol
 layer: reference
 role: phase_contract
 tags: [gmp, phases, contract]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-04
----
+version: 1.1.0
+updated: 2026-06-06
+/L9_META -->
 
 # GMP Phase Contracts (0–6)
 
@@ -30,7 +31,13 @@ Each phase ends with its named status line and proceeds only if the exit gate is
   ```
 - **Also declare:** MODIFICATION LOCK (may-modify list / must-not-modify list) and `ADRs CONSULTED`.
 - **Rules:** monotonic IDs; one file + one operation group per TODO; no placeholders, no "maybe/likely/should"; no protected path scheduled.
-- **Exit:** "Phase 0 complete. TODO PLAN locked. ADRs consulted: [list]." Stop for approval if scope is high-risk or ambiguous.
+- **CODE_GRAPH_BASELINE (PlasticOS cross-module plans):** when any locked TODO file matches `skills/l9-code-graph-rag-mcp/assets/plasticos-trigger-matrix.md` **GRAPH REQUIRED** rows (`plasticos_base/**`, `plasticos_security_base/**`, `plasticos_*/models/*.py`, shared models), run CLI only (no chat indexing):
+  ```bash
+  bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts/code_graph_gmp_baseline.sh" \
+    "$REPO_ROOT" --run-id "gmp-YYYYMMDD-NNN" --files <relative/path> [...]
+  ```
+  Requires `code_graph_health.sh` exit 0. Writes `.cursor/code-graph-phase0-evidence.json` (4h TTL). Attach impact/importer summary to the locked plan. Skip when all TODOs are grep-only (known files, views, tests, docs) — declare `CODE_GRAPH_BASELINE: SKIPPED`.
+- **Exit:** "Phase 0 complete. TODO PLAN locked. ADRs consulted: [list]. CODE_GRAPH_BASELINE: COMPLETE | SKIPPED | BLOCKED." Stop for approval if scope is high-risk or ambiguous.
 
 ## Phase 1 — Baseline Confirmation
 

@@ -1,13 +1,16 @@
 ---
-description: "Python rules for AI OS runtime, agents, orchestration, and backend services."
+description: "Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo addon suites — use repo overlay 88-plasticos-odoo-python-tooling.mdc."
 globs:
-  - "**/*.py"
+  - "src/**/*.py"
+  - "!**/plasticos_*/**"
   - "!**/migrations/*.py"
-  - "!**/tests/**/*.py"
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Python Language Rules for L9 OS Core Runtime
+
+> **Scope:** Applies when editing `src/**/*.py` in L9 services (uv, strict typing, async-first).
+> **Excluded:** `plasticos_*` Odoo addons and migration scripts. Odoo repos use their own overlay rule.
 
 ## Type Hints & Static Analysis
 

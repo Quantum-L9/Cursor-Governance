@@ -1,123 +1,83 @@
 ---
 name: l9-repo-index
-description: /index — Repo Index Export
+description: export repo indexes for fast lookup — repo-agnostic index generation. use when refreshing reports/repo-index, searching classes/functions/models before grep, or bootstrapping codebase navigation indexes.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, index, repo, lookup, odoo]
+owner: igor_beylin
+status: active
+version: 1.1.1
+updated: 2026-06-06
 disable-model-invocation: true
 ---
 
----
-name: index
-version: "1.1.0"
-description: "Export repo indexes for fast lookup - repo-agnostic"
-auto_chain: null
----
+# Repo Index
 
-# /index — Repo Index Export
+## Purpose
 
-## WHAT IT DOES
+Generate or update repo index files under `reports/repo-index/` for fast codebase lookup — works in any repo; includes Odoo-specific indexes when applicable.
 
-Generate/update repo index files for fast lookup. Works in any repo.
+## Core Contract
 
-## Execution (Repo-Agnostic)
+`RESOLVE SCRIPT → GENERATE INDEXES → VERIFY ENTRIES → REPORT`
 
-Run from **current workspace (repo) root**. Indexes are written to this repo's `reports/repo-index/`.
+1. **Resolve** generator script (synced → repo-local → manual fallback).
+2. **Generate** index files from repo root.
+3. **Verify** files exist with non-zero entry counts.
+4. **Report** index counts and location.
 
-### Resolution Order for Generator Script
+## Authority Order
 
-1. `.cursor/workflows-synced/scripts/export_repo_indexes.py` (synced)
-2. `scripts/repo_generators/export_repo_indexes.py` (repo-local)
-3. Manual generation (see below)
+1. `.cursor/workflows-synced/scripts/export_repo_indexes.py` — synced generator (preferred)
+2. `scripts/repo_generators/export_repo_indexes.py` — repo-local generator
+3. [`references/index-export-protocol.md`](references/index-export-protocol.md) — manual generation and usage
+4. `reports/repo-index/` — output location (repo root)
 
-### Run Command
+## Compact Workflow
+
+Run from **current workspace (repo) root**:
 
 ```bash
-# If synced script exists:
+# Preferred: synced script
 python3 .cursor/workflows-synced/scripts/export_repo_indexes.py
 
-# Or if repo has local script:
+# Or repo-local
 python3 scripts/repo_generators/export_repo_indexes.py
 
-# Or manual generation (see Manual Index Generation below)
+# Or manual (see reference)
 ```
-
-## Index Files
-
-Location: `reports/repo-index/`
-
-| File | Contents |
-|------|----------|
-| `readme_manifest.txt` | All READMEs with descriptions |
-| `class_definitions.txt` | All classes with paths |
-| `function_signatures.txt` | All functions |
-| `imports.txt` | Import graph |
-| `route_handlers.txt` | API routes |
-| `test_catalog.txt` | All tests |
-| `inheritance_graph.txt` | Class hierarchy |
-| `method_catalog.txt` | Class methods |
-| `pydantic_models.txt` | BaseModel subclasses |
-
-### Odoo-Specific Indexes
-
-For Odoo repos, additional indexes:
-
-| File | Contents |
-|------|----------|
-| `odoo_model_registry.txt` | Odoo model definitions |
-| `odoo_xml_data_files.txt` | XML data files by module |
-| `odoo_security_groups.txt` | Security groups |
-| `odoo_email_templates.txt` | Email templates |
-| `odoo_cron_jobs.txt` | Cron jobs |
-| `odoo_automations.txt` | Automated actions |
-| `odoo_module_dependencies.txt` | Module dependency graph |
-| `odoo_views.txt` | View files by module |
-
-## Usage
 
 Before searching codebase, check indexes:
 
 ```bash
-# Find README for a module
-grep "memory/" reports/repo-index/readme_manifest.txt
-
-# Find class
 grep "ClassName" reports/repo-index/class_definitions.txt
-
-# Find function
-grep "function_name" reports/repo-index/function_signatures.txt
-
-# Find route (non-Odoo)
-grep "POST /api" reports/repo-index/route_handlers.txt
-
-# Find Odoo model
 grep "plasticos.transaction" reports/repo-index/odoo_model_registry.txt
 ```
 
-## Manual Index Generation
+See [`references/index-export-protocol.md`](references/index-export-protocol.md).
 
-If no generator script exists, generate indexes manually:
+## Resource Map
 
-```bash
-mkdir -p reports/repo-index
+- [`references/index-export-protocol.md`](references/index-export-protocol.md) — index files, manual generation, usage examples
+- `.cursor/workflows-synced/scripts/export_repo_indexes.py` — synced generator
+- `scripts/repo_generators/export_repo_indexes.py` — repo-local generator
+- `reports/repo-index/` — output directory
 
-# Model/class definitions
-grep -rn "class " --include="*.py" . | grep -v __pycache__ > reports/repo-index/class_definitions.txt
+## Validation
 
-# Function signatures
-grep -rn "def " --include="*.py" . | grep -v __pycache__ > reports/repo-index/function_signatures.txt
+- `reports/repo-index/` directory exists after run.
+- Core index files present: `class_definitions.txt`, `function_signatures.txt`.
+- Odoo repos: `odoo_model_registry.txt` and module dependency index populated.
+- Entry counts reported in output summary.
 
-# For Odoo repos:
-grep -r "_name = " --include="*.py" . | grep -v __pycache__ > reports/repo-index/odoo_model_registry.txt
-```
+## Failure Handling
 
-## Output
+| Symptom | Action |
+|---------|--------|
+| No generator script found | Use manual generation from reference |
+| Empty index file | Re-run from repo root; check path exclusions |
+| Stale indexes | Regenerate before large search tasks |
+| Odoo indexes missing | Run Odoo-specific grep commands from reference |
 
-```markdown
-## 📇 INDEX UPDATED
-
-| Index | Entries |
-|-------|---------|
-| classes | N |
-| functions | N |
-| models | N |
-
-**Location:** reports/repo-index/
-```
+When blocked: state exact gap, label `Unknown`, give smallest next action (usually: manual index generation from reference).

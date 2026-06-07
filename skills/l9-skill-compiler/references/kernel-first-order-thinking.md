@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: leverage_kernel
 tags: [skill, leverage, first_order, sequencing, scope_control]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Compresses first-order thinking gates that force the compiler to surface the simplest highest-value path before execution.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # First-Order Thinking Kernel
 

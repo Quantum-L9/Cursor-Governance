@@ -1,130 +1,78 @@
 ---
 name: l9-chat-extraction
-description: Extract learnings and specific content from chat conversations to memory or structured output
+description: extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, memory, extraction, chat, lessons, patterns]
+owner: igor_beylin
+status: active
+version: 1.0.1
+updated: 2026-06-06
 disable-model-invocation: true
 ---
 
----
-name: extract-chat
-version: "1.0.0"
-description: "Extract learnings from chat to memory"
-auto_chain: null
----
+# Chat Extraction
 
-# /extract-chat — Memory Extraction
+## Purpose
 
-## WHAT IT DOES
+Extract durable value from conversation — lessons, patterns, errors, preferences, and structured content (code, decisions, requirements, action items) — into L9 memory or formatted output.
 
-Extract learnings from conversation → L9 memory:
+## Core Contract
 
-- Lessons learned
-- Patterns discovered
-- Errors and fixes
-- User preferences
+`SCAN → CLASSIFY → WRITE (canonical path) → REPORT`
 
----
+1. **Scan** conversation for extractable items (lessons, patterns, errors, preferences, decisions, code, requirements, actions).
+2. **Classify** each item by type and scope; one atomic fact per memory write.
+3. **Write** through the canonical memory client — never bypass governance pipeline.
+4. **Report** extraction summary with counts and status.
 
-## EXECUTION
+## Authority Order
 
-### 1. SCAN CONVERSATION
+1. `docs/MEMORY_PIPELINE_MAP.md` — canonical write path
+2. `.cursor/rules/87-cursor-memory-kernel.mdc` — memory write format
+3. [`references/extract-chat.md`](references/extract-chat.md) — learnings → memory workflow
+4. [`references/extract-from-chat.md`](references/extract-from-chat.md) — structured content extraction
+5. `agents/cursor/cursor_memory_client.py` — CLI entry point
 
-```
-EXTRACT:
-├── Lessons (mistakes → corrections)
-├── Patterns (reusable approaches)
-├── Errors (issue → fix)
-├── Preferences (user corrections)
-└── Decisions (architectural choices)
-```
+## Compact Workflow
 
-### 2. WRITE TO MEMORY
+### Memory extraction (learnings)
 
-```bash
-python3 agents/cursor/cursor_memory_client.py write \
-  "LESSON: {content}" --kind lesson
+1. Scan for lessons, patterns, errors, preferences, decisions.
+2. Write one fact per call with `--kind` and `--scope cursor`.
+3. Output extraction table.
 
-python3 agents/cursor/cursor_memory_client.py write \
-  "PATTERN: {content}" --kind pattern
+See [`references/extract-chat.md`](references/extract-chat.md).
 
-python3 agents/cursor/cursor_memory_client.py write \
-  "ERROR: {issue} → FIX: {solution}" --kind error
-```
+### Content extraction (structured)
 
----
+1. Identify extraction type: code, decisions, requirements, actions, files.
+2. Pull matching blocks from conversation.
+3. Format per type template.
 
-## OUTPUT
+See [`references/extract-from-chat.md`](references/extract-from-chat.md).
 
-```markdown
-## 📝 EXTRACTED TO MEMORY
+## Resource Map
 
-| Type | Content | Status |
-|------|---------|--------|
-| lesson | {summary} | ✅ |
-| pattern | {summary} | ✅ |
-| error | {summary} | ✅ |
+- [`references/extract-chat.md`](references/extract-chat.md) — lessons/patterns/errors → memory writes
+- [`references/extract-from-chat.md`](references/extract-from-chat.md) — code/decisions/requirements/actions extraction
+- `agents/cursor/cursor_memory_client.py` — memory CLI
+- `docs/MEMORY_PIPELINE_MAP.md` — pipeline routing
 
-**Items:** N extracted
-```
+## Validation
 
---- End Command ---
+- Each memory write uses `--kind` and atomic single-fact content.
+- Extraction report lists type, summary, and status per item.
+- No bulk blob writes; no bypass of canonical pipeline.
 
----
+## Failure Handling
 
-<!-- migrated-from: extract-from-chat.md -->
+| Symptom | Action |
+|---------|--------|
+| Memory client unavailable | Report blocker; save structured handoff locally; retry on next session |
+| Ambiguous extraction type | Ask one focused question or default to `insight` with scope note |
+| Duplicate fact already in memory | Skip write; note in report as `skipped-duplicate` |
+| No extractable content | Report `0 items`; do not invent learnings |
 
----
-name: extract-from-chat
-version: "1.0.0"
-description: "Extract specific content from chat"
-auto_chain: null
----
-
-# /extract-from-chat — Content Extraction
-
-## WHAT IT DOES
-
-Extract specific content types from conversation:
-
-- Code blocks
-- Decisions
-- Requirements
-- Action items
-
----
-
-## EXTRACTION TYPES
-
-| Type | What |
-|------|------|
-| code | Code blocks |
-| decisions | Choices made |
-| requirements | Specs gathered |
-| actions | TODOs identified |
-| files | File references |
-
----
-
-## OUTPUT
-
-```markdown
-## 📤 EXTRACTED: {type}
-
-### Code Blocks
-```python
-{extracted code}
-```
-
-### Decisions
-- {decision 1}
-- {decision 2}
-
-### Requirements
-- {req 1}
-- {req 2}
-
-### Action Items
-- [ ] {action 1}
-- [ ] {action 2}
-```
-
---- End Command ---
+When blocked: state exact gap, label `Unknown`, give smallest next action (usually: run memory client health check or defer to `/end-session`).

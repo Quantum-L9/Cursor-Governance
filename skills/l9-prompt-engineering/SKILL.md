@@ -7,13 +7,33 @@ role: skill_entrypoint
 tags: [l9, prompt, llm, prompt-engineering]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
 ---
 
 # Prompt Engineering
 
-Write prompts that get reliable, high-quality output from LLMs.
+## Purpose
+
+Write and refine LLM prompts for reliable, structured output — system prompts, few-shot examples, chain-of-thought, constraints, and parseable response formats.
+
+## Core Contract
+
+| Technique | When | Output shape |
+|-----------|------|--------------|
+| System prompt | Role + constraints | Fixed behavior rules |
+| Few-shot | Format-sensitive tasks | 2–3 input→output examples |
+| Chain-of-thought | Debugging, reasoning | Numbered reasoning steps |
+| Structured output | Programmatic parsing | JSON or schema |
+| Guardrails | Safety, PII, scope | Explicit never/guess rules |
+
+## Authority Order
+
+1. Explicit user task, model, and output format requirements.
+2. Existing prompts in repo — extend, version, do not silently overwrite.
+3. Temperature guidance: 0 for deterministic, 0.7+ for creative.
+4. This skill's techniques and anti-patterns below.
+5. `Unknown` — test with edge cases; do not ship untested prompts to production.
 
 ## Core Principles
 
@@ -143,3 +163,18 @@ Fix the bug. Explain what caused it in a comment.
 - Version control your prompts — they're as important as code
 - Use structured output (JSON) when parsing the response programmatically
 - Shorter prompts often outperform longer ones if they're precise enough
+
+## Resource Map
+
+No `references/` folder — techniques, patterns, and anti-patterns live in this file.
+
+## Validation
+
+Prompts MUST specify output format when responses are parsed programmatically. User input MUST be delimited when injection risk exists. Few-shot examples MUST match the target task domain. Version prompts alongside code changes.
+
+## Failure Handling
+
+- Vague user goal → ask for success criteria and 1–2 example outputs before writing.
+- Contradictory constraints → surface tradeoff; ask user to pick priority.
+- Prompt too long → split into system + task + examples; keep each section focused.
+- Production prompt change → recommend A/B or eval set before full rollout.

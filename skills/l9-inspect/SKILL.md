@@ -1,45 +1,51 @@
 ---
 name: l9-inspect
-description: /inspect — Code Gate & File Audit
+description: inspect code before it enters l9 — external code gate and existing file audit via inspect-v1 dag. use when validating markdown with code blocks, proposed files not yet in repo, or auditing existing repo files before import/refactor.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, inspect, validation, external-code, audit, dag]
+owner: igor_beylin
+status: active
+version: 3.0.1
+updated: 2026-06-06
 disable-model-invocation: true
 ---
 
-name: inspect
-version: "3.0.0"
-description: "Inspect code before it enters L9 — external code gate + existing file audit"
-auto_chain: ynp
-dag: inspect-v1
-dag_file: .cursor-commands/workflows/dags/inspect_dag.py
+# Inspect
 
-# /inspect — Code Gate & File Audit
+## Purpose
 
-**DAG-ENFORCED.** Execute the `inspect-v1` DAG.
+Gate external code before L9 import and audit existing files — validate imports, ADR compliance, config drift, AST structure, and route to fix/refactor/wire/GMP paths.
 
-## Usage
+## Core Contract
+
+`CLASSIFY → ORIENT → STRUCTURE → COMPLIANCE → IMPACT → ROUTE → REPORT`
+
+1. **Classify** input as external (markdown/non-repo) or existing repo file.
+2. **Orient** — extract code blocks or load file AST.
+3. **Structure** — parse classes, functions, hotspots, syntax.
+4. **Compliance** — run wired validators (imports, ADR, config drift, DORA, async safety).
+5. **Impact** — assess blast radius for existing files.
+6. **Route** — `FIX-BEFORE-IMPORT`, `/harvest-analyze`, `/refactor-sweep`, `/wire`, `/gmp`, or `STOP`.
+7. **Report** — emit structured gate report.
+
+## Authority Order
+
+1. `.cursor-commands/workflows/dags/inspect_dag.py` — `inspect-v1` DAG
+2. `tools/validation/validate_external_code.py` — import/ADR/config validators
+3. [`references/inspect-protocol.md`](references/inspect-protocol.md) — usage, validators, flow
+4. `make validate-external-code FILE=path` — Makefile shortcut
+
+## Compact Workflow
 
 ```
-/inspect current_work/02-13-2026/guide.md    # External code — validate before import
+/inspect current_work/02-13-2026/guide.md    # External code
 /inspect path/to/proposed_file.py             # File not yet in repo
 /inspect core/tools/registry_adapter.py       # Existing file audit
 ```
 
-## What It Does
-
-### External Code (markdown, non-repo files)
-1. Extracts Python code blocks from markdown
-2. Validates imports against actual L9 modules
-3. Checks ADR compliance (structlog, no print, no f-string SQL, etc.)
-4. Detects hardcoded config values
-5. Parses AST structure (classes, functions, hotspots)
-6. Gates: `FIX-BEFORE-IMPORT` or `/harvest-analyze`
-
-### Existing Files
-1. Classifies type (MODULE, SERVICE, AGENT, etc.) and tier
-2. Parses AST for structure map
-3. Runs same compliance checks
-4. Routes to `/refactor-sweep`, `/wire`, `/gmp`, or `STOP`
-
-## Execution
+Execute `inspect-v1` DAG:
 
 ```python
 from .cursor_commands.workflows.dags.inspect_dag import run_inspect
@@ -47,25 +53,33 @@ result = await run_inspect("current_work/02-13-2026/guide.md")
 print(result.report)
 ```
 
-## Validators Wired In
+See [`references/inspect-protocol.md`](references/inspect-protocol.md).
 
-| Validator | Source | Checks |
-|-----------|--------|--------|
-| Import validation | `tools/validation/validate_external_code.py` | Non-existent L9 imports |
-| ADR compliance | `tools/validation/validate_external_code.py` | print(), logging, f-string SQL, random |
-| Config drift | `tools/validation/validate_external_code.py` | Hardcoded values vs config_constants |
-| AST structure | Built-in | Classes, functions, long functions, syntax errors |
-| DORA check | Built-in | Missing `__dora_meta__` |
-| Async safety | Built-in | `time.sleep()` in async functions |
+Auto-chains to `/ynp` after report.
 
-## Flow
+## Resource Map
 
-```
-START → classify → orient → structure → compliance → impact → routing → report → END
-```
+- [`references/inspect-protocol.md`](references/inspect-protocol.md) — validators, flow, routing details
+- `.cursor-commands/workflows/dags/inspect_dag.py` — inspect DAG
+- `tools/validation/validate_external_code.py` — external code validators
+- `Makefile` — `make validate-external-code FILE=path`
 
-## Key Files
+## Validation
 
-- **DAG**: `.cursor-commands/workflows/dags/inspect_dag.py`
-- **Validator**: `tools/validation/validate_external_code.py`
-- **Makefile**: `make validate-external-code FILE=path`
+- External code: imports resolve against actual L9 modules.
+- ADR compliance: no print(), no f-string SQL, structlog patterns.
+- Config drift: no hardcoded values vs `config_constants`.
+- AST: no syntax errors; DORA meta present where required.
+- Routing decision explicit in report.
+
+## Failure Handling
+
+| Symptom | Action |
+|---------|--------|
+| Import validation fails | Route `FIX-BEFORE-IMPORT`; list missing modules |
+| ADR violation | Route fix with specific rule citation |
+| Syntax error in extracted code | Block import; report line-level error |
+| Existing file audit fails compliance | Route `/refactor-sweep` or `/wire` per severity |
+| Validator script missing | Fall back to AST + manual ADR grep; note gap |
+
+When blocked: state exact gap, label `Unknown`, give smallest next action (usually: run `make validate-external-code FILE=path`).

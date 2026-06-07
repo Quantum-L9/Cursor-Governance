@@ -1,3 +1,10 @@
+<!-- L9_META
+l9_schema: 1
+origin: skill-hardening GMP-SKILL-HARDEN-001
+tags: [pr, review, angles]
+status: active
+/L9_META -->
+
 # PR review angles
 
 Load when the user asks for a focused PR review without full `/pr` analysis.

@@ -7,13 +7,34 @@ role: skill_entrypoint
 tags: [l9, security, audit, owasp, secrets]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
 ---
 
 # Security Audit
 
-Use this skill when the user asks to audit security, check for vulnerabilities, review code for security issues, or harden an application.
+## Purpose
+
+Perform a systematic code-level security review: secrets exposure, auth/authz, injection, dependencies, headers, and data leakage. Code review — not penetration testing.
+
+## Core Contract
+
+| Check | Focus | Severity output |
+|-------|-------|-----------------|
+| Secrets | Hardcoded keys, committed `.env` | Critical / High |
+| Auth | Route guards, password hashing, sessions | Critical / High |
+| Injection | SQL, XSS, command, path traversal | Critical / High |
+| Dependencies | `npm audit`, `pip audit`, CVEs | High / Medium |
+| Headers | CORS, CSP, HSTS, frame options | Medium |
+| Data exposure | API fields, errors, logs | High / Medium |
+
+## Authority Order
+
+1. Explicit user scope (paths, threat model, release gate).
+2. OWASP Top 10 and repo security rules when present.
+3. Automated scan output (`npm audit`, gitleaks, trivy) when available.
+4. This skill's checklist below.
+5. `Unknown` — recommend professional pentest for production-critical systems.
 
 ## Steps
 
@@ -57,3 +78,18 @@ Use this skill when the user asks to audit security, check for vulnerabilities, 
 - This is a code review, not a penetration test. Recommend tools like `npm audit`, `trivy`, or `snyk` for automated scanning.
 - Always check `.gitignore` to ensure `.env`, credentials, and key files are excluded.
 - For comprehensive auditing, recommend the OWASP Testing Guide.
+
+## Resource Map
+
+No `references/` folder — audit checklist and report format live in this file.
+
+## Validation
+
+Final report MUST list each finding with severity, file path, line (when applicable), and recommended fix. Secrets findings MUST be treated as Critical until proven false positive. Verify `.gitignore` excludes credentials.
+
+## Failure Handling
+
+- Live secrets in repo → flag Critical; do not echo full secret values in report.
+- Scope too broad → prioritize auth, injection, and secrets first.
+- No dependency lockfile → note limitation; run available audit tools only.
+- User expects pentest → clarify this skill is static code review; recommend external tooling.

@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: next_prompt_kernel
 tags: [skill, next_prompt, ynp, velocity, minimum_turns]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Compresses the one-next-prompt protocol used to preserve momentum and reduce turns after Skill design or build work.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # YNP Next Prompt Kernel
 

@@ -7,13 +7,33 @@ role: skill_entrypoint
 tags: [l9, ci, github-actions, pipeline, devops]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
 ---
 
 # Setup CI (GitHub Actions)
 
-Use this skill when the user asks to set up CI, continuous integration, a build pipeline, or GitHub Actions.
+## Purpose
+
+Bootstrap or extend GitHub Actions CI/CD: detect project stack, create `.github/workflows/ci.yml`, add lint/test/typecheck/build stages, optional matrix and deploy jobs.
+
+## Core Contract
+
+| Step | Output |
+|------|--------|
+| Detect | Stack from manifest files |
+| Scaffold | `ci.yml` with checkout + setup + cache |
+| Quality | lint, typecheck, test, build jobs |
+| Optional | matrix, deploy, status badge |
+| Secrets | GitHub Settings only — never in YAML |
+
+## Authority Order
+
+1. Explicit user stack, branch names, and required gates.
+2. Existing `.github/workflows/` — extend, do not duplicate conflicting workflows.
+3. Repo package scripts (`npm run lint`, `make pr-check`, etc.).
+4. This skill's steps below.
+5. `Unknown` — ask before adding deploy jobs or secret names.
 
 ## Steps
 
@@ -84,3 +104,18 @@ Use this skill when the user asks to set up CI, continuous integration, a build 
 - Keep CI fast — run lint and typecheck in parallel using separate jobs if the pipeline is slow.
 - Use `npm ci` (not `npm install`) for deterministic installs.
 - Store secrets (API keys, deploy tokens) in GitHub repository settings, never in the workflow file.
+
+## Resource Map
+
+No `references/` folder — workflow templates and notes live in this file. For PlasticOS repos, align with existing `ci.yml` rather than replacing — load `l9-ci-ops` for triage after setup.
+
+## Validation
+
+Workflow MUST use deterministic installs (`npm ci`, not `npm install`). Third-party actions SHOULD be version-pinned. Deploy jobs MUST gate on build success and target branch. No secrets in committed YAML.
+
+## Failure Handling
+
+- Unknown stack → inspect manifests; ask user if ambiguous.
+- Missing test/lint scripts → add scripts to package manifest or document manual steps.
+- Existing CI conflict → merge into single gate workflow; do not create duplicate PR checks.
+- SHA-pin policy required → follow repo rule (e.g. PlasticOS `86-ci-github-actions`).

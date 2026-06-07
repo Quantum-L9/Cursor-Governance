@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, reasoning, planning, architecture, debugging, analysis, leverage, confidence]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-06-04
+version: 1.1.0
+updated: 2026-06-06
 sources:
   - 01_reasoning_engine.kernel.yaml
   - 02_intelligence_analysis_engine.kernel.yaml
@@ -17,36 +17,43 @@ sources:
   - reasoning_think_strategy.kernel.yaml
 ---
 
-> Folded techniques: [references/systematic-debugging.md](references/systematic-debugging.md) (reproduce → isolate → hypothesize → verify; git bisect) and [references/best-of-n-parallel.md](references/best-of-n-parallel.md) (parallel best-of-n-runner strategies for high-uncertainty decisions).
-
 # Structured Reasoning
 
 ## Purpose
 
 Apply disciplined, visible reasoning before and during non-trivial work: planning, analyzing plans, architecture decisions, and debugging. Surface highest-leverage paths, quantify trade-offs, and state confidence explicitly.
 
-## When to Load
+## Core Contract
 
-Load this skill when the task involves:
-
-- **Planning** — multi-step implementation, sequencing, resource trade-offs
-- **Plan analysis** — reviewing a proposed approach, PR strategy, refactor plan
-- **Architecture decisions** — module boundaries, dependency choices, pattern selection
-- **Debugging** — root cause analysis, failure diagnosis, regression investigation
-- **Explicit requests** — "think through this", "analyze options", "what's the best approach"
+| Task type | Preflight | Mode | Analysis | Extra ref |
+|-----------|-----------|------|----------|-----------|
+| Planning | Required | Strategic + ADI | Dependency | B9 plan + ToTh if high-stakes |
+| Plan review | Required | Deductive + Comparative | Comprehensive | Effort/coverage ratio |
+| Architecture | Required | Strategic + Deep | Dependency + Performance | ≥2 alternatives |
+| Debugging | Required | Deep + Abductive | Rapid → Deep | Disconfirming evidence |
+| Multi-modal summary | Optional | Abductive/Deductive/Inductive | — | [reasoning-command-workflow.md](references/reasoning-command-workflow.md) |
 
 Skip for trivial one-line fixes with no trade-offs.
 
+## Authority Order
+
+1. Explicit user instruction
+2. Workspace invariants (`AGENTS.md`, `INVARIANTS.md`, module rules)
+3. This skill's operating rules and references
+4. Domain-specific skills loaded after this one
+
 ## Operating Rules
 
-1. **First-order preflight first** — run the five leverage gates silently on every non-trivial turn; surface failures before producing artifacts. Load `references/first-order-gates.md`.
+1. **First-order preflight first** — run five leverage gates silently; surface failures before artifacts. Load [first-order-gates.md](references/first-order-gates.md).
 2. **Verify before asserting** — read workspace state with tools; do not answer from memory when evidence is available.
-3. **Visible reasoning** — no black-box conclusions; show logic, assumptions, and trade-offs.
-4. **Mode routing** — pick strategic / rapid / deep / creative or ADI (abductive → deductive → inductive) based on task type. Load `references/reasoning-modes.md`.
-5. **Block protocol** — execute blocks in order for moderate+ complexity; Block 5 gate must pass before irreversible execution. Load `references/reasoning-protocol.md`.
-6. **Analysis depth** — match rapid / comprehensive / dependency / performance mode to the question. Load `references/analysis-modes.md`.
-7. **Confidence required** — state confidence on every non-trivial recommendation; include fallback for high-stakes plans. Load `references/confidence-and-contingency.md`.
-8. **Fail closed** — when confidence is below threshold or a gate fails, halt, surface the blocker, and request confirmation.
+3. **Visible reasoning** — no black-box conclusions; show logic, assumptions, trade-offs.
+4. **Mode routing** — strategic / rapid / deep / creative or ADI per [reasoning-modes.md](references/reasoning-modes.md).
+5. **Block protocol** — blocks 0–7 in order; Block 5 gate must pass before irreversible execution. Load [reasoning-protocol.md](references/reasoning-protocol.md).
+6. **Analysis depth** — match mode to question per [analysis-modes.md](references/analysis-modes.md).
+7. **Confidence required** — state confidence on every non-trivial recommendation. Load [confidence-and-contingency.md](references/confidence-and-contingency.md).
+8. **Fail closed** — confidence below threshold or gate failure → halt, surface blocker, request confirmation.
+
+Folded techniques: [systematic-debugging.md](references/systematic-debugging.md), [best-of-n-parallel.md](references/best-of-n-parallel.md).
 
 ## Compact Workflow
 
@@ -56,136 +63,30 @@ Preflight (5 gates) → Complexity (Block 0) → Objective → Context → Decom
 → Anticipate-and-Deliver → Confidence → Implementation plan (if coding)
 ```
 
-### Task-Type Shortcuts
-
-| Task type | Preflight | Mode | Analysis | Extra |
-|-----------|-----------|------|----------|-------|
-| Planning | Required | Strategic + ADI | Dependency | B9 plan + ToTh if high-stakes |
-| Plan review | Required | Deductive + Comparative | Comprehensive | Quantify effort/coverage ratio |
-| Architecture | Required | Strategic + Deep | Dependency + Performance | ≥2 alternatives before recommend |
-| Debugging | Required | Deep + Abductive | Rapid → Deep if needed | Disconfirming evidence required |
-
-## Authority Order
-
-1. Explicit user instruction
-2. Workspace invariants (AGENTS.md, INVARIANTS.md, module rules)
-3. This skill's operating rules
-4. Domain-specific skills loaded after this one
-
-## Reference Map
+## Resource Map
 
 Load references only when relevant:
 
-- `references/first-order-gates.md` — cardinal rule, five gates, proceed protocol, anti-patterns
-- `references/reasoning-protocol.md` — block 0–7 + anticipate-and-deliver + B8/B9/B11 extensions
-- `references/reasoning-modes.md` — depth tiers, escalation, strategic/rapid/deep/creative, ADI, complexity routing
-- `references/implementation-plan-template.md` — Block 9 YAML plan skeleton
-- `references/success-metrics-template.md` — Block 11 measurable acceptance criteria
-- `references/analysis-modes.md` — rapid/comprehensive/dependency/performance analysis workflows
-- `references/confidence-and-contingency.md` — confidence scale, Block 5 gate, ToTh, RAFA, bias mitigation
-- `references/validation-checklist.md` — pass/fail gates before delivery
+- [references/first-order-gates.md](references/first-order-gates.md) — cardinal rule, five gates, proceed protocol
+- [references/reasoning-protocol.md](references/reasoning-protocol.md) — blocks 0–7 + extensions
+- [references/reasoning-modes.md](references/reasoning-modes.md) — depth tiers, ADI, complexity routing
+- [references/reasoning-command-workflow.md](references/reasoning-command-workflow.md) — abductive/deductive/inductive synthesis output
+- [references/implementation-plan-template.md](references/implementation-plan-template.md) — Block 9 YAML plan skeleton
+- [references/success-metrics-template.md](references/success-metrics-template.md) — Block 11 acceptance criteria
+- [references/analysis-modes.md](references/analysis-modes.md) — rapid/comprehensive/dependency/performance
+- [references/confidence-and-contingency.md](references/confidence-and-contingency.md) — confidence scale, Block 5 gate
+- [references/validation-checklist.md](references/validation-checklist.md) — pass/fail gates before delivery
+- [references/systematic-debugging.md](references/systematic-debugging.md) — reproduce → isolate → verify
+- [references/best-of-n-parallel.md](references/best-of-n-parallel.md) — parallel best-of-n strategies
 
 ## Validation
 
-Before delivering a reasoning artifact, validate against `references/validation-checklist.md`.
+Before delivering a reasoning artifact, validate against [validation-checklist.md](references/validation-checklist.md).
 
 ## Failure Handling
 
-When blocked:
-
-- State the exact blocker and which gate or block failed
+- State exact blocker and which gate or block failed
 - Label unverifiable items as `Unknown`
-- Surface the highest-leverage alternative with quantified trade-offs
+- Surface highest-leverage alternative with quantified trade-offs
 - Do not proceed on moderate+ complexity when Block 5 gate fails without explicit user override
 - Do not present low-confidence output as certain
-
----
-
-<!-- migrated-from: commands/reasoning.md -->
-
----
-name: reasoning
-version: "6.0.0"
-description: "Multi-modal reasoning — abductive, deductive, inductive"
-auto_chain: ynp
----
-
-# /reasoning — Multi-Modal Reasoning
-
-## WHAT IT DOES
-
-Apply structured reasoning with confidence scoring:
-
-| Mode | Purpose | When |
-|------|---------|------|
-| Abductive | Pattern discovery, hypothesis | Diagnosis, root cause |
-| Deductive | Logical validation | Verification, compliance |
-| Inductive | Generalization | Trends, predictions |
-
----
-
-## EXECUTION
-
-### 1. DEFINE OBJECTIVE
-
-- What's the question/decision?
-- What does success look like?
-- What constraints apply?
-
-### 2. APPLY REASONING MODES
-
-**Abductive (Discovery):**
-- Observe symptoms
-- Generate explanations
-- Rank by likelihood
-
-**Deductive (Validation):**
-- State premises
-- Apply logic
-- Derive conclusions
-
-**Inductive (Generalization):**
-- Collect observations
-- Identify patterns
-- Generalize principle
-
-### 3. SYNTHESIZE
-
-Combine insights → confidence score → recommendation
-
----
-
-## CONFIDENCE SCORING
-
-| Score | Meaning | Action |
-|-------|---------|--------|
-| ≥90% | Very High | Execute |
-| 80-89% | High | Proceed with monitoring |
-| 70-79% | Moderate | Validate first |
-| <70% | Low | Investigate more |
-
----
-
-## OUTPUT FORMAT
-
-```markdown
-## 🧠 REASONING: {topic}
-
-### Analysis
-**Abductive:** {findings}
-**Deductive:** {validation}
-**Inductive:** {patterns}
-
-### Synthesis
-{combined insight}
-
-### Confidence: {score}%
-**Evidence:** {quality}
-
-### Recommendation
-{action with rationale}
-```
-
-→ **Auto-chains to /ynp**
-
---- End Command ---

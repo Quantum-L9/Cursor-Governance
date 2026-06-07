@@ -8,13 +8,32 @@ role: skill_entrypoint
 tags: [l9, python, tdd, uv, testing]
 owner: igor_beylin
 status: active
-version: 1.1.0
+version: 1.1.1
 updated: 2026-06-06
 ---
 
 # Python TDD with uv
 
-Write Python code test-first using `uv` for fast dependency and environment management.
+## Purpose
+
+Write Python code test-first using `uv` for dependency and environment management. Enforce red-green-refactor vertical slices — one failing test at a time.
+
+## Core Contract
+
+| Phase | Rule |
+|-------|------|
+| RED | One failing test for next behavior |
+| GREEN | Minimum code to pass |
+| REFACTOR | Clean without behavior change |
+| RUN | `uv run pytest` after every change |
+
+## Authority Order
+
+1. Explicit user module/API under test.
+2. Existing `pyproject.toml`, `uv.lock`, and test layout in repo.
+3. pytest conventions in repo when present.
+4. This skill's TDD workflow and uv commands below.
+5. `Unknown` — initialize with `uv init` only when no Python project exists.
 
 ## Setting Up the Project
 
@@ -106,8 +125,21 @@ uv lock                    # regenerate lockfile
 - Add `uv sync` to `postCreateCommand` in `devcontainer.json` so rebuilds restore the locked environment.
 - Never regenerate `uv.lock` without `uv lock`.
 
-## References
+## Resource Map
+
+No `references/` folder — workflow lives in this file. External inspiration:
 
 - [mattpocock/skills — TDD skill](https://github.com/mattpocock/skills) — vertical-slice TDD philosophy
 - [nizos/tdd-guard](https://github.com/nizos/tdd-guard) — automated TDD enforcement via hooks
 - [s2005/uv-skill](https://github.com/s2005/uv-skill) — uv workflow patterns
+
+## Validation
+
+Never write implementation before a failing test exists. Never more than one failing test at a time. Tests MUST assert observable behavior, not implementation details. Always use `uv run` — never manual venv activation. Commit `pyproject.toml` and `uv.lock` together.
+
+## Failure Handling
+
+- `uv` not installed → install uv or ask user; do not fall back to pip without approval.
+- Existing non-uv project → ask before `uv init`; may need migration plan.
+- Test passes on first write → test was not RED; rewrite test to fail first.
+- Odoo/runtime tests needed → this skill covers pure Python TDD; route Odoo tests to repo test rules.

@@ -1,16 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: pack_contract
 tags: [skill, standalone_protocol, structure, packaging, validation]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-06-04
---- /SKILL_META ---
--->
+version: 1.2.1
+updated: 2026-06-06
+/L9_META -->
 
 # Skill Pack Contract
 

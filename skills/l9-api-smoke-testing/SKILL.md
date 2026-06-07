@@ -7,13 +7,33 @@ role: skill_entrypoint
 tags: [l9, api, testing, smoke-test, http]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
 ---
 
 # API Smoke Testing
 
-Verify all API endpoints return healthy responses by combining codebase analysis with HTTP requests.
+## Purpose
+
+Verify all API endpoints return healthy responses by combining codebase route discovery with live HTTP requests. Report regressions (404/500) and fix root causes when requested.
+
+## Core Contract
+
+| Phase | Output |
+|-------|--------|
+| Discover | Route list with HTTP methods from codebase |
+| Smoke | Status code per endpoint |
+| Classify | OK / auth-expected / bug |
+| Report | Summary table with error details |
+| Fix | Stack-trace-driven patch for 500/404 bugs |
+
+## Authority Order
+
+1. Explicit user server URL, port, and auth requirements.
+2. Route definitions in repo — source of truth for expected endpoints.
+3. Live HTTP responses — classify against actual status codes.
+4. Terminal/server logs for 500 root cause.
+5. `Unknown` — ask before hitting production or authenticated routes without credentials.
 
 ## Workflow
 
@@ -77,3 +97,18 @@ API Smoke Test Results:
 ### 6. Fix Errors
 
 For 500 errors, read the terminal output for the stack trace and fix the root cause. For 404s, check that the route file is in the correct location and properly exported.
+
+## Resource Map
+
+No `references/` folder — workflow and status classification live in this file.
+
+## Validation
+
+Every discovered route MUST be hit at least once. Report MUST separate auth-expected (401/403) from bugs (404/500/timeout). 500 findings MUST include the error message or stack trace excerpt.
+
+## Failure Handling
+
+- Server not running → start dev server or ask user for URL/port.
+- Auth-required routes without credentials → classify as auth-expected; do not mark as bug.
+- Cannot discover routes → search by framework patterns; ask user for router entrypoint if ambiguous.
+- Production URL requested → confirm explicitly before sending requests.

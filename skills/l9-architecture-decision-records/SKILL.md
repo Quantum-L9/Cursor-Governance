@@ -7,13 +7,33 @@ role: skill_entrypoint
 tags: [l9, adr, architecture, documentation, decisions]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.0.1
 updated: 2026-06-06
 ---
 
 # Architecture Decision Records
 
-Document significant technical decisions so future you (and your team) understands why choices were made.
+## Purpose
+
+Document significant technical decisions so future readers understand context, options, trade-offs, and rationale. ADRs capture the decision — not full design docs.
+
+## Core Contract
+
+| Step | Output |
+|------|--------|
+| Identify | Decision scope and constraints |
+| Research | ≥2 viable options with pros/cons |
+| Write | Numbered ADR in `docs/decisions/` or `docs/adr/` |
+| Review | PR or team discussion |
+| Maintain | Supersede — never delete — link replacements |
+
+## Authority Order
+
+1. Explicit user decision and constraints.
+2. Existing ADRs in repo — numbering and format conventions.
+3. Team/project ADR template when present.
+4. This skill's template and workflow below.
+5. `Unknown` — mark options as provisional; do not invent stakeholder requirements.
 
 ## When to Write an ADR
 
@@ -100,3 +120,18 @@ docs/decisions/
 - It's OK to write an ADR after the fact if you forgot to write one during the decision
 - Superseded ADRs should link to their replacement, not be deleted
 - ADRs are not design docs — they capture the decision, not the full design
+
+## Resource Map
+
+No `references/` folder — template and workflow live in this file. Check repo for existing `docs/decisions/`, `docs/adr/`, or `ADR-*.md` patterns before creating files.
+
+## Validation
+
+Every ADR MUST include Status, Date, Context, Options Considered (≥2), Decision, and Consequences. File naming MUST follow repo sequential numbering. Superseded ADRs MUST link forward — never delete.
+
+## Failure Handling
+
+- Decision already made without ADR → write retrospective ADR; label status Accepted.
+- No `docs/decisions/` folder → create using repo convention or ask user for path.
+- Single obvious option → still document rejected alternatives briefly.
+- User wants full design doc → redirect to `l9-plan` spec mode; ADR stays decision-focused.

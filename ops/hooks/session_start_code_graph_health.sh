@@ -32,9 +32,9 @@ d = json.load(sys.stdin)
 t = d.get('data', {}).get('totals', {})
 print(f\"entities={t.get('entities', 0)} relationships={t.get('relationships', 0)} files={t.get('files', 0)}\")
 " 2>/dev/null || echo "healthy")"
-      SUMMARY="code-graph: healthy (${TOTALS}). Grep first; MCP for importers/impact/cross-module only. Rule 87-plasticos-code-graph-rag; skill l9-code-graph-rag-mcp."
+      SUMMARY="code-graph: healthy (${TOTALS}). Grep first; read graph for importers/impact/cross-module only. Trigger matrix: skills/l9-code-graph-rag-mcp/assets/plasticos-trigger-matrix.md. Rule 87-plasticos-code-graph-rag; skill l9-code-graph-rag-mcp. GMP Phase 0: code_graph_gmp_baseline.sh."
     else
-      SUMMARY="code-graph: UNHEALTHY — run in Terminal: bash ${GOV_SKILLS}/code_graph_batch_index.sh \"${REPO}\""
+      SUMMARY="code-graph: UNHEALTHY — run in Terminal: bash ${GOV_SKILLS}/code_graph_batch_index.sh \"${REPO}\". Trigger matrix: skills/l9-code-graph-rag-mcp/assets/plasticos-trigger-matrix.md"
     fi
   fi
 fi

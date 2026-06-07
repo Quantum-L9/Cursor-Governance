@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: file_contract
 tags: [skill, metadata, search, versioning, auditability, prompt_primitives]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Defines the compact metadata standard used across the Skill pack so prompts, kernels, contracts, checklists, and output modes remain searchable, versioned, and auditable.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # Metadata Standard
 

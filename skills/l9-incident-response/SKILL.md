@@ -7,18 +7,38 @@ role: skill_entrypoint
 tags: [l9, incident, ops, postmortem, sev]
 owner: igor_beylin
 status: active
-version: 1.1.0
+version: 1.1.1
 updated: 2026-06-06
 ---
 
 # Incident Response
 
-Handle production incidents systematically.
+## Purpose
 
-## Reference Map
+Handle production incidents systematically: triage by severity, mitigate first, communicate, resolve, and write blameless postmortems within 48 hours.
 
-- `references/rollback-playbook.md` — rollback-first decision tree, forensic snapshot, escalation ladder, MTTR report skeleton.
-- `references/network-troubleshoot.md` — read-only developer network diagnostics (DNS, TLS, proxy, registry failures).
+## Core Contract
+
+| Phase | Goal | Timebox |
+|-------|------|---------|
+| Detect & triage | Assign SEV level | First 5 min |
+| Mitigate | Stop bleeding — rollback/feature flag/scale | 15–30 min |
+| Communicate | Internal channel + status page | Every 15–30 min |
+| Resolve | Verify fix in production metrics | Before close |
+| Postmortem | Blameless timeline + action items | Within 48 h |
+
+## Authority Order
+
+1. Explicit severity, service impact, and rollback authority.
+2. Monitoring dashboards and recent deploy history.
+3. [references/rollback-playbook.md](references/rollback-playbook.md) for mitigation decisions.
+4. This skill's workflow below.
+5. `Unknown` — escalate; do not guess root cause during active SEV1/SEV2.
+
+## Resource Map
+
+- [references/rollback-playbook.md](references/rollback-playbook.md) — rollback-first decision tree, forensic snapshot, escalation ladder, MTTR report skeleton.
+- [references/network-troubleshoot.md](references/network-troubleshoot.md) — read-only developer network diagnostics (DNS, TLS, proxy, registry failures).
 
 ## Severity Levels
 
@@ -113,3 +133,14 @@ new webhook events failed because the insert didn't include `currency`.
 - Don't assign blame in postmortems — focus on process improvements
 - Maintain a runbook for common failure modes
 - Practice incident response with game days before real incidents happen
+
+## Validation
+
+SEV level MUST be assigned before mitigation. Mitigation actions MUST be logged with timestamps. Postmortem MUST include timeline, root cause, what went well/wrong, and owned action items. Network diagnostics ref is for developer failures — not production incident command.
+
+## Failure Handling
+
+- Active SEV1/SEV2 → mitigate before root-cause deep dive.
+- Rollback vs fix unclear → load rollback-playbook; prefer fastest user-impact reduction.
+- No monitoring access → ask for error rates, deploy time, and symptoms.
+- Postmortem blame language → rewrite blameless; focus on process improvements.

@@ -1,103 +1,54 @@
 ---
 name: l9-forge
-description: /forge — Autonomous Execution
+description: autonomous high-velocity execution with zero pauses — batch gmp runs, auto-fix validation, deliver code tests and reports. use when user invokes /forge or requests maximum-velocity autonomous delivery.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, forge, autonomous, gmp, velocity]
+owner: igor_beylin
+status: active
+version: 2.0.0
+updated: 2026-06-06
 disable-model-invocation: true
 ---
 
----
-name: forge
-version: "7.0.0"
-description: "Autonomous execution — NO PAUSES, maximum velocity"
-auto_chain: ynp
----
+# Forge — Autonomous Execution
 
-# /forge — Autonomous Execution
+## Purpose
 
-## WHAT IT DOES
+Maximum-velocity autonomous delivery: execute scoped work without manual checkpoints, auto-fix validation failures where safe, and deliver code + tests + GMP reports.
 
-**Maximum velocity execution** — ZERO pauses for approval:
-
-1. Execute autonomously (no manual checkpoints)
-2. Auto-fix issues silently
-3. Governance compliant by default
-4. Complete delivery: code + tests + docs
-
----
-
-## VELOCITY RULES
+## Core Contract
 
 | Rule | Behavior |
 |------|----------|
-| NO PAUSES | Don't ask, execute |
-| AUTO-FIX | Fix issues, proceed |
-| BATCH | Multiple GMPs per forge |
-| COMPLETE | Code + tests + docs |
+| NO PAUSES | Execute; do not ask unless stop condition hit |
+| AUTO-FIX | Fix validation failures within scope; proceed |
+| BATCH | Multiple GMPs per forge when scoped |
+| COMPLETE | Code + tests + reports required |
 
----
+Load [references/forge-workflow.md](references/forge-workflow.md) for execution steps and output format.
 
-## EXECUTION
+## Authority Order
 
-### 1. SCOPE LOCK
+1. User forge scope and modification lock.
+2. [l9-gmp-protocol](../l9-gmp-protocol/SKILL.md) for phased runs.
+3. Repo protected paths (`.cursor/rules/`, `pipeline_v2.py` never activated).
 
-```markdown
-## FORGE SCOPE
-**Task:** {description}
-**GMPs:** {count}
-**Files:** {list}
-**Tier:** KERNEL | RUNTIME | INFRA | UX
+## Resource Map
 
-⚡ EXECUTING (no confirmation needed)
-```
+- [references/forge-workflow.md](references/forge-workflow.md) — scope lock, GMP batch, deliverables, stop conditions.
 
-### 2. EXECUTE GMPs
+## Validation
 
-For each GMP in scope:
-- Phase 0-6 (no pauses)
-- Auto-fix validation failures
-- Generate report
+Each GMP in scope MUST end with evidence report in `reports/` when using GMP protocol.
 
-### 3. DELIVER
-
-| Artifact | Required |
-|----------|----------|
-| Code | ✅ |
-| Tests | ✅ |
-| Docs | If new API |
-| Report | ✅ |
-
----
-
-## STOP CONDITIONS (ONLY)
+## Failure Handling
 
 | Condition | Action |
 |-----------|--------|
-| Protected file | STOP → Request KERNEL approval |
-| Destructive op | STOP → Request explicit approval |
-| Circular dependency | STOP → Report issue |
+| Protected file change needed | STOP → request KERNEL approval |
+| Destructive op | STOP → explicit approval |
+| Circular dependency | STOP → report |
 
-Everything else → AUTO-FIX and proceed
-
----
-
-## OUTPUT
-
-```markdown
-## ⚡ FORGE COMPLETE
-
-**GMPs:** N executed
-**Files:** N modified
-**Tests:** ✅ passing
-
-### Deliverables
-- [x] Code implemented
-- [x] Tests added
-- [x] Reports generated
-
-### Reports
-- reports/GMP-XXX.md
-- reports/GMP-YYY.md
-```
-
-→ **Auto-chains to /ynp**
-
---- End Command ---
+Everything else → auto-fix within scope and proceed.

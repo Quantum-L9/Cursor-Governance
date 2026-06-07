@@ -1,3 +1,10 @@
+<!-- L9_META
+l9_schema: 1
+origin: skill-hardening GMP-SKILL-HARDEN-001
+tags: [pr, template, github]
+status: active
+/L9_META -->
+
 # GitHub PR template (reference)
 
 ```markdown

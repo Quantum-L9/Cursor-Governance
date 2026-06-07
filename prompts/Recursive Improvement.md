@@ -182,10 +182,6 @@ compiled_prompt:
       - convergence_block
     must_not_return:
       - single_improved_artifact_as_default
-      - commentary
-      - explanation
-      - side_notes
-      - implementation_unless_requested
       - partial_patch_when_complete_pack_is_required
 
   convergence_block:

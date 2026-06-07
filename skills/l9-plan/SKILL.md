@@ -1,215 +1,59 @@
 ---
 name: l9-plan
-description: Create an execution plan or implementation specification before building. Use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes.
+description: create an execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes.
+skill_schema: 1
+layer: control_plane
+role: skill_entrypoint
+tags: [l9, plan, spec, execution, requirements]
+owner: igor_beylin
+status: active
+version: 2.0.0
+updated: 2026-06-06
 ---
 
----
-name: plan
-version: "1.0.0"
-description: "Create execution plan before action"
-auto_chain: ynp
----
+# Execution Planning
 
-# /plan — Execution Planning
+## Purpose
 
-For engineering ticket structure (acceptance criteria, GWT scenarios), load [references/engineering-ticket-template.md](references/engineering-ticket-template.md).
+Produce a structured plan or full specification before implementation. Planning-only — no code edits unless the user explicitly chains to `l9-gmp-protocol` or another execution skill.
 
-## WHAT IT DOES
+## Core Contract
 
-Create structured plan before implementation:
+| Mode | Output | Load |
+|------|--------|------|
+| plan | TODO plan, risks, estimate | [references/plan-workflow.md](references/plan-workflow.md) |
+| spec | Full spec document for forge/gmp | [references/spec-workflow.md](references/spec-workflow.md) |
+| ticket | Engineering ticket structure | [references/engineering-ticket-template.md](references/engineering-ticket-template.md) |
 
-1. Define objective
-2. Identify scope
-3. List TODO items
-4. Estimate effort
-5. Identify risks
+## Authority Order
 
----
+1. Explicit user objective and constraints.
+2. Verified repo ground truth — existing modules, patterns, ADRs.
+3. Repo invariants — `AGENTS.md`, `.cursor/rules/*.mdc`.
+4. This skill's references.
+5. `Unknown` — ask before filling gaps in the spec.
 
-## EXECUTION
+## Compact Workflow
 
-### 1. OBJECTIVE
+1. **Gather** — objective, scope in/out, success criteria.
+2. **Decompose** — TODO table with files, effort, risk.
+3. **Dependencies** — task graph; identify blockers.
+4. **Deliver** — plan markdown or `specs/{project}-spec.md` per mode.
+5. **Recommend** — load `l9-ynp` for gmp vs forge vs continue.
 
-```
-What: {goal}
-Why: {rationale}
-Success: {criteria}
-```
+## Resource Map
 
-### 2. SCOPE
+- [references/plan-workflow.md](references/plan-workflow.md) — execution plan output format.
+- [references/spec-workflow.md](references/spec-workflow.md) — full specification generator.
+- [references/engineering-ticket-template.md](references/engineering-ticket-template.md) — acceptance criteria, GWT scenarios.
 
-```
-IN SCOPE:
-- {item}
+## Validation
 
-OUT OF SCOPE:
-- {item}
-```
+Every TODO MUST name files or `TBD` with a blocker note. Scope out MUST be explicit. No placeholder "TODO: fill in" without a question to the user.
 
-### 3. TODO PLAN
+## Failure Handling
 
-| # | Task | Files | Effort | Risk |
-|---|------|-------|--------|------|
-| 1 | ... | ... | S/M/L | 🟢/🟡/🔴 |
-
-### 4. DEPENDENCIES
-
-```
-Task 1 → Task 2 → Task 3
-              ↘ Task 4
-```
-
-### 5. RISKS
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-
----
-
-## OUTPUT
-
-```markdown
-## 📋 PLAN: {title}
-
-### Objective
-{what and why}
-
-### Scope
-**In:** {list}
-**Out:** {list}
-
-### TODO Plan
-| # | Task | Files | Effort |
-|---|------|-------|--------|
-
-### Dependencies
-{graph}
-
-### Risks
-| Risk | Mitigation |
-|------|------------|
-
-### Estimate
-**Total:** {time}
-**GMPs:** {count}
-```
-
-→ **Auto-chains to /ynp** (recommends /gmp or /forge)
-
---- End Command ---
-
----
-
-<!-- migrated-from: commands/spec.md -->
-
----
-name: spec
-version: "7.1.0"
-description: "Generate specification before building"
-before_chain: rules
-auto_chain: ynp
----
-
-# /spec — Specification Generator
-
-## WHAT IT DOES
-
-Generate complete spec before implementation:
-
-1. Context & Goals
-2. Constraints
-3. Architecture
-4. Detailed Design
-5. Operations
-6. Risks
-7. Acceptance Criteria
-
-**Output:** Spec document ready for `/forge` or `/gmp`
-
----
-
-## EXECUTION
-
-### 1. GATHER CONTEXT
-
-```
-QUESTIONS:
-├── What problem does this solve?
-├── Who are the users?
-├── What are the constraints?
-├── What already exists to leverage?
-└── What does success look like?
-```
-
-### 2. GENERATE SPEC
-
-```markdown
-# {Project} Specification
-
-## 1. Overview
-**Problem:** ...
-**Solution:** ...
-**Success Criteria:** ...
-
-## 2. Constraints
-- Must: ...
-- Must Not: ...
-- Should: ...
-
-## 3. Architecture
-```
-[diagram]
-```
-
-## 4. Components
-| Component | Purpose | Interface |
-|-----------|---------|-----------|
-
-## 5. Data Flow
-Entry → Process → Store → Return
-
-## 6. Operations
-- Deployment: ...
-- Monitoring: ...
-- Rollback: ...
-
-## 7. Risks
-| Risk | Mitigation |
-|------|------------|
-
-## 8. Acceptance
-- [ ] Criterion 1
-- [ ] Criterion 2
-
-## 9. Phases
-| Phase | Scope | GMPs |
-|-------|-------|------|
-```
-
----
-
-## OUTPUT LOCATION
-
-```
-specs/{project}-spec.md
-```
-
-→ **Auto-chains to /ynp** (recommends /forge or /gmp)
-
----
-
-## Future: IR Engine Integration
-
-The IR engine (`ir_engine/`) can enhance spec generation:
-
-- **`SemanticCompiler`** (`ir_engine/semantic_compiler.py`) converts natural language descriptions into structured `IRGraph` representations, extracting requirements, constraints, and dependencies automatically.
-- **`UnifiedController.compile_only(text, context)`** provides a single entry point for NL-to-IR compilation.
-
-When wired, `/spec` could use `SemanticCompiler` to:
-1. Parse the user's NL description into structured intent
-2. Auto-detect constraints and dependencies from the IRGraph
-3. Pre-populate the spec template with machine-extracted requirements
-
-**Status:** Not yet wired. The `UnifiedController` is complete (v2.0.0) and exported from `orchestration/`. Integration requires calling `compile_only()` during the "GATHER CONTEXT" phase and feeding the IRGraph into spec template generation.
-
---- End Command ---
+- Ambiguous objective → STOP at gather; ask clarifying questions.
+- Scope creep detected → move items to Out of scope.
+- Protected-path changes planned → flag KERNEL GMP requirement.
+- User requests immediate implementation → recommend `l9-gmp-protocol`; do not edit files in plan mode.

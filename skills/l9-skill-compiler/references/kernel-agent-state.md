@@ -1,19 +1,14 @@
-<!--
---- SKILL_META ---
-skill_schema: 1
-origin: strict-skill-compiler
+<!-- L9_META
+l9_schema: 1
+parent: l9-skill-compiler
 layer: reference
 role: runtime_kernel
 tags: [skill, runtime, deterministic, no_drift, fail_closed]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-05-31
---- /SKILL_META ---
-
-Purpose:
-Compresses deterministic runtime behavior rules for strict, low-drift Skill compilation.
--->
+version: 1.1.1
+updated: 2026-06-06
+/L9_META -->
 
 # Agent State Kernel
 
