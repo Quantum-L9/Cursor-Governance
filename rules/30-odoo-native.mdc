@@ -4,7 +4,7 @@ alwaysApply: true
 globs: ["plasticos_*/**/*.py", "plasticos_*/**/*.xml"]
 ---
 
-# Odoo-Native Code Patterns (PlastOS)
+# Odoo-Native Code Patterns (PlasticOS)
 
 **Scope:** All `plasticos_*` modules in this repository.
 
