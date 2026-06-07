@@ -1,0 +1,44 @@
+---
+description: Graphiti episodic memory SSOT — retrieval authority, group_id contract, no Cursor native memory for repo facts
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Graphiti Memory (SSOT)
+
+**Graphiti memory gate hooks ≠ PlasticOS ADR-002 Gate hub** — this rule is Cursor episodic memory only.
+
+## Retrieval authority (canonical order)
+
+1. Rules / `AGENTS.md` — always, $0
+2. Grep / Read — when path/symbol known, $0
+3. **code-graph** — importers, impact, cross-module location only ($0)
+4. Scoped code-graph semantic — module path required
+5. **Graphiti** — decisions, ADRs, constraints, CI gotchas
+6. `Unknown` — STOP; do not unscoped graph dump
+
+## Write tiers
+
+| Tier | Target | Trigger |
+|------|--------|---------|
+| T0 | `memory-bank/` | sessionEnd template — no LLM |
+| T1 | Graphiti JSON episode | sessionEnd distill — budget capped |
+| T2 | Graphiti search-before-write | lessons, ADR deltas |
+| T3 | Full chat ingest | **FORBIDDEN** |
+
+## MUST
+
+- Every Graphiti read/write includes resolved `group_id` from `graphiti_memory_client.py resolve`
+- Never write to `group_id=main` or `group_id=default`
+- Never use Cursor `update_memory` / native Memories for repo/code facts
+- Never use code-graph for episodic decisions (use Graphiti)
+
+## CLI (terminal / hooks only)
+
+```bash
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "query"
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run
+```
+
+Load skill: **`l9-graphiti-memory`**

@@ -89,10 +89,13 @@ install_session_end_governance_hook() {
   local hook_link="$HOME/.cursor/hooks/governance-backup.sh"
   local session_start_src="$GLOBAL_COMMANDS/ops/hooks/session_start_code_graph_health.sh"
   local session_start_link="$HOME/.cursor/hooks/code-graph-health.sh"
+  local orchestrator_src="$GLOBAL_COMMANDS/ops/hooks/session_start_memory_orchestrator.sh"
+  local orchestrator_link="$HOME/.cursor/hooks/session-start-memory-orchestrator.sh"
   local pre_tool_src="$GLOBAL_COMMANDS/ops/hooks/pre_tool_use_code_graph_gate.sh"
   local pre_tool_link="$HOME/.cursor/hooks/pre-tool-use-code-graph-gate.sh"
   local before_mcp_src="$GLOBAL_COMMANDS/ops/hooks/before_mcp_code_graph_gate.sh"
   local before_mcp_link="$HOME/.cursor/hooks/before-mcp-code-graph-gate.sh"
+  local graphiti_template="$GLOBAL_COMMANDS/ops/graphiti/memory-bank-template"
   local hooks_json="$HOME/.cursor/hooks.json"
   local template="$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
 
@@ -101,29 +104,55 @@ install_session_end_governance_hook() {
     return 0
   fi
 
-  mkdir -p "$HOME/.cursor/hooks"
+  mkdir -p "$HOME/.cursor/hooks" "$HOME/.cursor/graphiti-state"
   chmod +x "$hook_src"
   link_or_update "$hook_link" "$hook_src" "~/.cursor/hooks/governance-backup.sh"
 
   if [ -f "$session_start_src" ]; then
     chmod +x "$session_start_src"
     link_or_update "$session_start_link" "$session_start_src" "~/.cursor/hooks/code-graph-health.sh"
-  else
-    echo "WARN: sessionStart hook missing: $session_start_src"
+  fi
+
+  if [ -f "$orchestrator_src" ]; then
+    chmod +x "$orchestrator_src" "$GLOBAL_COMMANDS/ops/hooks/graphiti_common.sh"
+    link_or_update "$orchestrator_link" "$orchestrator_src" "~/.cursor/hooks/session-start-memory-orchestrator.sh"
+  fi
+
+  for pair in \
+    "graphiti-prefetch.sh:graphiti-prefetch.sh" \
+    "graphiti-session-end.sh:graphiti-session-end.sh" \
+    "graphiti-reset-generation.sh:graphiti-reset-generation.sh" \
+    "graphiti-mark-ok.sh:graphiti-mark-ok.sh" \
+    "graphiti-gate-edits.sh:graphiti-gate-edits.sh" \
+    "graphiti-gate-shell.sh:graphiti-gate-shell.sh" \
+    "graphiti-gate-subagent.sh:graphiti-gate-subagent.sh"; do
+    src_name="${pair%%:*}"
+    link_name="${pair##*:}"
+    src_path="$GLOBAL_COMMANDS/ops/hooks/$src_name"
+    if [ -f "$src_path" ]; then
+      chmod +x "$src_path"
+      link_or_update "$HOME/.cursor/hooks/$link_name" "$src_path" "~/.cursor/hooks/$link_name"
+    fi
+  done
+
+  if [ -d "$graphiti_template" ]; then
+    mkdir -p "$WORKSPACE_DIR/memory-bank"
+    for f in activeContext.md tasks.md progress.md tech-debt.md; do
+      if [ ! -f "$WORKSPACE_DIR/memory-bank/$f" ] && [ -f "$graphiti_template/$f" ]; then
+        cp "$graphiti_template/$f" "$WORKSPACE_DIR/memory-bank/$f"
+        echo "SCAFFOLD: memory-bank/$f"
+      fi
+    done
   fi
 
   if [ -f "$pre_tool_src" ]; then
     chmod +x "$pre_tool_src"
     link_or_update "$pre_tool_link" "$pre_tool_src" "~/.cursor/hooks/pre-tool-use-code-graph-gate.sh"
-  else
-    echo "WARN: preToolUse hook missing: $pre_tool_src"
   fi
 
   if [ -f "$before_mcp_src" ]; then
     chmod +x "$before_mcp_src"
     link_or_update "$before_mcp_link" "$before_mcp_src" "~/.cursor/hooks/before-mcp-code-graph-gate.sh"
-  else
-    echo "WARN: beforeMCPExecution hook missing: $before_mcp_src"
   fi
 
   python3 - "$hooks_json" "$template" <<'PY'

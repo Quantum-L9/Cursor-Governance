@@ -1,10 +1,13 @@
 ---
-description: "L9 Memory Stack - C1 PRIMARY server, PostgreSQL, Neo4j, Redis, pgvector"
+description: "DEPRECATED — superseded by 03-graphiti-memory.mdc (Graphiti VPS). C1 read-only."
 globs: ["**/*"]
-alwaysApply: true
+alwaysApply: false
 ---
 
-# 🚨 C1 IS THE PRIMARY MEMORY SERVER
+> **DEPRECATED 2026-06-06** — Use **`03-graphiti-memory.mdc`** + Graphiti VPS (`graphiti_memory_client.py`).
+> C1 (`46.62.243.82`) is **read-only** — no new writes. Do not use for repo facts.
+
+# 🚨 C1 IS THE PRIMARY MEMORY SERVER (LEGACY — DEPRECATED)
 
 **Effective: 2026-01-24**
 

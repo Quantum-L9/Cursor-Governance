@@ -3,14 +3,31 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "./hooks/code-graph-health.sh",
+        "command": "./hooks/session-start-memory-orchestrator.sh",
         "timeout": 15
       }
     ],
     "sessionEnd": [
       {
+        "command": "./hooks/graphiti-session-end.sh",
+        "timeout": 30
+      },
+      {
         "command": "./hooks/governance-backup.sh",
         "timeout": 120
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "./hooks/graphiti-reset-generation.sh",
+        "timeout": 5
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "./hooks/graphiti-mark-ok.sh",
+        "matcher": "graphiti|add_episode|search_facts|search_nodes",
+        "timeout": 5
       }
     ],
     "preToolUse": [
@@ -18,11 +35,28 @@
         "command": "./hooks/pre-tool-use-code-graph-gate.sh",
         "matcher": "Write|StrReplace|search_replace|EditNotebook|ApplyPatch",
         "timeout": 10
+      },
+      {
+        "command": "./hooks/graphiti-gate-edits.sh",
+        "matcher": "Write|StrReplace|search_replace|EditNotebook|ApplyPatch|Delete|Task",
+        "timeout": 10
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "./hooks/graphiti-gate-shell.sh",
+        "timeout": 10
       }
     ],
     "beforeMCPExecution": [
       {
         "command": "./hooks/before-mcp-code-graph-gate.sh",
+        "timeout": 10
+      }
+    ],
+    "subagentStart": [
+      {
+        "command": "./hooks/graphiti-gate-subagent.sh",
         "timeout": 10
       }
     ]

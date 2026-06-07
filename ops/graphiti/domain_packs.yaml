@@ -1,0 +1,36 @@
+# Graphiti domain packs — coding allowlist_only (PlasticOS / GlobalCommands)
+schema_version: 1
+
+core:
+  entity_types:
+    - Preference
+    - TechDebtItem
+  edge_types:
+    - DependsOn
+    - Supersedes
+    - ConflictsWith
+
+coding:
+  extraction_mode: allowlist_only
+  entity_types:
+    - RepoManifest
+    - Module
+    - ADRDecision
+    - GMPPhase
+    - ModificationLock
+    - CIGotcha
+    - TechDebtItem
+    - Preference
+  edge_types:
+    - DependsOn
+    - Supersedes
+    - IntegratesWith
+    - Blocks
+    - Documents
+    - ConflictsWith
+  excluded_entity_types:
+    - FamilyMember
+    - RoofingJob
+    - Hobby
+    - Property
+    - RealEstateDeal

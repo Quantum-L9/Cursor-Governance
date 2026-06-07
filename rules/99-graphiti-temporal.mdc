@@ -1,0 +1,24 @@
+---
+description: Graphiti temporal contract — Supersedes, conflicts_with, bi-temporal invalidation
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Graphiti Temporal Memory
+
+## Supersedes
+
+When a new ADR/decision replaces an old one:
+
+- Emit `Supersedes` edge from new episode to prior
+- Prefer Graphiti bi-temporal invalidation over silent overwrite
+
+## conflicts_with
+
+- Run `graphiti_memory_client.py conflicts` before GMP Phase 0 lock
+- Surface unresolved conflicts in Phase 6 evidence Section 11
+- Human resolves or documents each conflict before cutover
+
+## Search-before-write (T1/T2)
+
+Before lesson/manifest writes, search same `group_id` for near-duplicates.

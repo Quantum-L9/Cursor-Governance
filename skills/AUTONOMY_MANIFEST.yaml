@@ -17,6 +17,8 @@ tiers:
   auto_invoke:
     - skill: "l9-context7-docs"
       use_when: "current library, framework, SDK, API, or version-specific documentation could prevent implementation mistakes"
+    - skill: "l9-recursive-optimization"
+      use_when: "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
     - skill: "l9-structured-reasoning"
       use_when: "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
     - skill: "l9-gmp-protocol"
