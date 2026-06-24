@@ -10,7 +10,7 @@
 | Service | Bind | Notes |
 |---------|------|-------|
 | Graphiti MCP | `127.0.0.1:8100` | Maps container 8000 |
-| Neo4j bolt | `127.0.0.1:7687` | DB `graphiti_cursor` |
+| Neo4j bolt | `127.0.0.1:7687` | Default `neo4j` DB (dedicated instance) |
 | Neo4j browser | `127.0.0.1:7474` | Optional admin |
 
 ## Deploy on C1
@@ -21,8 +21,8 @@ mkdir -p /opt/graphiti-cursor
 cd /opt/graphiti-cursor
 # Copy docker-compose.yml from GlobalCommands/ops/graphiti/
 cp graphiti.env.example graphiti.env   # fill OPENAI_API_KEY, tokens — NEVER commit
-docker compose up -d
-curl -sf -H "Authorization: Bearer $GRAPHITI_MCP_TOKEN" http://127.0.0.1:8100/healthcheck
+docker compose --env-file graphiti.env up -d
+curl -sf -H "Authorization: Bearer $(grep ^GRAPHITI_MCP_TOKEN= graphiti.env | cut -d= -f2-)" http://127.0.0.1:8100/healthcheck
 ```
 
 ## Mac client
@@ -50,6 +50,26 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py phase-lock
 bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ```
+
+## Custom ontology (optional)
+
+`ontology_coding.py` defines entity/edge types for `--use-custom-entities`. **Do not enable** until verified on C1:
+
+```bash
+docker compose exec graphiti-mcp python -m graphiti_mcp.server --help | grep -i custom || true
+```
+
+If supported, uncomment the `volumes` + `command` block in `docker-compose.yml`, then `docker compose --env-file graphiti.env up -d --force-recreate graphiti-mcp`.
+
+## Autoseed on workspace wire
+
+In `~/.cursor/graphiti.env`:
+
+```bash
+GRAPHITI_AUTOSEED=1   # default off — runs bootstrap after memory-bank scaffold in setup_workspace_symlinks.sh
+```
+
+Manual check: `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py autoseed-check` (exit 2 = not seeded).
 
 ## Warnings
 

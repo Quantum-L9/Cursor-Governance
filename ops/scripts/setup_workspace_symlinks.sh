@@ -68,6 +68,88 @@ setup_local_governance_dir() {
   link_or_update "$law_link" "$law_src" ".cursor/governance/CANONICAL_LAW.md"
 }
 
+install_graphiti_tunnel_agent() {
+  # Always-on Graphiti VPS tunnel via a macOS LaunchAgent (launchd).
+  # Opt-in: GRAPHITI_TUNNEL_AUTOSTART=1 in ~/.cursor/graphiti.env.
+  # Prefers autossh if installed; otherwise plain ssh + keepalive (launchd KeepAlive restarts on exit).
+  local genv="$HOME/.cursor/graphiti.env"
+  if [ ! -f "$genv" ]; then
+    echo "HINT: no graphiti.env — skip Graphiti tunnel agent"
+    return 0
+  fi
+  # shellcheck disable=SC1090
+  set -a && source "$genv" && set +a
+
+  if [ "${GRAPHITI_MEMORY_ENABLED:-0}" != "1" ]; then
+    echo "OK: Graphiti disabled — skip tunnel agent"
+    return 0
+  fi
+  if [ "${GRAPHITI_TUNNEL_AUTOSTART:-0}" != "1" ]; then
+    echo "HINT: set GRAPHITI_TUNNEL_AUTOSTART=1 in graphiti.env for an always-on tunnel LaunchAgent"
+    return 0
+  fi
+
+  local ssh_host="${GRAPHITI_SSH_HOST:-}"
+  if [ -z "$ssh_host" ]; then
+    echo "WARN: GRAPHITI_SSH_HOST unset — cannot install tunnel agent"
+    return 0
+  fi
+  local ssh_user="${GRAPHITI_SSH_USER:-root}"
+  local ssh_key="${GRAPHITI_SSH_KEY:-$HOME/.ssh/Hetzner-C1-nopass}"
+  local local_port="${GRAPHITI_TUNNEL_LOCAL_PORT:-8100}"
+  local remote_port="${GRAPHITI_TUNNEL_REMOTE_PORT:-8100}"
+
+  local label="com.cursor.graphiti-tunnel"
+  local plist="$HOME/Library/LaunchAgents/$label.plist"
+  local logdir="$HOME/.cursor/logs_llm"
+  mkdir -p "$(dirname "$plist")" "$logdir"
+
+  local ssh_bin autossh_env=""
+  if command -v autossh >/dev/null 2>&1; then
+    ssh_bin="$(command -v autossh)"
+    autossh_env="    <key>EnvironmentVariables</key>
+    <dict><key>AUTOSSH_GATETIME</key><string>0</string></dict>
+"
+  else
+    ssh_bin="$(command -v ssh)"
+  fi
+
+  cat > "$plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>$label</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$ssh_bin</string>
+        <string>-N</string>
+        <string>-o</string><string>ServerAliveInterval=30</string>
+        <string>-o</string><string>ServerAliveCountMax=3</string>
+        <string>-o</string><string>ExitOnForwardFailure=yes</string>
+        <string>-o</string><string>StrictHostKeyChecking=accept-new</string>
+        <string>-i</string><string>$ssh_key</string>
+        <string>-L</string><string>${local_port}:127.0.0.1:${remote_port}</string>
+        <string>${ssh_user}@${ssh_host}</string>
+    </array>
+$autossh_env    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>10</integer>
+    <key>StandardOutPath</key><string>$logdir/graphiti-tunnel.log</string>
+    <key>StandardErrorPath</key><string>$logdir/graphiti-tunnel.err</string>
+</dict>
+</plist>
+PLIST
+
+  launchctl unload "$plist" 2>/dev/null || true
+  if launchctl load "$plist" 2>/dev/null; then
+    echo "LAUNCHAGENT: $label loaded ($(basename "$ssh_bin") tunnel ${local_port}->${ssh_host}:${remote_port})"
+  else
+    echo "WARN: launchctl load failed for $plist"
+  fi
+}
+
 echo "Governance root:  $GOV_ROOT"
 echo "GlobalCommands:   $GLOBAL_COMMANDS"
 echo "Workspace:        $WORKSPACE_DIR"
@@ -75,9 +157,11 @@ echo ""
 
 link_or_update "$HOME/.cursor/skills" "$GLOBAL_COMMANDS/skills" "~/.cursor/skills"
 link_or_update "$HOME/.cursor/commands" "$GLOBAL_COMMANDS/commands" "~/.cursor/commands"
+link_or_update "$HOME/.cursor/rules" "$GLOBAL_COMMANDS/rules" "~/.cursor/rules"
 
 link_or_update "$WORKSPACE_DIR/.cursor-commands" "$GLOBAL_COMMANDS" ".cursor-commands"
 mkdir -p "$WORKSPACE_DIR/.cursor"
+link_or_update "$WORKSPACE_DIR/.cursor/rules" "$GLOBAL_COMMANDS/rules" ".cursor/rules"
 
 setup_local_governance_dir
 
@@ -98,6 +182,14 @@ install_session_end_governance_hook() {
   local graphiti_template="$GLOBAL_COMMANDS/ops/graphiti/memory-bank-template"
   local hooks_json="$HOME/.cursor/hooks.json"
   local template="$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
+
+  local bootstrap_src="$GLOBAL_COMMANDS/ops/hooks/session_start_bootstrap.sh"
+  local bootstrap_dst="$HOME/.cursor/hooks/session-start-bootstrap.sh"
+  if [ -f "$bootstrap_src" ]; then
+    cp -f "$bootstrap_src" "$bootstrap_dst"
+    chmod +x "$bootstrap_dst"
+    echo "INSTALLED: ~/.cursor/hooks/session-start-bootstrap.sh (real file)"
+  fi
 
   if [ ! -f "$hook_src" ]; then
     echo "WARN: session end hook missing: $hook_src"
@@ -146,6 +238,26 @@ install_session_end_governance_hook() {
     done
   fi
 
+  # Graphiti autoseed — opt-in via GRAPHITI_AUTOSEED=1 in ~/.cursor/graphiti.env
+  graphiti_env="$HOME/.cursor/graphiti.env"
+  graphiti_cli="$GLOBAL_COMMANDS/ops/graphiti/graphiti_memory_client.py"
+  if [ -f "$graphiti_env" ]; then
+    # shellcheck disable=SC1090
+    set -a && source "$graphiti_env" && set +a
+  fi
+  if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$graphiti_cli" ]; then
+    if [ "${GRAPHITI_AUTOSEED:-0}" = "1" ]; then
+      if python3 "$graphiti_cli" autoseed-check 2>/dev/null; then
+        echo "GRAPHITI: manifest already seeded"
+      else
+        echo "GRAPHITI: autoseed bootstrap for $(basename "$WORKSPACE_DIR")..."
+        python3 "$graphiti_cli" bootstrap || echo "WARN: Graphiti bootstrap failed — run manually" >&2
+      fi
+    else
+      echo "HINT: set GRAPHITI_AUTOSEED=1 in ~/.cursor/graphiti.env to bootstrap on wire"
+    fi
+  fi
+
   if [ -f "$pre_tool_src" ]; then
     chmod +x "$pre_tool_src"
     link_or_update "$pre_tool_link" "$pre_tool_src" "~/.cursor/hooks/pre-tool-use-code-graph-gate.sh"
@@ -163,6 +275,7 @@ from pathlib import Path
 
 hooks_json = Path(sys.argv[1])
 template = Path(sys.argv[2])
+bootstrap_cmd = "./hooks/session-start-bootstrap.sh"
 data = json.loads(template.read_text())
 if hooks_json.exists():
     try:
@@ -181,6 +294,16 @@ if hooks_json.exists():
                 merged.append(entry)
                 known.add(cmd)
     data = existing
+
+# sessionStart: bootstrap first; retire orchestrator-only entry
+hooks = data.setdefault("hooks", {})
+ss = hooks.setdefault("sessionStart", [])
+ss = [e for e in ss if e.get("command") != "./hooks/session-start-memory-orchestrator.sh"]
+bootstrap_entry = {"command": bootstrap_cmd, "timeout": 30}
+ss = [bootstrap_entry] + [e for e in ss if e.get("command") != bootstrap_cmd]
+hooks["sessionStart"] = ss
+data = {"version": 1, "hooks": hooks}
+
 hooks_json.parent.mkdir(parents=True, exist_ok=True)
 hooks_json.write_text(json.dumps(data, indent=2) + "\n")
 print(f"OK: governance hooks registered in {hooks_json}")
@@ -188,6 +311,9 @@ PY
 }
 
 install_session_end_governance_hook
+
+echo ""
+install_graphiti_tunnel_agent
 
 echo ""
 bash "$SCRIPT_DIR/validate_governance_symlinks.sh" "$WORKSPACE_DIR"

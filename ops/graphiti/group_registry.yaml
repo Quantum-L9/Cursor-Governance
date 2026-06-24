@@ -20,3 +20,8 @@ repos:
     path_hints: [cognitive-engine-graphs, CEG]
     remote_patterns: ["*/cognitive-engine-graphs*"]
     integrates_with: [ib-odoo-19]
+  l9-node-template:
+    github: cryptoxdog/L9-Node-Template
+    path_hints: [L9-Node-Template]
+    remote_patterns: ["*/L9-Node-Template*"]
+    integrates_with: [cursor-governance]

@@ -107,3 +107,17 @@ bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh
 bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh
 bash .cursor-commands/ops/scripts/backup_to_github.sh   # first GitHub sync
 ```
+
+## 9. Graphiti memory (GLOBAL-001)
+
+| Layer | SSOT | Path |
+|-------|------|------|
+| T0 resume | `memory-bank/` | repo root (gitignored scaffold via `setup_workspace_symlinks.sh`) |
+| T1/T2 semantic | Graphiti VPS | `ops/graphiti/graphiti_memory_client.py` |
+| Legacy read-only | C1 MCP | deprecated — `03-mcp-memory.mdc` |
+
+**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`  
+**Skill:** `skills/l9-graphiti-memory/SKILL.md`  
+**Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES` (default off until GATES-002 proven)
+
+Prefetch runs on `sessionStart` via `ops/hooks/session_start_memory_orchestrator.sh`. Writes to C1 from `learning_to_mcp_bridge.py` are deprecated — use Graphiti bootstrap after VPS deploy.
