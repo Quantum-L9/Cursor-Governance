@@ -38,7 +38,7 @@ remaining_known_defects:
 
 unresolved_unknowns:
   - "RESOLVED 2026-06-30: SSOT origin owner confirmed as Quantum-L9. All cryptoxdog/ GitHub-org references refactored to Quantum-L9/ (15 refs, 9 files). Odoo.sh staging hostname (cryptoxdog-ib-odoo-19-staging...dev.odoo.com) intentionally preserved — it is a platform subdomain, not a GitHub org."
-  - "Follow-up (confirm): group_registry.yaml also remapped sibling repos IB-Odoo_19, cognitive-engine-graphs, L9-Node-Template to Quantum-L9/ per the blanket refactor; verify those repos actually live under the Quantum-L9 org."
+  - "RESOLVED 2026-06-30: sibling repo ownership confirmed. cognitive-engine-graphs -> Quantum-L9/Cognitive.Engine.Graphs (repo renamed); l9-node-template -> Quantum-L9/L9-Node-Template; ib-odoo-19 stays cryptoxdog/IB-Odoo_19 (unchanged). group_registry.yaml updated accordingly."
 
 stop_condition_triggered: "No material defect remaining in scope; all hard gates pass; next-pass estimate <5%."
 final_status: IMPROVED_WITH_FINDINGS
