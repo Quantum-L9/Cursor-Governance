@@ -27,8 +27,8 @@ GLOBAL_COMMANDS="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PLIST_NAME="com.cursor.prevention-effectiveness-tracker"
 PLIST_FILE="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
 # Use $HOME-based path for cross-machine compatibility (MacBook and Mac Mini)
-WRAPPER_SCRIPT="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/prevention_effectiveness_tracker_wrapper.sh"
-LOG_FILE="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/logs/prevention_effectiveness_tracker.log"
+WRAPPER_SCRIPT="$HOME/.cursor-governance/ops/scripts/prevention_effectiveness_tracker_wrapper.sh"
+LOG_FILE="$HOME/.cursor-governance/ops/logs/prevention_effectiveness_tracker.log"
 
 echo "🔧 Installing Prevention Effectiveness Tracker LaunchAgent..."
 echo "   Wrapper: $WRAPPER_SCRIPT"

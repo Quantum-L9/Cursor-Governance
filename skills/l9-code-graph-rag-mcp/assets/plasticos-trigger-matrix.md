@@ -69,7 +69,7 @@ Use the graph when Grep/Read cannot answer the question without reading many fil
 
 ```bash
 export REPO_ROOT="/path/to/IB-Odoo_19"
-export GOV_SKILLS="$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts"
+export GOV_SKILLS="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts"
 bash "$GOV_SKILLS/code_graph_gmp_baseline.sh" "$REPO_ROOT" \
   --run-id "gmp-YYYYMMDD-NNN" \
   --files plasticos_material_profile/models/material_profile.py

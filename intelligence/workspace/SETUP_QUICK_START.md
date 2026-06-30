@@ -36,7 +36,7 @@ summary: "One-command universal workspace setup with 200% enforcement and beauti
 cd /path/to/your/workspace
 
 # Run the self-executing setup script
-python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/intelligence/workspace/setup-new-workspace.py"
+python3 "$HOME/.cursor-governance/intelligence/workspace/setup-new-workspace.py"
 ```
 
 **That's it!** The script will:

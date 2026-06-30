@@ -35,14 +35,14 @@ outputs: [".suite6-config.json", ".cursor-commands/", "verification_reports"]
 
 canonical_paths:
   governance_root: "$HOME/Dropbox/Cursor Governance"
-  global_commands: "$HOME/Dropbox/Cursor Governance/GlobalCommands"
+  global_commands: "$HOME/.cursor-governance"
   canonical_law: "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md"
-  path_resolver: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/resolve_governance_paths.sh"
-  setup_symlinks: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"
-  check_governance_wiring: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh"
-  wire_governance_workspace: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh"
-  validate_symlinks: "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh"
-  env_manager: "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py"
+  path_resolver: "$HOME/.cursor-governance/ops/scripts/resolve_governance_paths.sh"
+  setup_symlinks: "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
+  check_governance_wiring: "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh"
+  wire_governance_workspace: "$HOME/.cursor-governance/ops/scripts/wire_governance_workspace.sh"
+  validate_symlinks: "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
+  env_manager: "$HOME/.cursor-governance/environment/env-manager.py"
   github_backup_remote: "cryptoxdog/Cursor-Governance"
 
 # === OPERATIONAL METADATA ===
@@ -79,7 +79,7 @@ total_duration_minutes: 15
 preflight:
   required_checks:
     - name: "GlobalCommands SSOT Exists"
-      command: 'test -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" || test -d "$HOME/Dropbox/cursor governance/GlobalCommands"'
+      command: 'test -d "$HOME/.cursor-governance" || test -d "$HOME/.cursor-governance"'
       error_message: "Dropbox GlobalCommands not found — SSOT must live under $HOME/Dropbox/Cursor Governance/"
       blocking: true
 
@@ -113,10 +113,10 @@ governance_wiring_gate:
   description: |
     Every repo must use Dropbox GlobalCommands via .cursor-commands and have sessionEnd
     governance backup hook active. Auto-chains /wire governance on failure.
-  check_command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)"'
+  check_command: 'bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"'
   on_fail:
     chain: "/wire governance"
-    repair_command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
+    repair_command: 'bash "$HOME/.cursor-governance/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
   pass_output: "RESULT: PASS — governance wiring + sessionEnd hook active"
   fail_output: "RESULT: FAIL — run /wire governance"
   verifies:
@@ -555,14 +555,14 @@ startup_sequence:
 installation:
   step_0:
     name: "Governance Wiring Gate"
-    command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)" || bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
+    command: 'bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)" || bash "$HOME/.cursor-governance/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
     expected_output: "RESULT: PASS — governance wiring + sessionEnd hook active"
     blocking: true
     on_fail_chain: "/wire governance"
 
   step_1:
     name: "Wire Governance Symlinks"
-    command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
+    command: 'bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"'
     expected_output: "RESULT: PASS — GlobalCommands only via .cursor-commands"
     blocking: true
     verification:
@@ -576,13 +576,13 @@ installation:
 
   step_2:
     name: "Sync Workspace Configuration"
-    command: 'python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py" sync "$(pwd)"'
+    command: 'python3 "$HOME/.cursor-governance/environment/env-manager.py" sync "$(pwd)"'
     expected_output: ".suite6-config.json created"
     blocking: true
 
   step_3:
     name: "Validate Governance Alignment"
-    command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
+    command: 'bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
     expected_output: "RESULT: PASS — GlobalCommands only via .cursor-commands"
     blocking: true
 
@@ -613,11 +613,11 @@ intelligence_systems:
   
   activation_commands:
     - name: "Activate Learning System"
-      command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_learnings.sh"'
+      command: 'bash "$HOME/.cursor-governance/ops/scripts/process_learnings.sh"'
       expected_steps: 4
     
     - name: "Activate Context-Memory System"
-      command: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_context.sh"'
+      command: 'bash "$HOME/.cursor-governance/ops/scripts/process_context.sh"'
       expected_output: "Context saved"
 
 # ═══════════════════════════════════════════════════════════
@@ -780,20 +780,20 @@ quick_reference:
     intelligence_templates: 1
   
   critical_commands:
-    check_wiring: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)"'
-    wire_governance: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
-    wire: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
-    validate: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
-    setup: 'python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py" sync "$(pwd)"'
+    check_wiring: 'bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"'
+    wire_governance: 'bash "$HOME/.cursor-governance/ops/scripts/wire_governance_workspace.sh" "$(pwd)"'
+    wire: 'bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"'
+    validate: 'bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
+    setup: 'python3 "$HOME/.cursor-governance/environment/env-manager.py" sync "$(pwd)"'
     verify_startup: "bash .cursor-commands/ops/scripts/verify-startup-files.sh"
-    activate_learning: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_learnings.sh"'
-    activate_context: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_context.sh"'
-    backup_github: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/backup_to_github.sh"'
+    activate_learning: 'bash "$HOME/.cursor-governance/ops/scripts/process_learnings.sh"'
+    activate_context: 'bash "$HOME/.cursor-governance/ops/scripts/process_context.sh"'
+    backup_github: 'bash "$HOME/.cursor-governance/ops/scripts/backup_to_github.sh"'
   
   troubleshooting:
     yaml_missing: "python3 -m pip install pyyaml"
-    rewire_all: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"'
-    verify_symlink: 'bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
+    rewire_all: 'bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"'
+    verify_symlink: 'bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
     never: "Do not rsync from git clone into Dropbox — Dropbox GlobalCommands is SSOT"
 
 # ═══════════════════════════════════════════════════════════

@@ -16,8 +16,8 @@ Run canonical `setup_workspace_symlinks.sh` in the workspace, then run `validate
 
 The canonical scripts live under the Dropbox governance root resolved exactly like the scripts do (first match wins):
 
-1. `$HOME/Dropbox/cursor governance/GlobalCommands/ops/scripts`
-2. `$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts`
+1. `$HOME/.cursor-governance/ops/scripts`
+2. `$HOME/.cursor-governance/ops/scripts`
 
 ## Workflow
 

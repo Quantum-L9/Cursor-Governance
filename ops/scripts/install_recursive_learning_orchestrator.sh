@@ -27,8 +27,8 @@ GLOBAL_COMMANDS="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PLIST_NAME="com.cursor.recursive-learning-orchestrator"
 PLIST_FILE="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
 # Use $HOME-based path for cross-machine compatibility (MacBook and Mac Mini)
-WRAPPER_SCRIPT="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/recursive_learning_orchestrator_wrapper.sh"
-LOG_FILE="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/logs/recursive_learning_orchestrator.log"
+WRAPPER_SCRIPT="$HOME/.cursor-governance/ops/scripts/recursive_learning_orchestrator_wrapper.sh"
+LOG_FILE="$HOME/.cursor-governance/ops/logs/recursive_learning_orchestrator.log"
 
 echo "🔧 Installing Recursive Learning Orchestrator LaunchAgent..."
 echo "   Wrapper: $WRAPPER_SCRIPT"

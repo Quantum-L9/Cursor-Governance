@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Push Dropbox GlobalCommands (+ CANONICAL_LAW) to cryptoxdog/Cursor-Governance.
-# SSOT: Dropbox. GitHub: off-site backup only.
+# Push the governance SSOT (GlobalCommands + CANONICAL_LAW) up to the GitHub remote.
+# SSOT: GitHub (the ~/.cursor-governance clone). This is the push side; session start
+# pulls via ops/scripts/governance_sync.sh. Remote is overridable via GOVERNANCE_GITHUB_REMOTE.
 #
 # Usage:
 #   bash .cursor-commands/ops/scripts/backup_to_github.sh

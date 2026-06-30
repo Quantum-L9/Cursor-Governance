@@ -11,16 +11,16 @@ FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
 
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
-    ROOT="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+if [ -d "$HOME/.cursor-governance" ]; then
+    ROOT="$HOME/.cursor-governance"
     USING_DROPBOX=true
-elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
+elif [ -d "$HOME/.cursor-governance" ]; then
     if [ "$DISABLE_FALLBACK" = "1" ]; then
         echo "❌ ERROR: Dropbox GlobalCommands not found and fallback disabled!"
         echo "   Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path"
         exit 1
     fi
-    ROOT="$HOME/Library/Application Support/Cursor/GlobalCommands"
+    ROOT="$HOME/.cursor-governance"
     USING_DROPBOX=false
     
     # Log fallback usage

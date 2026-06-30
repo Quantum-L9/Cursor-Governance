@@ -1,0 +1,45 @@
+artifact_type: l9_convergence_report
+name: github_centric_governance_migration.convergence
+date: 2026-06-30
+branch: claude/governance-github-migration-23mh38
+skill: l9-recursive-optimization
+mode: optimize
+
+passes_run: 3
+pass_summaries:
+  - pass: 1 (align)
+    focus: "Audit draft vs repo evidence."
+    result: "2 critical, 3 high, 3 medium defects found; draft would not function (GLOBAL_COMMANDS path, reset --hard data loss, half-migration)."
+  - pass: 2 (improve)
+    focus: "Apply corrections A–G; route all resolvers through SSOT; guarded sync; isolation; docs sweep."
+    result: "All execution-path resolvers migrated; guarded sync built; 63 docs swept; immutable provenance carved out."
+  - pass: 3 (validate / re-align)
+    focus: "Behavioral gates: resolver, no-hardcoded-paths, fresh-machine setup, sync data-loss, concurrency, self-heal."
+    result: "All hard gates PASS; surfaced + fixed a fresh-machine ordering blocker; 2 pre-existing py_compile defects logged out-of-scope."
+
+improvement_ratio_by_pass:
+  pass_1_to_2: "high — non-functional draft -> functional, validated migration"
+  pass_2_to_3: "low — one blocker fix + message cleanup; <5% remaining"
+
+cumulative_improvement_estimate: "draft was non-executable; now execution-ready with evidence"
+
+defects_corrected:
+  - "A (critical): GLOBAL_COMMANDS pointed at non-existent GlobalCommands/ subfolder -> set to clone root."
+  - "B (critical): reset --hard background sync (data loss + race) -> guarded ff-only sync."
+  - "C (high): only 2 files de-Dropboxed -> all execution-path resolvers + wrappers migrated."
+  - "D (high): installed bootstrap copy never refreshed -> self-heal in governance_sync.sh."
+  - "E (high): hard Dropbox break -> Dropbox retained as ordered fallback."
+  - "F (medium): no validation/rollback -> reused gates + VALIDATION/DELTA artifacts."
+  - "G (medium): runtime state not isolated -> .gitignore + core.excludesfile."
+  - "H (blocker, found in pass 3): bootstrap cp before mkdir aborted fresh-machine setup -> reordered."
+
+remaining_known_defects:
+  - "Pre-existing f-string-backslash SyntaxError in closed_loop_improvement.py:431 and prevention_effectiveness_tracker.py:500 (present at HEAD; out of scope)."
+
+unresolved_unknowns:
+  - "SSOT origin owner: draft/backup_to_github.sh hardcode cryptoxdog/Cursor-Governance; session scoped to quantum-l9/cursor-governance. Defaulted to quantum-l9 (only accessible remote); confirm if cryptoxdog must remain origin."
+
+stop_condition_triggered: "No material defect remaining in scope; all hard gates pass; next-pass estimate <5%."
+final_status: IMPROVED_WITH_FINDINGS
+final_recommendation: "Merge to enable the GitHub-centric SSOT; on each machine clone to ~/.cursor-governance and run setup_workspace_symlinks.sh."
+smallest_next_action: "Confirm SSOT origin owner, then clone + run setup on a first machine to validate live."

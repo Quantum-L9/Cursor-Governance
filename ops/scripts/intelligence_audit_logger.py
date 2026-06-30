@@ -48,7 +48,7 @@ import os
 
 def get_global_commands_path():
     """Get GlobalCommands path"""
-    dropbox = Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+    dropbox = Path.home() / ".cursor-governance"
     if dropbox.exists():
         return dropbox
     library = Path.home() / "Library/Application Support/Cursor/GlobalCommands"

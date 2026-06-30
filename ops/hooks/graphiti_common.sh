@@ -15,7 +15,7 @@ graphiti_resolve_cli() {
   if resolve_governance_paths 2>/dev/null; then
     GRAPHITI_CLI="$GLOBAL_COMMANDS/ops/graphiti/graphiti_memory_client.py"
   else
-    GRAPHITI_CLI="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/graphiti/graphiti_memory_client.py"
+    GRAPHITI_CLI="$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py"
   fi
 }
 

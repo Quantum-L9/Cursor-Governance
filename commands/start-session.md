@@ -28,11 +28,12 @@ Full preflight check before starting work:
 
 ### 0. GOVERNANCE WIRING GATE (MANDATORY — blocking)
 
-Run **before** any other step. Uses Dropbox SSOT path so it works even when `.cursor-commands` is missing.
+Run **before** any other step. Resolves the SSOT clone so it works even when `.cursor-commands` is missing.
 
 ```bash
-GC="$HOME/Dropbox/Cursor Governance/GlobalCommands"
-[ -d "$HOME/Dropbox/cursor governance/GlobalCommands" ] && GC="$HOME/Dropbox/cursor governance/GlobalCommands"
+GC="$HOME/.cursor-governance"                                   # SSOT: clone root == GlobalCommands
+[ -d "$HOME/Dropbox/cursor governance/GlobalCommands" ] && [ ! -f "$GC/CANONICAL_LAW.md" ] && GC="$HOME/Dropbox/cursor governance/GlobalCommands"
+[ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ] && [ ! -f "$GC/CANONICAL_LAW.md" ] && GC="$HOME/Dropbox/Cursor Governance/GlobalCommands"
 
 bash "$GC/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 ```
@@ -53,8 +54,8 @@ This runs `setup_workspace_symlinks.sh` (repo symlinks + `~/.cursor/hooks.json` 
 **Re-run check after repair.** Session is **blocked** until `RESULT: PASS`.
 
 Pass criteria:
-- `.cursor-commands` symlink → Dropbox `GlobalCommands`
-- `.cursor/governance/CANONICAL_LAW.md` → Dropbox law file
+- `.cursor-commands` symlink → `~/.cursor-governance` (SSOT clone == GlobalCommands)
+- `.cursor/governance/CANONICAL_LAW.md` → `~/.cursor-governance/CANONICAL_LAW.md`
 - No `.cursor/commands` or `.cursor/skills` duplicates in repo
 - `sessionEnd` hook registered in `~/.cursor/hooks.json`
 - `~/.cursor/hooks/governance-backup.sh` → SSOT backup script

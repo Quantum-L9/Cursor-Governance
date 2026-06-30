@@ -77,7 +77,7 @@ Now matches the FIXED learning system pattern:
 After sync to GlobalCommands:
 ```bash
 # Test manually
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands
+cd ~/.cursor-governance
 ./ops/scripts/process_context.sh
 
 # Should now find conversations from workspaceStorage

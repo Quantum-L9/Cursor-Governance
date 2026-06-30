@@ -2,7 +2,7 @@
 # Version: 2.0.0
 # Purpose: Deploy .cursorrules to a workspace (or all workspaces)
 # Usage: 
-#   In workspace: bash "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/deploy_cursorrules_global.sh"
+#   In workspace: bash "~/.cursor-governance/ops/scripts/deploy_cursorrules_global.sh"
 #   Or provide path: bash deploy_cursorrules_global.sh /path/to/workspace
 # Updated: Use Dropbox GlobalCommands as single source of truth
 
@@ -16,16 +16,16 @@ FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
 
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
-    GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+if [ -d "$HOME/.cursor-governance" ]; then
+    GLOBAL_COMMANDS="$HOME/.cursor-governance"
     USING_DROPBOX=true
-elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
+elif [ -d "$HOME/.cursor-governance" ]; then
     if [ "$DISABLE_FALLBACK" = "1" ]; then
         echo "❌ ERROR: Dropbox GlobalCommands not found and fallback disabled!"
         echo "   Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path"
         exit 1
     fi
-    GLOBAL_COMMANDS="$HOME/Library/Application Support/Cursor/GlobalCommands"
+    GLOBAL_COMMANDS="$HOME/.cursor-governance"
     USING_DROPBOX=false
     
     # Log fallback usage with timestamp
@@ -40,7 +40,7 @@ elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     echo "╔════════════════════════════════════════════════════════════╗"
     echo "║  ⚠️  WARNING: USING FALLBACK PATH (NOT DROPBOX)          ║"
     echo "╠════════════════════════════════════════════════════════════╣"
-    echo "║  Expected: Dropbox/Cursor Governance/GlobalCommands       ║"
+    echo "║  Expected: .cursor-governance       ║"
     echo "║  Using:    Library/Application Support/Cursor/GlobalCommands ║"
     echo "║                                                            ║"
     echo "║  This means changes won't sync across computers!          ║"

@@ -92,12 +92,12 @@ launchctl list | grep learning-processor
 
 ### **View Recent Activity**
 ```bash
-tail -50 "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/learning_processing.log"
+tail -50 "$HOME/.cursor-governance/ops/logs/learning_processing.log"
 ```
 
 ### **Manual Run**
 ```bash
-bash "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/scripts/process_learnings.sh"
+bash "$HOME/.cursor-governance/ops/scripts/process_learnings.sh"
 ```
 
 ### **Stop Service**
@@ -112,7 +112,7 @@ launchctl load ~/Library/LaunchAgents/com.tenx.learning-processor.plist
 
 ### **View Memory Index**
 ```bash
-cat "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/memory_index.json" | python3 -m json.tool
+cat "$HOME/.cursor-governance/ops/logs/memory_index.json" | python3 -m json.tool
 ```
 
 ---
@@ -193,21 +193,21 @@ Extracted patterns are automatically added to:
 launchctl list | grep tenx
 
 # Reload if needed
-bash "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/scripts/install_learning_processor.sh"
+bash "$HOME/.cursor-governance/ops/scripts/install_learning_processor.sh"
 ```
 
 ### **No New Learnings**
-- Check if chat exports are happening: `ls -la "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/chat_exports/"`
+- Check if chat exports are happening: `ls -la "$HOME/.cursor-governance/ops/logs/chat_exports/"`
 - Verify conversations exist in exports
 - Run manual processing to see detailed output
 
 ### **Logs Not Updating**
 ```bash
 # Check log file permissions
-ls -la "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/learning_processing.log"
+ls -la "$HOME/.cursor-governance/ops/logs/learning_processing.log"
 
 # View recent errors
-tail -100 "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/learning_processing.log" | grep -i error
+tail -100 "$HOME/.cursor-governance/ops/logs/learning_processing.log" | grep -i error
 ```
 
 ---

@@ -34,7 +34,7 @@ from memory_aggregator import MemoryAggregator, LearningPattern
 
 def get_global_commands_path():
     """Get GlobalCommands path"""
-    dropbox_path = Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+    dropbox_path = Path.home() / ".cursor-governance"
     if dropbox_path.exists():
         return dropbox_path
     library_path = Path.home() / "Library/Application Support/Cursor/GlobalCommands"

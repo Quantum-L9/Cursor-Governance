@@ -2,7 +2,7 @@
 
 **Status:** authoritative  
 **Governance root (SSOT):** `$HOME/Dropbox/Cursor Governance/`  
-**GlobalCommands (SSOT body):** `$HOME/Dropbox/Cursor Governance/GlobalCommands/`  
+**GlobalCommands (SSOT body):** `$HOME/.cursor-governance/`  
 **GitHub backup:** `cryptoxdog/Cursor-Governance`  
 **Updated:** 2026-06-06
 

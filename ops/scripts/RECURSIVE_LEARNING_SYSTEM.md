@@ -71,7 +71,7 @@ The Recursive Learning System is a fully autonomous, self-improving governance s
 
 **Installation:**
 ```bash
-cd "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
+cd "~/.cursor-governance"
 bash ops/scripts/install_pre_execution_checker.sh
 ```
 
@@ -101,7 +101,7 @@ python3 ops/scripts/pre_execution_checker.py
 
 **Installation:**
 ```bash
-cd "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
+cd "~/.cursor-governance"
 bash ops/scripts/install_prevention_effectiveness_tracker.sh
 ```
 
@@ -135,7 +135,7 @@ python3 ops/scripts/prevention_effectiveness_tracker.py --weekly-trend
 
 **Installation:**
 ```bash
-cd "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
+cd "~/.cursor-governance"
 bash ops/scripts/install_closed_loop_improvement.sh
 ```
 
@@ -164,7 +164,7 @@ python3 ops/scripts/closed_loop_improvement.py --snapshot
 
 **Installation:**
 ```bash
-cd "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
+cd "~/.cursor-governance"
 bash ops/scripts/install_memory_compounding.sh
 ```
 
@@ -200,7 +200,7 @@ python3 ops/scripts/memory_compounding.py --stats
 
 **Installation:**
 ```bash
-cd "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
+cd "~/.cursor-governance"
 bash ops/scripts/install_recursive_learning_orchestrator.sh
 ```
 
@@ -244,7 +244,7 @@ python3 ops/scripts/recursive_learning_health_monitor.py
 ### Master Installer (All Components)
 
 ```bash
-cd "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
+cd "~/.cursor-governance"
 
 # Install all LaunchAgents
 bash ops/scripts/install_pre_execution_checker.sh
@@ -287,30 +287,30 @@ The recursive learning system integrates with the existing learning pipeline:
 
 ```bash
 # Run health monitor
-python3 "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/recursive_learning_health_monitor.py"
+python3 "~/.cursor-governance/ops/scripts/recursive_learning_health_monitor.py"
 
 # Check logs
-tail -50 "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/logs/recursive_learning_orchestrator.log"
+tail -50 "~/.cursor-governance/ops/logs/recursive_learning_orchestrator.log"
 ```
 
 ### View Effectiveness Metrics
 
 ```bash
 # View effectiveness metrics
-cat "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/logs/effectiveness_metrics.json" | python3 -m json.tool
+cat "~/.cursor-governance/ops/logs/effectiveness_metrics.json" | python3 -m json.tool
 
 # View latest daily report
-ls -t "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/logs/effectiveness_reports/" | head -1 | xargs cat
+ls -t "~/.cursor-governance/ops/logs/effectiveness_reports/" | head -1 | xargs cat
 ```
 
 ### View Pattern Weights
 
 ```bash
 # View pattern weights
-cat "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/logs/pattern_weights.json" | python3 -m json.tool
+cat "~/.cursor-governance/ops/logs/pattern_weights.json" | python3 -m json.tool
 
 # View auto-applied patterns
-tail -20 "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/logs/auto_applied_patterns.jsonl"
+tail -20 "~/.cursor-governance/ops/logs/auto_applied_patterns.jsonl"
 ```
 
 ## Troubleshooting
@@ -330,17 +330,17 @@ launchctl load ~/Library/LaunchAgents/com.cursor.pre-execution-checker.plist
 
 ```bash
 # Manually refresh cache
-python3 "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/pre_execution_checker.py"
+python3 "~/.cursor-governance/ops/scripts/pre_execution_checker.py"
 ```
 
 ### Low Effectiveness Rate
 
 ```bash
 # Check lesson effectiveness
-python3 "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/prevention_effectiveness_tracker.py" --calculate
+python3 "~/.cursor-governance/ops/scripts/prevention_effectiveness_tracker.py" --calculate
 
 # Review ineffective lessons (< 50% effectiveness)
-cat "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/logs/effectiveness_metrics.json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('\n'.join([f\"{k}: {v:.1f}%\" for k,v in d['lesson_effectiveness'].items() if v < 50]))"
+cat "~/.cursor-governance/ops/logs/effectiveness_metrics.json" | python3 -c "import json,sys; d=json.load(sys.stdin); print('\n'.join([f\"{k}: {v:.1f}%\" for k,v in d['lesson_effectiveness'].items() if v < 50]))"
 ```
 
 ## Success Metrics

@@ -77,7 +77,7 @@ GlobalCommands/
 - `@.GlobalCommands/` - Standard access
 
 ### Direct Path
-- `/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands`
+- `~/.cursor-governance`
 
 ## 📋 Key Files
 

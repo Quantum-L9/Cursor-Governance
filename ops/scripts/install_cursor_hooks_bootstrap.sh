@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time machine bootstrap — installs sessionStart hook WITHOUT requiring repo symlinks.
-# Usage: bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/install_cursor_hooks_bootstrap.sh"
+# Usage: bash "$HOME/.cursor-governance/ops/scripts/install_cursor_hooks_bootstrap.sh"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

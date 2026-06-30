@@ -345,7 +345,7 @@ class OperationalOversight:
         try:
             # Find GlobalCommands path
             home = Path.home()
-            dropbox_path = home / "Dropbox/Cursor Governance/GlobalCommands"
+            dropbox_path = home / ".cursor-governance"
             library_path = home / "Library/Application Support/Cursor/GlobalCommands"
             
             global_commands = dropbox_path if dropbox_path.exists() else library_path

@@ -7,12 +7,19 @@ set -uo pipefail
 REPO="${CURSOR_PROJECT_DIR:-}"
 PARTS=()
 
+# Auto-sync the ~/.cursor-governance SSOT clone in the background (guarded: ff-only,
+# never destroys local edits, single-flight). Replaces the unsafe reset --hard pattern.
+SYNC="$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
+[ -x "$SYNC" ] && ( "$SYNC" >/dev/null 2>&1 & )
+
 resolve_global_commands() {
+  # SSOT: ~/.cursor-governance (repo-root layout == GlobalCommands); Dropbox = transition fallback.
   GLOBAL_COMMANDS=""
-  for p in "$HOME/Dropbox/cursor governance/GlobalCommands" "$HOME/Dropbox/Cursor Governance/GlobalCommands"; do
-    if [ -d "$p" ]; then
-      GLOBAL_COMMANDS="$p"
-      return 0
+  for root in "$HOME/.cursor-governance" "$HOME/Dropbox/cursor governance" "$HOME/Dropbox/Cursor Governance"; do
+    if [ -d "$root/skills" ] && [ -f "$root/CANONICAL_LAW.md" ]; then
+      GLOBAL_COMMANDS="$root"; return 0          # clone root is GlobalCommands
+    elif [ -d "$root/GlobalCommands" ]; then
+      GLOBAL_COMMANDS="$root/GlobalCommands"; return 0   # legacy nested layout
     fi
   done
   return 1
@@ -33,7 +40,7 @@ PY
 }
 
 if ! resolve_global_commands; then
-  emit_json "session bootstrap: GlobalCommands not found under \$HOME/Dropbox — sync Dropbox Cursor Governance"
+  emit_json "session bootstrap: governance root not found — clone Cursor-Governance to \$HOME/.cursor-governance"
   exit 0
 fi
 

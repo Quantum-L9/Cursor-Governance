@@ -12,7 +12,7 @@ GATE_LIB=""
 if resolve_governance_paths 2>/dev/null; then
   GATE_LIB="$GLOBAL_COMMANDS/skills/l9-code-graph-rag-mcp/scripts/code_graph_plasticos_gate.py"
 else
-  GATE_LIB="$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts/code_graph_plasticos_gate.py"
+  GATE_LIB="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts/code_graph_plasticos_gate.py"
 fi
 
 INPUT="$(cat)"
