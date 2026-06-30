@@ -382,9 +382,9 @@ ls -la .cursor-commands
 # Expected: .cursor-commands -> ~/.cursor-governance
 ```
 
-**⚠️ IMPORTANT**: Governance is in Dropbox, not Library
+**⚠️ IMPORTANT**: Governance SSOT is `~/.cursor-governance` (Dropbox is legacy fallback, not Library)
 - ✅ Correct: `~/.cursor-governance`
-- ❌ Wrong: `~/.cursor-governance`
+- ❌ Wrong: `~/Library/Application Support/Cursor/GlobalCommands`
 
 **If symlink points to wrong location:**
 ```bash
@@ -398,7 +398,7 @@ ln -s "~/.cursor-governance" .cursor-commands
 ls -la .cursor-commands
 ```
 
-**✅ Success Check**: Symlink points to Dropbox GlobalCommands (not Library)
+**✅ Success Check**: Symlink points to the SSOT `~/.cursor-governance` (not Library)
 
 ---
 

@@ -26,7 +26,7 @@ resolve_governance_paths_or_exit
 
 REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
 BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
-MSG="${1:-chore(governance): sync Dropbox SSOT $(date +%Y-%m-%d\ %H:%M)}"
+MSG="${1:-chore(governance): sync SSOT $(date +%Y-%m-%d\ %H:%M)}"
 
 cd "$GLOBAL_COMMANDS"
 

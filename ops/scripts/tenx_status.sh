@@ -14,13 +14,16 @@ DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
 if [ -d "$HOME/.cursor-governance" ]; then
     ROOT="$HOME/.cursor-governance"
     USING_DROPBOX=true
-elif [ -d "$HOME/.cursor-governance" ]; then
+elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
+    ROOT="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+    USING_DROPBOX=true
+elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     if [ "$DISABLE_FALLBACK" = "1" ]; then
-        echo "❌ ERROR: Dropbox GlobalCommands not found and fallback disabled!"
-        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path"
+        echo "❌ ERROR: SSOT/Dropbox GlobalCommands not found and fallback disabled!"
+        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or restore the SSOT clone"
         exit 1
     fi
-    ROOT="$HOME/.cursor-governance"
+    ROOT="$HOME/Library/Application Support/Cursor/GlobalCommands"
     USING_DROPBOX=false
     
     # Log fallback usage

@@ -28,15 +28,15 @@ data_sources: ["GlobalCommands"]
 outputs: [".suite6-config.json", ".cursor-commands/", "verification_reports"]
 
 # ═══════════════════════════════════════════════════════════
-#   CANONICAL PATHS (SSOT — Dropbox, not GitHub)
+#   CANONICAL PATHS (SSOT — $HOME/.cursor-governance GitHub clone)
 # ═══════════════════════════════════════════════════════════
-# Edit governance under Dropbox only. GitHub is backup (backup_to_github.sh).
+# Edit governance under $HOME/.cursor-governance (SSOT). Dropbox is legacy fallback.
 # macOS: "cursor governance" and "Cursor Governance" resolve to the same folder.
 
 canonical_paths:
-  governance_root: "$HOME/Dropbox/Cursor Governance"
+  governance_root: "$HOME/.cursor-governance"
   global_commands: "$HOME/.cursor-governance"
-  canonical_law: "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md"
+  canonical_law: "$HOME/.cursor-governance/CANONICAL_LAW.md"
   path_resolver: "$HOME/.cursor-governance/ops/scripts/resolve_governance_paths.sh"
   setup_symlinks: "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
   check_governance_wiring: "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh"
@@ -79,13 +79,13 @@ total_duration_minutes: 15
 preflight:
   required_checks:
     - name: "GlobalCommands SSOT Exists"
-      command: 'test -d "$HOME/.cursor-governance" || test -d "$HOME/.cursor-governance"'
-      error_message: "Dropbox GlobalCommands not found — SSOT must live under $HOME/Dropbox/Cursor Governance/"
+      command: 'test -d "$HOME/.cursor-governance" || test -d "$HOME/Dropbox/Cursor Governance/GlobalCommands"'
+      error_message: "GlobalCommands SSOT not found — expected $HOME/.cursor-governance (legacy Dropbox fallback also missing)"
       blocking: true
 
     - name: "Canonical Law Present"
-      command: 'test -f "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md" || test -f "$HOME/Dropbox/cursor governance/CANONICAL_LAW.md"'
-      error_message: "CANONICAL_LAW.md missing from Dropbox governance root"
+      command: 'test -f "$HOME/.cursor-governance/CANONICAL_LAW.md" || test -f "$HOME/Dropbox/Cursor Governance/CANONICAL_LAW.md"'
+      error_message: "CANONICAL_LAW.md missing from SSOT ($HOME/.cursor-governance) and Dropbox fallback"
       blocking: true
     
     - name: "Python 3 Installed"
@@ -572,7 +572,7 @@ installation:
       - 'test -d .cursor/governance && ! test -L .cursor/governance'
       - 'test -L .cursor/governance/CANONICAL_LAW.md'
       - '! test -e .cursor/governance/GlobalCommands'
-      - 'readlink .cursor-commands | grep -qi "GlobalCommands"'
+      - 'readlink .cursor-commands | grep -qiE "\.cursor-governance|GlobalCommands"'
 
   step_2:
     name: "Sync Workspace Configuration"

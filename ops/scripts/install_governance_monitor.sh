@@ -17,8 +17,10 @@ echo "🔧 Installing Governance Monitor LaunchAgent..."
 # Find GlobalCommands path
 if [ -d "$HOME/.cursor-governance" ]; then
     GLOBAL_COMMANDS="$HOME/.cursor-governance"
-elif [ -d "$HOME/.cursor-governance" ]; then
-    GLOBAL_COMMANDS="$HOME/.cursor-governance"
+elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
+    GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
+    GLOBAL_COMMANDS="$HOME/Library/Application Support/Cursor/GlobalCommands"
 else
     echo "❌ Error: GlobalCommands directory not found"
     exit 1
@@ -36,8 +38,10 @@ cat > "$WRAPPER_SCRIPT" << 'EOF'
 # Find GlobalCommands
 if [ -d "$HOME/.cursor-governance" ]; then
     GLOBAL_COMMANDS="$HOME/.cursor-governance"
-elif [ -d "$HOME/.cursor-governance" ]; then
-    GLOBAL_COMMANDS="$HOME/.cursor-governance"
+elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
+    GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
+    GLOBAL_COMMANDS="$HOME/Library/Application Support/Cursor/GlobalCommands"
 fi
 
 MONITOR_SCRIPT="$GLOBAL_COMMANDS/ops/scripts/governance-monitor.py"

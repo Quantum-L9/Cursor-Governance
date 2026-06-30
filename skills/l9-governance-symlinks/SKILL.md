@@ -10,14 +10,14 @@ Run canonical `setup_workspace_symlinks.sh` in the workspace, then run `validate
 
 ## What this does
 
-- Wires user-level Cursor links (`~/.cursor/skills`, `~/.cursor/commands`) to the Dropbox governance SSOT.
+- Wires user-level Cursor links (`~/.cursor/skills`, `~/.cursor/commands`) to the governance SSOT (`$HOME/.cursor-governance`).
 - Wires repo-level links in the current workspace: `.cursor-commands`, `.cursor/commands`, `.cursor/rules`, `.cursor/governance`.
 - Validates every link resolves to the canonical Single Source of Truth and reports `RESULT: PASS` or `RESULT: FAIL`.
 
-The canonical scripts live under the Dropbox governance root resolved exactly like the scripts do (first match wins):
+The canonical scripts live under the governance SSOT, resolved exactly like the scripts do (first match wins):
 
 1. `$HOME/.cursor-governance/ops/scripts`
-2. `$HOME/.cursor-governance/ops/scripts`
+2. `$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts`
 
 ## Workflow
 
