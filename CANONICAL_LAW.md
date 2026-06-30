@@ -3,7 +3,7 @@
 **Status:** authoritative  
 **Governance root (SSOT):** `$HOME/Dropbox/Cursor Governance/`  
 **GlobalCommands (SSOT body):** `$HOME/.cursor-governance/`  
-**GitHub backup:** `cryptoxdog/Cursor-Governance`  
+**GitHub backup:** `Quantum-L9/Cursor-Governance`  
 **Updated:** 2026-06-06
 
 ## 1. Single source of truth
@@ -68,7 +68,7 @@ bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh
 
 | Item | Value |
 |------|-------|
-| Remote | `https://github.com/cryptoxdog/Cursor-Governance.git` |
+| Remote | `https://github.com/Quantum-L9/Cursor-Governance.git` |
 | Branch | `main` |
 | Git root | Dropbox `GlobalCommands/` (same tree as `.cursor-commands/`) |
 | Law file | Copied to repo root as `CANONICAL_LAW.md` on each backup |

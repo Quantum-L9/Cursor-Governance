@@ -8,7 +8,7 @@
 #   bash .cursor-commands/ops/scripts/backup_to_github.sh "chore(governance): session sync"
 #
 # Env:
-#   GOVERNANCE_GITHUB_REMOTE  default https://github.com/cryptoxdog/Cursor-Governance.git
+#   GOVERNANCE_GITHUB_REMOTE  default https://github.com/Quantum-L9/Cursor-Governance.git
 #   GOVERNANCE_BACKUP_DRY_RUN=1   stage/commit only, no push
 #   GOVERNANCE_BACKUP_SKIP=1      exit 0 immediately
 set -euo pipefail
@@ -24,7 +24,7 @@ fi
 
 resolve_governance_paths_or_exit
 
-REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/cryptoxdog/Cursor-Governance.git}"
+REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
 BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
 MSG="${1:-chore(governance): sync Dropbox SSOT $(date +%Y-%m-%d\ %H:%M)}"
 

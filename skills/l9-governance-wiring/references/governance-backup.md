@@ -7,7 +7,7 @@ status: active
 
 # Governance Backup
 
-Push GlobalCommands SSOT to cryptoxdog/Cursor-Governance.
+Push GlobalCommands SSOT to Quantum-L9/Cursor-Governance.
 
 ```bash
 bash .cursor-commands/ops/scripts/backup_to_github.sh

@@ -37,7 +37,8 @@ remaining_known_defects:
   - "Pre-existing f-string-backslash SyntaxError in closed_loop_improvement.py:431 and prevention_effectiveness_tracker.py:500 (present at HEAD; out of scope)."
 
 unresolved_unknowns:
-  - "SSOT origin owner: draft/backup_to_github.sh hardcode cryptoxdog/Cursor-Governance; session scoped to quantum-l9/cursor-governance. Defaulted to quantum-l9 (only accessible remote); confirm if cryptoxdog must remain origin."
+  - "RESOLVED 2026-06-30: SSOT origin owner confirmed as Quantum-L9. All cryptoxdog/ GitHub-org references refactored to Quantum-L9/ (15 refs, 9 files). Odoo.sh staging hostname (cryptoxdog-ib-odoo-19-staging...dev.odoo.com) intentionally preserved — it is a platform subdomain, not a GitHub org."
+  - "Follow-up (confirm): group_registry.yaml also remapped sibling repos IB-Odoo_19, cognitive-engine-graphs, L9-Node-Template to Quantum-L9/ per the blanket refactor; verify those repos actually live under the Quantum-L9 org."
 
 stop_condition_triggered: "No material defect remaining in scope; all hard gates pass; next-pass estimate <5%."
 final_status: IMPROVED_WITH_FINDINGS

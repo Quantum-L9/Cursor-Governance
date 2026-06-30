@@ -43,7 +43,7 @@ canonical_paths:
   wire_governance_workspace: "$HOME/.cursor-governance/ops/scripts/wire_governance_workspace.sh"
   validate_symlinks: "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
   env_manager: "$HOME/.cursor-governance/environment/env-manager.py"
-  github_backup_remote: "cryptoxdog/Cursor-Governance"
+  github_backup_remote: "Quantum-L9/Cursor-Governance"
 
 # === OPERATIONAL METADATA ===
 execution_mode: "manual"

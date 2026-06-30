@@ -52,7 +52,7 @@ Use `BASH_SOURCE` + `realpath` to locate `ops/scripts/resolve_governance_paths.s
 - `$HOME`, `$HOME/Dropbox`, `$HOME/.cursor`, `$HOME/.cursor-governance`
 - `$GOV_ROOT`, `$GLOBAL_COMMANDS` after `resolve_governance_paths`
 - Repo-relative: `.cursor-commands/ops/scripts/...`, `@.cursor-commands/...`
-- GitHub remote URLs (e.g. `cryptoxdog/Cursor-Governance`) — not filesystem paths
+- GitHub remote URLs (e.g. `Quantum-L9/Cursor-Governance`) — not filesystem paths
 
 ## Agent checklist (before editing governance)
 
