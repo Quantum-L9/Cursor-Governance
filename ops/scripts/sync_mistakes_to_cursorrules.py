@@ -50,32 +50,34 @@ from datetime import datetime
 from pathlib import Path
 
 def get_global_commands_path():
-    """Get GlobalCommands path, preferring Dropbox location"""
+    """Resolve GlobalCommands, preferring the ~/.cursor-governance SSOT clone.
+
+    Order: ~/.cursor-governance (SSOT) -> legacy Dropbox -> Library fallback (logged).
+    """
     import os
     fallback_log = Path.home() / ".cursor-globalcommands-fallback.log"
     disable_fallback = os.environ.get("DISABLE_FALLBACK", "0") == "1"
-    
-    dropbox_paths = [
+
+    # SSOT clone first, then legacy Dropbox (transition fallback).
+    for candidate in (
         Path.home() / ".cursor-governance",
         Path.home() / "Dropbox/Cursor Governance/GlobalCommands",
-    ]
+    ):
+        if candidate.is_dir():
+            return candidate
+
+    # Last-resort Library fallback (logged).
     library_path = Path.home() / "Library/Application Support/Cursor/GlobalCommands"
-    
-    # Try Dropbox paths first
-    for path in dropbox_paths:
-        if path.exists():
-            return path
-    
-    # Fallback to Library
-    if library_path.exists():
+    if library_path.is_dir():
         if disable_fallback:
             raise FileNotFoundError(
-                "Dropbox GlobalCommands not found and DISABLE_FALLBACK=1. "
-                "Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path."
+                "GlobalCommands not found under ~/.cursor-governance or Dropbox and "
+                "DISABLE_FALLBACK=1. Set DISABLE_FALLBACK=0 to allow the Library fallback, "
+                "or clone Cursor-Governance to ~/.cursor-governance."
             )
-        
+
         # Log fallback usage
-        log_entry = f"""[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FALLBACK USED: Library path instead of Dropbox
+        log_entry = f"""[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)
 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]   Script: sync_mistakes_to_cursorrules.py
 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]   Path: {library_path}
 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]   User: {os.getenv('USER', 'unknown')}
@@ -83,11 +85,11 @@ def get_global_commands_path():
 """
         with open(fallback_log, 'a') as f:
             f.write(log_entry)
-        
+
         print("\n⚠️  WARNING: Using Library fallback (logged to ~/.cursor-globalcommands-fallback.log)")
         return library_path
-    
-    raise FileNotFoundError("GlobalCommands directory not found in Dropbox or Library")
+
+    raise FileNotFoundError("GlobalCommands directory not found under ~/.cursor-governance, Dropbox, or Library")
 
 def sync_mistakes_to_cursorrules():
     """Embed repeated mistakes directly into .cursorrules for auto-loading"""
