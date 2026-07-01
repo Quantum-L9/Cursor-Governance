@@ -34,14 +34,14 @@ from memory_aggregator import MemoryAggregator, LearningPattern
 
 def get_global_commands_path():
     """Get GlobalCommands path"""
-    dropbox_path = Path.home() / ".cursor-governance"
-    if dropbox_path.exists():
-        return dropbox_path
+    ssot_path = Path.home() / ".cursor-governance"
+    if ssot_path.is_dir():
+        return ssot_path
     legacy_dropbox = Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
-    if legacy_dropbox.exists():
+    if legacy_dropbox.is_dir():
         return legacy_dropbox
     library_path = Path.home() / "Library/Application Support/Cursor/GlobalCommands"
-    if library_path.exists():
+    if library_path.is_dir():
         return library_path
     raise FileNotFoundError("GlobalCommands directory not found")
 
