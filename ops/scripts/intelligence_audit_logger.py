@@ -51,6 +51,9 @@ def get_global_commands_path():
     dropbox = Path.home() / ".cursor-governance"
     if dropbox.exists():
         return dropbox
+    legacy_dropbox = Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+    if legacy_dropbox.exists():
+        return legacy_dropbox
     library = Path.home() / "Library/Application Support/Cursor/GlobalCommands"
     if library.exists():
         return library

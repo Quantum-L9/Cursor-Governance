@@ -391,8 +391,8 @@ ls -la .cursor-commands
 # Remove incorrect symlink
 rm .cursor-commands
 
-# Create correct symlink to Dropbox
-ln -s "~/.cursor-governance" .cursor-commands
+# Create correct symlink to the SSOT
+ln -s ~/.cursor-governance .cursor-commands
 
 # Verify
 ls -la .cursor-commands
@@ -408,7 +408,7 @@ ls -la .cursor-commands
 
 ```bash
 # Run the learning processor manually to activate the system
-bash "~/.cursor-governance/ops/scripts/process_learnings.sh"
+bash ~/.cursor-governance/ops/scripts/process_learnings.sh
 ```
 
 **Expected Output:**
@@ -593,15 +593,15 @@ python3 -m pip install pyyaml
 ```
 
 ### Issue 2: Symlink points to wrong location
-**Symptom**: `.cursor-commands` points to Library instead of Dropbox
-**Root Cause**: Governance is in Dropbox, not Library/Application Support
+**Symptom**: `.cursor-commands` points to Library instead of the SSOT
+**Root Cause**: Governance SSOT is `~/.cursor-governance`, not Library/Application Support
 **Fix**:
 ```bash
 # Remove wrong symlink
 rm .cursor-commands
 
-# Create correct symlink to Dropbox (where governance actually is)
-ln -s "~/.cursor-governance" .cursor-commands
+# Create correct symlink to the SSOT (where governance actually is)
+ln -s ~/.cursor-governance .cursor-commands
 
 # Verify correct target
 ls -la .cursor-commands

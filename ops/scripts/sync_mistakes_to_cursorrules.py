@@ -56,7 +56,8 @@ def get_global_commands_path():
     disable_fallback = os.environ.get("DISABLE_FALLBACK", "0") == "1"
     
     dropbox_paths = [
-        Path.home() / ".cursor-governance"
+        Path.home() / ".cursor-governance",
+        Path.home() / "Dropbox/Cursor Governance/GlobalCommands",
     ]
     library_path = Path.home() / "Library/Application Support/Cursor/GlobalCommands"
     

@@ -13,10 +13,10 @@ DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
 if [ -d "$HOME/.cursor-governance" ]; then
     ROOT="$HOME/.cursor-governance"
-    USING_DROPBOX=true
+    USING_SYNCED_SOURCE=true
 elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
     ROOT="$HOME/Dropbox/Cursor Governance/GlobalCommands"
-    USING_DROPBOX=true
+    USING_SYNCED_SOURCE=true
 elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     if [ "$DISABLE_FALLBACK" = "1" ]; then
         echo "❌ ERROR: SSOT/Dropbox GlobalCommands not found and fallback disabled!"
@@ -24,7 +24,7 @@ elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
         exit 1
     fi
     ROOT="$HOME/Library/Application Support/Cursor/GlobalCommands"
-    USING_DROPBOX=false
+    USING_SYNCED_SOURCE=false
     
     # Log fallback usage
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of Dropbox" >> "$FALLBACK_LOG"

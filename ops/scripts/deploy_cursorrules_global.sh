@@ -2,9 +2,9 @@
 # Version: 2.0.0
 # Purpose: Deploy .cursorrules to a workspace (or all workspaces)
 # Usage: 
-#   In workspace: bash "~/.cursor-governance/ops/scripts/deploy_cursorrules_global.sh"
+#   In workspace: bash ~/.cursor-governance/ops/scripts/deploy_cursorrules_global.sh
 #   Or provide path: bash deploy_cursorrules_global.sh /path/to/workspace
-# Updated: Use Dropbox GlobalCommands as single source of truth
+# Updated: Use ~/.cursor-governance as single source of truth (Dropbox is legacy fallback)
 
 set -e
 

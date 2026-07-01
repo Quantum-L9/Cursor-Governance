@@ -190,7 +190,7 @@ phase_4_governance_github:
       - triggers.end_session
       - triggers.governance_backup_only
   description: |
-    Push Dropbox SSOT (.cursor-commands / GlobalCommands) to Quantum-L9/Cursor-Governance.
+    Push SSOT (.cursor-commands / GlobalCommands) to Quantum-L9/Cursor-Governance.
     Runs on sessionEnd hook (automatic) or via /end-session / manual backup command.
   command: |
     bash .cursor-commands/ops/scripts/backup_to_github.sh \
@@ -202,7 +202,7 @@ phase_4_governance_github:
     github: "gh api repos/Quantum-L9/Cursor-Governance/commits --jq '.[0].sha'"
     pass_criteria:
       - "New log lines with today's timestamp (sessionEnd hook fired)"
-      - "OK: pushed... or OK: nothing to commit — Dropbox SSOT matches index"
+      - "OK: pushed... or OK: nothing to commit — SSOT matches index"
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 5: CONFIRMATION

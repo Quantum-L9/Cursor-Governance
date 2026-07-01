@@ -56,7 +56,7 @@ keywords: ["formal", "lessons", "review", "refinement", "prevention"]
 ### Step 1: Run Formal Lesson Extractor
 
 ```bash
-cd "~/.cursor-governance"
+cd ~/.cursor-governance
 python3 ops/scripts/formal_lesson_extractor.py
 ```
 

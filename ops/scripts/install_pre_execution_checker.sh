@@ -27,7 +27,7 @@ GLOBAL_COMMANDS="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PLIST_NAME="com.cursor.pre-execution-checker"
 PLIST_FILE="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
 # Use $HOME-based path for cross-machine compatibility (MacBook and Mac Mini)
-WRAPPER_SCRIPT="$HOME/.cursor-governance/ops/scripts/pre_execution_checker__wrapper.sh"
+WRAPPER_SCRIPT="$HOME/.cursor-governance/ops/scripts/pre_execution_checker_daemon_wrapper.sh"
 LOG_FILE="$HOME/.cursor-governance/ops/logs/pre_execution_checker_.log"
 
 echo "🔧 Installing Pre-Execution Checker LaunchAgent..."
