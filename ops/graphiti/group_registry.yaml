@@ -11,17 +11,17 @@ repos:
     remote_patterns: ["*/IB-Odoo_19*"]
     integrates_with: [cursor-governance, cognitive-engine-graphs]
   cursor-governance:
-    github: cryptoxdog/Cursor-Governance
+    github: Quantum-L9/Cursor-Governance
     remote_patterns: ["*/Cursor-Governance*"]
     path_hints: [Cursor-Governance, GlobalCommands]
     integrates_with: [ib-odoo-19]
   cognitive-engine-graphs:
-    github: cryptoxdog/cognitive-engine-graphs
-    path_hints: [cognitive-engine-graphs, CEG]
-    remote_patterns: ["*/cognitive-engine-graphs*"]
+    github: Quantum-L9/Cognitive.Engine.Graphs
+    path_hints: [Cognitive.Engine.Graphs, cognitive-engine-graphs, CEG]
+    remote_patterns: ["*/Cognitive.Engine.Graphs*", "*/cognitive-engine-graphs*"]
     integrates_with: [ib-odoo-19]
   l9-node-template:
-    github: cryptoxdog/L9-Node-Template
+    github: Quantum-L9/L9-Node-Template
     path_hints: [L9-Node-Template]
     remote_patterns: ["*/L9-Node-Template*"]
     integrates_with: [cursor-governance]

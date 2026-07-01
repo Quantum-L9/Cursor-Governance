@@ -107,7 +107,7 @@ Terminal Opens:
 
 ```bash
 # Install hourly automation
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands/ops/scripts
+cd ~/.cursor-governance/ops/scripts
 ./install_context_processor.sh
 
 # Verify installation
@@ -118,7 +118,7 @@ launchctl list | grep cursor.context
 
 ```bash
 # Extract context manually
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands
+cd ~/.cursor-governance
 ./ops/scripts/process_context.sh
 
 # Show last context
@@ -212,7 +212,7 @@ This filters out trivial check-ins and quick lookups.
 
 ```bash
 # Check if sessions exist
-ls ~/Dropbox/Cursor\ Governance/GlobalCommands/intelligence/context-memory/sessions/
+ls ~/.cursor-governance/intelligence/context-memory/sessions/
 
 # Check if processor is running
 launchctl list | grep cursor.context
@@ -225,7 +225,7 @@ cat ~/.cursor-governance/logs/context_processing.log
 
 ```bash
 # Run manually to see errors
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands
+cd ~/.cursor-governance
 ./ops/scripts/process_context.sh
 
 # Check chat exports exist

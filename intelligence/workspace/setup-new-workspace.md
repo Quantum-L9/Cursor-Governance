@@ -379,26 +379,26 @@ bash "/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/ops
 **Verify symlink points to correct location:**
 ```bash
 ls -la .cursor-commands
-# Expected: .cursor-commands -> /Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands
+# Expected: .cursor-commands -> ~/.cursor-governance
 ```
 
-**⚠️ IMPORTANT**: Governance is in Dropbox, not Library
-- ✅ Correct: `/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands`
-- ❌ Wrong: `/Users/ib-mac/Library/Application Support/Cursor/GlobalCommands`
+**⚠️ IMPORTANT**: Governance SSOT is `~/.cursor-governance` (Dropbox is legacy fallback, not Library)
+- ✅ Correct: `~/.cursor-governance`
+- ❌ Wrong: `~/Library/Application Support/Cursor/GlobalCommands`
 
 **If symlink points to wrong location:**
 ```bash
 # Remove incorrect symlink
 rm .cursor-commands
 
-# Create correct symlink to Dropbox
-ln -s "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands" .cursor-commands
+# Create correct symlink to the SSOT
+ln -s ~/.cursor-governance .cursor-commands
 
 # Verify
 ls -la .cursor-commands
 ```
 
-**✅ Success Check**: Symlink points to Dropbox GlobalCommands (not Library)
+**✅ Success Check**: Symlink points to the SSOT `~/.cursor-governance` (not Library)
 
 ---
 
@@ -408,7 +408,7 @@ ls -la .cursor-commands
 
 ```bash
 # Run the learning processor manually to activate the system
-bash "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/process_learnings.sh"
+bash ~/.cursor-governance/ops/scripts/process_learnings.sh
 ```
 
 **Expected Output:**
@@ -593,19 +593,19 @@ python3 -m pip install pyyaml
 ```
 
 ### Issue 2: Symlink points to wrong location
-**Symptom**: `.cursor-commands` points to Library instead of Dropbox
-**Root Cause**: Governance is in Dropbox, not Library/Application Support
+**Symptom**: `.cursor-commands` points to Library instead of the SSOT
+**Root Cause**: Governance SSOT is `~/.cursor-governance`, not Library/Application Support
 **Fix**:
 ```bash
 # Remove wrong symlink
 rm .cursor-commands
 
-# Create correct symlink to Dropbox (where governance actually is)
-ln -s "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands" .cursor-commands
+# Create correct symlink to the SSOT (where governance actually is)
+ln -s ~/.cursor-governance .cursor-commands
 
 # Verify correct target
 ls -la .cursor-commands
-# Expected: -> /Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands
+# Expected: -> ~/.cursor-governance
 ```
 
 ### Issue 3: Suite 6 directory not found
@@ -677,7 +677,7 @@ echo "=== SETUP COMPLETE ==="
 === GOVERNANCE STATUS CHECK ===
 ✅ Suite 6 config exists
 ✅ Symlink exists
-/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands
+~/.cursor-governance
 ✅ Profiles accessible
 ✅ GlobalCommands learning accessible
 ✅ GlobalCommands learning files: 7

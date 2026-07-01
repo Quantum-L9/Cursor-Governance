@@ -2,9 +2,9 @@
 # Version: 2.0.0
 # Purpose: Deploy .cursorrules to a workspace (or all workspaces)
 # Usage: 
-#   In workspace: bash "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/deploy_cursorrules_global.sh"
+#   In workspace: bash ~/.cursor-governance/ops/scripts/deploy_cursorrules_global.sh
 #   Or provide path: bash deploy_cursorrules_global.sh /path/to/workspace
-# Updated: Use Dropbox GlobalCommands as single source of truth
+# Updated: Use ~/.cursor-governance as single source of truth (Dropbox is legacy fallback)
 
 set -e
 
@@ -16,20 +16,23 @@ FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
 
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
+if [ -d "$HOME/.cursor-governance" ]; then
+    GLOBAL_COMMANDS="$HOME/.cursor-governance"
+    USING_SYNCED_SOURCE=true
+elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
     GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
-    USING_DROPBOX=true
+    USING_SYNCED_SOURCE=true
 elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     if [ "$DISABLE_FALLBACK" = "1" ]; then
-        echo "❌ ERROR: Dropbox GlobalCommands not found and fallback disabled!"
-        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path"
+        echo "❌ ERROR: SSOT/Dropbox GlobalCommands not found and fallback disabled!"
+        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or restore the SSOT clone"
         exit 1
     fi
     GLOBAL_COMMANDS="$HOME/Library/Application Support/Cursor/GlobalCommands"
-    USING_DROPBOX=false
+    USING_SYNCED_SOURCE=false
     
     # Log fallback usage with timestamp
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of Dropbox" >> "$FALLBACK_LOG"
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Script: $0" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Path: $GLOBAL_COMMANDS" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   User: $USER" >> "$FALLBACK_LOG"
@@ -38,9 +41,9 @@ elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     # Loud notification
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  ⚠️  WARNING: USING FALLBACK PATH (NOT DROPBOX)          ║"
+    echo "║  ⚠️  WARNING: USING FALLBACK PATH (NOT SSOT CLONE)       ║"
     echo "╠════════════════════════════════════════════════════════════╣"
-    echo "║  Expected: Dropbox/Cursor Governance/GlobalCommands       ║"
+    echo "║  Expected: .cursor-governance       ║"
     echo "║  Using:    Library/Application Support/Cursor/GlobalCommands ║"
     echo "║                                                            ║"
     echo "║  This means changes won't sync across computers!          ║"
@@ -58,8 +61,8 @@ SOURCE_CURSORRULES="$GLOBAL_COMMANDS/templates/.cursorrules"
 TARGET_DIR="${1:-$(pwd)}"
 
 echo "🚀 Deploying .cursorrules to workspace..."
-if [ "$USING_DROPBOX" = true ]; then
-    echo "📍 GlobalCommands: $GLOBAL_COMMANDS (✅ Dropbox)"
+if [ "$USING_SYNCED_SOURCE" = true ]; then
+    echo "📍 GlobalCommands: $GLOBAL_COMMANDS (✅ synced source)"
 else
     echo "📍 GlobalCommands: $GLOBAL_COMMANDS (⚠️  Library fallback)"
 fi

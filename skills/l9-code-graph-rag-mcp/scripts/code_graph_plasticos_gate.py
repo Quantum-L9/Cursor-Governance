@@ -192,7 +192,7 @@ def check_pre_tool_use(hook_input: dict[str, Any]) -> dict[str, Any]:
         return hook_response("allow")
 
     baseline = (
-        "bash \"$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts/"
+        "bash \"$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts/"
         f"code_graph_gmp_baseline.sh\" \"{repo}\" --run-id gmp-$(date +%Y%m%d) --files {rel}"
     )
     matrix = (

@@ -14,17 +14,17 @@ These are **hard-won lessons** from repeated mistakes. Violating these wastes ho
 
 ## 🚨 ULTRA-CRITICAL: Path Rules
 
-### GlobalCommands Location — DROPBOX NOT LIBRARY
+### GlobalCommands Location — SSOT IS `$HOME/.cursor-governance`
 
 ```bash
 # ❌❌❌ WRONG — NEVER USE ❌❌❌
-/Users/ib-mac/Library/Application Support/Cursor/GlobalCommands
+/Users/ib-mac/.cursor-governance
 
 # ✅✅✅ CORRECT — ALWAYS USE ✅✅✅
-$HOME/Dropbox/Cursor Governance/GlobalCommands
+$HOME/.cursor-governance
 ```
 
-**Rule:** The governance folder is in Dropbox, NOT Library. Period. No exceptions.
+**Rule:** The governance SSOT is `$HOME/.cursor-governance` (the GitHub clone); legacy Dropbox is fallback only. Always use `$HOME`, never hardcoded `/Users/...` paths. Period. No exceptions.
 
 ### Use $HOME, Never Hardcoded Paths
 

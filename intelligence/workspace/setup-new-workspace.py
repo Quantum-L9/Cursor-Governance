@@ -115,8 +115,14 @@ class SetupConfig:
     
     # Paths
     HOME = Path.home()
-    SUITE6_PATH = HOME / "Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)"
-    GLOBAL_COMMANDS = HOME / "Dropbox/Cursor Governance/GlobalCommands"
+    # SSOT: ~/.cursor-governance (repo-root layout == GlobalCommands); Dropbox = transition fallback.
+    GLOBAL_COMMANDS = next(
+        (r for r in [HOME / ".cursor-governance",
+                     HOME / "Dropbox/cursor governance/GlobalCommands",
+                     HOME / "Dropbox/Cursor Governance/GlobalCommands"] if r.is_dir()),
+        HOME / ".cursor-governance",
+    )
+    SUITE6_PATH = GLOBAL_COMMANDS
     
     # Mandatory files (23 total)
     MANDATORY_FILES = [

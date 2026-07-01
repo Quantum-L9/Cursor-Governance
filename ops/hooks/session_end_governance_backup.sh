@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cursor sessionEnd hook — backup GlobalCommands to cryptoxdog/Cursor-Governance.
+# Cursor sessionEnd hook — backup GlobalCommands to Quantum-L9/Cursor-Governance.
 # Fail-open: never block session close.
 # Path contract: CANONICAL_LAW §9 — resolve via $GLOBAL_COMMANDS, not dirname "$0".
 set -uo pipefail

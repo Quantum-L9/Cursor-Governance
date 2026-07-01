@@ -48,11 +48,14 @@ import os
 
 def get_global_commands_path():
     """Get GlobalCommands path"""
-    dropbox = Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
-    if dropbox.exists():
-        return dropbox
+    ssot = Path.home() / ".cursor-governance"
+    if ssot.is_dir():
+        return ssot
+    legacy_dropbox = Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+    if legacy_dropbox.is_dir():
+        return legacy_dropbox
     library = Path.home() / "Library/Application Support/Cursor/GlobalCommands"
-    if library.exists():
+    if library.is_dir():
         return library
     raise FileNotFoundError("GlobalCommands not found")
 

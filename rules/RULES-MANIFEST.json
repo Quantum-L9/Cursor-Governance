@@ -1,7 +1,7 @@
 {
   "$schema": "cursor-global-rules-manifest/1.0",
   "generated_utc": "2026-06-06T22:30:31Z",
-  "rules_directory": "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules",
+  "rules_directory": "$HOME/.cursor-governance/rules",
   "purpose": "Machine-readable index of GlobalCommands/rules/*.mdc for agents and tooling.",
   "summary": {
     "total_mdc_files": 53,

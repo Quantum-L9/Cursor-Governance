@@ -2,8 +2,8 @@
 # L9 Transcript Distiller — daily cron wrapper
 # Runs at 5am via launchd, distills yesterday's transcripts.
 #
-# Logs: ~/Dropbox/Cursor Governance/GlobalCommands/ops/logs/distiller_cron.log
-# Reports: ~/Dropbox/Cursor Governance/GlobalCommands/ops/logs/distiller_reports/
+# Logs: ~/.cursor-governance/ops/logs/distiller_cron.log
+# Reports: ~/.cursor-governance/ops/logs/distiller_reports/
 
 set -euo pipefail
 

@@ -29,7 +29,7 @@ summary: "Step-by-step installation instructions for automated context capture a
 
 ```bash
 # Navigate to scripts
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands/ops/scripts
+cd ~/.cursor-governance/ops/scripts
 
 # Run installer
 ./install_context_processor.sh
@@ -64,7 +64,7 @@ ls -la ~/.cursor-governance/logs/
 # Should show: context_processing.log
 
 # Run manually to test
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands
+cd ~/.cursor-governance
 ./ops/scripts/process_context.sh
 ```
 
@@ -74,7 +74,7 @@ The system needs existing chat exports to work. If you've been using the learnin
 
 ```bash
 # Check for chat exports
-ls -la ~/Dropbox/Cursor\ Governance/GlobalCommands/ops/logs/chat_exports/
+ls -la ~/.cursor-governance/ops/logs/chat_exports/
 
 # If empty, wait for next hourly export (export_chats.sh runs hourly)
 ```
@@ -83,7 +83,7 @@ ls -la ~/Dropbox/Cursor\ Governance/GlobalCommands/ops/logs/chat_exports/
 
 ```bash
 # Process current chats manually
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands
+cd ~/.cursor-governance
 ./ops/scripts/process_context.sh
 
 # View generated context
@@ -107,7 +107,7 @@ launchctl unload ~/Library/LaunchAgents/com.cursor.context.processor.plist
 rm ~/Library/LaunchAgents/com.cursor.context.processor.plist
 
 # Optionally remove data
-rm -rf ~/Dropbox/Cursor\ Governance/GlobalCommands/intelligence/context-memory/sessions/
+rm -rf ~/.cursor-governance/intelligence/context-memory/sessions/
 ```
 
 ## Troubleshooting
@@ -117,7 +117,7 @@ rm -rf ~/Dropbox/Cursor\ Governance/GlobalCommands/intelligence/context-memory/s
 **Solution:**
 ```bash
 # Check if sessions exist
-ls ~/Dropbox/Cursor\ Governance/GlobalCommands/intelligence/context-memory/sessions/
+ls ~/.cursor-governance/intelligence/context-memory/sessions/
 
 # If empty, wait 1 hour or run manually
 ./ops/scripts/process_context.sh
@@ -144,7 +144,7 @@ python3 --version
 # Need Python 3.6+
 
 # Test extractor directly
-cd ~/Dropbox/Cursor\ Governance/GlobalCommands
+cd ~/.cursor-governance
 python3 intelligence/context-memory/context-extractor.py --help
 ```
 

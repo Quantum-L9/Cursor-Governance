@@ -345,10 +345,16 @@ class OperationalOversight:
         try:
             # Find GlobalCommands path
             home = Path.home()
+            ssot_path = home / ".cursor-governance"
             dropbox_path = home / "Dropbox/Cursor Governance/GlobalCommands"
             library_path = home / "Library/Application Support/Cursor/GlobalCommands"
-            
-            global_commands = dropbox_path if dropbox_path.exists() else library_path
+
+            if ssot_path.exists():
+                global_commands = ssot_path
+            elif dropbox_path.exists():
+                global_commands = dropbox_path
+            else:
+                global_commands = library_path
             
             learning_script = global_commands / "ops" / "scripts" / "process_learnings.sh"
             if learning_script.exists():

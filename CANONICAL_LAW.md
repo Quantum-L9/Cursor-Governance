@@ -1,17 +1,17 @@
 # Cursor Governance — Canonical Law
 
 **Status:** authoritative  
-**Governance root (SSOT):** `$HOME/Dropbox/Cursor Governance/`  
-**GlobalCommands (SSOT body):** `$HOME/Dropbox/Cursor Governance/GlobalCommands/`  
-**GitHub backup:** `cryptoxdog/Cursor-Governance`  
-**Updated:** 2026-06-06
+**Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone; the whole repo **is** GlobalCommands (root layout), so `$GOV_ROOT == $GLOBAL_COMMANDS`  
+**GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance` — pull via `governance_sync.sh` (guarded ff-only) on session start; push via `backup_to_github.sh` on session end  
+**Legacy fallback:** `$HOME/Dropbox/Cursor Governance/GlobalCommands` — transition only, until each machine clones  
+**Updated:** 2026-06-30 (GitHub-centric migration)
 
 ## 1. Single source of truth
 
 | Asset | Canonical path | Repo access |
 |-------|----------------|-------------|
-| **GlobalCommands body** | Dropbox `GlobalCommands/` | **`.cursor-commands/` only** |
-| CANONICAL_LAW | Dropbox `CANONICAL_LAW.md` | `.cursor/governance/CANONICAL_LAW.md` (file symlink) |
+| **GlobalCommands body** | `~/.cursor-governance/` (clone root) | **`.cursor-commands/` only** |
+| CANONICAL_LAW | `~/.cursor-governance/CANONICAL_LAW.md` | `.cursor/governance/CANONICAL_LAW.md` (file symlink) |
 | L9 skills | `GlobalCommands/skills/` | `@.cursor-commands/skills/` |
 | Slash commands | `GlobalCommands/commands/` | `@.cursor-commands/commands/` |
 | Global rules | `GlobalCommands/rules/` | `@.cursor-commands/rules/` |
@@ -29,14 +29,14 @@ bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh
 | Repo path | Target | Purpose |
 |-----------|--------|---------|
 | `.cursor-commands` | `GlobalCommands/` | **sole global entry** |
-| `.cursor/governance/CANONICAL_LAW.md` | Dropbox `CANONICAL_LAW.md` | law file only |
-| `.cursor/governance/` | **local directory** | not a symlink to Dropbox root |
+| `.cursor/governance/CANONICAL_LAW.md` | `~/.cursor-governance/CANONICAL_LAW.md` | law file only |
+| `.cursor/governance/` | **local directory** | not a symlink to the governance root |
 
 ### Forbidden
 
 | Path | Why |
 |------|-----|
-| `.cursor/governance` → Dropbox root | exposes duplicate `GlobalCommands/` tree |
+| `.cursor/governance` → governance root | exposes duplicate `GlobalCommands/` tree |
 | `.cursor/governance/GlobalCommands` | duplicate of `.cursor-commands` |
 | `.cursor/commands` | duplicate of `.cursor-commands/commands` |
 | `.cursor/skills` | duplicate of `.cursor-commands/skills` |
@@ -64,14 +64,16 @@ bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh
 | `plasticos-*` | repo `.claude/skills/` |
 | repo rules | repo `.cursor/rules/` only |
 
-## 5. GitHub backup (Cursor-Governance)
+## 5. GitHub SSOT (Cursor-Governance)
 
 | Item | Value |
 |------|-------|
-| Remote | `https://github.com/cryptoxdog/Cursor-Governance.git` |
+| Remote (origin) | `https://github.com/Quantum-L9/Cursor-Governance.git` |
 | Branch | `main` |
-| Git root | Dropbox `GlobalCommands/` (same tree as `.cursor-commands/`) |
-| Law file | Copied to repo root as `CANONICAL_LAW.md` on each backup |
+| Git root | `~/.cursor-governance` (clone root == GlobalCommands == `.cursor-commands/` target) |
+| Pull (session start) | `governance_sync.sh` — guarded ff-only; never `reset --hard` (opt-in: `GOVERNANCE_SYNC_HARD_RESET=1`) |
+| Push (session end) | `backup_to_github.sh` — commits + rebases + pushes |
+| Law file | Lives at clone root as `CANONICAL_LAW.md` |
 
 **Manual:**
 
@@ -97,8 +99,8 @@ Skip one session: `GOVERNANCE_BACKUP_SKIP=1`
 ## 7. Anti-patterns
 
 - Second GlobalCommands tree in any repo (`.cursor/governance/GlobalCommands`, `.cursor/skills`, etc.)
-- Editing GitHub directly without syncing Dropbox SSOT first
-- Committing `.cursor-commands` symlink into app repos (symlink only; content lives in Dropbox + Cursor-Governance)
+- Hard-resetting or force-pushing the SSOT clone — let `governance_sync.sh` reconcile ff-only
+- Committing `.cursor-commands` symlink into app repos (symlink only; content lives in `~/.cursor-governance`)
 
 ## 8. Setup checklist
 

@@ -23,7 +23,7 @@ Clean session close:
 2. Extract learnings to memory (via canonical pipeline; see `docs/MEMORY_PIPELINE_MAP.md`)
 3. Save Redis session context for cross-window resume
 4. Create handoff summary
-5. **Backup GlobalCommands to GitHub** (`cryptoxdog/Cursor-Governance`)
+5. **Backup GlobalCommands to GitHub** (`Quantum-L9/Cursor-Governance`)
 
 Protocol spec: `end-session.yaml` (v2.1)
 

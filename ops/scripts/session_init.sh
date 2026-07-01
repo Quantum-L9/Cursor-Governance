@@ -14,20 +14,23 @@ FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
 
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
+if [ -d "$HOME/.cursor-governance" ]; then
+    GLOBAL_COMMANDS="$HOME/.cursor-governance"
+    USING_SYNCED_SOURCE=true
+elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
     GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
-    USING_DROPBOX=true
+    USING_SYNCED_SOURCE=true
 elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     if [ "$DISABLE_FALLBACK" = "1" ]; then
-        echo "❌ ERROR: Dropbox GlobalCommands not found and fallback disabled!"
-        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path"
+        echo "❌ ERROR: SSOT/Dropbox GlobalCommands not found and fallback disabled!"
+        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or restore the SSOT clone"
         exit 1
     fi
     GLOBAL_COMMANDS="$HOME/Library/Application Support/Cursor/GlobalCommands"
-    USING_DROPBOX=false
+    USING_SYNCED_SOURCE=false
     
     # Log fallback usage
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of Dropbox" >> "$FALLBACK_LOG"
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Script: $0" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Path: $GLOBAL_COMMANDS" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   User: $USER" >> "$FALLBACK_LOG"
@@ -44,8 +47,8 @@ MEMORY_INDEX="$GLOBAL_COMMANDS/ops/logs/memory_index.json"
 LOG_FILE="$GLOBAL_COMMANDS/ops/logs/session_init.log"
 
 # Log fallback status to session log if fallback was used
-if [ "$USING_DROPBOX" = false ]; then
-    echo "[$(date)] ⚠️  WARNING: Using Library fallback (should be Dropbox)" >> "$LOG_FILE"
+if [ "$USING_SYNCED_SOURCE" = false ]; then
+    echo "[$(date)] ⚠️  WARNING: Using Library fallback (should be SSOT/Dropbox)" >> "$LOG_FILE"
 fi
 
 echo "[$(date)] ========================================" >> "$LOG_FILE"

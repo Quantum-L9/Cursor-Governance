@@ -15,7 +15,7 @@ if ! resolve_governance_paths; then
     GOV_ROOT="$(dirname "$GLOBAL_COMMANDS")"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK: $GLOBAL_COMMANDS" >> "$FALLBACK_LOG"
   else
-    echo "ERROR: GlobalCommands not found under Dropbox."
+    echo "ERROR: governance root not found (looked in ~/.cursor-governance, Dropbox)."
     exit 1
   fi
 fi
@@ -150,6 +150,23 @@ PLIST
   fi
 }
 
+ensure_global_git_ignores() {
+  # Isolate per-machine runtime state from every repo via git core.excludesfile,
+  # so dynamic memory/state never lands in git history or fights the auto-sync.
+  local gi
+  gi="$(git config --global core.excludesfile 2>/dev/null || true)"
+  [ -z "$gi" ] && gi="$HOME/.gitignore_global"
+  gi="${gi/#\~/$HOME}"
+  mkdir -p "$(dirname "$gi")" 2>/dev/null || true
+  touch "$gi" 2>/dev/null || { echo "WARN: cannot write global gitignore $gi"; return 0; }
+  git config --global core.excludesfile "$gi" >/dev/null 2>&1 || true
+  local added=0 pat
+  for pat in "memory-bank/" ".workflow_state_*.json" ".cursor-globalcommands-fallback.log"; do
+    if ! grep -qxF "$pat" "$gi" 2>/dev/null; then echo "$pat" >> "$gi"; added=1; fi
+  done
+  [ "$added" = "1" ] && echo "OK: global git ignores updated in $gi" || echo "OK: global git ignores already present ($gi)"
+}
+
 echo "Governance root:  $GOV_ROOT"
 echo "GlobalCommands:   $GLOBAL_COMMANDS"
 echo "Workspace:        $WORKSPACE_DIR"
@@ -185,6 +202,9 @@ install_session_end_governance_hook() {
 
   local bootstrap_src="$GLOBAL_COMMANDS/ops/hooks/session_start_bootstrap.sh"
   local bootstrap_dst="$HOME/.cursor/hooks/session-start-bootstrap.sh"
+  # Ensure the hooks dir exists first — on a fresh clone/new machine ~/.cursor/hooks
+  # does not exist yet, and `set -e` would otherwise abort the whole wiring here.
+  mkdir -p "$HOME/.cursor/hooks" "$HOME/.cursor/graphiti-state"
   if [ -f "$bootstrap_src" ]; then
     cp -f "$bootstrap_src" "$bootstrap_dst"
     chmod +x "$bootstrap_dst"
@@ -314,6 +334,9 @@ install_session_end_governance_hook
 
 echo ""
 install_graphiti_tunnel_agent
+
+echo ""
+ensure_global_git_ignores
 
 echo ""
 bash "$SCRIPT_DIR/validate_governance_symlinks.sh" "$WORKSPACE_DIR"

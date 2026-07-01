@@ -57,7 +57,8 @@ def get_global_commands_path():
     disable_fallback = os.environ.get("DISABLE_FALLBACK", "0") == "1"
     
     dropbox_paths = [
-        Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+        Path.home() / ".cursor-governance",
+        Path.home() / "Dropbox/Cursor Governance/GlobalCommands",
     ]
     library_path = Path(os.path.expanduser("~/Library/Application Support/Cursor/GlobalCommands"))
     
@@ -428,7 +429,8 @@ def main():
         print(f"\n✅ Snapshot generated:")
         print(f"   Improvement Rate: {snapshot['improvement_rate']:.2f}%")
         print(f"   Adjustment Success Rate: {snapshot['adjustment_success_rate']:.2f}%")
-        print(f"   File: {IMPROVEMENT_SNAPSHOTS_DIR / f'snapshot_{datetime.now().strftime(\"%Y%m%d_%H%M%S\")}.json'}")
+        _snap_name = f"snapshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        print(f"   File: {IMPROVEMENT_SNAPSHOTS_DIR / _snap_name}")
     else:
         result = improvement.run_improvement_cycle()
         print(f"\n✅ Improvement Cycle Complete:")

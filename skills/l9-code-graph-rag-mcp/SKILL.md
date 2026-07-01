@@ -44,7 +44,7 @@ Operate **@er77/code-graph-rag-mcp** as a **repo-local code structure** graph (A
 
    ```bash
    export REPO_ROOT="/path/to/repo"
-   export GOV_SKILLS="$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts"
+   export GOV_SKILLS="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts"
    bash "$GOV_SKILLS/code_graph_health.sh" "$REPO_ROOT"
    ```
 

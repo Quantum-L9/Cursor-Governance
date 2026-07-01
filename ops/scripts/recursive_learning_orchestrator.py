@@ -51,32 +51,41 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-# Configuration - Use Dropbox as single source of truth
+# Configuration - SSOT: local GitHub clone at ~/.cursor-governance (the whole repo IS GlobalCommands).
 def get_global_commands_path():
-    """Get GlobalCommands path, preferring Dropbox location"""
+    """Resolve GlobalCommands, preferring the ~/.cursor-governance SSOT clone.
+
+    Mirrors ops/scripts/resolve_governance_paths.sh ordering:
+      1. ~/.cursor-governance (repo-root layout: clone root == GlobalCommands)
+      2. legacy Dropbox roots (nested GlobalCommands/) - transition fallback
+      3. ~/Library/.../GlobalCommands - last-resort fallback (logged)
+    """
     fallback_log = Path.home() / ".cursor-globalcommands-fallback.log"
     disable_fallback = os.environ.get("DISABLE_FALLBACK", "0") == "1"
-    
-    dropbox_paths = [
-        Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
-    ]
+
+    # 1 + 2: SSOT clone (root layout) then legacy Dropbox roots (nested layout).
+    for root in [
+        Path.home() / ".cursor-governance",
+        Path.home() / "Dropbox/cursor governance",
+        Path.home() / "Dropbox/Cursor Governance",
+    ]:
+        if (root / "skills").is_dir() and (root / "CANONICAL_LAW.md").is_file():
+            return root  # repo-root layout: clone root is GlobalCommands
+        if (root / "GlobalCommands").is_dir():
+            return root / "GlobalCommands"  # legacy nested layout
+
+    # 3: Library fallback.
     library_path = Path(os.path.expanduser("~/Library/Application Support/Cursor/GlobalCommands"))
-    
-    # Try Dropbox paths first
-    for path in dropbox_paths:
-        if path.exists():
-            return path
-    
-    # Fallback to Library
     if library_path.exists():
         if disable_fallback:
             raise FileNotFoundError(
-                "Dropbox GlobalCommands not found and DISABLE_FALLBACK=1. "
-                "Set DISABLE_FALLBACK=0 to allow fallback, or fix Dropbox path."
+                "Governance root not found under ~/.cursor-governance or Dropbox and "
+                "DISABLE_FALLBACK=1. Set DISABLE_FALLBACK=0 to allow Library fallback, "
+                "or clone Cursor-Governance to ~/.cursor-governance."
             )
-        
+
         # Log fallback usage
-        log_entry = f"""[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FALLBACK USED: Library path instead of Dropbox
+        log_entry = f"""[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FALLBACK USED: Library path instead of ~/.cursor-governance
 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]   Script: recursive_learning_orchestrator.py
 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]   Path: {library_path}
 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]   User: {os.getenv('USER', 'unknown')}
@@ -84,11 +93,11 @@ def get_global_commands_path():
 """
         with open(fallback_log, 'a') as f:
             f.write(log_entry)
-        
+
         print("\n⚠️  WARNING: Using Library fallback (logged to ~/.cursor-globalcommands-fallback.log)")
         return library_path
-    
-    raise FileNotFoundError("GlobalCommands directory not found in Dropbox or Library")
+
+    raise FileNotFoundError("GlobalCommands directory not found under ~/.cursor-governance, Dropbox, or Library")
 
 GLOBAL_COMMANDS = get_global_commands_path()
 STATUS_FILE = GLOBAL_COMMANDS / "ops/logs/recursive_learning_status.json"

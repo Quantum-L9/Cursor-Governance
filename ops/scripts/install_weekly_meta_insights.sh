@@ -27,8 +27,8 @@ GLOBAL_COMMANDS="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PLIST_NAME="com.cursor.weekly-meta-insights"
 PLIST_FILE="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
 # Use $HOME-based path for cross-machine compatibility (MacBook and Mac Mini)
-WRAPPER_SCRIPT="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/formal_lesson_extractor_wrapper.sh"
-LOG_FILE="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/logs/weekly_meta_insights.log"
+WRAPPER_SCRIPT="$HOME/.cursor-governance/ops/scripts/formal_lesson_extractor_wrapper.sh"
+LOG_FILE="$HOME/.cursor-governance/ops/logs/weekly_meta_insights.log"
 
 echo "🔧 Installing Weekly Meta-Insights LaunchAgent..."
 echo "   Wrapper: $WRAPPER_SCRIPT"

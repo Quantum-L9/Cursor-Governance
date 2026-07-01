@@ -6,17 +6,17 @@
 launchctl list | grep learning-processor
 
 # View stats
-cat "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/memory_index.json"
+cat "$HOME/.cursor-governance/ops/logs/memory_index.json"
 
 # Recent logs
-tail -20 "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/logs/learning_processing.log"
+tail -20 "$HOME/.cursor-governance/ops/logs/learning_processing.log"
 ```
 
 ## 🚀 Manual Operations
 
 ### Run Now
 ```bash
-bash "$HOME/Library/Application Support/Cursor/GlobalCommands/ops/scripts/process_learnings.sh"
+bash "$HOME/.cursor-governance/ops/scripts/process_learnings.sh"
 ```
 
 ### Restart Service
@@ -28,10 +28,10 @@ launchctl load ~/Library/LaunchAgents/com.tenx.learning-processor.plist
 ## 📊 View Learning Files
 ```bash
 # Repeated mistakes
-cat "$HOME/Library/Application Support/Cursor/GlobalCommands/learning/failures/repeated-mistakes.md"
+cat "$HOME/.cursor-governance/learning/failures/repeated-mistakes.md"
 
 # Quick fixes
-cat "$HOME/Library/Application Support/Cursor/GlobalCommands/learning/patterns/quick-fixes.md"
+cat "$HOME/.cursor-governance/learning/patterns/quick-fixes.md"
 ```
 
 ## 🎯 What Gets Learned

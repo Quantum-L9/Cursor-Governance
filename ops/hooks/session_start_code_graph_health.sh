@@ -19,7 +19,7 @@ if [ -n "$REPO" ] && [ -d "$REPO/plasticos_base" ]; then
   if resolve_governance_paths 2>/dev/null; then
     GOV_SKILLS="$GLOBAL_COMMANDS/skills/l9-code-graph-rag-mcp/scripts"
   else
-    GOV_SKILLS="$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts"
+    GOV_SKILLS="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts"
   fi
   HEALTH_SCRIPT="$GOV_SKILLS/code_graph_health.sh"
 

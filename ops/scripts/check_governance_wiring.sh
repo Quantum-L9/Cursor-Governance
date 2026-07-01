@@ -136,10 +136,12 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     echo "  WARN: ~/.cursor/graphiti.env missing (copy graphiti.env.example)"
   fi
-  if grep -q "session-start-memory-orchestrator" "$HOOKS_JSON" 2>/dev/null; then
-    pass "sessionStart orchestrator registered"
+  # The bootstrap hook delegates to the memory orchestrator internally, so either
+  # entry in sessionStart satisfies the wiring (setup retires the orchestrator-only entry).
+  if grep -qE "session-start-bootstrap|session-start-memory-orchestrator" "$HOOKS_JSON" 2>/dev/null; then
+    pass "sessionStart bootstrap/orchestrator registered"
   else
-    fail "sessionStart orchestrator not in hooks.json"
+    fail "sessionStart bootstrap not in hooks.json"
   fi
   GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
   if [ -f "$GATE_LIB" ] && grep -q "gmp:phase_lock" "$GATE_LIB"; then

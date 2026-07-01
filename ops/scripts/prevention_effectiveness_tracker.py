@@ -58,7 +58,8 @@ def get_global_commands_path():
     disable_fallback = os.environ.get("DISABLE_FALLBACK", "0") == "1"
     
     dropbox_paths = [
-        Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+        Path.home() / ".cursor-governance",
+        Path.home() / "Dropbox/Cursor Governance/GlobalCommands",
     ]
     library_path = Path(os.path.expanduser("~/Library/Application Support/Cursor/GlobalCommands"))
     
@@ -497,12 +498,14 @@ def main():
     if args.daily_report:
         report = tracker.generate_daily_report()
         print(f"\n✅ Daily report generated:")
-        print(f"   {EFFECTIVENESS_REPORTS_DIR / f'effectiveness_report_{datetime.now().strftime(\"%Y%m%d\")}.md'}")
+        _report_name = f"effectiveness_report_{datetime.now().strftime('%Y%m%d')}.md"
+        print(f"   {EFFECTIVENESS_REPORTS_DIR / _report_name}")
     
     if args.weekly_trend:
         analysis = tracker.generate_weekly_trend_analysis()
         print(f"\n✅ Weekly trend analysis generated:")
-        print(f"   {EFFECTIVENESS_REPORTS_DIR / f'weekly_trend_{datetime.now().strftime(\"%Y%m%d\")}.md'}")
+        _trend_name = f"weekly_trend_{datetime.now().strftime('%Y%m%d')}.md"
+        print(f"   {EFFECTIVENESS_REPORTS_DIR / _trend_name}")
 
 
 if __name__ == "__main__":

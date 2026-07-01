@@ -282,7 +282,7 @@ python3 .cursor-commands/ops/scripts/operational-oversight.py
 python3 .cursor-commands/ops/scripts/intelligence_audit_logger.py --report
 
 # Sync workspace
-python3 "$HOME/Dropbox/Cursor Governance/GlobalCommands/environment/env-manager.py" sync "$(pwd)"
+python3 "$HOME/.cursor-governance/environment/env-manager.py" sync "$(pwd)"
 
 # Verify startup files
 bash .cursor-commands/ops/scripts/verify-startup-files.sh

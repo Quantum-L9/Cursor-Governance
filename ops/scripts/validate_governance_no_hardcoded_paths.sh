@@ -54,9 +54,9 @@ done
 
 echo ""
 if [ $FAIL -eq 0 ]; then
-  echo "RESULT: PASS — wiring kernel uses \$HOME/Dropbox resolution only"
+  echo "RESULT: PASS — wiring kernel resolves via resolve_governance_paths.sh (~/.cursor-governance SSOT)"
   exit 0
 fi
 
-echo "RESULT: FAIL — use \$HOME/Dropbox + resolve_governance_paths.sh (see CANONICAL_LAW §9)"
+echo "RESULT: FAIL — resolve via resolve_governance_paths.sh (~/.cursor-governance, Dropbox fallback); see CANONICAL_LAW §9"
 exit 1

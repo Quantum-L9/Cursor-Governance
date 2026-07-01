@@ -43,7 +43,7 @@ npm install --prefix "$HOME/.local/code-graph-rag-mcp" /tmp/code-graph-rag-mcp.t
 export REPO_ROOT="$HOME/IB-Odoo_19 (LOCAL)/IB-Odoo_19"
 
 # Governance scripts (Dropbox SSOT)
-export GOV_SKILLS="$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts"
+export GOV_SKILLS="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts"
 
 # Optional overrides
 export CODE_GRAPH_BIN="$HOME/.local/code-graph-rag-mcp/node_modules/.bin/code-graph-rag-mcp"
@@ -213,7 +213,7 @@ Code-graph does **not** remember "what we decided last Tuesday."
 ```bash
 # Paths
 export REPO_ROOT="$HOME/IB-Odoo_19 (LOCAL)/IB-Odoo_19"
-export GOV_SKILLS="$HOME/Dropbox/Cursor Governance/GlobalCommands/skills/l9-code-graph-rag-mcp/scripts"
+export GOV_SKILLS="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts"
 
 # Seed (once / after big changes)
 bash "$GOV_SKILLS/code_graph_batch_index.sh" "$REPO_ROOT"

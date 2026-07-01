@@ -1,6 +1,6 @@
 # GlobalCommands rules manifest
 
-Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands/rules`.
+Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `~/.cursor-governance/rules`.
 
 ## Counts
 

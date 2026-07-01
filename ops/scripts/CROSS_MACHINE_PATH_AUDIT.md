@@ -86,31 +86,31 @@ Ensure ALL scripts use `$HOME` or `Path.home()` instead of hardcoded user paths 
 **Before (❌ WRONG):**
 ```python
 dropbox_paths = [
-    Path("/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"),  # ❌ Hardcoded
-    Path.home() / "Dropbox/Cursor Governance/GlobalCommands"
+    Path("~/.cursor-governance"),  # ❌ Hardcoded
+    Path.home() / ".cursor-governance"
 ]
 ```
 
 **After (✅ CORRECT):**
 ```python
 dropbox_paths = [
-    Path.home() / "Dropbox/Cursor Governance/GlobalCommands"  # ✅ $HOME only
+    Path.home() / ".cursor-governance"  # ✅ $HOME only
 ]
 ```
 
 **Bash Before (❌ WRONG):**
 ```bash
-if [ -d "/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands" ]; then  # ❌ Hardcoded
-    GLOBAL_COMMANDS="/Users/ib-mac/Dropbox/Cursor Governance/GlobalCommands"
-elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
-    GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+if [ -d "~/.cursor-governance" ]; then  # ❌ Hardcoded
+    GLOBAL_COMMANDS="~/.cursor-governance"
+elif [ -d "$HOME/.cursor-governance" ]; then
+    GLOBAL_COMMANDS="$HOME/.cursor-governance"
 ```
 
 **Bash After (✅ CORRECT):**
 ```bash
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then  # ✅ $HOME only
-    GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
+if [ -d "$HOME/.cursor-governance" ]; then  # ✅ $HOME only
+    GLOBAL_COMMANDS="$HOME/.cursor-governance"
 ```
 
 ## 🚨 Critical Lesson Added

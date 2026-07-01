@@ -45,3 +45,14 @@ node_modules/
 # OS generated files
 Thumbs.db
 
+# ── Stateful Graphiti / runtime isolation ────────────────────────────────────
+# Keep dynamic execution state out of the SSOT clone so guarded auto-sync stays
+# fast-forward-clean and never collides with these per-machine/per-run files.
+# NOTE: memory-bank/ (per-project scaffold) is ignored; ops/graphiti/memory-bank-template/
+# is the tracked source and is intentionally NOT matched by this pattern.
+memory-bank/
+.workflow_state_*.json
+*.fallback.log
+.cursor-globalcommands-fallback.log
+.backup.*
+

@@ -44,4 +44,4 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
 
 ## Publish note
 
-Changes live in Dropbox SSOT (`$HOME/Dropbox/Cursor Governance/GlobalCommands`). Backup via `sessionEnd` hook or `make governance-backup` — not from IB-Odoo_19.
+Changes live in the SSOT (`$HOME/.cursor-governance`). Backup via `sessionEnd` hook or `make governance-backup` — not from IB-Odoo_19.
