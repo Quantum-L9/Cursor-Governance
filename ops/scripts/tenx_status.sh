@@ -27,7 +27,7 @@ elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     USING_SYNCED_SOURCE=false
     
     # Log fallback usage
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of Dropbox" >> "$FALLBACK_LOG"
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Script: $0" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Path: $ROOT" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   User: $USER" >> "$FALLBACK_LOG"

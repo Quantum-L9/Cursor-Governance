@@ -794,7 +794,7 @@ quick_reference:
     yaml_missing: "python3 -m pip install pyyaml"
     rewire_all: 'bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"'
     verify_symlink: 'bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh" "$(pwd)"'
-    never: "Do not rsync from git clone into Dropbox — Dropbox GlobalCommands is SSOT"
+    never: "Do not edit GlobalCommands outside ~/.cursor-governance — the SSOT clone is authoritative; push via backup_to_github.sh"
 
 # ═══════════════════════════════════════════════════════════
 #   AUTOMATION SUPPORT

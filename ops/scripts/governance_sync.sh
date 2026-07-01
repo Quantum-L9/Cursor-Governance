@@ -21,9 +21,27 @@ command -v git >/dev/null 2>&1 || exit 0
 mkdir -p "$(dirname "$LOCK")" 2>/dev/null || true
 
 # Single-flight: if another window holds the lock, skip silently.
-exec 9>"$LOCK" 2>/dev/null || exit 0
+# Use flock where available; macOS has no flock, so fall back to an atomic mkdir lock.
 if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK" 2>/dev/null || exit 0
   flock -n 9 || exit 0
+else
+  # macOS has no flock: atomic mkdir lock with a portable timestamp stale-breaker
+  # (uses only `date +%s`, so no GNU/BSD find/stat flag differences).
+  LOCKDIR="${LOCK}.d"
+  if ! mkdir "$LOCKDIR" 2>/dev/null; then
+    # Lock held — break it only if clearly stale (>5 min, e.g. a killed run), else skip.
+    _now=$(date +%s 2>/dev/null || echo 0)
+    _ts=$(cat "$LOCKDIR/ts" 2>/dev/null || echo 0)
+    if [ "$_now" -gt 0 ] && [ $((_now - _ts)) -gt 300 ]; then
+      rm -rf "$LOCKDIR" 2>/dev/null || true
+      mkdir "$LOCKDIR" 2>/dev/null || exit 0
+    else
+      exit 0
+    fi
+  fi
+  date +%s > "$LOCKDIR/ts" 2>/dev/null || true
+  trap 'rm -rf "$LOCKDIR" 2>/dev/null || true' EXIT
 fi
 
 cd "$CLONE" || exit 0

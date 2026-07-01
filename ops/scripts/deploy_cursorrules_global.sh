@@ -32,7 +32,7 @@ elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     USING_SYNCED_SOURCE=false
     
     # Log fallback usage with timestamp
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of Dropbox" >> "$FALLBACK_LOG"
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Script: $0" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Path: $GLOBAL_COMMANDS" >> "$FALLBACK_LOG"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   User: $USER" >> "$FALLBACK_LOG"
@@ -41,7 +41,7 @@ elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
     # Loud notification
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  ⚠️  WARNING: USING FALLBACK PATH (NOT DROPBOX)          ║"
+    echo "║  ⚠️  WARNING: USING FALLBACK PATH (NOT SSOT CLONE)       ║"
     echo "╠════════════════════════════════════════════════════════════╣"
     echo "║  Expected: .cursor-governance       ║"
     echo "║  Using:    Library/Application Support/Cursor/GlobalCommands ║"
