@@ -73,3 +73,15 @@ Only locked files modified. `group_registry.yaml` untouched.
 Phases 0-6 complete. No assumptions. No drift.
 
 GMP-GRAPHITI-FILEPACK-003 surgical port finalized. Wholesale pack merge rejected; live C1 health verified; production bootstrap remains human-gated.
+
+---
+
+## Status Update — 2026-06-30 (read-only re-diagnosis, this workspace)
+
+The `health` PASS recorded above (line 51, live **C1** tunnel, `group_id ib-odoo-19`) is **no longer the current live status**. Deployment has since moved to VPS `46.62.243.82`, group `cursor-governance`. A follow-up read-only GMP diagnosis (`GMP-Report-GRAPHITI-20260630.md`, companion `GMP-Report-DIAG-20260630-system-diagnosis.md`) found:
+
+- `health` → `"healthy": false` — liveness/tunnel OK, but **MCP tool plane 404s** at `/mcp` and `/mcp/`. `search`, `stats` (both fail with `HTTP 404`); dry-run `write`/`bootstrap` still build correctly (client-side logic intact, matching the surgical port done here).
+- `test_gate_e2e_full.sh` (row T6 above) **re-confirmed still PASS** on 2026-06-30 — the gate logic ported here remains sound; the regression is infra-side (VPS tool route), not in this port.
+- **Finding at diagnosis time (2026-06-30), since resolved:** the SSOT clone (`GlobalCommands`) had **10 uncommitted changes**, concentrated in exactly the files this GMP touched or adjacent to them: `ops/graphiti/graphiti_memory_client.py`, `ops/graphiti/graphiti.env.example`, `ops/hooks/graphiti_common.sh`, `ops/hooks/session_start_bootstrap.sh`, `ops/scripts/install_cursor_hooks_bootstrap.sh` (modified); `ops/graphiti/graphiti_env_loader.py`, `ops/graphiti/graphiti.env.defaults`, `ops/graphiti/docs/`, `ops/hooks/ensure_graphiti_tunnel.sh`, `ops/scripts/init_graphiti_machine_env.sh` (untracked). **Resolved 2026-07-04** in commit `3f65eb4` ("chore(governance): session-end sync 2026-07-04") — same file set, now committed and merged to `main` (Keychain-backed env loading: `graphiti_env_loader.py`, `MACHINE-ENV-POLICY.md`, `CURSOR-GRAPHITI-INSTANTIATION-BRIEF.md`).
+
+See `GMP-Report-GRAPHITI-20260630.md` for the full G1–G16 evidence matrix and `GRAPHITI GAPS TO FILL.md` for the actionable remediation checklist.
