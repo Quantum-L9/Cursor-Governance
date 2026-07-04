@@ -13,19 +13,34 @@ import sys
 def restore(task_type: str = "current active projects and open decisions") -> None:
     payload = {"query": task_type, "group_ids": None, "limit": 10}
     proc = subprocess.run(
-        ["python", "-m", "l9_ops_mcp.cli", "query", json.dumps(payload)],
-        capture_output=True, text=True,
+        [sys.executable, "-m", "l9_ops_mcp.cli", "query", json.dumps(payload)],
+        capture_output=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
+
+    if proc.returncode != 0:
+        print(f"Graph query failed (rc={proc.returncode}): {proc.stderr.strip()}")
+        print("Falling back to JSON session cache.")
+        return
+
     try:
         facts = json.loads(proc.stdout).get("facts", [])
     except json.JSONDecodeError:
-        print("No graph context available (fallback to JSON).")
+        print("No graph context available — MCP returned non-JSON. Falling back to JSON session cache.")
         return
+
+    if not facts:
+        print("No graph context episodes found. Falling back to JSON session cache.")
+        return
+
     print("=" * 60)
     print("LAST SESSION CONTEXT (graph-derived)")
     print("=" * 60)
     for f in facts:
-        print(f"  - {f['fact']}")
+        fact_text = f.get("fact", f.get("body", str(f)))
+        print(f"  - {fact_text}")
     print("=" * 60)
 
 

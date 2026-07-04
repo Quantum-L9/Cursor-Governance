@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,7 +33,9 @@ def emit_session(session_data: dict) -> dict:
     """Feed a session as a Graphiti episode via the L9-Ops-MCP tool; cache JSON."""
     SESSIONS.mkdir(parents=True, exist_ok=True)
     hour = session_data.get("hour", datetime.now(timezone.utc).strftime("%Y-%m-%d-%H"))
-    (SESSIONS / f"{hour}.json").write_text(json.dumps(session_data, indent=2))  # fallback cache
+    # Write local JSON cache with explicit UTF-8 encoding
+    cache_path = SESSIONS / f"{hour}.json"
+    cache_path.write_text(json.dumps(session_data, indent=2), encoding="utf-8")
 
     payload = {
         "body": _as_narrative(session_data),
@@ -42,10 +45,27 @@ def emit_session(session_data: dict) -> dict:
         "semantic_score": 1.0,
         "trust_level": "L2",
     }
-    # Invoke via MCP client (stdio). Replace with in-proc call if co-located.
+    # Invoke via MCP client (stdio). Use sys.executable for interpreter consistency.
     proc = subprocess.run(
-        ["python", "-m", "l9_ops_mcp.cli", "ingest", json.dumps(payload)],
-        capture_output=True, text=True,
+        [sys.executable, "-m", "l9_ops_mcp.cli", "ingest", json.dumps(payload)],
+        capture_output=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
-    return {"cached": str(SESSIONS / f"{hour}.json"),
-            "mcp_stdout": proc.stdout.strip(), "rc": proc.returncode}
+
+    if proc.returncode != 0:
+        return {
+            "cached": str(cache_path),
+            "mcp_stdout": proc.stdout.strip(),
+            "mcp_stderr": proc.stderr.strip(),
+            "rc": proc.returncode,
+            "status": "failed",
+        }
+
+    return {
+        "cached": str(cache_path),
+        "mcp_stdout": proc.stdout.strip(),
+        "rc": proc.returncode,
+        "status": "ok",
+    }
