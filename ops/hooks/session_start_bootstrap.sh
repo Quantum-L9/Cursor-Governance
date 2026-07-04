@@ -69,27 +69,33 @@ else
   PARTS+=("governance: symlinks OK")
 fi
 
-# Graphiti env + memory-bank scaffold
+# Graphiti env (defaults → machine → secrets → keychain) + memory-bank scaffold
 # shellcheck source=/dev/null
 [ -f "$GC/ops/hooks/graphiti_common.sh" ] && source "$GC/ops/hooks/graphiti_common.sh"
 graphiti_load_env 2>/dev/null || true
-if [ -f "$HOME/.cursor/graphiti.env" ]; then
-  # shellcheck disable=SC1090
-  set -a && source "$HOME/.cursor/graphiti.env" && set +a
-fi
 
 if [ -f "$GC/ops/hooks/graphiti_common.sh" ]; then
   graphiti_scaffold_memory_bank "$REPO" 2>/dev/null || true
 fi
 
+# Ensure Graphiti SSH tunnel before health check (defaults + keychain + .env.local C1_SSH)
+ENSURE_TUNNEL="$GC/ops/hooks/ensure_graphiti_tunnel.sh"
+if [ -f "$ENSURE_TUNNEL" ]; then
+  TUNNEL_STATUS="$(bash "$ENSURE_TUNNEL" 2>/dev/null || echo "tunnel: ensure failed")"
+  PARTS+=("$TUNNEL_STATUS")
+fi
+
 if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
   HEALTH_JSON="$(python3 "$GRAPHITI_CLI" health 2>/dev/null || echo '{"healthy":false}')"
   HEALTH_OK="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('healthy',False))" 2>/dev/null || echo False)"
+  LIVENESS_OK="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('liveness_ok', False))" 2>/dev/null || echo False)"
   if [ "$HEALTH_OK" = "True" ]; then
     PARTS+=("graphiti: healthy")
+  elif [ "$LIVENESS_OK" = "True" ]; then
+    PARTS+=("graphiti: tunnel up (MCP tools degraded — check VPS / token in keychain graphiti-mcp-token)")
   else
-    REASON="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('reason') or d.get('error') or 'degraded')" 2>/dev/null || echo degraded)"
-    PARTS+=("graphiti: ${REASON} — check ~/.cursor/graphiti.env and VPS tunnel")
+    REASON="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('degraded') or d.get('liveness_error') or d.get('reason') or 'unreachable')" 2>/dev/null || echo unreachable)"
+    PARTS+=("graphiti: ${REASON}")
   fi
 else
   PARTS+=("graphiti: disabled or CLI missing")

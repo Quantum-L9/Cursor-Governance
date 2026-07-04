@@ -17,22 +17,16 @@ from typing import Any, Optional
 
 from circuit_breaker import CircuitBreaker
 from episode_contract import EpisodeContract, FORBIDDEN_GROUPS
+from graphiti_env_loader import load_graphiti_env
 from group_resolver import load_registry, resolve_group_id
 from rate_limiter import RateLimiter
 
-_ENV_PATH = Path.home() / ".cursor" / "graphiti.env"
 _circuit = CircuitBreaker()
 _rate = RateLimiter()
 
 
 def load_env() -> None:
-    if _ENV_PATH.is_file():
-        for line in _ENV_PATH.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            os.environ.setdefault(key.strip(), val.strip())
+    load_graphiti_env()
 
 
 def memory_enabled() -> bool:

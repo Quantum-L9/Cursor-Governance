@@ -3,8 +3,20 @@
 set -uo pipefail
 
 graphiti_load_env() {
+  local defaults="$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/graphiti/graphiti.env.defaults"
+  [ -f "$HOME/Dropbox/cursor governance/GlobalCommands/ops/graphiti/graphiti.env.defaults" ] && \
+    defaults="$HOME/Dropbox/cursor governance/GlobalCommands/ops/graphiti/graphiti.env.defaults"
+  # shellcheck disable=SC1090
+  [ -f "$defaults" ] && set -a && source "$defaults" && set +a
   # shellcheck disable=SC1090
   [ -f "$HOME/.cursor/graphiti.env" ] && set -a && source "$HOME/.cursor/graphiti.env" && set +a
+  # shellcheck disable=SC1090
+  [ -f "$HOME/.cursor/secrets/graphiti.env" ] && set -a && source "$HOME/.cursor/secrets/graphiti.env" && set +a
+  # Keychain token fallback
+  if [ -z "${GRAPHITI_MCP_TOKEN:-}" ]; then
+    GRAPHITI_MCP_TOKEN="$(security find-generic-password -s graphiti-mcp-token -w 2>/dev/null || true)"
+    export GRAPHITI_MCP_TOKEN
+  fi
 }
 
 graphiti_resolve_cli() {

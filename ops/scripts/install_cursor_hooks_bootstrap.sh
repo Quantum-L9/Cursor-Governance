@@ -101,5 +101,9 @@ link_or_update "$HOME/.cursor/commands" "$GLOBAL_COMMANDS/commands" "~/.cursor/c
 link_or_update "$HOME/.cursor/rules" "$GLOBAL_COMMANDS/rules" "~/.cursor/rules"
 
 echo ""
+echo "--- Graphiti machine env (once per Mac, not per repo) ---"
+bash "$GLOBAL_COMMANDS/ops/scripts/init_graphiti_machine_env.sh" || true
+
+echo ""
 echo "Bootstrap complete. Reload Cursor — sessionStart runs on every new chat."
 echo "Optional: run setup_workspace_symlinks.sh in a repo to wire .cursor-commands."
