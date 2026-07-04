@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "EXE-VAL-001"
 component_name: "Governance Validator"
@@ -23,10 +23,10 @@ dependencies: ["FND-LG-002", "INT-RE-001"]
 integrates_with: ["EXE-API-001", "EXE-MON-001", "OPS-OPS-001"]
 
 suite_3_origin: "50_Governance_Validator_v3.0.py"
-migration_notes: "Enhanced with Suite 6 canonical header validation and formal logic integration"
+migration_notes: "Enhanced with L9 Governance canonical header validation and formal logic integration"
 
 Governance Validator v6.0
-Runtime enforcement mechanism for Suite 6 governance compliance
+Runtime enforcement mechanism for L9 Governance governance compliance
 """
 
 import os
@@ -39,7 +39,7 @@ from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 
 class GovernanceValidator:
-    """Validates Suite 6 governance compliance at runtime"""
+    """Validates L9 Governance governance compliance at runtime"""
     
     def __init__(self, l9_governance_root: Path = None):
         if l9_governance_root is None:
@@ -51,7 +51,7 @@ class GovernanceValidator:
         self.log_file = self.l9_governance_root / "telemetry" / "logs" / "governance-violations.log"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Suite 6 canonical header requirements
+        # L9 Governance canonical header requirements
         self.required_header_fields = [
             'suite', 'version', 'component_id', 'component_name', 'layer',
             'status', 'created', 'author', 'governance_level', 'purpose'
@@ -62,7 +62,7 @@ class GovernanceValidator:
         self.component_id_pattern = r'^(INT|FND|EXE|OPS|ENV|TEL|DOC)-[A-Z]{2,3}-\d{3}$'
     
     def validate_all_files(self) -> Dict[str, bool]:
-        """Validate all Suite 6 governance files for compliance"""
+        """Validate all L9 Governance governance files for compliance"""
         results = {}
         
         # Scan all layers for governance files
@@ -77,16 +77,16 @@ class GovernanceValidator:
         return results
     
     def validate_file(self, filepath: Path) -> bool:
-        """Validate a single file for Suite 6 governance compliance"""
+        """Validate a single file for L9 Governance governance compliance"""
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
             
             violations = []
             
-            # Check for Suite 6 canonical header
+            # Check for L9 Governance canonical header
             if not self._has_canonical_header(content, filepath):
-                violations.append(f"Missing Suite 6 canonical header in {filepath.name}")
+                violations.append(f"Missing L9 Governance canonical header in {filepath.name}")
             
             # Validate header content if present
             header_violations = self._validate_header_content(content, filepath)
@@ -111,7 +111,7 @@ class GovernanceValidator:
             return False
     
     def _has_canonical_header(self, content: str, filepath: Path) -> bool:
-        """Check if file has Suite 6 canonical header"""
+        """Check if file has L9 Governance canonical header"""
         # Python files: check for header in docstring
         if filepath.suffix == '.py':
             return '# === L9 GOVERNANCE CANONICAL HEADER ===' in content
@@ -156,7 +156,7 @@ class GovernanceValidator:
                 if header_match:
                     # For Python files, we expect key-value pairs in comments
                     header_content = header_match.group(0)
-                    if 'suite: "Cursor Governance Suite 6 (L9 + Suite 6)"' not in header_content:
+                    if 'suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"' not in header_content:
                         violations.append("Invalid suite name in Python file header")
                     if 'version: "6.0.0"' not in header_content:
                         violations.append("Invalid version in Python file header")
@@ -176,7 +176,7 @@ class GovernanceValidator:
                 violations.append(f"Missing required header field: {field}")
         
         # Validate suite name
-        if header.get('suite') != 'Cursor Governance Suite 6 (L9 + Suite 6)':
+        if header.get('suite') != 'Cursor Governance L9 Governance (L9 + L9 Governance)':
             violations.append('Invalid suite name in header')
         
         # Validate version format
@@ -218,10 +218,10 @@ class GovernanceValidator:
                 f.write(f"  - {violation}\n")
     
     def enforce_compliance(self) -> bool:
-        """Enforce governance compliance across Suite 6"""
+        """Enforce governance compliance across L9 Governance"""
         self.violations = []  # Reset violations
         
-        print("🔍 Enforcing Suite 6 governance compliance...")
+        print("🔍 Enforcing L9 Governance governance compliance...")
         
         results = self.validate_all_files()
         compliant_files = sum(1 for is_compliant in results.values() if is_compliant)
@@ -305,7 +305,7 @@ class GovernanceValidator:
 if __name__ == '__main__':
     import sys
     
-    print("🚀 Suite 6 Governance Validator")
+    print("🚀 L9 Governance Governance Validator")
     print("=" * 50)
     
     validator = GovernanceValidator()
@@ -328,8 +328,8 @@ if __name__ == '__main__':
         is_compliant = validator.enforce_compliance()
         
         if is_compliant:
-            print("\n✅ Suite 6 governance compliance: PASSED")
+            print("\n✅ L9 Governance governance compliance: PASSED")
             sys.exit(0)
         else:
-            print("\n❌ Suite 6 governance compliance: FAILED")
+            print("\n❌ L9 Governance governance compliance: FAILED")
             sys.exit(1)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "ENV-MGR-001"
 component_name: "Environment Manager"
@@ -23,10 +23,10 @@ dependencies: ["ENV-VAL-001", "ENV-LD-001"]
 integrates_with: ["FND-LG-002", "EXE-API-001", "OPS-OPS-001"]
 
 suite_2_origin: "02_env_loader.py, 03_env_validator.py"
-migration_notes: "Enhanced with Suite 6 integration and comprehensive environment management"
+migration_notes: "Enhanced with L9 Governance integration and comprehensive environment management"
 
 Environment Manager v6.0
-Comprehensive environment configuration management for Suite 6
+Comprehensive environment configuration management for L9 Governance
 """
 
 import os
@@ -39,7 +39,7 @@ import subprocess
 import shutil
 
 class EnvironmentManager:
-    """Comprehensive environment management for Suite 6"""
+    """Comprehensive environment management for L9 Governance"""
     
     def __init__(self, l9_governance_root: Path = None):
         if l9_governance_root is None:
@@ -56,8 +56,8 @@ class EnvironmentManager:
         self.requirements_file = self.l9_governance_root / "requirements.txt"
         
     def initialize_environment(self) -> Dict[str, Any]:
-        """Initialize Suite 6 environment configuration"""
-        print("🌍 Initializing Suite 6 environment...")
+        """Initialize L9 Governance environment configuration"""
+        print("🌍 Initializing L9 Governance environment...")
         
         # Create master configuration
         config = {
@@ -101,8 +101,8 @@ class EnvironmentManager:
         return config
     
     def install_dependencies(self, force: bool = False) -> bool:
-        """Install Python dependencies for Suite 6"""
-        print("📦 Installing Suite 6 dependencies...")
+        """Install Python dependencies for L9 Governance"""
+        print("📦 Installing L9 Governance dependencies...")
         
         if not self.requirements_file.exists():
             print(f"❌ Requirements file not found: {self.requirements_file}")
@@ -138,8 +138,8 @@ class EnvironmentManager:
             return False
     
     def validate_environment(self) -> Dict[str, Any]:
-        """Validate Suite 6 environment configuration"""
-        print("🔍 Validating Suite 6 environment...")
+        """Validate L9 Governance environment configuration"""
+        print("🔍 Validating L9 Governance environment...")
         
         validation_results = {
             "timestamp": datetime.now().isoformat(),
@@ -199,7 +199,7 @@ class EnvironmentManager:
         return validation_results
     
     def sync_workspace_config(self, workspace_path: Path) -> bool:
-        """Sync Suite 6 configuration to workspace"""
+        """Sync L9 Governance configuration to workspace"""
         print(f"🔄 Syncing configuration to workspace: {workspace_path}")
         
         try:
@@ -306,7 +306,7 @@ class EnvironmentManager:
         return missing
     
     def _check_layers_accessible(self) -> bool:
-        """Check if all Suite 6 layers are accessible"""
+        """Check if all L9 Governance layers are accessible"""
         required_layers = ["intelligence", "foundation", "execution", "operations"]
         return all((self.l9_governance_root / layer).exists() for layer in required_layers)
     

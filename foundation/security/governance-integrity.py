@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "FND-SEC-001"
 component_name: "Governance Integrity Manager"
@@ -40,7 +40,7 @@ success_metrics: ["hash_generation_time < 50ms", "verification_accuracy = 100%",
 
 # === INTEGRATION METADATA ===
 constellation_origin: "GovernanceSnapshotHash.js"
-migration_notes: "Ported from JavaScript to Python with enhanced Suite 6 integration"
+migration_notes: "Ported from JavaScript to Python with enhanced L9 Governance integration"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["security", "integrity", "hashing", "digital_signature", "constellation_port"]
@@ -59,7 +59,7 @@ import logging
 
 class GovernanceIntegrityManager:
     """
-    Digital Signature and Integrity Protection System for Suite 6
+    Digital Signature and Integrity Protection System for L9 Governance
     
     Provides SHA256 hashing, signature generation, and integrity verification
     for all governance files. Based on Constellation's GovernanceSnapshotHash.js
@@ -198,7 +198,7 @@ class GovernanceIntegrityManager:
     
     def sign_all_governance_files(self, signer_id: str = "L9Governance_System") -> Dict[str, bool]:
         """
-        Sign all governance files in Suite 6
+        Sign all governance files in L9 Governance
         """
         results = {}
         
@@ -251,7 +251,7 @@ class GovernanceIntegrityManager:
             if pattern in file_name:
                 return False
         
-        # Check for Suite 6 canonical header (for .md and .py files)
+        # Check for L9 Governance canonical header (for .md and .py files)
         if file_path.suffix in ['.md', '.py']:
             try:
                 with open(file_path, 'r') as f:

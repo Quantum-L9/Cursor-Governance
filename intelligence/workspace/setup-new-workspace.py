@@ -8,7 +8,7 @@
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "7.0.0"
 component_id: "INT-WS-003"
 component_name: "Workspace Setup - Self-Executing Protocol"
@@ -111,7 +111,7 @@ def print_progress(current: int, total: int, item: str):
 # ═══════════════════════════════════════════════════════════════════════════
 
 class SetupConfig:
-    """Configuration for Suite 6 workspace setup"""
+    """Configuration for L9 Governance workspace setup"""
     
     # Paths
     HOME = Path.home()
@@ -283,7 +283,7 @@ class L9GovernanceWorkspaceSetup:
         print_header(f"{Colors.ROCKET} PHASE 1: PREFLIGHT CHECKS")
         
         checks = [
-            ("Suite 6 Directory", lambda: self.config.SUITE6_PATH.exists()),
+            ("L9 Governance Directory", lambda: self.config.SUITE6_PATH.exists()),
             ("GlobalCommands Directory", lambda: self.config.GLOBAL_COMMANDS.exists()),
             ("Python Version", lambda: sys.version_info >= (3, 8)),
             ("YAML Module", self._check_yaml_module),
@@ -328,11 +328,11 @@ class L9GovernanceWorkspaceSetup:
     # ═══════════════════════════════════════════════════════════════════════
     
     def _install_l9_governance(self) -> bool:
-        """Phase 2: Install Suite 6 configuration and symlinks"""
+        """Phase 2: Install L9 Governance configuration and symlinks"""
         print_header(f"{Colors.GEAR} PHASE 2: INSTALLATION")
         
         # Step 1: Sync configuration
-        print_info("Syncing Suite 6 configuration...")
+        print_info("Syncing L9 Governance configuration...")
         env_manager = self.config.SUITE6_PATH / "environment/env-manager.py"
         
         try:
@@ -724,7 +724,7 @@ class L9GovernanceWorkspaceSetup:
             for warning in self.warnings:
                 print(f"   {Colors.YELLOW}• {warning}{Colors.END}")
         
-        print(f"\n{Colors.BOLD}{Colors.CYAN}🎯 Your workspace is now Suite 6 enabled!{Colors.END}")
+        print(f"\n{Colors.BOLD}{Colors.CYAN}🎯 Your workspace is now L9 Governance enabled!{Colors.END}")
         print(f"{Colors.CYAN}   All governance files accessible via @.cursor-commands/{Colors.END}")
         print(f"{Colors.CYAN}   Reasoning Stack: ACTIVE{Colors.END}")
         print(f"{Colors.CYAN}   Recursive Learning: OPERATIONAL{Colors.END}")

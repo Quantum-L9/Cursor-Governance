@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "FND-AG-002"
 component_name: "Agent Stub Manager"
@@ -14,7 +14,7 @@ updated: "2025-10-28T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
 governance_level: "critical"
-purpose: "Manage agent governance profiles and stub validation for Suite 6 components"
+purpose: "Manage agent governance profiles and stub validation for L9 Governance components"
 
 # === GOVERNANCE METADATA ===
 compliance_required: true
@@ -40,7 +40,7 @@ success_metrics: ["stub_coverage = 100%", "validation_accuracy > 95%", "response
 
 # === INTEGRATION METADATA ===
 constellation_origin: "StubValidatorAgent_LiveService_Bundle"
-migration_notes: "Enhanced Constellation stub validation with Suite 6 integration"
+migration_notes: "Enhanced Constellation stub validation with L9 Governance integration"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["agent_governance", "stub_management", "validation", "constellation_integration"]
@@ -59,7 +59,7 @@ import yaml
 
 class AgentStubManager:
     """
-    Agent Stub Management System for Suite 6
+    Agent Stub Management System for L9 Governance
     
     Manages agent governance profiles, validates stub compliance,
     and provides agent-centric governance tracking.
@@ -73,7 +73,7 @@ class AgentStubManager:
         
     def create_stub_from_component(self, component_path: str, component_id: str) -> Dict:
         """
-        Generate agent stub from Suite 6 component canonical header
+        Generate agent stub from L9 Governance component canonical header
         """
         try:
             with open(component_path, 'r') as f:
@@ -231,7 +231,7 @@ class AgentStubManager:
     
     def generate_stubs_for_l9_governance(self) -> Dict[str, bool]:
         """
-        Generate stubs for all Suite 6 components
+        Generate stubs for all L9 Governance components
         """
         results = {}
         
@@ -257,7 +257,7 @@ class AgentStubManager:
         return results
     
     def _has_canonical_header(self, file_path: Path) -> bool:
-        """Check if file has Suite 6 canonical header"""
+        """Check if file has L9 Governance canonical header"""
         try:
             with open(file_path, 'r') as f:
                 content = f.read(500)  # Read first 500 chars
@@ -283,7 +283,7 @@ class AgentStubManager:
     
     def get_governance_coverage(self) -> Dict:
         """
-        Analyze governance coverage across Suite 6 components
+        Analyze governance coverage across L9 Governance components
         """
         coverage = {
             "total_components": 0,
@@ -335,7 +335,7 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python agent-stub-manager.py <command> [args]")
         print("Commands:")
-        print("  generate - Generate stubs for all Suite 6 components")
+        print("  generate - Generate stubs for all L9 Governance components")
         print("  validate <stub_path> - Validate specific stub file")
         print("  coverage - Show governance coverage analysis")
         return
@@ -344,7 +344,7 @@ def main():
     command = sys.argv[1]
     
     if command == "generate":
-        print("Generating stubs for Suite 6 components...")
+        print("Generating stubs for L9 Governance components...")
         results = manager.generate_stubs_for_l9_governance()
         
         success_count = sum(1 for success in results.values() if success)

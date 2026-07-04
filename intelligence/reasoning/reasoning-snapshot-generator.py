@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "INT-RE-003"
 component_name: "Reasoning Snapshot Generator"
@@ -40,7 +40,7 @@ success_metrics: ["snapshot_generation_time < 100ms", "completeness = 100%", "au
 
 # === INTEGRATION METADATA ===
 constellation_origin: "ReasoningSnapshot_Template.md + SnapshotEnforcer.md"
-migration_notes: "Enhanced Constellation snapshot generation with Suite 6 automation"
+migration_notes: "Enhanced Constellation snapshot generation with L9 Governance automation"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["reasoning", "snapshot", "generator", "automation", "governance"]
@@ -58,10 +58,10 @@ import uuid
 
 class ReasoningSnapshotGenerator:
     """
-    Automated Reasoning Snapshot Generator for Suite 6
+    Automated Reasoning Snapshot Generator for L9 Governance
     
     Generates structured reasoning snapshots for governance decisions,
-    integrating Constellation's snapshot format with Suite 6's 10-step framework.
+    integrating Constellation's snapshot format with L9 Governance's 10-step framework.
     """
     
     def __init__(self, suite_root: str = None):
@@ -125,7 +125,7 @@ class ReasoningSnapshotGenerator:
             evidence = {
                 "data_sources": ["governance-validator.py", "rule-registry.json"],
                 "key_findings": [observation],
-                "constraints": ["Must comply with Suite 6 governance"],
+                "constraints": ["Must comply with L9 Governance governance"],
                 "assumptions": ["Standard governance assumptions"]
             }
         
@@ -243,7 +243,7 @@ class ReasoningSnapshotGenerator:
         outcome = snapshot["outcome"]
         audit = snapshot["audit_trail"]
         
-        content = f"""# Suite 6 Reasoning Snapshot
+        content = f"""# L9 Governance Reasoning Snapshot
 
 ## Decision Context
 - **Component**: {metadata['component_id']} - {metadata['component_name']}

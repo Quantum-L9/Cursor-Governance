@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "EXE-API-001"
 component_name: "Governance API Server"
@@ -24,10 +24,10 @@ integrates_with: ["INT-RE-001", "OPS-OPS-001", "TEL-LOG-001"]
 api_endpoints: ["/governance/status", "/governance/validate", "/governance/rules", "/governance/metrics"]
 
 suite_3_origin: "56_Governance_API_v3.0.py"
-migration_notes: "Enhanced with Suite 6 integration, formal logic endpoints, and canonical headers"
+migration_notes: "Enhanced with L9 Governance integration, formal logic endpoints, and canonical headers"
 
 Governance API Server v6.0
-REST API for governance dashboard and external integrations with Suite 6 enhancements
+REST API for governance dashboard and external integrations with L9 Governance enhancements
 """
 
 from flask import Flask, jsonify, request
@@ -39,7 +39,7 @@ from datetime import datetime
 import sqlite3
 from pathlib import Path
 
-# Suite 6 imports - updated paths with importlib for hyphenated filenames
+# L9 Governance imports - updated paths with importlib for hyphenated filenames
 import importlib.util
 
 l9_governance_root = Path(__file__).parent.parent.parent
@@ -74,7 +74,7 @@ except Exception:
 app = Flask(__name__)
 CORS(app)  # Enable CORS for dashboard access
 
-# Initialize governance components with Suite 6 paths
+# Initialize governance components with L9 Governance paths
 validator = GovernanceValidator(l9_governance_root)
 monitor = GovernanceMonitor(l9_governance_root)
 chat_extractor = ChatLearningExtractor(l9_governance_root) if ChatLearningExtractor else None
@@ -86,7 +86,7 @@ def get_status():
         metrics = monitor.collect_metrics()
         return jsonify({
             'status': 'online',
-            'suite': 'Cursor Governance Suite 6 (Unified)',
+            'suite': 'Cursor Governance L9 Governance (Unified)',
             'version': '6.0.0',
             'timestamp': datetime.now().isoformat(),
             'metrics': {
@@ -129,14 +129,14 @@ def get_rules():
         return jsonify({
             'rules': rules_data,
             'timestamp': datetime.now().isoformat(),
-            'source': 'Suite 6 Rule Registry'
+            'source': 'L9 Governance Rule Registry'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/governance/rules', methods=['POST'])
 def add_rule():
-    """Add new governance rule (Suite 6 enhancement)"""
+    """Add new governance rule (L9 Governance enhancement)"""
     try:
         rule_data = request.get_json()
         
@@ -150,7 +150,7 @@ def add_rule():
         with open(rules_path, 'r') as f:
             rules_registry = json.load(f)
         
-        # Add new rule with Suite 6 metadata
+        # Add new rule with L9 Governance metadata
         new_rule = {
             **rule_data,
             'enforced_by': 'Universal Governance Kernel v6.0',
@@ -180,14 +180,14 @@ def get_metrics():
         return jsonify({
             'metrics': metrics,
             'timestamp': datetime.now().isoformat(),
-            'suite': 'Suite 6 Enhanced Metrics'
+            'suite': 'L9 Governance Enhanced Metrics'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/governance/health', methods=['GET'])
 def health_check():
-    """Suite 6 health check endpoint"""
+    """L9 Governance health check endpoint"""
     try:
         health_status = {
             'api': 'healthy',
@@ -280,7 +280,7 @@ def auto_process_current():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting Suite 6 Governance API Server...")
+    print("🚀 Starting L9 Governance Governance API Server...")
     print(f"📊 Dashboard integration: Enhanced")
     print(f"🔗 Rule registry: {l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'}")
     print(f"🌐 Health check: http://localhost:8080/governance/health")

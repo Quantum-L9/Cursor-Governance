@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "EXE-TEST-001"
 component_name: "Governance Test Suite"
@@ -23,10 +23,10 @@ dependencies: ["EXE-VAL-001", "EXE-MON-001", "EXE-API-001"]
 integrates_with: ["FND-LG-002", "INT-RE-001", "OPS-OPS-001"]
 
 suite_3_origin: "51_Governance_Test_Suite_v3.0.py"
-migration_notes: "Enhanced with Suite 6 integration, canonical header validation, and cross-layer testing"
+migration_notes: "Enhanced with L9 Governance integration, canonical header validation, and cross-layer testing"
 
 Governance Test Suite v6.0
-Comprehensive automated testing framework for Suite 6 governance validation
+Comprehensive automated testing framework for L9 Governance governance validation
 """
 
 import unittest
@@ -39,7 +39,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from datetime import datetime
 
-# Suite 6 imports
+# L9 Governance imports
 import sys
 l9_governance_root = Path(__file__).parent.parent.parent
 sys.path.append(str(l9_governance_root / 'execution' / 'validation'))
@@ -49,7 +49,7 @@ from governance_validator import GovernanceValidator
 from governance_monitor import GovernanceMonitor
 
 class TestL9GovernanceCompliance(unittest.TestCase):
-    """Test suite for Suite 6 governance compliance"""
+    """Test suite for L9 Governance governance compliance"""
     
     def setUp(self):
         """Set up test environment"""
@@ -58,7 +58,7 @@ class TestL9GovernanceCompliance(unittest.TestCase):
         self.monitor = GovernanceMonitor(self.l9_governance_root)
         
     def test_canonical_header_compliance(self):
-        """Test that all governance files have Suite 6 canonical headers"""
+        """Test that all governance files have L9 Governance canonical headers"""
         print("🧪 Testing canonical header compliance...")
         
         results = self.validator.validate_all_files()
@@ -77,8 +77,8 @@ class TestL9GovernanceCompliance(unittest.TestCase):
         self.assertGreaterEqual(compliance_rate, 80.0, "Compliance rate should be >= 80%")
         
     def test_l9_governance_header_format(self):
-        """Test Suite 6 canonical header format"""
-        print("🧪 Testing Suite 6 header format...")
+        """Test L9 Governance canonical header format"""
+        print("🧪 Testing L9 Governance header format...")
         
         # Test a known compliant file
         test_file = self.l9_governance_root / 'intelligence' / 'reasoning' / 'cursor-native-reasoning.md'
@@ -87,9 +87,9 @@ class TestL9GovernanceCompliance(unittest.TestCase):
             with open(test_file, 'r') as f:
                 content = f.read()
             
-            # Check for Suite 6 canonical header
+            # Check for L9 Governance canonical header
             self.assertIn('# === L9 GOVERNANCE CANONICAL HEADER ===', content)
-            self.assertIn('suite: "Cursor Governance Suite 6 (L9 + Suite 6)"', content)
+            self.assertIn('suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"', content)
             self.assertIn('version: "6.0.0"', content)
             self.assertIn('component_id:', content)
             
@@ -154,7 +154,7 @@ class TestL9GovernanceCompliance(unittest.TestCase):
         self.assertLessEqual(len(violations), 2, f"Component ID format violations: {violations}")
 
 class TestL9GovernanceIntegration(unittest.TestCase):
-    """Test Suite 6 cross-layer integration"""
+    """Test L9 Governance cross-layer integration"""
     
     def setUp(self):
         """Set up integration test environment"""
@@ -232,7 +232,7 @@ class TestL9GovernanceIntegration(unittest.TestCase):
         print("   ✅ Validation integration working")
 
 class TestL9GovernancePerformance(unittest.TestCase):
-    """Test Suite 6 performance requirements"""
+    """Test L9 Governance performance requirements"""
     
     def setUp(self):
         """Set up performance test environment"""
@@ -284,7 +284,7 @@ class TestL9GovernancePerformance(unittest.TestCase):
         print("   ✅ Monitoring performance acceptable")
 
 class TestL9GovernanceSecurity(unittest.TestCase):
-    """Test Suite 6 security requirements"""
+    """Test L9 Governance security requirements"""
     
     def test_no_hardcoded_secrets(self):
         """Test that no hardcoded secrets exist in code"""
@@ -324,7 +324,7 @@ class TestL9GovernanceSecurity(unittest.TestCase):
         self.assertEqual(len(violations), 0, f"Potential hardcoded secrets found: {violations}")
 
 def run_test_suite():
-    """Run the complete Suite 6 test suite"""
+    """Run the complete L9 Governance test suite"""
     print("🚀 L9 GOVERNANCE GOVERNANCE TEST SUITE")
     print("=" * 50)
     

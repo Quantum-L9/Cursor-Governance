@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "EXE-API-002"
 component_name: "Registry Viewer Intelligence"
@@ -40,7 +40,7 @@ success_metrics: ["query_response_time < 500ms", "query_accuracy > 90%", "cache_
 
 # === INTEGRATION METADATA ===
 constellation_origin: "RegistryViewerAgent.md"
-migration_notes: "Enhanced Constellation registry viewer with intelligent querying and Suite 6 integration"
+migration_notes: "Enhanced Constellation registry viewer with intelligent querying and L9 Governance integration"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["registry", "intelligence", "querying", "natural_language", "governance"]
@@ -59,7 +59,7 @@ import logging
 
 class RegistryViewerIntelligence:
     """
-    Intelligent Governance Registry Query Engine for Suite 6
+    Intelligent Governance Registry Query Engine for L9 Governance
     
     Provides natural language querying capabilities for governance registries,
     agent stubs, and compliance data. Based on Constellation's RegistryViewerAgent.

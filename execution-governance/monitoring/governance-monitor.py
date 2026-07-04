@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "EXE-MON-001"
 component_name: "Governance Monitor"
@@ -23,10 +23,10 @@ dependencies: ["EXE-VAL-001", "TEL-LOG-001"]
 integrates_with: ["EXE-API-001", "OPS-OPS-001", "INT-ML-001"]
 
 suite_3_origin: "52_Governance_Monitor_v3.0.py"
-migration_notes: "Enhanced with Suite 6 integration, autonomous operation, and expanded metrics"
+migration_notes: "Enhanced with L9 Governance integration, autonomous operation, and expanded metrics"
 
 Governance Monitor v6.0
-Observability and monitoring tools for Suite 6 governance system
+Observability and monitoring tools for L9 Governance governance system
 """
 
 import os
@@ -41,7 +41,7 @@ from pathlib import Path
 
 @dataclass
 class GovernanceMetrics:
-    """Suite 6 governance system metrics"""
+    """L9 Governance governance system metrics"""
     timestamp: str
     total_files: int
     compliant_files: int
@@ -54,7 +54,7 @@ class GovernanceMetrics:
     suite_version: str = "6.0.0"
 
 class GovernanceMonitor:
-    """Monitor Suite 6 governance system performance and compliance"""
+    """Monitor L9 Governance governance system performance and compliance"""
     
     def __init__(self, l9_governance_root: Path = None):
         if l9_governance_root is None:
@@ -87,7 +87,7 @@ class GovernanceMonitor:
             )
         ''')
         
-        # Suite 6 enhancement: Add performance tracking table
+        # L9 Governance enhancement: Add performance tracking table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS performance_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +107,7 @@ class GovernanceMonitor:
         """Collect current governance metrics"""
         start_time = time.time()
         
-        # Scan Suite 6 structure for governance files
+        # Scan L9 Governance structure for governance files
         total_files = 0
         compliant_files = 0
         violations = []
@@ -146,12 +146,12 @@ class GovernanceMonitor:
         return metrics
     
     def _check_file_compliance(self, file_path: Path) -> bool:
-        """Check if file has Suite 6 canonical header"""
+        """Check if file has L9 Governance canonical header"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Check for Suite 6 canonical header
+            # Check for L9 Governance canonical header
             return '# === L9 GOVERNANCE CANONICAL HEADER ===' in content
         except:
             return False
@@ -184,7 +184,7 @@ class GovernanceMonitor:
         conn.close()
     
     def get_detailed_metrics(self) -> Dict:
-        """Get detailed metrics for Suite 6 dashboard"""
+        """Get detailed metrics for L9 Governance dashboard"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -221,7 +221,7 @@ class GovernanceMonitor:
     
     def log_performance(self, component_id: str, operation: str, duration_ms: float, 
                        success: bool, error_message: str = None):
-        """Log performance metrics for Suite 6 components"""
+        """Log performance metrics for L9 Governance components"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -272,7 +272,7 @@ class GovernanceMonitor:
         }
 
 if __name__ == '__main__':
-    print("🔍 Starting Suite 6 Governance Monitor...")
+    print("🔍 Starting L9 Governance Governance Monitor...")
     monitor = GovernanceMonitor()
     
     print("📊 Collecting initial metrics...")

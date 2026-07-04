@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "FND-AG-003"
 component_name: "Escalation Router System"
@@ -40,7 +40,7 @@ success_metrics: ["routing_accuracy > 95%", "escalation_time < 60s", "resolution
 
 # === INTEGRATION METADATA ===
 constellation_origin: "EscalationRouterAgent.md"
-migration_notes: "Enhanced Constellation escalation routing with Suite 6 automation and tracking"
+migration_notes: "Enhanced Constellation escalation routing with L9 Governance automation and tracking"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["escalation", "routing", "governance", "failure_management", "automation"]
@@ -59,7 +59,7 @@ import uuid
 
 class EscalationRouterSystem:
     """
-    Automated Escalation Router for Suite 6 Governance Failures
+    Automated Escalation Router for L9 Governance Governance Failures
     
     Routes governance failures to appropriate escalation paths based on
     failure type, severity, and component configuration. Based on

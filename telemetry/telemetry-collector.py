@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 # === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "TEL-COL-001"
 component_name: "Telemetry Collector"
@@ -22,13 +22,13 @@ security_classification: "internal"
 dependencies: ["EXE-MON-001", "EXE-API-001"]
 integrates_with: ["OPS-OPS-001", "INT-ML-001", "ENV-MGR-001"]
 
-purpose: "Comprehensive telemetry collection system for Suite 6 governance monitoring"
-summary: "Collects, aggregates, and stores metrics from all Suite 6 components for analysis and monitoring"
+purpose: "Comprehensive telemetry collection system for L9 Governance governance monitoring"
+summary: "Collects, aggregates, and stores metrics from all L9 Governance components for analysis and monitoring"
 business_value: "Enables data-driven governance optimization and proactive issue detection"
 success_metrics: ["collection_accuracy >= 99%", "data_retention >= 30_days", "query_performance < 100ms"]
 
 Telemetry Collector v6.0
-Comprehensive metrics collection and aggregation for Suite 6
+Comprehensive metrics collection and aggregation for L9 Governance
 """
 
 import json
@@ -43,7 +43,7 @@ import psutil
 import os
 
 class TelemetryCollector:
-    """Comprehensive telemetry collection system for Suite 6"""
+    """Comprehensive telemetry collection system for L9 Governance"""
     
     def __init__(self, l9_governance_root: Path = None):
         if l9_governance_root is None:
@@ -128,7 +128,7 @@ class TelemetryCollector:
         if self.collection_active:
             return
         
-        print("🚀 Starting Suite 6 telemetry collection...")
+        print("🚀 Starting L9 Governance telemetry collection...")
         self.collection_active = True
         
         # Start collection thread
@@ -154,7 +154,7 @@ class TelemetryCollector:
     def collect_metric(self, component_id: str, metric_name: str, value: float, 
                       unit: str = None, tags: Dict[str, str] = None, 
                       metadata: Dict[str, Any] = None):
-        """Collect a metric from a Suite 6 component"""
+        """Collect a metric from a L9 Governance component"""
         metric_data = {
             'timestamp': datetime.now().isoformat(),
             'component_id': component_id,
@@ -170,7 +170,7 @@ class TelemetryCollector:
     
     def collect_event(self, component_id: str, event_type: str, event_data: Dict[str, Any], 
                      severity: str = 'info'):
-        """Collect an event from a Suite 6 component"""
+        """Collect an event from a L9 Governance component"""
         event_data_obj = {
             'timestamp': datetime.now().isoformat(),
             'component_id': component_id,
@@ -183,7 +183,7 @@ class TelemetryCollector:
     
     def collect_performance(self, component_id: str, operation: str, duration_ms: float,
                           success: bool, error_message: str = None):
-        """Collect performance metrics from a Suite 6 component"""
+        """Collect performance metrics from a L9 Governance component"""
         perf_data = {
             'timestamp': datetime.now().isoformat(),
             'component_id': component_id,
