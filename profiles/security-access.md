@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "EXE-SEC-001"
 component_name: "Security Access Controller"
@@ -40,7 +40,7 @@ success_metrics: ["security_compliance >= 1.0", "credential_rotation_rate >= 0.9
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "security-access.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive security management capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive security management capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["security", "access", "credentials", "authentication", "authorization"]

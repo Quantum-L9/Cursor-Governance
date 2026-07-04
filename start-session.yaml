@@ -1,15 +1,14 @@
 ---
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "9.0.0"
-component_id: "INT-WS-002"
-component_name: "Workspace Setup Protocol - YAML Edition"
+# === L9 GOVERNANCE RUNTIME ===
+runtime: "L9 Governance"
+version: "10.0.0"
+component_name: "Workspace Setup Protocol"
 layer: "intelligence"
 domain: "workspace_management"
 type: "executable_protocol"
 status: "active"
 created: "2025-11-18T03:20:00Z"
-updated: "2026-06-06T00:00:00Z"
+updated: "2026-07-04T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
 
@@ -24,8 +23,8 @@ enforcement_level:
 dependencies: ["python3>=3.8", "pyyaml", "bash"]
 integrates_with: ["ENV-LD-001", "FND-LG-002", "EXE-API-001"]
 api_endpoints: []
-data_sources: ["GlobalCommands"]
-outputs: [".suite6-config.json", ".cursor-commands/", "verification_reports"]
+data_sources: ["Cursor-Governance"]
+outputs: [".l9_governance-config.json", ".cursor-commands/", "verification_reports"]
 
 # ═══════════════════════════════════════════════════════════
 #   CANONICAL PATHS (SSOT — $HOME/.cursor-governance GitHub clone)
@@ -64,10 +63,10 @@ related_components: ["ENV-LD-001", "FND-LG-002"]
 ---
 
 # ═══════════════════════════════════════════════════════════
-#   SUITE 6 WORKSPACE SETUP - MINIMAL FOOTPRINT PROTOCOL
+#   L9 GOVERNANCE WORKSPACE SETUP - MINIMAL FOOTPRINT PROTOCOL
 # ═══════════════════════════════════════════════════════════
 
-protocol_name: "Suite 6 Workspace Setup"
+protocol_name: "L9 Governance Workspace Setup"
 protocol_version: "9.0.0"
 enforcement_level: "200%"
 total_duration_minutes: 15
@@ -204,10 +203,10 @@ startup_sequence:
       - patterns/
       - solutions/
   # ─────────────────────────────────────────────────────────
-  # STEP 3: Suite 6 Config Check
+  # STEP 3: L9 Governance Config Check
   # ─────────────────────────────────────────────────────────
   step_3:
-    file: ".suite6-config.json"
+    file: ".l9_governance-config.json"
     purpose: "Verify governance enabled"
     duration_seconds: 5
     skip: "only_if_checked_in_last_10_minutes"
@@ -577,7 +576,7 @@ installation:
   step_2:
     name: "Sync Workspace Configuration"
     command: 'python3 "$HOME/.cursor-governance/environment/env-manager.py" sync "$(pwd)"'
-    expected_output: ".suite6-config.json created"
+    expected_output: ".l9_governance-config.json created"
     blocking: true
 
   step_3:
@@ -676,7 +675,7 @@ verification:
       intelligence_templates: 1
     
     critical_paths:
-      - path: ".suite6-config.json"
+      - path: ".l9_governance-config.json"
         must_contain: '"governance_enabled": true'
       - path: ".cursor-commands"
         must_be_symlink: true
@@ -711,7 +710,7 @@ final_verification:
     - "Learning files in organized structure (failures, patterns, solutions)"
     - "3 learning subdirectories (failures, patterns, solutions)"
     - "LaunchAgent services running (when configured)"
-    - "All scripts have Suite 6 headers"
+    - "All scripts have L9 Governance headers"
 
 # ═══════════════════════════════════════════════════════════
 #   ENFORCEMENT RULES (200% LEVEL)
@@ -873,7 +872,7 @@ success_confirmation:
     Intelligence Systems: [activated]
     LaunchAgents: [running]
     
-    🎯 Suite 6 governance: ACTIVE
+    🎯 L9 Governance governance: ACTIVE
     🔒 Enforcement level: 200%
   
   next_steps:

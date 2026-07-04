@@ -1,12 +1,12 @@
 ---
-description: "Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/."
+description: "Constellation.Gate monorepo: one L9 Governance symlink set at repo root only; avoid duplicate .cursor under constellation-gate/."
 globs: ["**/Constellation.Gate/**", "**/constellation-gate/**"]
 alwaysApply: true
 ---
 
 # Constellation.Gate — workspace session summary (2026-04-11, updated)
 
-**Source:** Cursor chat covering Suite 6 setup, `.gitignore` policy, commits, and symlink handling.  
+**Source:** Cursor chat covering L9 Governance setup, `.gitignore` policy, commits, and symlink handling.  
 **Intent:** Keep GitHub clean, clones reproducible, and **exactly one** GlobalCommands symlink tree on disk.
 
 ## Single workspace root (required)
@@ -19,7 +19,7 @@ alwaysApply: true
 
 ## Symlinks (untracked)
 
-- **Only at repo root:** `.cursor-commands` → `GlobalCommands` (rules live at `.cursor-commands/rules/`, commands at `.cursor-commands/commands/`). Suite 6 **does not** create `.cursor/commands` or `.cursor/rules` (redundant duplicate).
+- **Only at repo root:** `.cursor-commands` → `GlobalCommands` (rules live at `.cursor-commands/rules/`, commands at `.cursor-commands/commands/`). L9 Governance **does not** create `.cursor/commands` or `.cursor/rules` (redundant duplicate).
 - **Never commit** the symlink; regenerate after clone via `setup_workspace_symlinks.sh` from the **same** root.
 
 ## `current_work/`

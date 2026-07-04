@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "LRN-005"
 component_name: "JSON Processing Solutions Database"
@@ -40,7 +40,7 @@ success_metrics: ["failure_prevention_rate >= 0.95", "solution_effectiveness = 1
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "json-issues.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive JSON processing solution documentation"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive JSON processing solution documentation"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["learning", "json", "parsing", "L9", "ai-agent"]

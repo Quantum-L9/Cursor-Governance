@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
+# === L9 GOVERNANCE CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
 version: "6.0.0"
 component_id: "EXE-TEST-001"
@@ -41,21 +41,21 @@ from datetime import datetime
 
 # Suite 6 imports
 import sys
-suite6_root = Path(__file__).parent.parent.parent
-sys.path.append(str(suite6_root / 'execution' / 'validation'))
-sys.path.append(str(suite6_root / 'execution' / 'monitoring'))
+l9_governance_root = Path(__file__).parent.parent.parent
+sys.path.append(str(l9_governance_root / 'execution' / 'validation'))
+sys.path.append(str(l9_governance_root / 'execution' / 'monitoring'))
 
 from governance_validator import GovernanceValidator
 from governance_monitor import GovernanceMonitor
 
-class TestSuite6Compliance(unittest.TestCase):
+class TestL9GovernanceCompliance(unittest.TestCase):
     """Test suite for Suite 6 governance compliance"""
     
     def setUp(self):
         """Set up test environment"""
-        self.suite6_root = Path(__file__).parent.parent.parent
-        self.validator = GovernanceValidator(self.suite6_root)
-        self.monitor = GovernanceMonitor(self.suite6_root)
+        self.l9_governance_root = Path(__file__).parent.parent.parent
+        self.validator = GovernanceValidator(self.l9_governance_root)
+        self.monitor = GovernanceMonitor(self.l9_governance_root)
         
     def test_canonical_header_compliance(self):
         """Test that all governance files have Suite 6 canonical headers"""
@@ -76,19 +76,19 @@ class TestSuite6Compliance(unittest.TestCase):
         # Should have high compliance (allow some development files to be non-compliant)
         self.assertGreaterEqual(compliance_rate, 80.0, "Compliance rate should be >= 80%")
         
-    def test_suite6_header_format(self):
+    def test_l9_governance_header_format(self):
         """Test Suite 6 canonical header format"""
         print("🧪 Testing Suite 6 header format...")
         
         # Test a known compliant file
-        test_file = self.suite6_root / 'intelligence' / 'reasoning' / 'cursor-native-reasoning.md'
+        test_file = self.l9_governance_root / 'intelligence' / 'reasoning' / 'cursor-native-reasoning.md'
         
         if test_file.exists():
             with open(test_file, 'r') as f:
                 content = f.read()
             
             # Check for Suite 6 canonical header
-            self.assertIn('# === SUITE 6 CANONICAL HEADER ===', content)
+            self.assertIn('# === L9 GOVERNANCE CANONICAL HEADER ===', content)
             self.assertIn('suite: "Cursor Governance Suite 6 (L9 + Suite 6)"', content)
             self.assertIn('version: "6.0.0"', content)
             self.assertIn('component_id:', content)
@@ -104,13 +104,13 @@ class TestSuite6Compliance(unittest.TestCase):
         violations = []
         
         for layer in ['intelligence', 'foundation', 'execution', 'operations']:
-            layer_path = self.suite6_root / layer
+            layer_path = self.l9_governance_root / layer
             if layer_path.exists():
                 for file_path in layer_path.rglob('*.md'):
                     filename = file_path.stem
                     # Check kebab-case pattern (lowercase letters, numbers, hyphens)
                     if not filename.replace('-', '').replace('_', '').islower():
-                        violations.append(str(file_path.relative_to(self.suite6_root)))
+                        violations.append(str(file_path.relative_to(self.l9_governance_root)))
         
         if violations:
             print(f"   ⚠️  Kebab-case violations: {violations}")
@@ -128,7 +128,7 @@ class TestSuite6Compliance(unittest.TestCase):
         violations = []
         
         # Check markdown files with headers
-        for md_file in self.suite6_root.rglob('*.md'):
+        for md_file in self.l9_governance_root.rglob('*.md'):
             try:
                 with open(md_file, 'r') as f:
                     content = f.read()
@@ -153,19 +153,19 @@ class TestSuite6Compliance(unittest.TestCase):
         
         self.assertLessEqual(len(violations), 2, f"Component ID format violations: {violations}")
 
-class TestSuite6Integration(unittest.TestCase):
+class TestL9GovernanceIntegration(unittest.TestCase):
     """Test Suite 6 cross-layer integration"""
     
     def setUp(self):
         """Set up integration test environment"""
-        self.suite6_root = Path(__file__).parent.parent.parent
+        self.l9_governance_root = Path(__file__).parent.parent.parent
         
     def test_symlink_structure(self):
         """Test that symlink structure works correctly"""
         print("🧪 Testing symlink structure...")
         
         # Create test workspace
-        test_workspace = Path('/tmp/suite6-test-workspace')
+        test_workspace = Path('/tmp/l9_governance-test-workspace')
         test_workspace.mkdir(exist_ok=True)
         
         try:
@@ -174,7 +174,7 @@ class TestSuite6Integration(unittest.TestCase):
             if cursor_commands.exists():
                 cursor_commands.unlink()
             
-            cursor_commands.symlink_to(self.suite6_root)
+            cursor_commands.symlink_to(self.l9_governance_root)
             
             # Test access to components
             self.assertTrue((cursor_commands / 'intelligence').exists())
@@ -195,7 +195,7 @@ class TestSuite6Integration(unittest.TestCase):
         print("🧪 Testing API integration...")
         
         # Test API file exists
-        api_file = self.suite6_root / 'execution' / 'api' / 'governance-api.py'
+        api_file = self.l9_governance_root / 'execution' / 'api' / 'governance-api.py'
         self.assertTrue(api_file.exists(), "Governance API file should exist")
         
         # Test API imports (basic syntax check)
@@ -217,7 +217,7 @@ class TestSuite6Integration(unittest.TestCase):
         """Test validation system integration"""
         print("🧪 Testing validation integration...")
         
-        validator = GovernanceValidator(self.suite6_root)
+        validator = GovernanceValidator(self.l9_governance_root)
         
         # Test basic validation functionality
         results = validator.validate_all_files()
@@ -231,18 +231,18 @@ class TestSuite6Integration(unittest.TestCase):
         
         print("   ✅ Validation integration working")
 
-class TestSuite6Performance(unittest.TestCase):
+class TestL9GovernancePerformance(unittest.TestCase):
     """Test Suite 6 performance requirements"""
     
     def setUp(self):
         """Set up performance test environment"""
-        self.suite6_root = Path(__file__).parent.parent.parent
+        self.l9_governance_root = Path(__file__).parent.parent.parent
         
     def test_validation_performance(self):
         """Test validation performance meets targets"""
         print("🧪 Testing validation performance...")
         
-        validator = GovernanceValidator(self.suite6_root)
+        validator = GovernanceValidator(self.l9_governance_root)
         
         # Measure validation time
         start_time = time.time()
@@ -264,7 +264,7 @@ class TestSuite6Performance(unittest.TestCase):
         """Test monitoring system performance"""
         print("🧪 Testing monitoring performance...")
         
-        monitor = GovernanceMonitor(self.suite6_root)
+        monitor = GovernanceMonitor(self.l9_governance_root)
         
         # Measure metrics collection time
         start_time = time.time()
@@ -283,7 +283,7 @@ class TestSuite6Performance(unittest.TestCase):
         
         print("   ✅ Monitoring performance acceptable")
 
-class TestSuite6Security(unittest.TestCase):
+class TestL9GovernanceSecurity(unittest.TestCase):
     """Test Suite 6 security requirements"""
     
     def test_no_hardcoded_secrets(self):
@@ -325,7 +325,7 @@ class TestSuite6Security(unittest.TestCase):
 
 def run_test_suite():
     """Run the complete Suite 6 test suite"""
-    print("🚀 SUITE 6 GOVERNANCE TEST SUITE")
+    print("🚀 L9 GOVERNANCE GOVERNANCE TEST SUITE")
     print("=" * 50)
     
     # Create test suite
@@ -333,10 +333,10 @@ def run_test_suite():
     suite = unittest.TestSuite()
     
     # Add test classes
-    suite.addTests(loader.loadTestsFromTestCase(TestSuite6Compliance))
-    suite.addTests(loader.loadTestsFromTestCase(TestSuite6Integration))
-    suite.addTests(loader.loadTestsFromTestCase(TestSuite6Performance))
-    suite.addTests(loader.loadTestsFromTestCase(TestSuite6Security))
+    suite.addTests(loader.loadTestsFromTestCase(TestL9GovernanceCompliance))
+    suite.addTests(loader.loadTestsFromTestCase(TestL9GovernanceIntegration))
+    suite.addTests(loader.loadTestsFromTestCase(TestL9GovernancePerformance))
+    suite.addTests(loader.loadTestsFromTestCase(TestL9GovernanceSecurity))
     
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
@@ -360,7 +360,7 @@ def run_test_suite():
             print(f"  - {test}: {traceback}")
     
     if result.wasSuccessful():
-        print("\n✅ ALL TESTS PASSED - SUITE 6 READY FOR PRODUCTION")
+        print("\n✅ ALL TESTS PASSED - L9 GOVERNANCE READY FOR PRODUCTION")
         return 0
     else:
         print("\n❌ SOME TESTS FAILED - REVIEW ISSUES BEFORE DEPLOYMENT")

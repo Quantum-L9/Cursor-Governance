@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "EXE-OP-001"
 component_name: "Operational Health Monitor"
@@ -40,7 +40,7 @@ success_metrics: ["uptime >= 0.99", "anomaly_detection_rate >= 0.95", "recovery_
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "operational-health.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive health monitoring capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive health monitoring capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["monitoring", "health", "operations", "anomaly_detection", "recovery"]

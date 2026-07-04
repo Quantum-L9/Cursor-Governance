@@ -1,20 +1,18 @@
 ---
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "2.1.0"
-component_id: "INT-WS-003"
-component_name: "Session End Protocol - L9 Enterprise Edition v2"
+# === L9 GOVERNANCE RUNTIME ===
+runtime: "L9 Governance"
+version: "10.0.0"
+component_name: "Session End Protocol"
 layer: "intelligence"
 domain: "workspace_management"
 enforcement_level: active
 type: "executable_protocol"
 status: "active"
 created: "2026-01-07T00:00:00Z"
-updated: "2026-06-06T00:00:00Z"
+updated: "2026-07-04T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
 sister_file: "start-session.yaml"
-changelog_url: "CHANGELOG.md#v2.0.0"
 execution_mode: "manual_and_automatic"
 ---
 

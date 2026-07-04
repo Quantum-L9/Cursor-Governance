@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-RSN-001"
 component_name: "L9 Reasoning Profile"
@@ -39,7 +39,7 @@ business_value: "Keeps Cursor-side reasoning aligned with L9 invariants: no sile
 success_metrics: ["governance_checks_passed", "invariant_violations == 0 on critical paths"]
 
 # === INTEGRATION METADATA ===
-suite_2_origin: "reasoning_l9.md (Suite 6 canonical)"
+suite_2_origin: "reasoning_l9.md (L9 Governance canonical)"
 migration_notes: "Restored as INT-RSN-001 to satisfy verify-startup-files.sh and setup-new-workspace.yaml step_5"
 
 # === TAGS & CLASSIFICATION ===

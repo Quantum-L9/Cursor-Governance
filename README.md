@@ -3,7 +3,7 @@ title: GlobalCommands Directory
 version: 1.0.0
 created: 2025-01-27
 owner: Igor Beylin
-source: Migrated from Cursor Governance Suite 6 (L9 + Suite 5)
+source: Migrated from L9 Governance (L9 + Suite 5)
 tags: [governance, global-commands, learning, profiles, ops]
 domain: system-governance
 type: documentation
@@ -113,7 +113,7 @@ Save node research findings to:
 ## 📊 Migration Status
 
 **Migrated:** 2025-01-27  
-**Source:** Cursor Governance Suite 6 (L9 + Suite 5)  
+**Source:** L9 Governance (L9 + Suite 5)  
 **Files:** 59 files across 4 directories  
 **Status:** ✅ Complete
 

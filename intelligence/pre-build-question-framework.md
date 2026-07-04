@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.1.0"
 component_id: "INT-PBQ-001"
 component_name: "Pre-Build Question Framework"

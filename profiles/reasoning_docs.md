@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-RSN-002"
 component_name: "Strategic Document Reasoning Profile"
@@ -40,7 +40,7 @@ success_metrics: ["insight_accuracy >= 0.85", "gap_detection_rate >= 0.90", "coh
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "reasoning_docs.md v2.0.0"
-migration_notes: "Enhanced with Suite 6 structure, comprehensive reasoning modes, and strategic intelligence integration"
+migration_notes: "Enhanced with L9 Governance structure, comprehensive reasoning modes, and strategic intelligence integration"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["reasoning", "strategic", "document_analysis", "intelligence", "pattern_recognition"]

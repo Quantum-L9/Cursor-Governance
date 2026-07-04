@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "FND-AG-001"
 component_name: "Constellation Linter Agent"
@@ -40,7 +40,7 @@ success_metrics: ["scan_accuracy >= 99%", "false_positive_rate < 5%", "scan_time
 
 # === INTEGRATION METADATA ===
 suite_1_origin: "4_ConstellationLinter_Agent.md"
-migration_notes: "Enhanced with Suite 6 integration and expanded validation capabilities"
+migration_notes: "Enhanced with L9 Governance integration and expanded validation capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["linter", "agent_validation", "compliance_check", "ci_cd", "governance_runtime"]
@@ -59,7 +59,7 @@ Linter that scans agents for governance compliance using formal logic validation
 - DeploymentGate: Pre-deployment validation
 - ContinuousMonitoring: Periodic compliance checks
 
-## Suite 6 Enhancements
+## L9 Governance Enhancements
 - Integration with Universal Governance Kernel for rule validation
 - Real-time compliance checking via API endpoints
 - Enhanced reporting with detailed violation analysis

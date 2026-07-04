@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-ML-001"
 component_name: "Meta Learning Log"
@@ -50,7 +50,7 @@ related_components: ["INT-RE-001", "FND-LG-002", "EXE-MON-001"]
 
 # Meta Learning Log
 
-This file is your **system memory core** for Suite 6.
+This file is your **system memory core** for L9 Governance.
 
 It captures pattern-level insights across many sessions and threads. It is updated **after reviewing 1 or more extracted preference documents**, and is structured to support reuse by agents, humans, and governance tools.
 
@@ -61,7 +61,7 @@ It captures pattern-level insights across many sessions and threads. It is updat
 - Train future agents or team members
 - Generate global rules and reusable assets
 
-## Suite 6 Enhancements:
+## L9 Governance Enhancements:
 - Integration with formal logic compiler for automatic rule generation
 - Real-time pattern recognition and learning
 - Cross-layer insight propagation
@@ -96,13 +96,13 @@ Derived from preference files:
 - [Validation criteria]
 
 **Related Components:**
-- [Suite 6 components affected]
+- [L9 Governance components affected]
 - [Integration points]
 ```
 
 ## Current Learning Patterns
 
-### 2025-10-28 – Suite 6 Canonical Headers
+### 2025-10-28 – L9 Governance Canonical Headers
 
 **Context:**
 Derived from Suite 1-4 migration and consolidation process.
@@ -111,7 +111,7 @@ Derived from Suite 1-4 migration and consolidation process.
 Canonical headers with complete metadata are essential for governance traceability, component identification, and automated validation.
 
 **Implications:**
-- All Suite 6 components must have canonical headers
+- All L9 Governance components must have canonical headers
 - Headers enable automated compliance checking
 - Metadata supports cross-layer integration
 - Component IDs provide unique identification
@@ -129,7 +129,7 @@ Canonical headers with complete metadata are essential for governance traceabili
 **Related Components:**
 - FND-LG-002 (Universal Governance Kernel)
 - EXE-VAL-001 (Governance Validator)
-- All Suite 6 components
+- All L9 Governance components
 
 ### 2025-10-28 – Kebab-Case Naming Convention
 
@@ -140,7 +140,7 @@ User feedback on filename conventions during migration.
 Kebab-case filenames (use-this-format.md) are preferred over numbered or camelCase formats for better readability and standardization.
 
 **Implications:**
-- All Suite 6 files should use kebab-case naming
+- All L9 Governance files should use kebab-case naming
 - Numbers in filenames are unnecessary when canonical headers provide identification
 - Consistent naming improves developer experience
 
@@ -155,7 +155,7 @@ Kebab-case filenames (use-this-format.md) are preferred over numbered or camelCa
 - Reduced cognitive load in file identification
 
 **Related Components:**
-- All Suite 6 components
+- All L9 Governance components
 - Development tooling and scripts
 
 

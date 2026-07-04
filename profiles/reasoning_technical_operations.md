@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-RSN-003"
 component_name: "Technical Operations Reasoning Profile"
@@ -40,7 +40,7 @@ success_metrics: ["decision_quality_score >= 0.85", "tool_fit_score >= 0.90", "r
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "reasoning_technical_operations.md v2.1.0"
-migration_notes: "Enhanced with Suite 6 structure, MCP tool selection protocol, and comprehensive technical reasoning framework"
+migration_notes: "Enhanced with L9 Governance structure, MCP tool selection protocol, and comprehensive technical reasoning framework"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["reasoning", "technical", "operations", "tool_selection", "architecture", "ynp_enabled"]

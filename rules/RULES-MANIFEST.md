@@ -49,7 +49,7 @@ Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `~/.cursor-governance/rules`.
 - `87-cursor-memory-kernel.mdc` — alwaysApply **true** — Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle
 - `87-wire-workflow-guard.mdc` — alwaysApply **false** — Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
 - `88-perplexity-run-harness.mdc` — alwaysApply **true** — L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.
-- `89-constellation-gate-workspace-session.mdc` — alwaysApply **true** — Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.
+- `89-constellation-gate-workspace-session.mdc` — alwaysApply **true** — Constellation.Gate monorepo: one L9 Governance symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.
 - `90-protected-core.mdc` — alwaysApply **true** — Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.
 - `91-existing-code-source-of-truth.mdc` — alwaysApply **true** — Existing code is source of truth — new code adapts to established patterns
 - `92-learned-lessons.mdc` — alwaysApply **true** — Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.

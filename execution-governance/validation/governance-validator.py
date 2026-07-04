@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
+# === L9 GOVERNANCE CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
 version: "6.0.0"
 component_id: "EXE-VAL-001"
@@ -41,14 +41,14 @@ from pathlib import Path
 class GovernanceValidator:
     """Validates Suite 6 governance compliance at runtime"""
     
-    def __init__(self, suite6_root: Path = None):
-        if suite6_root is None:
-            suite6_root = Path(__file__).parent.parent.parent
+    def __init__(self, l9_governance_root: Path = None):
+        if l9_governance_root is None:
+            l9_governance_root = Path(__file__).parent.parent.parent
         
-        self.suite6_root = Path(suite6_root)
-        self.governance_path = self.suite6_root
+        self.l9_governance_root = Path(l9_governance_root)
+        self.governance_path = self.l9_governance_root
         self.violations = []
-        self.log_file = self.suite6_root / "telemetry" / "logs" / "governance-violations.log"
+        self.log_file = self.l9_governance_root / "telemetry" / "logs" / "governance-violations.log"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Suite 6 canonical header requirements
@@ -67,11 +67,11 @@ class GovernanceValidator:
         
         # Scan all layers for governance files
         for layer in self.valid_layers:
-            layer_path = self.suite6_root / layer
+            layer_path = self.l9_governance_root / layer
             if layer_path.exists():
                 for file_path in layer_path.rglob('*'):
                     if file_path.is_file() and file_path.suffix in ['.md', '.py', '.json', '.yaml']:
-                        relative_path = str(file_path.relative_to(self.suite6_root))
+                        relative_path = str(file_path.relative_to(self.l9_governance_root))
                         results[relative_path] = self.validate_file(file_path)
         
         return results
@@ -114,11 +114,11 @@ class GovernanceValidator:
         """Check if file has Suite 6 canonical header"""
         # Python files: check for header in docstring
         if filepath.suffix == '.py':
-            return '# === SUITE 6 CANONICAL HEADER ===' in content
+            return '# === L9 GOVERNANCE CANONICAL HEADER ===' in content
         
         # Markdown files: check for YAML header
         if filepath.suffix == '.md':
-            return content.startswith('---') and '# === SUITE 6 CANONICAL HEADER ===' in content
+            return content.startswith('---') and '# === L9 GOVERNANCE CANONICAL HEADER ===' in content
         
         # JSON files: check for metadata section
         if filepath.suffix == '.json':
@@ -152,7 +152,7 @@ class GovernanceValidator:
             
             elif filepath.suffix == '.py':
                 # Extract header from docstring
-                header_match = re.search(r'# === SUITE 6 CANONICAL HEADER ===.*?"""', content, re.DOTALL)
+                header_match = re.search(r'# === L9 GOVERNANCE CANONICAL HEADER ===.*?"""', content, re.DOTALL)
                 if header_match:
                     # For Python files, we expect key-value pairs in comments
                     header_content = header_match.group(0)
@@ -270,7 +270,7 @@ class GovernanceValidator:
         required_files = [
             '.cursorrules',
             '.cursor-commands',
-            '.suite6-config.json'
+            '.l9_governance-config.json'
         ]
         
         missing_files = []
@@ -285,7 +285,7 @@ class GovernanceValidator:
         # Check configuration
         config_valid = False
         try:
-            config_path = workspace_path / '.suite6-config.json'
+            config_path = workspace_path / '.l9_governance-config.json'
             if config_path.exists():
                 with open(config_path, 'r') as f:
                     config = json.load(f)

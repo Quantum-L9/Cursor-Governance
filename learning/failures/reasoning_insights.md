@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "1.0.0"
 component_id: "INT-LRN-003"
 component_name: "Reasoning Insights - Meta-Learning Analysis"

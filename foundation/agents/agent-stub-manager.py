@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
+# === L9 GOVERNANCE CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
 version: "6.0.0"
 component_id: "FND-AG-002"
@@ -229,7 +229,7 @@ class AgentStubManager:
         else:
             return "general_review_required"
     
-    def generate_stubs_for_suite6(self) -> Dict[str, bool]:
+    def generate_stubs_for_l9_governance(self) -> Dict[str, bool]:
         """
         Generate stubs for all Suite 6 components
         """
@@ -261,7 +261,7 @@ class AgentStubManager:
         try:
             with open(file_path, 'r') as f:
                 content = f.read(500)  # Read first 500 chars
-                return "=== SUITE 6 CANONICAL HEADER ===" in content
+                return "=== L9 GOVERNANCE CANONICAL HEADER ===" in content
         except:
             return False
     
@@ -345,7 +345,7 @@ def main():
     
     if command == "generate":
         print("Generating stubs for Suite 6 components...")
-        results = manager.generate_stubs_for_suite6()
+        results = manager.generate_stubs_for_l9_governance()
         
         success_count = sum(1 for success in results.values() if success)
         total_count = len(results)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
+# === L9 GOVERNANCE CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
 version: "6.0.0"
 component_id: "EXE-API-001"
@@ -42,17 +42,17 @@ from pathlib import Path
 # Suite 6 imports - updated paths with importlib for hyphenated filenames
 import importlib.util
 
-suite6_root = Path(__file__).parent.parent.parent
+l9_governance_root = Path(__file__).parent.parent.parent
 
 # Import governance-validator.py (hyphenated filename)
-validator_path = suite6_root / 'execution' / 'validation' / 'governance-validator.py'
+validator_path = l9_governance_root / 'execution' / 'validation' / 'governance-validator.py'
 spec = importlib.util.spec_from_file_location('governance_validator', validator_path)
 governance_validator_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(governance_validator_module)
 GovernanceValidator = governance_validator_module.GovernanceValidator
 
 # Import governance-monitor.py (hyphenated filename)
-monitor_path = suite6_root / 'execution' / 'monitoring' / 'governance-monitor.py'
+monitor_path = l9_governance_root / 'execution' / 'monitoring' / 'governance-monitor.py'
 spec = importlib.util.spec_from_file_location('governance_monitor', monitor_path)
 governance_monitor_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(governance_monitor_module)
@@ -60,7 +60,7 @@ GovernanceMonitor = governance_monitor_module.GovernanceMonitor
 
 # Try to import chat learning extractor (optional)
 try:
-    extractor_path = suite6_root / 'intelligence' / 'learning' / 'chat-learning-extractor.py'
+    extractor_path = l9_governance_root / 'intelligence' / 'learning' / 'chat-learning-extractor.py'
     if extractor_path.exists():
         spec = importlib.util.spec_from_file_location('chat_learning_extractor', extractor_path)
         chat_extractor_module = importlib.util.module_from_spec(spec)
@@ -75,9 +75,9 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for dashboard access
 
 # Initialize governance components with Suite 6 paths
-validator = GovernanceValidator(suite6_root)
-monitor = GovernanceMonitor(suite6_root)
-chat_extractor = ChatLearningExtractor(suite6_root) if ChatLearningExtractor else None
+validator = GovernanceValidator(l9_governance_root)
+monitor = GovernanceMonitor(l9_governance_root)
+chat_extractor = ChatLearningExtractor(l9_governance_root) if ChatLearningExtractor else None
 
 @app.route('/governance/status', methods=['GET'])
 def get_status():
@@ -122,7 +122,7 @@ def validate_governance():
 def get_rules():
     """Get current governance rules from rule registry"""
     try:
-        rules_path = suite6_root / 'foundation' / 'logic' / 'rule-registry.json'
+        rules_path = l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'
         with open(rules_path, 'r') as f:
             rules_data = json.load(f)
         
@@ -146,7 +146,7 @@ def add_rule():
             return jsonify({'error': 'Missing required fields'}), 400
         
         # Load current rules
-        rules_path = suite6_root / 'foundation' / 'logic' / 'rule-registry.json'
+        rules_path = l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'
         with open(rules_path, 'r') as f:
             rules_registry = json.load(f)
         
@@ -200,7 +200,7 @@ def health_check():
         
         # Check rule registry accessibility
         try:
-            rules_path = suite6_root / 'foundation' / 'logic' / 'rule-registry.json'
+            rules_path = l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'
             with open(rules_path, 'r') as f:
                 json.load(f)
         except:
@@ -282,7 +282,7 @@ def auto_process_current():
 if __name__ == '__main__':
     print("🚀 Starting Suite 6 Governance API Server...")
     print(f"📊 Dashboard integration: Enhanced")
-    print(f"🔗 Rule registry: {suite6_root / 'foundation' / 'logic' / 'rule-registry.json'}")
+    print(f"🔗 Rule registry: {l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'}")
     print(f"🌐 Health check: http://localhost:8080/governance/health")
     
     app.run(host='0.0.0.0', port=8080, debug=False)

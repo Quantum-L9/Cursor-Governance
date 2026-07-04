@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "FND-LG-001"
 component_name: "DSL Compiler System"
@@ -71,7 +71,7 @@ Compile markdown governance rules written in natural language or FOL into machin
 ## Usage:
 Drop `.md` files with rules into `/rules/` and run the compiler to produce `.json`.
 
-## Suite 6 Enhancements:
+## L9 Governance Enhancements:
 - Integration with meta-learning system for automatic rule generation
 - API endpoints for real-time compilation
 - Enhanced error handling and validation

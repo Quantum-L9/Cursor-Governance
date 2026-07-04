@@ -318,7 +318,7 @@ rules:
   first_heading: Perplexity ↔ L9 run harness
   has_yaml_frontmatter: true
 - file: 89-constellation-gate-workspace-session.mdc
-  description: 'Constellation.Gate monorepo: one Suite 6 symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.'
+  description: 'Constellation.Gate monorepo: one L9 Governance symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.'
   always_apply: true
   globs:
   - '**/Constellation.Gate/**'

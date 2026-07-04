@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
+# === L9 GOVERNANCE CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
 version: "6.0.0"
 component_id: "EXE-MON-001"
@@ -56,13 +56,13 @@ class GovernanceMetrics:
 class GovernanceMonitor:
     """Monitor Suite 6 governance system performance and compliance"""
     
-    def __init__(self, suite6_root: Path = None):
-        if suite6_root is None:
-            suite6_root = Path(__file__).parent.parent.parent
+    def __init__(self, l9_governance_root: Path = None):
+        if l9_governance_root is None:
+            l9_governance_root = Path(__file__).parent.parent.parent
         
-        self.suite6_root = Path(suite6_root)
-        self.governance_path = self.suite6_root
-        self.db_path = self.suite6_root / "telemetry" / "logs" / "governance-metrics.db"
+        self.l9_governance_root = Path(l9_governance_root)
+        self.governance_path = self.l9_governance_root
+        self.db_path = self.l9_governance_root / "telemetry" / "logs" / "governance-metrics.db"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.init_database()
     
@@ -114,14 +114,14 @@ class GovernanceMonitor:
         
         # Check all layers for compliance
         for layer in ['intelligence', 'foundation', 'execution', 'operations', 'environment']:
-            layer_path = self.suite6_root / layer
+            layer_path = self.l9_governance_root / layer
             if layer_path.exists():
                 for file_path in layer_path.rglob('*.md'):
                     total_files += 1
                     if self._check_file_compliance(file_path):
                         compliant_files += 1
                     else:
-                        violations.append(str(file_path.relative_to(self.suite6_root)))
+                        violations.append(str(file_path.relative_to(self.l9_governance_root)))
         
         validation_time = time.time() - start_time
         compliance_rate = (compliant_files / total_files * 100) if total_files > 0 else 100.0
@@ -152,7 +152,7 @@ class GovernanceMonitor:
                 content = f.read()
             
             # Check for Suite 6 canonical header
-            return '# === SUITE 6 CANONICAL HEADER ===' in content
+            return '# === L9 GOVERNANCE CANONICAL HEADER ===' in content
         except:
             return False
     
@@ -246,11 +246,11 @@ class GovernanceMonitor:
         metrics = self.collect_metrics()
         
         # Check rule registry health
-        rule_registry_path = self.suite6_root / 'foundation' / 'logic' / 'rule-registry.json'
+        rule_registry_path = self.l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'
         rule_registry_healthy = rule_registry_path.exists()
         
         # Check API health
-        api_path = self.suite6_root / 'execution' / 'api' / 'governance-api.py'
+        api_path = self.l9_governance_root / 'execution' / 'api' / 'governance-api.py'
         api_healthy = api_path.exists()
         
         return {

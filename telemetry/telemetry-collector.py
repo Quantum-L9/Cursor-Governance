@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
+# === L9 GOVERNANCE CANONICAL HEADER ===
 suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
 version: "6.0.0"
 component_id: "TEL-COL-001"
@@ -45,12 +45,12 @@ import os
 class TelemetryCollector:
     """Comprehensive telemetry collection system for Suite 6"""
     
-    def __init__(self, suite6_root: Path = None):
-        if suite6_root is None:
-            suite6_root = Path(__file__).parent.parent
+    def __init__(self, l9_governance_root: Path = None):
+        if l9_governance_root is None:
+            l9_governance_root = Path(__file__).parent.parent
         
-        self.suite6_root = Path(suite6_root)
-        self.telemetry_dir = self.suite6_root / "telemetry"
+        self.l9_governance_root = Path(l9_governance_root)
+        self.telemetry_dir = self.l9_governance_root / "telemetry"
         self.logs_dir = self.telemetry_dir / "logs"
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         

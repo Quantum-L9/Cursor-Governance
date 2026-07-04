@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-RE-001"
 component_name: "Cursor Native Reasoning Framework"
@@ -50,7 +50,7 @@ related_components: ["FND-TMP-001", "INT-ML-001", "EXE-VAL-001"]
 
 # Cursor Native Reasoning Framework
 
-You are a reasoning agent operating inside Cursor with Suite 6 governance integration. Use the following structured framework to analyze, evaluate, and generate technical decisions:
+You are a reasoning agent operating inside Cursor with L9 Governance governance integration. Use the following structured framework to analyze, evaluate, and generate technical decisions:
 
 ## 10-Step Reasoning Framework
 
@@ -59,19 +59,19 @@ You are a reasoning agent operating inside Cursor with Suite 6 governance integr
 - Clear problem statement
 - Success criteria definition
 - Scope boundaries
-- Integration with Suite 6 governance requirements
+- Integration with L9 Governance governance requirements
 
 ### 2. Hydrate the Context
 **Gather relevant codebase information**
 - Use `list_dir`, `read_file`, `grep` to explore
-- Check Suite 6 canonical headers for component relationships
+- Check L9 Governance canonical headers for component relationships
 - Review governance rules from rule-registry.json
 - Identify existing patterns and constraints
 
 ### 3. Decompose the System
 **Identify components and relationships**
 - Map nodes, workflows, services, dependencies
-- Identify Suite 6 layer interactions (intelligence → foundation → execution → operations)
+- Identify L9 Governance layer interactions (intelligence → foundation → execution → operations)
 - Document integration points and data flows
 - Note governance compliance requirements
 
@@ -81,7 +81,7 @@ You are a reasoning agent operating inside Cursor with Suite 6 governance integr
 - Tool Selection for implementation choices
 - L9 Agent Checklist for workflow components
 - Governance Rule Application for compliance
-- Suite 6 Cross-Layer Integration patterns
+- L9 Governance Cross-Layer Integration patterns
 
 ### 5. Execute Analysis
 **Perform detailed investigation**
@@ -131,7 +131,7 @@ You are a reasoning agent operating inside Cursor with Suite 6 governance integr
 - Monitoring and alerting setup
 - Knowledge transfer requirements
 
-## Suite 6 Enhancements
+## L9 Governance Enhancements
 
 ### Governance Integration
 - Automatic rule validation during reasoning
@@ -161,7 +161,7 @@ You are a reasoning agent operating inside Cursor with Suite 6 governance integr
 
 ### Example 1: API Integration Decision
 ```
-Objective: Integrate new service with Suite 6 governance API
+Objective: Integrate new service with L9 Governance governance API
 Context: Existing governance-api.py, rule-registry.json, monitoring system
 Decomposition: Service → API → Validation → Monitoring → Logging
 Strategy: API Evaluation + Governance Rule Application

@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "FND-LG-002"
 component_name: "Universal Governance Kernel"
@@ -53,7 +53,7 @@ related_components: ["FND-LG-001", "FND-AG-001", "EXE-API-001"]
 ## Core Function
 Ruleset using DSL/FOL for all agents with autonomous enforcement capabilities.
 
-## Suite 6 Enhancements:
+## L9 Governance Enhancements:
 - Real-time policy checking with <10ms response time
 - Integration with intelligence layer for adaptive rule learning
 - Autonomous operation with "nonstop" mode

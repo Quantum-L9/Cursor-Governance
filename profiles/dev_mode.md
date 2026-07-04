@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "CMD-003"
 component_name: "Development Automation Mode Profile"
@@ -40,7 +40,7 @@ success_metrics: ["code_quality_score >= 0.85", "test_coverage >= 0.80", "integr
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "08_development-automation.md v1.0.0 (migrated to dev_mode.md)"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive development automation capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive development automation capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["development", "automation", "code-analysis", "testing", "integration", "command"]

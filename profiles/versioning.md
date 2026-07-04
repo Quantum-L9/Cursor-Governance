@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "EXE-VER-001"
 component_name: "Version Control Manager"
@@ -40,7 +40,7 @@ success_metrics: ["version_accuracy >= 1.0", "archive_completeness >= 0.98", "ve
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "versioning.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive version management capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive version management capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["versioning", "version_control", "semantic_versioning", "history", "tracking"]
