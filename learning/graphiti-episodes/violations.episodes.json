@@ -1,0 +1,171 @@
+[
+  {
+    "body": "Violation: lesson-015-investigate-first\nSeverity: critical\nDescription: \nSource: \nContext: Speculated 'may not be fully implemented' and 'likely generated' about CodeGenAgent without checking the actual codebase. CodeGenAgent folder contains c_gmp_engine.py (444 lines), meta_loader.py, file_emitter.py, readme_generator.py, and 81 YAML specs - all fully implemented.",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-015-investigate-first"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903265+00:00"
+  },
+  {
+    "body": "Violation: lesson-013\nSeverity: critical\nDescription: Use $HOME\nSource: config.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-013"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903292+00:00"
+  },
+  {
+    "body": "Violation: lesson-test\nSeverity: warning\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903314+00:00"
+  },
+  {
+    "body": "Violation: lesson-test\nSeverity: warning\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903332+00:00"
+  },
+  {
+    "body": "Violation: lesson-escalate\nSeverity: critical\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903357+00:00"
+  },
+  {
+    "body": "Violation: lesson-escalate\nSeverity: critical\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903376+00:00"
+  },
+  {
+    "body": "Violation: lesson-escalate\nSeverity: critical\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903394+00:00"
+  },
+  {
+    "body": "Violation: lesson-013\nSeverity: critical\nDescription: Use $HOME\nSource: config.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-013"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903411+00:00"
+  },
+  {
+    "body": "Violation: lesson-test\nSeverity: warning\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903429+00:00"
+  },
+  {
+    "body": "Violation: lesson-test\nSeverity: warning\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903447+00:00"
+  },
+  {
+    "body": "Violation: lesson-escalate\nSeverity: critical\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903467+00:00"
+  },
+  {
+    "body": "Violation: lesson-escalate\nSeverity: critical\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903484+00:00"
+  },
+  {
+    "body": "Violation: lesson-escalate\nSeverity: critical\nDescription: Test\nSource: test.py\nContext: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:violations",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/failures/violations.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903502+00:00"
+  }
+]
