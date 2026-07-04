@@ -56,3 +56,5 @@ memory-bank/
 .cursor-globalcommands-fallback.log
 .backup.*
 
+*.pyc
+__pycache__/
