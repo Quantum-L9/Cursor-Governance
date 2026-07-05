@@ -1,0 +1,40 @@
+---
+l9_schema: 1
+artifact_type: governance_policy
+tags: [org-invariant, repo-routing, quantum-l9, canonical, ssot]
+retrieval: on_demand
+status: active
+canonical: true
+canonical_source: https://github.com/Quantum-L9/Cursor-Governance/blob/main/ORG_INVARIANTS.yaml
+---
+# CANONICAL org invariant policy for the Quantum-L9 organization.
+# This repo (Cursor-Governance) is the single source of truth. Consumer repos
+# carry a synced copy marked as a mirror; changes MUST originate here.
+# See docs/governance/ORG_INVARIANTS.md for the sync + change process.
+
+org_invariants:
+  owner: Quantum-L9
+  new_repo_url_prefix: https://github.com/Quantum-L9/
+  repo_birth:
+    allowed_owner: Quantum-L9
+    fail_closed: true
+    forbidden_owners:
+      - cryptoxdog
+      - personal_accounts
+  enforcement_points:
+    - upload_to_repo_routing
+    - repo_birth_decision
+    - github_create_repo
+    - dry_run_plan
+    - write_plan
+  violation_action: BLOCKED
+
+# Downstream repos that carry a synced mirror of the `org_invariants` block above.
+provenance:
+  consumers:
+    - repo: Quantum-L9/L9-Ops-MCP
+      path: ORG_INVARIANTS.yaml
+      enforced_by: scripts/validate_org_invariants.py
+  change_process: >
+    Edit the org_invariants block here, then re-sync each consumer's mirror
+    (byte-identical org_invariants block) in the same or a follow-up PR.
