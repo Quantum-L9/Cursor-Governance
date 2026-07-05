@@ -18,6 +18,16 @@ name: "L9 CodeQL config (security + code quality)"
 queries:
   - uses: security-and-quality
 
+# Noise dial. Suppress at source (deterministic + versioned + DRY across every
+# repo) instead of per-alert dismissal. Start minimal: drop only low-precision
+# findings. Add targeted `id` excludes below over time, each with a one-line
+# reason — a reviewable suppressions ledger, not a blanket mute.
+query-filters:
+  - exclude:
+      precision: low
+  # --- suppressions ledger (add data-driven, one reason per line) ---
+  # - exclude: { id: py/unused-import }   # example form; do NOT enable preemptively
+
 # Directories that are never source-of-truth for L9 repos. Kept generic so the
 # same ignore list is valid whether a repo ships Python, shell, or config only.
 paths-ignore:
@@ -30,3 +40,7 @@ paths-ignore:
   - "**/build/**"
   - "**/vendor/**"
   - "**/*.min.js"
+  - "**/tests/**"
+  - "**/test/**"
+  - "**/test_*.py"
+  - "**/*_test.py"

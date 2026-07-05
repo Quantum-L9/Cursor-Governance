@@ -1,0 +1,128 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: ci_workflow
+# component: codeql_code_quality_reusable
+# tags: [ci, codeql, code-quality, security, governance, quantum-l9, reusable]
+# retrieval: on_demand
+# status: active
+# --- /L9_META ---
+#
+# Quantum-L9 org-wide CodeQL analysis, exposed as a REUSABLE workflow.
+# Single source of truth: every L9 repo calls this via a ~18-line thin caller
+# (see docs/handoffs/codeql-caller-template.yml). Change analysis here once and
+# it propagates to all callers pinned at @main.
+#
+# Portable by design: the `detect` job resolves the analysis matrix from the
+# caller repo's actual language composition and assigns a per-language
+# build-mode (interpreted -> none, compiled -> autobuild), so no standalone
+# autobuild step is needed and repos with no CodeQL-supported source are skipped.
+
+name: "CodeQL reusable (security + code quality)"
+
+on:
+  workflow_call:
+    inputs:
+      config-file:
+        description: "CodeQL config (owner/repo/path@ref or local path)."
+        type: string
+        required: false
+        default: "Quantum-L9/Cursor-Governance/.github/codeql/codeql-config.yml@main"
+      runner:
+        description: "Runner label."
+        type: string
+        required: false
+        default: "ubuntu-latest"
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Detect CodeQL languages
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      matrix: ${{ steps.langs.outputs.matrix }}
+      empty: ${{ steps.langs.outputs.empty }}
+    steps:
+      - name: Resolve analyzable languages + build modes
+        id: langs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          API: ${{ github.api_url }}
+        run: |
+          set -euo pipefail
+          DETECTED=$(curl -sfS \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API}/repos/${REPO}/languages" || echo '{}')
+          export DETECTED
+          MATRIX=$(python3 - <<'PY'
+          import json, os
+          data = json.loads(os.environ.get("DETECTED") or "{}")
+          # GitHub Linguist language name -> CodeQL language id.
+          lang_map = {
+              "Python": "python",
+              "JavaScript": "javascript-typescript",
+              "TypeScript": "javascript-typescript",
+              "Java": "java-kotlin",
+              "Kotlin": "java-kotlin",
+              "C": "c-cpp",
+              "C++": "c-cpp",
+              "C#": "csharp",
+              "Go": "go",
+              "Ruby": "ruby",
+              "Swift": "swift",
+          }
+          # interpreted -> no build; compiled -> autobuild (keeps this portable
+          # to any future L9 repo without a per-repo edit).
+          build_mode = {
+              "python": "none",
+              "javascript-typescript": "none",
+              "ruby": "none",
+              "java-kotlin": "autobuild",
+              "c-cpp": "autobuild",
+              "csharp": "autobuild",
+              "go": "autobuild",
+              "swift": "autobuild",
+          }
+          langs = sorted({lang_map[k] for k in data if k in lang_map})
+          include = [{"language": l, "build-mode": build_mode[l]} for l in langs]
+          print(json.dumps({"include": include}))
+          PY
+          )
+          echo "resolved matrix: ${MATRIX}"
+          echo "matrix=${MATRIX}" >> "${GITHUB_OUTPUT}"
+          if [ "${MATRIX}" = '{"include": []}' ] || [ "${MATRIX}" = '{"include":[]}' ]; then
+            echo "empty=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "empty=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    needs: detect
+    if: needs.detect.outputs.empty == 'false'
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
+      security-events: write   # required to upload CodeQL results
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ${{ inputs.config-file }}
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
