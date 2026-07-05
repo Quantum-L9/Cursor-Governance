@@ -1,0 +1,115 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: ci_workflow
+# component: codeql_code_quality
+# tags: [ci, codeql, code-quality, security, governance, quantum-l9]
+# retrieval: on_demand
+# status: active
+# --- /L9_META ---
+#
+# Quantum-L9 org-wide CodeQL advanced setup (security + code quality).
+#
+# Portable across ALL L9 repos with no per-repo edits: the `detect` job asks the
+# GitHub API which languages the repo actually contains and builds the analysis
+# matrix from that. Repos with no CodeQL-supported source simply skip analysis.
+# The maintainability / code-quality queries come from the shared
+# .github/codeql/codeql-config.yml (`security-and-quality` suite) — the same
+# engine behind the github-code-quality PR reviewer.
+
+name: "CodeQL (security + code quality)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "24 3 * * 1"   # weekly, Monday 03:24 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect CodeQL languages
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.langs.outputs.matrix }}
+      empty: ${{ steps.langs.outputs.empty }}
+    steps:
+      - name: Resolve analyzable languages from repo composition
+        id: langs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          API: ${{ github.api_url }}
+        run: |
+          set -euo pipefail
+          DETECTED=$(curl -sfS \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API}/repos/${REPO}/languages" || echo '{}')
+          export DETECTED
+          MATRIX=$(python3 - <<'PY'
+          import json, os
+          data = json.loads(os.environ.get("DETECTED") or "{}")
+          # GitHub Linguist language name -> CodeQL language id.
+          mapping = {
+              "Python": "python",
+              "JavaScript": "javascript-typescript",
+              "TypeScript": "javascript-typescript",
+              "Java": "java-kotlin",
+              "Kotlin": "java-kotlin",
+              "C": "c-cpp",
+              "C++": "c-cpp",
+              "C#": "csharp",
+              "Go": "go",
+              "Ruby": "ruby",
+              "Swift": "swift",
+          }
+          langs = sorted({mapping[k] for k in data if k in mapping})
+          print(json.dumps({"language": langs}))
+          PY
+          )
+          echo "resolved matrix: ${MATRIX}"
+          echo "matrix=${MATRIX}" >> "${GITHUB_OUTPUT}"
+          if [ "${MATRIX}" = '{"language": []}' ] || [ "${MATRIX}" = '{"language":[]}' ]; then
+            echo "empty=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "empty=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    needs: detect
+    if: needs.detect.outputs.empty == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # required to upload CodeQL results
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
