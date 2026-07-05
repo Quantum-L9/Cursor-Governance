@@ -19,6 +19,7 @@
 | Global rules | `rules/` | `@.cursor-commands/rules/` |
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
+| **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
 
 **Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.  
 **Never** expose the governance root under `.cursor/governance/` — that path holds only the law file + README.
