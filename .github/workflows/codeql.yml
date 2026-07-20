@@ -34,6 +34,13 @@ permissions:
 jobs:
   codeql:
     uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@400691f622a86ce2a4945b166c8afdf95c2e9453 # main, this PR's head; re-pin to a release tag once tagged
+    with:
+      # Override the reusable workflow's remote @main default: this repo IS
+      # Cursor-Governance, so the config file already sits in the checked-out
+      # tree at any ref (PR branch, push, or main). A local path resolves
+      # against the workspace instead of fetching a remote ref via the
+      # Contents API -- avoids a 404 on PRs before this file exists on main.
+      config-file: ./.github/codeql/codeql-config.yml
     permissions:
       contents: read
       security-events: write
