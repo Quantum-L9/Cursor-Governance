@@ -6,8 +6,6 @@ Uses sed for extraction (no manual code writing).
 
 from __future__ import annotations
 
-from core.decorators import must_stay_async
-
 # ============================================================================
 __dora_meta__ = {
     "component_name": "Extract",
@@ -53,7 +51,6 @@ async def _run_shell(cmd: str, cwd: str) -> tuple[int, str, str]:
     return proc.returncode or 0, stdout.decode(), stderr.decode()
 
 
-@must_stay_async("callers use await")
 async def extract_files_node(state: WorkflowState) -> dict:
     """
     Extract code blocks from source document to harvest directory.

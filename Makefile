@@ -1,7 +1,11 @@
-.PHONY: help sync wiring-check symlinks-check symlinks-install path-lint precommit backup push graphiti-health lint
+.PHONY: help sync wiring-check symlinks-check symlinks-install path-lint precommit backup push graphiti-health lint venv
 
 help:
-	@echo "Targets: sync wiring-check symlinks-check symlinks-install path-lint precommit backup push graphiti-health lint"
+	@echo "Targets: sync wiring-check symlinks-check symlinks-install path-lint precommit backup push graphiti-health lint venv"
+
+## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
+venv:
+	uv sync --locked --extra dev
 
 ## Fast-forward-only pull of this clone from origin/main (same as sessionStart hook)
 sync:
@@ -36,9 +40,9 @@ backup:
 push: precommit backup
 
 ## Check Graphiti tunnel + MCP tool-plane health (degraded MCP is expected pre-full-wiring)
-graphiti-health:
-	python3 ops/graphiti/graphiti_memory_client.py health
+graphiti-health: venv
+	uv run python3 ops/graphiti/graphiti_memory_client.py health
 
-## Ruff lint (requires: pip install -e ".[dev]")
-lint:
-	ruff check .
+## Ruff lint, via the locked venv (run `make venv` first, or let this pull it in)
+lint: venv
+	uv run ruff check .

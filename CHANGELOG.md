@@ -91,6 +91,35 @@ session (see below).
 - `intelligence/reasoning/reasoning-snapshot-generator.py` — kept per
   explicit decision; needs a follow-up fix (see `TODO.md`).
 
+### l9-ci-core v2 integration
+
+- Audited the `Quantum-L9/.github` \u2194 `Quantum-L9/l9-ci-core` integration
+  end-to-end (git tags, tree contents, registry). Found the org's
+  `workflow-interface-registry.yml` and 8 of 9 `workflow-templates/*.yml`
+  starters reference `l9-ci-core@v1`, a tag that does not exist (only
+  `v0.1.0` exists) and describe a 9-kernel workflow set (`pr-pipeline.yml`
+  etc.) that `l9-ci-core`'s v2 rewrite replaced entirely. Filed
+  [`Quantum-L9/.github#7`](https://github.com/Quantum-L9/.github/issues/7).
+- Added `.github/workflows/l9-lint-test.yml`, adopted verbatim from
+  `l9-ci-core` v2's `docs/templates/l9-lint-test.yml` (the documented
+  consumer-side replacement for the retired v1 `pr-pipeline.yml`'s generic
+  lint/test half \u2014 Core v2 intentionally does not own this, per
+  `docs/consumer-lint-test.md`). `TEST_DIR`/`SOURCE_DIR` set to `.` (no
+  `tests/` convention exists yet in this repo).
+- Investigated `l9-ci-core`'s governed `profile-normalize-semgrep.yml`
+  reusable workflow as a CodeQL companion/replacement candidate.
+  **Not adopted** \u2014 its nested `normalize-semgrep-report.yml` does its own
+  independent `git checkout` of the caller's exact `github.sha` and reads
+  `report-path` from that checkout (no `upload-artifact`/`download-artifact`
+  hand-off from a prior job), meaning the raw semgrep report would need to
+  already be committed at that revision before the workflow runs \u2014 an
+  undocumented consumer contract gap in `l9-ci-core` itself, not something
+  to build speculatively. CodeQL remains the security scanner for this repo.
+- Added `[tool.pytest.ini_options]` to `pyproject.toml` (`testpaths = ["."]`,
+  `norecursedirs` mirroring the ruff archived-dir exclude list) so the new
+  workflow's `pytest .` invocation doesn't collect
+  `commands/_archived/do-templates/test_example.py`.
+
 ### Pre-commit / ruff hardening
 - `.pre-commit-config.yaml` — added top-level
   `exclude: '(^|/)_?archive(d)?/'` so every hook (present and future) skips

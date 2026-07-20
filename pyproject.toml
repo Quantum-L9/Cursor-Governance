@@ -23,6 +23,16 @@ dev = [
     "pytest>=8.0",
 ]
 
+# Repo-root layout (rules/, skills/, commands/, ops/, ...) is not an installable
+# package — pyproject.toml exists only to pin the dependency/interpreter contract.
+# Without this, `uv sync` tries to build+install "cursor-governance" itself and
+# setuptools' auto-discovery fails on the many top-level dirs.
+[tool.uv]
+package = false
+# Floor-pin the resolver itself — a much older/newer `uv` binary can change lock
+# resolution behavior even with an identical uv.lock. Bump alongside `uv self update`.
+required-version = ">=0.11.23"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
@@ -42,6 +52,23 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+# No `tests/` convention yet — this repo has 2 test_*.py files total, discovered
+# by scanning from root. norecursedirs mirrors [tool.ruff] exclude so archived
+# reference code and vendored governance symlinks are never collected.
+[tool.pytest.ini_options]
+testpaths = ["."]
+norecursedirs = [
+    "_archived",
+    "_archive",
+    "archive",
+    "archived",
+    "current_work",
+    "C_GOV_FILES",
+    ".cursor-commands",
+    ".cursor",
+    ".git",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

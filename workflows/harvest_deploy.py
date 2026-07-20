@@ -70,7 +70,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from core.decorators import must_stay_async
 from langgraph.graph import END, START, StateGraph
 
 from workflows.nodes import (
@@ -184,7 +183,6 @@ def create_harvest_deploy_graph() -> StateGraph:
 # =============================================================================
 
 
-@must_stay_async("callers use await")
 async def run_harvest_deploy(
     source_document: str,
     harvest_directory: str,

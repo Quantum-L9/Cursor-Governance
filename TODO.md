@@ -70,6 +70,72 @@ Heaviest files: `workflows/gmp_executor.py` (12), `ops/scripts/operational-overs
 `workflows/harvest_executor.py` (6), `workflows/runner.py` (5), `workflows/__init__.py` (5).
 Run `ruff check .` from repo root for the full current list.
 
+## mypy debt (354 errors / 25 files, tracked 2026-07-19)
+
+`.github/workflows/l9-lint-test.yml` (adopted from `l9-ci-core` v2's consumer
+template) runs `mypy .` unscoped, same as it runs `ruff check .` — by explicit
+decision, shipped as-is with debt tracked rather than holding the workflow
+back or silently dropping the mypy step. **CI will show red on every PR
+until this is fixed.**
+
+- [ ] `workflows/gmp_executor.py` — ~40 errors, nearly all `Item "None" of
+  "Optional[GMPState]" has no attribute "X"` (`union-attr`). Fix: add a
+  `_require_state()` guard (per the established L9 pattern — raise if
+  `None`, use the narrowed local) instead of accessing `self.state.X` directly
+  everywhere.
+- [ ] `workflows/dags/inspect_dag.py`, `workflows/harvest_deploy.py` — langgraph
+  `StateGraph`/`CompiledStateGraph` return-type and `.ainvoke` attribute
+  mismatches — likely a langgraph version/stub mismatch, investigate
+  `langgraph` version pin before treating as app-code bugs.
+- [ ] `workflows/nodes/{validate,report}.py` — `Optional[str]` used unguarded
+  (`arg-type`/`index`) — real potential `None`-handling bugs, not just
+  annotation noise.
+- [ ] `workflows/state.py:55` — incompatible redefinition of a reducer
+  function's type signature.
+- [ ] `ops/scripts/transcript_distiller.py:58` — `datetime.UTC` doesn't exist
+  on this mypy's stdlib stubs target; check `requires-python`/mypy
+  `python_version` alignment.
+- [ ] No `[tool.mypy]` section exists yet in `pyproject.toml` — add one
+  (pinning `python_version`, `exclude` matching the ruff archived-dirs list)
+  once these are triaged, so local `mypy .` matches CI exactly.
+
+Run `mypy . --show-error-codes --ignore-missing-imports --exclude
+'_archived|_archive|archive|archived|C_GOV_FILES|current_work'` from repo
+root for the full current list.
+
+## Missing `tools.validation.validate_external_code` (found + fixed-partially 2026-07-19)
+
+While wiring `l9-lint-test.yml`, discovered `import workflows` was completely
+broken at runtime (not just a lint nit) — traced to two nonexistent packages:
+
+- [x] **`core.decorators.must_stay_async`** — **fixed**: never existed in git
+  history (`git log --all` confirms), and every function it decorated
+  (`workflows/nodes/{report,extract,inject,validate,checkpoint,deploy}.py`,
+  `workflows/harvest_deploy.py`, `workflows/dags/inspect_dag.py` \u00d77) was
+  already correctly declared `async def` \u2014 the decorator was a pure
+  no-op-shaped safety wrapper, not load-bearing behavior. Removed the
+  import + all 8 `@must_stay_async("callers use await")` decorator lines.
+  `import workflows` now succeeds up to the next gap below.
+- [ ] **`tools.validation.validate_external_code`** \u2014 **deferred, real gap,
+  needs a dedicated pass**: `workflows/dags/inspect_dag.py`'s
+  `compliance_node` genuinely calls 5 functions from this nonexistent
+  module (`ValidationIssue`, `extract_python_code_blocks`,
+  `validate_adr_compliance`, `validate_config_values`, `validate_imports`)
+  to power what looks like the actual backing implementation for the
+  `/inspect` code-gate slash command (see `02-slash-commands.mdc`:
+  "Code gate — validate external code before import"). Unlike
+  `must_stay_async`, this is real designed logic (severity buckets,
+  issue-type classification), not a no-op \u2014 deleting the import would
+  gut actual functionality. `skills/l9-inspect/` only has the protocol
+  doc (`SKILL.md` + `references/inspect-protocol.md`), not the executable
+  validators, so this can't be resolved by pointing at an existing
+  alternative either. `tools/` was never tracked in git history (same as
+  `core/` was). Explicit decision 2026-07-19: leave broken, implement
+  properly in a dedicated follow-up pass — do not stub or delete.
+  `pytest .` will show exactly 1 collection error
+  (`workflows/dags/test_pipeline_dag.py`, via the `workflows.dags` import
+  chain) until this is implemented.
+
 ## Already superseded (do not restore)
 
 | Deleted | Replaced by |
