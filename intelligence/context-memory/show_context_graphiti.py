@@ -6,11 +6,39 @@ loading the last 7-day JSON blob. Cold-start becomes relational, not narrative.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 
+_MAX_TASK_TYPE_LEN = 500
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _validate_task_type(task_type: str) -> str:
+    """Validate untrusted CLI input before it reaches a subprocess argument.
+
+    Rejects non-string input, oversized input, and control/null bytes so a
+    malformed argv[1] can't smuggle unexpected bytes into the downstream
+    `l9_ops_mcp.cli` process.
+    """
+    if not isinstance(task_type, str):
+        raise ValueError(f"task_type must be a string, got {type(task_type).__name__}")
+    if not task_type.strip():
+        raise ValueError("task_type must not be empty")
+    if len(task_type) > _MAX_TASK_TYPE_LEN:
+        raise ValueError(f"task_type exceeds {_MAX_TASK_TYPE_LEN} characters")
+    if _CONTROL_CHARS.search(task_type):
+        raise ValueError("task_type contains control characters")
+    return task_type
+
 
 def restore(task_type: str = "current active projects and open decisions") -> None:
+    try:
+        task_type = _validate_task_type(task_type)
+    except ValueError as exc:
+        print(f"Invalid task_type: {exc}")
+        return
+
     payload = {"query": task_type, "group_ids": None, "limit": 10}
     proc = subprocess.run(
         [sys.executable, "-m", "l9_ops_mcp.cli", "query", json.dumps(payload)],
