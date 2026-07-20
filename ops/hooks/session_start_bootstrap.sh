@@ -49,21 +49,10 @@ SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 
-<<<<<<< HEAD
-# Recreate the pinned Python env from uv.lock every session (near-instant no-op once
-# already in sync). Makes every `python3` call below — and everything this script
-# spawns — use the exact locked interpreter/dependency versions instead of whatever
-# happens to be in the ambient global site-packages. `--locked` fails loudly instead
-# of silently re-resolving if pyproject.toml drifts out of sync with uv.lock.
-=======
 # Recreate/refresh the pinned .venv from uv.lock and put it first on PATH for the
-# rest of this hook chain (and any tooling launched from this shell), so python3/
-# ruff/mypy resolve to the locked 3.12 interpreter instead of a stray system one.
->>>>>>> origin/main
+# rest of this hook chain. `--locked` fails loudly if pyproject.toml drifts from uv.lock.
+# --extra dev keeps ruff/pytest in the SAME locked venv as runtime deps.
 if command -v uv >/dev/null 2>&1 && [ -f "$GC/uv.lock" ]; then
-  # --extra dev keeps ruff/pytest in the SAME locked venv as the runtime deps, so
-  # `make lint`/`make precommit`/editor tooling never fall back to an unpinned
-  # global install.
   if ( cd "$GC" && uv sync --locked --extra dev >/dev/null 2>&1 ) && [ -x "$GC/.venv/bin/python3" ]; then
     export PATH="$GC/.venv/bin:$PATH"
     PARTS+=("venv: locked (uv.lock)")
@@ -71,6 +60,25 @@ if command -v uv >/dev/null 2>&1 && [ -f "$GC/uv.lock" ]; then
     PARTS+=("venv: uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev")
   fi
 fi
+
+# Excerpt files from the *loaded workspace* memory-bank (CURSOR_PROJECT_DIR), never from
+# the Cursor-Governance clone. Skip missing files; keep excerpts short for hook payload.
+append_repo_memory_bank() {
+  local repo="$1"
+  local bank="$repo/memory-bank"
+  local f excerpt
+  if [ -z "$repo" ] || [ ! -d "$bank" ]; then
+    PARTS+=("memory-bank: absent in workspace (wire/scaffold via setup_workspace_symlinks)")
+    return 0
+  fi
+  PARTS+=("memory-bank repo=$(basename "$repo")")
+  for f in activeContext.md SESSION_HANDOFF.md progress.md tasks.md tech-debt.md; do
+    if [ -f "$bank/$f" ]; then
+      excerpt="$(head -20 "$bank/$f" | tr '\n' ' ' | cut -c1-500)"
+      PARTS+=("memory-bank/$f: ${excerpt}")
+    fi
+  done
+}
 
 needs_wire=0
 if [ -n "$REPO" ]; then
@@ -124,10 +132,7 @@ else
   PARTS+=("graphiti: disabled or CLI missing")
 fi
 
-if [ -n "$REPO" ] && [ -f "$REPO/memory-bank/activeContext.md" ]; then
-  EXCERPT="$(head -12 "$REPO/memory-bank/activeContext.md" | tr '\n' ' ' | cut -c1-400)"
-  PARTS+=("memory-bank: ${EXCERPT}")
-fi
+append_repo_memory_bank "$REPO"
 
 if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   if bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" >/dev/null 2>&1; then

@@ -15,10 +15,11 @@ auto_chain_on_fail:
 Full preflight check before starting work:
 
 0. **Governance wiring gate** — `.cursor-commands` SSOT + `sessionEnd` hook (auto-chains `/wire governance` if FAIL)
-1. **Graphiti memory** — health/resolve + read `memory-bank/activeContext.md` (T0 SSOT); sessionStart orchestrator prefetches when enabled
-2. **Legacy C1** — read-only advisory health (deprecated writes)
-3. **Redis session context** — resume from last `/end-session` handoff
-4. Load Graphiti/C1 context (PICKUP packets, lessons)
+1. **Graphiti memory** — health/resolve + prefetch when reachable (additive; never replaces T0)
+2. **T0 memory-bank** — always load full workspace suite (`activeContext`, `SESSION_HANDOFF`, `progress`, `tasks`, `tech-debt`) whether Graphiti is up or down
+3. **Legacy C1** — read-only advisory health (deprecated writes)
+4. **Redis session context** — resume from last `/end-session` handoff (additive with T0 + Graphiti)
+5. Load Graphiti/C1 context (PICKUP packets, lessons) when available
 5. Extract GMP Queue from TODO.md (if present)
 6. Identify priorities
 
@@ -71,14 +72,33 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
 
 | Status | Meaning | Action |
 |--------|---------|--------|
-| ✅ healthy | Graphiti VPS reachable | Proceed; prefetch runs via sessionStart hook when `GRAPHITI_MEMORY_ENABLED=1` |
-| ❌ unhealthy | VPS down or env missing | Warn; read `memory-bank/activeContext.md` only; see `ops/graphiti/DEPLOY.md` |
+| ✅ healthy | Graphiti VPS reachable | Prefetch via sessionStart hook when `GRAPHITI_MEMORY_ENABLED=1` **and** still load full T0 + Redis |
+| ❌ unhealthy | VPS down or env missing | Warn; **do not skip T0** — load full `memory-bank/` suite + Redis; see `ops/graphiti/DEPLOY.md` |
 
-**Step 0b: T0 resume SSOT**
+**Rule: stack, don't substitute.** Graphiti down ≠ “T0 only activeContext.” Until Graphiti is online you still get the full local bank + Redis. When Graphiti is online you get Graphiti **plus** the same T0 bank **plus** Redis.
+
+**Step 0b: T0 resume SSOT (loaded workspace only) — always run**
+
+Read `memory-bank/` from the **repo Cursor has open** (`CURSOR_PROJECT_DIR` / `pwd`), never from `$HOME/.cursor-governance`. End-session writes these; start-session loads **all** present files on every start (Graphiti status irrelevant):
 
 ```bash
-cat memory-bank/activeContext.md 2>/dev/null || echo "(scaffold on first wire)"
+# Workspace root = the cloned consumer/domain repo (e.g. l9-ci-core, LLM-Router)
+REPO="${CURSOR_PROJECT_DIR:-$(pwd)}"
+for f in activeContext.md SESSION_HANDOFF.md progress.md tasks.md tech-debt.md; do
+  echo "===== memory-bank/$f ====="
+  cat "$REPO/memory-bank/$f" 2>/dev/null || echo "(absent)"
+done
 ```
+
+| File | Role |
+|------|------|
+| `activeContext.md` | Short resume screen (where we left off) |
+| `SESSION_HANDOFF.md` | Full completed / in-progress / next-steps from last `/end-session` |
+| `progress.md` | Short progress bullets |
+| `tasks.md` | Active task list |
+| `tech-debt.md` | Known debt notes |
+
+Session-start hooks (`session_start_bootstrap.sh`, `session_start_memory_orchestrator.sh`) always inject excerpts of the same files from `$CURSOR_PROJECT_DIR/memory-bank/`, independent of Graphiti health.
 
 **Step 0c: Legacy C1 (advisory, read-only)**
 
