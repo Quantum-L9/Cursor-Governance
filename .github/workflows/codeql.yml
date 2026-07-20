@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   codeql:
-    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@main
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@400691f622a86ce2a4945b166c8afdf95c2e9453 # main, this PR's head; re-pin to a release tag once tagged
     permissions:
       contents: read
       security-events: write
