@@ -2,7 +2,7 @@
 title: L9 Governance
 version: 2.0.0
 created: 2025-01-27
-updated: 2026-07-04
+updated: 2026-07-19
 owner: Igor Beylin
 source: Post-Suite-6, Graphiti-native governance
 tags: [governance, skills, commands, rules, ops, graphiti]
@@ -21,7 +21,21 @@ Centralized, IDE-agnostic governance system for L9/Quantum-L9 repos. The clone a
 symlink: `.cursor-commands` → `~/.cursor-governance/`.
 
 See `CANONICAL_LAW.md` for the authoritative, binding contract this README
-summarizes.
+summarizes, and `AGENTS.md` for exactly how a session activates this
+governance layer.
+
+## ⚡ Activation (TL;DR)
+
+Activation is automatic — one hook, no manual step:
+
+`ops/hooks/session_start_bootstrap.sh` → installed at
+`~/.cursor/hooks/session-start-bootstrap.sh` → registered in
+`~/.cursor/hooks.json` under `sessionStart`. It syncs this clone, auto-wires
+symlinks, checks Graphiti (degraded is expected — not fully connected yet),
+and reads `memory-bank/activeContext.md`. See `AGENTS.md` §2 for the full
+activation contract and manual/repair commands. `start-session.yaml` (the
+old YAML "protocol") was retired 2026-07-19 — the `.sh` hook above is now the
+sole activation mechanism.
 
 ## 📁 Directory Structure
 
@@ -48,6 +62,7 @@ summarizes.
 ├── C_GOV_FILES/       # Legacy duplicate tree — pending removal (see hygiene PRs)
 ├── ORG_INVARIANTS.yaml # Canonical Quantum-L9 org policy
 ├── CANONICAL_LAW.md   # Authoritative governance contract (read first)
+├── AGENTS.md          # Activation contract + agent operating rules (read second)
 └── README.md          # This file
 ```
 
@@ -70,6 +85,7 @@ directory listing, including this one.
 
 ### Governance contract
 - [`CANONICAL_LAW.md`](CANONICAL_LAW.md) — SSOT, symlink law, memory layer, anti-patterns
+- [`AGENTS.md`](AGENTS.md) — activation contract, change policy, agent operating rules
 - [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — canonical Quantum-L9 org policy
 
 ### Skills
@@ -109,5 +125,5 @@ clone at `~/.cursor-governance/` is the SSOT working copy — see
 
 ---
 
-**Last Updated:** 2026-07-04
+**Last Updated:** 2026-07-19
 **Version:** 2.0.0

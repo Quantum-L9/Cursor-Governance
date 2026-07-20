@@ -12,7 +12,7 @@ created: "2026-01-07T00:00:00Z"
 updated: "2026-07-04T00:00:00Z"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
-sister_file: "start-session.yaml"
+sister_file: "ops/hooks/session_start_bootstrap.sh"
 execution_mode: "manual_and_automatic"
 ---
 

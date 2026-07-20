@@ -58,3 +58,10 @@ memory-bank/
 
 *.pyc
 __pycache__/
+
+# ── Self-referential workspace wiring (SSOT repo is not its own "consumer" repo) ──
+# setup_workspace_symlinks.sh can be run from inside ~/.cursor-governance itself,
+# which creates a symlink pointing to itself plus a local .cursor/ dir. Harmless,
+# but must never be committed — the SSOT clone is a source, not a consumer.
+/.cursor-commands
+/.cursor/

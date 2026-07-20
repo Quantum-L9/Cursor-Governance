@@ -1,0 +1,14 @@
+# Normalize line endings for everyone, regardless of OS/editor config.
+* text=auto eol=lf
+
+# Never diff/merge generated or lock-style artifacts as text.
+integrity/manifest-lock.json -diff
+*.lock -diff
+
+# GMP/audit reports are generated evidence, not hand-authored prose — keep
+# them out of GitHub's linguist stats and PR diff noise.
+reports/**/*.md linguist-generated=true
+governance-health-report.json linguist-generated=true
+
+# Shell scripts must always execute regardless of checkout platform.
+*.sh text eol=lf

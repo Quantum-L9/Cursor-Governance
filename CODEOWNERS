@@ -1,0 +1,18 @@
+# CODEOWNERS for Quantum-L9/Cursor-Governance
+#
+# Note: this file only governs THIS repo. It does not cascade org-wide, and
+# the nested .github/.github/CODEOWNERS in Quantum-L9/.github does not
+# cascade to this repo either — each repo needs its own.
+#
+# Single-maintainer org today (confirmed via `gh api orgs/Quantum-L9/members`).
+# Split this file by path once a second reviewer joins.
+
+*                                       @cryptoxdog
+
+# High-risk files per AGENTS.md §5.2 — listed explicitly so a future
+# multi-owner split doesn't silently drop required review on these.
+/CANONICAL_LAW.md                      @cryptoxdog
+/ops/scripts/resolve_governance_paths.sh @cryptoxdog
+/ops/scripts/backup_to_github.sh       @cryptoxdog
+/ops/hooks/session_start_bootstrap.sh  @cryptoxdog
+/ops/scripts/_archived/                @cryptoxdog

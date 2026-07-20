@@ -1,0 +1,21 @@
+repos:
+  - repo: local
+    hooks:
+      - id: no-hardcoded-paths
+        name: No hardcoded /Users or /home paths (governance SSOT path contract)
+        entry: bash ops/scripts/validate_governance_no_hardcoded_paths.sh
+        language: system
+        pass_filenames: false
+
+      - id: symlinks-check
+        name: Governance symlink wiring is healthy
+        entry: bash ops/scripts/validate_governance_symlinks.sh
+        language: system
+        pass_filenames: false
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

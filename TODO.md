@@ -1,15 +1,6 @@
 # GlobalCommands — Tech Debt (cleanup later)
 
-Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L9 skills, `.cursor/rules/*.mdc`, `AGENTS.md`, and active wiring scripts). `start-session.yaml` kept for realignment.
-
-## Priority — realign session startup
-
-- [ ] **`start-session.yaml`** — Remove/replace references to deleted paths:
-  - `templates/.cursorrules`
-  - `startup/REASONING_STACK.yaml`
-  - `startup/system_capabilities.md`
-  - Other dead steps: `startup/probabilistic_governance_activated.md`, `startup/production_speed_pack.md`, `launchctl com.tenx.*`
-  - Align to v6 model: governance-wiring gate → skills (`l9-structured-reasoning`, etc.) → `.cursor/rules/*.mdc` → `AGENTS.md`
+Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L9 skills, `.cursor/rules/*.mdc`, `AGENTS.md`, and active wiring scripts). `start-session.yaml` was deleted (2026-07-19) — it was never wired into any hook and had drifted from the archived pre-Graphiti learning pipeline. `ops/hooks/session_start_bootstrap.sh` is the real, live activation script: installed at `~/.cursor/hooks/session-start-bootstrap.sh`, registered in `~/.cursor/hooks.json` under `sessionStart`, runs automatically every session.
 
 ## Dangling references (broken if invoked)
 

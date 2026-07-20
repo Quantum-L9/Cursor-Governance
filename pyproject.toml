@@ -1,0 +1,38 @@
+[project]
+name = "cursor-governance"
+version = "2.0.0"
+description = "L9 Governance — rules, skills, commands, and activation automation for Quantum-L9 coding workspaces"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Igor Beylin" }]
+
+# Derived from actual imports in ops/graphiti/*.py and workflows/dags/*.py — not
+# aspirational. Re-derive with `grep -rhoE "^(import|from) [a-zA-Z0-9_]+"` before
+# adding entries here; do not add packages "for later."
+dependencies = [
+    "pydantic>=2.0,<3",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    "ops/scripts/_archived",
+    "current_work/harvested",
+    "C_GOV_FILES",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
