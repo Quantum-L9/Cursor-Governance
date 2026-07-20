@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "FND-AG-002"
 component_name: "Escalation Router Agent"
@@ -73,7 +73,7 @@ Route failed validations to appropriate governance paths with intelligent decisi
 }
 ```
 
-## Suite 6 Enhancements
+## L9 Governance Enhancements
 - Integration with intelligence layer for smart routing decisions
 - Autonomous operation with learning capabilities
 - Real-time status tracking and monitoring

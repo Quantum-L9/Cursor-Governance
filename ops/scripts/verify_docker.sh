@@ -1,6 +1,6 @@
 #!/bin/bash
-# === SUITE 6 CANONICAL HEADER ===
-# suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 # version: "6.0.0"
 # component_id: "OPS-MCP-003"
 # component_name: "Docker Verification Script"

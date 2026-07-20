@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "OPS-003"
 component_name: "Governance Dashboard Operations Layer"
@@ -40,7 +40,7 @@ success_metrics: ["dashboard_refresh_rate >= 1.0", "data_accuracy >= 0.95", "vis
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "governance-dashboard.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive governance dashboard capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive governance dashboard capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["operations", "dashboard", "governance", "visualization", "monitoring"]

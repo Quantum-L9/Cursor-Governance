@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "1.0.0"
 component_id: "INT-CM-001"
 component_name: "Context Memory System"
@@ -243,5 +243,5 @@ ls -la ops/logs/chat_exports/
 
 - Created: 2025-11-08
 - Pattern: Mirrors recursive learning system
-- Integration: Cursor Governance Suite 6
+- Integration: L9 Governance
 

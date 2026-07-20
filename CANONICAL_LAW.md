@@ -1,123 +1,166 @@
-# Cursor Governance — Canonical Law
+# L9 Governance — Canonical Law
 
 **Status:** authoritative  
-**Governance root (SSOT):** `$HOME/Dropbox/Cursor Governance/`  
-**GlobalCommands (SSOT body):** `$HOME/Dropbox/Cursor Governance/GlobalCommands/`  
-**GitHub backup:** `cryptoxdog/Cursor-Governance`  
-**Updated:** 2026-06-06
+**Runtime:** L9 Governance  
+**Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone  
+**GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`  
+**Updated:** 2026-07-04 (Post-Suite-6 / Graphiti-native rewrite)
 
-## 1. Single source of truth
+---
 
-| Asset | Canonical path | Repo access |
-|-------|----------------|-------------|
-| **GlobalCommands body** | Dropbox `GlobalCommands/` | **`.cursor-commands/` only** |
-| CANONICAL_LAW | Dropbox `CANONICAL_LAW.md` | `.cursor/governance/CANONICAL_LAW.md` (file symlink) |
-| L9 skills | `GlobalCommands/skills/` | `@.cursor-commands/skills/` |
-| Slash commands | `GlobalCommands/commands/` | `@.cursor-commands/commands/` |
-| Global rules | `GlobalCommands/rules/` | `@.cursor-commands/rules/` |
-| Ops scripts | `GlobalCommands/ops/scripts/` | `.cursor-commands/ops/scripts/` |
+## 1. Single Source of Truth
 
-**Law:** GlobalCommands appears **once** in each repo: `.cursor-commands` → `GlobalCommands/`.  
-**Never** expose GlobalCommands under `.cursor/governance/` — that path is local-only (law file + README).
+| Asset | Canonical path | Access method |
+|-------|----------------|---------------|
+| **Governance body** | `~/.cursor-governance/` (clone root) | `.cursor-commands/` symlink |
+| CANONICAL_LAW | `~/.cursor-governance/CANONICAL_LAW.md` | `.cursor/governance/CANONICAL_LAW.md` (file symlink) |
+| L9 skills | `skills/` | `@.cursor-commands/skills/` |
+| Workflows/DAGs | `workflows/dags/` | Executed by DAG runner |
+| Global rules | `rules/` | `@.cursor-commands/rules/` |
+| Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
+| Intelligence | `intelligence/` | Active signal corpus (never archive) |
+| **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
 
-## 2. Required symlinks — every coding repo
+**Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.  
+**Never** expose the governance root under `.cursor/governance/` — that path holds only the law file + README.
 
-```bash
-bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh
-```
+---
 
-| Repo path | Target | Purpose |
-|-----------|--------|---------|
-| `.cursor-commands` | `GlobalCommands/` | **sole global entry** |
-| `.cursor/governance/CANONICAL_LAW.md` | Dropbox `CANONICAL_LAW.md` | law file only |
-| `.cursor/governance/` | **local directory** | not a symlink to Dropbox root |
+## 2. IDE Adapter Model
+
+This governance layer is **IDE-agnostic**. The `.cursor-commands/` symlink is one adapter. Future adapters (Windsurf, VS Code, CLI) will consume the same root via their own conventions.
+
+| Adapter | Entry point | Status |
+|---------|-------------|--------|
+| Cursor | `.cursor-commands/` → clone root | Active |
+| Windsurf | TBD | Planned |
+| VS Code | TBD | Planned |
+| CLI | Direct path reference | Active |
+
+### Required symlinks — every coding workspace
+
+| Workspace path | Target | Purpose |
+|----------------|--------|---------|
+| `.cursor-commands` | `~/.cursor-governance/` | Sole global entry |
+| `.cursor/governance/CANONICAL_LAW.md` | `~/.cursor-governance/CANONICAL_LAW.md` | Law file only |
+| `.cursor/governance/` | **local directory** | Not a symlink to governance root |
 
 ### Forbidden
 
 | Path | Why |
 |------|-----|
-| `.cursor/governance` → Dropbox root | exposes duplicate `GlobalCommands/` tree |
-| `.cursor/governance/GlobalCommands` | duplicate of `.cursor-commands` |
-| `.cursor/commands` | duplicate of `.cursor-commands/commands` |
-| `.cursor/skills` | duplicate of `.cursor-commands/skills` |
+| `.cursor/governance` → governance root | Exposes duplicate tree |
+| `.cursor/governance/GlobalCommands` | Legacy duplicate |
+| `.cursor/commands` | Duplicate of `.cursor-commands/commands` |
+| `.cursor/skills` | Duplicate of `.cursor-commands/skills` |
 
-Repo `.cursor/rules/` — PlasticOS overlay only (real files, not global copies).
+---
 
-Validate:
-
-```bash
-bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh
-```
-
-## 3. User-level Cursor (every machine)
+## 3. User-Level Configuration (every machine)
 
 | Path | Target |
 |------|--------|
-| `~/.cursor/skills` | `GlobalCommands/skills/` |
-| `~/.cursor/commands` | `GlobalCommands/commands/` |
+| `~/.cursor/skills` | `~/.cursor-governance/skills/` |
+| `~/.cursor/commands` | `~/.cursor-governance/commands/` |
 
-## 4. Naming
+---
+
+## 4. Naming Conventions
 
 | Prefix | Location |
 |--------|----------|
-| `l9-*` | `GlobalCommands/skills/` |
-| `plasticos-*` | repo `.claude/skills/` |
-| repo rules | repo `.cursor/rules/` only |
+| `l9-*` | `skills/` |
+| `plasticos-*` | Repo-local `.claude/skills/` |
+| Repo rules | Repo `.cursor/rules/` only |
 
-## 5. GitHub backup (Cursor-Governance)
+---
+
+## 5. GitHub SSOT
 
 | Item | Value |
 |------|-------|
-| Remote | `https://github.com/cryptoxdog/Cursor-Governance.git` |
+| Remote (origin) | `https://github.com/Quantum-L9/Cursor-Governance.git` |
 | Branch | `main` |
-| Git root | Dropbox `GlobalCommands/` (same tree as `.cursor-commands/`) |
-| Law file | Copied to repo root as `CANONICAL_LAW.md` on each backup |
+| Git root | `~/.cursor-governance` |
+| Pull (session start) | `governance_sync.sh` — guarded ff-only |
+| Push (session end) | `backup_to_github.sh` — commits + rebases + pushes |
+| Law file | Clone root: `CANONICAL_LAW.md` |
 
 **Manual:**
 
 ```bash
 bash .cursor-commands/ops/scripts/backup_to_github.sh
-# or: /governance-backup
-# or (PlasticOS): make governance-backup
 ```
 
 **Automatic (every session end):**
 
-1. Run once: `bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh`
-2. Registers `sessionEnd` in `~/.cursor/hooks.json` → `ops/hooks/session_end_governance_backup.sh`
-3. Log: `~/.cursor-governance/backup.log`
+1. `sessionEnd` hook → `ops/hooks/session_end_governance_backup.sh`
+2. Log: `~/.cursor-governance/backup.log`
 
 Skip one session: `GOVERNANCE_BACKUP_SKIP=1`
 
-## 6. Wire skills
+---
+
+## 6. Skill Wiring
 
 - New global skill → `l9-skill-compiler`, then `l9-wire-skill-into-repo`
-- New PlasticOS skill → repo `.claude/skills/plasticos-*` (not GlobalCommands)
+- New repo-local skill → `.claude/skills/plasticos-*` (not governance root)
 
-## 7. Anti-patterns
+---
 
-- Second GlobalCommands tree in any repo (`.cursor/governance/GlobalCommands`, `.cursor/skills`, etc.)
-- Editing GitHub directly without syncing Dropbox SSOT first
-- Committing `.cursor-commands` symlink into app repos (symlink only; content lives in Dropbox + Cursor-Governance)
+## 7. Anti-Patterns
 
-## 8. Setup checklist
+- Second governance tree in any repo
+- Hard-resetting or force-pushing the SSOT clone
+- Committing `.cursor-commands` symlink target into app repos (symlink only; content lives in `~/.cursor-governance`)
+- Referencing archived scripts (`ops/scripts/_archived/`) as active dependencies
+- Using `cursor_memory_client.py` — deprecated, use Graphiti
 
-```bash
-bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh
-bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh
-bash .cursor-commands/ops/scripts/backup_to_github.sh   # first GitHub sync
-```
+---
 
-## 9. Graphiti memory (GLOBAL-001)
+## 8. Memory Layer (Graphiti-Native)
 
-| Layer | SSOT | Path |
-|-------|------|------|
-| T0 resume | `memory-bank/` | repo root (gitignored scaffold via `setup_workspace_symlinks.sh`) |
-| T1/T2 semantic | Graphiti VPS | `ops/graphiti/graphiti_memory_client.py` |
-| Legacy read-only | C1 MCP | deprecated — `03-mcp-memory.mdc` |
+| Layer | SSOT | Interface |
+|-------|------|-----------|
+| Durable episodes | Graphiti (Neo4j on VPS) | `intelligence/context-memory/graphiti_sink.py` |
+| Graph query | Graphiti (Neo4j on VPS) | `intelligence/context-memory/show_context_graphiti.py` |
+| Local cache | `intelligence/context-memory/sessions/*.json` | Fallback only |
+| MCP interface | `ops/graphiti/graphiti_memory_client.py` | L9-Ops-MCP |
 
 **Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`  
 **Skill:** `skills/l9-graphiti-memory/SKILL.md`  
-**Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES` (default off until GATES-002 proven)
+**Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES`
 
-Prefetch runs on `sessionStart` via `ops/hooks/session_start_memory_orchestrator.sh`. Writes to C1 from `learning_to_mcp_bridge.py` are deprecated — use Graphiti bootstrap after VPS deploy.
+Session start prefetch: `ops/hooks/session_start_memory_orchestrator.sh`
+
+### Deprecated (archived)
+
+- `cursor_memory_client.py` — replaced by `graphiti_memory_client.py`
+- `learning_to_mcp_bridge.py` — archived
+- All `install_*.sh` scripts (except `install_export_job.sh`) — archived
+- All recursive learning daemon scripts — archived
+
+---
+
+## 9. Intelligence & Signal Mining
+
+The `intelligence/` directory is a **permanent, active signal corpus**. All data within it — including exported chats, logs, reasoning traces, and meta-learning artifacts — is valuable and will be mined for knowledge graph enrichment.
+
+**Active mining scripts (do not archive):**
+- `ops/scripts/export_chats.sh`
+- `ops/scripts/parse_chat_exports.py`
+- `ops/scripts/transcript_distiller.py`
+- `ops/scripts/run_distiller.sh`
+- `ops/scripts/install_export_job.sh`
+
+---
+
+## 10. Governance Enforcement
+
+| Flag | Purpose | Default |
+|------|---------|---------|
+| `GOVERNANCE_HARDENING_ENABLED` | Lock production environment | `false` |
+| `GOVERNANCE_BACKUP_SKIP` | Skip one session backup | `false` |
+| `GOVERNANCE_SYNC_HARD_RESET` | Allow hard reset on sync (dangerous) | `false` |
+| `GRAPHITI_MEMORY_ENABLED` | Enable Graphiti memory layer | `true` |
+| `GRAPHITI_WRITE_GATES` | Enable write-through to graph | `true` |

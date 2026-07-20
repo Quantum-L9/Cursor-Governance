@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "CMD-001"
 component_name: "YNP Mode Profile"
@@ -40,7 +40,7 @@ success_metrics: ["prompt_reduction >= 0.70", "task_completion_rate >= 0.95", "y
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "ynp.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive YNP mode capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive YNP mode capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["high-velocity", "ynp", "strategic", "co-pilot", "autonomous", "command"]

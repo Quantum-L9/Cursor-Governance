@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "EXE-WF-001"
 component_name: "Workflow Governance Validator"
@@ -40,7 +40,7 @@ success_metrics: ["validation_accuracy >= 0.95", "compliance_rate >= 0.98", "rem
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "workflow-governance.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive workflow validation chain"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive workflow validation chain"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["workflow", "governance", "validation", "L9", "compliance"]

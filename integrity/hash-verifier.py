@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "INT-HV-001"
 component_name: "Hash Verifier"
@@ -42,7 +42,7 @@ success_metrics: ["verification_accuracy = 100%", "repair_success >= 99%", "dete
 # === MIGRATION METADATA ===
 canonical_source: "10X Governance Suite"
 generated: "2025-10-06T17:22:56Z"
-migration_notes: "Enhanced with Suite 6 canonical header"
+migration_notes: "Enhanced with L9 Governance canonical header"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["integrity", "hash", "verification", "tamper-detection", "security"]
@@ -50,7 +50,7 @@ keywords: ["hash", "sha256", "base64", "integrity", "manifest", "verification"]
 related_components: ["INT-MA-001", "EXE-VAL-001"]
 
 # === DESCRIPTION ===
-Hash Verifier - File Integrity System for Suite 6 Governance
+Hash Verifier - File Integrity System for L9 Governance Governance
 
 Modes:
 - Snapshot: Build/update integrity/manifest-lock.json with SHA-256 and Base64 snapshots

@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-ADV-001"
 component_name: "Advanced Features Profile"
@@ -40,7 +40,7 @@ success_metrics: ["parallel_speedup >= 8.0x", "preference_accuracy >= 0.90", "pe
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "advanced-features.md v1.0.0 (UserPrefPack v1.4)"
-migration_notes: "Enhanced with Suite 6 structure, comprehensive persona modules, and domain-specific rule enforcement"
+migration_notes: "Enhanced with L9 Governance structure, comprehensive persona modules, and domain-specific rule enforcement"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["advanced", "persona", "parallel", "evolution", "domain-rules", "productivity", "ynp_enabled"]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "2.0.0"
 component_id: "TEL-CD-001"
 component_name: "Calibration Dashboard"

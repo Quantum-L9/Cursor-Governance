@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "OPS-002"
 component_name: "Memory Aggregator Operations Layer"
@@ -40,7 +40,7 @@ success_metrics: ["aggregation_completeness >= 0.95", "learning_extraction_rate 
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "memory-aggregator.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive memory aggregation capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive memory aggregation capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["operations", "memory", "aggregator", "learning", "governance"]

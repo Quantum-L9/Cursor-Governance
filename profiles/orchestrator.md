@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-ORC-001"
 component_name: "Governance Orchestrator"
@@ -40,7 +40,7 @@ success_metrics: ["orchestration_accuracy >= 0.95", "layer_synchronization >= 0.
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "orchestrator.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure, comprehensive reasoning profile integration, and adaptive telemetry monitoring"
+migration_notes: "Enhanced with L9 Governance structure, comprehensive reasoning profile integration, and adaptive telemetry monitoring"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["orchestration", "governance", "coordination", "reasoning", "ynp_enabled"]

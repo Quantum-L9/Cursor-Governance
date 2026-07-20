@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "LRN-002"
 component_name: "Quick Fix Patterns Database"
@@ -40,7 +40,7 @@ success_metrics: ["fix_success_rate >= 0.95", "time_to_resolution <= 60s", "patt
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "quick-fixes.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive quick fix pattern database"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive quick fix pattern database"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["learning", "quick-fixes", "solutions", "patterns", "troubleshooting"]

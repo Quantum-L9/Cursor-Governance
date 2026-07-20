@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# === SUITE 6 CANONICAL HEADER ===
-# suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 # version: "1.0.0"
 # component_id: "OPS-VER-RLS-001"
 # component_name: "Recursive Learning System Verification"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "OPS-PCE-001"
 component_name: "Chat Export Parser"
@@ -42,7 +42,7 @@ success_metrics: ["parse_success = 100%"]
 # === MIGRATION METADATA ===
 canonical_source: "10X Governance Suite"
 generated: "2025-10-06T17:10:32Z"
-migration_notes: "Enhanced with Suite 6 canonical header"
+migration_notes: "Enhanced with L9 Governance canonical header"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["parsing", "chat", "export", "indexing", "memory"]

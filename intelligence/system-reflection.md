@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-REF-001"
 component_name: "System Reflection Intelligence Layer"
@@ -40,7 +40,7 @@ success_metrics: ["pattern_detection_rate >= 0.90", "optimization_quality >= 0.8
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "system-reflection.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive system reflection capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive system reflection capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["intelligence", "reflection", "analysis", "patterns", "governance"]

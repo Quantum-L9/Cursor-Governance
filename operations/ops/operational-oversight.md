@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "OPS-OPS-001"
 component_name: "Operational Oversight System"
@@ -161,7 +161,7 @@ All autonomous decisions logged with:
 - **Uptime**: 99.9% autonomous operation availability
 - **Learning Rate**: Continuous improvement in decision quality
 
-## Suite 6 Enhancements
+## L9 Governance Enhancements
 - Integration with formal logic validation
 - Meta-learning driven decision making
 - Cross-layer coordination and optimization

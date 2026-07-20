@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "SEC-001"
 component_name: "API Key Verification Security Layer"
@@ -40,7 +40,7 @@ success_metrics: ["validation_coverage >= 1.0", "remediation_success_rate >= 0.9
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "api-key-verification.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive API key verification capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive API key verification capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["security", "api-keys", "verification", "authentication", "governance"]

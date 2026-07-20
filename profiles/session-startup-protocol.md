@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-SSP-001"
 component_name: "Session Startup Protocol"
@@ -40,7 +40,7 @@ success_metrics: ["startup_success_rate >= 0.99", "mistake_prevention_rate >= 0.
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "session-startup-protocol.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure, reasoning/YNP/dev mode activation, and comprehensive pre-action verification"
+migration_notes: "Enhanced with L9 Governance structure, reasoning/YNP/dev mode activation, and comprehensive pre-action verification"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["protocol", "session-startup", "verification", "mistake-prevention", "governance", "critical"]
@@ -218,7 +218,7 @@ Ensure every session starts correctly with proper file loading, verification, an
    - Slash Commands ENABLED (/reasoning, /forge, /consolidate, /analyze-toolkit, /evaluate)
    - Supporting Profiles ENABLED (workflow-governance, operational-health)
    - Feature Files ENABLED (meta-learning, cursor-native-reasoning, formal-logic-validation)
-   - Suite 6 governance: ACTIVE
+   - L9 Governance governance: ACTIVE
 ```
 
 ---

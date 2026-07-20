@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "INT-LE-001"
 component_name: "Chat Learning Extractor"
@@ -380,7 +380,7 @@ def main():
     
     User: debug the current governance - figure out why it's not working
     
-    Assistant: The issue is that there's no chat extraction component in Suite 6! The system has meta-learning log, reasoning snapshot generator, governance monitor, DSL compiler, but is missing the chat conversation analyzer/extractor.
+    Assistant: The issue is that there's no chat extraction component in L9 Governance! The system has meta-learning log, reasoning snapshot generator, governance monitor, DSL compiler, but is missing the chat conversation analyzer/extractor.
     """
     
     patterns = extractor.extract_from_conversation(sample_conversation, "test_conversation")

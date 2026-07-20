@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-ADP-001"
 component_name: "Adaptive Reasoning Intelligence Layer"
@@ -40,7 +40,7 @@ success_metrics: ["reasoning_efficiency >= 0.90", "adaptation_accuracy >= 0.85",
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "adaptive-reasoning.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive adaptive reasoning capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive adaptive reasoning capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["intelligence", "adaptive", "reasoning", "governance", "tuning"]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "FND-SEC-001"
 component_name: "Governance Integrity Manager"
@@ -40,7 +40,7 @@ success_metrics: ["hash_generation_time < 50ms", "verification_accuracy = 100%",
 
 # === INTEGRATION METADATA ===
 constellation_origin: "GovernanceSnapshotHash.js"
-migration_notes: "Ported from JavaScript to Python with enhanced Suite 6 integration"
+migration_notes: "Ported from JavaScript to Python with enhanced L9 Governance integration"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["security", "integrity", "hashing", "digital_signature", "constellation_port"]
@@ -59,7 +59,7 @@ import logging
 
 class GovernanceIntegrityManager:
     """
-    Digital Signature and Integrity Protection System for Suite 6
+    Digital Signature and Integrity Protection System for L9 Governance
     
     Provides SHA256 hashing, signature generation, and integrity verification
     for all governance files. Based on Constellation's GovernanceSnapshotHash.js
@@ -91,7 +91,7 @@ class GovernanceIntegrityManager:
             self.logger.error(f"Error generating hash for {file_path}: {e}")
             return None
     
-    def create_signature_record(self, file_path: str, signer_id: str = "Suite6_System") -> Dict:
+    def create_signature_record(self, file_path: str, signer_id: str = "L9Governance_System") -> Dict:
         """
         Create digital signature record for a governance file
         """
@@ -187,7 +187,7 @@ class GovernanceIntegrityManager:
                 "file": os.path.basename(file_path)
             }
     
-    def sign_governance_file(self, file_path: str, signer_id: str = "Suite6_System") -> bool:
+    def sign_governance_file(self, file_path: str, signer_id: str = "L9Governance_System") -> bool:
         """
         Complete signing process for a governance file
         """
@@ -196,9 +196,9 @@ class GovernanceIntegrityManager:
             return self.save_signature(file_path, signature_record)
         return False
     
-    def sign_all_governance_files(self, signer_id: str = "Suite6_System") -> Dict[str, bool]:
+    def sign_all_governance_files(self, signer_id: str = "L9Governance_System") -> Dict[str, bool]:
         """
-        Sign all governance files in Suite 6
+        Sign all governance files in L9 Governance
         """
         results = {}
         
@@ -242,7 +242,7 @@ class GovernanceIntegrityManager:
             ".tmp",
             ".sig.json",  # Don't sign signature files
             "debug-gap-analysis.py",
-            "suite6-constellation-integration",
+            "l9_governance-constellation-integration",
             "cleanup-pre-commit.sh"
         ]
         
@@ -251,12 +251,12 @@ class GovernanceIntegrityManager:
             if pattern in file_name:
                 return False
         
-        # Check for Suite 6 canonical header (for .md and .py files)
+        # Check for L9 Governance canonical header (for .md and .py files)
         if file_path.suffix in ['.md', '.py']:
             try:
                 with open(file_path, 'r') as f:
                     content = f.read(1000)  # Read first 1000 chars
-                    return "=== SUITE 6 CANONICAL HEADER ===" in content
+                    return "=== L9 GOVERNANCE CANONICAL HEADER ===" in content
             except:
                 return False
         
@@ -375,7 +375,7 @@ def main():
     
     elif command == "sign" and len(sys.argv) > 2:
         file_path = sys.argv[2]
-        signer_id = sys.argv[3] if len(sys.argv) > 3 else "Suite6_System"
+        signer_id = sys.argv[3] if len(sys.argv) > 3 else "L9Governance_System"
         
         success = manager.sign_governance_file(file_path, signer_id)
         if success:
@@ -392,7 +392,7 @@ def main():
         print(json.dumps(result, indent=2))
     
     elif command == "sign-all":
-        signer_id = sys.argv[2] if len(sys.argv) > 2 else "Suite6_System"
+        signer_id = sys.argv[2] if len(sys.argv) > 2 else "L9Governance_System"
         
         print("Signing all governance files...")
         results = manager.sign_all_governance_files(signer_id)

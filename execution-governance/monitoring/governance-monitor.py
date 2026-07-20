@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "EXE-MON-001"
 component_name: "Governance Monitor"
@@ -23,10 +23,10 @@ dependencies: ["EXE-VAL-001", "TEL-LOG-001"]
 integrates_with: ["EXE-API-001", "OPS-OPS-001", "INT-ML-001"]
 
 suite_3_origin: "52_Governance_Monitor_v3.0.py"
-migration_notes: "Enhanced with Suite 6 integration, autonomous operation, and expanded metrics"
+migration_notes: "Enhanced with L9 Governance integration, autonomous operation, and expanded metrics"
 
 Governance Monitor v6.0
-Observability and monitoring tools for Suite 6 governance system
+Observability and monitoring tools for L9 Governance governance system
 """
 
 import os
@@ -41,7 +41,7 @@ from pathlib import Path
 
 @dataclass
 class GovernanceMetrics:
-    """Suite 6 governance system metrics"""
+    """L9 Governance governance system metrics"""
     timestamp: str
     total_files: int
     compliant_files: int
@@ -54,15 +54,15 @@ class GovernanceMetrics:
     suite_version: str = "6.0.0"
 
 class GovernanceMonitor:
-    """Monitor Suite 6 governance system performance and compliance"""
+    """Monitor L9 Governance governance system performance and compliance"""
     
-    def __init__(self, suite6_root: Path = None):
-        if suite6_root is None:
-            suite6_root = Path(__file__).parent.parent.parent
+    def __init__(self, l9_governance_root: Path = None):
+        if l9_governance_root is None:
+            l9_governance_root = Path(__file__).parent.parent.parent
         
-        self.suite6_root = Path(suite6_root)
-        self.governance_path = self.suite6_root
-        self.db_path = self.suite6_root / "telemetry" / "logs" / "governance-metrics.db"
+        self.l9_governance_root = Path(l9_governance_root)
+        self.governance_path = self.l9_governance_root
+        self.db_path = self.l9_governance_root / "telemetry" / "logs" / "governance-metrics.db"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.init_database()
     
@@ -87,7 +87,7 @@ class GovernanceMonitor:
             )
         ''')
         
-        # Suite 6 enhancement: Add performance tracking table
+        # L9 Governance enhancement: Add performance tracking table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS performance_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,21 +107,21 @@ class GovernanceMonitor:
         """Collect current governance metrics"""
         start_time = time.time()
         
-        # Scan Suite 6 structure for governance files
+        # Scan L9 Governance structure for governance files
         total_files = 0
         compliant_files = 0
         violations = []
         
         # Check all layers for compliance
         for layer in ['intelligence', 'foundation', 'execution', 'operations', 'environment']:
-            layer_path = self.suite6_root / layer
+            layer_path = self.l9_governance_root / layer
             if layer_path.exists():
                 for file_path in layer_path.rglob('*.md'):
                     total_files += 1
                     if self._check_file_compliance(file_path):
                         compliant_files += 1
                     else:
-                        violations.append(str(file_path.relative_to(self.suite6_root)))
+                        violations.append(str(file_path.relative_to(self.l9_governance_root)))
         
         validation_time = time.time() - start_time
         compliance_rate = (compliant_files / total_files * 100) if total_files > 0 else 100.0
@@ -146,13 +146,13 @@ class GovernanceMonitor:
         return metrics
     
     def _check_file_compliance(self, file_path: Path) -> bool:
-        """Check if file has Suite 6 canonical header"""
+        """Check if file has L9 Governance canonical header"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Check for Suite 6 canonical header
-            return '# === SUITE 6 CANONICAL HEADER ===' in content
+            # Check for L9 Governance canonical header
+            return '# === L9 GOVERNANCE CANONICAL HEADER ===' in content
         except:
             return False
     
@@ -184,7 +184,7 @@ class GovernanceMonitor:
         conn.close()
     
     def get_detailed_metrics(self) -> Dict:
-        """Get detailed metrics for Suite 6 dashboard"""
+        """Get detailed metrics for L9 Governance dashboard"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -221,7 +221,7 @@ class GovernanceMonitor:
     
     def log_performance(self, component_id: str, operation: str, duration_ms: float, 
                        success: bool, error_message: str = None):
-        """Log performance metrics for Suite 6 components"""
+        """Log performance metrics for L9 Governance components"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -246,11 +246,11 @@ class GovernanceMonitor:
         metrics = self.collect_metrics()
         
         # Check rule registry health
-        rule_registry_path = self.suite6_root / 'foundation' / 'logic' / 'rule-registry.json'
+        rule_registry_path = self.l9_governance_root / 'foundation' / 'logic' / 'rule-registry.json'
         rule_registry_healthy = rule_registry_path.exists()
         
         # Check API health
-        api_path = self.suite6_root / 'execution' / 'api' / 'governance-api.py'
+        api_path = self.l9_governance_root / 'execution' / 'api' / 'governance-api.py'
         api_healthy = api_path.exists()
         
         return {
@@ -272,7 +272,7 @@ class GovernanceMonitor:
         }
 
 if __name__ == '__main__':
-    print("🔍 Starting Suite 6 Governance Monitor...")
+    print("🔍 Starting L9 Governance Governance Monitor...")
     monitor = GovernanceMonitor()
     
     print("📊 Collecting initial metrics...")

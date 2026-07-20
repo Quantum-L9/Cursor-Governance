@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.0.0"
 component_id: "ENV-MGR-001"
 component_name: "Environment Manager"
@@ -23,10 +23,10 @@ dependencies: ["ENV-VAL-001", "ENV-LD-001"]
 integrates_with: ["FND-LG-002", "EXE-API-001", "OPS-OPS-001"]
 
 suite_2_origin: "02_env_loader.py, 03_env_validator.py"
-migration_notes: "Enhanced with Suite 6 integration and comprehensive environment management"
+migration_notes: "Enhanced with L9 Governance integration and comprehensive environment management"
 
 Environment Manager v6.0
-Comprehensive environment configuration management for Suite 6
+Comprehensive environment configuration management for L9 Governance
 """
 
 import os
@@ -39,25 +39,25 @@ import subprocess
 import shutil
 
 class EnvironmentManager:
-    """Comprehensive environment management for Suite 6"""
+    """Comprehensive environment management for L9 Governance"""
     
-    def __init__(self, suite6_root: Path = None):
-        if suite6_root is None:
-            suite6_root = Path(__file__).parent.parent
+    def __init__(self, l9_governance_root: Path = None):
+        if l9_governance_root is None:
+            l9_governance_root = Path(__file__).parent.parent
         
-        self.suite6_root = Path(suite6_root)
-        self.env_dir = self.suite6_root / "environment"
+        self.l9_governance_root = Path(l9_governance_root)
+        self.env_dir = self.l9_governance_root / "environment"
         self.logs_dir = self.env_dir / "logs"
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         
         # Configuration files
         self.master_config = self.env_dir / "master-config.json"
-        self.env_file = self.env_dir / "suite6.env"
-        self.requirements_file = self.suite6_root / "requirements.txt"
+        self.env_file = self.env_dir / "l9_governance.env"
+        self.requirements_file = self.l9_governance_root / "requirements.txt"
         
     def initialize_environment(self) -> Dict[str, Any]:
-        """Initialize Suite 6 environment configuration"""
-        print("🌍 Initializing Suite 6 environment...")
+        """Initialize L9 Governance environment configuration"""
+        print("🌍 Initializing L9 Governance environment...")
         
         # Create master configuration
         config = {
@@ -101,8 +101,8 @@ class EnvironmentManager:
         return config
     
     def install_dependencies(self, force: bool = False) -> bool:
-        """Install Python dependencies for Suite 6"""
-        print("📦 Installing Suite 6 dependencies...")
+        """Install Python dependencies for L9 Governance"""
+        print("📦 Installing L9 Governance dependencies...")
         
         if not self.requirements_file.exists():
             print(f"❌ Requirements file not found: {self.requirements_file}")
@@ -138,8 +138,8 @@ class EnvironmentManager:
             return False
     
     def validate_environment(self) -> Dict[str, Any]:
-        """Validate Suite 6 environment configuration"""
-        print("🔍 Validating Suite 6 environment...")
+        """Validate L9 Governance environment configuration"""
+        print("🔍 Validating L9 Governance environment...")
         
         validation_results = {
             "timestamp": datetime.now().isoformat(),
@@ -165,7 +165,7 @@ class EnvironmentManager:
         
         # Check directory structure
         required_dirs = ["intelligence", "foundation", "execution", "operations", "environment", "telemetry"]
-        missing_dirs = [d for d in required_dirs if not (self.suite6_root / d).exists()]
+        missing_dirs = [d for d in required_dirs if not (self.l9_governance_root / d).exists()]
         validation_results["checks"]["directory_structure"] = {
             "status": "pass" if not missing_dirs else "fail",
             "missing": missing_dirs
@@ -175,7 +175,7 @@ class EnvironmentManager:
         config_files = {
             "master_config": self.master_config.exists(),
             "requirements": self.requirements_file.exists(),
-            "readme": (self.suite6_root / "README.md").exists()
+            "readme": (self.l9_governance_root / "README.md").exists()
         }
         validation_results["checks"]["configuration_files"] = {
             "status": "pass" if all(config_files.values()) else "warn",
@@ -199,7 +199,7 @@ class EnvironmentManager:
         return validation_results
     
     def sync_workspace_config(self, workspace_path: Path) -> bool:
-        """Sync Suite 6 configuration to workspace"""
+        """Sync L9 Governance configuration to workspace"""
         print(f"🔄 Syncing configuration to workspace: {workspace_path}")
         
         try:
@@ -210,7 +210,7 @@ class EnvironmentManager:
                 "suite_version": "6.0.0",
                 "workspace_id": f"ws-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
                 "workspace_path": str(workspace_path),
-                "suite6_root": str(self.suite6_root),
+                "l9_governance_root": str(self.l9_governance_root),
                 "governance_enabled": True,
                 "intelligence_active": True,
                 "monitoring_level": "standard",
@@ -232,7 +232,7 @@ class EnvironmentManager:
             }
             
             # Save workspace configuration
-            config_file = workspace_path / ".suite6-config.json"
+            config_file = workspace_path / ".l9_governance-config.json"
             with open(config_file, 'w') as f:
                 json.dump(workspace_config, f, indent=2)
             
@@ -306,13 +306,13 @@ class EnvironmentManager:
         return missing
     
     def _check_layers_accessible(self) -> bool:
-        """Check if all Suite 6 layers are accessible"""
+        """Check if all L9 Governance layers are accessible"""
         required_layers = ["intelligence", "foundation", "execution", "operations"]
-        return all((self.suite6_root / layer).exists() for layer in required_layers)
+        return all((self.l9_governance_root / layer).exists() for layer in required_layers)
     
     def _check_api_available(self) -> bool:
         """Check if governance API is available"""
-        api_file = self.suite6_root / "execution" / "api" / "governance-api.py"
+        api_file = self.l9_governance_root / "execution" / "api" / "governance-api.py"
         return api_file.exists()
     
     def _get_last_validation_time(self) -> Optional[str]:

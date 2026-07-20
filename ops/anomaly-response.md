@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "OPS-004"
 component_name: "Anomaly Response Operations Layer"
@@ -40,7 +40,7 @@ success_metrics: ["detection_rate >= 0.95", "response_time <= 60s", "remediation
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "anomaly-response.md v1.0.0"
-migration_notes: "Enhanced with Suite 6 structure and comprehensive anomaly response capabilities"
+migration_notes: "Enhanced with L9 Governance structure and comprehensive anomaly response capabilities"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["operations", "anomaly", "response", "detection", "governance"]

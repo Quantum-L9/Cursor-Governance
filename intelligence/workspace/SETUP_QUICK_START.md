@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "7.0.0"
 component_id: "INT-WS-002"
 component_name: "Workspace Setup Quick Start Guide"
@@ -19,11 +19,11 @@ compliance_required: true
 audit_trail: true
 
 # === BUSINESS METADATA ===
-purpose: "Quick start guide for Suite 6 workspace setup"
+purpose: "Quick start guide for L9 Governance workspace setup"
 summary: "One-command universal workspace setup with 200% enforcement and beautiful UI"
 ---
 
-# 🚀 Suite 6 Workspace Setup - Universal Quick Start
+# 🚀 L9 Governance Workspace Setup - Universal Quick Start
 
 **Version:** 7.0.0 | **Enforcement:** 200% | **Duration:** ~15 minutes
 
@@ -41,7 +41,7 @@ python3 "$HOME/.cursor-governance/intelligence/workspace/setup-new-workspace.py"
 
 **That's it!** The script will:
 - ✅ Run preflight checks
-- ✅ Install Suite 6 configuration
+- ✅ Install L9 Governance configuration
 - ✅ Create symlinks to GlobalCommands
 - ✅ Load all 23 mandatory files with progress bars
 - ✅ Load 12 learning files recursively

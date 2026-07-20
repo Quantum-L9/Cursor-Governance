@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "suite": "Cursor Governance Suite 6 (Unified)",
+    "suite": "Cursor Governance L9 Governance (Unified)",
     "version": "6.0.0",
     "component_id": "FND-LG-003",
     "component_name": "Governance Rule Registry",
@@ -17,7 +17,7 @@
     "audit_trail": true,
     "security_classification": "restricted",
     "suite_1_origin": "11_Governance_Rule_Registry.json",
-    "migration_notes": "Enhanced with Suite 6 metadata and expanded rule capabilities"
+    "migration_notes": "Enhanced with L9 Governance metadata and expanded rule capabilities"
   },
   "rules": [
     {
@@ -52,7 +52,7 @@
     },
     {
       "id": "R004",
-      "description": "Suite 6 canonical headers required",
+      "description": "L9 Governance canonical headers required",
       "fol": "∀f. File(f) ∧ GovernanceFile(f) → HasCanonicalHeader(f)",
       "type": "validation",
       "priority": "high",

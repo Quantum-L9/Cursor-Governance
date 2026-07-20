@@ -39,11 +39,6 @@ if ! command -v gh >/dev/null 2>&1; then
   echo "WARN: gh not installed — push may fail if credentials are missing" >&2
 fi
 
-# Keep law file in repo root (mirrors Dropbox parent; used by clones without Dropbox).
-if [ -f "$GOV_ROOT/CANONICAL_LAW.md" ]; then
-  cp "$GOV_ROOT/CANONICAL_LAW.md" "$GLOBAL_COMMANDS/CANONICAL_LAW.md"
-fi
-
 if [ ! -d .git ]; then
   echo "INIT: git repo in GlobalCommands"
   git init -b "$BRANCH"
@@ -59,7 +54,7 @@ fi
 git add -A
 
 if git diff --cached --quiet; then
-  echo "OK: nothing to commit — Dropbox SSOT matches index"
+  echo "OK: nothing to commit — GitHub SSOT clone matches index"
   if git rev-parse "origin/$BRANCH" >/dev/null 2>&1; then
     git push origin "HEAD:$BRANCH" 2>/dev/null && echo "OK: remote already up to date" || true
   fi

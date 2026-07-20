@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "6.1.0"
 component_id: "OPS-OPS-002"
 component_name: "Operational Oversight - Executable Monitor"
@@ -192,9 +192,11 @@ class OperationalOversight:
     
     def _check_workflow_readiness(self) -> str:
         """Check if workflow system is ready"""
-        # Check if mandatory files exist
+        # Check if mandatory files exist. startup/REASONING_STACK.yaml was
+        # deleted; per TODO.md's supersession table, l9-structured-reasoning
+        # is the active replacement.
         session_startup = self.cursor_commands / "profiles" / "session-startup-protocol.md"
-        reasoning_stack = self.cursor_commands / "startup" / "REASONING_STACK.yaml"
+        reasoning_stack = self.cursor_commands / "skills" / "l9-structured-reasoning" / "SKILL.md"
         
         if session_startup.exists() and reasoning_stack.exists():
             return "green"
@@ -333,7 +335,9 @@ class OperationalOversight:
     
     def _run_verification(self):
         """Run verification script"""
-        verify_script = self.cursor_commands / "ops" / "scripts" / "verify-startup-files.sh"
+        # verify-startup-files.sh was archived (checked deleted startup/*
+        # paths); verify-setup-alignment.sh is the current active replacement.
+        verify_script = self.cursor_commands / "ops" / "scripts" / "verify-setup-alignment.sh"
         if verify_script.exists():
             try:
                 subprocess.run(["bash", str(verify_script)], check=False)
@@ -408,4 +412,3 @@ if __name__ == '__main__':
     print("🧠 Starting Operational Oversight Monitor...")
     monitor = OperationalOversight()
     monitor.run()
-

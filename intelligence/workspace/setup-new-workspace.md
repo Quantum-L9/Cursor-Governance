@@ -1,6 +1,6 @@
 ---
 # === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+suite: "L9 Governance"
 version: "6.0.0"
 component_id: "INT-WS-001"
 component_name: "Workspace Setup System"
@@ -33,14 +33,14 @@ logging_level: "info"
 performance_tier: "batch"
 
 # === BUSINESS METADATA ===
-purpose: "Make Suite 6 governance system available in ANY Cursor workspace with one command"
+purpose: "Make L9 Governance governance system available in ANY Cursor workspace with one command"
 summary: "Universal workspace deployment system that creates governance-enabled development environments"
 business_value: "Enables rapid governance adoption across all development projects"
 success_metrics: ["setup_success_rate >= 99%", "setup_time < 30s", "workspace_compliance = 100%"]
 
 # === INTEGRATION METADATA ===
 suite_2_origin: "SETUP_NEW_WORKSPACE.md"
-migration_notes: "Enhanced with Suite 6 structure, Python environment manager, and automated governance deployment"
+migration_notes: "Enhanced with L9 Governance structure, Python environment manager, and automated governance deployment"
 
 # === TAGS & CLASSIFICATION ===
 tags: ["workspace_setup", "deployment", "governance_enablement", "cursor_integration"]
@@ -48,9 +48,9 @@ keywords: ["workspace", "setup", "deployment", "governance", "cursor"]
 related_components: ["ENV-LD-001", "FND-LG-002", "EXE-API-001", "EXE-VAL-001"]
 ---
 
-# Setup New Workspace - Suite 6 Quick Guide
+# Setup New Workspace - L9 Governance Quick Guide
 
-**Purpose:** Make Suite 6 governance & learning system available in ANY Cursor workspace
+**Purpose:** Make L9 Governance governance & learning system available in ANY Cursor workspace
 
 ---
 
@@ -59,8 +59,8 @@ related_components: ["ENV-LD-001", "FND-LG-002", "EXE-API-001", "EXE-VAL-001"]
 **Before starting, verify:**
 
 ```bash
-# 1. Check if Suite 6 exists
-test -d "/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)" && echo "✅ Suite 6 found" || echo "❌ Suite 6 not found"
+# 1. Check if L9 Governance exists
+test -d "/Users/ib-mac/Dropbox/Cursor Governance/L9 Governance (L9)" && echo "✅ L9 Governance found" || echo "❌ L9 Governance not found"
 
 # 2. Check Python 3 installed
 python3 --version
@@ -91,7 +91,7 @@ python3 -m pip install pyyaml
 # Discover all learning files recursively from GlobalCommands
 find .cursor-commands/learning/ -type f -name "*.md" | sort
 
-# Expected structure (GlobalCommands learning folder - Suite 6 v6.0):
+# Expected structure (GlobalCommands learning folder - L9 Governance v6.0):
 # .cursor-commands/learning/credentials-policy.md
 # .cursor-commands/learning/failures/repeated-mistakes.md
 # .cursor-commands/learning/l9-ai-agent-patterns.md
@@ -286,7 +286,7 @@ find .cursor-commands/learning/ -type f -name "*.md" | sort
    - Slash Commands ENABLED (/reasoning, /forge, /consolidate, /analyze-toolkit, /evaluate)
    - Supporting Profiles ENABLED (workflow-governance, operational-health)
    - Feature Files ENABLED (meta-learning, cursor-native-reasoning, formal-logic-validation, probabilistic-reasoning)
-   - Suite 6 governance: ACTIVE (v6.1.0 with probabilistic reasoning)
+   - L9 Governance governance: ACTIVE (v6.1.0 with probabilistic reasoning)
 ```
 
 **✅ Success Check**: All learning files from GlobalCommands read and accessible
@@ -344,8 +344,8 @@ find .cursor-commands/learning/ -type f -name "*.md" | sort
 # Navigate to your workspace
 cd /path/to/your/workspace
 
-# Run Suite 6 setup (use actual path - Suite 6 (L9), not Suite 6 (L9 + Suite 6))
-python3 "/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/environment/env-manager.py" sync "$(pwd)"
+# Run L9 Governance setup (use actual path - L9 Governance (L9), not L9 Governance (L9 + L9 Governance))
+python3 "/Users/ib-mac/Dropbox/Cursor Governance/L9 Governance (L9)/environment/env-manager.py" sync "$(pwd)"
 ```
 
 **Expected Output:**
@@ -364,7 +364,7 @@ python3 "/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/
 
 ```bash
 # Create .cursor-commands symlink (use Dropbox GlobalCommands, not Library)
-bash "/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)/ops/scripts/setup_workspace_symlinks.sh"
+bash "/Users/ib-mac/Dropbox/Cursor Governance/L9 Governance (L9)/ops/scripts/setup_workspace_symlinks.sh"
 ```
 
 **Expected Output:**
@@ -466,7 +466,7 @@ cat .cursor-commands/ops/logs/memory_index.json | python3 -c "import json,sys; d
 | **Learning Updater** (OPS-UPD-001) | ✅ Auto | On-demand | Updates learning files | ops/scripts/learning_updater.py |
 | **Cursorrules Sync** (OPS-SYN-001) | ✅ Auto | On-demand | Syncs to .cursorrules | ops/scripts/sync_mistakes_to_cursorrules.py |
 
-**Utility Scripts (Suite 6 Compliant):**
+**Utility Scripts (L9 Governance Compliant):**
 | Component | ID | Purpose | Location |
 |-----------|-----|---------|----------|
 | **MCP Cleanup** | OPS-MCP-001 | Remove stale l9-mcp containers | ops/scripts/cleanup_mcp_containers.sh |
@@ -498,7 +498,7 @@ All 20 required files are accessible and ready for startup.
 **Manual Verification - Verify governance files are accessible:**
 
 ```bash
-# Check Suite 6 config
+# Check L9 Governance config
 cat .suite6-config.json | grep -E "(governance_enabled|intelligence_active)"
 # Expected: "governance_enabled": true, "intelligence_active": true
 
@@ -512,12 +512,12 @@ ls .cursor-commands/learning
 
 # Count ALL learning files recursively (MANDATORY)
 find .cursor-commands/learning/ -type f -name "*.md" 2>/dev/null | wc -l
-# Expected: 7+ files (all .md files in GlobalCommands learning folder with Suite 6 structure)
+# Expected: 7+ files (all .md files in GlobalCommands learning folder with L9 Governance structure)
 
 # Verify specific governance files
 test -f ".cursor-commands/profiles/session-startup-protocol.md" && echo "✅ Session startup protocol accessible" || echo "❌ Missing"
 
-# Verify GlobalCommands learning files exist (all subdirectories - Suite 6 v6.0 structure)
+# Verify GlobalCommands learning files exist (all subdirectories - L9 Governance v6.0 structure)
 test -f ".cursor-commands/learning/credentials-policy.md" && echo "✅ Credentials policy accessible" || echo "❌ Missing"
 test -f ".cursor-commands/learning/l9-ai-agent-patterns.md" && echo "✅ L9 patterns accessible" || echo "❌ Missing"
 test -d ".cursor-commands/learning/failures" && test -f ".cursor-commands/learning/failures/repeated-mistakes.md" && echo "✅ Failures learning accessible" || echo "❌ Missing"
@@ -566,7 +566,7 @@ test -f ".cursor-commands/foundation/logic/rule-registry.json" && echo "✅ Rule
 cat .cursor-commands/profiles/orchestrator.md | head -5
 # Expected: Should display orchestrator.md content
 
-# Test 2: Verify Suite 6 configuration
+# Test 2: Verify L9 Governance configuration
 python3 -c "import json; f=open('.suite6-config.json'); d=json.load(f); print(f'Governance: {d[\"governance_enabled\"]}'); print(f'Intelligence: {d[\"intelligence_active\"]}'); f.close()"
 # Expected: Governance: True, Intelligence: True
 ```
@@ -608,15 +608,15 @@ ls -la .cursor-commands
 # Expected: -> ~/.cursor-governance
 ```
 
-### Issue 3: Suite 6 directory not found
-**Symptom**: "No such file or directory: Suite 6 (L9 + Suite 6)"
+### Issue 3: L9 Governance directory not found
+**Symptom**: "No such file or directory: L9 Governance (L9 + L9 Governance)"
 **Fix**: Use correct path:
 ```bash
 # Correct path is:
-"/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9)"
+"/Users/ib-mac/Dropbox/Cursor Governance/L9 Governance (L9)"
 
 # NOT:
-"/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9 + Suite 6)"
+"/Users/ib-mac/Dropbox/Cursor Governance/L9 Governance"
 ```
 
 ### Issue 4: Governance files not accessible
@@ -659,7 +659,7 @@ bash .cursor-commands/ops/scripts/verify-startup-files.sh
 Run this verification:
 ```bash
 echo "=== GOVERNANCE STATUS CHECK ===" && \
-test -f ".suite6-config.json" && echo "✅ Suite 6 config exists" || echo "❌ Missing" && \
+test -f ".suite6-config.json" && echo "✅ L9 Governance config exists" || echo "❌ Missing" && \
 test -L ".cursor-commands" && echo "✅ Symlink exists" || echo "❌ Missing" && \
 readlink .cursor-commands && \
 test -d ".cursor-commands/profiles" && echo "✅ Profiles accessible" || echo "❌ Missing" && \
@@ -675,7 +675,7 @@ echo "=== SETUP COMPLETE ==="
 **Expected Output:**
 ```
 === GOVERNANCE STATUS CHECK ===
-✅ Suite 6 config exists
+✅ L9 Governance config exists
 ✅ Symlink exists
 ~/.cursor-governance
 ✅ Profiles accessible
@@ -706,8 +706,8 @@ echo "=== SETUP COMPLETE ==="
 
 ```
 workspace/
-├── .cursorrules ✅ Auto-loaded by Cursor (Suite 6 enhanced)
-├── .cursor-commands/ ✅ Symlink to Suite 6 governance
+├── .cursorrules ✅ Auto-loaded by Cursor (L9 Governance enhanced)
+├── .cursor-commands/ ✅ Symlink to L9 Governance governance
 │   ├── intelligence/
 │   │   ├── meta-learning/meta-learning-log.md
 │   │   ├── reasoning/cursor-native-reasoning.md
@@ -804,7 +804,7 @@ Note: `.cursor-commands/learning/` ✅ Symlink to GlobalCommands/learning (MANDA
 
 **Command Reference:** `@.cursor/commands/COMMANDS_REGISTRY.md`
 
-## Suite 6 Enhanced Features
+## L9 Governance Enhanced Features
 
 ### Automatic Governance
 - Real-time compliance checking
@@ -854,7 +854,7 @@ python3 @.cursor-commands/execution/validation/governance-validator.py --workspa
 
 ### Update Governance Rules
 ```bash
-# Pull latest rules from Suite 6
+# Pull latest rules from L9 Governance
 python @.cursor-commands/environment/env-manager.py sync "$(pwd)"
 ```
 
@@ -870,9 +870,9 @@ python3 @.cursor-commands/execution/monitoring/governance-monitor.py --workspace
 
 1. **Symlink Creation Failed**
    - Check permissions on target directory
-   - Ensure Suite 6 path is accessible
+   - Ensure L9 Governance path is accessible
    - Run with appropriate user permissions
-   - Verify Suite 6 directory exists: `/Users/ib-mac/Dropbox/Cursor Governance/Cursor Governance Suite 6 (L9 + Suite 6)`
+   - Verify L9 Governance directory exists: `/Users/ib-mac/Dropbox/Cursor Governance/L9 Governance`
 
 2. **Governance API Not Responding**
    - Check if governance server is running
@@ -902,7 +902,7 @@ python @.cursor-commands/environment/env-manager.py validate
 **Run the comprehensive alignment test to ensure everything is correctly set up:**
 
 ```bash
-# Run the Suite 6 Setup Alignment Verification
+# Run the L9 Governance Setup Alignment Verification
 bash .cursor-commands/ops/scripts/verify-setup-alignment.sh
 ```
 
@@ -945,7 +945,7 @@ bash .cursor-commands/ops/scripts/verify-setup-alignment.sh
    ✅ fix_mcp_config.sh exists
    ✅ verify_docker.sh exists
 
-6️⃣  Suite 6 Headers Compliance:
+6️⃣  L9 Governance Headers Compliance:
    Found: 10 scripts with headers (Expected: 8+)
    ✅ PASS
 
@@ -963,8 +963,8 @@ bash .cursor-commands/ops/scripts/verify-setup-alignment.sh
 
    All components verified:
    • 7 learning files in organized structure
-   • 5 learning system scripts with Suite 6 headers
-   • 3 utility scripts with Suite 6 headers
+   • 5 learning system scripts with L9 Governance headers
+   • 3 utility scripts with L9 Governance headers
    • 2 LaunchAgent services running
    • All verification commands will execute successfully
 
@@ -972,12 +972,12 @@ bash .cursor-commands/ops/scripts/verify-setup-alignment.sh
 ```
 
 **What This Verifies:**
-- ✅ Learning folder has correct Suite 6 v6.0 structure (7 files)
+- ✅ Learning folder has correct L9 Governance v6.0 structure (7 files)
 - ✅ All 4 subdirectories present (failures, patterns, solutions, l9_lessons_learned)
 - ✅ All 7 core learning files accessible
 - ✅ All 5 learning system scripts present
 - ✅ All 3 utility scripts present (MCP cleanup, config fix, Docker verify)
-- ✅ All 8+ scripts have Suite 6 canonical headers
+- ✅ All 8+ scripts have L9 Governance canonical headers
 - ✅ Both LaunchAgent services running (hourly chat export + learning processor)
 
 **✅ Success Check**: 

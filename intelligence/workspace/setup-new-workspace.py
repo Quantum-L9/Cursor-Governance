@@ -2,13 +2,13 @@
 """
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                                                                           ║
-║   SUITE 6 WORKSPACE SETUP - SELF-EXECUTING PROTOCOL                      ║
+║   L9 GOVERNANCE WORKSPACE SETUP - SELF-EXECUTING PROTOCOL                      ║
 ║   Version 7.0.0 | Enforcement: 200% | Beautiful, Powerful, Autonomous    ║
 ║                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
+# === L9 GOVERNANCE CANONICAL HEADER ===
+suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
 version: "7.0.0"
 component_id: "INT-WS-003"
 component_name: "Workspace Setup - Self-Executing Protocol"
@@ -111,7 +111,7 @@ def print_progress(current: int, total: int, item: str):
 # ═══════════════════════════════════════════════════════════════════════════
 
 class SetupConfig:
-    """Configuration for Suite 6 workspace setup"""
+    """Configuration for L9 Governance workspace setup"""
     
     # Paths
     HOME = Path.home()
@@ -200,7 +200,7 @@ class SetupConfig:
 #   MAIN SETUP CLASS
 # ═══════════════════════════════════════════════════════════════════════════
 
-class Suite6WorkspaceSetup:
+class L9GovernanceWorkspaceSetup:
     """
     Self-executing workspace setup with 200% enforcement.
     Beautiful, powerful, autonomous.
@@ -223,7 +223,7 @@ class Suite6WorkspaceSetup:
                 return self._exit_with_errors()
             
             # Phase 2: Installation
-            if not self._install_suite6():
+            if not self._install_l9_governance():
                 return self._exit_with_errors()
             
             # Phase 3: Load Mandatory Files
@@ -264,7 +264,7 @@ class Suite6WorkspaceSetup:
         print(f"\n{Colors.BOLD}{Colors.CYAN}")
         print("╔═══════════════════════════════════════════════════════════════════════════╗")
         print("║                                                                           ║")
-        print("║              🚀 SUITE 6 WORKSPACE SETUP - v7.0.0 🚀                       ║")
+        print("║              🚀 L9 GOVERNANCE WORKSPACE SETUP - v7.0.0 🚀                       ║")
         print("║                                                                           ║")
         print("║              Self-Executing | 200% Enforced | Beautiful                  ║")
         print("║                                                                           ║")
@@ -283,7 +283,7 @@ class Suite6WorkspaceSetup:
         print_header(f"{Colors.ROCKET} PHASE 1: PREFLIGHT CHECKS")
         
         checks = [
-            ("Suite 6 Directory", lambda: self.config.SUITE6_PATH.exists()),
+            ("L9 Governance Directory", lambda: self.config.SUITE6_PATH.exists()),
             ("GlobalCommands Directory", lambda: self.config.GLOBAL_COMMANDS.exists()),
             ("Python Version", lambda: sys.version_info >= (3, 8)),
             ("YAML Module", self._check_yaml_module),
@@ -327,12 +327,12 @@ class Suite6WorkspaceSetup:
     #   PHASE 2: INSTALLATION
     # ═══════════════════════════════════════════════════════════════════════
     
-    def _install_suite6(self) -> bool:
-        """Phase 2: Install Suite 6 configuration and symlinks"""
+    def _install_l9_governance(self) -> bool:
+        """Phase 2: Install L9 Governance configuration and symlinks"""
         print_header(f"{Colors.GEAR} PHASE 2: INSTALLATION")
         
         # Step 1: Sync configuration
-        print_info("Syncing Suite 6 configuration...")
+        print_info("Syncing L9 Governance configuration...")
         env_manager = self.config.SUITE6_PATH / "environment/env-manager.py"
         
         try:
@@ -345,8 +345,8 @@ class Suite6WorkspaceSetup:
             
             if result.returncode == 0:
                 print_success("Configuration synced")
-                if (self.workspace / ".suite6-config.json").exists():
-                    print_success(".suite6-config.json created")
+                if (self.workspace / ".l9_governance-config.json").exists():
+                    print_success(".l9_governance-config.json created")
             else:
                 print_error(f"Configuration sync failed: {result.stderr}")
                 self.errors.append("Configuration sync failed")
@@ -672,7 +672,7 @@ class Suite6WorkspaceSetup:
         print_info("Running manual verification checks...")
         
         checks = [
-            (".suite6-config.json exists", (self.workspace / ".suite6-config.json").exists()),
+            (".l9_governance-config.json exists", (self.workspace / ".l9_governance-config.json").exists()),
             (".cursor-commands symlink exists", (self.workspace / ".cursor-commands").is_symlink()),
             ("Learning files accessible", (self.workspace / ".cursor-commands/learning").exists()),
             ("n8n kit accessible", (self.workspace / ".cursor-commands/n8n-start-up-kit").exists()),
@@ -724,7 +724,7 @@ class Suite6WorkspaceSetup:
             for warning in self.warnings:
                 print(f"   {Colors.YELLOW}• {warning}{Colors.END}")
         
-        print(f"\n{Colors.BOLD}{Colors.CYAN}🎯 Your workspace is now Suite 6 enabled!{Colors.END}")
+        print(f"\n{Colors.BOLD}{Colors.CYAN}🎯 Your workspace is now L9 Governance enabled!{Colors.END}")
         print(f"{Colors.CYAN}   All governance files accessible via @.cursor-commands/{Colors.END}")
         print(f"{Colors.CYAN}   Reasoning Stack: ACTIVE{Colors.END}")
         print(f"{Colors.CYAN}   Recursive Learning: OPERATIONAL{Colors.END}")
@@ -762,7 +762,7 @@ class Suite6WorkspaceSetup:
 
 def main():
     """Main entry point with gorgeous execution"""
-    setup = Suite6WorkspaceSetup()
+    setup = L9GovernanceWorkspaceSetup()
     setup.run()
 
 if __name__ == "__main__":
