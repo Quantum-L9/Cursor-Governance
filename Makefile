@@ -43,9 +43,15 @@ push: precommit backup
 graphiti-health: venv
 	uv run python3 ops/graphiti/graphiti_memory_client.py health
 
+<<<<<<< HEAD
 ## Ruff check + format check + mypy, via the locked venv (run `make venv` first, or let this pull it in).
 ## Matches the CI workflow's lint job (.github/workflows/l9-lint-test.yml) step for step.
 lint: venv
 	uv run ruff check .
 	uv run ruff format --check .
 	uv run mypy . --show-error-codes --pretty --ignore-missing-imports
+=======
+## Ruff lint, via the locked venv (run `make venv` first, or let this pull it in)
+lint: venv
+	uv run ruff check .
+>>>>>>> origin/main

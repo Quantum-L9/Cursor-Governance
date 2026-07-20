@@ -1,10 +1,13 @@
 version = 1
 revision = 3
 requires-python = ">=3.12"
+<<<<<<< HEAD
 resolution-markers = [
     "python_full_version >= '3.15'",
     "python_full_version < '3.15'",
 ]
+=======
+>>>>>>> origin/main
 
 [[package]]
 name = "annotated-types"
@@ -29,6 +32,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "ast-serialize"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -70,6 +74,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> origin/main
 name = "certifi"
 version = "2026.6.17"
 source = { registry = "https://pypi.org/simple" }
@@ -161,7 +167,10 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+<<<<<<< HEAD
     { name = "mypy" },
+=======
+>>>>>>> origin/main
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -169,7 +178,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "langgraph", specifier = ">=0.2" },
+<<<<<<< HEAD
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.19" },
+=======
+>>>>>>> origin/main
     { name = "pydantic", specifier = ">=2.0,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pyyaml", specifier = ">=6.0" },
@@ -380,6 +392,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "librt"
 version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -496,6 +509,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> origin/main
 name = "orjson"
 version = "3.11.9"
 source = { registry = "https://pypi.org/simple" }
@@ -597,6 +612,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "pathspec"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -606,6 +622,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> origin/main
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }

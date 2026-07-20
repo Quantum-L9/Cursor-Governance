@@ -2,6 +2,16 @@
 
 Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L9 skills, `.cursor/rules/*.mdc`, `AGENTS.md`, and active wiring scripts). `start-session.yaml` was deleted (2026-07-19) — it was never wired into any hook and had drifted from the archived pre-Graphiti learning pipeline. `ops/hooks/session_start_bootstrap.sh` is the real, live activation script: installed at `~/.cursor/hooks/session-start-bootstrap.sh`, registered in `~/.cursor/hooks.json` under `sessionStart`, runs automatically every session.
 
+## Memory / session writes — blocked this session (2026-07-20)
+
+- [ ] ⚠️ **Graphiti (T1) memory writes** — blocked, not done. Health check:
+  `liveness_ok: true` but `mcp.tools.reachable: false` (HTTP 404 on the
+  SSH-tunneled tool plane). Per the no-local-fallback rule, no fake success
+  was reported — this is a real gap, captured in `activeContext.md` for next
+  session.
+- [ ] ⚠️ **Redis `cache_set_session_context`** — not called. No cache/session
+  MCP server is present in this workspace's current MCP tool set.
+
 ## Dangling references (broken if invoked)
 
 - [x] **`ops/scripts/operational-oversight.py`** — fixed (2026-07-19): dangling refs to

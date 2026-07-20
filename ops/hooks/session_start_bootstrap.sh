@@ -49,11 +49,17 @@ SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 
+<<<<<<< HEAD
 # Recreate the pinned Python env from uv.lock every session (near-instant no-op once
 # already in sync). Makes every `python3` call below — and everything this script
 # spawns — use the exact locked interpreter/dependency versions instead of whatever
 # happens to be in the ambient global site-packages. `--locked` fails loudly instead
 # of silently re-resolving if pyproject.toml drifts out of sync with uv.lock.
+=======
+# Recreate/refresh the pinned .venv from uv.lock and put it first on PATH for the
+# rest of this hook chain (and any tooling launched from this shell), so python3/
+# ruff/mypy resolve to the locked 3.12 interpreter instead of a stray system one.
+>>>>>>> origin/main
 if command -v uv >/dev/null 2>&1 && [ -f "$GC/uv.lock" ]; then
   # --extra dev keeps ruff/pytest in the SAME locked venv as the runtime deps, so
   # `make lint`/`make precommit`/editor tooling never fall back to an unpinned
