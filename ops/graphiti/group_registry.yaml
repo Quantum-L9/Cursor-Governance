@@ -25,3 +25,8 @@ repos:
     path_hints: [L9-Node-Template]
     remote_patterns: ["*/L9-Node-Template*"]
     integrates_with: [cursor-governance]
+  igorbot:
+    github: Quantum-L9/igorbot
+    path_hints: [igorbot]
+    remote_patterns: ["*/igorbot*", "*/igorbot.git"]
+    integrates_with: [cursor-governance]
