@@ -60,6 +60,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+
 # ---------------------------------------------------------------------------
 # Load .env from L9 root if available
 # ---------------------------------------------------------------------------
@@ -75,7 +76,7 @@ def _load_env_file():
         if (candidate / ".env").exists():
             l9_root = candidate
             break
-    
+
     if l9_root:
         env_path = l9_root / ".env"
         try:
@@ -91,20 +92,23 @@ def _load_env_file():
                     value = value.strip().strip("'").strip('"')
                     if key:
                         env_vars[key] = value
-            
+
             # Resolve ${VAR} references
             def resolve(val, seen=None):
-                if seen is None: seen = set()
-                if val in seen: return val
+                if seen is None:
+                    seen = set()
+                if val in seen:
+                    return val
                 seen.add(val)
-                
-                pattern = re.compile(r'\$\{([^}]+)\}')
+
+                pattern = re.compile(r"\$\{([^}]+)\}")
                 while True:
                     match = pattern.search(val)
-                    if not match: break
+                    if not match:
+                        break
                     var_name = match.group(1)
                     var_val = env_vars.get(var_name, os.environ.get(var_name, ""))
-                    val = val[:match.start()] + resolve(var_val, seen) + val[match.end():]
+                    val = val[: match.start()] + resolve(var_val, seen) + val[match.end() :]
                 return val
 
             for key, value in env_vars.items():
@@ -113,6 +117,7 @@ def _load_env_file():
                     os.environ[key] = resolved_value
         except Exception:
             pass
+
 
 _load_env_file()
 
@@ -138,9 +143,7 @@ if _L9_ROOT and _L9_ROOT not in sys.path:
 # Configuration from environment (NO hardcoded values)
 # ---------------------------------------------------------------------------
 DISTILLER_MODEL = os.environ.get("L9_DISTILLER_MODEL", "gpt-4o-mini")
-DISTILLER_API_KEY = os.environ.get(
-    "L9_DISTILLER_API_KEY", os.environ.get("OPENAI_API_KEY", "")
-)
+DISTILLER_API_KEY = os.environ.get("L9_DISTILLER_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
 DISTILLER_API_BASE = os.environ.get("L9_DISTILLER_API_BASE", "")
 L9_API_URL = os.environ.get("L9_API_URL", "http://46.62.243.82")
 CHUNK_SIZE = int(os.environ.get("L9_DISTILLER_CHUNK_SIZE", "512"))
@@ -163,6 +166,7 @@ STATE_FILE = GLOBAL_COMMANDS / "ops" / "logs" / "distiller_state.json"
 # ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class DistilledItem:
@@ -201,6 +205,7 @@ class DistillerResult:
 # State management (idempotent — skip already-processed files)
 # ---------------------------------------------------------------------------
 
+
 def _load_state() -> dict[str, Any]:
     """Load processed file hashes from state file."""
     if STATE_FILE.exists():
@@ -225,6 +230,7 @@ def _content_hash(text: str) -> str:
 # ---------------------------------------------------------------------------
 # File discovery
 # ---------------------------------------------------------------------------
+
 
 def discover_transcripts(
     since: str | None = None,
@@ -299,6 +305,7 @@ def discover_readmes(l9_root: Path) -> list[Path]:
 # Transcript parser
 # ---------------------------------------------------------------------------
 
+
 def parse_transcript(text: str) -> list[dict[str, str]]:
     """Parse a Cursor agent transcript into structured segments.
 
@@ -317,9 +324,7 @@ def parse_transcript(text: str) -> list[dict[str, str]]:
 
     for line in text.splitlines():
         # Detect role transitions
-        role_match = re.match(
-            r"^(user|assistant|tool|system):\s*(.*)", line, re.IGNORECASE
-        )
+        role_match = re.match(r"^(user|assistant|tool|system):\s*(.*)", line, re.IGNORECASE)
         bracket_match = re.match(
             r"^\[(Tool call|Tool result|Thinking|Image|File)\]\s*(.*)",
             line,
@@ -329,20 +334,24 @@ def parse_transcript(text: str) -> list[dict[str, str]]:
         if role_match:
             # Flush previous segment
             if current_role and current_lines:
-                segments.append({
-                    "role": current_role,
-                    "content": "\n".join(current_lines).strip(),
-                })
+                segments.append(
+                    {
+                        "role": current_role,
+                        "content": "\n".join(current_lines).strip(),
+                    }
+                )
             current_role = role_match.group(1).lower()
             current_lines = [role_match.group(2)] if role_match.group(2) else []
 
         elif bracket_match:
             # Flush previous segment
             if current_role and current_lines:
-                segments.append({
-                    "role": current_role,
-                    "content": "\n".join(current_lines).strip(),
-                })
+                segments.append(
+                    {
+                        "role": current_role,
+                        "content": "\n".join(current_lines).strip(),
+                    }
+                )
             tag = bracket_match.group(1).lower().replace(" ", "_")
             current_role = tag
             current_lines = [bracket_match.group(2)] if bracket_match.group(2) else []
@@ -352,17 +361,17 @@ def parse_transcript(text: str) -> list[dict[str, str]]:
 
     # Flush final segment
     if current_role and current_lines:
-        segments.append({
-            "role": current_role,
-            "content": "\n".join(current_lines).strip(),
-        })
+        segments.append(
+            {
+                "role": current_role,
+                "content": "\n".join(current_lines).strip(),
+            }
+        )
 
     return segments
 
 
-def extract_distillable_text(
-    file_path: Path, source_type: str
-) -> str:
+def extract_distillable_text(file_path: Path, source_type: str) -> str:
     """Extract text suitable for distillation from a file.
 
     For transcripts: extracts user + assistant messages (skips tool calls/results).
@@ -389,6 +398,7 @@ def extract_distillable_text(
 # ---------------------------------------------------------------------------
 # Chunking (uses L9 ChunkView)
 # ---------------------------------------------------------------------------
+
 
 def chunk_text(text: str, source_id: str) -> list[dict[str, Any]]:
     """Chunk text using L9's ChunkView for content-addressed chunks."""
@@ -418,21 +428,22 @@ def chunk_text(text: str, source_id: str) -> list[dict[str, Any]]:
             chunk_text_slice = text[i : i + CHUNK_SIZE]
             if len(chunk_text_slice) < 32:
                 continue
-            cid = hashlib.sha256(
-                f"{source_id}:{i}:{chunk_text_slice}".encode()
-            ).hexdigest()[:16]
-            chunks.append({
-                "chunk_id": cid,
-                "content": chunk_text_slice,
-                "offset": i,
-                "length": len(chunk_text_slice),
-            })
+            cid = hashlib.sha256(f"{source_id}:{i}:{chunk_text_slice}".encode()).hexdigest()[:16]
+            chunks.append(
+                {
+                    "chunk_id": cid,
+                    "content": chunk_text_slice,
+                    "offset": i,
+                    "length": len(chunk_text_slice),
+                }
+            )
         return chunks
 
 
 # ---------------------------------------------------------------------------
 # LLM distillation
 # ---------------------------------------------------------------------------
+
 
 async def distill_chunks(
     chunks: list[dict[str, Any]],
@@ -456,9 +467,7 @@ async def distill_chunks(
         combined = "\n\n---\n\n".join(c["content"] for c in batch)
         chunk_ids = [c["chunk_id"] for c in batch]
 
-        facts_raw, insights_raw = await _distill_single(
-            combined, source_type
-        )
+        facts_raw, insights_raw = await _distill_single(combined, source_type)
 
         for fact_text in facts_raw:
             item = _classify_fact(fact_text, source_type, source_file, chunk_ids)
@@ -471,9 +480,7 @@ async def distill_chunks(
     return all_facts, all_insights
 
 
-async def _distill_single(
-    content: str, source_type: str
-) -> tuple[list[str], list[str]]:
+async def _distill_single(content: str, source_type: str) -> tuple[list[str], list[str]]:
     """Run LLM distillation on a single content block.
 
     Returns (fact_strings, insight_strings).
@@ -718,6 +725,7 @@ def _classify_insight(
 # Ingestion (writes to L9 memory via ingest_packet)
 # ---------------------------------------------------------------------------
 
+
 async def ingest_distilled(
     facts: list[DistilledItem],
     insights: list[DistilledItem],
@@ -740,16 +748,16 @@ async def ingest_distilled(
     if not mcp_url:
         host = os.environ.get("C1_HOST", "46.62.243.82")
         mcp_url = f"http://{host}/memory/mcp/call"
-    
+
     api_key = os.environ.get("MCP_API_KEY_C") or os.environ.get("L9_EXECUTOR_API_KEY")
-    
+
     if not api_key:
         print("  ❌ MCP_API_KEY_C not set. Cannot ingest via MCP.")
         stats["errors"] = len(facts) + len(insights)
         return stats
 
     import httpx
-    
+
     async def mcp_save_memory(tool_name: str, arguments: dict):
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -812,6 +820,7 @@ async def ingest_distilled(
 # ---------------------------------------------------------------------------
 # Main distillation pipeline
 # ---------------------------------------------------------------------------
+
 
 async def distill_file(
     file_path: Path,
@@ -878,9 +887,7 @@ async def distill_file(
         print(f"  🔍 [DRY RUN] Would distill {len(chunks)} chunks with {DISTILLER_MODEL}")
         return result
 
-    facts, insights = await distill_chunks(
-        chunks, source_type, str(file_path)
-    )
+    facts, insights = await distill_chunks(chunks, source_type, str(file_path))
     result.facts = facts
     result.insights = insights
 
@@ -897,12 +904,9 @@ async def distill_file(
         return result
 
     # 5. Ingest into L9 memory
-    stats = await ingest_distilled(
-        facts, insights, str(file_path), source_type
-    )
+    stats = await ingest_distilled(facts, insights, str(file_path), source_type)
     print(
-        f"  ✅ Ingested: {stats['facts_ingested']} facts, "
-        f"{stats['insights_ingested']} insights"
+        f"  ✅ Ingested: {stats['facts_ingested']} facts, " f"{stats['insights_ingested']} insights"
     )
     if stats["errors"]:
         print(f"  ⚠️  {stats['errors']} ingestion errors")
@@ -957,12 +961,11 @@ async def run_pipeline(
         return
 
     if not files:
-        print(f"📭 No files found for source '{source}'"
-              + (f" since {since}" if since else ""))
+        print(f"📭 No files found for source '{source}'" + (f" since {since}" if since else ""))
         return
 
     print(f"{'=' * 60}")
-    print(f"L9 TRANSCRIPT DISTILLER")
+    print("L9 TRANSCRIPT DISTILLER")
     print(f"{'=' * 60}")
     print(f"Source:    {source}")
     date_range = since or "all"
@@ -1002,17 +1005,19 @@ async def run_pipeline(
             totals["insights"] += len(result.insights)
             totals["errors"] += len(result.errors)
 
-        file_results.append({
-            "file": fp.name,
-            "path": str(fp),
-            "skipped": result.skipped,
-            "skip_reason": result.skip_reason,
-            "chunks": result.chunks_count,
-            "facts": len(result.facts),
-            "insights": len(result.insights),
-            "errors": result.errors,
-            "content_hash": result.content_hash,
-        })
+        file_results.append(
+            {
+                "file": fp.name,
+                "path": str(fp),
+                "skipped": result.skipped,
+                "skip_reason": result.skip_reason,
+                "chunks": result.chunks_count,
+                "facts": len(result.facts),
+                "insights": len(result.insights),
+                "errors": result.errors,
+                "content_hash": result.content_hash,
+            }
+        )
 
     # Save state (even for dry runs — tracks what was seen)
     if not dry_run:
@@ -1022,7 +1027,7 @@ async def run_pipeline(
     elapsed = (run_end - run_start).total_seconds()
 
     print(f"\n{'=' * 60}")
-    print(f"DISTILLER RESULTS")
+    print("DISTILLER RESULTS")
     print(f"{'=' * 60}")
     print(f"Processed: {totals['processed']}")
     print(f"Skipped:   {totals['skipped']}")
@@ -1065,14 +1070,14 @@ async def run_pipeline(
         f"Duration:   {elapsed:.0f}s ({elapsed / 60:.1f} min)",
         f"Dry run:    {dry_run}",
         "",
-        f"TOTALS:",
+        "TOTALS:",
         f"  Processed: {totals['processed']} files",
         f"  Skipped:   {totals['skipped']} files",
         f"  Facts:     {totals['facts']} (→ knowledge_facts table)",
         f"  Insights:  {totals['insights']} (→ packet_store table)",
         f"  Errors:    {totals['errors']}",
         "",
-        f"FILES PROCESSED:",
+        "FILES PROCESSED:",
     ]
     for fr in file_results:
         status = "SKIP" if fr["skipped"] else "OK"
@@ -1086,6 +1091,7 @@ async def run_pipeline(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(

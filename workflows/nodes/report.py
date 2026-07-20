@@ -154,9 +154,7 @@ async def report_node(state: WorkflowState) -> dict:
         error=None,
         duration_ms=duration_ms,
         artifacts={
-            "total_files": len(files_extracted)
-            + len(files_copied)
-            + len(files_modified),
+            "total_files": len(files_extracted) + len(files_copied) + len(files_modified),
             "total_duration_ms": total_duration,
             "validation_passed": validation_passed,
         },

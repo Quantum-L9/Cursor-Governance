@@ -93,9 +93,7 @@ class StepType(str, Enum):
     BASELINE = "baseline"
     IMPLEMENT = "implement"
     GENERATE_TESTS = "generate_tests"  # Optional: Auto-generate tests for new code
-    GENERATE_README = (
-        "generate_readme"  # Optional: Auto-generate README for new modules
-    )
+    GENERATE_README = "generate_readme"  # Optional: Auto-generate README for new modules
     VALIDATE = "validate"
     MEMORY_WRITE = "memory_write"
     GENERATE_REPORT = "generate_report"
@@ -287,9 +285,7 @@ class GMPExecutor:
                         "id": f"T{len(todos) + 1}",
                         "file": parts[0] if not parts[0].startswith("T") else parts[1],
                         "lines": parts[1] if not parts[0].startswith("T") else parts[2],
-                        "action": parts[2]
-                        if not parts[0].startswith("T")
-                        else parts[3],
+                        "action": parts[2] if not parts[0].startswith("T") else parts[3],
                         "description": parts[3]
                         if not parts[0].startswith("T")
                         else (parts[4] if len(parts) > 4 else ""),
@@ -372,9 +368,7 @@ class GMPExecutor:
         print()  # noqa: ADR-0019
         print("TODO items to implement:")  # noqa: ADR-0019
         for t in self.state.todo_plan:
-            print(
-                f"  [ ] {t['id']}: {t['file']} - {t['action']} - {t.get('description', '')}"
-            )  # noqa: ADR-0019
+            print(f"  [ ] {t['id']}: {t['file']} - {t['action']} - {t.get('description', '')}")  # noqa: ADR-0019
         print()  # noqa: ADR-0019
         print("-" * 40)  # noqa: ADR-0019
         print("Make your changes now, then press ENTER when done.")  # noqa: ADR-0019
@@ -405,8 +399,7 @@ class GMPExecutor:
         todo_files = " ".join(t["file"] for t in self.state.todo_plan)
 
         self.state.needs_tests = (
-            any(kw in task_lower for kw in TEST_KEYWORDS)
-            or "test" in todo_files.lower()
+            any(kw in task_lower for kw in TEST_KEYWORDS) or "test" in todo_files.lower()
         )
         self.state.needs_readme = any(kw in task_lower for kw in README_KEYWORDS)
 
@@ -514,9 +507,7 @@ logger.info("generated {{len(tests.splitlines())}} lines")
                         "description": "Auto-generated tests",
                     }
                 )
-            return StepResult(
-                success=True, output=f"Generated {len(generated)} test files"
-            )
+            return StepResult(success=True, output=f"Generated {len(generated)} test files")
         print("\n⚠️  No tests were generated")  # noqa: ADR-0019
         return StepResult(success=True, output="No tests generated")
 
@@ -585,9 +576,7 @@ logger.info("generated {{len(tests.splitlines())}} lines")
                         "description": "Auto-generated README",
                     }
                 )
-            return StepResult(
-                success=True, output=f"Generated {len(generated)} READMEs"
-            )
+            return StepResult(success=True, output=f"Generated {len(generated)} READMEs")
         return StepResult(success=True, output="No READMEs generated")
 
     def _generate_simple_readme(self, dir_path: str, readme_path: Path):
@@ -636,9 +625,7 @@ from {module_path} import ...
         validations = []
 
         # py_compile
-        py_files = [
-            t["file"] for t in self.state.todo_plan if t["file"].endswith(".py")
-        ]
+        py_files = [t["file"] for t in self.state.todo_plan if t["file"].endswith(".py")]
         if py_files:
             files_str = " ".join(str(REPO_ROOT / f) for f in py_files)
             code, stdout, stderr = self._run_shell(f"python3 -m py_compile {files_str}")
@@ -646,9 +633,7 @@ from {module_path} import ...
                 validations.append({"gate": "py_compile", "result": "✅"})
                 print("✅ py_compile: PASSED")  # noqa: ADR-0019
             else:
-                validations.append(
-                    {"gate": "py_compile", "result": "❌", "details": stderr}
-                )
+                validations.append({"gate": "py_compile", "result": "❌", "details": stderr})
                 print(f"❌ py_compile: FAILED\n{stderr}")  # noqa: ADR-0019
                 self.state.validations = validations
                 return StepResult(success=False, error=f"py_compile failed: {stderr}")
@@ -669,9 +654,7 @@ from {module_path} import ...
         print("Writing learnings to L9 memory...\n")  # noqa: ADR-0019
 
         # Build summary
-        files_changed = ", ".join(
-            t["file"].split("/")[-1] for t in self.state.todo_plan[:3]
-        )
+        files_changed = ", ".join(t["file"].split("/")[-1] for t in self.state.todo_plan[:3])
         summary = f"{self.state.gmp_id}: {self.state.task}. Files: {files_changed}. Tags: gmp, {self.state.tier.lower()}"
 
         cmd = f'python3 {MEMORY_CLIENT} write "{summary}" --kind lesson 2>/dev/null || echo "Memory write failed"'
@@ -704,23 +687,21 @@ from {module_path} import ...
         for v in self.state.validations:
             val_args.append(f'--validation "{v["gate"]}|{v["result"]}"')
 
-        cmd = f'''python3 {REPORT_GENERATOR} \
+        cmd = f"""python3 {REPORT_GENERATOR} \
             --task "{self.state.task}" \
             --tier {self.state.tier}_TIER \
             {" ".join(todo_args)} \
             {" ".join(val_args)} \
             --summary "GMP execution via DAG executor" \
             --update-workflow \
-            --skip-verify'''
+            --skip-verify"""
 
         print("Running: python3 scripts/generate_gmp_report.py ...")  # noqa: ADR-0019
         code, stdout, stderr = self._run_shell(cmd)
 
         if code != 0:
             print(f"❌ Report generation failed: {stderr}")  # noqa: ADR-0019
-            return StepResult(
-                success=False, error=f"Report generation failed: {stderr}"
-            )
+            return StepResult(success=False, error=f"Report generation failed: {stderr}")
 
         # Extract report path from output
         for line in stdout.split("\n"):
@@ -909,14 +890,10 @@ Examples:
     )
 
     parser.add_argument("task", nargs="?", help="Task description")
-    parser.add_argument(
-        "--tier", choices=["KERNEL", "RUNTIME", "INFRA", "UX"], default="RUNTIME"
-    )
+    parser.add_argument("--tier", choices=["KERNEL", "RUNTIME", "INFRA", "UX"], default="RUNTIME")
     parser.add_argument("--resume", action="store_true", help="Resume interrupted GMP")
     parser.add_argument("--status", action="store_true", help="Show current status")
-    parser.add_argument(
-        "--reset", action="store_true", help="Clear state and start fresh"
-    )
+    parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
 
     args = parser.parse_args()
 

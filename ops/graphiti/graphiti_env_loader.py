@@ -91,7 +91,9 @@ def env_status() -> dict[str, str]:
     return {
         "machine_env": str(Path.home() / ".cursor" / "graphiti.env"),
         "machine_env_exists": str((Path.home() / ".cursor" / "graphiti.env").is_file()),
-        "secrets_overlay_exists": str((Path.home() / ".cursor" / "secrets" / "graphiti.env").is_file()),
+        "secrets_overlay_exists": str(
+            (Path.home() / ".cursor" / "secrets" / "graphiti.env").is_file()
+        ),
         "mcp_token_set": str(bool(os.environ.get("GRAPHITI_MCP_TOKEN", "").strip())),
         "ssh_key_exists": str(Path(os.environ.get("GRAPHITI_SSH_KEY", "")).expanduser().is_file()),
         "memory_enabled": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),

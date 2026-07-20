@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timedelta, timezone
-from typing import Literal, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -19,9 +19,7 @@ _PII_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     ),
     (
         "phone",
-        re.compile(
-            r"(?<!\d)(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}(?!\d)"
-        ),
+        re.compile(r"(?<!\d)(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}(?!\d)"),
         "[PHONE_REDACTED]",
     ),
     (
@@ -62,22 +60,22 @@ class EpisodeContract(BaseModel):
     source_description: str = Field(..., max_length=MAX_DESCRIPTION_CHARS)
     reference_time: datetime
     group_id: str = Field(..., min_length=3, max_length=100)
-    kind: Optional[str] = Field(None, description="lesson|pickup|manifest|gmp|session")
+    kind: str | None = Field(None, description="lesson|pickup|manifest|gmp|session")
     pii_redaction: bool = True
 
     @field_validator("reference_time")
     @classmethod
     def ensure_timezone_aware(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(tzinfo=UTC)
         return value
 
     @field_validator("reference_time")
     @classmethod
     def reject_future_dates(cls, value: datetime) -> datetime:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         if value > now + timedelta(hours=1):
             raise ValueError(f"reference_time {value.isoformat()} is in the future")
         return value

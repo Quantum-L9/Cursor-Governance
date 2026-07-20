@@ -39,10 +39,9 @@ from pathlib import Path
 from typing import Any, Literal
 
 import structlog
+from core.decorators import must_stay_async
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
-
-from core.decorators import must_stay_async
 from tools.validation.validate_external_code import (
     ValidationIssue,
     extract_python_code_blocks,
@@ -80,8 +79,8 @@ class InspectState(BaseModel):
     component_type: Literal[
         "MODULE", "SERVICE", "AGENT", "ROUTER", "TOOL", "KERNEL", "CONFIG", "EXTERNAL", "UNKNOWN"
     ] = Field(default="UNKNOWN")
-    tier: Literal["KERNEL_TIER", "RUNTIME_TIER", "INFRA_TIER", "UX_TIER", "UNKNOWN"] = (
-        Field(default="UNKNOWN")
+    tier: Literal["KERNEL_TIER", "RUNTIME_TIER", "INFRA_TIER", "UX_TIER", "UNKNOWN"] = Field(
+        default="UNKNOWN"
     )
 
     # Orientation
@@ -262,14 +261,18 @@ async def structure_node(state: InspectState) -> dict[str, Any]:
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 methods = [
-                    n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    n.name
+                    for n in node.body
+                    if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
                 ]
-                structure_map.append({
-                    "type": "class",
-                    "name": node.name,
-                    "line": node.lineno,
-                    "methods": methods,
-                })
+                structure_map.append(
+                    {
+                        "type": "class",
+                        "name": node.name,
+                        "line": node.lineno,
+                        "methods": methods,
+                    }
+                )
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 # Skip methods (already captured under class)
                 if not any(
@@ -278,11 +281,13 @@ async def structure_node(state: InspectState) -> dict[str, Any]:
                     if hasattr(p, "body") and node in getattr(p, "body", [])
                 ):
                     is_async = isinstance(node, ast.AsyncFunctionDef)
-                    structure_map.append({
-                        "type": "async_function" if is_async else "function",
-                        "name": node.name,
-                        "line": node.lineno,
-                    })
+                    structure_map.append(
+                        {
+                            "type": "async_function" if is_async else "function",
+                            "name": node.name,
+                            "line": node.lineno,
+                        }
+                    )
             elif isinstance(node, ast.ImportFrom) and node.module:
                 dependencies.append(node.module)
 
@@ -292,10 +297,12 @@ async def structure_node(state: InspectState) -> dict[str, Any]:
                 end_line = getattr(node, "end_lineno", node.lineno)
                 length = end_line - node.lineno
                 if length > 50:
-                    hotspots.append({
-                        "pattern": "long_function",
-                        "location": f"{node.name} ({length} lines at L{node.lineno})",
-                    })
+                    hotspots.append(
+                        {
+                            "pattern": "long_function",
+                            "location": f"{node.name} ({length} lines at L{node.lineno})",
+                        }
+                    )
 
     return {
         "structure_map": structure_map,
@@ -367,10 +374,12 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
     for code in code_snippets:
         if "time.sleep(" in code and "async def" in code:
             async_ok = False
-            anti_patterns.append({
-                "pattern": "sync_io_in_async",
-                "location": "time.sleep() in async function",
-            })
+            anti_patterns.append(
+                {
+                    "pattern": "sync_io_in_async",
+                    "location": "time.sleep() in async function",
+                }
+            )
 
     # --- Quality: missing DORA header ---
     quality_ok = True
@@ -378,19 +387,23 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
         if "class " in code or "def " in code:
             if "__dora_meta__" not in code:
                 quality_ok = False
-                anti_patterns.append({
-                    "pattern": "missing_dora_header",
-                    "location": "No __dora_meta__ dict found",
-                })
+                anti_patterns.append(
+                    {
+                        "pattern": "missing_dora_header",
+                        "location": "No __dora_meta__ dict found",
+                    }
+                )
                 break  # Only flag once
 
     # --- Convert issues to anti_patterns for existing report format ---
     for issue in all_issues:
         if issue.severity in ("critical", "high"):
-            anti_patterns.append({
-                "pattern": f"{issue.type}_{issue.severity}",
-                "location": f"L{issue.line}: {issue.issue}",
-            })
+            anti_patterns.append(
+                {
+                    "pattern": f"{issue.type}_{issue.severity}",
+                    "location": f"L{issue.line}: {issue.issue}",
+                }
+            )
 
     # --- Health score ---
     deductions = 0
@@ -538,7 +551,9 @@ async def report_node(state: InspectState) -> dict[str, Any]:
             structure_lines.append(f"- `{kind}` **{name}** (L{line}) — {len(methods)} methods")
         else:
             structure_lines.append(f"- `{kind}` **{name}** (L{line})")
-    structure_section = chr(10).join(structure_lines) if structure_lines else "No Python structures found"
+    structure_section = (
+        chr(10).join(structure_lines) if structure_lines else "No Python structures found"
+    )
 
     # --- Mode label ---
     mode_label = "EXTERNAL CODE" if state.is_external else "EXISTING FILE"

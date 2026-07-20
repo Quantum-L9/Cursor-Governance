@@ -70,9 +70,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
+from core.decorators import must_stay_async
 from langgraph.graph import END, START, StateGraph
 
-from core.decorators import must_stay_async
 from workflows.nodes import (
     deploy_files_node,
     extract_files_node,
@@ -226,10 +226,7 @@ async def run_harvest_deploy(
         )
     """
     working_dir = working_directory or str(Path.cwd())
-    wf_id = (
-        workflow_id
-        or f"hd-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
-    )
+    wf_id = workflow_id or f"hd-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
 
     initial_state = create_initial_state(
         workflow_id=wf_id,
@@ -282,9 +279,7 @@ async def main():
         result = await run_harvest_deploy(
             source_document=config.get("source_document", args.source),
             harvest_directory=config.get("harvest_directory", args.harvest_dir),
-            working_directory=str(
-                config.get("working_directory", args.working_dir or Path.cwd())
-            ),
+            working_directory=str(config.get("working_directory", args.working_dir or Path.cwd())),
             extraction_patterns=config.get("extraction_patterns"),
             file_mappings=config.get("file_mappings"),
             validation_checks=config.get("validation_checks"),

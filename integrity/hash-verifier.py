@@ -60,7 +60,11 @@ Modes:
 Logs to: ops/logs/integrity_report.json and ops/logs/integrity_activity.log
 """
 
-import os, sys, json, hashlib, base64, datetime
+import base64
+import datetime
+import hashlib
+import json
+import sys
 from pathlib import Path
 
 ROOT = Path.cwd()
@@ -69,6 +73,7 @@ MANIFEST_PATH = INTEGRITY_DIR / "manifest-lock.json"
 OPS_LOG_DIR = ROOT / "ops" / "logs"
 META_AUDIT = ROOT / "intelligence" / "meta-audit.md"
 
+
 def sha256_file(p: Path) -> str:
     h = hashlib.sha256()
     with open(p, "rb") as f:
@@ -76,20 +81,25 @@ def sha256_file(p: Path) -> str:
             h.update(chunk)
     return h.hexdigest()
 
+
 def b64_file(p: Path) -> str:
     with open(p, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
+
 
 def load_manifest():
     if not MANIFEST_PATH.exists():
         return None
     return json.loads(MANIFEST_PATH.read_text())
 
+
 def save_manifest(data):
     MANIFEST_PATH.write_text(json.dumps(data, indent=2))
 
+
 def ensure_logs():
     OPS_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def log_activity(msg: str):
     ensure_logs()
@@ -97,9 +107,11 @@ def log_activity(msg: str):
     with open(OPS_LOG_DIR / "integrity_activity.log", "a") as f:
         f.write(f"[{stamp}] {msg}\n")
 
+
 def write_report(payload: dict):
     ensure_logs()
     (OPS_LOG_DIR / "integrity_report.json").write_text(json.dumps(payload, indent=2))
+
 
 def update_meta_audit(title: str, details: str):
     stamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -108,6 +120,7 @@ def update_meta_audit(title: str, details: str):
         META_AUDIT.write_text("")
     with open(META_AUDIT, "a") as f:
         f.write(f"\n## Integrity Reflection — {stamp}\n**{title}**\n{details}\n")
+
 
 def should_exclude(path: Path, excludes):
     for ex in excludes:
@@ -118,6 +131,7 @@ def should_exclude(path: Path, excludes):
         return True
     return False
 
+
 def iter_governed_files(roots, excludes):
     for root_rel in roots:
         base = ROOT / root_rel
@@ -127,6 +141,7 @@ def iter_governed_files(roots, excludes):
             if p.is_file() and not should_exclude(p.relative_to(ROOT), excludes):
                 yield p
 
+
 def snapshot():
     manifest = load_manifest()
     if manifest is None:
@@ -135,22 +150,19 @@ def snapshot():
             "generated": "",
             "roots": [".cursor", "commands", "pipeline", "security", "ops", "intelligence"],
             "excludes": ["integrity"],
-            "files": []
+            "files": [],
         }
     files = []
     for p in iter_governed_files(manifest["roots"], manifest.get("excludes", [])):
         rel = str(p.relative_to(ROOT))
-        files.append({
-            "path": rel,
-            "sha256": sha256_file(p),
-            "b64": b64_file(p)
-        })
+        files.append({"path": rel, "sha256": sha256_file(p), "b64": b64_file(p)})
     manifest["files"] = files
     manifest["generated"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     save_manifest(manifest)
     log_activity(f"Snapshot created with {len(files)} files.")
     update_meta_audit("Snapshot Created", f"Total files snapshotted: {len(files)}")
     write_report({"mode": "snapshot", "timestamp": manifest["generated"], "files": len(files)})
+
 
 def verify_and_repair(auto_repair=True):
     manifest = load_manifest()
@@ -195,11 +207,14 @@ def verify_and_repair(auto_repair=True):
         "drift": drift,
         "missing": missing,
         "repaired": repaired,
-        "extras": extras
+        "extras": extras,
     }
     write_report(report)
-    log_activity(f"Verify complete. drift={len(drift)} missing={len(missing)} repaired={len(repaired)} extras={len(extras)}")
+    log_activity(
+        f"Verify complete. drift={len(drift)} missing={len(missing)} repaired={len(repaired)} extras={len(extras)}"
+    )
     update_meta_audit("Verify & Repair Completed", json.dumps(report, indent=2))
+
 
 def main():
     args = sys.argv[1:]
@@ -210,6 +225,7 @@ def main():
     if "--no-repair" in args:
         auto_repair = False
     verify_and_repair(auto_repair=auto_repair)
+
 
 if __name__ == "__main__":
     main()

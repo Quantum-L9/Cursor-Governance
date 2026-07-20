@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -93,7 +93,7 @@ def evidence_is_fresh(data: dict[str, Any]) -> bool:
         exp_dt = datetime.fromisoformat(str(expires).replace("Z", "+00:00"))
     except ValueError:
         return False
-    return exp_dt > datetime.now(timezone.utc)
+    return exp_dt > datetime.now(UTC)
 
 
 def evidence_covers_path(data: dict[str, Any], rel_path: str) -> bool:
@@ -123,12 +123,11 @@ def evidence_covers_path(data: dict[str, Any], rel_path: str) -> bool:
 
 def extract_tool_path(hook_input: dict[str, Any]) -> tuple[str | None, str | None]:
     tool_name = (
-        hook_input.get("tool_name")
-        or hook_input.get("tool")
-        or hook_input.get("name")
-        or ""
+        hook_input.get("tool_name") or hook_input.get("tool") or hook_input.get("name") or ""
     )
-    tool_input = hook_input.get("tool_input") or hook_input.get("parameters") or hook_input.get("args") or {}
+    tool_input = (
+        hook_input.get("tool_input") or hook_input.get("parameters") or hook_input.get("args") or {}
+    )
     if not isinstance(tool_input, dict):
         tool_input = {}
 
@@ -150,13 +149,20 @@ def extract_mcp_tool(hook_input: dict[str, Any]) -> tuple[str | None, dict[str, 
         if "/" in tool:
             tool = tool.rsplit("/", 1)[-1]
 
-    args = hook_input.get("arguments") or hook_input.get("tool_input") or hook_input.get("parameters") or {}
+    args = (
+        hook_input.get("arguments")
+        or hook_input.get("tool_input")
+        or hook_input.get("parameters")
+        or {}
+    )
     if not isinstance(args, dict):
         args = {}
     return str(tool) if tool else None, args
 
 
-def hook_response(permission: str, user_message: str = "", agent_message: str = "", **extra: Any) -> dict[str, Any]:
+def hook_response(
+    permission: str, user_message: str = "", agent_message: str = "", **extra: Any
+) -> dict[str, Any]:
     payload: dict[str, Any] = {"permission": permission}
     if user_message:
         payload["user_message"] = user_message
@@ -167,7 +173,9 @@ def hook_response(permission: str, user_message: str = "", agent_message: str = 
 
 
 def check_pre_tool_use(hook_input: dict[str, Any]) -> dict[str, Any]:
-    repo_raw = hook_input.get("workspace_roots", hook_input.get("workspace_root", [hook_input.get("cwd", "")]))
+    repo_raw = hook_input.get(
+        "workspace_roots", hook_input.get("workspace_root", [hook_input.get("cwd", "")])
+    )
     if isinstance(repo_raw, list):
         repo_raw = repo_raw[0] if repo_raw else ""
     repo = Path(str(repo_raw or hook_input.get("CURSOR_PROJECT_DIR", "."))).expanduser().resolve()
@@ -192,8 +200,8 @@ def check_pre_tool_use(hook_input: dict[str, Any]) -> dict[str, Any]:
         return hook_response("allow")
 
     baseline = (
-        "bash \"$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts/"
-        f"code_graph_gmp_baseline.sh\" \"{repo}\" --run-id gmp-$(date +%Y%m%d) --files {rel}"
+        'bash "$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts/'
+        f'code_graph_gmp_baseline.sh" "{repo}" --run-id gmp-$(date +%Y%m%d) --files {rel}'
     )
     matrix = (
         "skills/l9-code-graph-rag-mcp/assets/plasticos-trigger-matrix.md "
@@ -207,7 +215,9 @@ def check_pre_tool_use(hook_input: dict[str, Any]) -> dict[str, Any]:
 
 
 def check_before_mcp(hook_input: dict[str, Any]) -> dict[str, Any]:
-    repo_raw = hook_input.get("workspace_roots", hook_input.get("workspace_root", [hook_input.get("cwd", "")]))
+    repo_raw = hook_input.get(
+        "workspace_roots", hook_input.get("workspace_root", [hook_input.get("cwd", "")])
+    )
     if isinstance(repo_raw, list):
         repo_raw = repo_raw[0] if repo_raw else ""
     repo = Path(str(repo_raw or hook_input.get("CURSOR_PROJECT_DIR", "."))).expanduser().resolve()
@@ -239,7 +249,10 @@ def check_before_mcp(hook_input: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("Usage: code_graph_plasticos_gate.py pre_tool_use|before_mcp [json stdin]", file=sys.stderr)
+        print(
+            "Usage: code_graph_plasticos_gate.py pre_tool_use|before_mcp [json stdin]",
+            file=sys.stderr,
+        )
         return 2
 
     mode = sys.argv[1]

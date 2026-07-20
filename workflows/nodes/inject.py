@@ -77,9 +77,7 @@ async def inject_files_node(state: WorkflowState) -> dict:
     working_dir = state.get("working_directory", str(Path.cwd()))
 
     # Filter to inject/replace operations
-    modify_mappings = [
-        m for m in mappings if m.get("operation") in ("inject", "replace")
-    ]
+    modify_mappings = [m for m in mappings if m.get("operation") in ("inject", "replace")]
 
     logger.info(
         "inject.start",
@@ -110,18 +108,14 @@ async def inject_files_node(state: WorkflowState) -> dict:
                 cmd = f"sed -i '' '/{after_pattern}/r {source}' \"{destination}\""
                 location = f"pattern '{after_pattern}'"
             else:
-                errors.append(
-                    f"Inject requires after_line or after_pattern: {destination}"
-                )
+                errors.append(f"Inject requires after_line or after_pattern: {destination}")
                 continue
 
             code, _stdout, stderr = await _run_shell(cmd, working_dir)
 
             if code != 0:
                 errors.append(f"Inject failed: {source} → {destination}: {stderr}")
-                logger.error(
-                    "inject.failed", source=source, dest=destination, error=stderr
-                )
+                logger.error("inject.failed", source=source, dest=destination, error=stderr)
                 continue
 
             modified_files.append(destination)
@@ -139,9 +133,7 @@ async def inject_files_node(state: WorkflowState) -> dict:
             end_line = mapping.get("end_line")
 
             if not start_line or not end_line:
-                errors.append(
-                    f"Replace requires start_line and end_line: {destination}"
-                )
+                errors.append(f"Replace requires start_line and end_line: {destination}")
                 continue
 
             # Step 1: Delete the line range
@@ -164,9 +156,7 @@ async def inject_files_node(state: WorkflowState) -> dict:
                 continue
 
             modified_files.append(destination)
-            outputs.append(
-                f"✓ Replaced {destination}:{start_line}-{end_line} with {source}"
-            )
+            outputs.append(f"✓ Replaced {destination}:{start_line}-{end_line} with {source}")
             logger.info(
                 "inject.file_replaced",
                 source=source,
@@ -201,9 +191,7 @@ async def inject_files_node(state: WorkflowState) -> dict:
         "current_phase": "validate" if success else "done",
         "should_continue": success,
         "error": result["error"],
-        "messages": [
-            {"role": "assistant", "content": f"Modified {len(modified_files)} files"}
-        ],
+        "messages": [{"role": "assistant", "content": f"Modified {len(modified_files)} files"}],
     }
 
 

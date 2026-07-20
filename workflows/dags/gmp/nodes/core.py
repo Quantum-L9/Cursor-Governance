@@ -306,9 +306,7 @@ def node_finalize(state: GMPState) -> GMPState:
             state.add_message(f"   ⚠️ Report generation failed: {result.stderr[:100]}")
             # Still set a path for reference
             desc = state.task[:30].replace(" ", "-").replace("/", "-")
-            state.report_path = (
-                f"reports/GMP Reports/GMP-Report-{state.gmp_id}-{desc}.md"
-            )
+            state.report_path = f"reports/GMP Reports/GMP-Report-{state.gmp_id}-{desc}.md"
             state.report_generated = False
 
     except subprocess.TimeoutExpired:

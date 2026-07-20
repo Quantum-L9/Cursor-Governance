@@ -145,9 +145,7 @@ async def extract_files_node(state: WorkflowState) -> dict:
         "current_phase": "deploy" if success else "done",
         "should_continue": success,
         "error": result["error"],
-        "messages": [
-            {"role": "assistant", "content": f"Extracted {len(extracted_files)} files"}
-        ],
+        "messages": [{"role": "assistant", "content": f"Extracted {len(extracted_files)} files"}],
     }
 
 

@@ -117,9 +117,7 @@ def main():
         state = executor.run(args.task, args.tier)
 
     messages = (
-        state.get("messages", [])
-        if isinstance(state, dict)
-        else getattr(state, "messages", [])
+        state.get("messages", []) if isinstance(state, dict) else getattr(state, "messages", [])
     )
     for msg in messages:
         logger.info("output", value=msg)
@@ -129,11 +127,7 @@ def main():
         if isinstance(state, dict)
         else getattr(state, "phase", "unknown")
     )
-    gmp_id = (
-        state.get("gmp_id", "")
-        if isinstance(state, dict)
-        else getattr(state, "gmp_id", "")
-    )
+    gmp_id = state.get("gmp_id", "") if isinstance(state, dict) else getattr(state, "gmp_id", "")
     logger.info("\ngmp id: gmp id", gmp_id=gmp_id)
     logger.info("phase: phase", phase=phase)
     logger.info("thread id: gmp-{datetime.now().strftime('%y%m%d%h%m%s')}")

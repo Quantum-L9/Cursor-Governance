@@ -247,9 +247,7 @@ class StepExecutor:
             if strip_backticks:
                 cmd = f"sed -n '{start_line},{end_line}p' \"{source}\" | sed '1d' | sed '$d' > \"{target_path}\""
             else:
-                cmd = (
-                    f'sed -n \'{start_line},{end_line}p\' "{source}" > "{target_path}"'
-                )
+                cmd = f'sed -n \'{start_line},{end_line}p\' "{source}" > "{target_path}"'
 
             code, stdout, stderr = self._run_shell(cmd)
             if code != 0:
@@ -661,9 +659,7 @@ class DAGRunner:
 
             # Checkpoint pause
             if step.checkpoint and step.status == StepStatus.COMPLETED:
-                checkpoint_result = executor._execute_checkpoint(
-                    {"message": f"After {step.name}"}
-                )
+                checkpoint_result = executor._execute_checkpoint({"message": f"After {step.name}"})
                 if not checkpoint_result.success:
                     print("\n⏸️ Workflow paused by user")  # noqa: ADR-0019
                     return False
@@ -673,15 +669,12 @@ class DAGRunner:
 
         # Clean up state file on success
         if self.state_file and self.state_file.exists():
-            all_completed = all(
-                s.status == StepStatus.COMPLETED for s in self.steps.values()
-            )
+            all_completed = all(s.status == StepStatus.COMPLETED for s in self.steps.values())
             if all_completed:
                 self.state_file.unlink()
 
         return all(
-            s.status in (StepStatus.COMPLETED, StepStatus.SKIPPED)
-            for s in self.steps.values()
+            s.status in (StepStatus.COMPLETED, StepStatus.SKIPPED) for s in self.steps.values()
         )
 
     def _print_summary(self) -> None:
@@ -772,14 +765,10 @@ Examples:
     # Resume command
     resume_parser = subparsers.add_parser("resume", help="Resume interrupted workflow")
     resume_parser.add_argument("workflow", type=Path, help="Path to workflow YAML")
-    resume_parser.add_argument(
-        "--working-dir", "-w", type=Path, help="Working directory"
-    )
+    resume_parser.add_argument("--working-dir", "-w", type=Path, help="Working directory")
 
     # Validate command
-    validate_parser = subparsers.add_parser(
-        "validate", help="Validate workflow definition"
-    )
+    validate_parser = subparsers.add_parser("validate", help="Validate workflow definition")
     validate_parser.add_argument("workflow", type=Path, help="Path to workflow YAML")
 
     args = parser.parse_args()

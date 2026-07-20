@@ -4,20 +4,20 @@ Replaces the flat JSON save with an MCP call to memory_ingest_episode. The JSON
 snapshot is kept as a local fallback cache, not the source of truth.
 Import and call `emit_session(session_data)` where save_to_sessions_dir() was.
 """
+
 from __future__ import annotations
 
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 SESSIONS = Path(__file__).parent / "sessions"
 
 
 def _as_narrative(s: dict) -> str:
-    parts = [f"Project: {s.get('project','unknown')}",
-             f"Summary: {s.get('summary','')}"]
+    parts = [f"Project: {s.get('project','unknown')}", f"Summary: {s.get('summary','')}"]
     if s.get("key_actions"):
         parts.append("Actions: " + "; ".join(s["key_actions"]))
     if s.get("decisions"):
@@ -32,7 +32,7 @@ def _as_narrative(s: dict) -> str:
 def emit_session(session_data: dict) -> dict:
     """Feed a session as a Graphiti episode via the L9-Ops-MCP tool; cache JSON."""
     SESSIONS.mkdir(parents=True, exist_ok=True)
-    hour = session_data.get("hour", datetime.now(timezone.utc).strftime("%Y-%m-%d-%H"))
+    hour = session_data.get("hour", datetime.now(UTC).strftime("%Y-%m-%d-%H"))
     # Write local JSON cache with explicit UTF-8 encoding
     cache_path = SESSIONS / f"{hour}.json"
     cache_path.write_text(json.dumps(session_data, indent=2), encoding="utf-8")
@@ -41,7 +41,7 @@ def emit_session(session_data: dict) -> dict:
         "body": _as_narrative(session_data),
         "source_agent_id": "cursor-context-extractor",
         "session_id": hour,
-        "group_ids": [f"session:{hour}", f"agent:cursor-context-extractor"],
+        "group_ids": [f"session:{hour}", "agent:cursor-context-extractor"],
         "semantic_score": 1.0,
         "trust_level": "L2",
     }

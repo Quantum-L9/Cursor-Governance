@@ -13,6 +13,8 @@ authors = [{ name = "Igor Beylin" }]
 dependencies = [
     "pydantic>=2.0,<3",
     "pyyaml>=6.0",
+    "structlog>=24.0",
+    "langgraph>=0.2",
 ]
 
 [project.optional-dependencies]
@@ -24,8 +26,16 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# force-exclude: `exclude` alone only affects directory *discovery* (e.g. `ruff
+# check .`). pre-commit invokes ruff with explicit filenames, which bypasses
+# plain `exclude` — force-exclude makes the patterns apply to explicitly-passed
+# paths too, so _archived reference dirs stay untouched either way.
+force-exclude = true
 exclude = [
-    "ops/scripts/_archived",
+    "**/_archived",
+    "**/_archive",
+    "**/archive",
+    "**/archived",
     "current_work/harvested",
     "C_GOV_FILES",
 ]

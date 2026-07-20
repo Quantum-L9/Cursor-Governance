@@ -1,114 +1,62 @@
 ---
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "7.0.0"
 component_id: "INT-WS-002"
 component_name: "Workspace Setup Quick Start Guide"
 layer: "intelligence"
 domain: "workspace_management"
 type: "documentation"
 status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
+updated: "2026-07-19"
 author: "Igor Beylin"
 maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-
-# === BUSINESS METADATA ===
-purpose: "Quick start guide for L9 Governance workspace setup"
-summary: "One-command universal workspace setup with 200% enforcement and beautiful UI"
+purpose: "Point at the current L9 Governance activation mechanism"
+summary: "One-command workspace wiring via the real sessionStart hook, not the archived Suite-6 setup script"
 ---
 
-# 🚀 L9 Governance Workspace Setup - Universal Quick Start
+# L9 Governance Workspace Setup — Quick Start
 
-**Version:** 7.0.0 | **Enforcement:** 200% | **Duration:** ~15 minutes
+**The full activation contract lives in [`AGENTS.md`](../../AGENTS.md) at the repo root. Read that
+first — this file is a short pointer, not a duplicate.**
 
----
+`setup-new-workspace.py` (Suite-6, v6/v7) is archived at
+[`intelligence/_archived/workspace/`](../_archived/workspace/). It described a `.suite6-config.json`
++ hardcoded-Dropbox-path setup flow that predates the GitHub-SSOT, Graphiti-native governance model.
+Do not follow its instructions.
 
-## ⚡ ONE-COMMAND SETUP (From ANY workspace)
+## Automatic activation (already wired, nothing to run manually)
+
+Every Cursor session in a workspace with `.cursor/hooks.json` configured runs
+`ops/hooks/session_start_bootstrap.sh` automatically at session start. It:
+
+1. Fast-forward syncs this clone from `origin/main` (`ops/scripts/governance_sync.sh`)
+2. Wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}` symlinks
+3. Checks Graphiti tunnel/MCP health (degraded is expected pre-full-wiring)
+
+## First-time wiring for a NEW consumer workspace
+
+From inside the **consumer** repo (not `~/.cursor-governance` itself):
 
 ```bash
-# Navigate to your workspace
 cd /path/to/your/workspace
-
-# Run the self-executing setup script
-python3 "$HOME/.cursor-governance/intelligence/workspace/setup-new-workspace.py"
+bash ~/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh
 ```
 
-**That's it!** The script will:
-- ✅ Run preflight checks
-- ✅ Install L9 Governance configuration
-- ✅ Create symlinks to GlobalCommands
-- ✅ Load all 23 mandatory files with progress bars
-- ✅ Load 12 learning files recursively
-- ✅ Load 7 L9 start-up kit files
-- ✅ Display pending lessons inline
-- ✅ Activate intelligence systems
-- ✅ Verify everything with 200% enforcement
-- ✅ Show beautiful success message
+This creates the `.cursor-commands` symlink to `~/.cursor-governance`. It is intentionally
+**not** committed — see `.gitignore`.
 
----
+## Verify wiring health
 
-## 🎨 WHAT YOU'LL SEE
-
-```
-╔═══════════════════════════════════════════════════════════════════════════╗
-║              🚀 SUITE 6 WORKSPACE SETUP - v7.0.0 🚀                       ║
-║              Self-Executing | 200% Enforced | Beautiful                  ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-
-✅ Preflight checks passed
-✅ Configuration synced
-✅ Symlinks created
-[1/23] █████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  25.0% | Loading files...
-⚠️  PENDING LESSONS (displayed inline)
-✅ Intelligence systems activated
-✅ Verification passed
-🎯 Setup complete in 14m 32s
+```bash
+cd ~/.cursor-governance
+make wiring-check WS=/path/to/your/workspace   # check a consumer repo
+make symlinks-check                             # check this clone's own symlinks
+make path-lint                                  # fail if any script hardcodes /Users or /home
+make graphiti-health                            # Graphiti tunnel + MCP tool-plane
 ```
 
----
-
-## 📊 WHAT GETS LOADED (42 files total)
-
-- **23 mandatory files** (protocols, profiles, commands)
-- **12 learning files** (mistakes, patterns, solutions, L9 configs)
-- **7 L9 start-up kit files** (complete MCP system)
-
----
-
-## 🔧 TROUBLESHOOTING
+## Troubleshooting
 
 | Issue | Fix |
-|-------|-----|
-| YAML missing | `python3 -m pip install pyyaml` |
-| Wrong symlink | Script auto-detects and warns |
-| Missing files | Script blocks with error message |
-
----
-
-## 🎯 FEATURES
-
-- ✅ **Self-executing** - One command, zero manual steps
-- ✅ **200% enforcement** - Blocks on errors, not just warns
-- ✅ **Beautiful UI** - Progress bars, colors, emojis
-- ✅ **Real-time feedback** - See what's happening
-- ✅ **Inline lesson display** - No extra commands needed
-- ✅ **Automatic activation** - Intelligence systems start automatically
-- ✅ **Comprehensive verification** - Everything validated
-- ✅ **Error handling** - Clear error messages with fixes
-
----
-
-## 📖 DOCUMENTATION
-
-**Primary:** `setup-new-workspace.py` (764 lines) - Self-executing script  
-**Reference:** `setup-new-workspace.md` (archived) - Full documentation  
-
----
-
-**Ready to setup a workspace? Just run the Python script!** 🚀
+|---|---|
+| `.cursor-commands` missing or points at the wrong place | Re-run `setup_workspace_symlinks.sh` from the consumer repo |
+| Graphiti MCP degraded | Expected pre-full-wiring — see `AGENTS.md` §Activation |
+| Anything mentions `.suite6-config.json`, `process_learnings.sh`, or a Dropbox path | Stale Suite-6 reference — ignore, file an issue instead of following it |

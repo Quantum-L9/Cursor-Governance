@@ -459,12 +459,8 @@ git log -1 --oneline""",
         # Validate -> Gate
         SessionEdge("validate", "gate_validation"),
         # Validation gate decisions
-        SessionEdge(
-            "gate_validation", "memory_write", condition="continue", label="Validated"
-        ),
-        SessionEdge(
-            "gate_validation", "implement", condition="fix", label="Fix Issues"
-        ),
+        SessionEdge("gate_validation", "memory_write", condition="continue", label="Validated"),
+        SessionEdge("gate_validation", "implement", condition="fix", label="Fix Issues"),
         SessionEdge("gate_validation", "end", condition="abort", label="Abort"),
         # Memory Write (MANDATORY) -> Finalize
         SessionEdge("memory_write", "finalize"),

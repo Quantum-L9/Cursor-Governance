@@ -59,6 +59,7 @@ from pathlib import Path
 # Configuration
 # =============================================================================
 
+
 def _find_repo_root() -> Path:
     """Auto-detect git repo root from CWD — repo/folder agnostic."""
     cwd = Path.cwd().resolve()
@@ -181,9 +182,7 @@ class UseHarvestExecutor:
             # Try to find harvested files directly
             py_files = list(harvest_dir.glob("*.py"))
             if py_files:
-                print(
-                    f"⚠️  No HARVEST_TABLE.md, using {len(py_files)} .py files directly"
-                )  # noqa: ADR-0019
+                print(f"⚠️  No HARVEST_TABLE.md, using {len(py_files)} .py files directly")  # noqa: ADR-0019
                 items = []
                 for i, f in enumerate(sorted(py_files), 1):
                     items.append(
@@ -207,11 +206,7 @@ class UseHarvestExecutor:
 
         # Parse table rows: | # | Pattern | Source Lines | Target |
         for line in content.split("\n"):
-            if (
-                line.startswith("|")
-                and not line.startswith("| #")
-                and not line.startswith("|---")
-            ):
+            if line.startswith("|") and not line.startswith("| #") and not line.startswith("|---"):
                 parts = [p.strip() for p in line.split("|")[1:-1]]
                 if len(parts) >= 4:
                     try:
@@ -348,9 +343,7 @@ class UseHarvestExecutor:
         passed = 0
         for f in py_files:
             full_path = REPO_ROOT / f
-            code, _stdout, stderr = self._run_shell(
-                f'python3 -m py_compile "{full_path}"'
-            )
+            code, _stdout, stderr = self._run_shell(f'python3 -m py_compile "{full_path}"')
             if code == 0:
                 passed += 1
                 print(f"✅ {f}")  # noqa: ADR-0019
@@ -392,9 +385,7 @@ class UseHarvestExecutor:
 
                 # Check if already imported
                 if module_name not in init_content:
-                    print(
-                        f"⚠️  {f} may need to be added to {parent_dir.name}/__init__.py"
-                    )  # noqa: ADR-0019
+                    print(f"⚠️  {f} may need to be added to {parent_dir.name}/__init__.py")  # noqa: ADR-0019
             else:
                 # No __init__.py - may need to create one
                 print(f"⚠️  No __init__.py in {parent_dir.name}/ — may need to create")  # noqa: ADR-0019
@@ -565,9 +556,7 @@ class UseHarvestExecutor:
                 self._save_state()
             else:
                 print(f"\n❌ Step failed: {step}")  # noqa: ADR-0019
-                print(
-                    "\nResume with: python3 workflows/use_harvest_executor.py --resume"
-                )  # noqa: ADR-0019
+                print("\nResume with: python3 workflows/use_harvest_executor.py --resume")  # noqa: ADR-0019
                 return False
 
         # Complete
@@ -603,16 +592,10 @@ Examples:
         """,
     )
 
-    parser.add_argument(
-        "harvest_dir", nargs="?", help="Directory containing harvested files"
-    )
-    parser.add_argument(
-        "--resume", action="store_true", help="Resume interrupted execution"
-    )
+    parser.add_argument("harvest_dir", nargs="?", help="Directory containing harvested files")
+    parser.add_argument("--resume", action="store_true", help="Resume interrupted execution")
     parser.add_argument("--status", action="store_true", help="Show current status")
-    parser.add_argument(
-        "--reset", action="store_true", help="Clear state and start fresh"
-    )
+    parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
 
     args = parser.parse_args()
 

@@ -126,9 +126,7 @@ class StepResult(TypedDict):
 # =============================================================================
 
 
-def merge_results(
-    existing: list[StepResult], new: list[StepResult]
-) -> list[StepResult]:
+def merge_results(existing: list[StepResult], new: list[StepResult]) -> list[StepResult]:
     """Reducer: Append new results to existing."""
     return existing + new
 

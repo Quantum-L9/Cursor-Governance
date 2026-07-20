@@ -113,9 +113,7 @@ async def checkpoint_node(state: WorkflowState) -> dict:
             "user_confirmed": None,  # Reset for next checkpoint
             "should_continue": True,
             "results": [result],
-            "messages": [
-                {"role": "assistant", "content": "✅ Confirmed, continuing..."}
-            ],
+            "messages": [{"role": "assistant", "content": "✅ Confirmed, continuing..."}],
         }
     result = StepResult(
         step_id=step_id,

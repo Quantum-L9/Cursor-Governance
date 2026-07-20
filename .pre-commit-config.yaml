@@ -1,3 +1,9 @@
+# _archived/_archive/archive[d] dirs are kept reference artifacts (git-tracked,
+# NOT gitignored) — they document superseded systems but must never block or be
+# reformatted by pre-commit. Excluded globally so no current or future hook
+# touches them.
+exclude: '(^|/)_?archive(d)?/'
+
 repos:
   - repo: local
     hooks:

@@ -206,9 +206,7 @@ class LintFixExecutor:
         # Filter by target codes if specified
         if self.state.target_codes:
             errors = [
-                e
-                for e in errors
-                if any(e["code"].startswith(c) for c in self.state.target_codes)
+                e for e in errors if any(e["code"].startswith(c) for c in self.state.target_codes)
             ]
 
         self.state.errors_before = errors
@@ -265,9 +263,7 @@ class LintFixExecutor:
     def _step_apply_auto_fixes(self) -> bool:
         self._print_header("APPLY AUTO FIXES (ruff --fix)")
 
-        auto_errors = [
-            e for e in self.state.errors_before if e.get("fix_type") == "auto"
-        ]
+        auto_errors = [e for e in self.state.errors_before if e.get("fix_type") == "auto"]
 
         if not auto_errors:
             print("✅ No auto-fixable errors")  # noqa: ADR-0019
@@ -302,9 +298,7 @@ class LintFixExecutor:
     def _step_apply_semi_fixes(self) -> bool:
         self._print_header("APPLY SEMI-AUTO FIXES (sed patterns)")
 
-        semi_errors = [
-            e for e in self.state.errors_before if e.get("fix_type") == "semi"
-        ]
+        semi_errors = [e for e in self.state.errors_before if e.get("fix_type") == "semi"]
 
         if not semi_errors:
             print("✅ No semi-auto fixable errors")  # noqa: ADR-0019
@@ -363,9 +357,7 @@ class LintFixExecutor:
                         ):
                             in_except = True
                             except_var = "e"
-                        elif in_except and re.match(
-                            r"\s*(def|class|async def)\s+", line
-                        ):
+                        elif in_except and re.match(r"\s*(def|class|async def)\s+", line):
                             in_except = False
 
                         # Fix raises in except blocks
@@ -404,9 +396,7 @@ class LintFixExecutor:
             passed = 0
             for f in py_files:
                 full_path = REPO_ROOT / f
-                code, _stdout, stderr = self._run_shell(
-                    f'python3 -m py_compile "{full_path}"'
-                )
+                code, _stdout, stderr = self._run_shell(f'python3 -m py_compile "{full_path}"')
                 if code == 0:
                     passed += 1
                 else:
@@ -438,9 +428,7 @@ class LintFixExecutor:
         # Filter by target codes if specified
         if self.state.target_codes:
             errors = [
-                e
-                for e in errors
-                if any(e["code"].startswith(c) for c in self.state.target_codes)
+                e for e in errors if any(e["code"].startswith(c) for c in self.state.target_codes)
             ]
 
         self.state.errors_after = errors
@@ -530,9 +518,7 @@ class LintFixExecutor:
         after = len(self.state.errors_after)
         fixed = before - after
 
-        codes = {
-            e["code"] for e in self.state.errors_before if e.get("status") == "fixed"
-        }
+        codes = {e["code"] for e in self.state.errors_before if e.get("status") == "fixed"}
         codes_str = ", ".join(sorted(codes)[:3])
         if len(codes) > 3:
             codes_str += f" +{len(codes) - 3}"
@@ -669,13 +655,9 @@ Examples:
     )
 
     parser.add_argument("--only", nargs="+", help="Only fix specific error codes")
-    parser.add_argument(
-        "--resume", action="store_true", help="Resume interrupted execution"
-    )
+    parser.add_argument("--resume", action="store_true", help="Resume interrupted execution")
     parser.add_argument("--status", action="store_true", help="Show current status")
-    parser.add_argument(
-        "--reset", action="store_true", help="Clear state and start fresh"
-    )
+    parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
 
     args = parser.parse_args()
 

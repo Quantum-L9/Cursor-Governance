@@ -12,8 +12,8 @@ from datetime import datetime
 from pathlib import Path
 
 import structlog
-
 from core.decorators import must_stay_async
+
 from workflows.state import StepResult, WorkflowState
 
 logger = structlog.get_logger(__name__)
@@ -77,9 +77,7 @@ async def deploy_files_node(state: WorkflowState) -> dict:
 
         if code != 0:
             errors.append(f"Copy failed: {source} → {destination}: {stderr}")
-            logger.error(
-                "deploy.copy_failed", source=source, dest=destination, error=stderr
-            )
+            logger.error("deploy.copy_failed", source=source, dest=destination, error=stderr)
             continue
 
         copied_files.append(destination)
@@ -108,9 +106,7 @@ async def deploy_files_node(state: WorkflowState) -> dict:
 
     # Check if there are inject/replace operations
     has_inject = any(m.get("operation") in ("inject", "replace") for m in mappings)
-    next_phase = (
-        "inject" if has_inject and success else ("validate" if success else "done")
-    )
+    next_phase = "inject" if has_inject and success else ("validate" if success else "done")
 
     return {
         "files_copied": copied_files,
@@ -118,7 +114,5 @@ async def deploy_files_node(state: WorkflowState) -> dict:
         "current_phase": next_phase,
         "should_continue": success,
         "error": result["error"],
-        "messages": [
-            {"role": "assistant", "content": f"Deployed {len(copied_files)} files"}
-        ],
+        "messages": [{"role": "assistant", "content": f"Deployed {len(copied_files)} files"}],
     }

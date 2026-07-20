@@ -356,16 +356,12 @@ class MigrateExecutor:
         py_files = [f for f in self.state.files_modified if f.endswith(".py")]
         if py_files:
             files_str = " ".join(str(REPO_ROOT / f) for f in py_files)
-            code, _stdout, stderr = self._run_shell(
-                f"python3 -m py_compile {files_str}"
-            )
+            code, _stdout, stderr = self._run_shell(f"python3 -m py_compile {files_str}")
             if code == 0:
                 validations.append({"check": "py_compile", "status": "✅"})
                 print(f"✅ py_compile: {len(py_files)} files OK")  # noqa: ADR-0019
             else:
-                validations.append(
-                    {"check": "py_compile", "status": "❌", "error": stderr}
-                )
+                validations.append({"check": "py_compile", "status": "❌", "error": stderr})
                 print("❌ py_compile: FAILED")  # noqa: ADR-0019
                 print(stderr[:200])  # noqa: ADR-0019
                 # Don't fail - let wiring step handle
@@ -400,9 +396,7 @@ class MigrateExecutor:
         if "from " in new_pattern or "import " in new_pattern:
             print("Migration involves imports - checking refs...")  # noqa: ADR-0019
             # Extract module name from new pattern
-            match = re.search(
-                r"from\s+([\w.]+)\s+import|import\s+([\w.]+)", new_pattern
-            )
+            match = re.search(r"from\s+([\w.]+)\s+import|import\s+([\w.]+)", new_pattern)
             if match:
                 module_name = match.group(1) or match.group(2)
                 # Verify module exists
@@ -435,9 +429,7 @@ class MigrateExecutor:
             checks.append({"check": "Old pattern removed", "status": "✅"})
             print("✅ Old pattern fully migrated")  # noqa: ADR-0019
         else:
-            checks.append(
-                {"check": "Old pattern removed", "status": f"⚠️ {remaining} remaining"}
-            )
+            checks.append({"check": "Old pattern removed", "status": f"⚠️ {remaining} remaining"})
             print(f"⚠️  {remaining} files still contain old pattern")  # noqa: ADR-0019
 
         # Verify new pattern exists
@@ -446,9 +438,7 @@ class MigrateExecutor:
         _code, stdout, _stderr = self._run_shell(cmd)
         new_count = int(stdout.strip() or "0")
 
-        checks.append(
-            {"check": "New pattern present", "status": f"✅ {new_count} files"}
-        )
+        checks.append({"check": "New pattern present", "status": f"✅ {new_count} files"})
         print(f"✅ New pattern in {new_count} files")  # noqa: ADR-0019
 
         # Summary
@@ -557,9 +547,7 @@ class MigrateExecutor:
             print('  python3 workflows/migrate_executor.py "old" "new"')  # noqa: ADR-0019
             return
 
-        self._print_header(
-            f"MIGRATE STATUS: {self.state.old_pattern} → {self.state.new_pattern}"
-        )
+        self._print_header(f"MIGRATE STATUS: {self.state.old_pattern} → {self.state.new_pattern}")
         print(f"Started: {self.state.started_at}")  # noqa: ADR-0019
         print(f"Current step: {self.state.current_step}")  # noqa: ADR-0019
         print(f"Matches: {len(self.state.matches)}")  # noqa: ADR-0019
@@ -577,9 +565,7 @@ class MigrateExecutor:
         """Execute the /migrate DAG — fully autonomous."""
         # Initialize or resume
         if resume and self._load_state():
-            print(
-                f"Resuming migration: {self.state.old_pattern} → {self.state.new_pattern}"
-            )  # noqa: ADR-0019
+            print(f"Resuming migration: {self.state.old_pattern} → {self.state.new_pattern}")  # noqa: ADR-0019
         else:
             if not old_pattern or not new_pattern:
                 print("❌ Both old and new patterns required")  # noqa: ADR-0019
@@ -592,9 +578,7 @@ class MigrateExecutor:
             )
             self._save_state()
 
-        self._print_header(
-            f"MIGRATE EXECUTOR: {self.state.old_pattern} → {self.state.new_pattern}"
-        )
+        self._print_header(f"MIGRATE EXECUTOR: {self.state.old_pattern} → {self.state.new_pattern}")
 
         # Step executors
         executors = {
@@ -666,13 +650,9 @@ Examples:
 
     parser.add_argument("old_pattern", nargs="?", help="Pattern to find and replace")
     parser.add_argument("new_pattern", nargs="?", help="Pattern to replace with")
-    parser.add_argument(
-        "--resume", action="store_true", help="Resume interrupted execution"
-    )
+    parser.add_argument("--resume", action="store_true", help="Resume interrupted execution")
     parser.add_argument("--status", action="store_true", help="Show current status")
-    parser.add_argument(
-        "--reset", action="store_true", help="Clear state and start fresh"
-    )
+    parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
 
     args = parser.parse_args()
 

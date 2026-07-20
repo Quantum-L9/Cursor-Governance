@@ -8,7 +8,7 @@ import os
 import ssl
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +22,12 @@ def _mcp_call(tool: str, params: dict[str, Any]) -> Any:
         url = f"{url}/mcp/"
     token = os.environ.get("GRAPHITI_MCP_TOKEN", "")
     payload = json.dumps(
-        {"jsonrpc": "2.0", "id": "prune", "method": "tools/call", "params": {"name": tool, "arguments": params}}
+        {
+            "jsonrpc": "2.0",
+            "id": "prune",
+            "method": "tools/call",
+            "params": {"name": tool, "arguments": params},
+        }
     ).encode()
     headers = {"Content-Type": "application/json"}
     if token:
@@ -73,7 +78,7 @@ def run_prune_report(dry_run: bool = True) -> dict[str, Any]:
     reg = _load_registry()
     ws_group = reg.get("workspace_group", "igor-workspace")
     all_groups = list((reg.get("repos") or {}).keys()) + [ws_group]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     stale_cutoff = now - timedelta(days=STALE_EDGE_DAYS)
     episode_cutoff = now - timedelta(days=STALE_EPISODE_DAYS)
     report: dict[str, Any] = {
@@ -99,7 +104,12 @@ def run_prune_report(dry_run: bool = True) -> dict[str, Any]:
             name = ep.get("name", "")
             if group == ws_group and "integration_edge" in body_str and ep_time < stale_cutoff:
                 report["stale_edges"].append(
-                    {"group": group, "name": name, "days_old": (now - ep_time).days, "action": "REVIEW_DEMOTE"}
+                    {
+                        "group": group,
+                        "name": name,
+                        "days_old": (now - ep_time).days,
+                        "action": "REVIEW_DEMOTE",
+                    }
                 )
             if "conflicts_with" in body_str.lower() or "ConflictsWith" in body_str:
                 report["conflict_episodes"].append(
@@ -107,7 +117,12 @@ def run_prune_report(dry_run: bool = True) -> dict[str, Any]:
                 )
             if ep_time < episode_cutoff and not str(name).startswith("manifest:"):
                 report["old_episodes"].append(
-                    {"group": group, "name": name, "days_old": (now - ep_time).days, "action": "REVIEW_DEMOTE"}
+                    {
+                        "group": group,
+                        "name": name,
+                        "days_old": (now - ep_time).days,
+                        "action": "REVIEW_DEMOTE",
+                    }
                 )
 
     report["summary"] = {
@@ -116,7 +131,9 @@ def run_prune_report(dry_run: bool = True) -> dict[str, Any]:
         "conflicts": len(report["conflict_episodes"]),
         "old_episodes": len(report["old_episodes"]),
         "note": "No data deleted. All entries require human review.",
-        "telemetry": {"graphiti.prune.demoted_count": len(report["stale_edges"]) + len(report["old_episodes"])},
+        "telemetry": {
+            "graphiti.prune.demoted_count": len(report["stale_edges"]) + len(report["old_episodes"])
+        },
     }
     out = Path(__file__).parent / f"prune_report_{now.strftime('%Y%m%d')}.json"
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

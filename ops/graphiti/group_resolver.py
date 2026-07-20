@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-import re
 import subprocess
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -19,7 +18,7 @@ def load_registry() -> dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 
-def _git_remote_url(cwd: Path) -> Optional[str]:
+def _git_remote_url(cwd: Path) -> str | None:
     try:
         result = subprocess.run(
             ["git", "-C", str(cwd), "remote", "get-url", "origin"],
@@ -35,7 +34,7 @@ def _git_remote_url(cwd: Path) -> Optional[str]:
     return None
 
 
-def resolve_group_id(cwd: Optional[Path] = None, explicit: Optional[str] = None) -> dict[str, Any]:
+def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> dict[str, Any]:
     registry = load_registry()
     forbidden = set(registry.get("forbidden_groups") or [])
     cwd = (cwd or Path.cwd()).resolve()
@@ -79,5 +78,10 @@ def resolve_group_id(cwd: Optional[Path] = None, explicit: Optional[str] = None)
     on_failure = (registry.get("resolution") or {}).get("on_failure", "abort_write_allow_readonly")
     workspace = registry.get("workspace_group", "igor-workspace")
     if on_failure == "abort_write_allow_readonly":
-        return {"group_id": workspace, "method": "fallback_readonly", "readonly": True, "warning": "no repo match"}
+        return {
+            "group_id": workspace,
+            "method": "fallback_readonly",
+            "readonly": True,
+            "warning": "no repo match",
+        }
     return {"group_id": None, "error": "no group match", "readonly": True}

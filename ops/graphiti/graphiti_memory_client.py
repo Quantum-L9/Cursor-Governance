@@ -11,12 +11,12 @@ import ssl
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from circuit_breaker import CircuitBreaker
-from episode_contract import EpisodeContract, FORBIDDEN_GROUPS
+from episode_contract import FORBIDDEN_GROUPS, EpisodeContract
 from graphiti_env_loader import load_graphiti_env
 from group_resolver import load_registry, resolve_group_id
 from rate_limiter import RateLimiter
@@ -46,7 +46,9 @@ def mcp_headers() -> dict[str, str]:
     return headers
 
 
-def mcp_call(method: str, params: Optional[dict[str, Any]] = None, timeout: int = 30) -> dict[str, Any]:
+def mcp_call(
+    method: str, params: dict[str, Any] | None = None, timeout: int = 30
+) -> dict[str, Any]:
     if not _circuit.can_execute():
         raise RuntimeError("circuit breaker OPEN")
     payload = {"jsonrpc": "2.0", "id": "cli", "method": method, "params": params or {}}
@@ -75,7 +77,7 @@ def mcp_call(method: str, params: Optional[dict[str, Any]] = None, timeout: int 
     return body.get("result", body)
 
 
-def call_tool(name: str, arguments: Optional[dict[str, Any]] = None) -> Any:
+def call_tool(name: str, arguments: dict[str, Any] | None = None) -> Any:
     result = mcp_call("tools/call", {"name": name, "arguments": arguments or {}})
     content = result.get("content", []) if isinstance(result, dict) else []
     if content and isinstance(content[0], dict):
@@ -119,7 +121,9 @@ def _search_group(query: str, group_id: str, limit: int = 10) -> list[Any]:
     # Distinguish a genuinely empty result from a transport/tool failure so the
     # problem is not silently hidden behind an empty list.
     if errors:
-        print(f"WARN: search tool calls failed for {group_id}: {'; '.join(errors)}", file=sys.stderr)
+        print(
+            f"WARN: search tool calls failed for {group_id}: {'; '.join(errors)}", file=sys.stderr
+        )
     return []
 
 
@@ -127,7 +131,7 @@ def _is_already_seeded(group_id: str, seed_name: str) -> bool:
     return bool(_search_group(seed_name, group_id, limit=1))
 
 
-def _find_supersedes_uuid(body: str, group_id: str) -> Optional[str]:
+def _find_supersedes_uuid(body: str, group_id: str) -> str | None:
     facts = _search_group(body[:200], group_id, limit=3)
     if facts and isinstance(facts[0], dict):
         return facts[0].get("uuid") or facts[0].get("id")
@@ -145,7 +149,9 @@ def _probe_tool_plane(timeout: int = 10) -> dict[str, Any]:
     try:
         result = mcp_call("tools/list", {}, timeout=timeout)
         tools = result.get("tools", result) if isinstance(result, dict) else result
-        names = [t.get("name") for t in tools if isinstance(t, dict)] if isinstance(tools, list) else []
+        names = (
+            [t.get("name") for t in tools if isinstance(t, dict)] if isinstance(tools, list) else []
+        )
         probe: dict[str, Any] = {"reachable": True, "tool_count": len(names)}
         if names:
             probe["tools"] = sorted(n for n in names if n)[:25]
@@ -210,7 +216,17 @@ def cmd_search(args: argparse.Namespace) -> int:
         if not found:
             print(f"WARN: search empty for {gid}", file=sys.stderr)
         results.extend(found)
-    print(json.dumps({"group_id": group_id, "read_groups": resolve_read_groups(group_id), "budget_tokens": budget, "results": results}, indent=2))
+    print(
+        json.dumps(
+            {
+                "group_id": group_id,
+                "read_groups": resolve_read_groups(group_id),
+                "budget_tokens": budget,
+                "results": results,
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -224,8 +240,10 @@ def cmd_write(args: argparse.Namespace) -> int:
         raise SystemExit("forbidden or missing group_id")
     if not _rate.allow():
         raise SystemExit("rate limited")
-    now = datetime.now(timezone.utc)
-    episode_name = getattr(args, "episode_name", None) or f"{args.kind}-{group_id}-{int(now.timestamp())}"
+    now = datetime.now(UTC)
+    episode_name = (
+        getattr(args, "episode_name", None) or f"{args.kind}-{group_id}-{int(now.timestamp())}"
+    )
     contract = EpisodeContract(
         name=episode_name,
         episode_body=args.body,
@@ -256,7 +274,17 @@ def cmd_write(args: argparse.Namespace) -> int:
         else:
             raise
     _rate.record()
-    print(json.dumps({"written": True, "group_id": group_id, "supersedes": supersedes_uuid, "result": result}, indent=2))
+    print(
+        json.dumps(
+            {
+                "written": True,
+                "group_id": group_id,
+                "supersedes": supersedes_uuid,
+                "result": result,
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -280,17 +308,17 @@ def cmd_inject(args: argparse.Namespace) -> int:
     for gid in resolve_read_groups(group_id):
         try:
             prefetch_parts.append(
-                str(call_tool("search_facts", {"query": args.task, "group_id": gid, "max_facts": 8}))
+                str(
+                    call_tool("search_facts", {"query": args.task, "group_id": gid, "max_facts": 8})
+                )
             )
         except Exception:  # noqa: BLE001
             continue
-    prefetch_text = "".join(prefetch_parts)[
-        : int(os.environ.get("MEMORY_TOKEN_BUDGET", "400")) * 4
-    ]
+    prefetch_text = "".join(prefetch_parts)[: int(os.environ.get("MEMORY_TOKEN_BUDGET", "400")) * 4]
     bank = _read_memory_bank(repo)
     state = {
         "group_id": group_id,
-        "prefetch_ts": datetime.now(timezone.utc).isoformat(),
+        "prefetch_ts": datetime.now(UTC).isoformat(),
         "prefetch_hash": hashlib.sha256(prefetch_text.encode()).hexdigest(),
         "task_signature": task_sig,
         "memory_satisfied_for": [task_sig] if prefetch_text else [],
@@ -336,7 +364,7 @@ def _discover_bootstrap_sources(repo: Path) -> list[Path]:
 
 
 def _write_episode(name: str, body: str, group_id: str, source_description: str) -> Any:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     contract = EpisodeContract(
         name=name,
         episode_body=body,
@@ -375,7 +403,8 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         pass
 
     integrates_with = [
-        {"group_id": dep, "via": "group_registry.yaml"} for dep in repo_meta.get("integrates_with", [])
+        {"group_id": dep, "via": "group_registry.yaml"}
+        for dep in repo_meta.get("integrates_with", [])
     ]
     manifest = {
         "repo_slug": group_id,
@@ -384,7 +413,7 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         "branch_model": {"dev": "Staging", "prod": "Production"},
         "integrates_with": integrates_with,
         "sources": [str(p.relative_to(repo)) for p in _discover_bootstrap_sources(repo)],
-        "seeded_at": datetime.now(timezone.utc).isoformat(),
+        "seeded_at": datetime.now(UTC).isoformat(),
     }
     seed_name = _bootstrap_seed_name(group_id)
     body = json.dumps(manifest, indent=2)
@@ -394,7 +423,17 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         return 0
 
     if _is_already_seeded(group_id, seed_name):
-        print(json.dumps({"skipped": True, "reason": "already seeded", "slug": group_id, "seed_name": seed_name}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "skipped": True,
+                    "reason": "already seeded",
+                    "slug": group_id,
+                    "seed_name": seed_name,
+                },
+                indent=2,
+            )
+        )
         return 0
 
     if not _rate.allow():
@@ -470,7 +509,9 @@ def cmd_stats(args: argparse.Namespace) -> int:
         data = call_tool("search_nodes", {"query": "*", "group_id": group_id, "max_nodes": 50})
         print(json.dumps({"group_id": group_id, "stats": data, "episode_count": None}, indent=2))
         return 0
-    print(json.dumps({"group_id": group_id, "episode_count": len(episodes), "stats": data}, indent=2))
+    print(
+        json.dumps({"group_id": group_id, "episode_count": len(episodes), "stats": data}, indent=2)
+    )
     return 0
 
 

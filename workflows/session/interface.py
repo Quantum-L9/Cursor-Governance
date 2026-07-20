@@ -180,9 +180,7 @@ class SessionDAG:
         """Get next node IDs from current node, optionally filtered by condition."""
         edges = self.get_outgoing_edges(node_id)
         if condition:
-            edges = [
-                e for e in edges if e.condition == condition or e.condition is None
-            ]
+            edges = [e for e in edges if e.condition == condition or e.condition is None]
         return [e.to_node for e in edges]
 
     def validate(self) -> list[str]:
@@ -262,9 +260,7 @@ class SessionDAG:
         ]
 
         for i, node in enumerate(self.nodes, 1):
-            lines.append(
-                f"| {i} | `{node.id}` | {node.node_type.value} | {node.description} |"
-            )
+            lines.append(f"| {i} | `{node.id}` | {node.node_type.value} | {node.description} |")
 
         lines.extend(
             [

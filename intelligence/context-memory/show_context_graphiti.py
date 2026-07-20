@@ -3,6 +3,7 @@
 Queries the L9 graph for currently-valid, task-relevant context instead of
 loading the last 7-day JSON blob. Cold-start becomes relational, not narrative.
 """
+
 from __future__ import annotations
 
 import json
@@ -38,7 +39,9 @@ def restore(task_type: str = "current active projects and open decisions") -> No
     try:
         facts = json.loads(proc.stdout).get("facts", [])
     except json.JSONDecodeError:
-        print("No graph context available — MCP returned non-JSON. Falling back to JSON session cache.")
+        print(
+            "No graph context available — MCP returned non-JSON. Falling back to JSON session cache."
+        )
         return
 
     if not facts:

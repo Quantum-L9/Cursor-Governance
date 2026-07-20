@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -36,7 +36,7 @@ def prefetch_fresh(state: dict, ttl_minutes: int = 30) -> bool:
         return False
     try:
         then = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        age = (datetime.now(timezone.utc) - then).total_seconds() / 60
+        age = (datetime.now(UTC) - then).total_seconds() / 60
         return age <= ttl_minutes
     except ValueError:
         return False
@@ -102,7 +102,10 @@ def shell_gate(payload: str) -> dict:
     state = load_state(str(conv))
     if memory_ok(state):
         return {"permission": "allow"}
-    return {"permission": "deny", "user_message": "Graphiti gate: commit/push blocked until memory satisfied."}
+    return {
+        "permission": "deny",
+        "user_message": "Graphiti gate: commit/push blocked until memory satisfied.",
+    }
 
 
 def subagent_gate(payload: str) -> dict:
@@ -113,7 +116,10 @@ def subagent_gate(payload: str) -> dict:
     state = load_state(str(conv))
     if memory_ok(state):
         return {"permission": "allow"}
-    return {"permission": "deny", "user_message": "Graphiti gate: subagent blocked — parent memory not satisfied."}
+    return {
+        "permission": "deny",
+        "user_message": "Graphiti gate: subagent blocked — parent memory not satisfied.",
+    }
 
 
 def main() -> int:

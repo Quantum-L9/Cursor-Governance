@@ -16,7 +16,6 @@ Version: 1.0.0
 """
 
 from workflows.session.interface import (
-    GateType,
     NodeType,
     SessionDAG,
     SessionEdge,

@@ -48,63 +48,66 @@ keywords: ["snapshot", "reasoning", "generator", "automation", "governance"]
 related_components: ["INT-RE-001", "INT-RE-002", "FND-SEC-001"]
 """
 
-import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
-import uuid
+
 
 class ReasoningSnapshotGenerator:
     """
     Automated Reasoning Snapshot Generator for L9 Governance
-    
+
     Generates structured reasoning snapshots for governance decisions,
     integrating Constellation's snapshot format with L9 Governance's 10-step framework.
     """
-    
+
     def __init__(self, suite_root: str = None):
         self.suite_root = Path(suite_root) if suite_root else Path(__file__).parent.parent.parent
         self.snapshots_dir = self.suite_root / "intelligence" / "reasoning" / "snapshots"
-        self.template_path = self.suite_root / "intelligence" / "reasoning" / "reasoning-snapshot-template.md"
-        
+        self.template_path = (
+            self.suite_root / "intelligence" / "reasoning" / "reasoning-snapshot-template.md"
+        )
+
         # Create snapshots directory structure
         self._setup_snapshot_directories()
-    
+
     def _setup_snapshot_directories(self):
         """Create directory structure for snapshots"""
         current_year = datetime.now().year
         current_month = datetime.now().month
         current_day = datetime.now().day
-        
-        snapshot_path = self.snapshots_dir / str(current_year) / f"{current_month:02d}" / f"{current_day:02d}"
+
+        snapshot_path = (
+            self.snapshots_dir / str(current_year) / f"{current_month:02d}" / f"{current_day:02d}"
+        )
         snapshot_path.mkdir(parents=True, exist_ok=True)
-    
+
     def generate_snapshot_id(self, component_id: str, decision_type: str) -> str:
         """Generate unique snapshot ID"""
         timestamp = datetime.now().strftime("%Y%m%dT%H%M%SZ")
         return f"SNAP-{timestamp}-{component_id}-{decision_type}"
-    
-    def create_governance_snapshot(self, 
-                                 component_id: str,
-                                 component_name: str,
-                                 decision_type: str,
-                                 rule_applied: str,
-                                 rule_id: str,
-                                 observation: str,
-                                 conclusion: str,
-                                 verdict: str,
-                                 reasoning_steps: Dict = None,
-                                 evidence: Dict = None,
-                                 initiated_by: str = "System",
-                                 priority_level: str = "medium") -> Dict:
+
+    def create_governance_snapshot(
+        self,
+        component_id: str,
+        component_name: str,
+        decision_type: str,
+        rule_applied: str,
+        rule_id: str,
+        observation: str,
+        conclusion: str,
+        verdict: str,
+        reasoning_steps: dict = None,
+        evidence: dict = None,
+        initiated_by: str = "System",
+        priority_level: str = "medium",
+    ) -> dict:
         """
         Create a structured governance reasoning snapshot
         """
         snapshot_id = self.generate_snapshot_id(component_id, decision_type)
         timestamp = datetime.now().isoformat()
-        
+
         # Default reasoning steps if not provided
         if not reasoning_steps:
             reasoning_steps = {
@@ -117,21 +120,21 @@ class ReasoningSnapshotGenerator:
                 "validation": "Standard validation process",
                 "documentation": "Automated snapshot generation",
                 "risk_assessment": "Standard governance risk",
-                "maintainability": "Standard maintenance requirements"
+                "maintainability": "Standard maintenance requirements",
             }
-        
+
         # Default evidence if not provided
         if not evidence:
             evidence = {
                 "data_sources": ["governance-validator.py", "rule-registry.json"],
                 "key_findings": [observation],
                 "constraints": ["Must comply with L9 Governance governance"],
-                "assumptions": ["Standard governance assumptions"]
+                "assumptions": ["Standard governance assumptions"],
             }
-        
+
         # Determine escalation path based on verdict and priority
         escalation_path = self._determine_escalation_path(verdict, priority_level)
-        
+
         snapshot = {
             "metadata": {
                 "snapshot_id": snapshot_id,
@@ -141,12 +144,12 @@ class ReasoningSnapshotGenerator:
                 "initiated_by": initiated_by,
                 "priority_level": priority_level,
                 "timestamp": timestamp,
-                "kernel_version": "6.0"
+                "kernel_version": "6.0",
             },
             "governance_framework": {
                 "rule_applied": rule_applied,
                 "rule_id": rule_id,
-                "escalation_path": escalation_path
+                "escalation_path": escalation_path,
             },
             "reasoning_process": reasoning_steps,
             "evidence": evidence,
@@ -155,18 +158,18 @@ class ReasoningSnapshotGenerator:
                 "conclusion": conclusion,
                 "verdict": verdict,
                 "confidence_level": self._determine_confidence_level(verdict, evidence),
-                "next_actions": self._determine_next_actions(verdict, escalation_path)
+                "next_actions": self._determine_next_actions(verdict, escalation_path),
             },
             "audit_trail": {
                 "generated_by": "reasoning-snapshot-generator.py",
                 "validation_status": "Generated",
                 "digital_signature": None,  # Will be added by integrity system
-                "related_snapshots": []
-            }
+                "related_snapshots": [],
+            },
         }
-        
+
         return snapshot
-    
+
     def _determine_escalation_path(self, verdict: str, priority_level: str) -> str:
         """Determine appropriate escalation path"""
         if verdict in ["FAIL", "ESCALATE"]:
@@ -178,8 +181,8 @@ class ReasoningSnapshotGenerator:
                 return "Auto_Snapshot"
         else:
             return "None"
-    
-    def _determine_confidence_level(self, verdict: str, evidence: Dict) -> str:
+
+    def _determine_confidence_level(self, verdict: str, evidence: dict) -> str:
         """Determine confidence level based on verdict and evidence quality"""
         if verdict in ["PASS", "FAIL"] and len(evidence.get("data_sources", [])) >= 2:
             return "High"
@@ -187,11 +190,11 @@ class ReasoningSnapshotGenerator:
             return "Medium"
         else:
             return "Low"
-    
-    def _determine_next_actions(self, verdict: str, escalation_path: str) -> List[str]:
+
+    def _determine_next_actions(self, verdict: str, escalation_path: str) -> list[str]:
         """Determine next actions based on verdict and escalation"""
         actions = []
-        
+
         if verdict == "PASS":
             actions.append("Proceed with normal operations")
         elif verdict == "FAIL":
@@ -204,10 +207,10 @@ class ReasoningSnapshotGenerator:
         elif verdict == "DEFER":
             actions.append("Collect additional information")
             actions.append("Re-evaluate after conditions change")
-        
+
         return actions
-    
-    def save_snapshot(self, snapshot: Dict) -> str:
+
+    def save_snapshot(self, snapshot: dict) -> str:
         """Save snapshot to file system"""
         try:
             # Generate file path
@@ -215,26 +218,26 @@ class ReasoningSnapshotGenerator:
             year_month_day = f"{timestamp.year}/{timestamp.month:02d}/{timestamp.day:02d}"
             snapshot_dir = self.snapshots_dir / year_month_day
             snapshot_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # Generate filename
             snapshot_id = snapshot["metadata"]["snapshot_id"]
             filename = f"{snapshot_id}.md"
             file_path = snapshot_dir / filename
-            
+
             # Generate markdown content
             markdown_content = self._generate_markdown_content(snapshot)
-            
+
             # Save file
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 f.write(markdown_content)
-            
+
             return str(file_path)
-            
+
         except Exception as e:
             print(f"Error saving snapshot: {e}")
             return None
-    
-    def _generate_markdown_content(self, snapshot: Dict) -> str:
+
+    def _generate_markdown_content(self, snapshot: dict) -> str:
         """Generate markdown content from snapshot data"""
         metadata = snapshot["metadata"]
         governance = snapshot["governance_framework"]
@@ -242,7 +245,7 @@ class ReasoningSnapshotGenerator:
         evidence = snapshot["evidence"]
         outcome = snapshot["outcome"]
         audit = snapshot["audit_trail"]
-        
+
         content = f"""# L9 Governance Reasoning Snapshot
 
 ## Decision Context
@@ -291,11 +294,12 @@ class ReasoningSnapshotGenerator:
 - **Digital Signature**: {audit.get('digital_signature', 'Pending')}
 - **Related Snapshots**: {', '.join(audit.get('related_snapshots', [])) or 'None'}
 """
-        
+
         return content
-    
-    def create_validation_snapshot(self, component_id: str, component_name: str, 
-                                 validation_result: Dict) -> Optional[str]:
+
+    def create_validation_snapshot(
+        self, component_id: str, component_name: str, validation_result: dict
+    ) -> str | None:
         """
         Create snapshot for governance validation results
         """
@@ -309,7 +313,7 @@ class ReasoningSnapshotGenerator:
             violations = validation_result.get("violations", [])
             conclusion = f"Component has {len(violations)} governance violations"
             observation = f"Violations detected: {', '.join(violations)}"
-        
+
         # Create snapshot
         snapshot = self.create_governance_snapshot(
             component_id=component_id,
@@ -320,14 +324,15 @@ class ReasoningSnapshotGenerator:
             observation=observation,
             conclusion=conclusion,
             verdict=verdict,
-            priority_level="high" if verdict == "FAIL" else "medium"
+            priority_level="high" if verdict == "FAIL" else "medium",
         )
-        
+
         # Save snapshot
         return self.save_snapshot(snapshot)
-    
-    def create_escalation_snapshot(self, component_id: str, component_name: str,
-                                 failure_type: str, escalation_target: str) -> Optional[str]:
+
+    def create_escalation_snapshot(
+        self, component_id: str, component_name: str, failure_type: str, escalation_target: str
+    ) -> str | None:
         """
         Create snapshot for escalation routing decisions
         """
@@ -351,65 +356,70 @@ class ReasoningSnapshotGenerator:
                 "validation": "Escalation path validated against governance rules",
                 "documentation": "Escalation decision documented",
                 "risk_assessment": "High risk if not escalated properly",
-                "maintainability": "Standard escalation maintenance"
-            }
+                "maintainability": "Standard escalation maintenance",
+            },
         )
-        
+
         return self.save_snapshot(snapshot)
-    
-    def list_snapshots(self, component_id: str = None, days: int = 30) -> List[Dict]:
+
+    def list_snapshots(self, component_id: str = None, days: int = 30) -> list[dict]:
         """
         List recent snapshots, optionally filtered by component
         """
         snapshots = []
-        
+
         # Search recent snapshot directories
         for snapshot_file in self.snapshots_dir.rglob("SNAP-*.md"):
             try:
                 # Parse snapshot ID to get component info
                 filename = snapshot_file.stem
                 parts = filename.split("-")
-                
+
                 if len(parts) >= 4:
                     file_component_id = parts[2]
-                    
+
                     # Filter by component if specified
                     if component_id and file_component_id != component_id:
                         continue
-                    
+
                     # Get file stats
                     stat = snapshot_file.stat()
-                    
-                    snapshots.append({
-                        "snapshot_id": filename,
-                        "component_id": file_component_id,
-                        "file_path": str(snapshot_file),
-                        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
-                        "size": stat.st_size
-                    })
-                    
+
+                    snapshots.append(
+                        {
+                            "snapshot_id": filename,
+                            "component_id": file_component_id,
+                            "file_path": str(snapshot_file),
+                            "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                            "size": stat.st_size,
+                        }
+                    )
+
             except Exception as e:
                 print(f"Error processing snapshot {snapshot_file}: {e}")
-        
+
         # Sort by creation time (newest first)
         snapshots.sort(key=lambda x: x["created"], reverse=True)
-        
+
         return snapshots
+
 
 def main():
     """CLI interface for reasoning snapshot generation"""
     if len(sys.argv) < 2:
         print("Usage: python reasoning-snapshot-generator.py <command> [args]")
         print("Commands:")
-        print("  create <component_id> <component_name> <decision_type> <rule_id> <observation> <conclusion> <verdict>")
+        print(
+            "  create <component_id> <component_name> <decision_type> <rule_id> <observation> <conclusion> <verdict>"
+        )
         print("  validation <component_id> <component_name> <compliant:true/false> [violations...]")
         print("  escalation <component_id> <component_name> <failure_type> <escalation_target>")
         print("  list [component_id] - List recent snapshots")
         return
-    
+
     generator = ReasoningSnapshotGenerator()
     command = sys.argv[1]
-    
+
     if command == "create" and len(sys.argv) >= 9:
         component_id = sys.argv[2]
         component_name = sys.argv[3]
@@ -418,7 +428,7 @@ def main():
         observation = sys.argv[6]
         conclusion = sys.argv[7]
         verdict = sys.argv[8]
-        
+
         snapshot = generator.create_governance_snapshot(
             component_id=component_id,
             component_name=component_name,
@@ -427,54 +437,56 @@ def main():
             rule_id=rule_id,
             observation=observation,
             conclusion=conclusion,
-            verdict=verdict
+            verdict=verdict,
         )
-        
+
         file_path = generator.save_snapshot(snapshot)
         if file_path:
             print(f"✅ Snapshot created: {file_path}")
         else:
             print("❌ Failed to create snapshot")
-    
+
     elif command == "validation" and len(sys.argv) >= 5:
         component_id = sys.argv[2]
         component_name = sys.argv[3]
         compliant = sys.argv[4].lower() == "true"
         violations = sys.argv[5:] if len(sys.argv) > 5 else []
-        
-        validation_result = {
-            "compliant": compliant,
-            "violations": violations
-        }
-        
-        file_path = generator.create_validation_snapshot(component_id, component_name, validation_result)
+
+        validation_result = {"compliant": compliant, "violations": violations}
+
+        file_path = generator.create_validation_snapshot(
+            component_id, component_name, validation_result
+        )
         if file_path:
             print(f"✅ Validation snapshot created: {file_path}")
         else:
             print("❌ Failed to create validation snapshot")
-    
+
     elif command == "escalation" and len(sys.argv) >= 6:
         component_id = sys.argv[2]
         component_name = sys.argv[3]
         failure_type = sys.argv[4]
         escalation_target = sys.argv[5]
-        
-        file_path = generator.create_escalation_snapshot(component_id, component_name, failure_type, escalation_target)
+
+        file_path = generator.create_escalation_snapshot(
+            component_id, component_name, failure_type, escalation_target
+        )
         if file_path:
             print(f"✅ Escalation snapshot created: {file_path}")
         else:
             print("❌ Failed to create escalation snapshot")
-    
+
     elif command == "list":
         component_id = sys.argv[2] if len(sys.argv) > 2 else None
         snapshots = generator.list_snapshots(component_id)
-        
+
         print(f"Recent snapshots{f' for {component_id}' if component_id else ''}:")
         for snapshot in snapshots[:10]:  # Show last 10
             print(f"  📸 {snapshot['snapshot_id']} ({snapshot['created']})")
-    
+
     else:
         print("Invalid command or missing arguments")
+
 
 if __name__ == "__main__":
     main()

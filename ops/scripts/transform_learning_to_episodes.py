@@ -10,11 +10,12 @@ Output: learning/graphiti-episodes/*.json
 Usage:
     python3 ops/scripts/transform_learning_to_episodes.py
 """
+
 from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -23,15 +24,20 @@ EPISODES_DIR = LEARNING / "graphiti-episodes"
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
-def _episode(body: str, source: str, group_ids: list[str],
-             semantic_score: float = 0.8, trust_level: str = "L2") -> dict:
+def _episode(
+    body: str,
+    source: str,
+    group_ids: list[str],
+    semantic_score: float = 0.8,
+    trust_level: str = "L2",
+) -> dict:
     return {
         "body": body,
         "source_agent_id": "learning-corpus-transformer",
-        "session_id": f"batch-transform-{datetime.now(timezone.utc).strftime('%Y%m%d')}",
+        "session_id": f"batch-transform-{datetime.now(UTC).strftime('%Y%m%d')}",
         "group_ids": group_ids,
         "semantic_score": semantic_score,
         "trust_level": trust_level,
@@ -58,12 +64,14 @@ def transform_repeated_mistakes() -> list[dict]:
         # Extract lesson ID if present
         match = re.match(r"## (Lesson[- ]?\d+.*?)$", section, re.MULTILINE)
         lesson_id = match.group(1) if match else "unknown"
-        episodes.append(_episode(
-            body=section[:2000],  # Cap at 2000 chars per episode
-            source="learning/failures/repeated-mistakes.md",
-            group_ids=["corpus:repeated-mistakes", f"lesson:{lesson_id}"],
-            semantic_score=0.9,
-        ))
+        episodes.append(
+            _episode(
+                body=section[:2000],  # Cap at 2000 chars per episode
+                source="learning/failures/repeated-mistakes.md",
+                group_ids=["corpus:repeated-mistakes", f"lesson:{lesson_id}"],
+                semantic_score=0.9,
+            )
+        )
     return episodes
 
 
@@ -86,12 +94,14 @@ def transform_violations() -> list[dict]:
             f"Source: {v.get('source', '')}\n"
             f"Context: {v.get('context', '')}"
         )
-        episodes.append(_episode(
-            body=body,
-            source="learning/failures/violations.jsonl",
-            group_ids=["corpus:violations", f"lesson:{v.get('lesson_id', 'unknown')}"],
-            semantic_score=0.85,
-        ))
+        episodes.append(
+            _episode(
+                body=body,
+                source="learning/failures/violations.jsonl",
+                group_ids=["corpus:violations", f"lesson:{v.get('lesson_id', 'unknown')}"],
+                semantic_score=0.85,
+            )
+        )
     return episodes
 
 
@@ -114,12 +124,14 @@ def transform_audit_log() -> list[dict]:
             f"Impact: {entry.get('lesson_content', {}).get('impact', '')}\n"
             f"Prevention: {entry.get('lesson_content', {}).get('prevention', '')}"
         )
-        episodes.append(_episode(
-            body=body,
-            source="learning/failures/audit_log.jsonl",
-            group_ids=["corpus:audit-log", f"lesson:{entry.get('lesson_id', 'unknown')}"],
-            semantic_score=float(entry.get("quality_score", 0.7)),
-        ))
+        episodes.append(
+            _episode(
+                body=body,
+                source="learning/failures/audit_log.jsonl",
+                group_ids=["corpus:audit-log", f"lesson:{entry.get('lesson_id', 'unknown')}"],
+                semantic_score=float(entry.get("quality_score", 0.7)),
+            )
+        )
     return episodes
 
 
@@ -139,12 +151,14 @@ def transform_quick_fixes() -> list[dict]:
             continue
         match = re.match(r"## (.+?)$", section, re.MULTILINE)
         fix_name = match.group(1) if match else "unknown-fix"
-        episodes.append(_episode(
-            body=section[:2000],
-            source="learning/patterns/quick-fixes.md",
-            group_ids=["corpus:quick-fixes", f"pattern:{fix_name}"],
-            semantic_score=0.8,
-        ))
+        episodes.append(
+            _episode(
+                body=section[:2000],
+                source="learning/patterns/quick-fixes.md",
+                group_ids=["corpus:quick-fixes", f"pattern:{fix_name}"],
+                semantic_score=0.8,
+            )
+        )
     return episodes
 
 
@@ -161,17 +175,19 @@ def transform_solutions() -> list[dict]:
         if content.startswith("---"):
             end = content.find("---", 3)
             if end != -1:
-                content = content[end + 3:].strip()
+                content = content[end + 3 :].strip()
 
         if len(content) < 30:
             continue
 
-        episodes.append(_episode(
-            body=content[:2000],
-            source=f"learning/solutions/{md_file.name}",
-            group_ids=["corpus:solutions", f"solution:{md_file.stem}"],
-            semantic_score=0.85,
-        ))
+        episodes.append(
+            _episode(
+                body=content[:2000],
+                source=f"learning/solutions/{md_file.name}",
+                group_ids=["corpus:solutions", f"solution:{md_file.stem}"],
+                semantic_score=0.85,
+            )
+        )
     return episodes
 
 

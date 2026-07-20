@@ -641,19 +641,13 @@ To verify runtime correctness → /verify-component {component}""",
         # Discovery -> Gate
         SessionEdge("discovery", "gate_discovery"),
         # Discovery gate decisions
-        SessionEdge(
-            "gate_discovery", "analysis", condition="continue", label="Continue"
-        ),
-        SessionEdge(
-            "gate_discovery", "end", condition="abort", label="Unused component"
-        ),
+        SessionEdge("gate_discovery", "analysis", condition="continue", label="Continue"),
+        SessionEdge("gate_discovery", "end", condition="abort", label="Unused component"),
         # Analysis -> Gate
         SessionEdge("analysis", "gate_analysis"),
         # Analysis gate decisions
         SessionEdge("gate_analysis", "plan", condition="continue", label="Continue"),
-        SessionEdge(
-            "gate_analysis", "end", condition="escalate", label="Escalate to /gmp"
-        ),
+        SessionEdge("gate_analysis", "end", condition="escalate", label="Escalate to /gmp"),
         SessionEdge("gate_analysis", "end", condition="abort", label="Abort"),
         # Plan -> Gate
         SessionEdge("plan", "gate_plan"),
@@ -667,9 +661,7 @@ To verify runtime correctness → /verify-component {component}""",
         # Validate -> Gate
         SessionEdge("validate", "gate_validation"),
         # Validation gate decisions
-        SessionEdge(
-            "gate_validation", "rediscovery", condition="continue", label="Validated"
-        ),
+        SessionEdge("gate_validation", "rediscovery", condition="continue", label="Validated"),
         SessionEdge("gate_validation", "execute", condition="fix", label="Fix issues"),
         SessionEdge("gate_validation", "end", condition="abort", label="Abort"),
         # Re-discovery -> Confirm Wiring

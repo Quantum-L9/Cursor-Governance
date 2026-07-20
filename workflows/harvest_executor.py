@@ -60,6 +60,7 @@ from pathlib import Path
 # Configuration
 # =============================================================================
 
+
 def _find_repo_root() -> Path:
     """Auto-detect git repo root from CWD — repo/folder agnostic.
 
@@ -268,9 +269,7 @@ class HarvestExecutor:
     #          ### Grafana Dashboard: `grafana/dashboards/dora.json`
     #          ### pyproject.toml addition
     # Group 1 = backtick-wrapped path, Group 2 = bold-wrapped path
-    _HEADER_PATH_RE = re.compile(
-        r"^#{1,4}\s+.*?(?:`([^`]+\.\w+)`|[*]{2}([^*]+\.\w+)[*]{2})"
-    )
+    _HEADER_PATH_RE = re.compile(r"^#{1,4}\s+.*?(?:`([^`]+\.\w+)`|[*]{2}([^*]+\.\w+)[*]{2})")
 
     # Fragment indicators — headers containing these words describe patches /
     # snippets, NOT standalone files.  Skip them.
@@ -501,14 +500,10 @@ class HarvestExecutor:
                     item_num,
                 )
                 if filename is None and not is_fragment:
-                    filename = self._find_filename_from_block_meta(
-                        lines, code_start, code_end
-                    )
+                    filename = self._find_filename_from_block_meta(lines, code_start, code_end)
 
                 if is_fragment:
-                    skipped_fragments.append(
-                        f"  SKIP lines {code_start}-{code_end} (fragment)"
-                    )
+                    skipped_fragments.append(f"  SKIP lines {code_start}-{code_end} (fragment)")
                     continue
 
                 if filename is None:
@@ -527,12 +522,15 @@ class HarvestExecutor:
                         "source_start": code_start,
                         "source_end": code_end,
                         "target_file": f"{item_num}_{basename}",
-                        "deploy_target": original_path if (
-                            "/" in original_path or (
+                        "deploy_target": original_path
+                        if (
+                            "/" in original_path
+                            or (
                                 original_path != f"code_block_{item_num}{ext}"
                                 and "." in original_path
                             )
-                        ) else "",
+                        )
+                        else "",
                         "status": "pending",
                         "language": code_lang,
                         "lines": code_end - code_start - 1,
@@ -548,9 +546,7 @@ class HarvestExecutor:
             lang = item["language"]
             lang_counts[lang] = lang_counts.get(lang, 0) + 1
 
-        print(
-            f"Found {len(items)} extractable code blocks across {len(lang_counts)} language(s):"
-        )  # noqa: ADR-0019
+        print(f"Found {len(items)} extractable code blocks across {len(lang_counts)} language(s):")  # noqa: ADR-0019
         if skipped_fragments:
             print(f"  (skipped {len(skipped_fragments)} fragment(s))")  # noqa: ADR-0019
             for sf in skipped_fragments:
@@ -590,12 +586,12 @@ class HarvestExecutor:
                 rng = f"{item['extract_start_1based']}-{item['extract_end_1based']}"
             else:
                 rng = f"{item['source_start']}-{item['source_end']}"
-            table_content += f"| {item['number']} | `{item['pattern']}` | {rng} | `{item['target_file']}` |\n"
+            table_content += (
+                f"| {item['number']} | `{item['pattern']}` | {rng} | `{item['target_file']}` |\n"
+            )
 
         table_content += f"\n**Source:** `{self.state.source_document}`\n"
-        table_content += (
-            f"**Harvested:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}\n"
-        )
+        table_content += f"**Harvested:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}\n"
 
         table_file.write_text(table_content)
         print(f"✅ Created: {table_file}")  # noqa: ADR-0019
@@ -659,7 +655,9 @@ class HarvestExecutor:
 
             if not deploy_target:
                 skipped.append(item["target_file"])
-                print(f"⏭️  {item['number']:2}. {item['target_file']} — no target path, kept in staging")  # noqa: ADR-0019
+                print(
+                    f"⏭️  {item['number']:2}. {item['target_file']} — no target path, kept in staging"
+                )  # noqa: ADR-0019
                 continue
 
             if not staging_file.exists():
@@ -696,7 +694,9 @@ class HarvestExecutor:
         validations = []
 
         # Validate deployed files if available, otherwise fall back to staging
-        files_to_validate = self.state.files_deployed if self.state.files_deployed else self.state.files_created
+        files_to_validate = (
+            self.state.files_deployed if self.state.files_deployed else self.state.files_created
+        )
 
         if not files_to_validate:
             print("⚠️  No files to validate")  # noqa: ADR-0019
@@ -707,9 +707,7 @@ class HarvestExecutor:
         # Group files by extension for targeted validation
         py_files = [f for f in files_to_validate if f.endswith(".py")]
         json_files = [f for f in files_to_validate if f.endswith(".json")]
-        yaml_files = [
-            f for f in files_to_validate if f.endswith((".yaml", ".yml"))
-        ]
+        yaml_files = [f for f in files_to_validate if f.endswith((".yaml", ".yml"))]
         toml_files = [f for f in files_to_validate if f.endswith(".toml")]
         other_files = [
             f
@@ -740,9 +738,7 @@ class HarvestExecutor:
         if json_files:
             passed = 0
             for f in json_files:
-                code, _stdout, stderr = self._run_shell(
-                    f'python3 -m json.tool "{f}" > /dev/null'
-                )
+                code, _stdout, stderr = self._run_shell(f'python3 -m json.tool "{f}" > /dev/null')
                 if code == 0:
                     passed += 1
                     print(f"✅ [json] {Path(f).name}")  # noqa: ADR-0019
@@ -801,11 +797,7 @@ class HarvestExecutor:
 
         # --- Other files: existence check only ---
         if other_files:
-            passed = sum(
-                1
-                for f in other_files
-                if Path(f).exists() and Path(f).stat().st_size > 0
-            )
+            passed = sum(1 for f in other_files if Path(f).exists() and Path(f).stat().st_size > 0)
             for f in other_files:
                 p = Path(f)
                 if p.exists() and p.stat().st_size > 0:
@@ -825,9 +817,7 @@ class HarvestExecutor:
 
         total = len(self.state.files_created)
         total_passed = sum(int(v["status"].startswith("✅")) for v in validations)
-        print(
-            f"\nValidation: {total_passed}/{len(validations)} checks passed across {total} files"
-        )  # noqa: ADR-0019
+        print(f"\nValidation: {total_passed}/{len(validations)} checks passed across {total} files")  # noqa: ADR-0019
 
         return True
 
@@ -1011,9 +1001,7 @@ class HarvestExecutor:
         if self.state.commit_hash:
             print(f"   Commit: {self.state.commit_hash}")  # noqa: ADR-0019
         print("\n⚠️  DO NOT PUSH — Review changes first")  # noqa: ADR-0019
-        print(
-            f"\n→ Next: python3 workflows/use_harvest_executor.py {self.state.output_dir}"
-        )  # noqa: ADR-0019
+        print(f"\n→ Next: python3 workflows/use_harvest_executor.py {self.state.output_dir}")  # noqa: ADR-0019
 
         # Clean up state
         self._clear_state()
@@ -1038,13 +1026,9 @@ Examples:
     )
 
     parser.add_argument("source", nargs="?", help="Source document to harvest from")
-    parser.add_argument(
-        "--resume", action="store_true", help="Resume interrupted execution"
-    )
+    parser.add_argument("--resume", action="store_true", help="Resume interrupted execution")
     parser.add_argument("--status", action="store_true", help="Show current status")
-    parser.add_argument(
-        "--reset", action="store_true", help="Clear state and start fresh"
-    )
+    parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
 
     args = parser.parse_args()
 

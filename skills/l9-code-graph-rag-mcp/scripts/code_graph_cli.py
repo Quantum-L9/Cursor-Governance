@@ -55,7 +55,9 @@ def extract_jsonrpc_payload(stdout: str) -> dict[str, Any]:
     return candidate
 
 
-def call_tool(repo_root: Path, tool_name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+def call_tool(
+    repo_root: Path, tool_name: str, arguments: dict[str, Any] | None = None
+) -> dict[str, Any]:
     bin_path = resolve_bin()
     if not bin_path.is_file():
         raise FileNotFoundError(f"code-graph-rag-mcp not found: {bin_path}")

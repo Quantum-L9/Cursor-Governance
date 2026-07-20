@@ -139,12 +139,8 @@ async def validate_node(state: WorkflowState) -> dict:
             code, _, stderr = await _run_shell(command, working_dir)
 
             if code != 0:
-                errors.append(
-                    f"Shell check failed: {stderr or 'exit code ' + str(code)}"
-                )
-                logger.error(
-                    "validate.shell_failed", command=command[:50], error=stderr
-                )
+                errors.append(f"Shell check failed: {stderr or 'exit code ' + str(code)}")
+                logger.error("validate.shell_failed", command=command[:50], error=stderr)
             else:
                 outputs.append(f"✓ Shell check passed: {command[:50]}...")
                 logger.info("validate.shell_passed", command=command[:50])
@@ -160,9 +156,7 @@ async def validate_node(state: WorkflowState) -> dict:
 
                     if code != 0:
                         errors.append(f"Import failed: {module}: {stderr}")
-                        logger.error(
-                            "validate.import_failed", module=module, error=stderr
-                        )
+                        logger.error("validate.import_failed", module=module, error=stderr)
                     else:
                         outputs.append(f"✓ Import passed: {module}")
 

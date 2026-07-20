@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Optional
 
 log = logging.getLogger("graphiti.circuit")
 
@@ -22,7 +21,7 @@ class CircuitBreaker:
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.failure_count = 0
-        self.last_failure_time: Optional[float] = None
+        self.last_failure_time: float | None = None
         self.state = "CLOSED"
 
     def record_success(self) -> None:
@@ -40,7 +39,10 @@ class CircuitBreaker:
         if self.state == "CLOSED":
             return True
         if self.state == "OPEN":
-            if self.last_failure_time and (time.time() - self.last_failure_time) > self.recovery_timeout:
+            if (
+                self.last_failure_time
+                and (time.time() - self.last_failure_time) > self.recovery_timeout
+            ):
                 self.state = "HALF_OPEN"
                 log.info("Circuit breaker HALF_OPEN — testing recovery")
                 return True
