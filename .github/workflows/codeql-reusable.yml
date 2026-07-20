@@ -33,13 +33,12 @@ on:
         required: false
         default: "ubuntu-latest"
 
-permissions:
-  contents: read
-
 jobs:
   detect:
     name: Detect CodeQL languages
     runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.langs.outputs.matrix }}
       empty: ${{ steps.langs.outputs.empty }}

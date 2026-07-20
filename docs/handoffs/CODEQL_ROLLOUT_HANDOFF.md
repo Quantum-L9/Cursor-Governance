@@ -12,7 +12,7 @@ status: active
 **GMP ID:** `GMP-L.3-codeql-org-rollout-2026-07-05`
 **Handoff type:** AI-to-AI / AI-to-engineer · **Task type:** ci · **Autonomy:** L3 (constrained execution, human-approved writes)
 **Owner org:** Quantum-L9 (`https://github.com/Quantum-L9`) · **Central repo:** `Quantum-L9/Cursor-Governance`
-**Status:** Central layer READY on branch `claude/l9-ops-mcp-proof-gates-4ak2al` → PR open. Org rollout PENDING (this packet).
+**Status:** Central layer READY (this PR). Org rollout PENDING (this packet).
 
 ---
 
@@ -87,7 +87,7 @@ Callers pin `@main`; they only resolve **after this PR merges** the reusable wor
     # add .github/workflows/codeql.yml (= codeql-caller-template.yml), rm local .github/codeql/, open PR
   done
   ```
-  (Run by a human/authorized session — this AI session's write scope is limited to `L9-Ops-MCP` and `Cursor-Governance`.)
+  (Run by a human or automated session with write access to the target repositories.)
 
 ---
 
