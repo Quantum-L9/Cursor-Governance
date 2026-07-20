@@ -1,0 +1,28 @@
+[
+  {
+    "body": "# Authentication Solutions Database\n**Created:** 2025-01-29T16:00:00Z  \n**Purpose:** Prevent repeated authentication failures\n\n---\n\n## \ud83d\udea8 **CRITICAL: Supabase Authentication Method**\n\n### **Problem Description**\n- Manual apikey/Authorization headers causing authentication failures\n- Multiple failed attempts over hours\n- Wrong authentication method being used repeatedly\n\n### **Failed Approaches**\n```json\n// WRONG - Manual headers (DOESN'T WORK)\n\"headerParameters\": {\n  \"parameters\": [\n    {\n      \"name\": \"apikey\",\n      \"value\": \"={{$vars.SUPABASE_SERVICE_ROLE_KEY}}\"\n    },\n    {\n      \"name\": \"Authorization\", \n      \"value\": \"Bearer {{$vars.SUPABASE_SERVICE_ROLE_KEY}}\"\n    }\n  ]\n}\n```\n\n### **Working Solution**\n```python\n# CORRECT - Use Supabase client with proper authentication\nfrom supabase import create_client\n\nsupabase = create_client(\n    os.environ[\"SUPABASE_URL\"],\n    os.environ[\"SUPABASE_SERVICE_KEY\"]  # Service key for server-side ops\n)\n```\n\n### **Key Insight**\n- **NEVER** use manual headers for Supabase\n- **ALWAYS** use the official Supabase client library\n- **NEVER** assume manual headers will work\n\n### **Prevention**\n- **ALWAYS** check credential template first\n- **ALWAYS** use `predefinedCredentialType` + `supabaseApi`\n- **NEVER** add manual apikey/Authorization headers\n\n### **Search Tags**\n`supabase`, `auth`, `credentials`, `headers`, `predefinedCredentialType`, `supabaseApi`\n\n### **Time Impact**\n- **Without Solution:** 45+ minutes of failed attempts\n- **With Solution:** 2 minutes\n- **User Frustration:** HIGH \u2192 ZERO\n\n---\n\n## \ud83d\udd27 **Common Authentication Issues & Solutions**\n\n### **Issue: Wrong L9 API URL**\n**Solution:** Always read from .env\n```bash\ngrep \"L9_BASE_URL\" .env\n# Must be: https://l9.igorbeylin.com for production\n```\n\n### **Issue: Expression Syntax Errors**\n**Solution:** Use correct syntax without spaces\n```json\n// WRONG\n\"{{ $vars.KEY }}\"\n\n// CORRECT  \n\"{{$vars.KEY}}\"\n```\n\n### **Issue: Missing API Keys**\n**Solution:** Check L9 VPS .env file\n```bas",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:solutions",
+      "solution:authentication-fixes"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/solutions/authentication-fixes.md",
+    "transformed_at": "2026-07-04T23:15:45.904859+00:00"
+  },
+  {
+    "body": "# JSON Processing Solutions Database\n**Created:** 2025-01-29T16:00:00Z  \n**Purpose:** Prevent repeated JSON parsing failures\n\n---\n\n## \ud83d\udea8 **CRITICAL: JSON String Wrapping Issue**\n\n### **Problem Description**\n- JSON file content wrapped in text as string\n- Causes parsing failures and hours of debugging\n- User frustration: \"chasing tail for hours when solution took 2 seconds\"\n\n### **Failed Approaches**\n- Direct JSON parsing without checking format\n- Assuming JSON is in standard format\n- Complex parsing attempts without understanding root cause\n\n### **Working Solution**\n**Use Structured Output Parser in L9 AI Agent nodes:**\n\n```json\n{\n  \"parameters\": {\n    \"jsonSchemaExample\": \"{\\n  \\\"decision\\\": \\\"Hot\\\",\\n  \\\"reasons\\\": [\\n    \\\"Full truckload (40,000 lbs) of baled plastic film from commercial source\\\",\\n    \\\"Images confirm clean, uniform material\\\"\\n  ],\\n  \\\"normalized\\\": {\\n    \\\"polymer\\\": \\\"Unclear\\\",\\n    \\\"form\\\": \\\"Film Bales\\\",\\n    \\\"type\\\": \\\"Post Commercial\\\"\\n  }\\n}\"\n  },\n  \"type\": \"@L9/L9-nodes-langchain.outputParserStructured\"\n}\n```\n\n### **Key Insight**\n- This is an **L9-specific issue** - AI Agent nodes output JSON as strings by default\n- **Structured Output Parser** unwraps JSON from string/text format\n- **Only use when next node expects JSON** - not needed for all AI Agent outputs\n- Connect the parser as `ai_outputParser` to your AI Agent node\n- Map each field in the following node to pull data perfectly\n\n### **When to Use**\n- \u2705 **Use Structured Output Parser when:** Next node expects JSON input\n- \u2705 **Use when:** You need to access JSON properties in subsequent nodes\n- \u2705 **Use when:** Data needs to be structured for database operations\n- \u274c **Don't use when:** Next node only needs text output\n- \u274c **Don't use when:** AI Agent output is final result\n\n### **Prevention**\n- **Use Structured Output Parser** only when next node expects JSON\n- **NEVER** try to manually parse JSON from AI Agent output\n- **ALWAYS** connect parser as `ai_outputParser` to AI Agent",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:solutions",
+      "solution:json-issues"
+    ],
+    "semantic_score": 0.85,
+    "trust_level": "L2",
+    "source_file": "learning/solutions/json-issues.md",
+    "transformed_at": "2026-07-04T23:15:45.904937+00:00"
+  }
+]

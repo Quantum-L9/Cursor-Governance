@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-07-04T23:15:45.906671+00:00",
+  "total_episodes": 46,
+  "sources": {
+    "repeated-mistakes": 7,
+    "violations": 13,
+    "audit-log": 21,
+    "quick-fixes": 3,
+    "solutions": 2
+  },
+  "ingestion_target": "graphiti_sink.emit_session()",
+  "batch_command": "python3 -m l9_ops_mcp.cli batch-ingest learning/graphiti-episodes/"
+}

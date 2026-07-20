@@ -1,0 +1,93 @@
+[
+  {
+    "body": "---\nsuite: \"L9 Cursor Governance\"\nversion: \"8.6.0\"\ncomponent_id: \"LRN-001\"\ncomponent_name: \"Critical Lessons Database\"\nstatus: \"active\"\nupdated: \"2026-02-01T02:30:00Z\"\ngovernance_level: \"critical\"\nstartup_required: true\n---\n\n# L9 CRITICAL LESSONS \u2014 Priority-Ordered (v8.4)\n\n> **23 lessons** | Priority-ordered | Token-optimized\n> **Load at session start. Enforce always.**\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.902939+00:00"
+  },
+  {
+    "body": "## \ud83d\udea8 TIER 1: ULTRA-CRITICAL (4 lessons)\n\n### **1. NO OVERSTEP** \ud83d\udea8 ULTRA\n**Rule:** If approach/tool fails \u2192 FIX IT or ASK USER \u2014 never bypass silently\n**Wrong:** \"Tool failed, let me just do it myself\"\n**Right:** \"Tool failed. Should I: 1) Fix prompt, 2) Use alternative, 3) You do it?\"\n**On violation:** Write incident report \u2192 Harden rule \u2192 ASK if user wants changes undone (don't auto-undo)\n**MCP-ID:** `lesson-001-no-overstep`\n\n### **2. VPS READ-ONLY** \ud83d\udea8 ULTRA\n**Rule:** ASK \u2192 WAIT \u2192 EXECUTE for ANY VPS infrastructure change\n**Allowed:** docker ps/logs/inspect, cat, ls, grep, curl GET\n**Forbidden:** docker run/compose/stop/rm, file edits, volume changes\n**Key:** \"Fix it\" \u2260 approval. Each command needs explicit \"yes\"/\"approved\"\n**MCP-ID:** `lesson-002-vps-readonly`\n\n### **3. DROPBOX NOT LIBRARY** \ud83d\udea8 ULTRA\n**Rule:** GlobalCommands at `$HOME/Dropbox/Cursor Governance/GlobalCommands`\n**Wrong:** `/Users/ib-mac/Library/Application Support/Cursor/GlobalCommands`\n**Verify:** `ls .cursor-commands/ | wc -l` \u2192 should be ~30, not ~8\n**MCP-ID:** `lesson-003-dropbox-not-library`\n\n### **4. VPS MEMORY ONLY** \ud83d\udea8 ULTRA\n**Rule:** Use `cursor_memory_client.py` for ALL memory operations\n**Client:** `python3 agents/cursor/cursor_memory_client.py [search|write|stats]`\n**Also:** Check Neo4j graphs for repo data (not just postgres)\n**Wrong:** `docker exec l9-postgres psql` \u2014 LOCAL dev only\n**MCP-ID:** `lesson-004-vps-memory`\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.902981+00:00"
+  },
+  {
+    "body": "## \ud83d\udd34 TIER 2: CRITICAL (15 lessons)\n\n### **5. ASK QUESTIONS FIRST** \ud83d\udd34 CRITICAL\n**Rule:** 5 min questions saves 4 hrs rework (48-96x ROI)\n**Key:** NEVER build first, ask later. ALWAYS ask first, build second.\n**MCP-ID:** `lesson-005-ask-first`\n\n### **6. RUN COMMANDS, DON'T SHOW** \ud83d\udd34 CRITICAL\n**Rule:** Be proactive \u2014 run commands and display results\n**Wrong:** \"Run this command: `cat file.txt`\"\n**Right:** *actually runs command and shows output*\n**Exception:** ASK before destructive operations only\n**MCP-ID:** `lesson-006-run-commands`\n\n### **7. NO PLACEHOLDERS** \ud83d\udd34 CRITICAL\n**Rule:** NEVER leave blank fields or use placeholder/fabricated data\n**If missing:** NOTIFY user \"Field X is missing\" \u2192 ASK \"How should I fill this?\"\n**Key:** Ties to #5 \u2014 ask clarifying questions instead of guessing or leaving blank\n**MCP-ID:** `lesson-007-no-placeholders`\n\n### **8. PROOF REQUIRED** \ud83d\udd34 CRITICAL\n**Rule:** Never claim \"fixed\" without showing evidence\n**Key:** Show command output, file contents, test results as proof\n**MCP-ID:** `lesson-008-proof-required`\n\n### **9. INVESTIGATE FIRST** \ud83d\udd34 CRITICAL\n**Rule:** Check VPS memory + Neo4j graphs (not just postgres) before claims\n**Banned:** \"may not be implemented\", \"likely generated\", \"probably exists\"\n**Right:** \"I checked [path] and found [files]\", \"VPS memory shows...\"\n**MCP-ID:** `lesson-009-investigate-first`\n\n### **10. USE $HOME ALWAYS** \ud83d\udd34 CRITICAL\n**Rule:** Never hardcode `/Users/ib-mac/` in scripts or configs\n**Python:** `Path.home()` or `os.path.expanduser(\"~\")`\n**Bash:** `$HOME`\n**MCP-ID:** `lesson-010-use-home`\n\n### **11. FRUSTRATION RESPONSE** \ud83d\udd34 CRITICAL\n**Rule:** \"I told you\"/\"again\"/\"still happening\" \u2192 STOP immediately\n**Response protocol:**\n1. Write incident report documenting what went wrong\n2. Harden the rule you broke to prevent repeat\n3. ASK if user wants changes undone (don't auto-undo \u2014 ties to #1)\n**Key:** No apologies needed. Take corrective action.\n**MCP-ID:** `lesson-011-frustration-response`\n\n### **12. READ RULES FIR",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.903030+00:00"
+  },
+  {
+    "body": "## \ud83d\udfe1 TIER 3: HIGH (4 lessons)\n\n### **16. SEARCH BEFORE CREATING** \ud83d\udfe1 HIGH\n**Rule:** Check existing solutions before creating new ones\n**MCP-ID:** `lesson-016-search-first`\n\n### **17. MCP TOOL SELECTION** \ud83d\udfe1 HIGH\n**Rule:** List ALL tools in MCP server, pick BEST not first\n**Perplexity:** `search` (quick), `reason` (complex), `deep_research` (reports)\n**MCP-ID:** `lesson-017-mcp-tools`\n\n### **18. DISPLAY = SYMLINK** \ud83d\udfe2 MEDIUM\n**Rule:** \"Show in sidebar\" means folder access via symlink, not docs\n**MCP-ID:** `lesson-018-display-intent`\n\n### **19. PERPLEXITY TOOLS** \ud83d\udfe2 MEDIUM\n**Rule:** Use correct Perplexity tool for task type\n**Tools:**\n- `search` \u2014 Quick lookups, simple facts, current versions\n- `reason` \u2014 Multi-step analysis, comparisons, complex reasoning\n- `deep_research` \u2014 Comprehensive reports, in-depth research\n**Benefit:** Bypasses training cutoff \u2014 gets real-time web data with citations\n**MCP-ID:** `lesson-019-perplexity-tools`\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.903050+00:00"
+  },
+  {
+    "body": "## \ud83d\udd34 L9 AUTH\n\n**Rule:** All authentication uses L9 VPS stack. No external auth systems.\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.903063+00:00"
+  },
+  {
+    "body": "## \ud83d\udccb PRE-EXECUTION CHECKLIST\n\nBefore ANY execution task:\n- [ ] Asked clarifying questions (no placeholders/blanks)?\n- [ ] Paths use `$HOME` not hardcoded?\n- [ ] Using VPS memory client, not local Docker?\n- [ ] Checked Neo4j graphs for repo data?\n- [ ] Not overstepping user's chosen approach?\n- [ ] Have evidence ready before claiming success?\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.903077+00:00"
+  },
+  {
+    "body": "## \ud83d\udcca QUICK REFERENCE TABLE\n\n| # | Lesson | Tier | Key Rule |\n|---|--------|------|----------|\n| 1 | NO OVERSTEP | \ud83d\udea8 ULTRA | If tool fails \u2192 FIX or ASK, don't bypass |\n| 2 | VPS READ-ONLY | \ud83d\udea8 ULTRA | ASK \u2192 WAIT \u2192 EXECUTE for VPS changes |\n| 3 | DROPBOX NOT LIBRARY | \ud83d\udea8 ULTRA | GlobalCommands in Dropbox, not Library |\n| 4 | VPS MEMORY ONLY | \ud83d\udea8 ULTRA | cursor_memory_client.py + Neo4j graphs |\n| 5 | ASK QUESTIONS FIRST | \ud83d\udd34 CRITICAL | 5 min questions saves 4 hrs rework |\n| 6 | RUN COMMANDS | \ud83d\udd34 CRITICAL | Execute proactively, show results |\n| 7 | NO PLACEHOLDERS | \ud83d\udd34 CRITICAL | Notify gap + ASK how to fill |\n| 8 | PROOF REQUIRED | \ud83d\udd34 CRITICAL | Show evidence before claiming fixed |\n| 9 | INVESTIGATE FIRST | \ud83d\udd34 CRITICAL | Check VPS memory + Neo4j, never speculate |\n| 10 | USE $HOME | \ud83d\udd34 CRITICAL | Never hardcode /Users/ib-mac/ |\n| 11 | FRUSTRATION RESPONSE | \ud83d\udd34 CRITICAL | Incident report \u2192 Harden rule \u2192 ASK to undo |\n| 12 | READ RULES FIRST | \ud83d\udd34 CRITICAL | Load governance before execution |\n| 13 | ROOT DOCKER-COMPOSE | \ud83d\udd34 CRITICAL | Use root docker-compose.yml |\n| 14 | REAL TIMESTAMPS | \ud83d\udd34 CRITICAL | date -u \u2192 2026-01-20T15:56:08Z |\n| 15 | PR MERGE FIRST | \ud83d\udd34 CRITICAL | `gh pr merge` to adopt, never manual write |\n| 16 | SEARCH FIRST | \ud83d\udfe1 HIGH | Check existing before creating |\n| 17 | MCP TOOLS | \ud83d\udfe1 HIGH | Pick BEST tool, not first |\n| 18 | DISPLAY = SYMLINK | \ud83d\udfe2 MEDIUM | Sidebar = folder access |\n| 19 | PERPLEXITY TOOLS | \ud83d\udfe2 MEDIUM | search/reason/deep_research by task |\n\n|| Auto-detected Issues | 25 | AI Pattern Detection | \u2705 Active |\n|| Auto-detected Issues | 3 | AI Pattern Detection | \u2705 Active |\n---\n\n**Last Updated:** 2026-03-28T05:00:01Z  \n**Version:** 8.3.0  \n**Changes:** \n- Added #15 PR MERGE FIRST \u2014 git handles file transfer, never manual write from PR diff\n- Renumbered lessons 16-19 (was 15-18)\n- Updated /pr command v9.0.0 with git-native adoption workflow\n\n\n### **19. Successful solution pattern detected - can be reus...**\n**Mistake:** Successful solution pattern detected - can",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:repeated-mistakes",
+      "lesson:unknown"
+    ],
+    "semantic_score": 0.9,
+    "trust_level": "L2",
+    "source_file": "learning/failures/repeated-mistakes.md",
+    "transformed_at": "2026-07-04T23:15:45.903089+00:00"
+  }
+]

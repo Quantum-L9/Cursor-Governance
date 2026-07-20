@@ -1,0 +1,275 @@
+[
+  {
+    "body": "Audit: FL_20251117_user_correction\nQuality Score: 0.68\nMistake: User correction required - misunderstanding or incorrect assumption made\nImpact: Occurred 41 time(s) | Date range: 2025-10-10 to 2025-11-15 | Requires user correction or rework | HIGH frequency - significant time waste\nPrevention: Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:FL_20251117_user_correction"
+    ],
+    "semantic_score": 0.68,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903687+00:00"
+  },
+  {
+    "body": "Audit: FL_20251117_general\nQuality Score: 0.655\nMistake: Pattern detected: Unknown pattern\nImpact: Occurred 33 time(s) | Date range: 2025-10-10 to 2025-11-15 | Requires user correction or rework | HIGH frequency - significant time waste\nPrevention: Review pattern context before proceeding | Check existing lessons for similar patterns",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:FL_20251117_general"
+    ],
+    "semantic_score": 0.655,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903728+00:00"
+  },
+  {
+    "body": "Audit: FL_20251117_workflow_issue\nQuality Score: 0.6599999999999999\nMistake: Workflow configuration issue detected (legacy n8n pattern, deprecated)\nImpact: Occurred 2 time(s) | Date range: 2025-10-10 to 2025-10-10 | Requires user correction or rework\nPrevention: For L9: Validate specs with pipeline_validator before loading",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:FL_20251117_workflow_issue"
+    ],
+    "semantic_score": 0.6599999999999999,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903758+00:00"
+  },
+  {
+    "body": "Audit: FL_20251117_user_correction\nQuality Score: 0.68\nMistake: User correction required - misunderstanding or incorrect assumption made\nImpact: Occurred 41 time(s) | Date range: 2025-10-10 to 2025-11-15 | Requires user correction or rework | HIGH frequency - significant time waste\nPrevention: Ask clarifying questions BEFORE starting | Confirm understanding of requirements",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:FL_20251117_user_correction"
+    ],
+    "semantic_score": 0.68,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903782+00:00"
+  },
+  {
+    "body": "Audit: FL_20251117_general\nQuality Score: 0.655\nMistake: Pattern detected: Unknown pattern\nImpact: Occurred 33 time(s) | Date range: 2025-10-10 to 2025-11-15 | Requires user correction or rework | HIGH frequency - significant time waste\nPrevention: Review pattern context before proceeding | Check existing lessons for similar patterns",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:FL_20251117_general"
+    ],
+    "semantic_score": 0.655,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903806+00:00"
+  },
+  {
+    "body": "Audit: FL_20251117_workflow_issue\nQuality Score: 0.6599999999999999\nMistake: Workflow configuration issue detected (legacy n8n pattern, deprecated)\nImpact: Occurred 2 time(s) | Date range: 2025-10-10 to 2025-10-10 | Requires user correction or rework\nPrevention: For L9: Validate specs with pipeline_validator before loading",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:FL_20251117_workflow_issue"
+    ],
+    "semantic_score": 0.6599999999999999,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903831+00:00"
+  },
+  {
+    "body": "Audit: lesson-015-investigate-first\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-015-investigate-first"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903853+00:00"
+  },
+  {
+    "body": "Audit: lesson-013\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-013"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903872+00:00"
+  },
+  {
+    "body": "Audit: lesson-test\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903891+00:00"
+  },
+  {
+    "body": "Audit: lesson-test\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903910+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903928+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903946+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903966+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.903985+00:00"
+  },
+  {
+    "body": "Audit: lesson-013\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-013"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904003+00:00"
+  },
+  {
+    "body": "Audit: lesson-test\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904032+00:00"
+  },
+  {
+    "body": "Audit: lesson-test\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-test"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904049+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904067+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904085+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904106+00:00"
+  },
+  {
+    "body": "Audit: lesson-escalate\nQuality Score: N/A\nMistake: \nImpact: \nPrevention: ",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:audit-log",
+      "lesson:lesson-escalate"
+    ],
+    "semantic_score": 0.7,
+    "trust_level": "L2",
+    "source_file": "learning/failures/audit_log.jsonl",
+    "transformed_at": "2026-07-04T23:15:45.904124+00:00"
+  }
+]

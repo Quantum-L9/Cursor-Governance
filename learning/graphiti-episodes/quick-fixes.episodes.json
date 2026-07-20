@@ -1,0 +1,41 @@
+[
+  {
+    "body": "---\n# === SUITE 6 CANONICAL HEADER ===\nsuite: \"L9 Governance\"\nversion: \"6.0.0\"\ncomponent_id: \"LRN-002\"\ncomponent_name: \"Quick Fix Patterns Database\"\nlayer: \"intelligence\"\ndomain: \"learning\"\ntype: \"learning\"\nstatus: \"active\"\ncreated: \"2025-01-29T16:00:00Z\"\nupdated: \"2025-01-27T00:00:00Z\"\nauthor: \"Igor Beylin\"\nmaintainer: \"Igor Beylin\"\n\n# === GOVERNANCE METADATA ===\ngovernance_level: \"critical\"\ncompliance_required: true\naudit_trail: true\nsecurity_classification: \"internal\"\n\n# === TECHNICAL METADATA ===\ndependencies: []\nintegrates_with: [\"INT-SSP-001\", \"LRN-001\"]\napi_endpoints: []\ndata_sources: [\"error_patterns\", \"solution_database\", \"user_feedback\"]\noutputs: [\"quick_fixes\", \"pattern_recognition\", \"instant_solutions\"]\n\n# === OPERATIONAL METADATA ===\nexecution_mode: \"on-demand\"\nmonitoring_required: true\nlogging_level: \"info\"\nperformance_tier: \"interactive\"\n\n# === BUSINESS METADATA ===\npurpose: \"Document proven quick solutions for common problems to accelerate problem resolution\"\nsummary: \"Instant solutions database with proven quick fixes, pattern recognition, and diagnostic commands for common development issues\"\nbusiness_value: \"Reduces problem resolution time from hours to seconds through proven quick fix patterns\"\nsuccess_metrics: [\"fix_success_rate >= 0.95\", \"time_to_resolution <= 60s\", \"pattern_recognition_accuracy >= 0.90\"]\n\n# === INTEGRATION METADATA ===\nsuite_2_origin: \"quick-fixes.md v1.0.0\"\nmigration_notes: \"Enhanced with L9 Governance structure and comprehensive quick fix pattern database\"\n\n# === TAGS & CLASSIFICATION ===\ntags: [\"learning\", \"quick-fixes\", \"solutions\", \"patterns\", \"troubleshooting\"]\nkeywords: [\"quick\", \"fix\", \"solution\", \"pattern\", \"instant\", \"troubleshooting\"]\nrelated_components: [\"INT-SSP-001\", \"LRN-001\"]\nstartup_required: true\nmode_type: \"learning\"\n---\n\n# Quick Fix Patterns Database\n**Created:** 2025-01-29T16:00:00Z  \n**Purpose:** Document proven quick solutions for common problems\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:quick-fixes",
+      "pattern:unknown-fix"
+    ],
+    "semantic_score": 0.8,
+    "trust_level": "L2",
+    "source_file": "learning/patterns/quick-fixes.md",
+    "transformed_at": "2026-07-04T23:15:45.904479+00:00"
+  },
+  {
+    "body": "## \u26a1 **INSTANT SOLUTIONS**\n\n### **JSON Parsing Issues**\n**Problem:** JSON wrapped in string\n**Quick Fix:** Double `json.loads()`\n**Time:** 2 seconds\n**Code:**\n```python\nif isinstance(content, str) and content.startswith('\"'):\n    parsed = json.loads(json.loads(content))\n```\n\n### **Supabase Authentication**\n**Problem:** Manual headers not working\n**Quick Fix:** Use credential type\n**Time:** 2 minutes\n**Config:**\n```json\n{\n  \"authentication\": \"predefinedCredentialType\",\n  \"nodeCredentialType\": \"supabaseApi\"\n}\n```\n\n### **Missing Node IDs in YAML Specs**\n**Problem:** YAML spec import fails due to missing IDs\n**Quick Fix:** Add `id:` field to all nodes/specs\n**Time:** 30 seconds per node\n\n### **Expression Syntax Errors**\n**Problem:** Spaces in Jinja/template expressions break parsing\n**Quick Fix:** Remove spaces\n**Time:** 1 second\n**Before:** `{{ vars.KEY }}`\n**After:** `{{vars.KEY}}`\n\n### **Wrong L9 API URL**\n**Problem:** Using wrong instance URL (localhost vs production)\n**Quick Fix:** Check .env or environment variables\n**Time:** 10 seconds\n**Command:** `grep \"L9_BASE_URL\" .env`\n\n### **User Wants Folder Access**\n**Problem:** User says \"display folder in sidebar/left margin\"\n**Quick Fix:** Symlink to workspace, don't create docs\n**Time:** 5 seconds\n**Command:** `ln -s /path/to/folder /workspace/.folder-name`\n**Rule:** \"Display in sidebar\" = symlink, not documentation\n\n---",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:quick-fixes",
+      "pattern:\u26a1 **INSTANT SOLUTIONS**"
+    ],
+    "semantic_score": 0.8,
+    "trust_level": "L2",
+    "source_file": "learning/patterns/quick-fixes.md",
+    "transformed_at": "2026-07-04T23:15:45.904511+00:00"
+  },
+  {
+    "body": "## \ud83c\udfaf **PATTERN RECOGNITION**\n\n### **When You See These Errors:**\n- `Invalid character in header content` \u2192 Use credential type\n- `JSONDecodeError` \u2192 Check for string wrapping\n- `Workflow import failed` \u2192 Check for missing node IDs\n- `Authentication failed` \u2192 Check credential method\n- `Expression error` \u2192 Remove spaces from expressions\n\n### **Quick Diagnostic Commands:**\n```bash\n# Check JSON/YAML format\nfile yourfile.json\npython -c \"import yaml; yaml.safe_load(open('yourfile.yaml'))\"\n\n# Check L9 credentials\ngrep \"L9_\\|OPENAI_\\|ANTHROPIC_\" .env\n\n# Validate YAML spec\npython -m codegen_agent.pipeline_validator yourspec.yaml\n```\n\n---\n\n**Last Updated:** 2026-01-22T00:00:00Z  \n**Success Rate:** 95% when applied correctly",
+    "source_agent_id": "learning-corpus-transformer",
+    "session_id": "batch-transform-20260704",
+    "group_ids": [
+      "corpus:quick-fixes",
+      "pattern:\ud83c\udfaf **PATTERN RECOGNITION**"
+    ],
+    "semantic_score": 0.8,
+    "trust_level": "L2",
+    "source_file": "learning/patterns/quick-fixes.md",
+    "transformed_at": "2026-07-04T23:15:45.904536+00:00"
+  }
+]
