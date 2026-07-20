@@ -403,7 +403,7 @@ def extract_distillable_text(file_path: Path, source_type: str) -> str:
 def chunk_text(text: str, source_id: str) -> list[dict[str, Any]]:
     """Chunk text using L9's ChunkView for content-addressed chunks."""
     try:
-        from memory.chunk_view import Chunk, ChunkConfig, ChunkView
+        from memory.chunk_view import ChunkConfig, ChunkView
 
         config = ChunkConfig(
             chunk_size=CHUNK_SIZE,
@@ -905,9 +905,7 @@ async def distill_file(
 
     # 5. Ingest into L9 memory
     stats = await ingest_distilled(facts, insights, str(file_path), source_type)
-    print(
-        f"  ✅ Ingested: {stats['facts_ingested']} facts, " f"{stats['insights_ingested']} insights"
-    )
+    print(f"  ✅ Ingested: {stats['facts_ingested']} facts, {stats['insights_ingested']} insights")
     if stats["errors"]:
         print(f"  ⚠️  {stats['errors']} ingestion errors")
         result.errors.append(f"{stats['errors']} ingestion errors")

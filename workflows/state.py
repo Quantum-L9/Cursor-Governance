@@ -44,7 +44,7 @@ __dora_meta__ = {
 # ============================================================================
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any, Literal, TypedDict
 
 # LangGraph is optional - works without it for session DAGs
@@ -62,7 +62,7 @@ except ImportError:
 # =============================================================================
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     """Status of a workflow step."""
 
     PENDING = "pending"
@@ -275,7 +275,9 @@ __dora_footer__ = {
         "mapping",
         "merge",
     ],
-    "business_value": "Provides state components including StepStatus, FileMapping, ExtractionPattern",
+    "business_value": (
+        "Provides state components including StepStatus, FileMapping, ExtractionPattern"
+    ),
     "last_modified": "2026-01-25T14:45:51Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

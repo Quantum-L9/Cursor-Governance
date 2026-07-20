@@ -517,7 +517,9 @@ __dora_footer__ = {
         "enforced",
         "execution",
     ],
-    "business_value": "This DAG enforces the /gmp workflow with MANDATORY steps that cannot be skipped.",
+    "business_value": (
+        "This DAG enforces the /gmp workflow with MANDATORY steps that cannot be skipped."
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

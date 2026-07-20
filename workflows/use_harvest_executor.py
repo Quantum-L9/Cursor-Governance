@@ -406,7 +406,8 @@ class UseHarvestExecutor:
         for item in self.state.items[:10]:
             if item["target_path"]:
                 todo_args.append(
-                    f'--todo "D{item["number"]}|{item["target_path"]}|*|{item["action"]}|{item["status"]}"'
+                    f'--todo "D{item["number"]}|{item["target_path"]}|*|'
+                    f'{item["action"]}|{item["status"]}"'
                 )
 
         # Build validation items
@@ -650,7 +651,11 @@ __dora_footer__ = {
         "workflows",
     ],
     "keywords": ["deploy", "executor", "harvest", "state", "status", "use"],
-    "business_value": "Read HARVEST_TABLE.md Verify target locations exist Deploy files using cp (NO manual rewriting) Validate syntax Wire imports/exports Generate report Commit (NO PUSH) NO USER CONFIRMATION GATES — Fully",
+    "business_value": (
+        "Read HARVEST_TABLE.md Verify target locations exist Deploy files using cp "
+        "(NO manual rewriting) Validate syntax Wire imports/exports Generate report "
+        "Commit (NO PUSH) NO USER CONFIRMATION GATES — Fully"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

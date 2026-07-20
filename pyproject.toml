@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "ruff>=0.6",
     "pytest>=8.0",
+    "mypy>=1.19",
 ]
 
 # Repo-root layout (rules/, skills/, commands/, ops/, ...) is not an installable
@@ -52,6 +53,20 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+# python_version pinned to match [project] requires-python — CI's --ignore-missing-imports
+# flag is mirrored here so `uv run mypy .` and the CI mypy step behave identically.
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+exclude = [
+    "_archived",
+    "_archive",
+    "archive",
+    "archived",
+    "current_work/harvested",
+    "C_GOV_FILES",
+]
 
 # No `tests/` convention yet — this repo has 2 test_*.py files total, discovered
 # by scanning from root. norecursedirs mirrors [tool.ruff] exclude so archived

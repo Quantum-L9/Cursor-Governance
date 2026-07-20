@@ -17,7 +17,7 @@ SESSIONS = Path(__file__).parent / "sessions"
 
 
 def _as_narrative(s: dict) -> str:
-    parts = [f"Project: {s.get('project','unknown')}", f"Summary: {s.get('summary','')}"]
+    parts = [f"Project: {s.get('project', 'unknown')}", f"Summary: {s.get('summary', '')}"]
     if s.get("key_actions"):
         parts.append("Actions: " + "; ".join(s["key_actions"]))
     if s.get("decisions"):
@@ -48,9 +48,7 @@ def emit_session(session_data: dict) -> dict:
     # Invoke via MCP client (stdio). Use sys.executable for interpreter consistency.
     proc = subprocess.run(
         [sys.executable, "-m", "l9_ops_mcp.cli", "ingest", json.dumps(payload)],
-        capture_output=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
 

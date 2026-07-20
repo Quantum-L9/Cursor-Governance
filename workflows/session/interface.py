@@ -39,11 +39,11 @@ __dora_meta__ = {
 # ============================================================================
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class NodeType(str, Enum):
+class NodeType(StrEnum):
     """Type of session node."""
 
     ANALYZE = "analyze"  # Read-only analysis
@@ -55,7 +55,7 @@ class NodeType(str, Enum):
     END = "end"  # Terminal node
 
 
-class GateType(str, Enum):
+class GateType(StrEnum):
     """Type of gate (decision point)."""
 
     USER_CONFIRM = "user_confirm"  # Requires explicit user approval
@@ -64,7 +64,7 @@ class GateType(str, Enum):
     CONDITIONAL = "conditional"  # Based on condition function
 
 
-class SessionState(str, Enum):
+class SessionState(StrEnum):
     """State of session execution."""
 
     NOT_STARTED = "not_started"
@@ -102,7 +102,8 @@ class SessionNode:
 
     def __post_init__(self):
         """
-        Performs post-initialization setup for SessionNode, ensuring default gate_type assignment for GATE nodes.
+        Performs post-initialization setup for SessionNode, ensuring default gate_type
+        assignment for GATE nodes.
 
         Args:
             self: The SessionNode instance being initialized.

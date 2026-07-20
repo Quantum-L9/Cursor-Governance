@@ -25,9 +25,7 @@ def restore(task_type: str = "current active projects and open decisions") -> No
     payload = {"query": task_type, "group_ids": None, "limit": 10}
     proc = subprocess.run(
         [sys.executable, "-m", "l9_ops_mcp.cli", "query", json.dumps(payload)],
-        capture_output=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
     )
 
@@ -40,7 +38,8 @@ def restore(task_type: str = "current active projects and open decisions") -> No
         facts = json.loads(proc.stdout).get("facts", [])
     except json.JSONDecodeError:
         print(
-            "No graph context available — MCP returned non-JSON. Falling back to JSON session cache."
+            "No graph context available — MCP returned non-JSON. "
+            "Falling back to JSON session cache."
         )
         return
 

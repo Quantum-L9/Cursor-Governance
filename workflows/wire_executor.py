@@ -57,7 +57,7 @@ import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 # =============================================================================
@@ -83,7 +83,7 @@ PROTECTED_FILES = {
 # =============================================================================
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -91,7 +91,7 @@ class StepStatus(str, Enum):
     BLOCKED = "blocked"
 
 
-class RefStatus(str, Enum):
+class RefStatus(StrEnum):
     BROKEN = "broken"
     FIXED = "fixed"
     OK = "ok"
@@ -252,7 +252,8 @@ class WireExecutor:
         print("|------|------|------|---------|")  # noqa: ADR-0019
         for ref in references[:20]:  # Show first 20
             print(
-                f"| {ref['file'][:30]} | {ref['line']} | {ref['ref_type']} | {ref['context'][:40]} |"
+                f"| {ref['file'][:30]} | {ref['line']} | {ref['ref_type']} | "
+                f"{ref['context'][:40]} |"
             )  # noqa: ADR-0019
         if len(references) > 20:
             print(f"| ... and {len(references) - 20} more |")  # noqa: ADR-0019
@@ -442,7 +443,7 @@ class WireExecutor:
         _code, stdout, _stderr = self._run_shell(cmd)
 
         # Count references
-        ref_count = len([l for l in stdout.strip().split("\n") if l and ":" in l])
+        ref_count = len([ln for ln in stdout.strip().split("\n") if ln and ":" in ln])
 
         print(f"References after wiring: {ref_count}")  # noqa: ADR-0019
         print(f"Original references: {len(self.state.references)}")  # noqa: ADR-0019

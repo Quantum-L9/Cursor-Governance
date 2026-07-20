@@ -97,7 +97,9 @@ MODES:
             name="Start",
             node_type=NodeType.START,
             description="Entry point",
-            action="Begin test pipeline workflow. Specify target module/tier or full coverage scan.",
+            action=(
+                "Begin test pipeline workflow. Specify target module/tier or full coverage scan."
+            ),
         ),
         # === PHASE 1: GAP ANALYSIS ===
         SessionNode(

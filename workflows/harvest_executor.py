@@ -332,7 +332,8 @@ class HarvestExecutor:
         raise ValueError("no opening fence found above # filename")
 
     def _find_matching_fence_close(self, lines: list[str], open_idx: int) -> int:
-        """0-based index of the closing fence line for the block opened at open_idx (nested fences)."""
+        """0-based index of the closing fence line for the block opened at open_idx (nested
+        fences)."""
         st = lines[open_idx].strip()
         n_open = self._fence_run_at_line_start(st)
         if n_open < 3:
@@ -555,12 +556,15 @@ class HarvestExecutor:
             print(f"  {lang}: {count} block(s)")  # noqa: ADR-0019
         print("-" * 80)  # noqa: ADR-0019
         print(
-            f"| {'#':>2} | {'Target File':35} | {'Source Path':35} | {'Lang':6} | {'Lines':>5} | {'Range':12} |"
+            f"| {'#':>2} | {'Target File':35} | {'Source Path':35} | "
+            f"{'Lang':6} | {'Lines':>5} | {'Range':12} |"
         )  # noqa: ADR-0019
         print(f"|{'---':>4}|{'-' * 37}|{'-' * 37}|{'-' * 8}|{'-' * 7}|{'-' * 14}|")  # noqa: ADR-0019
         for item in items[:30]:
             print(  # noqa: ADR-0019
-                f"| {item['number']:2} | {item['target_file'][:35]:35} | {item['pattern'][:35]:35} | {item['language'][:6]:6} | {item['lines']:5} | {item['source_start']}-{item['source_end']:>5} |"
+                f"| {item['number']:2} | {item['target_file'][:35]:35} | "
+                f"{item['pattern'][:35]:35} | {item['language'][:6]:6} | "
+                f"{item['lines']:5} | {item['source_start']}-{item['source_end']:>5} |"
             )
         if len(items) > 30:
             print(f"| ... and {len(items) - 30} more |")  # noqa: ADR-0019
@@ -656,7 +660,8 @@ class HarvestExecutor:
             if not deploy_target:
                 skipped.append(item["target_file"])
                 print(
-                    f"⏭️  {item['number']:2}. {item['target_file']} — no target path, kept in staging"
+                    f"⏭️  {item['number']:2}. {item['target_file']} — "
+                    "no target path, kept in staging"
                 )  # noqa: ADR-0019
                 continue
 
@@ -830,8 +835,10 @@ class HarvestExecutor:
         # Build TODO items
         todo_args = []
         for item in self.state.items[:10]:
+            src_range = f"{item['source_start']}-{item['source_end']}"
             todo_args.append(
-                f'--todo "H{item["number"]}|{item["target_file"]}|{item["source_start"]}-{item["source_end"]}|EXTRACT|{item["status"]}"'
+                f'--todo "H{item["number"]}|{item["target_file"]}|{src_range}|'
+                f'EXTRACT|{item["status"]}"'
             )
 
         # Build validation items
@@ -1083,7 +1090,11 @@ __dora_footer__ = {
         "workflows",
     ],
     "keywords": ["executor", "harvest", "state", "status"],
-    "business_value": "Read source document Parse code blocks with line ranges Create harvest table Extract to numbered files using sed Validate syntax Generate report Commit (NO PUSH) NO USER CONFIRMATION GATES — Fully aut",
+    "business_value": (
+        "Read source document Parse code blocks with line ranges Create harvest table "
+        "Extract to numbered files using sed Validate syntax Generate report Commit "
+        "(NO PUSH) NO USER CONFIRMATION GATES — Fully aut"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

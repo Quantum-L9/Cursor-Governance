@@ -370,7 +370,10 @@ __dora_footer__ = {
         "workflows",
     ],
     "keywords": ["dag", "migration", "refactoring", "router", "workflow"],
-    "business_value": "1. Analyze document/requirements 2. Cross-reference with codebase 3. Plan (GMP Phase 0) 4. Execute in safe batches 5. Validate 6. Commit Version: 1.0.0",
+    "business_value": (
+        "1. Analyze document/requirements 2. Cross-reference with codebase 3. Plan "
+        "(GMP Phase 0) 4. Execute in safe batches 5. Validate 6. Commit Version: 1.0.0"
+    ),
     "last_modified": "2026-01-31T22:21:54Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

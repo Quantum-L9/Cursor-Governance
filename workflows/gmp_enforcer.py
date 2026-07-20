@@ -56,7 +56,7 @@ import json
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +65,7 @@ from typing import Any
 # =============================================================================
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     """Status of a GMP step."""
 
     PENDING = "pending"
@@ -621,7 +621,11 @@ __dora_footer__ = {
         "status",
         "step",
     ],
-    "business_value": "1. Tracking which steps have been executed 2. Refusing to proceed without required dependencies 3. Generating prompts for the next required step # Check current state and get next required step python",
+    "business_value": (
+        "1. Tracking which steps have been executed 2. Refusing to proceed without "
+        "required dependencies 3. Generating prompts for the next required step # "
+        "Check current state and get next required step python"
+    ),
     "last_modified": "2026-01-31T22:34:22Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

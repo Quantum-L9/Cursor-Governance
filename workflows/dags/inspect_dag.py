@@ -567,7 +567,12 @@ async def report_node(state: InspectState) -> dict[str, Any]:
 {structure_section}
 
 ### Anti-Patterns
-{chr(10).join(f"- {p.get('pattern', 'unknown')}: {p.get('location', '')}" for p in state.anti_patterns) or "None detected"}
+{
+        chr(10).join(
+            f"- {p.get('pattern', 'unknown')}: {p.get('location', '')}" for p in state.anti_patterns
+        )
+        or "None detected"
+    }
 
 ### Decision
 ➡️ **NEXT:** `{state.routing_decision}`

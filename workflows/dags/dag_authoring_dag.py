@@ -171,7 +171,8 @@ Pre-reading: workflows/dags/*.py (pick one as reference)""",
 
 3. **Design edge flow:**
    ```
-   start → phase1 → gate1 → [branch_a, branch_b] → phase2 → validate → gate2 → [success, retry] → end
+   start → phase1 → gate1 → [branch_a, branch_b] → phase2 → validate → gate2 →
+   [success, retry] → end
    ```
 
 4. **Identify loop-backs:**
@@ -518,7 +519,11 @@ __dora_footer__ = {
         "dags",
         "detailed",
     ],
-    "business_value": "This DAG enforces the proper pattern for creating and updating DAGs. DAGs contain ALL detailed instructions in node `action` fields Slash commands are MINIMAL TRIGGERS (~30 lines) NEVER duplicate inst",
+    "business_value": (
+        "This DAG enforces the proper pattern for creating and updating DAGs. DAGs "
+        "contain ALL detailed instructions in node `action` fields Slash commands "
+        "are MINIMAL TRIGGERS (~30 lines) NEVER duplicate inst"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

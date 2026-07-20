@@ -29,15 +29,18 @@ _workspace = Path(__file__).parent.parent.parent
 if str(_workspace) not in sys.path:
     sys.path.insert(0, str(_workspace))
 
-# Re-export everything from the modular package
-from workflows.dags.gmp import (
+# Re-export everything from the modular package. These must stay below the
+# sys.path.insert() above — direct script execution (`python3 workflows/dags/
+# gmp_langgraph_executor.py`) needs the workspace root on sys.path before the
+# `workflows.dags.gmp*` absolute imports below can resolve.
+from workflows.dags.gmp import (  # noqa: E402
     GMPLangGraphExecutor,
     GMPPhase,
     GMPState,
     build_gmp_graph,
     main,
 )
-from workflows.dags.gmp.nodes import (
+from workflows.dags.gmp.nodes import (  # noqa: E402
     node_aborted,
     node_baseline,
     node_end,
@@ -51,7 +54,7 @@ from workflows.dags.gmp.nodes import (
     node_user_confirm_validation,
     node_validate,
 )
-from workflows.dags.gmp.routing import (
+from workflows.dags.gmp.routing import (  # noqa: E402
     route_after_scope_confirm,
     route_after_validation_confirm,
 )

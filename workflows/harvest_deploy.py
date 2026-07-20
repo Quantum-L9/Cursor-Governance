@@ -216,10 +216,19 @@ async def run_harvest_deploy(
             source_document="current_work/01-25-2026/Plan Files To Harvest.md",
             harvest_directory="current_work/01-25-2026/harvested-files",
             extraction_patterns=[
-                {"start_line": 22, "end_line": 141, "output_file": "migration.sql", "strip_backticks": True},
+                {
+                    "start_line": 22,
+                    "end_line": 141,
+                    "output_file": "migration.sql",
+                    "strip_backticks": True,
+                },
             ],
             file_mappings=[
-                {"source": "harvested/migration.sql", "destination": "migrations/new.sql", "operation": "copy"},
+                {
+                    "source": "harvested/migration.sql",
+                    "destination": "migrations/new.sql",
+                    "operation": "copy",
+                },
             ],
         )
     """

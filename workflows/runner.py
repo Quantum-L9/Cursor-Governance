@@ -245,7 +245,10 @@ class StepExecutor:
 
             # Build sed command
             if strip_backticks:
-                cmd = f"sed -n '{start_line},{end_line}p' \"{source}\" | sed '1d' | sed '$d' > \"{target_path}\""
+                cmd = (
+                    f"sed -n '{start_line},{end_line}p' \"{source}\" | "
+                    f"sed '1d' | sed '$d' > \"{target_path}\""
+                )
             else:
                 cmd = f'sed -n \'{start_line},{end_line}p\' "{source}" > "{target_path}"'
 
@@ -475,11 +478,13 @@ class DAGRunner:
 
     def __init__(self, workflow_path: Path, working_dir: Path | None = None):
         """
-        Initializes a DAGRunner instance for executing workflow DAGs based on a specified workflow file.
+        Initializes a DAGRunner instance for executing workflow DAGs based on a specified
+        workflow file.
 
         Args:
             workflow_path: Path to the YAML or JSON file defining the workflow DAG.
-            working_dir: Optional directory for execution context; defaults to current working directory if None.
+            working_dir: Optional directory for execution context; defaults to current
+                working directory if None.
         """
         self.workflow_path = workflow_path
         self.working_dir = working_dir or Path.cwd()
@@ -559,7 +564,8 @@ class DAGRunner:
 
         def visit(step_id: str):
             """
-            Performs a depth-first traversal of workflow steps to determine execution order based on dependencies.
+            Performs a depth-first traversal of workflow steps to determine execution order
+            based on dependencies.
 
             Args:
                 step_id: Identifier of the workflow step to visit.
@@ -735,7 +741,8 @@ class DAGRunner:
 
 def main():
     """
-    Main entry point for the L9 DAG Workflow Runner that initializes argument parsing and executes workflows.
+    Main entry point for the L9 DAG Workflow Runner that initializes argument parsing and
+    executes workflows.
     Args:
         args: Command-line arguments parsed for workflow execution and configuration.
     Returns:

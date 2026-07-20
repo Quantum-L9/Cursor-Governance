@@ -732,7 +732,11 @@ __dora_footer__ = {
         "discovery",
         "plan",
     ],
-    "business_value": "This DAG enforces the /wire workflow for structural wiring repair. IMPORTANT: /wire is a STRUCTURAL REPAIR command. It fixes references and exports. It does NOT prove runtime correctness. Runtime proo",
+    "business_value": (
+        "This DAG enforces the /wire workflow for structural wiring repair. "
+        "IMPORTANT: /wire is a STRUCTURAL REPAIR command. It fixes references and "
+        "exports. It does NOT prove runtime correctness. Runtime proo"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

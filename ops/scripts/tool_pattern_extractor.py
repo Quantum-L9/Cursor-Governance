@@ -36,7 +36,8 @@ performance_tier: "background"
 purpose: "Extract tool call sequences from chat history and build pattern database"
 summary: "Analyzes conversations to identify successful tool sequences for different request types"
 business_value: "Enables intelligent tool selection based on historical success patterns"
-success_metrics: ["patterns_extracted >= 100", "success_rate_calculated", "tool_patterns.json_generated"]
+success_metrics: ["patterns_extracted >= 100", "success_rate_calculated",
+  "tool_patterns.json_generated"]
 """
 
 import hashlib
@@ -51,7 +52,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
-from memory_aggregator import MemoryAggregator, get_global_commands_path
+from memory_aggregator import get_global_commands_path
 
 GLOBAL_COMMANDS = get_global_commands_path()
 CHAT_EXPORTS_DIR = GLOBAL_COMMANDS / "ops/logs/chat_exports"
@@ -112,9 +113,6 @@ class ToolPatternExtractor:
                     )
             except Exception as e:
                 print(f"⚠️  Error loading existing patterns: {e}")
-
-        # Use memory aggregator to get conversations
-        aggregator = MemoryAggregator()
 
         # Process all exports
         if CHAT_EXPORTS_DIR.exists():

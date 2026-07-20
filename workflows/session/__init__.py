@@ -73,7 +73,10 @@ __dora_footer__ = {
     "dependencies": [],
     "tags": ["operations", "utility", "workflows"],
     "keywords": ["coding", "state", "systematic", "workflows"],
-    "business_value": "Clear phases and gates User confirmation checkpoints Validation requirements State persistence Version: 1.0.0",
+    "business_value": (
+        "Clear phases and gates User confirmation checkpoints Validation requirements "
+        "State persistence Version: 1.0.0"
+    ),
     "last_modified": "2026-01-31T22:21:54Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

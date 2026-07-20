@@ -81,13 +81,19 @@ def pre_tool_use(payload: str) -> dict:
     if gmp_prompt(prompt) and "gmp:phase_lock" not in (state.get("memory_satisfied_for") or []):
         return {
             "permission": "deny",
-            "user_message": "Graphiti gate: GMP requires prefetch + conflicts check (gmp:phase_lock). Run graphiti_memory_client.py phase-lock first.",
+            "user_message": (
+                "Graphiti gate: GMP requires prefetch + conflicts check (gmp:phase_lock). "
+                "Run graphiti_memory_client.py phase-lock first."
+            ),
         }
     if memory_ok(state):
         return {"permission": "allow"}
     return {
         "permission": "deny",
-        "user_message": "Graphiti gate: Write blocked until memory prefetch satisfied. Run Graphiti search or satisfy prefetch.",
+        "user_message": (
+            "Graphiti gate: Write blocked until memory prefetch satisfied. "
+            "Run Graphiti search or satisfy prefetch."
+        ),
     }
 
 

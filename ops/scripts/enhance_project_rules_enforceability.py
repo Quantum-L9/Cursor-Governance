@@ -253,10 +253,10 @@ class RuleEnhancer:
                 enhanced_count += 1
                 print(f"✅ Enhanced: {file_path.relative_to(self.rules_dir)}")
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("✅ Enhancement Complete!")
-        print(f"   Files enhanced: {enhanced_count}/{len(mdc_files)-1}")
-        print(f"{'='*60}")
+        print(f"   Files enhanced: {enhanced_count}/{len(mdc_files) - 1}")
+        print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

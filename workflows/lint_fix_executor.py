@@ -708,7 +708,11 @@ __dora_footer__ = {
         "serialization",
     ],
     "keywords": ["executor", "fix", "lint", "state", "status"],
-    "business_value": "Run linter to get all errors Categorize by fix type (auto, semi, manual) Apply auto-fixes with ruff Apply semi-auto fixes with sed patterns Validate no new errors introduced Generate report Commit (NO",
+    "business_value": (
+        "Run linter to get all errors Categorize by fix type (auto, semi, manual) "
+        "Apply auto-fixes with ruff Apply semi-auto fixes with sed patterns Validate "
+        "no new errors introduced Generate report Commit (NO"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

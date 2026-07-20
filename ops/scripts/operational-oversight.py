@@ -35,10 +35,13 @@ performance_tier: "realtime"
 schedule: "every_30_min"
 
 # === BUSINESS METADATA ===
-purpose: "Autonomous operational oversight with real-time anomaly detection and intelligent response"
-summary: "Executable implementation of operational-oversight.md providing governance dashboard, memory aggregation, and autonomous anomaly response"
+purpose: "Autonomous operational oversight with real-time anomaly detection and intelligent
+  response"
+summary: "Executable implementation of operational-oversight.md providing governance
+  dashboard, memory aggregation, and autonomous anomaly response"
 business_value: "Enables hands-off governance operation with intelligent anomaly handling"
-success_metrics: ["anomaly_detection_accuracy >= 95%", "response_time < 30s", "false_positive_rate < 5%"]
+success_metrics: ["anomaly_detection_accuracy >= 95%", "response_time < 30s",
+  "false_positive_rate < 5%"]
 
 Operational Oversight - Executable Monitor
 Implements the monitoring system described in operational-oversight.md
@@ -56,7 +59,7 @@ SCRIPT_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 try:
-    from governance_monitor import GovernanceMetrics, GovernanceMonitor
+    from governance_monitor import GovernanceMonitor
 
     GOVERNANCE_MONITOR_AVAILABLE = True
 except ImportError:
@@ -184,7 +187,7 @@ class OperationalOversight:
             result = subprocess.run(["launchctl", "list"], capture_output=True, text=True)
             if "com.tenx.learning-processor" not in result.stdout:
                 alerts.append("Learning processor LaunchAgent not running")
-        except:
+        except (OSError, subprocess.SubprocessError):
             pass
 
         return alerts
@@ -220,9 +223,9 @@ class OperationalOversight:
                 return 0.90
 
             # Average quality scores as confidence proxy
-            avg_quality = sum(l.get("quality_score", 0.7) for l in lessons) / len(lessons)
+            avg_quality = sum(lesson.get("quality_score", 0.7) for lesson in lessons) / len(lessons)
             return min(0.95, avg_quality + 0.10)  # Boost and cap at 0.95
-        except:
+        except (OSError, json.JSONDecodeError):
             return 0.90
 
     def _count_memory_insights(self) -> int:
@@ -251,7 +254,7 @@ class OperationalOversight:
                     if line.startswith("["):
                         timestamp = line.split("]")[0][1:]
                         return timestamp
-        except:
+        except OSError:
             pass
 
         return None
@@ -267,7 +270,9 @@ class OperationalOversight:
                     anomaly_type="compliance_violation",
                     severity="moderate" if health.governance_health >= 80 else "critical",
                     detected_at=datetime.now().isoformat(),
-                    description=f"Governance health at {health.governance_health:.1f}% (threshold: 90%)",
+                    description=(
+                        f"Governance health at {health.governance_health:.1f}% (threshold: 90%)"
+                    ),
                     response_action="remediation_required",
                     auto_remediated=False,
                 )
@@ -307,7 +312,10 @@ class OperationalOversight:
                     anomaly_type="reasoning_degradation",
                     severity="moderate",
                     detected_at=datetime.now().isoformat(),
-                    description=f"Reasoning confidence at {health.reasoning_confidence:.2f} (threshold: 0.85)",
+                    description=(
+                        f"Reasoning confidence at {health.reasoning_confidence:.2f} "
+                        "(threshold: 0.85)"
+                    ),
                     response_action="review_lessons",
                     auto_remediated=False,
                 )
@@ -348,7 +356,7 @@ class OperationalOversight:
         if verify_script.exists():
             try:
                 subprocess.run(["bash", str(verify_script)], check=False)
-            except:
+            except (OSError, subprocess.SubprocessError):
                 self.log("  ✗ Verification script failed", "ERROR")
 
     def _trigger_learning_processor(self):

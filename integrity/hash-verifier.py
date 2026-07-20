@@ -25,7 +25,8 @@ dependencies: ["hashlib", "base64", "json", "pathlib"]
 integrates_with: ["INT-MA-001", "EXE-VAL-001", "OPS-OPS-001"]
 api_endpoints: []
 data_sources: ["integrity/manifest-lock.json"]
-outputs: ["integrity/manifest-lock.json", "ops/logs/integrity_report.json", "ops/logs/integrity_activity.log"]
+outputs: ["integrity/manifest-lock.json", "ops/logs/integrity_report.json",
+  "ops/logs/integrity_activity.log"]
 
 # === OPERATIONAL METADATA ===
 execution_mode: "on-demand"
@@ -35,7 +36,8 @@ performance_tier: "realtime"
 
 # === BUSINESS METADATA ===
 purpose: "File tamper detection and integrity verification for governance files"
-summary: "Builds SHA-256/Base64 snapshots, verifies files against manifest, and repairs tampered files"
+summary: "Builds SHA-256/Base64 snapshots, verifies files against manifest, and repairs
+  tampered files"
 business_value: "Ensures governance file integrity and prevents unauthorized modifications"
 success_metrics: ["verification_accuracy = 100%", "repair_success >= 99%", "detection_latency < 1s"]
 
@@ -211,7 +213,8 @@ def verify_and_repair(auto_repair=True):
     }
     write_report(report)
     log_activity(
-        f"Verify complete. drift={len(drift)} missing={len(missing)} repaired={len(repaired)} extras={len(extras)}"
+        f"Verify complete. drift={len(drift)} missing={len(missing)} "
+        f"repaired={len(repaired)} extras={len(extras)}"
     )
     update_meta_audit("Verify & Repair Completed", json.dumps(report, indent=2))
 

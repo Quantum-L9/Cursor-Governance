@@ -707,7 +707,11 @@ __dora_footer__ = {
         "security",
     ],
     "keywords": ["executor", "match", "migrate", "migration", "state", "status"],
-    "business_value": "Index analysis (find all occurrences) Pattern extraction (identify migration pattern) Batch generation (create all changes) Apply changes (sed/cp, NO manual rewriting) Validate (py_compile, imports, t",
+    "business_value": (
+        "Index analysis (find all occurrences) Pattern extraction (identify migration "
+        "pattern) Batch generation (create all changes) Apply changes (sed/cp, NO "
+        "manual rewriting) Validate (py_compile, imports, t"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class GMPPhase(str, Enum):
+class GMPPhase(StrEnum):
     """GMP execution phases."""
 
     START = "start"

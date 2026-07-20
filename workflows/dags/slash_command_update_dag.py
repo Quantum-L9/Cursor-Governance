@@ -536,7 +536,11 @@ __dora_footer__ = {
         "pattern",
         "register",
     ],
-    "business_value": "This DAG enforces the proper pattern for updating slash commands that trigger DAGs. Slash commands that trigger DAGs should be ~30 lines All detailed instructions live in the DAG's node action fields ",
+    "business_value": (
+        "This DAG enforces the proper pattern for updating slash commands that "
+        "trigger DAGs. Slash commands that trigger DAGs should be ~30 lines All "
+        "detailed instructions live in the DAG's node action fields "
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

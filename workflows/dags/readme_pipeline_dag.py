@@ -386,7 +386,11 @@ __dora_footer__ = {
         "session",
         "workflow",
     ],
-    "business_value": "1. Gap analysis - identify missing subsystems 2. Config enrichment - add missing entries to readme_config.yaml 3. Template update - enhance README_TEMPLATE if needed 4. Generate - run generator script",
+    "business_value": (
+        "1. Gap analysis - identify missing subsystems 2. Config enrichment - add "
+        "missing entries to readme_config.yaml 3. Template update - enhance "
+        "README_TEMPLATE if needed 4. Generate - run generator script"
+    ),
     "last_modified": "2026-01-31T22:21:54Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

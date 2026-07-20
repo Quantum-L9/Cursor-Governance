@@ -97,7 +97,10 @@ async def extract_files_node(state: WorkflowState) -> dict:
         # Build sed command
         if strip_backticks:
             # Extract lines, remove first (```) and last (```) lines
-            cmd = f"sed -n '{start_line},{end_line}p' \"{source}\" | sed '1d' | sed '$d' > \"{output_path}\""
+            cmd = (
+                f"sed -n '{start_line},{end_line}p' \"{source}\" | "
+                f"sed '1d' | sed '$d' > \"{output_path}\""
+            )
         else:
             cmd = f'sed -n \'{start_line},{end_line}p\' "{source}" > "{output_path}"'
 

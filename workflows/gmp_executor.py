@@ -26,6 +26,15 @@ Version: 1.0.0
 
 from __future__ import annotations
 
+import argparse
+import json
+import subprocess
+import sys
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from enum import StrEnum
+from pathlib import Path
+
 import structlog
 
 # ============================================================================
@@ -52,15 +61,6 @@ __dora_meta__ = {
 }
 # ============================================================================
 
-import argparse
-import json
-import subprocess
-import sys
-from dataclasses import asdict, dataclass, field
-from datetime import datetime
-from enum import Enum
-from pathlib import Path
-
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -78,7 +78,7 @@ STATE_FILE = REPO_ROOT / ".gmp_executor_state.json"
 # =============================================================================
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -86,7 +86,7 @@ class StepStatus(str, Enum):
     BLOCKED = "blocked"
 
 
-class StepType(str, Enum):
+class StepType(StrEnum):
     MEMORY_READ = "memory_read"
     SCOPE_LOCK = "scope_lock"
     USER_GATE = "user_gate"
@@ -455,7 +455,8 @@ class GMPExecutor:
 
             # Determine test file path
             if py_file.startswith("core/"):
-                test_file = f"tests/{py_file.replace('.py', '').replace('/', '/test_').replace('core/test_', 'core/')}"
+                stem = py_file.replace(".py", "").replace("/", "/test_")
+                test_file = f"tests/{stem.replace('core/test_', 'core/')}"
             else:
                 parts = py_file.split("/")
                 test_file = f"tests/{'/'.join(parts[:-1])}/test_{parts[-1]}"
@@ -655,9 +656,15 @@ from {module_path} import ...
 
         # Build summary
         files_changed = ", ".join(t["file"].split("/")[-1] for t in self.state.todo_plan[:3])
-        summary = f"{self.state.gmp_id}: {self.state.task}. Files: {files_changed}. Tags: gmp, {self.state.tier.lower()}"
+        summary = (
+            f"{self.state.gmp_id}: {self.state.task}. Files: {files_changed}. "
+            f"Tags: gmp, {self.state.tier.lower()}"
+        )
 
-        cmd = f'python3 {MEMORY_CLIENT} write "{summary}" --kind lesson 2>/dev/null || echo "Memory write failed"'
+        cmd = (
+            f'python3 {MEMORY_CLIENT} write "{summary}" --kind lesson 2>/dev/null || '
+            'echo "Memory write failed"'
+        )
         code, stdout, stderr = self._run_shell(cmd)
 
         if "failed" in stdout.lower() or code != 0:
@@ -679,9 +686,8 @@ from {module_path} import ...
         # Build command
         todo_args = []
         for t in self.state.todo_plan:
-            todo_args.append(
-                f'--todo "{t["id"]}|{t["file"]}|{t["lines"]}|{t["action"]}|{t.get("description", "")}"'
-            )
+            desc = t.get("description", "")
+            todo_args.append(f'--todo "{t["id"]}|{t["file"]}|{t["lines"]}|{t["action"]}|{desc}"')
 
         val_args = []
         for v in self.state.validations:

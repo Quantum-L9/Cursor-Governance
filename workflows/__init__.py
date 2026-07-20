@@ -69,6 +69,8 @@ __dora_meta__ = {
 
 # === LangGraph State & Types ===
 # These work with or without LangGraph installed
+import importlib.util
+
 from workflows.state import (
     ExtractionPattern,
     FileMapping,
@@ -80,18 +82,14 @@ from workflows.state import (
 )
 
 # LangGraph execution is available when langgraph is installed
-_LANGGRAPH_AVAILABLE = False
-try:
-    from langgraph.graph import StateGraph
-
-    _LANGGRAPH_AVAILABLE = True
-except ImportError:
-    pass
+_LANGGRAPH_AVAILABLE = importlib.util.find_spec("langgraph.graph") is not None
 
 # === Session DAG System ===
-# Trigger DAG auto-registration
-from workflows import dags as _dags
-from workflows.session import (
+# Trigger DAG auto-registration (side-effect import — `as dags` signals intentional
+# re-export). Must stay below _LANGGRAPH_AVAILABLE: registration order depends on
+# the availability check running first.
+from workflows import dags as dags  # noqa: E402
+from workflows.session import (  # noqa: E402
     GateType,
     NodeType,
     SessionDAG,
@@ -145,7 +143,11 @@ __dora_footer__ = {
         "orchestration",
         "python",
     ],
-    "business_value": "1. **Session DAGs** (workflows.session) Python-defined workflow graphs Human-readable, self-documenting Mermaid diagram generation Step-by-step execution guides 2. **LangGraph Execution** (workflows.h",
+    "business_value": (
+        "1. **Session DAGs** (workflows.session) Python-defined workflow graphs "
+        "Human-readable, self-documenting Mermaid diagram generation Step-by-step "
+        "execution guides 2. **LangGraph Execution** (workflows.h"
+    ),
     "last_modified": "2026-01-31T22:27:11Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",
