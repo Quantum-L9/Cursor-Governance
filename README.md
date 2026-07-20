@@ -1,124 +1,113 @@
 ---
-title: GlobalCommands Directory
-version: 1.0.0
+title: L9 Governance
+version: 2.0.0
 created: 2025-01-27
+updated: 2026-07-04
 owner: Igor Beylin
-source: Migrated from L9 Governance (L9 + Suite 5)
-tags: [governance, global-commands, learning, profiles, ops]
+source: Post-Suite-6, Graphiti-native governance
+tags: [governance, skills, commands, rules, ops, graphiti]
 domain: system-governance
 type: documentation
 production_ready: true
 ---
 
-# GlobalCommands Directory
+# L9 Governance
 
 ## 🎯 Purpose
 
-Centralized governance system accessible across all workspaces via `@.globalcommands/` or `@.GlobalCommands/` references.
+Centralized, IDE-agnostic governance system for L9/Quantum-L9 repos. The clone at
+`~/.cursor-governance/` **is** the governance root — there is no nested
+`GlobalCommands/` subfolder. Every coding workspace exposes it through a single
+symlink: `.cursor-commands` → `~/.cursor-governance/`.
+
+See `CANONICAL_LAW.md` for the authoritative, binding contract this README
+summarizes.
 
 ## 📁 Directory Structure
 
 ```
-GlobalCommands/
-├── learning/          # Learning system files
-│   ├── repeated-mistakes.md
-│   ├── quick-fixes.md
-│   ├── L9-ai-agent-patterns.md
-│   └── L9-configs/
-├── profiles/          # Reasoning profiles
-│   ├── reasoning_docs.md
-│   ├── reasoning_L9.md
-│   ├── reasoning_technical_operations.md
-│   └── orchestrator.md
-├── ops/              # Operations scripts
-│   ├── scripts/       # Automation scripts
-│   └── logs/         # System logs
-├── integrity/        # Integrity verification
-│   ├── system-check.sh
-│   └── integrity-audit.md
-├── intelligence/     # Intelligence layer (governance)
-│   ├── reasoning/    # Reasoning frameworks
-│   └── meta-learning/
-├── foundation/       # Foundation layer (governance)
-│   ├── agents/       # Agent stubs
-│   ├── logic/        # Logic systems
-│   └── security/     # Security governance
-├── execution/        # Execution layer (governance)
-│   ├── api/          # Governance APIs
-│   ├── dashboard/    # Governance dashboard
-│   └── validation/   # Validation tools
-├── environment/      # Environment layer (governance)
-│   └── env-manager.py
-├── telemetry/       # Telemetry layer (governance)
-│   └── telemetry-collector.py
-├── operations/      # Operations layer (governance)
-├── key components/ # Key component documentation
-├── pipeline/       # Pipeline orchestration & validation
-│   ├── pipeline-orchestration.md
-│   ├── pipeline_validate.md
-│   └── workspace-doctor.md
-├── security/       # Security governance
-│   ├── api-key-verification.md
-│   ├── security-audit.md
-│   └── supabase-auth.md
-├── Prompt Artisan - Prompts & Primitives/  # Prompt templates
-│   ├── reasoning-engine.prompt.md
-│   ├── agent-profile.modular-reasoning.v1.0.md
-│   └── 17 more prompt templates
-├── templates/       # Template files (.cursorrules)
-├── L9 research/   # Node research database
-└── README.md       # This file
+~/.cursor-governance/            (this repo)
+├── skills/            # l9-* agent skills (SKILL.md per skill)
+├── commands/          # Slash commands (/gmp, /plan, /end-session, ...)
+├── rules/             # Global .mdc rules, symlinked as @.cursor-commands/rules
+├── workflows/         # DAG definitions + executors
+├── ops/
+│   ├── scripts/       # Active automation (setup, validation, backup, sync)
+│   ├── scripts/_archived/  # Retired pre-Graphiti / Suite-6 scripts (do not depend on)
+│   ├── hooks/         # sessionStart / sessionEnd hooks
+│   ├── graphiti/       # Graphiti memory client + activation runbooks
+│   └── logs/          # Runtime logs
+├── intelligence/      # Active signal corpus — chat exports, distillation, mining
+├── profiles/          # Reasoning / session-startup profiles
+├── learning/          # Curated lessons, repeated-mistakes, quick-fixes
+├── protocols/         # GMP protocol contracts and templates
+├── security/          # Security governance docs
+├── integrity/         # Integrity verification docs/scripts
+├── pipeline/          # Pipeline orchestration & validation docs
+├── reports/           # GMP execution reports
+├── C_GOV_FILES/       # Legacy duplicate tree — pending removal (see hygiene PRs)
+├── ORG_INVARIANTS.yaml # Canonical Quantum-L9 org policy
+├── CANONICAL_LAW.md   # Authoritative governance contract (read first)
+└── README.md          # This file
 ```
+
+`execution-governance/`, `foundation/`, `operations/`, `environment/`,
+`telemetry/`, `key components/`, `prompts/`, `current_work/`, and `logs/`
+hold supporting docs, in-progress notes, and legacy scaffolding; treat
+`CANONICAL_LAW.md` and `skills/*/SKILL.md` as the sources of truth over any
+directory listing, including this one.
 
 ## 🔗 Access Methods
 
-### In Cursor Workspaces
-- `@.globalcommands/` - Dot-prefixed access (via symlink)
-- `@.GlobalCommands/` - Standard access
+### In Cursor workspaces
+- `.cursor-commands/` — the sole symlink target in every coding repo
+- `@.cursor-commands/skills/...`, `@.cursor-commands/rules/...`, `@.cursor-commands/commands/...`
 
-### Direct Path
+### Direct path
 - `~/.cursor-governance`
 
 ## 📋 Key Files
 
-### Learning System
-- [`learning/repeated-mistakes.md`](learning/repeated-mistakes.md) - Critical mistakes to never repeat
-- [`learning/quick-fixes.md`](learning/quick-fixes.md) - Fast solution patterns
-- [`learning/L9-ai-agent-patterns.md`](learning/L9-ai-agent-patterns.md) - AI Agent node patterns
+### Governance contract
+- [`CANONICAL_LAW.md`](CANONICAL_LAW.md) — SSOT, symlink law, memory layer, anti-patterns
+- [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — canonical Quantum-L9 org policy
 
-### Reasoning Profiles
-- [`profiles/reasoning_L9.md`](profiles/reasoning_L9.md) - L9 orchestration reasoning
-- [`profiles/reasoning_technical_operations.md`](profiles/reasoning_technical_operations.md) - Technical decisions
-- [`profiles/orchestrator.md`](profiles/orchestrator.md) - Central coordinator
+### Skills
+- [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
+- [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — planning/debugging reasoning stack
+- [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring
+
+### Learning
+- [`learning/repeated-mistakes.md`](learning/repeated-mistakes.md) — critical mistakes to never repeat
+- [`learning/quick-fixes.md`](learning/quick-fixes.md) — fast solution patterns
 
 ### Operations
-- [`ops/scripts/setup_workspace_symlinks.sh`](ops/scripts/setup_workspace_symlinks.sh) - Setup script
-- [`ops/logs/memory_index.json`](ops/logs/memory_index.json) - Learning database
+- [`ops/scripts/setup_workspace_symlinks.sh`](ops/scripts/setup_workspace_symlinks.sh) — install symlinks in a workspace
+- [`ops/scripts/validate_governance_symlinks.sh`](ops/scripts/validate_governance_symlinks.sh) — verify symlink wiring
+- [`ops/scripts/backup_to_github.sh`](ops/scripts/backup_to_github.sh) — commit + push SSOT to GitHub
 
 ## 🚀 Usage
 
-### Reference in Prompts
+### Reference in prompts
 ```markdown
-@.GlobalCommands/learning/repeated-mistakes.md
-@.GlobalCommands/L9 research/[node_name].md
-@.GlobalCommands/profiles/reasoning_L9.md
+@.cursor-commands/learning/repeated-mistakes.md
+@.cursor-commands/skills/l9-structured-reasoning/SKILL.md
+@.cursor-commands/rules/00-global.mdc
 ```
 
-### Node Research Database
-Save node research findings to:
-```
-@.GlobalCommands/L9 research/[node_name].md
+### Wire a new workspace
+```bash
+bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh
+bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh
 ```
 
-## 📊 Migration Status
+## 📊 Status
 
-**Migrated:** 2025-01-27  
-**Source:** L9 Governance (L9 + Suite 5)  
-**Files:** 59 files across 4 directories  
-**Status:** ✅ Complete
+**Origin:** `Quantum-L9/Cursor-Governance` (GitHub is the SSOT remote; this
+clone at `~/.cursor-governance/` is the SSOT working copy — see
+`CANONICAL_LAW.md` §1, §5).
 
 ---
 
-**Last Updated:** 2025-01-27  
-**Version:** 1.0.0
-
+**Last Updated:** 2026-07-04
+**Version:** 2.0.0
