@@ -1,0 +1,47 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: ci_workflow
+# component: codeql_code_quality_caller
+# tags: [ci, codeql, code-quality, security, governance, quantum-l9, caller]
+# retrieval: on_demand
+# status: active
+# --- /L9_META ---
+#
+# Thin caller -> the org-wide reusable CodeQL workflow. This is the ONLY CodeQL
+# file a repo needs; analysis logic + query policy live centrally in
+# Quantum-L9/Cursor-Governance. This copy self-scans Cursor-Governance itself.
+
+name: "CodeQL (security + code quality)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths-ignore:            # skip docs-only PRs (save CI; see rollout handoff)
+      - "**/*.md"
+      - "docs/**"
+      - "**/*.mdc"
+  schedule:
+    - cron: "24 3 * * 1"     # weekly, Monday 03:24 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql:
+    uses: Quantum-L9/Cursor-Governance/.github/workflows/codeql-reusable.yml@400691f622a86ce2a4945b166c8afdf95c2e9453 # main, this PR's head; re-pin to a release tag once tagged
+    with:
+      # Override the reusable workflow's remote @main default: this repo IS
+      # Cursor-Governance, so the config file already sits in the checked-out
+      # tree at any ref (PR branch, push, or main). A local path resolves
+      # against the workspace instead of fetching a remote ref via the
+      # Contents API -- avoids a 404 on PRs before this file exists on main.
+      config-file: ./.github/codeql/codeql-config.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read

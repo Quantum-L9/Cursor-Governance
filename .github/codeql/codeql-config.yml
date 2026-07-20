@@ -1,0 +1,46 @@
+# --- L9_META ---
+# l9_schema: 1
+# artifact_type: ci_config
+# component: codeql_code_quality
+# tags: [ci, codeql, code-quality, security, governance, quantum-l9]
+# retrieval: on_demand
+# status: active
+# --- /L9_META ---
+#
+# Shared CodeQL configuration for all Quantum-L9 repositories.
+# Portable by design: contains no repo-specific paths or languages.
+# The `security-and-quality` suite is the built-in CodeQL suite that adds the
+# maintainability / code-quality queries (unused imports, dead code, unused
+# locals, etc.) on top of the security queries.
+
+name: "L9 CodeQL config (security + code quality)"
+
+queries:
+  - uses: security-and-quality
+
+# Noise dial. Suppress at source (deterministic + versioned + DRY across every
+# repo) instead of per-alert dismissal. Start minimal: drop only low-precision
+# findings. Add targeted `id` excludes below over time, each with a one-line
+# reason — a reviewable suppressions ledger, not a blanket mute.
+query-filters:
+  - exclude:
+      precision: low
+  # --- suppressions ledger (add data-driven, one reason per line) ---
+  # - exclude: { id: py/unused-import }   # example form; do NOT enable preemptively
+
+# Directories that are never source-of-truth for L9 repos. Kept generic so the
+# same ignore list is valid whether a repo ships Python, shell, or config only.
+paths-ignore:
+  - "**/archive/**"
+  - "**/__pycache__/**"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/vendor/**"
+  - "**/*.min.js"
+  - "**/tests/**"
+  - "**/test/**"
+  - "**/test_*.py"
+  - "**/*_test.py"
