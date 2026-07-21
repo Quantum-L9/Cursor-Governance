@@ -51,6 +51,17 @@ else
   git remote set-url origin "$REMOTE" 2>/dev/null || git remote add origin "$REMOTE"
 fi
 
+# Pre-flight: refuse to blindly stage a tree that already has unresolved conflict
+# markers / unmerged paths (e.g. left behind by a governance_sync.sh stash-pop
+# conflict). `git add -A` has no way to tell literal <<<<<<< markers apart from
+# intentional text, so without this guard they get committed as if resolved.
+if git status --porcelain | grep -qE '^(UU|AA|DD|AU|UA|UD|DU) '; then
+  echo "ERROR: unmerged paths detected in $GLOBAL_COMMANDS — refusing to stage/commit over an unresolved conflict:" >&2
+  git status --porcelain | grep -E '^(UU|AA|DD|AU|UA|UD|DU) ' >&2
+  echo "Resolve manually (see $GLOBAL_COMMANDS/.sync-conflict if present), then re-run." >&2
+  exit 1
+fi
+
 git add -A
 
 if git diff --cached --quiet; then
@@ -73,7 +84,14 @@ if git rev-parse "origin/$BRANCH" >/dev/null 2>&1; then
   if ! git rebase "origin/$BRANCH"; then
     echo "WARN: rebase failed — trying merge" >&2
     git rebase --abort 2>/dev/null || true
-    git merge "origin/$BRANCH" -m "chore(governance): merge remote before push" || true
+    if ! git merge "origin/$BRANCH" -m "chore(governance): merge remote before push"; then
+      # Never fall through to `git push` after a failed merge — that would either
+      # push a tree with literal conflict markers, or (with an incomplete merge)
+      # fail outright leaving a half-merged state. Restore a clean tree and stop.
+      echo "ERROR: merge with origin/$BRANCH failed — aborting merge to restore a clean tree. Resolve manually and re-run; NOT pushing." >&2
+      git merge --abort 2>/dev/null || true
+      exit 1
+    fi
   fi
 fi
 

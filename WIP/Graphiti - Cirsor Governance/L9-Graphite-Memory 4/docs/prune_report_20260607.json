@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-06-07T16:47:16.277328+00:00",
+  "dry_run": true,
+  "stale_edges": [],
+  "expired_episodes": [],
+  "conflict_episodes": [],
+  "old_episodes": [],
+  "summary": {
+    "stale_edges": 0,
+    "expired_episodes": 0,
+    "conflicts": 0,
+    "old_episodes": 0,
+    "note": "No data deleted. All entries require human review.",
+    "telemetry": {
+      "graphiti.prune.demoted_count": 0
+    }
+  }
+}

@@ -25,6 +25,7 @@ build/
 # Logs
 *.log
 logs/
+.sync-conflict
 
 # Temporary files
 *.tmp

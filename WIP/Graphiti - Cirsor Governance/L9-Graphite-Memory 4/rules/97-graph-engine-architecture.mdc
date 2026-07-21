@@ -1,0 +1,98 @@
+---
+description: "Graph Engine architecture: chassis contract, gates, Cypher security, action handlers"
+alwaysApply: true
+---
+
+
+## Core Principles
+- This is an L9 constellation engine. The chassis handles HTTP/auth/observability; engines handle domain logic only.
+- Engine NEVER imports FastAPI, Starlette, or any HTTP library.
+- Engine NEVER implements tenant resolution, auth, rate limiting, or CORS.
+- Engine NEVER creates routes. Only action handlers: `async def handle_X(tenant: str, payload: dict) -> dict`.
+
+## File Structure (Immutable)
+```
+engine/
+  handlers.py          # ONLY file that registers with chassis (register_all)
+  config/              # Domain spec schema + loader
+  gates/               # Gate compiler + types
+  scoring/             # Scoring assembler
+  traversal/           # Traversal assembler
+  sync/                # Sync generator
+  gds/                 # GDS scheduler
+  graph/               # Neo4j driver wrapper
+  compliance/          # PII + prohibited factors
+  packet/              # PacketEnvelope bridge (chassis_contract.py)
+domains/
+  {domain_id}_domain_spec.yaml   # One per vertical
+tests/
+  unit/                # Gate types, scoring math, parameter resolution
+  integration/         # Full match pipeline with testcontainers
+  compliance/          # Prohibited factor enforcement
+  performance/         # Latency benchmarks
+```
+
+## Security (Non-Negotiable)
+- All Neo4j labels and relationship types MUST pass `sanitize_label()` before f-string interpolation.
+- Domain specs uploaded via admin endpoints are untrusted input → sanitize labels/types.
+- `sanitize_label()` regex: `^[A-Za-z_][A-Za-z0-9_]*$`
+- Cypher VALUES use parameterized queries ($batch, $query). Only labels/types are interpolated.
+
+## Chassis Integration Contract
+- `engine/handlers.py` is the ONLY file that imports chassis modules.
+- Handler signature: `async def handle_action(tenant: str, payload: dict) -> dict`
+- Register handlers: `chassis.router.register_handler("match", handle_match)`
+- Tenant comes FROM chassis (5-level resolution). Engine does not resolve tenant.
+- PacketEnvelope: Request/response must be wrapped via `inflate_ingress()` / `deflate_egress()` at chassis boundary.
+
+## Code Style
+- Use `ruff format` (Black-compatible).
+- Type hints on all function signatures.
+- Pydantic v2 for all schemas (config, domain specs, models).
+- Async/await for all I/O (Neo4j, PostgreSQL, Redis).
+- `structlog` for logging (JSON output, trace_id propagation).
+
+## Testing
+- Unit tests for gate compilation, scoring math, parameter resolution.
+- Integration tests use `testcontainers-neo4j` (do NOT mock Neo4j driver).
+- Compliance tests verify prohibited factors are blocked.
+- Performance tests verify <200ms p95 match latency.
+
+## What NOT to Build
+- ❌ FastAPI routes, APIRouter, app factories
+- ❌ Middleware for tenant resolution, auth, CORS
+- ❌ Logging configuration (structlog comes from chassis)
+- ❌ Prometheus metrics setup (chassis exposes /metrics)
+- ❌ Dockerfile, docker-compose.yml (use l9-root template)
+- ❌ Terraform modules (use l9-iac template)
+- ❌ CI/CD pipeline (use .github/workflows from template)
+
+## Domain Specs
+- Every domain has a YAML spec: `domains/{domain_id}_domain_spec.yaml`
+- Schema defined in `engine/config/schema.py` (DomainSpec model)
+- Sections: domain, ontology, traversal, gates, scoring, sync, gds_jobs, compliance
+- Load via `DomainPackLoader.load_domain(tenant)` (tenant = domain_id)
+
+## Cypher Query Assembly
+- Traversal: `TraversalAssembler.assemble_traversal()` → MATCH clauses
+- Gates: `GateCompiler.compile_all_gates()` → WHERE clause
+- Scoring: `ScoringAssembler.assemble_scoring_clause()` → WITH score = ... clause
+- Order: MATCH → traversal → WHERE gates → WITH scoring → RETURN candidate, score → ORDER BY score DESC
+
+## Action Handlers (Current Implementation)
+- `handle_match(tenant, payload)`: Gate-then-score matching. Payload: query, match_direction, top_n, weights.
+- `handle_sync(tenant, payload)`: Batch UNWIND MERGE/MATCH SET. Payload: entity_type, batch.
+- `handle_admin(tenant, payload)`: Domain introspection, schema init, GDS trigger. Payload: subaction, domain_id, job_name.
+
+## Common Mistakes to Avoid
+- ❌ Importing from `engine.api.*` (this directory should not exist post-refactor)
+- ❌ `Depends(resolve_tenant)` FastAPI dependency (tenant comes as handler arg)
+- ❌ String interpolation without sanitize_label: `f"MATCH (n:{label})"` → `f"MATCH (n:{sanitize_label(label)})"`
+- ❌ Persisting match/sync results as plain dicts (wrap in PacketEnvelope)
+- ❌ Creating new FastAPI middleware (chassis owns middleware)
+
+## References
+- L9 Platform Architecture: `docs/L9_Platform_Architecture.md`
+- L9 Infrastructure Reference: `docs/L9_AI_Constellation_Infrastructure_Reference.md`
+- Chassis contract: Single ingress POST /v1/execute, action routing to handlers
+- PacketEnvelope: Immutable event container with content_hash idempotency

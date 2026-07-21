@@ -58,7 +58,21 @@ else
   # Dirty tree -> preserve local edits across the fast-forward.
   if git stash push -q -u -m governance-autosync >/dev/null 2>&1; then
     git merge --ff-only --quiet "origin/$BRANCH" >/dev/null 2>&1 || true
-    git stash pop -q >/dev/null 2>&1 || true   # conflict leaves stash intact for manual resolve
+    if ! git stash pop -q >/dev/null 2>&1; then
+      # `git stash pop` does a real 3-way merge on reapply. On conflict it can write
+      # literal <<<<<<< / ======= / >>>>>>> markers straight into the working tree and
+      # mark those paths unmerged, while also leaving the stash intact. Silencing this
+      # to /dev/null is exactly how those markers end up baked into a real commit by
+      # the next automated backup — so make it loud and discoverable instead of
+      # swallowing it. Still fail-soft: this script always exits 0 either way.
+      if git status --porcelain 2>/dev/null | grep -qE '^(UU|AA|DD|AU|UA|UD|DU) '; then
+        {
+          echo "=== governance_sync.sh: stash-pop conflict at $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+          git status --porcelain 2>/dev/null | grep -E '^(UU|AA|DD|AU|UA|UD|DU) '
+        } >> "$CLONE/.sync-conflict" 2>/dev/null
+        echo "WARNING: governance_sync.sh: 'git stash pop' left unresolved conflict markers/unmerged paths in $CLONE. Resolve before the next commit (see $CLONE/.sync-conflict). Stash was NOT dropped." >&2
+      fi
+    fi
   fi
 fi
 

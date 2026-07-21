@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install ruff
+      - name: Run ruff check
+        run: ruff check src/ tests/
+      - name: Run ruff format check
+        run: ruff format --check src/ tests/
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -e ".[dev,zep]"
+      - name: Run mypy
+        run: mypy src/ --ignore-missing-imports
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install -e ".[dev,zep]"
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          GRAPHITI_TRANSPORT: http
+
+  preflight:
+    name: Preflight Gate Check
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: pip install -e ".[zep]"
+      - name: Run preflight (expect warnings in CI — no Infisical)
+        run: bash scripts/preflight.sh || true
+      - name: Verify server imports
+        run: python -c "from l9_graphite_memory.server import TOOL_DEFINITIONS; assert len(TOOL_DEFINITIONS) == 6"

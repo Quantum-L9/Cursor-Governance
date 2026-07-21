@@ -1,0 +1,27 @@
+schema_version: 2
+workspace_group: igor-workspace
+forbidden_groups: [main, default, "", test]
+resolution:
+  order: [explicit_env, git_remote_match, path_hint_match]
+  on_failure: abort_write_allow_readonly
+repos:
+  ib-odoo-19:
+    github: cryptoxdog/IB-Odoo_19
+    path_hints: [IB-Odoo_19, IB_Odoo, plasticos_base]
+    remote_patterns: ["*/IB-Odoo_19*"]
+    integrates_with: [cursor-governance, cognitive-engine-graphs]
+  cursor-governance:
+    github: Quantum-L9/Cursor-Governance
+    remote_patterns: ["*/Cursor-Governance*"]
+    path_hints: [Cursor-Governance, GlobalCommands]
+    integrates_with: [ib-odoo-19]
+  cognitive-engine-graphs:
+    github: Quantum-L9/Cognitive.Engine.Graphs
+    path_hints: [Cognitive.Engine.Graphs, cognitive-engine-graphs, CEG]
+    remote_patterns: ["*/Cognitive.Engine.Graphs*", "*/cognitive-engine-graphs*"]
+    integrates_with: [ib-odoo-19]
+  l9-node-template:
+    github: Quantum-L9/L9-Node-Template
+    path_hints: [L9-Node-Template]
+    remote_patterns: ["*/L9-Node-Template*"]
+    integrates_with: [cursor-governance]

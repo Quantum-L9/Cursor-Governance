@@ -1,0 +1,26 @@
+---
+description: Code-graph vs Graphiti layer boundary — do not confuse structural and episodic graphs
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Graph Layer Boundary
+
+| Layer | Tool | Answers |
+|-------|------|---------|
+| Structural | `code-graph-rag` MCP | Where in code? Who imports? Blast radius? |
+| Episodic | `graphiti-memory` MCP | What did we decide? ADRs? CI gotchas? |
+| Git resume | `memory-bank/` | Where we left off — zero LLM |
+| Static law | rules / AGENTS.md | Non-negotiable instructions |
+
+## Repo overlay
+
+PlasticOS repos also load **`.cursor/rules/87-plasticos-code-graph-rag.mdc`** — grep-first discipline for IB-Odoo_19.
+
+## MUST NOT
+
+- Use Graphiti for symbol location or import graphs
+- Use code-graph for ADR/decision recall
+- Collapse the two MCP servers into one mental model
+
+MCP names: `code-graph-rag` vs `graphiti-memory` — distinct in `~/.cursor/mcp.json`.
