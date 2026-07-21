@@ -72,6 +72,23 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
+# Refuse to commit if the staged tree contains literal conflict markers (or
+# whitespace errors) — defense-in-depth in case something upstream (e.g. a
+# governance_sync.sh stash-pop conflict) staged them despite the pre-flight above.
+if ! git diff --cached --check; then
+  echo "ERROR: staged changes contain conflict markers or whitespace errors (see above) — refusing to commit. Resolve and re-run." >&2
+  exit 1
+fi
+
+# Refuse to commit a lockfile that's out of sync with pyproject.toml — never let a
+# stale/inconsistent uv.lock get pushed to the SSOT.
+if command -v uv >/dev/null 2>&1 && [ -f "$GLOBAL_COMMANDS/pyproject.toml" ]; then
+  if ! uv lock --check >/dev/null 2>&1; then
+    echo "ERROR: uv.lock is out of sync with pyproject.toml — run 'uv lock' and re-run. Refusing to commit a stale lockfile." >&2
+    exit 1
+  fi
+fi
+
 git commit -m "$MSG"
 
 if [ "${GOVERNANCE_BACKUP_DRY_RUN:-0}" = "1" ]; then
