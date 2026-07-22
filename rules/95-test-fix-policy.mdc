@@ -1,103 +1,76 @@
 ---
-description: "Never skip tests to avoid failures — fix the underlying issue"
+description: "Never skip, weaken, or bypass tests to hide failures; repair the defect or fixture while preserving test intent."
 alwaysApply: true
 ---
 
-# Test Fix Policy — Never Skip, Always Fix
+# Test Fix Policy — Preserve Test Intent
 
-**Effective: 2026-03-06**
+**Effective:** 2026-03-06
+**Revised:** 2026-07-21
 
-## Rule: Never Skip Tests to Avoid Failures
+## Governing rule
 
-Tests exist to catch real problems. When a test fails, **fix the underlying issue** — never skip the test.
+A failing test is evidence. Repair the implementation, test setup, fixture, or environment defect that caused the failure. Do not create a green result by preventing the test from exercising its intended behavior.
 
-### Anti-Patterns (NEVER DO)
+## Prohibited shortcuts
+
+- Adding `skip`, `skipTest`, `xfail`, focus markers, or conditional returns solely to avoid a failure.
+- Deleting or weakening an assertion without proving the original expectation is invalid.
+- Broadening mocks until the behavior under test is no longer exercised.
+- Replacing a deterministic failure with an unconditional retry.
+- Excluding a failing test path from discovery or CI.
+- Treating a missing required fixture as grounds to skip the test.
+
+## Required repair sequence
+
+1. Reproduce the failure with the narrowest deterministic command available.
+2. Classify the cause as implementation, fixture, test expectation, environment, or external dependency.
+3. Preserve the original behavioral contract unless repository authority proves it changed.
+4. Repair the narrowest responsible layer.
+5. Run the affected test.
+6. Run the nearest relevant suite or validation gate.
+7. Record commands, outcomes, and any remaining limitation accurately.
+
+## Fixture pattern
 
 ```python
-# ❌ WRONG — Skipping masks the problem
+# Wrong: hide the missing test dependency.
 def setUp(self):
-    if not self._sale_journal:
-        self.skipTest("No journal configured")
+    if self.fixture is None:
+        self.skipTest("fixture unavailable")
 
-# ❌ WRONG — Conditional skip based on missing fixtures
-@classmethod
-def setUpClass(cls):
-    if "some.model" not in cls.env:
-        raise unittest.SkipTest("Model not available")
-```
-
-### Correct Patterns (ALWAYS DO)
-
-```python
-# ✅ CORRECT — Create required fixtures
+# Correct: create or obtain the deterministic fixture required by the test.
 @classmethod
 def setUpClass(cls):
     super().setUpClass()
-    # Ensure journal exists (create if missing)
-    cls._sale_journal = cls.env["account.journal"].search(
-        [("type", "=", "sale")], limit=1
-    )
-    if not cls._sale_journal:
-        cls._sale_journal = cls.env["account.journal"].create({
-            "name": "Test Sales Journal",
-            "type": "sale",
-            "code": "TSALE",
-        })
+    cls.fixture = cls.fixture_factory.create_required_fixture()
 ```
 
-## Common Fixtures That May Need Creation
+Repository or framework-specific fixture construction belongs in the repository's local test-policy overlay, not in this global rule.
 
-| Fixture | When Needed | Creation Pattern |
-|---------|-------------|------------------|
-| Sale Journal | `account.move` with `move_type='out_invoice'` | `account.journal` type='sale' |
-| Purchase Journal | `account.move` with `move_type='in_invoice'` | `account.journal` type='purchase' |
-| Bank Journal | Payment tests | `account.journal` type='bank' |
-| Company | Multi-company tests | `res.company` |
-| Currency | Multi-currency tests | `res.currency` |
-| Product | Sale/Purchase tests | `product.product` |
-| Partner | Most transaction tests | `res.partner` |
+## Legitimate skip scenarios
 
-## Odoo 19 Specific Notes
+A skip is acceptable only when the test contract is genuinely conditional, such as:
 
-### Product Types Changed
+1. an optional integration is intentionally not installed;
+2. a platform-specific test is running on a different supported platform;
+3. an external service test is explicitly separated from the deterministic test suite;
+4. the repository's authoritative test policy requires a capability gate.
 
-```python
-# Odoo 18 and earlier
-product = Product.create({"name": "X", "type": "product"})  # Storable
+Even then:
 
-# Odoo 19
-product = Product.create({"name": "X", "type": "consu"})  # Storable (consumable)
-```
+- document the condition;
+- make the skip narrowly scoped;
+- prefer a deterministic fake or mock when it preserves test value;
+- never use the exception to hide an implementation or fixture defect.
 
-| Odoo 18 | Odoo 19 | Description |
-|---------|---------|-------------|
-| `type='product'` | `type='consu'` | Storable products |
-| `type='consu'` | `type='consu'` | Consumable (unchanged) |
-| `type='service'` | `type='service'` | Service (unchanged) |
+## Enforcement checklist
 
-### Backward Compatible Search
+Before submitting test changes, verify:
 
-```python
-# Search for storable products (works in both Odoo 18 and 19)
-products = self.search([("type", "in", ("product", "consu"))])
-```
-
-## Exception: Legitimate Skip Scenarios
-
-Skip is acceptable ONLY when:
-
-1. **Optional module not installed** — Test depends on module that may not be present
-2. **External service unavailable** — Test requires external API that's mocked in CI
-3. **Platform-specific** — Test only runs on specific OS/environment
-
-Even then, prefer mocking over skipping.
-
-## Enforcement
-
-Before submitting test changes:
-
-- [ ] No `skipTest()` calls added to avoid fixture issues
-- [ ] All required fixtures created in `setUpClass` or `setUp`
-- [ ] Tests actually run and pass, not just skip
-
-**Lesson:** 2026-03-06 — Initially tried to skip invoice tests due to missing journals. Correct fix was creating journals in setUpClass.
+- [ ] No skip, xfail, focus, exclusion, or early-return mechanism was added merely to avoid failure.
+- [ ] Required fixtures are created or loaded deterministically.
+- [ ] Assertions still represent the authoritative contract.
+- [ ] The affected test actually executed.
+- [ ] The nearest relevant suite or validation gate was run.
+- [ ] Unrun validation is reported as `NOT RUN`; missing evidence is reported as `UNKNOWN`.
