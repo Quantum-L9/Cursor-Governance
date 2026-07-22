@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.invalid/schemas/rule-metadata.schema.json",
+  "title": "L9 Cursor rule metadata",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)+$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "description": {"type": "string", "minLength": 1},
+    "scope": {"enum": ["global", "repository", "subtree", "personal"]},
+    "activation": {"enum": ["always", "auto_attached", "agent_requested", "manual"]},
+    "domain": {
+      "enum": [
+        "general", "governance", "execution", "security", "git", "testing",
+        "python", "typescript", "odoo", "plasticos", "ci", "deployment", "memory", "output"
+      ]
+    },
+    "authority": {
+      "enum": ["canonical_global", "canonical_repository", "compatibility", "deprecated", "reference_only"]
+    },
+    "context_cost": {"enum": ["minimal", "moderate", "high"]},
+    "alwaysApply": {"type": "boolean"},
+    "globs": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "array", "items": {"type": "string", "minLength": 1}}
+      ]
+    },
+    "deprecated": {"type": "boolean"},
+    "replacement": {"type": "string", "minLength": 1},
+    "removal_plan": {"type": "string", "minLength": 1},
+    "extends": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "array", "items": {"type": "string", "minLength": 1}}
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"activation": {"const": "agent_requested"}}, "required": ["activation"]},
+      "then": {"required": ["description"]}
+    },
+    {
+      "if": {"properties": {"activation": {"const": "auto_attached"}}, "required": ["activation"]},
+      "then": {"required": ["globs"]}
+    },
+    {
+      "if": {"properties": {"deprecated": {"const": true}}, "required": ["deprecated"]},
+      "then": {"anyOf": [{"required": ["replacement"]}, {"required": ["removal_plan"]}]}
+    }
+  ],
+  "additionalProperties": true
+}

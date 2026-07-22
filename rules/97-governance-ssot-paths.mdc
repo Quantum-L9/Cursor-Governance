@@ -1,71 +1,55 @@
 ---
-description: "Governance SSOT path contract — $HOME/.cursor-governance (GitHub clone) is SSOT; Dropbox is legacy fallback; never hardcode /Users/ or machine-specific paths. Authority: CANONICAL_LAW.md §9."
+id: l9.rule.governance-ssot-paths
+version: 2.0.0
+description: Use the local GitHub clone at $HOME/.cursor-governance as the sole governance root.
+scope: global
+domain: governance
+activation: always
+authority: canonical_global
+context_cost: minimal
 alwaysApply: true
 ---
-
 # Governance SSOT Path Contract
 
-**Authority:** `@.cursor-commands/CANONICAL_LAW.md` §9
-**Effective:** 2026-06-06 · **Updated:** 2026-06-30 (GitHub-centric migration)
-**Scope:** All agents, hooks, ops scripts, rules, skills, and docs under GlobalCommands
+**Authority:** `@.cursor-commands/CANONICAL_LAW.md`
 
-## Contract (binding)
+## Binding contract
 
-The SSOT is the local GitHub clone at `$HOME/.cursor-governance`. **The whole repo IS
-GlobalCommands** (repo-root layout), so `$GLOBAL_COMMANDS == $GOV_ROOT == $HOME/.cursor-governance`
-— there is no nested `GlobalCommands/` subfolder. Legacy Dropbox roots remain a transition
-fallback until every machine re-clones.
+The sole local governance root is the GitHub clone at `$HOME/.cursor-governance`.
+The repository root is also the shared governance content root, so:
 
-| Layer | Requirement |
-|-------|-------------|
-| **SSOT root** | `$HOME/.cursor-governance` (GitHub clone of `Cursor-Governance`) |
-| **GlobalCommands** | `$HOME/.cursor-governance` (clone root == GlobalCommands) — resolved via `resolve_governance_paths.sh` |
-| **Legacy fallback** | `$HOME/Dropbox/Cursor Governance/GlobalCommands` (nested layout) — used only until clone exists |
-| **Auto-sync** | `ops/scripts/governance_sync.sh` — guarded ff-only pull on session start (never `reset --hard`) |
-| **Repo entry** | `@.cursor-commands/` → symlink to GlobalCommands only |
-| **User Cursor** | `$HOME/.cursor/skills`, `$HOME/.cursor/commands`, `$HOME/.cursor/hooks` |
-
-## Required resolution API (bash)
-
-Every governance script or hook that needs GlobalCommands MUST:
-
-```bash
-# shellcheck source=resolve_governance_paths.sh
-source "$(…)/resolve_governance_paths.sh"   # via realpath of script, or repo-relative path
-resolve_governance_paths_or_exit            # or resolve_governance_paths + fail-open in hooks
-# then use: $GOV_ROOT, $GLOBAL_COMMANDS
+```text
+$GOV_ROOT == $GLOBAL_COMMANDS == $HOME/.cursor-governance
 ```
 
-Hooks invoked via `~/.cursor/hooks/` symlinks MUST NOT use `$SCRIPT_DIR` / `dirname "$0"` alone — symlink callers resolve under `~/.cursor/`, not Dropbox.
+There is no nested `GlobalCommands/` directory and no cloud-storage fallback.
 
-Use `BASH_SOURCE` + `realpath` to locate `ops/scripts/resolve_governance_paths.sh`, or call `resolve_governance_paths` after sourcing from `$GLOBAL_COMMANDS/ops/scripts/`.
+| Layer | Requirement |
+|---|---|
+| SSOT working copy | `$HOME/.cursor-governance` |
+| Remote | `Quantum-L9/Cursor-Governance` |
+| Resolver | `ops/scripts/resolve_governance_paths.sh` |
+| Workspace reference plane | `.cursor-commands` symlink to the clone root |
+| Workspace activation plane | real repository-owned `.cursor/rules/` directory |
+| Auto-sync | guarded fast-forward-only synchronization |
 
-## Forbidden (never write, never suggest)
+## Required resolution API
 
-- `/Users/<username>/Dropbox/...` or any `/Users/...` absolute path in scripts, hooks, rules, or agent instructions
-- `/home/<username>/...` machine-specific paths
-- `Library/CloudStorage/Dropbox/...` legacy iCloud/Dropbox paths
-- Deriving GlobalCommands from `~/.cursor/hooks/../scripts` (breaks sessionEnd backup)
+Governance scripts source `resolve_governance_paths.sh` and use the exported `$GOV_ROOT` and `$GLOBAL_COMMANDS` values. Hooks installed as real files must resolve the clone explicitly rather than deriving the root from a cloud path.
+
+## Forbidden
+
+- machine-specific `/Users/<name>/...` or `/home/<name>/...` paths;
+- cloud-storage governance roots or fallback reads;
+- a nested `GlobalCommands/` tree;
+- deriving governance from the installed hook directory;
+- whole-directory `.cursor/rules` links to global rules.
 
 ## Allowed
 
-- `$HOME`, `$HOME/Dropbox`, `$HOME/.cursor`, `$HOME/.cursor-governance`
-- `$GOV_ROOT`, `$GLOBAL_COMMANDS` after `resolve_governance_paths`
-- Repo-relative: `.cursor-commands/ops/scripts/...`, `@.cursor-commands/...`
-- GitHub remote URLs (e.g. `Quantum-L9/Cursor-Governance`) — not filesystem paths
+- `$HOME/.cursor-governance`;
+- `$GOV_ROOT` and `$GLOBAL_COMMANDS` after resolver success;
+- repository-relative `.cursor-commands/...` references;
+- selected individual shared-rule symlinks inside a real local overlay.
 
-## Agent checklist (before editing governance)
-
-1. Read `@.cursor-commands/CANONICAL_LAW.md`
-2. No new hardcoded `/Users/` or `/home/` paths
-3. Scripts source `resolve_governance_paths.sh`; hooks use `realpath` + `$GLOBAL_COMMANDS`
-4. Run: `bash .cursor-commands/ops/scripts/validate_governance_no_hardcoded_paths.sh`
-
-## Enforcement
-
-| Gate | Command |
-|------|---------|
-| Path lint | `bash .cursor-commands/ops/scripts/validate_governance_no_hardcoded_paths.sh` |
-| Symlink wiring | `bash .cursor-commands/ops/scripts/validate_governance_symlinks.sh` |
-
-Violation = contract breach. Fix paths before backup, hook, or rule changes ship.
+Run the path and wiring validators before committing governance changes.
