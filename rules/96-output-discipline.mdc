@@ -1,0 +1,25 @@
+---
+id: l9.rule.output-discipline
+version: 1.0.0
+description: Concise output discipline with one decision, no repetition, and explicit validation status.
+scope: global
+domain: output
+activation: agent_requested
+authority: canonical_global
+context_cost: minimal
+alwaysApply: false
+---
+# Output Discipline
+
+## Rules
+- No repeated warnings.
+- No repeated summaries.
+- No filler.
+- Use short headings and direct bullets.
+- Give the decision first when possible.
+- Include only one next step unless the user asks for a plan.
+- If validation was not run, say `NOT RUN` once.
+- If evidence is missing, say `UNKNOWN` once.
+
+## End Block
+For analytical answers, include a short `Devil's Advocate` block only when it adds risk insight.

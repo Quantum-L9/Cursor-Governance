@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.invalid/schemas/rule-manifest.schema.json",
+  "title": "L9 Cursor rules manifest",
+  "type": "object",
+  "required": ["$schema", "generated_utc", "rules_directory", "summary", "rules"],
+  "properties": {
+    "$schema": {"const": "l9.cursor-rules-manifest/v2"},
+    "generated_utc": {"type": "string"},
+    "generator": {"type": "string"},
+    "rules_directory": {"const": "rules"},
+    "source_tree_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "summary": {
+      "type": "object",
+      "required": ["total_mdc_files", "always_apply_true", "always_apply_false", "no_boolean_always_apply"],
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file", "id", "description", "scope", "domain", "activation", "line_count",
+          "content_digest", "authority", "deprecated"
+        ],
+        "properties": {
+          "file": {"type": "string", "pattern": "^[^/]+\\.mdc$"},
+          "id": {"type": "string", "minLength": 1},
+          "description": {"type": "string"},
+          "scope": {"type": "string"},
+          "domain": {"type": "string"},
+          "activation": {"type": "string"},
+          "line_count": {"type": "integer", "minimum": 1},
+          "content_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+          "authority": {"type": "string"},
+          "deprecated": {"type": "boolean"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
