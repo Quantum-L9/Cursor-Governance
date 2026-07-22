@@ -1,44 +1,47 @@
 ---
-description: "Use .env for configuration — never hardcode database, hosts, ports"
-alwaysApply: true
+id: l9.rule.configuration.no-hardcode
+version: 2.0.0
+description: Keep environment-specific hosts, credentials, ports, and identifiers outside source code.
+scope: global
+domain: security
+activation: auto_attached
+authority: canonical_global
+context_cost: minimal
+alwaysApply: false
+globs:
+  - "**/*.sh"
+  - "**/*.env*"
+  - "**/Dockerfile*"
+  - "**/docker-compose*.yml"
+  - "**/docker-compose*.yaml"
+  - "**/*config*.py"
+  - "**/*config*.ts"
 ---
+# Configuration: Use Environment Inputs, Do Not Hardcode
 
-# Configuration: Use .env, Do Not Hardcode
+## Rule
 
-**Effective:** When adding or editing scripts, Docker config, or app config in this repo.
+Do not hardcode secrets or environment-specific values in scripts, application configuration, deployment files, or tests.
 
-## Rule: No Hardcoded Config Values
+This includes:
 
-Do **not** hardcode:
+- credentials, tokens, and private keys;
+- database names and users;
+- hosts and ports;
+- deployment identifiers;
+- environment-specific module, tenant, or service lists.
 
-- Database names, database user, database password
-- Hosts, ports, project names (e.g. docker compose project)
-- Module lists or other environment-specific lists used by scripts
+## Required pattern
 
-Do **instead**:
-
-- **Source `.env`** in scripts when present (e.g. `[ -f .env ] && . ./.env` or `set -a; . ./.env; set +a`).
-- Use **environment variables** with fallback defaults (e.g. `"${ODOO_DB_NAME:-odoo}"`).
-- **Document** all variables in **`.env.example`** (names and example/safe defaults; no secrets).
-
-## Where This Applies
-
-- Shell scripts that call Docker, Odoo, or PostgreSQL (e.g. `scripts/rebuild-odoo-no-demo.sh`, `scripts/run-odoo-tests.sh`).
-- New scripts that take DB names, credentials, or host/port.
-- Docker Compose or env files that can be overridden by `.env` (Compose reads `.env` automatically; scripts should source it explicitly).
-
-## Variable Naming (Odoo/Postgres scripts)
-
-Prefer these names so they align with `.env.example` and docker-compose:
-
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- `ODOO_DB_HOST`, `ODOO_DB_PORT`, `ODOO_COMPOSE_PROJECT`, `ODOO_DB_NAME`
-- `ODOO_REBUILD_MODULES` or `ODOO_TEST_MODULES` for module lists
+- Read configuration from environment variables or an approved secret/configuration provider.
+- Provide safe, non-secret defaults only when the same default is valid in every environment.
+- Document variable names in an example configuration file without real credentials.
+- Validate required inputs at startup and fail with a clear message.
+- Keep test fixtures deterministic and isolated from production configuration.
 
 ## Checklist
 
-Before committing script or config changes:
-
-- [ ] No new hardcoded DB names, users, passwords, or ports.
-- [ ] Script loads `.env` if present and uses env vars with defaults.
-- [ ] `.env.example` updated when adding new variables.
+- [ ] No new literal credential, private endpoint, machine path, or deployment identifier.
+- [ ] Required variables are validated.
+- [ ] Example configuration is updated when the contract changes.
+- [ ] Logs and generated reports redact secret values.

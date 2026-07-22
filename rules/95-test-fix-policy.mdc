@@ -1,103 +1,57 @@
 ---
-description: "Never skip tests to avoid failures — fix the underlying issue"
+id: l9.rule.testing.integrity
+version: 2.0.0
+description: Preserve test intent and fix root causes instead of manufacturing a green suite.
+scope: global
+domain: testing
+activation: always
+authority: canonical_global
+context_cost: minimal
 alwaysApply: true
 ---
+# Test Integrity Policy
 
-# Test Fix Policy — Never Skip, Always Fix
+## Non-negotiable rule
 
-**Effective: 2026-03-06**
+A failing test is evidence. Repair the implementation, fixture, test defect, or environment problem that the evidence reveals. Do not manufacture a green suite by hiding the failure.
 
-## Rule: Never Skip Tests to Avoid Failures
+## Prohibited shortcuts
 
-Tests exist to catch real problems. When a test fails, **fix the underlying issue** — never skip the test.
+- Do not add blanket skips, conditional skips, or expected-failure markers merely to avoid investigation.
+- Do not weaken assertions until an incorrect result passes.
+- Do not delete legitimate coverage because the setup is inconvenient.
+- Do not replace meaningful tests with mocks that bypass the behavior under test.
+- Do not change production behavior solely to satisfy an invalid test without proving the intended contract.
 
-### Anti-Patterns (NEVER DO)
+## Required diagnosis
 
-```python
-# ❌ WRONG — Skipping masks the problem
-def setUp(self):
-    if not self._sale_journal:
-        self.skipTest("No journal configured")
+Classify the failure before changing code:
 
-# ❌ WRONG — Conditional skip based on missing fixtures
-@classmethod
-def setUpClass(cls):
-    if "some.model" not in cls.env:
-        raise unittest.SkipTest("Model not available")
-```
+1. **Product defect:** implementation violates the intended contract.
+2. **Test defect:** assertion or setup encodes the wrong contract.
+3. **Fixture defect:** required valid state was not constructed.
+4. **Environment defect:** dependency, service, clock, platform, or configuration is not controlled.
+5. **Flake or race:** result depends on timing, ordering, shared state, or nondeterminism.
 
-### Correct Patterns (ALWAYS DO)
+Then repair the narrowest true cause while preserving test intent.
 
-```python
-# ✅ CORRECT — Create required fixtures
-@classmethod
-def setUpClass(cls):
-    super().setUpClass()
-    # Ensure journal exists (create if missing)
-    cls._sale_journal = cls.env["account.journal"].search(
-        [("type", "=", "sale")], limit=1
-    )
-    if not cls._sale_journal:
-        cls._sale_journal = cls.env["account.journal"].create({
-            "name": "Test Sales Journal",
-            "type": "sale",
-            "code": "TSALE",
-        })
-```
+## Legitimate exceptions
 
-## Common Fixtures That May Need Creation
+A skip or expected failure is permitted only when the condition is real, narrow, documented, and externally unavoidable, such as an unsupported platform or an optional integration that is not part of the current test contract.
 
-| Fixture | When Needed | Creation Pattern |
-|---------|-------------|------------------|
-| Sale Journal | `account.move` with `move_type='out_invoice'` | `account.journal` type='sale' |
-| Purchase Journal | `account.move` with `move_type='in_invoice'` | `account.journal` type='purchase' |
-| Bank Journal | Payment tests | `account.journal` type='bank' |
-| Company | Multi-company tests | `res.company` |
-| Currency | Multi-currency tests | `res.currency` |
-| Product | Sale/Purchase tests | `product.product` |
-| Partner | Most transaction tests | `res.partner` |
+Every exception must state:
 
-## Odoo 19 Specific Notes
+- the exact condition;
+- why a deterministic fixture or mock is not appropriate;
+- the owner or removal trigger;
+- evidence that unrelated failures are not being hidden.
 
-### Product Types Changed
+## Completion evidence
 
-```python
-# Odoo 18 and earlier
-product = Product.create({"name": "X", "type": "product"})  # Storable
+Before declaring the tests fixed:
 
-# Odoo 19
-product = Product.create({"name": "X", "type": "consu"})  # Storable (consumable)
-```
-
-| Odoo 18 | Odoo 19 | Description |
-|---------|---------|-------------|
-| `type='product'` | `type='consu'` | Storable products |
-| `type='consu'` | `type='consu'` | Consumable (unchanged) |
-| `type='service'` | `type='service'` | Service (unchanged) |
-
-### Backward Compatible Search
-
-```python
-# Search for storable products (works in both Odoo 18 and 19)
-products = self.search([("type", "in", ("product", "consu"))])
-```
-
-## Exception: Legitimate Skip Scenarios
-
-Skip is acceptable ONLY when:
-
-1. **Optional module not installed** — Test depends on module that may not be present
-2. **External service unavailable** — Test requires external API that's mocked in CI
-3. **Platform-specific** — Test only runs on specific OS/environment
-
-Even then, prefer mocking over skipping.
-
-## Enforcement
-
-Before submitting test changes:
-
-- [ ] No `skipTest()` calls added to avoid fixture issues
-- [ ] All required fixtures created in `setUpClass` or `setUp`
-- [ ] Tests actually run and pass, not just skip
-
-**Lesson:** 2026-03-06 — Initially tried to skip invoice tests due to missing journals. Correct fix was creating journals in setUpClass.
+- run the targeted failing test;
+- run the nearest affected test group;
+- preserve or improve the original assertions;
+- record any legitimate exception;
+- distinguish product changes from test-only changes in the summary.

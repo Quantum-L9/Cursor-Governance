@@ -1,26 +1,29 @@
 ---
-description: Code-graph vs Graphiti layer boundary — do not confuse structural and episodic graphs
-globs: ["**/*"]
+id: l9.rule.graph-layer-boundary
+version: 2.0.0
+description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
+scope: global
+domain: memory
+activation: always
+authority: canonical_global
+context_cost: minimal
 alwaysApply: true
+globs: ["**/*"]
 ---
-
 # Graph Layer Boundary
 
 | Layer | Tool | Answers |
-|-------|------|---------|
-| Structural | `code-graph-rag` MCP | Where in code? Who imports? Blast radius? |
-| Episodic | `graphiti-memory` MCP | What did we decide? ADRs? CI gotchas? |
-| Git resume | `memory-bank/` | Where we left off — zero LLM |
-| Static law | rules / AGENTS.md | Non-negotiable instructions |
+|---|---|---|
+| Structural | `code-graph-rag` MCP | Where in code? Who imports it? What is the blast radius? |
+| Episodic | `graphiti-memory` MCP | What was decided? Which ADR or operating lesson applies? |
+| Git resume | `memory-bank/` | Where did the repository session stop? |
+| Static law | Rules and `AGENTS.md` | Which constraints are non-negotiable? |
 
-## Repo overlay
+Repository overlays may add domain-specific structural-graph procedures without changing these global boundaries.
 
-PlasticOS repos also load **`.cursor/rules/87-plasticos-code-graph-rag.mdc`** — grep-first discipline for IB-Odoo_19.
+## Must not
 
-## MUST NOT
-
-- Use Graphiti for symbol location or import graphs
-- Use code-graph for ADR/decision recall
-- Collapse the two MCP servers into one mental model
-
-MCP names: `code-graph-rag` vs `graphiti-memory` — distinct in `~/.cursor/mcp.json`.
+- Use episodic memory as a substitute for symbol or import discovery.
+- Use a structural code graph as a substitute for decisions, provenance, or temporal history.
+- Collapse distinct MCP servers into one authority model.
+- Treat local resume files as canonical global memory.

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.invalid/schemas/rule-selection.schema.json",
+  "title": "Repository shared-rule selection",
+  "type": "object",
+  "required": ["schema", "enabled", "shared", "local", "delivery"],
+  "properties": {
+    "schema": {"const": "l9.cursor-rules-selection/v1"},
+    "enabled": {"type": "boolean"},
+    "shared": {
+      "type": "object",
+      "required": ["required", "optional"],
+      "properties": {
+        "required": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "optional": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      },
+      "additionalProperties": false
+    },
+    "local": {
+      "type": "object",
+      "required": ["preserve_unknown_files"],
+      "properties": {"preserve_unknown_files": {"const": true}},
+      "additionalProperties": false
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["mode", "collision_policy"],
+      "properties": {
+        "mode": {"const": "individual_symlink"},
+        "collision_policy": {"const": "fail_closed"}
+      },
+      "additionalProperties": false
+    },
+    "activation_gate": {
+      "type": "object",
+      "properties": {
+        "required_report": {"type": "string"},
+        "required_status": {"const": "PASS"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
