@@ -3,106 +3,192 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: convergence_loop
-tags: [pr, convergence, loop, polling, ci, local-verify, stop-conditions]
+tags: [pr, convergence, loop, polling, ci, local-verify]
 owner: igor_beylin
 status: active
-version: 3.3.0
-updated: 2026-07-13
+version: 2.0.0
+updated: 2026-06-18
 /L9_META -->
 
 # Convergence Loop
 
 ## Purpose
 
-After pushing fixes (already passed local verify), wait for CI to confirm, check for new reviews, then decide whether another cycle is needed or convergence is reached.
+After pushing fixes (which have ALREADY passed local verification), wait for CI to confirm, check for new reviews, then determine whether another remediation cycle is needed or convergence has been reached.
 
 ## Key Principle: Local-First Verification
 
-Remote CI polling is a **CONFIRMATION** step, not a **DISCOVERY** step. All failures must be caught by local verify before push. If remote CI finds something local verify missed, that is a documented protocol delta, fed to the next cycle.
+Remote CI polling is a **CONFIRMATION** step, not a **DISCOVERY** step.
+
+- ALL failures MUST be caught by local verify BEFORE push.
+- If remote CI finds something local verify missed, that's a protocol failure.
+- Document any local/remote delta as a finding for the next cycle.
+
+This means: after push, CI SHOULD pass. Polling is to confirm and to catch environment-specific deltas (secrets, services, OS differences).
 
 ## Loop Architecture
 
 ```text
-CYCLE:  ingest → classify+validate → fix ALL → local verify (GATE) → commit(ONE) → push(ONE)
-                                   │
-                                   ▼
-CONVERGENCE CHECK:
-  1. Wait for CI completion (confirmation)
-  2. Check CI status
-  3. Check for new review comments (created after last push)
-  4. Evaluate convergence gate
-     → converged: STOP + report
-     → new actionable comments: loop (if cycles < max)
-     → CI failed unexpectedly: investigate delta, fix, loop
-     → max cycles: STOP + partial report
+┌─────────────────────────────────────────────────────────┐
+│              REMEDIATION CYCLE                            │
+│                                                          │
+│  ingest → classify → fix ALL → local verify (GATE) →    │
+│  commit (ONE) → push (ONE)                               │
+│                                                          │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│              CONVERGENCE CHECK                            │
+│                                                          │
+│  1. Wait for CI completion (confirmation only)           │
+│  2. Check CI status                                      │
+│  3. Check for new review comments                        │
+│  4. Evaluate convergence gate                            │
+│                                                          │
+│  → converged: STOP + report                              │
+│  → not converged (new comments): loop (if cycles < max)  │
+│  → CI failed unexpectedly: investigate delta, fix, loop  │
+│  → max cycles: STOP + partial report                     │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Wait Protocol
 
+### Polling CI Status
+
+After push, poll for CI completion:
+
 ```bash
+# Get the latest run on the PR branch
 gh run list --branch {branch} --limit 1 --json databaseId,status,conclusion
-# or, when a single run id is known:
+```
+
+Poll interval: 45 seconds (since local verify already passed, no urgency).
+Max wait: 10 minutes per cycle.
+
+If CI hasn't started after 2 minutes, check if workflows are configured:
+```bash
+gh workflow list --json name,state
+```
+
+### Alternative: Watch mode
+
+```bash
 gh run watch {RUN_ID} --exit-status
 ```
 
-Poll interval: 45s (local verify already passed — no urgency). Max wait: 10 min/cycle. If CI hasn't started after 2 min, check `gh workflow list --json name,state`.
+Use when a single run ID is known. Returns exit code 0 on success, non-zero on failure.
 
-### CI failure after local verify passed
+### CI Failure After Local Verify Passed
 
-1. `gh run view {RUN_ID} --log-failed`. 2. Identify the **delta**: missing secrets/env, different runtime version, missing system deps, network-dependent step, or parallel-job race. 3. Fixable locally → fix, re-verify, push (same cycle if within the commit). 4. Environment-only → add skip/`continue-on-error`, verify, push. 5. Unfixable → defer with reason "CI environment delta".
+If CI fails despite local verify passing:
 
-## Convergence Gate — reached when ALL true
+1. Fetch the failure logs: `gh run view {RUN_ID} --log-failed`
+2. Identify the **delta** — what's different between local and CI:
+   - Missing env vars / secrets (expected in CI but not locally)
+   - Different Node/Python version
+   - Missing system dependencies
+   - Network-dependent steps (API calls, package installs)
+   - Race conditions in parallel jobs
+3. If fixable locally → fix, re-verify, push (counts as same cycle if within the commit).
+4. If environment-only → add `continue-on-error` or skip condition, verify, push.
+5. If unfixable → defer with reason "CI environment delta".
 
-| Condition | Check |
-|-----------|-------|
-| CI status `success` | `gh run view --json conclusion` |
-| No new unresolved comments | compare counts/timestamps before/after push |
-| All blocking findings resolved | internal tracking |
-| All accepted findings resolved or deferred | internal tracking |
+## Convergence Gate
 
-## Re-Ingestion (when not converged)
+Convergence is reached when ALL conditions are true:
 
-Re-ingest only NEW signals: failures on the latest run only; comments with `created_at` after the last push; drop findings whose thread was resolved. Do NOT re-process already fixed/deferred findings (idempotency).
+| Condition | Check Method |
+|-----------|-------------|
+| CI status is `success` | `gh run view --json conclusion` → `"success"` |
+| No new unresolved review comments | Compare comment count/timestamps before and after push |
+| All blocking findings resolved | Internal tracking: all `blocking` findings have status `fixed` |
+| All actionable findings resolved or deferred | Internal tracking |
+
+## Re-Ingestion (When Not Converged)
+
+When convergence gate fails due to new review comments, re-ingest only NEW signals:
+
+1. **New CI failures**: Only failures on the latest run (not carried over from previous).
+2. **New review comments**: Only comments with `created_at` after the last push timestamp.
+3. **Resolved comments**: Remove from finding list if a thread was resolved.
+
+Do NOT re-process findings already fixed or deferred in previous cycles.
 
 ## Cycle Tracking
+
+Maintain state across cycles:
 
 ```yaml
 cycle_state:
   current_cycle: 1
   max_cycles: 3
-  push_timestamps: ["2026-07-13T10:00:00Z"]
+  push_timestamps: ["2026-06-17T10:00:00Z"]
   findings_fixed: ["ci-1", "review-3"]
   findings_deferred: ["review-7"]
   findings_remaining: ["ci-2"]
+  ci_status_history: ["success"]  # should be success since local verify passed
   local_verify_gates_count: 6
   local_verify_passed_before_push: true
 ```
 
 ## Convergence Report
 
-The convergence block is the `convergence` section of the canonical run report. **Normative shape:** [`schemas/run-report.schema.json`](../schemas/run-report.schema.json) (`convergence` + `summary`); the YAML below is a non-normative human view. Set `cycles_exhausted: true` when `cycles_run >= max_cycles` without convergence.
+When converged OR max cycles reached, emit:
 
 ```yaml
 convergence_status: converged | partial | blocked
-cycles_run: {int}
-pushes_total: {int}       # should equal cycles_run
-commits_pushed: ["{sha}"]
-cycles_exhausted: false   # true when cycles_run >= max_cycles without convergence (risk signal)
-findings_summary: { total_ingested: {int}, fixed: {int}, deferred: {int}, remaining: {int} }
+cycles_run: {integer}
+max_cycles: 3
+cycles_exhausted: true | false
+pushes_total: {integer}  # should equal cycles_run
+commits_total: {integer}  # should equal cycles_run
+
+findings_summary:
+  total_ingested: {integer}
+  fixed: {integer}
+  deferred: {integer}
+  remaining: {integer}
+
+ci_gates_discovered: {integer}
+local_verify_iterations: {integer}  # total across all cycles
+local_verify_green_before_every_push: true | false
+
 ci_status: success | failure
-new_comments_after_final_push: {int}
-protocol_violations: ["None"]
-minimum_safe_next_action: "merge" | "manual review of deferred items" | "run another cycle"
+new_comments_after_final_push: {integer}
+
+deferred_items:
+  - id: "review-7"
+    reason: "Requires architectural decision — Express vs Fastify"
+  - id: "ci-5"
+    reason: "Fix caused regression; reverted"
+
+protocol_violations:
+  - "None" | list of any batch/verify violations that occurred
+
+minimum_safe_next_action: "merge" | "manual review of deferred items" | "run another cycle manually"
 ```
 
 ## Stop Conditions
 
-- `cycles_run >= max_cycles` → `partial`
-- CI passes AND no new comments → `converged`
-- Fix causes an unrecoverable regression → `blocked`
-- GitHub API rate-limited and retry fails → `blocked`
-- User sends a stop signal → `partial` with current state
+MUST stop the loop when:
+- `cycles_run >= max_cycles` → emit `partial`
+- CI passes AND no new comments → emit `converged`
+- A fix causes an unrecoverable regression → emit `blocked`
+- GitHub API is rate-limited and retry fails → emit `blocked`
+- User sends a stop signal → emit `partial` with current state
 
 ## Configuration
 
-Canonical defaults live in `SKILL.md` §Configuration (single source of truth — do not restate values here to avoid drift). Loop-relevant keys consumed by this reference: `max_cycles`, `poll_interval_seconds`, `max_wait_per_cycle_minutes`, `max_local_verify_iterations`. All are user-overridable.
+Defaults (overridable by user):
+
+```yaml
+max_cycles: 3
+poll_interval_seconds: 45
+max_wait_per_cycle_minutes: 10
+max_local_verify_iterations: 5
+auto_fix_nits: false          # if true, treat "nit:" as actionable
+skip_bot_discussions: true    # skip non-actionable bot comments
+parallel_triage_threshold: 3  # use parallel fix when >= 3 independent job failures
+```

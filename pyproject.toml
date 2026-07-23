@@ -49,6 +49,8 @@ exclude = [
     "**/archived",
     "current_work/harvested",
     "C_GOV_FILES",
+    "**/.cursor-commands",
+    "**/.cursor",
 ]
 
 [tool.ruff.lint]
@@ -66,6 +68,8 @@ exclude = [
     "archived",
     "current_work/harvested",
     "C_GOV_FILES",
+    "\\.cursor-commands",
+    "\\.cursor",
 ]
 
 # No `tests/` convention yet — this repo has 2 test_*.py files total, discovered

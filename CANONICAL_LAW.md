@@ -115,6 +115,7 @@ Skip one session: `GOVERNANCE_BACKUP_SKIP=1`
 - Committing `.cursor-commands` symlink target into app repos (symlink only; content lives in `~/.cursor-governance`)
 - Referencing archived scripts (`ops/scripts/_archived/`) as active dependencies
 - Using `cursor_memory_client.py` — deprecated, use Graphiti
+- "Fire and hope" command execution — issuing a write/execute command with no prior read-only diagnosis (see §11)
 
 ---
 
@@ -164,3 +165,33 @@ The `intelligence/` directory is a **permanent, active signal corpus**. All data
 | `GOVERNANCE_SYNC_HARD_RESET` | Allow hard reset on sync (dangerous) | `false` |
 | `GRAPHITI_MEMORY_ENABLED` | Enable Graphiti memory layer | `true` |
 | `GRAPHITI_WRITE_GATES` | Enable write-through to graph | `true` |
+
+---
+
+## 11. Diagnose-First Execution Discipline
+
+**Source kernel:** `WIP/Diagnose First Kernel.md` — full principles, allowed/forbidden actions, enforcement sequence.
+**Related, not duplicate:** ADR-0072 "Diagnose Before Fix" (`WIP/0072-diagnose-before-fix.md`) governs root-cause diagnosis of an existing *error*. This section governs diagnosis of current *state* before any command is proposed — diagnostic commands always precede execution commands. Applies to infra, secrets, config, deploys, and any CLI/tool invocation that changes state — not limited to one tool or platform.
+
+**Law:** No write/execute command may be proposed or run until current state has been inspected read-only and summarized from trusted sources. No "fire and hope."
+
+### Enforcement sequence (binding order)
+
+| Step | Requirement |
+|------|-------------|
+| 1. Read state | Run read-only inspection (config validate/get, secret *shape* only — never values, schema lookup) before any plan is proposed |
+| 2. Plan changes | Present an explicit diff-style plan (path → old value shape → new value shape); get user confirmation if risk > low |
+| 3. Write changes | Execute only commands matching the approved plan; touch no path beyond it |
+
+### Forbidden
+
+| Pattern | Why |
+|---------|-----|
+| Write-before-read | Any config `set`/`patch`/`unset` or infra write issued before a corresponding read/validate step in the same session |
+| Placeholder commands | Angle-bracket placeholders, ALL_CAPS stand-ins, or fake values (`<...>`, `YOURUSERID`, `EXAMPLE`, `foo`) in a command presented as ready to run |
+| Secret duplication | Copying secret values out of their source-of-truth vault (e.g. AWS Secrets Manager) into local config when a reference/pointer pattern is available |
+| Inferring missing state | Guessing an unknown required value instead of asking the user |
+
+### User preferences (locked)
+
+`zero_ambiguity_tolerance`, `copy_paste_ready_commands_only`, `diagnose_before_execution`, `no_placeholders`, `ask_if_unknown` — all `true`.
