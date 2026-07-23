@@ -3,166 +3,251 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: review_replies
-tags: [pr, review, replies, threads, resolution, run-report, leverage]
+tags: [pr, review, replies, threads, resolution, leverage]
 owner: igor_beylin
 status: active
-version: 3.3.0
-updated: 2026-07-13
+version: 2.1.0
+updated: 2026-06-18
 /L9_META -->
 
-# Review Reply Protocol & Run Report
+# Review Reply Protocol
 
 ## Purpose
 
-After pushing fixes, reply to every review thread with a canonical response, resolve the thread, create trackable artifacts for deferred items, post a batch summary, and emit a machine-readable run report so downstream automation can route on PR state.
+After pushing fixes, reply to every review thread with a canonical response that resolves the thread, creates downstream leverage (searchable decisions, backlog items, bot training signal), and leaves the PR in a clean state for merge.
 
 ## Non-Negotiable Rules
 
-1. **Every thread gets a reply.** No silent fixes.
-2. **Replies follow a canonical format** — structured, not freeform.
-3. **Resolve threads after replying.**
-4. **Deferred items get linked issues** — never defer without a trackable artifact.
-5. **Batch summary posted as the final PR comment.**
-6. **Every reply carries an idempotency marker** (see below) so re-runs never double-post.
-
-## Idempotency Marker
-
-Append a hidden HTML-comment marker to every canonical reply:
-
-```markdown
-<!-- l9-remediation:{pr}:{finding_id} -->
-```
-
-**Before posting a reply, scan the thread for this exact marker.** If it is already present, the finding was replied to on a prior cycle — skip it (do not re-post, do not re-resolve). Combined with thread-resolved state and the commit `Remediation-Cycle:` trailer (`fix-engine.md`), this makes a re-run produce **zero duplicate artifacts**. The marker is invisible in rendered GitHub markdown.
+1. **Every thread gets a reply.** No silent fixes. No ignored comments.
+2. **Replies follow canonical format.** No freeform prose — structured responses only.
+3. **Resolve threads after replying.** Unresolved threads block merge perception.
+4. **Deferred items get linked issues.** Never defer without creating a trackable artifact.
+5. **Batch summary posted as final PR comment.** One comment summarizing all actions taken.
 
 ## Canonical Reply Formats
 
 ### Format A: Fixed
+
+Use when the finding was addressed in this cycle's commit.
+
 ```markdown
-**Fixed** in `{sha_short}`
+**Fixed** in {commit_sha_short}
 
-{one-line description of the change}
+{one-line description of what was changed}
 
-`{file}:{line}` — {before → after}
+`{file}:{line}` — {before → after summary}
 ```
-Then **resolve the thread**.
+
+**Example:**
+
+```markdown
+**Fixed** in `a3f8c21`
+
+Wrapped fetch in try-catch to handle network errors gracefully.
+
+`src/services/llm.ts:47` — bare fetch → try/catch with retry on 5xx
+```
+
+After posting → **resolve the thread**.
 
 ### Format B: Deferred
+
+Use when the finding requires a human decision, architectural change, or is out of scope.
+
 ```markdown
 **Deferred** → #{issue_number}
 
-Reason: {why not fixable this cycle}
+Reason: {why this can't be fixed in this cycle}
 Scope: {what would need to change}
-Proposed resolution: {suggested approach}
+Proposed resolution: {suggested approach for the issue}
 ```
-**Create the issue first**, reply with the link, then **resolve**.
 
-### Format C: Acknowledged (discussion)
+**Example:**
+
+```markdown
+**Deferred** → #14
+
+Reason: Express vs Fastify is an architectural decision requiring owner input.
+Scope: Migrate src/index.ts to Fastify OR delete src/api/ (Fastify dead code).
+Proposed resolution: Consolidate on Fastify in Phase 3 — it's more feature-complete in this codebase.
+```
+
+After posting → **create the issue first**, then reply with link, then **resolve the thread**.
+
+### Format C: Acknowledged (Discussion)
+
+Use when the comment is a question, suggestion for future consideration, or non-actionable feedback.
+
 ```markdown
 **Acknowledged** — not actioned this cycle
 
-{brief response}
+{brief response to the question or consideration}
 
-Tracking: {where captured, if anywhere}
+Tracking: {where this is captured, if anywhere}
 ```
-Then **resolve**.
 
-### Format D: Disagreed (false positive / intentional)
+**Example:**
+
+```markdown
+**Acknowledged** — not actioned this cycle
+
+Good point about batching the DataForSEO requests. Current implementation handles up to 50 keywords which is within their rate limit, but worth revisiting if we scale past 200.
+
+Tracking: Added to performance backlog in #15
+```
+
+After posting → **resolve the thread** (it's been acknowledged and tracked).
+
+### Format D: Disagreed
+
+Use when the review comment is incorrect, a false positive, or conflicts with project requirements.
+
 ```markdown
 **Disagree** — {reason category}
 
-{why the suggestion does not apply}
+{explanation of why the suggestion is not applicable}
 
-Evidence: {docs / type definition / code that proves the point}
+Evidence: {link to docs, type definition, or code that proves the point}
 ```
-Reason categories: `false positive` · `intentional design` · `conflicts with {X}` · `already handled`. Then **resolve**.
 
-Every rejected/ignored finding from the classifier MUST surface as a Format C or D reply — the reason is never dropped.
+Reason categories:
+- `false positive` — bot misread the code
+- `intentional design` — the current approach is deliberate
+- `conflicts with {X}` — another requirement takes precedence
+- `already handled` — the concern is addressed elsewhere
 
-## How to Post
+**Example:**
+
+```markdown
+**Disagree** — false positive
+
+`ctx` appears unused at declaration but is captured in the closure on line 47 and used in the async callback. The bot's scope analysis doesn't trace into closures.
+
+Evidence: `src/pipeline/PipelineRunner.ts:47` — `ctx` referenced in `stage.run(ctx)`
+```
+
+After posting → **resolve the thread**.
+
+## How to Post Replies
+
+### Reply to inline (diff) comments
 
 ```bash
-# Reply to an inline (diff) comment
-gh api /repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies -f body="{reply}"
-# Reply at PR level
-gh pr comment {pr} --repo {owner}/{repo} --body "{reply}"
-# Resolve a thread (use thread_id captured during ingestion)
+gh api /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
+  -f body="{canonical_reply}"
+```
+
+### Reply to review-level comments
+
+```bash
+gh pr comment {pr_number} --repo {owner}/{repo} --body "{reply}"
+```
+
+### Resolve a thread (GraphQL)
+
+```bash
 gh api graphql -f query='
-  mutation($t:ID!){ resolveReviewThread(input:{threadId:$t}){ thread{ isResolved } } }' -f t="{thread_id}"
-# Create a deferred issue
+  mutation($threadId: ID!) {
+    resolveReviewThread(input: {threadId: $threadId}) {
+      thread { isResolved }
+    }
+  }
+' -f threadId="{thread_node_id}"
+```
+
+To get the thread node ID:
+
+```bash
+gh api graphql -f query='
+  query($owner: String!, $repo: String!, $pr: Int!) {
+    repository(owner: $owner, name: $repo) {
+      pullRequest(number: $pr) {
+        reviewThreads(first: 100) {
+          nodes {
+            id
+            isResolved
+            comments(first: 1) {
+              nodes { body author { login } }
+            }
+          }
+        }
+      }
+    }
+  }
+' -f owner={owner} -f repo={repo} -F pr={pr_number}
+```
+
+Match threads to findings by comment body content, then resolve using the `id` field.
+
+### Create a deferred issue
+
+```bash
 gh issue create --repo {owner}/{repo} \
-  --title "Deferred from PR #{pr}: {short}" \
-  --body "{context + proposed resolution}" --label "deferred,from-review"
+  --title "Deferred from PR #{pr_number}: {short description}" \
+  --body "{full context from review comment + proposed resolution}" \
+  --label "deferred,from-review"
 ```
 
 ## Batch Summary Comment
 
+After all individual thread replies, post ONE summary comment on the PR:
+
 ```markdown
 ## PR Remediation — Cycle {N} Summary
 
-**Commit:** `{sha}` | **Findings:** {total} | **CI gates:** {count} passed locally
+**Commit:** `{sha_short}` | **Findings processed:** {total} | **CI gates:** {count} passed locally
 
-### Fixed ({n})
+### Fixed ({count})
 | Finding | File | Change |
 |---------|------|--------|
+| {id} | `{file}:{line}` | {one-line} |
+| {id} | `{file}:{line}` | {one-line} |
 
-### Deferred ({n})
+### Deferred ({count})
 | Finding | Reason | Issue |
 |---------|--------|-------|
+| {id} | {reason} | #{issue_number} |
 
-### Acknowledged / Disagreed ({n})
+### Acknowledged ({count})
+| Finding | Response |
+|---------|----------|
+| {id} | {one-line} |
+
+### Disagreed ({count})
 | Finding | Reason |
 |---------|--------|
+| {id} | {reason category}: {one-line} |
 
 ---
 *Local verify: {N} gates, all exit 0 | Threads resolved: {count}/{total}*
 ```
 
-## Machine-Readable Run Report (per PR — Gate G input)
+## Downstream Leverage Created
 
-Emit once per PR at convergence so other agents/dashboards can consume state without re-parsing GitHub. **Normative shape:** [`schemas/run-report.schema.json`](../schemas/run-report.schema.json) — the example below is a human view; the schema is the source of truth, and the emitted file MUST pass [`scripts/validate_run_report.py`](../scripts/validate_run_report.py). The report also carries the drift signals (`summary.bot_false_positive_rate`, `convergence.cycles_exhausted`).
+Each reply creates specific downstream value:
 
-```json
-{
-  "schema_version": "1.0",
-  "run": { "run_id": "<timestamp>", "repo": "OWNER/REPO",
-           "pr": { "number": 0, "branch": "", "cycles_run": 0 } },
-  "gates": { "gate_registry": {}, "classified_findings": {}, "local_verify_log": {},
-             "push_record": {}, "reply_record": {}, "report_record": {"run_report_emitted": true} },
-  "findings": {
-    "applied": [ {"reviewer": "", "file": "", "lines": "", "commit": "<sha>",
-                  "confidence": 0.0, "disposition": "AUTO_APPLY", "tests": "pass"} ],
-    "deferred": [ {"reviewer": "", "file": "", "reason": "", "issue": 0} ],
-    "rejected": [ {"reviewer": "", "file": "", "reason": ""} ]
-  },
-  "convergence": { "convergence_status": "converged", "pushes_total": 0, "commits_pushed": ["<sha>"],
-                   "cycles_exhausted": false, "protocol_violations": [], "minimum_safe_next_action": "merge" },
-  "summary": { "fixes_applied": 0, "deferred": 0, "rejected": 0,
-               "bot_false_positive_rate": {"coderabbitai": 0.0} }
-}
-```
-
-`summary.bot_false_positive_rate[reviewer] = rejected / (applied + rejected)` for that reviewer over the run. It is a drift signal consumed by the confidence-gate self-tuning rule in `finding-classifier.md`.
-
-## Downstream Leverage
-
-| Reply | Leverage |
-|-------|----------|
-| Fixed | searchable commit↔comment link; future grep finds the decision |
-| Deferred | backlog item with full context; prioritizable |
-| Acknowledged | knowledge captured; bot training signal |
-| Disagreed | reduces future false positives; documents intentional design |
-| Run report | machine-consumable state for routing/dashboards |
+| Reply Type | Leverage |
+|-----------|----------|
+| **Fixed** | Searchable commit-to-comment link; future grep finds the decision |
+| **Deferred** | Backlog item with full context; prioritizable; traceable |
+| **Acknowledged** | Bot training signal (CodeRabbit learns); knowledge captured |
+| **Disagreed** | Bot training signal (reduces future false positives); documents intentional design |
+| **Batch summary** | Release note fragment; audit trail; merge confidence signal |
 
 ## Ordering
 
-1. Reply to all **Fixed** threads. 2. Create issues for **Deferred**, then reply with links. 3. **Acknowledged**. 4. **Disagreed**. 5. Batch summary. 6. Resolve all threads. 7. Emit run report.
+1. Reply to all **Fixed** threads first (quick, no decisions needed).
+2. Create issues for **Deferred** items, then reply with links.
+3. Reply to **Acknowledged** threads.
+4. Reply to **Disagreed** threads (most thought required).
+5. Post the batch summary comment last.
+6. Resolve all threads.
 
-## Validation (Gate F)
+## Validation
 
-- [ ] Every unresolved thread has a reply
-- [ ] Every thread resolved
+Before proceeding to convergence check:
+- [ ] Every unresolved thread has a reply posted
+- [ ] Every thread is resolved (via GraphQL mutation)
 - [ ] Every deferred item has a linked issue
-- [ ] Batch summary posted
-- [ ] Run report emitted
-- [ ] reply count == thread count; every rejection carries a reason
+- [ ] Batch summary comment posted on the PR
+- [ ] Reply count matches finding count

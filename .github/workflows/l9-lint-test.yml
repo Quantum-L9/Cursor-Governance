@@ -66,6 +66,7 @@ jobs:
           if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
           command -v ruff >/dev/null 2>&1 || pip install ruff
           command -v mypy >/dev/null 2>&1 || pip install mypy
+          command -v uv >/dev/null 2>&1 || pip install uv
       - name: ruff check
         run: ruff check . --output-format=github
       - name: ruff format --check
@@ -75,6 +76,31 @@ jobs:
           mypy "${SOURCE_DIR}" \
             --show-error-codes --pretty \
             --install-types --non-interactive --ignore-missing-imports
+      - name: uv lock --check (lockfile drift guard)
+        # Independent, second check of the same invariant ops/scripts/backup_to_github.sh
+        # now enforces before every automated commit — catches uv.lock drift introduced
+        # through any path (not just that script), on every push to main.
+        run: |
+          set -euo pipefail
+          if [ -f uv.lock ]; then
+            uv lock --check
+          else
+            echo "::notice::no uv.lock present, skipping lockfile drift check"
+          fi
+      - name: Conflict-marker scan (repo-wide fast-detection tripwire)
+        # ops/scripts/backup_to_github.sh and ops/scripts/governance_sync.sh push
+        # directly to main with no PR/branch-protection gate, so this job cannot
+        # block a bad commit before it lands — it's a fast-detection tripwire that
+        # fires on every push, not a merge blocker. Mirrors the grep pattern used
+        # to verify Part A of this fix (unresolved <<<<<<<// =======/>>>>>>> markers).
+        run: |
+          set -euo pipefail
+          if git grep -n -I -E '^(<<<<<<<|=======$|>>>>>>>)' -- . \
+              ':!**/_archived/**' ':!**/_archive/**' ':!**/archive/**' ':!**/archived/**'; then
+            echo "::error::Conflict markers found in tracked files (see above)."
+            exit 1
+          fi
+          echo "OK: no conflict markers found"
 
   test:
     name: Test Suite

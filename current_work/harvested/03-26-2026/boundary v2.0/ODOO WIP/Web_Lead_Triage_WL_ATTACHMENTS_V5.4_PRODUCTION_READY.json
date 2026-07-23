@@ -1,0 +1,2333 @@
+{
+  "name": "Web Lead Triage - PRODUCTION - Attachments v5.4",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": false,
+        "httpMethod": "POST",
+        "path": "631708ea-e339-4667-89b1-5b78fb388fca",
+        "authentication": "none",
+        "responseMode": "onReceived",
+        "contentTypeNotice": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2300,
+        100
+      ],
+      "id": "5fef675c-6b63-4e71-9bd9-c1f319ca9659",
+      "name": "Webhook",
+      "webhookId": "da0d7d8b-f405-40dd-b489-db393497c121",
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "folder",
+        "operation": "create",
+        "name": "=WL{{ $('Webhook').first().json.body.Entry.Number }} - {{ $('Webhook').first().json.body.YourBusinessCompanyName }} - {{ $('Webhook').first().json.body.LocationOfPickUpCityState }} - {{ $('Webhook').first().json.body.LocationOfPickUpZip }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1vqwVZtFqc9lpwVS8kXwF4tNErIsk0LUT",
+          "mode": "list",
+          "cachedResultName": "Web Leads SM",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1vqwVZtFqc9lpwVS8kXwF4tNErIsk0LUT"
+        },
+        "options": {
+          "simplifyOutput": false
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2080,
+        -80
+      ],
+      "id": "0e342cff-4601-4bd0-ae5d-6feff9cbf7e4",
+      "name": "Create folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bCcR1sLG7bsH5E88",
+          "name": "Google Drive - ib@scrapmanagement.com"
+        }
+      },
+      "notes": "Creates the Drive folder after the mandatory Odoo attempt. All naming values are read directly from the immutable Webhook payload, not from the Odoo response item."
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "folder",
+        "operation": "share",
+        "folderNoRootId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone",
+            "allowFileDiscovery": false
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1860,
+        -80
+      ],
+      "id": "f45e132f-d553-4cc5-a9ce-9c6ec4c96df3",
+      "name": "Share folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bCcR1sLG7bsH5E88",
+          "name": "Google Drive - ib@scrapmanagement.com"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const body = $('Webhook').first().json.body ?? {};\nconst rawFiles = body.UploadPhotosOfYourScrapUpTo10;\n\nif (!Array.isArray(rawFiles)) {\n  throw new Error('Cognito attachment field UploadPhotosOfYourScrapUpTo10 is not an array.');\n}\nif (rawFiles.length === 0) {\n  throw new Error('Cognito submission contains no attachments.');\n}\nif (rawFiles.length > 10) {\n  throw new Error(`Cognito submission contains ${rawFiles.length} attachments; maximum supported is 10.`);\n}\n\nconst seen = new Set();\nconst expectedAttachmentCount = rawFiles.length;\nconst entryNumber = body.Entry?.Number;\nif (!entryNumber) {\n  throw new Error('Cognito submission is missing Entry.Number.');\n}\nconst leadId = `WL${entryNumber}`;\n\nreturn rawFiles.map((file, attachmentIndex) => {\n  if (!file || typeof file !== 'object') {\n    throw new Error(`Attachment ${attachmentIndex + 1} is not a valid file object.`);\n  }\n\n  const originalFileName = String(file.Name ?? '').trim();\n  const sourceDownloadUrl = String(file.File ?? '').trim();\n  const sourceFileId = String(file.Id ?? '').trim();\n  const contentType = String(file.ContentType ?? '').trim();\n  const sizeBytes = Number(file.Size ?? 0);\n\n  if (!sourceFileId) {\n    throw new Error(`Attachment ${attachmentIndex + 1} is missing its Cognito file ID.`);\n  }\n  if (!originalFileName) {\n    throw new Error(`Attachment ${attachmentIndex + 1} is missing its original filename.`);\n  }\n  if (!sourceDownloadUrl || !sourceDownloadUrl.startsWith('https://')) {\n    throw new Error(`Attachment ${attachmentIndex + 1} (${originalFileName}) has an invalid download URL.`);\n  }\n  if (!contentType) {\n    throw new Error(`Attachment ${attachmentIndex + 1} (${originalFileName}) is missing ContentType.`);\n  }\n  if (!Number.isInteger(sizeBytes) || sizeBytes <= 0) {\n    throw new Error(`Attachment ${attachmentIndex + 1} (${originalFileName}) has an invalid size.`);\n  }\n  if (seen.has(sourceFileId)) {\n    throw new Error(`Duplicate Cognito source file ID detected: ${sourceFileId}.`);\n  }\n  seen.add(sourceFileId);\n\n  return {\n    json: {\n      workflowRevision: 'WL-ATTACHMENTS-V5.4',\n      leadId,\n      expectedAttachmentCount,\n      attachmentIndex,\n      sourceFileId,\n      storageIdentity: sourceFileId,\n      originalFileName,\n      contentType,\n      sizeBytes,\n      sourceDownloadUrl,\n    },\n    pairedItem: { item: 0 },\n  };\n});",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1640,
+        -80
+      ],
+      "id": "99701334-09a5-415f-884f-a68297f20d20",
+      "name": "Normalize & Split Attachments",
+      "notes": "v5.2 canonical attachment contract. Validates, deduplicates, stamps revision, and emits one item per Cognito file."
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "upload",
+        "inputDataFieldName": "data",
+        "name": "={{ $json.originalFileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Create folder').first().json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -740,
+        -260
+      ],
+      "id": "9a367a89-2a61-4e93-9869-04f30e8a0def",
+      "name": "Upload Current Attachment",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bCcR1sLG7bsH5E88",
+          "name": "Google Drive - ib@scrapmanagement.com"
+        }
+      },
+      "notes": "v5.2 storage branch. Uploads the exact current binary with its authoritative Cognito filename."
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "GET",
+        "url": "={{ $json.sourceDownloadUrl }}",
+        "authentication": "none",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": false,
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          },
+          "timeout": 30000
+        },
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        0
+      ],
+      "id": "6e732954-c8a4-4190-8f38-d47219f91e98",
+      "name": "Download Current Attachment",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "notes": "Downloads exactly the current canonical Cognito attachment into binary.data."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const input = $input.item;\nconst meta = input.json ?? {};\nconst binaryData = input.binary?.data;\n\nif (!meta.sourceFileId || !meta.originalFileName || !meta.contentType) {\n  throw new Error('Canonical attachment metadata is incomplete before binary restoration.');\n}\nif (!binaryData) {\n  throw new Error(`Downloaded binary data is missing for ${meta.originalFileName}.`);\n}\nif (Number(binaryData.bytes ?? 0) !== Number(meta.sizeBytes)) {\n  throw new Error(`Downloaded byte count mismatch for ${meta.originalFileName}: expected ${meta.sizeBytes}, received ${binaryData.bytes ?? 'UNKNOWN'}.`);\n}\n\nreturn {\n  json: { ...meta },\n  binary: {\n    ...(input.binary ?? {}),\n    data: {\n      ...binaryData,\n      fileName: meta.originalFileName,\n      mimeType: meta.contentType,\n    },\n  },\n  pairedItem: input.pairedItem ?? { item: $itemIndex },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -980,
+        0
+      ],
+      "id": "125a1244-e437-4435-b60d-f70736986756",
+      "name": "Restore Original Filename",
+      "notes": "v5.2 validates binary size and restores Cognito filename/MIME as the authoritative binary metadata."
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "text": "You are a factual scrap-plastic image analyst for Scrap Management Inc.\nAnalyze only what is visibly supported by this image. Do not infer exact weight, polymer, source type, frequency, or trailer quantity without visible evidence.\nReturn raw JSON only with exactly these keys:\n{\n  \"plastic_visible\": \"Yes | No | Unclear\",\n  \"possible_polymer\": \"string or Unclear\",\n  \"physical_form\": \"string or Unclear\",\n  \"color\": \"string or Unclear\",\n  \"cleanliness\": \"string or Unclear\",\n  \"packaging\": \"string or Unclear\",\n  \"visible_contaminants\": [\"string\"],\n  \"quantity_observation\": \"string or Unclear\",\n  \"notes\": \"concise factual observations\"\n}",
+        "inputType": "base64",
+        "simplify": true,
+        "options": {
+          "detail": "high",
+          "maxTokens": 700
+        },
+        "binaryPropertyName": "data"
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -500,
+        20
+      ],
+      "id": "064cfab7-e80d-4553-a225-f7e45ce66a8f",
+      "name": "Analyze Image Binary",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "openAiApi": {
+          "id": "21U3nsblzrejrbN4",
+          "name": "OpenAI account 2"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "maxTries": 3,
+      "notes": "v5.2 analyzes the validated current binary using gpt-4.1. Provider errors are normalized downstream."
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "data",
+        "include": "allFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -40
+      ],
+      "id": "a468fff2-7a2f-4e51-a1f5-5138f266d2bb",
+      "name": "Aggregate",
+      "notes": "Aggregates all complete attachment results emitted by the Loop Over Attachments Done output."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "v51-image-mime-check",
+              "leftValue": "={{ $json.contentType.startsWith('image/') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -740,
+        80
+      ],
+      "id": "ef9d5386-3d69-44af-abe8-3933c38f117a",
+      "name": "Is Image?",
+      "notes": "Routes from canonical MIME type. True=image; false=PDF/unsupported evaluation."
+    },
+    {
+      "parameters": {
+        "aiAgentStarterCallout": "",
+        "promptType": "define",
+        "text": "={\n  \"workflow_revision\": \"{{ $json.workflowRevision }}\",\n  \"offer_id\": \"WL{{ $('Webhook').first().json.body.Entry.Number }}\",\n  \"received_at\": \"{{ $('Webhook').first().json.body.Entry.DateSubmitted }}\",\n  \"lead_email\": \"{{ $('Webhook').first().json.body.Email }}\",\n  \"drive_url\": \"{{ $('Create folder').first().json.webViewLink }}\",\n  \"lead_form\": {{ $('Webhook').first().json.body.toJsonString() }},\n  \"attachment_analysis\": {{ $json.attachmentAnalysis.toJsonString() }}\n}\n",
+        "hasOutputParser": true,
+        "notice": "",
+        "needsFallback": false,
+        "fallbackNotice": "",
+        "options": {
+          "systemMessage": "=# SYSTEM \u2014 Lead Intake & Qualification Agent v3.3 (No Assumptions Edition)\n\nYou are the **Lead Intake & Qualification Agent** for Scrap Management Inc.  \nYou evaluate web form and image data for plastic recycling leads.  \nYour goal is to produce a **structured JSON** that accurately describes what is known \u2014 and clearly identifies what is *unknown* or requires confirmation.  \nNever guess or infer beyond explicit evidence in the inputs.\n\n---\n\n## \ud83c\udfaf OBJECTIVE\n\nReturn **only factual, supported classifications** based on provided form and image data.  \nIf information cannot be confirmed, mark the field as `\"Unclear\"` or add a relevant `\"clarification_requests\"` entry.\n\n---\n\n## \ud83d\udce5 INPUTS\n\n- **lead_form** \u2014 JSON from the web form submission  \n- **attachment_analysis** \u2014 JSON from image/vision results  \n- **drive_url** \u2014 Link to photo folder\n\n---\n\n## \ud83e\udde9 MERGE & NORMALIZATION RULES\n\n**The form submission is the primary data source.**  \n**Attachment analysis** and **notes** may only *confirm* or *fill empty* fields \u2014 never override reliable human entries.\n\n### Merge Principles\n1. Do **not assume** or infer missing details.\n2. Only fill a value when it is explicitly stated or visually confirmed.\n3. If conflicting information exists, choose `\"Unclear\"` and request clarification.\n4. Always preserve all human-entered data in `\"notes\"`.\n\n### Field-by-Field Merge Logic\n\n| Field | Merge Rule |\n|-------|-------------|\n| **polymer** | Extract from form, image, or notes only when specific polymer codes (PP, HDPE, LDPE, PET, PVC, PS, ABS, PC, Nylon, Acrylic) appear. If not found \u2192 `\"Unclear\"`. Never infer polymer from packaging type or context (e.g. do **not** assume film = LDPE). |\n| **form** | Use explicit descriptions (\u201cPellets\u201d, \u201cFilm Bales\u201d, \u201cParts\u201d). If only partial info, keep `\"Unclear\"`. |\n| **type** | Classify source only when clearly stated: \u201cpost-industrial\u201d, \u201cpost-consumer\u201d, \u201cpost-commercial\u201d, \u201crepro\u201d, \u201cvirgin\u201d. If not explicitly given \u2192 `\"Unclear\"` and add `\"clarification_requests\": [\"Confirm source type (industrial, commercial, or consumer)\"]`. |\n| **cleanliness** | Use exact wording (\u201cclean\u201d, \u201cminor contamination\u201d, etc.). If mixed or uncertain \u2192 `\"Unclear\"`. |\n| **packaging** | Use explicit form entries (\u201cBales\u201d, \u201cGaylords\u201d, \u201cSupersacks\u201d). If not provided, use image if visually clear, else `\"Unclear\"`. |\n| **color** | Use explicit color if stated. Normalize \u201cClear\u201d \u2192 \u201cNatural\u201d. If unknown \u2192 `\"Unknown\"`. |\n| **quantity** | Trust form weight (lbs/pallets). If missing, request clarification. |\n| **notes** | Merge all notes from form, image, and your factual observations, separated by semicolons. No speculation. |\n\n---\n\n## \ud83e\uddee CLASSIFICATION LOGIC\n\n### \u2705 Hot\nLead qualifies as **Hot** only if:\n- Confirmed \u226510,000 lbs or equivalent full truckload, **AND**\n- Material is plastic, **AND**\n- Source is commercial or industrial (business, not individual)\n\nIf packaging, cleanliness, or polymer is *Unclear* but total quantity and business source are valid \u2192 still \u201cHot\u201d but add clarification requests.\n\n### \u274c Cold\nLead is **Cold** if explicitly disqualified by clear evidence:\n- Residential or individual source  \n- Less than 8,000 lbs  \n- Drop-off requests  \n- Non-plastic material  \n- Disallowed materials (vinyl siding, appliances, conduit, PVC pipe, PET bottles, etc.)\n\n### \ud83d\udd38 Unclear Hot\nUse only when **classification itself cannot be determined** from available data (e.g., images contradictory or insufficient).  \nDo not assign \"Unclear\" merely because of missing polymer, source type, or ongoing status \u2014 use `clarification_requests` instead.\n\n---\n\n## \ud83e\uddfe CLARIFICATION RULES\n\nUse `clarification_requests` for any missing or uncertain details that could affect qualification.\n\nExamples:\n- \u201cConfirm if material is ongoing or one-time\u201d\n- \u201cConfirm polymer type (e.g., LDPE, LLDPE, HDPE, etc.)\u201d\n- \u201cConfirm source type (industrial, commercial, or consumer)\u201d\n- \u201cConfirm packaging type (bales, gaylords, etc.)\u201d\n\nNever guess. Always request clarification instead.\n\n---\n\n## \ud83e\uddf1 NORMALIZATION\n\nUse the following canonical vocabulary.  \nOnly populate values you can verify as factual.\n\n| Field | Accepted Values |\n|--------|----------------|\n| **polymer** | PP, HDPE, LDPE, LLDPE, PET, PVC, PS, ABS, PC, Nylon, Acrylic, Other, Unclear |\n| **form** | Pellets, Regrind, Flake, Film Bales, Film Rolls, Logs/Agglo, Purge, Parts, Rigid Bales, Pallet Stacks, Loose, Floorsweep, Unclear |\n| **type** | Post Industrial, Post Commercial, Post Consumer, Virgin, Repro, Unclear |\n| **color** | Natural, Mixed, White, Black, Green, Blue, Red, Yellow, Gray, Custom, Unknown |\n| **cleanliness** | Clean, Mixed, Dirty, Unclear |\n| **packaging** | Bales, Supersacks, Gaylords, Loose, Crates, Other, Unclear |\n\n---\n\n## \u2699\ufe0f OUTPUT FORMAT\n\nRespond only with valid JSON matching this schema exactly:\n\n```json\n{\n  \"decision\": \"Hot | Unclear Hot | Cold\",\n  \"reasons\": [\"string\", \"...\"],\n  \"clarification_requests\": [\"string\", \"...\"],\n  \"normalized\": {\n    \"polymer\": \"PP | HDPE | LDPE | LLDPE | PET | PVC | PS | ABS | PC | Nylon | Acrylic | Other | Unclear\",\n    \"form\": \"Pellets | Regrind | Flake | Film Bales | Film Rolls | Logs/Agglo | Purge | Parts | Rigid Bales | Pallet Stacks | Loose | Floorsweep | Unclear\",\n    \"type\": \"Post Industrial | Post Commercial | Post Consumer | Virgin | Repro | Unclear\",\n    \"color\": \"Natural | Mixed | White | Black | Green | Blue | Red | Yellow | Gray | Custom | Unknown\",\n    \"cleanliness\": \"Clean | Mixed | Dirty | Unclear\",\n    \"packaging\": \"Bales | Supersacks | Gaylords | Loose | Crates | Other | Unclear\",\n    \"per_load_qty_lbs\": 0,\n    \"loads_per_week\": 0,\n    \"loads_per_month\": 0,\n    \"origin_city\": \"City\",\n    \"origin_state\": \"State\",\n    \"notes\": \"Combined factual notes\"\n  },\n  \"email_template\": \"Qualified A | Rejection B | Rejection C | Rejection D | Rejection E\",\n  \"airtable_target\": \"HOT | COLD\"\n}\n```\n\n---\n\n## \u2705 OUTPUT VALIDATION RULES\n- Return **raw JSON only** \u2014 no code fences, markdown, or explanations.  \n- Every key above must exist.  \n- Leave uncertain fields as `\"Unclear\"` or `\"Unknown\"`.  \n- Add clarification requests instead of inferring unknowns.  \n- Never assume relationships (e.g., \u201cfilm = LDPE\u201d, \u201cbaled = post-industrial\u201d).  \n- Prefer accuracy over completeness.\n\n---\n\n## \ud83e\udde9 EXAMPLE\n\n**Input:**\n> \u201cLDPE stretch film bales; minor contamination; warehouse source; 40,000 lbs; images show clean baled film.\u201d\n\n**Output:**\n- Return **raw JSON only** \u2014 no code fences, markdown, or explanations.\n- Do not wrap the JSON in ```json or any text block.\n- The node must output structured JSON (application/json), not plain text.\n\n{\n  \"decision\": \"Hot\",\n  \"reasons\": [\n    \"Full truckload (40,000 lbs) of baled plastic film from commercial source\",\n    \"Images confirm clean, uniform material\"\n  ],\n  \"clarification_requests\": [\n    \"Confirm polymer type (LDPE, LLDPE, or HDPE)\",\n    \"Confirm if material is ongoing or one-time\"\n  ],\n  \"normalized\": {\n    \"polymer\": \"Unclear\",\n    \"form\": \"Film Bales\",\n    \"type\": \"Post Commercial\",\n    \"color\": \"Natural\",\n    \"cleanliness\": \"Clean\",\n    \"packaging\": \"Bales\",\n    \"per_load_qty_lbs\": 40000,\n    \"loads_per_week\": 0,\n    \"loads_per_month\": 0,\n    \"origin_city\": \"Franklin\",\n    \"origin_state\": \"TN\",\n    \"notes\": \"LDPE stretch film bales; minor contamination; commercial/warehouse source\"\n  },\n  \"email_template\": \"Qualified A\",\n  \"airtable_target\": \"HOT\"\n}\n\n---\n\n## SOURCE AUTHORITY, FIELD SEPARATION, AND MULTI-IMAGE CONSENSUS\n\nUse source authority by field, not one global winner:\n- Human form: quantity, seller description, stated cleanliness, company and location.\n- Current photos: present shipment unit, packaging, visible material form, visible color and visible contamination.\n- SDS/specification documents: polymer, composition and technical properties. A document must not override current photo evidence for packaging, shipment form or current color.\n\nKeep these concepts separate:\n- `form` describes the recyclable material form.\n- `packaging` describes the shipping unit or containment.\n\nConsensus rules:\n1. The same observation in two or more successful images, with no explicit contradictory shipping unit, is visually confirmed.\n2. When two or more images show or explicitly describe bales, set `packaging` to `Bales`.\n3. When film is confirmed by the form/document and bales are visually confirmed, set `form` to `Film Bales`.\n4. Wrapped bales or bales on pallets are still `Bales`; clear stretch wrap is not a contradictory packaging type.\n5. Current photos outrank a generic SDS for current color. Printed or visibly multicolored film is `Mixed`, even when the SDS product name says white film.\n6. `trim scrap`, `edge trim`, `purge`, `sprues`, `runners`, `off-spec production` and similar manufacturing-process scrap support `Post Industrial`.\n7. Failed attachment analyses are not factual evidence. Preserve the attachment and request manual review rather than rejecting an otherwise qualified lead.\n\nIf evidence is sufficient under these rules, populate the field. Do not leave a confirmed field `Unclear` merely because the exact wording differs between images.\n",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1360,
+        -40
+      ],
+      "id": "0b49b61f-0671-4760-acb1-11d598d81f73",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "maxTries": 3,
+      "notes": "v5.3 deterministic classification transform. Gmail tools are detached; a post-agent validator enforces source authority, enums and cross-field alignment."
+    },
+    {
+      "parameters": {
+        "notice": "",
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        200
+      ],
+      "id": "61a6632e-b063-4603-84a9-dfea0764774c",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "21U3nsblzrejrbN4",
+          "name": "OpenAI account 2"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "notice": "",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"decision\": \"Hot\",\n  \"reasons\": [\n    \"Full truckload (40,000 lbs) of baled plastic film from commercial source\",\n    \"Images confirm clean, uniform material\"\n  ],\n  \"clarification_requests\": [\n    \"Confirm polymer type (LDPE, LLDPE, or HDPE)\",\n    \"Confirm if material is ongoing or one-time\"\n  ],\n  \"normalized\": {\n    \"polymer\": \"Unclear\",\n    \"form\": \"Film Bales\",\n    \"type\": \"Post Commercial\",\n    \"color\": \"Natural\",\n    \"cleanliness\": \"Clean\",\n    \"packaging\": \"Bales\",\n    \"per_load_qty_lbs\": 40000,\n    \"loads_per_week\": 0,\n    \"loads_per_month\": 0,\n    \"origin_city\": \"Franklin\",\n    \"origin_state\": \"TN\",\n    \"notes\": \"LDPE stretch film bales; minor contamination; commercial/warehouse source\"\n  },\n  \"email_template\": \"Qualified A\",\n  \"airtable_target\": \"HOT\"\n}",
+        "autoFix": false
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1750,
+        200
+      ],
+      "id": "7ada5c42-45f7-4a41-813e-01c5ff6ebbe5",
+      "name": "Structured Output Parser",
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f7288cbe-7ae4-48c5-9db5-1cff7cc6244d",
+              "leftValue": "={{ $json.output.airtable_target }}",
+              "rightValue": "HOT",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1800,
+        -40
+      ],
+      "id": "4bb5ac59-73e5-48ee-96c1-fb2a7ca8fbb6",
+      "name": "If HOT->True",
+      "executeOnce": true,
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "resource": "record",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appyVD2znnQCmEn74",
+          "mode": "list",
+          "cachedResultName": "AI Agents",
+          "cachedResultUrl": "https://airtable.com/appyVD2znnQCmEn74"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblokqBcIFkCuiNde",
+          "mode": "list",
+          "cachedResultName": "Hot Leads & Offers",
+          "cachedResultUrl": "https://airtable.com/appyVD2znnQCmEn74/tblokqBcIFkCuiNde"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Weight per load?": "={{ $json.output.normalized.per_load_qty_lbs }}",
+            "Location Of Pick Up - Zip": "={{ $('Webhook').item.json.body.LocationOfPickUpZip }}",
+            "Status": "New",
+            "Sales Rep": "Web Lead",
+            "Location Of Pick Up - City/State": "={{ $('Webhook').item.json.body.LocationOfPickUpCityState }}",
+            "What is the quantity?": "={{ $('Webhook').item.json.body.WhatIsTheQuantity }}",
+            "Attachments (G-Drive Link)": "={{ $('Create folder').item.json.webViewLink }}",
+            "Notes": "={{ $json.output.normalized.notes }}",
+            "Phone": "={{ $('Webhook').item.json.body.Phone }}",
+            "Email": "={{ $('Webhook').item.json.body.Email }}",
+            "Name": "={{ $('Webhook').item.json.body.Name.FirstAndLast }}",
+            "Your Business / Company Name": "={{ $('Webhook').item.json.body.YourBusinessCompanyName }}",
+            "OFFER ID": "=WL{{ $('Webhook').item.json.body.Entry.Number }}",
+            "What material is it made from?": "={{ $('Webhook').item.json.body.WhatMaterialIsItMadeFrom }}",
+            "What is it?": "={{ $('Webhook').item.json.body.WhatIsIt }}",
+            "Are there any contaminants?": "={{ $('Webhook').item.json.body.AreThereAnyContaminants }}",
+            "Date": "={{ $('Webhook').item.json.body.Entry.DateSubmitted }}",
+            "Material Type": "={{ $json.output.normalized.type }}",
+            "Material Form": "={{ $json.output.normalized.form }}",
+            "Packaging": "={{ $json.output.normalized.packaging }}",
+            "Polymer": "={{ $json.output.normalized.polymer }}",
+            "Cleanliness": "={{ $json.output.normalized.cleanliness }}",
+            "Loads/Wk": "={{ $json.output.normalized.loads_per_week }}",
+            "Loads/Mo": "={{ $json.output.normalized.loads_per_month }}",
+            "Color": "={{ $json.output.normalized.color }}",
+            "Origin City": "={{ $json.output.normalized.origin_city }}",
+            "Origin State": "={{ $json.output.normalized.origin_state }}",
+            "Clarification Requests": "={{ $json.output.clarification_requests }}",
+            "Airtable Target": "={{ $json.output.airtable_target }}",
+            "Weight/Load": "={{ $json.output.normalized.per_load_qty_lbs }}",
+            "Email Template Used": "={{ $json.output.email_template }}",
+            "Reason": "={{ $json.output.reasons }}",
+            "Attachments": "={{ $('Finalize Attachment Batch').first().json.airtableAttachments }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "OFFER ID",
+              "displayName": "OFFER ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "No Action",
+                  "value": "No Action"
+                },
+                {
+                  "name": "Quoted",
+                  "value": "Quoted"
+                },
+                {
+                  "name": "Closed",
+                  "value": "Closed"
+                },
+                {
+                  "name": "Pass",
+                  "value": "Pass"
+                },
+                {
+                  "name": "In Progress",
+                  "value": "In Progress"
+                },
+                {
+                  "name": "Assigned to Rep",
+                  "value": "Assigned to Rep"
+                },
+                {
+                  "name": "New",
+                  "value": "New"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Your Business / Company Name",
+              "displayName": "Your Business / Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Location Of Pick Up - City/State",
+              "displayName": "Location Of Pick Up - City/State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Location Of Pick Up - Zip",
+              "displayName": "Location Of Pick Up - Zip",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "What is the quantity?",
+              "displayName": "What is the quantity?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Weight per load?",
+              "displayName": "Weight per load?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "What material is it made from?",
+              "displayName": "What material is it made from?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "What is it?",
+              "displayName": "What is it?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Are there any contaminants?",
+              "displayName": "Are there any contaminants?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments (G-Drive Link)",
+              "displayName": "Attachments (G-Drive Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Material Form",
+              "displayName": "Material Form",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Material Type",
+              "displayName": "Material Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Polymer",
+              "displayName": "Polymer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Cleanliness",
+              "displayName": "Cleanliness",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Packaging",
+              "displayName": "Packaging",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Color",
+              "displayName": "Color",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Send To Offer Agent",
+              "displayName": "Send To Offer Agent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Loads/Wk",
+              "displayName": "Loads/Wk",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Loads/Mo",
+              "displayName": "Loads/Mo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Origin City",
+              "displayName": "Origin City",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Origin State",
+              "displayName": "Origin State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Clarification Requests",
+              "displayName": "Clarification Requests",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Weight/Load",
+              "displayName": "Weight/Load",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Airtable Target",
+              "displayName": "Airtable Target",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Template Used",
+              "displayName": "Email Template Used",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Miscategorized",
+              "displayName": "Miscategorized",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Sent By Offer Agent",
+              "displayName": "Sent By Offer Agent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Modified Time",
+              "displayName": "Last Modified Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sales Rep",
+              "displayName": "Sales Rep",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Web Lead",
+                  "value": "Web Lead"
+                },
+                {
+                  "name": "Tiffany Seisser",
+                  "value": "Tiffany Seisser"
+                },
+                {
+                  "name": "Ricardo Pereira",
+                  "value": "Ricardo Pereira"
+                },
+                {
+                  "name": "Arthur Buyanovskiy",
+                  "value": "Arthur Buyanovskiy"
+                },
+                {
+                  "name": "Igor Beylin",
+                  "value": "Igor Beylin"
+                },
+                {
+                  "name": "Lindsey Malyavko",
+                  "value": "Lindsey Malyavko"
+                },
+                {
+                  "name": "Arthur Akopyan",
+                  "value": "Arthur Akopyan"
+                },
+                {
+                  "name": "Mack",
+                  "value": "Mack"
+                },
+                {
+                  "name": "Web Lead, Ricardo Pereira",
+                  "value": "Web Lead, Ricardo Pereira"
+                },
+                {
+                  "name": "Web Lead, Tiffany Seisser",
+                  "value": "Web Lead, Tiffany Seisser"
+                },
+                {
+                  "name": "Web Lead, Lindsey Malyavko",
+                  "value": "Web Lead, Lindsey Malyavko"
+                },
+                {
+                  "name": "Web Lead, Arthur Buyanovskiy",
+                  "value": "Web Lead, Arthur Buyanovskiy"
+                },
+                {
+                  "name": "Web Lead, Arthur Akopyan",
+                  "value": "Web Lead, Arthur Akopyan"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Send Offer Agent",
+              "displayName": "Send Offer Agent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 2",
+              "displayName": "Send Offer Agent 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 3",
+              "displayName": "Send Offer Agent 3",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 4",
+              "displayName": "Send Offer Agent 4",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 5",
+              "displayName": "Send Offer Agent 5",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 6",
+              "displayName": "Send Offer Agent 6",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 7",
+              "displayName": "Send Offer Agent 7",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 8",
+              "displayName": "Send Offer Agent 8",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 9",
+              "displayName": "Send Offer Agent 9",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 10",
+              "displayName": "Send Offer Agent 10",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Send Offer Agent 11",
+              "displayName": "Send Offer Agent 11",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2020,
+        -140
+      ],
+      "id": "c930712d-a9b3-4ca6-a346-a57aa94fc072",
+      "name": "Add HOT to Airtable",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "631FPrCtV2x9Qb1b",
+          "name": "IB-AIRTABLE"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "resource": "record",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appyVD2znnQCmEn74",
+          "mode": "list",
+          "cachedResultName": "AI Agents",
+          "cachedResultUrl": "https://airtable.com/appyVD2znnQCmEn74"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblove1sM6VA7zRV8",
+          "mode": "list",
+          "cachedResultName": "Cold Web Leads",
+          "cachedResultUrl": "https://airtable.com/appyVD2znnQCmEn74/tblove1sM6VA7zRV8"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Miscategorized": false,
+            "Rejection Template Used": "={{ $json.output.email_template }}",
+            "Notes": "={{ $json.output.normalized.notes }}",
+            "Your Business / Company Name": "={{ $('Webhook').item.json.body.YourBusinessCompanyName }}",
+            "Phone": "={{ $('Webhook').item.json.body.Phone }}",
+            "Name": "={{ $('Webhook').item.json.body.Name.FirstAndLast }}",
+            "Email": "={{ $('Webhook').item.json.body.Email }}",
+            "Location Of Pick Up - City/State": "={{ $('Webhook').item.json.body.LocationOfPickUpCityState }}",
+            "Date": "={{ $('Webhook').item.json.body.Entry.DateSubmitted }}",
+            "OFFER ID": "=WL{{ $('Webhook').item.json.body.Entry.Number }}",
+            "What is the quantity?": "={{ $('Webhook').item.json.body.WhatIsTheQuantity }}",
+            "What material is it made from?": "={{ $('Webhook').item.json.body.WhatMaterialIsItMadeFrom }}",
+            "Weight per load?": "={{ $json.output.normalized.per_load_qty_lbs }}",
+            "What is it?": "={{ $('Webhook').item.json.body.WhatIsIt }}",
+            "Are there any contaminants?": "={{ $('Webhook').item.json.body.AreThereAnyContaminants }}",
+            "Location Of Pick Up - Zip": "={{ $('Webhook').item.json.body.LocationOfPickUpZip }}",
+            "Attachments (G-Drive Link)": "={{ $('Create folder').item.json.webViewLink }}",
+            "Polymer": "={{ $json.output.normalized.polymer }}",
+            "Material Type": "={{ $json.output.normalized.type }}",
+            "Material Form": "={{ $json.output.normalized.form }}",
+            "Cleanliness": "={{ $json.output.normalized.cleanliness }}",
+            "Send To Offer Agent": false,
+            "Sent By Offer Agent": false,
+            "Color": "={{ $json.output.normalized.color }}",
+            "Airtable Target": "={{ $json.output.airtable_target }}",
+            "Reason": "={{ $json.output.reasons }}",
+            "Attachments": "={{ $('Finalize Attachment Batch').first().json.airtableAttachments }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "OFFER ID",
+              "displayName": "OFFER ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Your Business / Company Name",
+              "displayName": "Your Business / Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Location Of Pick Up - City/State",
+              "displayName": "Location Of Pick Up - City/State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Location Of Pick Up - Zip",
+              "displayName": "Location Of Pick Up - Zip",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "What is the quantity?",
+              "displayName": "What is the quantity?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Weight per load?",
+              "displayName": "Weight per load?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "What material is it made from?",
+              "displayName": "What material is it made from?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "What is it?",
+              "displayName": "What is it?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Are there any contaminants?",
+              "displayName": "Are there any contaminants?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments (G-Drive Link)",
+              "displayName": "Attachments (G-Drive Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Rejection Template Used",
+              "displayName": "Rejection Template Used",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Polymer",
+              "displayName": "Polymer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Material Type",
+              "displayName": "Material Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Material Form",
+              "displayName": "Material Form",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Cleanliness",
+              "displayName": "Cleanliness",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Color",
+              "displayName": "Color",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Airtable Target",
+              "displayName": "Airtable Target",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Miscategorized",
+              "displayName": "Miscategorized",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Send To Offer Agent",
+              "displayName": "Send To Offer Agent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sent By Offer Agent",
+              "displayName": "Sent By Offer Agent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2020,
+        60
+      ],
+      "id": "ef8414b5-25b8-4f9a-b2c4-42423beeb483",
+      "name": "Add COLD to Airtable",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "631FPrCtV2x9Qb1b",
+          "name": "IB-AIRTABLE"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "POST",
+        "url": "https://cryptoxdog-ib-odoo-19.odoo.com/api/v1/cognito-webhook",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($('Webhook').first().json.body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 180000
+        },
+        "infoMessage": ""
+      },
+      "id": "e7edc0b1-4c1f-4989-8e15-44894f43b389",
+      "name": "POST Raw Cognito to Production Odoo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1860,
+        260
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "YJG0Fgn2CANFJtSI",
+          "name": "Odoo API"
+        }
+      },
+      "notes": "Mandatory first-hop delivery for every Cognito submission, regardless of later HOT/COLD result. The raw Cognito body is posted to Odoo new lead intake/triage. HTTP and transport failures are normalized, the Airtable path still completes, and the final production gate fails closed unless Odoo confirms web_lead_id.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const joined = $json ?? {};\nconst source = $('Restore Original Filename').item.json;\n\nif (!source || joined.sourceFileId !== source.sourceFileId) {\n  throw new Error(`Current loop source mismatch: joined=${joined.sourceFileId ?? 'UNKNOWN'}, source=${source?.sourceFileId ?? 'UNKNOWN'}.`);\n}\nif (joined.uploadStatus !== 'success' || !joined.driveFileId) {\n  throw new Error(`Attachment upload is incomplete for ${source.originalFileName}.`);\n}\nif (!['success', 'failed', 'unsupported'].includes(joined.analysisStatus)) {\n  throw new Error(`Attachment ${source.originalFileName} has an invalid analysis status.`);\n}\nif (joined.driveFileName !== source.originalFileName) {\n  throw new Error(`Attachment filename changed after upload: ${source.originalFileName} -> ${joined.driveFileName}.`);\n}\nif (joined.driveMimeType !== source.contentType) {\n  throw new Error(`Attachment MIME changed after upload for ${source.originalFileName}.`);\n}\n\nreturn {\n  json: {\n    workflowRevision: 'WL-ATTACHMENTS-V5.4',\n    leadId: source.leadId,\n    expectedAttachmentCount: source.expectedAttachmentCount,\n    attachmentIndex: source.attachmentIndex,\n    sourceFileId: source.sourceFileId,\n    originalFileName: source.originalFileName,\n    contentType: source.contentType,\n    sizeBytes: source.sizeBytes,\n    driveFileId: joined.driveFileId,\n    driveFileName: joined.driveFileName,\n    driveMimeType: joined.driveMimeType,\n    driveSizeBytes: joined.driveSizeBytes,\n    driveViewUrl: joined.driveViewUrl,\n    driveDownloadUrl: joined.driveDownloadUrl,\n    driveShared: joined.driveShared,\n    uploadStatus: joined.uploadStatus,\n    analysisType: joined.analysisType,\n    analysisStatus: joined.analysisStatus,\n    analysisData: joined.analysisData,\n    analysisText: joined.analysisText,\n    analysisError: joined.analysisError,\n    airtableAttachment: {\n      url: joined.driveDownloadUrl,\n      filename: source.originalFileName,\n    },\n  },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        -40
+      ],
+      "id": "651761bf-3145-4299-9121-30c766d6d1e2",
+      "name": "Build Attachment Result",
+      "notes": "v5.2 produces one complete attachment result inside the one-item loop and returns it to Loop Over Attachments."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const rows = Array.isArray($json.data) ? $json.data : [];\nconst rawFiles = $('Webhook').first().json.body?.UploadPhotosOfYourScrapUpTo10;\nconst expectedAttachmentCount = Array.isArray(rawFiles) ? rawFiles.length : 0;\n\nif (rows.length !== expectedAttachmentCount) {\n  throw new Error(`Attachment completeness check failed: expected ${expectedAttachmentCount}, received ${rows.length}.`);\n}\n\nconst ordered = [...rows].sort((a, b) => a.attachmentIndex - b.attachmentIndex);\nconst sourceIds = new Set();\nconst driveIds = new Set();\nconst indexes = new Set();\n\nfor (let expectedIndex = 0; expectedIndex < ordered.length; expectedIndex++) {\n  const row = ordered[expectedIndex];\n  if (row.workflowRevision !== 'WL-ATTACHMENTS-V5.4') throw new Error(`Revision marker missing for ${row.originalFileName ?? 'UNKNOWN'}.`);\n  if (row.attachmentIndex !== expectedIndex) throw new Error(`Attachment indexes are not contiguous at position ${expectedIndex}.`);\n  if (!row.sourceFileId || sourceIds.has(row.sourceFileId)) throw new Error(`Missing or duplicate sourceFileId: ${row.sourceFileId ?? 'UNKNOWN'}.`);\n  if (!row.driveFileId || driveIds.has(row.driveFileId)) throw new Error(`Missing or duplicate Drive file ID for ${row.originalFileName}.`);\n  if (indexes.has(row.attachmentIndex)) throw new Error(`Duplicate attachment index: ${row.attachmentIndex}.`);\n  if (row.uploadStatus !== 'success') throw new Error(`Upload failed for ${row.originalFileName}.`);\n  if (!row.airtableAttachment?.url || row.airtableAttachment.filename !== row.originalFileName) {\n    throw new Error(`Invalid Airtable attachment object for ${row.originalFileName}.`);\n  }\n  if (!['success', 'failed', 'unsupported'].includes(row.analysisStatus)) {\n    throw new Error(`Missing or invalid analysis status for ${row.originalFileName}.`);\n  }\n  if (row.analysisStatus === 'failed' && !row.analysisError?.message) {\n    throw new Error(`Failed analysis is missing an error message for ${row.originalFileName}.`);\n  }\n  sourceIds.add(row.sourceFileId);\n  driveIds.add(row.driveFileId);\n  indexes.add(row.attachmentIndex);\n}\n\nconst successfulAnalysisCount = ordered.filter((row) => row.analysisStatus === 'success').length;\nconst failedAnalysisCount = ordered.filter((row) => row.analysisStatus === 'failed').length;\nconst unsupportedAnalysisCount = ordered.filter((row) => row.analysisStatus === 'unsupported').length;\n\nreturn [{\n  json: {\n    workflowRevision: 'WL-ATTACHMENTS-V5.4',\n    expectedAttachmentCount,\n    successfulAttachmentCount: ordered.length,\n    successfulUploadCount: ordered.filter((row) => row.uploadStatus === 'success').length,\n    successfulAnalysisCount,\n    failedAnalysisCount,\n    unsupportedAnalysisCount,\n    attachmentAnalysis: ordered.map((row) => ({\n      filename: row.originalFileName,\n      content_type: row.contentType,\n      analysis_type: row.analysisType,\n      analysis_status: row.analysisStatus,\n      analysis_data: row.analysisData,\n      analysis_text: row.analysisText,\n      analysis_error: row.analysisError,\n    })),\n    airtableAttachments: ordered.map((row) => row.airtableAttachment),\n    analysisWarnings: ordered.filter((row) => row.analysisStatus === 'failed').map((row) => ({ filename: row.originalFileName, error: row.analysisError?.message ?? 'UNKNOWN ERROR' })),\n    attachmentManifest: ordered.map((row) => ({\n      attachmentIndex: row.attachmentIndex,\n      sourceFileId: row.sourceFileId,\n      originalFileName: row.originalFileName,\n      contentType: row.contentType,\n      sizeBytes: row.sizeBytes,\n      driveFileId: row.driveFileId,\n      driveViewUrl: row.driveViewUrl,\n      uploadStatus: row.uploadStatus,\n      analysisStatus: row.analysisStatus,\n    })),\n  },\n}];",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -40
+      ],
+      "id": "131236af-5eff-4b55-963c-0a20b9861616",
+      "name": "Finalize Attachment Batch",
+      "notes": "v5.3 validates uploads and identity fail-closed, but carries failed AI analyses as explicit warnings so qualified leads are not lost during provider outages."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "abca983c-f08a-43a1-a86e-d492f18d82d4",
+              "leftValue": "={{ $json.contentType }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -500,
+        160
+      ],
+      "id": "9c30f67a-702c-4e7b-b6e9-c48c418ebb52",
+      "name": "Is PDF?",
+      "notes": "Routes non-image attachments by canonical MIME type. True=PDF; false=unsupported."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const meta = $('Restore Original Filename').item.json;\nconst uploaded = $json ?? {};\nconst driveFileId = String(uploaded.id ?? '').trim();\nconst driveFileName = String(uploaded.name ?? '').trim();\nconst driveMimeType = String(uploaded.mimeType ?? '').trim();\nconst driveSizeBytes = Number(uploaded.size ?? 0);\n\nif (!driveFileId) throw new Error(`Google Drive returned no file ID for ${meta.originalFileName}.`);\nif (driveFileName !== meta.originalFileName) {\n  throw new Error(`Drive filename mismatch for ${meta.sourceFileId}: expected \"${meta.originalFileName}\", received \"${driveFileName}\".`);\n}\nif (driveMimeType !== meta.contentType) {\n  throw new Error(`Drive MIME mismatch for ${meta.originalFileName}: expected ${meta.contentType}, received ${driveMimeType}.`);\n}\nif (driveSizeBytes !== Number(meta.sizeBytes)) {\n  throw new Error(`Drive size mismatch for ${meta.originalFileName}: expected ${meta.sizeBytes}, received ${uploaded.size ?? 'UNKNOWN'}.`);\n}\n\nreturn {\n  json: {\n    sourceFileId: meta.sourceFileId,\n    driveFileId,\n    driveFileName,\n    driveMimeType,\n    driveSizeBytes,\n    driveViewUrl: uploaded.webViewLink || `https://drive.google.com/file/d/${driveFileId}/view`,\n    driveDownloadUrl: `https://drive.google.com/uc?export=download&id=${encodeURIComponent(driveFileId)}`,\n    uploadStatus: 'success',\n    driveShared: Boolean(uploaded.shared),\n  },\n  pairedItem: $input.item.pairedItem ?? { item: $itemIndex },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        -260
+      ],
+      "id": "ac9772c5-2612-4b57-ba4c-2ca59d9fde98",
+      "name": "Normalize Drive Upload",
+      "notes": "Validates Drive identity, filename, MIME type, and size; emits storage result keyed by Cognito sourceFileId."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const meta = $('Restore Original Filename').item.json;\nconst raw = $json ?? {};\nconst providerError = raw.error ? String(raw.error) : null;\nlet text = typeof raw.content === 'string' ? raw.content : null;\nlet parsed = null;\n\nif (text) {\n  const cleaned = text.trim().replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/i, '');\n  try { parsed = JSON.parse(cleaned); } catch { parsed = { raw_text: text }; }\n}\n\nconst failed = Boolean(providerError) || !text;\nreturn {\n  json: {\n    sourceFileId: meta.sourceFileId,\n    analysisType: 'image',\n    analysisStatus: failed ? 'failed' : 'success',\n    analysisData: failed ? null : parsed,\n    analysisText: failed ? null : text,\n    analysisError: failed ? {\n      provider: 'openai',\n      message: providerError || 'OpenAI image analysis returned no content.',\n      retryable: false,\n    } : null,\n  },\n  pairedItem: $input.item.pairedItem ?? { item: $itemIndex },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        20
+      ],
+      "id": "bb027811-f703-4c7c-8290-7aaf978d8ea3",
+      "name": "Normalize Image Analysis",
+      "notes": "Normalizes OpenAI binary vision output into the v5.2 contract within the current attachment loop."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "return {\n  json: {\n    sourceFileId: $json.sourceFileId,\n    analysisType: 'unsupported',\n    analysisStatus: 'unsupported',\n    analysisData: null,\n    analysisText: null,\n    analysisError: null,\n  },\n  pairedItem: $input.item.pairedItem ?? { item: $itemIndex },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        280
+      ],
+      "id": "ad0ab41b-8485-4dcb-96ce-a7e1fef54547",
+      "name": "Normalize Unsupported Analysis",
+      "notes": "Emits one v5.2 unsupported analysis result for the current attachment without blocking storage."
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1420,
+        -80
+      ],
+      "id": "c8d7da0b-c41f-43bd-b383-221808adbd12",
+      "name": "Loop Over Attachments",
+      "notes": "v5.2 deterministic per-attachment loop. Each iteration must return exactly one complete attachment result before the next item begins."
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "data",
+        "options": {
+          "joinPages": true,
+          "keepSource": "json"
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -260,
+        140
+      ],
+      "id": "250b3476-54a0-4846-a937-a80b2b4b5dc5",
+      "name": "Extract PDF Text",
+      "onError": "continueRegularOutput",
+      "notes": "v5.2 extracts searchable PDF text locally from binary.data before LLM analysis. This removes the failing Gemini Files API dependency for ordinary text PDFs."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "v52-pdf-text-check",
+              "leftValue": "={{ typeof $json.text === 'string' && $json.text.trim().length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -20,
+        140
+      ],
+      "id": "e429a830-2796-49e8-a4da-1541e2264e41",
+      "name": "PDF Text Available?",
+      "notes": "Routes text-bearing PDFs to OpenAI analysis and unreadable/scanned PDFs to an explicit failed analysis contract."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a factual scrap-plastic document analyst for Scrap Management Inc.\nAnalyze only information explicitly supported by the extracted PDF text. Do not claim that document properties apply to photographed material unless the document explicitly identifies it.\nReturn raw JSON only with exactly these keys:\n{\n  \"document_type\": \"string or Unclear\",\n  \"product_name\": \"string or Unclear\",\n  \"manufacturer\": \"string or Unclear\",\n  \"polymer\": \"string or Unclear\",\n  \"composition\": [\"string\"],\n  \"physical_form\": \"string or Unclear\",\n  \"density\": \"string or Unclear\",\n  \"melt_information\": \"string or Unclear\",\n  \"color\": \"string or Unclear\",\n  \"recycling_relevance\": \"string or Unclear\",\n  \"handling_notes\": [\"string\"],\n  \"unsupported_or_unknown_fields\": [\"string\"]\n}\n\nFilename: {{ $('Restore Original Filename').item.json.originalFileName }}\nExtracted PDF text:\n{{ $json.text.slice(0, 60000) }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        220,
+        100
+      ],
+      "id": "bb5b1dc9-4780-4b11-965a-22ee059545c4",
+      "name": "Analyze PDF Text",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3,
+      "onError": "continueRegularOutput",
+      "notes": "v5.2 analyzes locally extracted PDF text with the same proven OpenAI credential family used by image analysis."
+    },
+    {
+      "parameters": {
+        "notice": "",
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "31b4e56e-95c8-40ec-a800-80869bb2d7c9",
+      "name": "OpenAI PDF Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "21U3nsblzrejrbN4",
+          "name": "OpenAI account 2"
+        }
+      },
+      "notes": "Dedicated gpt-4.1 model connection for PDF text analysis."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const meta = $('Restore Original Filename').item.json;\nconst raw = $json ?? {};\nconst providerError = raw.error ? String(raw.error) : null;\nlet text = typeof raw.text === 'string' ? raw.text.trim() : null;\nlet parsed = null;\n\nif (text) {\n  const cleaned = text.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/i, '');\n  try { parsed = JSON.parse(cleaned); } catch { parsed = { raw_text: text }; }\n}\n\nconst failed = Boolean(providerError) || !text;\nreturn {\n  json: {\n    sourceFileId: meta.sourceFileId,\n    analysisType: 'document',\n    analysisStatus: failed ? 'failed' : 'success',\n    analysisData: failed ? null : parsed,\n    analysisText: failed ? null : text,\n    analysisError: failed ? {\n      provider: 'openai',\n      stage: 'pdf-text-analysis',\n      message: providerError || 'OpenAI PDF text analysis returned no content.',\n      retryable: false,\n    } : null,\n  },\n  pairedItem: $input.item.pairedItem ?? { item: $itemIndex },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        100
+      ],
+      "id": "08717f47-add4-4fa0-b8a7-14092f6b3add",
+      "name": "Normalize PDF Text Analysis",
+      "notes": "Normalizes OpenAI PDF text output into the v5.2 attachment analysis contract."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const meta = $('Restore Original Filename').item.json;\nconst raw = $json ?? {};\nreturn {\n  json: {\n    sourceFileId: meta.sourceFileId,\n    analysisType: 'document',\n    analysisStatus: 'failed',\n    analysisData: null,\n    analysisText: null,\n    analysisError: {\n      provider: 'n8n-pdf-extractor',\n      stage: 'pdf-text-extraction',\n      message: raw.error ? String(raw.error) : 'PDF contains no extractable text. Scanned-document fallback is not enabled in this revision.',\n      retryable: false,\n    },\n  },\n  pairedItem: $input.item.pairedItem ?? { item: $itemIndex },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        220
+      ],
+      "id": "2b516c07-0c95-4b01-a3b8-325c473a4ab3",
+      "name": "Normalize Unreadable PDF",
+      "notes": "Produces an explicit failed analysis record when native PDF text extraction cannot produce text."
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByFields",
+        "fieldsToMatchString": "sourceFileId",
+        "joinMode": "keepMatches",
+        "outputDataFrom": "both",
+        "options": {
+          "clashHandling": {
+            "values": {
+              "resolveClash": "preferLast",
+              "mergeMode": "deepMerge",
+              "overrideEmpty": false
+            }
+          },
+          "multipleMatches": "first"
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        -40
+      ],
+      "id": "59526443-5501-4cb0-bdcc-c7d1727fed90",
+      "name": "Join Current Upload + Analysis",
+      "notes": "v5.2 per-iteration reconciliation. Both branches always emit exactly one item keyed by sourceFileId."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const bodyInput = $('Webhook').first().json.body ?? {};\nconst entryNumber = bodyInput.Entry?.Number;\nconst leadId = `WL${entryNumber}`;\nconst raw = $json ?? {};\nconst statusCode = Number(raw.statusCode ?? raw.status ?? raw.httpCode ?? 0) || null;\nlet body = raw.body;\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch { body = { message: body }; }\n}\nif (!body || typeof body !== 'object' || Array.isArray(body)) body = raw;\n\nconst success = Boolean(\n  statusCode && statusCode >= 200 && statusCode < 300 &&\n  body.status === 'ok' && body.web_lead_id\n);\nconst message = success\n  ? null\n  : String(\n      body.message ??\n      body.error ??\n      raw.error?.message ??\n      raw.error ??\n      raw.message ??\n      `Unexpected Odoo response (HTTP ${statusCode ?? 'UNKNOWN'}).`\n    );\n\nreturn {\n  json: {\n    workflowRevision: 'WL-ATTACHMENTS-V5.4',\n    leadId,\n    cognitoEntryNumber: entryNumber ?? null,\n    odooStatus: success ? 'success' : 'failed',\n    odooHttpStatus: statusCode,\n    odooWebLeadId: body.web_lead_id ?? null,\n    odooLeadId: body.lead_id ?? null,\n    odooDecision: body.decision ?? null,\n    odooState: body.state ?? null,\n    odooIntakeId: body.intake_id ?? null,\n    odooPartnerId: body.partner_id ?? null,\n    odooResponse: body,\n    odooError: success ? null : message,\n  },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1620,
+        260
+      ],
+      "id": "f1bbd899-130c-43a2-af21-b5b388fa20c5",
+      "name": "Normalize Odoo Delivery",
+      "notes": "Normalizes the mandatory Odoo response into a stable contract. Handles normal full responses, HTTP errors returned through neverError, and transport errors continued by n8n."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const finalized = $('Finalize Attachment Batch').first().json;\nconst entryNumber = $('Webhook').first().json.body?.Entry?.Number;\nconst leadId = `WL${entryNumber}`;\nconst raw = $json ?? {};\nconst fields = raw.fields && typeof raw.fields === 'object' ? raw.fields : {};\nconst nativeAttachments = Array.isArray(fields.Attachments) ? fields.Attachments : null;\nconst recordId = String(raw.id ?? '').trim();\n\nreturn {\n  json: {\n    workflowRevision: 'WL-ATTACHMENTS-V5.4',\n    leadId,\n    airtableStatus: recordId ? 'success' : 'failed',\n    airtableRecordId: recordId || null,\n    airtableCreatedTime: raw.createdTime ?? null,\n    airtableNativeAttachmentCount: nativeAttachments ? nativeAttachments.length : null,\n    expectedAttachmentCount: finalized.expectedAttachmentCount,\n    airtableResponse: raw,\n    airtableError: recordId ? null : String(raw.error ?? 'Airtable returned no record ID.'),\n  },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -40
+      ],
+      "id": "9e0f1dbe-4d76-461f-b6c4-f3479ed9c9ab",
+      "name": "Normalize Airtable Write",
+      "notes": "Normalizes the single active HOT/COLD Airtable response and verifies native attachment count. The final gate also reads the mandatory Odoo result from its earlier first-hop node."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const airtable = $json ?? {};\nconst odoo = $('Normalize Odoo Delivery').first().json ?? {};\nconst errors = [];\n\nif (airtable.workflowRevision !== 'WL-ATTACHMENTS-V5.4') {\n  errors.push(`Unexpected Airtable workflow revision: ${airtable.workflowRevision ?? 'MISSING'}`);\n}\nif (odoo.workflowRevision !== 'WL-ATTACHMENTS-V5.4') {\n  errors.push(`Unexpected Odoo workflow revision: ${odoo.workflowRevision ?? 'MISSING'}`);\n}\nif (airtable.airtableStatus !== 'success' || !airtable.airtableRecordId) {\n  errors.push(`Airtable write failed: ${airtable.airtableError ?? 'record ID missing'}`);\n}\nif (airtable.airtableNativeAttachmentCount !== airtable.expectedAttachmentCount) {\n  errors.push(`Airtable native attachment count mismatch: expected ${airtable.expectedAttachmentCount}, received ${airtable.airtableNativeAttachmentCount ?? 'UNKNOWN'}`);\n}\nif (odoo.odooStatus !== 'success' || !odoo.odooWebLeadId) {\n  errors.push(`Odoo delivery failed (HTTP ${odoo.odooHttpStatus ?? 'UNKNOWN'}): ${odoo.odooError ?? 'web_lead_id missing'}`);\n}\n\nif (errors.length) {\n  throw new Error(`WL-ATTACHMENTS-V5.4 final production gate failed: ${errors.join(' | ')}`);\n}\n\nreturn {\n  json: {\n    workflowRevision: 'WL-ATTACHMENTS-V5.4',\n    status: 'success',\n    leadId: airtable.leadId,\n    airtableRecordId: airtable.airtableRecordId,\n    airtableNativeAttachmentCount: airtable.airtableNativeAttachmentCount,\n    odooStatus: odoo.odooStatus,\n    odooHttpStatus: odoo.odooHttpStatus,\n    odooWebLeadId: odoo.odooWebLeadId,\n    odooLeadId: odoo.odooLeadId,\n    odooDecision: odoo.odooDecision,\n    odooState: odoo.odooState,\n  },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2460,
+        -40
+      ],
+      "id": "34302a52-92bb-4543-ad96-08919e35b73e",
+      "name": "Final Production Gate",
+      "notes": "Fail-closed terminal gate. Odoo ingestion is attempted first for every Cognito lead, then Airtable HOT/COLD persistence is validated. Success requires both systems."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const raw = $json ?? {};\nconst form = $('Webhook').first().json.body ?? {};\nconst batch = $('Finalize Attachment Batch').first().json ?? {};\nconst clone = (value) => JSON.parse(JSON.stringify(value ?? {}));\nconst output = raw.output && typeof raw.output === 'object' ? clone(raw.output) : {};\nconst fallbackUsed = !raw.output || typeof raw.output !== 'object';\nconst normalized = output.normalized && typeof output.normalized === 'object' ? clone(output.normalized) : {};\nconst rows = Array.isArray(batch.attachmentAnalysis) ? batch.attachmentAnalysis : [];\nconst successfulImages = rows.filter((row) => row.analysis_type === 'image' && row.analysis_status === 'success' && row.analysis_data).map((row) => row.analysis_data);\nconst successfulDocs = rows.filter((row) => row.analysis_type === 'document' && row.analysis_status === 'success' && row.analysis_data).map((row) => row.analysis_data);\nconst failedAnalyses = rows.filter((row) => row.analysis_status === 'failed');\nconst lower = (value) => String(value ?? '').toLowerCase();\nconst joined = (...values) => values.flat(Infinity).filter((v) => v !== null && v !== undefined).map((v) => typeof v === 'object' ? JSON.stringify(v) : String(v)).join(' ');\nconst formText = joined(form.WhatIsIt, form.WhatMaterialIsItMadeFrom, form.AreThereAnyContaminants);\nconst imageText = joined(successfulImages);\nconst documentText = joined(successfulDocs);\nconst allEvidence = lower(joined(formText, imageText, documentText));\nconst imageColorEvidence = lower(joined(successfulImages.map((d) => d.color), successfulImages.map((d) => d.notes)));\nconst corrections = [];\nconst reasons = Array.isArray(output.reasons) ? [...output.reasons] : [];\nlet clarifications = Array.isArray(output.clarification_requests) ? [...output.clarification_requests] : [];\n\nconst parseWeight = (value) => {\n  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;\n  const text = String(value ?? '').replace(/,/g, '');\n  const matches = [...text.matchAll(/(?:^|\\D)(\\d+(?:\\.\\d+)?)(?=\\D|$)/g)].map((m) => Number(m[1])).filter((n) => Number.isFinite(n) && n > 0);\n  return matches.length ? Math.max(...matches) : 0;\n};\nconst agentWeight = parseWeight(normalized.per_load_qty_lbs);\nconst quantityWeight = parseWeight(form.WhatIsTheQuantity);\nconst formWeight = parseWeight(form.WeightPerLoad);\nconst weight = agentWeight || quantityWeight || formWeight || 0;\nconst businessPresent = Boolean(String(form.YourBusinessCompanyName ?? '').trim());\nconst plasticPresent = /plastic|bopp|polypropylene|polyethylene|hdpe|ldpe|lldpe|pet|pvc|ps|abs|nylon|acrylic/i.test(joined(form.WhatMaterialIsItMadeFrom, form.WhatIsIt, documentText));\n\nif (/\\bbopp\\b|biaxially oriented polypropylene|poly\\s*\\(propylene\\)|\\bpolypropylene\\b/i.test(joined(form.WhatIsIt, documentText))) {\n  if (normalized.polymer !== 'PP') corrections.push(`polymer:${normalized.polymer ?? 'MISSING'}->PP`);\n  normalized.polymer = 'PP';\n}\n\nif (/trim scrap|edge trim|production scrap|off[- ]?spec|purge|sprues?|runners?/i.test(joined(form.WhatIsIt))) {\n  if (normalized.type !== 'Post Industrial') corrections.push(`type:${normalized.type ?? 'MISSING'}->Post Industrial`);\n  normalized.type = 'Post Industrial';\n}\n\nconst cleanlinessText = lower(form.AreThereAnyContaminants);\nif (/\\bclean\\b/.test(cleanlinessText) && !/not clean|unclean/.test(cleanlinessText)) normalized.cleanliness = 'Clean';\nelse if (/minor|mixed|some contamination/.test(cleanlinessText)) normalized.cleanliness = 'Mixed';\nelse if (/dirty|heavy contamination|contaminated/.test(cleanlinessText)) normalized.cleanliness = 'Dirty';\n\nconst baleImageCount = successfulImages.filter((d) => /\\bbales?\\b|\\bbaled\\b|tightly compressed/i.test(joined(d.physical_form, d.packaging, d.quantity_observation, d.notes))).length;\nconst explicitAlternativePackaging = successfulImages.filter((d) => /\\bgaylords?\\b|\\bsupersacks?\\b|\\bcrates?\\b|\\bloose\\b/i.test(joined(d.packaging))).length;\nconst baleConfirmed = baleImageCount >= 2 && explicitAlternativePackaging === 0;\nconst filmConfirmed = /\\bfilm\\b|\\bbopp\\b/i.test(joined(form.WhatIsIt, documentText, successfulImages.map((d) => d.physical_form)));\n\nif (baleConfirmed) {\n  if (normalized.packaging !== 'Bales') corrections.push(`packaging:${normalized.packaging ?? 'MISSING'}->Bales`);\n  normalized.packaging = 'Bales';\n  if (filmConfirmed) {\n    if (normalized.form !== 'Film Bales') corrections.push(`form:${normalized.form ?? 'MISSING'}->Film Bales`);\n    normalized.form = 'Film Bales';\n  }\n}\n\nif (/multicolou?r|mixed|colored pieces|printed/i.test(joined(imageColorEvidence, form.WhatIsIt))) {\n  if (normalized.color !== 'Mixed') corrections.push(`color:${normalized.color ?? 'MISSING'}->Mixed`);\n  normalized.color = 'Mixed';\n}\n\nconst enumMap = {\n  polymer: ['PP','HDPE','LDPE','LLDPE','PET','PVC','PS','ABS','PC','Nylon','Acrylic','Other','Unclear'],\n  form: ['Pellets','Regrind','Flake','Film Bales','Film Rolls','Logs/Agglo','Purge','Parts','Rigid Bales','Pallet Stacks','Loose','Floorsweep','Unclear'],\n  type: ['Post Industrial','Post Commercial','Post Consumer','Virgin','Repro','Unclear'],\n  color: ['Natural','Mixed','White','Black','Green','Blue','Red','Yellow','Gray','Custom','Unknown'],\n  cleanliness: ['Clean','Mixed','Dirty','Unclear'],\n  packaging: ['Bales','Supersacks','Gaylords','Loose','Crates','Other','Unclear'],\n};\nfor (const [field, allowed] of Object.entries(enumMap)) {\n  const fallback = field === 'color' ? 'Unknown' : 'Unclear';\n  if (!allowed.includes(normalized[field])) {\n    corrections.push(`${field}:${normalized[field] ?? 'MISSING'}->${fallback}`);\n    normalized[field] = fallback;\n  }\n}\n\nnormalized.per_load_qty_lbs = weight;\nnormalized.loads_per_week = Number.isFinite(Number(normalized.loads_per_week)) ? Number(normalized.loads_per_week) : 0;\nnormalized.loads_per_month = Number.isFinite(Number(normalized.loads_per_month)) ? Number(normalized.loads_per_month) : 0;\nnormalized.origin_city = String(normalized.origin_city ?? form.LocationOfPickUpCityState ?? '').trim() || 'Unclear';\nnormalized.origin_state = String(normalized.origin_state ?? '').trim() || 'Unclear';\n\nif (normalized.packaging !== 'Unclear') clarifications = clarifications.filter((q) => !/packaging|bales|gaylords|wrapped pallets/i.test(String(q)));\nif (normalized.form !== 'Unclear') clarifications = clarifications.filter((q) => !/material considered|material form|film bales|regrind\\/flake/i.test(String(q)));\nif (!clarifications.some((q) => /ongoing|one-time|frequency/i.test(String(q)))) clarifications.push('Confirm if material is ongoing or a one-time load');\nif (failedAnalyses.length && !clarifications.some((q) => /manual review.*attachment|attachment analysis/i.test(String(q)))) {\n  clarifications.push(`Manual review required for ${failedAnalyses.length} attachment analysis failure(s)`);\n}\nclarifications = [...new Set(clarifications.map((q) => String(q).trim()).filter(Boolean))];\n\nlet decision = ['Hot','Unclear Hot','Cold'].includes(output.decision) ? output.decision : null;\nlet target = ['HOT','COLD'].includes(output.airtable_target) ? output.airtable_target : null;\nif (!decision || !target) {\n  if (weight > 0 && weight < 8000) {\n    decision = 'Cold';\n    target = 'COLD';\n  } else if (weight >= 10000 && businessPresent && plasticPresent) {\n    decision = 'Unclear Hot';\n    target = 'HOT';\n  } else {\n    decision = 'Unclear Hot';\n    target = 'HOT';\n  }\n}\nif (decision === 'Unclear Hot') target = 'HOT';\nif (decision === 'Cold') target = 'COLD';\nif (decision === 'Hot') target = 'HOT';\n\nif (baleConfirmed && filmConfirmed && !reasons.some((r) => /bale/i.test(String(r)))) reasons.push('Multiple images consistently confirm film material shipped in bales.');\nif (fallbackUsed) reasons.push('Automated agent output was unavailable; deterministic safe-review normalization was applied.');\nif (!reasons.length) reasons.push('Manual review required; deterministic normalization preserved the lead.');\n\nlet notes = String(normalized.notes ?? '').trim();\nif (decision === 'Unclear Hot' && !/Unclear Classification/i.test(notes)) notes = `Unclear Classification; ${notes}`.replace(/;\\s*$/, '');\nif (corrections.length) notes = `${notes}${notes ? '; ' : ''}Evidence alignment applied: ${corrections.join(', ')}`;\nif (failedAnalyses.length) notes = `${notes}${notes ? '; ' : ''}${failedAnalyses.length} attachment analysis failure(s) retained for manual review`;\nnormalized.notes = notes || 'Manual review required.';\n\nreturn {\n  json: {\n    output: {\n      decision,\n      reasons: [...new Set(reasons.map((r) => String(r).trim()).filter(Boolean))],\n      clarification_requests: clarifications,\n      normalized,\n      email_template: String(output.email_template ?? (target === 'HOT' ? 'Qualified A' : 'Rejection B')),\n      airtable_target: target,\n    },\n    alignment: {\n      workflowRevision: 'WL-ATTACHMENTS-V5.4',\n      fallbackUsed,\n      baleImageCount,\n      baleConfirmed,\n      filmConfirmed,\n      failedAnalysisCount: failedAnalyses.length,\n      corrections,\n    },\n  },\n};",
+        "notice": ""
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        -40
+      ],
+      "id": "15fcf94a-b12d-4b8e-8bd0-abe9e65fad42",
+      "name": "Validate & Align Lead Output",
+      "notes": "Validates and deterministically aligns AI output with form, image, and document evidence. Complex quantity text preserves the agent-normalized numeric estimate instead of collapsing to zero."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "POST Raw Cognito to Production Odoo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create folder": {
+      "main": [
+        [
+          {
+            "node": "Share folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share folder": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Split Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Split Attachments": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Attachments": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Current Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Current Attachment": {
+      "main": [
+        [
+          {
+            "node": "Restore Original Filename",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Original Filename": {
+      "main": [
+        [
+          {
+            "node": "Upload Current Attachment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Image?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Current Attachment": {
+      "main": [
+        [
+          {
+            "node": "Normalize Drive Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Drive Upload": {
+      "main": [
+        [
+          {
+            "node": "Join Current Upload + Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Image?": {
+      "main": [
+        [
+          {
+            "node": "Analyze Image Binary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Image Binary": {
+      "main": [
+        [
+          {
+            "node": "Normalize Image Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Image Analysis": {
+      "main": [
+        [
+          {
+            "node": "Join Current Upload + Analysis",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Is PDF?": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Unsupported Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "PDF Text Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF Text Available?": {
+      "main": [
+        [
+          {
+            "node": "Analyze PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Unreadable PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Normalize PDF Text Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize PDF Text Analysis": {
+      "main": [
+        [
+          {
+            "node": "Join Current Upload + Analysis",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Normalize Unreadable PDF": {
+      "main": [
+        [
+          {
+            "node": "Join Current Upload + Analysis",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Normalize Unsupported Analysis": {
+      "main": [
+        [
+          {
+            "node": "Join Current Upload + Analysis",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Join Current Upload + Analysis": {
+      "main": [
+        [
+          {
+            "node": "Build Attachment Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Attachment Result": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Finalize Attachment Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Attachment Batch": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Validate & Align Lead Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If HOT->True": {
+      "main": [
+        [
+          {
+            "node": "Add HOT to Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add COLD to Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add HOT to Airtable": {
+      "main": [
+        [
+          {
+            "node": "Normalize Airtable Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add COLD to Airtable": {
+      "main": [
+        [
+          {
+            "node": "Normalize Airtable Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Airtable Write": {
+      "main": [
+        [
+          {
+            "node": "Final Production Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI PDF Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze PDF Text",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Align Lead Output": {
+      "main": [
+        [
+          {
+            "node": "If HOT->True",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST Raw Cognito to Production Odoo": {
+      "main": [
+        [
+          {
+            "node": "Normalize Odoo Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Odoo Delivery": {
+      "main": [
+        [
+          {
+            "node": "Create folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "tags": [],
+  "versionId": "c3cbe3c2-b6d6-4e04-87a3-8f0d3a98bccc",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
