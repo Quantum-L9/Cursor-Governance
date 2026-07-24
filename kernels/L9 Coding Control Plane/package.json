@@ -1,0 +1,64 @@
+{
+  "name": "@l9/assurance-platform-release",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Trust, evidence-admission, control-evaluation, and attestation plane for the Quantum-L9 CI constellation.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "pack:dry-run": "npm pack --workspaces --dry-run",
+    "assurance:docs": "node -e \"console.log('Root assurance architecture documentation is present.')\""
+  },
+  "keywords": [
+    "assurance",
+    "ci",
+    "evidence",
+    "attestation",
+    "policy",
+    "controls",
+    "governance",
+    "provenance",
+    "quantum-l9"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Quantum-L9/l9-assurance.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Quantum-L9/l9-assurance/issues"
+  },
+  "homepage": "https://github.com/Quantum-L9/l9-assurance#readme",
+  "files": [
+    "README.md",
+    "AGENTS.md",
+    "MANIFEST.md",
+    "MANIFEST.sha256",
+    "ARCHITECTURE.md",
+    "SPECIFICATION.md",
+    "ROADMAP.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "ai-control-plane",
+    "docs",
+    "packages"
+  ],
+  "publishConfig": {
+    "access": "restricted",
+    "provenance": true
+  }
+}

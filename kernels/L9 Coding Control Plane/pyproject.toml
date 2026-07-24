@@ -1,0 +1,113 @@
+[build-system]
+requires = ["hatchling>=1.25,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "l9-assurance-contracts"
+version = "1.0.0"
+description = "Python tooling and generated protocol bindings for the Quantum-L9 assurance trust plane."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [
+  { name = "Quantum-L9" }
+]
+keywords = [
+  "assurance",
+  "ci",
+  "evidence",
+  "attestation",
+  "policy",
+  "controls",
+  "provenance"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed"
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Quantum-L9/l9-assurance"
+Repository = "https://github.com/Quantum-L9/l9-assurance"
+Issues = "https://github.com/Quantum-L9/l9-assurance/issues"
+
+[tool.hatch.build]
+include = [
+  "README.md",
+  "AGENTS.md",
+  "MANIFEST.md",
+  "MANIFEST.sha256",
+  "ARCHITECTURE.md",
+  "SPECIFICATION.md",
+  "ROADMAP.md",
+  "SECURITY.md",
+  "CONTRIBUTING.md",
+  "CHANGELOG.md",
+  "ai-control-plane/**",
+  "docs/**"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = []
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+  "--strict-config",
+  "--strict-markers"
+]
+testpaths = [
+  "tests"
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  "node_modules",
+  "dist",
+  "build"
+]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "UP",
+  "B",
+  "SIM",
+  "RUF"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+show_error_codes = true
+exclude = [
+  "node_modules",
+  "dist",
+  "build"
+]
+
+[tool.coverage.run]
+branch = true
+source = []
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 0
