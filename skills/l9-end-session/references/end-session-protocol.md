@@ -41,6 +41,46 @@ python3 agents/cursor/cursor_memory_client.py write \
   --kind pickup_context
 ```
 
+### 1b. MEMORY-BANK FALLBACK (Graphiti/memory client unreachable)
+
+If `cursor_memory_client.py` / Graphiti is unreachable, fall back to the T0
+`memory-bank/` files directly in the **target repo being worked on**
+(`$CURSOR_PROJECT_DIR`) — never in `$GLOBAL_COMMANDS` / the Cursor-Governance
+clone. See `MEMORY_BANK_POLICY.md`.
+
+1. **Read current files first** — `activeContext.md`, `tasks.md`,
+   `progress.md`, `tech-debt.md`. If another agent/thread is actively
+   writing to them concurrently, wait for it to finish before editing.
+2. **Append, never overwrite** — add a new dated section per file. Do not
+   truncate or replace existing content; a full-file rewrite destroys any
+   detail a prior session wrote manually. If `activeContext.md` has grown
+   past ~1 screen, a manual consolidation pass may rewrite the "current
+   state" summary as a fresh top section, but must not delete prior
+   sessions' appended history outright (`85-workflow-state-bridge.mdc`).
+3. **Check gitignore before assuming it's trackable:**
+   ```bash
+   git -C "$CURSOR_PROJECT_DIR" check-ignore -q memory-bank/activeContext.md
+   ```
+   If this exits `0` (ignored — commonly this machine's global
+   `~/.gitignore_global`, not the repo's own `.gitignore`), append a
+   repo-local negation to that repo's `.gitignore` (after any blanket ignore
+   rule already in the file):
+   ```
+   !/memory-bank/
+   !/memory-bank/**
+   ```
+   Then re-run `git check-ignore` to confirm it now resolves as trackable.
+4. **Push without touching unrelated in-flight work** — if the target repo's
+   current branch has a large unrelated uncommitted diff, do not commit on
+   top of it. Create an isolated `git worktree` off a fresh copy of the
+   repo's default branch, copy the `memory-bank/` files + `.gitignore`
+   negation there, commit, push, and open a normal PR.
+
+`ops/hooks/graphiti-session-end.sh` automates steps 2–3 on every automatic
+`sessionEnd` fire (`ensure_memory_bank_trackable()` + append-only write to
+`activeContext.md`); this section documents the same contract for the manual
+`/end-session` flow and for any repo where the automatic hook isn't wired.
+
 ### 2. EXTRACT LEARNINGS (canonical memory pipeline)
 
 Session learnings MUST be written through the **canonical memory path** so they get governance, audit, DAG (packet_store → graph_sync → semantic_embed → insights), and persistence. See `docs/MEMORY_PIPELINE_MAP.md`.
