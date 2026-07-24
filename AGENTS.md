@@ -188,6 +188,12 @@ python3 ops/graphiti/graphiti_memory_client.py health   # degraded Graphiti is e
   Both directions are commit-preserving: the pull is fast-forward-only, the push
   rebases and aborts rather than committing over a conflict. Never hand-edit
   files in a way that assumes a different sync model.
+- The session-end push is gated by `ops/scripts/backup_gate.sh`, because
+  `sessionEnd` fires once per composer conversation (aborted chats and window
+  closes included) and would otherwise commit a tree an agent is still writing.
+  If a backup you expected did not happen, read `backup.log` — every skip is
+  logged with its reason. Do not weaken the gate to force a backup through; run
+  `make backup` (ungated) or set `GOVERNANCE_BACKUP_FORCE=1`.
 
 ---
 

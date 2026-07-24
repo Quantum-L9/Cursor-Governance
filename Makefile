@@ -1,11 +1,11 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test path-lint precommit backup push graphiti-health lint venv
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
 WS ?= $(CURDIR)
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test path-lint precommit backup push graphiti-health lint venv"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv"
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -46,6 +46,10 @@ ide-profile:
 ## Fixture selftest for the IDE profile installer (writes only under $$TMPDIR)
 ide-profile-test:
 	bash ops/scripts/test_install_ide_profile.sh
+
+## Fixture selftest for the sessionEnd backup gate (writes only under $$TMPDIR)
+backup-gate-test:
+	bash ops/scripts/test_backup_gate.sh
 
 ## Fail if any script/rule/hook hardcodes a /Users or /home path instead of $$HOME
 path-lint:

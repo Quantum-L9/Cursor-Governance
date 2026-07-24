@@ -95,9 +95,17 @@ bash .cursor-commands/ops/scripts/backup_to_github.sh
 **Automatic (every session end):**
 
 1. `sessionEnd` hook → `ops/hooks/session_end_governance_backup.sh`
-2. Log: `~/.cursor-governance/backup.log`
+2. Gate: `ops/scripts/backup_gate.sh` decides whether this firing is a real
+   boundary. `sessionEnd` fires once per composer conversation — including
+   aborted chats and window closes — so the hook is filtered, debounced
+   (`GOVERNANCE_BACKUP_MIN_INTERVAL`, default 900s) and held off while the
+   working tree is still being written (`GOVERNANCE_BACKUP_QUIET_SECONDS`,
+   default 120s). A skip is logged, never silent.
+3. Log: `~/.cursor-governance/backup.log`
 
 Skip one session: `GOVERNANCE_BACKUP_SKIP=1`
+Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
+`backup_to_github.sh` / `make backup` never touches the gate at all)
 
 ---
 

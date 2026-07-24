@@ -17,6 +17,7 @@ SCAN_FILES=(
   "$GLOBAL_COMMANDS/ops/scripts/setup_workspace_symlinks.sh"
   "$GLOBAL_COMMANDS/ops/scripts/validate_governance_symlinks.sh"
   "$GLOBAL_COMMANDS/ops/scripts/install_ide_profile.sh"
+  "$GLOBAL_COMMANDS/ops/scripts/backup_gate.sh"
 )
 
 pass() { echo "  OK: $1"; }

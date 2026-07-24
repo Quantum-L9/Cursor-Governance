@@ -109,6 +109,7 @@ directory listing, including this one.
 - [`ops/scripts/setup_workspace_symlinks.sh`](ops/scripts/setup_workspace_symlinks.sh) — install symlinks in a workspace
 - [`ops/scripts/validate_governance_symlinks.sh`](ops/scripts/validate_governance_symlinks.sh) — verify symlink wiring
 - [`ops/scripts/backup_to_github.sh`](ops/scripts/backup_to_github.sh) — commit + push SSOT to GitHub
+- [`ops/scripts/backup_gate.sh`](ops/scripts/backup_gate.sh) — gate the sessionEnd backup (reason filter, debounce, activity guard)
 
 ## 🚀 Usage
 
