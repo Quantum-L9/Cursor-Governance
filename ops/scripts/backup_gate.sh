@@ -17,6 +17,7 @@
 #
 # Env:
 #   GOVERNANCE_BACKUP_FORCE=1        bypass every check below
+#   GOVERNANCE_BACKUP_SKIP=1         suppress this backup (FORCE outranks it)
 #   GOVERNANCE_BACKUP_MIN_INTERVAL   debounce window, seconds (default 900)
 #   GOVERNANCE_BACKUP_QUIET_SECONDS  required idle time since last write (default 120)
 #   GOVERNANCE_BACKUP_STAMP          last-success stamp (default $HOME/.cursor/governance-backup.last)
@@ -38,6 +39,15 @@ fi
 if [ "${GOVERNANCE_BACKUP_FORCE:-0}" = "1" ]; then
   echo "PROCEED: GOVERNANCE_BACKUP_FORCE=1"
   exit $PROCEED
+fi
+
+# backup_to_github.sh also honors this variable, but it signals the suppression by
+# exiting 0 — indistinguishable from a successful backup, so the hook writes the
+# success stamp and the debounce then swallows the *next real* backup too. The
+# decision has to land here, where a skip never touches the stamp.
+if [ "${GOVERNANCE_BACKUP_SKIP:-0}" = "1" ]; then
+  echo "SKIP: GOVERNANCE_BACKUP_SKIP=1"
+  exit $SKIP
 fi
 
 # --- sessionEnd payload ------------------------------------------------------

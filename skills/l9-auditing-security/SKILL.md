@@ -81,7 +81,9 @@ Perform a systematic code-level security review: secrets exposure, auth/authz, i
 
 ## Resource Map
 
-No `references/` folder — audit checklist and report format live in this file.
+Audit checklist and report format live in this file.
+
+- [references/credential-access-policy.md](references/credential-access-policy.md) — least-privilege, credential handling, redaction, rotation-on-exposure.
 
 ## Validation
 

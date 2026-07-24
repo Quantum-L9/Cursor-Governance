@@ -1,0 +1,81 @@
+---
+description: "Verification gates around any action: verify before acting, evidence before claiming success, stop on failure."
+alwaysApply: true
+---
+
+<!-- L9_META
+l9_schema: 1
+origin: migrated-from profiles/session-startup-protocol.md sections F/G/H/I
+tags: [verification, evidence, failure-handling, anti-patterns]
+status: active
+/L9_META -->
+
+# Pre-Action Verification
+
+Three gates: verify before acting, prove before claiming, stop on failure.
+
+Related: `92-learned-lessons.mdc` (search-before-creating, never-claim-fixed), `60-anti-patterns.mdc`
+(false validation, dishonest status).
+
+## Gate 1 — Before acting
+
+Before any operation that writes, deploys, or calls an external system:
+
+- **Read the real thing.** Schema, config, existing implementation — read it; do not recall it.
+- **Search first.** If creating something, search for an existing version (see `92-learned-lessons.mdc`).
+- **Credentials come from the environment.** Read from `.env` / secret store. Never use a value
+  pasted earlier in the conversation, never hardcode, never echo the value back.
+- **Confirm intent when the mode is ambiguous.** "Analyze and propose" and "execute the fix" are
+  different requests. When both readings are live, ask which — do not pick.
+
+## Gate 2 — After success: evidence
+
+A completed operation is reported with evidence, not assertion:
+
+```markdown
+## ✅ SUCCESS VERIFICATION
+
+**Operation:** what was completed
+**Evidence:** command output, exit code, test result, file path
+
+**Standards met**
+- [ ] Production-ready — no placeholders or stubs
+- [ ] Error handling present
+- [ ] Documentation updated
+- [ ] Tests passing (if applicable)
+- [ ] Schema compliant (if a data operation)
+
+**Ready for next step:** YES / NO
+```
+
+Unchecked boxes are stated, not omitted. "Tests NOT RUN" is an acceptable report; silence is not.
+
+## Gate 3 — On failure: stop
+
+```markdown
+## 🚨 FAILURE ANALYSIS
+
+**What failed:** the specific error
+**Why:** root cause, not restatement of the error
+**Tried before:** YES / NO
+**Correct approach:** what to do instead
+```
+
+Then:
+
+1. **Stop.**
+2. **Do not retry the same approach.** A second identical attempt is not a fix.
+3. **Check recorded lessons** for a known solution before improvising.
+4. If the root cause is unclear after one diagnostic pass, **report and ask** rather than iterating
+   blindly.
+
+## Anti-patterns
+
+| ❌ Wrong | ✅ Right |
+|---|---|
+| "Update this" → immediately edits | Read current state, verify constraints, then edit |
+| Reuses a credential from earlier chat | Reads from env; never echoes the value |
+| Invents a field or column | Reads the schema; works within it or says it is locked |
+| Creates a new script | Searches first; adapts what exists |
+| "Fixed" with no output shown | Shows the passing command |
+| Retries the failed command unchanged | Stops, diagnoses, reports |

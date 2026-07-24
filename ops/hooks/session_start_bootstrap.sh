@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # sessionStart bootstrap — works before repo symlinks exist.
 # Resolves GlobalCommands from $HOME/Dropbox, auto-wires governance, Graphiti health, memory prefetch.
+# Also publishes GOVERNANCE_BACKUP_SKIP to the rest of the hook chain when a
+# .governance-build-lock marker exists in the governance clone.
 # Installed as a REAL file at ~/.cursor/hooks/session-start-bootstrap.sh (not a symlink).
 set -uo pipefail
 
@@ -57,6 +59,7 @@ print(json.dumps({
     "env": {
         "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
         "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
+        "GOVERNANCE_BACKUP_SKIP": os.environ.get("GOVERNANCE_BACKUP_SKIP", "0"),
     },
     "additional_context": """${combined}""",
 }))
@@ -69,6 +72,18 @@ if ! resolve_global_commands; then
 fi
 
 GC="$GLOBAL_COMMANDS"
+
+# Build-in-progress kill switch. While the marker file exists, every sessionEnd in
+# every window skips its governance backup, so a long build is never snapshotted
+# half-written. backup_gate.sh returns exit 10 for this, which leaves the debounce
+# stamp untouched — the first sessionEnd after the marker is removed still backs up.
+#   touch "$GC/.governance-build-lock"   # arm
+#   rm    "$GC/.governance-build-lock"   # disarm
+if [ -e "$GC/.governance-build-lock" ]; then
+  export GOVERNANCE_BACKUP_SKIP=1
+  PARTS+=("backup: SKIPPED — .governance-build-lock present")
+fi
+
 SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"

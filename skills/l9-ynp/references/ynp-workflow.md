@@ -2,7 +2,8 @@
 l9_schema: 1
 parent: l9-ynp
 origin: migrated-from ynp command v8.1.0
-tags: [ynp, next-action, confidence, batching]
+sources: [profiles/ynp_mode.md]
+tags: [ynp, next-action, confidence, batching, packet-completeness]
 status: active
 /L9_META -->
 
@@ -69,6 +70,53 @@ SCAN:
 1. {alt1}
 2. {alt2}
 ```
+
+## Closing block
+
+When operating in YNP mode, end the response with a next-prompt block the user can accept verbatim:
+
+```markdown
+## 🚀 Your Next Prompt
+
+{next prompt, batching the related steps into one runnable instruction}
+
+Reply Y to use this as your next prompt!
+```
+
+The prompt SHOULD batch related steps into a single instruction — that is the same batching rule as
+above (3 TODOs in one GMP beats 3 runs), expressed as a prompt rather than a plan. It MUST reference
+the specific files or deliverables it acts on.
+
+### Reply interpretation
+
+| Reply | Meaning |
+|---|---|
+| `Y` | User accepted the next prompt — proceed with it |
+| `Y + edit` | Parse the edit, regenerate the modified prompt, proceed |
+| `N` | Rejected — use the stated reason to produce a better prompt |
+
+`Y` authorizes the *prompt*, not the operations inside it. Destructive actions, commits, and pushes
+still require their own explicit approval.
+
+## Do not re-ask confirmed inputs
+
+Once the user has confirmed a value, decision, or constraint, do not ask again unless they reset it.
+No revalidation, no "just to confirm", no duplicate questions.
+
+**Boundary:** this eliminates redundant *questions*, not approval *gates*. Commit, push, delete, and
+protected-file approvals are required every time regardless of prior confirmations.
+
+## Packet completeness
+
+When the deliverable is structured content, deliver the whole packet rather than a fragment:
+
+- the code or config file(s)
+- `README.md` — what it is and how to run it
+- a summary or explanation of decisions
+- schema outline, where a schema exists
+- sample or test data, where applicable
+
+Ship complete packages, not fragments. Note which packet elements were intentionally omitted.
 
 ## Scope boundary
 

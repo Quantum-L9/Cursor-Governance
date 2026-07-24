@@ -103,3 +103,19 @@ tiers:
       reason: "obsolete duplicate executor folder; prefer Cursor-native skill instructions and optional skill-local scripts only when needed"
     - item: "commands/dora-commands/"
       reason: "unwired legacy DORA commands; archive or rebuild only if aligned to the current stack"
+
+reasoning_routing:
+  purpose: "Which l9-structured-reasoning reference applies to which task class."
+  sources: ["profiles/orchestrator.md", "profiles/reasoning_l9.md"]
+  note: "Advisory routing context for the model, not an execution order. No orchestrator process exists."
+  routes:
+    - task_class: "L9 platform work — kernel, executor, memory substrate, tool dispatch, approval gates"
+      reference: "l9-structured-reasoning/references/reasoning-protocol.md#l9-platform-invariants"
+    - task_class: "Tool, library, API, or architecture selection"
+      reference: "l9-structured-reasoning/references/technical-operations-reasoning.md"
+    - task_class: "Multi-document corpus analysis — gaps, coherence, dependency mapping"
+      reference: "l9-structured-reasoning/references/document-corpus-reasoning.md"
+    - task_class: "Depth selection for a single problem"
+      reference: "l9-structured-reasoning/references/reasoning-modes.md"
+    - task_class: "Strategic angle, only when the user explicitly requests one"
+      reference: "l9-structured-reasoning/references/persona-lenses.md"

@@ -78,6 +78,9 @@ Load references only when relevant:
 - [references/validation-checklist.md](references/validation-checklist.md) — pass/fail gates before delivery
 - [references/systematic-debugging.md](references/systematic-debugging.md) — reproduce → isolate → verify
 - [references/best-of-n-parallel.md](references/best-of-n-parallel.md) — parallel best-of-n strategies
+- [references/technical-operations-reasoning.md](references/technical-operations-reasoning.md) — tool/API/architecture selection, MCP tool enumeration
+- [references/document-corpus-reasoning.md](references/document-corpus-reasoning.md) — multi-document analysis: dependency map, gap, coherence, insight
+- [references/persona-lenses.md](references/persona-lenses.md) — six strategic lenses; opt-in only
 
 ## Validation
 

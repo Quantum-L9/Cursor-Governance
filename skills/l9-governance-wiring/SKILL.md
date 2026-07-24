@@ -37,6 +37,7 @@ Wire governance workspace symlinks, run component wire DAG, confirm wiring audit
 - [references/governance-check.md](references/governance-check.md)
 - [references/governance-backup.md](references/governance-backup.md)
 - [references/rules-inventory.md](references/rules-inventory.md)
+- [references/operational-health.md](references/operational-health.md) — the two live health checks, baseline reading, no-weakening rule
 
 ## Authority Order
 

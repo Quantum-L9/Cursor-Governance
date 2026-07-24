@@ -47,6 +47,7 @@ Operate CI/CD for the current repo: check pipeline status, fix failing gates, en
 - [references/ci-policy-authoring.md](references/ci-policy-authoring.md) — regression policy authoring (no code fixes).
 - [references/parallel-ci-triage.md](references/parallel-ci-triage.md) — parallel subagents for independent job failures.
 - [references/plasticos-ci-adapter.md](references/plasticos-ci-adapter.md) — `make pr-check`, tier jobs, push workflow.
+- [references/workflow-governance.md](references/workflow-governance.md) — validation chain ordering: schema → credentials → environment → consistency.
 
 ## Validation
 

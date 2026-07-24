@@ -38,6 +38,7 @@ Load [references/forge-workflow.md](references/forge-workflow.md) for execution 
 ## Resource Map
 
 - [references/forge-workflow.md](references/forge-workflow.md) — scope lock, GMP batch, deliverables, stop conditions.
+- [references/parallel-batch-and-evolution.md](references/parallel-batch-and-evolution.md) — subagent batch fan-out (5+ independent items) and folding recurring feedback into governance.
 
 ## Validation
 

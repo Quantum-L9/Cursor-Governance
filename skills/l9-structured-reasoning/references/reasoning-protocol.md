@@ -13,7 +13,8 @@ sources:
   - 01_reasoning_engine.kernel.yaml
   - 07_reasoning_engine_extended.kernel.yaml
   - reasoning_think_strategy.kernel.yaml
-  - harvested: core-thinking-mode Block 8 (Suite-5 legacy, anti-stuck protocol)
+  - harvested: core-thinking-mode Block 8 (anti-stuck protocol)
+  - profiles/reasoning_l9.md (L9 platform invariants section)
 --- /SKILL_META ---
 
 Purpose:
@@ -187,6 +188,23 @@ Before marking complete, fill `references/success-metrics-template.md`.
 - 3–5 measurable acceptance criteria
 - Each criterion names verification method
 - Quality gates tied to repo CI when applicable
+
+## L9 platform invariants (when reasoning about the L9 stack)
+
+When the subject is the L9 Secure AI OS itself — kernel loading, agent execution, memory substrate,
+tool dispatch with approval gates — add an explicit **invariants** step between Block 2 (Context) and
+Block 3 (Decompose): name the non-negotiables before decomposing.
+
+- Determinism where required; idempotent writes; no silent failures; audit trail for high-risk actions.
+- Name the subsystem touched (executor, memory, tools, orchestration, infra) and the tier rules that
+  apply to it.
+- Multi-step work follows **Phase 0 lock → implement → validate**.
+
+Anti-patterns specific to this context:
+
+- Omitting error handling or recovery semantics for an operation that must be auditable.
+- Treating "worked once" as sufficient where idempotency or replay is required.
+- Expanding scope across kernel/executor/memory boundaries without a locked plan.
 
 ## Invariants
 

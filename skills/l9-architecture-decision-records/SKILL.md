@@ -123,7 +123,9 @@ docs/decisions/
 
 ## Resource Map
 
-No `references/` folder — template and workflow live in this file. Check repo for existing `docs/decisions/`, `docs/adr/`, or `ADR-*.md` patterns before creating files.
+- [references/artifact-versioning-policy.md](references/artifact-versioning-policy.md) — semver for governance artifacts, the MAJOR test, archival rules.
+
+Template and workflow live in this file. Check repo for existing `docs/decisions/`, `docs/adr/`, or `ADR-*.md` patterns before creating files.
 
 ## Validation
 

@@ -18,6 +18,7 @@ trap 'rm -rf "$FIXTURE_ROOT"' EXIT
 
 export GOVERNANCE_BACKUP_STAMP="$FIXTURE_ROOT/stamp"
 unset GOVERNANCE_BACKUP_FORCE 2>/dev/null || true
+unset GOVERNANCE_BACKUP_SKIP 2>/dev/null || true
 
 PASS=0
 FAIL=0
@@ -132,6 +133,16 @@ check "force beats reason filter" "proceed" \
 check "force beats activity guard" "proceed" \
   "$(GOVERNANCE_BACKUP_FORCE=1 verdict "$ACTIVE_CLONE" '{"reason":"completed"}')"
 rm -f "$GOVERNANCE_BACKUP_STAMP"
+
+echo "=== skip switch ==="
+check "skip=1 skips an otherwise clear session" "skip" \
+  "$(GOVERNANCE_BACKUP_SKIP=1 verdict "$DIRTY_CLONE" '{"reason":"completed"}')"
+check "skip unset proceeds" "proceed" \
+  "$(verdict "$DIRTY_CLONE" '{"reason":"completed"}')"
+check "skip=0 proceeds" "proceed" \
+  "$(GOVERNANCE_BACKUP_SKIP=0 verdict "$DIRTY_CLONE" '{"reason":"completed"}')"
+check "force outranks skip" "proceed" \
+  "$(GOVERNANCE_BACKUP_SKIP=1 GOVERNANCE_BACKUP_FORCE=1 verdict "$DIRTY_CLONE" '{"reason":"completed"}')"
 
 echo ""
 echo "PASS: $PASS   FAIL: $FAIL"
