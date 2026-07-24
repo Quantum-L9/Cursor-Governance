@@ -27,6 +27,14 @@ symlinks-install:
 claude-plugins:
 	bash ops/scripts/setup_claude_code_plugins.sh
 
+## Reconcile the Cursor IDE profile (extensions + .vscode settings) for the current workspace
+ide-profile:
+	bash ops/scripts/install_ide_profile.sh "$$(pwd)"
+
+## Fixture selftest for the IDE profile installer (writes only under $$TMPDIR)
+ide-profile-test:
+	bash ops/scripts/test_install_ide_profile.sh
+
 ## Fail if any script/rule/hook hardcodes a /Users or /home path instead of $$HOME
 path-lint:
 	bash ops/scripts/validate_governance_no_hardcoded_paths.sh

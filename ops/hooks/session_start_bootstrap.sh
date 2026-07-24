@@ -72,6 +72,19 @@ if command -v uv >/dev/null 2>&1 && [ -f "$GC/uv.lock" ]; then
   fi
 fi
 
+# Reconcile the Cursor IDE profile (extensions machine-wide, .vscode/settings.json
+# managed-key merge in the loaded workspace). Backgrounded + --quiet: extension
+# installs are slow and must never block or fail a session start.
+IDE_SETUP="$GC/ops/scripts/install_ide_profile.sh"
+if [ -x "$IDE_SETUP" ] && [ -n "$REPO" ]; then
+  ( bash "$IDE_SETUP" --quiet "$REPO" >/dev/null 2>&1 & )
+  if [ -f "$REPO/.vscode/.l9-ide-desired-hash" ]; then
+    PARTS+=("ide-profile: applied ($(basename "$REPO"))")
+  else
+    PARTS+=("ide-profile: reconciling (first run)")
+  fi
+fi
+
 # Excerpt files from the *loaded workspace* memory-bank (CURSOR_PROJECT_DIR), never from
 # the Cursor-Governance clone. Skip missing files; keep excerpts short for hook payload.
 append_repo_memory_bank() {

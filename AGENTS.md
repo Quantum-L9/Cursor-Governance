@@ -45,14 +45,17 @@ Cursor session start with no manual step:
    governed workspace inherits the same plugins
 3. Auto-wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}`
    symlinks in the active workspace if any are missing
-4. Loads Graphiti env, scaffolds `memory-bank/` in the active workspace
-5. Ensures the Graphiti SSH tunnel, then runs a health check
-6. Reads a `memory-bank/activeContext.md` excerpt (T0 resume context)
-7. Runs `check_governance_wiring.sh` and reports PASS/FAIL
-8. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
+4. Backgrounds `install_ide_profile.sh --quiet` — reconciles the IDE profile
+   declared in `environment/ide/` (extensions machine-wide, managed-key merge
+   into the workspace's `.vscode/settings.json`)
+5. Loads Graphiti env, scaffolds `memory-bank/` in the active workspace
+6. Ensures the Graphiti SSH tunnel, then runs a health check
+7. Reads a `memory-bank/activeContext.md` excerpt (T0 resume context)
+8. Runs `check_governance_wiring.sh` and reports PASS/FAIL
+9. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
    code-graph health (PlasticOS repos) + Graphiti `inject "session start"`
    prefetch
-9. Emits one combined `additional_context` JSON blob back to Cursor
+10. Emits one combined `additional_context` JSON blob back to Cursor
 
 ### 2.2 Manual / on-demand commands
 
@@ -64,6 +67,7 @@ bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"      # run from inside the consumer workspace, not from ~/.cursor-governance itself
 bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
 bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"     # reconcile Claude Code plugins (or --quiet)
+bash "$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh" "$(pwd)"  # reconcile IDE profile (--dry-run to preview)
 python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 ```
 

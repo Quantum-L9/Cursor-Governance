@@ -350,3 +350,13 @@ if [ -x "$SCRIPT_DIR/setup_claude_code_plugins.sh" ]; then
 else
   echo "HINT: setup_claude_code_plugins.sh missing — skip Claude plugin reconcile"
 fi
+
+# IDE profile: extensions are machine-scoped, .vscode/settings.json is workspace-scoped.
+# Wiring a workspace is exactly the moment to reconcile both.
+echo ""
+if [ -x "$SCRIPT_DIR/install_ide_profile.sh" ]; then
+  bash "$SCRIPT_DIR/install_ide_profile.sh" "$WORKSPACE_DIR" \
+    || echo "WARN: IDE profile install failed (non-blocking)"
+else
+  echo "HINT: install_ide_profile.sh missing — skip IDE profile"
+fi

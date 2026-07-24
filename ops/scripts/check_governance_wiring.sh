@@ -166,6 +166,17 @@ else
   echo "  WARN: memory-bank/ missing — run setup_workspace_symlinks.sh"
 fi
 
+# IDE profile is a convenience layer, never a gate — warn only, never fail.
+if [ ! -x "$GC/ops/scripts/install_ide_profile.sh" ]; then
+  echo "  WARN: install_ide_profile.sh missing — IDE profile not managed"
+elif [ -f "$WORKSPACE/.vscode/.l9-ide-desired-hash" ]; then
+  pass "IDE profile applied ($(python3 -c '
+import json,sys
+print(json.load(open(sys.argv[1])).get("class", "unknown"))' "$WORKSPACE/.vscode/.l9-ide-desired-hash" 2>/dev/null || echo unknown))"
+else
+  echo "  WARN: IDE profile not yet applied — run: bash \"\$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh\" \"$WORKSPACE\""
+fi
+
 echo ""
 if [ $FAIL -eq 0 ]; then
   echo "RESULT: PASS — governance wiring + sessionEnd hook active"
