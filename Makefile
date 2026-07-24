@@ -27,9 +27,10 @@ symlinks-install:
 claude-plugins:
 	bash ops/scripts/setup_claude_code_plugins.sh
 
-## Reconcile the Cursor IDE profile (extensions + .vscode settings) for the current workspace
+## Reconcile the Cursor IDE profile (extensions + .vscode settings). Override target: make ide-profile WORKSPACE=/path/to/repo
+WORKSPACE ?= $(CURDIR)
 ide-profile:
-	bash ops/scripts/install_ide_profile.sh "$$(pwd)"
+	bash ops/scripts/install_ide_profile.sh "$(WORKSPACE)"
 
 ## Fixture selftest for the IDE profile installer (writes only under $$TMPDIR)
 ide-profile-test:
