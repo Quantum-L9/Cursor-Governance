@@ -4,7 +4,7 @@ version = "2.0.0"
 description = "L9 Governance — rules, skills, commands, and activation automation for Quantum-L9 coding workspaces"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = { text = "Proprietary" }
 authors = [{ name = "Igor Beylin" }]
 
 # Derived from actual imports in ops/graphiti/*.py and workflows/dags/*.py — not
