@@ -1,27 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "1.0.0"
-component_id: "INT-CM-003"
-component_name: "Context Memory Installation Guide"
-layer: "intelligence"
-domain: "context_memory"
-type: "documentation"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "medium"
-compliance_required: true
-audit_trail: true
-
-# === BUSINESS METADATA ===
-purpose: "Installation guide for context-memory system"
-summary: "Step-by-step installation instructions for automated context capture and restoration system"
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: documentation
+component: context_memory_installation_guide
+tags: [intelligence, context_memory]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Context-Memory System Installation Guide
 

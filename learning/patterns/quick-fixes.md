@@ -1,54 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "LRN-002"
-component_name: "Quick Fix Patterns Database"
-layer: "intelligence"
-domain: "learning"
-type: "learning"
-status: "active"
-created: "2025-01-29T16:00:00Z"
-updated: "2025-01-27T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: []
-integrates_with: ["INT-SSP-001", "LRN-001"]
-api_endpoints: []
-data_sources: ["error_patterns", "solution_database", "user_feedback"]
-outputs: ["quick_fixes", "pattern_recognition", "instant_solutions"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "on-demand"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "interactive"
-
-# === BUSINESS METADATA ===
-purpose: "Document proven quick solutions for common problems to accelerate problem resolution"
-summary: "Instant solutions database with proven quick fixes, pattern recognition, and diagnostic commands for common development issues"
-business_value: "Reduces problem resolution time from hours to seconds through proven quick fix patterns"
-success_metrics: ["fix_success_rate >= 0.95", "time_to_resolution <= 60s", "pattern_recognition_accuracy >= 0.90"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "quick-fixes.md v1.0.0"
-migration_notes: "Enhanced with L9 Governance structure and comprehensive quick fix pattern database"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["learning", "quick-fixes", "solutions", "patterns", "troubleshooting"]
-keywords: ["quick", "fix", "solution", "pattern", "instant", "troubleshooting"]
-related_components: ["INT-SSP-001", "LRN-001"]
-startup_required: true
-mode_type: "learning"
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: learning
+component: quick_fix_patterns_database
+tags: [learning, quick_fixes, solutions, patterns, troubleshooting]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Quick Fix Patterns Database
 **Created:** 2025-01-29T16:00:00Z  

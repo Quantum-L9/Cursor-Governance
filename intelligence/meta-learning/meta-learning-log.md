@@ -1,52 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "INT-ML-001"
-component_name: "Meta Learning Log"
-layer: "intelligence"
-domain: "meta-governance"
-type: "learning_system"
-status: "active"
-created: "2025-10-28T00:00:00Z"
-updated: "2025-10-28T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["INT-RE-001", "INT-WS-001"]
-integrates_with: ["FND-LG-001", "EXE-API-001"]
-api_endpoints: ["/api/v1/learning/patterns", "/api/v1/learning/insights"]
-data_sources: ["telemetry/logs/meta-audit.json", "telemetry/logs/reasoning-metrics.json"]
-outputs: ["intelligence/meta-learning/patterns/", "foundation/logic/rule-updates/"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "autonomous"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "batch"
-
-# === BUSINESS METADATA ===
-purpose: "Capture and compound high-leverage learnings across governance interactions"
-summary: "Maintains persistent record of lessons, heuristics, and decision patterns for system evolution and prompt refinement"
-business_value: "Enables recursive learning and continuous governance improvement"
-success_metrics: ["insight_recall >= 95%", "rule_generation_accuracy >= 90%", "system_alignment_improvement"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "meta-learning-log.md"
-migration_notes: "Enhanced with formal logic integration and autonomous rule generation"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["meta-learning", "reasoning-log", "alignment", "prompt-refinement", "knowledge-compounding"]
-keywords: ["learning", "patterns", "insights", "governance", "evolution"]
-related_components: ["INT-RE-001", "FND-LG-002", "EXE-MON-001"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: learning_system
+component: meta_learning_log
+tags: [meta_learning, reasoning_log, alignment, prompt_refinement, knowledge_compounding]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Meta Learning Log
 

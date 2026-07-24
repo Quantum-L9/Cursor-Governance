@@ -1,43 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "1.0.0"
-component_id: "INT-MOD-001"
-component_name: "File Compliance Risk Model"
-layer: "intelligence"
-domain: "probabilistic_reasoning"
-type: "probabilistic_model"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["FND-LG-003"]
-integrates_with: ["probabilistic_engine", "hybrid_kernel", "governance-validator"]
-api_endpoints: []
-data_sources: ["file_metadata", "edit_history", "user_corrections", "meta-learning-log"]
-outputs: ["risk_probability", "confidence_score", "subjective_logic_breakdown"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "realtime"
-monitoring_required: true
-logging_level: "debug"
-performance_tier: "realtime"
-
-# === BUSINESS METADATA ===
-purpose: "Assess file compliance risk using probabilistic reasoning"
-summary: "Probabilistic model that evaluates risk of file compliance violations based on multiple evidence sources, providing calibrated probability scores and confidence levels"
-business_value: "Enables intelligent risk-based governance decisions instead of binary pass/fail"
-success_metrics: ["calibration_ece < 0.05", "inference_latency < 10ms", "accuracy > 0.90"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: probabilistic_model
+component: file_compliance_risk_model
+tags: [intelligence, probabilistic_reasoning]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # File Compliance Risk Model
 

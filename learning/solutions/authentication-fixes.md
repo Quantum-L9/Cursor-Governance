@@ -1,54 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "LRN-004"
-component_name: "Authentication Solutions Database"
-layer: "intelligence"
-domain: "learning"
-type: "learning"
-status: "active"
-created: "2025-01-29T16:00:00Z"
-updated: "2025-01-27T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: []
-integrates_with: ["LRN-001", "LRN-002", "SEC-003"]
-api_endpoints: []
-data_sources: ["authentication_failures", "credential_patterns"]
-outputs: ["solution_documentation", "prevention_rules"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "reference"
-monitoring_required: false
-logging_level: "info"
-performance_tier: "reference"
-
-# === BUSINESS METADATA ===
-purpose: "Prevent repeated authentication failures through documented solutions and prevention rules"
-summary: "Learning database documenting authentication solutions, particularly Supabase authentication methods, to prevent repeated failures"
-business_value: "Prevents repeated authentication failures reducing debugging time from 45+ minutes to 2 minutes"
-success_metrics: ["failure_prevention_rate >= 0.95", "solution_effectiveness = 1.0", "time_savings >= 0.95"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "authentication-fixes.md v1.0.0"
-migration_notes: "Enhanced with L9 Governance structure and comprehensive authentication solution documentation"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["learning", "authentication", "supabase", "credentials", "security"]
-keywords: ["authentication", "supabase", "credentials", "auth", "predefinedCredentialType", "supabaseApi"]
-related_components: ["LRN-001", "LRN-002", "SEC-003"]
-startup_required: false
-mode_type: "learning"
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: learning
+component: authentication_solutions_database
+tags: [learning, authentication, supabase, credentials, security]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Authentication Solutions Database
 **Created:** 2025-01-29T16:00:00Z  

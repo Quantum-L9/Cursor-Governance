@@ -9,6 +9,7 @@
 #
 # Env:
 #   GOVERNANCE_GITHUB_REMOTE  default https://github.com/Quantum-L9/Cursor-Governance.git
+#   GOVERNANCE_GITHUB_BRANCH  push target, default main (warns on branch mismatch)
 #   GOVERNANCE_BACKUP_DRY_RUN=1   stage/commit only, no push
 #   GOVERNANCE_BACKUP_SKIP=1      exit 0 immediately
 set -euo pipefail
@@ -51,6 +52,17 @@ else
   git remote set-url origin "$REMOTE" 2>/dev/null || git remote add origin "$REMOTE"
 fi
 
+# The push refspec is HEAD:$BRANCH, so work done on a feature branch in this clone
+# still lands on $BRANCH. That is the intended behavior for an unattended sessionEnd
+# hook — warn so it is never silent, but never block, or the hook starts failing.
+CURRENT_BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || echo HEAD)"
+warn_branch_mismatch() {
+  if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+    echo "WARN: on branch '$CURRENT_BRANCH' but pushing HEAD:$BRANCH — these commits land on '$BRANCH'." >&2
+    echo "WARN: set GOVERNANCE_GITHUB_BRANCH=$CURRENT_BRANCH to push the feature branch instead." >&2
+  fi
+}
+
 # Pre-flight: refuse to blindly stage a tree that already has unresolved conflict
 # markers / unmerged paths (e.g. left behind by a governance_sync.sh stash-pop
 # conflict). `git add -A` has no way to tell literal <<<<<<< markers apart from
@@ -67,6 +79,7 @@ git add -A
 if git diff --cached --quiet; then
   echo "OK: nothing to commit — GitHub SSOT clone matches index"
   if git rev-parse "origin/$BRANCH" >/dev/null 2>&1; then
+    warn_branch_mismatch
     git push origin "HEAD:$BRANCH" 2>/dev/null && echo "OK: remote already up to date" || true
   fi
   exit 0
@@ -112,5 +125,6 @@ if git rev-parse "origin/$BRANCH" >/dev/null 2>&1; then
   fi
 fi
 
+warn_branch_mismatch
 git push -u origin "HEAD:$BRANCH"
 echo "OK: pushed governance backup to $REMOTE ($BRANCH)"

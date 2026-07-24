@@ -1,32 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "1.0.0"
-component_id: "INT-MOD-003"
-component_name: "Command Execution Risk Model"
-layer: "intelligence"
-domain: "probabilistic_reasoning"
-type: "probabilistic_model"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-
-# === TECHNICAL METADATA ===
-dependencies: ["INT-MOD-001"]
-integrates_with: ["probabilistic_engine", "hybrid_kernel"]
-
-# === BUSINESS METADATA ===
-purpose: "Assess risk of command execution and determine approval requirements"
-summary: "Probabilistic model evaluating command execution safety based on command type, targets, user patterns, and potential impact"
-success_metrics: ["approval_accuracy > 0.92", "false_block_rate < 0.08"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: probabilistic_model
+component: command_execution_risk_model
+tags: [intelligence, probabilistic_reasoning]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Command Execution Risk Model
 

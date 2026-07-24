@@ -1,52 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "OPS-OPS-001"
-component_name: "Operational Oversight System"
-layer: "operations"
-domain: "autonomous_operations"
-type: "oversight_system"
-status: "active"
-created: "2025-10-28T00:00:00Z"
-updated: "2025-10-28T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["FND-LG-002", "EXE-MON-001", "INT-RE-001"]
-integrates_with: ["OPS-PIP-001", "OPS-SEC-001", "TEL-LOG-001"]
-api_endpoints: ["/api/v1/ops/status", "/api/v1/ops/anomaly-response"]
-data_sources: ["operations/pipeline/", "operations/security/", "telemetry/logs/"]
-outputs: ["telemetry/logs/ops-decisions.log", "operations/ops/anomaly-responses/"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "autonomous"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "realtime"
-
-# === BUSINESS METADATA ===
-purpose: "Autonomous operational oversight with anomaly detection and response"
-summary: "Consolidated operational layer providing governance dashboard, memory aggregation, and autonomous anomaly response"
-business_value: "Enables hands-off governance operation with intelligent anomaly handling"
-success_metrics: ["anomaly_detection_accuracy >= 95%", "response_time < 30s", "false_positive_rate < 5%"]
-
-# === INTEGRATION METADATA ===
-suite_4_origin: "ops/governance-dashboard.md, ops/anomaly-response.md, ops/memory-aggregator.md"
-migration_notes: "Consolidated from multiple ops layers with enhanced autonomous capabilities"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["autonomous_operation", "anomaly_response", "operational_oversight", "governance_runtime"]
-keywords: ["operations", "autonomous", "oversight", "anomaly", "response"]
-related_components: ["OPS-PIP-001", "OPS-SEC-001", "INT-RE-001"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: oversight_system
+component: operational_oversight_system
+tags: [autonomous_operation, anomaly_response, operational_oversight, governance_runtime]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Operational Oversight System
 

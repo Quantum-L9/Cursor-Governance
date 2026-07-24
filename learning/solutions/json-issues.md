@@ -1,54 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "LRN-005"
-component_name: "JSON Processing Solutions Database"
-layer: "intelligence"
-domain: "learning"
-type: "learning"
-status: "active"
-created: "2025-01-29T16:00:00Z"
-updated: "2025-01-27T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: []
-integrates_with: ["LRN-001", "LRN-002", "LRN-003"]
-api_endpoints: []
-data_sources: ["json_parsing_failures", "L9_patterns"]
-outputs: ["solution_documentation", "prevention_rules"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "reference"
-monitoring_required: false
-logging_level: "info"
-performance_tier: "reference"
-
-# === BUSINESS METADATA ===
-purpose: "Prevent repeated JSON parsing failures through documented solutions and prevention rules"
-summary: "Learning database documenting JSON string wrapping issues and solutions using Structured Output Parser in L9 AI Agent nodes"
-business_value: "Prevents repeated JSON parsing failures reducing debugging time from hours to seconds"
-success_metrics: ["failure_prevention_rate >= 0.95", "solution_effectiveness = 1.0", "time_savings >= 0.99"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "json-issues.md v1.0.0"
-migration_notes: "Enhanced with L9 Governance structure and comprehensive JSON processing solution documentation"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["learning", "json", "parsing", "L9", "ai-agent"]
-keywords: ["json", "parsing", "L9", "ai-agent", "structured-output-parser", "string-wrapping"]
-related_components: ["LRN-001", "LRN-002", "LRN-003"]
-startup_required: false
-mode_type: "learning"
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: learning
+component: json_processing_solutions_database
+tags: [learning, json, parsing, l9, ai_agent]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # JSON Processing Solutions Database
 **Created:** 2025-01-29T16:00:00Z  

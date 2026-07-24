@@ -1,32 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "1.0.0"
-component_id: "INT-MOD-002"
-component_name: "Escalation Need Assessment Model"
-layer: "intelligence"
-domain: "probabilistic_reasoning"
-type: "probabilistic_model"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-
-# === TECHNICAL METADATA ===
-dependencies: ["INT-MOD-001"]
-integrates_with: ["probabilistic_engine", "hybrid_kernel"]
-
-# === BUSINESS METADATA ===
-purpose: "Determine when to escalate issues to user vs. handle autonomously"
-summary: "Probabilistic model assessing escalation urgency based on error severity, timing, user patterns, and system state"
-success_metrics: ["false_escalation_rate < 0.15", "missed_critical_rate < 0.05"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: probabilistic_model
+component: escalation_need_assessment_model
+tags: [intelligence, probabilistic_reasoning]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Escalation Need Assessment Model
 

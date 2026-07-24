@@ -1,53 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "1.0.0"
-component_id: "INT-QS-001"
-component_name: "Production Quality Standards"
-layer: "intelligence"
-domain: "quality_assurance"
-type: "standards_document"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: []
-integrates_with: ["INT-WS-001", "CMD-002", "CMD-004", "FND-LG-003"]
-api_endpoints: []
-data_sources: ["user_preferences", "meta-learning-log", "quality_incidents"]
-outputs: ["quality_enforcement", "verification_checklists", "standards_compliance"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "continuous"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "realtime"
-
-# === BUSINESS METADATA ===
-purpose: "Define and enforce production quality standards for all AI-generated code and deliverables"
-summary: "Comprehensive quality directives ensuring production-ready output, zero-rework delivery, and top-1% execution standards across all projects"
-business_value: "Eliminates rework, ensures production readiness, prevents .1 version fixes, maintains top-tier deployment quality"
-success_metrics: ["zero_rework_rate >= 0.95", "production_readiness = 1.0", "quality_compliance >= 0.98"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "Derived from user quality preferences and meta-learning patterns"
-migration_notes: "Codifies user's quality-over-speed philosophy into enforceable standards"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["quality-standards", "production-ready", "zero-rework", "verification", "excellence"]
-keywords: ["quality", "production", "standards", "verification", "testing", "documentation"]
-related_components: ["INT-WS-001", "CMD-002", "CMD-004", "INT-ML-001"]
-startup_required: true
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: standards_document
+component: production_quality_standards
+tags: [quality_standards, production_ready, zero_rework, verification, excellence]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Production Quality Standards
 

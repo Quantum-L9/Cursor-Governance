@@ -1,52 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "INT-RE-001"
-component_name: "Cursor Native Reasoning Framework"
-layer: "intelligence"
-domain: "technical_reasoning"
-type: "reasoning_engine"
-status: "active"
-created: "2025-10-28T00:00:00Z"
-updated: "2025-10-28T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["FND-TMP-001"]
-integrates_with: ["FND-LG-001", "EXE-API-001", "OPS-OPS-001"]
-api_endpoints: ["/api/v1/reasoning/evaluate", "/api/v1/reasoning/snapshot"]
-data_sources: ["environment/rules.json", "foundation/logic/rule-registry.json"]
-outputs: ["telemetry/logs/reasoning-metrics.json", "foundation/templates/reasoning-snapshots/"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "hybrid"
-monitoring_required: true
-logging_level: "debug"
-performance_tier: "realtime"
-
-# === BUSINESS METADATA ===
-purpose: "Provide structured 10-step reasoning framework for technical evaluations in Cursor"
-summary: "Guides AI agents through systematic analysis, evaluation, and decision-making using real project data"
-business_value: "Ensures consistent, traceable, and high-quality technical decisions"
-success_metrics: ["decision_accuracy >= 95%", "reasoning_completeness >= 90%", "trace_auditability = 100%"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "cursor_native_reasoning_block.md"
-migration_notes: "Integrated with formal logic validation and autonomous execution"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["cursor", "technical_evaluation", "reasoning_framework", "decision_making", "audit_trail"]
-keywords: ["reasoning", "evaluation", "cursor", "technical", "framework"]
-related_components: ["FND-TMP-001", "INT-ML-001", "EXE-VAL-001"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: reasoning_engine
+component: cursor_native_reasoning_framework
+tags: [cursor, technical_evaluation, reasoning_framework, decision_making, audit_trail]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Cursor Native Reasoning Framework
 

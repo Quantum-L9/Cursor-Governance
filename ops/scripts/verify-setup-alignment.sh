@@ -1,46 +1,12 @@
 #!/bin/bash
-# === SUITE 6 CANONICAL HEADER ===
-# suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-# version: "6.0.0"
-# component_id: "OPS-VER-001"
-# component_name: "Setup Alignment Verification Script"
-# layer: "operations"
-# domain: "validation"
-# type: "verification"
-# status: "active"
-# created: "2025-11-08T00:00:00Z"
-# updated: "2025-11-08T00:00:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
-#
-# === GOVERNANCE METADATA ===
-# governance_level: "high"
-# compliance_required: true
-# audit_trail: true
-# security_classification: "internal"
-#
-# === TECHNICAL METADATA ===
-# dependencies: ["bash", "find", "launchctl"]
-# integrates_with: ["OPS-LEA-001", "OPS-EXP-001", "INT-WS-001"]
-# data_sources: ["learning_folder", "ops_scripts", "launchctl"]
-# outputs: ["terminal_output", "verification_report"]
-#
-# === OPERATIONAL METADATA ===
-# execution_mode: "manual"
-# monitoring_required: false
-# logging_level: "info"
-# performance_tier: "utility"
-#
-# === BUSINESS METADATA ===
-# purpose: "Verify setup-new-workspace.md instructions align with actual governance infrastructure"
-# summary: "Comprehensive verification test for workspace setup alignment"
-# business_value: "Ensures setup documentation matches reality, preventing setup failures"
-# success_metrics: ["all_checks_pass", "zero_misalignment_detected", "execution_time < 5s"]
-#
-# === TAGS & CLASSIFICATION ===
-# tags: ["verification", "setup", "validation", "testing", "alignment"]
-# keywords: ["verify", "setup", "alignment", "test", "validation"]
-# related_components: ["INT-WS-001", "OPS-LEA-001", "OPS-EXP-001"]
+# L9_META
+#   l9_schema: 1
+#   artifact_type: verification
+#   component: setup_alignment_verification
+#   tags: [verification, setup, validation, alignment, governance]
+#   retrieval: on_demand
+#   status: active
+#   contract: Verify governance infrastructure matches documented setup
 
 # Determine script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

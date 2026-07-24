@@ -1,50 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.0.0"
-component_id: "INT-RE-002"
-component_name: "Reasoning Snapshot Template"
-layer: "intelligence"
-domain: "reasoning"
-type: "template"
-status: "active"
-created: "2025-10-28T00:00:00Z"
-updated: "2025-10-28T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-governance_level: "high"
-purpose: "Structured reasoning documentation template for governance decisions"
-
-# === GOVERNANCE METADATA ===
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["cursor-native-reasoning.md", "universal-kernel.md"]
-integrates_with: ["INT-RE-001", "FND-LG-002", "FND-AG-002"]
-data_sources: ["foundation/logic/rule-registry.json"]
-outputs: ["intelligence/reasoning/snapshots/"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "template"
-monitoring_required: false
-logging_level: "info"
-performance_tier: "standard"
-
-# === BUSINESS METADATA ===
-business_value: "Provides structured decision documentation for governance audit trails"
-success_metrics: ["snapshot_completeness = 100%", "decision_traceability = 100%"]
-
-# === INTEGRATION METADATA ===
-constellation_origin: "3_ReasoningSnapshot_Template.md"
-migration_notes: "Enhanced Constellation reasoning snapshot with L9 Governance integration and 10-step framework"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["reasoning", "snapshot", "template", "governance", "decision_documentation"]
-keywords: ["reasoning", "snapshot", "template", "decision", "governance"]
-related_components: ["INT-RE-001", "FND-LG-002"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: template
+component: reasoning_snapshot_template
+tags: [reasoning, snapshot, template, governance, decision_documentation]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Reasoning Snapshot Template
 

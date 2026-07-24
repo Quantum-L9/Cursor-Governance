@@ -1,52 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "L9 Governance"
-version: "6.1.0"
-component_id: "INT-PBQ-001"
-component_name: "Pre-Build Question Framework"
-layer: "intelligence"
-domain: "requirements_engineering"
-type: "framework"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: []
-integrates_with: ["CMD-004", "CMD-002", "INT-RSN-001"]
-api_endpoints: []
-data_sources: []
-outputs: ["requirements_clarification", "build_specifications", "governance_validation"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "mandatory"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "pre-execution"
-
-# === BUSINESS METADATA ===
-purpose: "Prevent costly rework by asking strategic questions before building anything"
-summary: "20-question consultant interview framework ensuring complete requirements understanding before code/system development, preventing governance violations and technical debt"
-business_value: "Saves 4-8 hours of rework per build by investing 5-10 minutes in strategic questioning"
-success_metrics: ["rework_rate < 5%", "governance_violation_prevention >= 95%", "user_satisfaction >= 90%"]
-
-# === INTEGRATION METADATA ===
-suite_2_origin: "New component - addresses recurring build-then-rework pattern"
-migration_notes: "Created after Mack 7.1 governance violation (hardcoded confidence scores). Lesson: Ask before building."
-
-# === TAGS & CLASSIFICATION ===
-tags: ["requirements", "questioning", "consultation", "prevention", "governance"]
-keywords: ["pre-build", "questions", "requirements", "validation", "strategic"]
-related_components: ["CMD-004", "CMD-002", "INT-ML-001"]
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: framework
+component: pre_build_question_framework
+tags: [requirements, questioning, consultation, prevention, governance]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Pre-Build Question Framework
 
