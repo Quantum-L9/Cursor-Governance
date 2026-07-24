@@ -1,0 +1,1 @@
+bash ~/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh
