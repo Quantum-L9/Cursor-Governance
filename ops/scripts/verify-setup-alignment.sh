@@ -47,7 +47,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLOBAL_COMMANDS="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "   SUITE 6 SETUP ALIGNMENT VERIFICATION"
+echo "   GOVERNANCE SETUP ALIGNMENT VERIFICATION"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "📍 GlobalCommands: $GLOBAL_COMMANDS"
@@ -143,21 +143,8 @@ else
 fi
 echo ""
 
-# Test 6: Suite 6 Headers Compliance
-echo "6️⃣  Suite 6 Headers Compliance:"
-HEADERS=$(grep -l "=== SUITE 6 CANONICAL HEADER ===" ./ops/scripts/*.sh ./ops/scripts/*.py 2>/dev/null | wc -l | tr -d ' ')
-echo "   Found: $HEADERS scripts with headers (Expected: 8+)"
-if [ "$HEADERS" -ge 8 ]; then
-    echo "   ✅ PASS"
-    ((PASS_COUNT++))
-else
-    echo "   ⚠️  Only $HEADERS scripts have Suite 6 headers"
-    ((FAIL_COUNT++))
-fi
-echo ""
-
-# Test 7: LaunchAgent Services (optional - pass if at least 2 when present)
-echo "7️⃣  LaunchAgent Services:"
+# Test 6: LaunchAgent Services (optional - pass if at least 2 when present)
+echo "6️⃣  LaunchAgent Services:"
 SERVICES=$(launchctl list 2>/dev/null | grep -E "tenx|learning|chat" | wc -l | tr -d ' ')
 echo "   Active services: $SERVICES (Expected: 2+ when configured)"
 if [ "$SERVICES" -ge 2 ]; then
@@ -174,9 +161,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "   VERIFICATION RESULTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "   ✅ Tests Passed: $PASS_COUNT / 7"
+echo "   ✅ Tests Passed: $PASS_COUNT / 6"
 if [ "$FAIL_COUNT" -gt 0 ]; then
-    echo "   ❌ Tests Failed: $FAIL_COUNT / 7"
+    echo "   ❌ Tests Failed: $FAIL_COUNT / 6"
     echo ""
     echo "   🔴 SETUP ALIGNMENT: FAILED"
     echo ""
@@ -187,8 +174,8 @@ else
     echo ""
     echo "   All components verified:"
     echo "   • 5+ learning files in organized structure (failures, patterns, solutions)"
-    echo "   • 5 learning system scripts with Suite 6 headers"
-    echo "   • 3 utility scripts with Suite 6 headers"
+    echo "   • 5 learning system scripts present"
+    echo "   • 3 utility scripts present"
     echo "   • LaunchAgent services (when configured)"
     echo "   • All verification commands will execute successfully"
     echo ""

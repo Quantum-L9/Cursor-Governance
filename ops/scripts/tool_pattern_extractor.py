@@ -372,7 +372,7 @@ class ToolPatternExtractor:
             "debug": ["fix", "error", "bug", "issue", "broken", "not working"],
             "setup": ["setup", "install", "configure", "initialize", "deploy"],
             "documentation": ["document", "explain", "guide", "how", "what is"],
-            "governance": ["governance", "compliance", "suite 6", "canonical header"],
+            "governance": ["governance", "compliance", "l9_meta", "canonical law"],
             "learning": ["learning", "chat export", "memory", "lessons", "extract"],
             "n8n": ["n8n", "workflow", "node", "webhook"],
             "mack": ["mack", "plastics", "brokerage", "odoo"],
