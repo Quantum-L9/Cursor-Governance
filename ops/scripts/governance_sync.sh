@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-# Guarded auto-sync for the ~/.cursor-governance SSOT clone.
+# Guarded BIDIRECTIONAL auto-sync for the ~/.cursor-governance SSOT clone.
 #
 # Replaces the unsafe `git fetch && git reset --hard origin/main` pattern.
-# Guarantees:
+#
+# Pull half (remote -> local):
 #   - NEVER destroys local edits: fast-forward only; if the tree is dirty, stash -> ff -> pop.
+# Push half (local -> remote):
+#   - Delegates to backup_to_github.sh, the same script sessionEnd uses, so local work
+#     reaches GitHub at session START too — not only on a clean session close. Reusing it
+#     inherits all its guards (refuses unmerged paths, staged conflict markers, stale
+#     uv.lock; rebases onto origin/main and aborts rather than pushing a conflicted tree).
+#     Disable with GOVERNANCE_SYNC_PUSH=0.
+#
+# Also:
 #   - Single-flight: flock prevents concurrent runs when multiple Cursor windows open at once.
+#     The lock is held across BOTH halves so a start-sync and an end-backup can't interleave.
 #   - Self-heal: re-copies the installed session-start bootstrap when the source changes,
 #     so sync-logic updates actually propagate (the installed hook is a real file, not a symlink).
-#   - Fail-soft: every step tolerates failure (offline, no upstream) and exits 0.
+#   - Fail-soft: every step tolerates failure (offline, no upstream) and exits 0. Failures that
+#     need a human are announced on stderr, never swallowed.
 #
 # Opt-in hard reset: set GOVERNANCE_SYNC_HARD_RESET=1 to mirror remote exactly (discards local).
 set -uo pipefail
@@ -52,8 +63,11 @@ git rev-parse "origin/$BRANCH" >/dev/null 2>&1 || exit 0
 if [ "${GOVERNANCE_SYNC_HARD_RESET:-0}" = "1" ]; then
   git reset --hard "origin/$BRANCH" >/dev/null 2>&1 || true
 elif git diff --quiet && git diff --cached --quiet; then
-  # Clean tree -> safe fast-forward.
-  git merge --ff-only --quiet "origin/$BRANCH" >/dev/null 2>&1 || true
+  # Clean tree -> safe fast-forward. A failure here means local commits have diverged
+  # from origin/BRANCH; the push half below rebases and resolves it, so only announce.
+  if ! git merge --ff-only --quiet "origin/$BRANCH" >/dev/null 2>&1; then
+    echo "NOTE: governance_sync.sh: cannot fast-forward $CLONE onto origin/$BRANCH (local commits diverged). Push half will rebase." >&2
+  fi
 else
   # Dirty tree -> preserve local edits across the fast-forward.
   if git stash push -q -u -m governance-autosync >/dev/null 2>&1; then
@@ -73,6 +87,21 @@ else
         echo "WARNING: governance_sync.sh: 'git stash pop' left unresolved conflict markers/unmerged paths in $CLONE. Resolve before the next commit (see $CLONE/.sync-conflict). Stash was NOT dropped." >&2
       fi
     fi
+  fi
+fi
+
+# ── Push half: local -> GitHub ────────────────────────────────────────────────
+# Without this, local work only reaches GitHub on a clean session END — a crash, a
+# force-quit, or a hook timeout leaves it unpushed indefinitely. backup_to_github.sh
+# is intentionally reused rather than reimplemented: one push implementation, no drift.
+# It is a no-op (exit 0, "nothing to commit") when the tree already matches the index.
+if [ "${GOVERNANCE_SYNC_PUSH:-1}" = "1" ] && [ "${GOVERNANCE_SYNC_HARD_RESET:-0}" != "1" ]; then
+  PUSH="$CLONE/ops/scripts/backup_to_github.sh"
+  if [ -x "$PUSH" ]; then
+    PUSH_OUT="$(bash "$PUSH" "chore(governance): session-start sync $(date +%Y-%m-%d\ %H:%M)" 2>&1)" || {
+      echo "WARNING: governance_sync.sh: push to origin/$BRANCH failed — local work is NOT backed up. Resolve manually:" >&2
+      echo "$PUSH_OUT" | tail -5 >&2
+    }
   fi
 fi
 

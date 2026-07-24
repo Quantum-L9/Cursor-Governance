@@ -1,7 +1,19 @@
-.PHONY: help sync wiring-check symlinks-check symlinks-install claude-plugins path-lint precommit backup push graphiti-health lint venv
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test path-lint precommit backup push graphiti-health lint venv
+
+# Workspace a target acts on. Defaults to the directory make was invoked from, so
+# `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
+WS ?= $(CURDIR)
 
 help:
-	@echo "Targets: sync wiring-check symlinks-check symlinks-install claude-plugins path-lint precommit backup push graphiti-health lint venv"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test path-lint precommit backup push graphiti-health lint venv"
+
+## Run the FULL session-start pipeline against WS, synchronously, with visible output.
+## Same script Cursor runs on sessionStart — one implementation, no drift.
+## Usage from a consumer repo: make -C "$$HOME/.cursor-governance" start WS="$$(pwd)"
+start:
+	@cd "$(WS)" && CURSOR_PROJECT_DIR="$(WS)" L9_BOOTSTRAP_SYNC=1 \
+		bash "$(CURDIR)/ops/hooks/session_start_bootstrap.sh" \
+		| python3 "$(CURDIR)/ops/scripts/render_bootstrap_context.py"
 
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
@@ -27,10 +39,9 @@ symlinks-install:
 claude-plugins:
 	bash ops/scripts/setup_claude_code_plugins.sh
 
-## Reconcile the Cursor IDE profile (extensions + .vscode settings). Override target: make ide-profile WORKSPACE=/path/to/repo
-WORKSPACE ?= $(CURDIR)
+## Reconcile the Cursor IDE profile (extensions + .vscode settings). Usage: make ide-profile WS=/path/to/repo
 ide-profile:
-	bash ops/scripts/install_ide_profile.sh "$(WORKSPACE)"
+	bash ops/scripts/install_ide_profile.sh "$(WS)"
 
 ## Fixture selftest for the IDE profile installer (writes only under $$TMPDIR)
 ide-profile-test:
