@@ -1,7 +1,7 @@
-.PHONY: help sync wiring-check symlinks-check symlinks-install path-lint precommit backup push graphiti-health lint venv
+.PHONY: help sync wiring-check symlinks-check symlinks-install claude-plugins path-lint precommit backup push graphiti-health lint venv
 
 help:
-	@echo "Targets: sync wiring-check symlinks-check symlinks-install path-lint precommit backup push graphiti-health lint venv"
+	@echo "Targets: sync wiring-check symlinks-check symlinks-install claude-plugins path-lint precommit backup push graphiti-health lint venv"
 
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
@@ -22,6 +22,10 @@ symlinks-check:
 ## Install .cursor-commands + ~/.cursor symlinks. Run from inside the CONSUMER repo, not here.
 symlinks-install:
 	bash ops/scripts/setup_workspace_symlinks.sh
+
+## Reconcile Claude Code plugins to the desired state declared in setup_claude_code_plugins.sh
+claude-plugins:
+	bash ops/scripts/setup_claude_code_plugins.sh
 
 ## Fail if any script/rule/hook hardcodes a /Users or /home path instead of $$HOME
 path-lint:

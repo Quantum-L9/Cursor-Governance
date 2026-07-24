@@ -340,3 +340,13 @@ ensure_global_git_ignores
 
 echo ""
 bash "$SCRIPT_DIR/validate_governance_symlinks.sh" "$WORKSPACE_DIR"
+
+# Claude Code plugins are user-scoped ($HOME/.claude) but declared in this repo.
+# Reconcile whenever a workspace is wired so every governed repo inherits the set.
+echo ""
+if [ -x "$SCRIPT_DIR/setup_claude_code_plugins.sh" ]; then
+  bash "$SCRIPT_DIR/setup_claude_code_plugins.sh" --quiet \
+    || echo "WARN: Claude Code plugin reconcile failed (non-blocking)"
+else
+  echo "HINT: setup_claude_code_plugins.sh missing — skip Claude plugin reconcile"
+fi

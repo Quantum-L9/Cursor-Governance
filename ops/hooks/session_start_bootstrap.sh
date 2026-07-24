@@ -7,10 +7,21 @@ set -uo pipefail
 REPO="${CURSOR_PROJECT_DIR:-}"
 PARTS=()
 
+# Prefer native Claude Code (~/.local/bin) over a stale npm-global binary so
+# marketplace schema stays compatible with plugin reconcile.
+if [ -x "$HOME/.local/bin/claude" ]; then
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
 # Auto-sync the ~/.cursor-governance SSOT clone in the background (guarded: ff-only,
 # never destroys local edits, single-flight). Replaces the unsafe reset --hard pattern.
 SYNC="$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 [ -x "$SYNC" ] && ( "$SYNC" >/dev/null 2>&1 & )
+
+# Keep Claude Code plugins in sync with Cursor-Governance desired state (user-scope).
+# Background + --quiet: fail-open, no `claude update`, fast no-op when stamp matches.
+PLUGIN_SETUP="$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"
+[ -x "$PLUGIN_SETUP" ] && ( bash "$PLUGIN_SETUP" --quiet >/dev/null 2>&1 & )
 
 resolve_global_commands() {
   # SSOT: ~/.cursor-governance (repo-root layout == GlobalCommands); Dropbox = transition fallback.
@@ -98,6 +109,18 @@ if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ] && [ -f "$SETUP" ]; then
   fi
 else
   PARTS+=("governance: symlinks OK")
+fi
+
+# Status line for Claude Code plugins (install itself already backgrounded above)
+PLUGIN_STAMP="$HOME/.claude/plugins/.l9-plugin-desired-hash"
+if command -v claude >/dev/null 2>&1; then
+  if [ -f "$PLUGIN_STAMP" ]; then
+    PARTS+=("claude-plugins: desired-state stamped")
+  else
+    PARTS+=("claude-plugins: reconciling (background)")
+  fi
+else
+  PARTS+=("claude-plugins: claude CLI not on PATH")
 fi
 
 # Graphiti env (defaults → machine → secrets → keychain) + memory-bank scaffold

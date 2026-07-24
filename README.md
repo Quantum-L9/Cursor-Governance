@@ -30,12 +30,13 @@ Activation is automatic — one hook, no manual step:
 
 `ops/hooks/session_start_bootstrap.sh` → installed at
 `~/.cursor/hooks/session-start-bootstrap.sh` → registered in
-`~/.cursor/hooks.json` under `sessionStart`. It syncs this clone, auto-wires
-symlinks, checks Graphiti (degraded is expected — not fully connected yet),
-and reads `memory-bank/activeContext.md`. See `AGENTS.md` §2 for the full
-activation contract and manual/repair commands. `start-session.yaml` (the
-old YAML "protocol") was retired 2026-07-19 — the `.sh` hook above is now the
-sole activation mechanism.
+`~/.cursor/hooks.json` under `sessionStart`. It syncs this clone, reconciles
+the declared Claude Code plugin set (`ops/scripts/setup_claude_code_plugins.sh`),
+auto-wires symlinks, checks Graphiti (degraded is expected — not fully
+connected yet), and reads `memory-bank/activeContext.md`. See `AGENTS.md` §2
+for the full activation contract and manual/repair commands. `start-session.yaml`
+(the old YAML "protocol") was retired 2026-07-19 — the `.sh` hook above is now
+the sole activation mechanism.
 
 ## 📁 Directory Structure
 

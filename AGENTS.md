@@ -40,16 +40,19 @@ Cursor session start with no manual step:
 
 1. Backgrounds `governance_sync.sh` — fast-forward-only pull of this clone
    from `origin/main` (never destroys local edits, never hard-resets)
-2. Auto-wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}`
+2. Backgrounds `setup_claude_code_plugins.sh --quiet` — reconciles the
+   declared Claude Code plugin set (user-scope under `~/.claude/`) so every
+   governed workspace inherits the same plugins
+3. Auto-wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}`
    symlinks in the active workspace if any are missing
-3. Loads Graphiti env, scaffolds `memory-bank/` in the active workspace
-4. Ensures the Graphiti SSH tunnel, then runs a health check
-5. Reads a `memory-bank/activeContext.md` excerpt (T0 resume context)
-6. Runs `check_governance_wiring.sh` and reports PASS/FAIL
-7. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
+4. Loads Graphiti env, scaffolds `memory-bank/` in the active workspace
+5. Ensures the Graphiti SSH tunnel, then runs a health check
+6. Reads a `memory-bank/activeContext.md` excerpt (T0 resume context)
+7. Runs `check_governance_wiring.sh` and reports PASS/FAIL
+8. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
    code-graph health (PlasticOS repos) + Graphiti `inject "session start"`
    prefetch
-8. Emits one combined `additional_context` JSON blob back to Cursor
+9. Emits one combined `additional_context` JSON blob back to Cursor
 
 ### 2.2 Manual / on-demand commands
 
@@ -60,6 +63,7 @@ bash "$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"      # run from inside the consumer workspace, not from ~/.cursor-governance itself
 bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
+bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"     # reconcile Claude Code plugins (or --quiet)
 python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 ```
 
