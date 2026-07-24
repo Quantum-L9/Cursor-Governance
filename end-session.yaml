@@ -77,10 +77,40 @@ phase_1_pickup_context:
   description: |
     Write structured pickup to memory-bank/activeContext.md (T0 SSOT) and optional Graphiti episode.
     Legacy C1 PICKUP writes are deprecated.
-  
+
+  memory_bank_target: |
+    ALWAYS $CURSOR_PROJECT_DIR/memory-bank/ (the workspace/repo currently
+    open — the consumer repo). NEVER $GLOBAL_COMMANDS or the
+    Cursor-Governance clone (~/.cursor-governance). See MEMORY_BANK_POLICY.md.
+
   memory_bank_update: |
-    Update memory-bank/activeContext.md with: task, files touched, next action, blockers, GMP IDs, outcome.
-  
+    APPEND a new dated section to memory-bank/activeContext.md — task, files
+    touched, next action, blockers, GMP IDs, outcome. Do NOT truncate or
+    replace the whole file; a full overwrite destroys prior manually-written
+    detail (see MEMORY_BANK_POLICY.md "Append, never overwrite"). Same
+    append-only rule for tasks.md / progress.md / tech-debt.md.
+
+  memory_bank_gitignore_check: |
+    Before relying on `memory-bank/` being trackable in the target repo, run:
+      git -C "$CURSOR_PROJECT_DIR" check-ignore -q memory-bank/activeContext.md
+    If it exits 0 (ignored — commonly this machine's global
+    ~/.gitignore_global, not the repo's own .gitignore), append a repo-local
+    negation to that repo's .gitignore (after any blanket ignore rule):
+      !/memory-bank/
+      !/memory-bank/**
+    ops/hooks/graphiti-session-end.sh does this automatically via
+    ensure_memory_bank_trackable(); the manual /end-session flow must do the
+    same check when memory-bank changes are meant to be pushed.
+
+  memory_bank_push: |
+    If the target repo's memory-bank changes need to reach GitHub and the
+    current branch has an unrelated large uncommitted diff, do NOT commit on
+    top of it. Instead: create an isolated `git worktree` off a fresh copy of
+    the repo's default branch, copy the memory-bank/ files + .gitignore
+    negation there, commit, push, and open a normal PR. See
+    MEMORY_BANK_POLICY.md "Push via clean branch when the working branch is
+    dirty/diverged".
+
   graphiti_optional: |
     When GRAPHITI_MEMORY_ENABLED=1:
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \

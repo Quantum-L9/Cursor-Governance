@@ -49,7 +49,19 @@ link_check "$HOME/.cursor/commands" "$GC/commands" "~/.cursor/commands"
 
 echo ""
 echo "=== Repo: ONE GlobalCommands entry ==="
-link_check "$WORKSPACE/.cursor-commands" "$GC" ".cursor-commands"
+# When WORKSPACE resolves to GlobalCommands itself (e.g. running this script's
+# own pre-commit hook from inside ~/.cursor-governance), a $WORKSPACE/.cursor-commands
+# -> $GC symlink would be self-referential (GC/.cursor-commands -> GC), which is a
+# circular symlink that infinite-loops naive directory traversal (Finder, some
+# indexers). Skip the check in that case — GlobalCommands never needs an alias to
+# itself. Consumer repos (WORKSPACE != GC) still require the real symlink.
+WORKSPACE_REAL=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE'))")
+GC_REAL=$(python3 -c "import os; print(os.path.realpath('$GC'))")
+if [ "$WORKSPACE_REAL" = "$GC_REAL" ]; then
+  pass "workspace is GlobalCommands root itself — self-referential .cursor-commands symlink not required"
+else
+  link_check "$WORKSPACE/.cursor-commands" "$GC" ".cursor-commands"
+fi
 
 if [ -e "$WORKSPACE/.cursor/governance/GlobalCommands" ]; then
   fail ".cursor/governance/GlobalCommands must not exist (use .cursor-commands only)"

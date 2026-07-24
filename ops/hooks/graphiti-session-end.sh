@@ -21,6 +21,32 @@ TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 BANK="$REPO/memory-bank"
 mkdir -p "$BANK"
 
+# T0 target is always the *loaded workspace* memory-bank (CURSOR_PROJECT_DIR /
+# $REPO above), never the Cursor-Governance clone — see MEMORY_BANK_POLICY.md.
+# Some machines' global ~/.gitignore_global excludes memory-bank/ by default;
+# if this repo's own .gitignore doesn't already re-include it, add a scoped
+# negation so `git add memory-bank/` actually stages files (idempotent).
+ensure_memory_bank_trackable() {
+  local repo="$1"
+  local gi="$repo/.gitignore"
+  [ -d "$repo/.git" ] || return 0
+  if git -C "$repo" check-ignore -q memory-bank/activeContext.md 2>/dev/null; then
+    if ! grep -qF '!/memory-bank/' "$gi" 2>/dev/null; then
+      {
+        echo ""
+        echo "# Explicit override: memory-bank/ may be excluded by this machine's global"
+        echo "# gitignore (~/.gitignore_global) but must be tracked in THIS repo so a"
+        echo "# fresh clone gets T0 session-resume context. Negation must come after any"
+        echo "# blanket ignore in this file."
+        echo "!/memory-bank/"
+        echo "!/memory-bank/**"
+      } >> "$gi"
+      echo "INFO: memory-bank/ was gitignored — added repo-local negation to $gi" >&2
+    fi
+  fi
+}
+ensure_memory_bank_trackable "$REPO"
+
 SESSION_SUMMARY=""
 INPUT="$(cat 2>/dev/null || true)"
 if [ -n "$INPUT" ]; then
@@ -45,7 +71,15 @@ PY
 )"
 fi
 
-cat > "$BANK/activeContext.md" <<EOF
+# APPEND, never overwrite — a full `cat >` here would destroy any detailed
+# context an agent wrote manually during the session (observed 2026-07-24:
+# this line previously truncated activeContext.md back to a generic stub on
+# every idle sessionEnd fire). If the file doesn't exist yet, seed the header
+# once; every subsequent run appends a new dated delta section, matching the
+# tasks.md pattern below. `85-workflow-state-bridge.mdc` still governs manual
+# pruning/consolidation when the file grows past ~1 screen.
+if [ ! -f "$BANK/activeContext.md" ]; then
+  cat > "$BANK/activeContext.md" <<EOF
 # Where we left off (max ~1 screen)
 
 **Last session:** $TIMESTAMP
@@ -60,6 +94,16 @@ $(git -C "$REPO" diff --name-only HEAD 2>/dev/null | head -10 || echo "none")
 
 **Next action:** (update manually or via end-session command)
 EOF
+else
+  cat >> "$BANK/activeContext.md" <<EOF
+
+---
+## Append — sessionEnd $TIMESTAMP
+**Branch:** $(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+**Session Summary:** ${SESSION_SUMMARY:-No summary provided.}
+**Last Modified Files:** $(git -C "$REPO" diff --name-only HEAD 2>/dev/null | head -10 | tr '\n' ' ' || echo "none")
+EOF
+fi
 
 if [ -f "$BANK/tasks.md" ]; then
   cat >> "$BANK/tasks.md" <<EOF
