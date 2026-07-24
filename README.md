@@ -39,6 +39,12 @@ for the full activation contract and manual/repair commands. `start-session.yaml
 (the old YAML "protocol") was retired 2026-07-19 — the `.sh` hook above is now
 the sole activation mechanism.
 
+To trigger that same pipeline by hand — synchronously, with visible output:
+
+```bash
+make -C "$HOME/.cursor-governance" start WS="$(pwd)"
+```
+
 ## 📁 Directory Structure
 
 ```

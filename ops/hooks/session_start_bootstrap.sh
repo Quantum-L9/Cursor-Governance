@@ -13,15 +13,28 @@ if [ -x "$HOME/.local/bin/claude" ]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# Auto-sync the ~/.cursor-governance SSOT clone in the background (guarded: ff-only,
-# never destroys local edits, single-flight). Replaces the unsafe reset --hard pattern.
+# Slow reconcilers (git sync, plugin install, extension install) are backgrounded and
+# silenced during a real sessionStart so they can never stall or fail a session. A manual
+# run (`make start`) sets L9_BOOTSTRAP_SYNC=1 to run them in the foreground with output on
+# stderr, so stdout stays a clean JSON payload either way.
+BOOTSTRAP_SYNC="${L9_BOOTSTRAP_SYNC:-0}"
+run_reconciler() {
+  if [ "$BOOTSTRAP_SYNC" = "1" ]; then
+    "$@" >&2 || true
+  else
+    ( "$@" >/dev/null 2>&1 & )
+  fi
+}
+
+# Auto-sync the ~/.cursor-governance SSOT clone (guarded: ff-only, never destroys local
+# edits, single-flight). Replaces the unsafe reset --hard pattern.
 SYNC="$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
-[ -x "$SYNC" ] && ( "$SYNC" >/dev/null 2>&1 & )
+[ -x "$SYNC" ] && run_reconciler "$SYNC"
 
 # Keep Claude Code plugins in sync with Cursor-Governance desired state (user-scope).
-# Background + --quiet: fail-open, no `claude update`, fast no-op when stamp matches.
+# --quiet: fail-open, no `claude update`, fast no-op when stamp matches.
 PLUGIN_SETUP="$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"
-[ -x "$PLUGIN_SETUP" ] && ( bash "$PLUGIN_SETUP" --quiet >/dev/null 2>&1 & )
+[ -x "$PLUGIN_SETUP" ] && run_reconciler bash "$PLUGIN_SETUP" --quiet
 
 resolve_global_commands() {
   # SSOT: ~/.cursor-governance (repo-root layout == GlobalCommands); Dropbox = transition fallback.
@@ -77,7 +90,7 @@ fi
 # installs are slow and must never block or fail a session start.
 IDE_SETUP="$GC/ops/scripts/install_ide_profile.sh"
 if [ -x "$IDE_SETUP" ] && [ -n "$REPO" ]; then
-  ( bash "$IDE_SETUP" --quiet "$REPO" >/dev/null 2>&1 & )
+  run_reconciler bash "$IDE_SETUP" --quiet "$REPO"
   if [ -f "$REPO/.vscode/.l9-ide-desired-hash" ]; then
     PARTS+=("ide-profile: applied ($(basename "$REPO"))")
   else

@@ -38,8 +38,11 @@ This repo does **not** own:
 `~/.cursor/hooks.json` under `sessionStart` (30s timeout). It runs on every
 Cursor session start with no manual step:
 
-1. Backgrounds `governance_sync.sh` — fast-forward-only pull of this clone
-   from `origin/main` (never destroys local edits, never hard-resets)
+1. Backgrounds `governance_sync.sh` — **bidirectional** reconcile of this clone
+   against `origin/main`: fast-forward-only pull (never destroys local edits,
+   never hard-resets), then a push via `backup_to_github.sh` so local work is
+   backed up at session start too, not only on a clean session end. Set
+   `GOVERNANCE_SYNC_PUSH=0` to make it pull-only.
 2. Backgrounds `setup_claude_code_plugins.sh --quiet` — reconciles the
    declared Claude Code plugin set (user-scope under `~/.claude/`) so every
    governed workspace inherits the same plugins
@@ -59,7 +62,17 @@ Cursor session start with no manual step:
 
 ### 2.2 Manual / on-demand commands
 
-Run these directly if you need to re-check or repair wiring mid-session:
+To re-run the **entire** sequence above against the current repo — same script,
+synchronously, with output on your terminal instead of in a JSON payload:
+
+```bash
+make -C "$HOME/.cursor-governance" start WS="$(pwd)"
+```
+
+Consumer repos may add a two-line delegating `start` target so plain `make start`
+works from inside the repo.
+
+Run these directly if you need to re-check or repair only one piece mid-session:
 
 ```bash
 bash "$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
@@ -169,10 +182,12 @@ python3 ops/graphiti/graphiti_memory_client.py health   # degraded Graphiti is e
 - Prefer fixing the stale artifact over restoring the retired one. When a
   verification script fails because it checks a pre-archive path, the script
   is usually the thing that's stale, not the archive.
-- This repo is pulled fast-forward-only at session start
-  (`governance_sync.sh`) and pushed at session end
-  (`backup_to_github.sh` via the `sessionEnd` hook). Never hand-edit files in
-  a way that assumes a different sync model.
+- This repo reconciles with `origin/main` in **both directions at session start**
+  (`governance_sync.sh`: ff-only pull, then push via `backup_to_github.sh`) and
+  pushes again at session end (`backup_to_github.sh` via the `sessionEnd` hook).
+  Both directions are commit-preserving: the pull is fast-forward-only, the push
+  rebases and aborts rather than committing over a conflict. Never hand-edit
+  files in a way that assumes a different sync model.
 
 ---
 
