@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "class": "biome_default",
+  "comment": "Extensions installed in EVERY governed workspace. Biome owns JS/TS/JSON formatting here, so Prettier is deliberately absent (formatter exclusivity).",
+  "extensions": [
+    "biomejs.biome",
+    "charliermarsh.ruff",
+    "dbaeumer.vscode-eslint",
+    "anysphere.cursorpyright",
+    "ms-python.python",
+    "ms-python.debugpy",
+    "redhat.vscode-yaml"
+  ]
+}
