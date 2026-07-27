@@ -30,3 +30,8 @@ repos:
     path_hints: [igorbot]
     remote_patterns: ["*/igorbot*", "*/igorbot.git"]
     integrates_with: [cursor-governance]
+  l9-meta-injector:
+    github: Quantum-L9/l9-meta-injector
+    path_hints: [l9-meta-injector]
+    remote_patterns: ["*/l9-meta-injector*"]
+    integrates_with: [cursor-governance]
