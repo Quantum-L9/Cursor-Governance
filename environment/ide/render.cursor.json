@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "comment": [
+    "Cursor/VS Code rendering map: how each tool named in policy.json becomes concrete",
+    "editor configuration. This is the only place extension IDs and code-action IDs appear.",
+    "A second IDE gets its own render.<ide>.json — policy.json never changes for it.",
+    "Tools whose policy authority is 'repo' are listed for reference but are never bound",
+    "as editor.defaultFormatter; the repo's own config governs those languages."
+  ],
+  "tools": {
+    "biome": {
+      "format_extension": "biomejs.biome"
+    },
+    "ruff": {
+      "format_extension": "charliermarsh.ruff",
+      "code_actions": {
+        "fix_all": "source.fixAll.ruff",
+        "organize_imports": "source.organizeImports.ruff"
+      }
+    },
+    "eslint": {
+      "format_extension": "dbaeumer.vscode-eslint",
+      "code_actions": {
+        "fix_all": "source.fixAll.eslint"
+      }
+    },
+    "prettier": {
+      "format_extension": "esbenp.prettier-vscode"
+    }
+  }
+}

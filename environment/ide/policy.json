@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "comment": [
+    "Language ownership — the IDE-neutral authority for which tool owns which language",
+    "in a governed workspace. Deliberately contains no extension IDs and no editor.* keys:",
+    "those are rendering, and live in render.cursor.json (Cursor) or in an adapter under",
+    "ops/scripts/adapters/. Every adapter renders THIS file; none of them decides ownership.",
+    "Workspace classification (which class a repo belongs to) lives in exceptions.yaml."
+  ],
+  "authority_values": {
+    "governance": "This profile declares the concrete binding — the adapter renders it.",
+    "repo": "The repo's own config decides. Adapters MUST NOT bind a formatter for these languages, or they would fight the project config. This is formatter exclusivity."
+  },
+  "classes": {
+    "biome_default": {
+      "description": "Default for every governed workspace: Biome owns JS/TS/JSON, Ruff owns Python.",
+      "ownership": [
+        {
+          "tool": "biome",
+          "role": "formatter",
+          "authority": "governance",
+          "languages": [
+            "javascript",
+            "javascriptreact",
+            "typescript",
+            "typescriptreact",
+            "json",
+            "jsonc"
+          ]
+        },
+        {
+          "tool": "ruff",
+          "role": "formatter",
+          "authority": "governance",
+          "languages": ["python"],
+          "on_save": {
+            "format": true,
+            "fix_all": "explicit",
+            "organize_imports": "explicit"
+          }
+        }
+      ]
+    },
+    "eslint_owned": {
+      "description": "Workspaces where ESLint/Prettier config in the repo is authoritative for JS/TS. Python is still Ruff-owned.",
+      "ownership": [
+        {
+          "tool": "eslint",
+          "role": "linter_formatter",
+          "authority": "repo",
+          "languages": [
+            "javascript",
+            "javascriptreact",
+            "typescript",
+            "typescriptreact",
+            "json",
+            "jsonc"
+          ]
+        },
+        {
+          "tool": "ruff",
+          "role": "formatter",
+          "authority": "governance",
+          "languages": ["python"],
+          "on_save": {
+            "format": true,
+            "fix_all": "explicit",
+            "organize_imports": "explicit"
+          }
+        }
+      ]
+    }
+  }
+}

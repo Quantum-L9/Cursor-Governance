@@ -13,19 +13,36 @@ profile owns. Reconciled by `ops/scripts/install_ide_profile.sh`.
 
 | File | Purpose |
 |---|---|
+| `policy.json` | **Ownership authority.** Which tool owns which language, per class. IDE-neutral |
+| `render.cursor.json` | Cursor rendering map: tool name → extension ID and code-action IDs |
 | `extensions.core.json` | Extensions installed in every governed workspace |
 | `extensions.eslint_owned.json` | Extra extensions for ESLint-owned workspaces (adds Prettier) |
 | `settings.base.json` | Editor hygiene keys applied everywhere |
-| `settings.python.json` | Ruff as formatter, Ruff fix/organize-imports on save, Pyright basic |
-| `settings.node.json` | Biome as `defaultFormatter` for JS/TS/JSON — **`biome_default` only** |
+| `settings.python.json` | Python type-check mode (Pyright basic) — no formatter keys |
+| `settings.node.json` | Superseded by `policy.json`; kept for reference, read by nothing |
 | `exceptions.yaml` | Repos and heuristics that classify a workspace as `eslint_owned` |
+
+## Policy vs rendering
+
+`policy.json` says *"Biome owns TypeScript in `biome_default`"*. `render.cursor.json`
+says *"the Biome formatter is `biomejs.biome`"*. The installer joins the two into
+`[typescript]: { editor.defaultFormatter: … }`. Extension IDs and `editor.*` keys
+appear only on the rendering side, so a second IDE gets its own
+`render.<ide>.json` and `policy.json` never changes.
+
+Ownership entries carry an `authority`: `governance` means this profile declares the
+binding, `repo` means the project's own config decides and the adapter must render
+nothing. That is how `eslint_owned` gets no JS/TS formatter key.
+
+**To change which formatter owns a language, edit `policy.json`.** Editing a
+`settings.*.json` payload cannot do it — those files no longer carry ownership.
 
 ## Workspace classes
 
-| Class | JS/TS formatter | Applied settings |
+| Class | JS/TS formatter | Python formatter |
 |---|---|---|
-| `biome_default` | Biome | base + python + node |
-| `eslint_owned` | none written — repo's ESLint/Prettier config wins | base + python |
+| `biome_default` | Biome (governance) | Ruff (governance) |
+| `eslint_owned` | none written — repo's ESLint/Prettier config wins | Ruff (governance) |
 
 Classification order (first match wins): workspace basename matches
 `eslint_owned_repos` → any path segment matches → `eslint.config.*`/`.eslintrc*`
@@ -34,6 +51,29 @@ present within depth 2 **and** no `biome.json`. Otherwise `biome_default`.
 This is what **formatter exclusivity** means in practice: exactly one formatter is
 ever declared per language, and in `eslint_owned` repos the profile declares none
 so it cannot fight the project's own config.
+
+## Dispatcher and adapters
+
+`install_ide_profile.sh` classifies the workspace and dispatches; nothing
+editor-specific lives in it. Each adapter renders `policy.json` for one target and
+prints `key=value` state so the dispatcher can summarize.
+
+| Adapter | Renders | Reaches |
+|---|---|---|
+| `ops/scripts/adapters/cursor.sh` | extensions (machine) + `.vscode/settings.json` (repo) | desktop Cursor only — both paths are untracked |
+| `ops/scripts/adapters/agentdocs.sh` | ownership block in `AGENTS.md` / `CLAUDE.md` | **git-tracked**, so cloud agents see it after a clone |
+
+The agentdocs branch exists because `.vscode/` never survives a clone into a Claude
+Code mobile or Cursor cloud sandbox. It only edits files that already exist — it will
+not create `AGENTS.md` in a repo that has none.
+
+There are three stamps, at three scopes, and they stay separate on purpose:
+`$HOME/.cursor/.l9-ide-desired-hash` (extensions, machine),
+`<ws>/.vscode/.l9-ide-desired-hash` (settings, repo),
+`<ws>/.vscode/.l9-agentdocs-hash` (docs block, repo).
+
+No adapter exists for Zed or JetBrains. Add one the first time a governed repo is
+actually opened in that editor.
 
 ## Managed-key merge
 
