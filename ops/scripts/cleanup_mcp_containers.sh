@@ -1,46 +1,13 @@
 #!/bin/bash
-# === L9 GOVERNANCE CANONICAL HEADER ===
-# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-# version: "6.0.0"
-# component_id: "OPS-MCP-001"
-# component_name: "MCP Container Cleanup Script"
-# layer: "operations"
-# domain: "infrastructure"
-# type: "utility"
-# status: "active"
-# created: "2025-11-04T20:18:00Z"
-# updated: "2025-11-08T00:00:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
+# L9_META
+#   l9_schema: 1
+#   artifact_type: utility
+#   component: mcp_container_cleanup_script
+#   tags: [docker, mcp, cleanup, utility, infrastructure]
+#   retrieval: on_demand
+#   status: active
 #
-# === GOVERNANCE METADATA ===
-# governance_level: "medium"
-# compliance_required: false
-# audit_trail: false
-# security_classification: "internal"
-#
-# === TECHNICAL METADATA ===
-# dependencies: ["docker", "bash"]
-# integrates_with: ["docker", "n8n-mcp"]
-# data_sources: ["docker_ps"]
-# outputs: ["terminal_output"]
-#
-# === OPERATIONAL METADATA ===
-# execution_mode: "manual"
-# monitoring_required: false
-# logging_level: "info"
-# performance_tier: "utility"
-#
-# === BUSINESS METADATA ===
-# purpose: "Remove stale n8n-mcp Docker containers that may interfere with MCP tools"
-# summary: "Cleanup script for n8n-mcp Docker containers"
-# business_value: "Prevents MCP configuration issues caused by stale containers"
-# success_metrics: ["cleanup_success_rate >= 95%", "no_active_containers_removed"]
-#
-# === TAGS & CLASSIFICATION ===
-# tags: ["docker", "mcp", "cleanup", "utility", "infrastructure"]
-# keywords: ["docker", "n8n-mcp", "cleanup", "containers"]
-# related_components: ["OPS-MCP-002", "OPS-MCP-003"]
+# Remove stale n8n-mcp Docker containers that may interfere with MCP tools
 
 echo "🧹 Cleaning up old n8n-mcp containers..."
 echo ""

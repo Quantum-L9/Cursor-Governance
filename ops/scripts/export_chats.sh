@@ -1,47 +1,13 @@
 #!/usr/bin/env bash
-# === L9 GOVERNANCE CANONICAL HEADER ===
-# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-# version: "6.0.0"
-# component_id: "OPS-EXP-001"
-# component_name: "Chat Export Service"
-# layer: "operations"
-# domain: "telemetry"
-# type: "exporter"
-# status: "active"
-# created: "2025-10-06T17:10:32Z"
-# updated: "2025-11-08T00:00:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
+# L9_META
+#   l9_schema: 1
+#   artifact_type: exporter
+#   component: chat_export_service
+#   tags: [chat, export, telemetry, automation, hourly]
+#   retrieval: on_demand
+#   status: active
 #
-# === GOVERNANCE METADATA ===
-# governance_level: "critical"
-# compliance_required: true
-# audit_trail: true
-# security_classification: "internal"
-#
-# === TECHNICAL METADATA ===
-# dependencies: ["bash", "cp", "find"]
-# integrates_with: ["OPS-LEA-001", "TEL-COL-001"]
-# data_sources: ["cursor_local_storage"]
-# outputs: ["ops/logs/chat_exports"]
-#
-# === OPERATIONAL METADATA ===
-# execution_mode: "scheduled"
-# monitoring_required: true
-# logging_level: "info"
-# performance_tier: "background"
-# schedule: "hourly"
-#
-# === BUSINESS METADATA ===
-# purpose: "Export Cursor chat history for learning system analysis"
-# summary: "Automated hourly snapshot of Cursor chat data with retention policy"
-# business_value: "Enables recursive learning and pattern detection"
-# success_metrics: ["export_success_rate >= 99%", "retention_policy_enforced", "log_rotation_functional"]
-#
-# === TAGS & CLASSIFICATION ===
-# tags: ["chat", "export", "telemetry", "automation", "hourly"]
-# keywords: ["cursor", "chat", "leveldb", "export", "backup"]
-# related_components: ["OPS-LEA-001", "INT-LE-001", "TEL-COL-001"]
+# Export Cursor chat history for learning system analysis
 
 set -euo pipefail
 

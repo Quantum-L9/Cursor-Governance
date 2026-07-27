@@ -2,6 +2,7 @@
 l9_schema: 1
 parent: l9-forge
 origin: migrated-from profiles/advanced-features.md sections B and C
+sources: [profiles/advanced-features.md]
 tags: [forge, parallel, batching, subagents, preference-learning]
 status: active
 /L9_META -->

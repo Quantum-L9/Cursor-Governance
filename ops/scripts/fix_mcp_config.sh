@@ -1,46 +1,13 @@
 #!/bin/bash
-# === L9 GOVERNANCE CANONICAL HEADER ===
-# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-# version: "6.0.0"
-# component_id: "OPS-MCP-002"
-# component_name: "MCP Configuration Fix Script"
-# layer: "operations"
-# domain: "infrastructure"
-# type: "utility"
-# status: "active"
-# created: "2025-11-04T19:48:00Z"
-# updated: "2025-11-08T00:00:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
+# L9_META
+#   l9_schema: 1
+#   artifact_type: utility
+#   component: mcp_configuration_fix_script
+#   tags: [mcp, configuration, fix, utility, cursor]
+#   retrieval: on_demand
+#   status: active
 #
-# === GOVERNANCE METADATA ===
-# governance_level: "medium"
-# compliance_required: false
-# audit_trail: true
-# security_classification: "internal"
-#
-# === TECHNICAL METADATA ===
-# dependencies: ["bash", "jq"]
-# integrates_with: ["cursor", "mcp", "docker"]
-# data_sources: ["mcp_settings_json"]
-# outputs: ["mcp_config_file"]
-#
-# === OPERATIONAL METADATA ===
-# execution_mode: "manual"
-# monitoring_required: false
-# logging_level: "info"
-# performance_tier: "utility"
-#
-# === BUSINESS METADATA ===
-# purpose: "Ensure MCP configuration is properly set up for Cursor"
-# summary: "Configuration repair script for MCP Cline settings"
-# business_value: "Prevents MCP integration issues and ensures proper tool access"
-# success_metrics: ["config_fix_success_rate >= 95%", "backup_created", "validation_passed"]
-#
-# === TAGS & CLASSIFICATION ===
-# tags: ["mcp", "configuration", "fix", "utility", "cursor"]
-# keywords: ["mcp", "config", "cline", "settings", "fix"]
-# related_components: ["OPS-MCP-001", "OPS-MCP-003"]
+# Ensure MCP configuration is properly set up for Cursor
 
 CONFIG_DIR="$HOME/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings"
 CONFIG_FILE="$CONFIG_DIR/cline_mcp_settings.json"

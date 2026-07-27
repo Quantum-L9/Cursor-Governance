@@ -15,7 +15,7 @@ Ensure that all credentials within the environment comply with least-privilege p
 ## Governance Integration
 - `.cursor/rules.json`: Enforces environment credential sync.
 - `.env` and `environment/*.csv`: Primary verification source for key scope, status, and rotation dates.
-- `.cursor/profiles/security-access.md`: Governs access and redaction.
+- `skills/l9-auditing-security/references/credential-access-policy.md`: Governs access and redaction.
 
 ## Rules
 1. **Scope Control:** Each credential must specify `SCOPE=[service|internal|restricted]`.

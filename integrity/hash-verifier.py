@@ -1,65 +1,14 @@
 #!/usr/bin/env python3
 """
-# === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-version: "6.0.0"
-component_id: "INT-HV-001"
-component_name: "Hash Verifier"
-layer: "integrity"
-domain: "file_integrity"
-type: "verification_system"
-status: "active"
-created: "2025-10-06T17:22:56Z"
-updated: "2026-01-04T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
+L9_META
+  l9_schema: 1
+  artifact_type: verification_system
+  component: hash_verifier
+  tags: [integrity, hash, verification, tamper_detection, security]
+  retrieval: on_demand
+  status: active
 
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "restricted"
-
-# === TECHNICAL METADATA ===
-dependencies: ["hashlib", "base64", "json", "pathlib"]
-integrates_with: ["INT-MA-001", "EXE-VAL-001", "OPS-OPS-001"]
-api_endpoints: []
-data_sources: ["integrity/manifest-lock.json"]
-outputs: ["integrity/manifest-lock.json", "ops/logs/integrity_report.json",
-  "ops/logs/integrity_activity.log"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "on-demand"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "realtime"
-
-# === BUSINESS METADATA ===
-purpose: "File tamper detection and integrity verification for governance files"
-summary: "Builds SHA-256/Base64 snapshots, verifies files against manifest, and repairs
-  tampered files"
-business_value: "Ensures governance file integrity and prevents unauthorized modifications"
-success_metrics: ["verification_accuracy = 100%", "repair_success >= 99%", "detection_latency < 1s"]
-
-# === MIGRATION METADATA ===
-canonical_source: "10X Governance Suite"
-generated: "2025-10-06T17:22:56Z"
-migration_notes: "Enhanced with L9 Governance canonical header"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["integrity", "hash", "verification", "tamper-detection", "security"]
-keywords: ["hash", "sha256", "base64", "integrity", "manifest", "verification"]
-related_components: ["INT-MA-001", "EXE-VAL-001"]
-
-# === DESCRIPTION ===
-Hash Verifier - File Integrity System for L9 Governance Governance
-
-Modes:
-- Snapshot: Build/update integrity/manifest-lock.json with SHA-256 and Base64 snapshots
-- Verify: Compare current files to manifest
-- Repair: Restore missing/modified files from manifest
-
-Logs to: ops/logs/integrity_report.json and ops/logs/integrity_activity.log
+File tamper detection and integrity verification for governance files
 """
 
 import base64

@@ -1,46 +1,13 @@
 #!/bin/bash
-# === L9 GOVERNANCE CANONICAL HEADER ===
-# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-# version: "6.0.0"
-# component_id: "OPS-MCP-003"
-# component_name: "Docker Verification Script"
-# layer: "operations"
-# domain: "infrastructure"
-# type: "utility"
-# status: "active"
-# created: "2025-11-04T19:51:00Z"
-# updated: "2025-11-08T00:00:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
+# L9_META
+#   l9_schema: 1
+#   artifact_type: utility
+#   component: docker_verification_script
+#   tags: [docker, verification, mcp, utility, infrastructure]
+#   retrieval: on_demand
+#   status: active
 #
-# === GOVERNANCE METADATA ===
-# governance_level: "medium"
-# compliance_required: false
-# audit_trail: false
-# security_classification: "internal"
-#
-# === TECHNICAL METADATA ===
-# dependencies: ["docker", "bash"]
-# integrates_with: ["docker", "n8n-mcp"]
-# data_sources: ["docker_ps", "docker_version"]
-# outputs: ["terminal_output", "verification_report"]
-#
-# === OPERATIONAL METADATA ===
-# execution_mode: "manual"
-# monitoring_required: false
-# logging_level: "info"
-# performance_tier: "utility"
-#
-# === BUSINESS METADATA ===
-# purpose: "Verify Docker is properly configured for n8n-mcp integration"
-# summary: "Comprehensive Docker verification script for MCP setup"
-# business_value: "Ensures Docker environment is ready for MCP tools"
-# success_metrics: ["verification_success_rate >= 95%", "all_checks_passed"]
-#
-# === TAGS & CLASSIFICATION ===
-# tags: ["docker", "verification", "mcp", "utility", "infrastructure"]
-# keywords: ["docker", "verify", "n8n-mcp", "setup", "diagnostics"]
-# related_components: ["OPS-MCP-001", "OPS-MCP-002"]
+# Verify Docker is properly configured for n8n-mcp integration
 
 echo "🔍 Docker Verification for n8n-mcp"
 echo "=================================="

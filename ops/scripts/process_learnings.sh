@@ -1,47 +1,13 @@
 #!/usr/bin/env bash
-# === L9 GOVERNANCE CANONICAL HEADER ===
-# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-# version: "6.0.0"
-# component_id: "OPS-LEA-001"
-# component_name: "Learning Processing Pipeline"
-# layer: "operations"
-# domain: "learning"
-# type: "orchestrator"
-# status: "active"
-# created: "2025-10-06T00:00:00Z"
-# updated: "2025-11-08T00:00:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
+# L9_META
+#   l9_schema: 1
+#   artifact_type: orchestrator
+#   component: learning_processing_pipeline
+#   tags: [learning, pipeline, orchestration, automation, intelligence]
+#   retrieval: on_demand
+#   status: active
 #
-# === GOVERNANCE METADATA ===
-# governance_level: "critical"
-# compliance_required: true
-# audit_trail: true
-# security_classification: "internal"
-#
-# === TECHNICAL METADATA ===
-# dependencies: ["bash", "python3", "memory_aggregator.py", "learning_updater.py", "sync_mistakes_to_cursorrules.py"]
-# integrates_with: ["OPS-EXP-001", "INT-LE-001", "FND-LG-001"]
-# data_sources: ["ops/logs/chat_exports", "ops/logs/memory_index.json"]
-# outputs: ["learning/failures", "learning/patterns", "learning/solutions", ".cursorrules"]
-#
-# === OPERATIONAL METADATA ===
-# execution_mode: "scheduled"
-# monitoring_required: true
-# logging_level: "info"
-# performance_tier: "background"
-# schedule: "daily at 6 PM EST"
-#
-# === BUSINESS METADATA ===
-# purpose: "Orchestrate learning extraction from chat exports"
-# summary: "Master pipeline: Memory Aggregator → Learning Updater → .cursorrules Sync"
-# business_value: "Enables continuous improvement through automated learning extraction"
-# success_metrics: ["pipeline_success_rate >= 95%", "learnings_extracted > 0", "sync_to_cursorrules_successful"]
-#
-# === TAGS & CLASSIFICATION ===
-# tags: ["learning", "pipeline", "orchestration", "automation", "intelligence"]
-# keywords: ["learning", "aggregator", "updater", "cursorrules", "pipeline"]
-# related_components: ["OPS-EXP-001", "INT-LE-001", "INT-ML-001"]
+# Orchestrate learning extraction from chat exports
 
 set -e
 

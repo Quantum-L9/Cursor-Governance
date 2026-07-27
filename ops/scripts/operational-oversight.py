@@ -1,50 +1,14 @@
 #!/usr/bin/env python3
 """
-# === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-version: "6.1.0"
-component_id: "OPS-OPS-002"
-component_name: "Operational Oversight - Executable Monitor"
-layer: "operations"
-domain: "autonomous_operations"
-type: "monitoring_script"
-status: "active"
-created: "2025-11-20T00:00:00Z"
-updated: "2025-11-20T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
+L9_META
+  l9_schema: 1
+  artifact_type: monitoring_script
+  component: operational_oversight_executable_monitor
+  tags: [operations, autonomous_operations]
+  retrieval: on_demand
+  status: active
 
-# === GOVERNANCE METADATA ===
-governance_level: "critical"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["governance-monitor.py", "process_learnings.sh"]
-integrates_with: ["OPS-PIP-001", "OPS-SEC-001", "INT-RE-001", "EXE-MON-001"]
-api_endpoints: []
-data_sources: ["ops/logs/", "learning/failures/", "telemetry/logs/"]
-outputs: ["ops/logs/operational_health.log", "ops/logs/dashboard_state.json"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "scheduled"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "realtime"
-schedule: "every_30_min"
-
-# === BUSINESS METADATA ===
-purpose: "Autonomous operational oversight with real-time anomaly detection and intelligent
-  response"
-summary: "Executable implementation of operational-oversight.md providing governance
-  dashboard, memory aggregation, and autonomous anomaly response"
-business_value: "Enables hands-off governance operation with intelligent anomaly handling"
-success_metrics: ["anomaly_detection_accuracy >= 95%", "response_time < 30s",
-  "false_positive_rate < 5%"]
-
-Operational Oversight - Executable Monitor
-Implements the monitoring system described in operational-oversight.md
+"Autonomous operational oversight with real-time anomaly detection and intelligent
 """
 
 import json

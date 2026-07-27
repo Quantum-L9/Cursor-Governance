@@ -2,6 +2,7 @@
 l9_schema: 1
 parent: l9-structured-reasoning
 origin: migrated-from profiles/reasoning_technical_operations.md v2.1
+sources: [profiles/reasoning_technical_operations.md]
 tags: [reasoning, tool-selection, api-evaluation, mcp, architecture-decision]
 status: active
 /L9_META -->

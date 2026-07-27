@@ -35,7 +35,12 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
 ## Rules / docs that mention deleted assets
 
 - [ ] **`rules/25-python-dora-header.mdc`** — references deleted `python-header-template.py`
-- [ ] **`profiles/session-startup-protocol.md`** — Suite-6 startup protocol; may reference deleted startup stack
+- [x] **`profiles/session-startup-protocol.md`** — **confirmed dead** (2026-07-24). Lines 61-225 were
+  the Suite-6 "read all profiles at startup" bootstrap, superseded by `commands/start-session.md` +
+  `ops/hooks/session_start_bootstrap.sh`. Sections B-E cited a foreign stack (`HARD_RULES.md`,
+  Supabase schema/auth, `Configuration/.env`) — all absent from this repo, dropped. Only sections
+  F/G/H generalized; condensed into `rules/45-pre-action-verification.mdc`. File pending deletion at
+  the `profiles/` retirement gate.
 - [x] **`intelligence/workspace/setup-new-workspace.py`** — **archived** (2026-07-19) to
   `intelligence/_archived/workspace/`. Still the only implementation of the workspace-setup
   flow, but called deleted `startup/*` files and the broken `process_learnings.sh` pipeline.

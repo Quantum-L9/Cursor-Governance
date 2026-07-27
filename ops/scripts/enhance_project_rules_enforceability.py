@@ -1,52 +1,14 @@
 #!/usr/bin/env python3
 """
-# === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-version: "6.0.0"
-component_id: "OPS-PRE-001"
-component_name: "Project Rules Enhancer"
-layer: "operations"
-domain: "governance"
-type: "enhancer"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2026-01-04T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
+L9_META
+  l9_schema: 1
+  artifact_type: enhancer
+  component: project_rules_enhancer
+  tags: [rules, enhancement, enforcement, governance, automation]
+  retrieval: on_demand
+  status: active
 
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["re", "pathlib"]
-integrates_with: ["EXE-VAL-001", "OPS-OPS-001"]
-api_endpoints: []
-data_sources: ["project_rules/*.md"]
-outputs: ["Enhanced project rules files"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "on-demand"
-monitoring_required: false
-logging_level: "info"
-performance_tier: "background"
-
-# === BUSINESS METADATA ===
-purpose: "Enhance Project Rules files with enforceable language and mandatory checklists"
-summary: "Converts suggestions to mandates, adds enforcement sections, and strengthens language"
-business_value: "Ensures project rules are actionable and verifiable"
-success_metrics: ["enhancement_rate >= 95%", "enforcement_coverage = 100%"]
-
-# === TAGS & CLASSIFICATION ===
-tags: ["rules", "enhancement", "enforcement", "governance", "automation"]
-keywords: ["rules", "enhance", "enforce", "mandate", "checklist"]
-related_components: ["EXE-VAL-001", "OPS-OPS-001"]
-
-# === DESCRIPTION ===
-Enhance existing Project Rules files with enforceable language and mandatory checklists.
-Converts suggestions to mandates and adds verification requirements.
+Enhance Project Rules files with enforceable language and mandatory checklists
 """
 
 import re

@@ -15,7 +15,7 @@ Validate all API keys, tokens, and authentication variables to ensure compliance
 ## Verification Process
 1. Parse environment variables from `environment/L9-env-variable-audit.csv`.
 2. Validate structure, prefix, and checksum (if applicable).
-3. Check keys against allowlist or regex patterns defined in `.cursor/profiles/security-access.md`.
+3. Check keys against allowlist or regex patterns defined in `skills/l9-auditing-security/references/credential-access-policy.md`.
 4. Detect anomalies (expired, malformed, or unused keys).
 
 ## Remediation
