@@ -1,27 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "1.0.0"
-component_id: "INT-CM-001"
-component_name: "Context Memory System"
-layer: "intelligence"
-domain: "context_memory"
-type: "documentation"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "medium"
-compliance_required: true
-audit_trail: true
-
-# === BUSINESS METADATA ===
-purpose: "Long-term memory system for AI sessions through automated context capture"
-summary: "Provides session continuity by capturing and restoring context across AI sessions"
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: documentation
+component: context_memory_system
+tags: [intelligence, context_memory]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Context Memory System
 
@@ -243,5 +227,5 @@ ls -la ops/logs/chat_exports/
 
 - Created: 2025-11-08
 - Pattern: Mirrors recursive learning system
-- Integration: Cursor Governance Suite 6
+- Integration: L9 Governance
 

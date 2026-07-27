@@ -2,6 +2,7 @@
 l9_schema: 1
 parent: l9-structured-reasoning
 origin: migrated-from profiles/reasoning_docs.md (Strategic Intelligence Layer)
+sources: [profiles/reasoning_docs.md]
 tags: [reasoning, document-corpus, gap-analysis, coherence, dependency-map]
 status: active
 /L9_META -->

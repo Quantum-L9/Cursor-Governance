@@ -16,7 +16,7 @@ production_ready: true
 1. `.env.template`
 2. `supabase-schema.sql`
 3. `project_config.yaml`
-4. `@.GlobalCommands/profiles/*.md`
+4. `@.cursor-commands/rules/*.mdc`
 5. `memory_log.json` + `session_status.md`
 
 ## 🚀 COMMAND

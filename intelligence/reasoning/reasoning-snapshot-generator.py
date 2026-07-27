@@ -1,52 +1,14 @@
 #!/usr/bin/env python3
 """
-# === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-version: "6.0.0"
-component_id: "INT-RE-003"
-component_name: "Reasoning Snapshot Generator"
-layer: "intelligence"
-domain: "reasoning"
-type: "generator"
-status: "active"
-created: "2025-10-28T00:00:00Z"
-updated: "2025-10-28T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-governance_level: "high"
-purpose: "Automated generation of structured reasoning snapshots for governance decisions"
+L9_META
+  l9_schema: 1
+  artifact_type: generator
+  component: reasoning_snapshot_generator
+  tags: [reasoning, snapshot, generator, automation, governance]
+  retrieval: on_demand
+  status: active
 
-# === GOVERNANCE METADATA ===
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["datetime", "pathlib", "json", "yaml"]
-integrates_with: ["INT-RE-001", "INT-RE-002", "FND-SEC-001"]
-api_endpoints: ["/api/v1/reasoning/snapshot"]
-data_sources: ["foundation/logic/rule-registry.json", "foundation/agents/stubs/"]
-outputs: ["intelligence/reasoning/snapshots/"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "autonomous"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "standard"
-
-# === BUSINESS METADATA ===
-business_value: "Automates governance decision documentation for audit compliance"
-success_metrics: ["snapshot_generation_time < 100ms", "completeness = 100%",
-  "audit_compliance = 100%"]
-
-# === INTEGRATION METADATA ===
-constellation_origin: "ReasoningSnapshot_Template.md + SnapshotEnforcer.md"
-migration_notes: "Enhanced Constellation snapshot generation with L9 Governance automation"
-
-# === TAGS & CLASSIFICATION ===
-tags: ["reasoning", "snapshot", "generator", "automation", "governance"]
-keywords: ["snapshot", "reasoning", "generator", "automation", "governance"]
-related_components: ["INT-RE-001", "INT-RE-002", "FND-SEC-001"]
+Automated generation of structured reasoning snapshots for governance decisions
 """
 
 import sys

@@ -60,7 +60,7 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 │   ├── graphiti/       # Graphiti memory client + activation runbooks
 │   └── logs/          # Runtime logs
 ├── intelligence/      # Active signal corpus — chat exports, distillation, mining
-├── profiles/          # Reasoning / session-startup profiles
+├── profiles/          # DEPRECATED — content ported into skills/ + rules/; pending retirement
 ├── learning/          # Curated lessons, repeated-mistakes, quick-fixes
 ├── protocols/         # GMP protocol contracts and templates
 ├── security/          # Security governance docs

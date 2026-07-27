@@ -1,43 +1,18 @@
 #!/usr/bin/env python3
 """
-# === L9 GOVERNANCE CANONICAL HEADER ===
-suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-version: "6.0.0"
-component_id: "OPS-TPE-001"
-component_name: "Tool Pattern Extractor"
-layer: "operations"
-domain: "learning"
-type: "extractor"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
+L9_META
+  l9_schema: 1
+  artifact_type: extractor
+  component: tool_pattern_extractor
+  tags: [operations, learning, tool-selection, patterns, chat-export]
+  retrieval: on_demand
+  status: active
 
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
+Tool Pattern Extractor — extract tool call sequences from chat history and build a pattern
+database, so tool selection can be informed by historical success rates.
 
-# === TECHNICAL METADATA ===
-dependencies: ["python3", "json", "re", "pathlib", "hashlib"]
-integrates_with: ["OPS-AGG-001", "OPS-LEA-001", "INT-TSE-001"]
-data_sources: ["ops/logs/chat_exports", "ops/logs/memory_index.json"]
-outputs: ["ops/logs/tool_patterns.json"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "scheduled"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "background"
-
-# === BUSINESS METADATA ===
-purpose: "Extract tool call sequences from chat history and build pattern database"
-summary: "Analyzes conversations to identify successful tool sequences for different request types"
-business_value: "Enables intelligent tool selection based on historical success patterns"
-success_metrics: ["patterns_extracted >= 100", "success_rate_calculated",
-  "tool_patterns.json_generated"]
+Reads:  ops/logs/chat_exports, ops/logs/memory_index.json
+Writes: ops/logs/tool_patterns.json
 """
 
 import hashlib

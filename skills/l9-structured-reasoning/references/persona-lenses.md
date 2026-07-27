@@ -2,6 +2,7 @@
 l9_schema: 1
 parent: l9-structured-reasoning
 origin: migrated-from profiles/advanced-features.md section A
+sources: [profiles/advanced-features.md]
 tags: [reasoning, persona, strategic-lens, opt-in]
 status: active
 /L9_META -->

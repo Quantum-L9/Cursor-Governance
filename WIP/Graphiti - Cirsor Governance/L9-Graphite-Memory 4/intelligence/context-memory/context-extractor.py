@@ -1,50 +1,13 @@
 #!/usr/bin/env python3
 """
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "6.0.0"
-component_id: "INT-CM-001"
-component_name: "Context Memory Extractor"
-layer: "intelligence"
-domain: "context_memory"
-type: "extractor"
-status: "active"
-created: "2025-10-28T00:00:00Z"
-updated: "2026-01-04T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
+L9_META
+  l9_schema: 1
+  artifact_type: extractor
+  component: context_memory_extractor
+  tags: [context, memory, extraction, bayesian, probabilistic, session]
+  retrieval: on_demand
+  status: active
 
-# === GOVERNANCE METADATA ===
-governance_level: "high"
-compliance_required: true
-audit_trail: true
-security_classification: "internal"
-
-# === TECHNICAL METADATA ===
-dependencies: ["json", "sqlite3", "datetime", "pathlib", "re"]
-integrates_with: ["INT-PE-001", "OPS-AGG-001", "INT-ML-001"]
-api_endpoints: []
-data_sources: ["User/workspaceStorage/state.vscdb", "cursor_chat_exports"]
-outputs: ["context-memory/*.json", "context-memory/index.json"]
-
-# === OPERATIONAL METADATA ===
-execution_mode: "scheduled"
-monitoring_required: true
-logging_level: "info"
-performance_tier: "background"
-
-# === BUSINESS METADATA ===
-purpose: "Extract session context from chat exports for cross-session memory"
-summary: "Runs hourly to extract meaningful context using Bayesian probabilistic reasoning"
-business_value: "Enables persistent context awareness across development sessions"
-success_metrics: ["context_accuracy >= 90%", "extraction_latency < 30s", "meaningful_context_rate >= 70%"]
-
-# === TAGS & CLASSIFICATION ===
-tags: ["context", "memory", "extraction", "bayesian", "probabilistic", "session"]
-keywords: ["context", "memory", "extraction", "chat", "export", "bayesian"]
-related_components: ["INT-PE-001", "OPS-AGG-001", "INT-ML-001"]
-
-# === DESCRIPTION ===
 Context Memory Extractor - Session Context Analysis
 
 Runs hourly to:
@@ -158,7 +121,7 @@ class ContextExtractor:
             'cursor-load-pack': ['cursor load pack', 'cursor_load pack', 'load pack'],
             'mack': ['mack', 'sales agent', 'bcp'],
             'linda': ['linda', 'operations', 'logistics'],
-            'governance': ['governance', 'suite 6', 'globalcommands'],
+            'governance': ['governance', 'l9_meta', 'globalcommands'],
             'n8n': ['n8n', 'workflow', 'automation'],
             'neo4j': ['neo4j', 'graph', 'cypher']
         }

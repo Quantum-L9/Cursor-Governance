@@ -1,27 +1,11 @@
----
-# === SUITE 6 CANONICAL HEADER ===
-suite: "Cursor Governance Suite 6 (L9 + Suite 6)"
-version: "1.0.0"
-component_id: "INT-CM-002"
-component_name: "Context Memory Critical Fix Notes"
-layer: "intelligence"
-domain: "context_memory"
-type: "documentation"
-status: "active"
-created: "2025-11-08T00:00:00Z"
-updated: "2025-11-08T00:00:00Z"
-author: "Igor Beylin"
-maintainer: "Igor Beylin"
-
-# === GOVERNANCE METADATA ===
-governance_level: "medium"
-compliance_required: true
-audit_trail: true
-
-# === BUSINESS METADATA ===
-purpose: "Document critical fixes applied to context extractor system"
-summary: "Notes on fixing context extractor format assumptions and alignment with learning system"
----
+<!-- --- L9_META ---
+l9_schema: 1
+artifact_type: documentation
+component: context_memory_critical_fix_notes
+tags: [intelligence, context_memory]
+retrieval: on_demand
+status: active
+--- /L9_META --- -->
 
 # Critical Fix Notes - Context Extractor
 

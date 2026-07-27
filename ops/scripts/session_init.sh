@@ -80,8 +80,8 @@ fi
 
 # List files that should be auto-loaded (for reference)
 echo "[$(date)] Files to load (if Cursor supported auto-loading):" >> "$LOG_FILE"
-echo "[$(date)]   - profiles/reasoning.md" >> "$LOG_FILE"
-echo "[$(date)]   - profiles/technical-operations-reasoning.md" >> "$LOG_FILE"
+echo "[$(date)]   - skills/l9-structured-reasoning/references/reasoning-modes.md" >> "$LOG_FILE"
+echo "[$(date)]   - skills/l9-structured-reasoning/references/technical-operations-reasoning.md" >> "$LOG_FILE"
 echo "[$(date)]   - learning/failures/repeated-mistakes.md" >> "$LOG_FILE"
 echo "[$(date)]   - learning/patterns/quick-fixes.md" >> "$LOG_FILE"
 

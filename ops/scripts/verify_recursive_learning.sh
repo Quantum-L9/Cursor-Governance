@@ -1,24 +1,14 @@
 #!/bin/bash
 #
-# === L9 GOVERNANCE CANONICAL HEADER ===
-# suite: "Cursor Governance L9 Governance (L9 + L9 Governance)"
-# version: "1.0.0"
-# component_id: "OPS-VER-RLS-001"
-# component_name: "Recursive Learning System Verification"
-# layer: "operations"
-# domain: "verification"
-# type: "verification_script"
-# status: "active"
-# created: "2025-11-17T22:06:00Z"
-# updated: "2025-11-17T22:06:00Z"
-# author: "Igor Beylin"
-# maintainer: "Igor Beylin"
+# L9_META
+#   l9_schema: 1
+#   artifact_type: verification_script
+#   component: recursive_learning_system_verification
+#   tags: [operations, verification]
+#   retrieval: on_demand
+#   status: active
 #
-# === BUSINESS METADATA ===
-# purpose: "Verify recursive learning system components are installed and running"
-# summary: "Checks LaunchAgent status, verifies scripts exist, validates system health"
-# business_value: "Ensures recursive learning system is operational at startup"
-#
+# Verify recursive learning system components are installed and running
 
 set -e
 

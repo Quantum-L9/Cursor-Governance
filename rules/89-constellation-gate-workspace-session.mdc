@@ -15,7 +15,7 @@ alwaysApply: true
 2. **Run PHASE 3 installation only from that root:**  
    `env-manager.py sync "$(pwd)"` and `setup_workspace_symlinks.sh` with `cwd` = that root.
 3. **Do not** run the same installation again from **`constellation-gate/`** — that creates a second `.cursor-commands` and duplicates the whole GlobalCommands tree in the explorer.
-4. **Local files at root (gitignored):** `.cursorrules`, `.suite6-config.json` — synced/copied from GlobalCommands / env-manager; **`workspace_path`** in `.suite6-config.json` should be the **repo root** path.
+4. **Local files at root (gitignored):** `.cursorrules` — synced/copied from GlobalCommands / env-manager. (`.suite6-config.json` is **retired** as of 2026-07-24; do not create or expect it.)
 
 ## Symlinks (untracked)
 
@@ -31,5 +31,5 @@ Working notes may live under `constellation-gate/current_work/` or elsewhere; th
 | Item | Track in git? |
 |------|----------------|
 | `.cursor-commands` (repo root only) | **No** — gitignore + regenerate locally |
-| `.cursorrules`, `.suite6-config.json` at repo root | **No** — gitignore |
+| `.cursorrules` at repo root | **No** — gitignore |
 | Root `.gitignore` for the above | **Yes** |
