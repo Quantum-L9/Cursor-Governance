@@ -73,6 +73,36 @@ for forbidden in "$WORKSPACE/.cursor/commands" "$WORKSPACE/.cursor/skills"; do
 done
 
 echo ""
+echo "=== SSOT clone freshness ($GC) ==="
+SSOT_BRANCH_EXPECTED="${GOVERNANCE_GITHUB_BRANCH:-main}"
+if [ ! -d "$GC/.git" ]; then
+  fail "SSOT clone missing .git at $GC"
+else
+  ssot_branch=$(git -C "$GC" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  if [ "$ssot_branch" = "$SSOT_BRANCH_EXPECTED" ]; then
+    pass "SSOT on branch $SSOT_BRANCH_EXPECTED"
+  else
+    fail "SSOT checked out on '$ssot_branch', expected '$SSOT_BRANCH_EXPECTED' (fix: git -C \"$GC\" checkout $SSOT_BRANCH_EXPECTED)"
+  fi
+
+  if git -C "$GC" diff --quiet 2>/dev/null && git -C "$GC" diff --cached --quiet 2>/dev/null; then
+    pass "SSOT working tree clean"
+  else
+    dirty_count=$(git -C "$GC" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    fail "SSOT working tree dirty ($dirty_count file(s)) — commit+push or stash before it silently diverges from GitHub"
+  fi
+
+  ahead=$(git -C "$GC" rev-list --count "origin/$SSOT_BRANCH_EXPECTED..HEAD" 2>/dev/null || echo "")
+  if [ -z "$ahead" ]; then
+    echo "  WARN: no cached origin/$SSOT_BRANCH_EXPECTED ref in SSOT clone — run git -C \"$GC\" fetch origin"
+  elif [ "$ahead" -gt 0 ]; then
+    fail "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED — review before they linger (see git -C \"$GC\" log origin/$SSOT_BRANCH_EXPECTED..HEAD)"
+  else
+    pass "SSOT has no unpushed commits ahead of origin/$SSOT_BRANCH_EXPECTED (last fetched)"
+  fi
+fi
+
+echo ""
 echo "=== sessionEnd governance backup hook ==="
 if [ ! -f "$HOOK_SRC" ]; then
   fail "hook script missing: $HOOK_SRC"
