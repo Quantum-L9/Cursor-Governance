@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "comment": [
+    "Claude Code rendering map: how each tool named in policy.json reaches a Claude",
+    "Code session. Peer of render.cursor.json. policy.json (the IDE-neutral ownership",
+    "authority) never changes for this adapter.",
+    "Claude Code has no editor-formatter-extension surface of its own: on Web and Mobile",
+    "the .vscode/ rendering never survives a clone. So formatter ownership reaches a",
+    "Claude Code session through the agentdocs adapter's managed block in CLAUDE.md,",
+    "which IS git-tracked. That is recorded here as ownership_carrier so there is exactly",
+    "one place ownership is rendered for Claude Code and no second source to drift.",
+    "Tools whose policy authority is 'repo' are carried the same way but bound nowhere."
+  ],
+  "ownership_carrier": {
+    "mechanism": "agentdocs",
+    "renders_via": "ops/scripts/adapters/agentdocs.sh",
+    "target_file": "CLAUDE.md",
+    "note": "The formatter-ownership block in CLAUDE.md is the only ownership carrier that survives a clone into a Claude Code Web/Mobile sandbox."
+  },
+  "surfaces": {
+    "skills": {
+      "cli": "$HOME/.claude/skills/ (user scope, reconciled by setup_claude_code_plugins.sh)",
+      "web_mobile": "referenced from the governance clone created by web/setup.sh"
+    },
+    "session_hook": {
+      "event": "SessionStart",
+      "cli": "$HOME/.claude/settings.json",
+      "web_mobile": ".claude/settings.json (git-tracked in the consumer repo)",
+      "script": "hooks/session_start_claude_governance.sh"
+    },
+    "mcp": {
+      "template": "mcp.template.json",
+      "cli": "user-scope MCP server via `claude mcp add-json`",
+      "web_mobile": ".mcp.json (git-tracked; env-references only, no token)"
+    }
+  },
+  "tools": {
+    "biome": {
+      "ownership_via": "agentdocs",
+      "note": "Rendered as a CLAUDE.md ownership statement, not an editor.defaultFormatter key."
+    },
+    "ruff": {
+      "ownership_via": "agentdocs",
+      "note": "Rendered as a CLAUDE.md ownership statement, not an editor.defaultFormatter key."
+    },
+    "eslint": {
+      "ownership_via": "repo",
+      "note": "policy authority is 'repo' — carried for reference, bound nowhere."
+    }
+  }
+}
