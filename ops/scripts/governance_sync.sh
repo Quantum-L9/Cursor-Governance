@@ -3,6 +3,10 @@
 #
 # Replaces the unsafe `git fetch && git reset --hard origin/main` pattern.
 #
+# Bootstrap (fresh machine):
+#   - If $CLONE isn't a git repo yet, clone it from GOVERNANCE_GITHUB_REMOTE
+#     (default: Quantum-L9/Cursor-Governance) before attempting to sync.
+#
 # Pull half (remote -> local):
 #   - NEVER destroys local edits: fast-forward only; if the tree is dirty, stash -> ff -> pop.
 # Push half (local -> remote):
@@ -26,12 +30,14 @@ set -uo pipefail
 CLONE="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
 BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
 LOCK="$HOME/.cursor/governance-sync.lock"
+REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
 
-[ -d "$CLONE/.git" ] || exit 0          # only sync a real git clone
 command -v git >/dev/null 2>&1 || exit 0
 mkdir -p "$(dirname "$LOCK")" 2>/dev/null || true
 
-# Single-flight: if another window holds the lock, skip silently.
+# Single-flight: if another window holds the lock, skip silently. Acquired
+# BEFORE the clone-if-missing bootstrap below so two windows racing on a
+# fresh machine can't both `git clone` into the same path at once.
 # Use flock where available; macOS has no flock, so fall back to an atomic mkdir lock.
 if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCK" 2>/dev/null || exit 0
@@ -53,6 +59,24 @@ else
   fi
   date +%s > "$LOCKDIR/ts" 2>/dev/null || true
   trap 'rm -rf "$LOCKDIR" 2>/dev/null || true' EXIT
+fi
+
+# Guarded clone-if-missing: bootstraps the SSOT clone on a fresh machine so a
+# freshly-cloned consumer repo can wire governance without a manual `git clone`
+# step first. Only fires when $CLONE isn't a git repo yet — never touches an
+# existing clone's remote/branch config. Fail-soft like every other guard here:
+# a failed clone just skips sync for this run (exit 0), it never aborts loudly.
+# Runs inside the lock above, so concurrent windows can't race the clone.
+if [ ! -d "$CLONE/.git" ]; then
+  if [ -e "$CLONE" ] && [ ! -d "$CLONE" ]; then
+    echo "WARNING: governance_sync.sh: $CLONE exists and is not a directory — skipping clone." >&2
+    exit 0
+  fi
+  echo "NOTE: governance_sync.sh: $CLONE missing — cloning $REMOTE" >&2
+  if ! git clone --quiet --branch "$BRANCH" "$REMOTE" "$CLONE" 2>/dev/null; then
+    echo "WARNING: governance_sync.sh: clone of $REMOTE failed — governance not bootstrapped." >&2
+    exit 0
+  fi
 fi
 
 cd "$CLONE" || exit 0
