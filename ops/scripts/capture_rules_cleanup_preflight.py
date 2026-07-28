@@ -179,7 +179,10 @@ def main() -> int:
     if errors:
         lines.extend(f"- FAIL: {error}" for error in errors)
     else:
-        lines.append("- PASS: sources are recoverable, destinations are collision-free, and both trees are clean.")
+        lines.append(
+            "- PASS: sources are recoverable, destinations are collision-free, and both "
+            "trees are clean."
+        )
     lines.append("")
     md_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"WROTE: {md_path}")

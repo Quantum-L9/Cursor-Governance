@@ -17,7 +17,16 @@ CATEGORIES = {
     "formatter": ("prettier", "black-formatter", "ruff"),
     "linter": ("eslint", "ruff", "pylint", "flake8"),
     "python": ("ms-python.python", "pyright", "pylance", "ruff"),
-    "ai_assistant": ("copilot", "codeium", "windsurf", "tabnine", "continue", "claude", "gemini", "amazon-q"),
+    "ai_assistant": (
+        "copilot",
+        "codeium",
+        "windsurf",
+        "tabnine",
+        "continue",
+        "claude",
+        "gemini",
+        "amazon-q",
+    ),
 }
 
 
@@ -44,7 +53,11 @@ def scan_directory(path: Path) -> list[dict[str, Any]]:
 
 
 def categories(extension_id: str) -> list[str]:
-    return [name for name, needles in CATEGORIES.items() if any(needle in extension_id for needle in needles)]
+    return [
+        name
+        for name, needles in CATEGORIES.items()
+        if any(needle in extension_id for needle in needles)
+    ]
 
 
 def main() -> int:
@@ -59,7 +72,9 @@ def main() -> int:
     cli = shutil.which("cursor")
     cli_error: str | None = None
     if cli:
-        result = subprocess.run([cli, "--list-extensions", "--show-versions"], capture_output=True, text=True)
+        result = subprocess.run(
+            [cli, "--list-extensions", "--show-versions"], capture_output=True, text=True
+        )
         if result.returncode == 0:
             for line in result.stdout.splitlines():
                 if line.strip():
@@ -105,14 +120,18 @@ def main() -> int:
 
     report = {
         "schema": "l9.cursor-extension-inventory/v1",
-        "generated_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "generated_utc": datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
         "read_only": True,
         "cursor_cli": cli,
         "cursor_cli_error": cli_error,
         "scanned_directories": [str(path) for path in candidates],
         "extensions": extensions,
         "potential_overlaps": overlaps,
-        "recommendation_policy": "Inventory only. Do not install or remove extensions automatically.",
+        "recommendation_policy": "Inventory only. Do not install or remove extensions "
+        "automatically.",
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / "cursor-extension-inventory.json"

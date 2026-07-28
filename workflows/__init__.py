@@ -81,8 +81,14 @@ from workflows.state import (
     create_initial_state,
 )
 
-# LangGraph execution is available when langgraph is installed
-_LANGGRAPH_AVAILABLE = importlib.util.find_spec("langgraph.graph") is not None
+# LangGraph execution is available when langgraph is installed.
+# find_spec("langgraph.graph") must import the parent "langgraph" package to
+# resolve the submodule, so it raises ModuleNotFoundError (not None) when
+# langgraph isn't installed at all — guard explicitly to keep this optional.
+try:
+    _LANGGRAPH_AVAILABLE = importlib.util.find_spec("langgraph.graph") is not None
+except ModuleNotFoundError:
+    _LANGGRAPH_AVAILABLE = False
 
 # === Session DAG System ===
 # Trigger DAG auto-registration (side-effect import — `as dags` signals intentional

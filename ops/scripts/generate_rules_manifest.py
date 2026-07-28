@@ -97,15 +97,23 @@ def infer_activation(metadata: dict[str, Any], globs: list[str] | None) -> str:
     return "agent_requested"
 
 
-def infer_deprecation(metadata: dict[str, Any], description: str, body: str) -> tuple[bool, str | None, str | None]:
+def infer_deprecation(
+    metadata: dict[str, Any], description: str, body: str
+) -> tuple[bool, str | None, str | None]:
     deprecated = bool(metadata.get("deprecated")) or "deprecated" in description.lower()
     replacement = metadata.get("replacement")
     removal_plan = metadata.get("removal_plan")
     if deprecated and not replacement:
-        match = re.search(r"superseded by\s+[`\"']?([A-Za-z0-9_.-]+)", f"{description}\n{body}", re.I)
+        match = re.search(
+            r"superseded by\s+[`\"']?([A-Za-z0-9_.-]+)", f"{description}\n{body}", re.I
+        )
         if match:
             replacement = match.group(1)
-    return deprecated, str(replacement) if replacement else None, str(removal_plan) if removal_plan else None
+    return (
+        deprecated,
+        str(replacement) if replacement else None,
+        str(removal_plan) if removal_plan else None,
+    )
 
 
 def context_cost(line_count: int, explicit: Any) -> str:
@@ -128,7 +136,10 @@ def build_entry(path: Path) -> dict[str, Any]:
     rule_id = str(metadata.get("id") or f"l9.rule.{slug(path.stem)}")
     id_source = "explicit" if metadata.get("id") else "derived"
     scope = str(metadata.get("scope") or "global")
-    authority = str(metadata.get("authority") or ("canonical_global" if id_source == "explicit" else "compatibility"))
+    authority = str(
+        metadata.get("authority")
+        or ("canonical_global" if id_source == "explicit" else "compatibility")
+    )
     activation = infer_activation(metadata, globs)
     deprecated, replacement, removal_plan = infer_deprecation(metadata, description, parsed.body)
     lines = text.splitlines()
@@ -142,7 +153,9 @@ def build_entry(path: Path) -> dict[str, Any]:
         "domain": str(metadata.get("domain") or infer_domain(path.name, description)),
         "activation": activation,
         "activation_source": "explicit" if metadata.get("activation") else "derived",
-        "always_apply": metadata.get("alwaysApply") if isinstance(metadata.get("alwaysApply"), bool) else None,
+        "always_apply": metadata.get("alwaysApply")
+        if isinstance(metadata.get("alwaysApply"), bool)
+        else None,
         "globs": globs,
         "first_heading": first_heading(parsed.body),
         "has_yaml_frontmatter": parsed.has_frontmatter,
@@ -154,7 +167,9 @@ def build_entry(path: Path) -> dict[str, Any]:
         "replacement": replacement,
         "removal_plan": removal_plan,
         "extends": metadata.get("extends"),
-        "classification_source": "explicit" if all(metadata.get(k) for k in ("id", "scope", "domain", "activation", "authority")) else "mixed_or_derived",
+        "classification_source": "explicit"
+        if all(metadata.get(k) for k in ("id", "scope", "domain", "activation", "authority"))
+        else "mixed_or_derived",
     }
 
 
@@ -167,7 +182,10 @@ def build_manifest(root: Path) -> dict[str, Any]:
     explicit_ids = sum(entry["id_source"] == "explicit" for entry in entries)
     manifest = {
         "$schema": SCHEMA,
-        "generated_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "generated_utc": datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
         "generator": "ops/scripts/generate_rules_manifest.py",
         "rules_directory": "rules",
         "source_tree_digest": "",
@@ -222,8 +240,10 @@ def render_markdown(manifest: dict[str, Any]) -> str:
             "",
             "## Notes",
             "",
-            "- IDs marked as derived are compatibility identities. Add explicit immutable `id` metadata when a rule is materially edited.",
-            "- The JSON and YAML files are generated from the same in-memory model as this document.",
+            "- IDs marked as derived are compatibility identities. Add explicit immutable "
+            "`id` metadata when a rule is materially edited.",
+            "- The JSON and YAML files are generated from the same in-memory model as "
+            "this document.",
             "- Never edit manifest counters by hand.",
             "",
         ]

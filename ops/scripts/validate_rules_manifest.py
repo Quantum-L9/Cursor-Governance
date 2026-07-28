@@ -125,7 +125,9 @@ def validate(root: Path) -> list[str]:
 
     path_validator = root / "ops/scripts/validate_governance_no_hardcoded_paths.sh"
     if path_validator.is_file():
-        result = subprocess.run(["bash", str(path_validator)], cwd=root, capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", str(path_validator)], cwd=root, capture_output=True, text=True
+        )
         if result.returncode != 0:
             fail(errors, "validate_governance_no_hardcoded_paths.sh failed")
     return errors

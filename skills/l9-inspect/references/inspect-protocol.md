@@ -49,6 +49,7 @@ auto_chain: ynp
 
 ```python
 from .cursor_commands.workflows.dags.inspect_dag import run_inspect
+
 result = await run_inspect("current_work/02-13-2026/guide.md")
 print(result.report)
 ```

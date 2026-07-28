@@ -10,11 +10,15 @@ from pathlib import Path
 from typing import Any
 
 
-def score(severity: int, blast: int, recurrence: int, confidence: int, leverage: int, effort: int) -> int:
+def score(
+    severity: int, blast: int, recurrence: int, confidence: int, leverage: int, effort: int
+) -> int:
     return severity * 5 + blast * 3 + recurrence * 2 + confidence * 2 + leverage * 3 - effort
 
 
-def finding(fid: str, title: str, severity: int, evidence: str, impact: str, action: str, **kwargs: Any) -> dict[str, Any]:
+def finding(
+    fid: str, title: str, severity: int, evidence: str, impact: str, action: str, **kwargs: Any
+) -> dict[str, Any]:
     blast = kwargs.get("blast", 3)
     recurrence = kwargs.get("recurrence", 3)
     confidence = kwargs.get("confidence", 5)
@@ -57,8 +61,10 @@ def main() -> int:
                 "Always activation footprint requires per-rule justification",
                 3,
                 f"{len(always)} of {total} rules ({ratio:.0%}) resolve to always activation.",
-                "Broad persistent context can create instruction collisions and consume agent context.",
-                "Review each Always rule; keep only short non-negotiable governance and irreversible-action constraints.",
+                "Broad persistent context can create instruction collisions and consume "
+                "agent context.",
+                "Review each Always rule; keep only short non-negotiable governance and "
+                "irreversible-action constraints.",
                 blast=5,
                 recurrence=5,
                 leverage=5,
@@ -73,7 +79,8 @@ def main() -> int:
                 2,
                 f"{len(derived)} rules lack an explicit immutable frontmatter ID.",
                 "Renames cannot be distinguished reliably from replacement or deletion.",
-                "Add explicit IDs when rules are materially edited; do not mass-rewrite solely for metadata.",
+                "Add explicit IDs when rules are materially edited; do not mass-rewrite "
+                "solely for metadata.",
                 blast=3,
                 recurrence=4,
                 leverage=4,
@@ -88,7 +95,8 @@ def main() -> int:
                 3,
                 ", ".join(f"{rule['file']} ({rule['line_count']} lines)" for rule in oversized),
                 "Large rules are expensive to attach and harder to keep internally consistent.",
-                "Move multi-step procedures to skills/commands and keep persistent rule contracts focused.",
+                "Move multi-step procedures to skills/commands and keep persistent rule "
+                "contracts focused.",
                 blast=3,
                 recurrence=3,
                 leverage=4,
@@ -103,7 +111,8 @@ def main() -> int:
                 4,
                 ", ".join(f"{rule['file']} ({rule['line_count']} lines)" for rule in hard_target),
                 "Very large rule payloads raise context and contradiction risk.",
-                "Split immediately behind stable IDs and preserve compatibility aliases where required.",
+                "Split immediately behind stable IDs and preserve compatibility aliases "
+                "where required.",
                 blast=4,
                 recurrence=3,
                 leverage=5,
@@ -118,7 +127,8 @@ def main() -> int:
                 4,
                 ", ".join(rule["file"] for rule in high_cost_always),
                 "Maximum activation cost is paid on every task.",
-                "Convert to Agent Requested, Auto Attached, or an explicit skill after behavioral review.",
+                "Convert to Agent Requested, Auto Attached, or an explicit skill after "
+                "behavioral review.",
                 blast=5,
                 recurrence=5,
                 leverage=5,
@@ -144,7 +154,10 @@ def main() -> int:
     findings.sort(key=lambda item: item["priority_score"], reverse=True)
     report = {
         "schema": "l9.rules-corpus-audit/v1",
-        "generated_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "generated_utc": datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
         "manifest_digest": manifest.get("source_tree_digest"),
         "summary": {
             "total_rules": total,
@@ -158,7 +171,8 @@ def main() -> int:
         "convergence": {
             "passes": ["scope", "activation", "size", "identity", "deprecation", "adversarial"],
             "status": "stable",
-            "note": "No corpus-wide activation changes were made automatically; findings require evidence-backed review.",
+            "note": "No corpus-wide activation changes were made automatically; findings "
+            "require evidence-backed review.",
         },
     }
     reports = root / "reports"
@@ -203,7 +217,8 @@ def main() -> int:
         [
             "## Convergence",
             "",
-            "Scope, activation, size, identity, deprecation, and adversarial passes completed. Findings stabilized.",
+            "Scope, activation, size, identity, deprecation, and adversarial passes "
+            "completed. Findings stabilized.",
             "No mass conversion was performed without behavioral evidence.",
             "",
         ]

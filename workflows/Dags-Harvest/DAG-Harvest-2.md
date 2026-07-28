@@ -834,7 +834,7 @@ MIGRATION_DAG = {
         ("gmp_plan", "gmp_execute"),
         ("gmp_execute", "validate"),
         ("validate", "commit"),
-    ]
+    ],
 }
 ```
 
@@ -939,6 +939,7 @@ Document: @path/to/migration-doc.md
 
 ```python
 from orchestrators.session.dags import REFACTORING_DAG
+
 print(REFACTORING_DAG.to_markdown())
 ```
 
@@ -946,6 +947,7 @@ print(REFACTORING_DAG.to_markdown())
 
 ```python
 from orchestrators.session.dags import REFACTORING_DAG
+
 print(REFACTORING_DAG.to_mermaid())
 ```
 
