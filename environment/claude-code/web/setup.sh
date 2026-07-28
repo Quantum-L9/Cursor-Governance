@@ -49,6 +49,29 @@ else
   log "Governance clone present -> $GOV_DIR"
 fi
 
+# 3.5) Activate the Claude Code governance environment in THIS workspace.
+# This is what makes every mobile chat self-activate: if the repo has not committed
+# the .claude/ triad, install it from the clone so the SessionStart hook fires and
+# governance boots. Never clobber files the repo already committed.
+CC_ENV="$GOV_DIR/environment/claude-code"
+if [ -d "$CC_ENV" ]; then
+  log "Activating Claude Code environment in $(pwd)"
+  mkdir -p .claude/hooks
+  [ -f .claude/settings.json ] \
+    || cp "$CC_ENV/settings.template.json" .claude/settings.json
+  [ -f .claude/hooks/session_start_claude_governance.sh ] \
+    || cp "$CC_ENV/hooks/session_start_claude_governance.sh" .claude/hooks/
+  chmod +x .claude/hooks/session_start_claude_governance.sh 2>/dev/null || true
+  # Shared-memory MCP only when the account provides an endpoint; never overwrite a
+  # repo's own .mcp.json.
+  if [ -n "${L9_MEMORY_HTTP_URL:-}" ] && [ ! -f .mcp.json ]; then
+    cp "$CC_ENV/mcp.template.json" .mcp.json
+  fi
+  echo "activated: .claude/settings.json + SessionStart hook -> governance at $GOV_DIR"
+else
+  echo "WARN: $CC_ENV missing — governance clone may be incomplete; SessionStart hook not installed."
+fi
+
 # 4) Language toolchains — install only what the workspace declares.
 if [ -f pyproject.toml ] || ls ./*.py >/dev/null 2>&1; then
   log "Python toolchain"

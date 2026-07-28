@@ -27,9 +27,13 @@ field.
 3. **Setup script** — paste `setup.sh`. It is idempotent and auto-detects Python
    vs Node, clones `Cursor-Governance` to `L9_GOVERNANCE_DIR`, and (optionally)
    installs the memory client.
-4. **Per-repo (git-tracked)** — in each consumer repo commit the `.claude/` triad
-   so the SessionStart hook boots governance from the clone (see the parent
-   `README.md` §4). This is the half that survives the sandbox clone.
+4. **Per-repo (git-tracked, recommended)** — in each consumer repo commit the
+   `.claude/` triad so the SessionStart hook boots governance from the clone (see
+   the parent `README.md` §4). Committing is preferred: it is explicit, reviewable,
+   and identical on CLI. **Not strictly required for Mobile/Web**, though —
+   `setup.sh` step 3.5 installs the `.claude/` triad from the governance clone into
+   the workspace when a repo has not committed it, so every mobile chat
+   self-activates either way. It never overwrites files the repo already committed.
 
 ## Verify (in a fresh session after saving)
 
