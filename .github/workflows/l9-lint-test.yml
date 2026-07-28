@@ -154,14 +154,17 @@ jobs:
         env:
           TESTING: "true"
         run: |
-          set -uo pipefail
+          # GitHub Actions runs `bash -e {0}` for this step regardless of any
+          # `set` call inside the script, so `pytest ... || status=$?` (not a
+          # bare command) is required to capture a non-zero exit without
+          # errexit aborting the script before the status check below runs.
           PYTHONPATH=. pytest "${TEST_DIR}" \
             -n auto \
             --cov="${SOURCE_DIR}" \
             --cov-report=xml --cov-report=term-missing \
             --cov-fail-under="${COVERAGE_THRESHOLD}" \
-            --timeout=300 --tb=short -v
-          status=$?
+            --timeout=300 --tb=short -v || status=$?
+          status=${status:-0}
           # Exit 5 = "no tests collected" (pytest's own exit-code semantics, not a
           # crash). This repo currently has zero real test_*.py files outside WIP/
           # (excluded) and workflows/dags/test_pipeline_dag.py (ignored -- it's a
