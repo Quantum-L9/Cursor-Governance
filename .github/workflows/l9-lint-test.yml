@@ -149,7 +149,10 @@ jobs:
           # installed. langgraph is optional at import time (workflows/__init__.py
           # feature-detects it) but must be present for workflows/dags/*_dag.py
           # tests to collect and exercise the LangGraph-backed code paths.
-          python -c "import langgraph" 2>/dev/null || pip install --only-binary :all: "langgraph>=0.2"
+          # Exact-pinned (not >=) per SonarCloud's "lock resolved versions" security
+          # rule; kept in sync with the langgraph entry in uv.lock, the single
+          # resolved-version source of truth for this repo's [project.dependencies].
+          python -c "import langgraph" 2>/dev/null || pip install --only-binary :all: "langgraph==1.2.9"
       - name: pytest with coverage
         env:
           TESTING: "true"
