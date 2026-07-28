@@ -33,9 +33,19 @@ This governance layer is **IDE-agnostic**. The `.cursor-commands/` symlink is on
 | Adapter | Entry point | Status |
 |---------|-------------|--------|
 | Cursor | `.cursor-commands/` → clone root | Active |
+| Claude Code (CLI · Web · Mobile) | `environment/claude-code/` — committed `.claude/` + account environment | Active |
 | Windsurf | TBD | Planned |
 | VS Code | TBD | Planned |
-| CLI | Direct path reference | Active |
+| CLI (direct) | Direct path reference | Active |
+
+The Claude Code adapter is defined in `environment/claude-code/` (peer of
+`environment/ide/`). It reuses `environment/ide/policy.json` unchanged; formatter
+ownership reaches a Claude Code session through the `agentdocs` `CLAUDE.md` block,
+not a second authority. It adds **no** second activation path for Cursor. On
+Claude Code Web/Mobile the sandbox is cloned fresh and reclaimed per session, so
+its activation is carried by **git-tracked** files (`.claude/settings.json`, the
+SessionStart hook, `.mcp.json`) plus the account-level environment — never by
+`~/.cursor/` machine state, which never reaches the sandbox.
 
 ### Required symlinks — every coding workspace
 

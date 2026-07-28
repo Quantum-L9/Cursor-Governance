@@ -4,6 +4,12 @@ Declarative desired state for the **editor** in every governed workspace: which
 extensions are installed machine-wide, and which `.vscode/settings.json` keys the
 profile owns. Reconciled by `ops/scripts/install_ide_profile.sh`.
 
+> **Peer adapter:** `environment/claude-code/` is the Claude Code environment
+> (CLI · Web · Mobile). It renders the **same** `policy.json` through a different
+> target — see `render.claude.json` there. For Claude Code, formatter ownership is
+> carried by the `agentdocs` `CLAUDE.md` block (git-tracked, survives a clone),
+> not by `.vscode/` (which never reaches a Web/Mobile sandbox).
+
 > **Not to be confused with `profiles/`.** `profiles/*.md` (`dev_mode`,
 > `reasoning_l9`, …) are *agent reasoning* profiles — Markdown that shapes how the
 > LLM thinks. This directory is *IDE* configuration — extensions and editor

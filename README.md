@@ -61,6 +61,9 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 │   ├── graphiti/       # Graphiti memory client + activation runbooks
 │   └── logs/          # Runtime logs
 ├── intelligence/      # Active signal corpus — chat exports, distillation, mining
+├── environment/       # Runtime environment adapters (IDE-neutral policy + per-target renderers)
+│   ├── ide/           # Editor profile: policy.json + render.cursor.json (Cursor/VS Code)
+│   └── claude-code/   # Claude Code environment (CLI · Web · Mobile) — committed .claude/ + account env
 ├── profiles/          # DEPRECATED — content ported into skills/ + rules/; pending retirement
 ├── learning/          # Curated lessons, repeated-mistakes, quick-fixes
 ├── protocols/         # GMP protocol contracts and templates
