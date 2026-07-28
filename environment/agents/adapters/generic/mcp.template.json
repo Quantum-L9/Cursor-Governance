@@ -1,0 +1,25 @@
+{
+  "_l9_meta": {
+    "l9_schema": 1,
+    "repo": "Quantum-L9/Cursor-Governance",
+    "path": "environment/agents/adapters/generic/mcp.template.json",
+    "layer": "adapter-config",
+    "owner": "governance-control-plane",
+    "status": "active",
+    "version": "1.0.0",
+    "updated": "2026-07-28",
+    "note": "Generic .mcp.json entry for any MCP-capable surface. Replace ${AGENT_ID} from the registry entry; env vars expand at runtime; never hardcode tokens."
+  },
+  "mcpServers": {
+    "l9-memory": {
+      "type": "http",
+      "url": "${L9_MEMORY_HTTP_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${L9_MEMORY_CLIENT_TOKEN}",
+        "X-L9-User-Id": "${AGENT_ID}_agent",
+        "X-L9-Agent-Id": "${AGENT_ID}",
+        "X-L9-Source": "${AGENT_ID}"
+      }
+    }
+  }
+}

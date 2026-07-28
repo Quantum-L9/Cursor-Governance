@@ -1,0 +1,26 @@
+{
+  "_l9_meta": {
+    "l9_schema": 1,
+    "repo": "Quantum-L9/Cursor-Governance",
+    "path": "environment/agents/adapters/gemini/settings.template.json",
+    "layer": "adapter-config",
+    "owner": "governance-control-plane",
+    "status": "planned",
+    "version": "1.0.0",
+    "updated": "2026-07-28",
+    "note": "Merge the mcpServers entry into ~/.gemini/settings.json. $VARS expand from the environment; never hardcode tokens."
+  },
+  "mcpServers": {
+    "l9-memory": {
+      "httpUrl": "$L9_MEMORY_HTTP_URL/mcp",
+      "headers": {
+        "Authorization": "Bearer $L9_MEMORY_CLIENT_TOKEN",
+        "X-L9-User-Id": "gemini_agent",
+        "X-L9-Agent-Id": "gemini",
+        "X-L9-Source": "gemini"
+      },
+      "timeout": 30000,
+      "trust": false
+    }
+  }
+}
