@@ -149,7 +149,7 @@ jobs:
           # installed. langgraph is optional at import time (workflows/__init__.py
           # feature-detects it) but must be present for workflows/dags/*_dag.py
           # tests to collect and exercise the LangGraph-backed code paths.
-          python -c "import langgraph" 2>/dev/null || pip install langgraph
+          python -c "import langgraph" 2>/dev/null || pip install --only-binary :all: "langgraph>=0.2"
       - name: pytest with coverage
         env:
           TESTING: "true"
