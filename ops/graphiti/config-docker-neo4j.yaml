@@ -1,0 +1,58 @@
+# Graphiti MCP Server config — Cursor agent memory on C1
+# Pinned to zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone
+# Mounted read-only into the container by docker-compose.yml
+# (CONFIG_PATH=/app/mcp/config/config.yaml). Verified live on C1 2026-07-27.
+server:
+  transport: "http"
+  host: "0.0.0.0"
+  port: 8000
+
+llm:
+  provider: "openai"
+  model: ${MODEL_NAME:gpt-4o-mini}
+  max_tokens: 4096
+  providers:
+    openai:
+      api_key: ${OPENAI_API_KEY}
+      api_url: ${OPENAI_API_URL:https://api.openai.com/v1}
+
+embedder:
+  provider: "openai"
+  model: ${EMBEDDER_MODEL:text-embedding-3-small}
+  dimensions: 1536
+  providers:
+    openai:
+      api_key: ${OPENAI_API_KEY}
+      api_url: ${OPENAI_API_URL:https://api.openai.com/v1}
+
+database:
+  provider: "neo4j"
+  providers:
+    neo4j:
+      uri: ${NEO4J_URI:bolt://neo4j:7687}
+      username: ${NEO4J_USER:neo4j}
+      password: ${NEO4J_PASSWORD:demodemo}
+      database: ${NEO4J_DATABASE:neo4j}
+
+graphiti:
+  group_id: ${GRAPHITI_GROUP_ID:main}
+  user_id: ${USER_ID:cursor_agent}
+  entity_types:
+    - name: "Preference"
+      description: "User preferences, choices, opinions, or selections"
+    - name: "Requirement"
+      description: "Specific needs, features, or functionality that must be fulfilled"
+    - name: "Procedure"
+      description: "Standard operating procedures and sequential instructions"
+    - name: "Location"
+      description: "Physical or virtual places where activities occur"
+    - name: "Event"
+      description: "Time-bound activities, occurrences, or experiences"
+    - name: "Organization"
+      description: "Companies, institutions, groups, or formal entities"
+    - name: "Document"
+      description: "Information content in various forms"
+    - name: "Topic"
+      description: "Subject of conversation, interest, or knowledge domain"
+    - name: "Object"
+      description: "Physical items, tools, devices, or possessions"

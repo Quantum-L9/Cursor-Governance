@@ -94,11 +94,14 @@ class EpisodeContract(BaseModel):
         return self
 
     def to_mcp_payload(self) -> dict:
+        # add_memory's live schema (verified via tools/list against the deployed
+        # zepai/knowledge-graph-mcp server) has no reference_time field — the
+        # server timestamps episodes itself. reference_time stays a validated
+        # model field (used for reject_future_dates / ordering) but is not sent.
         return {
             "name": self.name,
             "episode_body": self.episode_body,
             "source": self.source,
             "source_description": self.source_description,
-            "reference_time": self.reference_time.isoformat(),
             "group_id": self.group_id,
         }

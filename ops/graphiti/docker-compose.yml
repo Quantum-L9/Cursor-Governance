@@ -1,6 +1,11 @@
 # Graphiti + Neo4j for Cursor agent memory (GlobalCommands ops/graphiti)
 # Loopback bind only — access via Tailscale from Mac
-# Usage: docker compose --env-file graphiti.env up -d
+# Usage: source graphiti.env && docker compose up -d
+#
+# graphiti-mcp image LOCKED to zepai/knowledge-graph-mcp (MCP/streamable-HTTP
+# transport, serves /mcp + /health). zepai/graphiti:latest is a DIFFERENT REST
+# API server with no /mcp endpoint — do not swap back, that was the 2026-07-27
+# outage (client got HTTP 404 on every tool call). Verified live on C1.
 
 services:
   neo4j:
@@ -27,32 +32,33 @@ services:
       start_period: 30s
 
   graphiti-mcp:
-    image: zepai/graphiti:latest
+    image: zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone
     container_name: graphiti-mcp-cursor
     restart: unless-stopped
-    # Optional custom ontology — verify image supports --use-custom-entities before enabling:
-    #   docker compose exec graphiti-mcp python -m graphiti_mcp.server --help | grep custom
-    # volumes:
-    #   - ./ontology_coding.py:/app/ontology_coding.py:ro
-    # command: ["python", "-m", "graphiti_mcp.server", "--use-custom-entities"]
     environment:
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: "${NEO4J_PASSWORD:?set NEO4J_PASSWORD}"
+      NEO4J_DATABASE: neo4j
       OPENAI_API_KEY: "${OPENAI_API_KEY:?set OPENAI_API_KEY}"
       MODEL_NAME: gpt-4o-mini
-      SMALL_MODEL_NAME: gpt-4o-mini
-      EMBEDDER_NAME: text-embedding-3-small
+      EMBEDDER_MODEL: text-embedding-3-small
+      GRAPHITI_GROUP_ID: main
       GRAPHITI_TELEMETRY_ENABLED: "false"
+      SEMAPHORE_LIMIT: "10"
+      CONFIG_PATH: /app/mcp/config/config.yaml
       GRAPHITI_MCP_TOKEN: "${GRAPHITI_MCP_TOKEN:?set GRAPHITI_MCP_TOKEN}"
+    volumes:
+      - ./config-docker-neo4j.yaml:/app/mcp/config/config.yaml:ro
     ports:
       - "127.0.0.1:8100:8000"
     depends_on:
       neo4j:
         condition: service_healthy
+    command: ["uv", "run", "main.py"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthcheck"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 30s

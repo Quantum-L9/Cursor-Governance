@@ -19,11 +19,16 @@
 ssh -i ~/.ssh/Hetzner-C1-nopass root@46.62.243.82
 mkdir -p /opt/graphiti-cursor
 cd /opt/graphiti-cursor
-# Copy docker-compose.yml from GlobalCommands/ops/graphiti/
+# Copy docker-compose.yml AND config-docker-neo4j.yaml from GlobalCommands/ops/graphiti/
+# — the config file is required (mounted read-only, CONFIG_PATH env points at it).
 cp graphiti.env.example graphiti.env   # fill OPENAI_API_KEY, tokens — NEVER commit
-docker compose --env-file graphiti.env up -d
-curl -sf -H "Authorization: Bearer $(grep ^GRAPHITI_MCP_TOKEN= graphiti.env | cut -d= -f2-)" http://127.0.0.1:8100/healthcheck
+source graphiti.env && docker compose up -d
+curl -sf http://127.0.0.1:8100/health
 ```
+
+**OPENAI_API_KEY** must be a live `sk-...` / `sk-proj-...` **secret key with inference
+permissions** — not an `sk-admin-...` org-management key (401s on every call).
+Source of truth: AWS Secrets Manager `l9/OPENAI_API_KEY` (see `graphiti.env.example`).
 
 ## Mac client
 
@@ -51,15 +56,12 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py phase-lock
 bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ```
 
-## Custom ontology (optional)
+## Custom ontology
 
-`ontology_coding.py` defines entity/edge types for `--use-custom-entities`. **Do not enable** until verified on C1:
-
-```bash
-docker compose exec graphiti-mcp python -m graphiti_mcp.server --help | grep -i custom || true
-```
-
-If supported, uncomment the `volumes` + `command` block in `docker-compose.yml`, then `docker compose --env-file graphiti.env up -d --force-recreate graphiti-mcp`.
+Entity types are configured natively in `config-docker-neo4j.yaml` (`graphiti.entity_types`),
+mounted into the container at `/app/mcp/config/config.yaml` — no CLI flag needed on this image.
+Edit that file and `docker compose up -d --force-recreate graphiti-mcp` to apply.
+`ontology_coding.py` is reference material only; it is not wired into this image.
 
 ## Autoseed on workspace wire
 

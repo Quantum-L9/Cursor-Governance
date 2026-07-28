@@ -33,17 +33,108 @@ def memory_enabled() -> bool:
     return os.environ.get("GRAPHITI_MEMORY_ENABLED", "1").strip() not in ("0", "false", "False")
 
 
+_session_id: str | None = None
+
+
 def mcp_url() -> str:
-    base = os.environ.get("GRAPHITI_MCP_URL", "http://127.0.0.1:8100/mcp/").rstrip("/")
-    return base if base.endswith("/mcp") or base.endswith("/mcp/") else f"{base}/mcp/"
+    # Server canonicalizes to no trailing slash (redirects /mcp/ -> /mcp with
+    # 307); target the canonical path directly rather than relying on urllib
+    # to follow the redirect.
+    base = os.environ.get("GRAPHITI_MCP_URL", "http://127.0.0.1:8100/mcp").rstrip("/")
+    return base if base.endswith("/mcp") else f"{base}/mcp"
 
 
-def mcp_headers() -> dict[str, str]:
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+def mcp_headers(session_id: str | None = None) -> dict[str, str]:
+    # Server requires the client to accept BOTH — it replies over SSE
+    # (streamable-HTTP transport) and rejects requests missing either.
+    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
     token = os.environ.get("GRAPHITI_MCP_TOKEN", "").strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    if session_id:
+        headers["Mcp-Session-Id"] = session_id
     return headers
+
+
+def _parse_mcp_body(text: str) -> dict[str, Any]:
+    """Parse an MCP HTTP response body.
+
+    The deployed server (zepai/knowledge-graph-mcp, streamable-HTTP transport)
+    replies as text/event-stream ("event: message\\ndata: {...}\\n\\n") even
+    for single-shot tool calls, not plain JSON. Handle both shapes.
+    """
+    text = text.strip()
+    if not text:
+        raise RuntimeError("empty MCP response body")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    last_error: json.JSONDecodeError | None = None
+    for line in text.splitlines():
+        if not line.startswith("data:"):
+            continue
+        chunk = line[len("data:") :].strip()
+        if not chunk:
+            continue
+        try:
+            return json.loads(chunk)
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            continue
+    raise RuntimeError(f"unparseable MCP response ({last_error}): {text[:300]}")
+
+
+def _mcp_post(payload: dict[str, Any], session_id: str | None, timeout: int) -> tuple[dict, Any]:
+    req = urllib.request.Request(
+        mcp_url(),
+        data=json.dumps(payload).encode(),
+        headers=mcp_headers(session_id),
+        method="POST",
+    )
+    _ssl_ctx = ssl.create_default_context()
+    with urllib.request.urlopen(req, timeout=timeout, context=_ssl_ctx) as resp:
+        body = _parse_mcp_body(resp.read().decode())
+        return body, resp.headers
+
+
+def _ensure_session(timeout: int = 30) -> str:
+    """Perform the MCP initialize handshake once per process.
+
+    The server requires a session (returned as the Mcp-Session-Id response
+    header on initialize) before it will accept tools/list or tools/call —
+    without it, every other method fails with "Bad Request: Missing session
+    ID" (HTTP 400).
+    """
+    global _session_id
+    if _session_id:
+        return _session_id
+    init_payload = {
+        "jsonrpc": "2.0",
+        "id": "init",
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "graphiti-memory-client", "version": "0.1"},
+        },
+    }
+    try:
+        body, headers = _mcp_post(init_payload, session_id=None, timeout=timeout)
+    except urllib.error.HTTPError as exc:
+        _circuit.record_failure()
+        detail = exc.read().decode()[:500]
+        raise RuntimeError(f"HTTP {exc.code} during initialize: {detail}") from exc
+    except urllib.error.URLError as exc:
+        _circuit.record_failure()
+        raise RuntimeError(f"MCP unreachable during initialize: {exc.reason}") from exc
+    if "error" in body:
+        raise RuntimeError(f"initialize failed: {json.dumps(body['error'])}")
+    session_id = headers.get("Mcp-Session-Id") or headers.get("mcp-session-id")
+    if not session_id:
+        raise RuntimeError("initialize succeeded but server returned no Mcp-Session-Id header")
+    _session_id = session_id
+    return _session_id
 
 
 def mcp_call(
@@ -51,17 +142,10 @@ def mcp_call(
 ) -> dict[str, Any]:
     if not _circuit.can_execute():
         raise RuntimeError("circuit breaker OPEN")
+    session_id = _ensure_session(timeout=timeout)
     payload = {"jsonrpc": "2.0", "id": "cli", "method": method, "params": params or {}}
-    req = urllib.request.Request(
-        mcp_url(),
-        data=json.dumps(payload).encode(),
-        headers=mcp_headers(),
-        method="POST",
-    )
-    _ssl_ctx = ssl.create_default_context()
     try:
-        with urllib.request.urlopen(req, timeout=timeout, context=_ssl_ctx) as resp:
-            body = json.loads(resp.read().decode())
+        body, _headers = _mcp_post(payload, session_id=session_id, timeout=timeout)
     except urllib.error.HTTPError as exc:
         _circuit.record_failure()
         detail = exc.read().decode()[:500]
@@ -109,9 +193,9 @@ def _facts_from_search(data: Any) -> list[Any]:
 
 def _search_group(query: str, group_id: str, limit: int = 10) -> list[Any]:
     errors: list[str] = []
-    for tool, arg_key in (("search_facts", "max_facts"), ("search_nodes", "max_nodes")):
+    for tool, arg_key in (("search_memory_facts", "max_facts"), ("search_nodes", "max_nodes")):
         try:
-            data = call_tool(tool, {"query": query, "group_id": group_id, arg_key: limit})
+            data = call_tool(tool, {"query": query, "group_ids": [group_id], arg_key: limit})
             facts = _facts_from_search(data)
             if facts:
                 return facts
@@ -172,9 +256,9 @@ def health_check() -> int:
         "resolver": resolved,
     }
 
-    # 1. Liveness — GET /healthcheck (process up?)
+    # 1. Liveness — GET /health (process up?)
     try:
-        health_url = mcp_url().replace("/mcp/", "/healthcheck").replace("/mcp", "/healthcheck")
+        health_url = mcp_url().replace("/mcp", "/health")
         req = urllib.request.Request(health_url, headers=mcp_headers())
         _ssl_ctx = ssl.create_default_context()
         with urllib.request.urlopen(req, timeout=10, context=_ssl_ctx) as resp:
@@ -266,11 +350,11 @@ def cmd_write(args: argparse.Namespace) -> int:
         payload["supersedes_uuid"] = supersedes_uuid
         print(f"INFO: near-duplicate — Supersedes {supersedes_uuid}", file=sys.stderr)
     try:
-        result = call_tool("add_episode", payload)
+        result = call_tool("add_memory", payload)
     except RuntimeError as exc:
         if supersedes_uuid and "supersedes" in str(exc).lower():
             payload.pop("supersedes_uuid", None)
-            result = call_tool("add_episode", payload)
+            result = call_tool("add_memory", payload)
         else:
             raise
     _rate.record()
@@ -309,7 +393,10 @@ def cmd_inject(args: argparse.Namespace) -> int:
         try:
             prefetch_parts.append(
                 str(
-                    call_tool("search_facts", {"query": args.task, "group_id": gid, "max_facts": 8})
+                    call_tool(
+                        "search_memory_facts",
+                        {"query": args.task, "group_ids": [gid], "max_facts": 8},
+                    )
                 )
             )
         except Exception:  # noqa: BLE001
@@ -374,7 +461,7 @@ def _write_episode(name: str, body: str, group_id: str, source_description: str)
         group_id=group_id,
         kind="manifest",
     )
-    return call_tool("add_episode", contract.to_mcp_payload())
+    return call_tool("add_memory", contract.to_mcp_payload())
 
 
 def cmd_bootstrap(args: argparse.Namespace) -> int:
@@ -503,10 +590,10 @@ def cmd_stats(args: argparse.Namespace) -> int:
         raise SystemExit("no group_id")
     episodes: list[Any] = []
     try:
-        data = call_tool("get_episodes", {"group_id": group_id, "last_n": 999})
+        data = call_tool("get_episodes", {"group_ids": [group_id], "max_episodes": 999})
         episodes = data.get("episodes", []) if isinstance(data, dict) else []
     except Exception:  # noqa: BLE001
-        data = call_tool("search_nodes", {"query": "*", "group_id": group_id, "max_nodes": 50})
+        data = call_tool("search_nodes", {"query": "*", "group_ids": [group_id], "max_nodes": 50})
         print(json.dumps({"group_id": group_id, "stats": data, "episode_count": None}, indent=2))
         return 0
     print(
