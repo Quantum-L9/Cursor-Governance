@@ -1,11 +1,11 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
 WS ?= $(CURDIR)
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv"
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -39,6 +39,10 @@ symlinks-install:
 ## Usage: make claude-plugins WS=/path/to/repo (defaults to cwd if WS omitted)
 claude-plugins:
 	bash ops/scripts/setup_claude_code_plugins.sh $(if $(WS),--workspace "$(WS)",)
+
+## Validate the Claude Code environment adapter (CLI/Web/Mobile): files, JSON, no committed secrets
+claude-env:
+	python3 environment/claude-code/validate_claude_env.py
 
 ## Reconcile the Cursor IDE profile (extensions + .vscode settings). Usage: make ide-profile WS=/path/to/repo
 ide-profile:

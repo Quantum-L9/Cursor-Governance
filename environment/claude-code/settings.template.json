@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": [
+    "Committable .claude/settings.json for an L9 consumer repo. Copy to .claude/settings.json",
+    "and commit it: on Claude Code Web/Mobile only git-tracked files survive the clone, so a",
+    "committed settings.json is what makes governance boot with no manual step. On the CLI the",
+    "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
+    "environment (web/environment.env.example) or user-scope config, never in a repo.",
+    "Field/event names track the Claude Code release; see https://code.claude.com/docs."
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_claude_governance.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(make claude-env:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.mcp.json)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "env": {
+    "L9_GOVERNANCE_SURFACE": "claude-code"
+  }
+}
