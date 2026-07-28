@@ -81,10 +81,10 @@ else:
 ```python
 def assess_level(metric, value):
     thresholds = {
-        'deploy_freq': [(1, 'Elite'), (0.14, 'High'), (0.03, 'Medium')],
-        'lead_time': [(60, 'Elite'), (1440, 'High'), (10080, 'Medium')],  # minutes
-        'cfr': [(5, 'Elite'), (15, 'High'), (30, 'Medium')],
-        'mttr': [(60, 'Elite'), (1440, 'High'), (10080, 'Medium')],  # minutes
+        "deploy_freq": [(1, "Elite"), (0.14, "High"), (0.03, "Medium")],
+        "lead_time": [(60, "Elite"), (1440, "High"), (10080, "Medium")],  # minutes
+        "cfr": [(5, "Elite"), (15, "High"), (30, "Medium")],
+        "mttr": [(60, "Elite"), (1440, "High"), (10080, "Medium")],  # minutes
     }
     # Return level based on thresholds
 ```

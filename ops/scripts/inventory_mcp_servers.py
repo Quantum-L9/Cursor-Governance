@@ -12,12 +12,18 @@ from typing import Any
 
 SHELL_NAMES = {"bash", "sh", "zsh", "fish", "powershell", "pwsh", "cmd"}
 WRITE_HINTS = re.compile(r"write|create|update|delete|mutat|shell|exec", re.I)
-FILESYSTEM_HINTS = re.compile(r"filesystem|file-system|server-filesystem|allowedDirectories|roots", re.I)
+FILESYSTEM_HINTS = re.compile(
+    r"filesystem|file-system|server-filesystem|allowedDirectories|roots", re.I
+)
 
 
 def redact_server(name: str, config: dict[str, Any], source: Path) -> dict[str, Any]:
     command = config.get("command")
-    args = [str(value) for value in config.get("args", [])] if isinstance(config.get("args"), list) else []
+    args = (
+        [str(value) for value in config.get("args", [])]
+        if isinstance(config.get("args"), list)
+        else []
+    )
     url = config.get("url") or config.get("serverUrl")
     env = config.get("env") if isinstance(config.get("env"), dict) else {}
     command_name = Path(str(command)).name.lower() if command else None
@@ -30,13 +36,16 @@ def redact_server(name: str, config: dict[str, Any], source: Path) -> dict[str, 
         "command": str(command) if command else None,
         "args": args,
         "url_host": re.sub(r"^(https?://[^/]+).*$", r"\1", str(url)) if url else None,
-        "shell_capability": command_name in SHELL_NAMES or any(Path(arg).name.lower() in SHELL_NAMES for arg in args),
+        "shell_capability": command_name in SHELL_NAMES
+        or any(Path(arg).name.lower() in SHELL_NAMES for arg in args),
         "filesystem_capability": bool(FILESYSTEM_HINTS.search(serialized)),
         "write_capability_hint": bool(WRITE_HINTS.search(serialized)),
         "credential_sources": sorted(env.keys()),
         "credential_values_redacted": True,
         "startup_behavior": "configured" if config.get("disabled") is not True else "disabled",
-        "repository_relevance": "workspace" if "/.cursor/" in str(source) and str(source).startswith(str(Path.cwd())) else "machine_or_unknown",
+        "repository_relevance": "workspace"
+        if "/.cursor/" in str(source) and str(source).startswith(str(Path.cwd()))
+        else "machine_or_unknown",
     }
 
 
@@ -89,12 +98,16 @@ def main() -> int:
 
     report = {
         "schema": "l9.mcp-inventory/v1",
-        "generated_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "generated_utc": datetime.now(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
         "read_only": True,
         "scanned_configs": [str(path) for path in unique_candidates],
         "servers": servers,
         "errors": errors,
-        "policy": "Inventory only. Do not rewrite MCP configuration until a repeated management problem is proven.",
+        "policy": "Inventory only. Do not rewrite MCP configuration until a repeated "
+        "management problem is proven.",
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / "mcp-inventory.json"
@@ -129,7 +142,8 @@ def main() -> int:
             "",
             "## Decision gate",
             "",
-            "Review trust boundaries before changing startup behavior, credentials, or write-capable servers.",
+            "Review trust boundaries before changing startup behavior, credentials, or "
+            "write-capable servers.",
             "",
         ]
     )

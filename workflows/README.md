@@ -129,7 +129,6 @@ class StepStatus:
     """Status of a workflow step."""
 
     # Key methods:
-
 ```
 
 **Lines:** 75-83 in `runner.py`
@@ -141,7 +140,6 @@ class StepType:
     """Type of workflow step."""
 
     # Key methods:
-
 ```
 
 **Lines:** 86-96 in `runner.py`
@@ -153,7 +151,6 @@ class StepResult:
     """Result of executing a step."""
 
     # Key methods:
-
 ```
 
 **Lines:** 100-107 in `runner.py`
@@ -165,7 +162,6 @@ class Step:
     """A single step in the workflow DAG."""
 
     # Key methods:
-
 ```
 
 **Lines:** 111-122 in `runner.py`
@@ -177,7 +173,6 @@ class WorkflowState:
     """Persistent state of a workflow execution."""
 
     # Key methods:
-
 ```
 
 **Lines:** 126-136 in `runner.py`
@@ -207,15 +202,19 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
 class WorkflowsRequest(BaseModel):
     """Request model for workflows operations."""
+
     id: str
     data: dict
     timestamp: datetime
     correlation_id: Optional[str] = None
 
+
 class WorkflowsResponse(BaseModel):
     """Response model for workflows operations."""
+
     success: bool
     result: Optional[dict] = None
     error: Optional[str] = None

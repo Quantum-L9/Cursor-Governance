@@ -82,14 +82,15 @@ except json.JSONDecodeError:
 ### **Issue: JSON in Wrong Encoding**
 **Solution:** Ensure UTF-8 encoding
 ```python
-content = content.decode('utf-8') if isinstance(content, bytes) else content
+content = content.decode("utf-8") if isinstance(content, bytes) else content
 ```
 
 ### **Issue: JSON with Comments**
 **Solution:** Remove comments before parsing
 ```python
 import re
-clean_json = re.sub(r'//.*?\n|/\*.*?\*/', '', content, flags=re.DOTALL)
+
+clean_json = re.sub(r"//.*?\n|/\*.*?\*/", "", content, flags=re.DOTALL)
 ```
 
 ---

@@ -282,11 +282,14 @@ NEVER:
 try:
     result = risky_operation()
 except SpecificError as e:
-    logger.error(f"Operation failed: {e}", extra={
-        'operation': 'risky_operation',
-        'context': context_info,
-        'timestamp': datetime.utcnow()
-    })
+    logger.error(
+        f"Operation failed: {e}",
+        extra={
+            "operation": "risky_operation",
+            "context": context_info,
+            "timestamp": datetime.utcnow(),
+        },
+    )
     return fallback_value  # Graceful degradation
 except Exception as e:
     logger.critical(f"Unexpected error: {e}", exc_info=True)
@@ -317,19 +320,21 @@ NEVER:
 from typing import Optional
 from dataclasses import dataclass
 
+
 @dataclass
 class ValidatedInput:
     required_field: str
     optional_field: Optional[int] = None
 
+
 def process(data: ValidatedInput) -> Result:
     """Process validated input with type safety."""
     if not data.required_field:
         raise ValueError("required_field cannot be empty")
-    
+
     if data.optional_field is not None and data.optional_field < 0:
         raise ValueError("optional_field must be non-negative")
-    
+
     # Safe to process
     return Result(...)
 ```

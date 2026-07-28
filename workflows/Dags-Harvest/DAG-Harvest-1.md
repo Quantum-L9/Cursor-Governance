@@ -682,6 +682,7 @@ The **audit bug is still present**. Line 44 imports only `register_tool`, but li
 ```python
 # Line 44: Change
 from runtime.tool_registry import register_tool
+
 # To:
 from runtime.tool_registry import get_tool_executors, register_tool
 
@@ -1106,11 +1107,9 @@ from core.tools import (
     # Hybrid search
     find_tools_hybrid,
     find_tools_keyword,
-
     # Discovery types
     DiscoveryMethod,
     DiscoveryResult,
-
     # Observability
     DiscoveryPhase,
     DiscoveryTrace,
@@ -2059,11 +2058,8 @@ To make agents "remember what tools worked best":
 
        # Boost based on past success
        for tool in candidates:
-           success_rate = await get_tool_success_rate(
-               task_embedding=embed(query),
-               tool_name=tool.name
-           )
-           tool.score *= (1 + success_rate * 0.3)  # Boost successful tools
+           success_rate = await get_tool_success_rate(task_embedding=embed(query), tool_name=tool.name)
+           tool.score *= 1 + success_rate * 0.3  # Boost successful tools
 
        return sorted(candidates, key=lambda t: t.score, reverse=True)
    ```
@@ -2071,11 +2067,7 @@ To make agents "remember what tools worked best":
 3. **Record outcomes after execution**
    ```python
    async def record_tool_outcome(task_query: str, tool_name: str, success: bool):
-       await store_feedback(
-           task_embedding=embed(task_query),
-           tool_name=tool_name,
-           success=success
-       )
+       await store_feedback(task_embedding=embed(task_query), tool_name=tool_name, success=success)
    ```
 
 ### Should This Be a GMP?
@@ -2316,6 +2308,7 @@ EXECUTE THIS /gmp style!
 
    ```python
    from services.tool_learning_scheduler import register_tool_learning_jobs
+
    await register_tool_learning_jobs(scheduler)
    ```
 

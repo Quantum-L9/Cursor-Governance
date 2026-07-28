@@ -272,6 +272,7 @@ def test_placeholder():
 def test_import_works():
     """Verify basic imports work."""
     import sys
+
     assert sys.version_info >= (3, 11)
 ```
 
