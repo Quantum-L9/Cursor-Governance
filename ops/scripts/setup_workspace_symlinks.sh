@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Version: 3.4.0 — GlobalCommands ONLY via .cursor-commands (never under .cursor/governance)
+# Version: 4.0.0 — GlobalCommands loads as a Cursor local plugin (~/.cursor/plugins/local/l9-governance),
+# never as a whole-directory rules/skills/commands symlink. See rules/84-cursor-governance-wiring.mdc v3.0.0.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -172,13 +173,21 @@ echo "GlobalCommands:   $GLOBAL_COMMANDS"
 echo "Workspace:        $WORKSPACE_DIR"
 echo ""
 
-link_or_update "$HOME/.cursor/skills" "$GLOBAL_COMMANDS/skills" "~/.cursor/skills"
-link_or_update "$HOME/.cursor/commands" "$GLOBAL_COMMANDS/commands" "~/.cursor/commands"
-link_or_update "$HOME/.cursor/rules" "$GLOBAL_COMMANDS/rules" "~/.cursor/rules"
+# GlobalCommands loads as a Cursor local plugin (rules/84-cursor-governance-wiring.mdc
+# v3.0.0), not as whole-directory symlinks into Cursor's native rules/skills/commands
+# dirs. Cursor auto-discovers rules/, skills/, commands/ under the plugin root itself.
+link_or_update "$HOME/.cursor/plugins/local/l9-governance" "$GLOBAL_COMMANDS" "~/.cursor/plugins/local/l9-governance"
+
+# Migration cleanup: pre-4.0.0 runs created these whole-directory symlinks. They are
+# wiring artifacts, not repository or user content, so they are removed outright
+# (never backed up as if real) rather than left dangling once superseded.
+remove_repo_duplicate "$HOME/.cursor/skills" "~/.cursor/skills (pre-4.0.0 symlink)"
+remove_repo_duplicate "$HOME/.cursor/commands" "~/.cursor/commands (pre-4.0.0 symlink)"
+remove_repo_duplicate "$HOME/.cursor/rules" "~/.cursor/rules (pre-4.0.0 symlink)"
 
 link_or_update "$WORKSPACE_DIR/.cursor-commands" "$GLOBAL_COMMANDS" ".cursor-commands"
 mkdir -p "$WORKSPACE_DIR/.cursor"
-link_or_update "$WORKSPACE_DIR/.cursor/rules" "$GLOBAL_COMMANDS/rules" ".cursor/rules"
+remove_repo_duplicate "$WORKSPACE_DIR/.cursor/rules" ".cursor/rules (pre-4.0.0 symlink)"
 
 setup_local_governance_dir
 
@@ -196,6 +205,8 @@ install_session_end_governance_hook() {
   local pre_tool_link="$HOME/.cursor/hooks/pre-tool-use-code-graph-gate.sh"
   local before_mcp_src="$GLOBAL_COMMANDS/ops/hooks/before_mcp_code_graph_gate.sh"
   local before_mcp_link="$HOME/.cursor/hooks/before-mcp-code-graph-gate.sh"
+  local workspace_open_src="$GLOBAL_COMMANDS/ops/hooks/workspace_open_plugin_loader.py"
+  local workspace_open_link="$HOME/.cursor/hooks/workspace-open-plugin-loader.py"
   local graphiti_template="$GLOBAL_COMMANDS/ops/graphiti/memory-bank-template"
   local hooks_json="$HOME/.cursor/hooks.json"
   local template="$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
@@ -288,6 +299,14 @@ install_session_end_governance_hook() {
     link_or_update "$before_mcp_link" "$before_mcp_src" "~/.cursor/hooks/before-mcp-code-graph-gate.sh"
   fi
 
+  # workspaceOpen: per-class addon plugin loader (rules/84-cursor-governance-wiring.mdc
+  # v3.0.0, environment/plugins/). Best-effort — the l9-governance core plugin above does
+  # not depend on this hook firing; see the known-limitation note in that rule.
+  if [ -f "$workspace_open_src" ]; then
+    chmod +x "$workspace_open_src"
+    link_or_update "$workspace_open_link" "$workspace_open_src" "~/.cursor/hooks/workspace-open-plugin-loader.py"
+  fi
+
   python3 - "$hooks_json" "$template" <<'PY'
 import json
 import sys
@@ -341,11 +360,12 @@ ensure_global_git_ignores
 echo ""
 bash "$SCRIPT_DIR/validate_governance_symlinks.sh" "$WORKSPACE_DIR"
 
-# Claude Code plugins are user-scoped ($HOME/.claude) but declared in this repo.
-# Reconcile whenever a workspace is wired so every governed repo inherits the set.
+# Claude Code plugins: core set is user-scoped ($HOME/.claude); class-gated addons
+# (environment/plugins/) install at project scope into $WORKSPACE_DIR/.claude/. Pass
+# --workspace explicitly so classification targets this workspace, not some other cwd.
 echo ""
 if [ -x "$SCRIPT_DIR/setup_claude_code_plugins.sh" ]; then
-  bash "$SCRIPT_DIR/setup_claude_code_plugins.sh" --quiet \
+  bash "$SCRIPT_DIR/setup_claude_code_plugins.sh" --quiet --workspace "$WORKSPACE_DIR" \
     || echo "WARN: Claude Code plugin reconcile failed (non-blocking)"
 else
   echo "HINT: setup_claude_code_plugins.sh missing — skip Claude plugin reconcile"

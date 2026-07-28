@@ -1,0 +1,47 @@
+schema: 1
+
+# Workspaces where governance loads the Odoo/PlasticOS rule addon plugin
+# (30-odoo-native.mdc, 95-plasticos-equipment-policy.mdc, 98-odoo-sh-staging.mdc)
+# via the workspaceOpen hook, instead of bundling them into every workspace's
+# core l9-governance plugin.
+#
+# Source of truth for these names: ops/graphiti/group_registry.yaml
+# (repos.ib-odoo-19.path_hints) — reused here rather than re-guessing repo names.
+odoo_plasticos_repos:
+  - IB-Odoo_19
+  - IB_Odoo
+  - plasticos_base
+
+# Workspaces where setup_claude_code_plugins.sh installs aws-core@claude-plugins-official
+# at `-s project` scope (in addition to the always-on core_default set at `-s user`).
+# No known repo names yet — heuristic-only until a real AWS-infra repo is identified.
+# Do not add placeholder names here; leave empty until a repo genuinely needs it.
+aws_infra_repos: []
+
+# Workspaces where setup_claude_code_plugins.sh installs building-with-zep@zep at
+# `-s project` scope. No known repo names yet — heuristic-only, same rule as above.
+zep_memory_repos: []
+
+# Detection order — first match wins, evaluated in this priority:
+#   1. odoo_plasticos — basename(workspace) or any path segment matches
+#      odoo_plasticos_repos, OR __manifest__.py / plasticos_* marker present at
+#      depth <= max_depth
+#   2. aws_infra — basename/path segment matches aws_infra_repos, OR cdk.json /
+#      serverless.yml / template.yaml marker present at depth <= max_depth
+#   3. zep_memory — basename/path segment matches zep_memory_repos, OR .zep marker
+#      present at depth <= max_depth
+# Otherwise the workspace is classified core_default. A workspace resolves to a
+# single class today — this mirrors the single-class model in
+# environment/ide/exceptions.yaml (eslint_owned vs biome_default).
+heuristic:
+  enabled: true
+  max_depth: 2
+  odoo_plasticos_markers:
+    - "__manifest__.py"
+    - "plasticos_*"
+  aws_infra_markers:
+    - "cdk.json"
+    - "serverless.yml"
+    - "template.yaml"
+  zep_memory_markers:
+    - ".zep"

@@ -1,0 +1,10 @@
+{
+  "name": "l9-governance",
+  "displayName": "L9 Governance",
+  "description": "Core L9/Constellation governance: rules, skills, and commands shared across every governed workspace. Loaded from ~/.cursor/plugins/local/l9-governance, symlinked to the Cursor-Governance clone root by ops/scripts/setup_workspace_symlinks.sh.",
+  "version": "1.0.0",
+  "author": { "name": "Quantum-L9" },
+  "repository": "https://github.com/Quantum-L9/Cursor-Governance",
+  "license": "Proprietary",
+  "keywords": ["l9", "governance", "constellation", "rules", "skills", "commands"]
+}

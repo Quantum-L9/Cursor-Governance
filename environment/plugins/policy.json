@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "comment": [
+    "Capability ownership for AI-tooling plugins across governed workspaces — the",
+    "plugin-axis analog of environment/ide/policy.json. Deliberately contains no",
+    "extension IDs, no plugin@marketplace ids, and no Cursor plugin paths: those are",
+    "rendering, and live in render.cursor.json / render.claude.json. Workspace",
+    "classification lives in exceptions.yaml, mirroring the IDE profile's pattern."
+  ],
+  "core_capabilities": [
+    "docs-lookup",
+    "shell-tooling",
+    "hook-authoring",
+    "pr-review"
+  ],
+  "classes": {
+    "core_default": {
+      "description": "Every governed workspace. Only the core capabilities above — no class-specific addon.",
+      "additional_capabilities": []
+    },
+    "odoo_plasticos": {
+      "description": "Odoo/PlasticOS repos (see exceptions.yaml). Adds the Odoo-native rule bundle.",
+      "additional_capabilities": ["odoo-plasticos-rules"]
+    },
+    "aws_infra": {
+      "description": "Repos with AWS/CDK/IaC surface. Adds AWS operational guidance.",
+      "additional_capabilities": ["aws-infra-guidance"]
+    },
+    "zep_memory": {
+      "description": "Repos integrating Zep context graphs. Adds Zep-specific guidance.",
+      "additional_capabilities": ["zep-memory-guidance"]
+    }
+  }
+}

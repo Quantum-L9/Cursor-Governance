@@ -1,34 +1,71 @@
 ---
 id: l9.rule.cursor-governance-wiring
-version: 2.0.0
-description: Separate the shared governance reference plane from Cursor-native repository rule activation.
+version: 3.0.0
+description: GlobalCommands loads as a Cursor local plugin, not a whole-directory rules symlink. Supersedes v2.0.0.
 scope: global
 domain: governance
 activation: always
 authority: canonical_global
 context_cost: minimal
 alwaysApply: true
+supersedes: l9.rule.cursor-governance-wiring@2.0.0
 ---
 # Cursor Governance Wiring Boundary
 
-## Two distinct planes
+## Supersession notice
 
-| Plane | Path | Responsibility |
+**This version (3.0.0) supersedes 2.0.0.** v2.0.0 (2026-07 update) described the
+target model as "`.cursor/rules/` stays a real repository-owned directory, shared
+rules project in only as selected individual file symlinks." That model was never
+implemented — `ops/scripts/setup_workspace_symlinks.sh` kept creating
+whole-directory symlinks for `.cursor/rules` (and the three `$HOME/.cursor/{rules,
+skills,commands}` directories), so every governed repo was in violation of its own
+governance rule. Rather than build the individual-symlink selector v2.0.0 called
+for, this version replaces that plan entirely: governance content loads through
+Cursor's own local-plugin mechanism instead of any rules-directory symlink, global
+or selective. Per the Graphiti `Supersedes` convention (`99-graphiti-temporal.mdc`),
+this is a replacement, not a silent overwrite — v2.0.0's text is preserved in git
+history, not deleted.
+
+## The model (v3.0.0)
+
+GlobalCommands (`$HOME/.cursor-governance`) is wired into Cursor two ways, for two
+different purposes, and they must not be conflated:
+
+| Mechanism | Path | Purpose |
 |---|---|---|
-| Governance reference plane | `.cursor-commands -> $HOME/.cursor-governance` | Commands, skills, scripts, canonical documents, and explicit rule references |
-| Cursor rule activation plane | `.cursor/rules/` | Cursor-native project discovery, repository rules, subtree rules, and selected shared rule files |
+| Governance reference plane | `.cursor-commands -> $HOME/.cursor-governance` (per workspace) | Commands, skills, scripts, canonical documents, and explicit rule references — read by name, not auto-loaded |
+| Cursor plugin (rule/skill/command activation) | `~/.cursor/plugins/local/l9-governance -> $HOME/.cursor-governance` (user scope) | The `l9-governance` local plugin. Cursor discovers `rules/`, `skills/`, `commands/` under this path itself; nothing symlinks those subfolders individually |
+| Per-class addon plugin | `~/.cursor/plugins/local/<addon> -> $HOME/.cursor-governance/plugins/<addon>` or returned ad hoc via `workspaceOpen` | Class-specific rule bundles (e.g. `odoo-plasticos-addon`) loaded only in workspaces `environment/plugins/exceptions.yaml` classifies into that class — see `environment/plugins/README.md` |
 
-`.cursor-commands` does not replace Cursor-native project-rule discovery.
+`.cursor-commands` does not replace plugin-based rule activation, and the plugin
+does not replace `.cursor-commands` as the reference path used by scripts/commands
+that need a stable, name-addressable path to the governance repo.
 
 ## Repository path contracts
 
-- `.cursor-commands` is the sole workspace symlink to the governance root.
-- `.cursor/governance/` is a real local directory.
-- `.cursor/governance/CANONICAL_LAW.md` is a file symlink to the canonical law.
-- `.cursor/rules/` is a real repository-owned directory and must never be replaced by a whole-directory global-rules symlink.
-- Shared rules may be projected only as selected individual file symlinks under an explicit fail-closed selection policy.
-- `.cursor/commands` and `.cursor/skills` remain forbidden duplicates of the shared entry point.
+- `.cursor-commands` is the sole workspace symlink to the governance root. Unchanged from v2.0.0.
+- `.cursor/governance/` is a real local directory; `.cursor/governance/CANONICAL_LAW.md` is a file symlink to the canonical law. Unchanged from v2.0.0.
+- `.cursor/rules/` is repository-owned and reserved for rules a repository genuinely authors itself. It must **never** be a symlink — whole-directory or individual-file — to any part of GlobalCommands. This supersedes v2.0.0's "selected individual file symlinks" allowance: that mechanism is retired in favor of the plugin model above.
+- Shared governance rules, skills, and commands are never symlinked into a repository's `.cursor/` tree. They activate exclusively through the `l9-governance` plugin (always-on) and per-class addon plugins (conditional).
+- `$HOME/.cursor/rules`, `$HOME/.cursor/skills`, `$HOME/.cursor/commands` are likewise never whole-directory symlinks to GlobalCommands. The plugin mechanism is user-scoped through `~/.cursor/plugins/local/`, not through Cursor's native rules/skills/commands directories.
+- `.cursor/commands` and `.cursor/skills` remain forbidden duplicates of the shared entry point, in a repository or at `$HOME` — unchanged from v2.0.0.
 
 ## Mutation rule
 
-Wiring tools must preserve repository-owned directories. Unexpected symlinks, files, and filename collisions fail closed instead of being renamed or overwritten by assumption.
+Wiring tools must preserve repository-owned directories. Unexpected symlinks,
+files, and filename collisions fail closed instead of being renamed or overwritten
+by assumption. A pre-existing `.cursor/rules` (or `$HOME/.cursor/{rules,skills,
+commands}`) symlink left over from the v2.0.0-era script is a migration artifact,
+not repository content — wiring tools remove the symlink outright (never back it
+up as if it were real content) and leave the path absent for the repository to
+populate genuinely, if it ever does.
+
+## Known limitation
+
+Cursor's `workspaceOpen` hook — the mechanism per-class addon plugins depend on —
+has a documented reliability gap on some Cursor builds (hooks registered but never
+executed). The `l9-governance` core plugin does not depend on this hook and loads
+unconditionally via the static `~/.cursor/plugins/local/l9-governance` symlink;
+only class-gated addons are affected if the hook does not fire on a given machine.
+See `environment/plugins/README.md` for the adapter-level detail.
