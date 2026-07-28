@@ -19,7 +19,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 if ! have gh; then
   log "Installing GitHub CLI (gh)"
   if have apt-get; then
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    curl -fsSL --proto '=https' --tlsv1.2 https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null || true
     sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null || true
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
@@ -77,17 +77,17 @@ if [ -f pyproject.toml ] || ls ./*.py >/dev/null 2>&1; then
   log "Python toolchain"
   python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
   if [ -f pyproject.toml ]; then
-    pip install -e '.[dev,server]' 2>/dev/null \
-      || pip install -e '.[dev]' 2>/dev/null \
-      || pip install ruff mypy pytest build 2>/dev/null || true
+    pip install --only-binary :all: -e '.[dev,server]' 2>/dev/null \
+      || pip install --only-binary :all: -e '.[dev]' 2>/dev/null \
+      || pip install --only-binary :all: ruff mypy pytest build 2>/dev/null || true
   else
-    pip install ruff mypy pytest 2>/dev/null || true
+    pip install --only-binary :all: ruff mypy pytest 2>/dev/null || true
   fi
 fi
 if [ -f package.json ]; then
   log "Node toolchain"
-  if have pnpm; then pnpm install || true
-  elif have npm; then npm ci 2>/dev/null || npm install || true
+  if have pnpm; then pnpm install --ignore-scripts || true
+  elif have npm; then npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts || true
   fi
 fi
 
