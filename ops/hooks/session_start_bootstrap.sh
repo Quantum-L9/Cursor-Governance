@@ -33,10 +33,19 @@ run_reconciler() {
 SYNC="$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 [ -x "$SYNC" ] && run_reconciler "$SYNC"
 
-# Keep Claude Code plugins in sync with Cursor-Governance desired state (user-scope).
-# --quiet: fail-open, no `claude update`, fast no-op when stamp matches.
+# Keep Claude Code plugins in sync with Cursor-Governance desired state.
+# --quiet: fail-open, no `claude update`, fast no-op when stamp matches. --workspace
+# is required here because sessionStart's cwd is the hooks dir, not the open
+# workspace -- CURSOR_PROJECT_DIR ($REPO) is the only reliable source for the path
+# that class-gated project-scope installs (environment/plugins/) need to target.
 PLUGIN_SETUP="$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"
-[ -x "$PLUGIN_SETUP" ] && run_reconciler bash "$PLUGIN_SETUP" --quiet
+if [ -x "$PLUGIN_SETUP" ]; then
+  if [ -n "$REPO" ]; then
+    run_reconciler bash "$PLUGIN_SETUP" --quiet --workspace "$REPO"
+  else
+    run_reconciler bash "$PLUGIN_SETUP" --quiet
+  fi
+fi
 
 resolve_global_commands() {
   # SSOT: ~/.cursor-governance (repo-root layout == GlobalCommands); Dropbox = transition fallback.
@@ -134,7 +143,9 @@ append_repo_memory_bank() {
 
 needs_wire=0
 if [ -n "$REPO" ]; then
-  for check in "$REPO/.cursor-commands" "$HOME/.cursor/skills" "$HOME/.cursor/commands" "$HOME/.cursor/rules"; do
+  # Governance loads as a Cursor local plugin (rules/84-cursor-governance-wiring.mdc
+  # v3.0.0), not as ~/.cursor/{rules,skills,commands} whole-directory symlinks.
+  for check in "$REPO/.cursor-commands" "$HOME/.cursor/plugins/local/l9-governance"; do
     if [ ! -L "$check" ]; then
       needs_wire=1
       break

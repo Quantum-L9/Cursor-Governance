@@ -7,6 +7,12 @@
         "timeout": 30
       }
     ],
+    "workspaceOpen": [
+      {
+        "command": "./hooks/workspace-open-plugin-loader.py",
+        "timeout": 10
+      }
+    ],
     "sessionEnd": [
       {
         "command": "./hooks/graphiti-session-end.sh",

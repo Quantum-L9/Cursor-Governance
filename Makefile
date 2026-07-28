@@ -35,9 +35,10 @@ symlinks-check:
 symlinks-install:
 	bash ops/scripts/setup_workspace_symlinks.sh
 
-## Reconcile Claude Code plugins to the desired state declared in setup_claude_code_plugins.sh
+## Reconcile Claude Code plugins to the desired state declared in setup_claude_code_plugins.sh.
+## Usage: make claude-plugins WS=/path/to/repo (defaults to cwd if WS omitted)
 claude-plugins:
-	bash ops/scripts/setup_claude_code_plugins.sh
+	bash ops/scripts/setup_claude_code_plugins.sh $(if $(WS),--workspace "$(WS)",)
 
 ## Reconcile the Cursor IDE profile (extensions + .vscode settings). Usage: make ide-profile WS=/path/to/repo
 ide-profile:

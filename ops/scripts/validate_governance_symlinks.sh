@@ -44,8 +44,21 @@ done
 
 echo ""
 echo "=== User-level Cursor ==="
-link_check "$HOME/.cursor/skills" "$GC/skills" "~/.cursor/skills"
-link_check "$HOME/.cursor/commands" "$GC/commands" "~/.cursor/commands"
+# Governance loads as a Cursor local plugin (rules/84-cursor-governance-wiring.mdc
+# v3.0.0), not whole-directory ~/.cursor/{rules,skills,commands} symlinks.
+link_check "$HOME/.cursor/plugins/local/l9-governance" "$GC" "~/.cursor/plugins/local/l9-governance"
+if [ -e "$GC/.cursor-plugin/plugin.json" ]; then
+  pass ".cursor-plugin/plugin.json present at GlobalCommands root"
+else
+  fail ".cursor-plugin/plugin.json missing at GlobalCommands root"
+fi
+for legacy in "$HOME/.cursor/skills" "$HOME/.cursor/commands" "$HOME/.cursor/rules"; do
+  if [ -e "$legacy" ]; then
+    fail "legacy pre-4.0.0 symlink still present: $legacy (run setup_workspace_symlinks.sh)"
+  else
+    pass "absent: $(basename "$legacy") (retired — served by l9-governance plugin)"
+  fi
+done
 
 echo ""
 echo "=== Repo: ONE GlobalCommands entry ==="
@@ -88,8 +101,12 @@ for forbidden in "$WORKSPACE/.cursor/commands" "$WORKSPACE/.cursor/skills"; do
   fi
 done
 
-if [ -d "$WORKSPACE/.cursor/rules" ]; then
-  pass ".cursor/rules/ (repo overlay)"
+if [ -L "$WORKSPACE/.cursor/rules" ]; then
+  fail ".cursor/rules must never be a symlink into GlobalCommands (pre-4.0.0 artifact — run setup_workspace_symlinks.sh)"
+elif [ -d "$WORKSPACE/.cursor/rules" ]; then
+  pass ".cursor/rules/ (repo-owned overlay)"
+else
+  pass ".cursor/rules/ absent (fine — no repo-owned rules yet)"
 fi
 
 echo ""

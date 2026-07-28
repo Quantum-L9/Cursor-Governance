@@ -43,9 +43,11 @@ Cursor session start with no manual step:
    never hard-resets), then a push via `backup_to_github.sh` so local work is
    backed up at session start too, not only on a clean session end. Set
    `GOVERNANCE_SYNC_PUSH=0` to make it pull-only.
-2. Backgrounds `setup_claude_code_plugins.sh --quiet` — reconciles the
-   declared Claude Code plugin set (user-scope under `~/.claude/`) so every
-   governed workspace inherits the same plugins
+2. Backgrounds `setup_claude_code_plugins.sh --quiet --workspace "$REPO"` —
+   reconciles the declared Claude Code plugin set: a core set every governed
+   workspace inherits (user-scope, `~/.claude/`), plus class-gated addons
+   (project-scope, `<repo>/.claude/settings.json`) per `environment/plugins/`
+   classification — see `environment/plugins/README.md`
 3. Auto-wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}`
    symlinks in the active workspace if any are missing
 4. Backgrounds `install_ide_profile.sh --quiet` — reconciles the IDE profile
@@ -79,7 +81,7 @@ bash "$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"      # run from inside the consumer workspace, not from ~/.cursor-governance itself
 bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
-bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"     # reconcile Claude Code plugins (or --quiet)
+bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"     # reconcile Claude Code plugins; run from inside the consumer workspace (or pass --workspace)
 bash "$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh" "$(pwd)"  # reconcile IDE profile (--dry-run to preview)
 python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 ```
@@ -88,7 +90,10 @@ python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 resolve the workspace as `$(pwd)` — always `cd` into the consumer repo first.
 Running them from inside `~/.cursor-governance` self-wires the SSOT clone as
 if it were a consumer (harmless, but pointless; `.cursor-commands` and
-`.cursor/` are gitignored here for exactly this reason).
+`.cursor/` are gitignored here for exactly this reason). `setup_claude_code_plugins.sh`
+defaults to `$(pwd)` the same way but also accepts an explicit `--workspace <path>`
+(used by `setup_workspace_symlinks.sh` and the sessionStart hook internally) —
+pass it directly if you're not `cd`'d into the target repo.
 
 ### 2.3 Graphiti caveat
 

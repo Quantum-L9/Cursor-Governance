@@ -4,7 +4,7 @@
 **Runtime:** L9 Governance  
 **Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone  
 **GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`  
-**Updated:** 2026-07-04 (Post-Suite-6 / Graphiti-native rewrite)
+**Updated:** 2026-07-27 (Cursor-plugin governance wiring, rule 84 v3.0.0)
 
 ---
 
@@ -53,15 +53,24 @@ This governance layer is **IDE-agnostic**. The `.cursor-commands/` symlink is on
 | `.cursor/governance/GlobalCommands` | Legacy duplicate |
 | `.cursor/commands` | Duplicate of `.cursor-commands/commands` |
 | `.cursor/skills` | Duplicate of `.cursor-commands/skills` |
+| `.cursor/rules` → governance root/`rules/` (whole-dir or selective) | Retired by rule 84 v3.0.0 — served by the `l9-governance` Cursor plugin instead |
 
 ---
 
 ## 3. User-Level Configuration (every machine)
 
+Governance loads as a Cursor **local plugin**, not as `~/.cursor/{rules,skills,
+commands}` symlinks — see rule `84-cursor-governance-wiring.mdc` v3.0.0 and
+`environment/plugins/README.md` for the full model, including per-class addon
+plugins.
+
 | Path | Target |
 |------|--------|
-| `~/.cursor/skills` | `~/.cursor-governance/skills/` |
-| `~/.cursor/commands` | `~/.cursor-governance/commands/` |
+| `~/.cursor/plugins/local/l9-governance` | `~/.cursor-governance/` (clone root; `.cursor-plugin/plugin.json` at root names the plugin) |
+
+**Retired (do not recreate):** `~/.cursor/skills`, `~/.cursor/commands`,
+`~/.cursor/rules` as whole-directory symlinks to governance. Cursor discovers
+`rules/`, `skills/`, `commands/` under the plugin root itself.
 
 ---
 

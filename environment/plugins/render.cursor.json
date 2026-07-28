@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "comment": [
+    "Cursor rendering of environment/plugins/policy.json capabilities. Cursor's own",
+    "context7-plugin / semgrep-plugin marketplace installs already cover some of",
+    "these concerns and are unrelated to the l9-governance local plugin, so most",
+    "capabilities render to null here on purpose — this is the honest current",
+    "state, not a placeholder to fill in later without a real artifact."
+  ],
+  "capabilities": {
+    "docs-lookup": null,
+    "shell-tooling": null,
+    "hook-authoring": null,
+    "pr-review": null,
+    "odoo-plasticos-rules": null,
+    "aws-infra-guidance": null,
+    "zep-memory-guidance": null
+  },
+  "notes": {
+    "docs-lookup": "Covered separately by Cursor's own context7-plugin marketplace install (user scope, unrelated to l9-governance).",
+    "shell-tooling": "No Cursor-side plugin equivalent to desktop-commander today.",
+    "hook-authoring": "No Cursor-side plugin equivalent to hookify today.",
+    "pr-review": "No Cursor-side plugin equivalent to pr-review-toolkit today.",
+    "odoo-plasticos-rules": "No GlobalCommands-side artifact by design, not by gap. Commit bbc74c3 (2026-07-22, 'cursor rules stabilization') already removed rules/30-odoo-native.mdc, rules/95-plasticos-equipment-policy.mdc, rules/98-odoo-sh-staging.mdc from this repo and moved that content to the consumer repo's own repo-owned .cursor/rules/ overlay (rules/84-cursor-governance-wiring.mdc v3.0.0). Recreating a governance-side addon here would resurrect intentionally-retired content and re-fork a decision already made. The workspaceOpen hook still classifies odoo_plasticos workspaces (exceptions.yaml) for when a real cross-repo addon is authored, but returns no pluginPaths for this capability today.",
+    "aws-infra-guidance": "No Cursor artifact exists yet. Documented gap -- do not fabricate a bundle to fill this in.",
+    "zep-memory-guidance": "No Cursor artifact exists yet. Documented gap -- do not fabricate a bundle to fill this in."
+  }
+}

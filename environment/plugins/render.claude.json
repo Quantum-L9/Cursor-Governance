@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "comment": [
+    "Claude Code rendering of environment/plugins/policy.json capabilities.",
+    "core_capabilities install at `-s user` (universal, small, no gating value).",
+    "Class-specific capabilities install at `-s project`, written to that repo's",
+    "own .claude/settings.json, only when exceptions.yaml classifies the workspace",
+    "into the matching class. `null` means no Claude-side artifact for that capability."
+  ],
+  "marketplaces": {
+    "claude-plugins-official": "anthropics/claude-plugins-official",
+    "zep": "getzep/zep"
+  },
+  "capabilities": {
+    "docs-lookup": { "plugin": "context7@claude-plugins-official", "scope": "user" },
+    "shell-tooling": { "plugin": "desktop-commander@claude-plugins-official", "scope": "user" },
+    "hook-authoring": { "plugin": "hookify@claude-plugins-official", "scope": "user" },
+    "pr-review": { "plugin": "pr-review-toolkit@claude-plugins-official", "scope": "user" },
+    "odoo-plasticos-rules": null,
+    "aws-infra-guidance": { "plugin": "aws-core@claude-plugins-official", "scope": "project" },
+    "zep-memory-guidance": { "plugin": "building-with-zep@zep", "scope": "project" }
+  }
+}
