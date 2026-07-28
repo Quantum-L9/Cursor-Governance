@@ -33,8 +33,9 @@ Activation is automatic — one hook, no manual step:
 `~/.cursor/hooks.json` under `sessionStart`. It syncs this clone, reconciles
 the declared Claude Code plugin set (`ops/scripts/setup_claude_code_plugins.sh`),
 reconciles the IDE profile (`environment/ide/` — Biome/Ruff/Pyright extensions plus
-a managed-key merge into `.vscode/settings.json`), auto-wires symlinks, checks Graphiti (degraded is expected — not fully
-connected yet), and reads `memory-bank/activeContext.md`. See `AGENTS.md` §2
+a managed-key merge into `.vscode/settings.json`), auto-wires symlinks, checks Graphiti
+(activated and round-trip verified as of 2026-07-27 — see `AGENTS.md` §2.3), and reads
+`memory-bank/activeContext.md`. See `AGENTS.md` §2
 for the full activation contract and manual/repair commands. `start-session.yaml`
 (the old YAML "protocol") was retired 2026-07-19 — the `.sh` hook above is now
 the sole activation mechanism.

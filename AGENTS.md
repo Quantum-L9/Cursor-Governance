@@ -90,14 +90,28 @@ Running them from inside `~/.cursor-governance` self-wires the SSOT clone as
 if it were a consumer (harmless, but pointless; `.cursor-commands` and
 `.cursor/` are gitignored here for exactly this reason).
 
-### 2.3 Graphiti caveat
+### 2.3 Graphiti — activated (2026-07-27)
 
-The learning system is designed to feed into Graphiti, but that pipeline is
-**not fully built out or connected yet**. Expect the health check to report
-`"graphiti: tunnel up (MCP tools degraded ...)"` — that is an accurate,
-expected degraded state, not a wiring bug. Everything else in the activation
-chain (symlinks, wiring check, memory-bank read) is unaffected and should
-report PASS.
+Graphiti memory is **fully activated and round-trip verified**, not degraded.
+C1's `graphiti-mcp` container was found running `zepai/graphiti:latest` (a REST
+API server with no `/mcp` endpoint — every tool call 404'd); it is now pinned
+to `zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone` per
+`ops/graphiti/docker-compose.yml` + `ops/graphiti/config-docker-neo4j.yaml`.
+The OpenAI key backing it was rotated (the prior key was revoked) and the
+current key lives in AWS Secrets Manager (`l9/OPENAI_API_KEY`) — see
+`ops/graphiti/graphiti.env.example`. `ops/graphiti/graphiti_memory_client.py`
+was patched to match the real server's MCP protocol: session handshake
+(`initialize` → `Mcp-Session-Id`), SSE response parsing, and the server's
+actual tool/param names (`add_memory`, `search_memory_facts`, `group_ids` as
+a list) — the client previously assumed names (`add_episode`, `search_facts`,
+`group_id`) that never matched this deployment's `tools/list`.
+
+Expect the health check to report `"graphiti: healthy"` / a successful
+`tools/list`, not a degraded state. If you see `"MCP tools degraded"` again,
+that is a regression — check the deployed image on C1
+(`docker inspect graphiti-mcp-cursor --format '{{.Config.Image}}'` should say
+`zepai/knowledge-graph-mcp`, not `zepai/graphiti`) before assuming this note
+is stale.
 
 ### 2.4 Retired: `start-session.yaml`
 
@@ -167,7 +181,7 @@ verify the archival rationale in git history before restoring anything).
 bash ops/scripts/check_governance_wiring.sh "$(pwd)"
 bash ops/scripts/validate_governance_symlinks.sh
 bash ops/scripts/validate_governance_no_hardcoded_paths.sh
-python3 ops/graphiti/graphiti_memory_client.py health   # degraded Graphiti is expected, not a failure
+python3 ops/graphiti/graphiti_memory_client.py health   # expect healthy — see §2.3
 ```
 
 ---
