@@ -19,7 +19,7 @@ auto_chain: extract-chat
 
 Clean session close:
 
-1. Write structured PICKUP context to C1 memory
+1. Write structured PICKUP context to Graphiti (primary) — memory-bank only as a fallback
 2. Extract learnings to memory (via canonical pipeline; see `docs/MEMORY_PIPELINE_MAP.md`)
 3. Save Redis session context for cross-window resume
 4. Create handoff summary
@@ -31,22 +31,30 @@ Protocol spec: `end-session.yaml` (v2.1)
 
 ## EXECUTION
 
-### 1. PICKUP CONTEXT (structured handoff — REQUIRED)
+### 1. MEMORY WRITE — Graphiti (primary, REQUIRED)
 
-Write a structured pickup packet per `end-session.yaml` phase 1:
+Health-check first, then write the structured PICKUP packet + one atomic
+write per learning fact, all to Graphiti. This is the canonical store — when
+this step succeeds, **skip step 1b entirely**; do not also write the same
+session summary into `memory-bank/`.
 
 ```bash
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+# If healthy:
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
   --kind pickup_context
+
+# One atomic write per learning fact (see step 2 below for format).
 ```
 
-### 1b. MEMORY-BANK FALLBACK (Graphiti/memory client unreachable)
+### 1b. MEMORY-BANK FALLBACK (only if Graphiti unreachable or a write fails)
 
-If `cursor_memory_client.py` / Graphiti is unreachable, fall back to the T0
-`memory-bank/` files directly in the **target repo being worked on**
-(`$CURSOR_PROJECT_DIR`) — never in `$GLOBAL_COMMANDS` / the Cursor-Governance
-clone. See `MEMORY_BANK_POLICY.md`.
+Trigger this step **only** when step 1's health check fails or a write
+errors — it replaces the Graphiti write for this session, it does not
+supplement it. Fall back to the T0 `memory-bank/` files directly in the
+**target repo being worked on** (`$CURSOR_PROJECT_DIR`) — never in
+`$GLOBAL_COMMANDS` / the Cursor-Governance clone. See `MEMORY_BANK_POLICY.md`.
 
 1. **Read current files first** — `activeContext.md`, `tasks.md`,
    `progress.md`, `tech-debt.md`. If another agent/thread is actively
@@ -81,24 +89,28 @@ clone. See `MEMORY_BANK_POLICY.md`.
 `activeContext.md`); this section documents the same contract for the manual
 `/end-session` flow and for any repo where the automatic hook isn't wired.
 
-### 2. EXTRACT LEARNINGS (canonical memory pipeline)
+### 2. EXTRACT LEARNINGS (canonical memory pipeline — part of step 1, primary path)
+
+Only runs when step 1's Graphiti health check passed (if it didn't, learnings
+go into the memory-bank fallback in step 1b instead — e.g. as bullet points
+appended to `progress.md` — not written a second time here).
 
 Session learnings MUST be written through the **canonical memory path** so they get governance, audit, DAG (packet_store → graph_sync → semantic_embed → insights), and persistence. See `docs/MEMORY_PIPELINE_MAP.md`.
 
-- **Path:** `cursor_memory_client.py write` → MCP `save_memory` → main pipeline (`write_packet` → SubstrateDAG) → PostgreSQL + Neo4j + pgvector.
+- **Path:** `graphiti_memory_client.py write` → Graphiti episode queue → entity/edge extraction → group-scoped graph. Legacy C1 path (`cursor_memory_client.py` → `save_memory` → SubstrateDAG → PostgreSQL/Neo4j/pgvector) is deprecated — do not use it for new writes.
 
 **Write atomic memories — one fact per write, not one big blob.**
 See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for the full spec.
 
 ```bash
 # One write per fact. Pre-classify with --kind. Terse, no preamble.
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "{terse fact 1}" \
-  --kind lesson --scope cursor
+  --kind lesson --group-id {resolved_group_id}
 
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "{terse fact 2}" \
-  --kind insight --scope cursor
+  --kind insight --group-id {resolved_group_id}
 ```
 
 ### 3. REDIS SESSION CONTEXT (cache_set_session_context)
@@ -169,14 +181,13 @@ Also runs automatically on **sessionEnd** after `setup_workspace_symlinks.sh` (s
 **Reports generated:** {list}
 
 ### Handoff
-- PICKUP context written ✅
-- Memory written ✅
+- PICKUP context + learnings written to Graphiti (or memory-bank fallback, if noted) ✅
 - Redis session context saved (cache_set_session_context) ✅
 - Next steps defined ✅
 - GlobalCommands pushed to Cursor-Governance ✅
 
 ### When you open a new window
-→ Use **/start-session** to load Redis context + C1 PICKUP + memory and resume.
+→ Use **/start-session** to load Redis context + Graphiti/memory-bank and resume.
 ```
 
 → **Auto-chains to /extract-chat**
