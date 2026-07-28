@@ -70,7 +70,13 @@ fi
 
 # 5) Optional: L9 shared agent memory. Only the package is installed here; the
 #    canonical DB is owned by ONE long-running HTTP server, not per-session stdio.
+#    Identity guard: Claude Code writes under its OWN agent id, never cursor_agent
+#    (group_id/repo namespace is shared with Cursor; writing identity is not).
 if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
+  if [ "${USER_ID:-}" = "cursor_agent" ] || [ "${L9_MEMORY_AGENT_ID:-}" = "cursor_agent" ]; then
+    echo "WARNING: memory identity is 'cursor_agent' — collides with Cursor. Set USER_ID=claude_code_agent / L9_MEMORY_AGENT_ID=claude-code."
+  fi
+  log "Memory identity: agent_id=${L9_MEMORY_AGENT_ID:-claude-code} user_id=${USER_ID:-claude_code_agent} (distinct from Cursor's cursor_agent)"
   log "Provisioning L9 memory client (l9-graphiti-memory)"
   MEM_DIR="${L9_MEMORY_SRC:-$HOME/l9-graphiti-memory}"
   [ -d "$MEM_DIR/.git" ] || git clone --depth 1 https://github.com/Quantum-L9/l9-graphiti-memory "$MEM_DIR" 2>/dev/null || echo "memory clone skipped"
