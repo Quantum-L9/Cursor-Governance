@@ -46,6 +46,12 @@ ls "$L9_GOVERNANCE_DIR/CANONICAL_LAW.md"   # governance clone present
 `../mcp.template.json` is the MCP block that consumes them. One long-running HTTP
 server owns the canonical DB and all sessions share it.
 
+**Identity (shared graph, distinct author).** The `group_id` (repo namespace) is
+shared with Cursor — that is what makes memory shared. The writing-agent identity
+is **not**: Claude Code uses `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claude-code`
+and its **own** bearer token (a separate server principal), so it never writes
+under Cursor's `cursor_agent`. Give Claude Code a token distinct from Cursor's.
+
 **Container scope caveat:** `127.0.0.1:8200` shares memory only across sessions on
 the **same host/container**. Separate ephemeral cloud containers each have their
 own loopback and will **not** share via `127.0.0.1`. For cross-container sharing,

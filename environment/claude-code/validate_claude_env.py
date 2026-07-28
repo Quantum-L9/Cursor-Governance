@@ -107,6 +107,37 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         _fail("mcp.template.json Authorization must be a ${...} env-reference", failures)
 
 
+def check_memory_identity_distinct(failures: list[str]) -> None:
+    """Claude Code's memory identity must differ from Cursor's (`cursor_agent`).
+
+    The repo namespace (group_id) is shared with Cursor on purpose; the writing
+    agent identity is not. Guard the env template so that invariant cannot
+    silently regress into Claude Code writing as ``cursor_agent``.
+    """
+    path = HERE / "web" / "environment.env.example"
+    if not path.is_file():
+        return
+    assignments: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        assignments[key.strip()] = value.strip()
+
+    agent_id = assignments.get("L9_MEMORY_AGENT_ID", "")
+    user_id = assignments.get("USER_ID", "")
+    if not agent_id:
+        _fail(
+            "environment.env.example must set L9_MEMORY_AGENT_ID (distinct memory identity)",
+            failures,
+        )
+    if user_id == "cursor_agent" or agent_id == "cursor_agent":
+        _fail("memory identity collides with Cursor's cursor_agent — must be distinct", failures)
+    if agent_id and agent_id != "cursor_agent" and user_id != "cursor_agent":
+        print(f"  OK: memory identity distinct from Cursor (agent_id={agent_id!r})")
+
+
 def main() -> int:
     print("=== Claude Code environment — structural validation ===")
     print(f"  root: {HERE}\n")
@@ -115,6 +146,7 @@ def main() -> int:
     check_json_parses(failures)
     check_no_secrets(failures)
     check_mcp_uses_env_refs(failures)
+    check_memory_identity_distinct(failures)
     print()
     if failures:
         print(f"RESULT: FAIL — {len(failures)} issue(s)")

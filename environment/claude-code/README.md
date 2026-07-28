@@ -45,6 +45,21 @@ context**, **reach shared memory** — without a human wiring step.
 | Discover L9 skills | `~/.claude/skills/` fed by `setup_claude_code_plugins.sh` (user scope, machine-wide) | governance cloned by `web/setup.sh`; skills referenced from the clone |
 | Boot session context | `hooks/session_start_claude_governance.sh` registered in `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` in the consumer repo |
 | Reach shared memory | `mcp.template.json` → user-scope MCP server | committed `.mcp.json` (env-refs only) + `L9_MEMORY_*` from the account environment |
+
+### Memory identity — distinct from Cursor, shared graph
+
+Two dimensions, kept separate on purpose:
+
+- **`group_id` (repo namespace) — SHARED with Cursor.** Resolved per-repo from the
+  git remote / `GRAPHITI_GROUP_ID` (`ops/graphiti/group_registry.yaml`). Sharing it
+  is what makes memory shared; it is **not** forked per agent.
+- **Writing-agent identity — DISTINCT from Cursor.** Cursor writes as `cursor_agent`
+  (`ops/graphiti/config-docker-neo4j.yaml`, `${USER_ID:cursor_agent}`). Claude Code
+  writes as `claude_code_agent` / `agent_id=claude-code`, under its **own** bearer
+  token (a separate server principal — `claude-code-memory-client`). Claude Code
+  never reuses Cursor's token and never writes under `cursor_agent`, so every
+  episode stays attributable to the agent that produced it. Set via
+  `USER_ID` / `L9_MEMORY_AGENT_ID` / `L9_MEMORY_SOURCE` (`web/environment.env.example`).
 | Formatter ownership | the `CLAUDE.md` managed block (`ops/scripts/adapters/agentdocs.sh`) | **same** — the block is git-tracked, so it is the only ownership carrier that survives a clone |
 
 Formatter ownership is deliberately **not** re-declared here: `render.claude.json`
