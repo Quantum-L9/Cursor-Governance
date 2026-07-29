@@ -34,25 +34,15 @@ def _git_remote_url(cwd: Path) -> str | None:
     return None
 
 
-def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> dict[str, Any]:
-    registry = load_registry()
-    forbidden = set(registry.get("forbidden_groups") or [])
-    cwd = (cwd or Path.cwd()).resolve()
+def _repo_matches(registry: dict[str, Any], cwd: Path) -> list[str]:
+    """Return the sorted set of registry slugs matching cwd (remote + path hints).
 
-    if explicit:
-        if explicit in forbidden:
-            return {"group_id": None, "error": f"forbidden group_id: {explicit}", "readonly": True}
-        return {"group_id": explicit, "method": "explicit_env", "readonly": False}
-
-    env_gid = os.environ.get("GRAPHITI_GROUP_ID", "").strip()
-    if env_gid:
-        if env_gid in forbidden:
-            return {"group_id": None, "error": f"forbidden group_id: {env_gid}", "readonly": True}
-        return {"group_id": env_gid, "method": "GRAPHITI_GROUP_ID", "readonly": False}
-
+    Path hints are anchored to whole path segments — a hint matches only if it
+    equals one of cwd's directory components, never as an arbitrary substring.
+    """
     repos: dict[str, Any] = registry.get("repos") or {}
     remote = _git_remote_url(cwd) or ""
-    cwd_str = str(cwd)
+    cwd_parts = set(cwd.parts)
     matches: list[str] = []
 
     for slug, cfg in repos.items():
@@ -61,11 +51,40 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
                 matches.append(slug)
                 break
         for hint in cfg.get("path_hints") or []:
-            if hint in cwd_str:
+            if hint in cwd_parts:
                 matches.append(slug)
                 break
 
-    unique = sorted(set(matches))
+    return sorted(set(matches))
+
+
+def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> dict[str, Any]:
+    registry = load_registry()
+    forbidden = set(registry.get("forbidden_groups") or [])
+    cwd = (cwd or Path.cwd()).resolve()
+
+    unique = _repo_matches(registry, cwd)
+
+    override = explicit or os.environ.get("GRAPHITI_GROUP_ID", "").strip() or None
+    if override:
+        method = "explicit_env" if explicit else "GRAPHITI_GROUP_ID"
+        if override in forbidden:
+            return {"group_id": None, "error": f"forbidden group_id: {override}", "readonly": True}
+        # An override must agree with what the repo actually is: reject it if it
+        # contradicts a resolved match. With no repo match at all it is allowed
+        # (e.g. CI runners in generic checkout dirs).
+        if unique and override not in unique:
+            resolved = unique[0] if len(unique) == 1 else f"one of {unique}"
+            return {
+                "group_id": None,
+                "error": (
+                    f"explicit group_id '{override}' contradicts resolved repo match "
+                    f"'{resolved}'"
+                ),
+                "readonly": True,
+            }
+        return {"group_id": override, "method": method, "readonly": False}
+
     if len(unique) == 1:
         return {"group_id": unique[0], "method": "registry", "readonly": False}
     if len(unique) > 1:
