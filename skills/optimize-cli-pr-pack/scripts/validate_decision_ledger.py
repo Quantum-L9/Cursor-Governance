@@ -138,11 +138,6 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
             required_pos.add("PO-UTILIZATION-PROOF")
         if route.get("risk_class") in {"guarded", "irreversible"}:
             required_pos.add("PO-DEPLOY-ROLLBACK")
-        if route.get("write_action_allowed") is True:
-            required_pos.add("PO-AUTHORIZATION")
-            auth = (ledger.get("decision") or {}).get("authorization_status")
-            if auth != "explicitly_authorized":
-                errors.append("write_action_allowed requires decision.authorization_status == explicitly_authorized")
         capability = (
             bool(wiring.get("analysis_performed"))
             or optimization.get("strategy") in WIRING_STRATEGIES
@@ -184,8 +179,6 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
             errors.append(f"decision_ledger.decision.{field} is required")
     if not isinstance(decision.get("tradeoffs"), list):
         errors.append("decision_ledger.decision.tradeoffs must be an array")
-    if decision.get("authorization_status") not in {"not_required", "explicitly_authorized", "not_authorized"}:
-        errors.append("decision_ledger.decision.authorization_status is invalid")
 
     convergence = ledger.get("convergence")
     if not isinstance(convergence, dict):

@@ -25,7 +25,7 @@ Transfer executable state, not a narrative diary.
 ```json
 {
   "objective": "string",
-  "status": "PR_READY | READY_WITH_HUMAN_STEP | BLOCKED",
+  "status": "PR_READY | BLOCKED",
   "repository": "string",
   "base_ref": "string",
   "branch": "string",

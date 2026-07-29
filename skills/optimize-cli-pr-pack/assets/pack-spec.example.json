@@ -46,7 +46,6 @@
     },
     "cycle": 3,
     "decision": {
-      "authorization_status": "not_required",
       "final_action": "proceed_with_validation",
       "rationale": "The repository-owned bottleneck is proven, the selected option is leverage-approved, all active proof obligations are satisfied, and the remaining divergence is non-blocking and disclosed.",
       "rollback_or_containment": "Restore the prior package or revert the dispatch change if error rate or memory crosses the recorded abort threshold.",

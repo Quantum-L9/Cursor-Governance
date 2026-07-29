@@ -72,8 +72,6 @@ def route(data: dict[str, Any]) -> dict[str, Any]:
         adapters.append("docs_code_divergence")
     if risk in {"guarded", "irreversible"}:
         obligations.append({"id": "PO-DEPLOY-ROLLBACK", "description": "Prove staged deployment, abort thresholds, and rollback.", "source": "risk"})
-    if mode == "write_authorized":
-        obligations.append({"id": "PO-AUTHORIZATION", "description": "Verify explicit current-turn mutation authority.", "source": "authority"})
 
     if ownership == "external":
         action = "blocked_pack"

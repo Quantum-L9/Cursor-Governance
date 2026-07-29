@@ -11,4 +11,4 @@ For each cycle:
 5. Update claims, options, unknowns, proof status, and convergence evidence.
 6. Stop immediately when all active obligations are satisfied or a material blocker is proven.
 
-Cycle three is the terminal closure cycle. It may package `PR_READY`, `READY_WITH_HUMAN_STEP`, or `BLOCKED`. A fourth cycle is forbidden.
+Cycle three is the terminal closure cycle. It may package `PR_READY` or `BLOCKED`. A fourth cycle is forbidden.

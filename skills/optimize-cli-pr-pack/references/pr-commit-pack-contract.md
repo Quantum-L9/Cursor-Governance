@@ -50,7 +50,6 @@ Add `issues/ISSUE-<fingerprint>.md` only for unresolved independent root causes.
 ## Status model
 
 - `PR_READY`: all applicable release gates pass.
-- `READY_WITH_HUMAN_STEP`: code and pack validate, but a named external approval or deployment action remains.
 - `BLOCKED`: material implementation, validation, or deployment blocker remains.
 
 A pack may be complete while status is `BLOCKED`, but it must not claim deployability.

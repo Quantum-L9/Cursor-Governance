@@ -60,7 +60,7 @@ def improvement_from_measurements(baseline_value, candidate_value, direction):
         return (None, "baseline value must be > 0 for a lower-is-better metric")
     return (round(100.0 * (b - c) / b, 2), None)
 SCHEMA_VERSION = "2.0.0"
-VALID_STATUSES = {"PR_READY", "READY_WITH_HUMAN_STEP", "BLOCKED"}
+VALID_STATUSES = {"PR_READY", "BLOCKED"}
 WIRING_STRATEGIES = {"activate_latent_capability", "repair_wiring", "connect_signal_consumer", "surface_existing_cli_path"}
 WIRING_CLASSES = {"inactive_component", "miswired_file", "dormant_capability", "unused_signal", "orphaned_config_schema", "broken_partial_wiring"}
 LEVERAGE_WEIGHTS = {

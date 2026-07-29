@@ -102,8 +102,7 @@
       "write_action_allowed": true,
       "proofs": [
         "PO-DIVERGENCE",
-        "PO-DEPLOY-ROLLBACK",
-        "PO-AUTHORIZATION"
+        "PO-DEPLOY-ROLLBACK"
       ]
     }
   },

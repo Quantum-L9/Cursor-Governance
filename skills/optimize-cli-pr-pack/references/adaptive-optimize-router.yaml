@@ -2,7 +2,7 @@ router_version: 1.0.0
 purpose: >
   Route an optimize CLI revision through only the proof obligations required by
   bottleneck ownership, evidence state, change risk, latent wiring, documentation
-  divergence, available capabilities, and mutation authority.
+  divergence, and available capabilities.
 
 identity_lock:
   task_kind: optimize_cli_revision
@@ -81,9 +81,6 @@ proof_obligation_catalog:
   PO-DEPLOY-ROLLBACK:
     activate_when: risk_class in [guarded, irreversible]
     requires: staged deployment, abort thresholds, rollback trigger, and exact rollback path
-  PO-AUTHORIZATION:
-    activate_when: output_mode == write_authorized
-    requires: explicit current-turn mutation authority
   PO-HANDOFF:
     activate_when: always
     requires: resumable successor-agent state with exact next action

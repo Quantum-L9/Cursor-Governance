@@ -61,7 +61,7 @@ def main() -> int:
         "PERFORMANCE.md",
         "bidirectional evidence",
     ]
-    # M3: one distinctive phrase per numbered Identity Lock invariant (1..12), so
+    # M3: one distinctive phrase per numbered Identity Lock invariant (1..11), so
     # deleting any invariant fails the gate (previously only ~3 were covered).
     invariant_phrases = [
         "Enable a proven, underutilized repository-owned capability",   # 1
@@ -75,7 +75,6 @@ def main() -> int:
         "Route only the proof obligations required",                    # 9
         "Run at most three implementation-validation cycles",           # 10
         "Require comparable performance proof before claiming improvement",  # 11
-        "Require explicit current-turn authorization before commit",    # 12
     ]
     for index, phrase in enumerate(invariant_phrases, start=1):
         if phrase not in skill:

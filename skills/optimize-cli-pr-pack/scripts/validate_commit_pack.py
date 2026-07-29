@@ -19,7 +19,7 @@ from build_commit_pack import calculate_leverage_score, leverage_decision
 from validate_decision_ledger import validate_decision_contract
 from build_commit_pack import improvement_from_measurements
 
-VALID_STATUSES = {"PR_READY", "READY_WITH_HUMAN_STEP", "BLOCKED"}
+VALID_STATUSES = {"PR_READY", "BLOCKED"}
 WIRING_STRATEGIES = {"activate_latent_capability", "repair_wiring", "connect_signal_consumer", "surface_existing_cli_path"}
 REQUIRED_FILES = {
     "MANIFEST.json", "README.md", "change/commit.patch", "change/OPTIMIZATION_PLAN.json",
@@ -355,7 +355,7 @@ def validate(root: Path) -> list[str]:
                 errors.append(f"manifest improvement_percent {declared} does not match recomputed {computed}")
             if manifest.get("improvement_percent") != declared:
                 errors.append("manifest improvement_percent disagrees with performance.improvement_percent")
-    if manifest.get("status") in {"PR_READY", "READY_WITH_HUMAN_STEP"}:
+    if manifest.get("status") == "PR_READY":
         label = manifest.get("status")
         if plan.get("ownership") != "repository_owned":
             errors.append(f"{label} requires repository-owned ownership")

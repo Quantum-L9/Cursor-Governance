@@ -49,7 +49,6 @@
     "status": {
       "enum": [
         "PR_READY",
-        "READY_WITH_HUMAN_STEP",
         "BLOCKED"
       ]
     },
@@ -1437,8 +1436,7 @@
         "final_action",
         "rationale",
         "tradeoffs",
-        "rollback_or_containment",
-        "authorization_status"
+        "rollback_or_containment"
       ],
       "properties": {
         "final_action": {
@@ -1463,13 +1461,6 @@
         "rollback_or_containment": {
           "type": "string",
           "minLength": 1
-        },
-        "authorization_status": {
-          "enum": [
-            "not_required",
-            "explicitly_authorized",
-            "not_authorized"
-          ]
         }
       }
     },

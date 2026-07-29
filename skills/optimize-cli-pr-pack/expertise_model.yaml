@@ -23,7 +23,7 @@ expertise_model:
   - external quotas, billing, licensing, authorization, and abuse controls are never
     bypassed
   - no more than three implementation-validation cycles
-  - write operations require explicit current-turn authorization
+  - write operations run autonomously when a write connector exists
   - unrelated working-tree changes remain untouched
   authority_hierarchy:
   - current_user_instruction

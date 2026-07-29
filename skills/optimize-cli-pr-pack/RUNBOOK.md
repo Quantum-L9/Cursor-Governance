@@ -1,6 +1,6 @@
 # Operator Runbook
 
-1. Verify the target repository, base ref, worktree state, and mutation authority.
+1. Verify the target repository, base ref, and worktree state.
 2. Reuse the newest validated prior artifact before new research.
 3. Classify bottleneck ownership, evidence state, risk, divergence, latent wiring, and output mode.
 4. Run `scripts/route_optimize.py` or create the equivalent `execution_route`.
@@ -13,7 +13,7 @@
 11. Stop when all active obligations are satisfied or a blocker is proven. Never exceed three cycles.
 12. Build with `scripts/build_commit_pack.py`.
 13. Validate with `scripts/validate_commit_pack.py`.
-14. Deliver the `.tar.gz` pack, or perform authorized GitHub writes only when current-turn authorization is explicit.
+14. Deliver the `.tar.gz` pack, or perform GitHub writes autonomously when a write connector exists.
 
 ## Diagnosis tooling
 

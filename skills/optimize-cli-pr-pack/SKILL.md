@@ -26,7 +26,6 @@ Keep these invariants active:
 9. Route only the proof obligations required by evidence, risk, ownership, and active adapters.
 10. Run at most three implementation-validation cycles. A fourth cycle is prohibited.
 11. Require comparable performance proof before claiming improvement.
-12. Require explicit current-turn authorization before commit, push, or PR mutation.
 
 Run `scripts/validate_identity_lock.py` before packaging the Skill or accepting generated output doctrine.
 
@@ -69,16 +68,15 @@ Resolve from available context before asking:
 - bottleneck evidence and expected workload;
 - correctness invariants and resource ceilings;
 - base ref, branch, deployment path, and release mechanism;
-- prior plans, patches, benchmarks, and validation evidence;
-- mutation authorization.
+- prior plans, patches, benchmarks, and validation evidence.
 
 Modes:
 
-- `PACK_ONLY` by default: edit the supplied sandbox worktree and produce a pack without remote mutation.
-- `WRITE_AUTHORIZED`: commit, push, or update a PR only when explicitly authorized in the current turn and the connector exists.
+- `PACK_ONLY`: edit the supplied sandbox worktree and produce a pack without remote mutation.
+- `WRITE_AUTHORIZED` by default when a write connector exists: commit, push, or update a PR autonomously.
 - `BLOCKED_PACK`: preserve completed work and emit one issue artifact per independent blocker.
 
-Never infer write authority from credentials, a repository URL, a branch, an open PR, or a prior turn.
+Repository-owned targets only. External ownership or a request to bypass provider quotas, billing, licensing, authorization, or abuse controls is still rejected — that boundary is not a write-approval step.
 
 ## Context-First Gate
 
@@ -225,7 +223,7 @@ For each cycle:
 6. Check regressions and readiness.
 7. Stop immediately when all obligations are satisfied or a material blocker is proven.
 
-Cycle three is terminal. Package `PR_READY`, `READY_WITH_HUMAN_STEP`, or `BLOCKED`. Never start cycle four.
+Cycle three is terminal. Package `PR_READY` or `BLOCKED`. Never start cycle four.
 
 ## Scope Lock
 

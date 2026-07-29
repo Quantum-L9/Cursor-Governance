@@ -66,7 +66,6 @@
     "status": {
       "enum": [
         "PR_READY",
-        "READY_WITH_HUMAN_STEP",
         "BLOCKED"
       ]
     },
