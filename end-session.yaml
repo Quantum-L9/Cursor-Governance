@@ -75,10 +75,21 @@ phase_1_pickup_context:
   priority: 1
   required: true
   description: |
-    Write structured pickup to memory-bank/activeContext.md (T0 SSOT) and optional Graphiti episode.
-    Legacy C1 PICKUP writes are deprecated.
+    Write structured pickup + learnings to Graphiti (T1) — the primary,
+    canonical store. memory-bank/activeContext.md (T0) is written ONLY as a
+    fallback when Graphiti's health check fails or a write errors — it is
+    never written in addition to a successful Graphiti write; the two stores
+    are not meant to hold duplicate copies of the same session summary.
+    Legacy C1 PICKUP writes are deprecated (see 03-graphiti-memory.mdc).
+
+  primary_target: |
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+    # If healthy: write PICKUP (see `template` below) + one atomic write per
+    # learning fact to Graphiti. This is the only memory write. Do NOT also
+    # write memory_bank_target below in this case.
 
   memory_bank_target: |
+    FALLBACK ONLY (Graphiti health check failed or a write errored). Target:
     ALWAYS $CURSOR_PROJECT_DIR/memory-bank/ (the workspace/repo currently
     open — the consumer repo). NEVER $GLOBAL_COMMANDS or the
     Cursor-Governance clone (~/.cursor-governance). See MEMORY_BANK_POLICY.md.
@@ -111,11 +122,6 @@ phase_1_pickup_context:
     MEMORY_BANK_POLICY.md "Push via clean branch when the working branch is
     dirty/diverged".
 
-  graphiti_optional: |
-    When GRAPHITI_MEMORY_ENABLED=1:
-    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
-      --body "PICKUP|date={DATE}|task={TASK}|..." --kind pickup_context
-  
   template: |
     PICKUP|date={YYYY-MM-DD}|task={current_task}|files={file1,file2,file3}|next={next_action}|blocker={blocker_or_none}|gmps={GMP-XX,GMP-YY}|outcome={success|partial|blocked}
   
@@ -123,9 +129,13 @@ phase_1_pickup_context:
     PICKUP|date=2026-01-16|task=WMToGraphSync bidirectional sync|files=api/server.py,core/integration/wm_to_graph_sync.py,runtime/Dockerfile|next=Deploy container detection fix to VPS|blocker=none|gmps=GMP-68|outcome=success
   
   command: |
-    python3 agents/cursor/cursor_memory_client.py write \
+    # Primary (default path when GRAPHITI_MEMORY_ENABLED=1):
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
       "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
       --kind pickup_context
+    # Fallback ONLY if the health check fails or the write errors — see
+    # memory_bank_target above. Do not run both for the same session.
   
   fields:
     date: "YYYY-MM-DD format"
