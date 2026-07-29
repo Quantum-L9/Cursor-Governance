@@ -28,15 +28,17 @@ wrote 5 principal(s) -> /tmp/l9test/auth_tokens.json (agents: claude-code, codex
 
 cursor       user=cursor_agent       roles=['orchestrator', 'memory-client'] write=['*'] promote=['*']
 claude-code  user=claude_code_agent  roles=['implementer', 'memory-client'] write=['cursor-governance', 'l9-graphiti-memory', 'l9-node-template'] promote=[]
-manus        user=manus_agent        roles=['researcher-builder', 'memory-client'] write=['cognitive-engine-graphs', 'cursor-governance', 'igorbot', 'l9-graphiti-memory', 'l9-workspace'] promote=[]
+manus        user=manus_agent        roles=['researcher-builder', 'memory-client'] write=['cognitive-engine-graphs', 'cursor-governance', 'igor-workspace', 'igorbot', 'l9-graphiti-memory'] promote=[]
 codex        user=codex_agent        roles=['implementer', 'memory-client'] write=['l9-node-template'] promote=[]
 gemini       user=gemini_agent       roles=['reviewer', 'memory-client'] write=['cursor-governance.reviews', 'l9-graphiti-memory.reviews'] promote=[]
 ```
 
 Grants match the role catalog exactly: orchestrator full write + promote;
 implementers scoped to assigned groups; researcher-builder gains the shared
-`l9-workspace` namespace; reviewer confined to `<group>.reviews`; nobody else
-promotes.
+workspace namespace (`igor-workspace`, read from the registry's
+`workspace_group` — an earlier build hardcoded the literal `l9-workspace`
+here, fixed during repo integration); reviewer confined to `<group>.reviews`;
+nobody else promotes.
 
 ## 3. Self-test suite (2 positive, 5 negative)
 

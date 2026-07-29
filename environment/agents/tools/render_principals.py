@@ -89,7 +89,7 @@ def load_yaml(path: Path) -> dict:
     return data
 
 
-def write_namespaces_for(agent: dict, role: str) -> list[str]:
+def write_namespaces_for(agent: dict, role: str, workspace: str) -> list[str]:
     """Compute write namespace grants for one agent role."""
     assigned = list(agent.get("assigned_groups") or [])
     if role == "orchestrator":
@@ -101,16 +101,20 @@ def write_namespaces_for(agent: dict, role: str) -> list[str]:
     if role == "implementer":
         return assigned[:]
     if role == "researcher-builder":
-        return [*assigned, "l9-workspace"]
+        # The registry's workspace_group, not a hardcoded literal — must stay
+        # in lockstep with ops/graphiti/group_registry.yaml.
+        return [*assigned, workspace]
     return []  # observer
 
 
-def grants_for(agent: dict, role_def: dict) -> tuple[list[str], list[str], list[str]]:
+def grants_for(
+    agent: dict, role_def: dict, workspace: str
+) -> tuple[list[str], list[str], list[str]]:
     """Derive read/write/promote namespace globs for one agent."""
     role = agent["role"]
     read_ns = list(role_def.get("read_namespaces") or [])
     promote_ns = list(role_def.get("promote_namespaces") or [])
-    write_ns = write_namespaces_for(agent, role)
+    write_ns = write_namespaces_for(agent, role, workspace)
     if role in WRITING_ROLES and not write_ns:
         fail(f"agent {agent['agent_id']} has writing role '{role}' but no grants")
     return read_ns, sorted(set(write_ns)), promote_ns
@@ -146,7 +150,7 @@ def build_principal(
     workspace: str,
 ) -> dict:
     role = agent["role"]
-    read_ns, write_ns, promote_ns = grants_for(agent, role_def)
+    read_ns, write_ns, promote_ns = grants_for(agent, role_def, workspace)
     return {
         "principal_id": agent["principal_id"],
         "tenant_id": tenant,
@@ -223,7 +227,7 @@ def main() -> int:
     registry = load_yaml(registry_path)
     roles = registry.get("roles") or {}
     agents = registry.get("agents") or {}
-    workspace = registry.get("workspace_group", "default")
+    workspace = registry.get("workspace_group", "igor-workspace")
 
     if not tokens_path.is_file():
         fail(f"token map not found: {tokens_path} (create it locally; never commit it)")

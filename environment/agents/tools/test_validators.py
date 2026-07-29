@@ -89,7 +89,7 @@ def main() -> int:
                 ids == ["claude-code", "codex", "cursor", "gemini", "manus"]
                 and gem["write_namespaces"]
                 == ["cursor-governance.reviews", "l9-graphiti-memory.reviews"]
-                and "l9-workspace" in man["write_namespaces"]
+                and "igor-workspace" in man["write_namespaces"]
                 and all(len(p["user_id"]) and p["user_id"].endswith("_agent") for p in d.values())
             )
             detail = f"agents={ids}"

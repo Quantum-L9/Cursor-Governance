@@ -39,6 +39,17 @@ Existing surfaces are unchanged: Cursor keeps `.cursor-commands` +
 `ops/graphiti`; Claude Code keeps `environment/claude-code/`. Their registry
 entries record deployed identities (`legacy_token_env`) so nothing breaks.
 
+**Workspace-group contract (aligned with the hardened `ops/graphiti` gate):**
+the shared workspace group is `igor-workspace` — the same value as
+`ops/graphiti/group_registry.yaml`'s `workspace_group`, and the two files
+must never diverge. On the deployed MCP stack, direct
+`graphiti_memory_client.py write` to that group is rejected unconditionally
+(only bootstrap's integration-edge mirror writes there), explicit `group_id`
+overrides that contradict the resolved repo match fail closed, and path
+hints match whole path segments only. Server-side namespace grants rendered
+by `tools/render_principals.py` apply to the planned `l9-graphiti-memory`
+control-plane server and do not bypass that gate — see `DESIGN.md` §6.
+
 ## Quick start (operator)
 
 ```bash
