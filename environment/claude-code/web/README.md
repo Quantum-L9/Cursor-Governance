@@ -19,8 +19,10 @@ field.
 
 ## Steps
 
-1. **Network access** — pick **Full** (simplest) or **Custom** + the allowlist in
-   `network-policy.md`.
+1. **Network access** — pick **Trusted** (recommended for a plain Python/TS repo;
+   GitHub + package registries already allowlisted, no maintenance), **Full**
+   (unrestricted), or **Custom** + the allowlist in `network-policy.md`. Four
+   levels exist — `None / Trusted / Full / Custom`; see `network-policy.md`.
 2. **Environment variables** — paste `environment.env.example`, then replace every
    `REPLACE_WITH_*` **in the UI, not in chat or a repo**. At minimum set `GH_TOKEN`
    (dedicated bot-user fine-grained PAT).
