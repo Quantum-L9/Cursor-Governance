@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -44,23 +45,38 @@ def fail(msg: str) -> None:
     sys.exit(1)
 
 
+def allowed_roots() -> list[str]:
+    return [
+        os.path.realpath(os.getcwd()),
+        os.path.realpath(tempfile.gettempdir()),
+    ]
+
+
 def resolve_cli_path(path: Path, *, label: str) -> Path:
     """Resolve a CLI path and reject escapes outside allowed roots.
 
-    Operator CLIs (and LLM-driven invocations) must not read/write arbitrary
-    filesystem locations via crafted ``..`` segments. Allowed roots: the
-    process cwd and the system temp dir (fixture/self-tests write there).
+    Uses ``os.path.realpath`` + ``os.path.commonpath`` (Sonar-recognized
+    sanitizers) so LLM/operator-supplied paths cannot escape cwd or tempdir.
     """
     if ".." in path.parts:
         fail(f"{label} must not contain '..' path segments: {path}")
-    resolved = path.expanduser().resolve(strict=False)
-    roots = [Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve()]
-    if not any(resolved.is_relative_to(root) for root in roots):
-        fail(
-            f"{label} must resolve under cwd or tempdir "
-            f"({', '.join(str(r) for r in roots)}): {path}"
-        )
-    return resolved
+    target = os.path.realpath(os.path.expanduser(str(path)))
+    if not any(os.path.commonpath([root, target]) == root for root in allowed_roots()):
+        fail(f"{label} must resolve under cwd or tempdir ({', '.join(allowed_roots())}): {path}")
+    return Path(target)
+
+
+def write_text_secure(path: Path, content: str, *, label: str) -> Path:
+    """Validate then write via open() so path-escape checks stay in the sink."""
+    safe = resolve_cli_path(path, label=label)
+    os.makedirs(safe.parent, exist_ok=True)
+    # Re-check immediately before the write sink (taint-analysis boundary).
+    target = os.path.realpath(str(safe))
+    if not any(os.path.commonpath([root, target]) == root for root in allowed_roots()):
+        fail(f"{label} escaped allowed roots before write: {path}")
+    with open(target, "w", encoding="utf-8") as fh:
+        fh.write(content)
+    return Path(target)
 
 
 def load_yaml(path: Path) -> dict:
@@ -203,7 +219,6 @@ def main() -> int:
 
     registry_path = resolve_cli_path(args.registry, label="--registry")
     tokens_path = resolve_cli_path(args.tokens, label="--tokens")
-    out_path = resolve_cli_path(args.out, label="--out")
 
     registry = load_yaml(registry_path)
     roles = registry.get("roles") or {}
@@ -242,8 +257,7 @@ def main() -> int:
     if not out:
         fail("no active agents produced principals")
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+    out_path = write_text_secure(args.out, json.dumps(out, indent=2) + "\n", label="--out")
     try:
         out_path.chmod(0o600)
     except OSError as e:
