@@ -6,8 +6,8 @@
 #   layer: tool
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-07-28
+#   version: 1.0.1
+#   updated: 2026-07-29
 """Render l9-graphiti-memory auth_tokens.json from the agent registry.
 
 Reads:
@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 try:
@@ -43,6 +44,25 @@ def fail(msg: str) -> None:
     sys.exit(1)
 
 
+def resolve_cli_path(path: Path, *, label: str) -> Path:
+    """Resolve a CLI path and reject escapes outside allowed roots.
+
+    Operator CLIs (and LLM-driven invocations) must not read/write arbitrary
+    filesystem locations via crafted ``..`` segments. Allowed roots: the
+    process cwd and the system temp dir (fixture/self-tests write there).
+    """
+    if ".." in path.parts:
+        fail(f"{label} must not contain '..' path segments: {path}")
+    resolved = path.expanduser().resolve(strict=False)
+    roots = [Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve()]
+    if not any(resolved.is_relative_to(root) for root in roots):
+        fail(
+            f"{label} must resolve under cwd or tempdir "
+            f"({', '.join(str(r) for r in roots)}): {path}"
+        )
+    return resolved
+
+
 def load_yaml(path: Path) -> dict:
     if not path.is_file():
         fail(f"registry not found: {path}")
@@ -53,29 +73,116 @@ def load_yaml(path: Path) -> dict:
     return data
 
 
+def write_namespaces_for(agent: dict, role: str) -> list[str]:
+    """Compute write namespace grants for one agent role."""
+    assigned = list(agent.get("assigned_groups") or [])
+    if role == "orchestrator":
+        return ["*"]
+    if role == "reviewer":
+        if "*" in assigned:
+            fail(f"reviewer {agent['agent_id']} may not be assigned '*'")
+        return [f"{g}.reviews" for g in assigned]
+    if role == "implementer":
+        return assigned[:]
+    if role == "researcher-builder":
+        return [*assigned, "l9-workspace"]
+    return []  # observer
+
+
 def grants_for(agent: dict, role_def: dict) -> tuple[list[str], list[str], list[str]]:
     """Derive read/write/promote namespace globs for one agent."""
     role = agent["role"]
-    assigned = list(agent.get("assigned_groups") or [])
     read_ns = list(role_def.get("read_namespaces") or [])
     promote_ns = list(role_def.get("promote_namespaces") or [])
-
-    if role == "orchestrator":
-        write_ns = ["*"]
-    elif role == "reviewer":
-        if "*" in assigned:
-            fail(f"reviewer {agent['agent_id']} may not be assigned '*'")
-        write_ns = [f"{g}.reviews" for g in assigned]
-    elif role in ("implementer", "researcher-builder"):
-        write_ns = assigned[:]
-        if role == "researcher-builder":
-            write_ns.append("l9-workspace")
-    else:  # observer
-        write_ns = []
-
+    write_ns = write_namespaces_for(agent, role)
     if role in WRITING_ROLES and not write_ns:
         fail(f"agent {agent['agent_id']} has writing role '{role}' but no grants")
     return read_ns, sorted(set(write_ns)), promote_ns
+
+
+def require_unique(value: str, seen_ids: set[str]) -> None:
+    if value in seen_ids:
+        fail(f"duplicate identity value across agents: '{value}'")
+    seen_ids.add(value)
+
+
+def require_token(
+    agent_id: str, token_map: dict, tokens_path: Path, seen_tokens: dict[str, str]
+) -> str:
+    token = token_map.get(agent_id)
+    if not token or not isinstance(token, str) or len(token) < 24:
+        fail(f"agent {agent_id}: token missing or shorter than 24 chars in {tokens_path}")
+    if token in seen_tokens:
+        fail(
+            f"agents '{seen_tokens[token]}' and '{agent_id}' share a token "
+            "— every agent MUST have its own bearer token"
+        )
+    seen_tokens[token] = agent_id
+    return token
+
+
+def build_principal(
+    agent: dict,
+    role_def: dict,
+    *,
+    tenant: str,
+    organization: str,
+    workspace: str,
+) -> dict:
+    role = agent["role"]
+    read_ns, write_ns, promote_ns = grants_for(agent, role_def)
+    return {
+        "principal_id": agent["principal_id"],
+        "tenant_id": tenant,
+        "organization_id": organization,
+        "workspace_id": workspace,
+        "user_id": agent["user_id"],
+        "agent_id": agent["agent_id"],
+        "roles": [role, "memory-client"],
+        "read_namespaces": read_ns,
+        "write_namespaces": write_ns,
+        "promote_namespaces": promote_ns,
+        "is_admin": bool(role_def.get("is_admin", False)),
+    }
+
+
+def process_agent(
+    key: str,
+    agent: dict,
+    roles: dict,
+    *,
+    include_planned: bool,
+    token_map: dict,
+    tokens_path: Path,
+    seen_ids: set[str],
+    seen_tokens: dict[str, str],
+    tenant: str,
+    organization: str,
+    workspace: str,
+) -> tuple[str, dict] | None:
+    agent_id = agent.get("agent_id")
+    if agent_id != key:
+        fail(f"agents.{key}: agent_id '{agent_id}' must equal its key")
+    status = agent.get("status", "active")
+    if status != "active" and not include_planned:
+        return None
+    role = agent.get("role")
+    if role not in roles:
+        fail(f"agent {agent_id}: unknown role '{role}'")
+    for fld in ("user_id", "source", "principal_id", "token_env"):
+        if not agent.get(fld):
+            fail(f"agent {agent_id}: missing field '{fld}'")
+    for uniq in (agent_id, agent["user_id"], agent["principal_id"]):
+        require_unique(uniq, seen_ids)
+    token = require_token(agent_id, token_map, tokens_path, seen_tokens)
+    principal = build_principal(
+        agent,
+        roles[role],
+        tenant=tenant,
+        organization=organization,
+        workspace=workspace,
+    )
+    return token, principal
 
 
 def main() -> int:
@@ -94,14 +201,18 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    registry = load_yaml(args.registry)
+    registry_path = resolve_cli_path(args.registry, label="--registry")
+    tokens_path = resolve_cli_path(args.tokens, label="--tokens")
+    out_path = resolve_cli_path(args.out, label="--out")
+
+    registry = load_yaml(registry_path)
     roles = registry.get("roles") or {}
     agents = registry.get("agents") or {}
     workspace = registry.get("workspace_group", "default")
 
-    if not args.tokens.is_file():
-        fail(f"token map not found: {args.tokens} (create it locally; never commit it)")
-    token_map = json.loads(args.tokens.read_text(encoding="utf-8"))
+    if not tokens_path.is_file():
+        fail(f"token map not found: {tokens_path} (create it locally; never commit it)")
+    token_map = json.loads(tokens_path.read_text(encoding="utf-8"))
     if not isinstance(token_map, dict):
         fail("token map must be a JSON object of agent_id -> token")
 
@@ -110,60 +221,36 @@ def main() -> int:
     out: dict[str, dict] = {}
 
     for key, agent in agents.items():
-        agent_id = agent.get("agent_id")
-        if agent_id != key:
-            fail(f"agents.{key}: agent_id '{agent_id}' must equal its key")
-        status = agent.get("status", "active")
-        if status != "active" and not args.include_planned:
+        result = process_agent(
+            key,
+            agent,
+            roles,
+            include_planned=args.include_planned,
+            token_map=token_map,
+            tokens_path=tokens_path,
+            seen_ids=seen_ids,
+            seen_tokens=seen_tokens,
+            tenant=args.tenant,
+            organization=args.organization,
+            workspace=workspace,
+        )
+        if result is None:
             continue
-        role = agent.get("role")
-        if role not in roles:
-            fail(f"agent {agent_id}: unknown role '{role}'")
-        for fld in ("user_id", "source", "principal_id", "token_env"):
-            if not agent.get(fld):
-                fail(f"agent {agent_id}: missing field '{fld}'")
-        for uniq in (agent_id, agent["user_id"], agent["principal_id"]):
-            if uniq in seen_ids:
-                fail(f"duplicate identity value across agents: '{uniq}'")
-            seen_ids.add(uniq)
-
-        token = token_map.get(agent_id)
-        if not token or not isinstance(token, str) or len(token) < 24:
-            fail(f"agent {agent_id}: token missing or shorter than 24 chars in {args.tokens}")
-        if token in seen_tokens:
-            fail(
-                f"agents '{seen_tokens[token]}' and '{agent_id}' share a token "
-                "— every agent MUST have its own bearer token"
-            )
-        seen_tokens[token] = agent_id
-
-        read_ns, write_ns, promote_ns = grants_for(agent, roles[role])
-        out[token] = {
-            "principal_id": agent["principal_id"],
-            "tenant_id": args.tenant,
-            "organization_id": args.organization,
-            "workspace_id": workspace,
-            "user_id": agent["user_id"],
-            "agent_id": agent_id,
-            "roles": [role, "memory-client"],
-            "read_namespaces": read_ns,
-            "write_namespaces": write_ns,
-            "promote_namespaces": promote_ns,
-            "is_admin": bool(roles[role].get("is_admin", False)),
-        }
+        token, principal = result
+        out[token] = principal
 
     if not out:
         fail("no active agents produced principals")
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     try:
-        args.out.chmod(0o600)
+        out_path.chmod(0o600)
     except OSError as e:
         # Non-fatal: principals still written; operator should fix perms.
-        sys.stderr.write(f"warning: could not chmod 0600 {args.out}: {e}\n")
+        sys.stderr.write(f"warning: could not chmod 0600 {out_path}: {e}\n")
     sys.stderr.write(
-        f"wrote {len(out)} principal(s) -> {args.out} "
+        f"wrote {len(out)} principal(s) -> {out_path} "
         f"(agents: {', '.join(sorted(v['agent_id'] for v in out.values()))})\n"
     )
     return 0
