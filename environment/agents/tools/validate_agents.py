@@ -31,6 +31,7 @@ Checks:
 Exit 0 = pass, 1 = violations (all listed), 2 = environment error.
 Usage: validate_agents.py [--root environment/agents]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -136,15 +137,19 @@ def check_adapters(reg: dict, root: Path) -> None:
         env_files = list(adir.glob("*.env.example"))
         for envf in env_files:
             text = envf.read_text(encoding="utf-8")
-            for var, fld in (("USER_ID", "user_id"),
-                             ("L9_MEMORY_AGENT_ID", "agent_id"),
-                             ("L9_MEMORY_SOURCE", "source")):
+            for var, fld in (
+                ("USER_ID", "user_id"),
+                ("L9_MEMORY_AGENT_ID", "agent_id"),
+                ("L9_MEMORY_SOURCE", "source"),
+            ):
                 m = re.search(rf"^{var}=(.+)$", text, re.M)
                 if not m:
                     err("A2", f"{envf.name}: missing {var}")
                 elif m.group(1).strip() != a.get(fld):
-                    err("A2", f"{envf.name}: {var}='{m.group(1).strip()}' "
-                              f"!= registry '{a.get(fld)}'")
+                    err(
+                        "A2",
+                        f"{envf.name}: {var}='{m.group(1).strip()}' != registry '{a.get(fld)}'",
+                    )
 
 
 def check_secrets(root: Path) -> None:
@@ -159,19 +164,18 @@ def check_secrets(root: Path) -> None:
         except (UnicodeDecodeError, OSError):
             continue
         for m in SECRET_ASSIGN.finditer(text):
-            if PLACEHOLDER.search(m.group(2)) or PLACEHOLDER.search(
-                    m.group(0)):
+            if PLACEHOLDER.search(m.group(2)) or PLACEHOLDER.search(m.group(0)):
                 continue
             if ENV_VAR_NAME.match(m.group(2)):
                 continue  # e.g. token_env: L9_MEMORY_TOKEN__MANUS (a name, not a value)
-            err("S1", f"{path}: possible committed secret "
-                      f"('{m.group(1)}...' = '{m.group(2)[:8]}…')")
+            err(
+                "S1", f"{path}: possible committed secret ('{m.group(1)}...' = '{m.group(2)[:8]}…')"
+            )
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--root", type=Path,
-                    default=Path(__file__).resolve().parent.parent)
+    ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
     args = ap.parse_args()
     root = args.root.resolve()
     if not root.is_dir():
@@ -189,9 +193,10 @@ def main() -> int:
         for e in errors:
             sys.stderr.write(f"  {e}\n")
         return 1
-    n = len((reg.get("agents") or {}))
-    sys.stderr.write(f"PASS — registry valid, {n} agent(s), adapters "
-                     "consistent, no committed secrets\n")
+    n = len(reg.get("agents") or {})
+    sys.stderr.write(
+        f"PASS — registry valid, {n} agent(s), adapters consistent, no committed secrets\n"
+    )
     return 0
 
 

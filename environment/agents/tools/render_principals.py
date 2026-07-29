@@ -21,6 +21,7 @@ Writes:
 Fails loudly on: duplicate identities, unknown roles, missing/duplicate tokens,
 tokens that look committed (registry path), or empty grants for writing roles.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -80,13 +81,17 @@ def grants_for(agent: dict, role_def: dict) -> tuple[list[str], list[str], list[
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--registry", required=True, type=Path)
-    ap.add_argument("--tokens", required=True, type=Path,
-                    help="agent_tokens.local.json — gitignored token map")
+    ap.add_argument(
+        "--tokens", required=True, type=Path, help="agent_tokens.local.json — gitignored token map"
+    )
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--tenant", default="l9")
     ap.add_argument("--organization", default="quantum-l9")
-    ap.add_argument("--include-planned", action="store_true",
-                    help="also emit principals for status=planned agents")
+    ap.add_argument(
+        "--include-planned",
+        action="store_true",
+        help="also emit principals for status=planned agents",
+    )
     args = ap.parse_args()
 
     registry = load_yaml(args.registry)
@@ -95,8 +100,7 @@ def main() -> int:
     workspace = registry.get("workspace_group", "default")
 
     if not args.tokens.is_file():
-        fail(f"token map not found: {args.tokens} "
-             "(create it locally; never commit it)")
+        fail(f"token map not found: {args.tokens} (create it locally; never commit it)")
     token_map = json.loads(args.tokens.read_text(encoding="utf-8"))
     if not isinstance(token_map, dict):
         fail("token map must be a JSON object of agent_id -> token")
@@ -125,11 +129,12 @@ def main() -> int:
 
         token = token_map.get(agent_id)
         if not token or not isinstance(token, str) or len(token) < 24:
-            fail(f"agent {agent_id}: token missing or shorter than 24 chars "
-                 f"in {args.tokens}")
+            fail(f"agent {agent_id}: token missing or shorter than 24 chars in {args.tokens}")
         if token in seen_tokens:
-            fail(f"agents '{seen_tokens[token]}' and '{agent_id}' share a token "
-                 "— every agent MUST have its own bearer token")
+            fail(
+                f"agents '{seen_tokens[token]}' and '{agent_id}' share a token "
+                "— every agent MUST have its own bearer token"
+            )
         seen_tokens[token] = agent_id
 
         read_ns, write_ns, promote_ns = grants_for(agent, roles[role])
@@ -154,8 +159,9 @@ def main() -> int:
     args.out.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     try:
         args.out.chmod(0o600)
-    except OSError:
-        pass
+    except OSError as e:
+        # Non-fatal: principals still written; operator should fix perms.
+        sys.stderr.write(f"warning: could not chmod 0600 {args.out}: {e}\n")
     sys.stderr.write(
         f"wrote {len(out)} principal(s) -> {args.out} "
         f"(agents: {', '.join(sorted(v['agent_id'] for v in out.values()))})\n"

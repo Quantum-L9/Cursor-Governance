@@ -14,6 +14,7 @@ Positive: real pack passes; principals render for all 5 agents with correct
 role grants. Negative: mutated registries (duplicate user_id, bad naming,
 unknown role, committed secret, shared token) must FAIL. Exit 0 = all pass.
 """
+
 from __future__ import annotations
 
 import json
@@ -55,14 +56,28 @@ def main() -> int:
     # T2 positive: principals render for all agents incl. planned
     with tempfile.TemporaryDirectory() as td:
         tokmap = Path(td) / "tok.json"
-        tokmap.write_text(json.dumps({
-            a: f"tok_{a}_{'x' * 24}" for a in
-            ["cursor", "claude-code", "manus", "codex", "gemini"]}))
+        tokmap.write_text(
+            json.dumps(
+                {
+                    a: f"tok_{a}_{'x' * 24}"
+                    for a in ["cursor", "claude-code", "manus", "codex", "gemini"]
+                }
+            )
+        )
         out = Path(td) / "auth_tokens.json"
-        r = run([PY, str(TOOLS / "render_principals.py"),
-                 "--registry", str(ROOT / "agent_registry.yaml"),
-                 "--tokens", str(tokmap), "--out", str(out),
-                 "--include-planned"])
+        r = run(
+            [
+                PY,
+                str(TOOLS / "render_principals.py"),
+                "--registry",
+                str(ROOT / "agent_registry.yaml"),
+                "--tokens",
+                str(tokmap),
+                "--out",
+                str(out),
+                "--include-planned",
+            ]
+        )
         ok = r.returncode == 0
         detail = r.stderr.strip()
         if ok:
@@ -70,55 +85,78 @@ def main() -> int:
             ids = sorted(p["agent_id"] for p in d.values())
             gem = next(p for p in d.values() if p["agent_id"] == "gemini")
             man = next(p for p in d.values() if p["agent_id"] == "manus")
-            ok = (ids == ["claude-code", "codex", "cursor", "gemini", "manus"]
-                  and gem["write_namespaces"] == ["cursor-governance.reviews",
-                                                  "l9-graphiti-memory.reviews"]
-                  and "l9-workspace" in man["write_namespaces"]
-                  and all(len(p["user_id"]) and p["user_id"].endswith("_agent")
-                          for p in d.values()))
+            ok = (
+                ids == ["claude-code", "codex", "cursor", "gemini", "manus"]
+                and gem["write_namespaces"]
+                == ["cursor-governance.reviews", "l9-graphiti-memory.reviews"]
+                and "l9-workspace" in man["write_namespaces"]
+                and all(len(p["user_id"]) and p["user_id"].endswith("_agent") for p in d.values())
+            )
             detail = f"agents={ids}"
         case("T2 principals render with role-correct grants", ok, detail)
 
         # T3 negative: shared token must fail render
-        tokmap.write_text(json.dumps({
-            a: "sharedsharedsharedsharedshared" for a in
-            ["cursor", "claude-code", "manus", "codex", "gemini"]}))
-        r = run([PY, str(TOOLS / "render_principals.py"),
-                 "--registry", str(ROOT / "agent_registry.yaml"),
-                 "--tokens", str(tokmap), "--out", str(out),
-                 "--include-planned"])
-        case("T3 shared token rejected", r.returncode != 0 and "share a token" in r.stderr,
-             r.stderr.strip())
+        tokmap.write_text(
+            json.dumps(
+                {
+                    a: "sharedsharedsharedsharedshared"
+                    for a in ["cursor", "claude-code", "manus", "codex", "gemini"]
+                }
+            )
+        )
+        r = run(
+            [
+                PY,
+                str(TOOLS / "render_principals.py"),
+                "--registry",
+                str(ROOT / "agent_registry.yaml"),
+                "--tokens",
+                str(tokmap),
+                "--out",
+                str(out),
+                "--include-planned",
+            ]
+        )
+        case(
+            "T3 shared token rejected",
+            r.returncode != 0 and "share a token" in r.stderr,
+            r.stderr.strip(),
+        )
 
     # T4 negative: duplicate user_id
-    p = mutated_pack(lambda t: t.replace("user_id: manus_agent",
-                                         "user_id: cursor_agent"))
+    p = mutated_pack(lambda t: t.replace("user_id: manus_agent", "user_id: cursor_agent"))
     r = run([PY, str(TOOLS / "validate_agents.py"), "--root", str(p)])
-    case("T4 duplicate user_id rejected",
-         r.returncode == 1 and ("duplicate" in r.stderr or "!=" in r.stderr), r.stderr.strip())
+    case(
+        "T4 duplicate user_id rejected",
+        r.returncode == 1 and ("duplicate" in r.stderr or "!=" in r.stderr),
+        r.stderr.strip(),
+    )
     shutil.rmtree(p.parent.parent if p.name == "pack" else p.parent, ignore_errors=True)
 
     # T5 negative: unknown role
-    p = mutated_pack(lambda t: t.replace("role: researcher-builder",
-                                         "role: superuser"))
+    p = mutated_pack(lambda t: t.replace("role: researcher-builder", "role: superuser"))
     r = run([PY, str(TOOLS / "validate_agents.py"), "--root", str(p)])
-    case("T5 unknown role rejected", r.returncode == 1 and "unknown role" in r.stderr,
-         r.stderr.strip())
+    case(
+        "T5 unknown role rejected",
+        r.returncode == 1 and "unknown role" in r.stderr,
+        r.stderr.strip(),
+    )
     shutil.rmtree(p.parent, ignore_errors=True)
 
     # T6 negative: naming-law break (source != agent_id)
     p = mutated_pack(lambda t: t.replace("source: codex", "source: codex-bot"))
     r = run([PY, str(TOOLS / "validate_agents.py"), "--root", str(p)])
-    case("T6 naming-law violation rejected", r.returncode == 1 and "R3" in r.stderr,
-         r.stderr.strip())
+    case(
+        "T6 naming-law violation rejected", r.returncode == 1 and "R3" in r.stderr, r.stderr.strip()
+    )
     shutil.rmtree(p.parent, ignore_errors=True)
 
     # T7 negative: committed secret detected
-    fake = "AbCdEfGh" + "IjKlMnOp" + "QrStUvWxYz123456"  # built at runtime so this file never contains a secret-like literal
+    # Built at runtime so this file never contains a secret-like literal.
+    fake = "AbCdEfGh" + "IjKlMnOp" + "QrStUvWxYz123456"
     p = mutated_pack(lambda t: t + f'\n# leaked\nleak_token: "{fake}"\n')
     r = run([PY, str(TOOLS / "validate_agents.py"), "--root", str(p)])
-    case("T7 committed secret rejected", r.returncode == 1 and "S1" in r.stderr,
-         r.stderr.strip())
+    case("T7 committed secret rejected", r.returncode == 1 and "S1" in r.stderr, r.stderr.strip())
     shutil.rmtree(p.parent, ignore_errors=True)
 
     failed = [n for n, ok, _ in results if not ok]
