@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/optimize-cli-pack-manifest-v2.0.json",
+  "title": "Optimize CLI PR Commit Pack Manifest v2.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pack_name",
+    "version",
+    "repository",
+    "base_ref",
+    "branch",
+    "status",
+    "changed_files",
+    "patch_sha256",
+    "created_utc",
+    "generator",
+    "utilization_gap_class",
+    "ownership",
+    "improvement_percent",
+    "wiring_analysis_performed",
+    "selected_wiring_findings",
+    "unresolved_wiring_unknowns",
+    "revision_synthesis_status",
+    "revision_finding_count",
+    "revision_target_count",
+    "revision_option_count",
+    "selected_revision_options",
+    "unresolved_docs_code_divergences",
+    "highest_selected_leverage_score",
+    "reasoning_depth",
+    "initial_action",
+    "final_action",
+    "proof_obligation_count",
+    "satisfied_proof_obligation_count",
+    "unresolved_material_unknowns",
+    "decision_convergence_status",
+    "performance",
+    "reproducible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "pack_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "PR_READY",
+        "READY_WITH_HUMAN_STEP",
+        "BLOCKED"
+      ]
+    },
+    "changed_files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "copied_files": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "deleted_files": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "patch_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generator": {
+      "const": "optimize-cli-pr-pack"
+    },
+    "utilization_gap_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ownership": {
+      "enum": [
+        "repository_owned",
+        "external",
+        "unknown"
+      ]
+    },
+    "improvement_percent": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "wiring_analysis_performed": {
+      "type": "boolean"
+    },
+    "selected_wiring_findings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^DWA-[0-9]{3}$"
+      }
+    },
+    "unresolved_wiring_unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "revision_synthesis_status": {
+      "enum": [
+        "complete",
+        "partial",
+        "blocked"
+      ]
+    },
+    "revision_finding_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "revision_target_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "revision_option_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "selected_revision_options": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^CLI-OPT-[0-9]{3}$"
+      }
+    },
+    "unresolved_docs_code_divergences": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^CLI-FND-[0-9]{3}$"
+      }
+    },
+    "highest_selected_leverage_score": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 5
+    },
+    "reasoning_depth": {
+      "enum": [
+        "rapid",
+        "standard",
+        "deep"
+      ]
+    },
+    "initial_action": {
+      "enum": [
+        "proceed",
+        "proceed_with_validation",
+        "bounded_probe",
+        "blocked_pack"
+      ]
+    },
+    "final_action": {
+      "enum": [
+        "proceed",
+        "proceed_with_validation",
+        "bounded_probe",
+        "blocked_pack"
+      ]
+    },
+    "proof_obligation_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "satisfied_proof_obligation_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unresolved_material_unknowns": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^UNK-[0-9]{3}$"
+      }
+    },
+    "decision_convergence_status": {
+      "enum": [
+        "converged",
+        "partial",
+        "blocked"
+      ]
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "unit",
+        "direction",
+        "baseline_value",
+        "candidate_value",
+        "improvement_percent"
+      ],
+      "properties": {
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "lower_is_better",
+            "higher_is_better"
+          ]
+        },
+        "baseline_value": {
+          "type": "number"
+        },
+        "candidate_value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "improvement_percent": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "reproducible": {
+      "type": "boolean"
+    }
+  }
+}

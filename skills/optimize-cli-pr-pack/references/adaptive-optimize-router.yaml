@@ -1,0 +1,94 @@
+router_version: 1.0.0
+purpose: >
+  Route an optimize CLI revision through only the proof obligations required by
+  bottleneck ownership, evidence state, change risk, latent wiring, documentation
+  divergence, available capabilities, and mutation authority.
+
+identity_lock:
+  task_kind: optimize_cli_revision
+  terminal_output: deployable_pr_commit_pack
+  maximum_cycles: 3
+  forbidden_outcomes:
+    - audit_only_report
+    - external_quota_bypass
+    - uncontrolled_concurrency
+    - throttle_implementation
+
+routing_dimensions:
+  utilization_gap_class:
+    - artificial_delay
+    - unnecessary_serialization
+    - low_local_cap
+    - blocking_io
+    - repeated_startup
+    - duplicate_work
+    - buffering
+    - local_retry_backoff
+    - lock_contention
+    - inactive_component
+    - miswired_file
+    - dormant_capability
+    - unused_signal
+    - orphaned_config_schema
+    - broken_partial_wiring
+    - latent_capability_wiring
+    - other_repository_owned
+    - external_limit
+    - unknown
+  ownership: [repository_owned, external, unknown]
+  evidence_state: [sufficient, partial, conflicting, absent]
+  risk_class: [reversible, guarded, irreversible]
+  docs_code_divergence: [none, non_blocking, release_blocking, unknown]
+  latent_capability: [true, false]
+  output_mode: [pack_only, write_authorized]
+
+initial_action_rules:
+  - when: ownership == external
+    action: blocked_pack
+  - when: ownership == unknown
+    action: bounded_probe
+  - when: evidence_state in [absent, partial, conflicting]
+    action: bounded_probe
+  - when: risk_class == irreversible
+    action: proceed_with_validation
+  - otherwise: proceed
+
+proof_obligation_catalog:
+  PO-OWNERSHIP:
+    activate_when: always
+    requires: repository ownership or explicit external/unknown blocker classification
+  PO-BASELINE:
+    activate_when: evidence_state != sufficient
+    requires: smallest representative baseline or equivalent trace
+  PO-CORRECTNESS:
+    activate_when: always
+    requires: behavior, ordering, durability, cancellation, signals, and exit-code proof
+  PO-RESOURCE-ENVELOPE:
+    activate_when: always
+    requires: bounded CPU, memory, queues, workers, processes, descriptors, and connections
+  PO-UTILIZATION-PROOF:
+    activate_when: ownership == repository_owned
+    requires: baseline and candidate measured under comparable conditions
+  PO-REACHABILITY:
+    activate_when: latent_capability == true or utilization_gap_class in [inactive_component, miswired_file, dormant_capability, unused_signal, orphaned_config_schema, broken_partial_wiring, latent_capability_wiring]
+    requires: bidirectional definition-consumer evidence plus dynamic-dispatch and flag intent review
+  PO-DIVERGENCE:
+    activate_when: docs_code_divergence != none
+    requires: reconcile or disclose every divergence with owner, release impact, and next action
+  PO-LEVERAGE-SELECTION:
+    activate_when: always
+    requires: complete finding-target-option graph and threshold-valid selected options
+  PO-DEPLOY-ROLLBACK:
+    activate_when: risk_class in [guarded, irreversible]
+    requires: staged deployment, abort thresholds, rollback trigger, and exact rollback path
+  PO-AUTHORIZATION:
+    activate_when: output_mode == write_authorized
+    requires: explicit current-turn mutation authority
+  PO-HANDOFF:
+    activate_when: always
+    requires: resumable successor-agent state with exact next action
+
+stop_rules:
+  research: stop when the named material evidence gap is resolved
+  cycle: stop when all active proof obligations are satisfied or blocked
+  run: stop when PR_READY gates pass or cycle three emits a BLOCKED pack

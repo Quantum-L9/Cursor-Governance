@@ -1,0 +1,62 @@
+[
+  {
+    "id": "A1",
+    "expected": "activate",
+    "required_text": "optimization"
+  },
+  {
+    "id": "A2",
+    "expected": "activate",
+    "required_text": "CLI throughput bottleneck"
+  },
+  {
+    "id": "A3",
+    "expected": "activate",
+    "required_text": "CLI audit"
+  },
+  {
+    "id": "A4",
+    "expected": "activate",
+    "required_text": "before-and-after performance evidence"
+  },
+  {
+    "id": "A5",
+    "expected": "activate",
+    "required_text": "prior sandbox artifact"
+  },
+  {
+    "id": "A6",
+    "expected": "activate",
+    "required_text": "latent capability"
+  },
+  {
+    "id": "A7",
+    "expected": "activate",
+    "required_text": "bidirectional evidence"
+  },
+  {
+    "id": "R1",
+    "expected": "reject",
+    "required_text": "provider quotas"
+  },
+  {
+    "id": "R2",
+    "expected": "reject",
+    "required_text": "billing limits"
+  },
+  {
+    "id": "R3",
+    "expected": "reject",
+    "required_text": "authorization"
+  },
+  {
+    "id": "R4",
+    "expected": "reject",
+    "required_text": "audit-only"
+  },
+  {
+    "id": "R5",
+    "expected": "reject",
+    "required_text": "Never implement a new throttle"
+  }
+]

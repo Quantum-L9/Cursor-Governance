@@ -1,0 +1,3 @@
+# Runtime dependencies for optimize-cli-pr-pack scripts.
+jsonschema>=4
+PyYAML>=6

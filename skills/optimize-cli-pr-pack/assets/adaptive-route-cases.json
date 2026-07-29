@@ -1,0 +1,153 @@
+[
+  {
+    "name": "simple_repository_bottleneck",
+    "input": {
+      "utilization_gap_class": "artificial_delay",
+      "ownership": "repository_owned",
+      "evidence_state": "sufficient",
+      "risk_class": "reversible",
+      "docs_code_divergence": "none",
+      "latent_capability": false,
+      "output_mode": "pack_only"
+    },
+    "expect": {
+      "reasoning_depth": "rapid",
+      "initial_action": "proceed",
+      "write_action_allowed": false,
+      "proofs": [
+        "PO-OWNERSHIP",
+        "PO-UTILIZATION-PROOF"
+      ]
+    }
+  },
+  {
+    "name": "latent_conflicting",
+    "input": {
+      "utilization_gap_class": "latent_capability_wiring",
+      "ownership": "repository_owned",
+      "evidence_state": "conflicting",
+      "risk_class": "guarded",
+      "docs_code_divergence": "non_blocking",
+      "latent_capability": true,
+      "output_mode": "pack_only"
+    },
+    "expect": {
+      "reasoning_depth": "deep",
+      "initial_action": "bounded_probe",
+      "write_action_allowed": false,
+      "proofs": [
+        "PO-BASELINE",
+        "PO-REACHABILITY",
+        "PO-DIVERGENCE",
+        "PO-DEPLOY-ROLLBACK"
+      ]
+    }
+  },
+  {
+    "name": "external_limit",
+    "input": {
+      "utilization_gap_class": "external_limit",
+      "ownership": "external",
+      "evidence_state": "sufficient",
+      "risk_class": "reversible",
+      "docs_code_divergence": "none",
+      "latent_capability": false,
+      "output_mode": "pack_only"
+    },
+    "expect": {
+      "reasoning_depth": "rapid",
+      "initial_action": "blocked_pack",
+      "write_action_allowed": false,
+      "proofs": [
+        "PO-OWNERSHIP"
+      ]
+    }
+  },
+  {
+    "name": "unknown_ownership",
+    "input": {
+      "utilization_gap_class": "unknown",
+      "ownership": "unknown",
+      "evidence_state": "partial",
+      "risk_class": "guarded",
+      "docs_code_divergence": "unknown",
+      "latent_capability": false,
+      "output_mode": "pack_only"
+    },
+    "expect": {
+      "reasoning_depth": "standard",
+      "initial_action": "bounded_probe",
+      "write_action_allowed": false,
+      "proofs": [
+        "PO-BASELINE",
+        "PO-DIVERGENCE",
+        "PO-DEPLOY-ROLLBACK"
+      ]
+    }
+  },
+  {
+    "name": "irreversible_write",
+    "input": {
+      "utilization_gap_class": "lock_contention",
+      "ownership": "repository_owned",
+      "evidence_state": "sufficient",
+      "risk_class": "irreversible",
+      "docs_code_divergence": "release_blocking",
+      "latent_capability": false,
+      "output_mode": "write_authorized"
+    },
+    "expect": {
+      "reasoning_depth": "deep",
+      "initial_action": "proceed_with_validation",
+      "write_action_allowed": true,
+      "proofs": [
+        "PO-DIVERGENCE",
+        "PO-DEPLOY-ROLLBACK",
+        "PO-AUTHORIZATION"
+      ]
+    }
+  },
+  {
+    "name": "capability_activation",
+    "input": {
+      "utilization_gap_class": "dormant_capability",
+      "ownership": "repository_owned",
+      "evidence_state": "sufficient",
+      "risk_class": "guarded",
+      "docs_code_divergence": "none",
+      "latent_capability": false,
+      "output_mode": "pack_only",
+      "target_reachable": true
+    },
+    "expect": {
+      "reasoning_depth": "deep",
+      "initial_action": "proceed",
+      "write_action_allowed": false,
+      "proofs": [
+        "PO-REACHABILITY",
+        "PO-UTILIZATION-PROOF"
+      ]
+    }
+  },
+  {
+    "name": "no_entrypoint_blocked",
+    "input": {
+      "utilization_gap_class": "inactive_component",
+      "ownership": "repository_owned",
+      "evidence_state": "sufficient",
+      "risk_class": "reversible",
+      "docs_code_divergence": "none",
+      "latent_capability": false,
+      "output_mode": "pack_only",
+      "target_reachable": false
+    },
+    "expect": {
+      "reasoning_depth": "deep",
+      "initial_action": "blocked_pack",
+      "write_action_allowed": false,
+      "proofs": [
+        "PO-OWNERSHIP"
+      ]
+    }
+  }
+]
