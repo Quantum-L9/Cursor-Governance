@@ -28,6 +28,11 @@
 # See environment.env.example and network-policy.md for the other two fields.
 # ===========================================================================
 set -uo pipefail
+# Fail-open contract, enforced: the cloud runner executes this script under `set -e`,
+# so a single failed optional step (e.g. a cp of a template that isn't where we
+# looked) would abort the run and BLOCK the session. Explicitly clear errexit here;
+# every fallible step below degrades to a WARN instead of killing the session.
+set +e
 log()  { printf '\n=== %s ===\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -56,44 +61,61 @@ else
 fi
 
 # 3) Governance clone — the SessionStart hook and skills resolve against this.
-#    Fresh clone if absent; else fast-forward refresh so a persistent CLI sandbox
-#    tracks the same HEAD a fresh Web/Mobile clone would — no law drift between chats.
-GOV_DIR="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+#    Precedence, and every candidate MUST actually contain CANONICAL_LAW.md:
+#      a) explicit L9_GOVERNANCE_DIR (only if it holds CANONICAL_LAW.md)
+#      b) the workspace itself — a session run directly against Cursor-Governance
+#         IS its own clone; do not clone a second copy
+#      c) a $HOME clone we create (fresh) or fast-forward refresh (subsequent chats)
 GOV_URL="https://github.com/Quantum-L9/Cursor-Governance"
-if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
-  log "Cloning Cursor-Governance -> $GOV_DIR"
-  git clone --depth 1 --single-branch ${L9_GOVERNANCE_REF:+--branch "$L9_GOVERNANCE_REF"} \
-    "$GOV_URL" "$GOV_DIR" \
-    || echo "WARN: governance clone failed — set L9_GOVERNANCE_DIR or check network allowlist"
+WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ -f "${L9_GOVERNANCE_DIR}/CANONICAL_LAW.md" ]; then
+  GOV_DIR="$L9_GOVERNANCE_DIR"
+  log "Governance clone (L9_GOVERNANCE_DIR) -> $GOV_DIR"
+elif [ -f "$WORKSPACE/CANONICAL_LAW.md" ]; then
+  GOV_DIR="$WORKSPACE"
+  log "Workspace IS the governance clone -> $GOV_DIR (no separate clone needed)"
 else
-  log "Refreshing governance clone -> $GOV_DIR"
-  # --ff-only never merges or conflicts; tolerated if the checkout is a live work tree.
-  git -C "$GOV_DIR" fetch --depth 1 origin ${L9_GOVERNANCE_REF:-HEAD} 2>/dev/null \
-    && git -C "$GOV_DIR" merge --ff-only FETCH_HEAD 2>/dev/null \
-    || echo "note: governance refresh skipped (offline, pinned, or local work tree) — using existing clone"
+  GOV_DIR="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+  if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
+    log "Cloning Cursor-Governance -> $GOV_DIR"
+    git clone --depth 1 --single-branch ${L9_GOVERNANCE_REF:+--branch "$L9_GOVERNANCE_REF"} \
+      "$GOV_URL" "$GOV_DIR" \
+      || echo "WARN: governance clone failed — set L9_GOVERNANCE_DIR or check the network allowlist (needs github.com)."
+  else
+    log "Refreshing governance clone -> $GOV_DIR"
+    # --ff-only never merges or conflicts; tolerated if the checkout is a live work tree.
+    git -C "$GOV_DIR" fetch --depth 1 origin "${L9_GOVERNANCE_REF:-HEAD}" 2>/dev/null \
+      && git -C "$GOV_DIR" merge --ff-only FETCH_HEAD 2>/dev/null \
+      || echo "note: governance refresh skipped (offline, pinned, or local work tree) — using existing clone"
+  fi
 fi
 
 # 3.5) Activate the Claude Code governance environment in THIS workspace.
-# This is what makes every mobile/web chat self-activate: if the repo has not
-# committed the .claude/ triad, install it from the clone so the SessionStart hook
-# fires and governance boots. Never clobber files the repo already committed.
+# Makes every mobile/web chat self-activate: if the repo has not committed the
+# .claude/ triad, install it from the clone so the SessionStart hook fires. Guarded
+# on the TEMPLATE FILE (not just the dir) and fully fail-open — a missing template
+# emits a WARN and must never abort the session. Never clobbers committed files.
 CC_ENV="$GOV_DIR/environment/claude-code"
-if [ -d "$CC_ENV" ]; then
+if [ -f "$WORKSPACE/.claude/settings.json" ]; then
+  log "Workspace already ships a committed .claude/ triad — self-activation not needed"
+elif [ -f "$CC_ENV/settings.template.json" ]; then
   log "Activating Claude Code environment in $(pwd)"
-  mkdir -p .claude/hooks
+  mkdir -p .claude/hooks 2>/dev/null || true
   [ -f .claude/settings.json ] \
-    || cp "$CC_ENV/settings.template.json" .claude/settings.json
+    || cp "$CC_ENV/settings.template.json" .claude/settings.json 2>/dev/null \
+    || echo "WARN: could not install .claude/settings.json from $CC_ENV"
   [ -f .claude/hooks/session_start_claude_governance.sh ] \
-    || cp "$CC_ENV/hooks/session_start_claude_governance.sh" .claude/hooks/
+    || cp "$CC_ENV/hooks/session_start_claude_governance.sh" .claude/hooks/ 2>/dev/null \
+    || echo "WARN: could not install the SessionStart hook from $CC_ENV"
   chmod +x .claude/hooks/session_start_claude_governance.sh 2>/dev/null || true
   # Shared-memory MCP only when the account provides an endpoint; never overwrite a
   # repo's own .mcp.json.
   if [ -n "${L9_MEMORY_HTTP_URL:-}" ] && [ ! -f .mcp.json ]; then
-    cp "$CC_ENV/mcp.template.json" .mcp.json
+    cp "$CC_ENV/mcp.template.json" .mcp.json 2>/dev/null || echo "WARN: could not install .mcp.json"
   fi
-  echo "activated: .claude/settings.json + SessionStart hook -> governance at $GOV_DIR"
+  echo "activated: .claude/ triad -> governance at $GOV_DIR"
 else
-  echo "WARN: $CC_ENV missing — governance clone may be incomplete; SessionStart hook not installed."
+  echo "WARN: templates not found under $CC_ENV (GOV_DIR=$GOV_DIR) — clone incomplete or path wrong; SessionStart hook not installed. Session still starts."
 fi
 
 # 4) Language toolchains — install only what the workspace declares.
