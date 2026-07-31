@@ -6,9 +6,42 @@ import re
 import sys
 from pathlib import Path
 
-REQUIRED_EXPERTISE = ["experts", "doctrine", "invariants", "authority_hierarchy", "activation_signals", "reject_signals", "adapters", "failure_modes", "leverage_points"]
-REQUIRED_REPORT = ["activation_model", "authority_model", "expert_heuristics", "doctrine", "invariants", "adapter_map", "failure_modes", "leverage_points", "evidence_hierarchy", "exemplary_gate_results", "tier_decision"]
-REQUIRED_GATES = ["activation_precision", "adapter_architecture", "evidence_hierarchy", "doctrine_extraction", "expert_heuristics", "failure_modes", "leverage_model", "self_improvement_hook", "compiler_enforcement_gates", "skill_intelligence_report"]
+REQUIRED_EXPERTISE = [
+    "experts",
+    "doctrine",
+    "invariants",
+    "authority_hierarchy",
+    "activation_signals",
+    "reject_signals",
+    "adapters",
+    "failure_modes",
+    "leverage_points",
+]
+REQUIRED_REPORT = [
+    "activation_model",
+    "authority_model",
+    "expert_heuristics",
+    "doctrine",
+    "invariants",
+    "adapter_map",
+    "failure_modes",
+    "leverage_points",
+    "evidence_hierarchy",
+    "exemplary_gate_results",
+    "tier_decision",
+]
+REQUIRED_GATES = [
+    "activation_precision",
+    "adapter_architecture",
+    "evidence_hierarchy",
+    "doctrine_extraction",
+    "expert_heuristics",
+    "failure_modes",
+    "leverage_model",
+    "self_improvement_hook",
+    "compiler_enforcement_gates",
+    "skill_intelligence_report",
+]
 
 
 def load_mapping(path: Path) -> dict:
@@ -30,7 +63,9 @@ def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     errors = []
     expertise = load_mapping(root / "expertise_model.yaml").get("expertise_model", {})
-    report = load_mapping(root / "skill_intelligence_report.yaml").get("skill_intelligence_report", {})
+    report = load_mapping(root / "skill_intelligence_report.yaml").get(
+        "skill_intelligence_report", {}
+    )
     for field in REQUIRED_EXPERTISE:
         if field not in expertise or (field != "adapters" and not expertise[field]):
             errors.append(f"expertise_model missing or empty: {field}")
@@ -51,10 +86,16 @@ def main() -> int:
     # Anti-circularity: verify the report's self-reported counts against the real
     # assets so a factual drift (e.g. "5 route fixtures" when there are 7) fails.
     try:
-        activation_cases = json.loads((root / "assets" / "activation-cases.json").read_text(encoding="utf-8"))
-        route_cases = json.loads((root / "assets" / "adaptive-route-cases.json").read_text(encoding="utf-8"))
+        activation_cases = json.loads(
+            (root / "assets" / "activation-cases.json").read_text(encoding="utf-8")
+        )
+        route_cases = json.loads(
+            (root / "assets" / "adaptive-route-cases.json").read_text(encoding="utf-8")
+        )
         measurement = str(report.get("activation_model", {}).get("measurement", ""))
-        if not re.search(rf"\b{len(activation_cases)}\b", measurement) or not re.search(rf"\b{len(route_cases)}\b", measurement):
+        if not re.search(rf"\b{len(activation_cases)}\b", measurement) or not re.search(
+            rf"\b{len(route_cases)}\b", measurement
+        ):
             errors.append(
                 f"activation_model.measurement counts disagree with assets "
                 f"({len(activation_cases)} activation cases, {len(route_cases)} route fixtures): {measurement!r}"
@@ -65,7 +106,9 @@ def main() -> int:
         for error in errors:
             print(f"FAIL: {error}", file=sys.stderr)
         return 1
-    print("PASS: exemplary skill checks passed (structural gates + asset-count verification; scores are self-reported)")
+    print(
+        "PASS: exemplary skill checks passed (structural gates + asset-count verification; scores are self-reported)"
+    )
     return 0
 
 

@@ -57,6 +57,11 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 
+# Long error/message strings in this skill pack are intentional evidence text;
+# keep F/I/UP enforcement, suppress line-length noise only for these scripts.
+[tool.ruff.lint.per-file-ignores]
+"skills/optimize-cli-pr-pack/scripts/**" = ["E501"]
+
 # python_version pinned to match [project] requires-python — CI's --ignore-missing-imports
 # flag is mirrored here so `uv run mypy .` and the CI mypy step behave identically.
 [tool.mypy]

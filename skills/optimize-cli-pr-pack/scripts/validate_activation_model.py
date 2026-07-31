@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,10 +16,13 @@ def main() -> int:
     failures: list[str] = []
     for case in cases:
         if not isinstance(case, dict) or "required_text" not in case:
-            failures.append(f"malformed activation case: {case!r}"); continue
+            failures.append(f"malformed activation case: {case!r}")
+            continue
         required = str(case["required_text"]).lower()
         if required not in text:
-            failures.append(f"{case.get('id')} missing {case.get('expected')} signal: {case['required_text']}")
+            failures.append(
+                f"{case.get('id')} missing {case.get('expected')} signal: {case['required_text']}"
+            )
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)

@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from build_commit_pack import calculate_leverage_score, leverage_decision
 
@@ -27,7 +27,9 @@ def main() -> int:
             print(f"FAIL: {error}", file=sys.stderr)
         return 1
 
-    source = (ROOT / "references" / "source-domain-agnostic-leverage.yaml").read_text(encoding="utf-8")
+    source = (ROOT / "references" / "source-domain-agnostic-leverage.yaml").read_text(
+        encoding="utf-8"
+    )
     for snippet in (
         "A move is high quality when it improves future moves.",
         "future_action_acceleration: 0.22",
@@ -64,16 +66,24 @@ def main() -> int:
 
     example = json.loads((ROOT / "assets" / "pack-spec.example.json").read_text(encoding="utf-8"))
     synthesis = example.get("revision_synthesis", {})
-    findings = {item.get("id"): item for item in synthesis.get("findings", []) if isinstance(item, dict)}
-    targets = {item.get("id"): item for item in synthesis.get("targets", []) if isinstance(item, dict)}
-    options = {item.get("id"): item for item in synthesis.get("options", []) if isinstance(item, dict)}
+    findings = {
+        item.get("id"): item for item in synthesis.get("findings", []) if isinstance(item, dict)
+    }
+    targets = {
+        item.get("id"): item for item in synthesis.get("targets", []) if isinstance(item, dict)
+    }
+    options = {
+        item.get("id"): item for item in synthesis.get("options", []) if isinstance(item, dict)
+    }
     if not findings or not targets or not options:
         errors.append("example does not contain complete finding-target-option synthesis")
     if not any(item.get("kind") == "docs_code_divergence" for item in findings.values()):
         errors.append("example does not exercise docs-code divergence")
     if not synthesis.get("unresolved_divergence_ids"):
         errors.append("example does not preserve an out-of-scope docs-code divergence")
-    finding_refs = {fid for target in targets.values() for fid in target.get("source_finding_ids", [])}
+    finding_refs = {
+        fid for target in targets.values() for fid in target.get("source_finding_ids", [])
+    }
     if finding_refs != set(findings):
         errors.append("example does not map every finding to a target")
     target_refs = {tid for option in options.values() for tid in option.get("target_ids", [])}

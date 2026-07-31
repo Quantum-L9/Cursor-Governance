@@ -1,22 +1,35 @@
 #!/usr/bin/env python3
 """Deterministically route an optimize CLI revision to proportional proof obligations."""
+
 from __future__ import annotations
+
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 # One flattened taxonomy: a throughput branch and a capability branch (the
 # promoted dead-wiring / latent-capability classes) are peers, plus boundary.
 THROUGHPUT_GAPS = {
-    "artificial_delay", "unnecessary_serialization", "low_local_cap", "blocking_io",
-    "repeated_startup", "duplicate_work", "buffering", "local_retry_backoff",
+    "artificial_delay",
+    "unnecessary_serialization",
+    "low_local_cap",
+    "blocking_io",
+    "repeated_startup",
+    "duplicate_work",
+    "buffering",
+    "local_retry_backoff",
     "lock_contention",
 }
 CAPABILITY_GAPS = {
-    "inactive_component", "miswired_file", "dormant_capability", "unused_signal",
-    "orphaned_config_schema", "broken_partial_wiring", "latent_capability_wiring",
+    "inactive_component",
+    "miswired_file",
+    "dormant_capability",
+    "unused_signal",
+    "orphaned_config_schema",
+    "broken_partial_wiring",
+    "latent_capability_wiring",
 }
 BOUNDARY_GAPS = {"other_repository_owned", "external_limit", "unknown"}
 VALID_UTILIZATION_GAPS = THROUGHPUT_GAPS | CAPABILITY_GAPS | BOUNDARY_GAPS
@@ -50,42 +63,106 @@ def route(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("latent_capability must be boolean")
 
     obligations: list[dict[str, str]] = [
-        {"id": "PO-OWNERSHIP", "description": "Prove repository ownership or classify the external/unknown blocker.", "source": "core"},
-        {"id": "PO-CORRECTNESS", "description": "Preserve behavior, ordering, cancellation, signals, and exit codes.", "source": "core"},
-        {"id": "PO-RESOURCE-ENVELOPE", "description": "Prove bounded resource use under the candidate path.", "source": "core"},
-        {"id": "PO-LEVERAGE-SELECTION", "description": "Close the finding-target-option graph and select threshold-valid options.", "source": "leverage"},
-        {"id": "PO-HANDOFF", "description": "Preserve exact resumable state and next action.", "source": "handoff"},
+        {
+            "id": "PO-OWNERSHIP",
+            "description": "Prove repository ownership or classify the external/unknown blocker.",
+            "source": "core",
+        },
+        {
+            "id": "PO-CORRECTNESS",
+            "description": "Preserve behavior, ordering, cancellation, signals, and exit codes.",
+            "source": "core",
+        },
+        {
+            "id": "PO-RESOURCE-ENVELOPE",
+            "description": "Prove bounded resource use under the candidate path.",
+            "source": "core",
+        },
+        {
+            "id": "PO-LEVERAGE-SELECTION",
+            "description": "Close the finding-target-option graph and select threshold-valid options.",
+            "source": "leverage",
+        },
+        {
+            "id": "PO-HANDOFF",
+            "description": "Preserve exact resumable state and next action.",
+            "source": "handoff",
+        },
     ]
     adapters = ["revision_synthesis_leverage", "ecosystem_native_cli"]
     methods = ["deductive", "comparative"]
 
     if ownership == "repository_owned":
-        obligations.append({"id": "PO-UTILIZATION-PROOF", "description": "Show comparable before/after evidence: a throughput baseline-vs-candidate measurement, or a capability-activation functional proof that the capability is now reachable and exercised by a real entrypoint.", "source": "performance"})
+        obligations.append(
+            {
+                "id": "PO-UTILIZATION-PROOF",
+                "description": "Show comparable before/after evidence: a throughput baseline-vs-candidate measurement, or a capability-activation functional proof that the capability is now reachable and exercised by a real entrypoint.",
+                "source": "performance",
+            }
+        )
     if evidence != "sufficient":
-        obligations.append({"id": "PO-BASELINE", "description": "Resolve the exact evidence gap with a bounded probe.", "source": "evidence"})
+        obligations.append(
+            {
+                "id": "PO-BASELINE",
+                "description": "Resolve the exact evidence gap with a bounded probe.",
+                "source": "evidence",
+            }
+        )
         methods.insert(0, "abductive")
     if latent or is_capability:
-        obligations.append({"id": "PO-REACHABILITY", "description": "Prove bidirectional reachability and rollout intent.", "source": "latent_capability"})
+        obligations.append(
+            {
+                "id": "PO-REACHABILITY",
+                "description": "Prove bidirectional reachability and rollout intent.",
+                "source": "latent_capability",
+            }
+        )
         adapters.append("latent_capability_reachability")
     if divergence != "none":
-        obligations.append({"id": "PO-DIVERGENCE", "description": "Reconcile or disclose documentation-code divergence.", "source": "docs_code"})
+        obligations.append(
+            {
+                "id": "PO-DIVERGENCE",
+                "description": "Reconcile or disclose documentation-code divergence.",
+                "source": "docs_code",
+            }
+        )
         adapters.append("docs_code_divergence")
     if risk in {"guarded", "irreversible"}:
-        obligations.append({"id": "PO-DEPLOY-ROLLBACK", "description": "Prove staged deployment, abort thresholds, and rollback.", "source": "risk"})
+        obligations.append(
+            {
+                "id": "PO-DEPLOY-ROLLBACK",
+                "description": "Prove staged deployment, abort thresholds, and rollback.",
+                "source": "risk",
+            }
+        )
 
     if ownership == "external":
         action = "blocked_pack"
     elif ownership == "repository_owned" and not target_reachable:
         action = "blocked_pack"
-    elif ownership == "unknown" or evidence in {"absent", "partial", "conflicting"} or divergence == "unknown":
+    elif (
+        ownership == "unknown"
+        or evidence in {"absent", "partial", "conflicting"}
+        or divergence == "unknown"
+    ):
         action = "bounded_probe"
     elif risk == "irreversible" or divergence == "release_blocking":
         action = "proceed_with_validation"
     else:
         action = "proceed"
 
-    depth = "deep" if risk == "irreversible" or evidence == "conflicting" or latent or is_capability else "standard"
-    if risk == "reversible" and evidence == "sufficient" and not latent and not is_capability and divergence == "none":
+    depth = (
+        "deep"
+        if risk == "irreversible" or evidence == "conflicting" or latent or is_capability
+        else "standard"
+    )
+    if (
+        risk == "reversible"
+        and evidence == "sufficient"
+        and not latent
+        and not is_capability
+        and divergence == "none"
+    ):
         depth = "rapid"
 
     return {
@@ -116,7 +193,7 @@ def main() -> int:
         if not isinstance(data, dict):
             raise ValueError("input root must be an object")
         result = route(data)
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
+    except (OSError, ValueError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
     text = json.dumps(result, indent=2, sort_keys=True) + "\n"
@@ -125,6 +202,7 @@ def main() -> int:
     else:
         print(text, end="")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
