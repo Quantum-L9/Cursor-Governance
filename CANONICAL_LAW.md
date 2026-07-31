@@ -45,9 +45,17 @@ This governance layer is **IDE-agnostic**. The `.cursor-commands/` symlink is on
 |---------|-------------|--------|
 | Cursor | `.cursor-commands/` → clone root | Active |
 | Claude Code (CLI · Web · Mobile) | `environment/claude-code/` — committed `.claude/` + account environment | Active |
+| Manus | `environment/agents/adapters/manus/` — connector + env + session bootstrap, identity from `environment/agents/agent_registry.yaml` | Active |
+| Codex / OpenAI | `environment/agents/adapters/codex/` — AGENTS.md block + env, identity from `environment/agents/agent_registry.yaml` | Planned |
+| Gemini CLI | `environment/agents/adapters/gemini/` — settings template + env, identity from `environment/agents/agent_registry.yaml` | Planned |
 | Windsurf | TBD | Planned |
 | VS Code | TBD | Planned |
 | CLI (direct) | Direct path reference | Active |
+
+Multi-agent identity (WHO writes memory: agent IDs, roles, tokens-by-name) is
+governed by `environment/agents/agent_registry.yaml` — peer of
+`ops/graphiti/group_registry.yaml` (WHAT repo memory is about). Validate with
+`make agents-env`. See `environment/agents/README.md`.
 
 The Claude Code adapter is defined in `environment/claude-code/` (peer of
 `environment/ide/`). It reuses `environment/ide/policy.json` unchanged; formatter
