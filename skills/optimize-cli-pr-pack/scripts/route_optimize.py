@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Deterministically route an optimize CLI revision to proportional proof obligations."""
+"""Deterministically route an optimize CLI revision to proportional proof obligations.
+
+Path contract (Sonar S8707 / LLM+CLI path-escape):
+  * ``--root`` is the only trusted directory root.
+  * positional ``input`` and optional ``--output`` MUST be relative paths with no
+    ``..`` segments; they are resolved via ``os.path.join`` + ``realpath`` +
+    ``commonpath`` under ``--root`` before any filesystem access.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
-# One flattened taxonomy: a throughput branch and a capability branch (the
-# promoted dead-wiring / latent-capability classes) are peers, plus boundary.
 THROUGHPUT_GAPS = {
     "artificial_delay",
     "unnecessary_serialization",
@@ -38,6 +44,22 @@ VALID_EVIDENCE = {"sufficient", "partial", "conflicting", "absent"}
 VALID_RISK = {"reversible", "guarded", "irreversible"}
 VALID_DIVERGENCE = {"none", "non_blocking", "release_blocking", "unknown"}
 VALID_MODES = {"pack_only", "write_authorized"}
+
+
+def under_root(root: Path, rel: str, *, label: str) -> Path:
+    """Join ``rel`` under ``root`` and reject escapes / absolute paths."""
+    if not rel or rel.startswith(("/", "\\")) or ".." in Path(rel).parts:
+        raise ValueError(f"{label} must be a relative path without '..': {rel!r}")
+    base = os.path.realpath(root)
+    target = os.path.realpath(os.path.join(base, rel))
+    try:
+        if os.path.commonpath([base, target]) != base:
+            raise ValueError(f"{label} escapes --root: {rel!r}")
+    except ValueError as exc:
+        if "escapes" in str(exc):
+            raise
+        raise ValueError(f"{label} escapes --root: {rel!r}") from exc
+    return Path(target)
 
 
 def _require(data: dict[str, Any], key: str, allowed: set[str]) -> str:
@@ -185,22 +207,34 @@ def route(data: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path)
-    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=Path.cwd(),
+        help="Trusted directory root for input/output path resolution",
+    )
+    parser.add_argument("input", help="Input JSON path relative to --root")
+    parser.add_argument("--output", help="Optional output JSON path relative to --root")
     args = parser.parse_args()
     try:
-        data = json.loads(args.input.read_text(encoding="utf-8"))
+        root = args.root.resolve()
+        input_path = under_root(root, args.input, label="input")
+        with open(input_path, encoding="utf-8") as handle:
+            data = json.load(handle)
         if not isinstance(data, dict):
             raise ValueError("input root must be an object")
         result = route(data)
+        text = json.dumps(result, indent=2, sort_keys=True) + "\n"
+        if args.output:
+            output_path = under_root(root, args.output, label="--output")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as handle:
+                handle.write(text)
+        else:
+            print(text, end="")
     except (OSError, ValueError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
-    text = json.dumps(result, indent=2, sort_keys=True) + "\n"
-    if args.output:
-        args.output.write_text(text, encoding="utf-8")
-    else:
-        print(text, end="")
     return 0
 
 

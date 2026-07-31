@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import gzip
 import hashlib
+import io
 import json
 import os
 import re
@@ -796,9 +797,25 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
     return patch
 
 
-def write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content.rstrip() + "\n", encoding="utf-8")
+def under_root(root: Path, path: Path, *, label: str = "path") -> Path:
+    """Resolve ``path`` and require it stays under ``root`` (commonpath gate)."""
+    base = os.path.realpath(root)
+    target = os.path.realpath(path)
+    try:
+        if os.path.commonpath([base, target]) != base:
+            raise PackError(f"{label} escapes root {root}: {path}")
+    except ValueError as exc:  # different drives / empty
+        raise PackError(f"{label} escapes root {root}: {path}") from exc
+    return Path(target)
+
+
+def write_text(root: Path, path: Path, content: str) -> None:
+    """Write ``path`` only after confirming it resolves under ``root``."""
+    target = under_root(root, path, label="write_text")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # open() after commonpath — same sanitizer pattern as agents/tools render_principals.
+    with open(target, "w", encoding="utf-8") as handle:
+        handle.write(content.rstrip() + "\n")
 
 
 def created_utc(spec: dict[str, Any]) -> str:
@@ -1239,23 +1256,36 @@ def generate_checksums(pack_root: Path) -> None:
     lines = []
     for path in sorted(pack_root.rglob("*")):
         if path.is_file() and path != checksum_path and path.suffix != ".gz":
+            under_root(pack_root, path, label="checksums")
             lines.append(f"{sha256_file(path)}  {path.relative_to(pack_root).as_posix()}")
-    write_text(checksum_path, "\n".join(lines))
+    write_text(pack_root, checksum_path, "\n".join(lines))
 
 
 def add_deterministic(tar: tarfile.TarFile, source: Path, arcname: str, *, pack_root: Path) -> None:
-    """Add ``source`` under ``arcname``, confining every path to ``pack_root``."""
+    """Add ``source`` under ``arcname``, confining every path to ``pack_root``.
+
+    File bytes are read after an ``under_root`` gate and fed via BytesIO so the
+    tar writer never joins unsanitized archive-entry names onto a filesystem path.
+    """
     root = pack_root.resolve()
-    resolved = source.resolve()
-    if not resolved.is_relative_to(root):
-        raise PackError(f"refusing path escape while archiving: {source}")
-    info = tar.gettarinfo(str(resolved), arcname=arcname)
-    info.uid = info.gid = info.mtime = 0
-    info.uname = info.gname = ""
+    resolved = under_root(root, source, label="archive source")
     if resolved.is_file():
-        with resolved.open("rb") as handle:
-            tar.addfile(info, handle)
+        payload = resolved.read_bytes()
+        info = tarfile.TarInfo(name=arcname)
+        info.size = len(payload)
+        info.mtime = 0
+        info.uid = info.gid = 0
+        info.uname = info.gname = ""
+        tar.addfile(info, io.BytesIO(payload))
         return
+    if not resolved.is_dir():
+        raise PackError(f"archive source is neither file nor directory: {source}")
+    info = tarfile.TarInfo(name=arcname)
+    info.type = tarfile.DIRTYPE
+    info.mtime = 0
+    info.uid = info.gid = 0
+    info.uname = info.gname = ""
+    info.mode = 0o755
     tar.addfile(info)
     for child in sorted(resolved.iterdir(), key=lambda p: p.name):
         segment = child.name.replace("/", "_").replace("\\", "_")
@@ -1303,48 +1333,64 @@ def build(spec_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, 
     patch_path.parent.mkdir(parents=True, exist_ok=True)
     patch_path.write_bytes(patch)
     write_text(
+        pack_root,
         pack_root / "change" / "OPTIMIZATION_PLAN.json",
         json.dumps(spec["optimization"], indent=2, sort_keys=True),
     )
     write_text(
+        pack_root,
         pack_root / "evidence" / "EXECUTION_ROUTE.json",
         json.dumps(spec["execution_route"], indent=2, sort_keys=True),
     )
     write_text(
+        pack_root,
         pack_root / "evidence" / "DECISION_LEDGER.json",
         json.dumps(spec["decision_ledger"], indent=2, sort_keys=True),
     )
-    write_text(pack_root / "evidence" / "DECISION_RECORD.md", render_decision_record(spec))
     write_text(
+        pack_root, pack_root / "evidence" / "DECISION_RECORD.md", render_decision_record(spec)
+    )
+    write_text(
+        pack_root,
         pack_root / "evidence" / "CLI_REVISION_SYNTHESIS.json",
         json.dumps(spec["revision_synthesis"], indent=2, sort_keys=True),
     )
     write_text(
+        pack_root,
         pack_root / "evidence" / "CLI_REVISION_PLAN.md",
         render_revision_plan(spec["revision_synthesis"]),
     )
     write_text(
+        pack_root,
         pack_root / "evidence" / "DOCS_CODE_DIVERGENCE_FINDINGS.md",
         render_divergence_findings(spec["revision_synthesis"]),
     )
-    write_text(pack_root / "README.md", render_readme(spec))
-    write_text(pack_root / "pr" / "COMMIT_MESSAGE.txt", spec["commit_message"])
-    write_text(pack_root / "pr" / "PR_BODY.md", render_pr_body(spec))
-    write_text(pack_root / "pr" / "PR_CHECKLIST.md", render_pr_checklist(spec))
-    write_text(pack_root / "deploy" / "DEPLOY_PLAYBOOK.md", spec["deploy"]["playbook"])
-    write_text(pack_root / "deploy" / "RELEASE_CHECKLIST.md", spec["deploy"]["release_checklist"])
-    write_text(pack_root / "deploy" / "ROLLBACK_PLAYBOOK.md", spec["rollback"]["playbook"])
-    write_text(pack_root / "handoff" / "AGENT_HANDOFF.md", spec["handoff"]["markdown"])
+    write_text(pack_root, pack_root / "README.md", render_readme(spec))
+    write_text(pack_root, pack_root / "pr" / "COMMIT_MESSAGE.txt", spec["commit_message"])
+    write_text(pack_root, pack_root / "pr" / "PR_BODY.md", render_pr_body(spec))
+    write_text(pack_root, pack_root / "pr" / "PR_CHECKLIST.md", render_pr_checklist(spec))
+    write_text(pack_root, pack_root / "deploy" / "DEPLOY_PLAYBOOK.md", spec["deploy"]["playbook"])
     write_text(
+        pack_root,
+        pack_root / "deploy" / "RELEASE_CHECKLIST.md",
+        spec["deploy"]["release_checklist"],
+    )
+    write_text(
+        pack_root, pack_root / "deploy" / "ROLLBACK_PLAYBOOK.md", spec["rollback"]["playbook"]
+    )
+    write_text(pack_root, pack_root / "handoff" / "AGENT_HANDOFF.md", spec["handoff"]["markdown"])
+    write_text(
+        pack_root,
         pack_root / "handoff" / "NEXT_AGENT_TASK.json",
         json.dumps(spec["handoff"]["next_agent_task"], indent=2, sort_keys=True),
     )
-    write_text(pack_root / "evidence" / "VALIDATION.md", render_validation(spec))
-    write_text(pack_root / "evidence" / "PERFORMANCE.md", render_performance(spec))
+    write_text(pack_root, pack_root / "evidence" / "VALIDATION.md", render_validation(spec))
+    write_text(pack_root, pack_root / "evidence" / "PERFORMANCE.md", render_performance(spec))
     wiring = spec.get("wiring")
     if isinstance(wiring, dict) and wiring.get("analysis_performed"):
-        write_text(pack_root / "evidence" / "WIRING_MAP.md", render_wiring_map(wiring))
+        write_text(pack_root, pack_root / "evidence" / "WIRING_MAP.md", render_wiring_map(wiring))
         write_text(
+            pack_root,
             pack_root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json",
             json.dumps(wiring, indent=2, sort_keys=True),
         )
@@ -1355,7 +1401,11 @@ def build(spec_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, 
         for record in spec["validation"]["commands"]:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
     for index, issue in enumerate(spec.get("issues", []), start=1):
-        write_text(pack_root / "issues" / issue_filename(issue, index), render_issue(issue, index))
+        write_text(
+            pack_root,
+            pack_root / "issues" / issue_filename(issue, index),
+            render_issue(issue, index),
+        )
 
     manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -1421,7 +1471,9 @@ def build(spec_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, 
         "decision_convergence_status": spec["decision_ledger"]["convergence"]["status"],
     }
     schema_validate(manifest, "pack-manifest.schema.json", "manifest")
-    write_text(pack_root / "MANIFEST.json", json.dumps(manifest, indent=2, sort_keys=True))
+    write_text(
+        pack_root, pack_root / "MANIFEST.json", json.dumps(manifest, indent=2, sort_keys=True)
+    )
     generate_checksums(pack_root)
     archive_path = output_parent / f"{pack_name}.tar.gz"
     if archive_path.exists():
