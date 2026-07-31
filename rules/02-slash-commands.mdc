@@ -25,8 +25,16 @@ Commands and workflows are resolved in this order:
 |----------|---------|----------|
 | `.cursor/commands/{cmd}.md` | Repo-specific commands | 1st (highest) |
 | `.cursor-commands/commands/{cmd}.md` | Shared governance commands (symlink) | 2nd |
+| L9 skill whose `SKILL.md` matches the command | Skill-backed commands (see `skills/AUTONOMY_MANIFEST.yaml`) | 3rd |
 | `.cursor/workflows-synced/` | Synced workflow executors and DAGs | For DAG execution |
 | `.cursor/workflows-synced/dags/` | DAG definitions | For DAG-based commands |
+
+> **Note on the `File` column below.** Post Suite-6 → L9 migration, most governance
+> commands are implemented by an **L9 skill** (auto-selected from its `SKILL.md`),
+> not by a `commands/{cmd}.md` file. The `File` paths are legacy pointers: when the
+> file is absent, resolve the command via its backing skill (priority 3 above).
+> Only `lcto`, `mem`, `readme`, `start-session`, and `violation` still resolve to a
+> real `commands/*.md` file in this repo.
 
 ### Workflow/DAG Resolution
 
