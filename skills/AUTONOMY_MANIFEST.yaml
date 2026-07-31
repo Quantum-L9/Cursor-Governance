@@ -93,6 +93,8 @@ tiers:
       reason: "infra-as-code bootstrap — high blast radius, explicit only"
     - skill: "l9-pr-remediation"
       reason: "recursive PR loop that pushes commits and posts review replies — high blast radius, explicit only"
+    - skill: "l9-cli-optimization"
+      reason: "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only"
     - skill: "l9-e2e-blocker-resolution"
       reason: "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only"
     - skill: "l9-governance-symlinks"
