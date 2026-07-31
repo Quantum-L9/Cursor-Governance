@@ -18,6 +18,9 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
+
+PROD_MEMORY_MCP_DEFAULT = "${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp"
 
 HERE = Path(__file__).resolve().parent
 
@@ -102,18 +105,24 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         print("  OK: mcp auth is an env-reference, not a literal token")
     else:
         _fail("mcp.template.json Authorization must be a ${...} env-reference", failures)
-    if "127.0.0.1" in url or "localhost" in url:
+    loopback = url.startswith("http://127.0.0.1") or url.startswith("http://localhost")
+    if loopback:
         _fail(
             "mcp.template.json default URL must not be loopback (use production HTTPS fallback)",
             failures,
         )
-    elif "memory.quantumaipartners.com" in url or "${L9_MEMORY_HTTP_URL" in url:
+    elif url == PROD_MEMORY_MCP_DEFAULT:
         print("  OK: mcp URL defaults to production HTTPS / env expansion")
     else:
-        _fail(
-            "mcp.template.json URL must expand L9_MEMORY_HTTP_URL with HTTPS production fallback",
-            failures,
-        )
+        parsed = urlsplit(url)
+        if parsed.scheme == "https" and parsed.hostname == "memory.quantumaipartners.com":
+            print("  OK: mcp URL is production HTTPS host")
+        else:
+            _fail(
+                "mcp.template.json URL must be production HTTPS default "
+                f"({PROD_MEMORY_MCP_DEFAULT!r}) or https://memory.quantumaipartners.com/…",
+                failures,
+            )
 
 
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
