@@ -16,7 +16,9 @@ if ! resolve_governance_paths; then
     GOV_ROOT="$(dirname "$GLOBAL_COMMANDS")"
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK: $GLOBAL_COMMANDS" >> "$FALLBACK_LOG"
   else
-    echo "ERROR: governance root not found (looked in ~/.cursor-governance, Dropbox)."
+    echo "ERROR: governance root not found at \$HOME/.cursor-governance (GitHub clone)."
+    echo "  Fix: git clone https://github.com/Quantum-L9/Cursor-Governance.git \"\$HOME/.cursor-governance\""
+    echo "  Dropbox is not a fallback."
     exit 1
   fi
 fi
