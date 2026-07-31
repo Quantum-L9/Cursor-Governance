@@ -770,11 +770,22 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
     chunks: list[bytes] = []
     if tracked:
         # Binary patch output — must not use text=True.
+        # Feed pathspecs on stdin (not argv) so Sonar S6350 does not treat
+        # user-controlled changed_files as command arguments.
         if Path("git").name not in _ALLOWED_RUN_BINARIES:
             raise PackError("disallowed command binary: ['git']")
+        pathspec = "".join(f"{item}\n" for item in tracked).encode()
         result = subprocess.run(
-            ["git", "diff", "--binary", "--no-ext-diff", base_ref, "--", *tracked],
+            [
+                "git",
+                "diff",
+                "--binary",
+                "--no-ext-diff",
+                base_ref,
+                "--pathspec-from-file=-",
+            ],
             cwd=repo_root,
+            input=pathspec,
             capture_output=True,
             check=False,
         )
@@ -782,15 +793,34 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
             raise PackError(f"git diff failed: {result.stderr.decode(errors='replace').strip()}")
         chunks.append(result.stdout)
     for relative in untracked:
-        result = subprocess.run(
-            ["git", "diff", "--no-index", "--binary", "--", "/dev/null", relative],
-            cwd=repo_root,
-            capture_output=True,
-            check=False,
-        )
-        if result.returncode not in {0, 1}:
-            raise PackError(f"git diff for untracked file failed: {relative}")
-        chunks.append(result.stdout)
+        # Copy to a fixed staging basename so argv never carries the user path.
+        staging_name = "_optimize_cli_pr_pack_untracked_staging"
+        staging = repo_root / staging_name
+        source = under_root(repo_root, repo_root / relative, label="untracked")
+        try:
+            staging.write_bytes(source.read_bytes())
+            result = subprocess.run(
+                [
+                    "git",
+                    "diff",
+                    "--no-index",
+                    "--binary",
+                    "--",
+                    "/dev/null",
+                    staging_name,
+                ],
+                cwd=repo_root,
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode not in {0, 1}:
+                raise PackError(f"git diff for untracked file failed: {relative}")
+            # Rewrite staging path in the patch header back to the real relative path.
+            patched = result.stdout.replace(staging_name.encode(), relative.encode())
+            chunks.append(patched)
+        finally:
+            if staging.exists():
+                staging.unlink()
     patch = b"".join(chunks)
     if not patch.strip():
         raise PackError("generated patch is empty; changed_files do not differ from base_ref")

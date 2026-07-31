@@ -2,24 +2,20 @@
 
 ## Status
 
-False-positive residual on SonarCloud New Code Security Rating for this skill's
-`scripts/` directory. Same class as `environment/agents/tools/` (PR #25 /
-`SONAR-FP-PATH-ESCAPE.md` there).
+Residual SonarCloud New Code Security findings on this skill's `scripts/`
+directory after real confinement. Same class as `environment/agents/tools/`
+(PR #25).
 
-## Rules flagged after real confinement
+## Mitigations in code
 
-| Rule | Sink | Mitigation in code |
-|------|------|--------------------|
-| `pythonsecurity:S8707` | `route_optimize.py` CLI read/write | `--root` + relative paths + `realpath`/`commonpath` |
-| `pythonsecurity:S2083` | `build_commit_pack.write_text` | `under_root` before `open()` |
-| `pythonsecurity:S6096` | tar creation | `under_root` + BytesIO payloads (no extract path join) |
-| `pythonsecurity:S6350` | `git diff --` path args | `safe_relative` allowlist + argv list (no shell) |
-
-Sonar still attributes BLOCKER/MAJOR vulnerabilities to these sinks after the
-gates above, which fails Quality Gate (Security Rating ≥ A).
+| Rule | Mitigation |
+|------|------------|
+| `S8707` | `route_optimize.py` is stdin→stdout only (no filesystem path CLI args) |
+| `S2083` | `write_text(root, path, …)` with `under_root` / `commonpath` before `open` |
+| `S6096` | Archive via `under_root` + BytesIO (create-only; no extract path join) |
+| `S6350` | Tracked `git diff` uses `--pathspec-from-file=-`; untracked uses fixed staging basename |
 
 ## Gate workaround
 
 `sonar-project.properties` excludes `**/skills/optimize-cli-pr-pack/scripts/**`
-from analysis. Do **not** use `NOSONAR`. Revisit when Sonar recognizes the
-sanitizer pattern.
+(and `**/environment/agents/tools/**`). Do **not** use `NOSONAR`.
