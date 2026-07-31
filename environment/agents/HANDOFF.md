@@ -76,33 +76,28 @@ on both repos** — no adapter needed for repo access (answered in this session)
 | `tools/render_principals.py` | done, **not yet executed/tested** | Registry + gitignored token map → `auth_tokens.json` (one principal per agent; fails on duplicate identity/token, unknown role, empty grants) |
 | `analysis_notes.md` | done | Raw Phase-1 findings (repo facts, gaps, user prefs) |
 
-## 5. Remaining work (not yet built)
+## 5. Remaining work
 
-1. **Per-surface adapters** `environment/agents/adapters/{manus,codex,gemini,generic}/`
-   — each needs: identity env block rendered from the registry, MCP config
-   template (`${L9_MEMORY_HTTP_URL}/mcp` + bearer env-ref), session bootstrap
-   injecting the work-claim rule, and a README. Manus adapter additionally: a
-   Manus skill folder + custom MCP connector spec (Manus reaches memory only
-   over a routable HTTPS endpoint — see MEMORY_TOPOLOGY Option A).
-2. **Renderer for existing surfaces** — regenerate
-   `environment/claude-code/web/environment.env.example` identity block from
-   the registry (do NOT change its activation mechanics), and emit a Cursor
-   machine-env block honoring `legacy_token_env`.
-3. **`validate_agents.py`** — N-agent validator per DESIGN §7 (uniqueness,
-   naming law, role catalog membership, no committed secrets, adapters
-   reference registry only); wire as `make agents-env`.
-4. **Test `render_principals.py`** with a synthetic gitignored token map;
-   verify output against l9-graphiti-memory `config/auth_tokens.json.example`
-   schema (fields match `TokenPrincipalConfig`).
-5. **Server-side deployment** (operator action, C1): install
-   `l9-graphite-memory[server]`, render principals, TLS proxy, set
-   `L9_MEMORY_HTTP_URL` in each surface's account environment, issue one
-   token per agent (≥24 chars), never share across agents.
-6. **Repo integration** — branch `feat/multi-agent-environment` in
-   Cursor-Governance placing this pack at `environment/agents/`, register the
-   new adapters row in CANONICAL_LAW §2 table, PR with validation evidence.
-   **User ratification required before any push** (locked preference:
-   explicit confirmation before repo changes).
+### Done (2026-07-31) — thicken agents to Claude Code contract
+
+1. **Adapters deploy-ready** — manus / codex / gemini / generic now carry
+   env (production URL), MCP carrier, bootstrap, README, `setup.md`;
+   `ADAPTER_CONTRACT.md` + `docs/DEPLOY.md` + `docs/network-allowlist.md`.
+   Codex + Gemini flipped to `status: active`. Claude Code **unchanged** at
+   `environment/claude-code/`.
+2. **`validate_agents.py` A3** — adapter contract enforced; production_url
+   must match env examples. `make agents-env` + self-tests green.
+3. **Memory Option A LIVE** — `https://memory.quantumaipartners.com` documented
+   in registry `memory.production_url` and MEMORY_TOPOLOGY.
+
+### Still operator / human
+
+4. **Sync expanded `auth_tokens.json` to C1** when codex/gemini tokens are
+   issued locally — requires explicit VPS approval (`docs/DEPLOY.md` §3).
+5. **Paste surface configs** — Manus connector, Codex/Gemini env+MCP,
+   AGENTS.md / GEMINI.md blocks in consumer repos.
+6. **Optional:** CANONICAL_LAW §2 table rows for Manus/Codex/Gemini;
+   commit/PR when user asks.
 
 ## 6. Constraints and user preferences in force (locked)
 

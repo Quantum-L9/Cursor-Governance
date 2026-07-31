@@ -5,8 +5,8 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-07-28
+#   version: 1.1.0
+#   updated: 2026-07-31
 #
 # AGENT REGISTRY — the single source of truth for WHO writes memory.
 # Peer of ops/graphiti/group_registry.yaml (which answers WHAT repo memory
@@ -128,7 +128,7 @@ agents:
     surfaces: [codex-cloud, codex-cli]
     assigned_groups: [l9-node-template]
     adapter: codex
-    status: planned
+    status: active
 
   gemini:
     agent_id: gemini
@@ -140,16 +140,18 @@ agents:
     surfaces: [gemini-cli]
     assigned_groups: [cursor-governance, l9-graphiti-memory]
     adapter: gemini
-    status: planned
+    status: active
 
 # ---------------------------------------------------------------------------
-# Shared memory endpoint contract (values live in each surface's environment,
-# never here). Loopback (127.0.0.1) shares only within one host/container —
-# cloud agents (manus, claude-web, codex-cloud) REQUIRE a routable host with
-# http_auth_required=true. See docs/MEMORY_TOPOLOGY.md.
+# Shared memory endpoint contract. production_url is the public non-secret
+# control plane (Caddy TLS → C1 l9-memory-server :8200). Per-agent bearer
+# tokens live only in each surface's environment / agent_tokens.local.json.
+# Loopback shares only within one host — cloud agents REQUIRE this HTTPS host
+# with http_auth_required=true. See docs/MEMORY_TOPOLOGY.md + docs/DEPLOY.md.
 # ---------------------------------------------------------------------------
 memory:
   url_env: L9_MEMORY_HTTP_URL
+  production_url: https://memory.quantumaipartners.com
   mcp_path: /mcp
   auth_scheme: bearer
   identity_env:
