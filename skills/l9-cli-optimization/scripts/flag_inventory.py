@@ -62,6 +62,15 @@ SCHEMA_KEYWORDS = {
 # Path segments that mark scratch / harvested / work-in-progress trees whose
 # contents are not the repo's live config.
 _NOISE_SEG = re.compile(r"(?:^|[\s_\-/])(?:wip|harvested|current_work|backup|backups|snapshot)(?:$|[\s_\-/])", re.IGNORECASE)
+# Config files that are templates / versioned specs / examples, not the runtime
+# config the engine loads — flipping a flag in them changes nothing at runtime.
+_NONRUNTIME_CFG = re.compile(
+    r"(?:^|/)_?template[\w.\-]*\.(?:ya?ml|json|toml|ini)$"      # _template.yaml
+    r"|[-_]v\d+(?:[._]\d+)*[\w.\-]*\.(?:ya?ml|json|toml|ini)$"  # ...-v1.1.0.yaml / _v0.3.0.yaml
+    r"|[-_]spec[-_]v[\w.\-]*\.(?:ya?ml|json)$"                  # ...-spec-v1.1.0.yaml
+    r"|(?:^|/)(?:example|sample)[\w.\-]*\.(?:ya?ml|json|toml|ini)$",
+    re.IGNORECASE,
+)
 
 # --- danger vocabulary (polarity-aware) ---------------------------------------
 # Turning a flag False->True that ENABLES one of these actions is danger.
@@ -101,6 +110,20 @@ SAFETY_TOKENS = {
     "throttle", "ratelimit", "backpressure", "csrf", "cors", "sanitize",
     "sanitization", "escape", "firewall",
 }
+# Config parent-block names whose activation is sensitive: a bare `enabled: false`
+# under one of these blocks (e.g. `pii.enabled`, `auth.enabled`) is context-danger
+# even though the leaf key carries no danger token.
+SENSITIVE_BLOCKS = {
+    "pii", "privacy", "gdpr", "phi", "pci",
+    "auth", "authn", "authz", "security", "secret", "secrets",
+    "credential", "credentials", "compliance", "audit_export",
+    "retention", "encryption", "encrypt", "tls", "ssl", "permission",
+    "permissions", "rbac", "acl", "billing", "payment", "charge",
+    "deploy", "deployment", "publish", "release", "killswitch", "kill_switch",
+    "external", "webhook", "egress", "quota",
+}
+GENERIC_GATE = {"enabled", "enable", "disabled", "disable", "on", "off", "active", "enforce"}
+
 # Names that, turned on, are self-evidently unsafe regardless of surroundings.
 ALWAYS_DANGER = {
     "unsafe", "insecure", "unverified", "danger", "dangerous", "force",
@@ -122,6 +145,7 @@ def _tokens(name: str) -> list[str]:
 
 
 def classify_flag(name: str, context: str, *, staged: bool,
+                  parent: str | None = None,
                   overrides: dict | None = None) -> tuple[str, str]:
     """Classify flipping `name` False->True. Returns (classification, reason).
 
@@ -140,6 +164,11 @@ def classify_flag(name: str, context: str, *, staged: bool,
         return "safe", "adapter always_flip allow-list"
 
     toks = set(_tokens(name))
+    # Context-aware: a generic gate under a sensitive parent block is danger.
+    if parent and parent.lower() in SENSITIVE_BLOCKS and (low in GENERIC_GATE or toks & GENERIC_GATE):
+        return "danger", f"flip enables the sensitive '{parent}' block (context-aware)"
+    if parent and parent.lower() in SENSITIVE_BLOCKS:
+        return "danger", f"flag sits inside the sensitive '{parent}' block"
     if low in ALWAYS_DANGER or toks & {"unsafe", "insecure", "unverified", "danger"}:
         return "danger", "flip enables a self-evidently unsafe state"
     if toks & extra_danger or any(t in low for t in extra_danger):
@@ -258,16 +287,30 @@ _CFG_OFF = re.compile(
     r"""["']?([A-Za-z_][\w.\-]*)["']?\s*[:=]\s*(false|False|0)\b""")
 
 
+_YAML_KEY = re.compile(r"^(\s*)([A-Za-z_][\w.\-]*)\s*:")
+
+
 def _config_flags(rel: str, text: str) -> list[dict]:
     out: list[dict] = []
+    is_yaml = rel.rsplit(".", 1)[-1].lower() in ("yaml", "yml")
+    stack: list[tuple[int, str]] = []  # (indent, key) — nearest-ancestor block chain
     for i, line in enumerate(text.splitlines(), start=1):
+        if is_yaml:
+            km = _YAML_KEY.match(line)
+            if km:
+                indent = len(km.group(1))
+                while stack and stack[-1][0] >= indent:
+                    stack.pop()
         for m in _CFG_OFF.finditer(line):
             name = m.group(1)
             if name.lower() in SCHEMA_KEYWORDS or not FLAG_NAME.search(name):
                 continue
+            parent = stack[-1][1] if (is_yaml and stack) else None
             out.append({"flag": name, "file": rel, "line": i,
                         "current": m.group(2), "lang": "config",
-                        "kind": "config_key", "context": line})
+                        "kind": "config_key", "context": line, "parent": parent})
+        if is_yaml and km:
+            stack.append((indent, km.group(2)))
     return out
 
 
@@ -287,6 +330,8 @@ def _iter(root: Path):
         if suffix in PY_EXT:
             yield path, rel, "python"
         elif suffix in CONFIG_EXT or name in ENV_NAMES:
+            if _NONRUNTIME_CFG.search("/" + rel):
+                continue  # template / versioned / example spec — not runtime config
             yield path, rel, "config"
 
 
@@ -308,7 +353,8 @@ def inventory_flags(root: Path, overrides: dict | None = None) -> list[dict]:
         for f in found:
             staged = f["flag"] in staged_flags or bool(STAGED_MARKER.search(f.get("context", "")))
             classification, reason = classify_flag(
-                f["flag"], f.get("context", ""), staged=staged, overrides=overrides)
+                f["flag"], f.get("context", ""), staged=staged,
+                parent=f.get("parent"), overrides=overrides)
             if f.get("no_flip"):
                 decision, dec_reason = "hold", "argparse CLI default — surface in docs, not flipped in source"
             elif classification == "danger":
