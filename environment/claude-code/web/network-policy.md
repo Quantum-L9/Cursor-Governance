@@ -23,13 +23,14 @@ needs. Baseline allowlist for L9 work:
 | `pypi.org`, `files.pythonhosted.org` | Python toolchain (`ruff`, `mypy`, `pytest`) |
 | `registry.npmjs.org` | Node toolchain (`biome`, project deps) |
 | `cli.github.com` | `gh` install in `setup.sh` |
+| `memory.quantumaipartners.com` | shared L9 memory HTTP MCP (`L9_MEMORY_HTTP_URL`) |
 
 Add scanner hosts **only** if that repo's gate uses them, e.g.
 `sonarcloud.io`, `*.sonarcloud.io`, `semgrep.dev`, `*.semgrep.dev`.
 
-For **shared memory across separate cloud containers**, add the routable host you
-bind the memory server to (see `network-policy` note in `../mcp.template.json` and
-`web/README.md` §Shared memory). Loopback (`127.0.0.1`) never crosses containers.
+Production shared memory is `https://memory.quantumaipartners.com` (must be on
+the Custom allowlist, or use Full). See `../mcp.template.json` and
+`README.md` §Shared memory.
 
 ## Which to pick
 

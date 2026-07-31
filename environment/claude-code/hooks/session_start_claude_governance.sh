@@ -15,20 +15,16 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-# --- Resolve the governance clone (no hardcoded paths) ----------------------
-# Order: explicit override -> conventional CLI clone -> a clone dropped by
-# web/setup.sh into $HOME. On Web/Mobile the setup script is what puts it there.
+# --- Resolve governance: GitHub main clone only (Linux sandbox-safe) --------
+# Canonical path is $HOME/.cursor-governance (materialized by web/setup.sh from
+# https://github.com/Quantum-L9/Cursor-Governance @ main). Other L9_GOVERNANCE_DIR
+# values are ignored so a host IDE path cannot hijack the session.
 resolve_governance_dir() {
-  local candidates=(
-    "${L9_GOVERNANCE_DIR:-}"
-    "$HOME/.cursor-governance"
-    "$HOME/Cursor-Governance"
-    "$HOME/l9-governance"
-  )
-  local d
-  for d in "${candidates[@]}"; do
-    [ -n "$d" ] && [ -f "$d/CANONICAL_LAW.md" ] && { printf '%s' "$d"; return 0; }
-  done
+  local d="$HOME/.cursor-governance"
+  if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "${L9_GOVERNANCE_DIR}" != "$d" ]; then
+    : # ignored — Web/Mobile / CLI shared contract is always $HOME/.cursor-governance
+  fi
+  [ -f "$d/CANONICAL_LAW.md" ] && { printf '%s' "$d"; return 0; }
   return 1
 }
 
@@ -57,16 +53,23 @@ LINES+=("L9 Governance — Claude Code session")
 LINES+=("workspace: $WORKSPACE")
 
 if GOV=$(resolve_governance_dir); then
-  LINES+=("governance clone: $GOV")
+  LINES+=("governance SSOT: $GOV (GitHub Quantum-L9/Cursor-Governance)")
+  if [ -d "$GOV/.git" ]; then
+    br=$(git -C "$GOV" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+    sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
+    LINES+=("governance rev: ${br}@${sha}")
+    if [ "$br" != "main" ]; then
+      LINES+=("WARN: governance clone is not on main — web/setup.sh should sync origin/main")
+    fi
+  fi
   LINES+=("authority order: CANONICAL_LAW.md > AGENTS.md > skills/*/SKILL.md > this context")
-  # Surface the skill index cheaply, if present.
   if [ -d "$GOV/skills" ]; then
     n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
     LINES+=("skills available: $n l9-* skills under \$GOV/skills (invoke by name)")
   fi
 else
-  LINES+=("governance clone: NOT FOUND — run web/setup.sh, or set L9_GOVERNANCE_DIR.")
-  LINES+=("On Web/Mobile the account 'Setup script' must clone Cursor-Governance first.")
+  LINES+=("governance SSOT: NOT FOUND — web/setup.sh must clone GitHub main to \$HOME/.cursor-governance")
+  LINES+=("remote: https://github.com/Quantum-L9/Cursor-Governance (branch main)")
 fi
 
 # --- T0 resume context: memory-bank/activeContext.md in the workspace -------

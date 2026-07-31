@@ -18,6 +18,9 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
+
+PROD_MEMORY_MCP_DEFAULT = "${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp"
 
 HERE = Path(__file__).resolve().parent
 
@@ -95,16 +98,52 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
     if not path.is_file():
         return
     server = json.loads(path.read_text(encoding="utf-8"))
-    auth = (
-        server.get("mcpServers", {})
-        .get("l9-shared-memory", {})
-        .get("headers", {})
-        .get("Authorization", "")
-    )
+    mem = server.get("mcpServers", {}).get("l9-shared-memory", {})
+    auth = mem.get("headers", {}).get("Authorization", "")
+    url = mem.get("url", "")
     if "${" in auth and "Bearer" in auth:
         print("  OK: mcp auth is an env-reference, not a literal token")
     else:
         _fail("mcp.template.json Authorization must be a ${...} env-reference", failures)
+    loopback = url.startswith("http://127.0.0.1") or url.startswith("http://localhost")
+    if loopback:
+        _fail(
+            "mcp.template.json default URL must not be loopback (use production HTTPS fallback)",
+            failures,
+        )
+    elif url == PROD_MEMORY_MCP_DEFAULT:
+        print("  OK: mcp URL defaults to production HTTPS / env expansion")
+    else:
+        parsed = urlsplit(url)
+        if parsed.scheme == "https" and parsed.hostname == "memory.quantumaipartners.com":
+            print("  OK: mcp URL is production HTTPS host")
+        else:
+            _fail(
+                "mcp.template.json URL must be production HTTPS default "
+                f"({PROD_MEMORY_MCP_DEFAULT!r}) or https://memory.quantumaipartners.com/…",
+                failures,
+            )
+
+
+def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
+    """Web setup must stay GitHub-main / Linux-sandbox shaped (no host-IDE SSOT)."""
+    setup = HERE / "web" / "setup.sh"
+    if not setup.is_file():
+        return
+    text = setup.read_text(encoding="utf-8")
+    banned = ("Dropbox", "CloudStorage", "Keychain", "LaunchAgent", "Homebrew")
+    hits = [b for b in banned if b in text]
+    if hits:
+        _fail(f"web/setup.sh must not reference host-IDE paths/tools: {', '.join(hits)}", failures)
+    else:
+        print("  OK: web/setup.sh has no host-IDE path/tool residue")
+    if (
+        'GOV_DIR="$HOME/.cursor-governance"' not in text
+        and "GOV_DIR='$HOME/.cursor-governance'" not in text
+    ):
+        _fail("web/setup.sh must pin GOV_DIR to $HOME/.cursor-governance", failures)
+    else:
+        print("  OK: web/setup.sh pins governance to $HOME/.cursor-governance")
 
 
 def check_memory_identity_distinct(failures: list[str]) -> None:
@@ -146,6 +185,7 @@ def main() -> int:
     check_json_parses(failures)
     check_no_secrets(failures)
     check_mcp_uses_env_refs(failures)
+    check_setup_linux_sandbox_hygiene(failures)
     check_memory_identity_distinct(failures)
     print()
     if failures:
