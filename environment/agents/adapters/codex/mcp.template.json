@@ -2,13 +2,13 @@
   "_l9_meta": {
     "l9_schema": 1,
     "repo": "Quantum-L9/Cursor-Governance",
-    "path": "environment/agents/adapters/generic/mcp.template.json",
+    "path": "environment/agents/adapters/codex/mcp.template.json",
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "1.1.0",
+    "version": "1.0.0",
     "updated": "2026-07-31",
-    "note": "Generic .mcp.json entry. After copying into a named adapter, replace ${AGENT_ID} literals with registry identity. Env vars expand at runtime; never hardcode tokens."
+    "note": "HTTP MCP block for Codex (cloud settings or CLI). Env-refs only — never hardcode tokens. Peer of environment/claude-code/mcp.template.json."
   },
   "mcpServers": {
     "l9-shared-memory": {
@@ -16,9 +16,9 @@
       "url": "${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp",
       "headers": {
         "Authorization": "Bearer ${L9_MEMORY_CLIENT_TOKEN}",
-        "X-L9-User-Id": "${AGENT_ID}_agent",
-        "X-L9-Agent-Id": "${AGENT_ID}",
-        "X-L9-Source": "${AGENT_ID}"
+        "X-L9-User-Id": "codex_agent",
+        "X-L9-Agent-Id": "codex",
+        "X-L9-Source": "codex"
       },
       "timeout": 120000
     }

@@ -5,69 +5,78 @@ path: environment/agents/docs/MEMORY_TOPOLOGY.md
 layer: doc
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-28
+version: 1.1.0
+updated: 2026-07-31
 /L9_META -->
 
 # Memory Topology — one server, N surfaces
 
 ## 1. The requirement
 
-All agents write to the **same** memory graph. That means one long-running
-memory endpoint that every surface can reach, with per-agent bearer tokens.
-Loopback (`127.0.0.1`) shares only within one host/container: it works for the
-Cursor Mac (via the C1 SSH tunnel) but is unreachable from Manus sandboxes,
-Claude Code Web/Mobile sandboxes, and Codex cloud. Cloud agents require a
-**routable HTTPS host**.
+All agents write to the **same** memory graph via one long-running HTTPS
+control plane (`https://memory.quantumaipartners.com`) and per-agent bearer
+tokens. Cursor IDE may still use the separate Graphiti SSH tunnel (`:8100`);
+that path does not reach cloud sandboxes — adapters must default to the
+HTTPS URL, never loopback.
 
-## 2. Deployment options (choose one; Option A is the current live pattern)
+## 2. Live deployment (Option A — ACTIVE)
 
-| Option | What runs where | Reaches cloud agents? | Identity enforcement |
+| Item | Value |
+|---|---|
+| Public URL | `https://memory.quantumaipartners.com` |
+| MCP | `https://memory.quantumaipartners.com/mcp` |
+| Origin | C1 `46.62.243.82` — Caddy TLS → `127.0.0.1:8200` |
+| Process | systemd `l9-memory-server` under `/opt/l9-memory` |
+| Package | `l9-graphite-memory[server]` |
+| Auth | `auth_tokens.json` from `tools/render_principals.py` |
+
+Registry field: `memory.production_url` in `agent_registry.yaml`.
+
+| Option | What runs where | Reaches cloud agents? | Status |
 |---|---|---|---|
-| **A. C1 VPS, direct HTTPS (recommended)** | `l9-memory-server --transport http` on C1 (46.62.243.82) behind a TLS reverse proxy (Caddy/nginx) on e.g. `memory.<your-domain>` | Yes | `auth_tokens.json` rendered from the agent registry — one principal per agent |
-| B. C1 VPS, tunnel-only (status quo) | Graphiti MCP on C1, SSH tunnel `localhost:8100` per machine | **No** — only machines that can hold an SSH tunnel | `USER_ID` env per machine (weaker; no per-agent token) |
-| C. Per-host loopback (`127.0.0.1:8200`) | one server per host | No | local principal only |
+| **A. C1 HTTPS** | control plane behind Caddy | **Yes** | **LIVE** |
+| B. Tunnel-only Graphiti | Cursor SSH tunnel `localhost:8100` | No | Cursor-local legacy path (still valid for Cursor IDE) |
+| C. Per-host loopback `:8200` | one server per host | No | Local-only |
 
-Option A is the only topology that satisfies "all LLMs write to the same
-memory." Options B/C remain valid for single-machine work but cannot be the
-shared plane.
+## 3. Operator wiring
 
-## 3. Option A wiring (C1)
+See `DEPLOY.md` for the full checklist (validate → render principals → sync to
+C1 → wire each adapter). Short form:
 
 ```bash
-# On C1 (as root or a service user) — l9-graphiti-memory v2.3+
-python -m pip install 'l9-graphite-memory[server]'
-# Render per-agent principals from the registry (run wherever governance is cloned):
 python3 environment/agents/tools/render_principals.py \
   --root     environment/agents \
   --out-dir  ~/.config/l9-memory \
   --registry agent_registry.yaml \
   --tokens   agent_tokens.local.json \
   --out      auth_tokens.json
-# (--registry/--tokens/--out are relative under --root/--out-dir only)
-# Start (systemd unit recommended; http_auth_required stays true):
-l9-memory-server --transport http --host 127.0.0.1 --port 8200
-# TLS proxy: memory.<domain> -> 127.0.0.1:8200  (Caddy: `reverse_proxy 127.0.0.1:8200`)
+# Then sync auth_tokens.json to C1 /opt/l9-memory/config/ and restart
+# l9-memory-server — only after explicit human approval (VPS rule).
 ```
 
-Every surface then sets `L9_MEMORY_HTTP_URL=https://memory.<domain>` and its own
-`L9_MEMORY_TOKEN__<AGENT>` (exposed to the adapter under the generic
-`L9_MEMORY_CLIENT_TOKEN` name each MCP template expands).
+Every surface sets:
+
+```bash
+L9_MEMORY_HTTP_URL=https://memory.quantumaipartners.com
+L9_MEMORY_CLIENT_TOKEN=<that agent's own bearer>
+USER_ID=<registry user_id>
+L9_MEMORY_AGENT_ID=<registry agent_id>
+L9_MEMORY_SOURCE=<registry source>
+```
 
 ## 4. Non-negotiables
 
-`http_auth_required` stays `true` on any routable bind — the server refuses to
-start unauthenticated on a non-loopback host by design. One bearer token per
-agent, never shared, rotated independently. The Graphiti/Neo4j projection stays
-where it is; the canonical write path is the memory control plane, and the graph
-is a rebuildable projection. `group_id` resolution is unchanged
-(`ops/graphiti/group_registry.yaml`); this document changes **reachability and
-identity**, not namespace semantics.
+`http_auth_required` stays `true` on any routable bind. One bearer token per
+agent, never shared. Graphiti/Neo4j projection for Cursor (`:8100` tunnel)
+remains; cloud agents use the HTTPS control plane. `group_id` resolution is
+unchanged (`ops/graphiti/group_registry.yaml`).
 
-## 5. Known unknowns (stated, not fabricated)
+## 5. Two planes (do not conflate)
 
-The exact domain name, TLS termination choice, and whether C1 keeps the legacy
-Graphiti MCP (`:8100`) alongside the control plane (`:8200`) are operator
-decisions not encoded here. The legacy Cursor tunnel path keeps working during
-migration; Cursor's registry entry honors its deployed `GRAPHITI_MCP_TOKEN` via
-`legacy_token_env`.
+| Plane | Reach | Used by |
+|---|---|---|
+| Graphiti MCP (Cursor) | SSH tunnel `127.0.0.1:8100` | Cursor IDE / `graphiti_memory_client.py` |
+| L9 memory HTTP control plane | `https://memory.quantumaipartners.com` | Claude Code Web/Mobile, Manus, Codex, Gemini, generic |
+
+Cursor may later also consume the HTTPS plane; until then its registry entry
+honors `legacy_token_env: GRAPHITI_MCP_TOKEN` for the tunnel path.

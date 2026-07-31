@@ -5,14 +5,20 @@ path: environment/agents/README.md
 layer: doc
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-28
+version: 1.1.0
+updated: 2026-07-31
 /L9_META -->
 
 # environment/agents — L9 Multi-Agent Environment
 
 One work environment replicated across every LLM surface; one shared memory;
 unique agent IDs; role-scoped work; no overlap, no duplication.
+
+**Claude Code stays at `environment/claude-code/`** (thicker peer of
+`environment/ide/`). This pack thickens Manus / Codex / Gemini / generic to
+the same deployable contract (`adapters/ADAPTER_CONTRACT.md`).
+
+Live memory: `https://memory.quantumaipartners.com` — see `docs/DEPLOY.md`.
 
 ## Layout
 
@@ -22,17 +28,20 @@ environment/agents/
 ├── DESIGN.md                  # architecture and binding contracts
 ├── HANDOFF.md                 # session handoff / resume context
 ├── docs/
-│   ├── WORK_CLAIM_PROTOCOL.md # anti-duplication claim protocol
-│   └── MEMORY_TOPOLOGY.md     # one server, N surfaces (routable HTTPS)
+│   ├── DEPLOY.md              # operator checklist (validate → C1 → surfaces)
+│   ├── MEMORY_TOPOLOGY.md     # Option A LIVE HTTPS topology
+│   ├── network-allowlist.md   # egress hosts for cloud sandboxes
+│   └── WORK_CLAIM_PROTOCOL.md # anti-duplication claim protocol
 ├── adapters/
-│   ├── manus/                 # active — connector + env + bootstrap
-│   ├── codex/                 # planned — config.toml + AGENTS.md block
-│   ├── gemini/                # planned — settings.json + GEMINI.md block
+│   ├── ADAPTER_CONTRACT.md    # three-carrier contract (from claude-code)
+│   ├── manus/                 # active — connector + env + bootstrap + setup
+│   ├── codex/                 # active — MCP + config.toml + AGENTS block
+│   ├── gemini/                # active — settings + GEMINI block + setup
 │   └── generic/               # onboarding template for any future surface
 └── tools/
     ├── render_principals.py   # registry + local tokens -> auth_tokens.json
-    ├── validate_agents.py     # N-agent validator (wire as `make agents-env`)
-    └── test_validators.py     # self-test suite (7/7 passing)
+    ├── validate_agents.py     # N-agent validator (`make agents-env`)
+    └── test_validators.py     # self-test suite
 ```
 
 Existing surfaces are unchanged: Cursor keeps `.cursor-commands` +

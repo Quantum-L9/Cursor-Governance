@@ -5,11 +5,16 @@ path: environment/agents/INDEX.md
 layer: index
 owner: governance-control-plane
 status: active
-version: 2.0.0
-updated: 2026-07-28
+version: 2.1.0
+updated: 2026-07-31
 /L9_META -->
 
-# INDEX — l9-multi-agent-pack (push-ready build, 2026-07-28)
+# INDEX — l9-multi-agent-pack (deploy-ready, 2026-07-31)
+
+**2026-07-31:** Adapters thickened to Claude Code contract; live memory
+`https://memory.quantumaipartners.com`; codex+gemini `active`. See
+`docs/DEPLOY.md`, `adapters/ADAPTER_CONTRACT.md`. Claude Code remains at
+`environment/claude-code/`.
 
 Read order: `README.md` → `HANDOFF.md` → `DESIGN.md` → `agent_registry.yaml`.
 Intended repo destination: `Quantum-L9/Cursor-Governance` at `environment/agents/`.

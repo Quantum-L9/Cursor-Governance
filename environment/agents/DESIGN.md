@@ -65,10 +65,14 @@ Roles are enforced at two levels — **namespace grants** (hard, server-side) an
 |---|---|---|
 | Cursor | existing `.cursor-commands` + `ops/graphiti` (unchanged) | `USER_ID=cursor_agent` machine env |
 | Claude Code | existing `environment/claude-code/` (env example now rendered from registry) | account environment |
-| Manus | `environment/agents/adapters/manus/` — Manus skill + connector spec | Manus session env / custom MCP connector |
-| Codex / OpenAI | `environment/agents/adapters/codex/` — AGENTS.md block + setup script | account env |
-| Gemini CLI | `environment/agents/adapters/gemini/` — settings + setup script | `~/.gemini/settings.json` env refs |
-| Generic CLI | `environment/agents/adapters/generic/` — env block + `.mcp.json` | shell profile |
+| Manus | `environment/agents/adapters/manus/` — connector + env + bootstrap + setup.md | Manus session env / custom MCP connector |
+| Codex / OpenAI | `environment/agents/adapters/codex/` — MCP + config.toml + AGENTS.md block + setup.md | account env / `~/.codex/config.toml` |
+| Gemini CLI | `environment/agents/adapters/gemini/` — settings + GEMINI.md block + setup.md | `~/.gemini/settings.json` env refs |
+| Generic CLI | `environment/agents/adapters/generic/` — env + mcp.template + bootstrap | shell profile |
+
+Contract SSOT for the four rows above: `adapters/ADAPTER_CONTRACT.md`
+(three carriers copied from the Claude Code gold standard). Production
+memory URL: `memory.production_url` in `agent_registry.yaml`.
 
 Every adapter does the same three things, per the claude-code precedent: discover skills (governance clone), boot context (session-start hook or equivalent), reach shared memory (HTTP MCP with the agent's own bearer token and identity env block).
 

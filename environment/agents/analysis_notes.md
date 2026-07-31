@@ -27,7 +27,7 @@
 
 ## Memory infra live state
 - C1 VPS (Hetzner 46.62.243.82): graphiti-mcp container zepai/knowledge-graph-mcp:1.0.2, Neo4j; Cursor connects via SSH tunnel localhost:8100/mcp/
-- Shared HTTP memory server (l9-graphiti-memory) concept at 127.0.0.1:8200 — loopback only shares within a host; cross-container needs routable host + allowlist.
+- Shared HTTP memory control plane: `https://memory.quantumaipartners.com` (Caddy → C1 `l9-memory-server`). Cloud adapters must default to that HTTPS URL, not loopback.
 
 ## Gaps for multi-agent replication (what user wants)
 1. No central AGENT REGISTRY (peer of group_registry.yaml) declaring each agent: id, user_id, source, principal_id, role, surfaces, token env var name.
