@@ -55,11 +55,11 @@ bash .cursor-commands/ops/scripts/init_graphiti_machine_env.sh
 
 | # | Requirement | Command / path |
 |---|-------------|----------------|
-| 4.1 | **Dropbox GlobalCommands SSOT** | `$HOME/Dropbox/Cursor Governance/GlobalCommands/` |
-| 4.2 | **Repo symlink** | `.cursor-commands` → GlobalCommands |
-| 4.3 | **User symlinks** | `~/.cursor/skills`, `~/.cursor/commands`, `~/.cursor/rules` → GlobalCommands |
-| 4.4 | **Wire script** | `bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh` |
-| 4.5 | **Bootstrap installer (no symlinks yet)** | `bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/install_cursor_hooks_bootstrap.sh"` |
+| 4.1 | **GitHub SSOT clone** | `$HOME/.cursor-governance` (= `Quantum-L9/Cursor-Governance` @ `main`) |
+| 4.2 | **Repo symlink** | `.cursor-commands` → `$HOME/.cursor-governance` |
+| 4.3 | **Plugin activation** | `~/.cursor/plugins/local/l9-governance` → `$HOME/.cursor-governance` |
+| 4.4 | **Wire script** | `bash $HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh` |
+| 4.5 | **Bootstrap installer** | `bash "$HOME/.cursor-governance/ops/scripts/install_cursor_hooks_bootstrap.sh"` |
 
 ---
 
@@ -145,21 +145,23 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ## 10. Minimal first-time setup (copy-paste)
 
 ```bash
-# Machine bootstrap (once — no repo symlinks needed)
-bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/install_cursor_hooks_bootstrap.sh"
+# Machine bootstrap (once) — GitHub main clone only; Dropbox is never used
+git clone https://github.com/Quantum-L9/Cursor-Governance.git "$HOME/.cursor-governance"
+bash "$HOME/.cursor-governance/ops/scripts/install_cursor_hooks_bootstrap.sh"
 
 # Client env
-cp "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/graphiti/graphiti.env.example" ~/.cursor/graphiti.env
+cp "$HOME/.cursor-governance/ops/graphiti/graphiti.env.example" ~/.cursor/graphiti.env
 # Edit: GRAPHITI_MCP_TOKEN, GRAPHITI_SSH_KEY, GRAPHITI_TUNNEL_AUTOSTART=1
+# Linux/containers: put the token in ~/.cursor/secrets/graphiti.env (no Keychain)
 
 # SSH key (if using repo .env.local C1_SSH — or place key at ~/.ssh/Hetzner-C1-nopass)
 
 # Per repo
 cd /path/to/repo
-bash .cursor-commands/ops/scripts/setup_workspace_symlinks.sh   # or auto-wired by sessionStart bootstrap
+bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
 
 # Verify
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 ```
 
 Reload Cursor — new chats trigger `sessionStart` bootstrap (wire → tunnel → health → prefetch → memory-bank).

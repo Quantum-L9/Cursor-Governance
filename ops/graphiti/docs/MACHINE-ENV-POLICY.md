@@ -32,7 +32,7 @@
 
 ```bash
 # Step 1 — machine env (idempotent)
-bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/init_graphiti_machine_env.sh"
+bash "$HOME/.cursor-governance/ops/scripts/init_graphiti_machine_env.sh"
 
 # Step 2 — store MCP token (pick ONE)
 security add-generic-password -a "$USER" -s graphiti-mcp-token -w "YOUR_VPS_TOKEN"
@@ -44,7 +44,7 @@ security add-generic-password -a "$USER" -s graphiti-mcp-token -w "YOUR_VPS_TOKE
 # OR gitignored repo .env.local C1_SSH (auto-extracted on session start)
 
 # Step 4 — hooks (once)
-bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/install_cursor_hooks_bootstrap.sh"
+bash "$HOME/.cursor-governance/ops/scripts/install_cursor_hooks_bootstrap.sh"
 ```
 
 ---
@@ -54,7 +54,7 @@ bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/install_cursor_
 ```bash
 git clone ...
 cd repo
-bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/setup_workspace_symlinks.sh"
+bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
 # OR: open in Cursor — sessionStart bootstrap auto-wires symlinks
 ```
 

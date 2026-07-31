@@ -30,9 +30,9 @@ dev = [
 # setuptools' auto-discovery fails on the many top-level dirs.
 [tool.uv]
 package = false
-# Floor-pin the resolver itself — a much older/newer `uv` binary can change lock
-# resolution behavior even with an identical uv.lock. Bump alongside `uv self update`.
-required-version = ">=0.11.23"
+# Floor-pin uv so ancient binaries fail closed, but stay compatible with
+# Anthropic/Linux sandbox images that ship uv 0.8.x (0.11+ is preferred locally).
+required-version = ">=0.8.0"
 
 [tool.ruff]
 line-length = 100

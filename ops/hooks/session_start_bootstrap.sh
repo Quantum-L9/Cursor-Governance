@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # sessionStart bootstrap — works before repo symlinks exist.
-# Resolves GlobalCommands from $HOME/Dropbox, auto-wires governance, Graphiti health, memory prefetch.
+# Resolves GlobalCommands from $HOME/.cursor-governance (GitHub main clone only).
+# Dropbox is never consulted. Auto-wires governance, Graphiti health, memory prefetch.
 # Also publishes GOVERNANCE_BACKUP_SKIP to the rest of the hook chain when a
 # .governance-build-lock marker exists in the governance clone.
 # Installed as a REAL file at ~/.cursor/hooks/session-start-bootstrap.sh (not a symlink).
@@ -48,15 +49,14 @@ if [ -x "$PLUGIN_SETUP" ]; then
 fi
 
 resolve_global_commands() {
-  # SSOT: ~/.cursor-governance (repo-root layout == GlobalCommands); Dropbox = transition fallback.
+  # SSOT: $HOME/.cursor-governance only — GitHub clone of Quantum-L9/Cursor-Governance.
+  # Dropbox / cloud-storage trees are never used (CANONICAL_LAW / resolve_governance_paths).
   GLOBAL_COMMANDS=""
-  for root in "$HOME/.cursor-governance" "$HOME/Dropbox/cursor governance" "$HOME/Dropbox/Cursor Governance"; do
-    if [ -d "$root/skills" ] && [ -f "$root/CANONICAL_LAW.md" ]; then
-      GLOBAL_COMMANDS="$root"; return 0          # clone root is GlobalCommands
-    elif [ -d "$root/GlobalCommands" ]; then
-      GLOBAL_COMMANDS="$root/GlobalCommands"; return 0   # legacy nested layout
-    fi
-  done
+  local root="$HOME/.cursor-governance"
+  if [ -d "$root/skills" ] && [ -f "$root/CANONICAL_LAW.md" ]; then
+    GLOBAL_COMMANDS="$root"
+    return 0
+  fi
   return 1
 }
 
@@ -208,15 +208,21 @@ if [ -f "$ENSURE_TUNNEL" ]; then
 fi
 
 if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
-  HEALTH_JSON="$(python3 "$GRAPHITI_CLI" health 2>/dev/null || echo '{"healthy":false}')"
-  HEALTH_OK="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('healthy',False))" 2>/dev/null || echo False)"
-  LIVENESS_OK="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('liveness_ok', False))" 2>/dev/null || echo False)"
+  # Prefer locked venv python (PATH may already include it after uv sync above).
+  if [ -x "$GC/.venv/bin/python3" ]; then
+    GPY="$GC/.venv/bin/python3"
+  else
+    GPY="python3"
+  fi
+  HEALTH_JSON="$("$GPY" "$GRAPHITI_CLI" health 2>/dev/null || echo '{"healthy":false}')"
+  HEALTH_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('healthy',False))" 2>/dev/null || echo False)"
+  LIVENESS_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('liveness_ok', False))" 2>/dev/null || echo False)"
   if [ "$HEALTH_OK" = "True" ]; then
     PARTS+=("graphiti: healthy")
   elif [ "$LIVENESS_OK" = "True" ]; then
-    PARTS+=("graphiti: tunnel up (MCP tools degraded — check VPS / token in keychain graphiti-mcp-token)")
+    PARTS+=("graphiti: tunnel up (MCP tools degraded — check VPS / graphiti-mcp-token)")
   else
-    REASON="$(echo "$HEALTH_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('degraded') or d.get('liveness_error') or d.get('reason') or 'unreachable')" 2>/dev/null || echo unreachable)"
+    REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('degraded') or d.get('liveness_error') or d.get('reason') or 'unreachable')" 2>/dev/null || echo unreachable)"
     PARTS+=("graphiti: ${REASON}")
   fi
 else
@@ -233,7 +239,7 @@ if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   fi
 fi
 
-# Delegate prefetch / code-graph context to full orchestrator (Dropbox path — no symlink required)
+# Delegate prefetch / code-graph context to full orchestrator (SSOT clone path)
 ORCH_CTX=""
 if [ -f "$ORCH" ]; then
   ORCH_OUT="$(bash "$ORCH" 2>/dev/null || echo '{}')"
