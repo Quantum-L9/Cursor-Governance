@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# L9 Claude Code cloud-environment Setup script (Web & Mobile).
+# L9 Claude Code environment — Setup script (Web & Mobile)
 #
-# Paste into claude.ai/code -> your environment -> Setup script. Runs before each
-# session, in the ephemeral sandbox, BEFORE the model starts. Account-level, so
-# Claude Code Mobile runs the same script. Idempotent; language-auto-detecting;
-# fail-tolerant (a session must still start if an optional step fails).
+# Paste into claude.ai/code → your environment → Setup script.
+# Runs in Anthropic's ephemeral Linux sandbox before the model starts.
+# Account-level: Mobile inherits the same script. Credentials come only from
+# the Claude environment variables field + GitHub — nothing from a host IDE.
 #
-# Reads from the environment's "Environment variables" field:
-#   GH_TOKEN (required for gh), L9_GOVERNANCE_DIR, L9_MEMORY_* (optional).
+# Env vars (from the Environment variables field):
+#   GH_TOKEN                          — required for gh
+#   L9_GOVERNANCE_REMOTE / _BRANCH    — defaults: GitHub Quantum-L9/Cursor-Governance @ main
+#   L9_MEMORY_HTTP_URL + CLIENT_TOKEN — optional shared HTTP memory
+#   USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE — memory identity
+#
+# Governance always lands at $HOME/.cursor-governance (GitHub main).
 # See environment.env.example and network-policy.md.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 log() { printf '\n=== %s ===\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# 1) GitHub CLI — gh-driven skills need it for CI logs, reviews, pushes.
+# 1) GitHub CLI — needed for CI logs, reviews, pushes.
 if ! have gh; then
   log "Installing GitHub CLI (gh)"
   if have apt-get; then
@@ -26,33 +31,48 @@ if ! have gh; then
       | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null 2>&1 || true
     sudo apt-get update -qq && sudo apt-get install -y gh || echo "WARN: gh install failed"
   else
-    echo "WARN: no apt-get; install gh manually (https://cli.github.com)"
+    echo "WARN: no apt-get; install gh from https://cli.github.com (sandbox should be Debian/Ubuntu)"
   fi
 fi
 
-# 2) Authenticate gh + git with the BOT-USER PAT so pushes trigger Actions.
+# 2) Authenticate gh + git with the bot-user PAT so pushes trigger Actions.
 if [ -n "${GH_TOKEN:-}" ] && have gh; then
   log "Authenticating gh"
   printf '%s' "$GH_TOKEN" | gh auth login --with-token 2>/dev/null && gh auth setup-git || true
   gh auth status 2>/dev/null || true
 else
-  echo "WARNING: GH_TOKEN unset or gh missing — gh is unauthenticated; skills that read CI/reviews or push will not work."
+  echo "WARNING: GH_TOKEN unset or gh missing — gh is unauthenticated; CI/review/push skills will not work."
 fi
 
-# 3) Governance clone — the SessionStart hook and skills resolve against this.
-GOV_DIR="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+# 3) Governance SSOT — GitHub main only (Quantum-L9/Cursor-Governance).
+#    Always materialize at $HOME/.cursor-governance. Ignore other overrides so
+#    the sandbox never follows a host IDE path pasted into env by mistake.
+GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
+GOV_DIR="$HOME/.cursor-governance"
+if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "${L9_GOVERNANCE_DIR}" != "$GOV_DIR" ]; then
+  echo "WARN: ignoring L9_GOVERNANCE_DIR='${L9_GOVERNANCE_DIR}' — Web/Mobile SSOT is always \$HOME/.cursor-governance"
+fi
+
 if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
-  log "Cloning Cursor-Governance -> $GOV_DIR"
-  git clone --depth 1 https://github.com/Quantum-L9/Cursor-Governance "$GOV_DIR" \
-    || echo "WARN: governance clone failed — set L9_GOVERNANCE_DIR or check network allowlist"
+  log "Cloning governance from GitHub (${GOV_BRANCH}) -> $GOV_DIR"
+  git clone --depth 1 --branch "$GOV_BRANCH" "$GOV_REMOTE" "$GOV_DIR" \
+    || echo "WARN: governance clone failed — allowlist github.com"
 else
-  log "Governance clone present -> $GOV_DIR"
+  log "Syncing governance to GitHub ${GOV_BRANCH} -> $GOV_DIR"
+  git -C "$GOV_DIR" remote set-url origin "$GOV_REMOTE" 2>/dev/null || true
+  if git -C "$GOV_DIR" fetch --depth 1 origin "$GOV_BRANCH" 2>/dev/null; then
+    git -C "$GOV_DIR" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" 2>/dev/null \
+      || git -C "$GOV_DIR" reset --hard "origin/$GOV_BRANCH" 2>/dev/null \
+      || echo "WARN: could not reset to origin/${GOV_BRANCH}"
+    log "Governance at $(git -C "$GOV_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown) (origin/${GOV_BRANCH})"
+  else
+    echo "WARN: git fetch origin/${GOV_BRANCH} failed — using existing clone (may be stale)"
+  fi
 fi
 
-# 3.5) Activate the Claude Code governance environment in THIS workspace.
-# This is what makes every mobile chat self-activate: if the repo has not committed
-# the .claude/ triad, install it from the clone so the SessionStart hook fires and
-# governance boots. Never clobber files the repo already committed.
+# 3.5) Install Claude Code triad into this workspace when the repo has not
+#      committed it. Never overwrite files the repo already has.
 CC_ENV="$GOV_DIR/environment/claude-code"
 if [ -d "$CC_ENV" ]; then
   log "Activating Claude Code environment in $(pwd)"
@@ -62,17 +82,15 @@ if [ -d "$CC_ENV" ]; then
   [ -f .claude/hooks/session_start_claude_governance.sh ] \
     || cp "$CC_ENV/hooks/session_start_claude_governance.sh" .claude/hooks/
   chmod +x .claude/hooks/session_start_claude_governance.sh 2>/dev/null || true
-  # Shared-memory MCP only when the account provides an endpoint; never overwrite a
-  # repo's own .mcp.json.
   if [ -n "${L9_MEMORY_HTTP_URL:-}" ] && [ ! -f .mcp.json ]; then
     cp "$CC_ENV/mcp.template.json" .mcp.json
   fi
-  echo "activated: .claude/settings.json + SessionStart hook -> governance at $GOV_DIR"
+  echo "activated: .claude/settings.json + SessionStart hook -> $GOV_DIR"
 else
   echo "WARN: $CC_ENV missing — governance clone may be incomplete; SessionStart hook not installed."
 fi
 
-# 4) Language toolchains — install only what the workspace declares.
+# 4) Language toolchains — only what the workspace declares.
 if [ -f pyproject.toml ] || ls ./*.py >/dev/null 2>&1; then
   log "Python toolchain"
   python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
@@ -91,28 +109,36 @@ if [ -f package.json ]; then
   fi
 fi
 
-# 5) Optional: L9 shared agent memory. Only the package is installed here; the
-#    canonical DB is owned by ONE long-running HTTP server, not per-session stdio.
-#    Identity guard: Claude Code writes under its OWN agent id, never cursor_agent
-#    (group_id/repo namespace is shared with Cursor; writing identity is not).
+# 5) Optional shared memory — HTTP MCP client only (no local server).
+#    Primary wiring is .mcp.json from step 3.5. Production:
+#    https://memory.quantumaipartners.com  (set L9_MEMORY_HTTP_URL in env).
 if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
   if [ "${USER_ID:-}" = "cursor_agent" ] || [ "${L9_MEMORY_AGENT_ID:-}" = "cursor_agent" ]; then
-    echo "WARNING: memory identity is 'cursor_agent' — collides with Cursor. Set USER_ID=claude_code_agent / L9_MEMORY_AGENT_ID=claude-code."
+    echo "WARNING: memory identity 'cursor_agent' is reserved — set USER_ID=claude_code_agent and L9_MEMORY_AGENT_ID=claude-code."
   fi
-  log "Memory identity: agent_id=${L9_MEMORY_AGENT_ID:-claude-code} user_id=${USER_ID:-claude_code_agent} (distinct from Cursor's cursor_agent)"
-  log "Provisioning L9 memory client (l9-graphiti-memory)"
-  MEM_DIR="${L9_MEMORY_SRC:-$HOME/l9-graphiti-memory}"
-  [ -d "$MEM_DIR/.git" ] || git clone --depth 1 https://github.com/Quantum-L9/l9-graphiti-memory "$MEM_DIR" 2>/dev/null || echo "memory clone skipped"
-  [ -d "$MEM_DIR" ] && { pip install -e "${MEM_DIR}[server]" 2>/dev/null || pip install -e "$MEM_DIR" 2>/dev/null || true; }
-  echo "note: for cross-session sharing, run the shared HTTP memory server and register mcp.template.json."
+  log "Memory identity: agent_id=${L9_MEMORY_AGENT_ID:-claude-code} user_id=${USER_ID:-claude_code_agent}"
+  log "Shared memory: ${L9_MEMORY_HTTP_URL} (MCP /mcp via .mcp.json + Bearer env)"
+  if [ ! -f .mcp.json ]; then
+    echo "WARN: .mcp.json missing — step 3.5 should have copied mcp.template.json when L9_MEMORY_HTTP_URL is set."
+  fi
+  if have curl; then
+    mem_base="${L9_MEMORY_HTTP_URL%/}"
+    code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 8 "${mem_base}/healthz" 2>/dev/null || echo "000")
+    if [ "$code" = "200" ] || [ "$code" = "204" ]; then
+      log "Memory healthz: HTTP ${code} OK"
+    else
+      echo "WARN: Memory healthz HTTP ${code} from ${mem_base}/healthz — allowlist the host or check the control plane"
+    fi
+  fi
 fi
 
-# 6) Surface resolved versions so drift is visible in the setup log.
+# 6) Versions for the setup log.
 log "Tool versions"
-have gh     && gh --version | head -1        || true
+have gh      && gh --version | head -1        || true
 have python3 && python3 --version            || true
-have ruff   && ruff --version                || echo "ruff:   (per-repo via .[dev])"
-have mypy   && mypy --version                || echo "mypy:   (per-repo via .[dev])"
-have node   && echo "node:   $(node --version)" || true
+have ruff    && ruff --version               || echo "ruff:   (per-repo via .[dev])"
+have mypy    && mypy --version               || echo "mypy:   (per-repo via .[dev])"
+have node    && echo "node:   $(node --version)" || true
+uname -s 2>/dev/null | awk '{print "os:     "$0}' || true
 
-log "Setup complete — governance at $GOV_DIR"
+log "Setup complete — governance at $GOV_DIR (GitHub ${GOV_BRANCH})"
