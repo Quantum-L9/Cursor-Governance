@@ -109,16 +109,18 @@ GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 # through the same `run_reconciler` backgrounding every other slow reconciler
 # above uses. The next session start hits the fast path once the background sync
 # finishes; `make venv` remains the way to force it in the foreground and wait.
-if command -v uv >/dev/null 2>&1 && [ -f "$GC/uv.lock" ]; then
-  if [ -x "$GC/.venv/bin/python3" ]; then
-    if ( cd "$GC" && uv sync --locked --extra dev >/dev/null 2>&1 ); then
+# `--no-build` refuses source builds (no setup.py/PEP517 script execution) so a
+# compromised or unexpected sdist cannot run installer code during sessionStart.
+if command -v uv >/dev/null 2>&1 && [[ -f "$GC/uv.lock" ]]; then
+  if [[ -x "$GC/.venv/bin/python3" ]]; then
+    if ( cd "$GC" && uv sync --locked --extra dev --no-build >/dev/null 2>&1 ); then
       export PATH="$GC/.venv/bin:$PATH"
       PARTS+=("venv: locked (uv.lock)")
     else
       PARTS+=("venv: uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev")
     fi
   else
-    run_reconciler bash -c "cd \"$GC\" && uv sync --locked --extra dev"
+    run_reconciler bash -c "cd \"$GC\" && uv sync --locked --extra dev --no-build"
     PARTS+=("venv: not yet built — background sync started; run 'make venv' in $GC for foreground + wait")
   fi
 fi
