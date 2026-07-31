@@ -1,22 +1,11 @@
 #!/usr/bin/env bash
 # Ensure Graphiti SSH tunnel is up before health/prefetch. Fail-open — never block session.
+# Env/defaults load from $HOME/.cursor-governance only (via graphiti_common.sh) — never Dropbox.
 set -uo pipefail
 
-graphiti_load_env() {
-  # shellcheck disable=SC1090
-  local defaults=""
-  for p in "$HOME/Dropbox/cursor governance/GlobalCommands/ops/graphiti/graphiti.env.defaults" \
-           "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/graphiti/graphiti.env.defaults"; do
-    [ -f "$p" ] && defaults="$p" && break
-  done
-  [ -n "$defaults" ] && set -a && source "$defaults" && set +a
-  [ -f "$HOME/.cursor/graphiti.env" ] && set -a && source "$HOME/.cursor/graphiti.env" && set +a
-  [ -f "$HOME/.cursor/secrets/graphiti.env" ] && set -a && source "$HOME/.cursor/secrets/graphiti.env" && set +a
-  if [ -z "${GRAPHITI_MCP_TOKEN:-}" ]; then
-    GRAPHITI_MCP_TOKEN="$(security find-generic-password -s graphiti-mcp-token -w 2>/dev/null || true)"
-    export GRAPHITI_MCP_TOKEN
-  fi
-}
+REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
+# shellcheck source=/dev/null
+source "$(dirname "$REAL_HOOK")/graphiti_common.sh"
 
 resolve_ssh_key_file() {
   SSH_KEY_FILE=""
@@ -24,7 +13,7 @@ resolve_ssh_key_file() {
     SSH_KEY_FILE="${GRAPHITI_SSH_KEY/#\~/$HOME}"
     return 0
   fi
-  if [ -n "${GRAPHITI_SSH_KEYCHAIN_SERVICE:-}" ]; then
+  if [ -n "${GRAPHITI_SSH_KEYCHAIN_SERVICE:-}" ] && command -v security >/dev/null 2>&1; then
     local tmp
     tmp="$(mktemp)"
     if security find-generic-password -s "$GRAPHITI_SSH_KEYCHAIN_SERVICE" -w >"$tmp" 2>/dev/null; then

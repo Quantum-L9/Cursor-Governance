@@ -12,9 +12,17 @@ FAIL=0
 
 pass() { echo "  OK: $1"; }
 fail() { echo "  FAIL: $1"; FAIL=1; }
+warn() { echo "  WARN: $1"; }
 
 resolve_governance_paths_or_exit
 GC="$GLOBAL_COMMANDS"
+# Prefer the locked project interpreter so Graphiti CLI deps (pydantic, etc.)
+# resolve. Bare system python3 often lacks them and must not false-FAIL wiring.
+if [ -x "$GC/.venv/bin/python3" ]; then
+  GOV_PYTHON="$GC/.venv/bin/python3"
+else
+  GOV_PYTHON="python3"
+fi
 HOOK_SRC="$GC/ops/hooks/session_end_governance_backup.sh"
 HOOK_LINK="$HOME/.cursor/hooks/governance-backup.sh"
 HOOKS_JSON="$HOME/.cursor/hooks.json"
@@ -150,14 +158,16 @@ echo ""
 echo "=== Graphiti memory (GLOBAL-001) ==="
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 if [ -f "$GRAPHITI_CLI" ]; then
-  pass "graphiti_memory_client.py present"
-  if python3 -c "import yaml; yaml.safe_load(open('$GC/ops/graphiti/group_registry.yaml'))" 2>/dev/null; then
+  pass "graphiti_memory_client.py present (interpreter: $GOV_PYTHON)"
+  if "$GOV_PYTHON" -c "import yaml; yaml.safe_load(open('$GC/ops/graphiti/group_registry.yaml'))" 2>/dev/null; then
     pass "group_registry.yaml valid"
   else
     fail "group_registry.yaml invalid"
   fi
-  if python3 "$GRAPHITI_CLI" resolve >/dev/null 2>&1; then
+  if "$GOV_PYTHON" "$GRAPHITI_CLI" resolve >/dev/null 2>&1; then
     pass "graphiti resolve exits 0"
+  elif [ "$GOV_PYTHON" = "python3" ] && ! "$GOV_PYTHON" -c "import pydantic" 2>/dev/null; then
+    warn "graphiti resolve skipped — project .venv missing (run: make -C \"$GC\" venv)"
   else
     fail "graphiti resolve failed"
   fi

@@ -6,13 +6,13 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "1.0.0",
-    "updated": "2026-07-28",
-    "note": "Template for the Manus Custom MCP connector. Identity rendered from agent_registry.yaml (agents.manus). Replace ${...} at connector creation; never commit real tokens."
+    "version": "1.1.0",
+    "updated": "2026-07-31",
+    "note": "Manus Custom MCP connector. Production URL is the live control plane. Replace bearer at connector creation; never commit real tokens."
   },
-  "name": "l9-memory",
+  "name": "l9-shared-memory",
   "transport": "http",
-  "url": "${L9_MEMORY_HTTP_URL}/mcp",
+  "url": "https://memory.quantumaipartners.com/mcp",
   "headers": {
     "Authorization": "Bearer ${L9_MEMORY_CLIENT_TOKEN}",
     "X-L9-User-Id": "manus_agent",

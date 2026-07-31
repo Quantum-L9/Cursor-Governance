@@ -5,42 +5,37 @@ path: environment/agents/adapters/manus/README.md
 layer: adapter
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-28
+version: 1.1.0
+updated: 2026-07-31
 /L9_META -->
 
 # Manus Adapter — L9 governance node on Manus cloud
 
 Registry identity: `agents.manus` in `../../agent_registry.yaml`
-(`agent_id=manus`, `user_id=manus_agent`, role `researcher-builder`).
+(`agent_id=manus`, `user_id=manus_agent`, role `researcher-builder`, **active**).
 
-Manus sandboxes are ephemeral per task, but Manus has three persistent
-carriers that map onto the claude-code adapter's pattern:
+Contract: `../ADAPTER_CONTRACT.md` (same three carriers as Claude Code).
+Claude Code itself remains at `environment/claude-code/` — this adapter does
+not replace it.
 
 | Need | Claude Code carrier | Manus carrier |
 |---|---|---|
-| Skill discovery | git-tracked `.claude/` | **Manus Skills** (account-registered; the L9 skills already exist there) |
-| Boot context | SessionStart hook | **Project instructions / skill preamble** (`session_bootstrap.md`) |
-| Shared memory | account env + `.mcp.json` | **Custom MCP connector** (`mcp-connector.json`) with per-agent bearer token |
+| Skill discovery | git-tracked `.claude/` | **Manus Skills** (account-registered) |
+| Boot context | SessionStart hook | `session_bootstrap.md` → project instructions / skill |
+| Shared memory | account env + `.mcp.json` | `mcp-connector.json` + `environment.env.example` |
+| Network | `web/network-policy.md` | `docs/network-allowlist.md` |
 | GitHub | `GH_TOKEN` account env | GitHub integration (already authenticated) |
 
-## Setup (one-time, ~5 minutes)
+## Setup
 
-1. **Memory endpoint** — requires the routable HTTPS endpoint from
-   `docs/MEMORY_TOPOLOGY.md` Option A. Loopback/tunnel deployments are
-   unreachable from Manus sandboxes; this is a hard prerequisite.
-2. **Issue the token** — generate a ≥24-char token for Manus, add it to
-   `agent_tokens.local.json` on the render host as `"manus": "<token>"`,
-   re-run `tools/render_principals.py`, restart the memory server.
-3. **Create the connector** — in Manus, add a Custom MCP connector using
-   `mcp-connector.json` as the template: URL
-   `https://<memory-host>/mcp`, header `Authorization: Bearer <manus token>`.
-4. **Install the bootstrap** — paste `environment.env.example` values into the
-   connector/env configuration and add `session_bootstrap.md` content to the
-   project instructions (or a Manus skill) so every Manus session boots with
-   L9 identity + the work-claim rule.
+Follow **`setup.md`** (step-by-step). Short form:
 
-## Session behavior (what the bootstrap enforces)
+1. Memory: `https://memory.quantumaipartners.com` (live Option A).
+2. Issue/sync manus token via `docs/DEPLOY.md`.
+3. Create Custom MCP connector from `mcp-connector.json`.
+4. Paste `environment.env.example` + `session_bootstrap.md`.
+
+## Session behavior
 
 On any task touching a governed repo, Manus must: resolve `group_id` from
 `ops/graphiti/group_registry.yaml` (never `main`/`default`); search memory for

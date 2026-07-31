@@ -6,8 +6,8 @@
 #   layer: tool
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.1
-#   updated: 2026-07-29
+#   version: 1.3.0
+#   updated: 2026-07-31
 """N-agent registry and adapter validator (peer of validate_claude_env.py).
 
 Checks:
@@ -23,7 +23,11 @@ Checks:
   A1  every active agent's adapter directory exists (adapters/<adapter>/)
       unless adapter is cursor/claude-code (pre-existing activation paths)
   A2  adapter env examples agree with the registry (USER_ID,
-      L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE lines match the agent entry)
+      L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE) and L9_MEMORY_HTTP_URL matches
+      memory.production_url when that field is set
+  A3  adapter contract (ADAPTER_CONTRACT.md): README.md, env example,
+      MCP carrier file, bootstrap/instructions file present
+  A4  MCP carriers must not default to loopback (127.0.0.1 / localhost)
   S1  no secret-looking values anywhere in the pack (long opaque literals
       assigned to *TOKEN*/*SECRET*/*KEY* vars); .env files allowed only as
       *.example
@@ -58,6 +62,18 @@ ENV_FIELD_CHECKS = (
     ("USER_ID", "user_id"),
     ("L9_MEMORY_AGENT_ID", "agent_id"),
     ("L9_MEMORY_SOURCE", "source"),
+)
+MCP_CARRIERS = (
+    "mcp.template.json",
+    "mcp-connector.json",
+    "settings.template.json",
+    "config.toml.example",
+)
+BOOTSTRAP_GLOBS = (
+    "session_bootstrap.md",
+    "agents-block.md",
+    "gemini-block.md",
+    "bootstrap.template.md",
 )
 
 errors: list[str] = []
@@ -147,7 +163,7 @@ def check_agents(reg: dict) -> None:
         check_one_agent(key, agent, roles, seen)
 
 
-def _check_env_example(envf: Path, agent: dict) -> None:
+def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> None:
     text = envf.read_text(encoding="utf-8")
     for var, fld in ENV_FIELD_CHECKS:
         m = re.search(rf"^{var}=(.+)$", text, re.M)
@@ -158,9 +174,55 @@ def _check_env_example(envf: Path, agent: dict) -> None:
                 "A2",
                 f"{envf.name}: {var}='{m.group(1).strip()}' != registry '{agent.get(fld)}'",
             )
+    url_m = re.search(r"^L9_MEMORY_HTTP_URL=(.+)$", text, re.M)
+    if not url_m:
+        err("A2", f"{envf.name}: missing L9_MEMORY_HTTP_URL")
+    elif production_url and url_m.group(1).strip() != production_url:
+        err(
+            "A2",
+            f"{envf.name}: L9_MEMORY_HTTP_URL='{url_m.group(1).strip()}' "
+            f"!= memory.production_url '{production_url}'",
+        )
 
 
-def check_one_adapter(key: str, agent: dict, root: Path) -> None:
+def _check_mcp_no_loopback_default(key: str, adir: Path) -> None:
+    for name in MCP_CARRIERS:
+        path = adir / name
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if "127.0.0.1" in text or "localhost" in text:
+            err(
+                "A4",
+                f"agents.{key}: {name} must not default to loopback "
+                "(use https://memory.quantumaipartners.com)",
+            )
+
+
+def _check_adapter_contract(key: str, adir: Path) -> None:
+    if not (adir / "README.md").is_file():
+        err("A3", f"agents.{key}: missing README.md in {adir.name}/")
+    env_examples = list(adir.glob("*.env.example"))
+    if not env_examples:
+        err("A3", f"agents.{key}: missing environment.env.example in {adir.name}/")
+    if not any((adir / name).is_file() for name in MCP_CARRIERS):
+        err(
+            "A3",
+            f"agents.{key}: missing MCP carrier (one of {', '.join(MCP_CARRIERS)}) in {adir.name}/",
+        )
+    if not any((adir / name).is_file() for name in BOOTSTRAP_GLOBS):
+        err(
+            "A3",
+            f"agents.{key}: missing bootstrap/instructions "
+            f"(one of {', '.join(BOOTSTRAP_GLOBS)}) in {adir.name}/",
+        )
+    _check_mcp_no_loopback_default(key, adir)
+
+
+def check_one_adapter(key: str, agent: dict, root: Path, production_url: str | None) -> None:
     if not isinstance(agent, dict) or agent.get("status", "active") != "active":
         return
     adapter = agent.get("adapter", key)
@@ -170,13 +232,20 @@ def check_one_adapter(key: str, agent: dict, root: Path) -> None:
     if not adir.is_dir():
         err("A1", f"agents.{key}: adapter dir missing: {adir}")
         return
+    _check_adapter_contract(key, adir)
     for envf in adir.glob("*.env.example"):
-        _check_env_example(envf, agent)
+        _check_env_example(envf, agent, production_url)
 
 
 def check_adapters(reg: dict, root: Path) -> None:
+    production_url = None
+    mem = reg.get("memory") or {}
+    if isinstance(mem, dict):
+        production_url = mem.get("production_url")
+        if production_url and not str(production_url).startswith("https://"):
+            err("R1", f"memory.production_url must be https://…, got '{production_url}'")
     for key, agent in (reg.get("agents") or {}).items():
-        check_one_adapter(key, agent, root)
+        check_one_adapter(key, agent, root, production_url)
 
 
 def _is_secret_literal(match: re.Match[str]) -> bool:
