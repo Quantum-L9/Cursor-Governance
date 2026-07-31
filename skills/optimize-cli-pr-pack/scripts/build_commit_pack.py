@@ -754,6 +754,47 @@ def is_tracked(repo_root: Path, relative: Path) -> bool:
     )
 
 
+def _split_git_patches(blob: bytes) -> list[bytes]:
+    """Split a concatenated git patch into per-file patch blobs."""
+    if not blob:
+        return []
+    marker = b"diff --git "
+    first = blob.find(marker)
+    if first < 0:
+        return []
+    parts: list[bytes] = []
+    start = first
+    while True:
+        nxt = blob.find(marker, start + len(marker))
+        if nxt < 0:
+            parts.append(blob[start:])
+            break
+        parts.append(blob[start:nxt])
+        start = nxt
+    return [p for p in parts if p.strip()]
+
+
+def _patch_paths(patch: bytes) -> set[str]:
+    """Extract a/ and b/ paths from a single ``diff --git`` header."""
+    first = patch.split(b"\n", 1)[0]
+    pieces = first.split(b" ")
+    if len(pieces) < 4:
+        return set()
+    out: set[str] = set()
+    for raw in pieces[2:4]:
+        s = raw.decode(errors="replace")
+        if s.startswith(("a/", "b/")):
+            s = s[2:]
+        if s != "/dev/null":
+            out.add(s)
+    return out
+
+
+def _filter_patches(blob: bytes, allowed: set[str]) -> bytes:
+    keep = [p for p in _split_git_patches(blob) if _patch_paths(p) & allowed]
+    return b"".join(keep)
+
+
 def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> bytes:
     run(["git", "rev-parse", "--verify", f"{base_ref}^{{commit}}"], repo_root)
     tracked: list[str] = []
@@ -769,36 +810,30 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
 
     chunks: list[bytes] = []
     if tracked:
-        # Binary patch output — must not use text=True.
-        # Feed pathspecs on stdin (not argv) so Sonar S6350 does not treat
-        # user-controlled changed_files as command arguments.
+        # Binary patch — no user paths on argv (Sonar S6350). Diff whole tree, filter.
         if Path("git").name not in _ALLOWED_RUN_BINARIES:
             raise PackError("disallowed command binary: ['git']")
-        pathspec = "".join(f"{item}\n" for item in tracked).encode()
         result = subprocess.run(
-            [
-                "git",
-                "diff",
-                "--binary",
-                "--no-ext-diff",
-                base_ref,
-                "--pathspec-from-file=-",
-            ],
+            ["git", "diff", "--binary", "--no-ext-diff", base_ref],
             cwd=repo_root,
-            input=pathspec,
             capture_output=True,
             check=False,
         )
         if result.returncode != 0:
             raise PackError(f"git diff failed: {result.stderr.decode(errors='replace').strip()}")
-        chunks.append(result.stdout)
+        filtered = _filter_patches(result.stdout, set(tracked))
+        if not filtered.strip():
+            raise PackError("tracked changed_files produced an empty filtered patch")
+        chunks.append(filtered)
     for relative in untracked:
-        # Copy to a fixed staging basename so argv never carries the user path.
+        # Fixed argv operands only; rewrite headers to the real relative path.
         staging_name = "_optimize_cli_pr_pack_untracked_staging"
         staging = repo_root / staging_name
         source = under_root(repo_root, repo_root / relative, label="untracked")
         try:
-            staging.write_bytes(source.read_bytes())
+            payload = source.read_bytes()
+            with open(staging, "wb") as handle:
+                handle.write(payload)
             result = subprocess.run(
                 [
                     "git",
@@ -815,9 +850,7 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
             )
             if result.returncode not in {0, 1}:
                 raise PackError(f"git diff for untracked file failed: {relative}")
-            # Rewrite staging path in the patch header back to the real relative path.
-            patched = result.stdout.replace(staging_name.encode(), relative.encode())
-            chunks.append(patched)
+            chunks.append(result.stdout.replace(staging_name.encode(), relative.encode()))
         finally:
             if staging.exists():
                 staging.unlink()
