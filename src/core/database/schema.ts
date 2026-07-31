@@ -196,6 +196,9 @@ export const actionOutcomes = pgTable('action_outcomes', {
   trafficAfter: integer('traffic_after'),
   success: boolean('success'),
   learnings: text('learnings'),
+  memoryRecordId: uuid('memory_record_id'),
+  memoryPromotedAt: timestamp('memory_promoted_at'),
+  memoryPromotionError: text('memory_promotion_error'),
 });
 
 // ─── Job Execution Log ───────────────────────────────────────────────────────

@@ -179,6 +179,16 @@ export class Scheduler {
     });
   }
 
+  registerDefinition(definition: JobDefinition): void {
+    const existing = JOB_DEFINITIONS.find(item => item.name === definition.name);
+    if (existing) {
+      if (JSON.stringify(existing) !== JSON.stringify(definition)) throw new Error(`Conflicting job definition: ${definition.name}`);
+      return;
+    }
+    JOB_DEFINITIONS.push(definition);
+    logger.debug({ jobName: definition.name }, 'Job definition registered');
+  }
+
   registerHandler(jobName: string, handler: (job: Job) => Promise<void>): void {
     this.handlers.set(jobName, handler);
     logger.debug({ jobName }, 'Handler registered');

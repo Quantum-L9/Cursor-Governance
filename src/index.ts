@@ -2,19 +2,13 @@
  * layer: module
  * role: seo_bot_engine
  * status: active
+ * version: 2.1.0
  */
-
-/**
- * ═══════════════════════════════════════════════════════════════════════════════
- * L9 SEO Bot - Main Entry Point v1.0.0
- * HTTP API served exclusively via Fastify (src/api/index.ts)
- * ═══════════════════════════════════════════════════════════════════════════════
- */
-
+import { eq } from 'drizzle-orm';
 import { loadSecrets } from './core/secrets.js';
 import { loadConfig } from './core/config.js';
 import { createModuleLogger } from './core/logger.js';
-import { closeDb } from './core/database/index.js';
+import { closeDb, getDb, schema } from './core/database/index.js';
 import { getScheduler } from './core/scheduler.js';
 import { startApiServer } from './api/index.js';
 import { registerSerpHandlers } from './modules/serp-intelligence/index.js';
@@ -23,16 +17,26 @@ import { registerAeoHandlers } from './modules/aeo-geo/index.js';
 import { registerLinkHandlers } from './modules/link-building/index.js';
 import { registerBehaviorHandlers } from './modules/behavior-intelligence/index.js';
 import { registerPlanExecutorHandlers } from './services/plan-executor.js';
+import { getLlmService } from './services/llm.js';
+import { registerMemoryHandlers } from './services/memory.js';
 
 const logger = createModuleLogger('main');
 
-async function main() {
-  // Hydrate process.env from Infisical before any config is read (no-op when
-  // Infisical isn't configured; never overrides vars already set in the env).
-  await loadSecrets();
+async function initializeActiveClientBudgets(): Promise<void> {
+  const activeClients = await getDb().select({ id: schema.clients.id })
+    .from(schema.clients)
+    .where(eq(schema.clients.active, true));
+  const llm = getLlmService();
+  const expiredReservations = await llm.recoverExpiredBudgetReservations();
 
+  logger.info({ clientCount: activeClients.length, expiredReservations }, 'Persistent LLM budget accounts initialized');
+}
+
+async function main() {
+  await loadSecrets();
   const config = loadConfig();
   logger.info('Configuration validated');
+  await initializeActiveClientBudgets();
 
   const scheduler = getScheduler();
   registerSerpHandlers(scheduler);
@@ -40,7 +44,8 @@ async function main() {
   registerAeoHandlers(scheduler);
   registerLinkHandlers(scheduler);
   registerBehaviorHandlers(scheduler);
-  registerPlanExecutorHandlers(scheduler); // GAP-07 (C-02); job disabled by default
+  registerPlanExecutorHandlers(scheduler);
+  registerMemoryHandlers(scheduler);
   await scheduler.start();
   logger.info('All modules registered and scheduler started');
 
@@ -52,18 +57,13 @@ async function main() {
     await closeDb();
     process.exit(0);
   };
-
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  logger.info('═══════════════════════════════════════════════════════════');
-  logger.info('  L9 SEO Bot v1.0.0 - OPERATIONAL');
-  logger.info('  Modules: SERP | Vitals | AEO/GEO | Links | Behavior');
-  logger.info('  API: Fastify on port ' + config.BOT_PORT);
-  logger.info('═══════════════════════════════════════════════════════════');
+  logger.info('L9 SEO Bot operational: SERP | Vitals | AEO/GEO | Links | Behavior | Governed Memory');
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error('Fatal startup error:', error);
   process.exit(1);
 });

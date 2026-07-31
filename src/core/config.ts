@@ -39,6 +39,13 @@ const envSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1),
   PERPLEXITY_API_KEY: z.string().min(1),
 
+  // Governed cross-agent memory (l9-graphiti-memory HTTP MCP)
+  L9_MEMORY_MODE: z.enum(['disabled', 'optional', 'required']).default('optional'),
+  L9_MEMORY_URL: z.string().url().optional(),
+  L9_MEMORY_TOKEN: z.string().min(1).optional(),
+  L9_MEMORY_TOKEN_BUDGET: z.coerce.number().int().min(128).max(64000).default(1200),
+  L9_MEMORY_MAX_RECORDS: z.coerce.number().int().min(1).max(200).default(40),
+
   // Cross-repo handoff: shared secret presented by Website-Bot as a Bearer
   // token to POST /api/clients/register. REQUIRED for that route — when unset,
   // registration fails closed (503) rather than accepting anonymous upserts.
