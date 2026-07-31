@@ -57,6 +57,8 @@ tiers:
       use_when: "a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem"
     - skill: "l9-setting-up-ci"
       use_when: "bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions"
+    - skill: "l9-graphiti-memory"
+      use_when: "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
 
   explicit_only:
     - skill: "l9-forge"
@@ -89,6 +91,10 @@ tiers:
       reason: "infra deploy operation — high blast radius, explicit only"
     - skill: "l9-setting-up-terraform"
       reason: "infra-as-code bootstrap — high blast radius, explicit only"
+    - skill: "l9-pr-remediation"
+      reason: "recursive PR loop that pushes commits and posts review replies — high blast radius, explicit only"
+    - skill: "l9-governance-symlinks"
+      reason: "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only"
 
   do_not_migrate_to_skills:
     - item: "commands/violation.md"
