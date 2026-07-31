@@ -100,12 +100,28 @@ GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 # Recreate/refresh the pinned .venv from uv.lock and put it first on PATH for the
 # rest of this hook chain. `--locked` fails loudly if pyproject.toml drifts from uv.lock.
 # --extra dev keeps ruff/pytest in the SAME locked venv as runtime deps.
-if command -v uv >/dev/null 2>&1 && [ -f "$GC/uv.lock" ]; then
-  if ( cd "$GC" && uv sync --locked --extra dev >/dev/null 2>&1 ) && [ -x "$GC/.venv/bin/python3" ]; then
-    export PATH="$GC/.venv/bin:$PATH"
-    PARTS+=("venv: locked (uv.lock)")
+#
+# Fast path vs. background path: when .venv already exists, a verify-only sync
+# against a warm cache is sub-second, so it's safe to run synchronously and keep
+# PATH correct for the rest of this hook chain. When .venv does NOT exist yet, the
+# first build can take minutes on a cold uv cache (48 locked packages incl. the
+# langgraph stack) — that must never block this hook's 30s budget, so it goes
+# through the same `run_reconciler` backgrounding every other slow reconciler
+# above uses. The next session start hits the fast path once the background sync
+# finishes; `make venv` remains the way to force it in the foreground and wait.
+# `--no-build` refuses source builds (no setup.py/PEP517 script execution) so a
+# compromised or unexpected sdist cannot run installer code during sessionStart.
+if command -v uv >/dev/null 2>&1 && [[ -f "$GC/uv.lock" ]]; then
+  if [[ -x "$GC/.venv/bin/python3" ]]; then
+    if ( cd "$GC" && uv sync --locked --extra dev --no-build >/dev/null 2>&1 ); then
+      export PATH="$GC/.venv/bin:$PATH"
+      PARTS+=("venv: locked (uv.lock)")
+    else
+      PARTS+=("venv: uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev")
+    fi
   else
-    PARTS+=("venv: uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev")
+    run_reconciler bash -c "cd \"$GC\" && uv sync --locked --extra dev --no-build"
+    PARTS+=("venv: not yet built — background sync started; run 'make venv' in $GC for foreground + wait")
   fi
 fi
 
