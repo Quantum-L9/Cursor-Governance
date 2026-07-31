@@ -10,7 +10,8 @@
     "intelligence"
   ],
   "excludes": [
-    "integrity"
+    "integrity",
+    "ops/logs"
   ],
   "files": [],
   "notes": "Run integrity/system-check.sh --snapshot to build the initial manifest with hashes and base64 content."

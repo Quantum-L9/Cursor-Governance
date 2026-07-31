@@ -1,11 +1,11 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
 WS ?= $(CURDIR)
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot"
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -95,3 +95,18 @@ rules-validate:
 ## pre-commit/CI gate. For a pure read-only check use `make rules-validate`.
 rules-stabilize:
 	bash ops/scripts/run_rules_stabilization_validation.sh
+
+## Read-only integrity check: report drift/missing/extra governed files against the
+## committed integrity/manifest-lock.json baseline. Never repairs, never writes to
+## tracked files (report goes to the gitignored ops/logs/). If the baseline was never
+## seeded it prints "manifest not seeded" and exits 0. Safe to run anytime.
+integrity-check:
+	python3 integrity/hash-verifier.py --no-repair
+
+## Seed/refresh the integrity baseline: snapshot every governed file's sha256 + full
+## base64 content into integrity/manifest-lock.json. Deliberate, high-footprint action
+## (embeds file contents) — run intentionally and review the (large) diff. Not wired
+## into any hook/CI. The self-heal auto-repair mode is intentionally NOT exposed as a
+## target because it overwrites working-tree files from the baseline.
+integrity-snapshot:
+	python3 integrity/hash-verifier.py --snapshot
