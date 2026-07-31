@@ -1,9 +1,20 @@
 """Machine-level Graphiti environment loader.
 
-Repo clones never carry graphiti secrets. Configure once per Mac:
-  ~/.cursor/graphiti.env          — optional overrides (no secrets required if using keychain)
+LEGACY / SELF-HOSTED ONLY. This loader configures the retired local-tunnel model
+(graphiti-memory @ 127.0.0.1:8100 over an SSH tunnel to the Hetzner VPS, token in
+GRAPHITI_MCP_TOKEN). The authoritative memory path for hosted/managed environments
+is the HTTP control plane (l9-shared-memory @ L9_MEMORY_HTTP_URL, Bearer
+L9_MEMORY_CLIENT_TOKEN) — see environment/claude-code/mcp.template.json. That path
+uses NONE of the values below: no SSH tunnel, no Keychain, no VPS reachability.
+
+Repo clones never carry graphiti secrets. Where the token comes from, by platform:
+  macOS  — Keychain service `graphiti-mcp-token` (queried below), or an env file.
+  Linux  — GRAPHITI_MCP_TOKEN in the environment, or ~/.cursor/secrets/graphiti.env.
+           There is no Keychain on Linux; the Keychain lookup is skipped there.
+
+Optional per-machine overlays (both platforms):
+  ~/.cursor/graphiti.env          — optional overrides (no secrets required)
   ~/.cursor/secrets/graphiti.env  — optional secrets overlay (gitignored globally)
-  macOS Keychain                  — graphiti-mcp-token, graphiti-c1-ssh-key
 
 Safe defaults live in graphiti.env.defaults (bash) and DEFAULTS below (python).
 """
@@ -12,6 +23,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 DEFAULTS: dict[str, str] = {
@@ -55,6 +67,11 @@ def _load_env_file(path: Path) -> None:
 
 
 def _keychain_get(service: str) -> str | None:
+    # Keychain (`security`) is macOS-only. On Linux/containers there is no Keychain,
+    # so skip the lookup explicitly rather than shelling out to a missing binary and
+    # swallowing the error — the token is expected via env or ~/.cursor/secrets there.
+    if sys.platform != "darwin":
+        return None
     try:
         result = subprocess.run(
             ["security", "find-generic-password", "-s", service, "-w"],
@@ -88,7 +105,14 @@ def load_graphiti_env() -> None:
 def env_status() -> dict[str, str]:
     """Non-secret status for doctor/init scripts."""
     load_graphiti_env()
+    token_source = (
+        "keychain-or-env (macOS)"
+        if sys.platform == "darwin"
+        else "env or ~/.cursor/secrets/graphiti.env (no Keychain on Linux)"
+    )
     return {
+        "platform": sys.platform,
+        "token_source": token_source,
         "machine_env": str(Path.home() / ".cursor" / "graphiti.env"),
         "machine_env_exists": str((Path.home() / ".cursor" / "graphiti.env").is_file()),
         "secrets_overlay_exists": str(
