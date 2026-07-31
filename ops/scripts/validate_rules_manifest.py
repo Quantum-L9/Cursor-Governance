@@ -97,6 +97,12 @@ def validate(root: Path) -> list[str]:
 
     for entry in entries:
         path = rules_dir / entry["file"]
+        if not path.is_file():
+            # Manifest references a rule that no longer exists on disk (drift).
+            # Report it instead of crashing on the read below, so the validator
+            # can surface every drift finding it was designed to catch.
+            fail(errors, f"manifest references missing rule file: {entry['file']}")
+            continue
         digest = f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
         if entry.get("content_digest") != digest:
             fail(errors, f"digest mismatch: {entry['file']}")

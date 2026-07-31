@@ -65,10 +65,13 @@ def write_report(payload: dict):
 
 
 def update_meta_audit(title: str, details: str):
-    stamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    META_AUDIT.parent.mkdir(parents=True, exist_ok=True)
+    # Do not resurrect an archived/absent audit file. intelligence/meta-audit.md
+    # was archived in the Suite-6 -> L9 migration; recreating it as a side effect
+    # of an integrity check would itself introduce governed-tree drift. Append
+    # only when the file already exists.
     if not META_AUDIT.exists():
-        META_AUDIT.write_text("")
+        return
+    stamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     with open(META_AUDIT, "a") as f:
         f.write(f"\n## Integrity Reflection — {stamp}\n**{title}**\n{details}\n")
 
@@ -118,6 +121,18 @@ def snapshot():
 def verify_and_repair(auto_repair=True):
     manifest = load_manifest()
     if manifest is None or not manifest.get("files"):
+        # Report-only must never mutate. An empty/absent manifest means the
+        # integrity baseline was never seeded; only the self-heal path may
+        # auto-initialize it via snapshot(). Report-only says so and stops.
+        if not auto_repair:
+            stamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            write_report({"mode": "verify", "timestamp": stamp, "status": "manifest_not_seeded"})
+            log_activity("Report-only: manifest not seeded; run --snapshot to initialize.")
+            print(
+                "integrity: manifest not seeded (0 files). "
+                "Run `make integrity-snapshot` to initialize the baseline."
+            )
+            return
         log_activity("No manifest found; running snapshot instead of verify.")
         snapshot()
         return
@@ -161,6 +176,10 @@ def verify_and_repair(auto_repair=True):
         "extras": extras,
     }
     write_report(report)
+    print(
+        f"integrity: drift={len(drift)} missing={len(missing)} "
+        f"repaired={len(repaired)} extras={len(extras)} report_only={not auto_repair}"
+    )
     log_activity(
         f"Verify complete. drift={len(drift)} missing={len(missing)} "
         f"repaired={len(repaired)} extras={len(extras)}"

@@ -12,9 +12,7 @@
   },
   "files": [
     "adaptive-reasoning.md",
-    "system-reflection.md",
-    "improvement-loop.md",
-    "meta-audit.md"
+    "system-reflection.md"
   ],
   "telemetry": {
     "audit_log": "/ops/logs/meta_audit.json",
