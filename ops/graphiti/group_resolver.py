@@ -78,8 +78,7 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
             return {
                 "group_id": None,
                 "error": (
-                    f"explicit group_id '{override}' contradicts resolved repo match "
-                    f"'{resolved}'"
+                    f"explicit group_id '{override}' contradicts resolved repo match '{resolved}'"
                 ),
                 "readonly": True,
             }
