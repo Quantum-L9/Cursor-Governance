@@ -94,9 +94,9 @@ Registered automatically by `setup_workspace_symlinks.sh` or `install_cursor_hoo
 | # | Requirement | Detail |
 |---|-------------|--------|
 | 7.1 | **`group_registry.yaml`** | `ops/graphiti/group_registry.yaml` — maps repo → `group_id` |
-| 7.2 | **Repo match** | Git remote or path hint must match a registry entry, or set explicit env |
+| 7.2 | **Repo match** | Git remote or path hint must match a registry entry, or set explicit env. Path hints are anchored to whole path segments — a hint matches only an exact directory component of cwd, never an arbitrary substring |
 | 7.3 | **Forbidden groups** | Never use: `main`, `default`, `test`, empty string |
-| 7.4 | **Fallback** | Unmatched repos → `igor-workspace` readonly (reads OK, writes blocked) |
+| 7.4 | **Fallback + hardened overrides** | Unmatched repos → `igor-workspace` readonly (reads OK, writes blocked). An explicit override (`--group-id` / `GRAPHITI_GROUP_ID`) must equal the resolved repo match when one exists — a contradicting override fails closed (readonly, no write). Overrides remain allowed when there is no repo match at all. Direct `write` to `igor-workspace` is always rejected; the only sanctioned write into that group is bootstrap's integration-edge mirror |
 
 Add repo entry to `group_registry.yaml` for full read/write (e.g. Enrichment.Inference.Engine).
 

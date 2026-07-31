@@ -10,7 +10,13 @@ alwaysApply: true
 
 - Resolve via `graphiti_memory_client.py resolve` or `GRAPHITI_GROUP_ID` env
 - **Forbidden:** `main`, `default`, empty, `test`
-- Cross-repo edges live in `igor-workspace` only
+- An explicit override (`--group-id` / `GRAPHITI_GROUP_ID`) must match the
+  resolved repo (git remote or path hint); a contradicting override fails
+  closed to readonly. Overrides are honored only when no repo match exists
+- Path hints match whole path segments only, never substrings
+- Cross-repo edges live in `igor-workspace` only — and only bootstrap's
+  integration-edge mirror may write there; `write` rejects `igor-workspace`
+  unconditionally
 
 ## Write gates (GATES-002)
 
