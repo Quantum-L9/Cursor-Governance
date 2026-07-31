@@ -21,9 +21,13 @@ PASS — registry valid, 5 agent(s), adapters consistent, no committed secrets
 ## 2. Rendered principals (synthetic tokens, --include-planned)
 
 ```
-$ python3 tools/render_principals.py --registry agent_registry.yaml \
-    --tokens /tmp/l9test/agent_tokens.local.json \
-    --out /tmp/l9test/auth_tokens.json --include-planned
+$ python3 tools/render_principals.py \
+    --root . \
+    --out-dir /tmp/l9test \
+    --registry agent_registry.yaml \
+    --tokens agent_tokens.local.json \
+    --out auth_tokens.json \
+    --include-planned
 wrote 5 principal(s) -> /tmp/l9test/auth_tokens.json (agents: claude-code, codex, cursor, gemini, manus)
 
 cursor       user=cursor_agent       roles=['orchestrator', 'memory-client'] write=['*'] promote=['*']
@@ -33,6 +37,10 @@ codex        user=codex_agent        roles=['implementer', 'memory-client'] writ
 gemini       user=gemini_agent       roles=['reviewer', 'memory-client'] write=['cursor-governance.reviews', 'l9-graphiti-memory.reviews'] promote=[]
 ```
 
+`--registry`, `--tokens`, and `--out` are relative paths under `--root` /
+`--out-dir` only (no absolute paths, no `..`). Absolute free-form CLI paths
+are rejected.
+
 Grants match the role catalog exactly: orchestrator full write + promote;
 implementers scoped to assigned groups; researcher-builder gains the shared
 workspace namespace (`igor-workspace`, read from the registry's
@@ -40,13 +48,15 @@ workspace namespace (`igor-workspace`, read from the registry's
 here, fixed during repo integration); reviewer confined to `<group>.reviews`;
 nobody else promotes.
 
-## 3. Self-test suite (2 positive, 5 negative)
+## 3. Self-test suite (2 positive, 7 negative)
 
 ```
 $ python3 tools/test_validators.py
 PASS  T1 real pack passes validator
 PASS  T2 principals render with role-correct grants
 PASS  T3 shared token rejected
+PASS  T3b absolute --tokens rejected
+PASS  T3c --out path escape rejected
 PASS  T4 duplicate user_id rejected
 PASS  T5 unknown role rejected
 PASS  T6 naming-law violation rejected

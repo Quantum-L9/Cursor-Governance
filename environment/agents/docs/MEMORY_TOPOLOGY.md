@@ -39,9 +39,12 @@ shared plane.
 python -m pip install 'l9-graphite-memory[server]'
 # Render per-agent principals from the registry (run wherever governance is cloned):
 python3 environment/agents/tools/render_principals.py \
-  --registry environment/agents/agent_registry.yaml \
-  --tokens   ~/.config/l9-memory/agent_tokens.local.json \
-  --out      ~/.config/l9-memory/auth_tokens.json
+  --root     environment/agents \
+  --out-dir  ~/.config/l9-memory \
+  --registry agent_registry.yaml \
+  --tokens   agent_tokens.local.json \
+  --out      auth_tokens.json
+# (--registry/--tokens/--out are relative under --root/--out-dir only)
 # Start (systemd unit recommended; http_auth_required stays true):
 l9-memory-server --transport http --host 127.0.0.1 --port 8200
 # TLS proxy: memory.<domain> -> 127.0.0.1:8200  (Caddy: `reverse_proxy 127.0.0.1:8200`)

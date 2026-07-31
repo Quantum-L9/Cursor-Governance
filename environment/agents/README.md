@@ -60,10 +60,13 @@ python3 environment/agents/tools/validate_agents.py
 #    ~/.config/l9-memory/agent_tokens.local.json: {"manus": "...", ...}
 
 # 3. Render server principals and deploy per docs/MEMORY_TOPOLOGY.md
+#    --registry/--tokens/--out are RELATIVE paths under trusted roots only.
 python3 environment/agents/tools/render_principals.py \
-  --registry environment/agents/agent_registry.yaml \
-  --tokens ~/.config/l9-memory/agent_tokens.local.json \
-  --out ~/.config/l9-memory/auth_tokens.json
+  --root environment/agents \
+  --out-dir ~/.config/l9-memory \
+  --registry agent_registry.yaml \
+  --tokens agent_tokens.local.json \
+  --out auth_tokens.json
 
 # 4. Wire each surface using its adapters/<name>/README.md
 ```

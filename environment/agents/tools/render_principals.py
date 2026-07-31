@@ -6,20 +6,25 @@
 #   layer: tool
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.1
-#   updated: 2026-07-29
+#   version: 1.1.0
+#   updated: 2026-07-30
 """Render l9-graphiti-memory auth_tokens.json from the agent registry.
 
-Reads:
-  * agent_registry.yaml               (committed; identities + roles, NO tokens)
-  * agent_tokens.local.json           (gitignored; {"<agent_id>": "<bearer token>"})
+Reads (relative to trusted bases — never free-form absolute CLI paths):
+  * ``--root`` / ``--registry``     agent_registry.yaml (identities + roles, NO tokens)
+  * ``--out-dir`` / ``--tokens``    agent_tokens.local.json (gitignored token map)
 
 Writes:
-  * auth_tokens.json for the memory server: one principal per active agent,
-    namespace grants derived from role + assigned_groups.
+  * ``--out-dir`` / ``--out``       auth_tokens.json for the memory server
 
-Fails loudly on: duplicate identities, unknown roles, missing/duplicate tokens,
-tokens that look committed (registry path), or empty grants for writing roles.
+CLI contract (Sonar LLM/CLI path-escape):
+  * ``--root`` and ``--out-dir`` are the only trusted directory roots.
+  * ``--registry``, ``--tokens``, and ``--out`` MUST be relative paths with no
+    ``..`` segments; they are joined under the matching root via
+    ``os.path.join`` + ``realpath`` + ``commonpath``.
+
+Fails loudly on: path escape, duplicate identities, unknown roles,
+missing/duplicate tokens, or empty grants for writing roles.
 """
 
 from __future__ import annotations
@@ -28,7 +33,6 @@ import argparse
 import json
 import os
 import sys
-import tempfile
 from pathlib import Path
 
 try:
@@ -45,44 +49,35 @@ def fail(msg: str) -> None:
     sys.exit(1)
 
 
-def allowed_roots() -> list[str]:
-    return [
-        os.path.realpath(os.getcwd()),
-        os.path.realpath(tempfile.gettempdir()),
-    ]
-
-
-def resolve_cli_path(path: Path, *, label: str) -> Path:
-    """Resolve a CLI path and reject escapes outside allowed roots.
-
-    Uses ``os.path.realpath`` + ``os.path.commonpath`` (Sonar-recognized
-    sanitizers) so LLM/operator-supplied paths cannot escape cwd or tempdir.
-    """
+def require_relative(rel: str, *, label: str) -> str:
+    """Reject absolute paths and ``..`` segments in CLI-supplied relative names."""
+    if not rel or rel.strip() != rel:
+        fail(f"{label} must be a non-empty relative path without surrounding whitespace")
+    path = Path(rel)
+    if path.is_absolute() or path.expanduser() != path:
+        fail(f"{label} must be relative (no absolute path or ~): {rel}")
     if ".." in path.parts:
-        fail(f"{label} must not contain '..' path segments: {path}")
-    target = os.path.realpath(os.path.expanduser(str(path)))
-    if not any(os.path.commonpath([root, target]) == root for root in allowed_roots()):
-        fail(f"{label} must resolve under cwd or tempdir ({', '.join(allowed_roots())}): {path}")
-    return Path(target)
+        fail(f"{label} must not contain '..' path segments: {rel}")
+    return rel
 
 
-def write_text_secure(path: Path, content: str, *, label: str) -> Path:
-    """Validate then write via open() so path-escape checks stay in the sink."""
-    safe = resolve_cli_path(path, label=label)
-    os.makedirs(safe.parent, exist_ok=True)
-    # Re-check immediately before the write sink (taint-analysis boundary).
-    target = os.path.realpath(str(safe))
-    if not any(os.path.commonpath([root, target]) == root for root in allowed_roots()):
-        fail(f"{label} escaped allowed roots before write: {path}")
-    with open(target, "w", encoding="utf-8") as fh:
-        fh.write(content)
+def under_root(root: Path, rel: str, *, label: str) -> Path:
+    """Join ``rel`` under trusted ``root``; refuse escapes (Sonar-recognized pattern)."""
+    rel = require_relative(rel, label=label)
+    base = os.path.realpath(str(root))
+    if not os.path.isdir(base):
+        fail(f"trusted root is not a directory: {root}")
+    # Construct from base + relative only — never trust a free-form absolute CLI path.
+    target = os.path.realpath(os.path.join(base, rel))
+    if os.path.commonpath([base, target]) != base:
+        fail(f"{label} escapes trusted root {base}: {rel}")
     return Path(target)
 
 
 def load_yaml(path: Path) -> dict:
     if not path.is_file():
         fail(f"registry not found: {path}")
-    with path.open("r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
         fail(f"registry did not parse to a mapping: {path}")
@@ -205,13 +200,50 @@ def process_agent(
     return token, principal
 
 
+def write_under_root(root: Path, rel: str, content: str, *, label: str) -> Path:
+    """Validate relative path under root, then write via open()."""
+    path = under_root(root, rel, label=label)
+    parent = path.parent
+    # Parent is still under root (commonpath already enforced on ``path``).
+    os.makedirs(parent, exist_ok=True)
+    target = os.path.realpath(str(path))
+    base = os.path.realpath(str(root))
+    if os.path.commonpath([base, target]) != base:
+        fail(f"{label} escaped trusted root before write: {rel}")
+    with open(target, "w", encoding="utf-8") as fh:
+        fh.write(content)
+    return Path(target)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--registry", required=True, type=Path)
     ap.add_argument(
-        "--tokens", required=True, type=Path, help="agent_tokens.local.json — gitignored token map"
+        "--root",
+        type=Path,
+        required=True,
+        help="Trusted pack directory (registry is resolved under this root)",
     )
-    ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument(
+        "--out-dir",
+        type=Path,
+        default=None,
+        help="Trusted directory for --tokens and --out (default: same as --root)",
+    )
+    ap.add_argument(
+        "--registry",
+        default="agent_registry.yaml",
+        help="Registry path relative to --root (default: agent_registry.yaml)",
+    )
+    ap.add_argument(
+        "--tokens",
+        default="agent_tokens.local.json",
+        help="Token map path relative to --out-dir (default: agent_tokens.local.json)",
+    )
+    ap.add_argument(
+        "--out",
+        default="auth_tokens.json",
+        help="Output path relative to --out-dir (default: auth_tokens.json)",
+    )
     ap.add_argument("--tenant", default="l9")
     ap.add_argument("--organization", default="quantum-l9")
     ap.add_argument(
@@ -221,8 +253,13 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    registry_path = resolve_cli_path(args.registry, label="--registry")
-    tokens_path = resolve_cli_path(args.tokens, label="--tokens")
+    root = Path(os.path.realpath(str(args.root.expanduser())))
+    out_dir = Path(os.path.realpath(str((args.out_dir or args.root).expanduser())))
+
+    # Validate relative path contracts up front (before any file I/O).
+    registry_path = under_root(root, args.registry, label="--registry")
+    tokens_path = under_root(out_dir, args.tokens, label="--tokens")
+    _ = under_root(out_dir, args.out, label="--out")  # reject .. / absolute early
 
     registry = load_yaml(registry_path)
     roles = registry.get("roles") or {}
@@ -231,7 +268,8 @@ def main() -> int:
 
     if not tokens_path.is_file():
         fail(f"token map not found: {tokens_path} (create it locally; never commit it)")
-    token_map = json.loads(tokens_path.read_text(encoding="utf-8"))
+    with open(tokens_path, encoding="utf-8") as fh:
+        token_map = json.load(fh)
     if not isinstance(token_map, dict):
         fail("token map must be a JSON object of agent_id -> token")
 
@@ -261,7 +299,7 @@ def main() -> int:
     if not out:
         fail("no active agents produced principals")
 
-    out_path = write_text_secure(args.out, json.dumps(out, indent=2) + "\n", label="--out")
+    out_path = write_under_root(out_dir, args.out, json.dumps(out, indent=2) + "\n", label="--out")
     try:
         out_path.chmod(0o600)
     except OSError as e:

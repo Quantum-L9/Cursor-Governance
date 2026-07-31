@@ -55,7 +55,8 @@ def main() -> int:
 
     # T2 positive: principals render for all agents incl. planned
     with tempfile.TemporaryDirectory() as td:
-        tokmap = Path(td) / "tok.json"
+        out_dir = Path(td)
+        tokmap = out_dir / "tok.json"
         tokmap.write_text(
             json.dumps(
                 {
@@ -64,17 +65,21 @@ def main() -> int:
                 }
             )
         )
-        out = Path(td) / "auth_tokens.json"
+        out = out_dir / "auth_tokens.json"
         r = run(
             [
                 PY,
                 str(TOOLS / "render_principals.py"),
+                "--root",
+                str(ROOT),
+                "--out-dir",
+                str(out_dir),
                 "--registry",
-                str(ROOT / "agent_registry.yaml"),
+                "agent_registry.yaml",
                 "--tokens",
-                str(tokmap),
+                "tok.json",
                 "--out",
-                str(out),
+                "auth_tokens.json",
                 "--include-planned",
             ]
         )
@@ -108,18 +113,64 @@ def main() -> int:
             [
                 PY,
                 str(TOOLS / "render_principals.py"),
+                "--root",
+                str(ROOT),
+                "--out-dir",
+                str(out_dir),
                 "--registry",
-                str(ROOT / "agent_registry.yaml"),
+                "agent_registry.yaml",
                 "--tokens",
-                str(tokmap),
+                "tok.json",
                 "--out",
-                str(out),
+                "auth_tokens.json",
                 "--include-planned",
             ]
         )
         case(
             "T3 shared token rejected",
             r.returncode != 0 and "share a token" in r.stderr,
+            r.stderr.strip(),
+        )
+
+        # T3b negative: absolute --tokens path rejected
+        r = run(
+            [
+                PY,
+                str(TOOLS / "render_principals.py"),
+                "--root",
+                str(ROOT),
+                "--out-dir",
+                str(out_dir),
+                "--tokens",
+                str(tokmap),  # absolute — must fail
+                "--include-planned",
+            ]
+        )
+        case(
+            "T3b absolute --tokens rejected",
+            r.returncode != 0 and "relative" in r.stderr,
+            r.stderr.strip(),
+        )
+
+        # T3c negative: .. escape in --out rejected
+        r = run(
+            [
+                PY,
+                str(TOOLS / "render_principals.py"),
+                "--root",
+                str(ROOT),
+                "--out-dir",
+                str(out_dir),
+                "--tokens",
+                "tok.json",
+                "--out",
+                "../escape.json",
+                "--include-planned",
+            ]
+        )
+        case(
+            "T3c --out path escape rejected",
+            r.returncode != 0 and (".." in r.stderr or "escape" in r.stderr),
             r.stderr.strip(),
         )
 
