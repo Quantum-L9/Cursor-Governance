@@ -1,0 +1,158 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: environment/agents/agent_registry.yaml
+#   layer: registry
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-07-28
+#
+# AGENT REGISTRY — the single source of truth for WHO writes memory.
+# Peer of ops/graphiti/group_registry.yaml (which answers WHAT repo memory
+# is about). Together they complete the identity matrix:
+#   group_id  = repo namespace  -> SHARED across all agents (group_registry.yaml)
+#   agent     = writing identity -> DISTINCT per agent (this file)
+#
+# Rules (enforced by validate_agents.py):
+#   * agent_id unique, kebab-case, immutable once shipped
+#   * user_id unique, snake_case, "<agent_id with _>_agent"
+#   * source == agent_id
+#   * principal_id == "<agent_id>-memory-client"
+#   * token_env == "L9_MEMORY_TOKEN__<AGENT_ID upper snake>"
+#     (legacy_token_env preserves already-deployed names; both are accepted)
+#   * role must exist in the roles catalog below
+#   * NO tokens in this file, ever. Tokens live in the account environment
+#     of each surface and in agent_tokens.local.json (gitignored) on the
+#     machine that renders auth_tokens.json for the memory server.
+
+schema_version: 1
+workspace_group: igor-workspace
+
+# ---------------------------------------------------------------------------
+# Role catalog — hard grants are namespace globs applied by
+# tools/render_principals.py when emitting the memory server's auth_tokens.json.
+# The work-claim protocol (docs/WORK_CLAIM_PROTOCOL.md) is the soft layer that
+# prevents two agents doing the same task inside a namespace they both hold.
+# ---------------------------------------------------------------------------
+roles:
+  orchestrator:
+    description: >
+      Human-directed lead session. Full read/write across the workspace,
+      may promote memories, arbitrates stale or conflicting task claims.
+    read_namespaces: ["*"]
+    write_namespaces: ["*"]
+    promote_namespaces: ["*"]
+    is_admin: false
+  implementer:
+    description: >
+      Writes code and memories only in repos it is assigned. Cannot promote.
+      Must claim tasks before starting work.
+    read_namespaces: ["*"]
+    write_namespaces: []          # filled per-agent from assigned_groups
+    promote_namespaces: []
+    is_admin: false
+  researcher-builder:
+    description: >
+      Research, analysis, multi-repo build work. Writes to assigned repos
+      plus the shared workspace namespace. Cannot promote.
+    read_namespaces: ["*"]
+    write_namespaces: []          # filled per-agent from assigned_groups
+    promote_namespaces: []
+    is_admin: false
+  reviewer:
+    description: >
+      CI / PR review bots. May write only review episodes into the
+      "<group>.reviews" sub-namespace of assigned repos.
+    read_namespaces: ["*"]
+    write_namespaces: []          # rendered as "<group>.reviews" per assignment
+    promote_namespaces: []
+    is_admin: false
+  observer:
+    description: Read-only. Dashboards, analytics, retrieval-only assistants.
+    read_namespaces: ["*"]
+    write_namespaces: []
+    promote_namespaces: []
+    is_admin: false
+
+# ---------------------------------------------------------------------------
+# Agents — one entry per writing identity. Adding an agent = add an entry,
+# run the renderers, issue a token. Nothing else is hand-edited.
+# ---------------------------------------------------------------------------
+agents:
+  cursor:
+    agent_id: cursor
+    user_id: cursor_agent            # matches ops/graphiti/config-docker-neo4j.yaml ${USER_ID:cursor_agent}
+    source: cursor
+    principal_id: cursor-memory-client
+    token_env: L9_MEMORY_TOKEN__CURSOR
+    legacy_token_env: GRAPHITI_MCP_TOKEN   # already deployed on Mac machine env; still honored
+    role: orchestrator
+    surfaces: [cursor-ide]
+    assigned_groups: ["*"]
+    adapter: cursor                  # existing .cursor-commands activation, unchanged
+    status: active
+
+  claude-code:
+    agent_id: claude-code
+    user_id: claude_code_agent       # matches environment/claude-code/web/environment.env.example
+    source: claude-code
+    principal_id: claude-code-memory-client
+    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
+    legacy_token_env: L9_MEMORY_CLIENT_TOKEN   # already deployed in Claude account env; still honored
+    role: implementer
+    surfaces: [claude-cli, claude-web, claude-mobile]
+    assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]
+    adapter: claude-code             # existing environment/claude-code/, identities now rendered from here
+    status: active
+
+  manus:
+    agent_id: manus
+    user_id: manus_agent
+    source: manus
+    principal_id: manus-memory-client
+    token_env: L9_MEMORY_TOKEN__MANUS
+    role: researcher-builder
+    surfaces: [manus-cloud]
+    assigned_groups: [cursor-governance, l9-graphiti-memory, cognitive-engine-graphs, igorbot]
+    adapter: manus
+    status: active
+
+  codex:
+    agent_id: codex
+    user_id: codex_agent
+    source: codex
+    principal_id: codex-memory-client
+    token_env: L9_MEMORY_TOKEN__CODEX
+    role: implementer
+    surfaces: [codex-cloud, codex-cli]
+    assigned_groups: [l9-node-template]
+    adapter: codex
+    status: planned
+
+  gemini:
+    agent_id: gemini
+    user_id: gemini_agent
+    source: gemini
+    principal_id: gemini-memory-client
+    token_env: L9_MEMORY_TOKEN__GEMINI
+    role: reviewer
+    surfaces: [gemini-cli]
+    assigned_groups: [cursor-governance, l9-graphiti-memory]
+    adapter: gemini
+    status: planned
+
+# ---------------------------------------------------------------------------
+# Shared memory endpoint contract (values live in each surface's environment,
+# never here). Loopback (127.0.0.1) shares only within one host/container —
+# cloud agents (manus, claude-web, codex-cloud) REQUIRE a routable host with
+# http_auth_required=true. See docs/MEMORY_TOPOLOGY.md.
+# ---------------------------------------------------------------------------
+memory:
+  url_env: L9_MEMORY_HTTP_URL
+  mcp_path: /mcp
+  auth_scheme: bearer
+  identity_env:
+    user_id: USER_ID
+    agent_id: L9_MEMORY_AGENT_ID
+    source: L9_MEMORY_SOURCE

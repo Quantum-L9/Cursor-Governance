@@ -1,0 +1,22 @@
+{
+  "_l9_meta": {
+    "l9_schema": 1,
+    "repo": "Quantum-L9/Cursor-Governance",
+    "path": "environment/agents/adapters/manus/mcp-connector.json",
+    "layer": "adapter-config",
+    "owner": "governance-control-plane",
+    "status": "active",
+    "version": "1.0.0",
+    "updated": "2026-07-28",
+    "note": "Template for the Manus Custom MCP connector. Identity rendered from agent_registry.yaml (agents.manus). Replace ${...} at connector creation; never commit real tokens."
+  },
+  "name": "l9-memory",
+  "transport": "http",
+  "url": "${L9_MEMORY_HTTP_URL}/mcp",
+  "headers": {
+    "Authorization": "Bearer ${L9_MEMORY_CLIENT_TOKEN}",
+    "X-L9-User-Id": "manus_agent",
+    "X-L9-Agent-Id": "manus",
+    "X-L9-Source": "manus"
+  }
+}

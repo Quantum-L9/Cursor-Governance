@@ -322,6 +322,11 @@ def cmd_write(args: argparse.Namespace) -> int:
     group_id = resolved.get("group_id")
     if not group_id or group_id in FORBIDDEN_GROUPS:
         raise SystemExit("forbidden or missing group_id")
+    if group_id == load_registry().get("workspace_group", "igor-workspace"):
+        raise SystemExit(
+            "writes to the shared workspace group are not permitted via cmd_write; "
+            "cross-repo edges are mirrored only by bootstrap's integration-edge path"
+        )
     if not _rate.allow():
         raise SystemExit("rate limited")
     now = datetime.now(UTC)

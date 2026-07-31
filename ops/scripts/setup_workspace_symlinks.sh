@@ -339,7 +339,13 @@ hooks = data.setdefault("hooks", {})
 ss = hooks.setdefault("sessionStart", [])
 ss = [e for e in ss if e.get("command") != "./hooks/session-start-memory-orchestrator.sh"]
 bootstrap_entry = {"command": bootstrap_cmd, "timeout": 30}
-ss = [bootstrap_entry] + [e for e in ss if e.get("command") != bootstrap_cmd]
+# Match by substring, not exact equality: collapses stray env-var-prefixed
+# variants too (e.g. "GOVERNANCE_SYNC_PUSH=0 ./hooks/session-start-bootstrap.sh"),
+# which otherwise survive every reconcile as a second sessionStart entry and
+# double the cost of everything the bootstrap script does (including uv sync).
+ss = [bootstrap_entry] + [
+    e for e in ss if "session-start-bootstrap.sh" not in (e.get("command") or "")
+]
 hooks["sessionStart"] = ss
 data = {"version": 1, "hooks": hooks}
 
