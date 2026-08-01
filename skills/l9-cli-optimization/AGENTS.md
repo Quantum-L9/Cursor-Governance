@@ -95,6 +95,17 @@ Default `--mode plan`. Always plan and review danger exclusions before apply.
   force a flip.
 - **Honesty.** `evidence/FULL_THROTTLE_REPORT.md` carries the real flags-off →
   flags-on test delta. Never fabricate an activation.
+- **Consumer reachability.** A flag is only a real flip candidate if code *reads*
+  it. `flag_inventory` marks each `consumer_evidence` = `found`/`none`/`unknown`; a
+  `safe` flag that nothing reads (`none`) is held with `needs_wiring: true` —
+  flipping is a no-op, it needs a wiring change (the CEG `temporal_decay` case).
+  `unknown` = a generic `enabled` leaf; verify the parent block has a
+  consumer/adapter manually (registry drift). Never "activate" a `needs_wiring`
+  flag by flipping it.
+- **Non-runtime / infra held.** `scope=non_runtime` (config under `docs/`/`infra/`/
+  `deploy/`/`helm/`/`monitoring/`, `values*.yaml`) and `scope=infra` (generic
+  `enabled` under `ingress`/`autoscaling`/`pdb`/… deploy blocks) are surfaced but
+  never flipped — they are docs/deploy toggles, not app capability.
 - **Adapter overrides.** `.optimize-scan.json` → `full_throttle.{never_flip,
   always_flip,danger_tokens}` extends the classifier per-repo.
 

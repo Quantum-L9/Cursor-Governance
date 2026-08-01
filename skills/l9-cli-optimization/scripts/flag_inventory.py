@@ -71,6 +71,21 @@ _NONRUNTIME_CFG = re.compile(
     r"|(?:^|/)(?:example|sample)[\w.\-]*\.(?:ya?ml|json|toml|ini)$",
     re.IGNORECASE,
 )
+# Config that lives under docs/ or infra/deploy (Helm) trees — surfaced but held,
+# not flipped: docs/contract specs and deploy manifests are not app runtime config.
+_NONRUNTIME_PATH = re.compile(
+    r"(^|/)docs/|(^|/)infra/|(^|/)deploy(?:ment)?s?/|(^|/)helm/"
+    r"|(^|/)(?:monitoring|observability|logging|grafana|loki|prometheus)/"
+    r"|(^|/)chart\.ya?ml$|(^|/)values[\w.\-]*\.ya?ml$",
+    re.IGNORECASE,
+)
+# k8s / Helm deploy blocks: a generic `enabled` under one of these is an
+# infra/deploy toggle (turn on ingress/autoscaling/pdb), not an app capability.
+INFRA_BLOCKS = {
+    "ingress", "autoscaling", "hpa", "pdb", "poddisruptionbudget",
+    "servicemonitor", "networkpolicy", "serviceaccount", "rbac",
+    "podsecuritypolicy", "prometheus", "grafana", "persistence", "metrics",
+}
 
 # --- danger vocabulary (polarity-aware) ---------------------------------------
 # Turning a flag False->True that ENABLES one of these actions is danger.
@@ -335,12 +350,77 @@ def _iter(root: Path):
             yield path, rel, "config"
 
 
+_IDENT = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def _reader_corpus(root: Path) -> tuple[dict[str, set[str]], set[str], set[str]]:
+    """Build a repo-wide *reader* corpus (genuine consumers, not declarations).
+
+    Context-aware AST walk over non-test `.py` files, returning:
+    - name_loads_by_file: {rel: {Name ids read in Load context}} — per file so a
+      flag's own definition module can be excluded when checking it;
+    - attr_loads: attribute-access names read in Load context (`obj.<attr>`), the
+      real consumption signal for config/schema-derived flags;
+    - str_ids: identifier-like string constants (`config["<key>"]` lookups).
+    Assignment targets (Store) are excluded, so a `NAME = False` definition or a
+    Pydantic field declaration does NOT count as a consumer of itself."""
+    name_loads_by_file: dict[str, set[str]] = {}
+    attr_loads: set[str] = set()
+    str_ids: set[str] = set()
+    for path in root.rglob("*.py"):
+        rel = path.relative_to(root).as_posix()
+        if any(part in SKIP_DIRS for part in rel.split("/")):
+            continue
+        if is_test_file(rel) or _NOISE_SEG.search("/" + rel):
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+        except (SyntaxError, OSError):
+            continue
+        names: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                names.add(node.id)
+            elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+                attr_loads.add(node.attr)
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str) and _IDENT.match(node.value):
+                str_ids.add(node.value)
+        name_loads_by_file[rel] = names
+    return name_loads_by_file, attr_loads, str_ids
+
+
+def _consumer_evidence(flag: dict, corpus: tuple[dict[str, set[str]], set[str], set[str]]) -> str:
+    """Is this flag actually *read* anywhere? Returns found | none | unknown.
+
+    - python_assignment: found if the name is read (Load/attr/string) in any
+      module other than its own definition file.
+    - config_key with a DISTINCTIVE leaf: found if the leaf is accessed as an
+      attribute or string key (`spec.x.<leaf>` / `cfg["<leaf>"]`). This catches
+      declared-but-unconsumed flags (e.g. a schema field no code branches on).
+    - config_key with a GENERIC leaf (`enabled`/`on`/…): unknown — the leaf is
+      too common to disambiguate; the block's identity (parent) must be verified
+      manually (registry/adapter drift), so the decision is left unchanged."""
+    name_loads_by_file, attr_loads, str_ids = corpus
+    name = flag["flag"]
+    if flag.get("kind") == "python_assignment":
+        others: set[str] = set()
+        for rel, loads in name_loads_by_file.items():
+            if rel != flag.get("file"):
+                others |= loads
+        return "found" if (name in others or name in attr_loads or name in str_ids) else "none"
+    # config_key
+    if name.lower() in GENERIC_GATE:
+        return "unknown"
+    return "found" if (name in attr_loads or name in str_ids) else "none"
+
+
 def inventory_flags(root: Path, overrides: dict | None = None) -> list[dict]:
     """Enumerate every off-by-default flag under `root`, classify each, and
     attach the flip decision. Test files and archived/scratch trees are read for
     context but excluded from activation candidates."""
     staged_flags, _ = intent_scan(root)
     overrides = overrides or _load_overrides(root)
+    corpus = _reader_corpus(root)
     rows: list[dict] = []
     for path, rel, lang in _iter(root):
         if is_test_file(rel) or is_excluded(rel):
@@ -355,18 +435,31 @@ def inventory_flags(root: Path, overrides: dict | None = None) -> list[dict]:
             classification, reason = classify_flag(
                 f["flag"], f.get("context", ""), staged=staged,
                 parent=f.get("parent"), overrides=overrides)
+            scope = "runtime"
+            needs_wiring = False
+            parent = (f.get("parent") or "").lower()
             if f.get("no_flip"):
                 decision, dec_reason = "hold", "argparse CLI default — surface in docs, not flipped in source"
             elif classification == "danger":
                 decision, dec_reason = "hold", reason
             elif classification == "staged":
                 decision, dec_reason = "hold", reason
+            elif _NONRUNTIME_PATH.search("/" + rel):
+                decision, dec_reason, scope = "hold", "docs/infra deploy config — not application runtime config", "non_runtime"
+            elif parent in INFRA_BLOCKS:
+                decision, dec_reason, scope = "hold", f"infra/deploy toggle under '{parent}' — not an application capability", "infra"
             else:
                 decision, dec_reason = "flip", reason
+            evidence = _consumer_evidence(f, corpus)
+            if decision == "flip" and evidence == "none":
+                decision, needs_wiring = "hold", True
+                dec_reason = "declared but no consumer found — flipping is a no-op; needs a wiring change, not a flip"
             row = dict(f)
             row.pop("context", None)
             row.update({"polarity": "off->on", "classification": classification,
-                        "decision": decision, "reason": dec_reason})
+                        "decision": decision, "reason": dec_reason,
+                        "consumer_evidence": evidence, "needs_wiring": needs_wiring,
+                        "scope": scope})
             rows.append(row)
     rows.sort(key=lambda r: (r["file"], r["line"], r["flag"]))
     return rows
@@ -393,6 +486,9 @@ def summarize(rows: list[dict]) -> dict:
         "flip_candidates": sorted(r["flag"] for r in rows if r["decision"] == "flip"),
         "held_danger": sorted(r["flag"] for r in rows if r["classification"] == "danger"),
         "held_staged": sorted(r["flag"] for r in rows if r["classification"] == "staged"),
+        "needs_wiring": sorted(r["flag"] for r in rows if r.get("needs_wiring")),
+        "held_non_runtime": sorted(r["flag"] for r in rows if r.get("scope") == "non_runtime"),
+        "held_infra": sorted(r["flag"] for r in rows if r.get("scope") == "infra"),
     }
 
 
@@ -410,10 +506,15 @@ def main() -> int:
         "flags": rows,
         "summary": summarize(rows),
         "note": "Off-by-default flag inventory for full-throttle activation. decision=flip "
-                "means non-danger and non-staged (empirical back-out in full_throttle.py still "
-                "validates it against the repo's own tests). classification=danger is NEVER "
-                "flipped (polarity-aware: enables a dangerous action OR disables a safety "
-                "control); classification=staged is dormant_by_design (Identity-Lock #1).",
+                "means non-danger, non-staged, non-infra, runtime, and with a consumer "
+                "(empirical back-out in full_throttle.py still validates it against the repo's "
+                "own tests). classification=danger is NEVER flipped (polarity-aware); "
+                "classification=staged is dormant_by_design (Identity-Lock #1). needs_wiring=true "
+                "(consumer_evidence=none) means the flag is declared but nothing reads it — "
+                "flipping is a no-op; it needs a wiring change, not a flip. scope=non_runtime "
+                "(docs/infra) and scope=infra (ingress/autoscaling/pdb/... deploy blocks) are "
+                "surfaced but held. consumer_evidence=unknown is a generic config leaf whose "
+                "parent block identity must be verified manually (registry/adapter drift).",
     }
     text = json.dumps(result, indent=2) + "\n"
     if args.output:

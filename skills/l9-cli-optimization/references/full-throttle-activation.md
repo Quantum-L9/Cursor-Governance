@@ -40,6 +40,25 @@ Flipping a flag `False → True`, the classifier assigns one of:
 - **`safe` — flip candidate.** Everything else — still validated by tests before it
   ships (see back-out).
 
+Two further signals refine a `safe` flag before it is offered for flipping:
+
+- **Consumer reachability (`consumer_evidence`, `needs_wiring`).** A flag is only a
+  real flip candidate if something *reads* it. `flag_inventory` builds a repo-wide
+  reader corpus (Load-context Names, attribute accesses, string keys — declarations
+  and assignment targets excluded) and marks each flag `found` / `none` / `unknown`.
+  A `safe` flag with `consumer_evidence == none` is **declared but unconsumed** —
+  flipping it is a no-op — so it is held with `needs_wiring: true` ("needs a wiring
+  change, not a flip"). This is the flag-level form of the skill's "never fake an
+  activation" law (it is exactly the CEG `temporal_decay_enabled` case). `unknown`
+  is a generic config leaf (`enabled` under a block) the static check cannot
+  disambiguate; the decision is left unchanged and the block's parent identity must
+  be verified manually (registry/adapter drift).
+- **Non-runtime / infra scope (`scope`).** Config under `docs/`, `infra/`, `deploy/`,
+  `helm/`, `monitoring/` (and `values*.yaml` / `Chart.yaml`) is `scope=non_runtime`;
+  a generic `enabled` under a k8s/Helm deploy block (`ingress`, `autoscaling`,
+  `pdb`, …) is `scope=infra`. Both are **surfaced but held** — they are documentation
+  or deploy toggles, not application capability.
+
 Adapter override in `.optimize-scan.json`:
 
 ```json

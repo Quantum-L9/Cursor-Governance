@@ -20,6 +20,21 @@
 - `python3 scripts/scan_capabilities.py <repo>` — advisory scan for candidate underutilization gaps and entrypoints (verify before acting).
 - `python3 scripts/measure.py --before <cmd> --after <cmd> [--capture]` — comparable before/after proof block (throughput or functional).
 
+## Full-throttle activation mode (enable off-by-default flags at scale)
+
+A separate, opt-in mode; see `references/full-throttle-activation.md`. Never auto-merged.
+
+1. **Inventory + classify (read-only):** `python3 scripts/flag_inventory.py <repo>`. Read the `summary`:
+   - `flip_candidates` — non-danger, non-staged, runtime, *and* has a consumer.
+   - `held_danger` — polarity-aware block-list (enables a dangerous action OR disables a safety control); never flipped.
+   - `held_staged` — `dormant_by_design` (Identity-Lock #1); never flipped.
+   - `needs_wiring` — `consumer_evidence=none`: declared but nothing reads it; flipping is a no-op — it needs a *wiring change*, not a flip. (`consumer_evidence=unknown` on a generic `enabled` leaf → verify the parent block/registry manually.)
+   - `held_non_runtime` / `held_infra` — docs/deploy/monitoring config and k8s/Helm deploy toggles; surfaced but not application capability.
+2. **Plan (mutates nothing):** `python3 scripts/full_throttle.py <repo> --mode plan`. Review the danger/needs_wiring/scope exclusions before applying.
+3. **Apply (isolated worktree):** `python3 scripts/full_throttle.py <repo> --mode apply --test-cmd "<cmd>" --output ft.json`. Flips non-danger candidates in a throwaway `git worktree`, runs the repo's own tests, and backs out any flag that regresses them (`empirically_unsafe`).
+4. **Package:** `python3 scripts/build_flag_activation_pack.py --report ft.json --repo-root <repo> --output <dir>` → a REVIEW-REQUIRED pack (`auto_merge=false`) with the real flags-off→flags-on test delta in `FULL_THROTTLE_REPORT.md`.
+5. **Gate:** a human reviews/merges the PR. A run that flips nothing (all excluded or all regress) is a valid BLOCKED outcome, not a failure to force.
+
 ## Requirements
 
 Python 3.10+. Install dependencies before running the scripts:

@@ -140,6 +140,21 @@ keep #2 (safety) and #3 (no quota/backpressure bypass) intact:
 - **Staged / `dormant_by_design` flags are held.** A flag marked staged rollout
   (`wave N`, `dormant_by_design`, system-state intent) is classified `staged` and
   never flipped, honoring Identity-Lock #1.
+- **Consumer reachability (`consumer_evidence`, `needs_wiring`).** A flag is only a
+  real flip candidate if code actually *reads* it. `flag_inventory` builds a
+  repo-wide reader corpus (Load-context Names, attribute accesses, string keys —
+  declarations and assignment targets excluded) and marks each flag `found` /
+  `none` / `unknown`. A safe flag with `consumer_evidence=none` is **declared but
+  unconsumed** — flipping is a no-op — so it is held with `needs_wiring: true`
+  ("needs a wiring change, not a flip"). This is the flag-level form of the
+  never-fake-an-activation law (the CEG `temporal_decay_enabled` case). `unknown`
+  is a generic config leaf (`enabled` under a block) the static check cannot
+  disambiguate; decision unchanged, verify the parent/registry manually.
+- **Non-runtime / infra held (`scope`).** Config under `docs/`, `infra/`, `deploy/`,
+  `helm/`, `monitoring/` (and `values*.yaml` / `Chart.yaml`) is `scope=non_runtime`;
+  a generic `enabled` under a k8s/Helm deploy block (`ingress`/`autoscaling`/`pdb`/…)
+  is `scope=infra`. Both are surfaced but never flipped — docs/deploy toggles, not
+  application capability.
 - **Empirical back-out.** Every non-danger flip is validated by execution in a
   throwaway `git worktree` at HEAD: run the baseline (flags off), flip all
   candidates, run the repo's own tests, and back out — by bounded bisection — any
@@ -471,6 +486,15 @@ Update the smallest behavior-changing rule, route condition, proof obligation, o
   proposed_behavior_change: polarity-aware danger classifier (enabling a dangerous action OR disabling a safety control are both held), staged/dormant_by_design flags held, and empirical back-out reverts any flag that regresses the repo's own tests; the PR is never auto-merged.
 ```
 
+### Recorded observations (fifth run — CEG wiring PR + EIE handoff)
+
+```yaml
+- missed_trigger: flag_inventory flagged CEG causal.temporal_decay_enabled as safe->flip, but the flag had NO consumer — flipping was a no-op; it needed a wiring change (shipped as CEG PR #155). The scanner detected the default, never whether anything reads the flag.
+  proposed_behavior_change: added a context-aware repo-wide reader corpus (Load-only Names, attribute accesses, string keys — declarations/assignment targets excluded) and a consumer_evidence signal; a safe flag with consumer_evidence=none is held with needs_wiring=true ("needs a wiring change, not a flip"). Generic config leaves resolve to consumer_evidence=unknown (decision unchanged; verify parent/registry manually).
+- false_trigger: on EIE, flag_inventory surfaced docs/contracts/dependencies/*.yaml and infra/k8s/helm values*.yaml `enabled` keys as flip candidates — documentation/contract specs and Helm deploy manifests, not application runtime config.
+  proposed_behavior_change: added _NONRUNTIME_PATH (docs/, infra/, deploy/, helm/, monitoring/, values*.yaml, Chart.yaml) -> scope=non_runtime hold, and INFRA_BLOCKS (ingress/autoscaling/pdb/...) -> scope=infra hold. Both surfaced but never flipped.
+```
+
 ## Validation
 
 `scripts/self_test.py` is the single aggregate gate: it runs every standalone
@@ -531,7 +555,7 @@ See `expertise_model.yaml` and `skill_intelligence_report.yaml`. Do not claim ex
 - `scripts/measure.py`: comparable before/after measurement producing a proof block.
 - `references/full-throttle-activation.md`: full-throttle activation mode sub-contract (danger classifier, empirical back-out, pack shape, invariants).
 - `assets/full-throttle.example.json`: example `full_throttle.py --mode apply` report consumed by the flag-activation pack builder.
-- `scripts/flag_inventory.py`: off-by-default flag inventory + polarity-aware danger classifier + single-line flip transform.
+- `scripts/flag_inventory.py`: off-by-default flag inventory + polarity-aware danger classifier + consumer-reachability signal (`consumer_evidence`/`needs_wiring` via a repo-wide reader corpus) + non-runtime/infra `scope` holds + single-line flip transform.
 - `scripts/full_throttle.py`: worktree-isolated flip → test → empirical back-out harness; multi-repo driver.
 - `scripts/build_flag_activation_pack.py`: standalone deterministic review-required flag-activation pack builder (core pipeline untouched).
 - `scripts/route_optimize.py`: deterministic adaptive router.

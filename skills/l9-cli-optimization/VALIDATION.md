@@ -14,6 +14,11 @@
 - Deterministic archive reproduction: PASS (requires a pinned `created_utc` or `SOURCE_DATE_EPOCH`; the builder warns and falls back to wall-clock time otherwise)
 - Repository capability scan tool: PASS
 - Before/after measurement tool: PASS
+- Full-throttle flag inventory + polarity-aware danger classifier: PASS
+- Full-throttle consumer-reachability (`consumer_evidence` found/none/unknown → `needs_wiring`): PASS
+- Full-throttle non-runtime/infra `scope` holds (docs/infra/helm/monitoring, deploy blocks): PASS
+- Full-throttle apply harness (worktree flip → test → empirical back-out): PASS
+- Flag-activation pack build + determinism (review-required, never auto-merge): PASS
 - Missing route rejection: PASS
 - Unsatisfied proof rejection: PASS
 - Decision-selection drift rejection: PASS

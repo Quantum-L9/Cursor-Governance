@@ -33,6 +33,7 @@ python3 scripts/build_flag_activation_pack.py --report ft.json --repo-root <repo
 - **"All except a danger block-list" is proven by tests, not assumed.** Any flipped flag that regresses the repo's tests is reverted and reported `empirically_unsafe`.
 - **Nothing is auto-merged.** A full-throttle pack is `auto_merge=false`, labeled REVIEW REQUIRED; a human opens/merges the PR.
 - **A run that flips nothing is a valid outcome** (all danger-excluded or all regress → BLOCKED pack, exit 2), not a failure to force.
+- **A flag nothing reads is not a flip.** `flag_inventory` cross-checks each flag against a repo-wide reader corpus and sets `consumer_evidence` (`found`/`none`/`unknown`); a declared-but-unconsumed flag (`none`) is held `needs_wiring` — flipping is a no-op, it needs a wiring change (a generic `enabled` leaf is `unknown` → verify the parent/registry manually). Config under `docs/`/`infra/`/`deploy/`/`helm/`/`monitoring/` is held `scope=non_runtime`, and a generic `enabled` under a k8s/Helm deploy block (`ingress`/`autoscaling`/`pdb`) is held `scope=infra`.
 - **Isolation.** All flip+test happens in a throwaway worktree; the real working tree is never mutated.
 
 Run `python3 scripts/self_test.py` before packaging (it is the single aggregate gate and now also proves the full-throttle mode).

@@ -44,7 +44,7 @@
 
 - `references/full-throttle-activation.md`: mode sub-contract (danger classifier, empirical back-out, pack shape, invariants).
 - `assets/full-throttle.example.json`: example apply-mode report consumed by the pack builder.
-- `scripts/flag_inventory.py`: off-by-default flag inventory + polarity-aware danger classifier + flip transform.
+- `scripts/flag_inventory.py`: off-by-default flag inventory + polarity-aware danger classifier + consumer-reachability signal (`consumer_evidence`/`needs_wiring`) + non-runtime/infra `scope` holds + flip transform.
 - `scripts/full_throttle.py`: worktree-isolated flip → test → empirical back-out harness; multi-repo driver.
 - `scripts/build_flag_activation_pack.py`: standalone review-required flag-activation pack builder.
 

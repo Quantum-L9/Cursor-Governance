@@ -504,9 +504,13 @@ def main() -> int:
             encoding="utf-8")
         (ft / "system-state.md").write_text(
             "| KGE | kge_enabled=False | Wave 6 merge |\n", encoding="utf-8")
+        # check.py reads BOTH flip flags (attribute access) so the consumer-
+        # reachability signal marks them consumer_evidence=found (not needs_wiring)
+        # while still failing when breaker is on.
         (ft / "check.py").write_text(
             "import config\n"
             "assert not config.breaker_enabled, 'breaker must stay off'\n"
+            "if config.benign_enabled:\n    pass\n"
             "print('ok')\n", encoding="utf-8")
         run(["git", "add", "-A"], ft)
         run(["git", "commit", "-q", "-m", "ft fixture"], ft)
@@ -523,6 +527,54 @@ def main() -> int:
                 raise RuntimeError(f"flag_inventory misclassified {name}: got {cls.get(name)}, want {want}")
         if inv["summary"]["held_danger"] != ["allow_delete", "disable_auth", "use_live_api"]:
             raise RuntimeError(f"danger block-list wrong: {inv['summary']['held_danger']}")
+
+        # (a2) flag_inventory: consumer-reachability + non-runtime/infra precision.
+        # Isolated inventory-only fixture (NOT driven by full_throttle apply, so it
+        # cannot perturb the activated-set assertions below).
+        ftinv = temp / "ftinv"
+        (ftinv / "docs").mkdir(parents=True)
+        (ftinv / "infra").mkdir()
+        (ftinv / "defs.py").write_text(
+            "orphan_feature_enabled = False\nused_feature_enabled = False\n", encoding="utf-8")
+        (ftinv / "main.py").write_text(
+            "from defs import used_feature_enabled\nif used_feature_enabled:\n    print(1)\n", encoding="utf-8")
+        (ftinv / "consumer.py").write_text("reader = spec.decay_thing_enabled\n", encoding="utf-8")
+        (ftinv / "config.yaml").write_text(
+            "myblock:\n  decay_thing_enabled: false\n  orphan_thing_enabled: false\n", encoding="utf-8")
+        (ftinv / "docs" / "dep.yaml").write_text("dep:\n  enabled: false\n", encoding="utf-8")
+        (ftinv / "infra" / "values.yaml").write_text("ingress:\n  enabled: false\n", encoding="utf-8")
+        (ftinv / "app_config.yaml").write_text("autoscaling:\n  enabled: false\n", encoding="utf-8")
+        invx = json.loads(run([sys.executable, str(scripts / "flag_inventory.py"), str(ftinv)]).stdout)
+        by_key = {(f["flag"], f["file"]): f for f in invx["flags"]}
+
+        def _row(flag, file):
+            r = by_key.get((flag, file))
+            if r is None:
+                raise RuntimeError(f"flag_inventory missing {flag} in {file}: {sorted(by_key)}")
+            return r
+
+        # consumer found -> stays flip; consumer none -> hold + needs_wiring.
+        if _row("used_feature_enabled", "defs.py")["consumer_evidence"] != "found":
+            raise RuntimeError("read python flag should be consumer_evidence=found")
+        if _row("used_feature_enabled", "defs.py")["decision"] != "flip":
+            raise RuntimeError("consumed python flag should stay flip")
+        orphan_py = _row("orphan_feature_enabled", "defs.py")
+        if orphan_py["consumer_evidence"] != "none" or not orphan_py["needs_wiring"] or orphan_py["decision"] != "hold":
+            raise RuntimeError(f"unread python flag should be none/needs_wiring/hold: {orphan_py}")
+        if _row("decay_thing_enabled", "config.yaml")["consumer_evidence"] != "found":
+            raise RuntimeError("config flag read via attribute should be consumer_evidence=found")
+        orphan_cfg = _row("orphan_thing_enabled", "config.yaml")
+        if orphan_cfg["consumer_evidence"] != "none" or not orphan_cfg["needs_wiring"]:
+            raise RuntimeError(f"unread distinctive config flag should be none/needs_wiring: {orphan_cfg}")
+        if set(invx["summary"]["needs_wiring"]) != {"orphan_feature_enabled", "orphan_thing_enabled"}:
+            raise RuntimeError(f"needs_wiring summary wrong: {invx['summary']['needs_wiring']}")
+        # non-runtime (docs/ + values.yaml) and infra-block (autoscaling) are held.
+        if _row("enabled", "docs/dep.yaml")["scope"] != "non_runtime" or _row("enabled", "docs/dep.yaml")["decision"] != "hold":
+            raise RuntimeError("docs/ config flag must be held as non_runtime")
+        if _row("enabled", "infra/values.yaml")["scope"] != "non_runtime":
+            raise RuntimeError("infra values.yaml flag must be held as non_runtime")
+        if _row("enabled", "app_config.yaml")["scope"] != "infra" or _row("enabled", "app_config.yaml")["decision"] != "hold":
+            raise RuntimeError("generic enabled under an infra block must be held as infra")
 
         # (b) full_throttle PLAN: would_flip has the safe flags, never a danger flag.
         plan = json.loads(run([sys.executable, str(scripts / "full_throttle.py"), str(ft), "--mode", "plan"]).stdout)
