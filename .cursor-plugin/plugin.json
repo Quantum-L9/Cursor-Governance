@@ -6,5 +6,11 @@
   "author": { "name": "Quantum-L9" },
   "repository": "https://github.com/Quantum-L9/Cursor-Governance",
   "license": "Proprietary",
-  "keywords": ["l9", "governance", "constellation", "rules", "skills", "commands"]
+  "keywords": ["l9", "governance", "constellation", "rules", "skills", "commands", "slash-commands"],
+  "commands": "./commands",
+  "l9": {
+    "commands_manifest": "commands/COMMANDS_MANIFEST.yaml",
+    "commands_index": "commands/commands-index.md",
+    "slash_recognition_rule": "rules/02-slash-commands.mdc"
+  }
 }

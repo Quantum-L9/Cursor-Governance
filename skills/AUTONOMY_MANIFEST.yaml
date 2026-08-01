@@ -165,10 +165,10 @@ claude_routing:
     - l9-update-agent-docs
     - l9-ynp
   trivial_patterns:
-    - '^fix (the )?typo\b'
-    - '^correct (the )?spelling\b'
+    - '^fix (the )?typo'
+    - '^correct (the )?spelling'
     - '^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$'
-    - '^show (me )?(the )?(file|status|diff)\b'
+    - '^show (me )?(the )?(file|status|diff)'
   routes:
     - id: pr_analysis
       primary: l9-pr-analysis
@@ -338,3 +338,15 @@ claude_routing:
         - align this artifact pack
       supporting:
         - l9-structured-reasoning
+
+# Slash command library (file-backed). Enabled whenever l9-governance is activated.
+# Recognition: rules/02-slash-commands.mdc. Map: commands/COMMANDS_MANIFEST.yaml.
+slash_commands:
+  registry: "commands/COMMANDS_MANIFEST.yaml"
+  index: "commands/commands-index.md"
+  recognition_rule: "rules/02-slash-commands.mdc"
+  activation:
+    - "l9-governance Cursor local plugin (commands/ under plugin root)"
+    - ".cursor-commands symlink in consumer workspace"
+    - "sessionStart bootstrap / /start-session / make start"
+  policy: "When user types /cmd, ALWAYS read commands/{cmd}.md if present; skill is fallback only."
