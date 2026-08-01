@@ -79,9 +79,11 @@ if [ -f "$ACTIVE" ]; then
   [ -n "$EXCERPT" ] && LINES+=("--- resume context (memory-bank/activeContext.md) ---" "$EXCERPT")
 fi
 
-# --- Shared memory reachability hint (no secrets read/printed) ---------------
+# --- Shared memory reachability + calling-contract hint (no secrets) ---------
 if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
   LINES+=("shared memory: L9_MEMORY_HTTP_URL set — l9-shared-memory MCP expected (see mcp.template.json)")
+  LINES+=("memory MCP contract: identity derives from the bearer token (agent_id=${L9_MEMORY_AGENT_ID:-claude-code}) — never pass an agent_id argument.")
+  LINES+=("memory MCP contract: memory.search/hydrate require an explicit 'namespaces' ARRAY (not 'namespace'); a wildcard-only grant rejects bare queries with AuthorizationError -32010 — always name >=1 namespace, e.g. [\"cursor-governance\"].")
 fi
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")

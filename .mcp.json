@@ -10,7 +10,12 @@
     "memory.quantumaipartners.com in web/network-policy.md when using Custom network access.",
     "IDENTITY: group_id (repo namespace) is shared across agents; writing identity is not.",
     "Claude Code uses its own bearer → principal (agent_id=claude-code). See",
-    "web/environment.env.example (USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE)."
+    "web/environment.env.example (USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE).",
+    "CALLING CONTRACT: memory.search / memory.hydrate require `namespaces` (an ARRAY),",
+    "not `namespace`; a wildcard-only read grant rejects bare queries with",
+    "AuthorizationError -32010. Name >=1 namespace, e.g. [\"cursor-governance\"]. Never",
+    "pass an agent_id argument — identity derives from the bearer token. Full contract:",
+    "skills/l9-graphiti-memory/SKILL.md (Direct HTTP MCP tool contract)."
   ],
   "mcpServers": {
     "l9-shared-memory": {

@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, graphiti, memory, prefetch, gmp]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-06-07
+version: 1.2.0
+updated: 2026-08-01
 disable-model-invocation: false
 ---
 
@@ -39,6 +39,34 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py inject "current 
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write --body "..." --kind lesson
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py stats
+```
+
+## Direct HTTP MCP tool contract (l9-shared-memory)
+
+Claude Code (Web · Mobile · CLI) reaches the memory service through the
+`l9-shared-memory` **HTTP MCP server** (`${L9_MEMORY_HTTP_URL}/mcp`, wired by
+`.mcp.json`), **not** the `graphiti_memory_client.py` CLI above — that CLI is the
+Cursor/legacy path. Server identifies as `l9-graphite-memory` (canonical SQLite
+store + Graphiti semantic projection). When invoking MCP tools directly:
+
+- **Identity is server-derived from the bearer token** → `agent_id=claude-code`.
+  `L9_MEMORY_AGENT_ID` / `L9_MEMORY_SOURCE` document it; they are **not** call
+  arguments. Never pass an `agent_id`/principal argument — the token is the only
+  identity lever. Wrong token ⇒ wrong principal.
+- **`memory.search` / `memory.hydrate` require `namespaces` — an ARRAY of strings**
+  (not a singular `namespace`). A wildcard-only read grant **rejects a bare query**
+  with `AuthorizationError` (code `-32010`): *"explicit namespace is required when
+  read grants contain only wildcards."* Always name at least one namespace, e.g.
+  `["cursor-governance"]` or `["l9-graphiti-memory"]`.
+- **Writes** go through `memory.ingest` (alias `write`). **Health** through
+  `memory.health` (reports canonical store, Graphiti projection circuit, outbox).
+- Canonical tools are the `memory.*` names; bare aliases (`search`, `write`,
+  `health`, `conflicts`, …) exist for compatibility.
+
+Minimal authorized search call:
+
+```json
+{"name": "memory.search", "arguments": {"query": "governance", "namespaces": ["cursor-governance"], "limit": 5}}
 ```
 
 ## Session lifecycle
