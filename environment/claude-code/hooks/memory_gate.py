@@ -79,8 +79,13 @@ def main() -> int:
         if breakglass:
             try:
                 st.record_override(contract, rule["id"], breakglass)
-            except OSError:
-                pass
+            except OSError as exc:
+                # Non-fatal: the override still applies, but note the audit gap.
+                print(
+                    f"memory-gate: could not persist override event ({exc}); "
+                    "continuing under breakglass",
+                    file=sys.stderr,
+                )
             print(
                 f"memory-gate: OPERATOR BREAKGLASS on {rule['id']}: {breakglass}",
                 file=sys.stderr,
