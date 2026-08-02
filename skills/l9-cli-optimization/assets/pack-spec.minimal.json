@@ -1,0 +1,404 @@
+{
+  "base_ref": "main",
+  "branch": "perf/activate-latent-cli-workers",
+  "changed_files": [
+    "runner.py"
+  ],
+  "commit_message": "Activate existing bounded CLI workers",
+  "created_utc": "2026-07-29T00:00:00Z",
+  "decision_ledger": {
+    "claims": [
+      {
+        "disconfirming_evidence": [
+          "Dynamic-dispatch and registry inspection found no alternate consumer."
+        ],
+        "evidence": [
+          "DWA-001 definition and missing-consumer evidence"
+        ],
+        "grade": "verified",
+        "id": "CLM-001",
+        "statement": "The CLI serializes independent tasks despite an existing bounded worker implementation."
+      },
+      {
+        "disconfirming_evidence": [],
+        "evidence": [
+          "Baseline 100 tasks/minute; candidate 180 tasks/minute; max workers remains four."
+        ],
+        "grade": "verified",
+        "id": "CLM-002",
+        "statement": "Connecting the bounded worker path improves comparable fixture throughput without breaking the worker cap."
+      }
+    ],
+    "convergence": {
+      "remaining_material_unknown_ids": [],
+      "status": "converged",
+      "stop_reason": "All routed proof obligations are satisfied within cycle three."
+    },
+    "cycle": 3,
+    "decision": {
+      "final_action": "proceed_with_validation",
+      "rationale": "The repository-owned bottleneck is proven, the selected option is leverage-approved, all active proof obligations are satisfied, and the remaining divergence is non-blocking and disclosed.",
+      "rollback_or_containment": "Restore the prior package or revert the dispatch change if error rate or memory crosses the recorded abort threshold.",
+      "tradeoffs": [
+        "Bounded concurrency increases scheduling complexity but remains capped and regression-tested."
+      ]
+    },
+    "ledger_version": "1.0.0",
+    "objective": "Activate the existing bounded worker path and package the verified change for PR review.",
+    "options": [
+      {
+        "disposition": "selected",
+        "id": "CLI-OPT-001",
+        "rationale": "Reuses the existing bounded worker implementation with the highest leverage and smallest change surface.",
+        "reversibility": "guarded",
+        "tradeoffs": [
+          "Adds concurrent execution paths that require ordering and resource validation."
+        ]
+      }
+    ],
+    "probes": [
+      {
+        "evidence": [
+          "No consumer exists before the candidate wiring."
+        ],
+        "id": "PRB-001",
+        "method": "Inspect CLI entrypoint, registries, flags, and direct consumers.",
+        "question": "Does dynamic dispatch already consume parallel_count?",
+        "status": "passed"
+      },
+      {
+        "evidence": [
+          "Median throughput improves from 100 to 180 tasks/minute."
+        ],
+        "id": "PRB-002",
+        "method": "Run three baseline and three candidate samples.",
+        "question": "Does the candidate improve throughput under the same fixture workload?",
+        "status": "passed"
+      }
+    ],
+    "proof_obligations": [
+      {
+        "description": "Prove repository ownership or classify the blocker.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-OWNERSHIP."
+        ],
+        "id": "PO-OWNERSHIP",
+        "status": "satisfied"
+      },
+      {
+        "description": "Preserve behavior, cancellation, signals, and exit codes.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-CORRECTNESS."
+        ],
+        "id": "PO-CORRECTNESS",
+        "status": "satisfied"
+      },
+      {
+        "description": "Prove bounded workers and resource use.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-RESOURCE-ENVELOPE."
+        ],
+        "id": "PO-RESOURCE-ENVELOPE",
+        "status": "satisfied"
+      },
+      {
+        "description": "Select from a complete finding-target-option graph.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-LEVERAGE-SELECTION."
+        ],
+        "id": "PO-LEVERAGE-SELECTION",
+        "status": "satisfied"
+      },
+      {
+        "description": "Preserve exact next-agent state.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-HANDOFF."
+        ],
+        "id": "PO-HANDOFF",
+        "status": "satisfied"
+      },
+      {
+        "description": "Show comparable baseline and candidate evidence.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-UTILIZATION-PROOF."
+        ],
+        "id": "PO-UTILIZATION-PROOF",
+        "status": "satisfied"
+      },
+      {
+        "description": "Prove staged deployment and rollback.",
+        "evidence": [
+          "Satisfied by fixture evidence for PO-DEPLOY-ROLLBACK."
+        ],
+        "id": "PO-DEPLOY-ROLLBACK",
+        "status": "satisfied"
+      }
+    ],
+    "selected_option_ids": [
+      "CLI-OPT-001"
+    ],
+    "unknowns": []
+  },
+  "deploy": {
+    "playbook": "# Deploy Playbook\n\n1. Install the candidate package in staging.\n2. Verify the smoke command and resource ceilings.\n3. Roll out to one worker group.\n4. Abort if errors increase or memory exceeds the ceiling.\n5. Use the rollback playbook when an abort threshold is crossed.",
+    "release_checklist": "# Release Checklist\n\n- [x] Smoke passed\n- [x] Performance evidence recorded\n- [x] Rollback prepared"
+  },
+  "execution_route": {
+    "utilization_gap_class": "unnecessary_serialization",
+    "epistemic_methods": [
+      "abductive",
+      "deductive",
+      "comparative"
+    ],
+    "evidence_state": "sufficient",
+    "initial_action": "proceed_with_validation",
+    "max_cycles": 3,
+    "ownership": "repository_owned",
+    "proof_obligations": [
+      {
+        "description": "Prove repository ownership or classify the blocker.",
+        "id": "PO-OWNERSHIP",
+        "source": "core"
+      },
+      {
+        "description": "Preserve behavior, cancellation, signals, and exit codes.",
+        "id": "PO-CORRECTNESS",
+        "source": "core"
+      },
+      {
+        "description": "Prove bounded workers and resource use.",
+        "id": "PO-RESOURCE-ENVELOPE",
+        "source": "core"
+      },
+      {
+        "description": "Select from a complete finding-target-option graph.",
+        "id": "PO-LEVERAGE-SELECTION",
+        "source": "leverage"
+      },
+      {
+        "description": "Preserve exact next-agent state.",
+        "id": "PO-HANDOFF",
+        "source": "handoff"
+      },
+      {
+        "description": "Show comparable baseline and candidate evidence.",
+        "id": "PO-UTILIZATION-PROOF",
+        "source": "performance"
+      },
+      {
+        "description": "Prove staged deployment and rollback.",
+        "id": "PO-DEPLOY-ROLLBACK",
+        "source": "risk"
+      }
+    ],
+    "reasoning_depth": "deep",
+    "required_adapters": [
+      "revision_synthesis_leverage",
+      "ecosystem_native_cli"
+    ],
+    "risk_class": "guarded",
+    "route_version": "1.0.0",
+    "stop_condition": "Stop when all active proof obligations are satisfied or cycle three packages a blocker.",
+    "task_kind": "optimize_cli_revision",
+    "write_action_allowed": false,
+    "docs_code_divergence": "none",
+    "latent_capability": false,
+    "output_mode": "write_authorized"
+  },
+  "handoff": {
+    "markdown": "# Agent Handoff\n\nApply the patch to clean main, verify DWA-001 reachability, rerun validation, deploy canary, and watch abort thresholds.",
+    "next_agent_task": {
+      "base_ref": "main",
+      "blockers": [],
+      "branch": "perf/activate-latent-cli-workers",
+      "deploy_entrypoint": "deploy/DEPLOY_PLAYBOOK.md",
+      "do_not": [
+        "Do not bypass external service limits, remove the worker cap, or classify unproven reachability as dead."
+      ],
+      "next_action": "Apply the patch and run the recorded validation command.",
+      "objective": "Create and deploy the latent-capability activation PR.",
+      "pack_manifest": "MANIFEST.json",
+      "repository": "fixture/repo",
+      "status": "PR_READY",
+      "unknowns": [],
+      "validation_entrypoint": "evidence/VALIDATION.md"
+    }
+  },
+  "issues": [],
+  "pack_name": "minimal-optimize-cli-pack",
+  "performance": {
+    "baseline": {
+      "command": "python runner.py --tasks 10",
+      "evidence": "fixture baseline record",
+      "metric": "throughput",
+      "samples": 3,
+      "unit": "tasks/minute",
+      "value": 100
+    },
+    "candidate": {
+      "command": "python runner.py --tasks 10 --workers 4",
+      "evidence": "fixture candidate record",
+      "metric": "throughput",
+      "samples": 3,
+      "unit": "tasks/minute",
+      "value": 180
+    },
+    "comparison_method": "Same fixture workload and interpreter; compare median throughput across three samples.",
+    "correctness_checks": [
+      "task count matches",
+      "exit code remains zero"
+    ],
+    "improvement_percent": 80,
+    "limitations": [
+      "synthetic fixture only"
+    ],
+    "resource_checks": [
+      "workers never exceed four",
+      "no orphan subprocesses"
+    ],
+    "direction": "higher_is_better"
+  },
+  "pr_body": "## Problem\nThe repository already contains a bounded parallel worker function, but the CLI entrypoint never calls it, leaving independent tasks serialized.\n\n## Solution\nConnect the existing worker implementation to the `--workers` CLI path while preserving the cap, output count, failures, and external service limits.\n\n## Evidence\nDWA-001 contains definition and missing-consumer evidence. A comparable fixture workload improves from 100 to 180 tasks per minute with correctness and resource checks passing.\n",
+  "repository": "fixture/repo",
+  "revision_synthesis": {
+    "all_material_findings_synthesized": true,
+    "findings": [
+      {
+        "blocks_release": true,
+        "evidence": [
+          "DWA-001 definition evidence",
+          "DWA-001 missing-consumer evidence"
+        ],
+        "id": "CLI-FND-001",
+        "kind": "performance_bottleneck",
+        "owner": "runner.py CLI dispatch",
+        "recommended_action": "Connect the existing bounded worker path to --workers dispatch.",
+        "related_source_ids": [
+          "DWA-001"
+        ],
+        "scope": "in_scope",
+        "severity": 3,
+        "status": "reconciled",
+        "summary": "Bounded parallel worker capability exists but is not reached from CLI dispatch."
+      }
+    ],
+    "leverage_policy_version": "1.0.0",
+    "options": [
+      {
+        "current_assets_strengthened": [
+          "parallel_count implementation",
+          "worker-cap validation",
+          "CLI parser"
+        ],
+        "decision": "prioritize",
+        "description": "Reuse parallel_count and connect it to the existing --workers branch without adding a subsystem.",
+        "future_actions_accelerated": [
+          "future CLI parallelism changes use one tested dispatch path"
+        ],
+        "id": "CLI-OPT-001",
+        "leverage_dimensions": {
+          "energy_load_inverse": 4,
+          "existing_asset_amplification": 5,
+          "future_action_acceleration": 5,
+          "multi_domain_benefit": 4,
+          "optionality_gain": 4,
+          "reusable_system_value": 5,
+          "social_or_network_gain": 4
+        },
+        "leverage_score": 4.6,
+        "multi_domain_benefits": [
+          "CLI throughput",
+          "testability",
+          "release confidence"
+        ],
+        "recurring_drag_risk": "Low; reuses existing implementation and cap.",
+        "reusable_outputs_created": [
+          "bounded worker dispatch primitive",
+          "performance and resource regression evidence"
+        ],
+        "scope": "in_scope",
+        "selected": true,
+        "strategy": "activate_existing_bounded_worker_dispatch",
+        "target_ids": [
+          "CLI-TGT-001"
+        ],
+        "unknowns": []
+      }
+    ],
+    "selected_option_ids": [
+      "CLI-OPT-001"
+    ],
+    "selection_rationale": "CLI-OPT-001 has the highest leverage score, reuses verified bounded capability, remains repository-owned, and avoids new maintenance machinery. CLI-OPT-002 is preserved for the external documentation owner.",
+    "synthesis_status": "complete",
+    "synthesis_version": "1.0.0",
+    "targets": [
+      {
+        "affected_surfaces": [
+          "runner.py CLI dispatch",
+          "worker-cap tests"
+        ],
+        "constraints": [
+          "preserve output count",
+          "preserve exit status",
+          "keep max workers at four"
+        ],
+        "id": "CLI-TGT-001",
+        "objective": "Route --workers values greater than one through the existing bounded parallel implementation.",
+        "option_ids": [
+          "CLI-OPT-001"
+        ],
+        "scope": "implement_now",
+        "source_finding_ids": [
+          "CLI-FND-001"
+        ],
+        "success_evidence": [
+          "candidate throughput exceeds baseline",
+          "correctness and resource checks pass"
+        ],
+        "title": "Activate bounded CLI workers"
+      }
+    ],
+    "unknowns": [],
+    "unresolved_divergence_ids": []
+  },
+  "rollback": {
+    "playbook": "# Rollback Playbook\n\n1. Restore the prior package.\n2. Verify serial behavior and stable error rate."
+  },
+  "status": "PR_READY",
+  "summary": "Connect the existing bounded worker path into the CLI dispatch flow (throughput).",
+  "optimization": {
+    "utilization_gap_class": "unnecessary_serialization",
+    "evidence": "A bounded parallel_count capability exists in runner.py, but the CLI dispatch always calls serial_count.",
+    "external_limits_not_bypassed": [
+      "no external service quota is altered"
+    ],
+    "ownership": "repository_owned",
+    "preserved_constraints": [
+      "output count",
+      "nonzero failure exit",
+      "worker cap"
+    ],
+    "resource_envelope": {
+      "max_inflight": 4,
+      "max_workers": 4,
+      "memory": "bounded by task count"
+    },
+    "revision_synthesis_path": "evidence/CLI_REVISION_SYNTHESIS.json",
+    "rollback_trigger": "Abort if errors rise or memory exceeds the recorded ceiling.",
+    "selected_revision_option_ids": [
+      "CLI-OPT-001"
+    ],
+    "strategy": "bounded_parallelism"
+  },
+  "validation": {
+    "commands": [
+      {
+        "command": "python runner.py --tasks 4 --workers 2",
+        "evidence": "printed 4 and exited 0",
+        "status": "PASS"
+      }
+    ],
+    "summary": "Fixture CLI smoke and structural checks passed."
+  },
+  "version": "2.0.0"
+}

@@ -282,6 +282,9 @@ def validate_revision_synthesis(
             value = finding.get(field)
             if not isinstance(value, str) or not value.strip():
                 errors.append(f"docs-code divergence {finding_id} lacks {field}")
+        owner = finding.get("owner")
+        if isinstance(owner, str) and owner.strip().lower() == "unknown":
+            errors.append(f"unresolved divergence {finding_id} owner must not be 'unknown'")
         if finding.get("scope") == "unknown" or finding.get("reconciliation") == "unknown":
             if manifest.get("status") == "PR_READY":
                 errors.append(f"PR_READY retains unknown docs-code divergence: {finding_id}")
@@ -729,9 +732,18 @@ def validate(root: Path) -> list[str]:
                 errors.append(f"{label} found in {path.relative_to(root).as_posix()}")
 
     deploy = (root / "deploy" / "DEPLOY_PLAYBOOK.md").read_text(encoding="utf-8").lower()
-    for term in ("rollback", "verify", "abort"):
-        if term not in deploy:
-            errors.append(f"deployment playbook missing {term} guidance")
+    # Structural intent, not three magic words: accept common synonyms so a
+    # semantically-complete playbook is not failed for wording.
+    deploy_requirements = {
+        "rollback": ("rollback", "roll back", "revert", "restore"),
+        "verify": ("verify", "validate", "confirm", "smoke"),
+        "abort": ("abort", "halt", "stop", "cease"),
+    }
+    for label, synonyms in deploy_requirements.items():
+        if not any(term in deploy for term in synonyms):
+            errors.append(
+                f"deployment playbook missing {label} guidance (any of: {', '.join(synonyms)})"
+            )
 
     errors.extend(validate_checksums(root))
     return errors

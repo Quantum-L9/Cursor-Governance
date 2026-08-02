@@ -75,6 +75,9 @@ def main() -> int:
         "scan_capabilities.py",
         "measure.py",
         "self_test.py",
+        "flag_inventory.py",
+        "full_throttle.py",
+        "build_flag_activation_pack.py",
     }
     if listed != invoked:
         raise RuntimeError(
@@ -215,6 +218,20 @@ def main() -> int:
             recs[0]["status"] = "failed"
             cf.write_text("".join(json.dumps(r) + chr(10) for r in recs), encoding="utf-8")
 
+        def _mut_unknown_owner(m):
+            # P0-2: an unresolved divergence with owner "unknown" must be
+            # rejected by the standalone validator, matching the builder.
+            p = m / "evidence" / "CLI_REVISION_SYNTHESIS.json"
+            obj = json.loads(p.read_text())
+            changed = False
+            for f in obj["findings"]:
+                if f.get("kind") == "docs_code_divergence":
+                    f["owner"] = "unknown"
+                    changed = True
+            if not changed:
+                raise RuntimeError("fixture has no divergence finding to mutate")
+            p.write_text(json.dumps(obj, indent=2), encoding="utf-8")
+
         def _mut_underdeclared_route(m):
             # Remove PO-REACHABILITY from BOTH route and ledger (keeps them matched
             # to each other) — M1 must still catch it via content binding (the
@@ -232,6 +249,7 @@ def main() -> int:
 
         for label, mut in [
             ("underdeclared-route", _mut_underdeclared_route),
+            ("unknown-divergence-owner", _mut_unknown_owner),
             ("checksum-tamper", _mut_checksum),
             ("dropped-file", _mut_drop_file),
             ("garbled-patch", _mut_garble_patch),
@@ -532,9 +550,127 @@ def main() -> int:
             "from a import used_symbol\nprint(used_symbol())\n", encoding="utf-8"
         )
         mini_out = run([sys.executable, str(scripts / "scan_capabilities.py"), str(mini)])
-        flagged = {c["symbol"] for c in json.loads(mini_out.stdout)["candidates"]}
+        mini_scan = json.loads(mini_out.stdout)
+        flagged = {c["symbol"] for c in mini_scan["candidates"]}
         if "dead_symbol" not in flagged or "used_symbol" in flagged:
             raise RuntimeError(f"scanner precision regressed: flagged={flagged}")
+        # P2-2: every candidate is ranked (numeric score, non-increasing order).
+        scores = [c.get("score") for c in mini_scan["candidates"]]
+        if not all(isinstance(s, (int, float)) for s in scores) or scores != sorted(
+            scores, reverse=True
+        ):
+            raise RuntimeError(f"scanner candidates are not ranked by score: {scores}")
+
+        # P2-1/P2-3: framework suppression (entry_points, Alembic) + twin visibility.
+        mini2 = temp / "miniscan2"
+        (mini2 / "versions").mkdir(parents=True)
+        (mini2 / "a.py").write_text(
+            "def dead_symbol():\n    return 1\n"
+            "def cli_entry():\n    return 2\n"
+            "def twinned():\n    return 3\n",
+            encoding="utf-8",
+        )
+        (mini2 / "b.py").write_text("def twinned():\n    return 9\n", encoding="utf-8")
+        (mini2 / "versions" / "0001_m.py").write_text(
+            "def upgrade():\n    pass\ndef downgrade():\n    pass\n", encoding="utf-8"
+        )
+        (mini2 / "pyproject.toml").write_text(
+            '[project.scripts]\nmytool = "a:cli_entry"\n', encoding="utf-8"
+        )
+        # OBS-002: staged-rollout intent. kge_enabled is named beside a staged
+        # marker in system-state.md -> do_not_activate; debug_enabled is a plain
+        # off-by-default flag with no intent signal.
+        (mini2 / "config.py").write_text(
+            "kge_enabled = False\ndebug_enabled = False\n", encoding="utf-8"
+        )
+        (mini2 / "system-state.md").write_text(
+            "| System | Flag | Activation |\n| KGE | kge_enabled=False | Wave 6 merge |\n",
+            encoding="utf-8",
+        )
+        mini2_scan = json.loads(
+            run([sys.executable, str(scripts / "scan_capabilities.py"), str(mini2)]).stdout
+        )
+        by_symbol = {c["symbol"]: c for c in mini2_scan["candidates"]}
+        if by_symbol.get("kge_enabled", {}).get("recommended_verdict") != "do_not_activate":
+            raise RuntimeError("scanner did not flag staged-rollout flag as do_not_activate")
+        if by_symbol.get("debug_enabled", {}).get("recommended_verdict") == "do_not_activate":
+            raise RuntimeError(
+                "scanner over-flagged a plain off-by-default flag as do_not_activate"
+            )
+        flagged2 = {c["symbol"] for c in mini2_scan["candidates"]}
+        if "cli_entry" in flagged2:
+            raise RuntimeError("scanner did not suppress a setuptools entry_point target")
+        if {"upgrade", "downgrade"} & flagged2:
+            raise RuntimeError("scanner did not suppress Alembic upgrade/downgrade")
+        if "dead_symbol" not in flagged2:
+            raise RuntimeError("scanner over-suppressed a genuinely dead symbol")
+        if "twinned" not in {t["symbol"] for t in mini2_scan["duplicate_twins"]}:
+            raise RuntimeError("scanner did not surface a same-name twin in duplicate_twins")
+        twin_cands = [c for c in mini2_scan["candidates"] if c["symbol"] == "twinned"]
+        if not twin_cands or not all(c.get("twin_definitions") for c in twin_cands):
+            raise RuntimeError("twin candidates lack twin_definitions annotation")
+
+        # OBS-third-run: comprehensive-sweep detectors — unwired executables
+        # (incl. the `python -m pkg.mod` guard), phantom/archived imports, scratch
+        # exclusion, and syntax-broken files. Regression net for the deep scan.
+        mini3 = temp / "miniscan3"
+        (mini3 / "pkg").mkdir(parents=True)
+        (mini3 / "wip").mkdir()
+        (mini3 / "_archived").mkdir()
+        (mini3 / "tool_unwired.py").write_text(
+            "def main():\n    return 1\nif __name__ == '__main__':\n    main()\n", encoding="utf-8"
+        )
+        (mini3 / "tool_wired.py").write_text(
+            "def main():\n    return 2\nif __name__ == '__main__':\n    main()\n", encoding="utf-8"
+        )
+        (mini3 / "pkg" / "__init__.py").write_text("", encoding="utf-8")
+        (mini3 / "pkg" / "runner.py").write_text(
+            "def main():\n    return 3\nif __name__ == '__main__':\n    main()\n", encoding="utf-8"
+        )
+        # tool_wired invoked by filename; pkg.runner invoked via `python -m` dotted path.
+        (mini3 / "Makefile").write_text(
+            "wired:\n\tpython3 tool_wired.py\nrun:\n\tpython3 -m pkg.runner\n", encoding="utf-8"
+        )
+        (mini3 / "_archived" / "legacy_mod.py").write_text(
+            "def legacy():\n    return 0\n", encoding="utf-8"
+        )
+        (mini3 / "user.py").write_text(
+            "import json\nimport totally_phantom_xyz\nimport legacy_mod\n", encoding="utf-8"
+        )
+        (mini3 / "wip" / "dead.py").write_text(
+            "def wip_only_dead_symbol():\n    return 1\n", encoding="utf-8"
+        )
+        (mini3 / "broken.py").write_text("def broken(:\n    pass\n", encoding="utf-8")
+        m3 = json.loads(
+            run([sys.executable, str(scripts / "scan_capabilities.py"), str(mini3)]).stdout
+        )
+        unwired = {u["path"] for u in m3["unwired_executables"]}
+        if "tool_unwired.py" not in unwired:
+            raise RuntimeError("scanner missed an unwired executable")
+        if "tool_wired.py" in unwired:
+            raise RuntimeError("scanner flagged a Makefile-invoked script as unwired")
+        if "pkg/runner.py" in unwired:
+            raise RuntimeError(
+                "scanner flagged a `python -m pkg.runner` script as unwired (F2 regression)"
+            )
+        if not all(u.get("suggested_wiring") for u in m3["unwired_executables"]):
+            raise RuntimeError("unwired executable lacks suggested_wiring")
+        dang = {(r["module"], r["reason"]) for r in m3["dangling_references"]}
+        if ("totally_phantom_xyz", "unresolved_phantom") not in dang:
+            raise RuntimeError("scanner missed a phantom import")
+        if ("legacy_mod", "archived_only") not in dang:
+            raise RuntimeError("scanner missed an archived-only import")
+        if any(r["module"] == "json" for r in m3["dangling_references"]):
+            raise RuntimeError("scanner flagged a stdlib import as dangling")
+        keys = [(r["path"], r["module"], r["reason"]) for r in m3["dangling_references"]]
+        if len(keys) != len(set(keys)):
+            raise RuntimeError("dangling_references are not deduplicated")
+        if not any(se["path"].endswith("broken.py") for se in m3["syntax_errors"]):
+            raise RuntimeError("scanner missed a syntax-broken file")
+        if "wip_only_dead_symbol" in {c["symbol"] for c in m3["candidates"]}:
+            raise RuntimeError("scanner flagged a candidate inside a scratch (wip/) dir")
+        if "candidate_counts_by_class" not in m3:
+            raise RuntimeError("scan missing candidate_counts_by_class summary")
         measure_out = run(
             [
                 sys.executable,
@@ -550,6 +686,33 @@ def main() -> int:
         proof = json.loads(measure_out.stdout)
         if "baseline" not in proof or "candidate" not in proof:
             raise RuntimeError("measure did not emit a proof block")
+        # P1-1: git-aware baseline. --before runs (relative) inside a throwaway
+        # worktree at main (serial fixture); --after runs the working-tree
+        # (parallel) runner by absolute path. Proof must emit and the worktree
+        # must be cleaned up.
+        runner_abs = str(repo / "runner.py")
+        git_measure = run(
+            [
+                sys.executable,
+                str(scripts / "measure.py"),
+                "--repo",
+                str(repo),
+                "--before-ref",
+                "main",
+                "--before",
+                f"{sys.executable} runner.py --tasks 3",
+                "--after",
+                f"{sys.executable} {runner_abs} --tasks 3 --workers 2",
+                "--samples",
+                "1",
+            ]
+        )
+        gproof = json.loads(git_measure.stdout)
+        if "baseline" not in gproof or "candidate" not in gproof:
+            raise RuntimeError("git-aware measure did not emit a proof block")
+        worktrees_dir = repo / ".git" / "worktrees"
+        if worktrees_dir.exists() and any(worktrees_dir.iterdir()):
+            raise RuntimeError("measure.py left a git worktree behind")
 
         null_wiring = build_spec()
         null_wiring["wiring"] = None
@@ -587,8 +750,294 @@ def main() -> int:
             expected_codes={2},
         )
 
+        # P0-1: a 0->N capability activation (baseline 0, present-null
+        # improvement, candidate > 0, higher_is_better) must BUILD — proving the
+        # spec schema, validate_spec, and improvement_from_measurements agree.
+        activation = build_spec()
+        activation["performance"]["baseline"]["value"] = 0  # type: ignore[index]
+        activation["performance"]["improvement_percent"] = None  # type: ignore[index]
+        activation_path = temp / "activation.json"
+        activation_path.write_text(json.dumps(activation), encoding="utf-8")
+        run(
+            [
+                sys.executable,
+                str(scripts / "build_commit_pack.py"),
+                "--spec",
+                str(activation_path),
+                "--repo-root",
+                str(repo),
+                "--output",
+                str(out),
+            ],
+            env=env,
+        )
+
+        # OBS-003 / OBS-006: the shipped minimal (throughput, non-latent)
+        # template must build+validate and must NOT carry a wiring block.
+        minimal_spec = json.loads(
+            (scripts.parent / "assets" / "pack-spec.minimal.json").read_text(encoding="utf-8")
+        )
+        if "wiring" in minimal_spec:
+            raise RuntimeError(
+                "pack-spec.minimal.json must not include a wiring block (throughput template)"
+            )
+        minimal_path = temp / "minimal.json"
+        minimal_path.write_text(json.dumps(minimal_spec), encoding="utf-8")
+        run(
+            command[:2]
+            + ["--spec", str(minimal_path), "--repo-root", str(repo), "--output", str(out)],
+            env=env,
+        )
+        run(
+            [
+                sys.executable,
+                str(scripts / "validate_commit_pack.py"),
+                str(out / str(minimal_spec["pack_name"])),
+            ]
+        )
+
+        # P0-3: execution_route keeps additionalProperties:false after the
+        # classifier-field widening — a genuinely-foreign key is rejected.
+        foreign_route = build_spec()
+        foreign_route["execution_route"]["not_a_route_field"] = True  # type: ignore[index]
+        foreign_route_path = temp / "foreign-route.json"
+        foreign_route_path.write_text(json.dumps(foreign_route), encoding="utf-8")
+        run(
+            [
+                sys.executable,
+                str(scripts / "build_commit_pack.py"),
+                "--spec",
+                str(foreign_route_path),
+                "--repo-root",
+                str(repo),
+                "--output",
+                str(out),
+            ],
+            expected_codes={2},
+        )
+
+        # ---- Full-throttle activation mode (flag_inventory / full_throttle /
+        # build_flag_activation_pack). Separate self-contained mode; the core
+        # dormant_by_design rejection above (staged-rollout spec -> exit 2) is
+        # UNCHANGED and still green, proving the core is untouched.
+        ft = temp / "ftrepo"
+        ft.mkdir()
+        run(["git", "init", "-q"], ft)
+        run(["git", "config", "user.name", "Skill Test"], ft)
+        run(["git", "config", "user.email", "skill-test@example.invalid"], ft)
+        (ft / "config.py").write_text(
+            "benign_enabled = False\n"  # safe -> flip, stays green
+            "breaker_enabled = False\n"  # safe -> flip, but regresses tests -> backed out
+            "disable_auth = False\n"  # danger (disables a control) -> never flipped
+            "allow_delete = False\n"  # danger (destructive action) -> never flipped
+            "use_live_api = False\n"  # danger (live/external) -> never flipped
+            "kge_enabled = False\n",  # staged (Wave 6) -> dormant_by_design, held
+            encoding="utf-8",
+        )
+        (ft / "system-state.md").write_text(
+            "| KGE | kge_enabled=False | Wave 6 merge |\n", encoding="utf-8"
+        )
+        # check.py reads BOTH flip flags (attribute access) so the consumer-
+        # reachability signal marks them consumer_evidence=found (not needs_wiring)
+        # while still failing when breaker is on.
+        (ft / "check.py").write_text(
+            "import config\n"
+            "assert not config.breaker_enabled, 'breaker must stay off'\n"
+            "if config.benign_enabled:\n    pass\n"
+            "print('ok')\n",
+            encoding="utf-8",
+        )
+        run(["git", "add", "-A"], ft)
+        run(["git", "commit", "-q", "-m", "ft fixture"], ft)
+
+        # (a) flag_inventory: polarity-aware classifier is correct on all five cases.
+        inv = json.loads(run([sys.executable, str(scripts / "flag_inventory.py"), str(ft)]).stdout)
+        cls = {f["flag"]: f["classification"] for f in inv["flags"]}
+        expected_cls = {
+            "enable_cache": None,
+            "benign_enabled": "safe",
+            "disable_auth": "danger",
+            "allow_delete": "danger",
+            "use_live_api": "danger",
+            "kge_enabled": "staged",
+        }
+        for name, want in expected_cls.items():
+            if want is None:
+                continue
+            if cls.get(name) != want:
+                raise RuntimeError(
+                    f"flag_inventory misclassified {name}: got {cls.get(name)}, want {want}"
+                )
+        if inv["summary"]["held_danger"] != ["allow_delete", "disable_auth", "use_live_api"]:
+            raise RuntimeError(f"danger block-list wrong: {inv['summary']['held_danger']}")
+
+        # (a2) flag_inventory: consumer-reachability + non-runtime/infra precision.
+        # Isolated inventory-only fixture (NOT driven by full_throttle apply, so it
+        # cannot perturb the activated-set assertions below).
+        ftinv = temp / "ftinv"
+        (ftinv / "docs").mkdir(parents=True)
+        (ftinv / "infra").mkdir()
+        (ftinv / "defs.py").write_text(
+            "orphan_feature_enabled = False\nused_feature_enabled = False\n", encoding="utf-8"
+        )
+        (ftinv / "main.py").write_text(
+            "from defs import used_feature_enabled\nif used_feature_enabled:\n    print(1)\n",
+            encoding="utf-8",
+        )
+        (ftinv / "consumer.py").write_text("reader = spec.decay_thing_enabled\n", encoding="utf-8")
+        (ftinv / "config.yaml").write_text(
+            "myblock:\n  decay_thing_enabled: false\n  orphan_thing_enabled: false\n",
+            encoding="utf-8",
+        )
+        (ftinv / "docs" / "dep.yaml").write_text("dep:\n  enabled: false\n", encoding="utf-8")
+        (ftinv / "infra" / "values.yaml").write_text(
+            "ingress:\n  enabled: false\n", encoding="utf-8"
+        )
+        (ftinv / "app_config.yaml").write_text("autoscaling:\n  enabled: false\n", encoding="utf-8")
+        invx = json.loads(
+            run([sys.executable, str(scripts / "flag_inventory.py"), str(ftinv)]).stdout
+        )
+        by_key = {(f["flag"], f["file"]): f for f in invx["flags"]}
+
+        def _row(flag, file):
+            r = by_key.get((flag, file))
+            if r is None:
+                raise RuntimeError(f"flag_inventory missing {flag} in {file}: {sorted(by_key)}")
+            return r
+
+        # consumer found -> stays flip; consumer none -> hold + needs_wiring.
+        if _row("used_feature_enabled", "defs.py")["consumer_evidence"] != "found":
+            raise RuntimeError("read python flag should be consumer_evidence=found")
+        if _row("used_feature_enabled", "defs.py")["decision"] != "flip":
+            raise RuntimeError("consumed python flag should stay flip")
+        orphan_py = _row("orphan_feature_enabled", "defs.py")
+        if (
+            orphan_py["consumer_evidence"] != "none"
+            or not orphan_py["needs_wiring"]
+            or orphan_py["decision"] != "hold"
+        ):
+            raise RuntimeError(f"unread python flag should be none/needs_wiring/hold: {orphan_py}")
+        if _row("decay_thing_enabled", "config.yaml")["consumer_evidence"] != "found":
+            raise RuntimeError("config flag read via attribute should be consumer_evidence=found")
+        orphan_cfg = _row("orphan_thing_enabled", "config.yaml")
+        if orphan_cfg["consumer_evidence"] != "none" or not orphan_cfg["needs_wiring"]:
+            raise RuntimeError(
+                f"unread distinctive config flag should be none/needs_wiring: {orphan_cfg}"
+            )
+        if set(invx["summary"]["needs_wiring"]) != {
+            "orphan_feature_enabled",
+            "orphan_thing_enabled",
+        }:
+            raise RuntimeError(f"needs_wiring summary wrong: {invx['summary']['needs_wiring']}")
+        # non-runtime (docs/ + values.yaml) and infra-block (autoscaling) are held.
+        if (
+            _row("enabled", "docs/dep.yaml")["scope"] != "non_runtime"
+            or _row("enabled", "docs/dep.yaml")["decision"] != "hold"
+        ):
+            raise RuntimeError("docs/ config flag must be held as non_runtime")
+        if _row("enabled", "infra/values.yaml")["scope"] != "non_runtime":
+            raise RuntimeError("infra values.yaml flag must be held as non_runtime")
+        if (
+            _row("enabled", "app_config.yaml")["scope"] != "infra"
+            or _row("enabled", "app_config.yaml")["decision"] != "hold"
+        ):
+            raise RuntimeError("generic enabled under an infra block must be held as infra")
+
+        # (b) full_throttle PLAN: would_flip has the safe flags, never a danger flag.
+        plan = json.loads(
+            run(
+                [sys.executable, str(scripts / "full_throttle.py"), str(ft), "--mode", "plan"]
+            ).stdout
+        )
+        if "benign_enabled" not in plan["would_flip"]:
+            raise RuntimeError("full_throttle plan dropped a safe flip candidate")
+        if {"disable_auth", "allow_delete", "use_live_api", "kge_enabled"} & set(
+            plan["would_flip"]
+        ):
+            raise RuntimeError(
+                f"full_throttle plan would flip an excluded flag: {plan['would_flip']}"
+            )
+
+        # (c) full_throttle APPLY: empirical back-out keeps only the proven-safe
+        # flag, reverts the breaker, and cleans up its worktree.
+        ft_report = temp / "ft-report.json"
+        run(
+            [
+                sys.executable,
+                str(scripts / "full_throttle.py"),
+                str(ft),
+                "--mode",
+                "apply",
+                "--test-cmd",
+                f"{sys.executable} check.py",
+                "--output",
+                str(ft_report),
+            ]
+        )
+        report = json.loads(ft_report.read_text())
+        if report.get("activated_flags") != ["benign_enabled"]:
+            raise RuntimeError(
+                f"full_throttle activated the wrong set: {report.get('activated_flags')}"
+            )
+        if "breaker_enabled" not in [b["flag"] for b in report.get("backed_out_flags", [])]:
+            raise RuntimeError("full_throttle did not back out the test-breaking flag")
+        if not report.get("baseline_test", {}).get("passed"):
+            raise RuntimeError("full_throttle baseline should pass with flags off")
+        ft_worktrees = ft / ".git" / "worktrees"
+        if ft_worktrees.exists() and any(ft_worktrees.iterdir()):
+            raise RuntimeError("full_throttle left a git worktree behind")
+        if any(run(["git", "status", "--porcelain"], ft).stdout.strip()):
+            raise RuntimeError("full_throttle mutated the real working tree")
+
+        # (d) build_flag_activation_pack: review-required pack with a real test
+        # delta; patch applies; deterministic; never auto-merge.
+        ft_out = temp / "ft-out"
+        run(
+            [
+                sys.executable,
+                str(scripts / "build_flag_activation_pack.py"),
+                "--report",
+                str(ft_report),
+                "--repo-root",
+                str(ft),
+                "--output",
+                str(ft_out),
+            ],
+            env=env,
+        )
+        ft_pack = ft_out / "full-throttle-ftrepo"
+        manifest = json.loads((ft_pack / "MANIFEST.json").read_text())
+        if manifest["strategy"] != "full_throttle_flag_activation":
+            raise RuntimeError("flag activation pack has the wrong strategy")
+        if manifest["status"] != "PR_READY" or manifest["auto_merge"] is not False:
+            raise RuntimeError("flag activation pack must be PR_READY and never auto-merge")
+        if manifest["activated_flags"] != ["benign_enabled"]:
+            raise RuntimeError("flag activation pack activated the wrong flags")
+        if not (ft_pack / "evidence" / "FULL_THROTTLE_REPORT.md").is_file():
+            raise RuntimeError("flag activation pack missing FULL_THROTTLE_REPORT.md")
+        patch = (ft_pack / "change" / "commit.patch").read_text()
+        if "benign_enabled = True" not in patch or "breaker_enabled = True" in patch:
+            raise RuntimeError("flag activation patch content is wrong")
+        run(["git", "apply", "--check", str(ft_pack / "change" / "commit.patch")], ft)
+        first_sums = (ft_pack / "SHA256SUMS").read_text()
+        run(
+            [
+                sys.executable,
+                str(scripts / "build_flag_activation_pack.py"),
+                "--report",
+                str(ft_report),
+                "--repo-root",
+                str(ft),
+                "--output",
+                str(ft_out),
+            ],
+            env=env,
+        )
+        if (ft_pack / "SHA256SUMS").read_text() != first_sums:
+            raise RuntimeError("flag activation pack is not deterministic")
+
     print(
-        "PASS: identity, adaptive routing, decision ledger, latent wiring, divergence, leverage synthesis, deterministic packaging, and negative self-tests"
+        "PASS: identity, adaptive routing, decision ledger, latent wiring, divergence, leverage synthesis, deterministic packaging, full-throttle activation, and negative self-tests"
     )
     return 0
 

@@ -39,11 +39,19 @@ def schema_validate(instance: Any, schema_filename: str, label: str) -> None:
             f"install it (pip install jsonschema): {_JSONSCHEMA_IMPORT_ERROR}"
         )
     schema = json.loads((SCHEMA_DIR / schema_filename).read_text(encoding="utf-8"))
-    try:
-        _jsonschema.validate(instance, schema)
-    except _jsonschema.ValidationError as exc:
-        location = "/".join(str(part) for part in exc.absolute_path) or "<root>"
-        raise PackError(f"{label} violates {schema_filename} at {location}: {exc.message}") from exc
+    validator_cls = _jsonschema.validators.validator_for(schema)
+    validator_cls.check_schema(schema)
+    errors = sorted(
+        validator_cls(schema).iter_errors(instance), key=lambda e: list(e.absolute_path)
+    )
+    if errors:
+        # Collect-and-report ALL violations at once so one build surfaces the
+        # full constraint set instead of aborting on the first.
+        details = "; ".join(
+            f"at {'/'.join(str(part) for part in e.absolute_path) or '<root>'}: {e.message}"
+            for e in errors
+        )
+        raise PackError(f"{label} violates {schema_filename} ({len(errors)} error(s)): {details}")
 
 
 def improvement_from_measurements(baseline_value, candidate_value, direction):
@@ -99,17 +107,19 @@ class PackError(RuntimeError):
     """Raised when the pack cannot be built safely."""
 
 
-# Only `git` is invoked via run(); refuse any other binary (Sonar command-injection).
-_ALLOWED_RUN_BINARIES = frozenset({"git"})
+_ALLOWED_RUN_BINARIES = frozenset({"git", "python", "python3"})
 
 
 def run(
     command: list[str], cwd: Path, *, allow_codes: set[int] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    if not command or Path(command[0]).name not in _ALLOWED_RUN_BINARIES:
-        raise PackError(f"disallowed command binary: {command[:1]!r}")
-    # argv after the binary are git subcommands/flags/paths — never a shell string.
-    result = subprocess.run(list(command), cwd=cwd, text=True, capture_output=True, check=False)
+    if not command:
+        raise PackError("command argv must be non-empty")
+    binary = Path(command[0]).name
+    if binary not in _ALLOWED_RUN_BINARIES:
+        raise PackError(f"refusing to execute non-allowlisted binary: {command[0]!r}")
+    # argv only (no shell); binary allowlisted above — Sonar S4721/S2076 class.
+    result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=False)
     if result.returncode not in (allow_codes or {0}):
         raise PackError(
             f"command failed ({result.returncode}): {' '.join(command)}\n{result.stderr.strip()}"
@@ -754,47 +764,6 @@ def is_tracked(repo_root: Path, relative: Path) -> bool:
     )
 
 
-def _split_git_patches(blob: bytes) -> list[bytes]:
-    """Split a concatenated git patch into per-file patch blobs."""
-    if not blob:
-        return []
-    marker = b"diff --git "
-    first = blob.find(marker)
-    if first < 0:
-        return []
-    parts: list[bytes] = []
-    start = first
-    while True:
-        nxt = blob.find(marker, start + len(marker))
-        if nxt < 0:
-            parts.append(blob[start:])
-            break
-        parts.append(blob[start:nxt])
-        start = nxt
-    return [p for p in parts if p.strip()]
-
-
-def _patch_paths(patch: bytes) -> set[str]:
-    """Extract a/ and b/ paths from a single ``diff --git`` header."""
-    first = patch.split(b"\n", 1)[0]
-    pieces = first.split(b" ")
-    if len(pieces) < 4:
-        return set()
-    out: set[str] = set()
-    for raw in pieces[2:4]:
-        s = raw.decode(errors="replace")
-        if s.startswith(("a/", "b/")):
-            s = s[2:]
-        if s != "/dev/null":
-            out.add(s)
-    return out
-
-
-def _filter_patches(blob: bytes, allowed: set[str]) -> bytes:
-    keep = [p for p in _split_git_patches(blob) if _patch_paths(p) & allowed]
-    return b"".join(keep)
-
-
 def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> bytes:
     run(["git", "rev-parse", "--verify", f"{base_ref}^{{commit}}"], repo_root)
     tracked: list[str] = []
@@ -810,50 +779,25 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
 
     chunks: list[bytes] = []
     if tracked:
-        # Binary patch — no user paths on argv (Sonar S6350). Diff whole tree, filter.
-        if Path("git").name not in _ALLOWED_RUN_BINARIES:
-            raise PackError("disallowed command binary: ['git']")
         result = subprocess.run(
-            ["git", "diff", "--binary", "--no-ext-diff", base_ref],
+            ["git", "diff", "--binary", "--no-ext-diff", base_ref, "--", *tracked],
             cwd=repo_root,
             capture_output=True,
             check=False,
         )
         if result.returncode != 0:
             raise PackError(f"git diff failed: {result.stderr.decode(errors='replace').strip()}")
-        filtered = _filter_patches(result.stdout, set(tracked))
-        if not filtered.strip():
-            raise PackError("tracked changed_files produced an empty filtered patch")
-        chunks.append(filtered)
+        chunks.append(result.stdout)
     for relative in untracked:
-        # Fixed argv operands only; rewrite headers to the real relative path.
-        staging_name = "_optimize_cli_pr_pack_untracked_staging"
-        staging = repo_root / staging_name
-        source = under_root(repo_root, repo_root / relative, label="untracked")
-        try:
-            payload = source.read_bytes()
-            with open(staging, "wb") as handle:
-                handle.write(payload)
-            result = subprocess.run(
-                [
-                    "git",
-                    "diff",
-                    "--no-index",
-                    "--binary",
-                    "--",
-                    "/dev/null",
-                    staging_name,
-                ],
-                cwd=repo_root,
-                capture_output=True,
-                check=False,
-            )
-            if result.returncode not in {0, 1}:
-                raise PackError(f"git diff for untracked file failed: {relative}")
-            chunks.append(result.stdout.replace(staging_name.encode(), relative.encode()))
-        finally:
-            if staging.exists():
-                staging.unlink()
+        result = subprocess.run(
+            ["git", "diff", "--no-index", "--binary", "--", "/dev/null", relative],
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode not in {0, 1}:
+            raise PackError(f"git diff for untracked file failed: {relative}")
+        chunks.append(result.stdout)
     patch = b"".join(chunks)
     if not patch.strip():
         raise PackError("generated patch is empty; changed_files do not differ from base_ref")
@@ -1358,6 +1302,7 @@ def add_deterministic(tar: tarfile.TarFile, source: Path, arcname: str, *, pack_
 
 
 def create_archive(pack_root: Path, archive_path: Path) -> None:
+    archive_path = under_root(pack_root.parent.resolve(), archive_path, label="archive_path")
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     with archive_path.open("wb") as raw:
         with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as gz:

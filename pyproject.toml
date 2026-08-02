@@ -60,7 +60,7 @@ select = ["E", "F", "I", "UP"]
 # Long error/message strings in this skill pack are intentional evidence text;
 # keep F/I/UP enforcement, suppress line-length noise only for these scripts.
 [tool.ruff.lint.per-file-ignores]
-"skills/optimize-cli-pr-pack/scripts/**" = ["E501"]
+"skills/l9-cli-optimization/scripts/**" = ["E501"]
 
 # python_version pinned to match [project] requires-python — CI's --ignore-missing-imports
 # flag is mirrored here so `uv run mypy .` and the CI mypy step behave identically.
@@ -106,7 +106,7 @@ norecursedirs = [
 # 2026-07-19 decision: leave broken, do not stub). Ignored here so CI collection
 # doesn't fail on a dormant, currently-unused code path; the underlying gap is
 # untouched.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py"
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]

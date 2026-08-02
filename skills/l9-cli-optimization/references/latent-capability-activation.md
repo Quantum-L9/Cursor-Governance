@@ -78,6 +78,8 @@ A reachability finding may enter the optimization PR only when:
 
 Prefer the smallest wiring repair that unlocks the highest verified leverage. Do not activate dormant code merely because it exists.
 
+Clause 4 is a **manual** gate. `scripts/scan_capabilities.py` surfaces same-name duplicates (`twin_definitions` / `duplicate_twins`) as a hint, but it cannot detect a dead symbol whose live twin has a *different* name — activating such an orphan reintroduces duplication. Before selecting an `activate` finding, confirm no existing capability (same or different name) already performs the function.
+
 ## Pack Evidence
 
 When this adapter is active, the generated pack must include:

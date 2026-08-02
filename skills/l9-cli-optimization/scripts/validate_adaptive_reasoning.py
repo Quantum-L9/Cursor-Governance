@@ -64,6 +64,9 @@ def main() -> int:
         for proof in expect.get("proofs", []):
             if proof not in proofs:
                 errors.append(f"route case {case['name']} missing {proof}")
+        for key in ("docs_code_divergence", "latent_capability", "output_mode"):
+            if key not in result:
+                errors.append(f"route case {case['name']} dropped classification {key}")
     example = json.loads((ROOT / "assets" / "pack-spec.example.json").read_text(encoding="utf-8"))
     errors.extend(f"example: {item}" for item in validate_decision_contract(example))
     schema = json.loads((ROOT / "schemas" / "pack-spec.schema.json").read_text(encoding="utf-8"))

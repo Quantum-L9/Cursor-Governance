@@ -216,7 +216,7 @@
           "$ref": "#/$defs/measurement"
         },
         "improvement_percent": {
-          "type": "number"
+          "type": ["number", "null"]
         },
         "comparison_method": {
           "type": "string",
@@ -584,6 +584,23 @@
             "repository_owned",
             "external",
             "unknown"
+          ]
+        },
+        "docs_code_divergence": {
+          "enum": [
+            "none",
+            "non_blocking",
+            "release_blocking",
+            "unknown"
+          ]
+        },
+        "latent_capability": {
+          "type": "boolean"
+        },
+        "output_mode": {
+          "enum": [
+            "pack_only",
+            "write_authorized"
           ]
         }
       }

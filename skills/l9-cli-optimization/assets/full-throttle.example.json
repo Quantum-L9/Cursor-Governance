@@ -1,0 +1,32 @@
+{
+  "_comment": "Example output of `full_throttle.py --mode apply`, consumed by build_flag_activation_pack.py. Shows the shape: proven-safe flags activated, danger/staged flags held, a test-breaking flag backed out, and a real flags-off -> flags-on test delta. Regenerate with: python3 scripts/full_throttle.py <repo> --mode apply --test-cmd '<cmd>' --output ft.json",
+  "repo": "/abs/path/to/repo",
+  "mode": "apply",
+  "test_command": ["python3", "-m", "pytest", "-q"],
+  "would_flip": ["benign_enabled", "breaker_enabled"],
+  "applied": true,
+  "activated_flags": ["benign_enabled"],
+  "activated_flag_rows": [
+    {"flag": "benign_enabled", "file": "config.py", "line": 1, "current": "False", "lang": "python", "kind": "python_assignment", "polarity": "off->on", "classification": "safe", "decision": "flip", "reason": "off-by-default flag with no danger signal or staged intent"}
+  ],
+  "backed_out_flags": [
+    {"flag": "breaker_enabled", "file": "config.py", "line": 2, "classification": "empirically_unsafe", "reason": "activation regressed the repo's tests"}
+  ],
+  "back_out_passes": 2,
+  "baseline_test": {"returncode": 0, "passed": true, "stdout_tail": "1 passed", "stderr_tail": ""},
+  "activated_test": {"returncode": 0, "passed": true, "stdout_tail": "1 passed", "stderr_tail": ""},
+  "test_delta": {"baseline_passed": true, "activated_passed": true, "flags_off": 0, "flags_on": 1},
+  "summary": {
+    "total": 6,
+    "by_classification": {"safe": 2, "danger": 3, "staged": 1},
+    "flip_candidates": ["benign_enabled", "breaker_enabled"],
+    "held_danger": ["allow_delete", "disable_auth", "use_live_api"],
+    "held_staged": ["kge_enabled"]
+  },
+  "inventory": [
+    {"flag": "allow_delete", "file": "config.py", "line": 3, "current": "False", "lang": "python", "kind": "python_assignment", "polarity": "off->on", "classification": "danger", "decision": "hold", "reason": "flip enables a dangerous action ('delete')"},
+    {"flag": "disable_auth", "file": "config.py", "line": 4, "current": "False", "lang": "python", "kind": "python_assignment", "polarity": "off->on", "classification": "danger", "decision": "hold", "reason": "flip disables a control ('disable_…')"},
+    {"flag": "kge_enabled", "file": "config.py", "line": 6, "current": "False", "lang": "python", "kind": "python_assignment", "polarity": "off->on", "classification": "staged", "decision": "hold", "reason": "repo intent marks this a staged rollout / dormant_by_design"}
+  ],
+  "diff": "diff --git a/config.py b/config.py\n--- a/config.py\n+++ b/config.py\n@@ -1,2 +1,2 @@\n-benign_enabled = False\n+benign_enabled = True\n breaker_enabled = False\n"
+}

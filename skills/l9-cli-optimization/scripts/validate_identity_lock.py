@@ -28,6 +28,10 @@ REQUIRED_FILES = {
     "scripts/validate_decision_ledger.py",
     "scripts/validate_adaptive_reasoning.py",
     "scripts/validate_exemplary_skill.py",
+    "scripts/flag_inventory.py",
+    "scripts/full_throttle.py",
+    "scripts/build_flag_activation_pack.py",
+    "references/full-throttle-activation.md",
 }
 BANNED = {
     "legacy skill identity": re.compile(r"\b(?:un)?throttle-cli-pr-pack\b", re.IGNORECASE),
@@ -56,7 +60,7 @@ def main() -> int:
 
     skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
     required_snippets = [
-        "name: optimize-cli-pr-pack",
+        "name: l9-cli-optimization",
         "Produce a deployable code change that enables an underutilized, verified repository-owned capability",
         "Never implement a new throttle",
         "Do not use for audit-only output",
@@ -69,6 +73,11 @@ def main() -> int:
         "OPTIMIZATION_PLAN.json",
         "PERFORMANCE.md",
         "bidirectional evidence",
+        # Full-throttle activation mode: its safety controls must stay documented.
+        "Full-Throttle Activation Mode",
+        "Polarity-aware danger block-list",
+        "Empirical back-out",
+        "never auto-merged",
     ]
     # M3: one distinctive phrase per numbered Identity Lock invariant (1..11), so
     # deleting any invariant fails the gate (previously only ~3 were covered).

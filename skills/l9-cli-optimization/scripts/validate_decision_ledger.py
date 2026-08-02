@@ -287,7 +287,7 @@ def main() -> int:
     try:
         data = _load_contract_input(path)
         errors = validate_decision_contract(data)
-    except (OSError, ValueError) as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
     if errors:

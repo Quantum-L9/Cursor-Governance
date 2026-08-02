@@ -43,6 +43,30 @@ The weighted score is the sum of dimension value multiplied by weight, rounded t
 
 A selected implementation option must be `approve` or `prioritize`. `PR_READY` requires at least one selected in-scope option, no selected-option unknowns, and a score consistent with its dimensions.
 
+## `leverage_score` and `decision` are DERIVED, not authored
+
+Although the spec schema lists both as properties, `build_commit_pack.py` recomputes and enforces them:
+
+- `leverage_score = round(sum(dimension_value * weight), 2)` over the seven weighted dimensions above.
+- `decision = band(leverage_score)` using the `< 2.5 / < 3.5 / < 4.0 / >= 4.0` bands.
+
+Author the seven `leverage_dimensions` (0–5) only; set `leverage_score` and `decision` to exactly those computed values. On a mismatch the validator prints the expected value (`must equal calculated score X` / `decision must be Y`) — copy it. Do not treat these two fields as independent judgement.
+
+## Finding-kind mapping (fine `utilization_gap_class` -> coarse `findings[].kind`)
+
+`optimization.utilization_gap_class` is a 19-member fine-grained enum; `revision_synthesis.findings[].kind` is coarse. Map with this table:
+
+| utilization_gap_class | findings[].kind |
+|---|---|
+| artificial_delay, unnecessary_serialization, low_local_cap, blocking_io, repeated_startup, duplicate_work, buffering, local_retry_backoff, lock_contention | `performance_bottleneck` |
+| inactive_component, miswired_file, dormant_capability, unused_signal, orphaned_config_schema, broken_partial_wiring, latent_capability_wiring | `latent_capability` |
+| (documentation vs code disagreement) | `docs_code_divergence` |
+| external_limit | `external_limit` |
+| (resource ceiling risk) | `resource_risk` |
+| (missing/failed validation) | `validation_gap` |
+| (deploy/rollback gap) | `deployment_gap` |
+| (none of the above) | `configuration_misalignment` or `other` |
+
 ## Mandatory machine-readable output
 
 Always emit `evidence/CLI_REVISION_SYNTHESIS.json` containing all findings, targets, options, selected option IDs, unresolved divergence IDs, unknowns, and the selection rationale. Emit `evidence/CLI_REVISION_PLAN.md` as a human-readable projection.

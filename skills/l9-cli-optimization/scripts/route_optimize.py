@@ -14,6 +14,8 @@ import json
 import sys
 from typing import Any
 
+# One flattened taxonomy: a throughput branch and a capability branch (the
+# promoted dead-wiring / latent-capability classes) are peers, plus boundary.
 THROUGHPUT_GAPS = {
     "artificial_delay",
     "unnecessary_serialization",
@@ -183,18 +185,23 @@ def route(data: dict[str, Any]) -> dict[str, Any]:
         "write_action_allowed": mode == "write_authorized",
         "utilization_gap_class": gap,
         "ownership": ownership,
+        # Persist the classification inputs so EXECUTION_ROUTE.json records why
+        # the route was shaped this way (previously consumed then dropped).
+        "docs_code_divergence": divergence,
+        "latent_capability": latent,
+        "output_mode": mode,
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args()  # reject unexpected flags; no path args
+    parser.parse_args()  # no path args; payload via stdin
     try:
         data = json.load(sys.stdin)
         if not isinstance(data, dict):
             raise ValueError("input root must be an object")
         result = route(data)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
     print(json.dumps(result, indent=2, sort_keys=True))

@@ -1,6 +1,6 @@
 expertise_model:
   experts:
-  - CLI performance and systems engineer
+  - repository capability-activation and performance engineer (CLI throughput is one branch)
   - adaptive evidence and decision architect
   - release, deployment, and rollback engineer
   - reachability and capability-contract analyst
@@ -32,8 +32,8 @@ expertise_model:
   - repository_contracts_tests_and_release_configuration
   - bundled_optimize_reasoning_synthesis_and_pack_contracts
   activation_signals:
-  - user requests optimization or removal of a CLI throughput bottleneck
-  - CLI audit or benchmark must become deployable code and a PR pack
+  - user requests activation of an underutilized repository-owned capability, or removal of a CLI throughput bottleneck (throughput is one branch, not the whole mission)
+  - a repository or CLI audit or benchmark must become deployable code and a PR pack
   - repository has delay, serialization, local cap, blocking I/O, repeated startup,
     duplicate work, lock contention, or proven latent CLI capability
   - findings must become leverage-ranked revision options

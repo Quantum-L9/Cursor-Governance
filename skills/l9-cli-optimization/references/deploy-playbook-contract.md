@@ -15,6 +15,16 @@
 11. **Rollback:** exact restoration commands and verification.
 12. **Post-deploy:** final evidence, release note, ownership, and follow-up.
 
+## Enforced intent terms
+
+`scripts/validate_commit_pack.py` requires `deploy/DEPLOY_PLAYBOOK.md` to express three intents, each satisfied by any one synonym (case-insensitive):
+
+- **verify** (section 7): `verify` / `validate` / `confirm` / `smoke`
+- **abort** (section 10): `abort` / `halt` / `stop` / `cease`
+- **rollback** (section 11): `rollback` / `roll back` / `revert` / `restore`
+
+Write those sections with at least one synonym each, or the pack fails validation.
+
 ## Rules
 
 - Derive commands from repository release configuration, not generic memory.
