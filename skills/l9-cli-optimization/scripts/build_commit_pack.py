@@ -107,9 +107,18 @@ class PackError(RuntimeError):
     """Raised when the pack cannot be built safely."""
 
 
+_ALLOWED_RUN_BINARIES = frozenset({"git", "python", "python3"})
+
+
 def run(
     command: list[str], cwd: Path, *, allow_codes: set[int] | None = None
 ) -> subprocess.CompletedProcess[str]:
+    if not command:
+        raise PackError("command argv must be non-empty")
+    binary = Path(command[0]).name
+    if binary not in _ALLOWED_RUN_BINARIES:
+        raise PackError(f"refusing to execute non-allowlisted binary: {command[0]!r}")
+    # argv only (no shell); binary allowlisted above — Sonar S4721/S2076 class.
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=False)
     if result.returncode not in (allow_codes or {0}):
         raise PackError(
