@@ -418,7 +418,7 @@ class ToolPatternExtractor:
     def _hash_sequence(self, tools: list[str]) -> str:
         """Create hash for tool sequence"""
         sequence_str = "→".join(tools)
-        return hashlib.md5(sequence_str.encode()).hexdigest()[:12]
+        return hashlib.md5(sequence_str.encode(), usedforsecurity=False).hexdigest()[:12]
 
     def _calculate_success_rates(self):
         """Calculate success rates for all patterns"""

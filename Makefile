@@ -1,11 +1,27 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
 WS ?= $(CURDIR)
 
+# When 1, `make pr` fails on mypy errors. Default 0 matches CI (mypy is
+# continue-on-error while the tracked debt in TODO.md remains).
+PR_MYPY_STRICT ?= 0
+
+# When 1, security scanners report findings but do not fail `make pr`.
+PR_SECURITY_ADVISORY ?= 0
+
+# Comparison ref for changed-file resolution (merge-base with HEAD ∪ working tree).
+# Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
+PR_BASE ?= origin/main
+
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot"
+	@echo "  make pr           — CHANGED-FILES local PR gate (pre-commit + ruff + security); not full-tree"
+	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
+	@echo "  make pr-full      — intentional full-tree local gate (nightly-equivalent; slow)"
+	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" pr WS=\"\$$(pwd)\""
+	@echo "  Prefer l9-ci-core thin Makefile (identical across repos) when adopting the common workflow."
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -83,28 +99,85 @@ backup-gate-test:
 path-lint:
 	bash ops/scripts/validate_governance_no_hardcoded_paths.sh
 
-## Run the pre-commit pipeline (.pre-commit-config.yaml) across all files
+## Full-tree pre-commit (nightly / intentional). Not used by `make pr`.
 precommit:
 	@command -v pre-commit >/dev/null 2>&1 || { echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; exit 1; }
 	pre-commit run --all-files
+
+## Changed-files pre-commit for PR velocity (skips machine-local symlinks-check).
+precommit-repo:
+	PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh "$(WS)"
 
 ## Commit + rebase + push this clone to origin/main (same as sessionEnd hook)
 backup:
 	bash ops/scripts/backup_to_github.sh
 
-## Gate push behind the pre-commit pipeline: fails (no push) if precommit fails
+## Gate push behind the full pre-commit pipeline: fails (no push) if precommit fails
 push: precommit backup
 
 ## Check Graphiti tunnel + MCP tool-plane health (degraded MCP is expected pre-full-wiring)
 graphiti-health: venv
 	uv run python3 ops/graphiti/graphiti_memory_client.py health
 
-## Ruff check + format check + mypy, via the locked venv (run `make venv` first, or let this pull it in).
-## Matches the CI workflow's lint job (.github/workflows/l9-lint-test.yml) step for step.
-lint: venv
-	uv run ruff check .
-	uv run ruff format --check .
+## Hard ruff gates on CHANGED files only (make pr). Full-tree: lint-ruff-full / make pr-full.
+## Resolver errors fail closed (do not treat as "no Python files").
+lint-ruff: venv
+	@tmp=$$(mktemp); py=$$(mktemp); \
+	trap 'rm -f "$$tmp" "$$py"' EXIT; \
+	if ! PR_BASE="$(PR_BASE)" WS="$(WS)" bash ops/scripts/resolve_changed_files.sh >"$$tmp"; then \
+		echo "FAIL: resolve_changed_files.sh"; exit 1; \
+	fi; \
+	grep -E '\.(py|pyi)$$' "$$tmp" >"$$py" || true; \
+	if [ ! -s "$$py" ]; then echo "OK: no changed Python files for ruff"; exit 0; fi; \
+	echo "ruff (changed): $$(grep -c . "$$py") file(s)"; \
+	xargs uv run --no-build ruff check <"$$py"; \
+	xargs uv run --no-build ruff format --check <"$$py"
+
+lint-ruff-full: venv
+	uv run --no-build ruff check .
+	uv run --no-build ruff format --check .
+
+## mypy via the locked venv. Advisory in CI today (TODO.md mypy debt); still
+## useful as a local signal. `make lint` keeps it blocking for intentional debt work.
+lint-mypy: venv
 	uv run mypy . --show-error-codes --pretty --ignore-missing-imports
+
+## Full-tree ruff + mypy (not the PR gate).
+lint: lint-ruff-full lint-mypy
+
+## Fail if uv.lock is out of sync with pyproject.toml (same as CI lockfile drift guard).
+## Skipped by make pr unless a dependency manifest is in the change set.
+uv-lock-check:
+	@if [ -f uv.lock ]; then uv lock --check; else echo "OK: no uv.lock present, skipping"; fi
+
+## Pytest suite. make pr runs this only when Python files changed.
+test: venv
+	@status=0; \
+	TESTING=true PYTHONPATH=. uv run pytest . --tb=short -q || status=$$?; \
+	if [ $$status -eq 5 ]; then \
+		echo "OK: pytest collected zero tests (exit 5) — expected given current repo state"; \
+		exit 0; \
+	fi; \
+	exit $$status
+
+## Local PR security scanners on CHANGED files only.
+## Pins: l9-ci-core security.yml (gitleaks 8.24.3, bandit==1.8.6, pip-audit==2.9.0).
+## Semgrep: SDK supported range >=1.100.0,<2.0.0. Full-tree = nightly CI.
+pr-security:
+	PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" PR_BASE="$(PR_BASE)" \
+		bash ops/scripts/run_pr_security.sh "$(WS)"
+
+## Local PR gate — CHANGED FILES ONLY (invariant). Does not scan the whole tree.
+## Nightly GHA owns full-corpus scans. Alias: pr-check.
+pr pr-check:
+	PR_BASE="$(PR_BASE)" PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
+	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
+		bash ops/scripts/run_pr_gate.sh
+
+## Intentional full-tree local gate (nightly-adjacent). Slow; not the default.
+pr-full: venv precommit lint-ruff-full uv-lock-check test rules-validate
+	@echo "NOTE: corpus security remains nightly CI; pr-full runs local full lint/test/precommit"
+	@echo "RESULT: PASS — full local gate (lint/test/precommit)"
 
 ## Read-only drift check: does the committed rules/RULES-MANIFEST.* still match the
 ## live rules/*.mdc corpus? Writes nothing. Exit 1 (with a findings list) on drift.

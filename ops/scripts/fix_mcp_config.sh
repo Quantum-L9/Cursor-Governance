@@ -110,7 +110,7 @@ cat > "$CONFIG_FILE" << 'EOF'
         "@modelcontextprotocol/server-postgres"
       ],
       "env": {
-        "DATABASE_URL": "postgresql://postgres:KJP_xam5pvj%2Angd_tkm@db.ebprgdlzzeoinrvdcfwx.supabase.co:5432/postgres"
+        "DATABASE_URL": "postgresql://USER:PASSWORD@HOST:5432/DB"
       }
     }
   }

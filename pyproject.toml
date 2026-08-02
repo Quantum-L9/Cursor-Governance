@@ -18,10 +18,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Analysis toolchain — exact pins must match requirements.txt and l9-ci-sdk
+# (sdk wins over l9-ci-core on disagreement). See AGENTS.md § toolchain.
 dev = [
-    "ruff>=0.6",
-    "pytest>=8.0",
-    "mypy>=1.19",
+    "ruff==0.16.0",
+    "mypy==2.3.0",
+    "types-PyYAML==6.0.12.20260724",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "bandit==1.8.6",
+    "pip-audit==2.9.0",
 ]
 
 # Repo-root layout (rules/, skills/, commands/, ops/, ...) is not an installable

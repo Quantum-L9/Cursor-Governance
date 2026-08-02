@@ -25,7 +25,8 @@ repos:
         pass_filenames: false
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.22 # pin matches uv.lock — keep in sync when bumping the ruff dev dep
+    # Pin must match requirements.txt / l9-ci-sdk ruff==0.16.0 (sdk wins over core).
+    rev: v0.16.0
     hooks:
       - id: ruff
         args: [--fix]
