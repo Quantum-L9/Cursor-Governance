@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import sys
@@ -9,10 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-try:
-    import yaml
-except ImportError as exc:
-    raise RuntimeError("harvester.py requires the 'PyYAML' package") from exc
 RUNTIME_DIR = Path(__file__).resolve().parent
 if str(RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(RUNTIME_DIR))
@@ -238,40 +233,8 @@ class SubagentDataHarvester:
         return raw
 
 
-def load_data(path: str | Path) -> Any:
-    source = Path(path)
-    with source.open("r", encoding="utf-8") as handle:
-        if source.suffix.lower() == ".json":
-            return json.load(handle)
-        if source.suffix.lower() in {".yaml", ".yml"}:
-            return yaml.safe_load(handle)
-    raise ValueError(f"Unsupported file type: {source}")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Harvest validated subagent-generated data.")
-    parser.add_argument("packet")
-    parser.add_argument("--output")
-    args = parser.parse_args()
-    packet = load_data(args.packet)
-    if not isinstance(packet, Mapping):
-        raise SystemExit("Packet root must be an object")
-    result = SubagentDataHarvester().harvest(packet).to_dict()
-    rendered = json.dumps(
-        result,
-        indent=2,
-        sort_keys=True,
-    )
-    if args.output:
-        target = Path(args.output)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            rendered + "\n",
-            encoding="utf-8",
-        )
-    else:
-        print(rendered)
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("harvester file-path CLI is disabled; use SubagentDataHarvester APIs")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 
@@ -72,38 +70,9 @@ class LearningClosureEvaluator:
         harvest_list = list(harvest_results)
         route_list = list(routing_decisions)
         promotion_list = list(promotion_results)
-        packet_actions = {
-            str(packet.get("identity", {}).get("action_id"))
-            for packet in packet_list
-            if isinstance(packet.get("identity"), Mapping)
-        }
-        missing_actions = sorted(expected_actions - packet_actions)
-        packet_ids = {
-            str(packet.get("packet_id")) for packet in packet_list if packet.get("packet_id")
-        }
-        valid_packet_ids = {
-            str(report.get("packet_id"))
-            for report in validation_list
-            if report.get("valid") is True
-        }
-        invalid_or_unvalidated = sorted(packet_ids - valid_packet_ids)
-        harvested_unit_ids: set[str] = set()
-        rejected_units_have_reasons = True
-        for result in harvest_list:
-            for unit in result.get(
-                "harvested_units",
-                [],
-            ):
-                if isinstance(unit, Mapping) and unit.get("unit_id"):
-                    harvested_unit_ids.add(str(unit["unit_id"]))
-            for rejected in result.get(
-                "rejected_units",
-                [],
-            ):
-                if not isinstance(rejected, Mapping):
-                    rejected_units_have_reasons = False
-                elif not rejected.get("reason"):
-                    rejected_units_have_reasons = False
+        missing_actions = self._missing_actions(expected_actions, packet_list)
+        invalid_or_unvalidated = self._invalid_or_unvalidated_packets(packet_list, validation_list)
+        harvested_unit_ids, rejected_units_have_reasons = self._harvest_state(harvest_list)
         routed_unit_ids = {
             str(decision.get("unit_id")) for decision in route_list if decision.get("unit_id")
         }
@@ -112,18 +81,107 @@ class LearningClosureEvaluator:
             str(result.get("unit_id")) for result in promotion_list if result.get("unit_id")
         }
         units_without_promotion_decision = sorted(routed_unit_ids - promoted_unit_ids)
+        high_value_unresolved = self._high_value_unresolved(promotion_list)
+        unresolved_unknown_ids = self._unresolved_unknown_ids(packet_list)
+        checks = self._build_checks(
+            missing_actions=missing_actions,
+            invalid_or_unvalidated=invalid_or_unvalidated,
+            unrouted_units=unrouted_units,
+            units_without_promotion_decision=units_without_promotion_decision,
+            unresolved_unknown_ids=unresolved_unknown_ids,
+            rejected_units_have_reasons=rejected_units_have_reasons,
+            evidence_archive_complete=evidence_archive_complete,
+            high_value_unresolved=high_value_unresolved,
+        )
+        status = (
+            "closed" if all(check.passed or not check.blocking for check in checks) else "blocked"
+        )
+        payload = {
+            "campaign_id": campaign_id,
+            "status": status,
+            "checks": [check.to_dict() for check in checks],
+            "unresolved_high_value_units": sorted(high_value_unresolved),
+            "unresolved_unknown_ids": sorted(unresolved_unknown_ids),
+        }
+        digest = hashlib.sha256(
+            json.dumps(
+                payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        return LearningClosureResult(
+            closure_id=f"closure-{digest[:20]}",
+            campaign_id=campaign_id,
+            status=status,
+            checks=checks,
+            unresolved_high_value_units=tuple(sorted(high_value_unresolved)),
+            unresolved_unknown_ids=tuple(sorted(unresolved_unknown_ids)),
+            closure_hash=digest,
+        )
+
+    @staticmethod
+    def _missing_actions(
+        expected_actions: set[str],
+        packet_list: list[Mapping[str, Any]],
+    ) -> list[str]:
+        packet_actions = {
+            str(packet.get("identity", {}).get("action_id"))
+            for packet in packet_list
+            if isinstance(packet.get("identity"), Mapping)
+        }
+        return sorted(expected_actions - packet_actions)
+
+    @staticmethod
+    def _invalid_or_unvalidated_packets(
+        packet_list: list[Mapping[str, Any]],
+        validation_list: list[Mapping[str, Any]],
+    ) -> list[str]:
+        packet_ids = {
+            str(packet.get("packet_id")) for packet in packet_list if packet.get("packet_id")
+        }
+        valid_packet_ids = {
+            str(report.get("packet_id"))
+            for report in validation_list
+            if report.get("valid") is True
+        }
+        return sorted(packet_ids - valid_packet_ids)
+
+    @staticmethod
+    def _harvest_state(
+        harvest_list: list[Mapping[str, Any]],
+    ) -> tuple[set[str], bool]:
+        harvested_unit_ids: set[str] = set()
+        rejected_units_have_reasons = True
+        for result in harvest_list:
+            for unit in result.get("harvested_units", []):
+                if isinstance(unit, Mapping) and unit.get("unit_id"):
+                    harvested_unit_ids.add(str(unit["unit_id"]))
+            for rejected in result.get("rejected_units", []):
+                if not isinstance(rejected, Mapping) or not rejected.get("reason"):
+                    rejected_units_have_reasons = False
+        return harvested_unit_ids, rejected_units_have_reasons
+
+    @staticmethod
+    def _high_value_unresolved(
+        promotion_list: list[Mapping[str, Any]],
+    ) -> set[str]:
         high_value_unresolved: set[str] = set()
         for result in promotion_list:
             if not isinstance(result, Mapping):
                 continue
             if result.get("risk_class") in {"medium", "high"} and result.get("decision") == "defer":
                 high_value_unresolved.add(str(result.get("unit_id")))
+        return high_value_unresolved
+
+    @staticmethod
+    def _unresolved_unknown_ids(
+        packet_list: list[Mapping[str, Any]],
+    ) -> set[str]:
         unresolved_unknown_ids: set[str] = set()
         for packet in packet_list:
-            unknowns = packet.get(
-                "unresolved_unknowns",
-                [],
-            )
+            unknowns = packet.get("unresolved_unknowns", [])
             if not isinstance(unknowns, list):
                 continue
             for unknown in unknowns:
@@ -138,7 +196,21 @@ class LearningClosureEvaluator:
                             )
                         )
                     )
-        checks = (
+        return unresolved_unknown_ids
+
+    @staticmethod
+    def _build_checks(
+        *,
+        missing_actions: list[str],
+        invalid_or_unvalidated: list[str],
+        unrouted_units: list[str],
+        units_without_promotion_decision: list[str],
+        unresolved_unknown_ids: set[str],
+        rejected_units_have_reasons: bool,
+        evidence_archive_complete: bool,
+        high_value_unresolved: set[str],
+    ) -> tuple[ClosureCheck, ...]:
+        return (
             ClosureCheck(
                 check_id="SGD-CLOSE-001",
                 passed=not missing_actions,
@@ -228,72 +300,12 @@ class LearningClosureEvaluator:
                 ),
             ),
         )
-        status = (
-            "closed" if all(check.passed or not check.blocking for check in checks) else "blocked"
-        )
-        payload = {
-            "campaign_id": campaign_id,
-            "status": status,
-            "checks": [check.to_dict() for check in checks],
-            "unresolved_high_value_units": sorted(high_value_unresolved),
-            "unresolved_unknown_ids": sorted(unresolved_unknown_ids),
-        }
-        digest = hashlib.sha256(
-            json.dumps(
-                payload,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            ).encode("utf-8")
-        ).hexdigest()
-        return LearningClosureResult(
-            closure_id=f"closure-{digest[:20]}",
-            campaign_id=campaign_id,
-            status=status,
-            checks=checks,
-            unresolved_high_value_units=tuple(sorted(high_value_unresolved)),
-            unresolved_unknown_ids=tuple(sorted(unresolved_unknown_ids)),
-            closure_hash=digest,
-        )
 
 
-def load_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Evaluate campaign learning closure.")
-    parser.add_argument("--campaign-id", required=True)
-    parser.add_argument("--expected-actions", required=True)
-    parser.add_argument("--packets", required=True)
-    parser.add_argument("--validation-reports", required=True)
-    parser.add_argument("--harvest-results", required=True)
-    parser.add_argument("--routing-decisions", required=True)
-    parser.add_argument("--promotion-results", required=True)
-    parser.add_argument(
-        "--evidence-archive-complete",
-        action="store_true",
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit(
+        "learning_closure file-path CLI is disabled; use LearningClosureEvaluator APIs"
     )
-    args = parser.parse_args()
-    result = LearningClosureEvaluator().evaluate(
-        campaign_id=args.campaign_id,
-        expected_action_ids=load_json(args.expected_actions),
-        packets=load_json(args.packets),
-        validation_reports=load_json(args.validation_reports),
-        harvest_results=load_json(args.harvest_results),
-        routing_decisions=load_json(args.routing_decisions),
-        promotion_results=load_json(args.promotion_results),
-        evidence_archive_complete=(args.evidence_archive_complete),
-    )
-    print(
-        json.dumps(
-            result.to_dict(),
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0 if result.status == "closed" else 1
 
 
 if __name__ == "__main__":

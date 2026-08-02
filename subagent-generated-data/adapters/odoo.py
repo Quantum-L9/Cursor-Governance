@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import argparse
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +34,8 @@ class OdooRepositoryContext:
 
 class OdooRepositoryAdapter:
     """Interpret generated data for pragmatic local-first Odoo repos."""
+
+    MANIFEST_FILENAME = "__manifest__.py"
 
     PROTECTED_PATHS = (
         ".env",
@@ -121,7 +121,7 @@ class OdooRepositoryAdapter:
             "ownership_finding",
         }:
             metadata["inspect_first"] = [
-                "__manifest__.py",
+                self.MANIFEST_FILENAME,
                 "models/__init__.py",
                 "models/*.py",
                 "views/*.xml",
@@ -134,6 +134,7 @@ class OdooRepositoryAdapter:
     def _discover_addon_roots(
         root: Path,
     ) -> list[str]:
+        manifest_name = OdooRepositoryAdapter.MANIFEST_FILENAME
         candidates: list[Path] = []
         common = (
             root / "addons",
@@ -143,7 +144,7 @@ class OdooRepositoryAdapter:
         for path in common:
             if path.is_dir():
                 candidates.append(path)
-        for manifest in root.rglob("__manifest__.py"):
+        for manifest in root.rglob(manifest_name):
             parent = manifest.parent.parent
             if parent.is_dir():
                 candidates.append(parent)
@@ -155,45 +156,20 @@ class OdooRepositoryAdapter:
         root: Path,
         addon_roots: list[str],
     ) -> list[str]:
+        manifest_name = OdooRepositoryAdapter.MANIFEST_FILENAME
         modules: set[str] = set()
         for relative_root in addon_roots:
             addon_root = root / relative_root
             if not addon_root.is_dir():
                 continue
             for child in addon_root.iterdir():
-                if child.is_dir() and (child / "__manifest__.py").is_file():
+                if child.is_dir() and (child / manifest_name).is_file():
                     modules.add(str(child.relative_to(root)))
         return sorted(modules)
 
 
-def load_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Inspect or enrich data for an Odoo repo.")
-    parser.add_argument("--repository", required=True)
-    parser.add_argument("--unit")
-    args = parser.parse_args()
-    adapter = OdooRepositoryAdapter()
-    context = adapter.inspect(args.repository)
-    result: Mapping[str, Any]
-    if args.unit:
-        unit = load_json(args.unit)
-        if not isinstance(unit, Mapping):
-            raise SystemExit("Unit root must be an object")
-        result = adapter.enrich_unit(unit, context)
-    else:
-        result = context.to_dict()
-    print(
-        json.dumps(
-            result,
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0 if context.metadata["conformant"] else 1
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("odoo file-path CLI is disabled; use OdooRepositoryAdapter APIs")
 
 
 if __name__ == "__main__":

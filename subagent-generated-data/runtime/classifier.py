@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-try:
-    import yaml
-except ImportError as exc:
-    raise RuntimeError("classifier.py requires the 'PyYAML' package") from exc
 PRIMARY_CLASSES = {
     "repository_fact",
     "architecture_boundary",
@@ -201,9 +195,7 @@ class GeneratedDataClassifier:
         )
         if count >= 3 and independently_sourced >= 2:
             return "strong"
-        if count >= 1:
-            return "moderate"
-        return "none"
+        return "moderate"
 
     @staticmethod
     def _confidence_band(
@@ -298,32 +290,8 @@ class GeneratedDataClassifier:
         return hashlib.sha256(encoded).hexdigest()
 
 
-def load_data(path: str | Path) -> Any:
-    source = Path(path)
-    with source.open("r", encoding="utf-8") as handle:
-        if source.suffix.lower() == ".json":
-            return json.load(handle)
-        if source.suffix.lower() in {".yaml", ".yml"}:
-            return yaml.safe_load(handle)
-    raise ValueError(f"Unsupported file type: {source}")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Classify generated data units deterministically.")
-    parser.add_argument("packet")
-    args = parser.parse_args()
-    packet = load_data(args.packet)
-    if not isinstance(packet, Mapping):
-        raise SystemExit("Packet root must be an object")
-    classifications = GeneratedDataClassifier().classify_packet(packet)
-    print(
-        json.dumps(
-            [item.to_dict() for item in classifications],
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("classifier file-path CLI is disabled; use GeneratedDataClassifier APIs")
 
 
 if __name__ == "__main__":

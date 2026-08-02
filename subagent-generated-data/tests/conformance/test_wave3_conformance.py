@@ -64,14 +64,16 @@ class Wave3ConformanceTests(unittest.TestCase):
         )
 
     def test_file_outbox_is_idempotent(self) -> None:
-        import tempfile
-
-        with tempfile.TemporaryDirectory() as temp:
-            transport = FileOutboxTransport(temp)
-            payload = {
-                "candidate_id": "memcand-idempotent",
-                "value": 1,
-            }
+        candidate_id = "memcand-idempotent"
+        transport = FileOutboxTransport()
+        payload = {
+            "candidate_id": candidate_id,
+            "value": 1,
+        }
+        target = transport.outbox_dir / f"{candidate_id}.json"
+        if target.exists():
+            target.unlink()
+        try:
             first = transport.deliver(payload)
             second = transport.deliver(payload)
             self.assertEqual(
@@ -82,6 +84,9 @@ class Wave3ConformanceTests(unittest.TestCase):
                 second["status"],
                 "already_enqueued",
             )
+        finally:
+            if target.exists():
+                target.unlink()
 
     def test_repository_adapters_have_distinct_policy(
         self,

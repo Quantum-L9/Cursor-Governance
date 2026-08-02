@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -68,15 +67,14 @@ class FailClosedTests(unittest.TestCase):
             "conditions": [],
             "promotion_hash": "bad",
         }
-        with tempfile.TemporaryDirectory() as temp:
-            adapter = GraphitiMemoryAdapter(FileOutboxTransport(temp))
-            with self.assertRaises(GraphitiAdapterError):
-                adapter.compile_candidate(
-                    harvested_unit=unit,
-                    routing_decision=bad_route,
-                    promotion_result=promotion,
-                    packet=self.valid_packet,
-                )
+        adapter = GraphitiMemoryAdapter(FileOutboxTransport())
+        with self.assertRaises(GraphitiAdapterError):
+            adapter.compile_candidate(
+                harvested_unit=unit,
+                routing_decision=bad_route,
+                promotion_result=promotion,
+                packet=self.valid_packet,
+            )
 
     def test_graphiti_rejects_deferred_promotion(
         self,
@@ -94,34 +92,40 @@ class FailClosedTests(unittest.TestCase):
             promotion.decision,
             "promote",
         )
-        with tempfile.TemporaryDirectory() as temp:
-            adapter = GraphitiMemoryAdapter(FileOutboxTransport(temp))
-            with self.assertRaises(GraphitiAdapterError):
-                adapter.compile_candidate(
-                    harvested_unit=unit,
-                    routing_decision=route.to_dict(),
-                    promotion_result=promotion.to_dict(),
-                    packet=self.valid_packet,
-                )
+        adapter = GraphitiMemoryAdapter(FileOutboxTransport())
+        with self.assertRaises(GraphitiAdapterError):
+            adapter.compile_candidate(
+                harvested_unit=unit,
+                routing_decision=route.to_dict(),
+                promotion_result=promotion.to_dict(),
+                packet=self.valid_packet,
+            )
 
     def test_outbox_rejects_candidate_id_collision(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            transport = FileOutboxTransport(temp)
+        candidate_id = "memcand-collision"
+        transport = FileOutboxTransport()
+        target = transport.outbox_dir / f"{candidate_id}.json"
+        if target.exists():
+            target.unlink()
+        try:
             transport.deliver(
                 {
-                    "candidate_id": "memcand-collision",
+                    "candidate_id": candidate_id,
                     "value": 1,
                 }
             )
             with self.assertRaises(GraphitiAdapterError):
                 transport.deliver(
                     {
-                        "candidate_id": "memcand-collision",
+                        "candidate_id": candidate_id,
                         "value": 2,
                     }
                 )
+        finally:
+            if target.exists():
+                target.unlink()
 
     def test_contested_memory_is_not_eligible(
         self,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import os
@@ -13,6 +12,9 @@ from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+_MEMORY_OUTBOX_DIR = _PACKAGE_ROOT / ".runtime" / "memory-outbox"
 
 
 class GraphitiAdapterError(RuntimeError):
@@ -74,8 +76,8 @@ class MemoryTransport(Protocol):
 class FileOutboxTransport:
     """Durably enqueue candidates for later Graphiti ingestion."""
 
-    def __init__(self, outbox_dir: str | Path) -> None:
-        self.outbox_dir = Path(outbox_dir)
+    def __init__(self) -> None:
+        self.outbox_dir = _MEMORY_OUTBOX_DIR
         self.outbox_dir.mkdir(parents=True, exist_ok=True)
 
     def deliver(
@@ -411,79 +413,29 @@ def canonical_json(value: Mapping[str, Any]) -> bytes:
     ).encode("utf-8")
 
 
-def load_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def select_transport(args: argparse.Namespace) -> MemoryTransport:
-    if args.endpoint:
+def select_transport(
+    *,
+    endpoint: str | None = None,
+    token: str | None = None,
+    command: list[str] | None = None,
+    timeout_seconds: int = 20,
+) -> MemoryTransport:
+    if endpoint:
         return HttpJsonTransport(
-            args.endpoint,
-            bearer_token=(args.token or os.environ.get("L9_GRAPHITI_MEMORY_TOKEN")),
-            timeout_seconds=args.timeout,
+            endpoint,
+            bearer_token=(token or os.environ.get("L9_GRAPHITI_MEMORY_TOKEN")),
+            timeout_seconds=timeout_seconds,
         )
-    if args.command:
+    if command:
         return CommandTransport(
-            args.command,
-            timeout_seconds=args.timeout,
+            command,
+            timeout_seconds=timeout_seconds,
         )
-    return FileOutboxTransport(args.outbox)
+    return FileOutboxTransport()
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description=("Compile and deliver one approved generated-data memory candidate.")
-    )
-    parser.add_argument("--packet", required=True)
-    parser.add_argument("--harvested-unit", required=True)
-    parser.add_argument("--routing-decision", required=True)
-    parser.add_argument("--promotion-result", required=True)
-    parser.add_argument(
-        "--outbox",
-        default=("subagent-generated-data/.runtime/memory-outbox"),
-    )
-    parser.add_argument("--endpoint")
-    parser.add_argument("--token")
-    parser.add_argument(
-        "--command",
-        nargs="+",
-    )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=20,
-    )
-    parser.add_argument(
-        "--compile-only",
-        action="store_true",
-    )
-    args = parser.parse_args()
-    adapter = GraphitiMemoryAdapter(select_transport(args))
-    candidate = adapter.compile_candidate(
-        harvested_unit=load_json(args.harvested_unit),
-        routing_decision=load_json(args.routing_decision),
-        promotion_result=load_json(args.promotion_result),
-        packet=load_json(args.packet),
-    )
-    if args.compile_only:
-        print(
-            json.dumps(
-                candidate.to_dict(),
-                indent=2,
-                sort_keys=True,
-            )
-        )
-        return 0
-    result = adapter.deliver(candidate)
-    print(
-        json.dumps(
-            result.to_dict(),
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("graphiti_memory file-path CLI is disabled; use GraphitiMemoryAdapter APIs")
 
 
 if __name__ == "__main__":

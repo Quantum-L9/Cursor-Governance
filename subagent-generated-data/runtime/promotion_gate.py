@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 
@@ -109,8 +107,72 @@ class PromotionGate:
             authority_sensitivity=authority_sensitivity,
             reuse_risk=reuse_risk,
         )
+        early = self._early_routing_decision(
+            unit_id=unit_id,
+            route=route,
+            route_status=route_status,
+            risk_class=risk_class,
+            routing_decision=routing_decision,
+        )
+        if early is not None:
+            return early
         reasons: list[str] = []
         conditions: list[str] = []
+        self._apply_epistemic_checks(
+            epistemic_status=epistemic_status,
+            confidence=confidence,
+            reasons=reasons,
+            conditions=conditions,
+        )
+        deferred = self._defer_for_high_or_medium_risk(
+            unit_id=unit_id,
+            route=route,
+            risk_class=risk_class,
+            reasons=reasons,
+            conditions=conditions,
+            independent_validation_present=independent_validation_present,
+            designated_authority_approval=designated_authority_approval,
+            recurrence_count=recurrence_count,
+        )
+        if deferred is not None:
+            return deferred
+        if confidence < 0.75 and route != "evidence":
+            return self._result(
+                unit_id=unit_id,
+                route=route,
+                decision="retain",
+                risk_class=risk_class,
+                authority_required="runtime",
+                reasons=("confidence_supports_evidence_only",),
+                conditions=("reassess_after_additional_evidence",),
+            )
+        return self._result(
+            unit_id=unit_id,
+            route=route,
+            decision="promote",
+            risk_class=risk_class,
+            authority_required=str(
+                routing_decision.get(
+                    "required_authority",
+                    "runtime",
+                )
+            ),
+            reasons=(
+                "routing_eligible",
+                "promotion_controls_satisfied",
+            ),
+            conditions=(),
+        )
+
+    def _early_routing_decision(
+        self,
+        *,
+        unit_id: str,
+        route: str,
+        route_status: str,
+        risk_class: str,
+        routing_decision: Mapping[str, Any],
+    ) -> PromotionResult | None:
         if route_status == "rejected":
             return self._result(
                 unit_id=unit_id,
@@ -141,6 +203,16 @@ class PromotionGate:
                     )
                 ),
             )
+        return None
+
+    @staticmethod
+    def _apply_epistemic_checks(
+        *,
+        epistemic_status: str,
+        confidence: float,
+        reasons: list[str],
+        conditions: list[str],
+    ) -> None:
         if epistemic_status in {
             "hypothesized",
             "contested",
@@ -151,6 +223,19 @@ class PromotionGate:
         if confidence < 0.5:
             reasons.append("confidence_below_minimum")
             conditions.append("collect_stronger_evidence")
+
+    def _defer_for_high_or_medium_risk(
+        self,
+        *,
+        unit_id: str,
+        route: str,
+        risk_class: str,
+        reasons: list[str],
+        conditions: list[str],
+        independent_validation_present: bool,
+        designated_authority_approval: bool,
+        recurrence_count: int,
+    ) -> PromotionResult | None:
         if risk_class == "high":
             if not independent_validation_present:
                 conditions.append("independent_validation_required")
@@ -181,33 +266,7 @@ class PromotionGate:
                         "or_observe_second_confirming_occurrence",
                     ),
                 )
-        if confidence < 0.75 and route != "evidence":
-            return self._result(
-                unit_id=unit_id,
-                route=route,
-                decision="retain",
-                risk_class=risk_class,
-                authority_required="runtime",
-                reasons=("confidence_supports_evidence_only",),
-                conditions=("reassess_after_additional_evidence",),
-            )
-        return self._result(
-            unit_id=unit_id,
-            route=route,
-            decision="promote",
-            risk_class=risk_class,
-            authority_required=str(
-                routing_decision.get(
-                    "required_authority",
-                    "runtime",
-                )
-            ),
-            reasons=(
-                "routing_eligible",
-                "promotion_controls_satisfied",
-            ),
-            conditions=(),
-        )
+        return None
 
     def evaluate_many(
         self,
@@ -324,43 +383,8 @@ class PromotionGate:
         return raw.strip()
 
 
-def load_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Apply promotion gates to routing decisions.")
-    parser.add_argument("--harvest", required=True)
-    parser.add_argument("--routes", required=True)
-    parser.add_argument(
-        "--independent-validation",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--authority-approved",
-        action="store_true",
-    )
-    args = parser.parse_args()
-    harvest = load_json(args.harvest)
-    routes = load_json(args.routes)
-    results = PromotionGate().evaluate_many(
-        harvested_units=harvest.get(
-            "harvested_units",
-            [],
-        ),
-        routing_decisions=routes,
-        independent_validation_present=(args.independent_validation),
-        designated_authority_approval=(args.authority_approved),
-    )
-    print(
-        json.dumps(
-            [result.to_dict() for result in results],
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("promotion_gate file-path CLI is disabled; use PromotionGate APIs")
 
 
 if __name__ == "__main__":

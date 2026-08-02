@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import argparse
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,13 +35,14 @@ class RepositoryContext:
 class L9PythonRepositoryAdapter:
     """Interpret generated data for strict L9 Python repositories."""
 
+    AGENTS_MD = "AGENTS.md"
     REQUIRED_FILES = (
         "pyproject.toml",
         "uv.lock",
-        "AGENTS.md",
+        AGENTS_MD,
     )
     AUTHORITATIVE_FILES = (
-        "AGENTS.md",
+        AGENTS_MD,
         "ARCHITECTURE.md",
         "DEVELOPMENT.md",
         "TESTING.md",
@@ -66,7 +65,7 @@ class L9PythonRepositoryAdapter:
         "**/*.key",
         "**/secrets/**",
         ".github/workflows/**",
-        "AGENTS.md",
+        AGENTS_MD,
         "SECURITY.md",
     )
 
@@ -160,34 +159,8 @@ class L9PythonRepositoryAdapter:
         return [candidate for candidate in candidates if (root / candidate).exists()]
 
 
-def load_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Inspect or enrich data for an L9 Python repo.")
-    parser.add_argument("--repository", required=True)
-    parser.add_argument("--unit")
-    args = parser.parse_args()
-    adapter = L9PythonRepositoryAdapter()
-    context = adapter.inspect(args.repository)
-    result: Mapping[str, Any]
-    if args.unit:
-        unit = load_json(args.unit)
-        if not isinstance(unit, Mapping):
-            raise SystemExit("Unit root must be an object")
-        result = adapter.enrich_unit(unit, context)
-    else:
-        result = context.to_dict()
-    print(
-        json.dumps(
-            result,
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0 if context.metadata["conformant"] else 1
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("l9_python file-path CLI is disabled; use L9PythonRepositoryAdapter APIs")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections.abc import Mapping
@@ -21,11 +20,23 @@ RUNTIME_DIR = Path(__file__).resolve().parent
 BASE_DIR = RUNTIME_DIR.parent
 SCHEMAS_DIR = BASE_DIR / "schemas"
 ROLES_DIR = BASE_DIR / "roles"
-PACKET_SCHEMA = SCHEMAS_DIR / "subagent-data-packet.schema.json"
-UNIT_SCHEMA = SCHEMAS_DIR / "generated-data-unit.schema.json"
-PROVENANCE_SCHEMA = SCHEMAS_DIR / "provenance.schema.json"
-ROUTING_SCHEMA = SCHEMAS_DIR / "routing-decision.schema.json"
-CLOSURE_SCHEMA = SCHEMAS_DIR / "learning-closure.schema.json"
+PACKET_SCHEMA_FILENAME = "subagent-data-packet.schema.json"
+UNIT_SCHEMA_FILENAME = "generated-data-unit.schema.json"
+PROVENANCE_SCHEMA_FILENAME = "provenance.schema.json"
+ROUTING_SCHEMA_FILENAME = "routing-decision.schema.json"
+CLOSURE_SCHEMA_FILENAME = "learning-closure.schema.json"
+PACKET_SCHEMA = SCHEMAS_DIR / PACKET_SCHEMA_FILENAME
+UNIT_SCHEMA = SCHEMAS_DIR / UNIT_SCHEMA_FILENAME
+PROVENANCE_SCHEMA = SCHEMAS_DIR / PROVENANCE_SCHEMA_FILENAME
+ROUTING_SCHEMA = SCHEMAS_DIR / ROUTING_SCHEMA_FILENAME
+CLOSURE_SCHEMA = SCHEMAS_DIR / CLOSURE_SCHEMA_FILENAME
+REQUIRED_SCHEMA_FILENAMES = (
+    PACKET_SCHEMA_FILENAME,
+    UNIT_SCHEMA_FILENAME,
+    PROVENANCE_SCHEMA_FILENAME,
+    ROUTING_SCHEMA_FILENAME,
+    CLOSURE_SCHEMA_FILENAME,
+)
 
 
 class PacketValidationFailure(ValueError):
@@ -79,7 +90,7 @@ class PacketValidator:
     ) -> None:
         self.schemas_dir = Path(schemas_dir)
         self.roles_dir = Path(roles_dir)
-        self.packet_schema = self._load_json(self.schemas_dir / "subagent-data-packet.schema.json")
+        self.packet_schema = self._load_json(self.schemas_dir / PACKET_SCHEMA_FILENAME)
         self.schema_store = self._load_schema_store(self.schemas_dir)
         self.validator = self._build_validator(self.packet_schema)
         Draft202012Validator.check_schema(self.packet_schema)
@@ -128,14 +139,7 @@ class PacketValidator:
 
     def validate_schema_set(self) -> list[ValidationFinding]:
         findings: list[ValidationFinding] = []
-        required = (
-            "subagent-data-packet.schema.json",
-            "generated-data-unit.schema.json",
-            "provenance.schema.json",
-            "routing-decision.schema.json",
-            "learning-closure.schema.json",
-        )
-        for filename in required:
+        for filename in REQUIRED_SCHEMA_FILENAMES:
             path = self.schemas_dir / filename
             if not path.is_file():
                 findings.append(
@@ -197,100 +201,140 @@ class PacketValidator:
         identity = packet.get("identity")
         if not isinstance(identity, Mapping):
             return findings
+        findings.extend(self._base_sha_findings(packet, identity))
+        findings.extend(self._unit_semantic_findings(packet))
+        findings.extend(self._unknown_semantic_findings(packet))
+        return findings
+
+    @staticmethod
+    def _base_sha_findings(
+        packet: Mapping[str, Any],
+        identity: Mapping[str, Any],
+    ) -> list[ValidationFinding]:
         base_sha = identity.get("base_sha")
         provenance = packet.get("provenance")
-        if isinstance(provenance, Mapping):
-            provenance_sha = provenance.get("base_sha")
-            if (
-                isinstance(base_sha, str)
-                and isinstance(provenance_sha, str)
-                and base_sha != provenance_sha
-            ):
+        if not isinstance(provenance, Mapping):
+            return []
+        provenance_sha = provenance.get("base_sha")
+        if (
+            isinstance(base_sha, str)
+            and isinstance(provenance_sha, str)
+            and base_sha != provenance_sha
+        ):
+            return [
+                ValidationFinding(
+                    code="SGD-BASE-SHA-MISMATCH",
+                    severity="error",
+                    message=("identity.base_sha and provenance.base_sha must match"),
+                    location="$.provenance.base_sha",
+                )
+            ]
+        return []
+
+    @staticmethod
+    def _unit_semantic_findings(
+        packet: Mapping[str, Any],
+    ) -> list[ValidationFinding]:
+        findings: list[ValidationFinding] = []
+        units = packet.get("generated_data_units", [])
+        if not isinstance(units, list):
+            return findings
+        unit_ids: set[str] = set()
+        for index, unit in enumerate(units):
+            if not isinstance(unit, Mapping):
+                continue
+            findings.extend(
+                PacketValidator._single_unit_findings(
+                    unit=unit,
+                    index=index,
+                    unit_ids=unit_ids,
+                )
+            )
+        return findings
+
+    @staticmethod
+    def _single_unit_findings(
+        *,
+        unit: Mapping[str, Any],
+        index: int,
+        unit_ids: set[str],
+    ) -> list[ValidationFinding]:
+        findings: list[ValidationFinding] = []
+        unit_id = unit.get("unit_id")
+        if isinstance(unit_id, str):
+            if unit_id in unit_ids:
                 findings.append(
                     ValidationFinding(
-                        code="SGD-BASE-SHA-MISMATCH",
+                        code="SGD-DUPLICATE-UNIT-ID",
                         severity="error",
-                        message=("identity.base_sha and provenance.base_sha must match"),
-                        location="$.provenance.base_sha",
+                        message=f"Duplicate unit_id: {unit_id}",
+                        location=(f"$.generated_data_units[{index}].unit_id"),
                     )
                 )
-        units = packet.get("generated_data_units", [])
-        if isinstance(units, list):
-            unit_ids: set[str] = set()
-            for index, unit in enumerate(units):
-                if not isinstance(unit, Mapping):
-                    continue
-                unit_id = unit.get("unit_id")
-                if isinstance(unit_id, str):
-                    if unit_id in unit_ids:
-                        findings.append(
-                            ValidationFinding(
-                                code="SGD-DUPLICATE-UNIT-ID",
-                                severity="error",
-                                message=f"Duplicate unit_id: {unit_id}",
-                                location=(f"$.generated_data_units[{index}].unit_id"),
-                            )
-                        )
-                    unit_ids.add(unit_id)
-                status = unit.get("epistemic_status")
-                evidence = unit.get("source_evidence", [])
-                if status in {"observed", "derived"} and not evidence:
-                    findings.append(
-                        ValidationFinding(
-                            code="SGD-EVIDENCE-REQUIRED",
-                            severity="error",
-                            message=(f"{status!r} units require source evidence"),
-                            location=(f"$.generated_data_units[{index}].source_evidence"),
-                        )
-                    )
-                proposed_routes = unit.get("proposed_routes", [])
-                if isinstance(proposed_routes, list) and not proposed_routes:
-                    findings.append(
-                        ValidationFinding(
-                            code="SGD-ROUTE-REQUIRED",
-                            severity="error",
-                            message=(
-                                "Every generated data unit requires at least one proposed route"
-                            ),
-                            location=(f"$.generated_data_units[{index}].proposed_routes"),
-                        )
-                    )
-                invalidation = unit.get(
-                    "invalidation_conditions",
-                    [],
+            unit_ids.add(unit_id)
+        status = unit.get("epistemic_status")
+        evidence = unit.get("source_evidence", [])
+        if status in {"observed", "derived"} and not evidence:
+            findings.append(
+                ValidationFinding(
+                    code="SGD-EVIDENCE-REQUIRED",
+                    severity="error",
+                    message=(f"{status!r} units require source evidence"),
+                    location=(f"$.generated_data_units[{index}].source_evidence"),
                 )
-                if unit.get("expected_reuse") and not invalidation:
-                    findings.append(
-                        ValidationFinding(
-                            code="SGD-INVALIDATION-REQUIRED",
-                            severity="error",
-                            message=("Reusable units require invalidation conditions"),
-                            location=(f"$.generated_data_units[{index}].invalidation_conditions"),
-                        )
-                    )
+            )
+        proposed_routes = unit.get("proposed_routes", [])
+        if isinstance(proposed_routes, list) and not proposed_routes:
+            findings.append(
+                ValidationFinding(
+                    code="SGD-ROUTE-REQUIRED",
+                    severity="error",
+                    message=("Every generated data unit requires at least one proposed route"),
+                    location=(f"$.generated_data_units[{index}].proposed_routes"),
+                )
+            )
+        invalidation = unit.get("invalidation_conditions", [])
+        if unit.get("expected_reuse") and not invalidation:
+            findings.append(
+                ValidationFinding(
+                    code="SGD-INVALIDATION-REQUIRED",
+                    severity="error",
+                    message=("Reusable units require invalidation conditions"),
+                    location=(f"$.generated_data_units[{index}].invalidation_conditions"),
+                )
+            )
+        return findings
+
+    @staticmethod
+    def _unknown_semantic_findings(
+        packet: Mapping[str, Any],
+    ) -> list[ValidationFinding]:
+        findings: list[ValidationFinding] = []
         unknowns = packet.get("unresolved_unknowns", [])
-        if isinstance(unknowns, list):
-            for index, unknown in enumerate(unknowns):
-                if not isinstance(unknown, Mapping):
-                    continue
-                for field_name in (
-                    "unknown_id",
-                    "description",
-                    "class",
-                    "blocking_status",
-                    "owner",
-                    "next_action",
-                    "evidence_needed",
-                ):
-                    if not unknown.get(field_name):
-                        findings.append(
-                            ValidationFinding(
-                                code="SGD-UNKNOWN-INCOMPLETE",
-                                severity="error",
-                                message=(f"Unresolved unknown is missing {field_name!r}"),
-                                location=(f"$.unresolved_unknowns[{index}].{field_name}"),
-                            )
+        if not isinstance(unknowns, list):
+            return findings
+        required_fields = (
+            "unknown_id",
+            "description",
+            "class",
+            "blocking_status",
+            "owner",
+            "next_action",
+            "evidence_needed",
+        )
+        for index, unknown in enumerate(unknowns):
+            if not isinstance(unknown, Mapping):
+                continue
+            for field_name in required_fields:
+                if not unknown.get(field_name):
+                    findings.append(
+                        ValidationFinding(
+                            code="SGD-UNKNOWN-INCOMPLETE",
+                            severity="error",
+                            message=(f"Unresolved unknown is missing {field_name!r}"),
+                            location=(f"$.unresolved_unknowns[{index}].{field_name}"),
                         )
+                    )
         return findings
 
     def _role_findings(
@@ -433,44 +477,8 @@ class PacketValidator:
         return hashlib.sha256(encoded).hexdigest()
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate an L9 subagent-generated data packet.")
-    parser.add_argument(
-        "packet",
-        nargs="?",
-        help="JSON or YAML packet to validate.",
-    )
-    parser.add_argument(
-        "--schemas-dir",
-        default=str(SCHEMAS_DIR),
-    )
-    parser.add_argument(
-        "--roles-dir",
-        default=str(ROLES_DIR),
-    )
-    parser.add_argument(
-        "--validate-contracts",
-        action="store_true",
-        help="Validate the full Wave 1 schema set.",
-    )
-    args = parser.parse_args()
-    validator = PacketValidator(
-        schemas_dir=args.schemas_dir,
-        roles_dir=args.roles_dir,
-    )
-    if args.validate_contracts:
-        findings = validator.validate_schema_set()
-        payload = {
-            "valid": not any(item.severity == "error" for item in findings),
-            "findings": [item.to_dict() for item in findings],
-        }
-        print(json.dumps(payload, indent=2, sort_keys=True))
-        return 0 if payload["valid"] else 1
-    if not args.packet:
-        parser.error("packet is required unless --validate-contracts is used")
-    report = validator.validate_file(args.packet)
-    print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
-    return 0 if report.valid else 1
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("packet_validator file-path CLI is disabled; use PacketValidator APIs")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -100,22 +99,22 @@ class EndToEndRoutingTests(unittest.TestCase):
             promotion.decision,
             "promote",
         )
-        with tempfile.TemporaryDirectory() as temp:
-            adapter = GraphitiMemoryAdapter(FileOutboxTransport(temp))
-            candidate = adapter.compile_candidate(
-                harvested_unit=memory_unit.to_dict(),
-                routing_decision=route.to_dict(),
-                promotion_result=promotion.to_dict(),
-                packet=self.packet,
-            )
+        adapter = GraphitiMemoryAdapter(FileOutboxTransport())
+        candidate = adapter.compile_candidate(
+            harvested_unit=memory_unit.to_dict(),
+            routing_decision=route.to_dict(),
+            promotion_result=promotion.to_dict(),
+            packet=self.packet,
+        )
+        try:
             delivery = adapter.deliver(candidate)
             self.assertEqual(
                 delivery.status,
                 "enqueued",
             )
-            target = Path(delivery.destination_reference)
-            self.assertTrue(target.is_file())
-            stored = json.loads(target.read_text(encoding="utf-8"))
+            stored_path = Path(delivery.destination_reference)
+            self.assertTrue(stored_path.is_file())
+            stored = json.loads(stored_path.read_text(encoding="utf-8"))
             self.assertEqual(
                 stored["kind"],
                 "MemoryCandidate",
@@ -125,6 +124,10 @@ class EndToEndRoutingTests(unittest.TestCase):
                 "advisory",
             )
             self.assertFalse(stored["governance"]["may_override_repository_state"])
+        finally:
+            outbox_path = FileOutboxTransport().outbox_dir / f"{candidate.candidate_id}.json"
+            if outbox_path.exists():
+                outbox_path.unlink()
 
 
 if __name__ == "__main__":

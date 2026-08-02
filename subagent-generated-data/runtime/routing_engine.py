@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections.abc import Iterable, Mapping
@@ -346,52 +345,8 @@ class RoutingEngine:
         return raw.strip()
 
 
-def load_json(path: str | Path) -> Any:
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Route harvested generated-data units.")
-    parser.add_argument("harvest_result", nargs="?")
-    parser.add_argument(
-        "--routes-dir",
-        default=str(ROUTES_DIR),
-    )
-    parser.add_argument(
-        "--validate-routes",
-        action="store_true",
-    )
-    args = parser.parse_args()
-    engine = RoutingEngine(
-        routes_dir=args.routes_dir,
-    )
-    if args.validate_routes:
-        errors = engine.validate_routes()
-        print(
-            json.dumps(
-                {
-                    "valid": not errors,
-                    "errors": errors,
-                },
-                indent=2,
-                sort_keys=True,
-            )
-        )
-        return 0 if not errors else 1
-    if not args.harvest_result:
-        parser.error("harvest_result is required unless --validate-routes is used")
-    payload = load_json(args.harvest_result)
-    units = payload.get("harvested_units", [])
-    decisions = engine.route_many(units)
-    print(
-        json.dumps(
-            [decision.to_dict() for decision in decisions],
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    raise SystemExit("routing_engine file-path CLI is disabled; use RoutingEngine APIs")
 
 
 if __name__ == "__main__":
