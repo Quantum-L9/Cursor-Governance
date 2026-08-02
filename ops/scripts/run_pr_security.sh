@@ -113,7 +113,8 @@ run_gitleaks() {
     return 0
   fi
   local ver
-  ver="$(gitleaks version 2>/dev/null | head -1 | tr -d '[:space:]' || true)"
+  # Output looks like "gitleaks version 8.24.3" — take the last token, not a space-stripped blob.
+  ver="$(gitleaks version 2>/dev/null | head -1 | awk '{print $NF}' || true)"
   if [[ -n "$ver" && "$ver" != "$GITLEAKS_PIN" ]]; then
     note "WARN: gitleaks $ver on PATH (expected $GITLEAKS_PIN from l9-ci-core security.yml; sdk has no gitleaks pin)"
   fi
@@ -174,33 +175,32 @@ run_semgrep() {
     skip "semgrep (no changed source files)"
     return 0
   fi
-  local -a cmd=()
-  if have semgrep; then
-    cmd=(semgrep)
-  elif have uvx || have uv; then
-    cmd=(run_uvx_pkg "semgrep>=1.100.0,<2" semgrep)
-  else
-    skip "semgrep not available"
-    return 0
-  fi
-  # Flatten function+args for version / run when using run_uvx_pkg wrapper is awkward;
-  # prefer PATH semgrep, else uvx --from.
-  if ! have semgrep; then
-    cmd=(uvx --from "semgrep>=1.100.0,<2" semgrep)
-  fi
-  local ver
-  ver="$("${cmd[@]}" --version 2>/dev/null | head -1 || true)"
-  note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
+  # Prefer PATH semgrep; else uvx / uv tool run (never assume uvx when only uv exists).
+  local ver=""
   local -a configs=()
   local c
   # shellcheck disable=SC2086
   for c in $SEMGREP_CONFIGS; do
     configs+=(--config "$c")
   done
-  if "${cmd[@]}" --error --quiet "${configs[@]}" "${targets[@]}"; then
-    ok "semgrep (${#targets[@]} file(s))"
+  if have semgrep; then
+    ver="$(semgrep --version 2>/dev/null | head -1 || true)"
+    note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
+    if semgrep --error --quiet "${configs[@]}" "${targets[@]}"; then
+      ok "semgrep (${#targets[@]} file(s))"
+    else
+      fail "semgrep found issues in changed files"
+    fi
+  elif have uvx || have uv; then
+    ver="$(run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --version 2>/dev/null | head -1 || true)"
+    note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
+    if run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet "${configs[@]}" "${targets[@]}"; then
+      ok "semgrep (${#targets[@]} file(s))"
+    else
+      fail "semgrep found issues in changed files"
+    fi
   else
-    fail "semgrep found issues in changed files"
+    skip "semgrep not available"
   fi
 }
 

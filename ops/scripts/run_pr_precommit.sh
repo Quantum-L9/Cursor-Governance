@@ -23,8 +23,10 @@ if [[ ! -s "$tmp" ]]; then
   exit 0
 fi
 
-count="$(grep -c . "$tmp" || true)"
-echo "pre-commit (changed files: ${count})"
+files=()
+while IFS= read -r f; do
+  [[ -n "$f" ]] && files+=("$f")
+done <"$tmp"
+echo "pre-commit (changed files: ${#files[@]})"
 cd "$WS"
-# shellcheck disable=SC2046
-SKIP=symlinks-check pre-commit run --files $(cat "$tmp")
+SKIP=symlinks-check pre-commit run --files "${files[@]}"

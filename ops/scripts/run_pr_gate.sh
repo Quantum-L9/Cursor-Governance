@@ -42,8 +42,9 @@ if [[ "${py_count:-0}" -eq 0 ]]; then
 else
   echo "ruff (changed): ${py_count} file(s)"
   # xargs -n batch to stay under ARG_MAX; paths are repo-relative.
-  xargs uv run ruff check <"$py_list"
-  xargs uv run ruff format --check <"$py_list"
+  # --no-build: do not execute package build/setup scripts (Sonar shell:S8541).
+  xargs uv run --no-build ruff check <"$py_list"
+  xargs uv run --no-build ruff format --check <"$py_list"
 fi
 
 echo "--- uv lock ---"
@@ -60,7 +61,7 @@ fi
 echo "--- pytest ---"
 if grep -Eq '\.py$' "$changed_file"; then
   status=0
-  TESTING=true PYTHONPATH=. uv run pytest . --tb=short -q || status=$?
+  TESTING=true PYTHONPATH=. uv run --no-build pytest . --tb=short -q || status=$?
   if [[ "$status" -eq 5 ]]; then
     echo "OK: pytest collected zero tests (exit 5)"
   elif [[ "$status" -ne 0 ]]; then
@@ -81,7 +82,7 @@ echo "--- security ---"
 bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
-  uv run mypy . --show-error-codes --pretty --ignore-missing-imports
+  uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
 else
   echo "mypy: advisory on PR gate (set PR_MYPY_STRICT=1 to fail; full check is make lint / nightly)"
 fi

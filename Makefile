@@ -120,16 +120,22 @@ graphiti-health: venv
 	uv run python3 ops/graphiti/graphiti_memory_client.py health
 
 ## Hard ruff gates on CHANGED files only (make pr). Full-tree: lint-ruff-full / make pr-full.
+## Resolver errors fail closed (do not treat as "no Python files").
 lint-ruff: venv
-	@files=$$(PR_BASE="$(PR_BASE)" WS="$(WS)" bash ops/scripts/resolve_changed_files.sh 2>/dev/null | grep -E '\.(py|pyi)$$' || true); \
-	if [ -z "$$files" ]; then echo "OK: no changed Python files for ruff"; exit 0; fi; \
-	echo "ruff (changed): $$(echo "$$files" | wc -l | tr -d ' ') file(s)"; \
-	uv run ruff check $$files; \
-	uv run ruff format --check $$files
+	@tmp=$$(mktemp); py=$$(mktemp); \
+	trap 'rm -f "$$tmp" "$$py"' EXIT; \
+	if ! PR_BASE="$(PR_BASE)" WS="$(WS)" bash ops/scripts/resolve_changed_files.sh >"$$tmp"; then \
+		echo "FAIL: resolve_changed_files.sh"; exit 1; \
+	fi; \
+	grep -E '\.(py|pyi)$$' "$$tmp" >"$$py" || true; \
+	if [ ! -s "$$py" ]; then echo "OK: no changed Python files for ruff"; exit 0; fi; \
+	echo "ruff (changed): $$(grep -c . "$$py") file(s)"; \
+	xargs uv run --no-build ruff check <"$$py"; \
+	xargs uv run --no-build ruff format --check <"$$py"
 
 lint-ruff-full: venv
-	uv run ruff check .
-	uv run ruff format --check .
+	uv run --no-build ruff check .
+	uv run --no-build ruff format --check .
 
 ## mypy via the locked venv. Advisory in CI today (TODO.md mypy debt); still
 ## useful as a local signal. `make lint` keeps it blocking for intentional debt work.
