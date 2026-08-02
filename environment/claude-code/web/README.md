@@ -23,9 +23,16 @@ field.
 2. **Environment variables** — paste `environment.env.example`, then replace every
    `REPLACE_WITH_*` **in the UI, not in chat or a repo**. At minimum set `GH_TOKEN`
    (dedicated bot-user fine-grained PAT).
-3. **Setup script** — paste `setup.sh`. It is idempotent and auto-detects Python
-   vs Node, clones `Cursor-Governance` to `$HOME/.cursor-governance`, and
-   (optionally) wires the shared-memory MCP client (`.mcp.json`).
+3. **Setup script** — **paste `setup.bootstrap.sh` (recommended), not `setup.sh`.**
+   The account field is a *copy*, not a live link to the repo, so pasting the full
+   `setup.sh` drifts from the file on every edit until someone re-pastes it. The
+   bootstrap is a stable stub: it clones/refreshes `Cursor-Governance` and then
+   executes the canonical `setup.sh` from it, so edits to `setup.sh` on `main`
+   propagate to every new session with **no re-paste**. (Pasting `setup.sh`
+   directly still works — it's the same logic — but you own keeping it in sync.)
+   Either way it is idempotent, auto-detects Python vs Node, clones governance to
+   `$HOME/.cursor-governance`, provisions `pre-commit` (the `make pr` gate,
+   CANONICAL_LAW §12), and optionally wires the shared-memory MCP client (`.mcp.json`).
 4. **Per-repo (git-tracked, recommended)** — in each consumer repo commit the
    `.claude/` triad so the SessionStart hook boots governance from the clone (see
    the parent `README.md` §4). Committing is preferred: it is explicit, reviewable,
