@@ -109,3 +109,5 @@ Same bootstrap, but agent may skip re-reading full `memory-bank/` bodies after t
 - Legacy C1 / Redis steps are **not** part of this command; use Graphiti + memory-bank (T0) as the resume stack.
 
 --- End Command ---
+
+<!-- pr-remediation: ci retrigger -->
