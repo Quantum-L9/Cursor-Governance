@@ -3,12 +3,21 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import shutil
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _write_under(root: Path, path: Path, text: str) -> None:
+    root_r = os.path.realpath(root)
+    path_r = os.path.realpath(path)
+    if os.path.commonpath([root_r, path_r]) != root_r:
+        raise ValueError(f"path escapes root: {path}")
+    Path(path_r).write_text(text, encoding="utf-8")
 
 
 def render_tree(target: Path, replacements: dict[str, str]) -> None:
@@ -29,11 +38,11 @@ def render_tree(target: Path, replacements: dict[str, str]) -> None:
         text = path.read_text(encoding="utf-8")
         for key, value in replacements.items():
             text = text.replace("{{" + key + "}}", value)
-        path.write_text(text, encoding="utf-8")
+        _write_under(target, path, text)
     program_path = target / "PROGRAM.yaml"
     program = yaml.safe_load(program_path.read_text(encoding="utf-8"))
     program["program"]["definition_status"] = "draft"
-    program_path.write_text(yaml.safe_dump(program, sort_keys=False, width=110), encoding="utf-8")
+    _write_under(target, program_path, yaml.safe_dump(program, sort_keys=False, width=110))
     write_manifest(target)
 
 
@@ -59,9 +68,7 @@ def write_manifest(root: Path) -> None:
         "files": files,
         "integrity": {"algorithm": "sha256", "self_excluded": True},
     }
-    (root / "MANIFEST.yaml").write_text(
-        yaml.safe_dump(manifest, sort_keys=False, width=110), encoding="utf-8"
-    )
+    _write_under(root, root / "MANIFEST.yaml", yaml.safe_dump(manifest, sort_keys=False, width=110))
 
 
 def main() -> int:

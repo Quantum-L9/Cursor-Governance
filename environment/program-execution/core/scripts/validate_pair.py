@@ -47,11 +47,30 @@ LEGACY = [
 ]
 
 
+def _is_external_or_fragment_link(target: str) -> bool:
+    """True for URL/mailto links and in-page fragments (skip filesystem checks)."""
+    if target.startswith("#"):
+        return True
+    if ":" not in target:
+        return False
+    scheme = target.split(":", 1)[0].lower()
+    return scheme in {"http", "https", "mailto"}
+
+
 def load(path: Path) -> Any:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 def child(command: list[str]) -> list[str]:
+    if not command or not all(isinstance(part, str) and part for part in command):
+        raise ValueError("command must be a non-empty list of non-empty strings")
+    if command[0] != sys.executable:
+        raise ValueError("child commands must invoke sys.executable")
+    script = Path(command[1]).resolve()
+    try:
+        script.relative_to(Path(__file__).resolve().parents[1])
+    except ValueError as exc:
+        raise ValueError(f"script escapes pack root: {script}") from exc
     r = subprocess.run(command, text=True, capture_output=True, check=False, timeout=120)
     return (
         []
@@ -181,7 +200,7 @@ def validate(root: Path, mode: str) -> list[str]:
     link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
     for path in root.glob("*.md"):
         for target in link_pattern.findall(path.read_text(encoding="utf-8")):
-            if target.startswith(("http://", "https://", "#", "mailto:")):
+            if _is_external_or_fragment_link(target):
                 continue
             clean = target.split("#", 1)[0]
             if clean and not (path.parent / clean).resolve().exists():

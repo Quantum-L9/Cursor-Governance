@@ -69,6 +69,18 @@ SCHEMA_MAP = {
 }
 PLACEHOLDERS = [re.compile(r"\{\{[A-Z0-9_]+\}\}"), re.compile(r"REPLACE_WITH_[A-Z0-9_]+")]
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+
+
+def _is_external_or_fragment_link(target: str) -> bool:
+    """True for URL/mailto links and in-page fragments (skip filesystem checks)."""
+    if target.startswith("#"):
+        return True
+    if ":" not in target:
+        return False
+    scheme = target.split(":", 1)[0].lower()
+    return scheme in {"http", "https", "mailto"}
+
+
 AUTH_ACTIONS = {
     "inspect",
     "local_write",
@@ -454,7 +466,7 @@ def validate(root: Path, mode: str) -> list[str]:
     for md in root.rglob("*.md"):
         content = md.read_text(encoding="utf-8")
         for target in MARKDOWN_LINK.findall(content):
-            if target.startswith(("http://", "https://", "#", "mailto:")):
+            if _is_external_or_fragment_link(target):
                 continue
             clean = target.split("#", 1)[0]
             if clean and not (md.parent / clean).resolve().exists():

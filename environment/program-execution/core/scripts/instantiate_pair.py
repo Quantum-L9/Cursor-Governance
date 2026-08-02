@@ -12,7 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(command: list[str]) -> None:
-    subprocess.run(command, check=True)
+    if not command or not all(isinstance(part, str) and part for part in command):
+        raise ValueError("command must be a non-empty list of non-empty strings")
+    if command[0] != sys.executable:
+        raise ValueError("instantiate_pair only execs sys.executable children")
+    script = Path(command[1]).resolve()
+    try:
+        script.relative_to(ROOT)
+    except ValueError as exc:
+        raise ValueError(f"script escapes pack root: {script}") from exc
+    subprocess.run(command, check=True, timeout=300)
 
 
 def main() -> int:

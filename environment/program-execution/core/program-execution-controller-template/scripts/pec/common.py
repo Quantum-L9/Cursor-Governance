@@ -29,6 +29,7 @@ def sha256_file(path: Path) -> str:
 
 
 def load_json(path: Path) -> Any:
+    path = Path(os.path.realpath(path))
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -37,6 +38,7 @@ def load_yaml(path: Path) -> Any:
 
 
 def write_json(path: Path, value: Any) -> None:
+    path = Path(os.path.realpath(path))
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     with tempfile.NamedTemporaryFile(
@@ -70,6 +72,7 @@ def run_git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedP
         text=True,
         capture_output=True,
         check=False,
+        timeout=120,
         env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
     )
     if check and completed.returncode != 0:

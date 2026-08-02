@@ -625,14 +625,24 @@ def _changed_paths(worktree: Path) -> list[str]:
 
 
 def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
-    completed = subprocess.run(
-        ["bash", "-lc", command],
-        cwd=worktree,
-        text=True,
-        capture_output=True,
-        check=False,
-        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
-    )
+    try:
+        completed = subprocess.run(
+            ["bash", "-lc", command],
+            cwd=worktree,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=300,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "command": command,
+            "status": "FAIL",
+            "exit_code": 124,
+            "stdout": (exc.stdout or "")[-8000:] if isinstance(exc.stdout, str) else "",
+            "stderr": "validation command timed out after 300s",
+        }
     return {
         "command": command,
         "status": "PASS" if completed.returncode == 0 else "FAIL",
@@ -885,6 +895,7 @@ def recover(workspace: Path, actor: str) -> dict[str, Any]:
                 try:
                     db.transition_task(lease["task_id"], "STALE", last_error="lease_expired")
                 except ValueError:
+                    # Task may already be outside the STALE-capable set after concurrent recovery.
                     pass
             ledger.append(
                 "LEASE_RECOVERED",
