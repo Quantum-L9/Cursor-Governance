@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 import argparse
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
 try:
     import yaml
 except ImportError as exc:
-    raise RuntimeError(
-        "classifier.py requires the 'PyYAML' package"
-    ) from exc
+    raise RuntimeError("classifier.py requires the 'PyYAML' package") from exc
 PRIMARY_CLASSES = {
     "repository_fact",
     "architecture_boundary",
@@ -76,8 +77,12 @@ DEFAULT_ROUTES = {
     "follow_on_opportunity": ["opportunities"],
     "evidence_only": ["evidence"],
 }
+
+
 class ClassificationFailure(ValueError):
     """Raised when a generated data unit cannot be classified safely."""
+
+
 @dataclass(frozen=True)
 class Classification:
     unit_id: str
@@ -90,6 +95,7 @@ class Classification:
     risk_of_incorrect_reuse: str
     normalized_routes: tuple[str, ...]
     classification_hash: str
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "unit_id": self.unit_id,
@@ -103,8 +109,11 @@ class Classification:
             "normalized_routes": list(self.normalized_routes),
             "classification_hash": self.classification_hash,
         }
+
+
 class GeneratedDataClassifier:
     """Deterministically enrich validated generated data units."""
+
     def classify(
         self,
         unit: Mapping[str, Any],
@@ -119,17 +128,10 @@ class GeneratedDataClassifier:
             "epistemic_status",
         )
         if primary_class not in PRIMARY_CLASSES:
-            raise ClassificationFailure(
-                f"Unsupported primary_class: {primary_class!r}"
-            )
+            raise ClassificationFailure(f"Unsupported primary_class: {primary_class!r}")
         if epistemic_status not in EPISTEMIC_STATUSES:
-            raise ClassificationFailure(
-                f"Unsupported epistemic_status: "
-                f"{epistemic_status!r}"
-            )
-        authority_sensitivity = self._authority_sensitivity(
-            primary_class
-        )
+            raise ClassificationFailure(f"Unsupported epistemic_status: {epistemic_status!r}")
+        authority_sensitivity = self._authority_sensitivity(primary_class)
         evidence_strength = self._evidence_strength(unit)
         confidence_band = self._confidence_band(unit)
         reuse_horizon = self._reuse_horizon(unit)
@@ -143,13 +145,7 @@ class GeneratedDataClassifier:
         if not isinstance(proposed, list) or not proposed:
             proposed = DEFAULT_ROUTES[primary_class]
         normalized_routes = tuple(
-            sorted(
-                {
-                    str(route).strip()
-                    for route in proposed
-                    if str(route).strip()
-                }
-            )
+            sorted({str(route).strip() for route in proposed if str(route).strip()})
         )
         payload = {
             "unit_id": unit_id,
@@ -166,20 +162,16 @@ class GeneratedDataClassifier:
             **payload,
             classification_hash=self._sha256(payload),
         )
+
     def classify_packet(
         self,
         packet: Mapping[str, Any],
     ) -> list[Classification]:
         units = packet.get("generated_data_units", [])
         if not isinstance(units, list):
-            raise ClassificationFailure(
-                "generated_data_units must be a list"
-            )
-        return [
-            self.classify(unit)
-            for unit in units
-            if isinstance(unit, Mapping)
-        ]
+            raise ClassificationFailure("generated_data_units must be a list")
+        return [self.classify(unit) for unit in units if isinstance(unit, Mapping)]
+
     @staticmethod
     def _authority_sensitivity(
         primary_class: str,
@@ -189,6 +181,7 @@ class GeneratedDataClassifier:
         if primary_class in MEDIUM_AUTHORITY_CLASSES:
             return "medium"
         return "low"
+
     @staticmethod
     def _evidence_strength(
         unit: Mapping[str, Any],
@@ -203,8 +196,7 @@ class GeneratedDataClassifier:
             {
                 str(item.get("source_id"))
                 for item in evidence
-                if isinstance(item, Mapping)
-                and item.get("source_id")
+                if isinstance(item, Mapping) and item.get("source_id")
             }
         )
         if count >= 3 and independently_sourced >= 2:
@@ -212,6 +204,7 @@ class GeneratedDataClassifier:
         if count >= 1:
             return "moderate"
         return "none"
+
     @staticmethod
     def _confidence_band(
         unit: Mapping[str, Any],
@@ -230,6 +223,7 @@ class GeneratedDataClassifier:
         if confidence >= 0.25:
             return "low"
         return "very_low"
+
     @staticmethod
     def _reuse_horizon(
         unit: Mapping[str, Any],
@@ -243,6 +237,7 @@ class GeneratedDataClassifier:
             if expected.get("cross_task"):
                 return "cross_task"
         return "task_local"
+
     @staticmethod
     def _incorrect_reuse_risk(
         *,
@@ -281,6 +276,7 @@ class GeneratedDataClassifier:
         if score >= 3:
             return "medium"
         return "low"
+
     @staticmethod
     def _required_string(
         value: Mapping[str, Any],
@@ -288,10 +284,9 @@ class GeneratedDataClassifier:
     ) -> str:
         raw = value.get(field_name)
         if not isinstance(raw, str) or not raw.strip():
-            raise ClassificationFailure(
-                f"{field_name!r} must be a non-empty string"
-            )
+            raise ClassificationFailure(f"{field_name!r} must be a non-empty string")
         return raw.strip()
+
     @staticmethod
     def _sha256(value: Mapping[str, Any]) -> str:
         encoded = json.dumps(
@@ -301,6 +296,8 @@ class GeneratedDataClassifier:
             ensure_ascii=False,
         ).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
+
+
 def load_data(path: str | Path) -> Any:
     source = Path(path)
     with source.open("r", encoding="utf-8") as handle:
@@ -309,18 +306,16 @@ def load_data(path: str | Path) -> Any:
         if source.suffix.lower() in {".yaml", ".yml"}:
             return yaml.safe_load(handle)
     raise ValueError(f"Unsupported file type: {source}")
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Classify generated data units deterministically."
-    )
+    parser = argparse.ArgumentParser(description="Classify generated data units deterministically.")
     parser.add_argument("packet")
     args = parser.parse_args()
     packet = load_data(args.packet)
     if not isinstance(packet, Mapping):
         raise SystemExit("Packet root must be an object")
-    classifications = GeneratedDataClassifier().classify_packet(
-        packet
-    )
+    classifications = GeneratedDataClassifier().classify_packet(packet)
     print(
         json.dumps(
             [item.to_dict() for item in classifications],
@@ -329,5 +324,7 @@ def main() -> int:
         )
     )
     return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

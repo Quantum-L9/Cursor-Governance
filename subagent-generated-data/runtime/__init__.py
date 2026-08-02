@@ -11,4 +11,5 @@ The runtime is governance infrastructure. It does not own destination systems
 such as Graphiti memory, task contracts, validation implementations,
 architecture authority, or opportunity planning.
 """
+
 __version__ = "1.0.0"

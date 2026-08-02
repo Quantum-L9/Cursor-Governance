@@ -105,8 +105,8 @@
       "additionalProperties": false,
       "properties": {
         "observed_at": {"type": ["string", "null"]},
-        "applies_to_base_sha": {"type": ["string", "null"]},
-        "validity_limit": {"type": ["string", "null"]}
+        "base_sha": {"type": ["string", "null"]},
+        "expires_at": {"type": ["string", "null"]}
       }
     },
     "proposed_routes": {
@@ -115,11 +115,50 @@
       "items": {"$ref": "#/$defs/routeName"},
       "default": []
     },
-    "expected_reuse": {"type": ["string", "null"]},
+    "expected_reuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reuse horizon the producing agent expects (law §24). Drives the classifier's reuse_horizon.",
+      "properties": {
+        "task_local": {"type": "boolean"},
+        "cross_task": {"type": "boolean"},
+        "cross_campaign": {"type": "boolean"},
+        "cross_repository": {"type": "boolean"},
+        "description": {"type": "string"}
+      }
+    },
     "invalidation_conditions": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1},
+      "description": "What makes this unit stale (law §22). Each condition names a trigger and, optionally, the selector it applies to.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["condition_type"],
+        "properties": {
+          "condition_type": {
+            "type": "string",
+            "enum": [
+              "relevant_path_changed",
+              "repository_base_changed",
+              "schema_version_changed",
+              "contract_version_changed",
+              "policy_version_changed",
+              "architecture_owner_changed",
+              "dependency_upgraded",
+              "contradictory_evidence_accepted",
+              "failed_reuse_reported",
+              "expiration_reached"
+            ]
+          },
+          "selector": {"type": "string", "minLength": 1}
+        }
+      },
       "default": []
+    },
+    "self_promoted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the producing agent asserts this unit should be promoted directly. The producing role may never self-promote (law SGD-003); the packet validator's role guard rejects any self_promoted unit that targets a forbidden destination route."
     },
     "visibility": {
       "$ref": "#/$defs/visibility",

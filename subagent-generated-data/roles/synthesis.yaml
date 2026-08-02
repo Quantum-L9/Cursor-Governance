@@ -4,6 +4,18 @@ primary_artifact_kinds:
   - ExecutionBrief
   - SynthesisReport
 promotion_authority: false
+
+# Activates the packet validator's role guard for the no-self-promotion invariant
+# (law SGD-003): a self_promoted unit targeting any destination route is rejected.
+allows_empty_generated_data: true
+required_generated_data_classes: []
+forbidden_self_promotion_targets:
+  - memory
+  - contracts
+  - validation
+  - patterns
+  - architecture
+  - opportunities
 default_epistemic_status: derived
 
 must_assess:

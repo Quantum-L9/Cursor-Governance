@@ -1,0 +1,186 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "packet-campaign-001-recon-001",
+  "identity": {
+    "campaign_id": "campaign-001",
+    "graph_id": "graph-001",
+    "repository": "Quantum-L9/example",
+    "repository_class": "l9_python",
+    "base_sha": "abc1234",
+    "action_id": "recon-001",
+    "agent_id": "agent-recon-001",
+    "role": "recon",
+    "lease_id": "lease-recon-001"
+  },
+  "primary_result": {
+    "artifact_id": "artifact-recon-001",
+    "artifact_kind": "ReconReport",
+    "completion_status": "completed"
+  },
+  "generated_data_units": [
+    {
+      "unit_id": "unit-repo-fact-001",
+      "primary_class": "repository_fact",
+      "epistemic_status": "observed",
+      "statement": "The repository uses uv.lock as the dependency resolution contract.",
+      "source_evidence": [
+        {
+          "source_id": "source-uv-lock",
+          "source_type": "repository_path",
+          "repository": "Quantum-L9/example",
+          "path": "uv.lock",
+          "base_sha": "abc1234",
+          "locator": "file"
+        }
+      ],
+      "scope": {
+        "repositories": [
+          "Quantum-L9/example"
+        ],
+        "repository_classes": [
+          "l9_python"
+        ],
+        "paths": [
+          "uv.lock"
+        ],
+        "task_types": [
+          "dependency_setup"
+        ],
+        "roles": [
+          "executor",
+          "verifier"
+        ]
+      },
+      "confidence": 0.98,
+      "freshness": {
+        "observed_at": "2026-08-02T15:00:00Z",
+        "base_sha": "abc1234",
+        "expires_at": null
+      },
+      "proposed_routes": [
+        "memory"
+      ],
+      "expected_reuse": {
+        "task_local": true,
+        "cross_task": true,
+        "cross_campaign": true,
+        "cross_repository": false,
+        "description": "Future setup and verification agents should use locked uv commands."
+      },
+      "invalidation_conditions": [
+        {
+          "condition_type": "relevant_path_changed",
+          "selector": "uv.lock"
+        },
+        {
+          "condition_type": "policy_version_changed",
+          "selector": "dependency_strategy"
+        }
+      ],
+      "visibility": "repository_local"
+    },
+    {
+      "unit_id": "unit-contract-gap-001",
+      "primary_class": "task_contract_gap",
+      "epistemic_status": "derived",
+      "statement": "Dependency setup tasks should explicitly require uv sync --locked.",
+      "source_evidence": [
+        {
+          "source_id": "source-pyproject",
+          "source_type": "repository_path",
+          "repository": "Quantum-L9/example",
+          "path": "pyproject.toml",
+          "base_sha": "abc1234",
+          "locator": "project"
+        },
+        {
+          "source_id": "source-uv-lock",
+          "source_type": "repository_path",
+          "repository": "Quantum-L9/example",
+          "path": "uv.lock",
+          "base_sha": "abc1234",
+          "locator": "file"
+        }
+      ],
+      "scope": {
+        "repositories": [
+          "Quantum-L9/example"
+        ],
+        "repository_classes": [
+          "l9_python"
+        ],
+        "paths": [
+          "pyproject.toml",
+          "uv.lock"
+        ],
+        "task_types": [
+          "dependency_setup"
+        ],
+        "roles": [
+          "executor"
+        ]
+      },
+      "confidence": 0.92,
+      "freshness": {
+        "observed_at": "2026-08-02T15:00:00Z",
+        "base_sha": "abc1234",
+        "expires_at": null
+      },
+      "proposed_routes": [
+        "contracts"
+      ],
+      "expected_reuse": {
+        "task_local": false,
+        "cross_task": true,
+        "cross_campaign": true,
+        "cross_repository": true,
+        "description": "The requirement applies to L9 Python dependency setup tasks."
+      },
+      "invalidation_conditions": [
+        {
+          "condition_type": "policy_version_changed",
+          "selector": "dependency_strategy"
+        }
+      ],
+      "visibility": "constellation_internal"
+    }
+  ],
+  "unresolved_unknowns": [
+    {
+      "unknown_id": "unknown-ci-001",
+      "description": "It is not yet verified whether CI uses uv sync --locked.",
+      "class": "validation",
+      "blocking_status": "non_blocking",
+      "owner": "verification-agent",
+      "next_action": "Inspect CI workflow dependency setup.",
+      "evidence_needed": "Current workflow file and successful CI receipt.",
+      "source_action": "recon-001"
+    }
+  ],
+  "provenance": {
+    "repository": "Quantum-L9/example",
+    "repository_class": "l9_python",
+    "base_sha": "abc1234",
+    "input_artifacts": [],
+    "evidence_artifacts": [
+      "artifact-recon-001"
+    ],
+    "inspected_paths": [
+      "pyproject.toml",
+      "uv.lock"
+    ],
+    "executed_commands": [
+      "git rev-parse HEAD"
+    ],
+    "generated_at": "2026-08-02T15:00:00Z"
+  },
+  "reuse_assessment": {
+    "reusable_data_found": true,
+    "task_local_value": 4,
+    "cross_task_value": 5,
+    "cross_repository_value": 3,
+    "confidence": 0.95,
+    "reason": "The packet contains durable dependency and task-contract knowledge."
+  },
+  "generated_at": "2026-08-02T15:00:00Z"
+}

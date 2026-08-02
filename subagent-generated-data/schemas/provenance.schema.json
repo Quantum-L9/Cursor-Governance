@@ -8,25 +8,58 @@
   "$defs": {
     "evidenceRef": {
       "title": "Evidence reference",
-      "description": "One inspectable evidence reference (law §10.2): a repository path, a `sha256:<hex>` file hash, a `commit:<sha>` reference, a `test:<id>` result, a `command:<argv>` receipt, an `artifact:<id>` typed artifact, a `probe:<name>` runtime probe, a `ci:<id>` result, a `review:<id>` finding, or a `source:<uri>` governed external source.",
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^(sha256:[0-9a-fA-F]{64}|commit:[0-9a-fA-F]{7,40}|test:.+|command:.+|artifact:.+|probe:.+|ci:.+|review:.+|source:.+|[^\\s].*)$"
+      "description": "One inspectable evidence reference (law §10.2). Identifies the source (source_id, source_type) and, where applicable, the repository/path/commit/locator that make it re-inspectable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "source_type"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "repository_path",
+            "file_hash",
+            "commit",
+            "test_result",
+            "command_receipt",
+            "typed_artifact",
+            "runtime_probe",
+            "ci_result",
+            "review_finding",
+            "governed_external_source"
+          ]
+        },
+        "repository": {"type": "string", "minLength": 1},
+        "repository_class": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "base_sha": {"type": "string", "minLength": 1},
+        "locator": {"type": "string", "minLength": 1},
+        "commit": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "minLength": 1},
+        "test_id": {"type": "string", "minLength": 1},
+        "command": {"type": "string", "minLength": 1},
+        "ci_id": {"type": "string", "minLength": 1},
+        "review_id": {"type": "string", "minLength": 1},
+        "description": {"type": "string"}
+      }
     },
     "provenanceBlock": {
       "title": "Provenance block",
-      "description": "Aggregate provenance for a packet: what was consumed, what evidence was produced, what was inspected, and what was executed.",
+      "description": "Aggregate provenance for a packet: what repository state produced it, what was consumed, what evidence was produced, what was inspected, and what was executed.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "repository_class": {"type": "string", "minLength": 1},
+        "base_sha": {"type": "string", "minLength": 1},
         "input_artifacts": {
           "type": "array",
-          "items": {"$ref": "#/$defs/evidenceRef"},
+          "items": {"type": "string", "minLength": 1},
           "default": []
         },
         "evidence_artifacts": {
           "type": "array",
-          "items": {"$ref": "#/$defs/evidenceRef"},
+          "items": {"type": "string", "minLength": 1},
           "default": []
         },
         "inspected_paths": {
@@ -38,19 +71,23 @@
           "type": "array",
           "items": {"type": "string", "minLength": 1},
           "default": []
-        }
+        },
+        "generated_at": {"type": "string", "minLength": 1}
       }
     }
   },
   "properties": {
+    "repository": {"type": "string", "minLength": 1},
+    "repository_class": {"type": "string", "minLength": 1},
+    "base_sha": {"type": "string", "minLength": 1},
     "input_artifacts": {
       "type": "array",
-      "items": {"$ref": "#/$defs/evidenceRef"},
+      "items": {"type": "string", "minLength": 1},
       "default": []
     },
     "evidence_artifacts": {
       "type": "array",
-      "items": {"$ref": "#/$defs/evidenceRef"},
+      "items": {"type": "string", "minLength": 1},
       "default": []
     },
     "inspected_paths": {
@@ -62,6 +99,7 @@
       "type": "array",
       "items": {"type": "string", "minLength": 1},
       "default": []
-    }
+    },
+    "generated_at": {"type": "string", "minLength": 1}
   }
 }

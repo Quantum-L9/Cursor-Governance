@@ -1,21 +1,26 @@
 from __future__ import annotations
+
 import argparse
 import hashlib
 import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
+
 try:
     import yaml
 except ImportError as exc:
-    raise RuntimeError(
-        "routing_engine.py requires the 'PyYAML' package"
-    ) from exc
+    raise RuntimeError("routing_engine.py requires the 'PyYAML' package") from exc
 RUNTIME_DIR = Path(__file__).resolve().parent
 BASE_DIR = RUNTIME_DIR.parent
 ROUTES_DIR = BASE_DIR / "routes"
+
+
 class RoutingFailure(ValueError):
     """Raised when no safe routing decision can be produced."""
+
+
 @dataclass(frozen=True)
 class RoutingDecision:
     decision_id: str
@@ -27,6 +32,7 @@ class RoutingDecision:
     required_authority: str
     requires_independent_validation: bool
     decision_hash: str
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "decision_id": self.decision_id,
@@ -36,13 +42,14 @@ class RoutingDecision:
             "status": self.status,
             "reason_codes": list(self.reason_codes),
             "required_authority": self.required_authority,
-            "requires_independent_validation": (
-                self.requires_independent_validation
-            ),
+            "requires_independent_validation": (self.requires_independent_validation),
             "decision_hash": self.decision_hash,
         }
+
+
 class RoutingEngine:
     """Route harvested generated-data units using declarative route files."""
+
     def __init__(
         self,
         *,
@@ -50,6 +57,7 @@ class RoutingEngine:
     ) -> None:
         self.routes_dir = Path(routes_dir)
         self.routes = self._load_routes(self.routes_dir)
+
     def route(
         self,
         harvested_unit: Mapping[str, Any],
@@ -57,13 +65,9 @@ class RoutingEngine:
         original = harvested_unit.get("original_unit")
         classification = harvested_unit.get("classification")
         if not isinstance(original, Mapping):
-            raise RoutingFailure(
-                "harvested_unit.original_unit must be an object"
-            )
+            raise RoutingFailure("harvested_unit.original_unit must be an object")
         if not isinstance(classification, Mapping):
-            raise RoutingFailure(
-                "harvested_unit.classification must be an object"
-            )
+            raise RoutingFailure("harvested_unit.classification must be an object")
         unit_id = self._required_string(
             harvested_unit,
             "unit_id",
@@ -97,9 +101,7 @@ class RoutingEngine:
                         route=route_name,
                         destination="none",
                         status="rejected",
-                        reason_codes=(
-                            "route_not_registered",
-                        ),
+                        reason_codes=("route_not_registered",),
                         required_authority="none",
                         requires_independent_validation=False,
                     )
@@ -116,13 +118,9 @@ class RoutingEngine:
                     self._decision(
                         unit_id=unit_id,
                         route=route_name,
-                        destination=str(
-                            route["destination"]
-                        ),
+                        destination=str(route["destination"]),
                         status="rejected",
-                        reason_codes=(
-                            "class_not_accepted_by_route",
-                        ),
+                        reason_codes=("class_not_accepted_by_route",),
                         required_authority=str(
                             route.get(
                                 "promotion_authority",
@@ -149,13 +147,9 @@ class RoutingEngine:
                     self._decision(
                         unit_id=unit_id,
                         route=route_name,
-                        destination=str(
-                            route["destination"]
-                        ),
+                        destination=str(route["destination"]),
                         status="deferred",
-                        reason_codes=(
-                            "epistemic_status_not_promotable",
-                        ),
+                        reason_codes=("epistemic_status_not_promotable",),
                         required_authority=str(
                             route.get(
                                 "promotion_authority",
@@ -177,13 +171,9 @@ class RoutingEngine:
                     self._decision(
                         unit_id=unit_id,
                         route=route_name,
-                        destination=str(
-                            route["destination"]
-                        ),
+                        destination=str(route["destination"]),
                         status="deferred",
-                        reason_codes=(
-                            "risk_exceeds_route_threshold",
-                        ),
+                        reason_codes=("risk_exceeds_route_threshold",),
                         required_authority=str(
                             route.get(
                                 "promotion_authority",
@@ -198,24 +188,15 @@ class RoutingEngine:
                 "required_unit_fields",
                 [],
             )
-            missing = [
-                field_name
-                for field_name in required_fields
-                if not original.get(field_name)
-            ]
+            missing = [field_name for field_name in required_fields if not original.get(field_name)]
             if missing:
                 decisions.append(
                     self._decision(
                         unit_id=unit_id,
                         route=route_name,
-                        destination=str(
-                            route["destination"]
-                        ),
+                        destination=str(route["destination"]),
                         status="deferred",
-                        reason_codes=tuple(
-                            f"missing_{field_name}"
-                            for field_name in missing
-                        ),
+                        reason_codes=tuple(f"missing_{field_name}" for field_name in missing),
                         required_authority=str(
                             route.get(
                                 "promotion_authority",
@@ -235,9 +216,7 @@ class RoutingEngine:
                 self._decision(
                     unit_id=unit_id,
                     route=route_name,
-                    destination=str(
-                        route["destination"]
-                    ),
+                    destination=str(route["destination"]),
                     status="eligible",
                     reason_codes=(
                         "class_accepted",
@@ -266,14 +245,13 @@ class RoutingEngine:
                     route="reject",
                     destination="evidence_archive",
                     status="rejected",
-                    reason_codes=(
-                        "no_route_requested",
-                    ),
+                    reason_codes=("no_route_requested",),
                     required_authority="runtime",
                     requires_independent_validation=False,
                 )
             )
         return decisions
+
     def route_many(
         self,
         harvested_units: Iterable[Mapping[str, Any]],
@@ -282,6 +260,7 @@ class RoutingEngine:
         for unit in harvested_units:
             decisions.extend(self.route(unit))
         return decisions
+
     def validate_routes(self) -> list[str]:
         errors: list[str] = []
         required_fields = {
@@ -296,19 +275,13 @@ class RoutingEngine:
             "independent_validation_required",
         }
         for route_name, route in self.routes.items():
-            missing = sorted(
-                required_fields - set(route)
-            )
+            missing = sorted(required_fields - set(route))
             if missing:
-                errors.append(
-                    f"{route_name}: missing fields "
-                    + ", ".join(missing)
-                )
+                errors.append(f"{route_name}: missing fields " + ", ".join(missing))
             if route.get("route_id") != route_name:
-                errors.append(
-                    f"{route_name}: route_id must equal filename stem"
-                )
+                errors.append(f"{route_name}: route_id must equal filename stem")
         return errors
+
     @staticmethod
     def _decision(
         *,
@@ -327,9 +300,7 @@ class RoutingEngine:
             "status": status,
             "reason_codes": list(reason_codes),
             "required_authority": required_authority,
-            "requires_independent_validation": (
-                requires_independent_validation
-            ),
+            "requires_independent_validation": (requires_independent_validation),
         }
         decision_hash = hashlib.sha256(
             json.dumps(
@@ -347,11 +318,10 @@ class RoutingEngine:
             status=status,
             reason_codes=reason_codes,
             required_authority=required_authority,
-            requires_independent_validation=(
-                requires_independent_validation
-            ),
+            requires_independent_validation=(requires_independent_validation),
             decision_hash=decision_hash,
         )
+
     @staticmethod
     def _load_routes(
         routes_dir: Path,
@@ -361,11 +331,10 @@ class RoutingEngine:
             with path.open("r", encoding="utf-8") as handle:
                 payload = yaml.safe_load(handle)
             if not isinstance(payload, Mapping):
-                raise RoutingFailure(
-                    f"Route file must contain an object: {path}"
-                )
+                raise RoutingFailure(f"Route file must contain an object: {path}")
             routes[path.stem] = payload
         return routes
+
     @staticmethod
     def _required_string(
         value: Mapping[str, Any],
@@ -373,17 +342,17 @@ class RoutingEngine:
     ) -> str:
         raw = value.get(field_name)
         if not isinstance(raw, str) or not raw.strip():
-            raise RoutingFailure(
-                f"{field_name!r} must be a non-empty string"
-            )
+            raise RoutingFailure(f"{field_name!r} must be a non-empty string")
         return raw.strip()
+
+
 def load_json(path: str | Path) -> Any:
     with Path(path).open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Route harvested generated-data units."
-    )
+    parser = argparse.ArgumentParser(description="Route harvested generated-data units.")
     parser.add_argument("harvest_result", nargs="?")
     parser.add_argument(
         "--routes-dir",
@@ -411,10 +380,7 @@ def main() -> int:
         )
         return 0 if not errors else 1
     if not args.harvest_result:
-        parser.error(
-            "harvest_result is required unless "
-            "--validate-routes is used"
-        )
+        parser.error("harvest_result is required unless --validate-routes is used")
     payload = load_json(args.harvest_result)
     units = payload.get("harvested_units", [])
     decisions = engine.route_many(units)
@@ -426,5 +392,7 @@ def main() -> int:
         )
     )
     return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

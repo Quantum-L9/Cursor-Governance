@@ -51,30 +51,33 @@
       "additionalProperties": false,
       "required": [
         "campaign_id",
+        "graph_id",
         "repository",
+        "repository_class",
         "base_sha",
         "action_id",
         "agent_id",
-        "role"
+        "role",
+        "lease_id"
       ],
       "properties": {
         "campaign_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._-]+$"},
-        "graph_id": {"type": ["string", "null"]},
+        "graph_id": {"type": "string", "minLength": 1},
         "repository": {"type": "string", "minLength": 1},
-        "repository_class": {"type": ["string", "null"]},
+        "repository_class": {"type": "string", "minLength": 1},
         "base_sha": {"type": "string", "minLength": 1},
         "action_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._-]+$"},
         "agent_id": {"type": "string", "minLength": 1},
         "role": {"$ref": "#/$defs/role"},
-        "lease_id": {"type": ["string", "null"]}
+        "lease_id": {"type": "string", "minLength": 1}
       }
     },
     "primary_result": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["artifact_kind", "completion_status"],
+      "required": ["artifact_id", "artifact_kind", "completion_status"],
       "properties": {
-        "artifact_id": {"type": ["string", "null"]},
+        "artifact_id": {"type": "string", "minLength": 1},
         "artifact_kind": {"type": "string", "minLength": 1},
         "completion_status": {
           "type": "string",
@@ -102,7 +105,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["unknown_id", "description", "class", "owner"],
+        "required": [
+          "unknown_id",
+          "description",
+          "class",
+          "blocking_status",
+          "owner",
+          "next_action",
+          "evidence_needed",
+          "source_action"
+        ],
         "properties": {
           "unknown_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$"},
           "description": {"type": "string", "minLength": 1},
@@ -122,9 +134,9 @@
             "default": "non_blocking"
           },
           "owner": {"type": "string", "minLength": 1},
-          "next_action": {"type": ["string", "null"]},
-          "evidence_needed": {"type": ["string", "null"]},
-          "source_action": {"type": ["string", "null"]}
+          "next_action": {"type": "string", "minLength": 1},
+          "evidence_needed": {"type": "string", "minLength": 1},
+          "source_action": {"type": "string", "minLength": 1}
         }
       }
     },
@@ -132,12 +144,14 @@
     "reuse_assessment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["confidence"],
+      "required": ["reusable_data_found", "confidence"],
       "properties": {
-        "task_local_value": {"type": ["string", "null"]},
-        "cross_task_value": {"type": ["string", "null"]},
-        "cross_repository_value": {"type": ["string", "null"]},
-        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+        "reusable_data_found": {"type": "boolean"},
+        "task_local_value": {"type": "integer", "minimum": 0, "maximum": 5},
+        "cross_task_value": {"type": "integer", "minimum": 0, "maximum": 5},
+        "cross_repository_value": {"type": "integer", "minimum": 0, "maximum": 5},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "reason": {"type": "string"}
       }
     },
     "visibility": {

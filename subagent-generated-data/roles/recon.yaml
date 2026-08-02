@@ -3,6 +3,20 @@ law_ref: "l9.subagent_generated_data_law.v1#11.1"
 primary_artifact_kinds:
   - ReconReport
 promotion_authority: false
+
+# Activates the packet validator's role guard for the no-self-promotion invariant
+# (law SGD-003): a self_promoted unit targeting any destination route is rejected.
+# required_generated_data_classes stays empty (no single class is mandatory) and
+# empty generated data is permitted.
+allows_empty_generated_data: true
+required_generated_data_classes: []
+forbidden_self_promotion_targets:
+  - memory
+  - contracts
+  - validation
+  - patterns
+  - architecture
+  - opportunities
 default_epistemic_status: observed
 
 # The recon agent must assess every item below and emit a generated-data unit

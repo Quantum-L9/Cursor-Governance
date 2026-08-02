@@ -3,6 +3,18 @@ law_ref: "l9.subagent_generated_data_law.v1#11.3"
 primary_artifact_kinds:
   - ExecutionResult
 promotion_authority: false
+
+# Activates the packet validator's role guard for the no-self-promotion invariant
+# (law SGD-003): a self_promoted unit targeting any destination route is rejected.
+allows_empty_generated_data: true
+required_generated_data_classes: []
+forbidden_self_promotion_targets:
+  - memory
+  - contracts
+  - validation
+  - patterns
+  - architecture
+  - opportunities
 default_epistemic_status: observed
 
 must_assess:

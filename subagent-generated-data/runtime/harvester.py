@@ -1,24 +1,29 @@
 from __future__ import annotations
+
 import argparse
 import hashlib
 import json
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
 try:
     import yaml
 except ImportError as exc:
-    raise RuntimeError(
-        "harvester.py requires the 'PyYAML' package"
-    ) from exc
+    raise RuntimeError("harvester.py requires the 'PyYAML' package") from exc
 RUNTIME_DIR = Path(__file__).resolve().parent
 if str(RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(RUNTIME_DIR))
 from classifier import GeneratedDataClassifier
 from packet_validator import PacketValidator
+
+
 class HarvestFailure(ValueError):
     """Raised when harvesting cannot proceed safely."""
+
+
 @dataclass(frozen=True)
 class HarvestedUnit:
     unit_id: str
@@ -32,6 +37,7 @@ class HarvestedUnit:
     normalized_statement: str
     classification: Mapping[str, Any]
     original_unit: Mapping[str, Any]
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "unit_id": self.unit_id,
@@ -46,6 +52,8 @@ class HarvestedUnit:
             "classification": dict(self.classification),
             "original_unit": dict(self.original_unit),
         }
+
+
 @dataclass(frozen=True)
 class HarvestResult:
     packet_id: str
@@ -54,23 +62,21 @@ class HarvestResult:
     harvested_units: tuple[HarvestedUnit, ...]
     duplicate_unit_ids: tuple[str, ...]
     rejected_units: tuple[Mapping[str, Any], ...]
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "packet_id": self.packet_id,
             "packet_hash": self.packet_hash,
             "valid": self.valid,
-            "harvested_units": [
-                unit.to_dict() for unit in self.harvested_units
-            ],
-            "duplicate_unit_ids": list(
-                self.duplicate_unit_ids
-            ),
-            "rejected_units": [
-                dict(item) for item in self.rejected_units
-            ],
+            "harvested_units": [unit.to_dict() for unit in self.harvested_units],
+            "duplicate_unit_ids": list(self.duplicate_unit_ids),
+            "rejected_units": [dict(item) for item in self.rejected_units],
         }
+
+
 class SubagentDataHarvester:
     """Extract reusable generated-data units from a validated packet."""
+
     def __init__(
         self,
         *,
@@ -78,9 +84,8 @@ class SubagentDataHarvester:
         classifier: GeneratedDataClassifier | None = None,
     ) -> None:
         self.validator = validator or PacketValidator()
-        self.classifier = (
-            classifier or GeneratedDataClassifier()
-        )
+        self.classifier = classifier or GeneratedDataClassifier()
+
     def harvest(
         self,
         packet: Mapping[str, Any],
@@ -124,9 +129,7 @@ class SubagentDataHarvester:
         seen_semantic_keys: set[str] = set()
         units = packet.get("generated_data_units", [])
         if not isinstance(units, list):
-            raise HarvestFailure(
-                "generated_data_units must be a list"
-            )
+            raise HarvestFailure("generated_data_units must be a list")
         for unit in units:
             if not isinstance(unit, Mapping):
                 rejected.append(
@@ -150,9 +153,7 @@ class SubagentDataHarvester:
             seen_unit_ids.add(unit_id)
             normalized = self._normalize_statement(statement)
             semantic_key = self._semantic_key(
-                primary_class=str(
-                    unit.get("primary_class", "")
-                ),
+                primary_class=str(unit.get("primary_class", "")),
                 normalized_statement=normalized,
                 repository=repository,
                 scope=unit.get("scope"),
@@ -161,9 +162,7 @@ class SubagentDataHarvester:
                 duplicates.append(unit_id)
                 continue
             seen_semantic_keys.add(semantic_key)
-            classification = self.classifier.classify(
-                unit
-            ).to_dict()
+            classification = self.classifier.classify(unit).to_dict()
             harvested.append(
                 HarvestedUnit(
                     unit_id=unit_id,
@@ -173,9 +172,7 @@ class SubagentDataHarvester:
                     source_role=source_role,
                     repository=repository,
                     base_sha=base_sha,
-                    statement_hash=self._sha256_text(
-                        normalized
-                    ),
+                    statement_hash=self._sha256_text(normalized),
                     normalized_statement=normalized,
                     classification=classification,
                     original_unit=dict(unit),
@@ -189,9 +186,11 @@ class SubagentDataHarvester:
             duplicate_unit_ids=tuple(sorted(duplicates)),
             rejected_units=tuple(rejected),
         )
+
     @staticmethod
     def _normalize_statement(value: str) -> str:
         return " ".join(value.strip().split())
+
     @staticmethod
     def _semantic_key(
         *,
@@ -213,11 +212,11 @@ class SubagentDataHarvester:
             ensure_ascii=False,
         ).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
+
     @staticmethod
     def _sha256_text(value: str) -> str:
-        return hashlib.sha256(
-            value.encode("utf-8")
-        ).hexdigest()
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
     @staticmethod
     def _required_string(
         value: Mapping[str, Any],
@@ -225,10 +224,9 @@ class SubagentDataHarvester:
     ) -> str:
         raw = value.get(field_name)
         if not isinstance(raw, str) or not raw.strip():
-            raise HarvestFailure(
-                f"{field_name!r} must be a non-empty string"
-            )
+            raise HarvestFailure(f"{field_name!r} must be a non-empty string")
         return raw.strip()
+
     @staticmethod
     def _required_mapping(
         value: Mapping[str, Any],
@@ -236,10 +234,10 @@ class SubagentDataHarvester:
     ) -> Mapping[str, Any]:
         raw = value.get(field_name)
         if not isinstance(raw, Mapping):
-            raise HarvestFailure(
-                f"{field_name!r} must be an object"
-            )
+            raise HarvestFailure(f"{field_name!r} must be an object")
         return raw
+
+
 def load_data(path: str | Path) -> Any:
     source = Path(path)
     with source.open("r", encoding="utf-8") as handle:
@@ -248,19 +246,17 @@ def load_data(path: str | Path) -> Any:
         if source.suffix.lower() in {".yaml", ".yml"}:
             return yaml.safe_load(handle)
     raise ValueError(f"Unsupported file type: {source}")
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Harvest validated subagent-generated data."
-    )
+    parser = argparse.ArgumentParser(description="Harvest validated subagent-generated data.")
     parser.add_argument("packet")
     parser.add_argument("--output")
     args = parser.parse_args()
     packet = load_data(args.packet)
     if not isinstance(packet, Mapping):
         raise SystemExit("Packet root must be an object")
-    result = SubagentDataHarvester().harvest(
-        packet
-    ).to_dict()
+    result = SubagentDataHarvester().harvest(packet).to_dict()
     rendered = json.dumps(
         result,
         indent=2,
@@ -276,5 +272,7 @@ def main() -> int:
     else:
         print(rendered)
     return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

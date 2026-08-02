@@ -1,12 +1,18 @@
 from __future__ import annotations
+
 import argparse
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
+
 class PromotionFailure(ValueError):
     """Raised when a promotion result cannot be determined safely."""
+
+
 @dataclass(frozen=True)
 class PromotionResult:
     promotion_id: str
@@ -18,6 +24,7 @@ class PromotionResult:
     reasons: tuple[str, ...]
     conditions: tuple[str, ...]
     promotion_hash: str
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "promotion_id": self.promotion_id,
@@ -30,8 +37,11 @@ class PromotionResult:
             "conditions": list(self.conditions),
             "promotion_hash": self.promotion_hash,
         }
+
+
 class PromotionGate:
     """Apply L9 promotion-risk rules to routing decisions."""
+
     HIGH_RISK_ROUTES = {
         "architecture",
     }
@@ -45,6 +55,7 @@ class PromotionGate:
         "opportunities",
         "evidence",
     }
+
     def evaluate(
         self,
         *,
@@ -71,13 +82,9 @@ class PromotionGate:
         )
         original = harvested_unit.get("original_unit")
         if not isinstance(classification, Mapping):
-            raise PromotionFailure(
-                "classification must be an object"
-            )
+            raise PromotionFailure("classification must be an object")
         if not isinstance(original, Mapping):
-            raise PromotionFailure(
-                "original_unit must be an object"
-            )
+            raise PromotionFailure("original_unit must be an object")
         confidence = self._confidence(original)
         epistemic_status = str(
             classification.get(
@@ -139,28 +146,18 @@ class PromotionGate:
             "contested",
             "unresolved",
         }:
-            reasons.append(
-                "epistemic_status_not_promotable"
-            )
-            conditions.append(
-                "resolve_or_reclassify_epistemic_status"
-            )
+            reasons.append("epistemic_status_not_promotable")
+            conditions.append("resolve_or_reclassify_epistemic_status")
         if confidence < 0.5:
             reasons.append("confidence_below_minimum")
             conditions.append("collect_stronger_evidence")
         if risk_class == "high":
             if not independent_validation_present:
-                conditions.append(
-                    "independent_validation_required"
-                )
+                conditions.append("independent_validation_required")
             if not designated_authority_approval:
-                conditions.append(
-                    "designated_authority_approval_required"
-                )
+                conditions.append("designated_authority_approval_required")
             if conditions:
-                reasons.append(
-                    "high_risk_promotion_controls_missing"
-                )
+                reasons.append("high_risk_promotion_controls_missing")
                 return self._result(
                     unit_id=unit_id,
                     route=route,
@@ -168,26 +165,17 @@ class PromotionGate:
                     risk_class=risk_class,
                     authority_required="designated_authority",
                     reasons=tuple(sorted(set(reasons))),
-                    conditions=tuple(
-                        sorted(set(conditions))
-                    ),
+                    conditions=tuple(sorted(set(conditions))),
                 )
         if risk_class == "medium":
-            if (
-                not independent_validation_present
-                and recurrence_count < 2
-            ):
+            if not independent_validation_present and recurrence_count < 2:
                 return self._result(
                     unit_id=unit_id,
                     route=route,
                     decision="defer",
                     risk_class=risk_class,
-                    authority_required=(
-                        "independent_validator_or_recurrence"
-                    ),
-                    reasons=(
-                        "medium_risk_requires_validation_or_recurrence",
-                    ),
+                    authority_required=("independent_validator_or_recurrence"),
+                    reasons=("medium_risk_requires_validation_or_recurrence",),
                     conditions=(
                         "provide_independent_validation",
                         "or_observe_second_confirming_occurrence",
@@ -220,6 +208,7 @@ class PromotionGate:
             ),
             conditions=(),
         )
+
     def evaluate_many(
         self,
         *,
@@ -229,30 +218,20 @@ class PromotionGate:
         designated_authority_approval: bool = False,
         recurrence_counts: Mapping[str, int] | None = None,
     ) -> list[PromotionResult]:
-        by_unit = {
-            str(unit["unit_id"]): unit
-            for unit in harvested_units
-        }
+        by_unit = {str(unit["unit_id"]): unit for unit in harvested_units}
         recurrence_counts = recurrence_counts or {}
         results: list[PromotionResult] = []
         for decision in routing_decisions:
             unit_id = str(decision["unit_id"])
             unit = by_unit.get(unit_id)
             if unit is None:
-                raise PromotionFailure(
-                    f"Routing decision references unknown unit "
-                    f"{unit_id!r}"
-                )
+                raise PromotionFailure(f"Routing decision references unknown unit {unit_id!r}")
             results.append(
                 self.evaluate(
                     harvested_unit=unit,
                     routing_decision=decision,
-                    independent_validation_present=(
-                        independent_validation_present
-                    ),
-                    designated_authority_approval=(
-                        designated_authority_approval
-                    ),
+                    independent_validation_present=(independent_validation_present),
+                    designated_authority_approval=(designated_authority_approval),
                     recurrence_count=int(
                         recurrence_counts.get(
                             unit_id,
@@ -262,6 +241,7 @@ class PromotionGate:
                 )
             )
         return results
+
     def _risk_class(
         self,
         *,
@@ -282,6 +262,7 @@ class PromotionGate:
         ):
             return "medium"
         return "low"
+
     @staticmethod
     def _confidence(
         original: Mapping[str, Any],
@@ -291,6 +272,7 @@ class PromotionGate:
         except (TypeError, ValueError):
             value = 0.0
         return max(0.0, min(1.0, value))
+
     @staticmethod
     def _result(
         *,
@@ -330,6 +312,7 @@ class PromotionGate:
             conditions=conditions,
             promotion_hash=digest,
         )
+
     @staticmethod
     def _required_string(
         value: Mapping[str, Any],
@@ -337,17 +320,17 @@ class PromotionGate:
     ) -> str:
         raw = value.get(field_name)
         if not isinstance(raw, str) or not raw.strip():
-            raise PromotionFailure(
-                f"{field_name!r} must be a non-empty string"
-            )
+            raise PromotionFailure(f"{field_name!r} must be a non-empty string")
         return raw.strip()
+
+
 def load_json(path: str | Path) -> Any:
     with Path(path).open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Apply promotion gates to routing decisions."
-    )
+    parser = argparse.ArgumentParser(description="Apply promotion gates to routing decisions.")
     parser.add_argument("--harvest", required=True)
     parser.add_argument("--routes", required=True)
     parser.add_argument(
@@ -367,12 +350,8 @@ def main() -> int:
             [],
         ),
         routing_decisions=routes,
-        independent_validation_present=(
-            args.independent_validation
-        ),
-        designated_authority_approval=(
-            args.authority_approved
-        ),
+        independent_validation_present=(args.independent_validation),
+        designated_authority_approval=(args.authority_approved),
     )
     print(
         json.dumps(
@@ -382,5 +361,7 @@ def main() -> int:
         )
     )
     return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
