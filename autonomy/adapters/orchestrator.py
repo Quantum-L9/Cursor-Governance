@@ -359,7 +359,7 @@ class AdapterOrchestrator:
 
     def _load_requirements(self) -> dict[str, Any]:
         path = self.repository_root / "autonomy/policies/adapter-requirements.json"
-        return load_json(path, root=self.repository_root)
+        return load_json(path)
 
     def _initialize_extension_tables(self) -> None:
         with self.runtime.store.connect() as connection:

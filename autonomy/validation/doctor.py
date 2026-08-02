@@ -6,7 +6,7 @@ from pathlib import Path
 
 from autonomy.adapters.conformance import AdapterConformance
 from autonomy.adapters.protocol import AdapterConfig
-from autonomy.io import load_json
+from autonomy.cli_fs import load_json_cli as load_json
 
 
 def main() -> int:

@@ -3,10 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Iterable, Mapping
-from pathlib import Path
 from typing import Any
 
-from autonomy.io import confined_path, load_json
+from autonomy.cli_fs import load_json_cli, read_jsonl_cli
 
 
 class GoldenTraceValidator:
@@ -43,30 +42,13 @@ class GoldenTraceValidator:
         return errors
 
 
-def read_receipts_jsonl(
-    path: str | Path, *, root: str | Path | None = None
-) -> list[dict[str, Any]]:
-    events: list[dict[str, Any]] = []
-    source = confined_path(path, root=root, label="events path")
-    with open(source, encoding="utf-8") as handle:
-        for line_number, raw_line in enumerate(handle, 1):
-            line = raw_line.strip()
-            if not line:
-                continue
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"Invalid JSONL at line {line_number}: {exc}") from exc
-    return events
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate an autonomy event trace.")
     parser.add_argument("--events", required=True)
     parser.add_argument("--spec", required=True)
     args = parser.parse_args()
-    events = read_receipts_jsonl(args.events)
-    specification = load_json(args.spec)
+    events = read_jsonl_cli(args.events)
+    specification = load_json_cli(args.spec)
     errors = GoldenTraceValidator().validate(
         events=events,
         specification=specification,

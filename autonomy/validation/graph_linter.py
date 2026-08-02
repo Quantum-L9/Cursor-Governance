@@ -6,8 +6,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from autonomy.cli_fs import load_json_cli as load_json
 from autonomy.errors import GraphValidationError
-from autonomy.io import load_json
 from autonomy.models import (
     Action,
     DeploymentManifest,

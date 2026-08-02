@@ -95,7 +95,7 @@ class JsonLineBridge:
         artifact = payload.pop("artifact", None)
         artifact_path = payload.pop("artifact_path", None)
         if artifact is None and artifact_path:
-            from autonomy.io import load_json
+            from autonomy.cli_fs import load_json_cli as load_json
 
             artifact = load_json(artifact_path)
         if not isinstance(artifact, dict):

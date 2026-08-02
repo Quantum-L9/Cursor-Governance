@@ -4,7 +4,7 @@ import argparse
 import json
 from typing import Any
 
-from autonomy.io import load_json
+from autonomy.cli_fs import load_json_cli as load_json
 from autonomy.runtime.engine import AutonomyRuntime
 
 

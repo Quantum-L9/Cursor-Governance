@@ -8,7 +8,8 @@ from typing import Any
 from autonomy.adapters.claude_code.adapter import build_claude_task
 from autonomy.adapters.cursor.adapter import build_cursor_task
 from autonomy.adapters.orchestrator import AdapterOrchestrator
-from autonomy.io import load_json, write_json
+from autonomy.cli_fs import load_json_cli as load_json
+from autonomy.cli_fs import write_json_cli as write_json
 from autonomy.runtime.engine import AutonomyRuntime
 from autonomy.validation.simulator import PipelineSimulator
 

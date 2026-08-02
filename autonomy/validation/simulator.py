@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from collections.abc import Mapping
 from typing import Any
 
-from autonomy.io import load_json, write_json
+from autonomy.cli_fs import load_json_cli as load_json
+from autonomy.cli_fs import write_json_cli as write_json
 
 SUCCESS = "COMPLETED"
 

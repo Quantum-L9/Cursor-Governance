@@ -7,8 +7,10 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from autonomy.cli_fs import load_json_cli as load_json
+from autonomy.cli_fs import write_json_cli as write_json
 from autonomy.errors import GraphCompilationError
-from autonomy.io import load_json, sha256_json, write_json
+from autonomy.io import sha256_json
 from autonomy.models import (
     Action,
     CampaignAuthorization,
