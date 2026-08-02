@@ -1,0 +1,32 @@
+schema_version: "1.0.0"
+state:
+  database_path: .l9/subagent-generated-data/pipeline.sqlite3
+processing:
+  maximum_units_per_packet: 250
+  maximum_packet_bytes: 2000000
+  delivery_inline: false
+delivery:
+  memory:
+    mode: outbox
+    endpoint: null
+    command: []
+    timeout_seconds: 30
+    outbox: subagent-generated-data/.runtime/memory-outbox
+  route_outbox_root: subagent-generated-data/.runtime
+retrieval:
+  command_environment_variable: L9_SGD_GRAPHITI_SEARCH_COMMAND
+  minimum_confidence: 0.70
+  max_items: 12
+  max_characters: 12000
+  include_contested: false
+  include_raw_evidence: false
+reuse:
+  command_environment_variable: L9_SGD_GRAPHITI_REUSE_COMMAND
+invalidation:
+  command_environment_variable: L9_SGD_GRAPHITI_INVALIDATE_COMMAND
+  delete_memory: false
+live_commands:
+  ingest: L9_SGD_GRAPHITI_INGEST_COMMAND
+  search: L9_SGD_GRAPHITI_SEARCH_COMMAND
+  reuse: L9_SGD_GRAPHITI_REUSE_COMMAND
+  invalidate: L9_SGD_GRAPHITI_INVALIDATE_COMMAND

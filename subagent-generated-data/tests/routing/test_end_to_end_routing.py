@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -99,14 +100,16 @@ class EndToEndRoutingTests(unittest.TestCase):
             promotion.decision,
             "promote",
         )
-        adapter = GraphitiMemoryAdapter(FileOutboxTransport())
-        candidate = adapter.compile_candidate(
-            harvested_unit=memory_unit.to_dict(),
-            routing_decision=route.to_dict(),
-            promotion_result=promotion.to_dict(),
-            packet=self.packet,
-        )
-        try:
+        # Isolate the outbox in a temp dir so this test is order-independent of
+        # any other suite that delivers the same deterministic candidate id.
+        with tempfile.TemporaryDirectory() as temp:
+            adapter = GraphitiMemoryAdapter(FileOutboxTransport(temp))
+            candidate = adapter.compile_candidate(
+                harvested_unit=memory_unit.to_dict(),
+                routing_decision=route.to_dict(),
+                promotion_result=promotion.to_dict(),
+                packet=self.packet,
+            )
             delivery = adapter.deliver(candidate)
             self.assertEqual(
                 delivery.status,
@@ -124,10 +127,6 @@ class EndToEndRoutingTests(unittest.TestCase):
                 "advisory",
             )
             self.assertFalse(stored["governance"]["may_override_repository_state"])
-        finally:
-            outbox_path = FileOutboxTransport().outbox_dir / f"{candidate.candidate_id}.json"
-            if outbox_path.exists():
-                outbox_path.unlink()
 
 
 if __name__ == "__main__":
