@@ -9,6 +9,7 @@ at DELIVERY_PENDING so dispatch stays a separate, independently retryable step.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -81,6 +82,12 @@ class GeneratedDataProcessor:
         units = packet.get("generated_data_units", [])
         if isinstance(units, list) and len(units) > self.configuration.maximum_units_per_packet:
             raise ProcessingError("packet exceeds maximum_units_per_packet")
+        packet_bytes = len(json.dumps(packet, separators=(",", ":"), default=str).encode("utf-8"))
+        if packet_bytes > self.configuration.maximum_packet_bytes:
+            raise ProcessingError(
+                f"packet exceeds maximum_packet_bytes ({packet_bytes} > "
+                f"{self.configuration.maximum_packet_bytes})"
+            )
 
         campaign_id = str(identity["campaign_id"])
         job_id = deterministic_id(
@@ -92,13 +99,24 @@ class GeneratedDataProcessor:
                 "base_sha": identity.get("base_sha"),
             },
         )
-        self.store.create_job(
+        job = self.store.create_job(
             job_id=job_id,
             campaign_id=campaign_id,
             graph_id=identity.get("graph_id"),
             packet_id=packet_id,
             packet=packet,
         )
+        if job.state is not PipelineState.RECEIVED:
+            # Idempotent reprocessing: the packet was already processed for this
+            # deterministic job id; return the existing job without re-running.
+            existing_deliveries = self.store.list_stage_snapshots(
+                job_id=job_id, stage=PipelineState.DELIVERY_PENDING.value
+            )
+            return ProcessingResult(
+                job=job,
+                delivery_count=len(existing_deliveries),
+                promotions=(),
+            )
 
         runtime = self._load_runtime()
         self._validate(runtime, packet, job_id, actor)

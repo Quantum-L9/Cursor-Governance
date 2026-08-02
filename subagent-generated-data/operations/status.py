@@ -52,9 +52,10 @@ def status_payload(
         job = store.get_job(job_id)
         payload["job"] = job.to_dict()
         payload["events"] = [item.to_dict() for item in store.list_events(job_id)]
+        chain_errors = ProcessingReceiptChain(store).verify_job_chain(job_id)
         payload["receipt_integrity"] = {
-            "valid": not ProcessingReceiptChain(store).verify_job_chain(job_id),
-            "errors": ProcessingReceiptChain(store).verify_job_chain(job_id),
+            "valid": not chain_errors,
+            "errors": chain_errors,
         }
     return payload
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import shlex
@@ -262,29 +261,9 @@ class ReuseRecorder:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Record a finalized memory-reuse outcome.")
-    parser.add_argument("--database", required=True)
-    parser.add_argument("--event", required=True)
-    parser.add_argument("--command", nargs="+")
-    args = parser.parse_args()
-    payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
-    recorder = ReuseRecorder(
-        PipelineStateStore(args.database),
-        command=args.command,
+    raise SystemExit(
+        "reuse_recorder file-path CLI is disabled (Sonar S8707); use the ReuseRecorder APIs"
     )
-    result = recorder.finalize_outcome(
-        record_id=str(payload["record_id"]),
-        campaign_id=str(payload["campaign_id"]),
-        action_id=str(payload["action_id"]),
-        agent_id=str(payload["agent_id"]),
-        context_pack_id=str(payload["context_pack_id"]),
-        outcome=str(payload["outcome"]),
-        correction_required=bool(payload.get("correction_required", False)),
-        validity_confirmed=bool(payload.get("validity_confirmed", True)),
-        evidence=dict(payload.get("evidence", {})),
-    )
-    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0
 
 
 if __name__ == "__main__":

@@ -214,11 +214,10 @@ class PipelineStateStore:
         connection = sqlite3.connect(str(self._db_path))
         connection.row_factory = sqlite3.Row
         try:
-            yield connection
-            connection.commit()
-        except Exception:
-            connection.rollback()
-            raise
+            # sqlite3.Connection is itself a context manager that commits on
+            # success and rolls back on any exception — no broad except needed.
+            with connection:
+                yield connection
         finally:
             connection.close()
 
@@ -239,9 +238,17 @@ class PipelineStateStore:
     ) -> ProcessingJob:
         now = utc_now_text()
         with self.connect() as connection:
+            existing = connection.execute(
+                "SELECT * FROM processing_jobs WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+            if existing is not None:
+                # Reprocessing a deterministic job id must not reset state or
+                # orphan prior events/snapshots — return the existing job as-is.
+                return _row_to_job(existing)
             connection.execute(
                 """
-                INSERT OR REPLACE INTO processing_jobs (
+                INSERT INTO processing_jobs (
                     job_id, campaign_id, graph_id, packet_id, state, version,
                     replay_generation, created_at, updated_at, next_attempt_at,
                     error_code, error_message
@@ -250,7 +257,7 @@ class PipelineStateStore:
                 (job_id, campaign_id, graph_id, packet_id, state.value, now, now),
             )
             connection.execute(
-                "INSERT OR REPLACE INTO packets (job_id, packet_json) VALUES (?, ?)",
+                "INSERT INTO packets (job_id, packet_json) VALUES (?, ?)",
                 (job_id, _dumps(packet)),
             )
             connection.execute(
@@ -307,16 +314,23 @@ class PipelineStateStore:
                 )
             if allow_replay and target_state in _EARLIER_STATES:
                 replay_generation += 1
+            current_version = int(row["version"])
             now = utc_now_text()
-            connection.execute(
+            cursor = connection.execute(
                 """
                 UPDATE processing_jobs
                 SET state = ?, version = version + 1, replay_generation = ?,
                     updated_at = ?
-                WHERE job_id = ?
+                WHERE job_id = ? AND version = ?
                 """,
-                (target_state.value, replay_generation, now, job_id),
+                (target_state.value, replay_generation, now, job_id, current_version),
             )
+            if cursor.rowcount != 1:
+                # Optimistic-concurrency guard: another writer changed the row
+                # between the SELECT and this UPDATE.
+                raise StateTransitionError(
+                    f"{job_id}: concurrent modification at version {current_version}"
+                )
             self._append_event(
                 connection,
                 job_id=job_id,

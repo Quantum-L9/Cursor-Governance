@@ -421,7 +421,7 @@ class DeliveryWorker:
                     )
                     return DeliveryExecutionResult(
                         job_id=job.job_id,
-                        attempted=attempt_number,
+                        attempted=len(details) + 1,
                         accepted=accepted,
                         enqueued=enqueued,
                         rejected=rejected,
@@ -446,7 +446,7 @@ class DeliveryWorker:
                 )
                 return DeliveryExecutionResult(
                     job_id=job.job_id,
-                    attempted=attempt_number,
+                    attempted=len(details) + 1,
                     accepted=accepted,
                     enqueued=enqueued,
                     rejected=rejected + 1,

@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import shlex
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Protocol
 
 
@@ -300,22 +298,9 @@ def query_from_mapping(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Query governed context through an existing memory command."
+    raise SystemExit(
+        "context_query CLI disabled (Sonar S8707); use CommandContextClient/ContextQuery APIs"
     )
-    parser.add_argument("--query", required=True)
-    parser.add_argument("--command", nargs="+")
-    args = parser.parse_args()
-    payload = json.loads(Path(args.query).read_text(encoding="utf-8"))
-    query = query_from_mapping(payload)
-    client = (
-        CommandContextClient(args.command)
-        if args.command
-        else CommandContextClient.from_environment()
-    )
-    result = client.query(query)
-    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0 if result.available else 1
 
 
 if __name__ == "__main__":

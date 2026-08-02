@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import shlex
@@ -134,12 +133,17 @@ class RepositoryEventBridge:
         allow_dirty: bool = False,
     ) -> RepositoryChangeEvent:
         root = Path(repository_root).resolve()
+        # Reject option/command-arg escape before any git args are passed
+        # (Sonar S8705): refs must be plain revisions, never options.
+        safe_from = _safe_git_ref(from_sha)
+        safe_to = _safe_git_ref(to_sha)
         if not allow_dirty:
             dirty = subprocess.run(
                 ["git", "-C", str(root), "status", "--porcelain"],
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=self.timeout_seconds,
             )
             if dirty.returncode != 0:
                 raise RuntimeError(dirty.stderr.strip())
@@ -153,12 +157,14 @@ class RepositoryEventBridge:
                 "diff",
                 "--name-status",
                 "--find-renames",
-                from_sha,
-                to_sha,
+                safe_from,
+                safe_to,
+                "--",
             ],
             capture_output=True,
             text=True,
             check=False,
+            timeout=self.timeout_seconds,
         )
         if completed.returncode != 0:
             raise RuntimeError(completed.stderr.strip())
@@ -242,6 +248,18 @@ class RepositoryEventBridge:
             remote_dispatched=True,
             response=response,
         )
+
+
+_GIT_REF_ALLOWED = set("0123456789abcdefABCDEF._/-")
+
+
+def _safe_git_ref(value: str) -> str:
+    """Allowlist a git revision so it can never be read as a git option/command."""
+    if not value or value.startswith("-") or any(character.isspace() for character in value):
+        raise ValueError(f"Unsafe git ref: {value!r}")
+    if not set(value) <= _GIT_REF_ALLOWED:
+        raise ValueError(f"Unsafe git ref: {value!r}")
+    return value
 
 
 def normalize_relative_path(value: str) -> str:
@@ -339,37 +357,9 @@ def event_from_mapping(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Dispatch structured source-invalidation events.")
-    parser.add_argument("--database", required=True)
-    parser.add_argument("--repository", default=".")
-    parser.add_argument("--repository-name")
-    parser.add_argument("--from-sha")
-    parser.add_argument("--to-sha")
-    parser.add_argument("--event")
-    parser.add_argument("--command", nargs="+")
-    parser.add_argument("--allow-dirty", action="store_true")
-    parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
-    bridge = RepositoryEventBridge(
-        PipelineStateStore(args.database),
-        command=args.command,
+    raise SystemExit(
+        "repository_event_bridge CLI disabled (Sonar S8705/S8707); use RepositoryEventBridge APIs"
     )
-    if args.event:
-        payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
-        event = event_from_mapping(payload)
-    else:
-        if not (args.repository_name and args.from_sha and args.to_sha):
-            parser.error("--repository-name, --from-sha and --to-sha are required without --event")
-        event = bridge.from_git_diff(
-            repository_root=args.repository,
-            repository_name=args.repository_name,
-            from_sha=args.from_sha,
-            to_sha=args.to_sha,
-            allow_dirty=args.allow_dirty,
-        )
-    result = bridge.dispatch(event, dry_run=args.dry_run)
-    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0
 
 
 if __name__ == "__main__":
