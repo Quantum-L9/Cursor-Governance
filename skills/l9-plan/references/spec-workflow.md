@@ -2,8 +2,10 @@
 l9_schema: 1
 parent: l9-plan
 origin: migrated-from spec command v7.1.0
-tags: [spec, specification, architecture, acceptance]
+tags: [spec, specification, architecture, acceptance, validation]
 status: active
+version: 2.1.0
+updated: 2026-08-02
 /L9_META -->
 
 # Spec Workflow — Specification Generator
@@ -32,6 +34,32 @@ QUESTIONS:
 7. Risks
 8. Acceptance criteria (checkboxes)
 9. Phases — scope and GMP count
+10. Pre-Validation (mandatory) — baseline gates before build
+11. Final Validation (mandatory) — post-build gates
+
+## Validation gates (mandatory)
+
+### Pre-Validation
+
+Before implementation begins, record:
+
+| Check | Command / action | Pass criteria |
+|-------|------------------|---------------|
+| Target bind | Resolve authorized roots | Unambiguous scope |
+| Baseline | Inventory current behavior/contracts | Evidence captured |
+| Clean gate (code in scope) | `make pr-check` | PASS — changed-files scanners; **no commit, no push** |
+
+### Final Validation
+
+Before claiming the spec is execution-complete / implementation-ready:
+
+| Check | Command / action | Pass criteria |
+|-------|------------------|---------------|
+| Acceptance | Map AC to evidence | All in-scope AC met or waived |
+| Clean gate (code in scope) | `make pr-check` | PASS; **no commit, no push** unless user explicitly asks |
+| Honesty | Status labels | Passed / Failed / Skipped / N/A / Unknown only |
+
+Omit `make pr-check` only when the spec covers pure planning/docs with no code edits — mark N/A with reason. Never weaken scanners to obtain PASS.
 
 ## Output location
 
