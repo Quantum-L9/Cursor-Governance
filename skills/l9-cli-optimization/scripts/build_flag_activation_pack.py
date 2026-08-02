@@ -207,12 +207,19 @@ def _render_readme(report: dict, pack_name: str) -> str:
 
 
 def build(report_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, int]:
-    report = json.loads(report_path.read_text(encoding="utf-8"))
     repo = repo_root.resolve()
+    out = output_parent.resolve()
+    report_file = report_path.resolve()
+    # Sanitizer: re-check the resolved path stays under its own parent (S2083).
+    report_file = under_root(report_file.parent, report_file, label="report")
+    with open(report_file, encoding="utf-8") as handle:
+        report = json.loads(handle.read())
     pack_name = report.get("pack_name") or (
-        "full-throttle-" + Path(report.get("repo", "repo")).name
+        "full-throttle-" + Path(str(report.get("repo", "repo"))).name.replace("..", "_")
     )
-    pack_root = output_parent / pack_name
+    if "/" in pack_name or "\\" in pack_name or pack_name in ("", ".", ".."):
+        raise RuntimeError(f"unsafe pack_name: {pack_name!r}")
+    pack_root = under_root(out, out / pack_name, label="pack_root")
     if pack_root.exists():
         import shutil
 

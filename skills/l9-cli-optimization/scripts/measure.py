@@ -22,28 +22,12 @@ import shlex
 import statistics
 import subprocess
 import sys
-import tempfile
 import time
-from pathlib import Path
 
 
-def confine(path: str, *, label: str) -> Path:
-    """Resolve CLI path args; reject empty / relative-escape inputs for Sonar S8707."""
-    raw = Path(path)
-    if not path or path.strip() != path:
-        raise RuntimeError(f"{label} must be a non-empty path without surrounding whitespace")
-    resolved = raw.expanduser().resolve()
-    # Refuse NUL and obvious escape tokens in the original string.
-    if "\x00" in path or "\0" in path:
-        raise RuntimeError(f"{label} contains NUL")
-    return resolved
-
-
-def run_once(
-    command: list[str], capture: bool, cwd: str | None = None
-) -> tuple[float, float | None]:
+def run_once(command: list[str], capture: bool) -> tuple[float, float | None]:
     start = time.perf_counter()
-    proc = subprocess.run(command, text=True, capture_output=True, check=False, cwd=cwd)
+    proc = subprocess.run(command, text=True, capture_output=True, check=False)
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     if proc.returncode != 0:
         raise RuntimeError(
@@ -62,13 +46,11 @@ def run_once(
     return elapsed_ms, number
 
 
-def measure(
-    command: list[str], samples: int, capture: bool, cwd: str | None = None
-) -> tuple[float, float | None]:
+def measure(command: list[str], samples: int, capture: bool) -> tuple[float, float | None]:
     times: list[float] = []
     numbers: list[float] = []
     for _ in range(samples):
-        elapsed, number = run_once(command, capture, cwd)
+        elapsed, number = run_once(command, capture)
         times.append(elapsed)
         if number is not None:
             numbers.append(number)
@@ -89,60 +71,20 @@ def main() -> int:
         action="store_true",
         help="parse a numeric from each command's last stdout line (functional metric)",
     )
-    parser.add_argument(
-        "--repo",
-        help="git repo path; with --before-ref, run --before in a throwaway "
-        "worktree checked out at that ref (produces the unpatched baseline)",
-    )
-    parser.add_argument("--before-ref", help="git ref for the --before baseline (requires --repo)")
     parser.add_argument("--output", type=argparse.FileType("w"), default=sys.stdout)
     args = parser.parse_args()
     if args.samples < 1:
         print("FAIL: --samples must be >= 1", file=sys.stderr)
         return 2
-    if args.before_ref and not args.repo:
-        print("FAIL: --before-ref requires --repo", file=sys.stderr)
-        return 2
-
-    try:
-        repo = confine(args.repo, label="--repo") if args.repo else None
-    except RuntimeError as exc:
-        print(f"FAIL: {exc}", file=sys.stderr)
-        return 2
 
     before_cmd = shlex.split(args.before)
     after_cmd = shlex.split(args.after)
-    if not before_cmd or not after_cmd:
-        print("FAIL: --before/--after must parse to a non-empty argv list", file=sys.stderr)
-        return 2
-    worktree: str | None = None
     try:
-        before_cwd: str | None = None
-        if args.before_ref:
-            worktree = tempfile.mkdtemp(prefix="measure-before-")
-            add = subprocess.run(
-                ["git", "-C", str(repo), "worktree", "add", "--detach", worktree, args.before_ref],
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            if add.returncode != 0:
-                print(f"FAIL: git worktree add failed: {add.stderr.strip()}", file=sys.stderr)
-                return 2
-            before_cwd = worktree
-        before_time, before_num = measure(before_cmd, args.samples, args.capture, before_cwd)
+        before_time, before_num = measure(before_cmd, args.samples, args.capture)
         after_time, after_num = measure(after_cmd, args.samples, args.capture)
     except (RuntimeError, OSError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
-    finally:
-        if worktree is not None:
-            subprocess.run(
-                ["git", "-C", str(repo), "worktree", "remove", "--force", worktree],
-                text=True,
-                capture_output=True,
-                check=False,
-            )
 
     activation = False
     if args.capture and before_num is not None and after_num is not None:

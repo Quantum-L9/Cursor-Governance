@@ -119,11 +119,13 @@ def _apply_flips(wt: Path, flags: list[dict]) -> None:
         by_file.setdefault(f["file"], []).append(f)
     for rel, fs in by_file.items():
         path = under_root(wt, wt / rel, label="flag file")
-        body = path.read_text(encoding="utf-8", errors="ignore")
+        with open(path, encoding="utf-8", errors="ignore") as handle:
+            body = handle.read()
         # apply highest line first so earlier line numbers stay valid
         for f in sorted(fs, key=lambda x: -x["line"]):
             body = flip_flag(body, f)
-        path.write_text(body, encoding="utf-8")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(body)
 
 
 def _reset_worktree(wt: Path, repo: Path) -> None:
