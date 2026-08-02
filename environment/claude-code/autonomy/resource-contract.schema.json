@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/claude-code/resource-contract.schema.json",
+  "title": "L9 Concurrent Resource Contract",
+  "$defs": {
+    "resourceLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "mode"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Canonical lock key such as repo:owner/name, branch:owner/name:feature, path:owner/name:src, or service:github-api."
+        },
+        "mode": {"type": "string", "enum": ["read", "write"]},
+        "isolation_key": {
+          "type": ["string", "null"],
+          "description": "Distinct worktree, branch, sandbox, or namespace identity that permits isolated writes to the same logical key."
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["resources"],
+  "properties": {
+    "resources": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/resourceLock"}
+    }
+  }
+}

@@ -3,8 +3,9 @@
 # L9 Governance — Claude Code SessionStart bootstrap (CLI · Web · Mobile).
 #
 # Mobile-safe by construction: git-tracked, no ~/.cursor dependency, no editor
-# machine state. Locates the governance clone, surfaces resume context, and
-# emits a Claude Code SessionStart `additionalContext` JSON blob on stdout.
+# machine state. Locates the governance clone, surfaces resume context, compiles
+# bounded-autonomy campaign state, and emits a Claude Code SessionStart
+# `additionalContext` JSON blob on stdout.
 #
 # Registered from .claude/settings.json (see settings.template.json). Copy this
 # file to <consumer-repo>/.claude/hooks/ and COMMIT it — on Claude Code Web and
@@ -66,6 +67,18 @@ if GOV=$(resolve_governance_dir); then
   if [ -d "$GOV/skills" ]; then
     n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
     LINES+=("skills available: $n l9-* skills under \$GOV/skills (invoke by name)")
+  fi
+
+  # --- Bounded-autonomy campaign context (fail-open; read-only probe) --------
+  # Reconstructs any active campaign's next dependency-ready action set so a
+  # resumed session continues without re-planning. bootstrap.py never blocks:
+  # it swallows its own errors and the `|| true` guards a missing interpreter.
+  AUTONOMY_BOOTSTRAP="$GOV/environment/claude-code/autonomy/bootstrap.py"
+  if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v python3 >/dev/null 2>&1; then
+    AUTONOMY_CONTEXT=$(python3 "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null || true)
+    [ -n "$AUTONOMY_CONTEXT" ] && LINES+=("--- bounded autonomy ---" "$AUTONOMY_CONTEXT")
+  else
+    LINES+=("bounded autonomy: runtime unavailable; continue under base governance")
   fi
 else
   LINES+=("governance SSOT: NOT FOUND — web/setup.sh must clone GitHub main to \$HOME/.cursor-governance")

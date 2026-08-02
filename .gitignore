@@ -74,3 +74,10 @@ __pycache__/
 WIP/*oauth*.json
 WIP/*credentials*.json
 WIP/*client_secret*.json
+
+# ── Bounded-autonomy durable state (per-consumer-workspace, never committed) ──
+# environment/claude-code/autonomy/ writes campaign state, leases, and locks
+# under L9_AUTONOMY_STATE_DIR (default .l9/autonomy/). It is machine-local
+# runtime state, not source. The SessionStart probe is read-only, but init/run
+# create this tree.
+.l9/

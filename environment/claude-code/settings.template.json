@@ -7,10 +7,13 @@
     "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
     "environment (web/environment.env.example) or user-scope config, never in a repo.",
     "Field/event names track the Claude Code release; see https://code.claude.com/docs.",
-    "permissions.allow lists read-only GitHub queries, PR monitoring (subscribe/unsubscribe),",
-    "and PR create/update so requested work opens a PR without a prompt. Only the stable",
-    "mcp__github__* server is listed; merge/destructive tools (merge_pull_request, force pushes)",
-    "are intentionally omitted so they still prompt."
+    "permissions.allow lets the bounded-autonomy runtime complete work end to end: scoped git",
+    "writes (branch/worktree/commit/push), CI inspection (gh run/pr checks), read-only GitHub",
+    "queries, PR monitoring (subscribe/unsubscribe), and PR create/update — so completed work",
+    "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
+    "Autonomous merge is deliberately OFF: merge_pull_request is omitted from allow so a human",
+    "still approves every merge (see L9_AUTONOMY_AUTONOMOUS_MERGE=false). Force pushes, hard",
+    "resets, destructive cleanup, and admin-merge overrides are denied outright."
   ],
   "hooks": {
     "SessionStart": [
@@ -33,6 +36,19 @@
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
+      "Bash(git fetch:*)",
+      "Bash(git switch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(git worktree:*)",
+      "Bash(git add --:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh run rerun:*)",
       "Bash(make claude-env:*)",
       "mcp__github__pull_request_read",
       "mcp__github__get_check_run",
@@ -61,10 +77,26 @@
     "deny": [
       "Read(./.env)",
       "Read(./.mcp.json)",
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(gh pr merge --admin:*)"
     ]
   },
   "env": {
-    "L9_GOVERNANCE_SURFACE": "claude-code"
+    "L9_GOVERNANCE_SURFACE": "claude-code",
+    "L9_AUTONOMY_ENABLED": "true",
+    "L9_AUTONOMY_AUTHORITY": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
+    "L9_AUTONOMY_MATURITY": "M4_ASSURANCE_GOVERNED",
+    "L9_AUTONOMY_PROFILE": "pr-convergence",
+    "L9_AUTONOMY_AUTONOMOUS_MERGE": "false",
+    "L9_AUTONOMY_REMEDIATION_SKILL": "l9-pr-remediation",
+    "L9_AUTONOMY_MAX_PARALLEL": "4",
+    "L9_AUTONOMY_MAX_MUTATION_LANES": "2",
+    "L9_AUTONOMY_STATE_DIR": ".l9/autonomy",
+    "L9_DISCOVER_BEFORE_ASK": "true",
+    "L9_REQUIRE_EXACT_SHA_GREEN": "true"
   }
 }
