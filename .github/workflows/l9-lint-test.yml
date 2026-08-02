@@ -149,10 +149,13 @@ jobs:
           # installed. langgraph is optional at import time (workflows/__init__.py
           # feature-detects it) but must be present for workflows/dags/*_dag.py
           # tests to collect and exercise the LangGraph-backed code paths.
+          # jsonschema is required by environment/program-execution/core validators
+          # and by pec.py subprocesses spawned from controller template tests.
           # Exact-pinned (not >=) per SonarCloud's "lock resolved versions" security
-          # rule; kept in sync with the langgraph entry in uv.lock, the single
+          # rule; kept in sync with the matching entries in uv.lock, the single
           # resolved-version source of truth for this repo's [project.dependencies].
           python -c "import langgraph" 2>/dev/null || pip install --only-binary :all: "langgraph==1.2.9"
+          python -c "import jsonschema" 2>/dev/null || pip install --only-binary :all: "jsonschema==4.26.0"
       - name: pytest with coverage
         env:
           TESTING: "true"
