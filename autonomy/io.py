@@ -15,8 +15,7 @@ def load_json(path: str | Path) -> Any:
         raise FileNotFoundError(f"JSON file does not exist: {source}") from exc
     except json.JSONDecodeError as exc:
         raise ValueError(
-            f"Invalid JSON in {source}: line {exc.lineno}, column {exc.colno}: "
-            f"{exc.msg}"
+            f"Invalid JSON in {source}: line {exc.lineno}, column {exc.colno}: {exc.msg}"
         ) from exc
 
 

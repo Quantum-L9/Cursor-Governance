@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from autonomy.errors import GraphValidationError
 from autonomy.io import load_json
@@ -58,9 +59,7 @@ class GraphLinter:
         blocking = [finding for finding in findings if finding.severity == "ERROR"]
         if blocking:
             rendered = "\n".join(item.render() for item in blocking)
-            raise GraphValidationError(
-                f"Compiled graph failed validation:\n{rendered}"
-            )
+            raise GraphValidationError(f"Compiled graph failed validation:\n{rendered}")
 
     def _check_role_cardinality(
         self,
@@ -131,12 +130,8 @@ class GraphLinter:
         for action in action_by_id.values():
             if action.role is not Role.EXECUTOR:
                 continue
-            dependencies = [
-                action_by_id[dependency] for dependency in action.depends_on
-            ]
-            has_synthesis = any(
-                dependency.role is Role.SYNTHESIS for dependency in dependencies
-            )
+            dependencies = [action_by_id[dependency] for dependency in action.depends_on]
+            has_synthesis = any(dependency.role is Role.SYNTHESIS for dependency in dependencies)
             if not has_synthesis:
                 findings.append(
                     Finding(
@@ -167,8 +162,7 @@ class GraphLinter:
                     Finding(
                         "PIPE-004",
                         "ERROR",
-                        "Reviewer must declare independence from at least "
-                        "one executor action",
+                        "Reviewer must declare independence from at least one executor action",
                         action.id,
                     )
                 )
@@ -192,12 +186,8 @@ class GraphLinter:
         for action in action_by_id.values():
             if action.role is not Role.REVIEWER:
                 continue
-            dependencies = [
-                action_by_id[dependency] for dependency in action.depends_on
-            ]
-            verifier_count = sum(
-                dependency.role is Role.VERIFIER for dependency in dependencies
-            )
+            dependencies = [action_by_id[dependency] for dependency in action.depends_on]
+            verifier_count = sum(dependency.role is Role.VERIFIER for dependency in dependencies)
             if verifier_count < 1:
                 findings.append(
                     Finding(
@@ -297,9 +287,7 @@ class GraphLinter:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Validate a compiled L9 autonomy graph."
-    )
+    parser = argparse.ArgumentParser(description="Validate a compiled L9 autonomy graph.")
     parser.add_argument("--graph", required=True)
     parser.add_argument("--deployment", required=True)
     parser.add_argument(

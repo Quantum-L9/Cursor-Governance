@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import heapq
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from autonomy.errors import GraphCompilationError
 from autonomy.io import load_json, sha256_json, write_json
@@ -82,9 +83,7 @@ def compile_graph(
     action_payload: Mapping[str, Any],
 ) -> CompiledGraph:
     if campaign.campaign_id != deployment.campaign_id:
-        raise GraphCompilationError(
-            "Campaign and deployment manifest campaign IDs differ"
-        )
+        raise GraphCompilationError("Campaign and deployment manifest campaign IDs differ")
     raw_actions = action_payload.get("actions")
     if not isinstance(raw_actions, list) or not raw_actions:
         raise GraphCompilationError("Action graph requires a non-empty actions list")
@@ -174,8 +173,7 @@ def _validate_conditional_references(
     for action in actions.values():
         if action.conditional_on is not None and action.conditional_on not in actions:
             raise GraphCompilationError(
-                f"Action {action.id!r} has missing conditional dependency "
-                f"{action.conditional_on!r}"
+                f"Action {action.id!r} has missing conditional dependency {action.conditional_on!r}"
             )
 
 
@@ -186,15 +184,12 @@ def _validate_independence_references(
         for source in action.independent_from:
             if source not in actions:
                 raise GraphCompilationError(
-                    f"Action {action.id!r} declares independence from "
-                    f"missing action {source!r}"
+                    f"Action {action.id!r} declares independence from missing action {source!r}"
                 )
 
 
 def _topological_sort(actions: Mapping[str, Action]) -> list[str]:
-    indegree = {
-        action_id: len(action.depends_on) for action_id, action in actions.items()
-    }
+    indegree = {action_id: len(action.depends_on) for action_id, action in actions.items()}
     dependents = _reverse_dependencies(actions)
     ready = [action_id for action_id, degree in indegree.items() if degree == 0]
     heapq.heapify(ready)
@@ -207,12 +202,9 @@ def _topological_sort(actions: Mapping[str, Action]) -> list[str]:
             if indegree[dependent] == 0:
                 heapq.heappush(ready, dependent)
     if len(result) != len(actions):
-        remaining = sorted(
-            action_id for action_id, degree in indegree.items() if degree > 0
-        )
+        remaining = sorted(action_id for action_id, degree in indegree.items() if degree > 0)
         raise GraphCompilationError(
-            "Action graph contains a dependency cycle involving: "
-            + ", ".join(remaining)
+            "Action graph contains a dependency cycle involving: " + ", ".join(remaining)
         )
     return result
 
@@ -243,9 +235,7 @@ def _critical_depth(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Compile an enforceable L9 autonomy action graph."
-    )
+    parser = argparse.ArgumentParser(description="Compile an enforceable L9 autonomy action graph.")
     parser.add_argument("--campaign", required=True)
     parser.add_argument("--deployment", required=True)
     parser.add_argument("--actions", required=True)

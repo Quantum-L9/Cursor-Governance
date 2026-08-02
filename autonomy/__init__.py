@@ -6,4 +6,5 @@ Wave 1 provides:
 - readiness and topology validation
 - role and pipeline policy loading
 """
+
 __version__ = "1.0.0"

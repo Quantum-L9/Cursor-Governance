@@ -21,16 +21,10 @@ class Wave1Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.campaign_payload = load_json(ROOT / "autonomy/examples/w7-campaign.json")
         self.campaign_payload["base_state"]["commit_sha"] = "abc1234"
-        self.deployment_payload = load_json(
-            ROOT / "autonomy/examples/w7-deployment.json"
-        )
+        self.deployment_payload = load_json(ROOT / "autonomy/examples/w7-deployment.json")
         self.action_payload = load_json(ROOT / "autonomy/examples/w7-actions.json")
-        self.role_policy = load_json(
-            ROOT / "autonomy/policies/role-capabilities.json"
-        )
-        self.pipeline_policy = load_json(
-            ROOT / "autonomy/policies/pipeline-invariants.json"
-        )
+        self.role_policy = load_json(ROOT / "autonomy/policies/role-capabilities.json")
+        self.pipeline_policy = load_json(ROOT / "autonomy/policies/pipeline-invariants.json")
 
     def compile(self):
         campaign = CampaignAuthorization.from_dict(self.campaign_payload)

@@ -19,12 +19,10 @@ class Version:
     patch: int
 
     @classmethod
-    def parse(cls, value: str) -> "Version":
+    def parse(cls, value: str) -> Version:
         match = _VERSION_RE.match(value)
         if not match:
-            raise CompatibilityError(
-                f"Version must use strict MAJOR.MINOR.PATCH format: {value!r}"
-            )
+            raise CompatibilityError(f"Version must use strict MAJOR.MINOR.PATCH format: {value!r}")
         return cls(
             major=int(match.group("major")),
             minor=int(match.group("minor")),

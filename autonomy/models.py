@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Iterable, Mapping
+from enum import StrEnum
+from typing import Any
 
 from autonomy.errors import ContractError
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     COORDINATOR = "coordinator"
     RECON = "recon"
     SYNTHESIS = "synthesis"
@@ -22,7 +23,7 @@ class Role(str, Enum):
     EVIDENCE_WRITER = "evidence_writer"
 
 
-class ActionKind(str, Enum):
+class ActionKind(StrEnum):
     WORK = "work"
     POLL = "poll"
     HUMAN_GATE = "human_gate"
@@ -30,7 +31,7 @@ class ActionKind(str, Enum):
     VALIDATION = "validation"
 
 
-class CampaignState(str, Enum):
+class CampaignState(StrEnum):
     DRAFT = "DRAFT"
     DIAGNOSED = "DIAGNOSED"
     AUTHORIZED = "AUTHORIZED"
@@ -53,13 +54,11 @@ class ResourceClaim:
     exclusive: bool = False
 
     @classmethod
-    def from_dict(cls, value: Mapping[str, Any]) -> "ResourceClaim":
+    def from_dict(cls, value: Mapping[str, Any]) -> ResourceClaim:
         key = require_nonempty_string(value, "key")
         mode = require_nonempty_string(value, "mode")
         if mode not in {"read", "write", "observe"}:
-            raise ContractError(
-                f"Unsupported resource claim mode {mode!r} for {key!r}"
-            )
+            raise ContractError(f"Unsupported resource claim mode {mode!r} for {key!r}")
         exclusive = bool(value.get("exclusive", mode == "write"))
         if mode == "write" and not exclusive:
             raise ContractError(f"Write claim {key!r} must be exclusive")
@@ -74,7 +73,7 @@ class CompletionPredicate:
     require_empty_blockers: bool = False
 
     @classmethod
-    def from_dict(cls, value: Mapping[str, Any]) -> "CompletionPredicate":
+    def from_dict(cls, value: Mapping[str, Any]) -> CompletionPredicate:
         artifact_kind = require_nonempty_string(value, "artifact_kind")
         required_fields = tuple(
             require_string_list(value.get("required_fields", []), "required_fields")
@@ -103,7 +102,7 @@ class Action:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, value: Mapping[str, Any]) -> "Action":
+    def from_dict(cls, value: Mapping[str, Any]) -> Action:
         action_id = require_nonempty_string(value, "id")
         try:
             role = Role(require_nonempty_string(value, "role"))
@@ -169,7 +168,7 @@ class CampaignAuthorization:
     revocation: Mapping[str, Any]
 
     @classmethod
-    def from_dict(cls, value: Mapping[str, Any]) -> "CampaignAuthorization":
+    def from_dict(cls, value: Mapping[str, Any]) -> CampaignAuthorization:
         required_objects = (
             "authority",
             "scope",
@@ -230,9 +229,7 @@ class CampaignAuthorization:
             raise ContractError("Campaign must require independent review")
         base_sha = self.base_state.get("commit_sha")
         if not isinstance(base_sha, str) or not base_sha.strip():
-            raise ContractError(
-                "Campaign base_state.commit_sha must be resolved before execution"
-            )
+            raise ContractError("Campaign base_state.commit_sha must be resolved before execution")
         max_mutation = self.budgets.get("max_mutation_agents")
         if not isinstance(max_mutation, int) or max_mutation < 1:
             raise ContractError("budgets.max_mutation_agents must be a positive integer")
@@ -248,7 +245,7 @@ class DeploymentManifest:
     fail_closed: Mapping[str, bool]
 
     @classmethod
-    def from_dict(cls, value: Mapping[str, Any]) -> "DeploymentManifest":
+    def from_dict(cls, value: Mapping[str, Any]) -> DeploymentManifest:
         roles_raw = value.get("required_roles")
         if not isinstance(roles_raw, Mapping):
             raise ContractError("Deployment required_roles must be an object")
@@ -259,24 +256,18 @@ class DeploymentManifest:
             except ValueError as exc:
                 raise ContractError(f"Unsupported deployment role: {role_name!r}") from exc
             if not isinstance(role_config, Mapping):
-                raise ContractError(
-                    f"Role configuration for {role_name!r} must be an object"
-                )
+                raise ContractError(f"Role configuration for {role_name!r} must be an object")
             minimum = role_config.get("min", 0)
             maximum = role_config.get("max", 0)
             if not isinstance(minimum, int) or minimum < 0:
-                raise ContractError(
-                    f"Role {role_name!r} min must be a non-negative integer"
-                )
+                raise ContractError(f"Role {role_name!r} min must be a non-negative integer")
             if not isinstance(maximum, int) or maximum < minimum:
                 raise ContractError(f"Role {role_name!r} max must be >= min")
             roles[role] = dict(role_config)
         fail_closed_raw = value.get("fail_closed")
         if not isinstance(fail_closed_raw, Mapping):
             raise ContractError("Deployment fail_closed must be an object")
-        fail_closed = {
-            str(name): bool(enabled) for name, enabled in fail_closed_raw.items()
-        }
+        fail_closed = {str(name): bool(enabled) for name, enabled in fail_closed_raw.items()}
         required_fail_closed = {
             "missing_required_agent",
             "invalid_agent_output",
@@ -284,9 +275,7 @@ class DeploymentManifest:
             "self_review",
             "unverified_completion",
         }
-        disabled = {
-            name for name in required_fail_closed if fail_closed.get(name) is not True
-        }
+        disabled = {name for name in required_fail_closed if fail_closed.get(name) is not True}
         if disabled:
             raise ContractError(
                 "Mandatory fail-closed controls are missing or disabled: "
@@ -329,9 +318,7 @@ def require_string_list(raw: Any, field_name: str) -> list[str]:
     result: list[str] = []
     for index, item in enumerate(raw):
         if not isinstance(item, str) or not item.strip():
-            raise ContractError(
-                f"Field {field_name!r}[{index}] must be a non-empty string"
-            )
+            raise ContractError(f"Field {field_name!r}[{index}] must be a non-empty string")
         result.append(item.strip())
     if len(result) != len(set(result)):
         raise ContractError(f"Field {field_name!r} contains duplicate values")

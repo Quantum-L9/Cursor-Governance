@@ -8,9 +8,7 @@ from autonomy.validation.graph_linter import main as lint_main
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="L9 autonomy control-plane CLI."
-    )
+    parser = argparse.ArgumentParser(description="L9 autonomy control-plane CLI.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser(
         "compile",
