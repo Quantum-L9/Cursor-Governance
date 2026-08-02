@@ -1,0 +1,78 @@
+{
+  "campaign_id": "example-pr-convergence",
+  "objective": "Inspect, remediate, validate, and merge two independent pull requests in dependency-safe order.",
+  "authority_profile": "pr-convergence",
+  "actions": [
+    {
+      "action_id": "inspect-pr-101",
+      "objective": "Inspect PR 101 state, CI, reviews, and dependencies.",
+      "depends_on": [],
+      "resources": [
+        {"key": "service:github-api", "mode": "read", "isolation_key": null},
+        {"key": "pr:Quantum-L9/example:101", "mode": "read", "isolation_key": null}
+      ],
+      "mutation": false,
+      "priority": 5,
+      "critical_path_weight": 5,
+      "downstream_unlocks": 1,
+      "reversibility_score": 5,
+      "validation_strength": 4,
+      "blast_radius": 0
+    },
+    {
+      "action_id": "inspect-pr-102",
+      "objective": "Inspect PR 102 state, CI, reviews, and dependencies.",
+      "depends_on": [],
+      "resources": [
+        {"key": "service:github-api", "mode": "read", "isolation_key": null},
+        {"key": "pr:Quantum-L9/example:102", "mode": "read", "isolation_key": null}
+      ],
+      "mutation": false,
+      "priority": 5,
+      "critical_path_weight": 5,
+      "downstream_unlocks": 1,
+      "reversibility_score": 5,
+      "validation_strength": 4,
+      "blast_radius": 0
+    },
+    {
+      "action_id": "remediate-pr-101",
+      "objective": "Apply scoped remediation to PR 101 in an isolated worktree.",
+      "depends_on": ["inspect-pr-101"],
+      "resources": [
+        {"key": "repo:Quantum-L9/example", "mode": "write", "isolation_key": "worktree:pr-101"},
+        {"key": "pr:Quantum-L9/example:101", "mode": "write", "isolation_key": "worktree:pr-101"}
+      ],
+      "mutation": true,
+      "priority": 10,
+      "critical_path_weight": 8,
+      "downstream_unlocks": 1,
+      "reversibility_score": 4,
+      "validation_strength": 5,
+      "blast_radius": 2,
+      "operation_id": "example-pr-101-remediation",
+      "join_group": "integration"
+    },
+    {
+      "action_id": "remediate-pr-102",
+      "objective": "Apply scoped remediation to PR 102 in an isolated worktree.",
+      "depends_on": ["inspect-pr-102"],
+      "resources": [
+        {"key": "repo:Quantum-L9/example", "mode": "write", "isolation_key": "worktree:pr-102"},
+        {"key": "pr:Quantum-L9/example:102", "mode": "write", "isolation_key": "worktree:pr-102"}
+      ],
+      "mutation": true,
+      "priority": 9,
+      "critical_path_weight": 7,
+      "downstream_unlocks": 1,
+      "reversibility_score": 4,
+      "validation_strength": 5,
+      "blast_radius": 2,
+      "operation_id": "example-pr-102-remediation",
+      "join_group": "integration"
+    }
+  ],
+  "runtime": {},
+  "completed_operations": [],
+  "checkpoints": []
+}

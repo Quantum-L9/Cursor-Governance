@@ -1,0 +1,66 @@
+{
+  "profile_id": "pr-convergence",
+  "version": "1.1.0",
+  "execution_authority": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
+  "autonomy_maturity": "M4_ASSURANCE_GOVERNED",
+  "autonomous_merge": false,
+  "remediation": {
+    "skill": "l9-pr-remediation",
+    "loop": "read CI failures and review-bot comments, apply scoped fixes, push to the PR branch, wait for re-run, repeat until CI is green and no actionable comments remain",
+    "terminal_state": "merge_gate_eligible"
+  },
+  "concurrency_budget": {
+    "total_lanes": 4,
+    "mutation_lanes": 2
+  },
+  "allowed_actions": [
+    "inspect_repository",
+    "inspect_pull_requests",
+    "inspect_ci",
+    "create_isolated_worktree",
+    "edit_campaign_branch",
+    "run_local_validation",
+    "commit_scoped_changes",
+    "push_campaign_branch",
+    "rerun_ci",
+    "update_pull_request",
+    "resolve_review_threads",
+    "remediate_until_green",
+    "evaluate_merge_gate"
+  ],
+  "protected_actions": [
+    "merge_pull_request_after_human_approval",
+    "expand_campaign_scope",
+    "rotate_credentials",
+    "change_branch_protection",
+    "deploy_production",
+    "publish_external_release"
+  ],
+  "forbidden_actions": [
+    "force_push",
+    "admin_merge_override",
+    "disable_required_checks",
+    "weaken_tests_to_obtain_green",
+    "commit_secrets",
+    "rewrite_published_history"
+  ],
+  "merge_gate": {
+    "require_exact_head_sha": true,
+    "require_all_required_checks_success": true,
+    "require_local_validation": true,
+    "require_no_merge_conflicts": true,
+    "require_no_blocking_review_threads": true,
+    "require_dependencies_merged": true,
+    "require_branch_protection_satisfied": true,
+    "require_proof_bundle": true
+  },
+  "parallelism": {
+    "require_dependency_ready": true,
+    "require_declared_resource_locks": true,
+    "require_isolated_mutation_lane": true,
+    "require_durable_state": true,
+    "require_join_barrier": true,
+    "waiting_external_releases_compute_lane": true,
+    "waiting_external_preserves_declared_locks": true
+  }
+}
