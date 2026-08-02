@@ -7,17 +7,22 @@
   `ops/hooks/session_start_bootstrap.sh` / `session_start_memory_orchestrator.sh`
   (`append_repo_memory_bank()`) and `ops/hooks/graphiti-session-end.sh` — both
   resolve the target via `CURSOR_PROJECT_DIR`, not a governance-relative path.
-- **Append, never overwrite:** every sessionEnd write to `activeContext.md`,
-  `tasks.md`, `progress.md`, and `tech-debt.md` MUST append a new dated
-  section — never truncate/replace the whole file (a `cat >` full-file
-  overwrite silently destroys any detail an agent added manually during the
-  session). `ops/hooks/graphiti-session-end.sh` seeds `activeContext.md` with
-  a header only on first creation; every later run appends an
-  `## Append — sessionEnd <ts>` section. `85-workflow-state-bridge.mdc`
-  governs periodic manual pruning/consolidation when the file exceeds ~1
-  screen — that consolidation is also append-based (rewrite the "current
-  state" summary as a new top section, don't delete prior sessions' history
-  outright).
+- **Fallback write only:** `ops/hooks/graphiti-session-end.sh` writes
+  `memory-bank/` **only** when Graphiti is disabled, `group_id` cannot be
+  resolved, or the Graphiti write fails. A successful Graphiti (T1) write
+  skips T0 entirely — do not dual-write the same session summary. Manual
+  `/end-session` follows the same contract (`skills/l9-end-session`).
+- **Append, never overwrite:** every fallback sessionEnd write to
+  `activeContext.md`, `tasks.md`, `progress.md`, and `tech-debt.md` MUST
+  append a new dated section — never truncate/replace the whole file (a
+  `cat >` full-file overwrite silently destroys any detail an agent added
+  manually during the session). On fallback, the hook seeds
+  `activeContext.md` with a header only on first creation; every later
+  fallback run appends an `## Append — sessionEnd <ts>` section.
+  `85-workflow-state-bridge.mdc` governs periodic manual
+  pruning/consolidation when the file exceeds ~1 screen — that
+  consolidation is also append-based (rewrite the "current state" summary
+  as a new top section, don't delete prior sessions' history outright).
 - **Gitignore check is mandatory before relying on git-tracking:** this
   machine's *global* `~/.gitignore_global` may exclude `memory-bank/` even
   when the target repo's own `.gitignore` doesn't. Before assuming
@@ -29,8 +34,9 @@
   !/memory-bank/**
   ```
   `ops/hooks/graphiti-session-end.sh`'s `ensure_memory_bank_trackable()` does
-  this automatically and idempotently on every sessionEnd fire.
-- **PlasticOS (`ib-odoo-19`):** `memory-bank/` is **git-tracked** — commit manually after sessionEnd T0 updates.
+  this automatically and idempotently when (and only when) the T0 fallback
+  path runs.
+- **PlasticOS (`ib-odoo-19`):** `memory-bank/` is **git-tracked** — commit manually after a fallback T0 write (or any intentional local bank edit).
 - **Other repos:** scaffold locally; track in git only when explicitly enabled in `group_registry.yaml`.
 - **Never auto-commit** from hooks — hooks write files; human or explicit `make commit` only.
 - **Push via clean branch when the working branch is dirty/diverged:** if the

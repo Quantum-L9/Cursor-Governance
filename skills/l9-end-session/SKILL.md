@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, session, handoff, memory, governance]
 owner: igor_beylin
 status: active
-version: 1.1.1
-updated: 2026-06-06
+version: 1.2.0
+updated: 2026-07-28
 disable-model-invocation: true
 ---
 

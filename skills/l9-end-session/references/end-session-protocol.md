@@ -7,8 +7,8 @@ role: session_close_protocol
 tags: [l9, session, handoff, memory, governance]
 owner: igor_beylin
 status: active
-version: 1.1.1
-updated: 2026-06-06
+version: 1.2.0
+updated: 2026-07-28
 auto_chain: extract-chat
 --- /SKILL_META ---
 -->
@@ -84,10 +84,10 @@ supplement it. Fall back to the T0 `memory-bank/` files directly in the
    repo's default branch, copy the `memory-bank/` files + `.gitignore`
    negation there, commit, push, and open a normal PR.
 
-`ops/hooks/graphiti-session-end.sh` automates steps 2–3 on every automatic
-`sessionEnd` fire (`ensure_memory_bank_trackable()` + append-only write to
-`activeContext.md`); this section documents the same contract for the manual
-`/end-session` flow and for any repo where the automatic hook isn't wired.
+`ops/hooks/graphiti-session-end.sh` on automatic `sessionEnd` tries Graphiti
+first; it runs `ensure_memory_bank_trackable()` + append-only `activeContext.md`
+write **only** when Graphiti is unavailable or the write fails. This section
+documents the same fallback contract for the manual `/end-session` flow.
 
 ### 2. EXTRACT LEARNINGS (canonical memory pipeline — part of step 1, primary path)
 

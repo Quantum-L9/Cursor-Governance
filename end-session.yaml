@@ -147,10 +147,10 @@ phase_1_pickup_context:
     outcome: "success|partial|blocked"
   
   search_at_resume: |
-    # T0 SSOT first
-    cat memory-bank/activeContext.md
-    # Then Graphiti (when enabled)
+    # Graphiti primary (when enabled)
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
+    # memory-bank only if Graphiti was down / as local supplement
+    cat memory-bank/activeContext.md 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 2: LESSONS & ERRORS (If Any)
