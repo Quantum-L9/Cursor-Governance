@@ -1,22 +1,20 @@
 <!-- L9_META
 l9_schema: 1
 parent: l9-plan
-origin: migrated-from spec command v7.1.0
-tags: [spec, specification, architecture, acceptance, validation, kernels]
+origin: planning-playbook-v3
+tags: [spec, playbook, validation]
 status: active
-version: 2.2.0
+version: 3.0.0
 updated: 2026-08-02
 /L9_META -->
 
-# Spec Workflow — Specification Generator
-
-Generate complete spec before implementation.
+# Spec Workflow — Planning Playbook (spec mode)
 
 Doctrine: Proper planning prevents piss poor performance. A minute spent planning is an hour saved debugging.
 
-Orchestration: [kernel-pass-pipeline.md](kernel-pass-pipeline.md). Patterns: [ccp-plan-patterns.md](ccp-plan-patterns.md).
+**Load** [authority-bindings.md](authority-bindings.md) the same as plan mode. Shells below; fill from fixtures — do not paste catalogs.
 
-## Gather context
+## Gather
 
 ```text
 QUESTIONS:
@@ -25,67 +23,37 @@ QUESTIONS:
 ├── What are the constraints?
 ├── What already exists to leverage?
 ├── What does success look like?
-└── Any matches in learning/failures/repeated-mistakes.md?
+└── Lesson corpus matches?
 ```
 
-## Spec sections
+## Spec shells
 
-1. Overview — problem, solution, success criteria
-2. Planning Mode + justification (Quick/Standard/Deep/Release)
-3. Constraints — must / must not / should
-4. Architecture — diagram
-5. Components — table
-6. Data flow
-7. Operations — deploy, monitor, rollback (design only; lifecycle auth separate)
-8. Risks; Unknown register; Decision register
-9. Acceptance criteria (checkboxes) — Definition of Done language: complete, validated, no stubs, contracts preserved
-10. Phases — scope and GMP count
-11. Pre-Validation (mandatory) — baseline gates before build
-12. Validation matrix — targeted / integration / final; structural ≠ behavioral
-13. Final Validation (mandatory) — post-build gates
-14. Kernel Pass Log (mandatory) — five-kernel pipeline on the **spec draft**
-15. Minimum Safe Next Action + handoff profile
+1. Load log (required Reads)
+2. Overview — problem, solution, success
+3. Planning Mode + justification ([ccp-plan-patterns.md](ccp-plan-patterns.md))
+4. Files in scope / Files out of scope (**Load:** CCP PLAN.md)
+5. Constraints MUST / MUST NOT (**Load:** GMP lock when CHANGE + CCP PLAN)
+6. Modification Lock if implementation follows (**Load:** modification-lock.md)
+7. Architecture / Components / Data flow
+8. Operations (design only; lifecycle auth separate)
+9. Assumption + Decision + Unknown registers
+10. Acceptance criteria
+11. Phases / GMP count
+12. Pre-Validation + Validation matrix
+13. Plan Definition of Done (**Load:** CCP PLAN plan_quality_gates)
+14. Post-implementation Definition of Done (**Load:** DEFINITION_OF_DONE.md + GMP Phase 4–5 names)
+15. Kernel Pass Log (**Load:** kernel-pass-pipeline.md)
+16. Final Validation · MSNA · Handoff · ADRs consulted
 
-## Validation gates (mandatory)
+## Validation gates
 
-### Pre-Validation
+| Gate | Action | Pass |
+|------|--------|------|
+| Pre-Validation | Target bind, baseline, lesson corpus, `make pr-check` if code | PASS / Skipped with reason |
+| Kernel Pass Log | Five Applied/Blocked on **spec draft** | Complete |
+| Final Validation | AC mapped; scanners; honesty; no false lifecycle readiness | PASS |
 
-Before implementation begins, record:
-
-| Check | Command / action | Pass criteria |
-|-------|------------------|---------------|
-| Target bind | Resolve authorized roots | Unambiguous scope |
-| Baseline | Inventory current behavior/contracts | Evidence captured |
-| Lesson corpus | `learning/failures/repeated-mistakes.md` when accessible | Matches or `None matched` |
-| Clean gate (code in scope) | `make pr-check` | PASS — changed-files scanners; **no commit, no push** |
-
-### Validation matrix
-
-| Level | Check | Structural vs behavioral | Pass criteria |
-|-------|-------|--------------------------|---------------|
-| Targeted | … | … | … |
-| Integration | … | … | … |
-| Final | DoD / acceptance | behavioral + structural | AC met or waived |
-| Final | `make pr-check` (when code in scope) | scanners | PASS; no commit/push |
-
-### Final Validation
-
-Before claiming the spec is execution-complete / implementation-ready:
-
-| Check | Command / action | Pass criteria |
-|-------|------------------|---------------|
-| Acceptance | Map AC to evidence | All in-scope AC met or waived |
-| Clean gate (code in scope) | `make pr-check` | PASS; **no commit, no push** unless user explicitly asks |
-| Honesty | Status labels | Passed / Failed / Skipped / N/A / Unknown only |
-| Lifecycle honesty | Readiness claim | Implementation-ready ≠ MergeReady / ReleaseReady |
-
-### Kernel Pass Log (mandatory)
-
-Apply [kernel-pass-pipeline.md](kernel-pass-pipeline.md) to the **spec draft** before presenting as ready. Five rows: Improve → Leverage → Recursive Alignment → Recursive Leverage → Validate & Repair. Status `Applied` \| `Blocked` only.
-
-Omit `make pr-check` only when the spec covers pure planning/docs with no code edits — mark N/A with reason. Never weaken scanners to obtain PASS.
-
-Do not claim Done while any applicable mandatory gate is Failed or Unknown.
+Omit `make pr-check` only for pure docs — N/A with reason. Never weaken scanners.
 
 ## Output location
 
@@ -93,8 +61,4 @@ Do not claim Done while any applicable mandatory gate is Failed or Unknown.
 specs/{project}-spec.md
 ```
 
-## Future: IR engine integration
-
-When wired, `SemanticCompiler` / `UnifiedController.compile_only()` can pre-populate constraints from NL during gather context. **Status:** not yet wired — manual gather only.
-
-Auto-chain recommendation: load `l9-ynp` (recommends forge or gmp).
+Auto-chain: `l9-ynp` / `/ynp`.

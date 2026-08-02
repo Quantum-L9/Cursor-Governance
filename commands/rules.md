@@ -73,6 +73,7 @@ grep -L "alwaysApply: true" .cursor/rules/*.mdc | xargs -I{} basename {}
 | `99-no-auto-commit.mdc` | Never auto-commit |
 | `99-execute-as-instructed.mdc` | Execute exactly as instructed |
 | `91-existing-code-source-of-truth.mdc` | Existing code wins |
+| `46-wrap-call-existing-authority.mdc` | Wrap/call fixtures — no concept harvest |
 | `92-learned-lessons.mdc` | Critical prevention rules |
 
 ---

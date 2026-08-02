@@ -11,7 +11,7 @@ startup_required: true
 
 # L9 CRITICAL LESSONS — Priority-Ordered (v8.4)
 
-> **23 lessons** | Priority-ordered | Token-optimized
+> **25 lessons** | Priority-ordered | Token-optimized
 > **Load at session start. Enforce always.**
 
 ---
@@ -52,7 +52,15 @@ startup_required: true
 ### **5. ASK QUESTIONS FIRST** 🔴 CRITICAL
 **Rule:** 5 min questions saves 4 hrs rework (48-96x ROI)
 **Key:** NEVER build first, ask later. ALWAYS ask first, build second.
+**Doctrine:** Proper planning prevents piss poor performance. A minute spent planning is an hour saved debugging.
 **MCP-ID:** `lesson-005-ask-first`
+
+### **5b. WRAP/CALL — DO NOT HARVEST CONCEPTS** 🔴 CRITICAL
+**Rule:** When permanent fixtures already govern a concern, Load/Read/apply them — never distill into a forked pattern catalog
+**Wrong:** Paste GMP lock/Phase-0/DoD or CCP PLAN chapters into `*-patterns.md`
+**Right:** Thin Load map + shells that cite fixtures (shape: `skills/l9-plan/references/authority-bindings.md`)
+**Enforce:** `rules/46-wrap-call-existing-authority.mdc` (alwaysApply)
+**MCP-ID:** `lesson-005b-wrap-call-no-harvest`
 
 ### **6. RUN COMMANDS, DON'T SHOW** 🔴 CRITICAL
 **Rule:** Be proactive — run commands and display results
@@ -163,6 +171,14 @@ startup_required: true
 **Incident:** 2026-02-02 — Tried to add noqa comments to bypass ADR-0019 print() violation instead of fixing test file to use proper logging
 **MCP-ID:** `lesson-023-no-noqa-bypass`
 
+### **24. RESOURCE HYGIENE** 🔴 CRITICAL
+**Rule:** Idle compute burns memory, bandwidth, and tokens — shut it down when you do not need it.
+**Doctrine:** Pause Docker containers you do not need; they consume a ton of memory. Pause/stop any unnecessary or hung subagents consuming bandwidth or tokens.
+**Local Docker:** Prefer `docker pause` / `docker stop` (or compose equivalents) for unused local containers once work no longer needs them.
+**Subagents:** Pause or stop background/hung Task subagents that are no longer useful; do not leave burners running.
+**VPS exception:** C1 / remote VPS Docker remains ASK → WAIT → EXECUTE (lesson-002). This lesson does not authorize unattended remote stop/pause.
+**MCP-ID:** `lesson-024-resource-hygiene`
+
 ---
 
 ## 🟡 TIER 3: HIGH (4 lessons)
@@ -206,6 +222,7 @@ Before ANY execution task:
 - [ ] Checked Neo4j graphs for repo data?
 - [ ] Not overstepping user's chosen approach?
 - [ ] Have evidence ready before claiming success?
+- [ ] Idle local Docker / hung subagents paused or stopped (resource hygiene)?
 
 ---
 
@@ -228,6 +245,7 @@ Before ANY execution task:
 | 13 | ROOT DOCKER-COMPOSE | 🔴 CRITICAL | Use root docker-compose.yml |
 | 14 | REAL TIMESTAMPS | 🔴 CRITICAL | date -u → 2026-01-20T15:56:08Z |
 | 15 | PR MERGE FIRST | 🔴 CRITICAL | `gh pr merge` to adopt, never manual write |
+| 24 | RESOURCE HYGIENE | 🔴 CRITICAL | Pause unused Docker; stop hung/unused subagents |
 | 16 | SEARCH FIRST | 🟡 HIGH | Check existing before creating |
 | 17 | MCP TOOLS | 🟡 HIGH | Pick BEST tool, not first |
 | 18 | DISPLAY = SYMLINK | 🟢 MEDIUM | Sidebar = folder access |

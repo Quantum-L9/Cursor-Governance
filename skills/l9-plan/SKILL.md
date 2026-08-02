@@ -1,92 +1,90 @@
 ---
 name: l9-plan
-description: create an execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes.
+description: planning playbook — load permanent fixtures and produce an execution-ready plan or spec before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
-tags: [l9, plan, spec, execution, requirements]
+tags: [l9, plan, playbook, spec, execution, requirements]
 owner: igor_beylin
 status: active
-version: 2.2.0
+version: 3.0.0
 updated: 2026-08-02
 ---
 
-# Execution Planning
+# Planning Playbook
 
 ## Doctrine
 
 > Proper planning prevents piss poor performance. A minute spent planning is an hour saved debugging.
 
-Plan before build. Prefer clarifying questions and a locked plan over speculative coding — minutes of planning routinely save hours of debugging and rework. (Also encoded as lesson `lesson-005-ask-first` and `rules/92-learned-lessons.mdc`.)
+Plan before build. Prefer clarifying questions and a locked plan over speculative coding.
 
 ## Purpose
 
-Produce a structured plan or full specification before implementation. Planning-only — no code edits unless the user explicitly chains to `l9-gmp-protocol` or another execution skill.
+Orchestrate a **planning playbook**: **Load / Read / apply** permanent in-repo fixtures, then emit a complete plan (or spec) draft. Planning-only — no product/code edits, commit, or push unless the user chains to `l9-gmp-protocol` / `/gmp` or another execution skill.
+
+Do **not** distill or re-host fixture contracts inside this skill. Call them.
 
 ## Core Contract
 
 | Mode | Output | Load |
 |------|--------|------|
-| plan | Deep TODO plan with CCP fields, pre/final validation, kernel pass log, milestones, checkpoints, checklist | [references/plan-workflow.md](references/plan-workflow.md) |
-| spec | Full spec document for forge/gmp (validation gates + kernel pass log) | [references/spec-workflow.md](references/spec-workflow.md) |
-| ticket | Engineering ticket structure | [references/engineering-ticket-template.md](references/engineering-ticket-template.md) |
+| plan | Playbook plan draft (shells + fixture-backed sections) | [references/plan-workflow.md](references/plan-workflow.md), [references/authority-bindings.md](references/authority-bindings.md) |
+| spec | Spec draft with same bindings | [references/spec-workflow.md](references/spec-workflow.md), authority-bindings |
+| ticket | Engineering ticket | [references/engineering-ticket-template.md](references/engineering-ticket-template.md) — Kernel Pass Log `N/A — ticket mode` |
 
 ## Authority Order
 
 1. Explicit user objective and constraints.
-2. Verified repo ground truth — existing modules, patterns, ADRs.
+2. Verified repo ground truth.
 3. Repo invariants — `AGENTS.md`, `.cursor/rules/*.mdc`.
-4. This skill's references ([plan-workflow](references/plan-workflow.md), [ccp-plan-patterns](references/ccp-plan-patterns.md), [kernel-pass-pipeline](references/kernel-pass-pipeline.md)).
-5. `Unknown` — ask before filling gaps in the spec.
+4. Bound fixtures via [authority-bindings.md](references/authority-bindings.md) (CCP PLAN/DoD, GMP refs, kernels).
+5. This skill’s workflow shells.
+6. `Unknown` — ask; do not invent.
 
-## Compact Workflow
+## Compact Workflow (playbook)
 
-1. **Pre-Validate** — bind target; inventory baseline; lesson corpus recall when `learning/failures/repeated-mistakes.md` is accessible (`None matched` or list matches); for Cursor-Governance / governed workspaces with code in scope: `make pr-check` (changed-files scanners; **no commit, no push**). Record PASS/FAIL/SKIPPED with reason.
-2. **Gather** — objective, scope in/out (inspection vs modification), falsifiable success; ask before build (doctrine).
-3. **Decompose** — TODO table with files (or `TBD` + blocker), effort, risk; Depth (preserved/prohibited contracts; evidence classes); conditional key-component sections when triggers match (see plan-workflow).
-4. **Dependencies** — task graph; execution waves only when write/contract-independent.
-5. **Milestones** — outcome batches that unlock the next phase.
-6. **Checkpoints** — go/no-go evidence gates between milestones.
-7. **Checklist** — atomic done/not-done items tied to TODOs.
-8. **Deliver** — plan markdown or `specs/{project}-spec.md` per mode using the required template (Planning Mode, plan_status, registers, Validation matrix included).
-9. **VALIDATE_PLAN** — template completeness vs plan-workflow; CCP gates ([ccp-plan-patterns.md](references/ccp-plan-patterns.md)); conditional key-component gates; escalate Quick mode if security/migration/shared contracts.
-10. **Kernel Pass Pipeline (mandatory for plan/spec)** — load [kernel-pass-pipeline.md](references/kernel-pass-pipeline.md); Read and apply five kernels to the **draft only**; attach Kernel Pass Log; halt readiness on Blocked. Ticket mode: `N/A — ticket mode`.
-11. **Final Validate** — post-implementation gates named; `make pr-check` when code in scope (**no commit, no push** unless user asks); drift-watch paths when config/schema/policy in scope; do not infer merge/release readiness from implementation-ready.
-12. **Recommend** — exactly one Minimum Safe Next Action + handoff profile; load `l9-ynp` for gmp vs forge vs continue.
+1. **Bind** — resolve authorized target; inspection vs modification intent.
+2. **Load fixtures** — Read [authority-bindings.md](references/authority-bindings.md); Read **always** fixtures; Read **CHANGE** fixtures if handoff is tracked implementation; Read **conditional** fixtures when triggers match. Record **Load log**.
+3. **Pre-Validate** — lesson corpus; `make pr-check` when code in scope (**no commit, no push**); halt if baseline unsafe.
+4. **Gather** — objective, success criteria; ask before build (doctrine).
+5. **Draft shells** — fill [plan-workflow.md](references/plan-workflow.md): path scopes, Constraints, Modification Lock (if CHANGE), Acceptance, Assumptions, TODOs (Phase-0 shape if CHANGE), registers, Validation matrix, dual DoD, milestones/checkpoints/checklist.
+6. **VALIDATE_PLAN** — required Loads done; shells complete; Quick forbidden for security/migration/shared contracts ([ccp-plan-patterns.md](references/ccp-plan-patterns.md)).
+7. **Kernel Pass Pipeline** — [kernel-pass-pipeline.md](references/kernel-pass-pipeline.md); apply five kernels to **draft only**; Kernel Pass Log.
+8. **Final Validate** — name post-impl gates; `make pr-check` when code in scope; do not claim merge/release readiness.
+9. **Recommend** — MSNA + handoff profile; load `l9-ynp` / `/ynp` (auto-chain).
 
 ## Resource Map
 
-- [references/plan-workflow.md](references/plan-workflow.md) — execution plan output template (SSOT).
-- [references/kernel-pass-pipeline.md](references/kernel-pass-pipeline.md) — sole kernel path SSOT, order, Kernel Pass Log schema.
-- [references/ccp-plan-patterns.md](references/ccp-plan-patterns.md) — distilled CCP PLAN patterns (adaptive depth, registers, anti-patterns).
-- [references/spec-workflow.md](references/spec-workflow.md) — full specification generator.
-- [references/engineering-ticket-template.md](references/engineering-ticket-template.md) — acceptance criteria, GWT scenarios.
+- [references/authority-bindings.md](references/authority-bindings.md) — playbook Load map (SSOT for what to Read).
+- [references/plan-workflow.md](references/plan-workflow.md) — plan section shells.
+- [references/kernel-pass-pipeline.md](references/kernel-pass-pipeline.md) — five-kernel path SSOT + log schema.
+- [references/ccp-plan-patterns.md](references/ccp-plan-patterns.md) — adaptive depth only + pointers.
+- [references/spec-workflow.md](references/spec-workflow.md) — spec shells.
+- [references/engineering-ticket-template.md](references/engineering-ticket-template.md) — ticket mode.
 
-## Validation
+## Validation (fail-closed)
 
-A plan is incomplete (fail-closed — do not present as ready) if any of the following are missing:
+Incomplete if any missing:
 
-- **Pre-Validation** section (commands + pass criteria, or explicit Skipped/N/A with reason) including lesson corpus row when accessible
-- **Final Validation** section (commands + pass criteria; `make pr-check` when code in scope)
-- **Planning Mode**, **plan_status**, **Unknown register**, **Decision register**, **Validation matrix**
-- **Milestones**, **Checkpoints**, and **Checklist**
-- **Kernel Pass Log** — five `Applied`/`Blocked` rows for plan/spec (see kernel-pass-pipeline); ticket: `N/A — ticket mode`
-- **Minimum Safe Next Action** and **handoff profile**
-- Conditional key-component sections when triggers match (or explicit `N/A — trigger not met`)
-- Every TODO names files or `TBD` with a blocker note
-- Scope out is explicit (inspection vs modification)
-- No placeholder "TODO: fill in" without a question to the user
-- `plan_status` is not Ready while a blocking Unknown remains
-- Quick mode is not used for security-sensitive, migration, or shared-contract work
+- Load log with required Reads for this handoff
+- Files in scope / Files out of scope (path tables) — or inspection-only N/A
+- Constraints (MUST / MUST NOT)
+- Modification Lock when handoff = CHANGE
+- Plan Definition of Done + Post-implementation Definition of Done (named)
+- Phase-0 TODO columns when handoff = CHANGE
+- Pre-Validation, Final Validation, milestones, checkpoints, checklist
+- Kernel Pass Log (five Applied/Blocked) for plan/spec
+- MSNA + handoff profile
+- plan_status not Ready with blocking Unknown
+- No placeholder TODOs / “maybe” language without blockers
 
-Code written under a plan that implied implementation MUST be clean: run `make pr-check` (alias `make pr`) locally; do not open/push a PR on a failing gate. Never weaken scanners to obtain PASS.
+Never weaken scanners. Never run GMP Phases 2–6 from this skill.
 
 ## Failure Handling
 
-- Ambiguous objective → STOP at gather; ask clarifying questions.
-- Scope creep detected → move items to Out of scope.
-- Protected-path changes planned → flag KERNEL GMP requirement.
-- Pre-Validation FAIL on unrelated dirty tree → quarantine unrelated changes or document baseline FAIL; do not claim whole-tree cleanliness.
-- User requests immediate implementation → recommend `l9-gmp-protocol`; do not edit files in plan mode.
-- Kernel pipeline Blocked → emit partial Kernel Pass Log; do not claim ready.
-- Required conditional section omitted when trigger matches → incomplete plan.
+- Ambiguous objective → STOP; ask.
+- Required fixture unreadable → Blocked; earliest blocker.
+- Scope creep → Out of scope / must-not-modify.
+- User wants implementation now → recommend `l9-gmp-protocol`; do not edit product files here.
+- Kernel pipeline Blocked → partial log; do not claim ready.

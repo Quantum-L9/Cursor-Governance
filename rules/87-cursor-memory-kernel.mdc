@@ -33,6 +33,21 @@ When starting a session (whether via `/start-session` or manually):
 
 ---
 
+## Before Task / explore subagent (MUST DO)
+
+Before deploying a Task, explore subagent, or other agent to **research the repo** for a task:
+
+1. **Resolve bucket:** `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve`
+2. **Search / inject** the task query against memory (repo group + workspace read fan-in)
+3. **Cite hits** in the subagent prompt; skip or narrow the Task if memory already answers
+4. **Never** launch a blind “research the repo” Task without steps 1–2
+
+Same rule before **exploratory** Grep when seeking prior decisions/lessons/gotchas (path unknown). If path/symbol is already known, Grep/Read first.
+
+Timing SSOT: skill `l9-graphiti-memory` → `references/read-write-timing.md`.
+
+---
+
 ## On User Correction (MUST DO)
 
 When the user corrects a mistake:

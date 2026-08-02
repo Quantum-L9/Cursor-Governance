@@ -11,11 +11,15 @@ alwaysApply: true
 ## Retrieval authority (canonical order)
 
 1. Rules / `AGENTS.md` — always, $0
-2. Grep / Read — when path/symbol known, $0
-3. **code-graph** — importers, impact, cross-module location only ($0)
-4. Scoped code-graph semantic — module path required
-5. **Graphiti** — decisions, ADRs, constraints, CI gotchas
+2. Grep / Read — when path/symbol **known**, $0
+3. **Graphiti** — **before exploratory** Task/subagent or exploratory Grep when seeking decisions, ADRs, lessons, constraints, CI gotchas (answers often already in memory)
+4. **code-graph** — importers, impact, cross-module location only ($0)
+5. Scoped code-graph semantic — module path required
 6. `Unknown` — STOP; do not unscoped graph dump
+
+**Memory-before-explore:** If the question is episodic (“how we do X here”, prior fix, doctrine) and no path is known yet → `resolve` + `search`/`inject` **before** launching Task/explore or broad inventory Grep. Cite hits in any subagent prompt. Blind “research the repo” without a memory read is forbidden.
+
+Load skill: **`l9-graphiti-memory`** → `references/read-write-timing.md`.
 
 ## Write tiers
 
@@ -29,15 +33,21 @@ alwaysApply: true
 ## MUST
 
 - Every Graphiti read/write includes resolved `group_id` from `graphiti_memory_client.py resolve`
+- **Write target = resolved repo group** (e.g. `cursor-governance`) — never the shared workspace group
+- Prefetch / session context may *read* `igor-workspace`; that is **not** the write bucket
+- Prefer CLI write over raw MCP `add_memory` (CLI resolves + blocks workspace-group writes)
 - Never write to `group_id=main` or `group_id=default`
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use Graphiti)
+- **Proactive T2 writes** for durable doctrine, lessons, and ADR deltas — do not wait to be told
 
-## CLI (terminal / hooks only)
+## CLI (terminal / hooks; agents use this for writes)
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write --kind lesson "durable fact…"
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "query"
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run
 ```
 

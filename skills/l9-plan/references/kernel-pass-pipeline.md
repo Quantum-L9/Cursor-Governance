@@ -1,10 +1,10 @@
 <!-- L9_META
 l9_schema: 1
 parent: l9-plan
-origin: plan-kernel-hardening-v2.2.0
+origin: planning-playbook-v3
 tags: [plan, kernels, pipeline, validation]
 status: active
-version: 2.2.0
+version: 3.0.0
 updated: 2026-08-02
 /L9_META -->
 
@@ -13,6 +13,8 @@ updated: 2026-08-02
 Mandatory post-draft hardening for **plan** and **spec** modes. This file owns the **exact kernel paths**, **order**, **plan-as-target rule**, **Kernel Pass Log schema**, and **stop rules**.
 
 Skill and `/plan` MUST cite this file. **MUST NOT** duplicate the five path strings elsewhere as a second authoritative list.
+
+Fixture Load map (always/conditional/forbid): [authority-bindings.md](authority-bindings.md). This file is the kernel-path SSOT only — do not fork CCP/GMP catalogs here.
 
 ## Purpose
 

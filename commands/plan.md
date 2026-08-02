@@ -1,92 +1,92 @@
 ---
 name: plan
-version: "1.2.0"
-description: "Deep execution plan: doctrine, CCP fields, five-kernel pipeline, pre/final validation, milestones, checkpoints, checklist"
+version: "2.0.0"
+description: "Planning playbook — load permanent fixtures, draft execution-ready plan, auto-chain /ynp"
 auto_chain: ynp
 ---
 
-# /plan — Execution Planning
+# /plan — Planning Playbook
 
 > **Doctrine:** Proper planning prevents piss poor performance. A minute spent planning is an hour saved debugging.
 
 ## WHAT IT DOES
 
-Create a structured plan before implementation. Delegates template authority to skill `l9-plan` → `skills/l9-plan/references/plan-workflow.md` (SSOT).
+**Planning playbook** (not a bare template): Load permanent in-repo fixtures, fill plan section shells, harden the draft with the five-kernel pipeline, then hand off via `/ynp`.
 
-1. Pre-Validate (mandatory; + lesson corpus when available)
-2. Define objective + falsifiable success; Planning Mode
-3. Identify inspection vs modification scope
-4. List TODO items with depth + conditional sections
-5. Map dependencies, waves, milestones, checkpoints
-6. Unknown/Decision registers; Validation matrix
-7. VALIDATE_PLAN then **five-kernel pipeline** on the draft ([kernel-pass-pipeline.md](../skills/l9-plan/references/kernel-pass-pipeline.md))
-8. Kernel Pass Log + plan_status + MSNA + handoff
-9. Final Validation (mandatory; `make pr-check` when code in scope)
-10. Auto-chain to `/ynp`
+Delegates to skill `l9-plan` v3:
 
-Planning-only — do not edit product/code files, commit, or push from `/plan`. Kernel passes may rewrite the **plan draft only**.
+- Load map: `skills/l9-plan/references/authority-bindings.md`
+- Shells: `skills/l9-plan/references/plan-workflow.md`
+- Kernels: `skills/l9-plan/references/kernel-pass-pipeline.md`
 
-Patterns: `skills/l9-plan/references/ccp-plan-patterns.md` (do not duplicate kernel paths here).
+## STAGES
 
----
+1. **Bind** target
+2. **Load fixtures** (always + CHANGE + conditional per bindings)
+3. **Gather** (doctrine: ask before build; lesson corpus)
+4. **Draft shells** (path scopes, Constraints, Lock, dual DoD, TODOs, …)
+5. **VALIDATE_PLAN**
+6. **Kernel Pass Pipeline** on the **draft only**
+7. **plan_status** + MSNA + handoff
+8. **Auto-chain `/ynp`**
 
-## EXECUTION
+Planning-only — do **not** edit product/code files, commit, or push. Do **not** paste fixture bodies. Do **not** run GMP Phases 2–6 here.
 
-Follow skill `l9-plan`. Required sections (fail-closed if any missing):
+## REQUIRED SHELLS (fail-closed)
 
-1. Doctrine / Planning Mode / plan_status
-2. Objective (+ Success)
-3. Scope (inspection + modification; in/out)
-4. Pre-Validation (+ lesson corpus)
-5. TODO Plan (+ Depth + conditionals when triggered)
-6. Dependencies / waves
-7. Unknown + Decision registers
-8. Validation matrix
-9. Milestones / Checkpoints / Checklist
-10. Risks / Estimate
-11. Kernel Pass Log (five Applied/Blocked rows)
-12. Final Validation
-13. Minimum Safe Next Action + handoff profile
+1. Load log  
+2. Planning Mode / plan_status / Objective  
+3. Files in scope / Files out of scope  
+4. Constraints (MUST / MUST NOT)  
+5. Modification Lock (when CHANGE handoff)  
+6. Pre-Validation  
+7. Acceptance / Assumptions / ADRs  
+8. TODO Plan (Phase-0 columns when CHANGE)  
+9. Depth / Dependencies / waves / Critical path  
+10. Unknown + Decision registers  
+11. Validation matrix  
+12. Plan Definition of Done + Post-implementation Definition of Done  
+13. Milestones / Checkpoints / Checklist  
+14. Kernel Pass Log  
+15. Final Validation / MSNA / Handoff  
+
+Full field shapes: `skills/l9-plan/references/plan-workflow.md`.
 
 ### Gate commands (governed workspaces)
 
 ```bash
-# Changed-files scanners only — does NOT push or commit
 make pr-check
 # alias:
 make pr
 ```
 
-Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
-
----
+Make is case-sensitive: lowercase `pr-check` / `pr`.
 
 ## OUTPUT
 
-Thin mirror — full template is `skills/l9-plan/references/plan-workflow.md`.
+See `plan-workflow.md` output format. Minimum skeleton:
 
 ```markdown
 ## PLAN: {title}
 
-### Planning Mode
-**Mode:** {Quick|Standard|Deep|Release} — {justification}
+### Load log
+| Fixture | Path | Status |
+|---------|------|--------|
+| … | … | Read |
 
-### plan_status
-{Ready|ConditionallyReady|Partial|Blocked|Failed}
+### Planning Mode / plan_status / Objective
+…
 
-### Objective / Scope / Pre-Validation / TODOs / Depth / …
-(see plan-workflow.md)
+### Files in scope / Files out of scope
+…
 
-### Kernel Pass Log (mandatory)
-| Kernel | Path | Status | Material deltas |
-|--------|------|--------|-----------------|
-| Improve | (see kernel-pass-pipeline.md) | Applied \| Blocked | … |
-| … | … | … | … |
+### Constraints / Modification Lock
+…
 
-### Final Validation / MSNA / Handoff
+### TODO / Dual DoD / Kernel Pass Log / MSNA / Handoff
 …
 ```
 
-→ **Auto-chains to /ynp** (recommends /gmp or /forge)
+→ **Auto-chains to /ynp**
 
 --- End Command ---

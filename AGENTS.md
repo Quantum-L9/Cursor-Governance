@@ -246,6 +246,10 @@ verify the archival rationale in git history before restoring anything).
   superseded (check `git log` for the archiving commit's stated rationale
   first)
 - A new YAML/manual "protocol" file duplicating the `.sh` hook's job
+- Harvesting / distilling living authority (GMP lock/phases, CCP PLAN/DoD,
+  kernels, protocols) into forked pattern catalogs — **wrap/call** the fixture
+  instead (`rules/46-wrap-call-existing-authority.mdc`; Load-map shape:
+  `skills/l9-plan/references/authority-bindings.md`)
 
 ---
 

@@ -1,0 +1,76 @@
+---
+description: "Wrap/call permanent fixtures — never harvest or distill concepts into forked catalogs"
+alwaysApply: true
+---
+
+# Wrap/Call Existing Authority — Do Not Harvest Concepts
+
+**Effective: 2026-08-02**
+
+**Doctrine:** When permanent in-repo fixtures already govern a concern, **Load / Read / apply** them. **MUST NOT** harvest concepts out of them into a parallel distillate, pattern dump, or rewritten mini-catalog that will drift.
+
+Canonical playbook Load map (example of correct shape):
+`skills/l9-plan/references/authority-bindings.md`
+
+This is distinct from the `/harvest` code-extraction pipeline (sed of source documents into files). That skill extracts **code**. This rule forbids **concept forking** of living authority.
+
+## MUST
+
+1. **Search first** — skills, kernels, CCP (`kernels/L9 Coding Control Plane/`), GMP refs (`skills/l9-gmp-protocol/references/`), protocols, rules, commands — before inventing policy text.
+2. **Wrap/call** — cite the fixture path; Read it; apply its fields/gates in your draft or implementation.
+3. **Thin orchestration only** — playbooks, skills, and patterns may hold shells, Load maps, and pointers — not pasted lock/DoD/phase/PLAN body.
+4. **Fail-closed** — if a required fixture exists and was not Read, do not invent substitute rules. Stop and Read, or report the gap.
+
+## MUST NOT
+
+- Distill GMP lock / phase / evidence catalogs into skill “patterns”
+- Re-host CCP `PLAN.md` / `DEFINITION_OF_DONE.md` chapters inside another skill
+- Bind living authority to `WIP/**` when an SSOT path exists (e.g. do not use `WIP/10X Kernels` over CCP)
+- Paraphrase a fixture into a second authoritative list of paths, gates, or schemas
+- Skip the Read and “remember” the contract from training data
+
+## Enforcement checks (before merge of skill/command/playbook work)
+
+| Check | Pass |
+|-------|------|
+| New policy text | Points at a fixture path, or is net-new with no existing SSOT |
+| Patterns / references files | Adaptive depth + pointers — no pasted Phase-0 / DoD / lock chapters |
+| Diff under fixture trees | Empty unless the task explicitly authorizes editing that SSOT |
+| Plan/playbook drafts | Load log lists required Reads |
+
+```bash
+# Example: plan playbook must not fork GMP/kernels
+git diff --name-only -- skills/l9-gmp-protocol kernels
+# expect empty unless the user authorized fixture edits
+```
+
+## Decision flow
+
+```
+Need a contract (lock, DoD, phases, plan quality, kernel order, …)
+  ↓
+Does a permanent fixture already exist?
+  YES → Read fixture → fill shells / cite path → thin pointer only
+  NO  → Create net-new SSOT (skill/kernel/rule) — do not hide it inside a distillate
+  ↓
+Tempted to “summarize the important bits” into patterns.md?
+  → STOP. Link the fixture. Update the Load map if missing.
+```
+
+## Anti-patterns
+
+```
+# ❌ WRONG: Harvest concepts into a fork
+ccp-plan-patterns.md ← pasted Modification Lock + Phase-0 schema + DoD gates
+(from GMP + CCP) — second copy, will rot
+
+# ✅ CORRECT: Wrap/call
+authority-bindings.md → Load GMP modification-lock.md + CCP PLAN.md + DoD
+ccp-plan-patterns.md  → adaptive-depth table + pointers only
+```
+
+## Related
+
+- Rule `91-existing-code-source-of-truth` — established **code** wins on field renames
+- This rule — established **authority fixtures** win on contracts; call them, don’t clone them
+- Playbook Load SSOT: `skills/l9-plan/references/authority-bindings.md`
