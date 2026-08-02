@@ -241,3 +241,26 @@ The `intelligence/` directory is a **permanent, active signal corpus**. All data
 ### User preferences (locked)
 
 `zero_ambiguity_tolerance`, `copy_paste_ready_commands_only`, `diagnose_before_execution`, `no_placeholders`, `ask_if_unknown` — all `true`.
+
+---
+
+## 12. Mandatory Pre-PR Local Gate (`make pr`)
+
+**Law:** No pull request may be opened — and no CI triggered by opening or
+updating one — until the local changed-files pre-commit pipeline has passed on
+the draft. From the repo root, before you open the PR:
+
+```bash
+make pr        # alias: make pr-check — changed-files pre-commit + ruff + security
+```
+
+**Fail-closed.** If `make pr` exits non-zero: fix the findings and re-run. Do
+**not** open the PR, do **not** push to trigger CI, and **never** bypass the gate
+to "let CI catch it." CI is the second line of defence, not the first.
+
+| Rule | Detail |
+|------|--------|
+| Target | Lowercase `make pr` (alias `make pr-check`). Make targets are case-sensitive; `make PR` is not a target and errors. |
+| Scope | CHANGED FILES ONLY (`AGENTS.md` §2.3 invariant). Full-tree is `make pr-full` / `make precommit` — intentional/nightly, and never a substitute for `make pr`. |
+| Applies to | Every L9 / Quantum-L9 coding workspace and every agent surface (Cursor, Claude Code CLI · Web · Mobile, Codex, Gemini, …). |
+| Authority | Non-optional. Sits above per-session context in the authority order; enforced operationally in `AGENTS.md` §6. |
