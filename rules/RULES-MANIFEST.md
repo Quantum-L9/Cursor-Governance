@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-02T14:03:45Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
 
 ## Counts
 

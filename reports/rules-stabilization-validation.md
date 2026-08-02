@@ -8,10 +8,10 @@
 | UV fingerprint suite | PASS | `RESULT: PASS (fingerprint cache, input change, invalid venv)` |
 | Selective rule delivery suite | PASS | `RESULT: PASS (individual links, idempotence, collision fail-closed)` |
 | Python syntax compilation | PASS | `` |
-| Manifest generation | PASS | `GENERATED: 58 rules; always=38` |
+| Manifest generation | PASS | `GENERATED: 59 rules; always=38` |
 | Manifest validation | PASS | `RESULT: PASS - manifests match filesystem and rule contracts` |
-| Corpus audit generation | PASS | `WROTE: /Users/ib-mac/Cursor-Governance/reports/rules-corpus-audit.md` |
-| Scoped ruff | PASS | `[1;32mAll checks passed![0m` |
+| Corpus audit generation | PASS | `WROTE: reports/rules-corpus-audit.md` |
+| Scoped ruff | PASS | `All checks passed!` |
 | Full repository ruff | DEFERRED | `Use --full; known unrelated debt may remain` |
 | Full repository pytest | DEFERRED | `Use --full; known unrelated collection debt may remain` |
 
