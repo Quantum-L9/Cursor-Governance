@@ -1,0 +1,124 @@
+{
+  "$schema": "./memory-enforcement.schema.json",
+  "contract": "l9.claude-code.memory-enforcement",
+  "version": "1.0.0",
+  "status": "enforced",
+  "summary": "Memory prefetch and conflict-checked phase-locks are preconditions for governed writes on the Claude Code surface. Enforced at the PreToolUse boundary by a fail-closed gate, not by model discretion. Validated in CI against the registered hook wiring.",
+  "memory": {
+    "url_env": "L9_MEMORY_HTTP_URL",
+    "token_env": "L9_MEMORY_CLIENT_TOKEN",
+    "mcp_path": "/mcp",
+    "agent_id_env": "L9_MEMORY_AGENT_ID",
+    "default_agent_id": "claude-code",
+    "namespace_env": "L9_MEMORY_NAMESPACES",
+    "default_namespaces": ["cursor-governance"]
+  },
+  "state": {
+    "root": ".l9/memory",
+    "session_receipt_glob": ".l9/memory/receipts/*.json",
+    "lock_glob": ".l9/memory/locks/*.json",
+    "session_ttl_seconds": 86400,
+    "lock_ttl_seconds": 3600
+  },
+  "enforcement_point": "PreToolUse",
+  "hooks": {
+    "prefetch": {
+      "event": "SessionStart",
+      "script": "environment/claude-code/hooks/memory_prefetch.py",
+      "fail_mode": "open",
+      "note": "SessionStart never blocks a session. On success it writes a session receipt; ABSENCE of a fresh receipt is what causes the PreToolUse gate to deny governed writes. Fail-open here plus fail-closed at the write boundary yields net fail-closed for governed mutations without ever bricking session startup."
+    },
+    "gate": {
+      "event": "PreToolUse",
+      "script": "environment/claude-code/hooks/memory_gate.py",
+      "fail_mode": "closed",
+      "note": "Emits a PreToolUse permissionDecision. Denies a matched governed write when its required preconditions are unmet."
+    },
+    "writeback": {
+      "event": "Stop",
+      "script": "environment/claude-code/hooks/memory_writeback.py",
+      "fail_mode": "open",
+      "note": "Best-effort deterministic episode ingest at session end."
+    }
+  },
+  "preconditions": {
+    "session_prefetch": {
+      "id": "session_prefetch",
+      "satisfied_by": "a session receipt under state.session_receipt_glob whose session_id matches the current session and whose age is < state.session_ttl_seconds",
+      "established_by": "environment/claude-code/hooks/memory_prefetch.py"
+    },
+    "phase_lock": {
+      "id": "phase_lock",
+      "satisfied_by": "a lock artifact under state.lock_glob for at least one required namespace, conflict-checked, unexpired (< state.lock_ttl_seconds), and bound to the current session",
+      "established_by": "environment/claude-code/hooks/memory_lock.py acquire --namespace <ns> --task <text>",
+      "verifies_against": ["memory.conflicts", "memory.phase_lock", "memory.verify_phase_lock"]
+    }
+  },
+  "governed_writes": [
+    {
+      "id": "edit-authority-files",
+      "description": "Edits to governance-authority paths require prefetch and a conflict-checked phase-lock.",
+      "match": {
+        "tools": ["Edit", "Write", "NotebookEdit"],
+        "path_globs": [
+          "CANONICAL_LAW.md",
+          "AGENTS.md",
+          "ORG_INVARIANTS.yaml",
+          "skills/**",
+          "rules/**",
+          "environment/**",
+          "ops/**",
+          "workflows/**",
+          ".github/**",
+          "docs/decisions/**",
+          ".claude/**"
+        ]
+      },
+      "requires": ["session_prefetch", "phase_lock"],
+      "fail_mode": "closed"
+    },
+    {
+      "id": "edit-other",
+      "description": "Any other edit still requires that memory was prefetched this session.",
+      "match": { "tools": ["Edit", "Write", "NotebookEdit"], "path_globs": ["**"] },
+      "requires": ["session_prefetch"],
+      "fail_mode": "closed"
+    },
+    {
+      "id": "git-mutation",
+      "description": "Local history mutation and publication require prefetch and a phase-lock.",
+      "match": {
+        "tools": ["Bash"],
+        "command_patterns": ["(^|\\s|&&|;|\\|)\\s*git\\s+(commit|push|merge|rebase|tag)\\b"]
+      },
+      "requires": ["session_prefetch", "phase_lock"],
+      "fail_mode": "closed"
+    },
+    {
+      "id": "external-write",
+      "description": "External GitHub writes (PR create/update, merge, direct file push) require prefetch and a phase-lock.",
+      "match": {
+        "tools": [
+          "mcp__github__create_pull_request",
+          "mcp__github__update_pull_request",
+          "mcp__github__merge_pull_request",
+          "mcp__github__push_files",
+          "mcp__github__create_or_update_file",
+          "mcp__github__delete_file"
+        ]
+      },
+      "requires": ["session_prefetch", "phase_lock"],
+      "fail_mode": "closed"
+    }
+  ],
+  "operator_override": {
+    "env": "L9_MEMORY_ENFORCEMENT_BREAKGLASS",
+    "agent_settable": false,
+    "note": "Operator-only break-glass. While this environment variable holds a non-empty reason string, the gate allows governed writes and appends an override event (rule id, reason, timestamp) to .l9/memory/overrides.jsonl for each one. It is supplied by the account environment; the agent cannot set it for its own hook subprocesses. The agent never has the choice; the human operator retains override."
+  },
+  "disable_env": {
+    "env": "L9_MEMORY_ENFORCEMENT",
+    "agent_settable": false,
+    "note": "Operator-only. Set to 'off' to disable enforcement (e.g. surfaces with no memory endpoint). Default is 'on'. Absent or any value other than 'off' means enforced."
+  }
+}

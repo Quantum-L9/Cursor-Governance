@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://quantum-l9.dev/schemas/claude-code/memory-enforcement.schema.json",
+  "title": "L9 Claude Code memory enforcement contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "version",
+    "status",
+    "memory",
+    "state",
+    "enforcement_point",
+    "hooks",
+    "preconditions",
+    "governed_writes",
+    "operator_override"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "contract": { "const": "l9.claude-code.memory-enforcement" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "status": { "enum": ["enforced", "disabled"] },
+    "summary": { "type": "string" },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url_env", "token_env", "mcp_path", "default_namespaces"],
+      "properties": {
+        "url_env": { "type": "string" },
+        "token_env": { "type": "string" },
+        "mcp_path": { "type": "string" },
+        "agent_id_env": { "type": "string" },
+        "default_agent_id": { "type": "string" },
+        "namespace_env": { "type": "string" },
+        "default_namespaces": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "session_ttl_seconds", "lock_ttl_seconds"],
+      "properties": {
+        "root": { "type": "string" },
+        "session_receipt_glob": { "type": "string" },
+        "lock_glob": { "type": "string" },
+        "session_ttl_seconds": { "type": "integer", "minimum": 1 },
+        "lock_ttl_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "enforcement_point": { "const": "PreToolUse" },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prefetch", "gate", "writeback"],
+      "properties": {
+        "prefetch": { "$ref": "#/definitions/hook" },
+        "gate": { "$ref": "#/definitions/hook" },
+        "writeback": { "$ref": "#/definitions/hook" }
+      }
+    },
+    "preconditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_prefetch", "phase_lock"],
+      "properties": {
+        "session_prefetch": { "$ref": "#/definitions/precondition" },
+        "phase_lock": { "$ref": "#/definitions/precondition" }
+      }
+    },
+    "governed_writes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "match", "requires", "fail_mode"],
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tools"],
+            "properties": {
+              "tools": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "path_globs": { "type": "array", "items": { "type": "string" } },
+              "command_patterns": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "requires": {
+            "type": "array",
+            "items": { "enum": ["session_prefetch", "phase_lock"] },
+            "minItems": 1
+          },
+          "fail_mode": { "enum": ["closed", "open"] }
+        }
+      }
+    },
+    "operator_override": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env", "agent_settable"],
+      "properties": {
+        "env": { "type": "string" },
+        "agent_settable": { "const": false },
+        "note": { "type": "string" }
+      }
+    },
+    "disable_env": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env", "agent_settable"],
+      "properties": {
+        "env": { "type": "string" },
+        "agent_settable": { "const": false },
+        "note": { "type": "string" }
+      }
+    }
+  },
+  "definitions": {
+    "hook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "script", "fail_mode"],
+      "properties": {
+        "event": { "enum": ["SessionStart", "PreToolUse", "Stop"] },
+        "script": { "type": "string" },
+        "fail_mode": { "enum": ["closed", "open"] },
+        "note": { "type": "string" }
+      }
+    },
+    "precondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "satisfied_by"],
+      "properties": {
+        "id": { "type": "string" },
+        "satisfied_by": { "type": "string" },
+        "established_by": { "type": "string" },
+        "verifies_against": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
