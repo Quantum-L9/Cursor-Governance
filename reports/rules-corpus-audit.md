@@ -1,12 +1,12 @@
 # Global rules corpus audit
 
-Generated: `2026-08-02T14:11:10Z`
+Generated: `2026-08-02T23:30:26Z`
 
 ## Summary
 
-- Total rules: **59**
-- Always rules: **38**
-- Derived compatibility IDs: **51**
+- Total rules: **60**
+- Always rules: **39**
+- Derived compatibility IDs: **52**
 - Rules over 300 lines: **4**
 - Deprecated rules: **1**
 
@@ -30,7 +30,7 @@ Generated: `2026-08-02T14:11:10Z`
 **Severity:** 3/5
 **Confidence:** confirmed
 
-**Evidence:** 38 of 59 rules (64%) resolve to always activation.
+**Evidence:** 39 of 60 rules (65%) resolve to always activation.
 
 **Impact:** Broad persistent context can create instruction collisions and consume agent context.
 
@@ -42,7 +42,7 @@ Generated: `2026-08-02T14:11:10Z`
 **Severity:** 4/5
 **Confidence:** confirmed
 
-**Evidence:** 92-learned-lessons.mdc (778 lines)
+**Evidence:** 92-learned-lessons.mdc (788 lines)
 
 **Impact:** Very large rule payloads raise context and contradiction risk.
 
@@ -54,7 +54,7 @@ Generated: `2026-08-02T14:11:10Z`
 **Severity:** 3/5
 **Confidence:** confirmed
 
-**Evidence:** 03-mcp-memory.mdc (419 lines), 60-anti-patterns.mdc (351 lines), 92-learned-lessons.mdc (778 lines), 99-incident-report.mdc (463 lines)
+**Evidence:** 03-mcp-memory.mdc (419 lines), 60-anti-patterns.mdc (351 lines), 92-learned-lessons.mdc (788 lines), 99-incident-report.mdc (463 lines)
 
 **Impact:** Large rules are expensive to attach and harder to keep internally consistent.
 
@@ -66,7 +66,7 @@ Generated: `2026-08-02T14:11:10Z`
 **Severity:** 2/5
 **Confidence:** confirmed
 
-**Evidence:** 51 rules lack an explicit immutable frontmatter ID.
+**Evidence:** 52 rules lack an explicit immutable frontmatter ID.
 
 **Impact:** Renames cannot be distinguished reliably from replacement or deletion.
 

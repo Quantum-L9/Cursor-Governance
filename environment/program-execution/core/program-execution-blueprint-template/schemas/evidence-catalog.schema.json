@@ -53,6 +53,9 @@
               "migration_result",
               "monitoring_observation",
               "recovery_artifact",
+              "local_pr_gate",
+              "uv_lock_check",
+              "phase0_ack",
               "other"
             ]
           },

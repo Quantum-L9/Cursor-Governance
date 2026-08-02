@@ -7,6 +7,7 @@
     "schema",
     "schema_version",
     "promotion_rule",
+    "phase0_rule",
     "waves"
   ],
   "properties": {
@@ -17,6 +18,10 @@
       "const": "2.0.0"
     },
     "promotion_rule": {},
+    "phase0_rule": {
+      "type": "string",
+      "minLength": 1
+    },
     "waves": {}
   }
 }

@@ -84,6 +84,21 @@
               "revoked",
               "superseded"
             ]
+          },
+          "waiver_kind": {
+            "enum": [
+              "program_ci_advisory",
+              "gate_obligation",
+              "other"
+            ]
+          },
+          "program_window": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "starts_at": { "type": "string", "minLength": 1 },
+              "ends_at": { "type": "string", "minLength": 1 }
+            }
           }
         }
       }
@@ -93,13 +108,17 @@
       "additionalProperties": false,
       "required": [
         "implicit_waivers_forbidden",
-        "expired_waiver_non_passing"
+        "expired_waiver_non_passing",
+        "cosmetic_ci_disable_requires_phase0"
       ],
       "properties": {
         "implicit_waivers_forbidden": {
           "const": true
         },
         "expired_waiver_non_passing": {
+          "const": true
+        },
+        "cosmetic_ci_disable_requires_phase0": {
           "const": true
         }
       }

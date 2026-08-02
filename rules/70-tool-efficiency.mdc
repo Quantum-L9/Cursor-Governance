@@ -107,6 +107,16 @@ npm run test
 
 ---
 
+## Resource hygiene
+
+> **Doctrine:** Pause Docker containers you do not need; they consume a ton of memory. Pause/stop any unnecessary or hung subagents consuming bandwidth or tokens.
+
+- Prefer pausing/stopping **local** idle Docker once the current task no longer needs those services.
+- Prefer pausing/stopping **unnecessary or hung subagents** instead of letting them burn tokens/bandwidth in the background.
+- Remote/C1 Docker stays under VPS ASK → WAIT → EXECUTE; do not treat this as remote kill authority.
+
+---
+
 ## When to skip heavy checks
 
 - **Comments-only changes:** Run formatter, skip full test suite.

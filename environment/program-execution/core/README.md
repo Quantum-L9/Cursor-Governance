@@ -43,3 +43,14 @@ The Controller never edits Blueprint authority in place. It may narrow a task co
 - Controller contract: `program-execution-controller.v2`
 - Compatibility: exact major-version match
 - Remote mutation: denied unless a separately installed adapter and exact approval authorize the named action
+
+## Learned lessons (implemented in pack)
+
+Ledger: [`LEARNED_LESSONS.md`](LEARNED_LESSONS.md). LL-001–004 are encoded in Phase 0, gates, waivers, DoD, stop taxonomy, evidence, and ERROR_TAXONOMY (promoted to `environment/program-execution/core/`).
+
+- **LL-001** — non-true-blocking CI demotion / waiver before major program
+- **LL-002** — Phase 0 user-config; max autonomy within ceiling when deploying
+- **LL-003** — local `make pr` required before push/PR; remediation exceptional
+- **LL-004** — pre-start `uv.lock` / pin alignment
+
+Autonomy bridge: `program-execution-controller-template/references/AUTONOMY_BRIDGE.md`.

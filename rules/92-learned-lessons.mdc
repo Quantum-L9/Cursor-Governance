@@ -73,6 +73,8 @@ If a file needs more than ~10 surgical edits, ask before proceeding.
 
 ### Ask Strategic Questions First
 
+> **Doctrine:** Proper planning prevents piss poor performance. A minute spent planning is an hour saved debugging.
+
 - **NEVER** build first, ask questions later
 - **ALWAYS** ask clarifying questions BEFORE building
 - 5-10 minutes of strategic questioning saves 4-8 hours of rework
@@ -84,6 +86,14 @@ If a file needs more than ~10 surgical edits, ask before proceeding.
 - Q14: "Should this have confidence scores? If yes, how calculated?"
 
 **User Wisdom:** "The user always asks your opinion and expects you to suggest things they haven't thought of yet. ASK MORE EXCELLENT QUESTIONS."
+
+### Resource Hygiene — Pause Idle Burn
+
+> **Doctrine:** Pause Docker containers you do not need; they consume a ton of memory. Pause/stop any unnecessary or hung subagents consuming bandwidth or tokens.
+
+- **Local Docker:** When containers are not needed for current work, `docker pause` or `docker stop` them (compose equivalents OK). Idle containers burn RAM.
+- **Subagents:** Pause or stop unnecessary / hung background Task subagents. Do not leave token- or bandwidth-burning workers running after their job is done or stuck.
+- **VPS exception:** Remote/C1 Docker remains ASK → WAIT → EXECUTE (`01-vps-rules.mdc` / lesson-002). This rule does not authorize unattended remote stop/pause.
 
 ---
 

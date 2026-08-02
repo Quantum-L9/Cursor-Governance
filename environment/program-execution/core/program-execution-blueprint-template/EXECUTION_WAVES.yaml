@@ -1,6 +1,7 @@
 schema: program-execution-blueprint.execution-waves.v2
 schema_version: 2.0.0
 promotion_rule: A wave starts only when prior waves and all blocking entry gates pass.
+phase0_rule: Mutating waves and long-running autonomy require PHASE0_USER_CONFIG.yaml completeness.phase0_complete when program_deploying is true.
 waves:
 - id: W0
   name: authority_and_current_state_lock
@@ -10,7 +11,8 @@ waves:
   - WS-01
   task_ids:
   - TASK-001
-  entry_gate_ids: []
+  entry_gate_ids:
+  - GATE-000
   exit_gate_ids:
   - GATE-001
   rollback_boundary: Discard planning artifacts; runtime mutation is forbidden.
@@ -30,3 +32,4 @@ waves:
   - GATE-002
   rollback_boundary: REPLACE_WITH_RESTORE_OR_REVERT_PATH
   definition_status: active
+

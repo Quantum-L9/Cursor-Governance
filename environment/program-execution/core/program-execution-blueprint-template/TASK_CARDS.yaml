@@ -9,6 +9,7 @@ tasks:
   target_id: TARGET-001
   execution_kind: program_control
   objective: Produce current evidence and resolve the authority lock.
+  autonomy_action_id: pes.phase0_and_authority_lock
   authority_basis_ids:
   - AUTH-001
   required_decision_ids: []
@@ -32,8 +33,13 @@ tasks:
   validation:
   - id: VAL-001
     method: inspection
-    command_or_inspection: Inspect registers and source revisions.
+    command_or_inspection: Inspect registers, Phase 0 completeness, and source revisions.
     environment: planning
+    expected_result: PASS
+  - id: VAL-001B
+    method: command
+    command_or_inspection: make uv-lock-check || uv lock --check (or N/A with reason)
+    environment: local
     expected_result: PASS
   negative_cases:
   - stale evidence
@@ -58,6 +64,7 @@ tasks:
     destructive_change: false
     external_message: false
   completion_gate_ids:
+  - GATE-000
   - GATE-001
 - id: TASK-002
   title: REPLACE_WITH_BOUNDED_EXECUTION_TASK
@@ -67,6 +74,7 @@ tasks:
   target_id: TARGET-001
   execution_kind: repo_local
   objective: REPLACE_WITH_ONE_OUTCOME
+  autonomy_action_id: REPLACE_WITH_AUTONOMY_ACTION_OR_LEASE_CLASS
   authority_basis_ids:
   - AUTH-001
   required_decision_ids:
@@ -93,6 +101,11 @@ tasks:
     command_or_inspection: REPLACE_WITH_COMMAND
     environment: local
     expected_result: PASS
+  - id: VAL-002B
+    method: command
+    command_or_inspection: make pr (alias make pr-check); record PASS before push/PR
+    environment: local
+    expected_result: PASS
   negative_cases:
   - REPLACE_WITH_FAILURE_CASE
   rollback:
@@ -116,3 +129,4 @@ tasks:
     external_message: false
   completion_gate_ids:
   - GATE-002
+  - GATE-003

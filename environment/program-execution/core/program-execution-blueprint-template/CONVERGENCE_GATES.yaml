@@ -8,11 +8,36 @@ result_values:
 - NOT_APPLICABLE_WITH_REASON
 unknown_is_non_passing: true
 gates:
+- id: GATE-000
+  name: phase0_user_config_complete
+  definition_status: active
+  owner: '{{PROGRAM_OWNER}}'
+  class: phase0
+  blocking_class: true_blocking
+  scope:
+    wave_ids:
+    - W0
+    task_ids:
+    - TASK-001
+  method:
+    type: inspection
+    steps:
+    - Inspect PHASE0_USER_CONFIG.yaml completeness, blocking inventory, alignment, and operator_ack.
+  pass_condition: When program_deploying is false, Phase 0 may remain draft with phase0_complete false.
+    When program_deploying is true, phase0_complete is true, stop_conditions_reviewed is true,
+    alignment.uv_lock_check and toolchain_pin_lockstep are pass or not_applicable, make_pr_gate_required
+    is true, autonomous_merge is false, and advisory CI is inventoried or waived.
+  fail_condition: program_deploying true with incomplete Phase 0, uncleared environmental stops, or lock/pin misalignment.
+  blocking: true
+  required_evidence_ids:
+  - EVID-002
+  waiver_allowed: false
 - id: GATE-001
   name: authority_and_decision_lock
   definition_status: active
   owner: '{{PROGRAM_OWNER}}'
   class: authority
+  blocking_class: true_blocking
   scope:
     wave_ids:
     - W0
@@ -34,6 +59,7 @@ gates:
   definition_status: active
   owner: REPLACE
   class: execution
+  blocking_class: true_blocking
   scope:
     wave_ids:
     - W1
@@ -43,8 +69,34 @@ gates:
     type: command_and_inspection
     steps:
     - REPLACE_WITH_COMMANDS_OR_EVIDENCE_METHOD
+    - Run make pr (changed-files Core-CI mirror) and record PASS evidence before push or PR.
   pass_condition: REPLACE_WITH_EXACT_PASS_CONDITION
   fail_condition: REPLACE_WITH_EXACT_FAIL_CONDITION
   blocking: true
-  required_evidence_ids: []
+  required_evidence_ids:
+  - EVID-003
+  waiver_allowed: false
+- id: GATE-003
+  name: local_make_pr_gate
+  definition_status: active
+  owner: '{{PROGRAM_OWNER}}'
+  class: validation
+  blocking_class: true_blocking
+  ci_check_ids:
+  - make_pr
+  - make_pr_check
+  scope:
+    wave_ids:
+    - W1
+    task_ids:
+    - TASK-002
+  method:
+    type: command
+    steps:
+    - Run make pr or make -C "$HOME/.cursor-governance" pr WS="$(pwd)" and capture exit 0 plus scanner summary.
+  pass_condition: Local changed-files precommit pipeline mirroring Core CI reports PASS; no scanner weaken.
+  fail_condition: make pr skipped, failed, or scanners weakened to obtain PASS.
+  blocking: true
+  required_evidence_ids:
+  - EVID-003
   waiver_allowed: false

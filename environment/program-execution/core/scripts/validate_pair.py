@@ -149,6 +149,7 @@ def validate(root: Path, mode: str) -> list[str]:
     index = load(root / "program-execution-blueprint-template/EXECUTION_INDEX.yaml")
     owners = index.get("canonical_owners", {})
     required_owners = {
+        "phase0_user_config": "PHASE0_USER_CONFIG.yaml",
         "task_dependencies": "DEPENDENCY_GRAPH.yaml",
         "gate_definitions": "CONVERGENCE_GATES.yaml",
         "runtime_gate_results": "Program Execution Controller",
@@ -158,6 +159,35 @@ def validate(root: Path, mode: str) -> list[str]:
     for key, value in required_owners.items():
         if owners.get(key) != value:
             errors.append(f"canonical owner mismatch: {key}")
+    phase0 = load(root / "program-execution-blueprint-template/PHASE0_USER_CONFIG.yaml")
+    if phase0.get("autonomy", {}).get("autonomous_merge") is not False:
+        errors.append("PHASE0 autonomous_merge must be false")
+    if phase0.get("alignment", {}).get("make_pr_gate_required") is not True:
+        errors.append("PHASE0 make_pr_gate_required must be true")
+    bridge = root / "program-execution-controller-template/references/AUTONOMY_BRIDGE.md"
+    if not bridge.is_file():
+        errors.append("missing AUTONOMY_BRIDGE.md")
+    taxonomy = load(root / "shared/ERROR_TAXONOMY.yaml")
+    codes = {e.get("code") for e in taxonomy.get("errors", [])}
+    for code in (
+        "PHASE0_INCOMPLETE",
+        "LOCAL_PR_GATE_SKIPPED",
+        "UV_LOCK_DRIFT",
+        "ADVISORY_CI_NOISE",
+        "NON_BUSINESS_STOP_UNCLEARED",
+    ):
+        if code not in codes:
+            errors.append(f"ERROR_TAXONOMY missing {code}")
+    autonomy_policy = load(root / "program-execution-controller-template/policy/autonomy.yaml")
+    if "program_deploy_max_autonomy" not in (autonomy_policy.get("profiles") or {}):
+        errors.append("autonomy.yaml missing program_deploy_max_autonomy profile")
+    stops = load(root / "program-execution-controller-template/policy/stop-conditions.yaml")
+    if "stop_taxonomy" not in stops:
+        errors.append("stop-conditions.yaml missing stop_taxonomy")
+    if "phase0_incomplete" not in (stops.get("stop_when") or []):
+        errors.append("stop-conditions missing phase0_incomplete")
+    if "local_pr_gate_skipped" not in (stops.get("stop_when") or []):
+        errors.append("stop-conditions missing local_pr_gate_skipped")
     tasks = load(root / "program-execution-blueprint-template/TASK_CARDS.yaml").get("tasks", [])
     for task in tasks:
         if "depends_on" in task or "runtime_state" in task or "status" in task:

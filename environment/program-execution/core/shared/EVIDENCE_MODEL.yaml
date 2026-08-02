@@ -9,7 +9,11 @@ validity_rules:
 - evidence_is_not_expired_invalidated_planned_or_UNKNOWN
 - support_scope_matches_the_claim_or_transition
 classes:
-  planning: [source_snapshot, inspection, architecture_decision]
+  planning: [source_snapshot, inspection, architecture_decision, phase0_ack]
   execution: [attempt_receipt, changed_file_inventory, command_output]
-  verification: [test_result, verification_receipt, gate_evaluation]
+  verification: [test_result, verification_receipt, gate_evaluation, local_pr_gate, uv_lock_check]
   governance: [approval, waiver, handoff_receipt, program_verdict_acceptance]
+evidence_distinction:
+  local_pr_gate: Changed-files Core-CI mirror (make pr); required before push/PR
+  remote_ci: Independent confirmation; not a substitute for skipped local gate
+  business_decision: DEC-* / accepted program authority only

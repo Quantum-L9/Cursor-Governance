@@ -67,8 +67,23 @@
               "migration",
               "release",
               "operations",
-              "security"
+              "security",
+              "phase0",
+              "ci_hygiene"
             ]
+          },
+          "blocking_class": {
+            "enum": [
+              "true_blocking",
+              "advisory_or_cosmetic"
+            ]
+          },
+          "ci_check_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "scope": {
             "type": "object",
