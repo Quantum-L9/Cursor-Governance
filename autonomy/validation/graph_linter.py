@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import argparse
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from autonomy.cli_fs import load_json_cli as load_json
 from autonomy.errors import GraphValidationError
 from autonomy.models import (
     Action,
@@ -341,36 +339,7 @@ class GraphLinter:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate a compiled L9 autonomy graph.")
-    parser.add_argument("--graph", required=True)
-    parser.add_argument("--deployment", required=True)
-    parser.add_argument(
-        "--role-policy",
-        default="autonomy/policies/role-capabilities.json",
-    )
-    parser.add_argument(
-        "--pipeline-policy",
-        default="autonomy/policies/pipeline-invariants.json",
-    )
-    args = parser.parse_args()
-    graph = load_json(args.graph)
-    deployment = DeploymentManifest.from_dict(load_json(args.deployment))
-    role_policy = load_json(args.role_policy)
-    pipeline_policy = load_json(args.pipeline_policy)
-    linter = GraphLinter(
-        deployment=deployment,
-        role_policy=role_policy,
-        pipeline_policy=pipeline_policy,
-    )
-    findings = linter.lint(graph)
-    for finding in findings:
-        print(finding.render())
-    errors = [finding for finding in findings if finding.severity == "ERROR"]
-    if errors:
-        print(f"FAILED: {len(errors)} blocking finding(s)")
-        return 1
-    print("PASS: compiled graph satisfies Wave-1 invariants")
-    return 0
+    raise SystemExit("graph_linter file-path CLI is disabled; call lint_graph()")
 
 
 if __name__ == "__main__":

@@ -9,8 +9,8 @@ from autonomy.adapters.cursor.adapter import build_cursor_task
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.compiler.graph_compiler import compile_graph
 from autonomy.errors import PolicyViolation
-from autonomy.io import load_json
 from autonomy.models import CampaignAuthorization, DeploymentManifest
+from autonomy.policy_loader import load_example, load_golden_spec, load_policy
 from autonomy.runtime.engine import AutonomyRuntime
 from autonomy.validation.golden_trace import GoldenTraceValidator
 from autonomy.validation.simulator import PipelineSimulator
@@ -22,10 +22,10 @@ class Wave3Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.database = Path(self.tempdir.name) / "runtime.sqlite3"
-        self.campaign_payload = load_json(ROOT / "autonomy/examples/w7-campaign.json")
+        self.campaign_payload = load_example("w7-campaign.json")
         self.campaign_payload["base_state"]["commit_sha"] = "abc1234"
-        self.deployment_payload = load_json(ROOT / "autonomy/examples/w7-deployment.json")
-        self.actions_payload = load_json(ROOT / "autonomy/examples/w7-actions.json")
+        self.deployment_payload = load_example("w7-deployment.json")
+        self.actions_payload = load_example("w7-actions.json")
         campaign = CampaignAuthorization.from_dict(self.campaign_payload)
         deployment = DeploymentManifest.from_dict(self.deployment_payload)
         self.graph_payload = compile_graph(
@@ -44,7 +44,7 @@ class Wave3Tests(unittest.TestCase):
             graph_payload=self.graph_payload,
         )
         # Override in-memory only — do not mutate tracked policy files (pytest-xdist safe).
-        requirements = load_json(ROOT / "autonomy/policies/adapter-requirements.json")
+        requirements = load_policy("adapter-requirements")
         requirements["allow_missing_executable_in_test"] = True
         self.orchestrator = AdapterOrchestrator(
             self.runtime,
@@ -58,13 +58,13 @@ class Wave3Tests(unittest.TestCase):
 
     def register_cursor(self) -> str:
         result = self.orchestrator.register(
-            load_json(ROOT / "autonomy/examples/adapters/cursor.json")
+            load_example("adapters/cursor.json")
         )
         self.assertEqual(result["conformance"]["status"], "PASS")
         return result["session_id"]
 
     def test_nonconformant_adapter_cannot_deploy(self) -> None:
-        config = load_json(ROOT / "autonomy/examples/adapters/cursor.json")
+        config = load_example("adapters/cursor.json")
         config["direct_tool_access"] = True
         result = self.orchestrator.register(config)
         self.assertEqual(result["conformance"]["status"], "FAIL")
@@ -156,7 +156,7 @@ class Wave3Tests(unittest.TestCase):
     def test_simulator_produces_deterministic_waves(self) -> None:
         result = PipelineSimulator(
             self.graph_payload,
-            load_json(ROOT / "autonomy/policies/resource-classes.json"),
+            load_policy("resource-classes"),
         ).simulate()
         self.assertGreater(result["steps"], 0)
         self.assertEqual(result["unreachable_actions"], [])
@@ -164,7 +164,7 @@ class Wave3Tests(unittest.TestCase):
         self.assertIn("campaign-coordinator", first_wave_ids)
 
     def test_golden_trace_rejects_autonomous_merge(self) -> None:
-        specification = load_json(ROOT / "autonomy/tests/golden/task046-happy-path.spec.json")
+        specification = load_golden_spec("task046-happy-path.spec.json")
         events = [
             {"event_type": "campaign_bootstrapped"},
             {"event_type": "lease_issued"},

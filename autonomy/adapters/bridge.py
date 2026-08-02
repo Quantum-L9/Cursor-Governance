@@ -93,13 +93,9 @@ class JsonLineBridge:
     def _submit_artifact(self, arguments: dict[str, Any]) -> Any:
         payload = dict(arguments)
         artifact = payload.pop("artifact", None)
-        artifact_path = payload.pop("artifact_path", None)
-        if artifact is None and artifact_path:
-            from autonomy.cli_fs import load_json_cli as load_json
-
-            artifact = load_json(artifact_path)
+        payload.pop("artifact_path", None)  # path loading removed (Sonar S8707)
         if not isinstance(artifact, dict):
-            raise ValueError("submit_artifact requires artifact or artifact_path")
+            raise ValueError("submit_artifact requires an in-memory artifact object")
         return self.orchestrator.submit_artifact(artifact=artifact, **payload)
 
     def _status(self, arguments: dict[str, Any]) -> Any:

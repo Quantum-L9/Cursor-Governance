@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import argparse
-import json
 import os
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Any
 
 from autonomy.adapters.orchestrator import AdapterOrchestrator
@@ -162,64 +159,11 @@ def _default_orchestrator() -> AdapterOrchestrator:
     return AdapterOrchestrator(runtime, repository_root=root)
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Fail-closed autonomy tool mediation hook.")
-    parser.add_argument(
-        "phase",
-        nargs="?",
-        choices=("pre", "post"),
-        help="Hook phase (positional or --phase)",
-    )
-    parser.add_argument(
-        "--phase",
-        dest="phase_opt",
-        choices=("pre", "post"),
-        help="Hook phase (preferred flag form used by adapter task configs)",
-    )
-    parser.add_argument("--tool-name", required=True)
-    parser.add_argument("--arguments-json", default="{}")
-    parser.add_argument("--allowed", action="store_true")
-    parser.add_argument("--error")
-    parser.add_argument("--root", default=os.environ.get("L9_AUTONOMY_ROOT", "."))
-    parser.add_argument("--database")
-    return parser
-
-
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    phase = args.phase_opt or args.phase
-    if phase is None:
-        parser.error("phase is required (positional or --phase)")
-    arguments = json.loads(args.arguments_json)
-    if phase == "pre":
-        runtime = AutonomyRuntime.from_repository(
-            repository_root=args.root,
-            database_path=args.database,
-        )
-        orchestrator = AdapterOrchestrator(
-            runtime,
-            repository_root=Path(args.root),
-        )
-        try:
-            decision = pre_tool_use(
-                tool_name=args.tool_name,
-                arguments=arguments,
-                orchestrator=orchestrator,
-                require_allowed=True,
-            )
-        except PolicyViolation as exc:
-            print(json.dumps({"allowed": False, "error": str(exc)}, sort_keys=True))
-            return 1
-        print(json.dumps(decision, sort_keys=True))
-        return 0 if decision.get("allowed") else 1
-    report = post_tool_use(
-        tool_name=args.tool_name,
-        allowed=bool(args.allowed),
-        error=args.error,
+    raise SystemExit(
+        "tool_hook file-path CLI is disabled; "
+        "call pre_tool_use()/post_tool_use() with an in-memory orchestrator"
     )
-    print(json.dumps(report, sort_keys=True))
-    return 0
 
 
 if __name__ == "__main__":

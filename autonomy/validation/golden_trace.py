@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import argparse
-import json
 from collections.abc import Iterable, Mapping
 from typing import Any
-
-from autonomy.cli_fs import load_json_cli, read_jsonl_cli
 
 
 class GoldenTraceValidator:
@@ -43,24 +39,9 @@ class GoldenTraceValidator:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate an autonomy event trace.")
-    parser.add_argument("--events", required=True)
-    parser.add_argument("--spec", required=True)
-    args = parser.parse_args()
-    events = read_jsonl_cli(args.events)
-    specification = load_json_cli(args.spec)
-    errors = GoldenTraceValidator().validate(
-        events=events,
-        specification=specification,
+    raise SystemExit(
+        "golden_trace file-path CLI is disabled; call GoldenTraceValidator.validate()"
     )
-    print(
-        json.dumps(
-            {"valid": not errors, "errors": errors},
-            indent=2,
-            sort_keys=True,
-        )
-    )
-    return 0 if not errors else 1
 
 
 if __name__ == "__main__":

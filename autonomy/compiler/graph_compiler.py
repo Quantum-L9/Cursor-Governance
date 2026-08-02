@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import argparse
 import heapq
 from collections.abc import Iterable, Mapping
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 
-from autonomy.cli_fs import load_json_cli as load_json
-from autonomy.cli_fs import write_json_cli as write_json
 from autonomy.errors import GraphCompilationError
 from autonomy.io import sha256_json
 from autonomy.models import (
@@ -237,21 +233,7 @@ def _critical_depth(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Compile an enforceable L9 autonomy action graph.")
-    parser.add_argument("--campaign", required=True)
-    parser.add_argument("--deployment", required=True)
-    parser.add_argument("--actions", required=True)
-    parser.add_argument("--output", required=True)
-    args = parser.parse_args()
-    campaign = CampaignAuthorization.from_dict(load_json(args.campaign))
-    deployment = DeploymentManifest.from_dict(load_json(args.deployment))
-    actions = load_json(args.actions)
-    compiled = compile_graph(campaign, deployment, actions)
-    write_json(args.output, compiled.to_dict())
-    print(f"compiled graph: {compiled.graph_id}")
-    print(f"actions: {len(compiled.actions)}")
-    print(f"output: {Path(args.output)}")
-    return 0
+    raise SystemExit("graph_compiler file-path CLI is disabled; call compile_graph()")
 
 
 if __name__ == "__main__":

@@ -8,11 +8,11 @@ from pathlib import Path
 
 from autonomy.compiler.graph_compiler import compile_graph
 from autonomy.errors import ContractError, PolicyViolation
-from autonomy.io import load_json
 from autonomy.models import (
     CampaignAuthorization,
     DeploymentManifest,
 )
+from autonomy.policy_loader import load_example
 from autonomy.runtime.engine import AutonomyRuntime
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,10 +22,10 @@ class Wave2RuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.database = Path(self.tempdir.name) / "runtime.sqlite3"
-        self.campaign_payload = load_json(ROOT / "autonomy/examples/w7-campaign.json")
+        self.campaign_payload = load_example("w7-campaign.json")
         self.campaign_payload["base_state"]["commit_sha"] = "abc1234"
-        self.deployment_payload = load_json(ROOT / "autonomy/examples/w7-deployment.json")
-        self.actions_payload = load_json(ROOT / "autonomy/examples/w7-actions.json")
+        self.deployment_payload = load_example("w7-deployment.json")
+        self.actions_payload = load_example("w7-actions.json")
         campaign = CampaignAuthorization.from_dict(self.campaign_payload)
         deployment = DeploymentManifest.from_dict(self.deployment_payload)
         compiled = compile_graph(

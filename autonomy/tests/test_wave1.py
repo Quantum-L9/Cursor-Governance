@@ -10,8 +10,8 @@ from autonomy.errors import (
     GraphCompilationError,
     GraphValidationError,
 )
-from autonomy.io import load_json
 from autonomy.models import CampaignAuthorization, DeploymentManifest
+from autonomy.policy_loader import load_example, load_policy
 from autonomy.validation.graph_linter import GraphLinter
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,12 +19,12 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class Wave1Tests(unittest.TestCase):
     def setUp(self) -> None:
-        self.campaign_payload = load_json(ROOT / "autonomy/examples/w7-campaign.json")
+        self.campaign_payload = load_example("w7-campaign.json")
         self.campaign_payload["base_state"]["commit_sha"] = "abc1234"
-        self.deployment_payload = load_json(ROOT / "autonomy/examples/w7-deployment.json")
-        self.action_payload = load_json(ROOT / "autonomy/examples/w7-actions.json")
-        self.role_policy = load_json(ROOT / "autonomy/policies/role-capabilities.json")
-        self.pipeline_policy = load_json(ROOT / "autonomy/policies/pipeline-invariants.json")
+        self.deployment_payload = load_example("w7-deployment.json")
+        self.action_payload = load_example("w7-actions.json")
+        self.role_policy = load_policy("role-capabilities")
+        self.pipeline_policy = load_policy("pipeline-invariants")
 
     def compile(self):
         campaign = CampaignAuthorization.from_dict(self.campaign_payload)

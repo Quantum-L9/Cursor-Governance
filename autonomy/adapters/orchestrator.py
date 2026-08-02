@@ -9,7 +9,7 @@ from autonomy.adapters.conformance import AdapterConformance
 from autonomy.adapters.contract_renderer import render_agent_contract
 from autonomy.adapters.protocol import AdapterConfig
 from autonomy.errors import PolicyViolation
-from autonomy.io import load_json
+from autonomy.policy_loader import load_policy
 from autonomy.runtime.engine import AutonomyRuntime
 from autonomy.runtime.store import canonical_dump
 from autonomy.runtime.timeutil import utc_now_text
@@ -358,8 +358,7 @@ class AdapterOrchestrator:
         return sorted(result)
 
     def _load_requirements(self) -> dict[str, Any]:
-        path = self.repository_root / "autonomy/policies/adapter-requirements.json"
-        return load_json(path)
+        return load_policy("adapter-requirements")
 
     def _initialize_extension_tables(self) -> None:
         with self.runtime.store.connect() as connection:

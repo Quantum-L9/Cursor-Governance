@@ -1,13 +1,8 @@
 from __future__ import annotations
 
-import argparse
-import json
 from collections import Counter, defaultdict
 from collections.abc import Mapping
 from typing import Any
-
-from autonomy.cli_fs import load_json_cli as load_json
-from autonomy.cli_fs import write_json_cli as write_json
 
 SUCCESS = "COMPLETED"
 
@@ -176,23 +171,7 @@ class PipelineSimulator:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Simulate an L9 compiled autonomy graph.")
-    parser.add_argument("--graph", required=True)
-    parser.add_argument(
-        "--resource-policy",
-        default="autonomy/policies/resource-classes.json",
-    )
-    parser.add_argument("--output")
-    args = parser.parse_args()
-    result = PipelineSimulator(
-        load_json(args.graph),
-        load_json(args.resource_policy),
-    ).simulate()
-    if args.output:
-        write_json(args.output, result)
-    else:
-        print(json.dumps(result, indent=2, sort_keys=True))
-    return 0 if result["valid"] else 1
+    raise SystemExit("simulator file-path CLI is disabled; call simulate()")
 
 
 if __name__ == "__main__":

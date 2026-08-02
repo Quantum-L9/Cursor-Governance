@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Any
 
 from autonomy.adapters.protocol import AdapterConfig
@@ -60,15 +59,10 @@ def build_claude_task(deployment: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def write_claude_task(deployment: Mapping[str, Any], path: str | Path) -> None:
+def claude_task_json(deployment: Mapping[str, Any]) -> str:
     import json
 
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        json.dumps(build_claude_task(deployment), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    return json.dumps(build_claude_task(deployment), indent=2, sort_keys=True) + "\n"
 
 
 def _claude_subagent_type(role: str) -> str:

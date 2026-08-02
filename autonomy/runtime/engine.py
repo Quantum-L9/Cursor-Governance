@@ -4,11 +4,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from autonomy.io import load_json
 from autonomy.models import (
     CampaignAuthorization,
     DeploymentManifest,
 )
+from autonomy.policy_loader import load_policy
 from autonomy.runtime.artifacts import ArtifactValidator
 from autonomy.runtime.capability_gateway import CapabilityGateway
 from autonomy.runtime.claims import ClaimRegistry
@@ -77,10 +77,10 @@ class AutonomyRuntime:
         root = Path(repository_root)
         return cls(
             database_path=(database_path or root / ".l9/autonomy/runtime.sqlite3"),
-            role_policy=load_json(root / "autonomy/policies/role-capabilities.json"),
-            pipeline_policy=load_json(root / "autonomy/policies/pipeline-invariants.json"),
-            resource_policy=load_json(root / "autonomy/policies/resource-classes.json"),
-            operation_aliases=load_json(root / "autonomy/policies/operation-aliases.json"),
+            role_policy=load_policy("role-capabilities"),
+            pipeline_policy=load_policy("pipeline-invariants"),
+            resource_policy=load_policy("resource-classes"),
+            operation_aliases=load_policy("operation-aliases"),
             signing_key=signing_key,
         )
 
