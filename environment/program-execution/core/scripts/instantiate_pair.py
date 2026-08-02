@@ -21,7 +21,9 @@ def run(command: list[str]) -> None:
         script.relative_to(ROOT)
     except ValueError as exc:
         raise ValueError(f"script escapes pack root: {script}") from exc
-    subprocess.run(command, check=True, timeout=300)
+    # Rebuild argv from validated pieces so the subprocess sink is not a tainted list.
+    argv = [sys.executable, str(script), *command[2:]]
+    subprocess.run(argv, check=True, timeout=300)
 
 
 def main() -> int:

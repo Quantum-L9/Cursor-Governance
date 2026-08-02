@@ -13,11 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write_under(root: Path, path: Path, text: str) -> None:
-    root_r = os.path.realpath(root)
-    path_r = os.path.realpath(path)
+    root_r = os.path.realpath(str(root))
+    path_r = os.path.realpath(str(path))
     if os.path.commonpath([root_r, path_r]) != root_r:
         raise ValueError(f"path escapes root: {path}")
-    Path(path_r).write_text(text, encoding="utf-8")
+    with open(path_r, "w", encoding="utf-8") as handle:
+        handle.write(text)
 
 
 def render_tree(target: Path, replacements: dict[str, str]) -> None:

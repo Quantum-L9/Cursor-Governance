@@ -195,8 +195,8 @@ files:
   sha256: 39b6a5da2ce940e03a365b45843eeb7acc160edc96c3d4566c6b17953d9d8477
   bytes: 3048
 - path: program-execution-blueprint-template/scripts/instantiate.py
-  sha256: bb39b053d1ada609399bc2e8f4cc144236386b40cac0ad2c5257d873e90baf2f
-  bytes: 3070
+  sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
+  bytes: 3111
 - path: program-execution-blueprint-template/scripts/validate_blueprint.py
   sha256: b0fa81ad4a03c40396f804370db6cab6c0fe524d41da4ffa6d5f85b2cd7d809f
   bytes: 21559
@@ -324,8 +324,8 @@ files:
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
   bytes: 1221
 - path: program-execution-controller-template/scripts/instantiate.py
-  sha256: 9f1d4fba82f487d892ce41cf2b07b57a1b644225231fb9142e3b33fdd36a8fe7
-  bytes: 2936
+  sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
+  bytes: 2977
 - path: program-execution-controller-template/scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
   bytes: 52
@@ -336,8 +336,8 @@ files:
   sha256: 0bff24a734cde731819025199d3578a882c3b1eda250b68294a5458e004aa927
   bytes: 9597
 - path: program-execution-controller-template/scripts/pec/common.py
-  sha256: 38b18c538321810e883b30caecd39c687a42c453f610fa87d447ec52dfd1a15e
-  bytes: 2317
+  sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
+  bytes: 2419
 - path: program-execution-controller-template/scripts/pec/contracts.py
   sha256: 664a0eab7fb45784f812b1036cd9cef6bfe44b49675d1d9defc398f0d8cad442
   bytes: 12358
@@ -408,14 +408,14 @@ files:
   sha256: d2f1be14f99214a2a487011f80ac4c4d10aff93013690069e2884e469a19eff9
   bytes: 1500
 - path: scripts/instantiate_pair.py
-  sha256: 24625c363bb33e52e9f1b5318d90406d57e00b1c44d9fdb0275f834bcfb6e61c
-  bytes: 3017
+  sha256: c64acde6a55c676d34092989e0bccd9e929becd2e2653bef6d036644dbaa842e
+  bytes: 3156
 - path: scripts/run_negative_tests.py
   sha256: bc10b4bf18bfdf1ffad63e574e28139939f64b171aaf519046c028999d5dccec
   bytes: 2625
 - path: scripts/validate_pair.py
-  sha256: d8b90792977c0070e051031c032f148c4bc7b4791c0330960a8c0b334194722f
-  bytes: 9978
+  sha256: 4303c58b5c7a5920562f8c523cc201892d55cc8b3409f003cc4d3832043f7f7b
+  bytes: 10056
 - path: shared/AUTHORIZATION_MODEL.yaml
   sha256: 2a7d346233543ce8a9aa62b0ea219e5627cc0bfd34979adbe56dd7318aa81a05
   bytes: 843
@@ -472,4 +472,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 155
-  total_bytes: 373241
+  total_bytes: 373642

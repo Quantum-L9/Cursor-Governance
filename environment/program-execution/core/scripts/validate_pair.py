@@ -66,12 +66,14 @@ def child(command: list[str]) -> list[str]:
         raise ValueError("command must be a non-empty list of non-empty strings")
     if command[0] != sys.executable:
         raise ValueError("child commands must invoke sys.executable")
+    pack_root = Path(__file__).resolve().parents[1]
     script = Path(command[1]).resolve()
     try:
-        script.relative_to(Path(__file__).resolve().parents[1])
+        script.relative_to(pack_root)
     except ValueError as exc:
         raise ValueError(f"script escapes pack root: {script}") from exc
-    r = subprocess.run(command, text=True, capture_output=True, check=False, timeout=120)
+    argv = [sys.executable, str(script), *command[2:]]
+    r = subprocess.run(argv, text=True, capture_output=True, check=False, timeout=120)
     return (
         []
         if r.returncode == 0

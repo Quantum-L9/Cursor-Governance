@@ -162,8 +162,8 @@ files:
   sha256: 39b6a5da2ce940e03a365b45843eeb7acc160edc96c3d4566c6b17953d9d8477
   bytes: 3048
 - path: scripts/instantiate.py
-  sha256: bb39b053d1ada609399bc2e8f4cc144236386b40cac0ad2c5257d873e90baf2f
-  bytes: 3070
+  sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
+  bytes: 3111
 - path: scripts/validate_blueprint.py
   sha256: b0fa81ad4a03c40396f804370db6cab6c0fe524d41da4ffa6d5f85b2cd7d809f
   bytes: 21559
@@ -172,4 +172,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 55
-  total_bytes: 96793
+  total_bytes: 96834
