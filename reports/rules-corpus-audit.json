@@ -1,0 +1,87 @@
+{
+  "schema": "l9.rules-corpus-audit/v1",
+  "generated_utc": "2026-08-02T13:06:10Z",
+  "manifest_digest": "sha256:bb4e75459cc3630ccc0088159c74a3847bef5ea1b12d30b3ce4fe3b8bf0aa949",
+  "summary": {
+    "total_rules": 58,
+    "always_rules": 38,
+    "derived_ids": 50,
+    "over_300_lines": 4,
+    "over_500_lines": 1,
+    "deprecated_rules": 1
+  },
+  "findings": [
+    {
+      "id": "RCA-005",
+      "title": "High-cost rules are marked Always",
+      "severity": 4,
+      "confidence": "confirmed",
+      "evidence": "60-anti-patterns.mdc, 92-learned-lessons.mdc, 99-incident-report.mdc",
+      "impact": "Maximum activation cost is paid on every task.",
+      "recommended_action": "Convert to Agent Requested, Auto Attached, or an explicit skill after behavioral review.",
+      "priority_score": 67
+    },
+    {
+      "id": "RCA-001",
+      "title": "Always activation footprint requires per-rule justification",
+      "severity": 3,
+      "confidence": "confirmed",
+      "evidence": "38 of 58 rules (66%) resolve to always activation.",
+      "impact": "Broad persistent context can create instruction collisions and consume agent context.",
+      "recommended_action": "Review each Always rule; keep only short non-negotiable governance and irreversible-action constraints.",
+      "priority_score": 61
+    },
+    {
+      "id": "RCA-004",
+      "title": "Rules exceed the 500-line hard target",
+      "severity": 4,
+      "confidence": "confirmed",
+      "evidence": "92-learned-lessons.mdc (778 lines)",
+      "impact": "Very large rule payloads raise context and contradiction risk.",
+      "recommended_action": "Split immediately behind stable IDs and preserve compatibility aliases where required.",
+      "priority_score": 59
+    },
+    {
+      "id": "RCA-003",
+      "title": "Oversized active rules should be split or converted to procedures",
+      "severity": 3,
+      "confidence": "confirmed",
+      "evidence": "03-mcp-memory.mdc (419 lines), 60-anti-patterns.mdc (351 lines), 92-learned-lessons.mdc (778 lines), 99-incident-report.mdc (463 lines)",
+      "impact": "Large rules are expensive to attach and harder to keep internally consistent.",
+      "recommended_action": "Move multi-step procedures to skills/commands and keep persistent rule contracts focused.",
+      "priority_score": 49
+    },
+    {
+      "id": "RCA-002",
+      "title": "Most legacy rules still use derived compatibility IDs",
+      "severity": 2,
+      "confidence": "confirmed",
+      "evidence": "50 rules lack an explicit immutable frontmatter ID.",
+      "impact": "Renames cannot be distinguished reliably from replacement or deletion.",
+      "recommended_action": "Add explicit IDs when rules are materially edited; do not mass-rewrite solely for metadata.",
+      "priority_score": 46
+    },
+    {
+      "id": "RCA-006",
+      "title": "Deprecated rules remain in the active rule directory",
+      "severity": 2,
+      "confidence": "confirmed",
+      "evidence": "03-mcp-memory.mdc",
+      "impact": "Compatibility content can still be discovered or explicitly referenced.",
+      "recommended_action": "Retain only with a documented compatibility reason and removal plan.",
+      "priority_score": 39
+    }
+  ],
+  "convergence": {
+    "passes": [
+      "scope",
+      "activation",
+      "size",
+      "identity",
+      "deprecation",
+      "adversarial"
+    ],
+    "status": "stable",
+    "note": "No corpus-wide activation changes were made automatically; findings require evidence-backed review."
+  }
+}

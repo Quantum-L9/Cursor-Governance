@@ -1,3 +1,14 @@
+---
+id: l9.rule.ide-profile-exceptions
+version: 1.0.0
+description: IDE profile exceptions — eslint_owned workspaces and formatter exclusivity for governed editor settings.
+scope: global
+domain: governance
+activation: agent_requested
+authority: canonical_global
+context_cost: minimal
+alwaysApply: false
+---
 # IDE profile exceptions
 
 **SSOT:** `environment/ide/` · **Installer:** `ops/scripts/install_ide_profile.sh`
