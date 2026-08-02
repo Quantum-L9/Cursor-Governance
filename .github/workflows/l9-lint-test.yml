@@ -135,27 +135,17 @@ jobs:
       - name: Install test tools
         run: |
           set -euo pipefail
+          # [tool.uv] package = false — this repo is not an installable package, so
+          # `pip install -e ".[dev]"` cannot install [project.dependencies]. Own
+          # project + dev deps via the lockfile (same as `make venv`).
+          # pytest-xdist / pytest-timeout are CI-only and not in uv.lock today.
           python -m pip install --upgrade pip
-          if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
-          pip install -e ".[dev]" || pip install -e . || \
-            echo "::notice::no local editable package to install"
-          command -v pytest >/dev/null 2>&1 || pip install pytest
-          python -c "import pytest_cov" 2>/dev/null || pip install pytest-cov
+          command -v uv >/dev/null 2>&1 || pip install uv
+          uv sync --locked --extra dev
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          export PATH="$PWD/.venv/bin:$PATH"
           python -c "import xdist" 2>/dev/null || pip install pytest-xdist
           python -c "import pytest_timeout" 2>/dev/null || pip install pytest-timeout
-          # The editable install above fails on this repo's flat multi-directory
-          # layout (setuptools can't auto-discover a single package) and falls
-          # through to the notice, so [project.dependencies] never actually get
-          # installed. langgraph is optional at import time (workflows/__init__.py
-          # feature-detects it) but must be present for workflows/dags/*_dag.py
-          # tests to collect and exercise the LangGraph-backed code paths.
-          # jsonschema is required by environment/program-execution/core validators
-          # and by pec.py subprocesses spawned from controller template tests.
-          # Exact-pinned (not >=) per SonarCloud's "lock resolved versions" security
-          # rule; kept in sync with the matching entries in uv.lock, the single
-          # resolved-version source of truth for this repo's [project.dependencies].
-          python -c "import langgraph" 2>/dev/null || pip install --only-binary :all: "langgraph==1.2.9"
-          python -c "import jsonschema" 2>/dev/null || pip install --only-binary :all: "jsonschema==4.26.0"
       - name: pytest with coverage
         env:
           TESTING: "true"
