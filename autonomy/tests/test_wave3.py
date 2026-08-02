@@ -22,16 +22,10 @@ class Wave3Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.database = Path(self.tempdir.name) / "runtime.sqlite3"
-        self.campaign_payload = load_json(
-            ROOT / "autonomy/examples/w7-campaign.json"
-        )
+        self.campaign_payload = load_json(ROOT / "autonomy/examples/w7-campaign.json")
         self.campaign_payload["base_state"]["commit_sha"] = "abc1234"
-        self.deployment_payload = load_json(
-            ROOT / "autonomy/examples/w7-deployment.json"
-        )
-        self.actions_payload = load_json(
-            ROOT / "autonomy/examples/w7-actions.json"
-        )
+        self.deployment_payload = load_json(ROOT / "autonomy/examples/w7-deployment.json")
+        self.actions_payload = load_json(ROOT / "autonomy/examples/w7-actions.json")
         campaign = CampaignAuthorization.from_dict(self.campaign_payload)
         deployment = DeploymentManifest.from_dict(self.deployment_payload)
         self.graph_payload = compile_graph(
@@ -54,15 +48,12 @@ class Wave3Tests(unittest.TestCase):
             repository_root=ROOT,
         )
         self.campaign_id = self.campaign_payload["campaign_id"]
-        requirements_path = (
-            ROOT / "autonomy/policies/adapter-requirements.json"
-        )
+        requirements_path = ROOT / "autonomy/policies/adapter-requirements.json"
         self.original_requirements = requirements_path.read_text(encoding="utf-8")
         requirements = load_json(requirements_path)
         requirements["allow_missing_executable_in_test"] = True
         requirements_path.write_text(
-            __import__("json").dumps(requirements, indent=2, sort_keys=True)
-            + "\n",
+            __import__("json").dumps(requirements, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         # Reload orchestrator requirements after mutation.
@@ -72,9 +63,9 @@ class Wave3Tests(unittest.TestCase):
         )
 
     def tearDown(self) -> None:
-        (
-            ROOT / "autonomy/policies/adapter-requirements.json"
-        ).write_text(self.original_requirements, encoding="utf-8")
+        (ROOT / "autonomy/policies/adapter-requirements.json").write_text(
+            self.original_requirements, encoding="utf-8"
+        )
         self.tempdir.cleanup()
 
     def register_cursor(self) -> str:
@@ -106,9 +97,7 @@ class Wave3Tests(unittest.TestCase):
         )
         contract = deployment["agent_contract"]
         self.assertEqual(contract["action_id"], "campaign-coordinator")
-        self.assertTrue(
-            contract["runtime_protocol"]["mediate_every_tool_call"]
-        )
+        self.assertTrue(contract["runtime_protocol"]["mediate_every_tool_call"])
         self.assertFalse(contract["mutation"])
 
     def test_ack_requires_exact_capability_set(self) -> None:
@@ -183,15 +172,11 @@ class Wave3Tests(unittest.TestCase):
         ).simulate()
         self.assertGreater(result["steps"], 0)
         self.assertEqual(result["unreachable_actions"], [])
-        first_wave_ids = {
-            action["action_id"] for action in result["waves"][0]["actions"]
-        }
+        first_wave_ids = {action["action_id"] for action in result["waves"][0]["actions"]}
         self.assertIn("campaign-coordinator", first_wave_ids)
 
     def test_golden_trace_rejects_autonomous_merge(self) -> None:
-        specification = load_json(
-            ROOT / "autonomy/tests/golden/task046-happy-path.spec.json"
-        )
+        specification = load_json(ROOT / "autonomy/tests/golden/task046-happy-path.spec.json")
         events = [
             {"event_type": "campaign_bootstrapped"},
             {"event_type": "lease_issued"},

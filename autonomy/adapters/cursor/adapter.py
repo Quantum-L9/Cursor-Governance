@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.adapters.protocol import AdapterConfig
 
@@ -57,9 +58,7 @@ def build_cursor_task(deployment: Mapping[str, Any]) -> dict[str, Any]:
     }
     missing = [field for field in CURSOR_REQUIRED_TASK_FIELDS if field not in task]
     if missing:
-        raise ValueError(
-            "Cursor task missing required fields: " + ", ".join(missing)
-        )
+        raise ValueError("Cursor task missing required fields: " + ", ".join(missing))
     return task
 
 
@@ -124,19 +123,13 @@ def _render_prompt(contract: Mapping[str, Any]) -> str:
         "",
         "## Allowed capabilities",
     ]
-    lines.extend(
-        f"- {capability}" for capability in authority["allowed_capabilities"]
-    )
+    lines.extend(f"- {capability}" for capability in authority["allowed_capabilities"])
     lines.extend(["", "## Globally forbidden capabilities"])
-    lines.extend(
-        f"- {capability}"
-        for capability in authority["globally_forbidden_capabilities"]
-    )
+    lines.extend(f"- {capability}" for capability in authority["globally_forbidden_capabilities"])
     lines.extend(["", "## Resource claims"])
     for claim in scope["claims"]:
         lines.append(
-            f"- {claim['mode']} {claim['key']} "
-            f"(exclusive={claim.get('exclusive', False)})"
+            f"- {claim['mode']} {claim['key']} (exclusive={claim.get('exclusive', False)})"
         )
     lines.extend(
         [

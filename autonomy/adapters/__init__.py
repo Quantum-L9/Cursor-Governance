@@ -12,4 +12,5 @@ They may only:
 Direct mutation, autonomous merge, invented topology, and gateway bypass are
 not valid adapter operations.
 """
+
 __version__ = "1.0.0"

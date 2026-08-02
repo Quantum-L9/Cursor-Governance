@@ -3,7 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.errors import PolicyViolation
@@ -22,19 +23,13 @@ def send_heartbeat(
 ) -> dict[str, Any]:
     resolved_session = session_id or os.environ.get("L9_ADAPTER_SESSION_ID")
     resolved_lease = (
-        lease_id
-        or os.environ.get("L9_LEASE_ID")
-        or os.environ.get("L9_AUTONOMY_LEASE_ID")
+        lease_id or os.environ.get("L9_LEASE_ID") or os.environ.get("L9_AUTONOMY_LEASE_ID")
     )
     resolved_agent = (
-        agent_id
-        or os.environ.get("L9_AGENT_ID")
-        or os.environ.get("L9_AUTONOMY_AGENT_ID")
+        agent_id or os.environ.get("L9_AGENT_ID") or os.environ.get("L9_AUTONOMY_AGENT_ID")
     )
     resolved_base = (
-        base_sha
-        or os.environ.get("L9_BASE_SHA")
-        or os.environ.get("L9_AUTONOMY_BASE_SHA")
+        base_sha or os.environ.get("L9_BASE_SHA") or os.environ.get("L9_AUTONOMY_BASE_SHA")
     )
     if not resolved_session or not resolved_lease or not resolved_agent:
         raise PolicyViolation(
@@ -42,9 +37,7 @@ def send_heartbeat(
             "L9_LEASE_ID, and L9_AGENT_ID are required"
         )
     if not resolved_base:
-        raise PolicyViolation(
-            "ADAPTER_HEARTBEAT_INCOMPLETE: L9_BASE_SHA is required"
-        )
+        raise PolicyViolation("ADAPTER_HEARTBEAT_INCOMPLETE: L9_BASE_SHA is required")
     orch = orchestrator or _default_orchestrator()
     return orch.heartbeat(
         session_id=resolved_session,

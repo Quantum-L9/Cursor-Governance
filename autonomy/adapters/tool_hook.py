@@ -3,8 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.errors import PolicyViolation
@@ -109,8 +110,7 @@ def pre_tool_use(
         agent_id = os.environ.get("L9_AUTONOMY_AGENT_ID", "")
     if not lease_id or not agent_id:
         raise PolicyViolation(
-            "ADAPTER_SESSION_INCOMPLETE: L9_LEASE_ID and L9_AGENT_ID "
-            "are required"
+            "ADAPTER_SESSION_INCOMPLETE: L9_LEASE_ID and L9_AGENT_ID are required"
         )
     capability = infer_capability(tool_name, arguments)
     resource = infer_resource(tool_name, arguments)
@@ -124,9 +124,7 @@ def pre_tool_use(
         metadata={"tool_name": tool_name},
     )
     if require_allowed and not decision.get("allowed"):
-        raise PolicyViolation(
-            f"{decision.get('code')}: {decision.get('message')}"
-        )
+        raise PolicyViolation(f"{decision.get('code')}: {decision.get('message')}")
     return decision
 
 
@@ -141,10 +139,8 @@ def post_tool_use(
         "tool_name": tool_name,
         "allowed": allowed,
         "session_id": os.environ.get("L9_ADAPTER_SESSION_ID"),
-        "lease_id": os.environ.get("L9_LEASE_ID")
-        or os.environ.get("L9_AUTONOMY_LEASE_ID"),
-        "agent_id": os.environ.get("L9_AGENT_ID")
-        or os.environ.get("L9_AUTONOMY_AGENT_ID"),
+        "lease_id": os.environ.get("L9_LEASE_ID") or os.environ.get("L9_AUTONOMY_LEASE_ID"),
+        "agent_id": os.environ.get("L9_AGENT_ID") or os.environ.get("L9_AUTONOMY_AGENT_ID"),
         "result": dict(result or {}),
         "error": error,
     }
@@ -161,9 +157,7 @@ def _default_orchestrator() -> AdapterOrchestrator:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Fail-closed autonomy tool mediation hook."
-    )
+    parser = argparse.ArgumentParser(description="Fail-closed autonomy tool mediation hook.")
     parser.add_argument("phase", choices=("pre", "post"))
     parser.add_argument("--tool-name", required=True)
     parser.add_argument("--arguments-json", default="{}")

@@ -14,9 +14,7 @@ from autonomy.validation.simulator import PipelineSimulator
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="L9 Wave-3 IDE orchestration CLI."
-    )
+    parser = argparse.ArgumentParser(description="L9 Wave-3 IDE orchestration CLI.")
     parser.add_argument("--root", default=".")
     parser.add_argument("--database")
     commands = parser.add_subparsers(dest="command", required=True)

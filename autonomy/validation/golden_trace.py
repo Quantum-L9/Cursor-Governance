@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 
 class GoldenTraceValidator:
@@ -28,18 +29,14 @@ class GoldenTraceValidator:
             try:
                 position = event_types.index(required, position + 1)
             except ValueError:
-                errors.append(
-                    "Required sequence is not satisfied at event "
-                    f"{required!r}"
-                )
+                errors.append(f"Required sequence is not satisfied at event {required!r}")
                 break
         maximum_counts = specification.get("maximum_counts", {})
         for event_type, maximum in maximum_counts.items():
             observed = event_types.count(event_type)
             if observed > int(maximum):
                 errors.append(
-                    f"Event {event_type!r} observed {observed} times; "
-                    f"maximum is {maximum}"
+                    f"Event {event_type!r} observed {observed} times; maximum is {maximum}"
                 )
         return errors
 
@@ -54,16 +51,12 @@ def read_receipts_jsonl(path: str | Path) -> list[dict[str, Any]]:
             try:
                 events.append(json.loads(line))
             except json.JSONDecodeError as exc:
-                raise ValueError(
-                    f"Invalid JSONL at line {line_number}: {exc}"
-                ) from exc
+                raise ValueError(f"Invalid JSONL at line {line_number}: {exc}") from exc
     return events
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Validate an autonomy event trace."
-    )
+    parser = argparse.ArgumentParser(description="Validate an autonomy event trace.")
     parser.add_argument("--events", required=True)
     parser.add_argument("--spec", required=True)
     args = parser.parse_args()

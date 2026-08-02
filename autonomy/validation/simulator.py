@@ -3,7 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter, defaultdict
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from autonomy.io import load_json, write_json
 
@@ -39,21 +40,15 @@ class PipelineSimulator:
                 for action_id in pending
                 if self._dependencies_complete(self.actions[action_id], status)
             ]
-            human_ready = [
-                action for action in ready if action["kind"] == "human_gate"
-            ]
+            human_ready = [action for action in ready if action["kind"] == "human_gate"]
             for action in human_ready:
                 status[action["id"]] = "HUMAN_STOP"
                 human_stops.append(action["id"])
-            runnable = [
-                action for action in ready if action["kind"] != "human_gate"
-            ]
+            runnable = [action for action in ready if action["kind"] != "human_gate"]
             selected = self._select_by_capacity(runnable)
             if not selected:
                 break
-            by_resource = Counter(
-                action["resource_class"] for action in selected
-            )
+            by_resource = Counter(action["resource_class"] for action in selected)
             for resource_class, count in by_resource.items():
                 peak[resource_class] = max(peak[resource_class], count)
             waves.append(
@@ -75,21 +70,14 @@ class PipelineSimulator:
                 status[action["id"]] = SUCCESS
             step += 1
         unreachable = sorted(
-            action_id
-            for action_id, action_status in status.items()
-            if action_status == "PENDING"
+            action_id for action_id, action_status in status.items() if action_status == "PENDING"
         )
         lock_conflicts = self._static_lock_conflicts()
         warnings: list[str] = []
         if lock_conflicts:
-            warnings.append(
-                "Exclusive resource claims serialize some actions."
-            )
+            warnings.append("Exclusive resource claims serialize some actions.")
         if human_stops:
-            warnings.append(
-                "Simulation stopped human-gated branches without "
-                "auto-approving them."
-            )
+            warnings.append("Simulation stopped human-gated branches without auto-approving them.")
         return {
             "schema_version": "1.0.0",
             "graph_id": self.graph["graph_id"],
@@ -132,9 +120,7 @@ class PipelineSimulator:
             ready,
             key=lambda action: (
                 -float(action.get("priority_weight", 1.0)),
-                -int(
-                    self.graph.get("critical_depth", {}).get(action["id"], 1)
-                ),
+                -int(self.graph.get("critical_depth", {}).get(action["id"], 1)),
                 action["id"],
             ),
         )
@@ -148,9 +134,7 @@ class PipelineSimulator:
             used[resource_class] += 1
             for claim in action.get("claims", []):
                 key = claim["key"]
-                exclusive = bool(
-                    claim.get("exclusive", claim["mode"] == "write")
-                )
+                exclusive = bool(claim.get("exclusive", claim["mode"] == "write"))
                 if exclusive:
                     claimed_exclusive.add(key)
                 else:
@@ -191,9 +175,7 @@ class PipelineSimulator:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Simulate an L9 compiled autonomy graph."
-    )
+    parser = argparse.ArgumentParser(description="Simulate an L9 compiled autonomy graph.")
     parser.add_argument("--graph", required=True)
     parser.add_argument(
         "--resource-policy",

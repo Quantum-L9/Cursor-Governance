@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.adapters.protocol import AdapterConfig
 
@@ -9,9 +10,7 @@ from autonomy.adapters.protocol import AdapterConfig
 def load_claude_code_config(payload: Mapping[str, Any]) -> AdapterConfig:
     config = AdapterConfig.from_dict(payload)
     if config.adapter_type.value != "claude-code":
-        raise ValueError(
-            "Claude Code adapter requires adapter_type='claude-code'"
-        )
+        raise ValueError("Claude Code adapter requires adapter_type='claude-code'")
     return config
 
 
@@ -114,9 +113,6 @@ def _render_prompt(contract: Mapping[str, Any]) -> str:
             "",
             "Required artifact kind: " + contract["completion"]["artifact_kind"],
             "Required payload fields:",
-            *[
-                f"- {field}"
-                for field in contract["completion"]["required_fields"]
-            ],
+            *[f"- {field}" for field in contract["completion"]["required_fields"]],
         ]
     )

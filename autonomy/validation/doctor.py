@@ -10,9 +10,7 @@ from autonomy.io import load_json
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Run IDE adapter conformance checks."
-    )
+    parser = argparse.ArgumentParser(description="Run IDE adapter conformance checks.")
     parser.add_argument("--root", default=".")
     parser.add_argument("--adapter", required=True)
     parser.add_argument(

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.adapters.conformance import AdapterConformance
 from autonomy.adapters.contract_renderer import render_agent_contract
@@ -83,8 +84,7 @@ class AdapterOrchestrator:
             raise PolicyViolation(f"ADAPTER_SESSION_UNKNOWN: {session_id}")
         if row["status"] != "PASS":
             raise PolicyViolation(
-                "ADAPTER_CONFORMANCE_FAILED: campaign execution is "
-                "blocked for this adapter session"
+                "ADAPTER_CONFORMANCE_FAILED: campaign execution is blocked for this adapter session"
             )
         with self.runtime.store.transaction() as connection:
             connection.execute(
@@ -124,8 +124,7 @@ class AdapterOrchestrator:
                     break
             if selected is None:
                 raise PolicyViolation(
-                    "NO_RUNNABLE_ACTION: no ready action matches "
-                    f"requested role {requested_role!r}"
+                    f"NO_RUNNABLE_ACTION: no ready action matches requested role {requested_role!r}"
                 )
         action = self.runtime.store.decode_action(
             campaign_id,
@@ -211,8 +210,7 @@ class AdapterOrchestrator:
         expected_session = lease.metadata.get("adapter_session_id")
         if expected_session != session_id:
             raise PolicyViolation(
-                "ADAPTER_SESSION_MISMATCH: lease was issued through "
-                "a different adapter session"
+                "ADAPTER_SESSION_MISMATCH: lease was issued through a different adapter session"
             )
         role_capabilities = set(
             self.runtime.role_policy["roles"][lease.role].get("capabilities", [])

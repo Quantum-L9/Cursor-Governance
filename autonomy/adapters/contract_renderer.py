@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 
 def render_agent_contract(
@@ -39,9 +40,7 @@ def render_agent_contract(
         "scope": {
             "campaign_allowed_paths": campaign["scope"]["allowed_paths"],
             "campaign_forbidden_paths": campaign["scope"]["forbidden_paths"],
-            "action_allowed_paths": action.get("metadata", {}).get(
-                "allowed_paths", []
-            ),
+            "action_allowed_paths": action.get("metadata", {}).get("allowed_paths", []),
             "claims": action.get("claims", []),
             "resource_class": action["resource_class"],
         },
@@ -52,12 +51,8 @@ def render_agent_contract(
         "completion": {
             "artifact_kind": completion["artifact_kind"],
             "required_fields": completion.get("required_fields", []),
-            "require_base_sha_match": completion.get(
-                "require_base_sha_match", True
-            ),
-            "require_empty_blockers": completion.get(
-                "require_empty_blockers", False
-            ),
+            "require_base_sha_match": completion.get("require_base_sha_match", True),
+            "require_empty_blockers": completion.get("require_empty_blockers", False),
         },
         "runtime_protocol": {
             "acknowledge_before_tools": True,

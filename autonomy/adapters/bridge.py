@@ -3,7 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.runtime.engine import AutonomyRuntime
@@ -65,9 +66,7 @@ class JsonLineBridge:
             lease_id=str(arguments["lease_id"]),
             agent_id=str(arguments["agent_id"]),
             accepted_capabilities=list(
-                arguments.get("accepted_capabilities")
-                or arguments.get("capabilities")
-                or []
+                arguments.get("accepted_capabilities") or arguments.get("capabilities") or []
             ),
         )
 
@@ -86,10 +85,7 @@ class JsonLineBridge:
             session_id=str(arguments["session_id"]),
             lease_id=str(arguments["lease_id"]),
             agent_id=str(arguments["agent_id"]),
-            base_sha=str(
-                arguments.get("base_sha")
-                or arguments.get("observed_base_sha")
-            ),
+            base_sha=str(arguments.get("base_sha") or arguments.get("observed_base_sha")),
             status=str(arguments.get("status", "running")),
             progress=arguments.get("progress"),
         )
@@ -140,9 +136,7 @@ class JsonLineBridge:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="L9 autonomy JSON-line adapter bridge."
-    )
+    parser = argparse.ArgumentParser(description="L9 autonomy JSON-line adapter bridge.")
     parser.add_argument("--root", default=".", help="Repository root.")
     parser.add_argument("--database", help="Runtime SQLite database path.")
     return parser

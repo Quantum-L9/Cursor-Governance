@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.adapters.protocol import (
     ADAPTER_PROTOCOL_VERSION,
@@ -69,10 +70,7 @@ class AdapterConformance:
             (
                 "Adapter protocol is compatible"
                 if passed
-                else (
-                    "Adapter protocol must be compatible with "
-                    f"{ADAPTER_PROTOCOL_VERSION}"
-                )
+                else (f"Adapter protocol must be compatible with {ADAPTER_PROTOCOL_VERSION}")
             ),
         )
 
@@ -83,9 +81,7 @@ class AdapterConformance:
             exists = candidate.exists() and os.access(candidate, os.X_OK)
         else:
             exists = shutil.which(executable) is not None
-        allow_missing = bool(
-            self.requirements.get("allow_missing_executable_in_test", False)
-        )
+        allow_missing = bool(self.requirements.get("allow_missing_executable_in_test", False))
         passed = exists or allow_missing
         return ConformanceCheck(
             "ADAPTER-002",
