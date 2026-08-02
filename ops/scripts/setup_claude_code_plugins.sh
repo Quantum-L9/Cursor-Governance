@@ -215,6 +215,18 @@ fi
 log "Claude Code CLI: $(command -v claude) ($(claude --version 2>/dev/null || echo unknown))"
 log "Workspace: $WORKSPACE_DIR (class: $WORKSPACE_CLASS)"
 
+
+# Reconcile the governance skill corpus into Claude Code's native discovery
+# locations. This happens before the plugin stamp fast path because skill state
+# changes independently of marketplace plugin state.
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+if [ -f "$SCRIPT_DIR/reconcile_claude_l9_skills.py" ]; then
+  python3 "$SCRIPT_DIR/reconcile_claude_l9_skills.py" \
+    --root "$GOV_ROOT" --scope user --scope project \
+    --workspace "$WORKSPACE_DIR" --quiet \
+    || echo "WARN: L9 Claude skill reconciliation reported drift or a local name conflict" >&2
+fi
+
 # Migration cleanup runs unconditionally, ahead of the per-class stamp fast path
 # below, so a stamped/already-correct workspace can't mask a stale user-scope
 # install left over from before Phase 7 forever.

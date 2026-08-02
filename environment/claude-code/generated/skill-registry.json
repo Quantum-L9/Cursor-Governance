@@ -1,0 +1,720 @@
+{
+  "routing": {
+    "advisory_threshold": 6,
+    "force_threshold": 8,
+    "max_primary": 1,
+    "max_supporting": 2,
+    "primary_skills": [
+      "l9-context7-docs",
+      "l9-recursive-optimization",
+      "l9-structured-reasoning",
+      "l9-gmp-protocol",
+      "l9-plan",
+      "l9-code-analysis",
+      "l9-gap-analysis",
+      "l9-pr-analysis",
+      "l9-ynp",
+      "l9-skill-compiler",
+      "l9-api-smoke-testing",
+      "l9-auditing-performance",
+      "l9-auditing-security",
+      "l9-prompt-engineering",
+      "l9-incident-response",
+      "l9-setting-up-ci",
+      "l9-graphiti-memory"
+    ],
+    "purpose": "Reinforce Claude Code's native skill selection with high-confidence routes while preserving model judgment, explicit-only boundaries, and narrow composition.\n",
+    "routes": [
+      {
+        "id": "pr_analysis",
+        "negative_signals": [
+          "implement the review fixes",
+          "push commits",
+          "merge the pr",
+          "merge this pr"
+        ],
+        "positive_signals": [
+          "review pr",
+          "pull request review",
+          "merge blockers",
+          "review comments",
+          "pr readiness",
+          "ready to merge"
+        ],
+        "primary": "l9-pr-analysis",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-gap-analysis",
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "code_analysis",
+        "positive_signals": [
+          "unfamiliar repository",
+          "audit this repository",
+          "map the code flows",
+          "map code flows",
+          "explore the codebase",
+          "identify hotspots"
+        ],
+        "primary": "l9-code-analysis",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "structured_reasoning",
+        "positive_signals": [
+          "architecture plan",
+          "compare the trade-offs",
+          "compare trade-offs",
+          "root cause analysis",
+          "deep reasoning",
+          "decision support"
+        ],
+        "primary": "l9-structured-reasoning",
+        "signal_weight": 8,
+        "supporting": []
+      },
+      {
+        "id": "gap_analysis",
+        "positive_signals": [
+          "what is missing",
+          "readiness gaps",
+          "percent complete",
+          "compliance drift",
+          "gap analysis"
+        ],
+        "primary": "l9-gap-analysis",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "skill_compiler",
+        "positive_signals": [
+          "installable skill",
+          "skill pack",
+          "compile this prompt into a skill",
+          "turn this workflow into a skill",
+          "turn this operating procedure into"
+        ],
+        "primary": "l9-skill-compiler",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-prompt-engineering"
+        ]
+      },
+      {
+        "id": "context7_docs",
+        "positive_signals": [
+          "sdk documentation",
+          "current library documentation",
+          "version-specific documentation",
+          "current api documentation",
+          "current next.js"
+        ],
+        "primary": "l9-context7-docs",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "api_smoke",
+        "positive_signals": [
+          "smoke test the routes",
+          "api endpoint returns 500",
+          "api returns 500",
+          "endpoint returns 404",
+          "verify api health"
+        ],
+        "primary": "l9-api-smoke-testing",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "ci_setup",
+        "positive_signals": [
+          "set up github actions ci",
+          "bootstrap ci",
+          "add lint type checking and tests",
+          "add ci stages"
+        ],
+        "primary": "l9-setting-up-ci",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "incident_response",
+        "positive_signals": [
+          "active production incident",
+          "sev1",
+          "sev2",
+          "coordinated mitigation",
+          "write a postmortem"
+        ],
+        "primary": "l9-incident-response",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "next_action",
+        "positive_signals": [
+          "what should i do next",
+          "work is complete what next",
+          "priorities are unclear",
+          "next highest leverage action"
+        ],
+        "primary": "l9-ynp",
+        "signal_weight": 8,
+        "supporting": []
+      },
+      {
+        "id": "graphiti_memory",
+        "positive_signals": [
+          "graphiti memory",
+          "memory prefetch",
+          "mcp health failure",
+          "memory bootstrap",
+          "episode write"
+        ],
+        "primary": "l9-graphiti-memory",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "performance_audit",
+        "positive_signals": [
+          "performance bottleneck",
+          "profile the slow",
+          "app is slow",
+          "optimize bundle performance",
+          "slow query"
+        ],
+        "primary": "l9-auditing-performance",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "security_audit",
+        "positive_signals": [
+          "exposed secrets",
+          "security vulnerabilities",
+          "security audit",
+          "harden before release",
+          "review code for security risks"
+        ],
+        "primary": "l9-auditing-security",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "prompt_engineering",
+        "positive_signals": [
+          "improve this prompt",
+          "design a system prompt",
+          "structured output schema",
+          "prompt engineering"
+        ],
+        "primary": "l9-prompt-engineering",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "recursive_optimization",
+        "positive_signals": [
+          "recursively improve",
+          "converge until execution-ready",
+          "recursive optimization",
+          "align this artifact pack"
+        ],
+        "primary": "l9-recursive-optimization",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      }
+    ],
+    "supporting_skills": [
+      "l9-structured-reasoning",
+      "l9-context7-docs",
+      "l9-gap-analysis",
+      "l9-prompt-engineering",
+      "l9-graphiti-memory",
+      "l9-architecture-decision-records",
+      "l9-update-agent-docs",
+      "l9-ynp"
+    ],
+    "trivial_patterns": [
+      "^fix (the )?typo\\b",
+      "^correct (the )?spelling\\b",
+      "^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$",
+      "^show (me )?(the )?(file|status|diff)\\b"
+    ],
+    "version": 1
+  },
+  "schema_version": 1,
+  "skills": [
+    {
+      "composition_role": "primary",
+      "description": "start the dev server, discover API routes from the codebase, hit every endpoint, and report which ones return errors. use when verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-api-smoke-testing",
+      "path": "skills/l9-api-smoke-testing",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes"
+    },
+    {
+      "composition_role": "supporting",
+      "description": "document technical decisions as Architecture Decision Records (ADRs) with context, options considered, and rationale. use when capturing a significant architecture or design decision, recording trade-offs, or creating an ADR.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-architecture-decision-records",
+      "path": "skills/l9-architecture-decision-records",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
+    },
+    {
+      "composition_role": "primary",
+      "description": "audit and optimize application performance, including bundle size, rendering, database queries, and Core Web Vitals. use when the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-auditing-performance",
+      "path": "skills/l9-auditing-performance",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance"
+    },
+    {
+      "composition_role": "primary",
+      "description": "perform a systematic security audit of a codebase, checking for OWASP Top 10 vulnerabilities, secrets exposure, and insecure patterns. use when reviewing code for security risks, scanning for exposed secrets, or hardening before release.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-auditing-security",
+      "path": "skills/l9-auditing-security",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "reviewing code for security risks, scanning for exposed secrets, or hardening before release"
+    },
+    {
+      "composition_role": "general",
+      "description": "extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-chat-extraction",
+      "path": "skills/l9-chat-extraction",
+      "reason": "extracts chat content to memory or structured output",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-ci-ops",
+      "path": "skills/l9-ci-ops",
+      "reason": "CI/CD pipeline operations and gate authoring",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "rapidly analyze, deeply evaluate, or combine analysis and evaluation for code targets. use when exploring unfamiliar code, auditing structure, mapping flows, identifying hotspots, or assessing quality before edits.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-code-analysis",
+      "path": "skills/l9-code-analysis",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots"
+    },
+    {
+      "composition_role": "general",
+      "description": "operate @er77/code-graph-rag-mcp for repo-local code structure \u2014 token-safe tool selection, cli indexing, importers, impact analysis, cross-module discovery. use when code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or mcp indexing is needed.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-code-graph-rag-mcp",
+      "path": "skills/l9-code-graph-rag-mcp",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
+    },
+    {
+      "composition_role": "general",
+      "description": "lint-fix, migrate, clean/compress, consolidate, and refactor-sweep operations via dag executors. use for systematic lint fixes, pattern migrations, or read-only refactor impact analysis.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-code-maintenance",
+      "path": "skills/l9-code-maintenance",
+      "reason": "lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "component audit, deterministic verify, and runtime probe escalation ladder. use for /audit-component, /verify-component, or /probe wiring checks.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-component-verification",
+      "path": "skills/l9-component-verification",
+      "reason": "component audit/verify/probe escalation ladder",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "Use Context7 documentation before coding when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-context7-docs",
+      "path": "skills/l9-context7-docs",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "current library, framework, SDK, API, or version-specific documentation could prevent implementation mistakes"
+    },
+    {
+      "composition_role": "general",
+      "description": "create or update l9 workflow dags the proper way via dag-authoring-v1. use when authoring new dags, updating existing dags, wiring commands to dag nodes, or registering dag executors.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-dag-authoring",
+      "path": "skills/l9-dag-authoring",
+      "reason": "creates/updates DAGs \u2014 structural meta tooling",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "run repo e2e or local-proof tests, classify and fix in-repo blockers, then write a brief for remaining external gates and a todo.md session-reference entry. use when the user asks to run e2e, clear e2e blockers, document remaining secrets/env gaps, or produce a session-start surface for blocked proof paths.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-e2e-blocker-resolution",
+      "path": "skills/l9-e2e-blocker-resolution",
+      "reason": "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets \u2014 high blast radius, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "close agent session \u2014 save pickup context, extract learnings, redis handoff, governance backup. use when ending a work session, creating handoff for next window, or running session teardown hooks.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-end-session",
+      "path": "skills/l9-end-session",
+      "reason": "session lifecycle boundary",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "autonomous high-velocity execution with zero pauses \u2014 batch gmp runs, auto-fix validation, deliver code tests and reports. use when user invokes /forge or requests maximum-velocity autonomous delivery.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-forge",
+      "path": "skills/l9-forge",
+      "reason": "zero-pause batch execution",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "perform read-only delta gap analysis against a target state with scoring and optional actionable recommendations. use when assessing readiness, missing pieces, compliance drift, or percent-complete status.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-gap-analysis",
+      "path": "skills/l9-gap-analysis",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "assessing readiness, missing pieces, compliance drift, or percent-complete status"
+    },
+    {
+      "composition_role": "primary",
+      "description": "execute deterministic repo changes through locked gmp phases 0-6 with a modification lock and a signed evidence report. use when a change must be traceable and drift-free \u2014 adding/refactoring/fixing modules, gated edits, or any task that needs a locked todo plan, phase-by-phase execution, and an evidence report in reports/.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-gmp-protocol",
+      "path": "skills/l9-gmp-protocol",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "work must be phased, auditable, traceable, or touches protected/high-risk areas"
+    },
+    {
+      "composition_role": "general",
+      "description": "Wire and verify a repo's Cursor governance symlinks against the Dropbox governance SSOT. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-governance-symlinks",
+      "path": "skills/l9-governance-symlinks",
+      "reason": "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "workspace governance symlinks, component wire executor, confirm-wiring audit, governance checks, rules inventory, and github ssot backup. use for /wire governance, confirm-wiring, or governance-backup.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-governance-wiring",
+      "path": "skills/l9-governance-wiring",
+      "reason": "symlinks, hooks, and governance backup",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, T0 memory-bank, episode writes, GMP Phase 0 MEMORY_PREFETCH. Use when wiring memory, debugging prefetch, bootstrap, or Graphiti health.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-graphiti-memory",
+      "path": "skills/l9-graphiti-memory",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
+    },
+    {
+      "composition_role": "general",
+      "description": "harvest code extraction via sed/dag and use-harvest deployment pipeline. use when extracting code from documents, deploying harvested files, or running harvest-deploy-v1 dag \u2014 never manually rewrite code from documents.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-harvest-pipeline",
+      "path": "skills/l9-harvest-pipeline",
+      "reason": "sed/cp harvest deployment pipeline",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "handle production incidents \u2014 triage, mitigate, communicate, and write postmortems. use when a production incident is active (SEV1\u2013SEV4), coordinating mitigation, or writing a postmortem.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-incident-response",
+      "path": "skills/l9-incident-response",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "a production incident is active (SEV1\u2013SEV4), coordinating mitigation, or writing a postmortem"
+    },
+    {
+      "composition_role": "general",
+      "description": "inspect code before it enters l9 \u2014 external code gate and existing file audit via inspect-v1 dag. use when validating markdown with code blocks, proposed files not yet in repo, or auditing existing repo files before import/refactor.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-inspect",
+      "path": "skills/l9-inspect",
+      "reason": "external code gate and file audit before code enters L9",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "deploy applications to Kubernetes \u2014 Deployments, Services, Ingress, ConfigMaps, Secrets, health checks, and scaling. use when writing or debugging Kubernetes manifests, deploying to a cluster, or configuring scaling/health checks.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-kubernetes-deploying",
+      "path": "skills/l9-kubernetes-deploying",
+      "reason": "infra deploy operation \u2014 high blast radius, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-monitoring-terminal-errors",
+      "path": "skills/l9-monitoring-terminal-errors",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "a dev server, watcher, or test process is running and may emit runtime errors to fix live"
+    },
+    {
+      "composition_role": "primary",
+      "description": "create an execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-plan",
+      "path": "skills/l9-plan",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a plan/spec first"
+    },
+    {
+      "composition_role": "primary",
+      "description": "analyze pull requests, review comments, merge blockers, gap status, and adoption strategy. use when the user asks about a PR, merge decision, review findings, or PR readiness.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-pr-analysis",
+      "path": "skills/l9-pr-analysis",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "reviewing PRs, merge blockers, review comments, or PR readiness"
+    },
+    {
+      "composition_role": "general",
+      "description": "recursive pr improvement loop \u2014 read ci failures and code review bot comments, apply fixes, push to pr branch, wait for re-run, loop until ci green and no new actionable comments. use when a pr has failing ci, unresolved review comments from gemini or coderabbit, or when the user asks to fix a pr, remediate review feedback, or run a pr improvement loop.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pr-remediation",
+      "path": "skills/l9-pr-remediation",
+      "reason": "recursive PR loop that pushes commits and posts review replies \u2014 high blast radius, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "write effective prompts for LLMs \u2014 structure, few-shot examples, chain-of-thought, system prompts, and output parsing. use when designing or improving an LLM prompt, system message, or structured output schema.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-prompt-engineering",
+      "path": "skills/l9-prompt-engineering",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "designing or improving an LLM prompt, system message, or structured output schema"
+    },
+    {
+      "composition_role": "general",
+      "description": "test-driven development in Python using uv as the package manager. covers the red-green-refactor cycle, vertical slicing, and uv project setup. use when starting Python TDD with uv, setting up a uv project, or running a red-green-refactor loop.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-python-tdd-with-uv",
+      "path": "skills/l9-python-tdd-with-uv",
+      "reason": "non-default stack (uv) \u2014 invoke explicitly for Python TDD",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "recursively align, improve, and converge artifact groups, packs, prompts, plans, and agent outputs until complete and execution-ready. use when hardening l9 packs, auditing contract compliance, improving prompts or skill packs, or when recursive alignment, recursive improvement, or recursive optimization is requested.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-recursive-optimization",
+      "path": "skills/l9-recursive-optimization",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
+    },
+    {
+      "composition_role": "general",
+      "description": "export repo indexes for fast lookup \u2014 repo-agnostic index generation. use when refreshing reports/repo-index, searching classes/functions/models before grep, or bootstrapping codebase navigation indexes.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-repo-index",
+      "path": "skills/l9-repo-index",
+      "reason": "repo index export \u2014 on-demand only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-setting-up-ci",
+      "path": "skills/l9-setting-up-ci",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions"
+    },
+    {
+      "composition_role": "general",
+      "description": "set up Terraform infrastructure-as-code for cloud resources, including provider configuration, modules, state management, and CI integration. use when bootstrapping Terraform IaC, structuring modules/state, or wiring Terraform into CI.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-setting-up-terraform",
+      "path": "skills/l9-setting-up-terraform",
+      "reason": "infra-as-code bootstrap \u2014 high blast radius, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
+      "description": "compile prompts, sops, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into standalone zero-stub skill packs. use when the user asks to create, design, analyze, rebuild, validate, package, or improve reusable agent skills, chatgpt-compatible skill folders, model-agnostic skill packs, or tool-using agent workflows.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-skill-compiler",
+      "path": "skills/l9-skill-compiler",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "compiling prompts, SOPs, kernels, or workflows into standalone zero-stub skill packs"
+    },
+    {
+      "composition_role": "primary",
+      "description": "structured multi-modal reasoning for planning, plan analysis, architecture decisions, and debugging. use when decomposing complex tasks, evaluating trade-offs, root cause analysis, pre-implementation verification, reviewing proposed plans, or when the user asks for deep reasoning, strategy, or decision support.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-structured-reasoning",
+      "path": "skills/l9-structured-reasoning",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
+    },
+    {
+      "composition_role": "supporting",
+      "description": "audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-update-agent-docs",
+      "path": "skills/l9-update-agent-docs",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
+    },
+    {
+      "composition_role": "general",
+      "description": "minimize slash commands to dag triggers via slash-command-update workflow. use when reducing a command to a thin trigger or auditing dag-trigger commands.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-update-command",
+      "path": "skills/l9-update-command",
+      "reason": "meta tooling that changes command/skill structure",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "registers new or updated agent skills into repo discovery tables, subagent preload lists, and related agent docs after skill creation. use immediately after l9-skill-compiler finishes, when the user asks to wire or register a skill, or when a skill pack exists but is not yet discoverable.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-wire-skill-into-repo",
+      "path": "skills/l9-wire-skill-into-repo",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
+    },
+    {
+      "composition_role": "primary",
+      "description": "synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-ynp",
+      "path": "skills/l9-ynp",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "work just completed, priorities are unclear, or the user asks what to do next"
+    }
+  ],
+  "source": "skills/AUTONOMY_MANIFEST.yaml",
+  "source_manifest_sha256": "d385436524cafd18ea8955a38f25bedd0647228fcbf671273d9a51827ea53b77",
+  "source_skill_corpus_sha256": "c79ddfbf4b661d030d62fd1990dc75fe13bb7ca49901787d84b1ef18bbe50762"
+}

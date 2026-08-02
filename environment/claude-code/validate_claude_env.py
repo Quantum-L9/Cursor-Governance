@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -35,9 +36,19 @@ REQUIRED_FILES: tuple[str, ...] = (
     "web/environment.env.example",
     "web/setup.sh",
     "adapters/claude-code.md",
+    "generated/skill-registry.json",
+    "hooks/user_prompt_skill_router.py",
+    "hooks/skill_usage_logger.py",
+    "rules/l9-skill-routing.md",
+    "tests/skill_routing_cases.json",
+    "tests/test_skill_router.py",
+    "tests/test_skill_reconciliation.py",
+    "validate_skill_activation.py",
 )
 
 JSON_FILES: tuple[str, ...] = (
+    "generated/skill-registry.json",
+    "tests/skill_routing_cases.json",
     "render.claude.json",
     "settings.template.json",
     "mcp.template.json",
@@ -177,6 +188,22 @@ def check_memory_identity_distinct(failures: list[str]) -> None:
         print(f"  OK: memory identity distinct from Cursor (agent_id={agent_id!r})")
 
 
+
+def check_skill_activation(failures: list[str]) -> None:
+    script = HERE / "validate_skill_activation.py"
+    if not script.is_file():
+        return
+    result = subprocess.run(
+        [sys.executable, str(script)], capture_output=True, text=True, check=False
+    )
+    if result.returncode == 0:
+        print("  OK: proactive skill activation validation passed")
+    else:
+        _fail(
+            "proactive skill activation validation failed:\n" + result.stdout + result.stderr,
+            failures,
+        )
+
 def main() -> int:
     print("=== Claude Code environment — structural validation ===")
     print(f"  root: {HERE}\n")
@@ -187,6 +214,7 @@ def main() -> int:
     check_mcp_uses_env_refs(failures)
     check_setup_linux_sandbox_hygiene(failures)
     check_memory_identity_distinct(failures)
+    check_skill_activation(failures)
     print()
     if failures:
         print(f"RESULT: FAIL — {len(failures)} issue(s)")

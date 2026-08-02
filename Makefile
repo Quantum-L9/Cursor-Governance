@@ -1,11 +1,11 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
 WS ?= $(CURDIR)
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit backup push graphiti-health lint venv rules-validate rules-stabilize integrity-check integrity-snapshot"
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -40,7 +40,25 @@ symlinks-install:
 claude-plugins:
 	bash ops/scripts/setup_claude_code_plugins.sh $(if $(WS),--workspace "$(WS)",)
 
-## Validate the Claude Code environment adapter (CLI/Web/Mobile): files, JSON, no committed secrets
+## Build the deterministic Claude runtime registry from the canonical skill manifest.
+claude-skill-registry:
+	uv run python3 ops/scripts/build_claude_skill_registry.py --root "$(CURDIR)"
+
+## Reconcile L9 skills into Claude native user + project discovery paths.
+claude-skills: claude-skill-registry
+	python3 ops/scripts/reconcile_claude_l9_skills.py --root "$(CURDIR)" \
+		--scope user --scope project --workspace "$(WS)"
+
+## Read-only registry/frontmatter/hook/routing drift validation.
+claude-skills-check:
+	python3 environment/claude-code/validate_skill_activation.py
+
+## Behavioral router + reconciliation fixture tests.
+claude-skills-test:
+	python3 environment/claude-code/tests/test_skill_router.py
+	python3 environment/claude-code/tests/test_skill_reconciliation.py
+
+## Validate the Claude Code environment adapter and proactive skill activation.
 claude-env:
 	python3 environment/claude-code/validate_claude_env.py
 

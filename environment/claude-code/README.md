@@ -46,6 +46,24 @@ context**, **reach shared memory** — without a human wiring step.
 | Boot session context | `hooks/session_start_claude_governance.sh` registered in `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` in the consumer repo |
 | Reach shared memory | `mcp.template.json` → user-scope MCP server | committed `.mcp.json` (env-refs only) + `L9_MEMORY_*` from the account environment |
 
+### Proactive L9 skill discovery and routing
+
+The governance `skills/` tree is reconciled into Claude Code's native discovery
+locations as per-skill managed links:
+
+- CLI: `~/.claude/skills/<skill>/SKILL.md`
+- Web/Mobile: `<workspace>/.claude/skills/<skill>/SKILL.md`
+
+`skills/AUTONOMY_MANIFEST.yaml` is the cross-surface invocation authority. Its
+`auto_invoke` tier remains model-visible; `explicit_only` skills are protected by
+both `disable-model-invocation: true` and `skillOverrides` in the settings template.
+A `UserPromptSubmit` hook reinforces only high-confidence routes. Claude still uses
+its native Skill tool, and routing never grants write or deployment authority.
+
+`ops/scripts/reconcile_claude_l9_skills.py` preserves consumer-local skills and
+removes only entries recorded in its managed-state file. Validate registry,
+frontmatter, hooks, fixtures, and reconciliation with `make claude-skills-check`.
+
 ### Memory identity — distinct from Cursor, shared graph
 
 Two dimensions, kept separate on purpose:
