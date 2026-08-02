@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/subagent-generated-data/provenance.schema.json",
+  "title": "L9 Generated Data Provenance",
+  "description": "Shared provenance contract (law §10.2, §12). Referenced by the subagent data packet and every generated data unit so evidence is traced identically wherever it appears.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "evidenceRef": {
+      "title": "Evidence reference",
+      "description": "One inspectable evidence reference (law §10.2): a repository path, a `sha256:<hex>` file hash, a `commit:<sha>` reference, a `test:<id>` result, a `command:<argv>` receipt, an `artifact:<id>` typed artifact, a `probe:<name>` runtime probe, a `ci:<id>` result, a `review:<id>` finding, or a `source:<uri>` governed external source.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(sha256:[0-9a-fA-F]{64}|commit:[0-9a-fA-F]{7,40}|test:.+|command:.+|artifact:.+|probe:.+|ci:.+|review:.+|source:.+|[^\\s].*)$"
+    },
+    "provenanceBlock": {
+      "title": "Provenance block",
+      "description": "Aggregate provenance for a packet: what was consumed, what evidence was produced, what was inspected, and what was executed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input_artifacts": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/evidenceRef"},
+          "default": []
+        },
+        "evidence_artifacts": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/evidenceRef"},
+          "default": []
+        },
+        "inspected_paths": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "default": []
+        },
+        "executed_commands": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "default": []
+        }
+      }
+    }
+  },
+  "properties": {
+    "input_artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidenceRef"},
+      "default": []
+    },
+    "evidence_artifacts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidenceRef"},
+      "default": []
+    },
+    "inspected_paths": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": []
+    },
+    "executed_commands": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": []
+    }
+  }
+}

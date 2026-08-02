@@ -63,6 +63,16 @@
         "evidence",
         "reject"
       ]
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "campaign_local",
+        "repository_local",
+        "project_group",
+        "constellation_internal",
+        "restricted"
+      ]
     }
   },
   "properties": {
@@ -71,25 +81,28 @@
     "secondary_tags": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"type": "string", "minLength": 1}
+      "items": {"type": "string", "minLength": 1},
+      "default": []
     },
     "epistemic_status": {"$ref": "#/$defs/epistemicStatus"},
     "statement": {"type": "string", "minLength": 1},
     "source_evidence": {
       "type": "array",
-      "items": {"type": "string", "minLength": 1},
+      "items": {
+        "$ref": "provenance.schema.json#/$defs/evidenceRef"
+      },
       "default": []
     },
     "scope": {
       "type": "object",
       "additionalProperties": true,
       "minProperties": 1,
-      "description": "Where the unit applies (repository, repository_class, module, path, task_type, role, environment, contract_version, schema_version, campaign)."
+      "description": "Where the unit applies: repository, repository_class, project_group, module, path, task_type, role, environment, contract_version, schema_version, or campaign (law §10.3)."
     },
     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
     "freshness": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "observed_at": {"type": ["string", "null"]},
         "applies_to_base_sha": {"type": ["string", "null"]},
@@ -109,14 +122,7 @@
       "default": []
     },
     "visibility": {
-      "type": "string",
-      "enum": [
-        "campaign_local",
-        "repository_local",
-        "project_group",
-        "constellation_internal",
-        "restricted"
-      ],
+      "$ref": "#/$defs/visibility",
       "default": "campaign_local"
     }
   }

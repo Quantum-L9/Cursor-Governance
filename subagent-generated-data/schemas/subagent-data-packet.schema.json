@@ -14,6 +14,35 @@
     "reuse_assessment",
     "generated_at"
   ],
+  "$defs": {
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "campaign_local",
+        "repository_local",
+        "project_group",
+        "constellation_internal",
+        "restricted"
+      ]
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "coordinator",
+        "context",
+        "recon",
+        "synthesis",
+        "executor",
+        "verifier",
+        "reviewer",
+        "poller",
+        "failure_classifier",
+        "remediator",
+        "sentinel",
+        "evidence_writer"
+      ]
+    }
+  },
   "properties": {
     "schema_version": {"type": "string", "minLength": 1},
     "packet_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$"},
@@ -36,23 +65,7 @@
         "base_sha": {"type": "string", "minLength": 1},
         "action_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._-]+$"},
         "agent_id": {"type": "string", "minLength": 1},
-        "role": {
-          "type": "string",
-          "enum": [
-            "coordinator",
-            "context",
-            "recon",
-            "synthesis",
-            "executor",
-            "verifier",
-            "reviewer",
-            "poller",
-            "failure_classifier",
-            "remediator",
-            "sentinel",
-            "evidence_writer"
-          ]
-        },
+        "role": {"$ref": "#/$defs/role"},
         "lease_id": {"type": ["string", "null"]}
       }
     },
@@ -115,16 +128,7 @@
         }
       }
     },
-    "provenance": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "input_artifacts": {"type": "array", "items": {"type": "string"}, "default": []},
-        "evidence_artifacts": {"type": "array", "items": {"type": "string"}, "default": []},
-        "inspected_paths": {"type": "array", "items": {"type": "string"}, "default": []},
-        "executed_commands": {"type": "array", "items": {"type": "string"}, "default": []}
-      }
-    },
+    "provenance": {"$ref": "provenance.schema.json#/$defs/provenanceBlock"},
     "reuse_assessment": {
       "type": "object",
       "additionalProperties": false,
@@ -137,14 +141,7 @@
       }
     },
     "visibility": {
-      "type": "string",
-      "enum": [
-        "campaign_local",
-        "repository_local",
-        "project_group",
-        "constellation_internal",
-        "restricted"
-      ],
+      "$ref": "#/$defs/visibility",
       "default": "campaign_local"
     },
     "generated_at": {"type": "string", "minLength": 1}
