@@ -1,40 +1,1793 @@
 ---
-l9_schema: 1
+# =============================================================================
+# Quantum-L9 Organization Invariants
+# =============================================================================
+#
+# Purpose:
+#   Canonical, machine-readable organization policy for Quantum-L9.
+#
+# Authority:
+#   This file declares what MUST be true across governed repositories.
+#   It does not treat agents, IDE rules, prompts, documentation, or local hooks
+#   as sufficient enforcement boundaries.
+#
+# Trust model:
+#   Humans, Cursor, Claude Code, Codex, CI-generating agents, and repository
+#   contributors may propose changes. Independent platform controls determine
+#   whether governed changes may merge or governed operations may proceed.
+#
+# Assurance rule:
+#   No control may be described as implemented, verified, or blocking unless
+#   the required evidence exists and can be independently reproduced.
+#
+# Change rule:
+#   Edit the canonical policy first. Consumer mirrors are generated artifacts
+#   and MUST NOT be independently edited.
+#
+# =============================================================================
+
+l9_schema: 2
 artifact_type: governance_policy
-tags: [org-invariant, repo-routing, quantum-l9, canonical, ssot]
-retrieval: on_demand
 status: active
 canonical: true
-canonical_source: https://github.com/Quantum-L9/Cursor-Governance/blob/main/ORG_INVARIANTS.yaml
----
-# CANONICAL org invariant policy for the Quantum-L9 organization.
-# This repo (Cursor-Governance) is the single source of truth. Consumer repos
-# carry a synced copy marked as a mirror; changes MUST originate here.
-# See docs/governance/ORG_INVARIANTS.md for the sync + change process.
 
-org_invariants:
-  owner: Quantum-L9
-  new_repo_url_prefix: https://github.com/Quantum-L9/
-  repo_birth:
-    allowed_owner: Quantum-L9
-    fail_closed: true
-    forbidden_owners:
-      - cryptoxdog
-      - personal_accounts
-  enforcement_points:
-    - upload_to_repo_routing
-    - repo_birth_decision
-    - github_create_repo
-    - dry_run_plan
-    - write_plan
-  violation_action: BLOCKED
+metadata:
+  policy_id: quantum-l9.org-invariants
+  title: Quantum-L9 Organization Invariants
+  description: >-
+    Non-negotiable organization-wide requirements governing repository
+    ownership, policy authority, mirror integrity, enforcement independence,
+    governance change control, exemptions, bypasses, and assurance evidence.
 
-# Downstream repos that carry a synced mirror of the `org_invariants` block above.
+  organization:
+    name: Quantum-L9
+    github_owner: Quantum-L9
+
+  policy_version: 2.0.0
+  schema_version: 2
+
+  owner:
+    team: governance-admins
+    escalation_team: security-admins
+
+  canonical_source:
+    repository: Quantum-L9/Cursor-Governance
+    path: ORG_INVARIANTS.yaml
+    branch: main
+
+  classification:
+    criticality: critical
+    visibility: organization
+    handling: governance-controlled
+
+  tags:
+    - governance
+    - organization-invariants
+    - quantum-l9
+    - canonical-policy
+    - fail-closed
+    - machine-readable
+
+authority_order:
+  - user_authorized_task
+  - canonical_policy
+  - repository_governance_files
+  - repository_manifests_and_configuration
+  - tests_and_ci
+  - established_repository_patterns
+  - unknown
+
+policy_defaults:
+  enforcement_requirement: blocking
+  fail_behavior: closed
+  violation_action: block
+
+  unknown_semantics:
+    critical: block
+    high: block
+    medium: warn
+    low: warn
+
+  missing_evidence:
+    critical: unenforced
+    high: unenforced
+    medium: indeterminate
+    low: indeterminate
+
+  local_extensions:
+    may_strengthen: true
+    may_weaken: false
+
+principles:
+  - id: L9-PRINCIPLE-001
+    title: Inspect before editing
+    statement: >-
+      Governance changes must be based on inspected repository evidence,
+      existing contracts, tests, workflows, manifests, and active controls.
+
+  - id: L9-PRINCIPLE-002
+    title: Preserve working behavior and authority boundaries
+    statement: >-
+      Governance work must preserve valid existing behavior and must not cross,
+      weaken, or silently redefine established authority boundaries.
+
+  - id: L9-PRINCIPLE-003
+    title: Fix root causes
+    statement: >-
+      Governance changes must address the actual control or assurance failure
+      rather than masking symptoms through documentation-only changes.
+
+  - id: L9-PRINCIPLE-004
+    title: No fake validation
+    statement: >-
+      No policy, control, test, workflow, evidence record, or report may claim
+      success unless the relevant validation was actually executed and passed.
+
+  - id: L9-PRINCIPLE-005
+    title: No unfinished enforcement claims
+    statement: >-
+      Planned files, commands, workflows, integrations, and rulesets must not
+      be represented as implemented, verified, or blocking.
+
+  - id: L9-PRINCIPLE-006
+    title: Independent enforcement
+    statement: >-
+      Coding agents, IDEs, prompts, conventions, and local hooks may assist
+      compliance but may not be the sole enforcement mechanism for a blocking
+      organization invariant.
+
+  - id: L9-PRINCIPLE-007
+    title: Evidence-backed convergence
+    statement: >-
+      Governance validation must report executed controls, evidence, remaining
+      unknowns, scope drift, and whether repeated evaluation has converged.
+
+trust_model:
+  untrusted_change_producers:
+    - human_contributor
+    - repository_administrator
+    - cursor
+    - claude_code
+    - codex
+    - other_ai_agents
+    - ide_extension
+    - local_script
+    - local_git_hook
+    - pull_request_author
+
+  trusted_enforcement_boundaries:
+    - github_organization_ruleset
+    - github_repository_ruleset
+    - required_github_actions_check
+    - approved_repository_provisioner
+    - approved_policy_release_process
+
+  prohibited_trust_assumptions:
+    - agent_self_attestation_is_sufficient
+    - documentation_is_enforcement
+    - workflow_presence_implies_workflow_requirement
+    - check_success_implies_ruleset_binding
+    - repository_admin_cannot_bypass_without_verification
+    - mutable_branch_reference_is_immutable_provenance
+    - digest_alone_proves_author_identity
+
+lifecycle_model:
+  policy_states:
+    - proposed
+    - active
+    - deprecated
+    - retired
+
+  implementation_states:
+    - absent
+    - planned
+    - implemented
+    - verified
+    - degraded
+    - disabled
+
+  enforcement_states:
+    - unenforced
+    - advisory
+    - blocking
+    - bypassed
+    - indeterminate
+
+  assurance_states:
+    - unsupported
+    - insufficient_evidence
+    - partially_verified
+    - verified
+    - stale
+    - failed
+
+  transition_requirements:
+    implemented_to_verified:
+      require:
+        - implementation_exists
+        - implementation_is_reviewed
+        - implementation_tests_pass
+        - executable_entrypoint_resolves
+        - workflow_invocation_exists
+
+    verified_to_blocking:
+      require:
+        - required_check_configured
+        - ruleset_binding_verified
+        - bypass_policy_verified
+        - failure_path_demonstrated
+        - evidence_not_stale
+
+    blocking_to_bypassed:
+      require:
+        - authorized_break_glass_actor
+        - incident_reference
+        - expiration
+        - audit_event
+        - retrospective_review
+
+time_policy:
+  timestamp_format: RFC3339
+  timezone: UTC
+  duration_format: ISO8601
+
+  maximum_exemption_duration: P90D
+  maximum_break_glass_duration: PT4H
+  critical_detection_latency: PT1H
+  high_detection_latency: P1D
+  mirror_staleness_limit: P7D
+  organization_audit_interval: P1D
+  assurance_evidence_maximum_age: P7D
+
+  unavailable_trusted_clock:
+    result: indeterminate
+    critical_action: block
+
+repository_scope:
+  provider: github
+  organization: Quantum-L9
+  default_in_scope: true
+
+  include:
+    archived: false
+    forks: false
+    templates: true
+    visibility:
+      - public
+      - private
+      - internal
+
+  stable_identity:
+    preferred: github_repository_node_id
+    fallback: github_full_name
+
+  exclusions:
+    records: []
+
+  incomplete_inventory:
+    result: indeterminate
+    change_enforcement_action: block
+    audit_action: alert
+
+assertion_registry:
+  - type: repository_owner
+    version: 1
+    evaluator_contract: repository_owner_v1
+
+    required_inputs:
+      - repository_identity
+      - observed_owner
+      - expected_owner
+
+    normalization:
+      owner_case_sensitive: false
+      trim_whitespace: true
+      normalize_repository_url: true
+
+    outcomes:
+      pass: observed_owner_equals_expected_owner
+      fail: observed_owner_differs_from_expected_owner
+      unknown: owner_cannot_be_determined
+
+  - type: canonical_source
+    version: 1
+    evaluator_contract: canonical_source_v1
+
+    required_inputs:
+      - declared_canonical_repository
+      - declared_canonical_path
+      - expected_canonical_repository
+      - expected_canonical_path
+
+    outcomes:
+      pass: declared_source_matches_expected_source
+      fail: declared_source_conflicts_with_expected_source
+      unknown: declared_source_is_missing_or_unreadable
+
+  - type: canonical_digest_match
+    version: 1
+    evaluator_contract: canonical_digest_match_v1
+
+    required_inputs:
+      - canonical_payload
+      - consumer_payload
+      - canonicalization_profile
+      - expected_digest
+
+    outcomes:
+      pass: normalized_payload_digests_match
+      fail: normalized_payload_digests_differ
+      unknown: payload_or_digest_cannot_be_computed
+
+  - type: monotonic_policy_enforcement
+    version: 1
+    evaluator_contract: monotonic_policy_enforcement_v1
+
+    required_inputs:
+      - canonical_control_requirement
+      - consumer_control_requirement
+
+    outcomes:
+      pass: consumer_is_equal_or_stricter
+      fail: consumer_weakens_canonical_requirement
+      unknown: semantic_comparison_is_unsupported
+
+  - type: independent_approval
+    version: 1
+    evaluator_contract: independent_approval_v1
+
+    required_inputs:
+      - author_identity
+      - approver_identities
+      - required_owner_group
+      - approval_events
+
+    outcomes:
+      pass: required_independent_human_approval_exists
+      fail: approval_is_missing_self_approved_or_agent_only
+      unknown: approval_identity_cannot_be_verified
+
+  - type: enforcement_evidence
+    version: 1
+    evaluator_contract: enforcement_evidence_v1
+
+    required_inputs:
+      - control_requirement
+      - implementation_evidence
+      - platform_binding_evidence
+      - validation_evidence
+
+    outcomes:
+      pass: all_required_evidence_is_present_current_and_valid
+      fail: evidence_proves_control_is_not_effective
+      unknown: required_evidence_is_missing_stale_or_unverifiable
+
+  - type: repository_coverage
+    version: 1
+    evaluator_contract: repository_coverage_v1
+
+    required_inputs:
+      - organization_inventory
+      - repository_classifications
+      - control_bindings
+
+    outcomes:
+      pass: all_in_scope_repositories_are_classified_and_covered
+      fail: one_or_more_repositories_are_uncovered
+      unknown: inventory_is_incomplete_or_stale
+
+  - type: authorized_bypass
+    version: 1
+    evaluator_contract: authorized_bypass_v1
+
+    required_inputs:
+      - bypass_actor
+      - incident_reference
+      - start_time
+      - expiration_time
+      - audit_event
+
+    outcomes:
+      pass: bypass_is_authorized_time_bound_and_audited
+      fail: bypass_is_unauthorized_expired_or_incomplete
+      unknown: bypass_evidence_cannot_be_verified
+
+invariants:
+  # ---------------------------------------------------------------------------
+  # Repository lifecycle
+  # ---------------------------------------------------------------------------
+
+  - id: L9-ORG-001
+    title: New repositories must be created under Quantum-L9
+    domain: repository_lifecycle
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Every governed repository must be created under the Quantum-L9 GitHub
+        organization through an approved repository creation path.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    applies_to:
+      operations:
+        - repository_create
+        - repository_import
+        - initialize_remote
+
+    assertion:
+      type: repository_owner
+      version: 1
+      expected_owner: Quantum-L9
+
+    forbidden:
+      - creation_under_personal_account
+      - creation_under_undeclared_owner
+      - creation_without_owner_verification
+
+    violation:
+      code: L9_ORG_REPOSITORY_BIRTH_OWNER_INVALID
+      action: block
+      message: >-
+        Governed repositories must be created under the Quantum-L9
+        organization.
+
+    control_requirements:
+      minimum_preventive_controls: 1
+      minimum_detective_controls: 1
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        No approved repository provisioner or verified organization-level
+        repository-birth control is declared as active in this policy version.
+
+  - id: L9-ORG-002
+    title: Governed repositories must remain owned by Quantum-L9
+    domain: repository_lifecycle
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        An in-scope repository must not be transferred outside Quantum-L9 or
+        renamed in a way that escapes organization governance.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    applies_to:
+      operations:
+        - repository_transfer
+        - repository_owner_audit
+        - repository_identity_change
+
+    assertion:
+      type: repository_owner
+      version: 1
+      expected_owner: Quantum-L9
+
+    violation:
+      code: L9_ORG_REPOSITORY_OWNERSHIP_DRIFT
+      action: block_and_alert
+      message: >-
+        An in-scope repository is no longer owned by Quantum-L9.
+
+    control_requirements:
+      minimum_preventive_controls: 1
+      minimum_detective_controls: 1
+      maximum_detection_latency: PT1H
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        Organization ownership monitoring and transfer prevention have not yet
+        been verified.
+
+  - id: L9-ORG-003
+    title: Governed publication must target approved repositories
+    domain: repository_lifecycle
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Code, generated repositories, imports, and governed artifacts may only
+        be published to approved Quantum-L9 repositories.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    applies_to:
+      operations:
+        - git_push
+        - repository_publish
+        - upload_to_repository
+        - generated_repository_publish
+
+    assertion:
+      type: repository_owner
+      version: 1
+      expected_owner: Quantum-L9
+
+    violation:
+      code: L9_ORG_PUBLICATION_TARGET_INVALID
+      action: block
+      message: >-
+        The publication target is not an approved Quantum-L9 repository.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        No universally bound publication-routing control has been verified.
+
+  # ---------------------------------------------------------------------------
+  # Canonical authority and integrity
+  # ---------------------------------------------------------------------------
+
+  - id: L9-ORG-004
+    title: Organization invariants have one canonical source
+    domain: governance_integrity
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Quantum-L9 organization invariants originate only from the canonical
+        policy in Quantum-L9/Cursor-Governance.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    assertion:
+      type: canonical_source
+      version: 1
+
+      expected:
+        repository: Quantum-L9/Cursor-Governance
+        path: ORG_INVARIANTS.yaml
+
+    forbidden:
+      - competing_canonical_source
+      - consumer_declares_itself_canonical
+      - independent_consumer_policy_authority
+      - undocumented_policy_fork
+
+    violation:
+      code: L9_ORG_CANONICAL_SOURCE_VIOLATION
+      action: block
+      message: >-
+        Organization-invariant changes must originate from the canonical
+        Cursor-Governance policy.
+
+    assurance:
+      effective_enforcement_state: advisory
+      assurance_state: partially_verified
+      reason: >-
+        Canonical authority is declared, but organization-wide required-check
+        and mirror-binding evidence is not yet recorded.
+
+  - id: L9-ORG-005
+    title: Consumer mirrors must match the canonical policy
+    domain: governance_integrity
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Consumer mirrors must contain the same normalized authoritative payload
+        as an approved immutable canonical policy release.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    applies_to:
+      repositories:
+        include:
+          - Quantum-L9/*
+        exclude:
+          - Quantum-L9/Cursor-Governance
+
+    assertion:
+      type: canonical_digest_match
+      version: 1
+
+    forbidden:
+      - stale_policy_version
+      - digest_mismatch
+      - modified_invariant
+      - removed_invariant
+      - altered_policy_default
+      - altered_assertion_semantics
+      - altered_exemption_policy
+      - altered_bypass_policy
+      - consumer_marked_canonical
+      - direct_manual_edit
+
+    violation:
+      code: L9_ORG_MIRROR_INTEGRITY_FAILURE
+      action: block
+      message: >-
+        The consumer mirror is missing, stale, modified, or unverifiable.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        Deterministic mirror rendering and required consumer validation have not
+        yet been verified.
+
+  - id: L9-ORG-006
+    title: Consumer repositories cannot weaken canonical controls
+    domain: governance_integrity
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Repository-local policy may add stricter controls but may not disable,
+        downgrade, bypass, reinterpret, shadow, or replace canonical controls.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    assertion:
+      type: monotonic_policy_enforcement
+      version: 1
+
+    allowed:
+      - stricter_local_validation
+      - additional_required_review
+      - narrower_permission
+      - shorter_expiration
+      - faster_detection
+
+    forbidden:
+      - blocking_to_advisory
+      - blocking_to_disabled
+      - fail_closed_to_fail_open
+      - critical_to_lower_severity
+      - block_to_warn
+      - broadened_exemption
+      - extended_exemption_without_approval
+      - agent_instruction_replacing_platform_control
+      - unknown_critical_assertion_ignored
+
+    violation:
+      code: L9_ORG_ENFORCEMENT_WEAKENED
+      action: block
+      message: >-
+        A consumer repository attempted to weaken canonical governance.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        A verified semantic policy-comparison implementation is not yet
+        recorded.
+
+  # ---------------------------------------------------------------------------
+  # Change control
+  # ---------------------------------------------------------------------------
+
+  - id: L9-ORG-007
+    title: Governance-sensitive changes require independent human approval
+    domain: change_control
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Changes to canonical policy, policy schemas, validators, renderers,
+        governance workflows, CODEOWNERS, release controls, ruleset bindings,
+        bypass configuration, or exemption policy require independent approval
+        from an authorized human governance owner.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    protected_paths:
+      - ORG_INVARIANTS.yaml
+      - CANONICAL_LAW.md
+      - schemas/**
+      - assertions/**
+      - controls/**
+      - scripts/validate_org_invariants.py
+      - scripts/render_org_invariants_mirror.py
+      - .github/workflows/**
+      - .github/CODEOWNERS
+
+    assertion:
+      type: independent_approval
+      version: 1
+
+      requirements:
+        pull_request_required: true
+        minimum_human_approvals: 1
+        codeowner_approval_required: true
+        author_cannot_self_approve: true
+        agent_approval_is_not_approval: true
+        unresolved_review_threads_block: true
+
+    violation:
+      code: L9_ORG_INDEPENDENT_APPROVAL_REQUIRED
+      action: block
+      message: >-
+        Governance-sensitive changes require independent authorized human
+        approval.
+
+    assurance:
+      effective_enforcement_state: indeterminate
+      assurance_state: insufficient_evidence
+      reason: >-
+        CODEOWNERS, branch protection, ruleset coverage, and bypass actors must
+        be inspected and recorded before this control can be claimed blocking.
+
+  - id: L9-ORG-008
+    title: Governance code must use immutable external references
+    domain: supply_chain
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Blocking governance workflows and reusable workflow consumers must pin
+        external actions and governance execution references to immutable
+        commits or approved signed releases.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    forbidden:
+      - action_reference_to_mutable_branch
+      - reusable_workflow_reference_to_main
+      - reusable_workflow_reference_to_unprotected_tag
+      - unverified_downloaded_executable
+      - implicit_latest_version
+
+    allowed_reference_types:
+      - git_commit_sha
+      - approved_signed_release_tag
+      - verified_internal_artifact_digest
+
+    violation:
+      code: L9_ORG_MUTABLE_GOVERNANCE_DEPENDENCY
+      action: block
+      message: >-
+        Governance dependencies must use immutable, reviewable references.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        Repository workflow references have not yet been inventoried and
+        verified.
+
+  # ---------------------------------------------------------------------------
+  # Enforcement evidence and assurance
+  # ---------------------------------------------------------------------------
+
+  - id: L9-ORG-009
+    title: Enforcement claims must be evidence-backed
+    domain: governance_assurance
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        A control may not be labeled implemented, verified, or blocking unless
+        the corresponding implementation, validation, platform binding, and
+        failure-path evidence exists and is current.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    assertion:
+      type: enforcement_evidence
+      version: 1
+
+    implemented_requires:
+      - implementation_exists
+      - implementation_entrypoint_resolves
+      - implementation_is_reviewed
+      - tests_exist
+      - tests_pass
+
+    verified_requires:
+      - all_implemented_requirements
+      - workflow_invokes_implementation
+      - deterministic_result_demonstrated
+      - negative_test_demonstrates_failure
+      - evidence_is_current
+
+    blocking_requires:
+      - all_verified_requirements
+      - required_check_is_configured
+      - organization_or_repository_ruleset_requires_check
+      - bypass_actors_are_declared
+      - bypass_events_are_audited
+      - check_failure_blocks_merge_or_operation
+
+    forbidden:
+      - documentation_only_marked_implemented
+      - planned_command_marked_executable
+      - unrun_test_marked_passed
+      - workflow_presence_marked_required
+      - required_check_without_ruleset_binding
+      - stale_evidence_marked_current
+      - missing_evidence_marked_passed
+
+    violation:
+      code: L9_ORG_FALSE_ENFORCEMENT_CLAIM
+      action: block
+      message: >-
+        The declared enforcement state is not supported by current evidence.
+
+    assurance:
+      effective_enforcement_state: advisory
+      assurance_state: partially_verified
+      reason: >-
+        The policy forbids unsupported claims, but a complete executable
+        evidence validator is not yet verified.
+
+  - id: L9-ORG-010
+    title: Every critical invariant requires preventive and detective coverage
+    domain: governance_assurance
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Every active critical invariant must map to at least one preventive
+        control and one detective control unless the policy explicitly records
+        a technically justified exception.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    minimum_coverage:
+      preventive_controls: 1
+      detective_controls: 1
+      maximum_detection_latency: P1D
+
+    assertion:
+      type: repository_coverage
+      version: 1
+
+    violation:
+      code: L9_ORG_CONTROL_COVERAGE_INCOMPLETE
+      action: block_and_alert
+      message: >-
+        One or more critical invariants lack required control coverage.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        The control registry is not yet populated with verified controls.
+
+  - id: L9-ORG-011
+    title: Every in-scope repository must be classified and covered
+    domain: governance_coverage
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        Every repository returned by the authoritative organization inventory
+        must be classified as governed or explicitly exempted and must have the
+        required governance controls attached.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    assertion:
+      type: repository_coverage
+      version: 1
+
+    required_repository_state:
+      - classification_present
+      - mirror_present_when_required
+      - required_workflow_present
+      - required_check_configured
+      - ruleset_coverage_verified
+      - exemption_valid_or_absent
+
+    violation:
+      code: L9_ORG_REPOSITORY_COVERAGE_GAP
+      action: block_and_alert
+      message: >-
+        An in-scope repository is unclassified or lacks required governance
+        coverage.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        Complete organization inventory and ruleset coverage evidence have not
+        yet been collected.
+
+  # ---------------------------------------------------------------------------
+  # Exceptions and emergency bypass
+  # ---------------------------------------------------------------------------
+
+  - id: L9-ORG-012
+    title: Exemptions must be explicit, scoped, approved, and temporary
+    domain: exception_management
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        An exemption is invalid unless it identifies the affected repository
+        and invariants, contains an approved reason, names an accountable owner,
+        references an approval record, and expires automatically.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    critical_invariants_exemptible: false
+
+    violation:
+      code: L9_ORG_INVALID_EXEMPTION
+      action: block
+      message: >-
+        The exemption is missing, invalid, overbroad, unapproved, or expired.
+
+    assurance:
+      effective_enforcement_state: advisory
+      assurance_state: partially_verified
+      reason: >-
+        Exemption requirements are declared, but automated expiration and
+        coverage validation are not yet verified.
+
+  - id: L9-ORG-013
+    title: Enforcement bypasses must be authorized and audited
+    domain: break_glass
+    severity: critical
+    policy_state: active
+
+    requirement:
+      statement: >-
+        An enforcement bypass may occur only through the approved break-glass
+        process and must be authorized, time-bound, incident-linked, logged,
+        notified, and retrospectively reviewed.
+
+      enforcement_requirement: blocking
+      fail_behavior: closed
+
+    assertion:
+      type: authorized_bypass
+      version: 1
+
+    forbidden_actors:
+      - coding_agent
+      - pull_request_author
+      - ordinary_repository_contributor
+      - workflow_token
+      - undeclared_repository_administrator
+
+    violation:
+      code: L9_ORG_UNAUTHORIZED_BYPASS
+      action: block_and_alert
+      message: >-
+        Governance enforcement was bypassed without complete authorization and
+        audit evidence.
+
+    assurance:
+      effective_enforcement_state: unenforced
+      assurance_state: insufficient_evidence
+      reason: >-
+        Approved break-glass actors, notification paths, and audit integrations
+        are not yet verified.
+
+control_registry:
+  # Controls remain "planned" until executable and platform evidence exists.
+  # A planned control is not an enforcement claim.
+
+  - id: L9-CTRL-001
+    title: Approved organization repository provisioner
+    control_type: preventive
+    execution_boundary: approved_repository_provisioner
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-001
+      - L9-ORG-003
+
+    required_capabilities:
+      - force_owner_Quantum-L9
+      - reject_personal_owner
+      - emit_audit_event
+      - support_dry_run
+      - fail_closed_on_unknown_owner
+
+    evidence: []
+
+  - id: L9-CTRL-002
+    title: Organization repository inventory audit
+    control_type: detective
+    execution_boundary: scheduled_github_action
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-001
+      - L9-ORG-002
+      - L9-ORG-011
+
+    required_capabilities:
+      - enumerate_all_in_scope_repositories
+      - verify_pagination_complete
+      - classify_each_repository
+      - detect_owner_drift
+      - detect_missing_governance_coverage
+      - emit_machine_readable_report
+
+    evidence: []
+
+  - id: L9-CTRL-003
+    title: Canonical policy validator
+    control_type: preventive
+    execution_boundary: github_actions
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-004
+      - L9-ORG-006
+      - L9-ORG-009
+      - L9-ORG-010
+
+    required_capabilities:
+      - safe_yaml_parse
+      - duplicate_key_rejection
+      - schema_validation
+      - unique_invariant_id_validation
+      - assertion_reference_resolution
+      - control_reference_resolution
+      - false_enforcement_claim_detection
+      - deterministic_output
+
+    required_path:
+      - scripts/validate_org_invariants.py
+
+    evidence: []
+
+  - id: L9-CTRL-004
+    title: Deterministic mirror renderer
+    control_type: preventive
+    execution_boundary: approved_policy_release_process
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-005
+
+    required_capabilities:
+      - deterministic_render
+      - immutable_canonical_commit_reference
+      - canonical_payload_digest
+      - generated_file_marker
+      - consumer_identity_binding
+
+    required_path:
+      - scripts/render_org_invariants_mirror.py
+
+    evidence: []
+
+  - id: L9-CTRL-005
+    title: Consumer policy required check
+    control_type: preventive
+    execution_boundary: github_actions
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-005
+      - L9-ORG-006
+      - L9-ORG-008
+
+    required_check_name: org-governance/invariants
+
+    required_capabilities:
+      - verify_canonical_reference_immutable
+      - verify_mirror_digest
+      - reject_weakened_policy
+      - reject_unknown_critical_semantics
+      - verify_consumer_repository_identity
+      - produce_actionable_diagnostics
+
+    evidence: []
+
+  - id: L9-CTRL-006
+    title: Organization ruleset binding
+    control_type: preventive
+    execution_boundary: github_organization_ruleset
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-005
+      - L9-ORG-006
+      - L9-ORG-007
+      - L9-ORG-009
+      - L9-ORG-011
+
+    required_capabilities:
+      - require_org_governance_check
+      - require_pull_request
+      - require_codeowner_approval
+      - block_force_push
+      - restrict_bypass
+      - cover_all_in_scope_repositories
+
+    evidence: []
+
+  - id: L9-CTRL-007
+    title: Governance CODEOWNERS control
+    control_type: preventive
+    execution_boundary: github_pull_request_review
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-007
+
+    required_capabilities:
+      - protect_policy
+      - protect_schema
+      - protect_validator
+      - protect_renderer
+      - protect_workflows
+      - protect_codeowners
+      - require_independent_human_review
+
+    evidence: []
+
+  - id: L9-CTRL-008
+    title: Governance bypass audit
+    control_type: detective
+    execution_boundary: organization_audit
+    implementation_state: absent
+    enforcement_state: unenforced
+
+    covers:
+      - L9-ORG-013
+
+    required_capabilities:
+      - enumerate_bypass_events
+      - verify_actor_authorization
+      - verify_incident_reference
+      - verify_expiration
+      - verify_notification
+      - verify_retrospective_review
+
+    evidence: []
+
+control_coverage_requirements:
+  critical:
+    minimum_preventive_controls: 1
+    minimum_detective_controls: 1
+    maximum_detection_latency: P1D
+
+  high:
+    minimum_preventive_controls: 1
+    minimum_detective_controls: 1
+    maximum_detection_latency: P7D
+
+  control_counting_rules:
+    planned_controls_count: false
+    absent_controls_count: false
+    disabled_controls_count: false
+    degraded_controls_count: false
+    only_verified_controls_count: true
+
+integrity_contract:
+  authoritative_payload:
+    include:
+      - l9_schema
+      - artifact_type
+      - metadata.policy_id
+      - metadata.policy_version
+      - policy_defaults
+      - authority_order
+      - principles
+      - trust_model
+      - lifecycle_model
+      - time_policy
+      - repository_scope
+      - assertion_registry
+      - invariants
+      - control_coverage_requirements
+      - exemption_policy
+      - bypass_policy
+      - validation_contract
+      - report_contract
+
+    exclude:
+      - provenance.generated_at
+      - provenance.consumer_repository
+      - provenance.consumer_path
+      - assurance_snapshot
+
+  canonicalization:
+    specification: RFC8785
+    character_encoding: UTF-8
+    unicode_normalization: NFC
+    line_endings: LF
+
+  digest:
+    algorithm: SHA-256
+    encoding: lowercase_hex
+
+  authenticity:
+    digest_alone_is_sufficient: false
+    immutable_git_commit_required: true
+    signed_release_required_for_blocking_rollout: true
+
+mirror_contract:
+  generated: true
+  independently_editable: false
+  direct_manual_edit: forbidden
+
+  required_metadata:
+    - canonical_repository
+    - canonical_path
+    - canonical_commit
+    - policy_id
+    - policy_version
+    - policy_digest
+    - generated_at
+    - consumer_repository
+    - consumer_path
+
+  canonical_reference:
+    mutable_branch_allowed_for_blocking_enforcement: false
+    accepted_reference_types:
+      - immutable_git_commit
+      - approved_signed_release
+
+  update_method:
+    preferred: reviewed_automated_pull_request
+    direct_push: forbidden
+    human_review_required: true
+
+  mismatch_behavior:
+    result: fail
+    action: block
+
+exemption_policy:
+  default: denied
+  critical_invariants_exemptible: false
+  maximum_duration: P90D
+  auto_expire: true
+
+  required_fields:
+    - exemption_id
+    - repository_identity
+    - invariant_ids
+    - scope
+    - reason
+    - accountable_owner
+    - approved_by
+    - approval_reference
+    - created_at
+    - effective_at
+    - expires_at
+    - compensating_controls
+
+  invalid_conditions:
+    - missing_required_field
+    - expired
+    - approval_missing
+    - approver_unauthorized
+    - invariant_not_exemptible
+    - scope_overbroad
+    - compensating_controls_missing
+    - repository_identity_mismatch
+
+  records: []
+
+bypass_policy:
+  default: denied
+  maximum_duration: PT4H
+
+  authorized_actor_groups:
+    - break-glass-admins
+
+  required_fields:
+    - bypass_id
+    - actor_identity
+    - affected_repository
+    - affected_controls
+    - incident_reference
+    - reason
+    - approved_by
+    - started_at
+    - expires_at
+    - audit_event_id
+    - notification_event_id
+
+  retrospective_review:
+    required: true
+    maximum_delay: P1D
+
+  invalid_conditions:
+    - agent_actor
+    - pull_request_author_self_bypass
+    - unauthorized_actor
+    - missing_incident_reference
+    - missing_expiration
+    - expired
+    - duration_exceeds_limit
+    - audit_event_missing
+    - notification_missing
+
+validation_profiles:
+  canonical_source:
+    required_checks:
+      - safe_yaml_parse
+      - duplicate_keys_rejected
+      - schema_valid
+      - policy_id_valid
+      - policy_version_valid
+      - invariant_ids_unique
+      - control_ids_unique
+      - assertion_types_resolve
+      - invariant_control_references_resolve
+      - unsupported_critical_semantics_rejected
+      - enforcement_claims_evidenced
+      - protected_paths_declared
+      - canonical_payload_digest_reproducible
+
+  consumer_pull_request:
+    required_checks:
+      - repository_identity_known
+      - repository_is_in_scope_or_validly_exempt
+      - canonical_reference_is_immutable
+      - canonical_signature_or_approved_release_valid
+      - mirror_metadata_complete
+      - mirror_digest_matches
+      - consumer_policy_not_weakened
+      - required_workflow_present
+      - governance_workflow_not_weakened
+      - required_check_name_exact
+      - exemption_valid_or_absent
+
+  organization_audit:
+    required_checks:
+      - organization_inventory_complete
+      - every_repository_classified
+      - every_repository_covered
+      - mirror_present_where_required
+      - mirror_not_stale
+      - required_workflow_present
+      - required_check_configured
+      - ruleset_coverage_verified
+      - bypasses_valid
+      - exemptions_valid
+      - evidence_not_stale
+
+  release:
+    required_checks:
+      - canonical_source_profile_passes
+      - tests_pass
+      - negative_tests_pass
+      - deterministic_render_verified
+      - deterministic_validation_verified
+      - immutable_commit_recorded
+      - signature_or_attestation_valid
+      - release_notes_present
+      - policy_version_increment_valid
+
+validation_contract:
+  parser:
+    safe_yaml_required: true
+    duplicate_mapping_keys: reject
+    aliases:
+      maximum_expansion: 50
+    unknown_top_level_fields: reject
+
+  schema:
+    required_path: schemas/org-invariants.schema.json
+    additional_properties_default: false
+
+  identifiers:
+    invariant_pattern: "^L9-ORG-[0-9]{3}$"
+    control_pattern: "^L9-CTRL-[0-9]{3}$"
+    principle_pattern: "^L9-PRINCIPLE-[0-9]{3}$"
+    unique: true
+    immutable_after_release: true
+
+  versions:
+    policy_version_format: semver
+    semantic_change_requires_increment: true
+    assertion_version_required: true
+
+  determinism:
+    same_inputs_same_decision: required
+    same_inputs_same_machine_output: required
+    nondeterministic_fields_excluded_from_digest: true
+    repeated_passes_required: 2
+
+  failure_behavior:
+    policy_violation_exit_code: 1
+    configuration_error_exit_code: 2
+    unsupported_semantics_exit_code: 3
+    integrity_failure_exit_code: 4
+    assurance_failure_exit_code: 5
+    indeterminate_critical_exit_code: 6
+
+  diagnostics:
+    human_readable: true
+    machine_readable: true
+    machine_format: json
+    include_policy_id: true
+    include_policy_version: true
+    include_repository_identity: true
+    include_invariant_id: true
+    include_control_id_when_applicable: true
+    include_evidence_references: true
+    include_remediation: true
+    include_remaining_unknowns: true
+    redact_secrets: true
+
+test_contract:
+  required_categories:
+    - valid_canonical_policy
+    - malformed_yaml
+    - duplicate_mapping_key
+    - schema_violation
+    - duplicate_invariant_id
+    - duplicate_control_id
+    - unknown_critical_assertion
+    - unresolved_control_reference
+    - stale_consumer_mirror
+    - consumer_digest_mismatch
+    - consumer_control_downgrade
+    - consumer_fail_closed_downgrade
+    - consumer_severity_downgrade
+    - mutable_canonical_reference
+    - missing_required_check
+    - missing_ruleset_binding
+    - expired_exemption
+    - unauthorized_exemption
+    - unauthorized_bypass
+    - expired_bypass
+    - incomplete_repository_inventory
+    - uncovered_repository
+    - stale_assurance_evidence
+    - false_blocking_claim
+    - deterministic_render
+    - deterministic_validation
+
+  fixture_contract:
+    required_fields:
+      - fixture_id
+      - description
+      - input
+      - expected_result
+      - expected_exit_code
+      - expected_violation_codes
+
+  pass_claim_rules:
+    unexecuted_test_may_be_reported_passed: false
+    skipped_critical_test_may_be_ignored: false
+    unavailable_validation_must_be_reported: true
+
+evidence_contract:
+  evidence_record_required_fields:
+    - evidence_id
+    - evidence_type
+    - subject_id
+    - source
+    - collected_at
+    - collector_identity
+    - immutable_reference
+    - result
+    - digest
+
+  accepted_evidence_types:
+    - implementation_file
+    - test_result
+    - workflow_run
+    - required_check_configuration
+    - ruleset_configuration
+    - codeowner_configuration
+    - signed_release
+    - provenance_attestation
+    - organization_inventory
+    - bypass_audit_event
+    - exemption_approval
+
+  evidence_freshness:
+    default_maximum_age: P7D
+    ruleset_configuration: P1D
+    organization_inventory: P1D
+    bypass_audit_event: PT1H
+    signed_release: immutable
+
+  stale_evidence:
+    may_support_blocking_claim: false
+
+provenance_policy:
+  canonical_release:
+    immutable_reference_required: true
+    mutable_branch_reference_for_blocking_enforcement: forbidden
+
+  signature:
+    required_for_blocking_rollout: true
+    accepted_signer_groups:
+      - governance-admins
+
+  attestation:
+    required_for_blocking_rollout: true
+    format: in-toto
+    predicate_type: quantum-l9.org-governance-policy.v1
+
+  dependency_policy:
+    external_actions_pinned_to_commit: true
+    reusable_workflows_pinned_to_commit: true
+    unverified_remote_scripts: forbidden
+    implicit_latest_versions: forbidden
+
+report_contract:
+  required_sections:
+    - summary
+    - policy_identity
+    - execution_context
+    - scope
+    - invariants_evaluated
+    - controls_executed
+    - evidence_collected
+    - validation_results
+    - regressions
+    - remaining_unknowns
+    - merge_readiness
+    - minimum_safe_next_action
+    - convergence
+
+  execution_context:
+    required_fields:
+      - repository_identity
+      - commit
+      - event
+      - policy_id
+      - policy_version
+      - canonical_commit
+      - validation_profile
+      - validator_version
+
+  validation_result:
+    allowed:
+      - pass
+      - fail
+      - partial
+      - blocked
+      - indeterminate
+
+  merge_readiness:
+    allowed:
+      - ready
+      - not_ready
+      - blocked
+
+  convergence:
+    required_fields:
+      - convergence_status
+      - recursive_passes_run
+      - align_improve_cycles_run
+      - same_output_after_multiple_passes
+      - remaining_unknowns
+      - minimum_safe_next_action
+      - source_intent_preserved
+      - scope_drift_detected
+      - execution_readiness
+
+    convergence_status_allowed:
+      - converged
+      - partial
+      - blocked
+
+    execution_readiness_allowed:
+      - pass
+      - partial
+      - fail
+
+  honesty_requirements:
+    validation_not_run_must_be_declared: true
+    blocked_validation_requires_exact_blocker: true
+    unsupported_claims_forbidden: true
+    remaining_unknowns_must_not_be_omitted: true
+    unrelated_changes_must_be_reported: true
+
+consumer_policy:
+  discovery:
+    source: github_organization_inventory
+    organization: Quantum-L9
+    default_in_scope: true
+
+  explicit_consumers:
+    - repository: Quantum-L9/L9-Ops-MCP
+      mirror_path: ORG_INVARIANTS.yaml
+      classification: governed
+      current_assurance_state: insufficient_evidence
+
+  absent_from_explicit_list:
+    exemption_implied: false
+    in_scope_by_default: true
+
+change_control:
+  protected_paths:
+    - ORG_INVARIANTS.yaml
+    - CANONICAL_LAW.md
+    - schemas/**
+    - assertions/**
+    - controls/**
+    - scripts/validate_org_invariants.py
+    - scripts/render_org_invariants_mirror.py
+    - .github/workflows/**
+    - .github/CODEOWNERS
+
+  requirements:
+    pull_request_required: true
+    independent_human_approval_required: true
+    codeowner_approval_required: true
+    direct_push_to_default_branch: forbidden
+    force_push: forbidden
+    unresolved_review_threads_block: true
+    required_check_name: org-governance/invariants
+
+  agent_constraints:
+    agent_may_propose_change: true
+    agent_may_run_validation: true
+    agent_may_report_evidence: true
+    agent_may_self_approve: false
+    agent_may_bypass: false
+    agent_attestation_alone_sufficient: false
+
+rollout_gates:
+  gate_1_policy_structure:
+    requirements:
+      - canonical_yaml_valid
+      - schema_exists
+      - schema_validation_passes
+      - assertion_registry_complete
+      - invariant_ids_stable
+      - control_ids_stable
+
+    current_status: not_verified
+
+  gate_2_validator:
+    requirements:
+      - validator_implemented
+      - required_profiles_supported
+      - negative_tests_pass
+      - deterministic_results_verified
+      - false_enforcement_claims_rejected
+
+    current_status: not_verified
+
+  gate_3_provenance:
+    requirements:
+      - immutable_release_reference
+      - signed_release
+      - provenance_attestation
+      - dependencies_pinned
+
+    current_status: not_verified
+
+  gate_4_consumer_pilot:
+    requirements:
+      - L9_Ops_MCP_mirror_generated
+      - consumer_workflow_installed
+      - stale_mirror_test_blocked
+      - weakened_control_test_blocked
+      - required_check_observed
+
+    current_status: not_verified
+
+  gate_5_platform_enforcement:
+    requirements:
+      - organization_ruleset_exists
+      - required_check_bound
+      - bypass_actors_reviewed
+      - failure_blocks_merge
+      - protected_paths_require_codeowner
+
+    current_status: not_verified
+
+  gate_6_organization_coverage:
+    requirements:
+      - repository_inventory_complete
+      - every_repository_classified
+      - every_repository_covered_or_validly_exempt
+      - scheduled_audit_enabled
+      - coverage_gap_alerting_enabled
+
+    current_status: not_verified
+
+  blocking_rollout_allowed_when:
+    all_gates_verified: true
+
+assurance_snapshot:
+  snapshot_status: insufficient_evidence
+  effective_organization_enforcement: unenforced
+
+  verified_claims:
+    - canonical_policy_intent_declared
+    - fail_closed_requirement_declared
+    - single_canonical_source_declared
+    - consumer_weakening_forbidden
+    - fake_validation_forbidden
+    - independent_enforcement_required
+
+  unverified_claims:
+    - validator_exists_and_passes
+    - schema_exists_and_passes
+    - mirror_renderer_exists_and_is_deterministic
+    - signed_release_exists
+    - consumer_required_check_exists
+    - organization_ruleset_requires_check
+    - repository_inventory_is_complete
+    - all_repositories_are_covered
+    - bypass_process_is_operational
+    - exemption_expiration_is_automated
+
+  remaining_unknowns:
+    - actual_current_repository_files
+    - actual_current_workflow_configuration
+    - actual_current_ruleset_configuration
+    - actual_CODEOWNERS_configuration
+    - actual_bypass_actor_configuration
+    - actual_consumer_repository_coverage
+    - actual_test_and_ci_results
+
+  minimum_safe_next_action: >-
+    Inspect the canonical repository and implement or verify the schema and
+    validator before promoting any control from absent or planned to implemented.
+
+  convergence:
+    convergence_status: partial
+    recursive_passes_run: 1
+    align_improve_cycles_run: 1
+    same_output_after_multiple_passes: false
+    remaining_unknowns:
+      - repository_implementation_evidence_not_yet_inspected
+      - platform_enforcement_evidence_not_yet_collected
+    minimum_safe_next_action: >-
+      Validate this policy against an implemented JSON Schema and repository
+      evidence, then resolve every unsupported control and assurance claim.
+    source_intent_preserved: true
+    scope_drift_detected: false
+    execution_readiness: partial
+
 provenance:
-  consumers:
-    - repo: Quantum-L9/L9-Ops-MCP
-      path: ORG_INVARIANTS.yaml
-      enforced_by: scripts/validate_org_invariants.py
-  change_process: >
-    Edit the org_invariants block here, then re-sync each consumer's mirror
-    (byte-identical org_invariants block) in the same or a follow-up PR.
+  supersedes:
+    schema_version: 1
+
+  preserved_intent:
+    - repositories_belong_to_Quantum-L9
+    - repository_birth_fails_closed
+    - personal_account_routing_is_forbidden
+    - Cursor_Governance_is_canonical
+    - L9_Ops_MCP_is_a_consumer
+    - violations_block_governed_operations
+
+  generated_artifact: false
+  independently_editable: true
+
+  change_process: >-
+    Inspect repository evidence before editing. Update the canonical policy.
+    Validate schema and semantics. Run all available tests and CI-equivalent
+    checks. Generate deterministic consumer mirrors from an immutable approved
+    canonical commit. Deliver changes through reviewed pull requests. Do not
+    claim implementation, verification, blocking enforcement, or convergence
+    without reproducible evidence.
