@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sessionEnd — T0 memory-bank update + optional T1 Graphiti JSON episode
+# sessionEnd — Graphiti (T1) primary; memory-bank (T0) only as fallback
 set -uo pipefail
 set +x
 
@@ -7,45 +7,15 @@ REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$
 # shellcheck source=graphiti_common.sh
 source "$(dirname "$REAL_HOOK")/graphiti_common.sh"
 
-graphiti_enabled || exit 0
-
 REPO="${CURSOR_PROJECT_DIR:-}"
-graphiti_resolve_cli
-graphiti_scaffold_memory_bank "$REPO"
 [ -n "$REPO" ] || exit 0
 
+graphiti_resolve_cli
 graphiti_load_env
 export CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"
 
 TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 BANK="$REPO/memory-bank"
-mkdir -p "$BANK"
-
-# T0 target is always the *loaded workspace* memory-bank (CURSOR_PROJECT_DIR /
-# $REPO above), never the Cursor-Governance clone — see MEMORY_BANK_POLICY.md.
-# Some machines' global ~/.gitignore_global excludes memory-bank/ by default;
-# if this repo's own .gitignore doesn't already re-include it, add a scoped
-# negation so `git add memory-bank/` actually stages files (idempotent).
-ensure_memory_bank_trackable() {
-  local repo="$1"
-  local gi="$repo/.gitignore"
-  [ -d "$repo/.git" ] || return 0
-  if git -C "$repo" check-ignore -q memory-bank/activeContext.md 2>/dev/null; then
-    if ! grep -qF '!/memory-bank/' "$gi" 2>/dev/null; then
-      {
-        echo ""
-        echo "# Explicit override: memory-bank/ may be excluded by this machine's global"
-        echo "# gitignore (~/.gitignore_global) but must be tracked in THIS repo so a"
-        echo "# fresh clone gets T0 session-resume context. Negation must come after any"
-        echo "# blanket ignore in this file."
-        echo "!/memory-bank/"
-        echo "!/memory-bank/**"
-      } >> "$gi"
-      echo "INFO: memory-bank/ was gitignored — added repo-local negation to $gi" >&2
-    fi
-  fi
-}
-ensure_memory_bank_trackable "$REPO"
 
 SESSION_SUMMARY=""
 INPUT="$(cat 2>/dev/null || true)"
@@ -71,15 +41,44 @@ PY
 )"
 fi
 
-# APPEND, never overwrite — a full `cat >` here would destroy any detailed
-# context an agent wrote manually during the session (observed 2026-07-24:
-# this line previously truncated activeContext.md back to a generic stub on
-# every idle sessionEnd fire). If the file doesn't exist yet, seed the header
-# once; every subsequent run appends a new dated delta section, matching the
-# tasks.md pattern below. `85-workflow-state-bridge.mdc` still governs manual
-# pruning/consolidation when the file grows past ~1 screen.
-if [ ! -f "$BANK/activeContext.md" ]; then
-  cat > "$BANK/activeContext.md" <<EOF
+if [ -z "$SESSION_SUMMARY" ]; then
+  echo "INFO: no session summary — nothing to write" >&2
+  exit 0
+fi
+
+# --- T0 fallback helpers (used only when Graphiti is unavailable or write fails) ---
+
+ensure_memory_bank_trackable() {
+  local repo="$1"
+  local gi="$repo/.gitignore"
+  [ -d "$repo/.git" ] || return 0
+  if git -C "$repo" check-ignore -q memory-bank/activeContext.md 2>/dev/null; then
+    if ! grep -qF '!/memory-bank/' "$gi" 2>/dev/null; then
+      {
+        echo ""
+        echo "# Explicit override: memory-bank/ may be excluded by this machine's global"
+        echo "# gitignore (~/.gitignore_global) but must be tracked in THIS repo so a"
+        echo "# fresh clone gets T0 session-resume context. Negation must come after any"
+        echo "# blanket ignore in this file."
+        echo "!/memory-bank/"
+        echo "!/memory-bank/**"
+      } >> "$gi"
+      echo "INFO: memory-bank/ was gitignored — added repo-local negation to $gi" >&2
+    fi
+  fi
+}
+
+write_memory_bank_fallback() {
+  # Target is always the loaded workspace memory-bank (CURSOR_PROJECT_DIR),
+  # never the Cursor-Governance clone — see MEMORY_BANK_POLICY.md.
+  graphiti_scaffold_memory_bank "$REPO"
+  mkdir -p "$BANK"
+  ensure_memory_bank_trackable "$REPO"
+
+  # APPEND, never overwrite — a full `cat >` here would destroy any detailed
+  # context an agent wrote manually during the session (observed 2026-07-24).
+  if [ ! -f "$BANK/activeContext.md" ]; then
+    cat > "$BANK/activeContext.md" <<EOF
 # Where we left off (max ~1 screen)
 
 **Last session:** $TIMESTAMP
@@ -94,8 +93,8 @@ $(git -C "$REPO" diff --name-only HEAD 2>/dev/null | head -10 || echo "none")
 
 **Next action:** (update manually or via end-session command)
 EOF
-else
-  cat >> "$BANK/activeContext.md" <<EOF
+  else
+    cat >> "$BANK/activeContext.md" <<EOF
 
 ---
 ## Append — sessionEnd $TIMESTAMP
@@ -103,35 +102,38 @@ else
 **Session Summary:** ${SESSION_SUMMARY:-No summary provided.}
 **Last Modified Files:** $(git -C "$REPO" diff --name-only HEAD 2>/dev/null | head -10 | tr '\n' ' ' || echo "none")
 EOF
-fi
+  fi
 
-if [ -f "$BANK/tasks.md" ]; then
-  cat >> "$BANK/tasks.md" <<EOF
+  if [ -f "$BANK/tasks.md" ]; then
+    cat >> "$BANK/tasks.md" <<EOF
 
 ---
 ## Session $TIMESTAMP
 ${SESSION_SUMMARY:-No summary.}
 EOF
-fi
+  fi
+  echo "INFO: T0 memory-bank fallback written (Graphiti unavailable or write failed)" >&2
+}
 
-if [ -z "$SESSION_SUMMARY" ]; then
-  echo "INFO: no session summary — T0 complete, T1 skipped" >&2
-  exit 0
-fi
+# --- Primary path: Graphiti T1 ---
 
-if [ -z "${OPENAI_API_KEY:-}" ]; then
-  echo "INFO: OPENAI_API_KEY not set — T0 complete, T1 skipped" >&2
+if ! graphiti_enabled; then
+  echo "INFO: Graphiti disabled — falling back to memory-bank" >&2
+  write_memory_bank_fallback
   exit 0
 fi
 
 GROUP_ID="$(python3 "$GRAPHITI_CLI" resolve 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('group_id',''))" 2>/dev/null || echo "")"
 if [ -z "$GROUP_ID" ]; then
-  echo "WARN: group_id unresolvable — T0 complete, T1 skipped" >&2
+  echo "WARN: group_id unresolvable — falling back to memory-bank" >&2
+  write_memory_bank_fallback
   exit 0
 fi
 
-DISTILL_BUDGET="${MEMORY_DISTILL_TOKEN_BUDGET:-300}"
-DISTILLED="$(SESSION_SUMMARY="$SESSION_SUMMARY" DISTILL_BUDGET="$DISTILL_BUDGET" python3 - <<'PY'
+PAYLOAD="$SESSION_SUMMARY"
+if [ -n "${OPENAI_API_KEY:-}" ]; then
+  DISTILL_BUDGET="${MEMORY_DISTILL_TOKEN_BUDGET:-300}"
+  DISTILLED="$(SESSION_SUMMARY="$SESSION_SUMMARY" DISTILL_BUDGET="$DISTILL_BUDGET" python3 - <<'PY'
 import json, os, urllib.request, urllib.error
 
 summary = os.environ.get("SESSION_SUMMARY", "")[:1500]
@@ -169,9 +171,14 @@ except (urllib.error.URLError, KeyError, json.JSONDecodeError) as exc:
     print(json.dumps({"error": str(exc), "fallback": summary[:200]}))
 PY
 )"
+  PAYLOAD="$DISTILLED"
+fi
 
-python3 "$GRAPHITI_CLI" write "$DISTILLED" --kind session_summary --group-id "$GROUP_ID" >/dev/null 2>&1 \
-  || echo "WARN: T1 episode write failed — T0 complete" >&2
+if python3 "$GRAPHITI_CLI" write "$PAYLOAD" --kind session_summary --group-id "$GROUP_ID" >/dev/null 2>&1; then
+  echo "INFO: T1 Graphiti episode written for $GROUP_ID (memory-bank skipped)" >&2
+  exit 0
+fi
 
-echo "INFO: T0 memory-bank updated; T1 episode attempted for $GROUP_ID" >&2
+echo "WARN: T1 episode write failed — falling back to memory-bank" >&2
+write_memory_bank_fallback
 exit 0
