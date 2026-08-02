@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,7 +48,9 @@ def main() -> int:
     if record.get("convergence_status") != "converged":
         errors.append("example wiring is not converged")
     selected = set(record.get("selected_finding_ids", []))
-    findings = {item.get("id"): item for item in record.get("findings", []) if isinstance(item, dict)}
+    findings = {
+        item.get("id"): item for item in record.get("findings", []) if isinstance(item, dict)
+    }
     for finding_id in selected:
         finding = findings.get(finding_id)
         if not finding:

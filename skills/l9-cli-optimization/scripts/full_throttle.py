@@ -24,6 +24,7 @@ Stdlib-only. The ONLY execution is `subprocess.run` of the repo's declared test
 command inside the isolated worktree — never a network or deploy action (deploy/
 publish/external flags are danger-class and excluded before any test runs).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -41,9 +42,17 @@ from flag_inventory import classify_flag, flip_flag, inventory_flags, summarize 
 MAX_BACKOUT_PASSES = 6  # bounded, in the spirit of the skill's three-cycle law
 
 
-def _run(cmd: list[str], cwd: str | Path | None = None, timeout: int = 900) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True,
-                          capture_output=True, check=False, timeout=timeout)
+def _run(
+    cmd: list[str], cwd: str | Path | None = None, timeout: int = 900
+) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd,
+        cwd=str(cwd) if cwd else None,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=timeout,
+    )
 
 
 def discover_test_cmd(root: Path) -> list[str] | None:
@@ -65,6 +74,7 @@ def discover_test_cmd(root: Path) -> list[str] | None:
             if isinstance(data.get("scripts"), dict) and "test" in data["scripts"]:
                 return ["npm", "test", "--silent"]
         except (OSError, json.JSONDecodeError):
+            # Unreadable or invalid package.json — try the next probe.
             pass
     if (root / "tox.ini").is_file():
         return ["tox"]
@@ -110,12 +120,17 @@ def _reset_worktree(wt: Path, repo: Path) -> None:
 
 def _run_tests(wt: Path, test_cmd: list[str]) -> dict:
     r = _run(test_cmd, cwd=wt)
-    return {"returncode": r.returncode, "passed": r.returncode == 0,
-            "stdout_tail": "\n".join(r.stdout.splitlines()[-15:]),
-            "stderr_tail": "\n".join(r.stderr.splitlines()[-15:])}
+    return {
+        "returncode": r.returncode,
+        "passed": r.returncode == 0,
+        "stdout_tail": "\n".join(r.stdout.splitlines()[-15:]),
+        "stderr_tail": "\n".join(r.stderr.splitlines()[-15:]),
+    }
 
 
-def _bisect_back_out(wt: Path, repo: Path, flippable: list[dict], test_cmd: list[str]) -> tuple[list[dict], list[dict], int]:
+def _bisect_back_out(
+    wt: Path, repo: Path, flippable: list[dict], test_cmd: list[str]
+) -> tuple[list[dict], list[dict], int]:
     """Return (safe_flags, breaker_flags, passes). A flag is a breaker if the
     proven-safe subset stays green without it but regresses with it. Bounded
     group-halving keeps this within MAX_BACKOUT_PASSES."""
@@ -158,7 +173,9 @@ def _bisect_back_out(wt: Path, repo: Path, flippable: list[dict], test_cmd: list
     return safe, breakers, passes
 
 
-def run_activation(root: Path, test_cmd: list[str] | None, mode: str, overrides: dict | None = None) -> dict:
+def run_activation(
+    root: Path, test_cmd: list[str] | None, mode: str, overrides: dict | None = None
+) -> dict:
     root = root.resolve()
     rows = inventory_flags(root, overrides)
     flippable = [f for f in rows if f["decision"] == "flip" and not f.get("no_flip")]
@@ -171,12 +188,16 @@ def run_activation(root: Path, test_cmd: list[str] | None, mode: str, overrides:
     }
 
     if mode == "plan":
-        report["note"] = "PLAN mode: no worktree, no test run, nothing mutated. " \
-                         "Re-run with MODE=apply (or --mode apply) to prove and package the flips."
+        report["note"] = (
+            "PLAN mode: no worktree, no test run, nothing mutated. "
+            "Re-run with MODE=apply (or --mode apply) to prove and package the flips."
+        )
         return report
 
     # apply mode
-    is_git = (root / ".git").exists() or _run(["git", "-C", str(root), "rev-parse", "--git-dir"]).returncode == 0
+    is_git = (root / ".git").exists() or _run(
+        ["git", "-C", str(root), "rev-parse", "--git-dir"]
+    ).returncode == 0
     if not is_git:
         report["error"] = "apply mode requires a git repository (isolated worktree)"
         report["applied"] = False
@@ -207,23 +228,32 @@ def run_activation(root: Path, test_cmd: list[str] | None, mode: str, overrides:
         _apply_flips(wt, safe)
         activated_test = _run_tests(wt, test_cmd)
         diff = _run(["git", "-C", str(wt), "diff"]).stdout
-        report.update({
-            "applied": bool(safe) and activated_test["passed"],
-            "activated_flags": [f["flag"] for f in safe],
-            "activated_flag_rows": safe,
-            "backed_out_flags": [{"flag": f["flag"], "file": f["file"], "line": f["line"],
-                                  "classification": "empirically_unsafe",
-                                  "reason": "activation regressed the repo's tests"} for f in breakers],
-            "back_out_passes": passes,
-            "activated_test": activated_test,
-            "diff": diff,
-            "test_delta": {
-                "baseline_passed": baseline["passed"],
-                "activated_passed": activated_test["passed"],
-                "flags_off": 0,
-                "flags_on": len(safe),
-            },
-        })
+        report.update(
+            {
+                "applied": bool(safe) and activated_test["passed"],
+                "activated_flags": [f["flag"] for f in safe],
+                "activated_flag_rows": safe,
+                "backed_out_flags": [
+                    {
+                        "flag": f["flag"],
+                        "file": f["file"],
+                        "line": f["line"],
+                        "classification": "empirically_unsafe",
+                        "reason": "activation regressed the repo's tests",
+                    }
+                    for f in breakers
+                ],
+                "back_out_passes": passes,
+                "activated_test": activated_test,
+                "diff": diff,
+                "test_delta": {
+                    "baseline_passed": baseline["passed"],
+                    "activated_passed": activated_test["passed"],
+                    "flags_off": 0,
+                    "flags_on": len(safe),
+                },
+            }
+        )
         if breakers and not safe:
             report["note"] = "every flip candidate regressed tests; flipping nothing"
         return report
@@ -238,15 +268,18 @@ def run_all(repos: list[Path], test_cmd: list[str] | None, mode: str) -> dict:
             results.append(run_activation(repo, test_cmd, mode))
         except (RuntimeError, OSError, subprocess.SubprocessError) as exc:
             results.append({"repo": str(repo), "mode": mode, "error": str(exc), "applied": False})
-    matrix = [{
-        "repo": r["repo"],
-        "activated": r.get("activated_flags", r.get("would_flip", [])),
-        "danger_excluded": r.get("summary", {}).get("held_danger", []),
-        "staged_excluded": r.get("summary", {}).get("held_staged", []),
-        "empirically_unsafe": [b["flag"] for b in r.get("backed_out_flags", [])],
-        "tests_pass": r.get("activated_test", {}).get("passed"),
-        "error": r.get("error"),
-    } for r in results]
+    matrix = [
+        {
+            "repo": r["repo"],
+            "activated": r.get("activated_flags", r.get("would_flip", [])),
+            "danger_excluded": r.get("summary", {}).get("held_danger", []),
+            "staged_excluded": r.get("summary", {}).get("held_staged", []),
+            "empirically_unsafe": [b["flag"] for b in r.get("backed_out_flags", [])],
+            "tests_pass": r.get("activated_test", {}).get("passed"),
+            "error": r.get("error"),
+        }
+        for r in results
+    ]
     return {"mode": mode, "results": results, "matrix": matrix}
 
 
@@ -254,7 +287,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repos", type=Path, nargs="+")
     parser.add_argument("--mode", choices=["plan", "apply"], default="plan")
-    parser.add_argument("--test-cmd", help="explicit test command (shell-quoted); overrides discovery")
+    parser.add_argument(
+        "--test-cmd", help="explicit test command (shell-quoted); overrides discovery"
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     test_cmd = shlex.split(args.test_cmd) if args.test_cmd else None

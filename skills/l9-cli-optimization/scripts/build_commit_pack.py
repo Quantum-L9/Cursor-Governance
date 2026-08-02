@@ -10,11 +10,11 @@ import hashlib
 import json
 import os
 import re
-from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import sys
 import tarfile
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from validate_decision_ledger import validate_decision_contract
@@ -40,8 +40,9 @@ def schema_validate(instance: Any, schema_filename: str, label: str) -> None:
     schema = json.loads((SCHEMA_DIR / schema_filename).read_text(encoding="utf-8"))
     validator_cls = _jsonschema.validators.validator_for(schema)
     validator_cls.check_schema(schema)
-    errors = sorted(validator_cls(schema).iter_errors(instance),
-                    key=lambda e: list(e.absolute_path))
+    errors = sorted(
+        validator_cls(schema).iter_errors(instance), key=lambda e: list(e.absolute_path)
+    )
     if errors:
         # Collect-and-report ALL violations at once so one build surfaces the
         # full constraint set instead of aborting on the first.
@@ -56,9 +57,15 @@ def improvement_from_measurements(baseline_value, candidate_value, direction):
     """Recompute improvement percent from the two measurements with metric
     direction. Returns (percent | None, error | None). A None percent with no
     error is a valid 0->N activation (higher-is-better from a zero baseline)."""
-    if not isinstance(baseline_value, (int, float)) or isinstance(baseline_value, bool) or not isinstance(candidate_value, (int, float)) or isinstance(candidate_value, bool):
+    if (
+        not isinstance(baseline_value, (int, float))
+        or isinstance(baseline_value, bool)
+        or not isinstance(candidate_value, (int, float))
+        or isinstance(candidate_value, bool)
+    ):
         return (None, "baseline and candidate values must be numeric")
-    b = float(baseline_value); c = float(candidate_value)
+    b = float(baseline_value)
+    c = float(candidate_value)
     if direction == "higher_is_better":
         if b == 0:
             return (None, None) if c > 0 else (None, "candidate does not exceed a zero baseline")
@@ -66,10 +73,24 @@ def improvement_from_measurements(baseline_value, candidate_value, direction):
     if b <= 0:
         return (None, "baseline value must be > 0 for a lower-is-better metric")
     return (round(100.0 * (b - c) / b, 2), None)
+
+
 SCHEMA_VERSION = "2.0.0"
 VALID_STATUSES = {"PR_READY", "BLOCKED"}
-WIRING_STRATEGIES = {"activate_latent_capability", "repair_wiring", "connect_signal_consumer", "surface_existing_cli_path"}
-WIRING_CLASSES = {"inactive_component", "miswired_file", "dormant_capability", "unused_signal", "orphaned_config_schema", "broken_partial_wiring"}
+WIRING_STRATEGIES = {
+    "activate_latent_capability",
+    "repair_wiring",
+    "connect_signal_consumer",
+    "surface_existing_cli_path",
+}
+WIRING_CLASSES = {
+    "inactive_component",
+    "miswired_file",
+    "dormant_capability",
+    "unused_signal",
+    "orphaned_config_schema",
+    "broken_partial_wiring",
+}
 LEVERAGE_WEIGHTS = {
     "future_action_acceleration": 0.22,
     "existing_asset_amplification": 0.20,
@@ -85,10 +106,14 @@ class PackError(RuntimeError):
     """Raised when the pack cannot be built safely."""
 
 
-def run(command: list[str], cwd: Path, *, allow_codes: set[int] | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    command: list[str], cwd: Path, *, allow_codes: set[int] | None = None
+) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=True, check=False)
     if result.returncode not in (allow_codes or {0}):
-        raise PackError(f"command failed ({result.returncode}): {' '.join(command)}\n{result.stderr.strip()}")
+        raise PackError(
+            f"command failed ({result.returncode}): {' '.join(command)}\n{result.stderr.strip()}"
+        )
     return result
 
 
@@ -171,7 +196,14 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
     synthesis = spec.get("revision_synthesis")
     if not isinstance(synthesis, dict):
         raise PackError("spec.revision_synthesis must be an object")
-    for key in ("findings", "targets", "options", "selected_option_ids", "unresolved_divergence_ids", "unknowns"):
+    for key in (
+        "findings",
+        "targets",
+        "options",
+        "selected_option_ids",
+        "unresolved_divergence_ids",
+        "unknowns",
+    ):
         if not isinstance(synthesis.get(key), list):
             raise PackError(f"spec.revision_synthesis.{key} must be an array")
     if synthesis.get("synthesis_version") != "1.0.0":
@@ -195,7 +227,17 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
             raise PackError(f"{prefix}.id must match CLI-FND-NNN")
         if finding_id in findings:
             raise PackError(f"duplicate revision finding id: {finding_id}")
-        if finding.get("kind") not in {"docs_code_divergence", "performance_bottleneck", "latent_capability", "configuration_misalignment", "resource_risk", "external_limit", "validation_gap", "deployment_gap", "other"}:
+        if finding.get("kind") not in {
+            "docs_code_divergence",
+            "performance_bottleneck",
+            "latent_capability",
+            "configuration_misalignment",
+            "resource_risk",
+            "external_limit",
+            "validation_gap",
+            "deployment_gap",
+            "other",
+        }:
             raise PackError(f"{prefix}.kind is invalid")
         severity = finding.get("severity")
         if not isinstance(severity, int) or isinstance(severity, bool) or not 1 <= severity <= 5:
@@ -205,7 +247,9 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
         for key in ("evidence", "related_source_ids"):
             if not isinstance(finding.get(key), list):
                 raise PackError(f"{prefix}.{key} must be an array")
-        if not finding["evidence"] or not all(isinstance(item, str) and item.strip() for item in finding["evidence"]):
+        if not finding["evidence"] or not all(
+            isinstance(item, str) and item.strip() for item in finding["evidence"]
+        ):
             raise PackError(f"{prefix}.evidence must contain non-empty strings")
         if finding.get("scope") not in {"in_scope", "out_of_scope", "unknown"}:
             raise PackError(f"{prefix}.scope is invalid")
@@ -217,9 +261,21 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
             divergence_ids.add(finding_id)
             for key in ("docs_claim", "code_observation"):
                 require_string(finding, key, prefix)
-            if finding.get("divergence_type") not in {"documented_not_implemented", "implemented_not_documented", "behavior_mismatch", "config_default_mismatch", "entrypoint_mismatch", "unknown"}:
+            if finding.get("divergence_type") not in {
+                "documented_not_implemented",
+                "implemented_not_documented",
+                "behavior_mismatch",
+                "config_default_mismatch",
+                "entrypoint_mismatch",
+                "unknown",
+            }:
                 raise PackError(f"{prefix}.divergence_type is invalid")
-            if finding.get("reconciliation") not in {"fixed_in_scope", "out_of_scope_finding", "deferred", "unknown"}:
+            if finding.get("reconciliation") not in {
+                "fixed_in_scope",
+                "out_of_scope_finding",
+                "deferred",
+                "unknown",
+            }:
                 raise PackError(f"{prefix}.reconciliation is invalid")
         findings[finding_id] = finding
 
@@ -236,7 +292,13 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
             raise PackError(f"duplicate revision target id: {target_id}")
         for key in ("title", "objective"):
             require_string(target, key, prefix)
-        for key in ("source_finding_ids", "affected_surfaces", "constraints", "success_evidence", "option_ids"):
+        for key in (
+            "source_finding_ids",
+            "affected_surfaces",
+            "constraints",
+            "success_evidence",
+            "option_ids",
+        ):
             value = target.get(key)
             if not isinstance(value, list) or not value:
                 raise PackError(f"{prefix}.{key} must be a non-empty array")
@@ -249,7 +311,9 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
         targets[target_id] = target
 
     if finding_refs != set(findings):
-        raise PackError(f"every finding must map to a target; unmapped={sorted(set(findings)-finding_refs)}")
+        raise PackError(
+            f"every finding must map to a target; unmapped={sorted(set(findings) - finding_refs)}"
+        )
 
     options: dict[str, dict[str, Any]] = {}
     target_refs: set[str] = set()
@@ -278,15 +342,29 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
             raise PackError(f"{prefix}.leverage_dimensions must be an object")
         calculated = calculate_leverage_score(dimensions)
         recorded = option.get("leverage_score")
-        if not isinstance(recorded, (int, float)) or isinstance(recorded, bool) or abs(float(recorded) - calculated) > 0.001:
+        if (
+            not isinstance(recorded, (int, float))
+            or isinstance(recorded, bool)
+            or abs(float(recorded) - calculated) > 0.001
+        ):
             raise PackError(f"{prefix}.leverage_score must equal calculated score {calculated}")
         expected = leverage_decision(calculated)
         if option.get("decision") != expected:
             raise PackError(f"{prefix}.decision must be {expected} for score {calculated}")
-        for key in ("future_actions_accelerated", "current_assets_strengthened", "reusable_outputs_created", "multi_domain_benefits", "unknowns"):
+        for key in (
+            "future_actions_accelerated",
+            "current_assets_strengthened",
+            "reusable_outputs_created",
+            "multi_domain_benefits",
+            "unknowns",
+        ):
             if not isinstance(option.get(key), list):
                 raise PackError(f"{prefix}.{key} must be an array")
-        for key in ("future_actions_accelerated", "current_assets_strengthened", "reusable_outputs_created"):
+        for key in (
+            "future_actions_accelerated",
+            "current_assets_strengthened",
+            "reusable_outputs_created",
+        ):
             if not option[key]:
                 raise PackError(f"{prefix}.{key} must not be empty")
         if not isinstance(option.get("selected"), bool):
@@ -294,16 +372,26 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
         options[option_id] = option
 
     if target_refs != set(targets):
-        raise PackError(f"every target must map to an option; unmapped={sorted(set(targets)-target_refs)}")
+        raise PackError(
+            f"every target must map to an option; unmapped={sorted(set(targets) - target_refs)}"
+        )
     for target_id, target in targets.items():
         declared = set(target["option_ids"])
-        actual = {option_id for option_id, option in options.items() if target_id in option["target_ids"]}
+        actual = {
+            option_id for option_id, option in options.items() if target_id in option["target_ids"]
+        }
         if declared != actual:
-            raise PackError(f"target {target_id} option_ids mismatch: declared={sorted(declared)}, actual={sorted(actual)}")
+            raise PackError(
+                f"target {target_id} option_ids mismatch: declared={sorted(declared)}, actual={sorted(actual)}"
+            )
 
     selected = synthesis["selected_option_ids"]
-    if not all(isinstance(item, str) and re.fullmatch(r"CLI-OPT-[0-9]{3}", item) for item in selected):
-        raise PackError("spec.revision_synthesis.selected_option_ids must contain CLI-OPT-NNN strings")
+    if not all(
+        isinstance(item, str) and re.fullmatch(r"CLI-OPT-[0-9]{3}", item) for item in selected
+    ):
+        raise PackError(
+            "spec.revision_synthesis.selected_option_ids must contain CLI-OPT-NNN strings"
+        )
     if len(selected) != len(set(selected)):
         raise PackError("spec.revision_synthesis.selected_option_ids contains duplicates")
     selected_flags = {option_id for option_id, option in options.items() if option["selected"]}
@@ -323,30 +411,45 @@ def validate_revision_synthesis(spec: dict[str, Any], optimization: dict[str, An
     unresolved = synthesis["unresolved_divergence_ids"]
     if set(unresolved) - divergence_ids:
         raise PackError("unresolved_divergence_ids must reference docs_code_divergence findings")
-    expected_unresolved = {fid for fid in divergence_ids if findings[fid].get("reconciliation") != "fixed_in_scope"}
+    expected_unresolved = {
+        fid for fid in divergence_ids if findings[fid].get("reconciliation") != "fixed_in_scope"
+    }
     if set(unresolved) != expected_unresolved:
-        raise PackError(f"unresolved_divergence_ids mismatch: expected={sorted(expected_unresolved)}")
+        raise PackError(
+            f"unresolved_divergence_ids mismatch: expected={sorted(expected_unresolved)}"
+        )
     for finding_id in unresolved:
         finding = findings[finding_id]
         if finding["scope"] == "unknown" or finding.get("reconciliation") == "unknown":
             if spec.get("status") == "PR_READY":
-                raise PackError(f"PR_READY cannot retain unknown docs-code divergence: {finding_id}")
+                raise PackError(
+                    f"PR_READY cannot retain unknown docs-code divergence: {finding_id}"
+                )
         if finding["owner"].strip().lower() == "unknown":
             raise PackError(f"unresolved divergence requires an owner: {finding_id}")
 
     if optimization.get("selected_revision_option_ids") != selected:
-        raise PackError("spec.optimization.selected_revision_option_ids must match revision_synthesis.selected_option_ids")
+        raise PackError(
+            "spec.optimization.selected_revision_option_ids must match revision_synthesis.selected_option_ids"
+        )
     if optimization.get("revision_synthesis_path") != "evidence/CLI_REVISION_SYNTHESIS.json":
         raise PackError("spec.optimization.revision_synthesis_path is invalid")
 
     if spec.get("status") == "PR_READY":
-        if synthesis["synthesis_status"] != "complete" or synthesis["all_material_findings_synthesized"] is not True:
+        if (
+            synthesis["synthesis_status"] != "complete"
+            or synthesis["all_material_findings_synthesized"] is not True
+        ):
             raise PackError("PR_READY requires complete synthesis of all material findings")
         if synthesis["unknowns"]:
             raise PackError("PR_READY revision synthesis cannot retain material unknowns")
         if not selected:
             raise PackError("PR_READY requires at least one selected revision option")
-        blocking = [fid for fid, finding in findings.items() if finding["blocks_release"] and finding["status"] != "reconciled"]
+        blocking = [
+            fid
+            for fid, finding in findings.items()
+            if finding["blocks_release"] and finding["status"] != "reconciled"
+        ]
         if blocking:
             raise PackError(f"PR_READY has unresolved release-blocking findings: {blocking}")
 
@@ -360,7 +463,16 @@ def validate_wiring(spec: dict[str, Any], optimization: dict[str, Any]) -> None:
         return
     if not isinstance(wiring, dict):
         raise PackError("spec.wiring must be an object")
-    for key in ("entrypoints", "registries", "feature_flags", "signal_consumers", "findings", "edges", "selected_finding_ids", "unresolved_unknowns"):
+    for key in (
+        "entrypoints",
+        "registries",
+        "feature_flags",
+        "signal_consumers",
+        "findings",
+        "edges",
+        "selected_finding_ids",
+        "unresolved_unknowns",
+    ):
         if not isinstance(wiring.get(key), list):
             raise PackError(f"spec.wiring.{key} must be an array")
     if not isinstance(wiring.get("analysis_performed"), bool):
@@ -386,7 +498,16 @@ def validate_wiring(spec: dict[str, Any], optimization: dict[str, Any]) -> None:
         severity = finding.get("severity")
         if not isinstance(severity, int) or isinstance(severity, bool) or not 1 <= severity <= 5:
             raise PackError(f"{prefix}.severity must be 1..5")
-        for key in ("definition_evidence", "consumer_evidence", "feature_flag_intent", "impact", "correction", "owner_layer", "leverage", "downstream_capability"):
+        for key in (
+            "definition_evidence",
+            "consumer_evidence",
+            "feature_flag_intent",
+            "impact",
+            "correction",
+            "owner_layer",
+            "leverage",
+            "downstream_capability",
+        ):
             require_string(finding, key, prefix)
         if not isinstance(finding.get("dynamic_dispatch_checked"), bool):
             raise PackError(f"{prefix}.dynamic_dispatch_checked must be boolean")
@@ -425,7 +546,9 @@ def validate_wiring(spec: dict[str, Any], optimization: dict[str, Any]) -> None:
         if wiring["convergence_status"] != "converged":
             raise PackError("latent-capability strategies require converged wiring analysis")
         if not selected or not wiring["edges"]:
-            raise PackError("latent-capability strategies require selected findings and producer-consumer edges")
+            raise PackError(
+                "latent-capability strategies require selected findings and producer-consumer edges"
+            )
 
     if spec.get("status") == "PR_READY" and active:
         if wiring["unresolved_unknowns"]:
@@ -442,20 +565,33 @@ def validate_wiring(spec: dict[str, Any], optimization: dict[str, Any]) -> None:
             if finding["feature_flag_intent"].strip().lower() == "unknown":
                 raise PackError(f"selected finding {finding_id} has unknown feature-flag intent")
             if finding["dormant_by_design"] is True:
-                raise PackError(f"selected finding {finding_id} is dormant by design and cannot be activated")
+                raise PackError(
+                    f"selected finding {finding_id} is dormant by design and cannot be activated"
+                )
 
 
 def validate_spec(spec: dict[str, Any]) -> None:
     for key in (
-        "pack_name", "version", "repository", "base_ref", "branch", "status", "summary",
-        "commit_message", "pr_body"
+        "pack_name",
+        "version",
+        "repository",
+        "base_ref",
+        "branch",
+        "status",
+        "summary",
+        "commit_message",
+        "pr_body",
     ):
         require_string(spec, key)
     if spec["status"] not in VALID_STATUSES:
         raise PackError(f"spec.status must be one of {sorted(VALID_STATUSES)}")
 
     changed = spec.get("changed_files")
-    if not isinstance(changed, list) or not changed or not all(isinstance(item, str) for item in changed):
+    if (
+        not isinstance(changed, list)
+        or not changed
+        or not all(isinstance(item, str) for item in changed)
+    ):
         raise PackError("spec.changed_files must be a non-empty string array")
     if len(set(changed)) != len(changed):
         raise PackError("spec.changed_files contains duplicates")
@@ -473,14 +609,25 @@ def validate_spec(spec: dict[str, Any]) -> None:
     optimization = spec.get("optimization")
     if not isinstance(optimization, dict):
         raise PackError("spec.optimization must be an object")
-    for key in ("utilization_gap_class", "ownership", "evidence", "strategy", "rollback_trigger", "revision_synthesis_path"):
+    for key in (
+        "utilization_gap_class",
+        "ownership",
+        "evidence",
+        "strategy",
+        "rollback_trigger",
+        "revision_synthesis_path",
+    ):
         require_string(optimization, key, "spec.optimization")
     selected_revision_options = optimization.get("selected_revision_option_ids")
     if not isinstance(selected_revision_options, list) or not selected_revision_options:
         raise PackError("spec.optimization.selected_revision_option_ids must be a non-empty array")
     for key in ("preserved_constraints", "external_limits_not_bypassed"):
         value = optimization.get(key)
-        if not isinstance(value, list) or not value or not all(isinstance(item, str) and item.strip() for item in value):
+        if (
+            not isinstance(value, list)
+            or not value
+            or not all(isinstance(item, str) and item.strip() for item in value)
+        ):
             raise PackError(f"spec.optimization.{key} must be a non-empty string array")
     envelope = optimization.get("resource_envelope")
     if not isinstance(envelope, dict) or not envelope:
@@ -506,13 +653,19 @@ def validate_spec(spec: dict[str, Any]) -> None:
     require_string(performance, "comparison_method", "spec.performance")
     for key in ("correctness_checks", "resource_checks"):
         value = performance.get(key)
-        if not isinstance(value, list) or not value or not all(isinstance(item, str) and item.strip() for item in value):
+        if (
+            not isinstance(value, list)
+            or not value
+            or not all(isinstance(item, str) and item.strip() for item in value)
+        ):
             raise PackError(f"spec.performance.{key} must be a non-empty string array")
     candidate = performance.get("candidate")
     improvement = performance.get("improvement_percent")
     if candidate is not None:
         validate_measurement(candidate, "candidate")
-    if improvement is not None and (not isinstance(improvement, (int, float)) or isinstance(improvement, bool)):
+    if improvement is not None and (
+        not isinstance(improvement, (int, float)) or isinstance(improvement, bool)
+    ):
         raise PackError("spec.performance.improvement_percent must be numeric when present")
     direction = performance.get("direction", "lower_is_better")
     if direction not in {"lower_is_better", "higher_is_better"}:
@@ -521,18 +674,28 @@ def validate_spec(spec: dict[str, Any]) -> None:
     activation = False
     if candidate is not None:
         base = performance["baseline"]
-        if base.get("metric") != candidate.get("metric") or base.get("unit") != candidate.get("unit"):
-            raise PackError("performance baseline and candidate must share the same metric and unit")
-        computed, error = improvement_from_measurements(base["value"], candidate["value"], direction)
+        if base.get("metric") != candidate.get("metric") or base.get("unit") != candidate.get(
+            "unit"
+        ):
+            raise PackError(
+                "performance baseline and candidate must share the same metric and unit"
+            )
+        computed, error = improvement_from_measurements(
+            base["value"], candidate["value"], direction
+        )
         if error:
             raise PackError(f"spec.performance: {error}")
         if computed is None:
             activation = True  # valid 0->N capability activation
         else:
             if improvement is None:
-                raise PackError("spec.performance.improvement_percent is required when a candidate is present")
+                raise PackError(
+                    "spec.performance.improvement_percent is required when a candidate is present"
+                )
             if abs(float(improvement) - computed) > 0.5:
-                raise PackError(f"spec.performance.improvement_percent {improvement} does not match recomputed {computed}")
+                raise PackError(
+                    f"spec.performance.improvement_percent {improvement} does not match recomputed {computed}"
+                )
 
     if spec["status"] == "PR_READY":
         if optimization["ownership"] != "repository_owned":
@@ -540,7 +703,9 @@ def validate_spec(spec: dict[str, Any]) -> None:
         if candidate is None:
             raise PackError("PR_READY requires a candidate measurement")
         if not activation and (improvement is None or float(improvement) <= 0):
-            raise PackError("PR_READY requires a positive measured improvement (or a 0->N activation proof)")
+            raise PackError(
+                "PR_READY requires a positive measured improvement (or a 0->N activation proof)"
+            )
         if optimization["strategy"] == "none":
             raise PackError("PR_READY cannot use optimization.strategy=none")
     if optimization["ownership"] in {"external", "unknown"} and spec["status"] != "BLOCKED":
@@ -573,11 +738,20 @@ def ensure_git_repo(repo_root: Path) -> None:
         raise PackError(f"repository path does not exist: {repo_root}")
     actual = Path(run(["git", "rev-parse", "--show-toplevel"], repo_root).stdout.strip()).resolve()
     if actual != repo_root.resolve():
-        raise PackError(f"repo_root must be the Git top level: expected {actual}, got {repo_root.resolve()}")
+        raise PackError(
+            f"repo_root must be the Git top level: expected {actual}, got {repo_root.resolve()}"
+        )
 
 
 def is_tracked(repo_root: Path, relative: Path) -> bool:
-    return run(["git", "ls-files", "--error-unmatch", "--", relative.as_posix()], repo_root, allow_codes={0, 1}).returncode == 0
+    return (
+        run(
+            ["git", "ls-files", "--error-unmatch", "--", relative.as_posix()],
+            repo_root,
+            allow_codes={0, 1},
+        ).returncode
+        == 0
+    )
 
 
 def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> bytes:
@@ -597,7 +771,9 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
     if tracked:
         result = subprocess.run(
             ["git", "diff", "--binary", "--no-ext-diff", base_ref, "--", *tracked],
-            cwd=repo_root, capture_output=True, check=False,
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
         )
         if result.returncode != 0:
             raise PackError(f"git diff failed: {result.stderr.decode(errors='replace').strip()}")
@@ -605,7 +781,9 @@ def build_patch(repo_root: Path, base_ref: str, changed_files: list[str]) -> byt
     for relative in untracked:
         result = subprocess.run(
             ["git", "diff", "--no-index", "--binary", "--", "/dev/null", relative],
-            cwd=repo_root, capture_output=True, check=False,
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
         )
         if result.returncode not in {0, 1}:
             raise PackError(f"git diff for untracked file failed: {relative}")
@@ -636,7 +814,11 @@ def created_utc(spec: dict[str, Any]) -> str:
             file=sys.stderr,
         )
     try:
-        timestamp = dt.datetime.fromtimestamp(int(epoch), tz=dt.timezone.utc) if epoch else dt.datetime.now(tz=dt.timezone.utc)
+        timestamp = (
+            dt.datetime.fromtimestamp(int(epoch), tz=dt.UTC)
+            if epoch
+            else dt.datetime.now(tz=dt.UTC)
+        )
     except ValueError as exc:
         raise PackError("SOURCE_DATE_EPOCH must be an integer") from exc
     return timestamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -651,7 +833,9 @@ def render_readme(spec: dict[str, Any]) -> str:
         "Review `evidence/CLI_REVISION_SYNTHESIS.json`, `evidence/CLI_REVISION_PLAN.md`, and `evidence/DOCS_CODE_DIVERGENCE_FINDINGS.md`.",
     ]
     if (spec.get("wiring") or {}).get("analysis_performed"):
-        steps.append("Review `evidence/WIRING_MAP.md` and `evidence/LATENT_CAPABILITY_FINDINGS.json`.")
+        steps.append(
+            "Review `evidence/WIRING_MAP.md` and `evidence/LATENT_CAPABILITY_FINDINGS.json`."
+        )
     steps += [
         "Review `change/OPTIMIZATION_PLAN.json` and `evidence/PERFORMANCE.md`.",
         "Apply `change/commit.patch` with `git apply --index change/commit.patch`.",
@@ -661,19 +845,19 @@ def render_readme(spec: dict[str, Any]) -> str:
         "Deploy only through `deploy/DEPLOY_PLAYBOOK.md`.",
     ]
     apply_block = "\n".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))
-    return f"""# {spec['pack_name']}
+    return f"""# {spec["pack_name"]}
 
-Status: `{spec['status']}`
+Status: `{spec["status"]}`
 
-Repository: `{spec['repository']}`  
-Base ref: `{spec['base_ref']}`  
-Branch: `{spec['branch']}`  
-Utilization gap: `{spec['optimization']['utilization_gap_class']}`  
+Repository: `{spec["repository"]}`  
+Base ref: `{spec["base_ref"]}`  
+Branch: `{spec["branch"]}`  
+Utilization gap: `{spec["optimization"]["utilization_gap_class"]}`  
 Measured improvement: `{delta}`
 
 ## Summary
 
-{spec['summary']}
+{spec["summary"]}
 
 ## Apply
 
@@ -685,7 +869,11 @@ Read `handoff/AGENT_HANDOFF.md` before continuing the work.
 
 def render_pr_checklist(spec: dict[str, Any]) -> str:
     mark = "x" if spec["status"] == "PR_READY" else " "
-    wiring_line = f"- [{mark}] Reachability converged with bidirectional evidence and selected activate findings\n" if (spec.get("wiring") or {}).get("analysis_performed") else ""
+    wiring_line = (
+        f"- [{mark}] Reachability converged with bidirectional evidence and selected activate findings\n"
+        if (spec.get("wiring") or {}).get("analysis_performed")
+        else ""
+    )
     return f"""# PR Checklist
 
 - [{mark}] Adaptive execution route matches ownership, evidence state, and risk
@@ -706,16 +894,31 @@ def render_pr_checklist(spec: dict[str, Any]) -> str:
 
 
 def render_validation(spec: dict[str, Any]) -> str:
-    lines = ["# Validation", "", f"Status: `{spec['status']}`", "", spec["validation"]["summary"], "", "## Commands", ""]
+    lines = [
+        "# Validation",
+        "",
+        f"Status: `{spec['status']}`",
+        "",
+        spec["validation"]["summary"],
+        "",
+        "## Commands",
+        "",
+    ]
     commands = spec["validation"]["commands"]
     if not commands:
-        lines.append("No commands were executed. This pack cannot be classified PR_READY without equivalent evidence.")
+        lines.append(
+            "No commands were executed. This pack cannot be classified PR_READY without equivalent evidence."
+        )
     for index, record in enumerate(commands, start=1):
-        lines.extend([
-            f"### {index}. `{record.get('command', 'UNKNOWN')}`", "",
-            f"- Status: `{record.get('status', 'UNKNOWN')}`",
-            f"- Evidence: {record.get('evidence', 'UNKNOWN')}", "",
-        ])
+        lines.extend(
+            [
+                f"### {index}. `{record.get('command', 'UNKNOWN')}`",
+                "",
+                f"- Status: `{record.get('status', 'UNKNOWN')}`",
+                f"- Evidence: {record.get('evidence', 'UNKNOWN')}",
+                "",
+            ]
+        )
     return "\n".join(lines)
 
 
@@ -725,34 +928,51 @@ def render_performance(spec: dict[str, Any]) -> str:
     candidate = perf.get("candidate")
     improvement = perf.get("improvement_percent")
     lines = [
-        "# Performance Evidence", "",
-        f"Bottleneck class: `{spec['optimization']['utilization_gap_class']}`", "",
-        "## Baseline", "",
+        "# Performance Evidence",
+        "",
+        f"Bottleneck class: `{spec['optimization']['utilization_gap_class']}`",
+        "",
+        "## Baseline",
+        "",
         f"- Command: `{base['command']}`",
         f"- Metric: `{base['metric']}`",
         f"- Value: `{base['value']} {base['unit']}`",
         f"- Samples: `{base['samples']}`",
-        f"- Evidence: {base['evidence']}", "",
-        "## Candidate", "",
+        f"- Evidence: {base['evidence']}",
+        "",
+        "## Candidate",
+        "",
     ]
     if candidate:
-        lines.extend([
-            f"- Command: `{candidate['command']}`",
-            f"- Metric: `{candidate['metric']}`",
-            f"- Value: `{candidate['value']} {candidate['unit']}`",
-            f"- Samples: `{candidate['samples']}`",
-            f"- Evidence: {candidate['evidence']}",
-        ])
+        lines.extend(
+            [
+                f"- Command: `{candidate['command']}`",
+                f"- Metric: `{candidate['metric']}`",
+                f"- Value: `{candidate['value']} {candidate['unit']}`",
+                f"- Samples: `{candidate['samples']}`",
+                f"- Evidence: {candidate['evidence']}",
+            ]
+        )
     else:
         lines.append("- Candidate measurement: `UNKNOWN`")
-    lines.extend([
-        "", f"Improvement: `{'UNKNOWN' if improvement is None else str(improvement) + '%'}`",
-        "", "## Comparison Method", "", perf["comparison_method"],
-        "", "## Correctness Checks", "",
-        *[f"- {item}" for item in perf["correctness_checks"]],
-        "", "## Resource Checks", "",
-        *[f"- {item}" for item in perf["resource_checks"]],
-    ])
+    lines.extend(
+        [
+            "",
+            f"Improvement: `{'UNKNOWN' if improvement is None else str(improvement) + '%'}`",
+            "",
+            "## Comparison Method",
+            "",
+            perf["comparison_method"],
+            "",
+            "## Correctness Checks",
+            "",
+            *[f"- {item}" for item in perf["correctness_checks"]],
+            "",
+            "## Resource Checks",
+            "",
+            *[f"- {item}" for item in perf["resource_checks"]],
+        ]
+    )
     if perf.get("limitations"):
         lines.extend(["", "## Limitations", "", *[f"- {item}" for item in perf["limitations"]]])
     return "\n".join(lines)
@@ -764,56 +984,132 @@ def render_decision_record(spec: dict[str, Any]) -> str:
     decision = ledger["decision"]
     convergence = ledger["convergence"]
     lines = [
-        "# Adaptive Decision Record", "",
+        "# Adaptive Decision Record",
+        "",
         f"Reasoning depth: `{route['reasoning_depth']}`",
         f"Initial action: `{route['initial_action']}`",
         f"Final action: `{decision['final_action']}`",
         f"Cycle: `{ledger['cycle']}` of `{route['max_cycles']}`",
-        f"Convergence: `{convergence['status']}`", "",
-        "## Objective", "", ledger["objective"], "",
-        "## Active Proof Obligations", "",
-        "| ID | Status | Evidence |", "|---|---|---|",
+        f"Convergence: `{convergence['status']}`",
+        "",
+        "## Objective",
+        "",
+        ledger["objective"],
+        "",
+        "## Active Proof Obligations",
+        "",
+        "| ID | Status | Evidence |",
+        "|---|---|---|",
     ]
     for proof in ledger["proof_obligations"]:
         evidence = "; ".join(proof.get("evidence", [])).replace("|", "\\|") or "None"
         lines.append(f"| {proof['id']} | {proof['status']} | {evidence} |")
-    lines.extend(["", "## Selected Options", "", *[f"- {item}" for item in ledger["selected_option_ids"]]])
+    lines.extend(
+        ["", "## Selected Options", "", *[f"- {item}" for item in ledger["selected_option_ids"]]]
+    )
     lines.extend(["", "## Material Unknowns", ""])
-    material = [item for item in ledger["unknowns"] if item.get("material") and item.get("disposition") != "resolved"]
-    lines.extend([f"- {item['id']}: {item['description']} ({item['disposition']})" for item in material] or ["- None"])
-    lines.extend(["", "## Decision", "", decision["rationale"], "", "### Trade-offs", "", *([f"- {item}" for item in decision["tradeoffs"]] or ["- None"]), "", "### Rollback or Containment", "", decision["rollback_or_containment"], "", "## Stop Reason", "", convergence["stop_reason"]])
+    material = [
+        item
+        for item in ledger["unknowns"]
+        if item.get("material") and item.get("disposition") != "resolved"
+    ]
+    lines.extend(
+        [f"- {item['id']}: {item['description']} ({item['disposition']})" for item in material]
+        or ["- None"]
+    )
+    lines.extend(
+        [
+            "",
+            "## Decision",
+            "",
+            decision["rationale"],
+            "",
+            "### Trade-offs",
+            "",
+            *([f"- {item}" for item in decision["tradeoffs"]] or ["- None"]),
+            "",
+            "### Rollback or Containment",
+            "",
+            decision["rollback_or_containment"],
+            "",
+            "## Stop Reason",
+            "",
+            convergence["stop_reason"],
+        ]
+    )
     return "\n".join(lines)
 
 
 def render_revision_plan(synthesis: dict[str, Any]) -> str:
     findings = {item["id"]: item for item in synthesis["findings"]}
-    options = {item["id"]: item for item in synthesis["options"]}
     lines = [
-        "# CLI Revision Plan", "",
+        "# CLI Revision Plan",
+        "",
         f"Synthesis status: `{synthesis['synthesis_status']}`",
         f"All material findings synthesized: `{synthesis['all_material_findings_synthesized']}`",
-        "", "## Selection Rationale", "", synthesis["selection_rationale"],
-        "", "## Findings", "",
+        "",
+        "## Selection Rationale",
+        "",
+        synthesis["selection_rationale"],
+        "",
+        "## Findings",
+        "",
         "| ID | Kind | Severity | Scope | Status | Blocks release | Summary |",
         "|---|---|---:|---|---|---:|---|",
     ]
     for finding in synthesis["findings"]:
         summary = finding["summary"].replace("|", "\\|")
-        lines.append(f"| {finding['id']} | {finding['kind']} | {finding['severity']} | {finding['scope']} | {finding['status']} | {finding['blocks_release']} | {summary} |")
-    lines.extend(["", "## Revision Targets", ""] )
+        lines.append(
+            f"| {finding['id']} | {finding['kind']} | {finding['severity']} | {finding['scope']} | {finding['status']} | {finding['blocks_release']} | {summary} |"
+        )
+    lines.extend(["", "## Revision Targets", ""])
     for target in synthesis["targets"]:
-        lines.extend([
-            f"### {target['id']}: {target['title']}", "",
-            f"- Scope: `{target['scope']}`",
-            f"- Source findings: {', '.join(target['source_finding_ids'])}",
-            f"- Objective: {target['objective']}",
-            f"- Options: {', '.join(target['option_ids'])}", "",
-        ])
-    lines.extend(["## Options and Leverage", "", "| ID | Targets | Scope | Score | Decision | Selected | Strategy |", "|---|---|---|---:|---|---:|---|"] )
+        lines.extend(
+            [
+                f"### {target['id']}: {target['title']}",
+                "",
+                f"- Scope: `{target['scope']}`",
+                f"- Source findings: {', '.join(target['source_finding_ids'])}",
+                f"- Objective: {target['objective']}",
+                f"- Options: {', '.join(target['option_ids'])}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Options and Leverage",
+            "",
+            "| ID | Targets | Scope | Score | Decision | Selected | Strategy |",
+            "|---|---|---|---:|---|---:|---|",
+        ]
+    )
     for option in synthesis["options"]:
         strategy = option["strategy"].replace("|", "\\|")
-        lines.append(f"| {option['id']} | {', '.join(option['target_ids'])} | {option['scope']} | {option['leverage_score']:.2f} | {option['decision']} | {option['selected']} | {strategy} |")
-    lines.extend(["", "## Selected Options", "", *([f"- {item}" for item in synthesis["selected_option_ids"]] or ["- None"]), "", "## Unresolved Documentation-Code Divergence", "", *([f"- {item}: {findings[item]['summary']}" for item in synthesis["unresolved_divergence_ids"]] or ["- None"]), "", "## Unknowns", "", *([f"- {item}" for item in synthesis["unknowns"]] or ["- None"])])
+        lines.append(
+            f"| {option['id']} | {', '.join(option['target_ids'])} | {option['scope']} | {option['leverage_score']:.2f} | {option['decision']} | {option['selected']} | {strategy} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Selected Options",
+            "",
+            *([f"- {item}" for item in synthesis["selected_option_ids"]] or ["- None"]),
+            "",
+            "## Unresolved Documentation-Code Divergence",
+            "",
+            *(
+                [
+                    f"- {item}: {findings[item]['summary']}"
+                    for item in synthesis["unresolved_divergence_ids"]
+                ]
+                or ["- None"]
+            ),
+            "",
+            "## Unknowns",
+            "",
+            *([f"- {item}" for item in synthesis["unknowns"]] or ["- None"]),
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -826,19 +1122,24 @@ def render_divergence_findings(synthesis: dict[str, Any]) -> str:
         return "\n".join(lines)
     for finding_id in unresolved:
         finding = findings[finding_id]
-        lines.extend([
-            f"## {finding_id}: {finding['summary']}", "",
-            f"- Severity: `{finding['severity']}`",
-            f"- Scope: `{finding['scope']}`",
-            f"- Owner: `{finding['owner']}`",
-            f"- Blocks release: `{finding['blocks_release']}`",
-            f"- Divergence type: `{finding['divergence_type']}`",
-            f"- Reconciliation: `{finding['reconciliation']}`",
-            f"- Documentation claim: {finding['docs_claim']}",
-            f"- Code observation: {finding['code_observation']}",
-            f"- Recommended action: {finding['recommended_action']}",
-            "- Evidence:", *[f"  - {item}" for item in finding["evidence"]], "",
-        ])
+        lines.extend(
+            [
+                f"## {finding_id}: {finding['summary']}",
+                "",
+                f"- Severity: `{finding['severity']}`",
+                f"- Scope: `{finding['scope']}`",
+                f"- Owner: `{finding['owner']}`",
+                f"- Blocks release: `{finding['blocks_release']}`",
+                f"- Divergence type: `{finding['divergence_type']}`",
+                f"- Reconciliation: `{finding['reconciliation']}`",
+                f"- Documentation claim: {finding['docs_claim']}",
+                f"- Code observation: {finding['code_observation']}",
+                f"- Recommended action: {finding['recommended_action']}",
+                "- Evidence:",
+                *[f"  - {item}" for item in finding["evidence"]],
+                "",
+            ]
+        )
     return "\n".join(lines)
 
 
@@ -865,24 +1166,51 @@ def render_pr_body(spec: dict[str, Any]) -> str:
 
 def render_wiring_map(wiring: dict[str, Any]) -> str:
     lines = [
-        "# Wiring Map", "",
-        f"Convergence: `{wiring['convergence_status']}` after `{wiring['convergence_passes']}` pass(es)", "",
-        "## Entrypoints", "",
+        "# Wiring Map",
+        "",
+        f"Convergence: `{wiring['convergence_status']}` after `{wiring['convergence_passes']}` pass(es)",
+        "",
+        "## Entrypoints",
+        "",
         *([f"- {item}" for item in wiring["entrypoints"]] or ["- None recorded"]),
-        "", "## Registries and Dynamic Dispatch", "",
-        *([f"- {item}" for item in wiring["registries"]] or ["- None recorded; explicit inspection still required"]),
-        "", "## Feature Flags", "",
+        "",
+        "## Registries and Dynamic Dispatch",
+        "",
+        *(
+            [f"- {item}" for item in wiring["registries"]]
+            or ["- None recorded; explicit inspection still required"]
+        ),
+        "",
+        "## Feature Flags",
+        "",
         *([f"- {item}" for item in wiring["feature_flags"]] or ["- None recorded"]),
-        "", "## Signal Consumers", "",
+        "",
+        "## Signal Consumers",
+        "",
         *([f"- {item}" for item in wiring["signal_consumers"]] or ["- None recorded"]),
-        "", "## Producer to Consumer Edges", "",
+        "",
+        "## Producer to Consumer Edges",
+        "",
         "| Producer | Consumer | Before | After | Evidence |",
         "|---|---|---:|---:|---|",
     ]
     for edge in wiring["edges"]:
         evidence = str(edge["evidence"]).replace("|", "\\|")
-        lines.append(f"| {edge['producer']} | {edge['consumer']} | {edge['connected_before']} | {edge['connected_after']} | {evidence} |")
-    lines.extend(["", "## Selected Findings", "", *([f"- {item}" for item in wiring["selected_finding_ids"]] or ["- None"]), "", "## Unresolved Unknowns", "", *([f"- {item}" for item in wiring["unresolved_unknowns"]] or ["- None"])])
+        lines.append(
+            f"| {edge['producer']} | {edge['consumer']} | {edge['connected_before']} | {edge['connected_after']} | {evidence} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Selected Findings",
+            "",
+            *([f"- {item}" for item in wiring["selected_finding_ids"]] or ["- None"]),
+            "",
+            "## Unresolved Unknowns",
+            "",
+            *([f"- {item}" for item in wiring["unresolved_unknowns"]] or ["- None"]),
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -895,12 +1223,12 @@ def issue_filename(issue: dict[str, Any], index: int) -> str:
 def render_issue(issue: dict[str, Any], index: int) -> str:
     if isinstance(issue.get("markdown"), str) and issue["markdown"].strip():
         return issue["markdown"]
-    return f"""# {issue.get('title', f'Blocked root cause {index}')}
+    return f"""# {issue.get("title", f"Blocked root cause {index}")}
 
-- Owner: `{issue.get('owner', 'UNKNOWN')}`
-- Observed failure: {issue.get('observed_failure', 'UNKNOWN')}
-- Evidence: {issue.get('evidence', 'UNKNOWN')}
-- Acceptance criteria: {issue.get('acceptance_criteria', 'UNKNOWN')}
+- Owner: `{issue.get("owner", "UNKNOWN")}`
+- Observed failure: {issue.get("observed_failure", "UNKNOWN")}
+- Evidence: {issue.get("evidence", "UNKNOWN")}
+- Acceptance criteria: {issue.get("acceptance_criteria", "UNKNOWN")}
 """
 
 
@@ -964,13 +1292,31 @@ def build(spec_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, 
     patch_path = pack_root / "change" / "commit.patch"
     patch_path.parent.mkdir(parents=True, exist_ok=True)
     patch_path.write_bytes(patch)
-    write_text(pack_root / "change" / "OPTIMIZATION_PLAN.json", json.dumps(spec["optimization"], indent=2, sort_keys=True))
-    write_text(pack_root / "evidence" / "EXECUTION_ROUTE.json", json.dumps(spec["execution_route"], indent=2, sort_keys=True))
-    write_text(pack_root / "evidence" / "DECISION_LEDGER.json", json.dumps(spec["decision_ledger"], indent=2, sort_keys=True))
+    write_text(
+        pack_root / "change" / "OPTIMIZATION_PLAN.json",
+        json.dumps(spec["optimization"], indent=2, sort_keys=True),
+    )
+    write_text(
+        pack_root / "evidence" / "EXECUTION_ROUTE.json",
+        json.dumps(spec["execution_route"], indent=2, sort_keys=True),
+    )
+    write_text(
+        pack_root / "evidence" / "DECISION_LEDGER.json",
+        json.dumps(spec["decision_ledger"], indent=2, sort_keys=True),
+    )
     write_text(pack_root / "evidence" / "DECISION_RECORD.md", render_decision_record(spec))
-    write_text(pack_root / "evidence" / "CLI_REVISION_SYNTHESIS.json", json.dumps(spec["revision_synthesis"], indent=2, sort_keys=True))
-    write_text(pack_root / "evidence" / "CLI_REVISION_PLAN.md", render_revision_plan(spec["revision_synthesis"]))
-    write_text(pack_root / "evidence" / "DOCS_CODE_DIVERGENCE_FINDINGS.md", render_divergence_findings(spec["revision_synthesis"]))
+    write_text(
+        pack_root / "evidence" / "CLI_REVISION_SYNTHESIS.json",
+        json.dumps(spec["revision_synthesis"], indent=2, sort_keys=True),
+    )
+    write_text(
+        pack_root / "evidence" / "CLI_REVISION_PLAN.md",
+        render_revision_plan(spec["revision_synthesis"]),
+    )
+    write_text(
+        pack_root / "evidence" / "DOCS_CODE_DIVERGENCE_FINDINGS.md",
+        render_divergence_findings(spec["revision_synthesis"]),
+    )
     write_text(pack_root / "README.md", render_readme(spec))
     write_text(pack_root / "pr" / "COMMIT_MESSAGE.txt", spec["commit_message"])
     write_text(pack_root / "pr" / "PR_BODY.md", render_pr_body(spec))
@@ -979,13 +1325,19 @@ def build(spec_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, 
     write_text(pack_root / "deploy" / "RELEASE_CHECKLIST.md", spec["deploy"]["release_checklist"])
     write_text(pack_root / "deploy" / "ROLLBACK_PLAYBOOK.md", spec["rollback"]["playbook"])
     write_text(pack_root / "handoff" / "AGENT_HANDOFF.md", spec["handoff"]["markdown"])
-    write_text(pack_root / "handoff" / "NEXT_AGENT_TASK.json", json.dumps(spec["handoff"]["next_agent_task"], indent=2, sort_keys=True))
+    write_text(
+        pack_root / "handoff" / "NEXT_AGENT_TASK.json",
+        json.dumps(spec["handoff"]["next_agent_task"], indent=2, sort_keys=True),
+    )
     write_text(pack_root / "evidence" / "VALIDATION.md", render_validation(spec))
     write_text(pack_root / "evidence" / "PERFORMANCE.md", render_performance(spec))
     wiring = spec.get("wiring")
     if isinstance(wiring, dict) and wiring.get("analysis_performed"):
         write_text(pack_root / "evidence" / "WIRING_MAP.md", render_wiring_map(wiring))
-        write_text(pack_root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json", json.dumps(wiring, indent=2, sort_keys=True))
+        write_text(
+            pack_root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json",
+            json.dumps(wiring, indent=2, sort_keys=True),
+        )
 
     commands_path = pack_root / "evidence" / "commands.jsonl"
     commands_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1022,24 +1374,40 @@ def build(spec_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, 
             "improvement_percent": spec["performance"].get("improvement_percent"),
         },
         "wiring_analysis_performed": bool((spec.get("wiring") or {}).get("analysis_performed")),
-        "selected_wiring_findings": list((spec.get("wiring") or {}).get("selected_finding_ids", [])),
-        "unresolved_wiring_unknowns": list((spec.get("wiring") or {}).get("unresolved_unknowns", [])),
+        "selected_wiring_findings": list(
+            (spec.get("wiring") or {}).get("selected_finding_ids", [])
+        ),
+        "unresolved_wiring_unknowns": list(
+            (spec.get("wiring") or {}).get("unresolved_unknowns", [])
+        ),
         "revision_synthesis_status": spec["revision_synthesis"]["synthesis_status"],
         "revision_finding_count": len(spec["revision_synthesis"]["findings"]),
         "revision_target_count": len(spec["revision_synthesis"]["targets"]),
         "revision_option_count": len(spec["revision_synthesis"]["options"]),
         "selected_revision_options": list(spec["revision_synthesis"]["selected_option_ids"]),
-        "unresolved_docs_code_divergences": list(spec["revision_synthesis"]["unresolved_divergence_ids"]),
+        "unresolved_docs_code_divergences": list(
+            spec["revision_synthesis"]["unresolved_divergence_ids"]
+        ),
         "highest_selected_leverage_score": max(
-            (option["leverage_score"] for option in spec["revision_synthesis"]["options"] if option["id"] in spec["revision_synthesis"]["selected_option_ids"]),
+            (
+                option["leverage_score"]
+                for option in spec["revision_synthesis"]["options"]
+                if option["id"] in spec["revision_synthesis"]["selected_option_ids"]
+            ),
             default=None,
         ),
         "reasoning_depth": spec["execution_route"]["reasoning_depth"],
         "initial_action": spec["execution_route"]["initial_action"],
         "final_action": spec["decision_ledger"]["decision"]["final_action"],
         "proof_obligation_count": len(spec["decision_ledger"]["proof_obligations"]),
-        "satisfied_proof_obligation_count": sum(1 for item in spec["decision_ledger"]["proof_obligations"] if item["status"] == "satisfied"),
-        "unresolved_material_unknowns": list(spec["decision_ledger"]["convergence"]["remaining_material_unknown_ids"]),
+        "satisfied_proof_obligation_count": sum(
+            1
+            for item in spec["decision_ledger"]["proof_obligations"]
+            if item["status"] == "satisfied"
+        ),
+        "unresolved_material_unknowns": list(
+            spec["decision_ledger"]["convergence"]["remaining_material_unknown_ids"]
+        ),
         "decision_convergence_status": spec["decision_ledger"]["convergence"]["status"],
     }
     schema_validate(manifest, "pack-manifest.schema.json", "manifest")
@@ -1063,7 +1431,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
     try:
-        pack_root, archive_path = build(args.spec.resolve(), args.repo_root.resolve(), args.output.resolve())
+        pack_root, archive_path = build(
+            args.spec.resolve(), args.repo_root.resolve(), args.output.resolve()
+        )
     except PackError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2

@@ -45,14 +45,15 @@ Ranking: each candidate carries a numeric `score` and a `confidence` tier;
 candidates are sorted highest-first. Entrypoints power the router's
 `target_reachable` signal. Stdlib only.
 """
+
 from __future__ import annotations
 
 import argparse
 import ast
 import json
 import re
-from pathlib import Path
 import sys
+from pathlib import Path
 
 PY_EXT = {".py"}
 JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
@@ -60,14 +61,46 @@ SH_EXT = {".sh", ".bash", ".zsh"}
 DOC_EXT = {".md", ".rst", ".txt", ".mdc"}
 # Files that can INVOKE a script (the "wiring surface"), plus code/config that
 # would reference one. Read broadly so unwired-executable detection is real.
-WIRE_EXT = PY_EXT | JS_EXT | SH_EXT | DOC_EXT | {
-    ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini", ".mk", ".env",
-}
+WIRE_EXT = (
+    PY_EXT
+    | JS_EXT
+    | SH_EXT
+    | DOC_EXT
+    | {
+        ".yml",
+        ".yaml",
+        ".json",
+        ".toml",
+        ".cfg",
+        ".ini",
+        ".mk",
+        ".env",
+    }
+)
 WIRE_NAMES = {
-    "Makefile", "makefile", "GNUmakefile", "Justfile", "justfile",
-    "Taskfile.yml", "Dockerfile", ".pre-commit-config.yaml", "tox.ini", "noxfile.py",
+    "Makefile",
+    "makefile",
+    "GNUmakefile",
+    "Justfile",
+    "justfile",
+    "Taskfile.yml",
+    "Dockerfile",
+    ".pre-commit-config.yaml",
+    "tox.ini",
+    "noxfile.py",
 }
-SKIP_DIRS = {".git", "node_modules", "dist", "build", "__pycache__", ".venv", "venv", "coverage", ".mypy_cache", ".pytest_cache"}
+SKIP_DIRS = {
+    ".git",
+    "node_modules",
+    "dist",
+    "build",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "coverage",
+    ".mypy_cache",
+    ".pytest_cache",
+}
 # Well-known scratch/work-in-progress dir names. Still read for references, but
 # their own contents are not flagged as reactivation candidates (not production).
 SCRATCH_DIRS = {"wip", "scratch", "sandbox", "playground", "examples", "fixtures"}
@@ -86,27 +119,44 @@ STAGED_MARKER = re.compile(
 INTENT_EXT = {".md", ".rst", ".txt", ".yaml", ".yml", ".py", ".cfg", ".toml", ".mdc"}
 FLAGISH = re.compile(r"[A-Za-z_][\w]*(?:enable[d]?|feature|flag)[\w]*")
 
-JS_EXPORT = re.compile(r"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|const|let|class)\s+([A-Za-z_$][\w$]*)")
+JS_EXPORT = re.compile(
+    r"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|const|let|class)\s+([A-Za-z_$][\w$]*)"
+)
 JS_EXPORT_LIST = re.compile(r"\bexport\s*\{([^}]*)\}")
-NAMED_FLAG_OFF = re.compile(r"""([A-Za-z_][\w]*(?:enable[d]?|feature|flag)[\w]*)\s*[:=]\s*(?:[Ff]alse|0)\b""")
+NAMED_FLAG_OFF = re.compile(
+    r"""([A-Za-z_][\w]*(?:enable[d]?|feature|flag)[\w]*)\s*[:=]\s*(?:[Ff]alse|0)\b"""
+)
 IDENT = re.compile(r"^[A-Za-z_]\w*$")
 PYTHON_M = re.compile(r"\bpython[0-9.]*\s+-m\s+([A-Za-z_][\w.]*)")
 # Common import-name -> distribution-name aliases (import root differs from the
 # name declared in pyproject/requirements). Keeps dep-backed imports from being
 # mis-flagged as phantom.
 IMPORT_ALIAS = {
-    "yaml": "pyyaml", "bs4": "beautifulsoup4", "PIL": "pillow", "cv2": "opencv_python",
-    "dotenv": "python_dotenv", "sklearn": "scikit_learn", "dateutil": "python_dateutil",
-    "jose": "python_jose", "attr": "attrs", "OpenSSL": "pyopenssl", "git": "gitpython",
+    "yaml": "pyyaml",
+    "bs4": "beautifulsoup4",
+    "PIL": "pillow",
+    "cv2": "opencv_python",
+    "dotenv": "python_dotenv",
+    "sklearn": "scikit_learn",
+    "dateutil": "python_dateutil",
+    "jose": "python_jose",
+    "attr": "attrs",
+    "OpenSSL": "pyopenssl",
+    "git": "gitpython",
 }
 
 
 def is_test_file(rel: str) -> bool:
     name = rel.rsplit("/", 1)[-1]
     return (
-        rel.startswith("test/") or rel.startswith("tests/") or "/tests/" in rel or "/test/" in rel
-        or name.startswith("test_") or name.endswith("_test.py")
-        or ".test." in name or ".spec." in name
+        rel.startswith("test/")
+        or rel.startswith("tests/")
+        or "/tests/" in rel
+        or "/test/" in rel
+        or name.startswith("test_")
+        or name.endswith("_test.py")
+        or ".test." in name
+        or ".spec." in name
     )
 
 
@@ -157,7 +207,11 @@ def python_defs_and_refs(text: str):
             refs.add(node.id)
         elif isinstance(node, ast.Attribute):
             refs.add(node.attr)
-        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and IDENT.match(node.value):
+        elif (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and IDENT.match(node.value)
+        ):
             refs.add(node.value)  # __all__ / registry-by-string
         elif isinstance(node, (ast.Import, ast.ImportFrom)):
             for alias in node.names:
@@ -285,6 +339,7 @@ def local_module_roots(root: Path) -> set[str]:
             elif child.suffix == ".py":
                 tops.add(child.stem)
     except OSError:
+        # Directory listing failed (permissions/race) — return whatever we collected.
         pass
     return tops
 
@@ -321,12 +376,17 @@ def find_entrypoints(root: Path, texts: dict) -> list:
         try:
             data = json.loads(pkg.read_text(encoding="utf-8"))
             bin_field = data.get("bin")
-            names = bin_field.keys() if isinstance(bin_field, dict) else ([bin_field] if bin_field else [])
+            names = (
+                bin_field.keys()
+                if isinstance(bin_field, dict)
+                else ([bin_field] if bin_field else [])
+            )
             for name in names:
                 entrypoints.append({"kind": "npm_bin", "name": str(name)})
-            for name in (data.get("scripts") or {}):
+            for name in data.get("scripts") or {}:
                 entrypoints.append({"kind": "npm_script", "name": name})
         except (ValueError, OSError):
+            # Unreadable or invalid package.json — continue with other entrypoint sources.
             pass
     for rel, text in texts.items():
         if rel.endswith(".py") and "__main__" in text:
@@ -362,7 +422,7 @@ def scan(root: Path) -> dict:
     wire = read_wire_corpus(root)
 
     # ---- Python: global reference index (all files, tests included as refs) ----
-    py_defs = {}            # rel -> set of candidate-eligible defs
+    py_defs = {}  # rel -> set of candidate-eligible defs
     py_refs_global = set()  # every referenced name anywhere
     syntax_errors = []
     for rel, text in texts.items():
@@ -386,7 +446,8 @@ def scan(root: Path) -> dict:
             name_to_files.setdefault(symbol, []).append(rel)
     duplicate_twins = [
         {"symbol": name, "files": sorted(fs)}
-        for name, fs in sorted(name_to_files.items()) if len(fs) > 1
+        for name, fs in sorted(name_to_files.items())
+        if len(fs) > 1
     ]
 
     staged_flags, retired_names = intent_scan(root)
@@ -396,14 +457,24 @@ def scan(root: Path) -> dict:
     entrypoints = find_entrypoints(root, texts)
     entrypoint_pkgs = {
         str(e.get("name", "")).split("/")[0]
-        for e in entrypoints if e.get("kind") in {"python_main", "script_file"}
+        for e in entrypoints
+        if e.get("kind") in {"python_main", "script_file"}
     }
 
     candidates = []
     seen = set()
 
-    def add(cls, path, symbol, evidence, verify, flag_bonus=0, intent=None,
-            recommended_verdict=None, extra=None):
+    def add(
+        cls,
+        path,
+        symbol,
+        evidence,
+        verify,
+        flag_bonus=0,
+        intent=None,
+        recommended_verdict=None,
+        extra=None,
+    ):
         key = (cls, path, symbol)
         if key in seen:
             return
@@ -416,8 +487,12 @@ def scan(root: Path) -> dict:
             score += 1
         confidence = "high" if score >= 3 else "medium" if score == 2 else "low"
         entry = {
-            "utilization_gap_class": cls, "path": path, "symbol": symbol,
-            "evidence": evidence, "score": score, "confidence": confidence,
+            "utilization_gap_class": cls,
+            "path": path,
+            "symbol": symbol,
+            "evidence": evidence,
+            "score": score,
+            "confidence": confidence,
             "verify": verify,
         }
         if twins:
@@ -437,9 +512,13 @@ def scan(root: Path) -> dict:
         for symbol in sorted(defs - py_refs_global):
             if symbol in ("upgrade", "downgrade") and is_migration_file(rel):
                 continue
-            add("inactive_component", rel, symbol,
+            add(
+                "inactive_component",
+                rel,
+                symbol,
                 f"top-level '{symbol}' in {rel} is referenced nowhere in the repo (imports, calls, __all__, or registry strings)",
-                "Confirm no reflection/getattr or external-package consumer before treating as inactive.")
+                "Confirm no reflection/getattr or external-package consumer before treating as inactive.",
+            )
 
     # ---- inactive_component: JS/TS exports referenced nowhere ----
     for rel, text in texts.items():
@@ -456,9 +535,13 @@ def scan(root: Path) -> dict:
                 other != rel and pattern.search(otext) for other, otext in texts.items()
             )
             if not referenced_elsewhere:
-                add("inactive_component", rel, symbol,
+                add(
+                    "inactive_component",
+                    rel,
+                    symbol,
                     f"exported '{symbol}' in {rel} has no \\b-matched reference in any other file",
-                    "Confirm no dynamic import, registry, or config-driven consumer before treating as inactive.")
+                    "Confirm no dynamic import, registry, or config-driven consumer before treating as inactive.",
+                )
 
     # ---- broken_partial_wiring: unwired executables (dead-end wiring) ----
     unwired_executables = []
@@ -507,13 +590,27 @@ def scan(root: Path) -> dict:
         extra = {"suggested_wiring": wiring}
         if doc_refs:
             extra["doc_only_refs"] = sorted(doc_refs)[:8]
-        add("broken_partial_wiring", rel, base, evidence,
+        add(
+            "broken_partial_wiring",
+            rel,
+            base,
+            evidence,
             "Confirm the executable is repository-owned, runnable, and NOT dormant_by_design; "
             "if it should run automatically, add the suggested Makefile/CI/hook target. If it "
             "mutates files, wire it read-only or opt-in, never as an unattended auto-fix.",
-            flag_bonus=1, intent=intent, recommended_verdict=verdict, extra=extra)
-        unwired_executables.append({"path": rel, "doc_only": bool(doc_refs) and not code_refs,
-                                    "suggested_wiring": wiring, "recommended_verdict": verdict})
+            flag_bonus=1,
+            intent=intent,
+            recommended_verdict=verdict,
+            extra=extra,
+        )
+        unwired_executables.append(
+            {
+                "path": rel,
+                "doc_only": bool(doc_refs) and not code_refs,
+                "suggested_wiring": wiring,
+                "recommended_verdict": verdict,
+            }
+        )
 
     # ---- dangling_reference: broken / phantom / archived-only imports ----
     dangling_references = []
@@ -529,39 +626,63 @@ def scan(root: Path) -> dict:
             if res == "local":
                 return
             if res == "archived_only":
-                add("dangling_reference", rel, mod_full,
+                add(
+                    "dangling_reference",
+                    rel,
+                    mod_full,
                     f"{rel} {kind} '{mod_full}', which resolves only under an _archived/ path",
                     "The referenced module was archived. Repoint to the live replacement or remove the reference; "
                     "do not un-archive dormant_by_design code.",
-                    flag_bonus=2)
-                dangling_references.append({"path": rel, "module": mod_full, "reason": "archived_only", "via": kind})
+                    flag_bonus=2,
+                )
+                dangling_references.append(
+                    {"path": rel, "module": mod_full, "reason": "archived_only", "via": kind}
+                )
                 return
             # local root exists but the dotted submodule file does not
-            add("dangling_reference", rel, mod_full,
+            add(
+                "dangling_reference",
+                rel,
+                mod_full,
                 f"{rel} {kind} '{mod_full}', but that submodule does not exist under the local '{mod_root}' package",
                 "Broken intra-repo import. Fix the path or implement the missing module; verify it is not a "
                 "deliberately-deferred gap (leave-broken) before acting.",
-                flag_bonus=2)
-            dangling_references.append({"path": rel, "module": mod_full, "reason": "missing_local_submodule", "via": kind})
+                flag_bonus=2,
+            )
+            dangling_references.append(
+                {"path": rel, "module": mod_full, "reason": "missing_local_submodule", "via": kind}
+            )
             return
         res = module_resolution(root, mod_full)
         if res == "local":
             return
         if res == "archived_only":
-            add("dangling_reference", rel, mod_full,
+            add(
+                "dangling_reference",
+                rel,
+                mod_full,
                 f"{rel} {kind} '{mod_full}', which resolves only under an _archived/ path",
                 "Archived-module reference. Repoint to the live replacement or remove it.",
-                flag_bonus=2)
-            dangling_references.append({"path": rel, "module": mod_full, "reason": "archived_only", "via": kind})
+                flag_bonus=2,
+            )
+            dangling_references.append(
+                {"path": rel, "module": mod_full, "reason": "archived_only", "via": kind}
+            )
             return
         # not stdlib, not a declared dep, not local, not archived → phantom/undeclared
-        add("dangling_reference", rel, mod_full,
+        add(
+            "dangling_reference",
+            rel,
+            mod_full,
             f"{rel} {kind} '{mod_full}': root '{mod_root}' is not stdlib, not a declared dependency "
             "(pyproject/requirements), and does not resolve in-repo",
             "Verify the module is actually installed (an undeclared 3rd-party dep with a different import name) "
             "OR is a phantom/never-created module. If phantom, remove or implement it; do not treat as latent capability.",
-            flag_bonus=1)
-        dangling_references.append({"path": rel, "module": mod_full, "reason": "unresolved_phantom", "via": kind})
+            flag_bonus=1,
+        )
+        dangling_references.append(
+            {"path": rel, "module": mod_full, "reason": "unresolved_phantom", "via": kind}
+        )
 
     for rel, text in texts.items():
         if not rel.endswith(".py") or is_excluded(rel):
@@ -577,10 +698,14 @@ def scan(root: Path) -> dict:
 
     # ---- syntax_error candidates (cracked; cannot import/run) ----
     for se in syntax_errors:
-        add("miswired_file", se["path"], se["path"].rsplit("/", 1)[-1],
+        add(
+            "miswired_file",
+            se["path"],
+            se["path"].rsplit("/", 1)[-1],
             f"{se['path']} fails to parse (SyntaxError at line {se.get('line')}: {se.get('error')})",
             "The file cannot be imported or executed as-is. Fix the syntax before any wiring or activation.",
-            flag_bonus=2)
+            flag_bonus=2,
+        )
 
     # ---- Named off-by-default feature flags ----
     for rel, text in texts.items():
@@ -593,16 +718,26 @@ def scan(root: Path) -> dict:
             context = lines[line_no - 1] if 0 <= line_no - 1 < len(lines) else ""
             staged = flag_name in staged_flags or bool(STAGED_MARKER.search(context))
             if staged:
-                add("dormant_capability", rel, flag_name,
+                add(
+                    "dormant_capability",
+                    rel,
+                    flag_name,
                     f"{rel}:{line_no}: named feature flag '{m.group(0).strip()}' defaults off, "
                     "but repo intent signals mark it as staged rollout / dormant_by_design",
                     "Identity-Lock #1 forbids activating dormant_by_design capability — treat as do_not_activate unless the rollout intent is proven complete and retired.",
-                    flag_bonus=0, intent="staged_rollout", recommended_verdict="do_not_activate")
+                    flag_bonus=0,
+                    intent="staged_rollout",
+                    recommended_verdict="do_not_activate",
+                )
             else:
-                add("dormant_capability", rel, flag_name,
+                add(
+                    "dormant_capability",
+                    rel,
+                    flag_name,
                     f"{rel}:{line_no}: named feature flag '{m.group(0).strip()}' defaults off",
                     "Confirm the feature is complete and NOT dormant_by_design (an intentional staged-rollout flag is not underutilization).",
-                    flag_bonus=1)
+                    flag_bonus=1,
+                )
 
     def _dedupe(rows, keys):
         out, seen_rows = [], set()
@@ -613,6 +748,7 @@ def scan(root: Path) -> dict:
             seen_rows.add(k)
             out.append(r)
         return out
+
     dangling_references = _dedupe(dangling_references, ("path", "module", "reason"))
     unwired_executables = _dedupe(unwired_executables, ("path",))
 
@@ -620,7 +756,9 @@ def scan(root: Path) -> dict:
 
     class_counts: dict[str, int] = {}
     for c in candidates:
-        class_counts[c["utilization_gap_class"]] = class_counts.get(c["utilization_gap_class"], 0) + 1
+        class_counts[c["utilization_gap_class"]] = (
+            class_counts.get(c["utilization_gap_class"], 0) + 1
+        )
 
     return {
         "repo": str(root),
@@ -634,16 +772,16 @@ def scan(root: Path) -> dict:
         "syntax_errors": syntax_errors,
         "duplicate_twins": duplicate_twins,
         "note": "CANDIDATE gaps — advisory only, ranked by suspicion (score). Verify each with "
-                "the latent-capability reachability law before authoring a finding. Classes: "
-                "inactive_component (dead symbol), broken_partial_wiring (unwired executable — see "
-                "suggested_wiring to add a Makefile/CI/hook target), dangling_reference (broken/phantom/"
-                "archived import), miswired_file (syntax-broken), dormant_capability (off-by-default flag). "
-                "A same-name twin usually means one copy is live — activating the orphan reintroduces "
-                "duplication. intent=staged_rollout / recommended_verdict=do_not_activate is "
-                "dormant_by_design (Identity-Lock #1) — do NOT activate. Anything under _archived/ is "
-                "excluded from reactivation candidates by design. This scan does NOT cover registry/manifest "
-                "inventory drift (e.g. a skill/plugin folder on disk missing from its manifest) or "
-                "config/doc path references to deleted files — run those diffs manually per SKILL.md Diagnosis.",
+        "the latent-capability reachability law before authoring a finding. Classes: "
+        "inactive_component (dead symbol), broken_partial_wiring (unwired executable — see "
+        "suggested_wiring to add a Makefile/CI/hook target), dangling_reference (broken/phantom/"
+        "archived import), miswired_file (syntax-broken), dormant_capability (off-by-default flag). "
+        "A same-name twin usually means one copy is live — activating the orphan reintroduces "
+        "duplication. intent=staged_rollout / recommended_verdict=do_not_activate is "
+        "dormant_by_design (Identity-Lock #1) — do NOT activate. Anything under _archived/ is "
+        "excluded from reactivation candidates by design. This scan does NOT cover registry/manifest "
+        "inventory drift (e.g. a skill/plugin folder on disk missing from its manifest) or "
+        "config/doc path references to deleted files — run those diffs manually per SKILL.md Diagnosis.",
     }
 
 

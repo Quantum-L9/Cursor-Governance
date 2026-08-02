@@ -12,6 +12,7 @@ Produces the `performance`/`proof` shape the pack spec consumes. Two modes:
 Stdlib-only. Timing is inherently non-deterministic; this tool measures, it does
 not pin time. Use it to generate evidence, then paste values into the spec.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,15 +24,18 @@ import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
 
 
-def run_once(command: list[str], capture: bool, cwd: str | None = None) -> tuple[float, float | None]:
+def run_once(
+    command: list[str], capture: bool, cwd: str | None = None
+) -> tuple[float, float | None]:
     start = time.perf_counter()
     proc = subprocess.run(command, text=True, capture_output=True, check=False, cwd=cwd)
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     if proc.returncode != 0:
-        raise RuntimeError(f"command failed ({proc.returncode}): {' '.join(command)}\n{proc.stderr}")
+        raise RuntimeError(
+            f"command failed ({proc.returncode}): {' '.join(command)}\n{proc.stderr}"
+        )
     number = None
     if capture:
         lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
@@ -45,7 +49,9 @@ def run_once(command: list[str], capture: bool, cwd: str | None = None) -> tuple
     return elapsed_ms, number
 
 
-def measure(command: list[str], samples: int, capture: bool, cwd: str | None = None) -> tuple[float, float | None]:
+def measure(
+    command: list[str], samples: int, capture: bool, cwd: str | None = None
+) -> tuple[float, float | None]:
     times: list[float] = []
     numbers: list[float] = []
     for _ in range(samples):
@@ -65,10 +71,16 @@ def main() -> int:
     parser.add_argument("--samples", type=int, default=3)
     parser.add_argument("--metric", default="wall_clock")
     parser.add_argument("--unit", default="ms")
-    parser.add_argument("--capture", action="store_true",
-                        help="parse a numeric from each command's last stdout line (functional metric)")
-    parser.add_argument("--repo", help="git repo path; with --before-ref, run --before in a throwaway "
-                                       "worktree checked out at that ref (produces the unpatched baseline)")
+    parser.add_argument(
+        "--capture",
+        action="store_true",
+        help="parse a numeric from each command's last stdout line (functional metric)",
+    )
+    parser.add_argument(
+        "--repo",
+        help="git repo path; with --before-ref, run --before in a throwaway "
+        "worktree checked out at that ref (produces the unpatched baseline)",
+    )
     parser.add_argument("--before-ref", help="git ref for the --before baseline (requires --repo)")
     parser.add_argument("--output", type=argparse.FileType("w"), default=sys.stdout)
     args = parser.parse_args()
@@ -86,8 +98,12 @@ def main() -> int:
         before_cwd: str | None = None
         if args.before_ref:
             worktree = tempfile.mkdtemp(prefix="measure-before-")
-            add = subprocess.run(["git", "-C", args.repo, "worktree", "add", "--detach", worktree, args.before_ref],
-                                 text=True, capture_output=True, check=False)
+            add = subprocess.run(
+                ["git", "-C", args.repo, "worktree", "add", "--detach", worktree, args.before_ref],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
             if add.returncode != 0:
                 print(f"FAIL: git worktree add failed: {add.stderr.strip()}", file=sys.stderr)
                 return 2
@@ -99,8 +115,12 @@ def main() -> int:
         return 2
     finally:
         if worktree is not None:
-            subprocess.run(["git", "-C", args.repo, "worktree", "remove", "--force", worktree],
-                           text=True, capture_output=True, check=False)
+            subprocess.run(
+                ["git", "-C", args.repo, "worktree", "remove", "--force", worktree],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
 
     activation = False
     if args.capture and before_num is not None and after_num is not None:
@@ -108,7 +128,10 @@ def main() -> int:
         before_value, after_value = before_num, after_num
         if before_value == 0:
             if after_value <= 0:
-                print("FAIL: capture activation proof requires candidate > 0 from a zero baseline", file=sys.stderr)
+                print(
+                    "FAIL: capture activation proof requires candidate > 0 from a zero baseline",
+                    file=sys.stderr,
+                )
                 return 2
             improvement, activation = None, True  # explicit 0 -> N activation, not a silent null
         else:
@@ -117,15 +140,31 @@ def main() -> int:
     else:
         metric, unit, direction = "wall_clock", "ms", "lower_is_better"
         before_value, after_value = before_time, after_time
-        improvement = None if before_value == 0 else round(100.0 * (before_value - after_value) / before_value, 2)
+        improvement = (
+            None
+            if before_value == 0
+            else round(100.0 * (before_value - after_value) / before_value, 2)
+        )
         method = f"Throughput proof: same workload, compare median wall-clock over {args.samples} samples (lower is better)."
 
     proof = {
         "direction": direction,
-        "baseline": {"command": args.before, "metric": metric, "unit": unit, "value": before_value, "samples": args.samples,
-                     "evidence": f"median of {args.samples} runs"},
-        "candidate": {"command": args.after, "metric": metric, "unit": unit, "value": after_value, "samples": args.samples,
-                      "evidence": f"median of {args.samples} runs"},
+        "baseline": {
+            "command": args.before,
+            "metric": metric,
+            "unit": unit,
+            "value": before_value,
+            "samples": args.samples,
+            "evidence": f"median of {args.samples} runs",
+        },
+        "candidate": {
+            "command": args.after,
+            "metric": metric,
+            "unit": unit,
+            "value": after_value,
+            "samples": args.samples,
+            "evidence": f"median of {args.samples} runs",
+        },
         "improvement_percent": improvement,
         "activation": activation,
         "comparison_method": method,

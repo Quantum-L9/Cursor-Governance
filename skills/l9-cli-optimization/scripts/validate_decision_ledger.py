@@ -1,19 +1,34 @@
 #!/usr/bin/env python3
 """Validate the adaptive execution route and evidence/decision ledger."""
+
 from __future__ import annotations
+
 import argparse
 import json
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
 ROUTE_ACTIONS = {"proceed", "proceed_with_validation", "bounded_probe", "blocked_pack"}
 FINAL_ACTIONS = ROUTE_ACTIONS
 PROOF_STATUSES = {"pending", "satisfied", "blocked"}
 CONVERGENCE = {"converged", "partial", "blocked"}
-CAPABILITY_GAPS = {"inactive_component", "miswired_file", "dormant_capability", "unused_signal", "orphaned_config_schema", "broken_partial_wiring", "latent_capability_wiring"}
-WIRING_STRATEGIES = {"activate_latent_capability", "repair_wiring", "connect_signal_consumer", "surface_existing_cli_path"}
+CAPABILITY_GAPS = {
+    "inactive_component",
+    "miswired_file",
+    "dormant_capability",
+    "unused_signal",
+    "orphaned_config_schema",
+    "broken_partial_wiring",
+    "latent_capability_wiring",
+}
+WIRING_STRATEGIES = {
+    "activate_latent_capability",
+    "repair_wiring",
+    "connect_signal_consumer",
+    "surface_existing_cli_path",
+}
 
 
 def _ids(items: Any, field: str, pattern: str, errors: list[str]) -> dict[str, dict[str, Any]]:
@@ -40,7 +55,9 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
     route = spec.get("execution_route")
     ledger = spec.get("decision_ledger")
     if not isinstance(route, dict):
-        return ["execution_route must be an object (pass the combined spec, a pack directory, or DECISION_LEDGER.json beside EXECUTION_ROUTE.json)"]
+        return [
+            "execution_route must be an object (pass the combined spec, a pack directory, or DECISION_LEDGER.json beside EXECUTION_ROUTE.json)"
+        ]
     if not isinstance(ledger, dict):
         return ["decision_ledger must be an object"]
 
@@ -60,7 +77,12 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
         value = route.get(field)
         if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
             errors.append(f"execution_route.{field} must be a non-empty string array")
-    route_proofs = _ids(route.get("proof_obligations"), "execution_route.proof_obligations", r"PO-[A-Z0-9-]+", errors)
+    route_proofs = _ids(
+        route.get("proof_obligations"),
+        "execution_route.proof_obligations",
+        r"PO-[A-Z0-9-]+",
+        errors,
+    )
     for proof_id, proof in route_proofs.items():
         if not isinstance(proof.get("description"), str) or not proof["description"].strip():
             errors.append(f"route proof {proof_id} requires description")
@@ -91,7 +113,11 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
 
     options = _ids(ledger.get("options"), "decision_ledger.options", r"CLI-OPT-[0-9]{3}", errors)
     selected = ledger.get("selected_option_ids")
-    if not isinstance(selected, list) or not selected or not all(isinstance(item, str) for item in selected):
+    if (
+        not isinstance(selected, list)
+        or not selected
+        or not all(isinstance(item, str) for item in selected)
+    ):
         errors.append("decision_ledger.selected_option_ids must be a non-empty string array")
         selected = []
     if len(set(selected)) != len(selected):
@@ -113,7 +139,13 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
     for unknown_id, unknown in unknowns.items():
         if not isinstance(unknown.get("material"), bool):
             errors.append(f"unknown {unknown_id} material must be boolean")
-        if unknown.get("disposition") not in {"resolved", "probe", "constraint", "handoff", "block"}:
+        if unknown.get("disposition") not in {
+            "resolved",
+            "probe",
+            "constraint",
+            "handoff",
+            "block",
+        }:
             errors.append(f"unknown {unknown_id} disposition is invalid")
         if unknown.get("material") is True and unknown.get("disposition") != "resolved":
             material_unresolved.add(unknown_id)
@@ -121,7 +153,12 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
             errors.append(f"unknown {unknown_id} evidence must be an array")
 
     _ids(ledger.get("probes"), "decision_ledger.probes", r"PRB-[0-9]{3}", errors)
-    ledger_proofs = _ids(ledger.get("proof_obligations"), "decision_ledger.proof_obligations", r"PO-[A-Z0-9-]+", errors)
+    ledger_proofs = _ids(
+        ledger.get("proof_obligations"),
+        "decision_ledger.proof_obligations",
+        r"PO-[A-Z0-9-]+",
+        errors,
+    )
     if set(route_proofs) != set(ledger_proofs):
         errors.append("ledger proof obligations must exactly match routed proof obligations")
 
@@ -153,10 +190,14 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
         declared_adapters = set(route.get("required_adapters") or [])
         missing_adapters = required_adapters - declared_adapters
         if missing_adapters:
-            errors.append(f"execution_route.required_adapters under-declares content-required adapters: {sorted(missing_adapters)}")
+            errors.append(
+                f"execution_route.required_adapters under-declares content-required adapters: {sorted(missing_adapters)}"
+            )
         missing_pos = required_pos - set(route_proofs)
         if missing_pos:
-            errors.append(f"execution_route.proof_obligations under-declares content-required obligations: {sorted(missing_pos)}")
+            errors.append(
+                f"execution_route.proof_obligations under-declares content-required obligations: {sorted(missing_pos)}"
+            )
     for proof_id, proof in ledger_proofs.items():
         if proof.get("status") not in PROOF_STATUSES:
             errors.append(f"proof obligation {proof_id} status is invalid")
@@ -201,7 +242,9 @@ def validate_decision_contract(spec: dict[str, Any]) -> list[str]:
             errors.append("PR_READY requires converged decision ledger")
         if material_unresolved:
             errors.append("PR_READY cannot retain material unknowns")
-        blocked_or_pending = [pid for pid, proof in ledger_proofs.items() if proof.get("status") != "satisfied"]
+        blocked_or_pending = [
+            pid for pid, proof in ledger_proofs.items() if proof.get("status") != "satisfied"
+        ]
         if blocked_or_pending:
             errors.append(f"PR_READY has unsatisfied proof obligations: {blocked_or_pending}")
     if status == "BLOCKED" and decision.get("final_action") != "blocked_pack":
@@ -229,7 +272,10 @@ def _load_contract_input(path: Path) -> dict:
                 "DECISION_LEDGER.json has no execution_route; expected sibling "
                 "EXECUTION_ROUTE.json next to it, or pass the pack directory / the combined spec"
             )
-        return {"execution_route": json.loads(sibling.read_text(encoding="utf-8")), "decision_ledger": data}
+        return {
+            "execution_route": json.loads(sibling.read_text(encoding="utf-8")),
+            "decision_ledger": data,
+        }
     return data
 
 
@@ -250,6 +296,7 @@ def main() -> int:
         return 1
     print("PASS: adaptive route and evidence decision ledger are valid")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

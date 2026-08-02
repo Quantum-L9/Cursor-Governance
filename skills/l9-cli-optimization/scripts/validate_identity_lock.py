@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = {
@@ -35,10 +35,19 @@ REQUIRED_FILES = {
 }
 BANNED = {
     "legacy skill identity": re.compile(r"\b(?:un)?throttle-cli-pr-pack\b", re.IGNORECASE),
-    "legacy product reference": re.compile(r"references/throttle-cli-product-contract\.md", re.IGNORECASE),
-    "throttle implementation objective": re.compile(r"\b(?:build|add|implement|create)\s+(?:a\s+)?(?:deployable\s+)?throttle\b", re.IGNORECASE),
-    "rate limiter objective": re.compile(r"\b(?:add|build|implement|create)\s+(?:a\s+)?(?:deterministic\s+)?rate limit(?:er|ing)\b", re.IGNORECASE),
-    "legacy model selector": re.compile(r"select_throttle_model|deployable_throttle_cli", re.IGNORECASE),
+    "legacy product reference": re.compile(
+        r"references/throttle-cli-product-contract\.md", re.IGNORECASE
+    ),
+    "throttle implementation objective": re.compile(
+        r"\b(?:build|add|implement|create)\s+(?:a\s+)?(?:deployable\s+)?throttle\b", re.IGNORECASE
+    ),
+    "rate limiter objective": re.compile(
+        r"\b(?:add|build|implement|create)\s+(?:a\s+)?(?:deterministic\s+)?rate limit(?:er|ing)\b",
+        re.IGNORECASE,
+    ),
+    "legacy model selector": re.compile(
+        r"select_throttle_model|deployable_throttle_cli", re.IGNORECASE
+    ),
     "audit-only terminal output": re.compile(r"terminal_artifact:\s*audit", re.IGNORECASE),
 }
 
@@ -73,16 +82,16 @@ def main() -> int:
     # M3: one distinctive phrase per numbered Identity Lock invariant (1..11), so
     # deleting any invariant fails the gate (previously only ~3 were covered).
     invariant_phrases = [
-        "Enable a proven, underutilized repository-owned capability",   # 1
-        "Preserve correctness, compatibility, safety",                  # 2
-        "Never implement a new throttle",                               # 3
-        "Produce a deployable PR commit pack, not an audit-only report",# 4
-        "Synthesize all material findings before selecting",            # 5
-        "Apply leverage after synthesis",                               # 6
-        "Treat unproven reachability",                                  # 7
+        "Enable a proven, underutilized repository-owned capability",  # 1
+        "Preserve correctness, compatibility, safety",  # 2
+        "Never implement a new throttle",  # 3
+        "Produce a deployable PR commit pack, not an audit-only report",  # 4
+        "Synthesize all material findings before selecting",  # 5
+        "Apply leverage after synthesis",  # 6
+        "Treat unproven reachability",  # 7
         "Preserve unresolved out-of-scope documentation-code divergence",  # 8
-        "Route only the proof obligations required",                    # 9
-        "Run at most three implementation-validation cycles",           # 10
+        "Route only the proof obligations required",  # 9
+        "Run at most three implementation-validation cycles",  # 10
         "Require comparable performance proof before claiming improvement",  # 11
     ]
     for index, phrase in enumerate(invariant_phrases, start=1):

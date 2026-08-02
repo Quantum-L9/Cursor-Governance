@@ -22,6 +22,7 @@ report). Stdlib-only. Honesty: the test delta is the real captured flags-off →
 flags-on result; nothing is fabricated. A report where `applied` is false emits a
 BLOCKED pack (no flips) and exits 2.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,7 +31,7 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -49,7 +50,7 @@ def _created_utc(report: dict) -> str:
         return str(report["created_utc"])
     if epoch:
         try:
-            return datetime.fromtimestamp(int(epoch), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            return datetime.fromtimestamp(int(epoch), tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         except ValueError as exc:
             raise PackError("SOURCE_DATE_EPOCH must be an integer") from exc
     return "1970-01-01T00:00:00Z"
@@ -73,9 +74,14 @@ def _flipped_content(repo: Path, rel: str, rows: list[dict]) -> tuple[str, str]:
 
 
 def _unified(rel: str, original: str, flipped: str) -> str:
-    return "".join(difflib.unified_diff(
-        original.splitlines(keepends=True), flipped.splitlines(keepends=True),
-        fromfile=f"a/{rel}", tofile=f"b/{rel}"))
+    return "".join(
+        difflib.unified_diff(
+            original.splitlines(keepends=True),
+            flipped.splitlines(keepends=True),
+            fromfile=f"a/{rel}",
+            tofile=f"b/{rel}",
+        )
+    )
 
 
 def _write(path: Path, content: str) -> None:
@@ -106,7 +112,9 @@ def _render_report_md(report: dict) -> str:
     ]
     if activated:
         for row in report.get("activated_flag_rows", []):
-            lines.append(f"- `{row['flag']}` — {row['file']}:{row['line']} ({row.get('kind', 'flag')})")
+            lines.append(
+                f"- `{row['flag']}` — {row['file']}:{row['line']} ({row.get('kind', 'flag')})"
+            )
     else:
         lines.append("- (none — every candidate was danger-excluded or regressed tests)")
     lines += ["", "## Excluded — danger block-list (never flipped, polarity-aware)", ""]
@@ -135,52 +143,66 @@ def _render_report_md(report: dict) -> str:
 
 def _render_pr_body(report: dict) -> str:
     activated = report.get("activated_flags", [])
-    return "\n".join([
-        "# Full-throttle flag activation — REVIEW REQUIRED, do not auto-merge",
-        "",
-        "This PR flips off-by-default feature flags **on** and commits the new defaults.",
-        "Each flip is non-danger (polarity-aware classifier), non-staged, and was proven",
-        "against the repository's own test suite in an isolated git worktree.",
-        "",
-        f"**Flags activated ({len(activated)}):** " + (", ".join(f"`{f}`" for f in activated) or "none"),
-        "",
-        "**Safety:** danger-class flags (delete/deploy/charge/auth-disable/…) were never",
-        "flipped; flags that regressed tests were backed out and reported. See",
-        "`evidence/FULL_THROTTLE_REPORT.md` for the full inventory, exclusions, and the",
-        "real flags-off → flags-on test delta.",
-        "",
-        "> This mode deliberately activates capability the repo defaults off. A human must",
-        "> review and merge; the skill never auto-merges a full-throttle pack.",
-        "",
-    ]) + "\n"
+    return (
+        "\n".join(
+            [
+                "# Full-throttle flag activation — REVIEW REQUIRED, do not auto-merge",
+                "",
+                "This PR flips off-by-default feature flags **on** and commits the new defaults.",
+                "Each flip is non-danger (polarity-aware classifier), non-staged, and was proven",
+                "against the repository's own test suite in an isolated git worktree.",
+                "",
+                f"**Flags activated ({len(activated)}):** "
+                + (", ".join(f"`{f}`" for f in activated) or "none"),
+                "",
+                "**Safety:** danger-class flags (delete/deploy/charge/auth-disable/…) were never",
+                "flipped; flags that regressed tests were backed out and reported. See",
+                "`evidence/FULL_THROTTLE_REPORT.md` for the full inventory, exclusions, and the",
+                "real flags-off → flags-on test delta.",
+                "",
+                "> This mode deliberately activates capability the repo defaults off. A human must",
+                "> review and merge; the skill never auto-merges a full-throttle pack.",
+                "",
+            ]
+        )
+        + "\n"
+    )
 
 
 def _render_readme(report: dict, pack_name: str) -> str:
-    return "\n".join([
-        f"# {pack_name}",
-        "",
-        f"Strategy: `{STRATEGY}` (review-required).",
-        "",
-        "Apply the activation:",
-        "",
-        "```bash",
-        "git apply --index change/commit.patch",
-        "```",
-        "",
-        "Or copy the full files under `change/files/` over their repository paths.",
-        "Then run the repository's own test command and open the PR from `pr/PR_BODY.md`.",
-        "Verify `evidence/FULL_THROTTLE_REPORT.md` before merging. Never auto-merge.",
-        "",
-    ]) + "\n"
+    return (
+        "\n".join(
+            [
+                f"# {pack_name}",
+                "",
+                f"Strategy: `{STRATEGY}` (review-required).",
+                "",
+                "Apply the activation:",
+                "",
+                "```bash",
+                "git apply --index change/commit.patch",
+                "```",
+                "",
+                "Or copy the full files under `change/files/` over their repository paths.",
+                "Then run the repository's own test command and open the PR from `pr/PR_BODY.md`.",
+                "Verify `evidence/FULL_THROTTLE_REPORT.md` before merging. Never auto-merge.",
+                "",
+            ]
+        )
+        + "\n"
+    )
 
 
 def build(report_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path, int]:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     repo = repo_root.resolve()
-    pack_name = report.get("pack_name") or ("full-throttle-" + Path(report.get("repo", "repo")).name)
+    pack_name = report.get("pack_name") or (
+        "full-throttle-" + Path(report.get("repo", "repo")).name
+    )
     pack_root = output_parent / pack_name
     if pack_root.exists():
         import shutil
+
         shutil.rmtree(pack_root)
     pack_root.mkdir(parents=True)
 
@@ -221,8 +243,8 @@ def build(report_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path
         "test_command": report.get("test_command", []),
         "changed_files": sorted(by_file),
         "identity_lock_note": "full-throttle activation is a bounded, test-proven exception to "
-                              "Identity-Lock #1; danger flags and staged/dormant_by_design flags are "
-                              "never flipped, and the PR is never auto-merged.",
+        "Identity-Lock #1; danger flags and staged/dormant_by_design flags are "
+        "never flipped, and the PR is never auto-merged.",
     }
     _write(pack_root / "MANIFEST.json", json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
@@ -241,7 +263,9 @@ def _write_checksums(pack_root: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", type=Path, required=True, help="full_throttle.py --mode apply output")
+    parser.add_argument(
+        "--report", type=Path, required=True, help="full_throttle.py --mode apply output"
+    )
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)

@@ -16,6 +16,7 @@ nothing; `flip_flag()` returns edited text, it does not write. The core scan /
 PR-pack pipeline and its `dormant_by_design` guarantees are untouched by this
 module.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -55,19 +56,32 @@ FLAG_NAME = re.compile(
 # JSON-Schema / meta keywords that appear as `key: false` but are schema
 # declarations, not feature flags.
 SCHEMA_KEYWORDS = {
-    "additionalproperties", "uniqueitems", "required", "nullable", "deprecated",
-    "readonly", "writeonly", "strict", "exclusiveminimum", "exclusivemaximum",
-    "propertynames", "unevaluatedproperties", "additionalitems",
+    "additionalproperties",
+    "uniqueitems",
+    "required",
+    "nullable",
+    "deprecated",
+    "readonly",
+    "writeonly",
+    "strict",
+    "exclusiveminimum",
+    "exclusivemaximum",
+    "propertynames",
+    "unevaluatedproperties",
+    "additionalitems",
 }
 # Path segments that mark scratch / harvested / work-in-progress trees whose
 # contents are not the repo's live config.
-_NOISE_SEG = re.compile(r"(?:^|[\s_\-/])(?:wip|harvested|current_work|backup|backups|snapshot)(?:$|[\s_\-/])", re.IGNORECASE)
+_NOISE_SEG = re.compile(
+    r"(?:^|[\s_\-/])(?:wip|harvested|current_work|backup|backups|snapshot)(?:$|[\s_\-/])",
+    re.IGNORECASE,
+)
 # Config files that are templates / versioned specs / examples, not the runtime
 # config the engine loads — flipping a flag in them changes nothing at runtime.
 _NONRUNTIME_CFG = re.compile(
-    r"(?:^|/)_?template[\w.\-]*\.(?:ya?ml|json|toml|ini)$"      # _template.yaml
+    r"(?:^|/)_?template[\w.\-]*\.(?:ya?ml|json|toml|ini)$"  # _template.yaml
     r"|[-_]v\d+(?:[._]\d+)*[\w.\-]*\.(?:ya?ml|json|toml|ini)$"  # ...-v1.1.0.yaml / _v0.3.0.yaml
-    r"|[-_]spec[-_]v[\w.\-]*\.(?:ya?ml|json)$"                  # ...-spec-v1.1.0.yaml
+    r"|[-_]spec[-_]v[\w.\-]*\.(?:ya?ml|json)$"  # ...-spec-v1.1.0.yaml
     r"|(?:^|/)(?:example|sample)[\w.\-]*\.(?:ya?ml|json|toml|ini)$",
     re.IGNORECASE,
 )
@@ -82,68 +96,236 @@ _NONRUNTIME_PATH = re.compile(
 # k8s / Helm deploy blocks: a generic `enabled` under one of these is an
 # infra/deploy toggle (turn on ingress/autoscaling/pdb), not an app capability.
 INFRA_BLOCKS = {
-    "ingress", "autoscaling", "hpa", "pdb", "poddisruptionbudget",
-    "servicemonitor", "networkpolicy", "serviceaccount", "rbac",
-    "podsecuritypolicy", "prometheus", "grafana", "persistence", "metrics",
+    "ingress",
+    "autoscaling",
+    "hpa",
+    "pdb",
+    "poddisruptionbudget",
+    "servicemonitor",
+    "networkpolicy",
+    "serviceaccount",
+    "rbac",
+    "podsecuritypolicy",
+    "prometheus",
+    "grafana",
+    "persistence",
+    "metrics",
 }
 
 # --- danger vocabulary (polarity-aware) ---------------------------------------
 # Turning a flag False->True that ENABLES one of these actions is danger.
 DANGER_ENABLE = {
-    "delete", "deletion", "purge", "drop", "wipe", "destroy", "truncate",
-    "erase", "remove", "prune", "reset", "overwrite", "clobber",
-    "deploy", "publish", "release", "ship", "promote", "rollout",
-    "push", "upload", "commit", "merge", "apply",
-    "charge", "bill", "billing", "payment", "paid", "invoice", "purchase",
-    "live", "prod", "production", "mainnet", "real",
-    "send", "email", "sms", "notify", "webhook", "broadcast", "dispatch",
-    "external", "remote", "network", "egress", "outbound", "internet",
-    "migrate", "migration", "seed", "backfill", "execute", "exec", "shell",
-    "auto", "autonomous", "nonstop", "unattended", "unlimited", "infinite",
+    "delete",
+    "deletion",
+    "purge",
+    "drop",
+    "wipe",
+    "destroy",
+    "truncate",
+    "erase",
+    "remove",
+    "prune",
+    "reset",
+    "overwrite",
+    "clobber",
+    "deploy",
+    "publish",
+    "release",
+    "ship",
+    "promote",
+    "rollout",
+    "push",
+    "upload",
+    "commit",
+    "merge",
+    "apply",
+    "charge",
+    "bill",
+    "billing",
+    "payment",
+    "paid",
+    "invoice",
+    "purchase",
+    "live",
+    "prod",
+    "production",
+    "mainnet",
+    "real",
+    "send",
+    "email",
+    "sms",
+    "notify",
+    "webhook",
+    "broadcast",
+    "dispatch",
+    "external",
+    "remote",
+    "network",
+    "egress",
+    "outbound",
+    "internet",
+    "migrate",
+    "migration",
+    "seed",
+    "backfill",
+    "execute",
+    "exec",
+    "shell",
+    "auto",
+    "autonomous",
+    "nonstop",
+    "unattended",
+    "unlimited",
+    "infinite",
     # supply-chain / code-execution and open-access hardenings — enabling these
     # weakens a control (yarn enableScripts, public sign-up, anonymous access).
-    "script", "scripts", "plugin", "plugins", "eval",
-    "signup", "register", "registration", "anonymous", "public", "guest",
+    "script",
+    "scripts",
+    "plugin",
+    "plugins",
+    "eval",
+    "signup",
+    "register",
+    "registration",
+    "anonymous",
+    "public",
+    "guest",
 }
 # Substring-danger (high-confidence destructive/financial/deploy roots) — catch
 # `autodeploy`, `livecharge`, `deletestore` even without an underscore boundary.
 DANGER_SUBSTR = (
-    "delete", "purge", "destroy", "deploy", "publish", "release", "charge",
-    "billing", "wipe", "truncate", "mainnet", "production",
-    "sign_up", "signup", "enable_scripts", "allow_scripts",
+    "delete",
+    "purge",
+    "destroy",
+    "deploy",
+    "publish",
+    "release",
+    "charge",
+    "billing",
+    "wipe",
+    "truncate",
+    "mainnet",
+    "production",
+    "sign_up",
+    "signup",
+    "enable_scripts",
+    "allow_scripts",
 )
 # Prefixes that, turned on, DISABLE a control -> danger.
 DISABLE_PREFIX = ("disable", "bypass", "skip", "ignore", "suppress", "no", "without", "un")
 # Safety/verification roots — disabling any of these is danger.
 SAFETY_TOKENS = {
-    "auth", "authn", "authz", "login", "permission", "permissions", "acl",
-    "rbac", "secret", "secrets", "credential", "credentials", "token", "tokens",
-    "tls", "ssl", "https", "cert", "certificate", "verify", "verification",
-    "validate", "validation", "check", "checks", "sandbox", "guard", "guardrail",
-    "safety", "safe", "confirm", "confirmation", "approval", "approve", "sign",
-    "signature", "encrypt", "encryption", "audit", "limit", "limits", "quota",
-    "throttle", "ratelimit", "backpressure", "csrf", "cors", "sanitize",
-    "sanitization", "escape", "firewall",
+    "auth",
+    "authn",
+    "authz",
+    "login",
+    "permission",
+    "permissions",
+    "acl",
+    "rbac",
+    "secret",
+    "secrets",
+    "credential",
+    "credentials",
+    "token",
+    "tokens",
+    "tls",
+    "ssl",
+    "https",
+    "cert",
+    "certificate",
+    "verify",
+    "verification",
+    "validate",
+    "validation",
+    "check",
+    "checks",
+    "sandbox",
+    "guard",
+    "guardrail",
+    "safety",
+    "safe",
+    "confirm",
+    "confirmation",
+    "approval",
+    "approve",
+    "sign",
+    "signature",
+    "encrypt",
+    "encryption",
+    "audit",
+    "limit",
+    "limits",
+    "quota",
+    "throttle",
+    "ratelimit",
+    "backpressure",
+    "csrf",
+    "cors",
+    "sanitize",
+    "sanitization",
+    "escape",
+    "firewall",
 }
 # Config parent-block names whose activation is sensitive: a bare `enabled: false`
 # under one of these blocks (e.g. `pii.enabled`, `auth.enabled`) is context-danger
 # even though the leaf key carries no danger token.
 SENSITIVE_BLOCKS = {
-    "pii", "privacy", "gdpr", "phi", "pci",
-    "auth", "authn", "authz", "security", "secret", "secrets",
-    "credential", "credentials", "compliance", "audit_export",
-    "retention", "encryption", "encrypt", "tls", "ssl", "permission",
-    "permissions", "rbac", "acl", "billing", "payment", "charge",
-    "deploy", "deployment", "publish", "release", "killswitch", "kill_switch",
-    "external", "webhook", "egress", "quota",
+    "pii",
+    "privacy",
+    "gdpr",
+    "phi",
+    "pci",
+    "auth",
+    "authn",
+    "authz",
+    "security",
+    "secret",
+    "secrets",
+    "credential",
+    "credentials",
+    "compliance",
+    "audit_export",
+    "retention",
+    "encryption",
+    "encrypt",
+    "tls",
+    "ssl",
+    "permission",
+    "permissions",
+    "rbac",
+    "acl",
+    "billing",
+    "payment",
+    "charge",
+    "deploy",
+    "deployment",
+    "publish",
+    "release",
+    "killswitch",
+    "kill_switch",
+    "external",
+    "webhook",
+    "egress",
+    "quota",
 }
 GENERIC_GATE = {"enabled", "enable", "disabled", "disable", "on", "off", "active", "enforce"}
 
 # Names that, turned on, are self-evidently unsafe regardless of surroundings.
 ALWAYS_DANGER = {
-    "unsafe", "insecure", "unverified", "danger", "dangerous", "force",
-    "allow_insecure", "no_verify", "noverify", "trust_all", "verify_none",
-    "disable_ssl_verify", "allow_all",
+    "unsafe",
+    "insecure",
+    "unverified",
+    "danger",
+    "dangerous",
+    "force",
+    "allow_insecure",
+    "no_verify",
+    "noverify",
+    "trust_all",
+    "verify_none",
+    "disable_ssl_verify",
+    "allow_all",
 }
 
 
@@ -159,9 +341,14 @@ def _tokens(name: str) -> list[str]:
     return out
 
 
-def classify_flag(name: str, context: str, *, staged: bool,
-                  parent: str | None = None,
-                  overrides: dict | None = None) -> tuple[str, str]:
+def classify_flag(
+    name: str,
+    context: str,
+    *,
+    staged: bool,
+    parent: str | None = None,
+    overrides: dict | None = None,
+) -> tuple[str, str]:
     """Classify flipping `name` False->True. Returns (classification, reason).
 
     classification ∈ {danger, staged, safe}. Adapter overrides win first:
@@ -180,7 +367,11 @@ def classify_flag(name: str, context: str, *, staged: bool,
 
     toks = set(_tokens(name))
     # Context-aware: a generic gate under a sensitive parent block is danger.
-    if parent and parent.lower() in SENSITIVE_BLOCKS and (low in GENERIC_GATE or toks & GENERIC_GATE):
+    if (
+        parent
+        and parent.lower() in SENSITIVE_BLOCKS
+        and (low in GENERIC_GATE or toks & GENERIC_GATE)
+    ):
         return "danger", f"flip enables the sensitive '{parent}' block (context-aware)"
     if parent and parent.lower() in SENSITIVE_BLOCKS:
         return "danger", f"flag sits inside the sensitive '{parent}' block"
@@ -250,7 +441,8 @@ def _py_flags(rel: str, text: str) -> list[dict]:
     def _emit_assign(node: ast.Assign) -> None:
         val = node.value
         is_off = (isinstance(val, ast.Constant) and val.value is False) or (
-            isinstance(val, ast.Constant) and val.value == 0 and val.value is not False)
+            isinstance(val, ast.Constant) and val.value == 0 and val.value is not False
+        )
         if not is_off:
             return
         for tgt in node.targets:
@@ -259,9 +451,17 @@ def _py_flags(rel: str, text: str) -> list[dict]:
                 continue
             if FLAG_NAME.search(name):
                 ctx = lines[node.lineno - 1] if 0 <= node.lineno - 1 < len(lines) else ""
-                out.append({"flag": name, "file": rel, "line": node.lineno,
-                            "current": "False" if val.value is False else "0",
-                            "lang": "python", "kind": "python_assignment", "context": ctx})
+                out.append(
+                    {
+                        "flag": name,
+                        "file": rel,
+                        "line": node.lineno,
+                        "current": "False" if val.value is False else "0",
+                        "lang": "python",
+                        "kind": "python_assignment",
+                        "context": ctx,
+                    }
+                )
 
     # Module-level and class-level assignments only — a real feature flag is a
     # module/class constant, not a loop/function-local boolean (which is where the
@@ -278,28 +478,47 @@ def _py_flags(rel: str, text: str) -> list[dict]:
         if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "add_argument":
             name = None
             for a in node.args:
-                if isinstance(a, ast.Constant) and isinstance(a.value, str) and a.value.startswith("--"):
+                if (
+                    isinstance(a, ast.Constant)
+                    and isinstance(a.value, str)
+                    and a.value.startswith("--")
+                ):
                     name = a.value.lstrip("-").replace("-", "_")
             store_true = default_false = False
             for kw in node.keywords:
-                if kw.arg == "action" and isinstance(kw.value, ast.Constant) and kw.value.value == "store_true":
+                if (
+                    kw.arg == "action"
+                    and isinstance(kw.value, ast.Constant)
+                    and kw.value.value == "store_true"
+                ):
                     store_true = True
-                if kw.arg == "default" and isinstance(kw.value, ast.Constant) and kw.value.value in (False, 0):
+                if (
+                    kw.arg == "default"
+                    and isinstance(kw.value, ast.Constant)
+                    and kw.value.value in (False, 0)
+                ):
                     default_false = True
             if name and (store_true or default_false):
                 ctx = lines[node.lineno - 1] if 0 <= node.lineno - 1 < len(lines) else ""
-                out.append({"flag": name, "file": rel, "line": node.lineno,
-                            "current": "store_true" if store_true else "default=False",
-                            "lang": "python", "kind": "argparse_flag", "context": ctx,
-                            "no_flip": True})  # CLI default; documented, not auto-flipped in-file
+                out.append(
+                    {
+                        "flag": name,
+                        "file": rel,
+                        "line": node.lineno,
+                        "current": "store_true" if store_true else "default=False",
+                        "lang": "python",
+                        "kind": "argparse_flag",
+                        "context": ctx,
+                        "no_flip": True,
+                    }
+                )  # CLI default; documented, not auto-flipped in-file
     return out
 
 
 # Match any `key: false/0` pair; the flag-name filter runs in Python so the
 # regex does not have to encode the flag vocabulary (avoids leading-char
 # backtracking that dropped names like "feature_new_ui").
-_CFG_OFF = re.compile(
-    r"""["']?([A-Za-z_][\w.\-]*)["']?\s*[:=]\s*(false|False|0)\b""")
+_CFG_OFF = re.compile(r"""["']?([A-Za-z_][\w.\-]*)["']?\s*[:=]\s*(false|False|0)\b""")
 
 
 _YAML_KEY = re.compile(r"^(\s*)([A-Za-z_][\w.\-]*)\s*:")
@@ -321,9 +540,18 @@ def _config_flags(rel: str, text: str) -> list[dict]:
             if name.lower() in SCHEMA_KEYWORDS or not FLAG_NAME.search(name):
                 continue
             parent = stack[-1][1] if (is_yaml and stack) else None
-            out.append({"flag": name, "file": rel, "line": i,
-                        "current": m.group(2), "lang": "config",
-                        "kind": "config_key", "context": line, "parent": parent})
+            out.append(
+                {
+                    "flag": name,
+                    "file": rel,
+                    "line": i,
+                    "current": m.group(2),
+                    "lang": "config",
+                    "kind": "config_key",
+                    "context": line,
+                    "parent": parent,
+                }
+            )
         if is_yaml and km:
             stack.append((indent, km.group(2)))
     return out
@@ -383,7 +611,11 @@ def _reader_corpus(root: Path) -> tuple[dict[str, set[str]], set[str], set[str]]
                 names.add(node.id)
             elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
                 attr_loads.add(node.attr)
-            elif isinstance(node, ast.Constant) and isinstance(node.value, str) and _IDENT.match(node.value):
+            elif (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and _IDENT.match(node.value)
+            ):
                 str_ids.add(node.value)
         name_loads_by_file[rel] = names
     return name_loads_by_file, attr_loads, str_ids
@@ -433,21 +665,36 @@ def inventory_flags(root: Path, overrides: dict | None = None) -> list[dict]:
         for f in found:
             staged = f["flag"] in staged_flags or bool(STAGED_MARKER.search(f.get("context", "")))
             classification, reason = classify_flag(
-                f["flag"], f.get("context", ""), staged=staged,
-                parent=f.get("parent"), overrides=overrides)
+                f["flag"],
+                f.get("context", ""),
+                staged=staged,
+                parent=f.get("parent"),
+                overrides=overrides,
+            )
             scope = "runtime"
             needs_wiring = False
             parent = (f.get("parent") or "").lower()
             if f.get("no_flip"):
-                decision, dec_reason = "hold", "argparse CLI default — surface in docs, not flipped in source"
+                decision, dec_reason = (
+                    "hold",
+                    "argparse CLI default — surface in docs, not flipped in source",
+                )
             elif classification == "danger":
                 decision, dec_reason = "hold", reason
             elif classification == "staged":
                 decision, dec_reason = "hold", reason
             elif _NONRUNTIME_PATH.search("/" + rel):
-                decision, dec_reason, scope = "hold", "docs/infra deploy config — not application runtime config", "non_runtime"
+                decision, dec_reason, scope = (
+                    "hold",
+                    "docs/infra deploy config — not application runtime config",
+                    "non_runtime",
+                )
             elif parent in INFRA_BLOCKS:
-                decision, dec_reason, scope = "hold", f"infra/deploy toggle under '{parent}' — not an application capability", "infra"
+                decision, dec_reason, scope = (
+                    "hold",
+                    f"infra/deploy toggle under '{parent}' — not an application capability",
+                    "infra",
+                )
             else:
                 decision, dec_reason = "flip", reason
             evidence = _consumer_evidence(f, corpus)
@@ -456,10 +703,17 @@ def inventory_flags(root: Path, overrides: dict | None = None) -> list[dict]:
                 dec_reason = "declared but no consumer found — flipping is a no-op; needs a wiring change, not a flip"
             row = dict(f)
             row.pop("context", None)
-            row.update({"polarity": "off->on", "classification": classification,
-                        "decision": decision, "reason": dec_reason,
-                        "consumer_evidence": evidence, "needs_wiring": needs_wiring,
-                        "scope": scope})
+            row.update(
+                {
+                    "polarity": "off->on",
+                    "classification": classification,
+                    "decision": decision,
+                    "reason": dec_reason,
+                    "consumer_evidence": evidence,
+                    "needs_wiring": needs_wiring,
+                    "scope": scope,
+                }
+            )
             rows.append(row)
     rows.sort(key=lambda r: (r["file"], r["line"], r["flag"]))
     return rows
@@ -506,15 +760,15 @@ def main() -> int:
         "flags": rows,
         "summary": summarize(rows),
         "note": "Off-by-default flag inventory for full-throttle activation. decision=flip "
-                "means non-danger, non-staged, non-infra, runtime, and with a consumer "
-                "(empirical back-out in full_throttle.py still validates it against the repo's "
-                "own tests). classification=danger is NEVER flipped (polarity-aware); "
-                "classification=staged is dormant_by_design (Identity-Lock #1). needs_wiring=true "
-                "(consumer_evidence=none) means the flag is declared but nothing reads it — "
-                "flipping is a no-op; it needs a wiring change, not a flip. scope=non_runtime "
-                "(docs/infra) and scope=infra (ingress/autoscaling/pdb/... deploy blocks) are "
-                "surfaced but held. consumer_evidence=unknown is a generic config leaf whose "
-                "parent block identity must be verified manually (registry/adapter drift).",
+        "means non-danger, non-staged, non-infra, runtime, and with a consumer "
+        "(empirical back-out in full_throttle.py still validates it against the repo's "
+        "own tests). classification=danger is NEVER flipped (polarity-aware); "
+        "classification=staged is dormant_by_design (Identity-Lock #1). needs_wiring=true "
+        "(consumer_evidence=none) means the flag is declared but nothing reads it — "
+        "flipping is a no-op; it needs a wiring change, not a flip. scope=non_runtime "
+        "(docs/infra) and scope=infra (ingress/autoscaling/pdb/... deploy blocks) are "
+        "surfaced but held. consumer_evidence=unknown is a generic config leaf whose "
+        "parent block identity must be verified manually (registry/adapter drift).",
     }
     text = json.dumps(result, indent=2) + "\n"
     if args.output:

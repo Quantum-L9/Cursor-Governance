@@ -6,30 +6,52 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+
 try:
     import jsonschema as _jsonschema
 except ImportError:
     _jsonschema = None
-from pathlib import Path, PurePosixPath
 import re
 import sys
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from build_commit_pack import calculate_leverage_score, leverage_decision
+from build_commit_pack import (
+    calculate_leverage_score,
+    improvement_from_measurements,
+    leverage_decision,
+)
 from validate_decision_ledger import validate_decision_contract
-from build_commit_pack import improvement_from_measurements
 
 VALID_STATUSES = {"PR_READY", "BLOCKED"}
-WIRING_STRATEGIES = {"activate_latent_capability", "repair_wiring", "connect_signal_consumer", "surface_existing_cli_path"}
+WIRING_STRATEGIES = {
+    "activate_latent_capability",
+    "repair_wiring",
+    "connect_signal_consumer",
+    "surface_existing_cli_path",
+}
 REQUIRED_FILES = {
-    "MANIFEST.json", "README.md", "change/commit.patch", "change/OPTIMIZATION_PLAN.json",
-    "pr/COMMIT_MESSAGE.txt", "pr/PR_BODY.md", "pr/PR_CHECKLIST.md",
-    "deploy/DEPLOY_PLAYBOOK.md", "deploy/ROLLBACK_PLAYBOOK.md", "deploy/RELEASE_CHECKLIST.md",
-    "handoff/AGENT_HANDOFF.md", "handoff/NEXT_AGENT_TASK.json",
-    "evidence/EXECUTION_ROUTE.json", "evidence/DECISION_LEDGER.json", "evidence/DECISION_RECORD.md",
-    "evidence/CLI_REVISION_SYNTHESIS.json", "evidence/CLI_REVISION_PLAN.md",
+    "MANIFEST.json",
+    "README.md",
+    "change/commit.patch",
+    "change/OPTIMIZATION_PLAN.json",
+    "pr/COMMIT_MESSAGE.txt",
+    "pr/PR_BODY.md",
+    "pr/PR_CHECKLIST.md",
+    "deploy/DEPLOY_PLAYBOOK.md",
+    "deploy/ROLLBACK_PLAYBOOK.md",
+    "deploy/RELEASE_CHECKLIST.md",
+    "handoff/AGENT_HANDOFF.md",
+    "handoff/NEXT_AGENT_TASK.json",
+    "evidence/EXECUTION_ROUTE.json",
+    "evidence/DECISION_LEDGER.json",
+    "evidence/DECISION_RECORD.md",
+    "evidence/CLI_REVISION_SYNTHESIS.json",
+    "evidence/CLI_REVISION_PLAN.md",
     "evidence/DOCS_CODE_DIVERGENCE_FINDINGS.md",
-    "evidence/VALIDATION.md", "evidence/PERFORMANCE.md", "evidence/commands.jsonl",
+    "evidence/VALIDATION.md",
+    "evidence/PERFORMANCE.md",
+    "evidence/commands.jsonl",
     "evidence/checksums.sha256",
 }
 FORBIDDEN_PATTERNS = {
@@ -64,14 +86,21 @@ def sha256_file(path: Path) -> str:
 
 def safe_relative(value: str) -> bool:
     posix = PurePosixPath(value)
-    return bool(posix.parts) and not posix.is_absolute() and ".." not in posix.parts and "." not in posix.parts
+    return (
+        bool(posix.parts)
+        and not posix.is_absolute()
+        and ".." not in posix.parts
+        and "." not in posix.parts
+    )
 
 
 def validate_checksums(root: Path) -> list[str]:
     errors: list[str] = []
     checksum_path = root / "evidence" / "checksums.sha256"
     recorded: dict[str, str] = {}
-    for line_number, line in enumerate(checksum_path.read_text(encoding="utf-8").splitlines(), start=1):
+    for line_number, line in enumerate(
+        checksum_path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
         if not line.strip():
             continue
         parts = line.split("  ", 1)
@@ -93,13 +122,23 @@ def validate_checksums(root: Path) -> list[str]:
     return errors
 
 
-def validate_revision_synthesis(root: Path, manifest: dict[str, Any], plan: dict[str, Any], pr_body: str) -> list[str]:
+def validate_revision_synthesis(
+    root: Path, manifest: dict[str, Any], plan: dict[str, Any], pr_body: str
+) -> list[str]:
     errors: list[str] = []
     synthesis = read_json(root / "evidence" / "CLI_REVISION_SYNTHESIS.json")
     required = {
-        "synthesis_version", "synthesis_status", "all_material_findings_synthesized",
-        "leverage_policy_version", "findings", "targets", "options",
-        "selected_option_ids", "unresolved_divergence_ids", "unknowns", "selection_rationale",
+        "synthesis_version",
+        "synthesis_status",
+        "all_material_findings_synthesized",
+        "leverage_policy_version",
+        "findings",
+        "targets",
+        "options",
+        "selected_option_ids",
+        "unresolved_divergence_ids",
+        "unknowns",
+        "selection_rationale",
     }
     for key in sorted(required - set(synthesis)):
         errors.append(f"CLI_REVISION_SYNTHESIS.json missing key: {key}")
@@ -108,9 +147,21 @@ def validate_revision_synthesis(root: Path, manifest: dict[str, Any], plan: dict
     options_list = synthesis.get("options", [])
     if not all(isinstance(value, list) for value in (findings_list, targets_list, options_list)):
         return errors + ["revision synthesis findings, targets, and options must be arrays"]
-    findings = {item.get("id"): item for item in findings_list if isinstance(item, dict) and isinstance(item.get("id"), str)}
-    targets = {item.get("id"): item for item in targets_list if isinstance(item, dict) and isinstance(item.get("id"), str)}
-    options = {item.get("id"): item for item in options_list if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    findings = {
+        item.get("id"): item
+        for item in findings_list
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    targets = {
+        item.get("id"): item
+        for item in targets_list
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    options = {
+        item.get("id"): item
+        for item in options_list
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
     if len(findings) != len(findings_list):
         errors.append("revision finding IDs must be present and unique")
     if len(targets) != len(targets_list):
@@ -132,11 +183,17 @@ def validate_revision_synthesis(root: Path, manifest: dict[str, Any], plan: dict
         if missing:
             errors.append(f"target {target_id} references missing findings: {sorted(missing)}")
         finding_refs.update(source_ids)
-        actual = {option_id for option_id, option in options.items() if target_id in option.get("target_ids", [])}
+        actual = {
+            option_id
+            for option_id, option in options.items()
+            if target_id in option.get("target_ids", [])
+        }
         if set(option_ids) != actual:
             errors.append(f"target {target_id} option_ids mismatch")
     if finding_refs != set(findings):
-        errors.append(f"every finding must map to a target; unmapped={sorted(set(findings)-finding_refs)}")
+        errors.append(
+            f"every finding must map to a target; unmapped={sorted(set(findings) - finding_refs)}"
+        )
 
     target_refs: set[str] = set()
     for option_id, option in options.items():
@@ -158,19 +215,27 @@ def validate_revision_synthesis(root: Path, manifest: dict[str, Any], plan: dict
             errors.append(f"option {option_id} leverage dimensions invalid: {exc}")
             continue
         recorded = option.get("leverage_score")
-        if not isinstance(recorded, (int, float)) or isinstance(recorded, bool) or abs(float(recorded) - calculated) > 0.001:
+        if (
+            not isinstance(recorded, (int, float))
+            or isinstance(recorded, bool)
+            or abs(float(recorded) - calculated) > 0.001
+        ):
             errors.append(f"option {option_id} leverage_score mismatch; expected {calculated}")
         expected = leverage_decision(calculated)
         if option.get("decision") != expected:
             errors.append(f"option {option_id} decision mismatch; expected {expected}")
     if target_refs != set(targets):
-        errors.append(f"every target must map to an option; unmapped={sorted(set(targets)-target_refs)}")
+        errors.append(
+            f"every target must map to an option; unmapped={sorted(set(targets) - target_refs)}"
+        )
 
     selected = synthesis.get("selected_option_ids", [])
     if not isinstance(selected, list):
         errors.append("selected_option_ids must be an array")
         selected = []
-    selected_flags = {option_id for option_id, option in options.items() if option.get("selected") is True}
+    selected_flags = {
+        option_id for option_id, option in options.items() if option.get("selected") is True
+    }
     if set(selected) != selected_flags:
         errors.append("selected_option_ids do not match selected option flags")
     for option_id in selected:
@@ -185,22 +250,35 @@ def validate_revision_synthesis(root: Path, manifest: dict[str, Any], plan: dict
         if option.get("unknowns"):
             errors.append(f"selected option retains unknowns: {option_id}")
 
-    divergence_ids = {fid for fid, finding in findings.items() if finding.get("kind") == "docs_code_divergence"}
+    divergence_ids = {
+        fid for fid, finding in findings.items() if finding.get("kind") == "docs_code_divergence"
+    }
     unresolved = synthesis.get("unresolved_divergence_ids", [])
     if not isinstance(unresolved, list):
         errors.append("unresolved_divergence_ids must be an array")
         unresolved = []
-    expected_unresolved = {fid for fid in divergence_ids if findings[fid].get("reconciliation") != "fixed_in_scope"}
+    expected_unresolved = {
+        fid for fid in divergence_ids if findings[fid].get("reconciliation") != "fixed_in_scope"
+    }
     if set(unresolved) != expected_unresolved:
         errors.append(f"unresolved_divergence_ids mismatch; expected {sorted(expected_unresolved)}")
-    divergence_text = (root / "evidence" / "DOCS_CODE_DIVERGENCE_FINDINGS.md").read_text(encoding="utf-8")
+    divergence_text = (root / "evidence" / "DOCS_CODE_DIVERGENCE_FINDINGS.md").read_text(
+        encoding="utf-8"
+    )
     for finding_id in unresolved:
         finding = findings.get(finding_id, {})
         if finding_id not in divergence_text:
             errors.append(f"divergence report omits {finding_id}")
         if finding_id not in pr_body:
             errors.append(f"PR body omits unresolved divergence {finding_id}")
-        for field in ("docs_claim", "code_observation", "divergence_type", "reconciliation", "owner", "recommended_action"):
+        for field in (
+            "docs_claim",
+            "code_observation",
+            "divergence_type",
+            "reconciliation",
+            "owner",
+            "recommended_action",
+        ):
             value = finding.get(field)
             if not isinstance(value, str) or not value.strip():
                 errors.append(f"docs-code divergence {finding_id} lacks {field}")
@@ -233,18 +311,31 @@ def validate_revision_synthesis(root: Path, manifest: dict[str, Any], plan: dict
         errors.append("manifest highest_selected_leverage_score mismatch")
 
     plan_text = (root / "evidence" / "CLI_REVISION_PLAN.md").read_text(encoding="utf-8")
-    for heading in ("## Findings", "## Revision Targets", "## Options and Leverage", "## Selected Options", "## Unresolved Documentation-Code Divergence"):
+    for heading in (
+        "## Findings",
+        "## Revision Targets",
+        "## Options and Leverage",
+        "## Selected Options",
+        "## Unresolved Documentation-Code Divergence",
+    ):
         if heading not in plan_text:
             errors.append(f"CLI_REVISION_PLAN.md missing section: {heading}")
 
     if manifest.get("status") == "PR_READY":
-        if synthesis.get("synthesis_status") != "complete" or synthesis.get("all_material_findings_synthesized") is not True:
+        if (
+            synthesis.get("synthesis_status") != "complete"
+            or synthesis.get("all_material_findings_synthesized") is not True
+        ):
             errors.append("PR_READY requires complete all-findings synthesis")
         if synthesis.get("unknowns"):
             errors.append("PR_READY revision synthesis retains unknowns")
         if not selected:
             errors.append("PR_READY requires selected revision options")
-        blocking = [fid for fid, finding in findings.items() if finding.get("blocks_release") is True and finding.get("status") != "reconciled"]
+        blocking = [
+            fid
+            for fid, finding in findings.items()
+            if finding.get("blocks_release") is True and finding.get("status") != "reconciled"
+        ]
         if blocking:
             errors.append(f"PR_READY has unresolved release-blocking findings: {blocking}")
     return errors
@@ -262,23 +353,50 @@ def validate(root: Path) -> list[str]:
 
     manifest = read_json(root / "MANIFEST.json")
     required_manifest = {
-        "schema_version", "pack_name", "version", "repository", "base_ref", "branch",
-        "status", "changed_files", "patch_sha256", "created_utc", "generator",
-        "utilization_gap_class", "ownership", "improvement_percent",
-        "wiring_analysis_performed", "selected_wiring_findings", "unresolved_wiring_unknowns",
-        "revision_synthesis_status", "revision_finding_count", "revision_target_count",
-        "revision_option_count", "selected_revision_options",
-        "unresolved_docs_code_divergences", "highest_selected_leverage_score",
-        "reasoning_depth", "initial_action", "final_action", "proof_obligation_count",
-        "satisfied_proof_obligation_count", "unresolved_material_unknowns",
+        "schema_version",
+        "pack_name",
+        "version",
+        "repository",
+        "base_ref",
+        "branch",
+        "status",
+        "changed_files",
+        "patch_sha256",
+        "created_utc",
+        "generator",
+        "utilization_gap_class",
+        "ownership",
+        "improvement_percent",
+        "wiring_analysis_performed",
+        "selected_wiring_findings",
+        "unresolved_wiring_unknowns",
+        "revision_synthesis_status",
+        "revision_finding_count",
+        "revision_target_count",
+        "revision_option_count",
+        "selected_revision_options",
+        "unresolved_docs_code_divergences",
+        "highest_selected_leverage_score",
+        "reasoning_depth",
+        "initial_action",
+        "final_action",
+        "proof_obligation_count",
+        "satisfied_proof_obligation_count",
+        "unresolved_material_unknowns",
         "decision_convergence_status",
     }
     for key in sorted(required_manifest - set(manifest)):
         errors.append(f"manifest missing key: {key}")
     if _jsonschema is None:
-        errors.append("jsonschema is required to validate MANIFEST.json; install it (pip install -r requirements.txt)")
+        errors.append(
+            "jsonschema is required to validate MANIFEST.json; install it (pip install -r requirements.txt)"
+        )
     else:
-        manifest_schema = json.loads((Path(__file__).resolve().parents[1] / "schemas" / "pack-manifest.schema.json").read_text(encoding="utf-8"))
+        manifest_schema = json.loads(
+            (
+                Path(__file__).resolve().parents[1] / "schemas" / "pack-manifest.schema.json"
+            ).read_text(encoding="utf-8")
+        )
         try:
             _jsonschema.validate(manifest, manifest_schema)
         except _jsonschema.ValidationError as exc:
@@ -293,14 +411,18 @@ def validate(root: Path) -> list[str]:
     route = read_json(root / "evidence" / "EXECUTION_ROUTE.json")
     ledger = read_json(root / "evidence" / "DECISION_LEDGER.json")
     synthesis_for_contract = read_json(root / "evidence" / "CLI_REVISION_SYNTHESIS.json")
-    decision_errors = validate_decision_contract({
-        "status": manifest.get("status"),
-        "execution_route": route,
-        "decision_ledger": ledger,
-        "optimization": read_json(root / "change" / "OPTIMIZATION_PLAN.json"),
-        "wiring": read_json(root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json") if (root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json").is_file() else {},
-        "revision_synthesis": synthesis_for_contract,
-    })
+    decision_errors = validate_decision_contract(
+        {
+            "status": manifest.get("status"),
+            "execution_route": route,
+            "decision_ledger": ledger,
+            "optimization": read_json(root / "change" / "OPTIMIZATION_PLAN.json"),
+            "wiring": read_json(root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json")
+            if (root / "evidence" / "LATENT_CAPABILITY_FINDINGS.json").is_file()
+            else {},
+            "revision_synthesis": synthesis_for_contract,
+        }
+    )
     errors.extend(f"adaptive decision contract: {item}" for item in decision_errors)
     if manifest.get("reasoning_depth") != route.get("reasoning_depth"):
         errors.append("manifest reasoning_depth mismatch")
@@ -309,27 +431,45 @@ def validate(root: Path) -> list[str]:
     decision = ledger.get("decision", {}) if isinstance(ledger, dict) else {}
     convergence = ledger.get("convergence", {}) if isinstance(ledger, dict) else {}
     proofs = ledger.get("proof_obligations", []) if isinstance(ledger, dict) else []
-    satisfied = sum(1 for item in proofs if isinstance(item, dict) and item.get("status") == "satisfied")
+    satisfied = sum(
+        1 for item in proofs if isinstance(item, dict) and item.get("status") == "satisfied"
+    )
     if manifest.get("final_action") != decision.get("final_action"):
         errors.append("manifest final_action mismatch")
     if manifest.get("proof_obligation_count") != len(proofs):
         errors.append("manifest proof_obligation_count mismatch")
     if manifest.get("satisfied_proof_obligation_count") != satisfied:
         errors.append("manifest satisfied_proof_obligation_count mismatch")
-    if manifest.get("unresolved_material_unknowns") != convergence.get("remaining_material_unknown_ids"):
+    if manifest.get("unresolved_material_unknowns") != convergence.get(
+        "remaining_material_unknown_ids"
+    ):
         errors.append("manifest unresolved_material_unknowns mismatch")
     if manifest.get("decision_convergence_status") != convergence.get("status"):
         errors.append("manifest decision_convergence_status mismatch")
     decision_record = (root / "evidence" / "DECISION_RECORD.md").read_text(encoding="utf-8")
-    for heading in ("## Objective", "## Active Proof Obligations", "## Selected Options", "## Material Unknowns", "## Decision", "## Stop Reason"):
+    for heading in (
+        "## Objective",
+        "## Active Proof Obligations",
+        "## Selected Options",
+        "## Material Unknowns",
+        "## Decision",
+        "## Stop Reason",
+    ):
         if heading not in decision_record:
             errors.append(f"DECISION_RECORD.md missing section: {heading}")
 
     plan = read_json(root / "change" / "OPTIMIZATION_PLAN.json")
     required_plan = {
-        "utilization_gap_class", "ownership", "evidence", "strategy", "preserved_constraints",
-        "external_limits_not_bypassed", "resource_envelope", "rollback_trigger",
-        "selected_revision_option_ids", "revision_synthesis_path",
+        "utilization_gap_class",
+        "ownership",
+        "evidence",
+        "strategy",
+        "preserved_constraints",
+        "external_limits_not_bypassed",
+        "resource_envelope",
+        "rollback_trigger",
+        "selected_revision_option_ids",
+        "revision_synthesis_path",
     }
     for key in sorted(required_plan - set(plan)):
         errors.append(f"OPTIMIZATION_PLAN.json missing key: {key}")
@@ -347,17 +487,27 @@ def validate(root: Path) -> list[str]:
     activation = False
     cand_value = perf.get("candidate_value")
     if cand_value is not None:
-        computed, perr = improvement_from_measurements(perf.get("baseline_value"), cand_value, perf.get("direction", "lower_is_better"))
+        computed, perr = improvement_from_measurements(
+            perf.get("baseline_value"), cand_value, perf.get("direction", "lower_is_better")
+        )
         if perr:
             errors.append(f"manifest performance is inconsistent: {perr}")
         elif computed is None:
             activation = True
         else:
             declared = perf.get("improvement_percent")
-            if not isinstance(declared, (int, float)) or isinstance(declared, bool) or abs(float(declared) - computed) > 0.5:
-                errors.append(f"manifest improvement_percent {declared} does not match recomputed {computed}")
+            if (
+                not isinstance(declared, (int, float))
+                or isinstance(declared, bool)
+                or abs(float(declared) - computed) > 0.5
+            ):
+                errors.append(
+                    f"manifest improvement_percent {declared} does not match recomputed {computed}"
+                )
             if manifest.get("improvement_percent") != declared:
-                errors.append("manifest improvement_percent disagrees with performance.improvement_percent")
+                errors.append(
+                    "manifest improvement_percent disagrees with performance.improvement_percent"
+                )
     if manifest.get("status") == "PR_READY":
         label = manifest.get("status")
         if plan.get("ownership") != "repository_owned":
@@ -366,7 +516,11 @@ def validate(root: Path) -> list[str]:
             errors.append(f"{label} requires a candidate measurement")
         elif not activation:
             improvement = manifest.get("improvement_percent")
-            if not isinstance(improvement, (int, float)) or isinstance(improvement, bool) or improvement <= 0:
+            if (
+                not isinstance(improvement, (int, float))
+                or isinstance(improvement, bool)
+                or improvement <= 0
+            ):
                 errors.append(f"{label} requires positive measured improvement")
         if plan.get("strategy") in {None, "none"}:
             errors.append(f"{label} requires an active optimize strategy")
@@ -387,17 +541,26 @@ def validate(root: Path) -> list[str]:
     if wiring_active:
         for required_path in (wiring_json_path, wiring_map_path):
             if not required_path.is_file():
-                errors.append(f"missing required wiring artifact: {required_path.relative_to(root).as_posix()}")
+                errors.append(
+                    f"missing required wiring artifact: {required_path.relative_to(root).as_posix()}"
+                )
         if wiring_json_path.is_file():
             wiring = read_json(wiring_json_path)
             selected = wiring.get("selected_finding_ids", [])
             unknowns = wiring.get("unresolved_unknowns", [])
-            findings = {item.get("id"): item for item in wiring.get("findings", []) if isinstance(item, dict)}
+            findings = {
+                item.get("id"): item
+                for item in wiring.get("findings", [])
+                if isinstance(item, dict)
+            }
             if selected != selected_manifest:
                 errors.append("manifest selected_wiring_findings mismatch")
             if unknowns != unknowns_manifest:
                 errors.append("manifest unresolved_wiring_unknowns mismatch")
-            if wiring.get("convergence_status") != "converged" and manifest.get("status") == "PR_READY":
+            if (
+                wiring.get("convergence_status") != "converged"
+                and manifest.get("status") == "PR_READY"
+            ):
                 errors.append("PR_READY wiring analysis must be converged")
             if manifest.get("status") == "PR_READY" and unknowns:
                 errors.append("PR_READY wiring analysis cannot retain unresolved unknowns")
@@ -411,16 +574,30 @@ def validate(root: Path) -> list[str]:
                 if finding.get("verdict") != "activate":
                     errors.append(f"selected wiring finding must be activate: {finding_id}")
                 if finding.get("dynamic_dispatch_checked") is not True:
-                    errors.append(f"selected wiring finding lacks dynamic-dispatch review: {finding_id}")
+                    errors.append(
+                        f"selected wiring finding lacks dynamic-dispatch review: {finding_id}"
+                    )
                 if finding.get("dormant_by_design") is not False:
-                    errors.append(f"selected wiring finding is dormant by design or unclassified: {finding_id}")
+                    errors.append(
+                        f"selected wiring finding is dormant by design or unclassified: {finding_id}"
+                    )
                 for field in ("definition_evidence", "consumer_evidence", "downstream_capability"):
                     value = finding.get(field)
-                    if not isinstance(value, str) or not value.strip() or value.strip().lower() == "unknown":
+                    if (
+                        not isinstance(value, str)
+                        or not value.strip()
+                        or value.strip().lower() == "unknown"
+                    ):
                         errors.append(f"selected wiring finding lacks {field}: {finding_id}")
         if wiring_map_path.is_file():
             wiring_text = wiring_map_path.read_text(encoding="utf-8")
-            for heading in ("## Entrypoints", "## Registries and Dynamic Dispatch", "## Producer to Consumer Edges", "## Selected Findings", "## Unresolved Unknowns"):
+            for heading in (
+                "## Entrypoints",
+                "## Registries and Dynamic Dispatch",
+                "## Producer to Consumer Edges",
+                "## Selected Findings",
+                "## Unresolved Unknowns",
+            ):
                 if heading not in wiring_text:
                     errors.append(f"WIRING_MAP.md missing section: {heading}")
     elif wiring_json_path.exists() or wiring_map_path.exists():
@@ -437,7 +614,10 @@ def validate(root: Path) -> list[str]:
         if not isinstance(raw, str) or not safe_relative(raw):
             errors.append(f"unsafe changed file path: {raw!r}")
             continue
-        if raw not in deleted and not (root / "change" / "files" / Path(*PurePosixPath(raw).parts)).is_file():
+        if (
+            raw not in deleted
+            and not (root / "change" / "files" / Path(*PurePosixPath(raw).parts)).is_file()
+        ):
             errors.append(f"changed file not copied: {raw}")
 
     patch = (root / "change" / "commit.patch").read_bytes()
@@ -464,7 +644,13 @@ def validate(root: Path) -> list[str]:
     errors.extend(validate_revision_synthesis(root, manifest, plan, pr_body))
 
     performance = (root / "evidence" / "PERFORMANCE.md").read_text(encoding="utf-8")
-    for heading in ("## Baseline", "## Candidate", "## Comparison Method", "## Correctness Checks", "## Resource Checks"):
+    for heading in (
+        "## Baseline",
+        "## Candidate",
+        "## Comparison Method",
+        "## Correctness Checks",
+        "## Resource Checks",
+    ):
         if heading not in performance:
             errors.append(f"PERFORMANCE.md missing section: {heading}")
     if manifest.get("status") == "PR_READY" and "Candidate measurement: `UNKNOWN`" in performance:
@@ -472,8 +658,18 @@ def validate(root: Path) -> list[str]:
 
     next_task = read_json(root / "handoff" / "NEXT_AGENT_TASK.json")
     required_task = {
-        "objective", "status", "repository", "base_ref", "branch", "pack_manifest",
-        "next_action", "validation_entrypoint", "deploy_entrypoint", "blockers", "unknowns", "do_not",
+        "objective",
+        "status",
+        "repository",
+        "base_ref",
+        "branch",
+        "pack_manifest",
+        "next_action",
+        "validation_entrypoint",
+        "deploy_entrypoint",
+        "blockers",
+        "unknowns",
+        "do_not",
     }
     for key in sorted(required_task - set(next_task)):
         errors.append(f"NEXT_AGENT_TASK.json missing key: {key}")
@@ -483,7 +679,9 @@ def validate(root: Path) -> list[str]:
         errors.append("PR_READY handoff must not retain material unknowns")
 
     command_count = 0
-    for line_number, line in enumerate((root / "evidence" / "commands.jsonl").read_text(encoding="utf-8").splitlines(), start=1):
+    for line_number, line in enumerate(
+        (root / "evidence" / "commands.jsonl").read_text(encoding="utf-8").splitlines(), start=1
+    ):
         if not line.strip():
             continue
         command_count += 1
@@ -492,10 +690,19 @@ def validate(root: Path) -> list[str]:
         except json.JSONDecodeError as exc:
             errors.append(f"invalid commands.jsonl line {line_number}: {exc}")
             continue
-        if not isinstance(record, dict) or not record.get("command") or not record.get("status") or not record.get("evidence"):
+        if (
+            not isinstance(record, dict)
+            or not record.get("command")
+            or not record.get("status")
+            or not record.get("evidence")
+        ):
             errors.append(f"commands.jsonl line {line_number} lacks command/status/evidence")
-        elif manifest.get("status") == "PR_READY" and str(record.get("status")).strip().lower() not in {"pass", "passed", "ok", "success", "green", "0"}:
-            errors.append(f"commands.jsonl line {line_number}: PR_READY requires a passing command status, got {record.get('status')!r}")
+        elif manifest.get("status") == "PR_READY" and str(
+            record.get("status")
+        ).strip().lower() not in {"pass", "passed", "ok", "success", "green", "0"}:
+            errors.append(
+                f"commands.jsonl line {line_number}: PR_READY requires a passing command status, got {record.get('status')!r}"
+            )
     if manifest.get("status") == "PR_READY" and command_count == 0:
         errors.append("PR_READY pack requires command evidence")
 
@@ -504,11 +711,17 @@ def validate(root: Path) -> list[str]:
         errors.append("BLOCKED pack requires at least one issue file")
 
     text_targets = [
-        root / "README.md", root / "pr" / "PR_BODY.md", root / "deploy" / "DEPLOY_PLAYBOOK.md",
-        root / "deploy" / "ROLLBACK_PLAYBOOK.md", root / "handoff" / "AGENT_HANDOFF.md",
-        root / "evidence" / "DECISION_RECORD.md", root / "evidence" / "CLI_REVISION_PLAN.md",
+        root / "README.md",
+        root / "pr" / "PR_BODY.md",
+        root / "deploy" / "DEPLOY_PLAYBOOK.md",
+        root / "deploy" / "ROLLBACK_PLAYBOOK.md",
+        root / "handoff" / "AGENT_HANDOFF.md",
+        root / "evidence" / "DECISION_RECORD.md",
+        root / "evidence" / "CLI_REVISION_PLAN.md",
         root / "evidence" / "DOCS_CODE_DIVERGENCE_FINDINGS.md",
-        root / "evidence" / "VALIDATION.md", root / "evidence" / "PERFORMANCE.md", *issue_files,
+        root / "evidence" / "VALIDATION.md",
+        root / "evidence" / "PERFORMANCE.md",
+        *issue_files,
     ]
     if wiring_map_path.is_file():
         text_targets.append(wiring_map_path)
@@ -528,7 +741,9 @@ def validate(root: Path) -> list[str]:
     }
     for label, synonyms in deploy_requirements.items():
         if not any(term in deploy for term in synonyms):
-            errors.append(f"deployment playbook missing {label} guidance (any of: {', '.join(synonyms)})")
+            errors.append(
+                f"deployment playbook missing {label} guidance (any of: {', '.join(synonyms)})"
+            )
 
     errors.extend(validate_checksums(root))
     return errors
