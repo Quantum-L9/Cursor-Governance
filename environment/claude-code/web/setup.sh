@@ -87,6 +87,25 @@ if [ -d "$CC_ENV" ]; then
   fi
   echo "activated: .claude/settings.json + SessionStart hook -> $GOV_DIR"
 
+  # Keep activation artifacts out of the working tree. setup_workspace_symlinks.sh
+  # and skill reconciliation create machine-local wiring (.cursor-commands/.cursor
+  # symlinks into the SSOT, generated .claude/{skills,rules} mirrors, per-workspace
+  # .l9/ and memory-bank/ state). None are committable, but they otherwise show as
+  # untracked and tempt a governed session into committing dangling symlinks.
+  # Write them to .git/info/exclude — LOCAL and uncommitted, so this never mutates
+  # a consumer's tracked .gitignore. Idempotent: only append globs not already present.
+  # NOTE: excludes only the GENERATED .claude mirrors; .claude/settings.json and
+  # .claude/hooks/ are committable consumer wiring and are deliberately left tracked.
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    exclude_file="$(git rev-parse --git-dir)/info/exclude"
+    mkdir -p "$(dirname "$exclude_file")"
+    touch "$exclude_file"
+    for glob in "/.cursor-commands" "/.cursor/" ".claude/skills/" ".claude/rules/" "/.l9/" "memory-bank/"; do
+      grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
+    done
+    echo "excluded: activation artifacts via $exclude_file (local, uncommitted)"
+  fi
+
   # Reconcile L9 skills into Claude Code's native project discovery path before
   # the model starts. Consumer-local skills are preserved; managed links only.
   if [ -f "$GOV_DIR/ops/scripts/reconcile_claude_l9_skills.py" ]; then
