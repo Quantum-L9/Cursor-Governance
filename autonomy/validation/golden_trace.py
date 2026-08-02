@@ -48,7 +48,7 @@ def read_receipts_jsonl(
 ) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
     source = confined_path(path, root=root, label="events path")
-    with source.open("r", encoding="utf-8") as handle:
+    with open(source, encoding="utf-8") as handle:
         for line_number, raw_line in enumerate(handle, 1):
             line = raw_line.strip()
             if not line:

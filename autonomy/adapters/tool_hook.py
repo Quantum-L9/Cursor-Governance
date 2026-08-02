@@ -78,14 +78,29 @@ def infer_resource(
     return None
 
 
-def _require_env(*names: str) -> dict[str, str]:
-    missing = [name for name in names if not os.environ.get(name)]
+def _env_first(*names: str) -> str | None:
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return None
+
+
+def _require_env_aliases(*groups: tuple[str, ...]) -> dict[str, str]:
+    resolved: dict[str, str] = {}
+    missing: list[str] = []
+    for group in groups:
+        value = _env_first(*group)
+        if value is None:
+            missing.append(" or ".join(group))
+            continue
+        resolved[group[0]] = value
     if missing:
         raise PolicyViolation(
             "ADAPTER_SESSION_INCOMPLETE: missing required environment "
             f"variables: {', '.join(missing)}"
         )
-    return {name: os.environ[name] for name in names}
+    return resolved
 
 
 def pre_tool_use(
@@ -95,23 +110,14 @@ def pre_tool_use(
     orchestrator: AdapterOrchestrator | None = None,
     require_allowed: bool = True,
 ) -> dict[str, Any]:
-    env = _require_env(
-        "L9_ADAPTER_SESSION_ID",
-        "L9_LEASE_ID",
-        "L9_AGENT_ID",
+    env = _require_env_aliases(
+        ("L9_ADAPTER_SESSION_ID",),
+        ("L9_LEASE_ID", "L9_AUTONOMY_LEASE_ID"),
+        ("L9_AGENT_ID", "L9_AUTONOMY_AGENT_ID"),
     )
-    # Accept legacy env aliases used by older launchers.
-    lease_id = env["L9_LEASE_ID"] or os.environ.get("L9_AUTONOMY_LEASE_ID", "")
-    agent_id = env["L9_AGENT_ID"] or os.environ.get("L9_AUTONOMY_AGENT_ID", "")
     session_id = env["L9_ADAPTER_SESSION_ID"]
-    if not lease_id:
-        lease_id = os.environ.get("L9_AUTONOMY_LEASE_ID", "")
-    if not agent_id:
-        agent_id = os.environ.get("L9_AUTONOMY_AGENT_ID", "")
-    if not lease_id or not agent_id:
-        raise PolicyViolation(
-            "ADAPTER_SESSION_INCOMPLETE: L9_LEASE_ID and L9_AGENT_ID are required"
-        )
+    lease_id = env["L9_LEASE_ID"]
+    agent_id = env["L9_AGENT_ID"]
     capability = infer_capability(tool_name, arguments)
     resource = infer_resource(tool_name, arguments)
     orch = orchestrator or _default_orchestrator()
@@ -158,7 +164,18 @@ def _default_orchestrator() -> AdapterOrchestrator:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Fail-closed autonomy tool mediation hook.")
-    parser.add_argument("phase", choices=("pre", "post"))
+    parser.add_argument(
+        "phase",
+        nargs="?",
+        choices=("pre", "post"),
+        help="Hook phase (positional or --phase)",
+    )
+    parser.add_argument(
+        "--phase",
+        dest="phase_opt",
+        choices=("pre", "post"),
+        help="Hook phase (preferred flag form used by adapter task configs)",
+    )
     parser.add_argument("--tool-name", required=True)
     parser.add_argument("--arguments-json", default="{}")
     parser.add_argument("--allowed", action="store_true")
@@ -171,8 +188,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    phase = args.phase_opt or args.phase
+    if phase is None:
+        parser.error("phase is required (positional or --phase)")
     arguments = json.loads(args.arguments_json)
-    if args.phase == "pre":
+    if phase == "pre":
         runtime = AutonomyRuntime.from_repository(
             repository_root=args.root,
             database_path=args.database,
