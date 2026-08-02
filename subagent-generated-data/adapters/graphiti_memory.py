@@ -127,8 +127,8 @@ class HttpJsonTransport:
         bearer_token: str | None = None,
         timeout_seconds: int = 20,
     ) -> None:
-        if not endpoint.startswith(("http://", "https://")):
-            raise ValueError("Graphiti HTTP endpoint must use http:// or https://")
+        if not endpoint.startswith("https://"):
+            raise ValueError("Graphiti HTTP endpoint must use https://")
         self.endpoint = endpoint
         self.bearer_token = bearer_token
         self.timeout_seconds = timeout_seconds
