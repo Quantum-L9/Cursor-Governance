@@ -74,6 +74,28 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 Consumer repos may add a two-line delegating `start` target so plain `make start`
 works from inside the repo.
 
+Same inheritance pattern for the local PR / security gate (no per-repo scanner
+install beyond machine-level `gitleaks` + `uv`; bandit/semgrep/pip-audit run via
+`uvx` from this clone). **Invariant:** `make pr` / PR pre-commit scan
+**changed files only** (vs `PR_BASE`, default `origin/main`); full-corpus scans
+are nightly CI (`make pr-full` / `make precommit` for intentional local full runs).
+
+```bash
+make -C "$HOME/.cursor-governance" pr WS="$(pwd)"
+# or security scanners only:
+make -C "$HOME/.cursor-governance" pr-security WS="$(pwd)"
+```
+
+When adopting **l9-ci-core**'s common workflow, consumer repos use the **identical
+thin Makefile** from `tools/l9_repo/Makefile.template` (delegates to
+`python -m tools.l9_repo`); they do **not** copy Cursor-Governance's fat Makefile.
+Optional thin consumer Makefile that only delegates governance `pr`:
+
+```makefile
+pr:
+	$(MAKE) -C "$(HOME)/.cursor-governance" pr WS="$(CURDIR)"
+```
+
 Run these directly if you need to re-check or repair only one piece mid-session:
 
 ```bash
@@ -95,7 +117,46 @@ defaults to `$(pwd)` the same way but also accepts an explicit `--workspace <pat
 (used by `setup_workspace_symlinks.sh` and the sessionStart hook internally) —
 pass it directly if you're not `cd`'d into the target repo.
 
-### 2.3 Graphiti — activated (2026-07-27)
+### 2.3 Toolchain pins (local `make pr` / pre-commit)
+
+**Authority:** when [l9-ci-sdk](https://github.com/Quantum-L9/l9-ci-sdk) and
+[l9-ci-core](https://github.com/Quantum-L9/l9-ci-core) disagree on a version,
+**l9-ci-sdk wins**. Core is used only for tools the SDK does not pin
+(gitleaks / bandit / pip-audit — SDK intentionally omits those).
+
+**SSOT file in this repo:** [`requirements.txt`](requirements.txt) (exact pins +
+comments). Keep `pyproject.toml` `[project.optional-dependencies] dev` and
+`.pre-commit-config.yaml` ruff `rev` in lockstep with that file.
+
+| Tool | Version | Install | Source |
+|---|---|---|---|
+| ruff | `0.16.0` | `uv sync --extra dev` | sdk `requirements-ci.txt` |
+| mypy | `2.3.0` | same | sdk |
+| pytest | `9.1.1` | same | sdk |
+| pytest-cov | `7.1.0` | same | sdk |
+| types-PyYAML | `6.0.12.20260724` | same | sdk |
+| bandit | `1.8.6` | same / `uvx` | core `security.yml` (sdk omits) |
+| pip-audit | `2.9.0` | same / `uvx` | core `security.yml` (sdk omits) |
+| gitleaks | `8.24.3` | `brew install gitleaks` | core `security.yml` (sdk omits) |
+| semgrep | `>=1.100.0,<2.0.0` | brew / pip / `uvx` | sdk SemgrepVersionPolicy |
+| pre-commit | latest stable | pipx / pip / brew | framework only |
+| uv | `>=0.8.0` | https://docs.astral.sh/uv/ | `[tool.uv] required-version` |
+
+```bash
+# One-time / refresh local analysis toolchain
+uv pip install -r "$HOME/.cursor-governance/requirements.txt"
+# preferred in this clone (locked):
+make -C "$HOME/.cursor-governance" venv   # uv sync --locked --extra dev
+brew install gitleaks                     # pin 8.24.3 when possible
+```
+
+**Not required for `make pr`:** `SEMGREP_APP_TOKEN` / `semgrep login` (optional
+unthrottle / private rules), `SONAR_TOKEN` (SonarCloud / SonarLint only).
+
+**Invariant:** `make pr` scans **changed files only**. Full-corpus = nightly CI
+(`make precommit` / `make pr-full` for intentional local full runs).
+
+### 2.4 Graphiti — activated (2026-07-27)
 
 Graphiti memory is **fully activated and round-trip verified**, not degraded.
 C1's `graphiti-mcp` container was found running `zepai/graphiti:latest` (a REST
@@ -118,7 +179,7 @@ that is a regression — check the deployed image on C1
 `zepai/knowledge-graph-mcp`, not `zepai/graphiti`) before assuming this note
 is stale.
 
-### 2.4 Retired: `start-session.yaml`
+### 2.5 Retired: `start-session.yaml`
 
 A 917-line declarative YAML protocol of the same name previously existed at
 the repo root. It was **deleted (2026-07-19)** — it was never wired into any

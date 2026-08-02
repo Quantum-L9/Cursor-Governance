@@ -1,0 +1,17 @@
+# Gitleaks config for local `make pr` / `make pr-security`.
+# Working-tree scans exclude reference/harvest/scratch trees that are not
+# production runtime. Full git-history secret archaeology stays an org/CI concern.
+title = "l9-cursor-governance-pr-security"
+
+[allowlist]
+paths = [
+  '''(?i)(^|/)current_work/''',
+  '''(?i)(^|/)WIP/''',
+  '''(?i)(^|/)_archived/''',
+  '''(?i)(^|/)_archive/''',
+  '''(?i)(^|/)archive(d)?/''',
+  '''(?i)(^|/)C_GOV_FILES/''',
+  '''(?i)(^|/)\.venv/''',
+  '''(?i)(^|/)node_modules/''',
+  '''(?i)(^|/)reports/''',
+]

@@ -1,0 +1,47 @@
+# =============================================================================
+# Cursor-Governance — local PR / CI analysis toolchain pins
+# =============================================================================
+#
+# Purpose: make it obvious which tools must be installed, at which versions,
+# before `make pr` / pre-commit / lint. Runtime app deps stay in pyproject.toml.
+#
+# Authority (binding):
+#   When Quantum-L9/l9-ci-sdk and Quantum-L9/l9-ci-core disagree on a version,
+#   l9-ci-sdk WINS. Core pins are used only for tools the SDK does not pin.
+#
+# Sources (checked against main):
+#   SDK  requirements-ci.txt / pyproject [project.optional-dependencies].ci
+#        https://github.com/Quantum-L9/l9-ci-sdk
+#   SDK  SemgrepVersionPolicy  (>=1.100.0,<2.0.0
+#        l9_ci/providers/semgrep/versioning.py
+#   Core .github/workflows/security.yml  (gitleaks / bandit / pip-audit only —
+#        SDK intentionally omits those; see sdk pyproject comment)
+#        https://github.com/Quantum-L9/l9-ci-core
+#
+# Install (Python pins below):
+#   uv pip install -r requirements.txt
+#   # or keep the locked venv in sync after pyproject mirrors these pins:
+#   uv sync --locked --extra dev
+#
+# Machine CLIs (not installable from this file) — see AGENTS.md § toolchain:
+#   uv          >=0.8.0          (https://docs.astral.sh/uv/)
+#   pre-commit  (latest stable)  pipx/pip/brew; runs .pre-commit-config.yaml
+#   gitleaks    8.24.3           brew install gitleaks  (core security.yml;
+#                                SDK has no gitleaks pin)
+#   semgrep     >=1.100.0,<2.0.0 brew / pip / uvx; SDK version policy
+#
+# Optional (unthrottle / private rules — NOT required for make pr):
+#   SEMGREP_APP_TOKEN   semgrep login
+#   SONAR_TOKEN         sonar-scanner / SonarLint connected mode only
+# =============================================================================
+
+# --- l9-ci-sdk wins (exact pins from requirements-ci.txt / pyproject ci) ------
+ruff==0.16.0
+mypy==2.3.0
+types-PyYAML==6.0.12.20260724
+pytest==9.1.1
+pytest-cov==7.1.0
+
+# --- l9-ci-core only (SDK does not pin these; used by make pr-security) -------
+bandit==1.8.6
+pip-audit==2.9.0
