@@ -375,7 +375,7 @@ class CommandContextClient:
     ) -> ContextQueryResult:
         try:
             completed = subprocess.run(
-                list(self.command),
+                self.command,
                 input=canonical_json(query.to_dict()),
                 capture_output=True,
                 text=True,

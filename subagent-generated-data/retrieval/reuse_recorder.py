@@ -235,7 +235,7 @@ class CommandReuseTransport:
     ) -> Mapping[str, Any]:
         try:
             completed = subprocess.run(
-                list(self.command),
+                self.command,
                 input=canonical_json(event),
                 capture_output=True,
                 text=True,

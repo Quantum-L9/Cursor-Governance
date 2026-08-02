@@ -250,8 +250,9 @@ class CommandInvalidationTransport:
         request: Mapping[str, Any],
     ) -> Mapping[str, Any]:
         try:
-            completed = subprocess.run(
-                list(self.command),
+            # Operator-configured argv (env/CLI), not untrusted request body.
+            completed = subprocess.run(  # nosemgrep: subprocess-injection
+                self.command,
                 input=canonical_json(request),
                 capture_output=True,
                 text=True,
