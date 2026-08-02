@@ -251,6 +251,18 @@ verify the archival rationale in git history before restoring anything).
 
 ## 6. Validation workflow before merge
 
+**Binding pre-PR gate (`CANONICAL_LAW.md` §12) — non-optional, fail-closed.**
+Before opening *any* PR (opening or updating a PR triggers CI), the local
+changed-files pipeline MUST pass:
+
+```bash
+make pr        # alias: make pr-check — changed-files pre-commit + ruff + security
+```
+
+Do not open the PR, and do not push to trigger CI, if `make pr` fails — fix and
+re-run first. Target is lowercase `make pr` (Make is case-sensitive; `make PR`
+errors). Then run the governance-wiring checks:
+
 ```bash
 bash ops/scripts/check_governance_wiring.sh "$(pwd)"
 bash ops/scripts/validate_governance_symlinks.sh
