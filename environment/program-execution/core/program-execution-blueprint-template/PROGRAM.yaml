@@ -1,0 +1,44 @@
+schema: program-execution-blueprint.program.v2
+schema_version: 2.0.0
+program:
+  id: '{{PROGRAM_ID}}'
+  name: '{{PROGRAM_NAME}}'
+  version: '{{PROGRAM_VERSION}}'
+  owner: '{{PROGRAM_OWNER}}'
+  definition_status: draft
+  snapshot_at: '{{DATE}}'
+  objective: REPLACE_WITH_ONE_SENTENCE_OBJECTIVE
+  problem_statement: REPLACE_WITH_VERIFIED_PROBLEM
+  target_state: REPLACE_WITH_TERMINAL_STATE
+  scope:
+    include:
+    - REPLACE_WITH_INCLUDED_SURFACE_OR_CAPABILITY
+    exclude:
+    - REPLACE_WITH_EXCLUDED_SURFACE_OR_CAPABILITY
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - latest_accepted_program_decision
+  - accepted_architecture_and_contracts
+  - verified_current_state_evidence
+  - approved_task_card
+  - implementation
+  - documentation
+  - historical_material
+  - UNKNOWN
+  operating_rules:
+  - one_authority_per_responsibility
+  - controller_may_narrow_never_widen
+  - unknown_blocks_only_named_dependencies
+  - promotion_requires_evidence_backed_gates
+  - no_silent_scope_expansion
+  - no_irreversible_action_without_exact_authority
+  - worker_claim_is_not_verification
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE

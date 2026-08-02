@@ -1,0 +1,24 @@
+schema: program-execution-system.handoff-protocol.v2
+schema_version: 2.0.0
+producer: Program Execution Controller
+consumer: program owner
+artifact: program-execution-controller.handoff-receipt.v2
+binding:
+- program_id
+- program_digest
+- controller_id
+- receipt_digest
+contents:
+- runtime_summary
+- task_runtime_states
+- gate_results_and_evidence
+- decision_and_unknown_projections
+- approvals
+- residual_risks
+- recommended_program_verdict
+laws:
+- receipt_is_append_only_evidence
+- receipt_does_not_mutate_blueprint
+- recommendation_is_not_terminal_acceptance
+- blueprint_change_requires_new_program_lock
+- acceptance_or_supersession_must_be_explicit

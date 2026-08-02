@@ -1,0 +1,22 @@
+schema: program-execution-blueprint.current-state-delta.v2
+schema_version: 2.0.0
+snapshot_at: '{{DATE}}'
+freshness_policy:
+  maximum_age: REPLACE_WITH_DURATION
+  stale_result: BLOCKED
+sources:
+- source_id: SRC-001
+  evidence_id: EVID-001
+  revision: UNKNOWN
+  freshness: UNKNOWN
+deltas:
+- id: DELTA-001
+  target_id: TARGET-001
+  expected_state: REPLACE
+  observed_state: REPLACE
+  classification: UNKNOWN
+  impact: REPLACE
+  required_action: REPLACE
+  evidence_ids:
+  - EVID-001
+next_blocking_action: Resolve authority and decision lock before implementation.

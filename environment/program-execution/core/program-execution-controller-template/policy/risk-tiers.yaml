@@ -1,0 +1,18 @@
+schema: program-execution-controller.risk-policy.v2
+schema_version: 2.0.0
+tiers:
+  T0:
+    description: read-only program control or inspection
+    maximum_autonomy: inspect
+  T1:
+    description: reversible documentation test or metadata change
+    maximum_autonomy: local_attempt_and_verify
+  T2:
+    description: reversible implementation change on one target
+    maximum_autonomy: local_attempt_and_verify
+  T3:
+    description: cross-surface compatibility-sensitive or partially reversible change
+    maximum_autonomy: plan_local_attempt_verify_and_pause_for_promotion
+  T4:
+    description: destructive irreversible security production migration or cutover action
+    maximum_autonomy: evidence_only_until_exact_approval

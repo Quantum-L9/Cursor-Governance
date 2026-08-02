@@ -1,0 +1,21 @@
+schema: program-execution-blueprint.cutover-and-rollback.v2
+schema_version: 2.0.0
+cutover:
+  required_gate_ids:
+  - GATE-002
+  approval_action: deploy_or_migrate
+  steps:
+  - REPLACE_WITH_CUTOVER_STEP
+  abort_conditions:
+  - REPLACE_WITH_ABORT_CONDITION
+  observation_window: REPLACE_WITH_DURATION
+rollback:
+  trigger_conditions:
+  - blocking_gate_failure
+  - material_observability_breach
+  steps:
+  - REPLACE_WITH_ROLLBACK_STEP
+  data_reconciliation: REPLACE
+  validation:
+  - REPLACE_WITH_POST_ROLLBACK_VALIDATION
+  owner: REPLACE

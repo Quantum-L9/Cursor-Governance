@@ -1,0 +1,18 @@
+schema: program-execution-blueprint.observability-plan.v2
+schema_version: 2.0.0
+signals:
+- id: OBS-001
+  name: REPLACE_WITH_SIGNAL
+  owner: REPLACE
+  source_target_id: TARGET-001
+  collection_method: REPLACE
+  expected_range: REPLACE
+  alert_condition: REPLACE
+  retention: REPLACE
+  related_gate_ids:
+  - GATE-002
+  status: planned
+incident_routing:
+- condition: blocking_signal_breach
+  owner: '{{PROGRAM_OWNER}}'
+  action: pause_affected_wave_and_preserve_evidence

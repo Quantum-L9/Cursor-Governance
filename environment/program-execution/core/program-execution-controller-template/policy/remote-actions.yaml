@@ -1,0 +1,12 @@
+schema: program-execution-controller.remote-action-policy.v2
+schema_version: 2.0.0
+default: denied
+actions:
+  commit: blueprint_ceiling_plus_exact_approval_required
+  push: adapter_plus_blueprint_ceiling_plus_exact_approval_required
+  open_or_update_pull_request: adapter_plus_blueprint_ceiling_plus_exact_approval_required
+  merge: human_only
+  publish_or_release: human_only
+  deploy_or_promote: human_only
+  migration_uninstall_delete_cutover: exact_approval_and_recovery_evidence_required
+  external_message: exact_approval_required

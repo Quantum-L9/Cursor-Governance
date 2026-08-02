@@ -1,8 +1,8 @@
-# _archived/_archive/archive[d] dirs are kept reference artifacts (git-tracked,
-# NOT gitignored) — they document superseded systems but must never block or be
-# reformatted by pre-commit. Excluded globally so no current or future hook
-# touches them.
-exclude: '(^|/)_?archive(d)?/'
+# Scratch / reference trees are git-visible but must never block or be
+# reformatted by pre-commit (local make pr, CI, or --all-files). Keep in sync
+# with ops/scripts/resolve_changed_files.sh SCRATCH_PREFIXES and
+# ops/scripts/run_pr_security.sh EXCLUDE_PREFIXES.
+exclude: '(^|/)(_?archive(d)?/|WIP/|current_work/|C_GOV_FILES/|reports/|workflows/)'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

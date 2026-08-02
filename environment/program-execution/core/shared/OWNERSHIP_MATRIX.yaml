@@ -1,0 +1,43 @@
+schema: program-execution-system.ownership-matrix.v2
+schema_version: 2.0.0
+rules:
+  one_canonical_owner_per_concern: true
+  runtime_projection_does_not_transfer_definition_authority: true
+  controller_may_narrow_never_widen: true
+concerns:
+- concern: program_identity_target_state_and_scope
+  canonical_owner: Program Execution Blueprint
+  controller_projection: immutable Program Lock
+  mutation_path: superseding Blueprint accepted by program owner
+- concern: responsibility_authority
+  canonical_owner: Program Execution Blueprint
+  controller_projection: read_only authority projection
+  mutation_path: evidence-backed decision and superseding Blueprint
+- concern: task_definition_and_authorization_ceiling
+  canonical_owner: Program Execution Blueprint
+  controller_projection: runtime task plus narrowed Source Contract
+  mutation_path: superseding Task Card
+- concern: task_runtime_state
+  canonical_owner: Program Execution Controller
+  controller_projection: SQLite state plus hash-chained event ledger
+  mutation_path: validated state transition only
+- concern: convergence_gate_definition
+  canonical_owner: Program Execution Blueprint
+  controller_projection: immutable gate definition
+  mutation_path: superseding gate definition
+- concern: convergence_gate_evaluation
+  canonical_owner: Program Execution Controller
+  controller_projection: evidence-bound Gate Evaluation Receipt
+  mutation_path: independent re-evaluation
+- concern: worker_attempt_claim
+  canonical_owner: worker
+  controller_projection: Attempt Receipt
+  mutation_path: new attempt only; never edits prior receipt
+- concern: verification_verdict
+  canonical_owner: Program Execution Controller
+  controller_projection: Verification Receipt
+  mutation_path: independent rerun against exact state
+- concern: final_program_verdict
+  canonical_owner: program owner
+  controller_projection: advisory Handoff Receipt recommendation
+  mutation_path: explicit acceptance or superseding program decision

@@ -1,0 +1,15 @@
+schema: program-execution-blueprint.unknown-register.v2
+schema_version: 2.0.0
+policy: Unknowns remain explicit and block only named dependent work.
+unknowns:
+- id: UNK-001
+  topic: REPLACE_WITH_MISSING_FACT_OR_UNRESOLVED_SEMANTIC
+  owner: REPLACE_WITH_RESOLUTION_OWNER
+  blocks:
+  - TASK-001
+  safe_state: Do not execute dependent work.
+  resolution_requirements:
+  - REPLACE_WITH_REQUIRED_PROOF
+  resolution_evidence_ids: []
+  status: open
+  resolved_at: null

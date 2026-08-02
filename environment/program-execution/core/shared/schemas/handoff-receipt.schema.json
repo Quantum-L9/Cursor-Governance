@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-controller.handoff-receipt.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "handoff_id",
+    "program_id",
+    "program_digest",
+    "controller_id",
+    "exported_at",
+    "runtime_summary",
+    "tasks",
+    "gates",
+    "decisions",
+    "unknowns",
+    "approvals",
+    "residual_risks",
+    "recommended_program_verdict",
+    "receipt_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-controller.handoff-receipt.v2"
+    },
+    "handoff_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "program_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "program_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "controller_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exported_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime_summary": {
+      "type": "object"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "residual_risks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "recommended_program_verdict": {
+      "enum": [
+        "CONVERGED",
+        "CONVERGED_WITH_NON_BLOCKING_RISKS",
+        "NOT_CONVERGED",
+        "INCONCLUSIVE"
+      ]
+    },
+    "receipt_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

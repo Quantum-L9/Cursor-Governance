@@ -1,0 +1,33 @@
+schema: program-execution-system.error-taxonomy.v2
+schema_version: 2.0.0
+errors:
+- code: DEFINITION_INVALID
+  owner: Blueprint
+  effect: reject import or block affected entity
+- code: PROGRAM_LOCK_STALE
+  owner: Controller
+  effect: block admission and require relock
+- code: AUTHORITY_AMBIGUOUS
+  owner: Blueprint
+  effect: block only named dependent work
+- code: AUTHORIZATION_INFLATION
+  owner: Controller
+  effect: reject Source or Rendered Contract
+- code: REPOSITORY_STATE_DRIFT
+  owner: Controller
+  effect: mark task STALE and preserve evidence
+- code: SCOPE_VIOLATION
+  owner: Controller
+  effect: fail attempt and deny advancement
+- code: VALIDATION_FAILURE
+  owner: Controller
+  effect: mark task FAILED and invoke rollback or retry policy
+- code: EVIDENCE_INVALID_OR_STALE
+  owner: Controller
+  effect: block decision, Unknown resolution, gate evaluation, or completion
+- code: LEASE_EXPIRED
+  owner: Controller
+  effect: preserve recovery artifacts, release lease, mark task STALE
+- code: PROGRAM_NOT_CONVERGED
+  owner: program owner
+  effect: accept NOT_CONVERGED or issue superseding Blueprint

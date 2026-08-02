@@ -1,0 +1,23 @@
+schema: program-execution-blueprint.dependency-graph.v2
+schema_version: 2.0.0
+direction: predecessor_to_successor
+nodes:
+- id: TASK-001
+  entity_type: task
+  owner: REPLACE
+- id: TASK-002
+  entity_type: task
+  owner: REPLACE
+edges:
+- id: EDGE-001
+  from: TASK-001
+  to: TASK-002
+  relation: requires
+  blocking: true
+  proof_gate_ids:
+  - GATE-001
+critical_path:
+- TASK-001
+- TASK-002
+parallelizable_groups: []
+hard_rule: No successor may bypass a predecessor by reproducing its output elsewhere.

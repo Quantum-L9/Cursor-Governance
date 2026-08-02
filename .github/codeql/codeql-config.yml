@@ -32,6 +32,13 @@ query-filters:
 # same ignore list is valid whether a repo ships Python, shell, or config only.
 paths-ignore:
   - "**/archive/**"
+  - "**/_archive/**"
+  - "**/_archived/**"
+  - "**/archived/**"
+  - "**/WIP/**"
+  - "**/current_work/**"
+  - "**/C_GOV_FILES/**"
+  - "**/reports/**"
   - "**/__pycache__/**"
   - "**/.venv/**"
   - "**/venv/**"

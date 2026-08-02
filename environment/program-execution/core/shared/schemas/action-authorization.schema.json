@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-system/action-authorization.v2",
+  "title": "Action Authorization Ceiling",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "inspect",
+    "local_write",
+    "commit",
+    "push",
+    "pull_request",
+    "merge",
+    "publish_or_release",
+    "deploy_or_migrate",
+    "destructive_change",
+    "external_message"
+  ],
+  "properties": {
+    "inspect": {
+      "type": "boolean"
+    },
+    "local_write": {
+      "type": "boolean"
+    },
+    "commit": {
+      "type": "boolean"
+    },
+    "push": {
+      "type": "boolean"
+    },
+    "pull_request": {
+      "type": "boolean"
+    },
+    "merge": {
+      "type": "boolean"
+    },
+    "publish_or_release": {
+      "type": "boolean"
+    },
+    "deploy_or_migrate": {
+      "type": "boolean"
+    },
+    "destructive_change": {
+      "type": "boolean"
+    },
+    "external_message": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-controller.attempt-receipt.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "task_id",
+    "contract_digest",
+    "program_digest",
+    "base_sha",
+    "candidate_sha",
+    "changed_files",
+    "validation_results",
+    "produced_evidence",
+    "residual_unknowns",
+    "claimed_status"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-controller.attempt-receipt.v2"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contract_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "program_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "base_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40,64}$"
+    },
+    "candidate_sha": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{40,64}$"
+    },
+    "changed_files": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "validation_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "command",
+          "status",
+          "exit_code",
+          "evidence"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "PASS",
+              "FAIL",
+              "BLOCKED",
+              "UNKNOWN"
+            ]
+          },
+          "exit_code": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "evidence": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "produced_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "residual_unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "claimed_status": {
+      "enum": [
+        "completed",
+        "failed",
+        "blocked",
+        "stopped"
+      ]
+    }
+  }
+}

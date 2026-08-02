@@ -1,0 +1,28 @@
+schema: program-execution-blueprint.decision-register.v2
+schema_version: 2.0.0
+policy: No blocked decision may be silently defaulted.
+decisions:
+- id: DEC-001
+  question: REPLACE_WITH_DECISION_QUESTION
+  status: pending
+  owner: '{{PROGRAM_OWNER}}'
+  options:
+  - id: A
+    description: REPLACE
+    benefits:
+    - REPLACE
+    risks:
+    - REPLACE
+  - id: B
+    description: REPLACE
+    benefits:
+    - REPLACE
+    risks:
+    - REPLACE
+  selected_option: null
+  rationale: null
+  evidence_ids: []
+  blocks:
+  - TASK-001
+  required_by: UNKNOWN
+  supersedes: null

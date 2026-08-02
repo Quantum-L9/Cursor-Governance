@@ -1,0 +1,17 @@
+schema: program-execution-controller.autonomy-policy.v2
+schema_version: 2.0.0
+profile: bounded_local_execution
+permissions:
+  inspect_local_sources: allowed
+  create_controller_state: allowed
+  create_worktree: allowed
+  modify_declared_paths: allowed_by_rendered_contract
+  run_declared_validation: allowed
+  create_local_commit: approval_and_ceiling_required
+  push: denied_without_adapter_and_exact_approval
+  pull_request: denied_without_adapter_and_exact_approval
+  merge: denied
+  publish_or_release: denied
+  deploy_or_migrate: denied
+  destructive_action: exact_approval_and_recovery_evidence_required
+  external_message: denied

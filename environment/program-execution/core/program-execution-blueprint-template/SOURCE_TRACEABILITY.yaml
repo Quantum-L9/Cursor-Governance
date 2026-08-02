@@ -1,0 +1,26 @@
+schema: program-execution-blueprint.source-traceability.v2
+schema_version: 2.0.0
+authority_classes:
+- governing
+- supporting
+- contradicting
+- example
+- historical
+- inferred
+sources:
+- id: SRC-001
+  source: REPLACE_WITH_SOURCE_NAME_OR_LOCATION
+  revision: UNKNOWN
+  authority_class: supporting
+  evidence_id: EVID-001
+  claims:
+  - REPLACE
+  target_ids:
+  - TARGET-001
+  workstream_ids:
+  - WS-01
+  task_ids:
+  - TASK-001
+  gate_ids:
+  - GATE-001
+  status: active

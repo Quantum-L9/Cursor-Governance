@@ -1,0 +1,30 @@
+schema: program-execution-system.vocabulary.v2
+terms:
+- term: Execution Program
+  definition: A coordinated undertaking with multiple dependent workstreams, explicit authority, promotion gates,
+    and a terminal state.
+  forbidden_synonyms:
+  - epic
+- term: Program Execution Blueprint
+  definition: The immutable-at-import design-time authority pack for an Execution Program.
+- term: Program Execution Controller
+  definition: The runtime authority that projects, constrains, schedules, verifies, and records Blueprint execution.
+- term: Task Card
+  definition: A Blueprint task definition. It is intent, not an execution lease or worker assignment.
+- term: Runtime Task
+  definition: The Controller projection of one Task Card with mutable execution state.
+- term: Convergence Gate
+  definition: A Blueprint-defined pass/fail condition whose runtime evaluation is owned by the Controller.
+- term: Program Lock
+  definition: A normalized immutable Controller import of an exact Blueprint revision.
+- term: Source Contract
+  definition: An operator-reviewed request that narrows a Task Card into exact writable scope and validation obligations.
+- term: Rendered Contract
+  definition: A Controller-generated contract binding the Source Contract to exact program digest, repository SHA,
+    lease, worktree, and receipt paths.
+- term: Attempt Receipt
+  definition: A worker claim describing what was changed and tested. It is never verification authority.
+- term: Verification Receipt
+  definition: Controller-produced evidence evaluating the actual attempt against the exact Rendered Contract.
+- term: Handoff Receipt
+  definition: Controller export summarizing runtime state and evidence for program-owner acceptance.

@@ -1,0 +1,34 @@
+schema: program-execution-system.validation-report.v2
+schema_version: 2.0.0
+artifact: program-execution-system-v2.0.0
+validation_status: APPROVED_EXECUTION_READY
+validated_scope:
+- reusable Program Execution Blueprint template
+- reusable Program Execution Controller template
+- Blueprint-to-Controller interface contract
+- local Git-worktree execution lifecycle
+- manifests, schemas, state transitions, authority ceilings, evidence receipts, recovery, and handoff
+not_proven:
+- any specific instantiated Execution Program
+- production deployment or migration
+- host-specific ChatGPT, Cursor, Claude Code, CI, or GitHub adapter behavior
+- remote publication, merge, release, or deployment
+hard_gates:
+  artifact_inventory_gate: PASS
+  no_stub_gate: PASS
+  contract_depth_gate: PASS
+  local_pipeline_execution_gate: PASS
+  evidence_gate: PASS
+  operator_docs_gate: PASS
+  regression_gate: PASS
+  authority_boundary_gate: PASS
+  ambiguity_elimination_gate: PASS
+  archive_integrity_gate: PASS
+release_blockers: []
+non_blocking_findings:
+- id: NF-001
+  finding: Host-specific worker and remote-action adapters remain intentionally outside the universal core.
+  disposition: Add as replaceable adapters when a concrete host and authority model are selected.
+- id: NF-002
+  finding: Template validation cannot prove the correctness of future domain-specific task definitions or commands.
+  disposition: Require instantiated validation and runtime evidence for each program.

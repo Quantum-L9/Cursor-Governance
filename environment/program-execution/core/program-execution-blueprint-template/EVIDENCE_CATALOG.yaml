@@ -1,0 +1,19 @@
+schema: program-execution-blueprint.evidence-catalog.v2
+schema_version: 2.0.0
+evidence:
+- id: EVID-001
+  type: source_snapshot
+  source: REPLACE_WITH_SOURCE
+  revision: UNKNOWN
+  digest: null
+  method: REPLACE_WITH_RETRIEVAL_OR_INSPECTION
+  environment: planning
+  producer: REPLACE
+  produced_at: '{{DATE}}'
+  expires_at: null
+  result: INFORMATIONAL
+  status: planned
+  supports:
+  - DELTA-001
+  contradicts: []
+  notes: null

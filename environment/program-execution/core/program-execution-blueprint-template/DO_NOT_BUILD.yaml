@@ -1,0 +1,16 @@
+schema: program-execution-blueprint.do-not-build.v2
+schema_version: 2.0.0
+prohibited_primary_paths:
+- id: DNB-001
+  path_or_pattern: REPLACE_WITH_PROHIBITED_ARCHITECTURE_OR_IMPLEMENTATION
+  reason: REPLACE_WITH_AUTHORITY_SAFETY_OR_DUPLICATION_REASON
+  detection: REPLACE_WITH_TEST_SCAN_OR_REVIEW_METHOD
+  exception_authority: NONE
+allowed_experiments:
+- id: EXP-001
+  scope: REPLACE_WITH_SANDBOXED_EXPERIMENT
+  constraints:
+  - must_not_become_production_authority
+  - must_be_disposable
+  - must_be_labeled_experimental
+  expiry: '{{DATE}}'

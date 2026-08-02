@@ -1,0 +1,24 @@
+schema: program-execution-blueprint.workstreams.v2
+schema_version: 2.0.0
+workstreams:
+- id: WS-01
+  name: REPLACE_WITH_WORKSTREAM_NAME
+  objective: REPLACE_WITH_ONE_RESPONSIBILITY_LANE
+  owner: REPLACE
+  target_ids:
+  - TARGET-001
+  scope:
+    include:
+    - REPLACE
+    exclude:
+    - REPLACE
+  inputs:
+  - REPLACE
+  outputs:
+  - REPLACE
+  entry_gate_ids:
+  - GATE-001
+  exit_gate_ids:
+  - GATE-002
+  rollback_boundary: REPLACE
+  definition_status: active

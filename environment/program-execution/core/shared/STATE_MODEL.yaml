@@ -1,0 +1,24 @@
+schema: program-execution-system.state-model.v2
+schema_version: 2.0.0
+domains:
+  definition_state:
+    owner: Program Execution Blueprint
+    values: [draft, ready, active, blocked, accepted, superseded, retired, cancelled]
+    law: Describes definition readiness or lifecycle; never execution progress.
+  runtime_task_state:
+    owner: Program Execution Controller
+    values: [BLOCKED, ELIGIBLE, LEASED, PREPARED, CONTRACTED, EXECUTING, SUBMITTED, VERIFYING, PASSED_LOCAL, FAILED, STALE, CANCELLED, COMPLETED]
+    law: Changes only through the Controller state machine and evidence-bearing events.
+  evidence_result:
+    owner: evidence producer with Controller validation
+    values: [PASS, FAIL, BLOCKED, UNKNOWN, NOT_APPLICABLE_WITH_REASON, INFORMATIONAL]
+    law: UNKNOWN is non-passing; NOT_APPLICABLE_WITH_REASON satisfies a gate only with a valid scoped waiver.
+  program_verdict:
+    owner: program owner
+    values: [CONVERGED, CONVERGED_WITH_NON_BLOCKING_RISKS, NOT_CONVERGED, INCONCLUSIVE]
+    law: Controller recommendations are advisory until explicitly accepted.
+forbidden_collapses:
+- task_status_as_both_definition_and_runtime
+- gate_status_inside_blueprint_definition
+- local_verification_as_program_convergence
+- worker_claim_as_verification
