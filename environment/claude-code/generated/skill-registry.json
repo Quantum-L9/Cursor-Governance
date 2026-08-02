@@ -251,6 +251,24 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "id": "bounded_autonomy",
+        "note": "explicit_only \u2014 recommendation is routing evidence only; requires /autonomy or explicit user campaign authority (campaign authorization packet).\n",
+        "positive_signals": [
+          "/autonomy",
+          "bounded autonomy campaign",
+          "parallel non-dependent tasks",
+          "background pr poll",
+          "pr convergence campaign",
+          "poll pr while continuing"
+        ],
+        "primary": "l9-bounded-autonomy",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-pr-remediation",
+          "l9-structured-reasoning"
+        ]
       }
     ],
     "supporting_skills": [
@@ -319,6 +337,17 @@
     },
     {
       "composition_role": "general",
+      "description": "bounded autonomy campaign SOP for Cursor \u2014 parallel non-dependent Tasks, background PR-poll subagents while main continues, campaign authorization packet, join/merge-gate without autonomous merge. use when user runs /autonomy, needs PR convergence while continuing other work, or fans out independent lanes under ADR-0001 / pr-convergence budgets.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-bounded-autonomy",
+      "path": "skills/l9-bounded-autonomy",
+      "reason": "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet \u2014 high blast radius, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -336,6 +365,17 @@
       "name": "l9-ci-ops",
       "path": "skills/l9-ci-ops",
       "reason": "CI/CD pipeline operations and gate authoring",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "Identify underutilized, verified repository-owned capabilities and enable their full utilization \u2014 activating dormant or miswired code, off-by-default features, unread config, and unused signals \u2014 then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-cli-optimization",
+      "path": "skills/l9-cli-optimization",
+      "reason": "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) \u2014 high blast radius, explicit only",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -715,6 +755,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "d385436524cafd18ea8955a38f25bedd0647228fcbf671273d9a51827ea53b77",
-  "source_skill_corpus_sha256": "c79ddfbf4b661d030d62fd1990dc75fe13bb7ca49901787d84b1ef18bbe50762"
+  "source_manifest_sha256": "7c3131463315037b315e932eb05762764d85459b15f54a8d09c6a7c692df8701",
+  "source_skill_corpus_sha256": "a58a6237c63033e75fa9c5effb763590e828befe26e695ba24879934bdf4ef0c"
 }

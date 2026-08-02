@@ -5,6 +5,12 @@ a resumable, policy-bounded campaign runtime. It does not create unbounded agent
 freedom. It makes independent, dependency-ready work executable concurrently
 when authority, isolation, validation, recovery, and durable state are present.
 
+**Cursor SOP:** for Composer/Agent parallel Tasks and background PR-poll while
+the main agent continues, use
+[`skills/l9-bounded-autonomy/`](../../skills/l9-bounded-autonomy/) and `/autonomy`
+(campaign authorization packet). Do not reimplement this Python scheduler in
+Cursor — map the same invariants onto Task tools.
+
 ## Core invariants
 
 1. Dependency readiness is computed from the action graph, never guessed.

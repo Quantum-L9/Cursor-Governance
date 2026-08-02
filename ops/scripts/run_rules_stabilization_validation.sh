@@ -29,15 +29,25 @@ TMP="$(mktemp -d "${TMPDIR:-/tmp}/rules-validation.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 FAIL=0
 
+sanitize_evidence() {
+  # Strip ANSI color codes and rewrite absolute GOV_ROOT paths to repo-relative.
+  local line
+  line="$(printf '%s' "$1" | sed $'s/\x1b\\[[0-9;]*[A-Za-z]//g')"
+  line="${line//$GOV_ROOT\//}"
+  line="${line//$GOV_ROOT/}"
+  printf '%s' "$line" | sed 's/`/\\`/g'
+}
+
 run_gate() {
   local name=$1
   shift
   local log="$TMP/$(printf '%s' "$name" | tr ' /' '__').log"
-  if "$@" >"$log" 2>&1; then
-    printf '| %s | PASS | `%s` |\n' "$name" "$(tail -1 "$log" | sed 's/`/\\`/g')" >> "$REPORT"
+  # Disable color so ruff/uv evidence stays plain Markdown.
+  if env NO_COLOR=1 FORCE_COLOR=0 CLICOLOR=0 "$@" >"$log" 2>&1; then
+    printf '| %s | PASS | `%s` |\n' "$name" "$(sanitize_evidence "$(tail -1 "$log")")" >> "$REPORT"
   else
     FAIL=1
-    printf '| %s | FAIL | `%s` |\n' "$name" "$(tail -1 "$log" | sed 's/`/\\`/g')" >> "$REPORT"
+    printf '| %s | FAIL | `%s` |\n' "$name" "$(sanitize_evidence "$(tail -1 "$log")")" >> "$REPORT"
   fi
 }
 

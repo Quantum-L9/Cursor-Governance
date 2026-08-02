@@ -27,7 +27,10 @@ Clean session close: structured PICKUP context, canonical memory extraction, Red
 3. **REDIS** — `cache_set_session_context` for next-window resume (mandatory).
 4. **HOOKS** — teardown session hooks if activated at start.
 5. **GOVERNANCE** — backup GlobalCommands to GitHub.
-6. **HANDOFF** — emit completed/in-progress/next-steps summary.
+6. **HANDOFF** — emit completed/in-progress/next-steps summary. If a bounded
+   autonomy campaign was active, include PICKUP fields from
+   `l9-bounded-autonomy/references/campaign-handoff.md` (`packet_id`, declared
+   PRs, lock owners, join/merge_gate status, next_actions, blockers).
 
 ## Authority Order
 

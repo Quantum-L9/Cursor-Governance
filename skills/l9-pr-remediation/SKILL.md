@@ -18,6 +18,11 @@ disable-model-invocation: true
 
 Operate a closed-loop remediation cycle on an open pull request: ingest CI gate failures AND code review bot comments (Gemini, CodeRabbit, GitHub reviewers), apply fixes, verify ALL gates locally, push ONE commit, reply to every review thread with canonical responses, wait for CI confirmation, then loop until converged or max cycles reached.
 
+**Bounded autonomy:** when used as a **background PR-poll worker** under
+`l9-bounded-autonomy` / `/autonomy`, run inside the campaign authorization
+**packet** (declared PR/branch only; ≤3 cycles; never merge). Main continues
+other work — do not expect the parent turn to AwaitShell on this loop.
+
 ## Core Contract
 
 | Input | Source | Tool |

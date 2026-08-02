@@ -6,6 +6,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# shellcheck source=lib/path_contracts.sh
+source "$SCRIPT_DIR/lib/path_contracts.sh"
+# shellcheck source=lib/rules_overlay.sh
+source "$SCRIPT_DIR/lib/rules_overlay.sh"
 
 FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-1}
@@ -189,7 +193,9 @@ remove_repo_duplicate "$HOME/.cursor/rules" "~/.cursor/rules (pre-4.0.0 symlink)
 
 link_or_update "$WORKSPACE_DIR/.cursor-commands" "$GLOBAL_COMMANDS" ".cursor-commands"
 mkdir -p "$WORKSPACE_DIR/.cursor"
-remove_repo_duplicate "$WORKSPACE_DIR/.cursor/rules" ".cursor/rules (pre-4.0.0 symlink)"
+# Repository-owned overlay: remove only a legacy global-rules symlink; preserve a
+# real local directory and its contents (rules/84-cursor-governance-wiring.mdc).
+ensure_repo_rules_overlay "$WORKSPACE_DIR/.cursor/rules" "$GLOBAL_COMMANDS/rules"
 
 setup_local_governance_dir
 

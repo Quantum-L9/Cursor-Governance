@@ -18,17 +18,17 @@ These are **hard-won lessons** from repeated mistakes. Violating these wastes ho
 
 ```bash
 # ❌❌❌ WRONG — NEVER USE ❌❌❌
-/Users/ib-mac/.cursor-governance
+/Users/<name>/.cursor-governance
 
 # ✅✅✅ CORRECT — ALWAYS USE ✅✅✅
 $HOME/.cursor-governance
 ```
 
-**Rule:** The governance SSOT is `$HOME/.cursor-governance` (the GitHub clone); legacy Dropbox is fallback only. Always use `$HOME`, never hardcoded `/Users/...` paths. Period. No exceptions.
+**Rule:** The governance SSOT is `$HOME/.cursor-governance` (the GitHub clone); legacy Dropbox is fallback only. Always use `$HOME`, never hardcoded `/Users/<name>/...` paths. Period. No exceptions.
 
 ### Use $HOME, Never Hardcoded Paths
 
-- **NEVER** use `/Users/ib-mac/` in scripts, configs, or LaunchAgents
+- **NEVER** use `/Users/<name>/` in scripts, configs, or LaunchAgents
 - **ALWAYS** use `$HOME` for user-specific paths
 - For Python: `Path.home()` or `os.path.expanduser("~")`
 - For bash: `$HOME`
@@ -40,7 +40,7 @@ $HOME/.cursor-governance
 docker-compose -f docs/docker-compose.yaml up -d  # Broken relative paths!
 
 # ✅ CORRECT
-cd /Users/ib-mac/Projects/L9 && docker-compose up -d  # Uses ROOT docker-compose.yml
+cd "$HOME/Projects/L9" && docker-compose up -d  # Uses ROOT docker-compose.yml
 ```
 
 **Rule:** Always use ROOT `docker-compose.yml` (gitignored but present). The docs version is reference only.

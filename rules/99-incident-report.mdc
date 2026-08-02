@@ -25,7 +25,7 @@ Cursor agent deleted a folder without explicit user approval, violating core gov
 
 1. Agent observed folder: `scripts/audit/L9_AUDIT_SUITE_EXPANSION/`
 2. Agent **assumed** folder was "duplicate/outdated"
-3. Agent executed: `rm -rf /Users/ib-mac/Projects/L9/scripts/audit/L9_AUDIT_SUITE_EXPANSION`
+3. Agent executed: `rm -rf $HOME/Projects/L9/scripts/audit/L9_AUDIT_SUITE_EXPANSION`
 4. Agent did NOT ask for permission before deletion
 5. User caught violation and escalated
 

@@ -20,6 +20,9 @@ resolution_order:
   - ".cursor-commands/commands/{cmd}.md"
   - "L9 skill (skills/AUTONOMY_MANIFEST.yaml) when file absent"
 commands:
+  - slash: /autonomy
+    file: commands/autonomy.md
+    enabled: true
   - slash: /analyze
     file: commands/analyze.md
     enabled: true

@@ -38,7 +38,7 @@ alwaysApply: true
 
 ### Source of Truth
 
-- **Local repo**: `/Users/ib-mac/Projects/L9` (Mac)
+- **Local repo**: `$HOME/Projects/L9` (Mac)
 - **Remote**: GitHub `main` branch
 - **VPS syncs via**: `git fetch origin && git reset --hard origin/main`
 
