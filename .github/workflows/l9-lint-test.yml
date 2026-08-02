@@ -161,20 +161,32 @@ jobs:
           # `set` call inside the script, so `pytest ... || status=$?` (not a
           # bare command) is required to capture a non-zero exit without
           # errexit aborting the script before the status check below runs.
+          #
+          # Root autonomy/ shadows environment/claude-code/autonomy (same package
+          # name). Run the repo suite first, then the Claude Code suite with a
+          # dedicated PYTHONPATH — see ops/scripts/run_pytest_suites.sh.
+          status=0
           PYTHONPATH=. pytest "${TEST_DIR}" \
+            --ignore=environment/claude-code/autonomy \
             -n auto \
             --cov="${SOURCE_DIR}" \
             --cov-report=xml --cov-report=term-missing \
             --cov-fail-under="${COVERAGE_THRESHOLD}" \
             --timeout=300 --tb=short -v || status=$?
-          status=${status:-0}
-          # Exit 5 = "no tests collected" (pytest's own exit-code semantics, not a
-          # crash). This repo currently has zero real test_*.py files outside WIP/
-          # (excluded) and workflows/dags/test_pipeline_dag.py (ignored -- it's a
-          # DAG module, not a test; see TODO.md). Treat that specific, expected
-          # code as a pass; any other non-zero code still fails the job.
           if [ "$status" -eq 5 ]; then
-            echo "::notice::pytest collected zero tests (exit 5) -- expected given current repo state, see TODO.md"
+            echo "::notice::repo pytest suite collected zero tests (exit 5)"
+            status=0
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          PYTHONPATH=environment/claude-code pytest \
+            environment/claude-code/autonomy/tests \
+            -o addopts= \
+            -n auto \
+            --timeout=300 --tb=short -v || status=$?
+          status=${status:-0}
+          if [ "$status" -eq 5 ]; then
+            echo "::notice::Claude Code autonomy suite collected zero tests (exit 5)"
             exit 0
           fi
           exit "$status"

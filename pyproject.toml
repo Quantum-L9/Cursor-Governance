@@ -112,7 +112,11 @@ norecursedirs = [
 # 2026-07-19 decision: leave broken, do not stub). Ignored here so CI collection
 # doesn't fail on a dormant, currently-unused code path; the underlying gap is
 # untouched.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py"
+# Root autonomy/ shadows environment/claude-code/autonomy when PYTHONPATH=.;
+# ignore the Claude Code package in the default suite. make test / make pr /
+# ops/scripts/run_pytest_suites.sh run that suite separately with the correct
+# PYTHONPATH. Clear addopts (-o addopts=) when invoking the Claude suite.
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=environment/claude-code/autonomy"
 
 [build-system]
 requires = ["setuptools>=68"]

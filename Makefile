@@ -155,14 +155,9 @@ uv-lock-check:
 	@if [ -f uv.lock ]; then uv lock --check; else echo "OK: no uv.lock present, skipping"; fi
 
 ## Pytest suite. make pr runs this only when Python files changed.
+## Splits root autonomy/ from environment/claude-code/autonomy/ (same package name).
 test: venv
-	@status=0; \
-	TESTING=true PYTHONPATH=. uv run pytest . --tb=short -q || status=$$?; \
-	if [ $$status -eq 5 ]; then \
-		echo "OK: pytest collected zero tests (exit 5) — expected given current repo state"; \
-		exit 0; \
-	fi; \
-	exit $$status
+	bash ops/scripts/run_pytest_suites.sh --tb=short -q
 
 ## Local PR security scanners on CHANGED files only.
 ## Pins: l9-ci-core security.yml (gitleaks 8.24.3, bandit==1.8.6, pip-audit==2.9.0).

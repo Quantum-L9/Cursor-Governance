@@ -60,13 +60,8 @@ fi
 
 echo "--- pytest ---"
 if grep -Eq '\.py$' "$changed_file"; then
-  status=0
-  TESTING=true PYTHONPATH=. uv run --no-build pytest . --tb=short -q || status=$?
-  if [[ "$status" -eq 5 ]]; then
-    echo "OK: pytest collected zero tests (exit 5)"
-  elif [[ "$status" -ne 0 ]]; then
-    exit "$status"
-  fi
+  # Root autonomy/ shadows environment/claude-code/autonomy — split suites.
+  bash "$SCRIPT_DIR/run_pytest_suites.sh" --tb=short -q
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
