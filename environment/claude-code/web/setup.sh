@@ -86,6 +86,14 @@ if [ -d "$CC_ENV" ]; then
     cp "$CC_ENV/mcp.template.json" .mcp.json
   fi
   echo "activated: .claude/settings.json + SessionStart hook -> $GOV_DIR"
+
+  # Reconcile L9 skills into Claude Code's native project discovery path before
+  # the model starts. Consumer-local skills are preserved; managed links only.
+  if [ -f "$GOV_DIR/ops/scripts/reconcile_claude_l9_skills.py" ]; then
+    python3 "$GOV_DIR/ops/scripts/reconcile_claude_l9_skills.py" \
+      --root "$GOV_DIR" --scope project --workspace "$(pwd)" --quiet \
+      || echo "WARN: L9 Claude skill reconciliation reported drift or a local name conflict"
+  fi
 else
   echo "WARN: $CC_ENV missing — governance clone may be incomplete; SessionStart hook not installed."
 fi

@@ -9,6 +9,7 @@ owner: igor_beylin
 status: active
 version: 2.1.0
 updated: 2026-06-18
+disable-model-invocation: true
 ---
 
 # PR Remediation Loop

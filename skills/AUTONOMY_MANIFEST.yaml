@@ -1,6 +1,6 @@
 version: 1
-purpose: "Document Cursor-native skill autonomy tiers for GlobalCommands."
-principle: "Skills are selected by Cursor from SKILL.md descriptions; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets."
+purpose: "Canonical cross-surface skill autonomy and routing registry for governed L9 agents."
+principle: "Model-invocable skills are selected from SKILL.md descriptions; explicit-only skills remain user-triggered; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets."
 
 cursor_discovery:
   enabled_by:
@@ -127,3 +127,214 @@ reasoning_routing:
       reference: "l9-structured-reasoning/references/reasoning-modes.md"
     - task_class: "Strategic angle, only when the user explicitly requests one"
       reference: "l9-structured-reasoning/references/persona-lenses.md"
+
+claude_routing:
+  version: 1
+  purpose: >
+    Reinforce Claude Code's native skill selection with high-confidence routes while
+    preserving model judgment, explicit-only boundaries, and narrow composition.
+  max_primary: 1
+  max_supporting: 2
+  force_threshold: 8
+  advisory_threshold: 6
+  primary_skills:
+    - l9-context7-docs
+    - l9-recursive-optimization
+    - l9-structured-reasoning
+    - l9-gmp-protocol
+    - l9-plan
+    - l9-code-analysis
+    - l9-gap-analysis
+    - l9-pr-analysis
+    - l9-ynp
+    - l9-skill-compiler
+    - l9-api-smoke-testing
+    - l9-auditing-performance
+    - l9-auditing-security
+    - l9-prompt-engineering
+    - l9-incident-response
+    - l9-setting-up-ci
+    - l9-graphiti-memory
+  supporting_skills:
+    - l9-structured-reasoning
+    - l9-context7-docs
+    - l9-gap-analysis
+    - l9-prompt-engineering
+    - l9-graphiti-memory
+    - l9-architecture-decision-records
+    - l9-update-agent-docs
+    - l9-ynp
+  trivial_patterns:
+    - '^fix (the )?typo\b'
+    - '^correct (the )?spelling\b'
+    - '^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$'
+    - '^show (me )?(the )?(file|status|diff)\b'
+  routes:
+    - id: pr_analysis
+      primary: l9-pr-analysis
+      signal_weight: 8
+      positive_signals:
+        - review pr
+        - pull request review
+        - merge blockers
+        - review comments
+        - pr readiness
+        - ready to merge
+      negative_signals:
+        - implement the review fixes
+        - push commits
+        - merge the pr
+        - merge this pr
+      supporting:
+        - l9-gap-analysis
+        - l9-structured-reasoning
+    - id: code_analysis
+      primary: l9-code-analysis
+      signal_weight: 8
+      positive_signals:
+        - unfamiliar repository
+        - audit this repository
+        - map the code flows
+        - map code flows
+        - explore the codebase
+        - identify hotspots
+      supporting:
+        - l9-structured-reasoning
+    - id: structured_reasoning
+      primary: l9-structured-reasoning
+      signal_weight: 8
+      positive_signals:
+        - architecture plan
+        - compare the trade-offs
+        - compare trade-offs
+        - root cause analysis
+        - deep reasoning
+        - decision support
+      supporting: []
+    - id: gap_analysis
+      primary: l9-gap-analysis
+      signal_weight: 8
+      positive_signals:
+        - what is missing
+        - readiness gaps
+        - percent complete
+        - compliance drift
+        - gap analysis
+      supporting:
+        - l9-structured-reasoning
+    - id: skill_compiler
+      primary: l9-skill-compiler
+      signal_weight: 8
+      positive_signals:
+        - installable skill
+        - skill pack
+        - compile this prompt into a skill
+        - turn this workflow into a skill
+        - turn this operating procedure into
+      supporting:
+        - l9-prompt-engineering
+    - id: context7_docs
+      primary: l9-context7-docs
+      signal_weight: 8
+      positive_signals:
+        - sdk documentation
+        - current library documentation
+        - version-specific documentation
+        - current api documentation
+        - current next.js
+      supporting:
+        - l9-structured-reasoning
+    - id: api_smoke
+      primary: l9-api-smoke-testing
+      signal_weight: 8
+      positive_signals:
+        - smoke test the routes
+        - api endpoint returns 500
+        - api returns 500
+        - endpoint returns 404
+        - verify api health
+      supporting:
+        - l9-structured-reasoning
+    - id: ci_setup
+      primary: l9-setting-up-ci
+      signal_weight: 8
+      positive_signals:
+        - set up github actions ci
+        - bootstrap ci
+        - add lint type checking and tests
+        - add ci stages
+      supporting:
+        - l9-structured-reasoning
+    - id: incident_response
+      primary: l9-incident-response
+      signal_weight: 8
+      positive_signals:
+        - active production incident
+        - sev1
+        - sev2
+        - coordinated mitigation
+        - write a postmortem
+      supporting:
+        - l9-structured-reasoning
+    - id: next_action
+      primary: l9-ynp
+      signal_weight: 8
+      positive_signals:
+        - what should i do next
+        - work is complete what next
+        - priorities are unclear
+        - next highest leverage action
+      supporting: []
+    - id: graphiti_memory
+      primary: l9-graphiti-memory
+      signal_weight: 8
+      positive_signals:
+        - graphiti memory
+        - memory prefetch
+        - mcp health failure
+        - memory bootstrap
+        - episode write
+      supporting:
+        - l9-structured-reasoning
+    - id: performance_audit
+      primary: l9-auditing-performance
+      signal_weight: 8
+      positive_signals:
+        - performance bottleneck
+        - profile the slow
+        - app is slow
+        - optimize bundle performance
+        - slow query
+      supporting:
+        - l9-structured-reasoning
+    - id: security_audit
+      primary: l9-auditing-security
+      signal_weight: 8
+      positive_signals:
+        - exposed secrets
+        - security vulnerabilities
+        - security audit
+        - harden before release
+        - review code for security risks
+      supporting:
+        - l9-structured-reasoning
+    - id: prompt_engineering
+      primary: l9-prompt-engineering
+      signal_weight: 8
+      positive_signals:
+        - improve this prompt
+        - design a system prompt
+        - structured output schema
+        - prompt engineering
+      supporting:
+        - l9-structured-reasoning
+    - id: recursive_optimization
+      primary: l9-recursive-optimization
+      signal_weight: 8
+      positive_signals:
+        - recursively improve
+        - converge until execution-ready
+        - recursive optimization
+        - align this artifact pack
+      supporting:
+        - l9-structured-reasoning

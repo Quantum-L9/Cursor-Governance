@@ -4,12 +4,12 @@
     "Committable .claude/settings.json for an L9 consumer repo. Copy to .claude/settings.json",
     "and commit it: on Claude Code Web/Mobile only git-tracked files survive the clone, so a",
     "committed settings.json is what makes governance boot with no manual step. On the CLI the",
-    "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
+    "same file is picked up locally. Keep secrets OUT of this file \u2014 they belong in the account",
     "environment (web/environment.env.example) or user-scope config, never in a repo.",
     "Field/event names track the Claude Code release; see https://code.claude.com/docs.",
     "permissions.allow lets the bounded-autonomy runtime complete work end to end: scoped git",
     "writes (branch/worktree/commit/push), CI inspection (gh run/pr checks), read-only GitHub",
-    "queries, PR monitoring (subscribe/unsubscribe), and PR create/update — so completed work",
+    "queries, PR monitoring (subscribe/unsubscribe), and PR create/update \u2014 so completed work",
     "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
     "Autonomous merge is deliberately OFF: merge_pull_request is omitted from allow so a human",
     "still approves every merge (see L9_AUTONOMY_AUTONOMOUS_MERGE=false). Force pushes, hard",
@@ -23,6 +23,40 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_claude_governance.sh\"",
             "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.cursor-governance/environment/claude-code/hooks/user_prompt_skill_router.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.cursor-governance/environment/claude-code/hooks/skill_usage_logger.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.cursor-governance/environment/claude-code/hooks/skill_usage_logger.py\"",
+            "timeout": 5
           }
         ]
       }
@@ -97,6 +131,28 @@
     "L9_AUTONOMY_MAX_MUTATION_LANES": "2",
     "L9_AUTONOMY_STATE_DIR": ".l9/autonomy",
     "L9_DISCOVER_BEFORE_ASK": "true",
-    "L9_REQUIRE_EXACT_SHA_GREEN": "true"
+    "L9_REQUIRE_EXACT_SHA_GREEN": "true",
+    "L9_PROACTIVE_SKILLS": "true",
+    "L9_SKILL_USAGE_LOGGING": "true"
+  },
+  "skillOverrides": {
+    "l9-chat-extraction": "user-invocable-only",
+    "l9-ci-ops": "user-invocable-only",
+    "l9-code-maintenance": "user-invocable-only",
+    "l9-component-verification": "user-invocable-only",
+    "l9-dag-authoring": "user-invocable-only",
+    "l9-e2e-blocker-resolution": "user-invocable-only",
+    "l9-end-session": "user-invocable-only",
+    "l9-forge": "user-invocable-only",
+    "l9-governance-symlinks": "user-invocable-only",
+    "l9-governance-wiring": "user-invocable-only",
+    "l9-harvest-pipeline": "user-invocable-only",
+    "l9-inspect": "user-invocable-only",
+    "l9-kubernetes-deploying": "user-invocable-only",
+    "l9-pr-remediation": "user-invocable-only",
+    "l9-python-tdd-with-uv": "user-invocable-only",
+    "l9-repo-index": "user-invocable-only",
+    "l9-setting-up-terraform": "user-invocable-only",
+    "l9-update-command": "user-invocable-only"
   }
 }

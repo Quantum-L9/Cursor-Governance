@@ -19,9 +19,11 @@ the three surfaces (CLI · Web · Mobile).
 | CLI | `$HOME/.claude/skills/` (user scope) | `ops/scripts/setup_claude_code_plugins.sh` |
 | Web · Mobile | referenced from the governance clone at `$L9_GOVERNANCE_DIR/skills/` | `web/setup.sh` (clones governance) |
 
-A skill directory (its `SKILL.md`) is invoked **explicitly by name** for the work
-it covers — e.g. checkpoint/handoff, PR remediation, structured reasoning. Skill
-visibility is discovery, not authority.
+The governance skill corpus is reconciled into Claude Code's native skill
+locations as managed per-skill links. Model-invocable skills are selected
+proactively from their `description` / `when_to_use` signals and the canonical
+routing manifest. Explicit-only skills require direct invocation or established
+campaign authority. Skill visibility and routing are context, not mutation authority.
 
 ## Invocation
 
