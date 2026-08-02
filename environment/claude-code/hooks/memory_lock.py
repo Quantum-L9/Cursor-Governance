@@ -60,6 +60,12 @@ def command_acquire(args: argparse.Namespace) -> int:
         return 4
 
     granted = mc.phase_lock(namespace, signature, ttl_seconds=ttl)
+    if not granted.get("granted", False):
+        print(
+            f"server did not grant the phase-lock for {namespace!r}; not writing a lock artifact",
+            file=sys.stderr,
+        )
+        return 5
     st.write_lock(contract, namespace, session_id, signature)
     print(
         json.dumps(

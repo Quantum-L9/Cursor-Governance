@@ -65,9 +65,10 @@ Claude Code surface. The agent no longer has the choice; the harness does.
   server-verified phase-lock. The agent cannot opt out.
 - **Operator retains override** (the human, not the agent):
   `L9_MEMORY_ENFORCEMENT=off` disables enforcement on surfaces without a memory
-  endpoint; `L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>` allows a specific call and
-  records the override. Neither is settable by the agent for its own hook
-  subprocesses.
+  endpoint; `L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>` allows governed writes
+  while set and appends an override event (rule, reason, timestamp) to
+  `.l9/memory/overrides.jsonl` for each one. Neither is settable by the agent for
+  its own hook subprocesses.
 - **Availability coupling (accepted):** when memory is unreachable, lock-gated
   writes fail closed. That is the intent; the break-glass and disable envs are the
   recovery path.

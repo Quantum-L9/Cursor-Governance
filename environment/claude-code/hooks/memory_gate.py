@@ -77,6 +77,10 @@ def main() -> int:
         if rule is None:
             return 0
         if breakglass:
+            try:
+                st.record_override(contract, rule["id"], breakglass)
+            except OSError:
+                pass
             print(
                 f"memory-gate: OPERATOR BREAKGLASS on {rule['id']}: {breakglass}",
                 file=sys.stderr,

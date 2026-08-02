@@ -69,6 +69,7 @@
           "environment/**",
           "ops/**",
           "workflows/**",
+          ".github/**",
           "docs/decisions/**",
           ".claude/**"
         ]
@@ -113,7 +114,7 @@
   "operator_override": {
     "env": "L9_MEMORY_ENFORCEMENT_BREAKGLASS",
     "agent_settable": false,
-    "note": "Operator-only break-glass. When this environment variable holds a non-empty reason string, the gate allows the call and records an override event to the writeback log. It is supplied by the account environment; the agent cannot set it for its own hook subprocesses. The agent never has the choice; the human operator retains override."
+    "note": "Operator-only break-glass. While this environment variable holds a non-empty reason string, the gate allows governed writes and appends an override event (rule id, reason, timestamp) to .l9/memory/overrides.jsonl for each one. It is supplied by the account environment; the agent cannot set it for its own hook subprocesses. The agent never has the choice; the human operator retains override."
   },
   "disable_env": {
     "env": "L9_MEMORY_ENFORCEMENT",

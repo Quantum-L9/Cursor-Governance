@@ -117,6 +117,15 @@ def read_lock(contract: dict[str, Any], namespace: str) -> dict[str, Any] | None
     return data
 
 
+# --- operator break-glass audit --------------------------------------------
+def record_override(contract: dict[str, Any], rule_id: str, reason: str) -> None:
+    path = state_root(contract) / "overrides.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    event = {"at": time.time(), "event": "breakglass_override", "rule": rule_id, "reason": reason}
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, sort_keys=True) + "\n")
+
+
 # --- governed-write classification ------------------------------------------
 def _glob_match(rel: str, pattern: str) -> bool:
     if pattern == "**":

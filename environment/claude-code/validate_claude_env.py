@@ -192,9 +192,17 @@ def check_skill_activation(failures: list[str]) -> None:
     script = HERE / "validate_skill_activation.py"
     if not script.is_file():
         return
-    result = subprocess.run(
-        [sys.executable, str(script)], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        _fail("proactive skill activation validation timed out", failures)
+        return
     if result.returncode == 0:
         print("  OK: proactive skill activation validation passed")
     else:
@@ -208,9 +216,17 @@ def check_memory_enforcement(failures: list[str]) -> None:
     script = HERE / "validate_memory_enforcement.py"
     if not script.is_file():
         return
-    result = subprocess.run(
-        [sys.executable, str(script)], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        _fail("memory enforcement validation timed out", failures)
+        return
     if result.returncode == 0:
         print("  OK: memory enforcement contract valid and wired")
     else:

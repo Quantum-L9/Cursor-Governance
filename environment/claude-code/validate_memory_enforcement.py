@@ -84,8 +84,12 @@ def _wiring_parity(contract: dict, settings: dict, failures: list[str]) -> None:
         return False
 
     for role, spec in contract.get("hooks", {}).items():
-        event = spec["event"]
-        basename = Path(spec["script"]).name
+        event = spec.get("event") if isinstance(spec, dict) else None
+        script = spec.get("script") if isinstance(spec, dict) else None
+        if not event or not script:
+            _fail(f"hook '{role}' is missing event/script in the contract", failures)
+            continue
+        basename = Path(script).name
         if registered(event, basename):
             print(f"  OK: {role} hook '{basename}' registered under {event}")
         else:

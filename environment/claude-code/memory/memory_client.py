@@ -32,7 +32,8 @@ def _endpoint() -> str:
     is_loopback = parsed.hostname in {"127.0.0.1", "localhost", "::1"}
     if parsed.scheme != "https" and not (parsed.scheme == "http" and is_loopback):
         raise MemoryError(f"refusing non-https memory endpoint scheme: {parsed.scheme!r}")
-    return base + "/mcp"
+    # Idempotent: tolerate an env value that already includes the MCP path.
+    return base if base.endswith("/mcp") else base + "/mcp"
 
 
 def _token() -> str:

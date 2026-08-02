@@ -51,9 +51,17 @@ class MemoryGateTests(unittest.TestCase):
         self.workspace = tempfile.mkdtemp()
         self.session = "test-session-abc"
         self.env = {**os.environ, "CLAUDE_PROJECT_DIR": self.workspace}
-        # Route state into the temp workspace for in-process helpers too.
+        # Route state into the temp workspace for in-process helpers too, and
+        # restore the prior value in tearDown so tests do not leak across files.
+        self._prev_project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
         os.environ["CLAUDE_PROJECT_DIR"] = self.workspace
         self.contract = st.load_contract()
+
+    def tearDown(self) -> None:
+        if self._prev_project_dir is None:
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        else:
+            os.environ["CLAUDE_PROJECT_DIR"] = self._prev_project_dir
 
     def _write_receipt(self) -> None:
         st.write_receipt(self.contract, self.session, {"namespaces": ["cursor-governance"]})
@@ -140,6 +148,9 @@ class MemoryGateTests(unittest.TestCase):
         )
         self.assertFalse(is_deny(out))
         self.assertFalse(self.contract["operator_override"]["agent_settable"])
+        overrides = st.state_root(self.contract) / "overrides.jsonl"
+        self.assertTrue(overrides.is_file(), "breakglass must persist an override event")
+        self.assertIn("incident-123", overrides.read_text(encoding="utf-8"))
 
     @unittest.skipUnless(
         os.environ.get("L9_MEMORY_HTTP_URL") and os.environ.get("L9_MEMORY_CLIENT_TOKEN"),
