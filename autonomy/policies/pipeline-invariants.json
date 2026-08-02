@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "invariants": [
+    {
+      "id": "PIPE-001",
+      "description": "No executor may start without a valid execution brief.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-002",
+      "description": "No mutation may occur without an active scoped write lease.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-003",
+      "description": "No action may consume stale or invalidated input artifacts.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-004",
+      "description": "No executor may review or approve its own output.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-005",
+      "description": "No result is merge-eligible without all required verifiers.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-006",
+      "description": "No action may exceed its declared path or operation scope.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-007",
+      "description": "No remediation mutation may start without a failure classification.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-008",
+      "description": "No human gate, human merge, or A4 stop may be bypassed.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-009",
+      "description": "No action is complete without a valid typed artifact and receipt.",
+      "severity": "blocking",
+      "continuous": true
+    },
+    {
+      "id": "PIPE-010",
+      "description": "No campaign may execute with a failed IDE adapter conformance check.",
+      "severity": "blocking",
+      "continuous": true
+    }
+  ]
+}

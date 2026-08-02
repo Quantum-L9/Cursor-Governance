@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "campaign_id": "autonomy-w7-mothball-2026-08-02",
+  "objective": "Execute W7 M0-M6 with enforceable subagent deployment and human-only merge.",
+  "authority": {
+    "issuer": "human",
+    "issued_at": "2026-08-02T15:00:00Z",
+    "expires_at": "2026-08-03T03:00:00Z"
+  },
+  "scope": {
+    "repositories": [
+      "cryptoxdog/IB-Odoo_19",
+      "Quantum-L9/Cursor-Governance"
+    ],
+    "allowed_paths": [
+      "addons/plasticos_gate/**",
+      "program/mothballing-cursor-contracts/**",
+      "ledger/artifacts/wave7/**",
+      "autonomy/**"
+    ],
+    "forbidden_paths": [
+      "ops/secrets/**",
+      ".env",
+      "**/*.pem",
+      "**/*.key"
+    ],
+    "allowed_operations": [
+      "read",
+      "search",
+      "create_worktree",
+      "edit_scoped",
+      "run_tests",
+      "commit_local",
+      "push_non_force_declared_branch",
+      "open_pull_request",
+      "inspect_ci",
+      "inspect_review"
+    ],
+    "forbidden_operations": [
+      "merge",
+      "merge_pull_request",
+      "admin_merge",
+      "force_push",
+      "modify_secrets",
+      "weaken_tests_for_green"
+    ]
+  },
+  "budgets": {
+    "max_files_changed": 80,
+    "max_lines_changed": 6000,
+    "max_mutation_agents": 1,
+    "max_read_agents": 4,
+    "max_poll_agents": 3,
+    "max_runtime_minutes": 720,
+    "max_tool_failures": 8
+  },
+  "validation": {
+    "required_checks": [
+      "unit_tests",
+      "schema_validation",
+      "governance_invariants",
+      "scope_lock",
+      "live_integration_proof"
+    ],
+    "independent_review_required": true,
+    "human_merge_required": true
+  },
+  "base_state": {
+    "repository": "cryptoxdog/IB-Odoo_19",
+    "branch": "feat/mothball-local-intelligence",
+    "commit_sha": "REPLACE_WITH_RESOLVED_BASE_SHA"
+  },
+  "revocation": {
+    "kill_switch_file": ".l9/autonomy/revoke",
+    "revoke_on_scope_drift": true,
+    "revoke_on_policy_conflict": true,
+    "revoke_on_base_sha_drift": true
+  }
+}
