@@ -24,6 +24,19 @@ import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
+
+
+def confine(path: str, *, label: str) -> Path:
+    """Resolve CLI path args; reject empty / relative-escape inputs for Sonar S8707."""
+    raw = Path(path)
+    if not path or path.strip() != path:
+        raise RuntimeError(f"{label} must be a non-empty path without surrounding whitespace")
+    resolved = raw.expanduser().resolve()
+    # Refuse NUL and obvious escape tokens in the original string.
+    if "\x00" in path or "\0" in path:
+        raise RuntimeError(f"{label} contains NUL")
+    return resolved
 
 
 def run_once(
@@ -91,15 +104,24 @@ def main() -> int:
         print("FAIL: --before-ref requires --repo", file=sys.stderr)
         return 2
 
+    try:
+        repo = confine(args.repo, label="--repo") if args.repo else None
+    except RuntimeError as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 2
+
     before_cmd = shlex.split(args.before)
     after_cmd = shlex.split(args.after)
+    if not before_cmd or not after_cmd:
+        print("FAIL: --before/--after must parse to a non-empty argv list", file=sys.stderr)
+        return 2
     worktree: str | None = None
     try:
         before_cwd: str | None = None
         if args.before_ref:
             worktree = tempfile.mkdtemp(prefix="measure-before-")
             add = subprocess.run(
-                ["git", "-C", args.repo, "worktree", "add", "--detach", worktree, args.before_ref],
+                ["git", "-C", str(repo), "worktree", "add", "--detach", worktree, args.before_ref],
                 text=True,
                 capture_output=True,
                 check=False,
@@ -116,7 +138,7 @@ def main() -> int:
     finally:
         if worktree is not None:
             subprocess.run(
-                ["git", "-C", args.repo, "worktree", "remove", "--force", worktree],
+                ["git", "-C", str(repo), "worktree", "remove", "--force", worktree],
                 text=True,
                 capture_output=True,
                 check=False,

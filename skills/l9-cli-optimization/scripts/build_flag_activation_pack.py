@@ -84,9 +84,22 @@ def _unified(rel: str, original: str, flipped: str) -> str:
     )
 
 
-def _write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+def under_root(root: Path, path: Path, *, label: str = "path") -> Path:
+    base = os.path.realpath(root)
+    target = os.path.realpath(path)
+    try:
+        if os.path.commonpath([base, target]) != base:
+            raise RuntimeError(f"{label} escapes root {root}: {path}")
+    except ValueError as exc:
+        raise RuntimeError(f"{label} escapes root {root}: {path}") from exc
+    return Path(target)
+
+
+def _write(root: Path, path: Path, content: str) -> None:
+    target = under_root(root, path, label="write")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "w", encoding="utf-8") as handle:
+        handle.write(content)
 
 
 def _render_report_md(report: dict) -> str:
@@ -218,14 +231,14 @@ def build(report_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path
     patch_parts: list[str] = []
     for rel in sorted(by_file):
         original, flipped = _flipped_content(repo, rel, by_file[rel])
-        _write(pack_root / "change" / "files" / rel, flipped)
+        _write(pack_root, pack_root / "change" / "files" / rel, flipped)
         patch_parts.append(_unified(rel, original, flipped))
     patch_text = report.get("diff") or "".join(patch_parts)
-    _write(pack_root / "change" / "commit.patch", patch_text)
+    _write(pack_root, pack_root / "change" / "commit.patch", patch_text)
 
-    _write(pack_root / "README.md", _render_readme(report, pack_name))
-    _write(pack_root / "pr" / "PR_BODY.md", _render_pr_body(report))
-    _write(pack_root / "evidence" / "FULL_THROTTLE_REPORT.md", _render_report_md(report))
+    _write(pack_root, pack_root / "README.md", _render_readme(report, pack_name))
+    _write(pack_root, pack_root / "pr" / "PR_BODY.md", _render_pr_body(report))
+    _write(pack_root, pack_root / "evidence" / "FULL_THROTTLE_REPORT.md", _render_report_md(report))
 
     manifest = {
         "pack_name": pack_name,
@@ -246,7 +259,11 @@ def build(report_path: Path, repo_root: Path, output_parent: Path) -> tuple[Path
         "Identity-Lock #1; danger flags and staged/dormant_by_design flags are "
         "never flipped, and the PR is never auto-merged.",
     }
-    _write(pack_root / "MANIFEST.json", json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    _write(
+        pack_root,
+        pack_root / "MANIFEST.json",
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    )
 
     _write_checksums(pack_root)
     return pack_root, (0 if applied else 2)

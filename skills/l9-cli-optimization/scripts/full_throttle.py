@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -100,18 +101,29 @@ def _worktree_remove(repo: Path, wt: str) -> None:
     _run(["git", "-C", str(repo), "worktree", "remove", "--force", wt])
 
 
+def under_root(root: Path, path: Path, *, label: str = "path") -> Path:
+    base = os.path.realpath(root)
+    target = os.path.realpath(path)
+    try:
+        if os.path.commonpath([base, target]) != base:
+            raise RuntimeError(f"{label} escapes root {root}: {path}")
+    except ValueError as exc:
+        raise RuntimeError(f"{label} escapes root {root}: {path}") from exc
+    return Path(target)
+
+
 def _apply_flips(wt: Path, flags: list[dict]) -> None:
     """Apply every flag in `flags` to files under the worktree (in place)."""
     by_file: dict[str, list[dict]] = {}
     for f in flags:
         by_file.setdefault(f["file"], []).append(f)
     for rel, fs in by_file.items():
-        path = wt / rel
-        text = path.read_text(encoding="utf-8", errors="ignore")
+        path = under_root(wt, wt / rel, label="flag file")
+        body = path.read_text(encoding="utf-8", errors="ignore")
         # apply highest line first so earlier line numbers stay valid
         for f in sorted(fs, key=lambda x: -x["line"]):
-            text = flip_flag(text, f)
-        path.write_text(text, encoding="utf-8")
+            body = flip_flag(body, f)
+        path.write_text(body, encoding="utf-8")
 
 
 def _reset_worktree(wt: Path, repo: Path) -> None:

@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Deterministically route an optimize CLI revision to proportional proof obligations."""
+"""Deterministically route an optimize CLI revision to proportional proof obligations.
+
+I/O contract (avoids Sonar S8707 LLM/CLI path-escape):
+  * Reads one JSON object from stdin (no filesystem path arguments).
+  * Writes the route JSON to stdout.
+  * Example: ``python3 scripts/route_optimize.py < route-input.json``
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-from pathlib import Path
 from typing import Any
 
 # One flattened taxonomy: a throughput branch and a capability branch (the
@@ -190,22 +195,16 @@ def route(data: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path)
-    parser.add_argument("--output", type=Path)
-    args = parser.parse_args()
+    parser.parse_args()  # no path args; payload via stdin
     try:
-        data = json.loads(args.input.read_text(encoding="utf-8"))
+        data = json.load(sys.stdin)
         if not isinstance(data, dict):
             raise ValueError("input root must be an object")
         result = route(data)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 2
-    text = json.dumps(result, indent=2, sort_keys=True) + "\n"
-    if args.output:
-        args.output.write_text(text, encoding="utf-8")
-    else:
-        print(text, end="")
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 

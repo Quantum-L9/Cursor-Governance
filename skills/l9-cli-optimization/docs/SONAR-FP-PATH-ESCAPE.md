@@ -1,4 +1,4 @@
-# Sonar FP — LLM/CLI path-escape on optimize-cli-pr-pack scripts
+# Sonar FP — LLM/CLI path-escape on l9-cli-optimization scripts
 
 ## Status
 
