@@ -21,7 +21,6 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol
 
-
 SUPPORTED_SCHEMA_MAJOR = 1
 
 _ALLOWED_VISIBILITY = {
@@ -119,25 +118,16 @@ class ContextQuery:
                 raise ValueError(f"{name} must be a non-empty string")
 
         if self.visibility_ceiling not in _ALLOWED_VISIBILITY:
-            raise ValueError(
-                f"Unsupported visibility ceiling: {self.visibility_ceiling}"
-            )
+            raise ValueError(f"Unsupported visibility ceiling: {self.visibility_ceiling}")
 
         if not 0.0 <= self.minimum_confidence <= 1.0:
-            raise ValueError(
-                "minimum_confidence must be within [0.0, 1.0]"
-            )
+            raise ValueError("minimum_confidence must be within [0.0, 1.0]")
 
-        normalized_paths = tuple(
-            normalize_repository_path(path)
-            for path in self.paths
-        )
+        normalized_paths = tuple(normalize_repository_path(path) for path in self.paths)
         object.__setattr__(self, "paths", normalized_paths)
 
         if self.scope is ContextScope.REPOSITORY and not self.repository:
-            raise ValueError(
-                "repository scope requires an explicit repository"
-            )
+            raise ValueError("repository scope requires an explicit repository")
 
         validate_schema_major(self.schema_version)
 
@@ -166,10 +156,7 @@ class ContextQuery:
 
     def default_query_text(self) -> str:
         path_text = ", ".join(self.paths) if self.paths else "repository"
-        return (
-            f"Reusable knowledge for {self.task_type} by role "
-            f"{self.role} affecting {path_text}"
-        )
+        return f"Reusable knowledge for {self.task_type} by role {self.role} affecting {path_text}"
 
 
 @dataclass(frozen=True)
@@ -198,7 +185,7 @@ class ContextCandidate:
     def from_mapping(
         cls,
         value: Mapping[str, Any],
-    ) -> "ContextCandidate":
+    ) -> ContextCandidate:
         record_id = string_field(
             value,
             "record_id",
@@ -213,7 +200,8 @@ class ContextCandidate:
         state = str(value.get("state", "unknown")).lower()
         invalidated = bool(
             value.get("invalidated", False)
-            or state in {
+            or state
+            in {
                 "archived",
                 "deleted",
                 "deletion_pending",
@@ -228,9 +216,7 @@ class ContextCandidate:
             score=float(value.get("score", 0.0)),
             confidence=float(value.get("confidence", 0.0)),
             state=state,
-            authority_class=str(
-                value.get("authority_class", "advisory")
-            ),
+            authority_class=str(value.get("authority_class", "advisory")),
             visibility=str(
                 value.get(
                     "visibility",
@@ -245,8 +231,7 @@ class ContextCandidate:
                 )
             ),
             paths=tuple(
-                normalize_repository_path(str(item))
-                for item in sequence_field(value, "paths")
+                normalize_repository_path(str(item)) for item in sequence_field(value, "paths")
             ),
             task_types=tuple(
                 str(item)
@@ -255,10 +240,7 @@ class ContextCandidate:
                     "task_types",
                 )
             ),
-            roles=tuple(
-                str(item)
-                for item in sequence_field(value, "roles")
-            ),
+            roles=tuple(str(item) for item in sequence_field(value, "roles")),
             epistemic_status=str(
                 value.get(
                     "epistemic_status",
@@ -290,10 +272,7 @@ class ContextCandidate:
 
     @property
     def ordinarily_eligible(self) -> bool:
-        return (
-            not self.invalidated
-            and self.state in _ACTIVE_STATES
-        )
+        return not self.invalidated and self.state in _ACTIVE_STATES
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -311,12 +290,8 @@ class ContextCandidate:
             "roles": list(self.roles),
             "epistemic_status": self.epistemic_status,
             "invalidated": self.invalidated,
-            "successful_reuse_count": (
-                self.successful_reuse_count
-            ),
-            "failed_reuse_count": (
-                self.failed_reuse_count
-            ),
+            "successful_reuse_count": (self.successful_reuse_count),
+            "failed_reuse_count": (self.failed_reuse_count),
             "metadata": dict(self.metadata),
         }
 
@@ -332,9 +307,7 @@ class ContextQueryResult:
     request_id: str | None = None
     error_code: str | None = None
     error_message: str | None = None
-    raw_metadata: Mapping[str, Any] = field(
-        default_factory=dict
-    )
+    raw_metadata: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def empty(self) -> bool:
@@ -344,10 +317,7 @@ class ContextQueryResult:
         return {
             "available": self.available,
             "empty": self.empty,
-            "candidates": [
-                candidate.to_dict()
-                for candidate in self.candidates
-            ],
+            "candidates": [candidate.to_dict() for candidate in self.candidates],
             "source": self.source,
             "schema_version": self.schema_version,
             "request_id": self.request_id,
@@ -376,36 +346,24 @@ class CommandContextClient:
         environment: Mapping[str, str] | None = None,
     ) -> None:
         if not command:
-            raise ValueError(
-                "Context retrieval command is required"
-            )
+            raise ValueError("Context retrieval command is required")
         if timeout_seconds < 1:
-            raise ValueError(
-                "timeout_seconds must be positive"
-            )
+            raise ValueError("timeout_seconds must be positive")
 
         self.command = tuple(str(item) for item in command)
         self.timeout_seconds = timeout_seconds
-        self.environment = (
-            dict(environment)
-            if environment is not None
-            else None
-        )
+        self.environment = dict(environment) if environment is not None else None
 
     @classmethod
     def from_environment(
         cls,
         *,
-        variable: str = (
-            "L9_SGD_GRAPHITI_SEARCH_COMMAND"
-        ),
+        variable: str = ("L9_SGD_GRAPHITI_SEARCH_COMMAND"),
         timeout_seconds: int = 30,
-    ) -> "CommandContextClient":
+    ) -> CommandContextClient:
         raw = os.environ.get(variable, "").strip()
         if not raw:
-            raise RetrievalUnavailableError(
-                f"{variable} is not configured"
-            )
+            raise RetrievalUnavailableError(f"{variable} is not configured")
         return cls(
             shlex.split(raw),
             timeout_seconds=timeout_seconds,
@@ -419,8 +377,7 @@ class CommandContextClient:
             completed = subprocess.run(
                 list(self.command),
                 input=canonical_json(query.to_dict()),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
                 check=False,
@@ -428,13 +385,10 @@ class CommandContextClient:
             )
         except subprocess.TimeoutExpired as exc:
             raise RetrievalUnavailableError(
-                f"Context retrieval timed out after "
-                f"{self.timeout_seconds}s"
+                f"Context retrieval timed out after {self.timeout_seconds}s"
             ) from exc
         except OSError as exc:
-            raise RetrievalUnavailableError(
-                f"Context command could not start: {exc}"
-            ) from exc
+            raise RetrievalUnavailableError(f"Context command could not start: {exc}") from exc
 
         stderr = completed.stderr.strip()
 
@@ -444,32 +398,20 @@ class CommandContextClient:
                 candidates=(),
                 source="command",
                 schema_version="unknown",
-                error_code=exit_code_name(
-                    completed.returncode
-                ),
-                error_message=(
-                    stderr
-                    or f"command exited "
-                    f"{completed.returncode}"
-                ),
+                error_code=exit_code_name(completed.returncode),
+                error_message=(stderr or f"command exited {completed.returncode}"),
                 raw_metadata={
                     "exit_code": completed.returncode,
                 },
             )
 
         try:
-            payload = json.loads(
-                completed.stdout or "{}"
-            )
+            payload = json.loads(completed.stdout or "{}")
         except json.JSONDecodeError as exc:
-            raise RetrievalProtocolError(
-                "Context command stdout was not valid JSON"
-            ) from exc
+            raise RetrievalProtocolError("Context command stdout was not valid JSON") from exc
 
         if not isinstance(payload, Mapping):
-            raise RetrievalProtocolError(
-                "Context command response must be a JSON object"
-            )
+            raise RetrievalProtocolError("Context command response must be a JSON object")
 
         return parse_query_result(
             payload,
@@ -507,14 +449,10 @@ def parse_query_result(
     *,
     source: str,
 ) -> ContextQueryResult:
-    schema_version = str(
-        payload.get("schema_version", "1.0.0")
-    )
+    schema_version = str(payload.get("schema_version", "1.0.0"))
     validate_schema_major(schema_version)
 
-    available = bool(
-        payload.get("available", True)
-    )
+    available = bool(payload.get("available", True))
 
     raw_candidates = payload.get(
         "candidates",
@@ -526,29 +464,19 @@ def parse_query_result(
     if raw_candidates is None:
         raw_candidates = []
     if not isinstance(raw_candidates, list):
-        raise RetrievalProtocolError(
-            "Context candidates must be a JSON array"
-        )
+        raise RetrievalProtocolError("Context candidates must be a JSON array")
 
     candidates = tuple(
-        ContextCandidate.from_mapping(item)
-        for item in raw_candidates
-        if isinstance(item, Mapping)
+        ContextCandidate.from_mapping(item) for item in raw_candidates if isinstance(item, Mapping)
     )
 
     return ContextQueryResult(
         available=available,
         candidates=candidates,
-        source=str(
-            payload.get("source", source)
-        ),
+        source=str(payload.get("source", source)),
         schema_version=schema_version,
-        request_id=optional_string(
-            payload.get("request_id")
-        ),
-        error_code=optional_string(
-            payload.get("error_code")
-        ),
+        request_id=optional_string(payload.get("request_id")),
+        error_code=optional_string(payload.get("error_code")),
         error_message=optional_string(
             payload.get(
                 "error_message",
@@ -622,9 +550,7 @@ def query_from_mapping(
             )
         ),
         budget=ContextBudget(
-            max_items=int(
-                payload.get("max_items", 12)
-            ),
+            max_items=int(payload.get("max_items", 12)),
             max_characters=int(
                 payload.get(
                     "max_characters",
@@ -658,9 +584,7 @@ def query_from_mapping(
                 False,
             )
         ),
-        query_text=optional_string(
-            payload.get("query")
-        ),
+        query_text=optional_string(payload.get("query")),
         schema_version=str(
             payload.get(
                 "schema_version",
@@ -673,23 +597,13 @@ def query_from_mapping(
 def normalize_repository_path(value: str) -> str:
     path = value.replace("\\", "/").strip()
     if not path:
-        raise ValueError(
-            "Repository path cannot be empty"
-        )
+        raise ValueError("Repository path cannot be empty")
     if path.startswith("/"):
-        raise ValueError(
-            "Repository path must be relative"
-        )
+        raise ValueError("Repository path must be relative")
 
-    parts = tuple(
-        part
-        for part in path.split("/")
-        if part not in {"", "."}
-    )
+    parts = tuple(part for part in path.split("/") if part not in {"", "."})
     if ".." in parts:
-        raise ValueError(
-            "Repository path traversal is forbidden"
-        )
+        raise ValueError("Repository path traversal is forbidden")
     return "/".join(parts)
 
 
@@ -697,18 +611,12 @@ def validate_schema_major(
     schema_version: str,
 ) -> None:
     try:
-        major = int(
-            schema_version.split(".", 1)[0]
-        )
+        major = int(schema_version.split(".", 1)[0])
     except (TypeError, ValueError) as exc:
-        raise RetrievalSchemaError(
-            f"Invalid schema version: {schema_version!r}"
-        ) from exc
+        raise RetrievalSchemaError(f"Invalid schema version: {schema_version!r}") from exc
 
     if major != SUPPORTED_SCHEMA_MAJOR:
-        raise RetrievalSchemaError(
-            f"Unsupported context schema major: {major}"
-        )
+        raise RetrievalSchemaError(f"Unsupported context schema major: {major}")
 
 
 def string_field(
@@ -721,9 +629,7 @@ def string_field(
     if raw is None and fallback:
         raw = value.get(fallback)
     if not isinstance(raw, str) or not raw.strip():
-        raise RetrievalProtocolError(
-            f"{field_name} must be a non-empty string"
-        )
+        raise RetrievalProtocolError(f"{field_name} must be a non-empty string")
     return raw.strip()
 
 
@@ -733,13 +639,9 @@ def sequence_field(
 ) -> Sequence[Any]:
     raw = value.get(field_name, [])
     if isinstance(raw, (str, bytes)):
-        raise RetrievalProtocolError(
-            f"{field_name} must be an array"
-        )
+        raise RetrievalProtocolError(f"{field_name} must be an array")
     if not isinstance(raw, Sequence):
-        raise RetrievalProtocolError(
-            f"{field_name} must be an array"
-        )
+        raise RetrievalProtocolError(f"{field_name} must be an array")
     return raw
 
 
@@ -777,10 +679,7 @@ def main(
     argv: Sequence[str] | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Query l9-graphiti-memory through the "
-            "configured governed command surface."
-        )
+        description=("Query l9-graphiti-memory through the configured governed command surface.")
     )
     parser.add_argument(
         "--query",
@@ -789,10 +688,7 @@ def main(
     parser.add_argument(
         "--command",
         nargs="+",
-        help=(
-            "Explicit retrieval command. Otherwise "
-            "L9_SGD_GRAPHITI_SEARCH_COMMAND is used."
-        ),
+        help=("Explicit retrieval command. Otherwise L9_SGD_GRAPHITI_SEARCH_COMMAND is used."),
     )
     parser.add_argument(
         "--timeout-seconds",
@@ -802,18 +698,12 @@ def main(
     args = parser.parse_args(argv)
 
     if args.query:
-        payload = json.loads(
-            Path(args.query).read_text(
-                encoding="utf-8"
-            )
-        )
+        payload = json.loads(Path(args.query).read_text(encoding="utf-8"))
     else:
         payload = json.load(os.sys.stdin)
 
     if not isinstance(payload, Mapping):
-        raise SystemExit(
-            "Context query must be a JSON object"
-        )
+        raise SystemExit("Context query must be a JSON object")
 
     query = query_from_mapping(payload)
     client = (
@@ -822,9 +712,7 @@ def main(
             timeout_seconds=args.timeout_seconds,
         )
         if args.command
-        else CommandContextClient.from_environment(
-            timeout_seconds=args.timeout_seconds
-        )
+        else CommandContextClient.from_environment(timeout_seconds=args.timeout_seconds)
     )
     result = client.query(query)
 

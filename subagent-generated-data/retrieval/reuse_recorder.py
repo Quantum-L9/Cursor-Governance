@@ -26,13 +26,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Protocol
 
-
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-_STATE_STORE_PATH = (
-    _PACKAGE_ROOT
-    / "orchestration"
-    / "state_store.py"
-)
+_STATE_STORE_PATH = _PACKAGE_ROOT / "orchestration" / "state_store.py"
 
 SUPPORTED_SCHEMA_MAJOR = 1
 
@@ -99,9 +94,7 @@ class ReuseIdentity:
         ):
             value = getattr(self, name)
             if not value.strip():
-                raise ValueError(
-                    f"{name} must be a non-empty string"
-                )
+                raise ValueError(f"{name} must be a non-empty string")
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -119,9 +112,7 @@ class PendingReuse:
     consumer: ReuseIdentity
     context_pack_id: str
     query: str
-    injection_method: str = (
-        "agent_contract_context"
-    )
+    injection_method: str = "agent_contract_context"
 
     def __post_init__(self) -> None:
         for name in (
@@ -132,9 +123,7 @@ class PendingReuse:
         ):
             value = getattr(self, name)
             if not value.strip():
-                raise ValueError(
-                    f"{name} must be a non-empty string"
-                )
+                raise ValueError(f"{name} must be a non-empty string")
 
     def identity_seed(
         self,
@@ -157,26 +146,15 @@ class ReuseFinalization:
     correction_required: bool
     validity_confirmed: bool
     occurred_at: str = field(
-        default_factory=lambda: (
-            datetime.now(UTC)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+        default_factory=lambda: datetime.now(UTC).isoformat().replace("+00:00", "Z")
     )
-    metadata: Mapping[str, Any] = field(
-        default_factory=dict
-    )
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.outcome not in VALID_OUTCOMES:
-            raise ValueError(
-                f"Unsupported reuse outcome: "
-                f"{self.outcome}"
-            )
+            raise ValueError(f"Unsupported reuse outcome: {self.outcome}")
         if not isinstance(self.evidence, Mapping):
-            raise ValueError(
-                "evidence must be an object"
-            )
+            raise ValueError("evidence must be an object")
         validate_utc_timestamp(self.occurred_at)
 
 
@@ -197,19 +175,14 @@ class ReuseDispatchResult:
             "stage": self.stage.value,
             "local_created": self.local_created,
             "local_duplicate": self.local_duplicate,
-            "remote_dispatched": (
-                self.remote_dispatched
-            ),
+            "remote_dispatched": (self.remote_dispatched),
             "remote_status": self.remote_status,
             "remote_response": (
-                dict(self.remote_response)
-                if self.remote_response is not None
-                else None
+                dict(self.remote_response) if self.remote_response is not None else None
             ),
             "invalidation_candidate": (
                 dict(self.invalidation_candidate)
-                if self.invalidation_candidate
-                is not None
+                if self.invalidation_candidate is not None
                 else None
             ),
         }
@@ -234,37 +207,23 @@ class CommandReuseTransport:
         environment: Mapping[str, str] | None = None,
     ) -> None:
         if not command:
-            raise ValueError(
-                "Reuse command is required"
-            )
+            raise ValueError("Reuse command is required")
         if timeout_seconds < 1:
-            raise ValueError(
-                "timeout_seconds must be positive"
-            )
-        self.command = tuple(
-            str(item) for item in command
-        )
+            raise ValueError("timeout_seconds must be positive")
+        self.command = tuple(str(item) for item in command)
         self.timeout_seconds = timeout_seconds
-        self.environment = (
-            dict(environment)
-            if environment is not None
-            else None
-        )
+        self.environment = dict(environment) if environment is not None else None
 
     @classmethod
     def from_environment(
         cls,
         *,
-        variable: str = (
-            "L9_SGD_GRAPHITI_REUSE_COMMAND"
-        ),
+        variable: str = ("L9_SGD_GRAPHITI_REUSE_COMMAND"),
         timeout_seconds: int = 30,
-    ) -> "CommandReuseTransport":
+    ) -> CommandReuseTransport:
         raw = os.environ.get(variable, "").strip()
         if not raw:
-            raise ReuseTransportError(
-                f"{variable} is not configured"
-            )
+            raise ReuseTransportError(f"{variable} is not configured")
         return cls(
             shlex.split(raw),
             timeout_seconds=timeout_seconds,
@@ -278,8 +237,7 @@ class CommandReuseTransport:
             completed = subprocess.run(
                 list(self.command),
                 input=canonical_json(event),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
                 check=False,
@@ -287,48 +245,33 @@ class CommandReuseTransport:
             )
         except subprocess.TimeoutExpired as exc:
             raise ReuseTransportError(
-                f"Reuse command timed out after "
-                f"{self.timeout_seconds}s"
+                f"Reuse command timed out after {self.timeout_seconds}s"
             ) from exc
         except OSError as exc:
-            raise ReuseTransportError(
-                f"Reuse command could not start: {exc}"
-            ) from exc
+            raise ReuseTransportError(f"Reuse command could not start: {exc}") from exc
 
         stderr = completed.stderr.strip()
         if completed.returncode != 0:
             raise ReuseTransportError(
-                f"Reuse command failed with exit "
-                f"{completed.returncode}: {stderr}"
+                f"Reuse command failed with exit {completed.returncode}: {stderr}"
             )
 
         try:
-            response = json.loads(
-                completed.stdout or "{}"
-            )
+            response = json.loads(completed.stdout or "{}")
         except json.JSONDecodeError as exc:
-            raise ReuseProtocolError(
-                "Reuse command stdout was not valid JSON"
-            ) from exc
+            raise ReuseProtocolError("Reuse command stdout was not valid JSON") from exc
 
         if not isinstance(response, Mapping):
-            raise ReuseProtocolError(
-                "Reuse response must be a JSON object"
-            )
+            raise ReuseProtocolError("Reuse response must be a JSON object")
 
-        status = str(
-            response.get("status", "")
-        )
+        status = str(response.get("status", ""))
         if status not in {
             "recorded",
             "accepted",
             "duplicate",
             "already_exists",
         }:
-            raise ReuseProtocolError(
-                f"Unsupported reuse status: "
-                f"{status!r}"
-            )
+            raise ReuseProtocolError(f"Unsupported reuse status: {status!r}")
 
         return dict(response)
 
@@ -351,7 +294,7 @@ class ReuseRecorder:
         database_path: str | Path,
         *,
         transport: ReuseTransport | None = None,
-    ) -> "ReuseRecorder":
+    ) -> ReuseRecorder:
         module = load_state_store_module()
         store_type = getattr(
             module,
@@ -411,23 +354,13 @@ class ReuseRecorder:
             "consumer": pending.consumer.to_dict(),
             "use": {
                 "query": pending.query,
-                "injection_method": (
-                    pending.injection_method
-                ),
-                "context_pack_id": (
-                    pending.context_pack_id
-                ),
+                "injection_method": (pending.injection_method),
+                "context_pack_id": (pending.context_pack_id),
             },
             "outcome": finalization.outcome,
-            "evidence": dict(
-                finalization.evidence
-            ),
-            "correction_required": (
-                finalization.correction_required
-            ),
-            "validity_confirmed": (
-                finalization.validity_confirmed
-            ),
+            "evidence": dict(finalization.evidence),
+            "correction_required": (finalization.correction_required),
+            "validity_confirmed": (finalization.validity_confirmed),
             "occurred_at": finalization.occurred_at,
             "metadata": {
                 "producer": "Cursor-Governance",
@@ -449,20 +382,13 @@ class ReuseRecorder:
         remote_dispatched = False
 
         if self.transport is not None:
-            remote_response = self.transport.record(
-                event
-            )
-            remote_status = str(
-                remote_response.get("status", "")
-            )
+            remote_response = self.transport.record(event)
+            remote_status = str(remote_response.get("status", ""))
             remote_dispatched = True
 
         invalidation_candidate = (
-            build_invalidation_candidate(
-                event
-            )
-            if finalization.outcome
-            in NEGATIVE_INVALIDATION_CANDIDATE_OUTCOMES
+            build_invalidation_candidate(event)
+            if finalization.outcome in NEGATIVE_INVALIDATION_CANDIDATE_OUTCOMES
             else None
         )
 
@@ -474,9 +400,7 @@ class ReuseRecorder:
             remote_dispatched=remote_dispatched,
             remote_status=remote_status,
             remote_response=remote_response,
-            invalidation_candidate=(
-                invalidation_candidate
-            ),
+            invalidation_candidate=(invalidation_candidate),
         )
 
     def _record_local_stage(
@@ -499,12 +423,8 @@ class ReuseRecorder:
             "consumer": pending.consumer.to_dict(),
             "use": {
                 "query": pending.query,
-                "injection_method": (
-                    pending.injection_method
-                ),
-                "context_pack_id": (
-                    pending.context_pack_id
-                ),
+                "injection_method": (pending.injection_method),
+                "context_pack_id": (pending.context_pack_id),
             },
             "stage": stage.value,
             **dict(payload),
@@ -538,49 +458,28 @@ class ReuseRecorder:
         outcome: str | None,
         payload: Mapping[str, Any],
     ) -> tuple[Mapping[str, Any], bool]:
-        row, created = (
-            self.state_store.record_reuse_event(
-                event_id=event_id,
-                record_id=pending.record_id,
-                campaign_id=(
-                    pending.consumer.campaign_id
-                ),
-                action_id=(
-                    pending.consumer.action_id
-                ),
-                agent_id=(
-                    pending.consumer.agent_id
-                ),
-                context_pack_id=(
-                    pending.context_pack_id
-                ),
-                stage=stage.value,
-                outcome=outcome,
-                payload=payload,
-            )
+        row, created = self.state_store.record_reuse_event(
+            event_id=event_id,
+            record_id=pending.record_id,
+            campaign_id=(pending.consumer.campaign_id),
+            action_id=(pending.consumer.action_id),
+            agent_id=(pending.consumer.agent_id),
+            context_pack_id=(pending.context_pack_id),
+            stage=stage.value,
+            outcome=outcome,
+            payload=payload,
         )
 
         if not created:
-            stored_payload = row.get(
-                "payload_json"
-            )
+            stored_payload = row.get("payload_json")
             if stored_payload is not None:
                 try:
-                    parsed = json.loads(
-                        str(stored_payload)
-                    )
+                    parsed = json.loads(str(stored_payload))
                 except json.JSONDecodeError as exc:
-                    raise ReuseProtocolError(
-                        "Stored reuse payload is invalid JSON"
-                    ) from exc
+                    raise ReuseProtocolError("Stored reuse payload is invalid JSON") from exc
 
-                if canonical_json(parsed) != (
-                    canonical_json(payload)
-                ):
-                    raise ReuseCollisionError(
-                        f"Reuse event ID collision: "
-                        f"{event_id}"
-                    )
+                if canonical_json(parsed) != (canonical_json(payload)):
+                    raise ReuseCollisionError(f"Reuse event ID collision: {event_id}")
 
         return row, created
 
@@ -594,13 +493,9 @@ def build_invalidation_candidate(
     return {
         "schema_version": "1.0.0",
         "kind": "SourceInvalidationCandidate",
-        "candidate_id": (
-            f"invalidation-candidate-{event_id}"
-        ),
+        "candidate_id": (f"invalidation-candidate-{event_id}"),
         "event_type": "failed_reuse_reported",
-        "record_ids": [
-            str(reuse_event["record_id"])
-        ],
+        "record_ids": [str(reuse_event["record_id"])],
         "reason": str(reuse_event["outcome"]),
         "source_reuse_event_id": event_id,
         "requires_policy_approval": True,
@@ -619,22 +514,15 @@ def deterministic_event_id(
         **pending.identity_seed(stage),
         "outcome": outcome,
     }
-    digest = hashlib.sha256(
-        canonical_json(seed).encode("utf-8")
-    ).hexdigest()
+    digest = hashlib.sha256(canonical_json(seed).encode("utf-8")).hexdigest()
     return f"reuse-{digest[:32]}"
 
 
 def load_state_store_module() -> ModuleType:
     if not _STATE_STORE_PATH.is_file():
-        raise ReuseRecorderError(
-            f"State store not found: "
-            f"{_STATE_STORE_PATH}"
-        )
+        raise ReuseRecorderError(f"State store not found: {_STATE_STORE_PATH}")
 
-    module_name = (
-        "_l9_sgd_orchestration_state_store"
-    )
+    module_name = "_l9_sgd_orchestration_state_store"
     existing = sys.modules.get(module_name)
     if existing is not None:
         return existing
@@ -644,9 +532,7 @@ def load_state_store_module() -> ModuleType:
         _STATE_STORE_PATH,
     )
     if spec is None or spec.loader is None:
-        raise ReuseRecorderError(
-            "Could not create state-store import spec"
-        )
+        raise ReuseRecorderError("Could not create state-store import spec")
 
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
@@ -660,18 +546,12 @@ def load_state_store_module() -> ModuleType:
 
 def validate_utc_timestamp(value: str) -> None:
     try:
-        parsed = datetime.fromisoformat(
-            value.replace("Z", "+00:00")
-        )
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ValueError(
-            f"Invalid occurred_at timestamp: {value}"
-        ) from exc
+        raise ValueError(f"Invalid occurred_at timestamp: {value}") from exc
 
     if parsed.tzinfo is None:
-        raise ValueError(
-            "occurred_at must be timezone-aware"
-        )
+        raise ValueError("occurred_at must be timezone-aware")
 
 
 def canonical_json(
@@ -689,10 +569,7 @@ def main(
     argv: Sequence[str] | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Record a finalized governed memory-reuse "
-            "outcome."
-        )
+        description=("Record a finalized governed memory-reuse outcome.")
     )
     parser.add_argument(
         "--database",
@@ -700,16 +577,13 @@ def main(
     )
     parser.add_argument(
         "--event",
-        help=(
-            "Finalization JSON file. Defaults to stdin."
-        ),
+        help=("Finalization JSON file. Defaults to stdin."),
     )
     parser.add_argument(
         "--command",
         nargs="+",
         help=(
-            "Explicit Graphiti reuse command. When omitted, "
-            "L9_SGD_GRAPHITI_REUSE_COMMAND is used."
+            "Explicit Graphiti reuse command. When omitted, L9_SGD_GRAPHITI_REUSE_COMMAND is used."
         ),
     )
     parser.add_argument(
@@ -724,18 +598,12 @@ def main(
     args = parser.parse_args(argv)
 
     if args.event:
-        payload = json.loads(
-            Path(args.event).read_text(
-                encoding="utf-8"
-            )
-        )
+        payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
     else:
         payload = json.load(sys.stdin)
 
     if not isinstance(payload, Mapping):
-        raise SystemExit(
-            "Reuse finalization must be a JSON object"
-        )
+        raise SystemExit("Reuse finalization must be a JSON object")
 
     consumer_payload = payload.get(
         "consumer",
@@ -746,30 +614,18 @@ def main(
         consumer_payload,
         Mapping,
     ) or not isinstance(use_payload, Mapping):
-        raise SystemExit(
-            "consumer and use must be objects"
-        )
+        raise SystemExit("consumer and use must be objects")
 
     pending = PendingReuse(
         record_id=str(payload["record_id"]),
         consumer=ReuseIdentity(
-            repository=str(
-                consumer_payload["repository"]
-            ),
-            campaign_id=str(
-                consumer_payload["campaign_id"]
-            ),
-            action_id=str(
-                consumer_payload["action_id"]
-            ),
-            agent_id=str(
-                consumer_payload["agent_id"]
-            ),
+            repository=str(consumer_payload["repository"]),
+            campaign_id=str(consumer_payload["campaign_id"]),
+            action_id=str(consumer_payload["action_id"]),
+            agent_id=str(consumer_payload["agent_id"]),
             role=str(consumer_payload["role"]),
         ),
-        context_pack_id=str(
-            use_payload["context_pack_id"]
-        ),
+        context_pack_id=str(use_payload["context_pack_id"]),
         query=str(use_payload["query"]),
         injection_method=str(
             use_payload.get(
@@ -780,9 +636,7 @@ def main(
     )
     finalization = ReuseFinalization(
         outcome=str(payload["outcome"]),
-        evidence=dict(
-            payload.get("evidence", {})
-        ),
+        evidence=dict(payload.get("evidence", {})),
         correction_required=bool(
             payload.get(
                 "correction_required",
@@ -798,14 +652,10 @@ def main(
         occurred_at=str(
             payload.get(
                 "occurred_at",
-                datetime.now(UTC)
-                .isoformat()
-                .replace("+00:00", "Z"),
+                datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             )
         ),
-        metadata=dict(
-            payload.get("metadata", {})
-        ),
+        metadata=dict(payload.get("metadata", {})),
     )
 
     transport: ReuseTransport | None
@@ -817,13 +667,7 @@ def main(
             timeout_seconds=args.timeout_seconds,
         )
     else:
-        transport = (
-            CommandReuseTransport.from_environment(
-                timeout_seconds=(
-                    args.timeout_seconds
-                )
-            )
-        )
+        transport = CommandReuseTransport.from_environment(timeout_seconds=(args.timeout_seconds))
 
     recorder = ReuseRecorder.from_database(
         args.database,

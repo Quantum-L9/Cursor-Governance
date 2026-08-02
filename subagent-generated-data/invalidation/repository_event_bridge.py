@@ -23,13 +23,8 @@ from pathlib import Path, PurePosixPath
 from types import ModuleType
 from typing import Any, Protocol
 
-
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-_STATE_STORE_PATH = (
-    _PACKAGE_ROOT
-    / "orchestration"
-    / "state_store.py"
-)
+_STATE_STORE_PATH = _PACKAGE_ROOT / "orchestration" / "state_store.py"
 
 SUPPORTED_SCHEMA_MAJOR = 1
 
@@ -51,21 +46,15 @@ class RepositoryEventBridgeError(RuntimeError):
     """Base repository invalidation bridge failure."""
 
 
-class RepositoryStateError(
-    RepositoryEventBridgeError
-):
+class RepositoryStateError(RepositoryEventBridgeError):
     """The repository state is unsuitable for deterministic diffing."""
 
 
-class InvalidationCollisionError(
-    RepositoryEventBridgeError
-):
+class InvalidationCollisionError(RepositoryEventBridgeError):
     """An immutable event ID was reused with different content."""
 
 
-class InvalidationTransportError(
-    RepositoryEventBridgeError
-):
+class InvalidationTransportError(RepositoryEventBridgeError):
     """The invalidation destination failed or returned an invalid response."""
 
 
@@ -84,9 +73,7 @@ class ChangedPath:
     previous_path: str | None = None
 
     def __post_init__(self) -> None:
-        normalized = normalize_repository_path(
-            self.path
-        )
+        normalized = normalize_repository_path(self.path)
         object.__setattr__(
             self,
             "path",
@@ -97,18 +84,11 @@ class ChangedPath:
             object.__setattr__(
                 self,
                 "previous_path",
-                normalize_repository_path(
-                    self.previous_path
-                ),
+                normalize_repository_path(self.previous_path),
             )
 
-        if (
-            self.change_kind is ChangeKind.RENAMED
-            and self.previous_path is None
-        ):
-            raise ValueError(
-                "Renamed paths require previous_path"
-            )
+        if self.change_kind is ChangeKind.RENAMED and self.previous_path is None:
+            raise ValueError("Renamed paths require previous_path")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -131,20 +111,11 @@ class RepositoryChangeEvent:
 
     def __post_init__(self) -> None:
         if not self.repository.strip():
-            raise ValueError(
-                "repository must be non-empty"
-            )
+            raise ValueError("repository must be non-empty")
         if self.event_type not in SUPPORTED_EVENT_TYPES:
-            raise ValueError(
-                f"Unsupported invalidation event type: "
-                f"{self.event_type}"
-            )
+            raise ValueError(f"Unsupported invalidation event type: {self.event_type}")
 
-        metadata = (
-            {}
-            if self.metadata is None
-            else dict(self.metadata)
-        )
+        metadata = {} if self.metadata is None else dict(self.metadata)
         object.__setattr__(
             self,
             "metadata",
@@ -152,20 +123,13 @@ class RepositoryChangeEvent:
         )
 
         if (
-            self.event_type
-            == "repository_path_changed"
+            self.event_type == "repository_path_changed"
             and not self.changed_paths
             and not self.selectors
         ):
-            raise ValueError(
-                "repository_path_changed requires "
-                "changed paths or selectors"
-            )
+            raise ValueError("repository_path_changed requires changed paths or selectors")
 
-        normalized_selectors = tuple(
-            normalize_selector(selector)
-            for selector in self.selectors
-        )
+        normalized_selectors = tuple(normalize_selector(selector) for selector in self.selectors)
         object.__setattr__(
             self,
             "selectors",
@@ -191,16 +155,10 @@ class RepositoryChangeEvent:
     ) -> tuple[Mapping[str, Any], ...]:
         path_selectors = tuple(
             {
-                "condition_type": (
-                    "relevant_path_changed"
-                ),
+                "condition_type": ("relevant_path_changed"),
                 "selector": item.path,
-                "change_kind": (
-                    item.change_kind.value
-                ),
-                "previous_path": (
-                    item.previous_path
-                ),
+                "change_kind": (item.change_kind.value),
+                "previous_path": (item.previous_path),
             }
             for item in self.changed_paths
         )
@@ -215,11 +173,7 @@ class RepositoryChangeEvent:
             "from_sha": self.from_sha,
             "to_sha": self.to_sha,
             "event_type": self.event_type,
-            "selectors": [
-                dict(selector)
-                for selector
-                in self.effective_selectors()
-            ],
+            "selectors": [dict(selector) for selector in self.effective_selectors()],
             "delete_memory": False,
             "create_replacement_record": False,
             "metadata": dict(self.metadata),
@@ -243,15 +197,9 @@ class InvalidationDispatchResult:
             "dry_run": self.dry_run,
             "local_created": self.local_created,
             "local_duplicate": self.local_duplicate,
-            "remote_dispatched": (
-                self.remote_dispatched
-            ),
+            "remote_dispatched": (self.remote_dispatched),
             "remote_status": self.remote_status,
-            "response": (
-                dict(self.response)
-                if self.response is not None
-                else None
-            ),
+            "response": (dict(self.response) if self.response is not None else None),
             "request": dict(self.request),
         }
 
@@ -275,37 +223,23 @@ class CommandInvalidationTransport:
         environment: Mapping[str, str] | None = None,
     ) -> None:
         if not command:
-            raise ValueError(
-                "Invalidation command is required"
-            )
+            raise ValueError("Invalidation command is required")
         if timeout_seconds < 1:
-            raise ValueError(
-                "timeout_seconds must be positive"
-            )
-        self.command = tuple(
-            str(item) for item in command
-        )
+            raise ValueError("timeout_seconds must be positive")
+        self.command = tuple(str(item) for item in command)
         self.timeout_seconds = timeout_seconds
-        self.environment = (
-            dict(environment)
-            if environment is not None
-            else None
-        )
+        self.environment = dict(environment) if environment is not None else None
 
     @classmethod
     def from_environment(
         cls,
         *,
-        variable: str = (
-            "L9_SGD_GRAPHITI_INVALIDATE_COMMAND"
-        ),
+        variable: str = ("L9_SGD_GRAPHITI_INVALIDATE_COMMAND"),
         timeout_seconds: int = 30,
-    ) -> "CommandInvalidationTransport":
+    ) -> CommandInvalidationTransport:
         raw = os.environ.get(variable, "").strip()
         if not raw:
-            raise InvalidationTransportError(
-                f"{variable} is not configured"
-            )
+            raise InvalidationTransportError(f"{variable} is not configured")
         return cls(
             shlex.split(raw),
             timeout_seconds=timeout_seconds,
@@ -319,8 +253,7 @@ class CommandInvalidationTransport:
             completed = subprocess.run(
                 list(self.command),
                 input=canonical_json(request),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
                 check=False,
@@ -328,58 +261,40 @@ class CommandInvalidationTransport:
             )
         except subprocess.TimeoutExpired as exc:
             raise InvalidationTransportError(
-                f"Invalidation command timed out after "
-                f"{self.timeout_seconds}s"
+                f"Invalidation command timed out after {self.timeout_seconds}s"
             ) from exc
         except OSError as exc:
             raise InvalidationTransportError(
-                f"Invalidation command could not start: "
-                f"{exc}"
+                f"Invalidation command could not start: {exc}"
             ) from exc
 
         stderr = completed.stderr.strip()
         if completed.returncode != 0:
             raise InvalidationTransportError(
-                f"Invalidation command failed with exit "
-                f"{completed.returncode}: {stderr}"
+                f"Invalidation command failed with exit {completed.returncode}: {stderr}"
             )
 
         try:
-            response = json.loads(
-                completed.stdout or "{}"
-            )
+            response = json.loads(completed.stdout or "{}")
         except json.JSONDecodeError as exc:
             raise InvalidationTransportError(
-                "Invalidation command stdout was "
-                "not valid JSON"
+                "Invalidation command stdout was not valid JSON"
             ) from exc
 
         if not isinstance(response, Mapping):
-            raise InvalidationTransportError(
-                "Invalidation response must be "
-                "a JSON object"
-            )
+            raise InvalidationTransportError("Invalidation response must be a JSON object")
 
         if response.get("deleted") is True:
             raise InvalidationTransportError(
-                "Invalidation boundary violation: "
-                "destination reported deletion"
+                "Invalidation boundary violation: destination reported deletion"
             )
 
-        if (
-            response.get(
-                "replacement_created"
-            )
-            is True
-        ):
+        if response.get("replacement_created") is True:
             raise InvalidationTransportError(
-                "Invalidation boundary violation: "
-                "destination created a replacement"
+                "Invalidation boundary violation: destination created a replacement"
             )
 
-        status = str(
-            response.get("status", "")
-        )
+        status = str(response.get("status", ""))
         if status not in {
             "accepted",
             "invalidated",
@@ -389,10 +304,7 @@ class CommandInvalidationTransport:
             "quarantined",
             "archived",
         }:
-            raise InvalidationTransportError(
-                f"Unsupported invalidation status: "
-                f"{status!r}"
-            )
+            raise InvalidationTransportError(f"Unsupported invalidation status: {status!r}")
 
         return dict(response)
 
@@ -404,9 +316,7 @@ class RepositoryEventBridge:
         self,
         state_store: Any,
         *,
-        transport: (
-            InvalidationTransport | None
-        ) = None,
+        transport: (InvalidationTransport | None) = None,
     ) -> None:
         self.state_store = state_store
         self.transport = transport
@@ -416,10 +326,8 @@ class RepositoryEventBridge:
         cls,
         database_path: str | Path,
         *,
-        transport: (
-            InvalidationTransport | None
-        ) = None,
-    ) -> "RepositoryEventBridge":
+        transport: (InvalidationTransport | None) = None,
+    ) -> RepositoryEventBridge:
         module = load_state_store_module()
         store_type = getattr(
             module,
@@ -459,34 +367,22 @@ class RepositoryEventBridge:
                 from_sha,
                 to_sha,
             ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             timeout=60,
             check=False,
         )
         if completed.returncode != 0:
-            raise RepositoryStateError(
-                completed.stderr.strip()
-                or "git diff failed"
-            )
+            raise RepositoryStateError(completed.stderr.strip() or "git diff failed")
 
-        changed_paths = tuple(
-            parse_name_status(
-                completed.stdout
-            )
-        )
+        changed_paths = tuple(parse_name_status(completed.stdout))
 
         if not changed_paths:
-            raise RepositoryStateError(
-                "Git diff contains no changed paths"
-            )
+            raise RepositoryStateError("Git diff contains no changed paths")
 
         return RepositoryChangeEvent(
             repository=repository_name,
-            event_type=(
-                "repository_path_changed"
-            ),
+            event_type=("repository_path_changed"),
             from_sha=resolve_commit(
                 root,
                 from_sha,
@@ -511,44 +407,28 @@ class RepositoryEventBridge:
         request = event.to_request()
         event_id = str(request["event_id"])
 
-        row, created = (
-            self.state_store.record_invalidation_event(
-                event_id=event_id,
-                repository=event.repository,
-                from_sha=event.from_sha,
-                to_sha=event.to_sha,
-                event_type=event.event_type,
-                status=(
-                    "DRY_RUN"
-                    if dry_run
-                    else "PENDING"
-                ),
-                payload=request,
-            )
+        row, created = self.state_store.record_invalidation_event(
+            event_id=event_id,
+            repository=event.repository,
+            from_sha=event.from_sha,
+            to_sha=event.to_sha,
+            event_type=event.event_type,
+            status=("DRY_RUN" if dry_run else "PENDING"),
+            payload=request,
         )
 
         if not created:
-            stored_payload = row.get(
-                "payload_json"
-            )
+            stored_payload = row.get("payload_json")
             if stored_payload is not None:
                 try:
-                    parsed = json.loads(
-                        str(stored_payload)
-                    )
+                    parsed = json.loads(str(stored_payload))
                 except json.JSONDecodeError as exc:
                     raise RepositoryEventBridgeError(
-                        "Stored invalidation payload "
-                        "is invalid JSON"
+                        "Stored invalidation payload is invalid JSON"
                     ) from exc
 
-                if canonical_json(parsed) != (
-                    canonical_json(request)
-                ):
-                    raise InvalidationCollisionError(
-                        f"Invalidation event ID "
-                        f"collision: {event_id}"
-                    )
+                if canonical_json(parsed) != (canonical_json(request)):
+                    raise InvalidationCollisionError(f"Invalidation event ID collision: {event_id}")
 
         if dry_run or self.transport is None:
             return InvalidationDispatchResult(
@@ -562,18 +442,14 @@ class RepositoryEventBridge:
                 request=request,
             )
 
-        response = self.transport.invalidate(
-            request
-        )
+        response = self.transport.invalidate(request)
         return InvalidationDispatchResult(
             event_id=event_id,
             dry_run=False,
             local_created=created,
             local_duplicate=not created,
             remote_dispatched=True,
-            remote_status=str(
-                response.get("status", "")
-            ),
+            remote_status=str(response.get("status", "")),
             response=response,
             request=request,
         )
@@ -593,26 +469,18 @@ def parse_name_status(
 
         if status.startswith("R"):
             if len(fields) != 3:
-                raise RepositoryStateError(
-                    f"Invalid rename record: "
-                    f"{raw_line!r}"
-                )
+                raise RepositoryStateError(f"Invalid rename record: {raw_line!r}")
             changes.append(
                 ChangedPath(
                     path=fields[2],
                     previous_path=fields[1],
-                    change_kind=(
-                        ChangeKind.RENAMED
-                    ),
+                    change_kind=(ChangeKind.RENAMED),
                 )
             )
             continue
 
         if len(fields) != 2:
-            raise RepositoryStateError(
-                f"Invalid name-status record: "
-                f"{raw_line!r}"
-            )
+            raise RepositoryStateError(f"Invalid name-status record: {raw_line!r}")
 
         kind = {
             "A": ChangeKind.ADDED,
@@ -643,47 +511,27 @@ def normalize_selector(
             "",
         )
     ).strip()
-    selector_value = str(
-        selector.get("selector", "")
-    ).strip()
+    selector_value = str(selector.get("selector", "")).strip()
 
     if not condition_type:
-        raise ValueError(
-            "Invalidation selector requires "
-            "condition_type"
-        )
+        raise ValueError("Invalidation selector requires condition_type")
     if not selector_value:
-        raise ValueError(
-            "Invalidation selector requires selector"
-        )
+        raise ValueError("Invalidation selector requires selector")
 
     normalized: dict[str, Any] = {
         "condition_type": condition_type,
         "selector": (
-            normalize_repository_path(
-                selector_value
-            )
-            if condition_type
-            == "relevant_path_changed"
+            normalize_repository_path(selector_value)
+            if condition_type == "relevant_path_changed"
             else selector_value
         ),
     }
 
     if selector.get("change_kind") is not None:
-        normalized["change_kind"] = str(
-            selector["change_kind"]
-        )
+        normalized["change_kind"] = str(selector["change_kind"])
 
     if selector.get("previous_path") is not None:
-        normalized["previous_path"] = (
-            normalize_repository_path(
-                str(
-                    selector[
-                        "previous_path"
-                    ]
-                )
-            )
-        )
+        normalized["previous_path"] = normalize_repository_path(str(selector["previous_path"]))
     else:
         normalized["previous_path"] = None
 
@@ -712,9 +560,7 @@ def event_from_mapping(
         changed_paths_raw,
         (str, bytes),
     ):
-        raise ValueError(
-            "changed_paths must be an array"
-        )
+        raise ValueError("changed_paths must be an array")
 
     selectors_raw = payload.get(
         "selectors",
@@ -727,56 +573,33 @@ def event_from_mapping(
         selectors_raw,
         (str, bytes),
     ):
-        raise ValueError(
-            "selectors must be an array"
-        )
+        raise ValueError("selectors must be an array")
 
     changed_paths = tuple(
         ChangedPath(
             path=str(item["path"]),
-            change_kind=ChangeKind(
-                str(item["change_kind"])
-            ),
+            change_kind=ChangeKind(str(item["change_kind"])),
             previous_path=(
-                str(item["previous_path"])
-                if item.get(
-                    "previous_path"
-                )
-                is not None
-                else None
+                str(item["previous_path"]) if item.get("previous_path") is not None else None
             ),
         )
         for item in changed_paths_raw
         if isinstance(item, Mapping)
     )
 
-    selectors = tuple(
-        dict(item)
-        for item in selectors_raw
-        if isinstance(item, Mapping)
-    )
+    selectors = tuple(dict(item) for item in selectors_raw if isinstance(item, Mapping))
 
     return RepositoryChangeEvent(
-        event_id=(
-            str(payload["event_id"])
-            if payload.get("event_id")
-            else None
-        ),
-        repository=str(
-            payload["repository"]
-        ),
+        event_id=(str(payload["event_id"]) if payload.get("event_id") else None),
+        repository=str(payload["repository"]),
         event_type=str(
             payload.get(
                 "event_type",
                 "repository_path_changed",
             )
         ),
-        from_sha=optional_string(
-            payload.get("from_sha")
-        ),
-        to_sha=optional_string(
-            payload.get("to_sha")
-        ),
+        from_sha=optional_string(payload.get("from_sha")),
+        to_sha=optional_string(payload.get("to_sha")),
         changed_paths=changed_paths,
         selectors=selectors,
         metadata=dict(
@@ -800,27 +623,17 @@ def deterministic_event_id(
     from_sha: str | None,
     to_sha: str | None,
     changed_paths: Sequence[ChangedPath],
-    selectors: Sequence[
-        Mapping[str, Any]
-    ],
+    selectors: Sequence[Mapping[str, Any]],
 ) -> str:
     seed = {
         "repository": repository,
         "event_type": event_type,
         "from_sha": from_sha,
         "to_sha": to_sha,
-        "changed_paths": [
-            item.to_dict()
-            for item in changed_paths
-        ],
-        "selectors": [
-            dict(item)
-            for item in selectors
-        ],
+        "changed_paths": [item.to_dict() for item in changed_paths],
+        "selectors": [dict(item) for item in selectors],
     }
-    digest = hashlib.sha256(
-        canonical_json(seed).encode("utf-8")
-    ).hexdigest()
+    digest = hashlib.sha256(canonical_json(seed).encode("utf-8")).hexdigest()
     return f"invalidation-{digest[:32]}"
 
 
@@ -829,28 +642,16 @@ def normalize_repository_path(
 ) -> str:
     text = value.replace("\\", "/").strip()
     if not text:
-        raise ValueError(
-            "Repository path cannot be empty"
-        )
+        raise ValueError("Repository path cannot be empty")
     path = PurePosixPath(text)
     if path.is_absolute():
-        raise ValueError(
-            "Repository path must be relative"
-        )
+        raise ValueError("Repository path must be relative")
     if ".." in path.parts:
-        raise ValueError(
-            "Repository path traversal is forbidden"
-        )
+        raise ValueError("Repository path traversal is forbidden")
 
-    parts = tuple(
-        part
-        for part in path.parts
-        if part not in {"", "."}
-    )
+    parts = tuple(part for part in path.parts if part not in {"", "."})
     if not parts:
-        raise ValueError(
-            "Repository path cannot resolve to root"
-        )
+        raise ValueError("Repository path cannot resolve to root")
     return "/".join(parts)
 
 
@@ -865,20 +666,13 @@ def assert_git_repository(
             "rev-parse",
             "--is-inside-work-tree",
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         timeout=15,
         check=False,
     )
-    if (
-        completed.returncode != 0
-        or completed.stdout.strip()
-        != "true"
-    ):
-        raise RepositoryStateError(
-            f"Not a Git repository: {root}"
-        )
+    if completed.returncode != 0 or completed.stdout.strip() != "true":
+        raise RepositoryStateError(f"Not a Git repository: {root}")
 
 
 def ensure_clean_repository(
@@ -892,21 +686,15 @@ def ensure_clean_repository(
             "status",
             "--porcelain",
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         timeout=15,
         check=False,
     )
     if completed.returncode != 0:
-        raise RepositoryStateError(
-            completed.stderr.strip()
-            or "git status failed"
-        )
+        raise RepositoryStateError(completed.stderr.strip() or "git status failed")
     if completed.stdout.strip():
-        raise RepositoryStateError(
-            "Repository has uncommitted changes"
-        )
+        raise RepositoryStateError("Repository has uncommitted changes")
 
 
 def validate_commit(
@@ -922,16 +710,13 @@ def validate_commit(
             "-e",
             f"{revision}^{{commit}}",
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         timeout=15,
         check=False,
     )
     if completed.returncode != 0:
-        raise RepositoryStateError(
-            f"Unknown commit: {revision}"
-        )
+        raise RepositoryStateError(f"Unknown commit: {revision}")
 
 
 def resolve_commit(
@@ -946,30 +731,21 @@ def resolve_commit(
             "rev-parse",
             f"{revision}^{{commit}}",
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         timeout=15,
         check=False,
     )
     if completed.returncode != 0:
-        raise RepositoryStateError(
-            f"Could not resolve commit: "
-            f"{revision}"
-        )
+        raise RepositoryStateError(f"Could not resolve commit: {revision}")
     return completed.stdout.strip()
 
 
 def load_state_store_module() -> ModuleType:
     if not _STATE_STORE_PATH.is_file():
-        raise RepositoryEventBridgeError(
-            f"State store not found: "
-            f"{_STATE_STORE_PATH}"
-        )
+        raise RepositoryEventBridgeError(f"State store not found: {_STATE_STORE_PATH}")
 
-    module_name = (
-        "_l9_sgd_orchestration_state_store"
-    )
+    module_name = "_l9_sgd_orchestration_state_store"
     existing = sys.modules.get(module_name)
     if existing is not None:
         return existing
@@ -979,9 +755,7 @@ def load_state_store_module() -> ModuleType:
         _STATE_STORE_PATH,
     )
     if spec is None or spec.loader is None:
-        raise RepositoryEventBridgeError(
-            "Could not create state-store import spec"
-        )
+        raise RepositoryEventBridgeError("Could not create state-store import spec")
 
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
@@ -997,20 +771,12 @@ def validate_schema_major(
     schema_version: str,
 ) -> None:
     try:
-        major = int(
-            schema_version.split(".", 1)[0]
-        )
+        major = int(schema_version.split(".", 1)[0])
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            f"Invalid schema version: "
-            f"{schema_version!r}"
-        ) from exc
+        raise ValueError(f"Invalid schema version: {schema_version!r}") from exc
 
     if major != SUPPORTED_SCHEMA_MAJOR:
-        raise ValueError(
-            f"Unsupported invalidation schema "
-            f"major: {major}"
-        )
+        raise ValueError(f"Unsupported invalidation schema major: {major}")
 
 
 def optional_string(value: Any) -> str | None:
@@ -1035,10 +801,7 @@ def main(
     argv: Sequence[str] | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Create and dispatch a structured "
-            "source-invalidation request."
-        )
+        description=("Create and dispatch a structured source-invalidation request.")
     )
     parser.add_argument(
         "--database",
@@ -1046,10 +809,7 @@ def main(
     )
     parser.add_argument(
         "--event",
-        help=(
-            "Explicit event JSON file. Defaults to "
-            "Git diff mode."
-        ),
+        help=("Explicit event JSON file. Defaults to Git diff mode."),
     )
     parser.add_argument(
         "--repository-root",
@@ -1091,22 +851,13 @@ def main(
     if args.dry_run or args.local_only:
         transport = None
     elif args.command:
-        transport = (
-            CommandInvalidationTransport(
-                args.command,
-                timeout_seconds=(
-                    args.timeout_seconds
-                ),
-            )
+        transport = CommandInvalidationTransport(
+            args.command,
+            timeout_seconds=(args.timeout_seconds),
         )
     else:
-        transport = (
-            CommandInvalidationTransport
-            .from_environment(
-                timeout_seconds=(
-                    args.timeout_seconds
-                )
-            )
+        transport = CommandInvalidationTransport.from_environment(
+            timeout_seconds=(args.timeout_seconds)
         )
 
     bridge = RepositoryEventBridge.from_database(
@@ -1115,34 +866,17 @@ def main(
     )
 
     if args.event:
-        payload = json.loads(
-            Path(args.event).read_text(
-                encoding="utf-8"
-            )
-        )
+        payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
         if not isinstance(payload, Mapping):
-            raise SystemExit(
-                "Event root must be a JSON object"
-            )
+            raise SystemExit("Event root must be a JSON object")
         event = event_from_mapping(payload)
     else:
-        if not (
-            args.repository_name
-            and args.from_sha
-            and args.to_sha
-        ):
-            parser.error(
-                "--repository-name, --from-sha and "
-                "--to-sha are required in Git diff mode"
-            )
+        if not (args.repository_name and args.from_sha and args.to_sha):
+            parser.error("--repository-name, --from-sha and --to-sha are required in Git diff mode")
 
         event = bridge.from_git_diff(
-            repository_root=(
-                args.repository_root
-            ),
-            repository_name=(
-                args.repository_name
-            ),
+            repository_root=(args.repository_root),
+            repository_name=(args.repository_name),
             from_sha=args.from_sha,
             to_sha=args.to_sha,
             allow_dirty=args.allow_dirty,
