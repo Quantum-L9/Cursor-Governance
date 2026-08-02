@@ -1,0 +1,40 @@
+route_id: validation
+schema_version: "1.0.0"
+description: >
+  Route findings that can become tests, invariants, CI checks, evidence
+  requirements, regression guards, or validation procedures.
+destination: validation_candidate_queue
+accepted_primary_classes:
+  - validation_procedure
+  - failure_pattern
+  - invariant_candidate
+  - regression_candidate
+forbidden_epistemic_statuses:
+  - hypothesized
+  - unresolved
+allowed_risk_levels:
+  - low
+  - medium
+  - high
+required_unit_fields:
+  - unit_id
+  - statement
+  - source_evidence
+  - scope
+  - confidence
+  - expected_reuse
+  - invalidation_conditions
+promotion_authority: validation_compiler
+independent_validation_required: true
+self_promotion_allowed: false
+default_visibility: repository_local
+output_contract:
+  kind: ValidationCandidate
+  require_reproduction_path: true
+  require_expected_failure_or_pass_condition: true
+  require_evidence_binding: true
+reject_when:
+  - validation_method_is_known_false_green
+  - reproduction_path_is_missing
+  - claim_cannot_be_measured
+  - test_would_only_assert_implementation_details_without_contract_value

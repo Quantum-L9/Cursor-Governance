@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "packet-invalid-001",
+  "identity": {
+    "campaign_id": "campaign-001",
+    "graph_id": "graph-001",
+    "repository": "Quantum-L9/example",
+    "repository_class": "l9_python",
+    "base_sha": "abc1234",
+    "action_id": "recon-invalid",
+    "agent_id": "agent-recon-invalid",
+    "role": "recon",
+    "lease_id": "lease-recon-invalid"
+  },
+  "primary_result": {
+    "artifact_id": "artifact-invalid",
+    "artifact_kind": "ReconReport",
+    "completion_status": "completed"
+  },
+  "generated_data_units": [
+    {
+      "unit_id": "unit-invalid-observed",
+      "primary_class": "repository_fact",
+      "epistemic_status": "observed",
+      "statement": "This observed statement has no evidence.",
+      "source_evidence": [],
+      "scope": {
+        "repositories": [
+          "Quantum-L9/example"
+        ],
+        "repository_classes": [
+          "l9_python"
+        ],
+        "paths": [],
+        "task_types": [],
+        "roles": []
+      },
+      "confidence": 0.9,
+      "freshness": {
+        "observed_at": "2026-08-02T15:00:00Z",
+        "base_sha": "abc1234",
+        "expires_at": null
+      },
+      "proposed_routes": [
+        "memory"
+      ],
+      "expected_reuse": {
+        "task_local": false,
+        "cross_task": true,
+        "cross_campaign": false,
+        "cross_repository": false,
+        "description": "Should fail because no evidence is present."
+      },
+      "invalidation_conditions": [
+        {
+          "condition_type": "relevant_path_changed",
+          "selector": "**"
+        }
+      ],
+      "visibility": "repository_local"
+    }
+  ],
+  "unresolved_unknowns": [],
+  "provenance": {
+    "repository": "Quantum-L9/example",
+    "repository_class": "l9_python",
+    "base_sha": "abc1234",
+    "input_artifacts": [],
+    "evidence_artifacts": [],
+    "inspected_paths": [],
+    "executed_commands": [],
+    "generated_at": "2026-08-02T15:00:00Z"
+  },
+  "reuse_assessment": {
+    "reusable_data_found": true,
+    "task_local_value": 1,
+    "cross_task_value": 2,
+    "cross_repository_value": 1,
+    "confidence": 0.2,
+    "reason": "Negative fixture."
+  },
+  "generated_at": "2026-08-02T15:00:00Z"
+}

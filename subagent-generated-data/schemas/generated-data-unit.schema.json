@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/subagent-generated-data/generated-data-unit.schema.json",
+  "title": "L9 Generated Data Unit",
+  "description": "Smallest independently classifiable and routable generated-data item (law §10).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unit_id",
+    "primary_class",
+    "epistemic_status",
+    "statement",
+    "scope",
+    "confidence"
+  ],
+  "$defs": {
+    "generatedDataClass": {
+      "type": "string",
+      "enum": [
+        "repository_fact",
+        "architecture_boundary",
+        "ownership_finding",
+        "dependency_finding",
+        "implementation_surface",
+        "execution_procedure",
+        "validation_procedure",
+        "failure_pattern",
+        "rejected_approach",
+        "context_requirement",
+        "context_waste",
+        "task_contract_gap",
+        "policy_candidate",
+        "invariant_candidate",
+        "regression_candidate",
+        "reusable_pattern_candidate",
+        "artifact_lineage",
+        "unresolved_unknown",
+        "follow_on_opportunity",
+        "evidence_only"
+      ]
+    },
+    "epistemicStatus": {
+      "type": "string",
+      "enum": [
+        "observed",
+        "derived",
+        "hypothesized",
+        "disproven",
+        "contested",
+        "unresolved"
+      ]
+    },
+    "routeName": {
+      "type": "string",
+      "enum": [
+        "memory",
+        "contracts",
+        "validation",
+        "patterns",
+        "architecture",
+        "opportunities",
+        "unknowns",
+        "evidence",
+        "reject"
+      ]
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "campaign_local",
+        "repository_local",
+        "project_group",
+        "constellation_internal",
+        "restricted"
+      ]
+    }
+  },
+  "properties": {
+    "unit_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "primary_class": {"$ref": "#/$defs/generatedDataClass"},
+    "secondary_tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1},
+      "default": []
+    },
+    "epistemic_status": {"$ref": "#/$defs/epistemicStatus"},
+    "statement": {"type": "string", "minLength": 1},
+    "source_evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "provenance.schema.json#/$defs/evidenceRef"
+      },
+      "default": []
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "description": "Where the unit applies: repository, repository_class, project_group, module, path, task_type, role, environment, contract_version, schema_version, or campaign (law §10.3)."
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "observed_at": {"type": ["string", "null"]},
+        "base_sha": {"type": ["string", "null"]},
+        "expires_at": {"type": ["string", "null"]}
+      }
+    },
+    "proposed_routes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/routeName"},
+      "default": []
+    },
+    "expected_reuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reuse horizon the producing agent expects (law §24). Drives the classifier's reuse_horizon.",
+      "properties": {
+        "task_local": {"type": "boolean"},
+        "cross_task": {"type": "boolean"},
+        "cross_campaign": {"type": "boolean"},
+        "cross_repository": {"type": "boolean"},
+        "description": {"type": "string"}
+      }
+    },
+    "invalidation_conditions": {
+      "type": "array",
+      "description": "What makes this unit stale (law §22). Each condition names a trigger and, optionally, the selector it applies to.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["condition_type"],
+        "properties": {
+          "condition_type": {
+            "type": "string",
+            "enum": [
+              "relevant_path_changed",
+              "repository_base_changed",
+              "schema_version_changed",
+              "contract_version_changed",
+              "policy_version_changed",
+              "architecture_owner_changed",
+              "dependency_upgraded",
+              "contradictory_evidence_accepted",
+              "failed_reuse_reported",
+              "expiration_reached"
+            ]
+          },
+          "selector": {"type": "string", "minLength": 1}
+        }
+      },
+      "default": []
+    },
+    "self_promoted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the producing agent asserts this unit should be promoted directly. The producing role may never self-promote (law SGD-003); the packet validator's role guard rejects any self_promoted unit that targets a forbidden destination route."
+    },
+    "visibility": {
+      "$ref": "#/$defs/visibility",
+      "default": "campaign_local"
+    }
+  }
+}

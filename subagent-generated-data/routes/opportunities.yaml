@@ -1,0 +1,38 @@
+route_id: opportunities
+schema_version: "1.0.0"
+description: >
+  Route unresolved unknowns and bounded follow-on opportunities into next-action
+  planning without treating them as approved work or canonical truth.
+destination: opportunity_and_unknown_registry
+accepted_primary_classes:
+  - unresolved_unknown
+  - follow_on_opportunity
+forbidden_epistemic_statuses: []
+allowed_risk_levels:
+  - low
+  - medium
+  - high
+  - critical
+required_unit_fields:
+  - unit_id
+  - statement
+  - scope
+  - confidence
+  - expected_reuse
+  - invalidation_conditions
+promotion_authority: opportunity_planner
+independent_validation_required: false
+self_promotion_allowed: false
+default_visibility: repository_local
+output_contract:
+  kind: OpportunityOrUnknownRecord
+  authorize_execution: false
+  require_owner: true
+  require_next_action: true
+  require_evidence_path: true
+  require_priority_and_risk_scoring_before_execution: true
+reject_when:
+  - opportunity_is_unbounded
+  - no_named_capability_gain_exists
+  - no_owner_or_next_action_can_be_defined
+  - work_duplicates_an_existing_open_action

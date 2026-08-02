@@ -1,0 +1,47 @@
+role: synthesis
+law_ref: "l9.subagent_generated_data_law.v1#11.2"
+primary_artifact_kinds:
+  - ExecutionBrief
+  - SynthesisReport
+promotion_authority: false
+
+# Activates the packet validator's role guard for the no-self-promotion invariant
+# (law SGD-003): a self_promoted unit targeting any destination route is rejected.
+allows_empty_generated_data: true
+required_generated_data_classes: []
+forbidden_self_promotion_targets:
+  - memory
+  - contracts
+  - validation
+  - patterns
+  - architecture
+  - opportunities
+default_epistemic_status: derived
+
+must_assess:
+  - reconciled_findings
+  - unresolved_conflicts
+  - authority_used_for_resolution
+  - ordering_logic
+  - assumptions_removed
+  - assumptions_retained
+  - dependency_logic
+  - risk_concentration
+
+expected_generated_data_classes:
+  - dependency_finding
+  - task_contract_gap
+  - reusable_pattern_candidate
+  - unresolved_unknown
+  - architecture_boundary
+
+may_not:
+  - promote_contract_improvements          # may produce candidates, may not promote
+  - silently_resolve_high_impact_conflict
+  - self_promote_findings
+
+# Synthesis may propose contract deltas but they remain candidates.
+contract_delta_constraint:
+  allowed_route: contracts
+  promotion_decision_ceiling: defer
+  requires_independent_authority: true
