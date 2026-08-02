@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
@@ -16,7 +16,7 @@ PR_SECURITY_ADVISORY ?= 0
 PR_BASE ?= origin/main
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot"
 	@echo "  make pr           — CHANGED-FILES local PR gate (pre-commit + ruff + security); not full-tree"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
 	@echo "  make pr-full      — intentional full-tree local gate (nightly-equivalent; slow)"
@@ -77,6 +77,10 @@ claude-skills-test:
 ## Validate the Claude Code environment adapter and proactive skill activation.
 claude-env:
 	python3 environment/claude-code/validate_claude_env.py
+
+## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
+autonomy-validate:
+	python3 environment/claude-code/autonomy/validate_autonomy.py
 
 ## Validate the multi-agent environment pack: registry naming law, identity uniqueness,
 ## role catalog, adapter consistency, no committed secrets

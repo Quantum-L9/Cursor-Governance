@@ -58,6 +58,7 @@ When a command needs generator scripts:
 | Command | File | Description |
 |---------|------|-------------|
 | `/analyze` | `commands/analyze.md` | Codebase analysis |
+| `/autonomy` | `commands/autonomy.md` | Bounded autonomy — parallel Tasks + background PR poll |
 | `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
 | `/audit-component` | `commands/audit-component.md` | Audit component exports, wiring, API instantiation |
 | `/ci` | `commands/ci.md` | CI/CD operations |

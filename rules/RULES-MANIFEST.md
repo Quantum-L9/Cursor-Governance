@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-02T13:06:10Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-02T14:03:45Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **58** |
+| Total MDC files | **59** |
 | `alwaysApply: true` | **38** |
-| `alwaysApply: false` | **20** |
+| `alwaysApply: false` | **21** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **8** |
-| Derived compatibility IDs | **50** |
+| Derived compatibility IDs | **51** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -21,7 +21,7 @@ Generated: `2026-08-02T13:06:10Z`. Source: `rules/*.mdc`.
 | `00-global.mdc` | `l9.rule.00.global` | global | security | always | 279 | `617dac45e91d` |
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
-| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 180 | `fc2501a7ed8e` |
+| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `a976f968cd15` |
 | `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 44 | `f05a463d9f4d` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
@@ -55,6 +55,7 @@ Generated: `2026-08-02T13:06:10Z`. Source: `rules/*.mdc`.
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `e6cc99f83500` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
+| `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
 | `88-perplexity-run-harness.mdc` | `l9.rule.88.perplexity.run.harness` | global | governance | always | 51 | `e599b2b56828` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | always | 35 | `b6b565182a82` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 110 | `3d0a8c303d9d` |

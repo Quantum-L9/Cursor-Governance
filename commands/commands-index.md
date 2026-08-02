@@ -25,6 +25,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | Command | What it does |
 |---------|--------------|
 | `/start-session` | Run L9 sessionStart bootstrap (`make start`) |
+| `/autonomy` | Bounded autonomy — parallel Tasks + background PR poll (packet) |
 | `/ynp` | Highest-leverage next action |
 | `/rules` | Load governance rules / project state |
 | `/plan` | Execution plan before action |

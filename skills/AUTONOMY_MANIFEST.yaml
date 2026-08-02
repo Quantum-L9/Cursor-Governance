@@ -93,6 +93,8 @@ tiers:
       reason: "infra-as-code bootstrap — high blast radius, explicit only"
     - skill: "l9-pr-remediation"
       reason: "recursive PR loop that pushes commits and posts review replies — high blast radius, explicit only"
+    - skill: "l9-bounded-autonomy"
+      reason: "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only"
     - skill: "l9-cli-optimization"
       reason: "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only"
     - skill: "l9-e2e-blocker-resolution"
@@ -167,10 +169,10 @@ claude_routing:
     - l9-update-agent-docs
     - l9-ynp
   trivial_patterns:
-    - '^fix (the )?typo'
-    - '^correct (the )?spelling'
+    - '^fix (the )?typo\b'
+    - '^correct (the )?spelling\b'
     - '^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$'
-    - '^show (me )?(the )?(file|status|diff)'
+    - '^show (me )?(the )?(file|status|diff)\b'
   routes:
     - id: pr_analysis
       primary: l9-pr-analysis
@@ -340,6 +342,22 @@ claude_routing:
         - align this artifact pack
       supporting:
         - l9-structured-reasoning
+    - id: bounded_autonomy
+      primary: l9-bounded-autonomy
+      signal_weight: 8
+      positive_signals:
+        - /autonomy
+        - bounded autonomy campaign
+        - parallel non-dependent tasks
+        - background pr poll
+        - pr convergence campaign
+        - poll pr while continuing
+      supporting:
+        - l9-pr-remediation
+        - l9-structured-reasoning
+      note: >
+        explicit_only — recommendation is routing evidence only; requires /autonomy
+        or explicit user campaign authority (campaign authorization packet).
 
 # Slash command library (file-backed). Enabled whenever l9-governance is activated.
 # Recognition: rules/02-slash-commands.mdc. Map: commands/COMMANDS_MANIFEST.yaml.

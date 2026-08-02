@@ -27,6 +27,14 @@ This repo does **not** own:
 
 ---
 
+## 2.0 Bounded autonomy (Cursor SOP)
+
+For parallel non-dependent Tasks and **background PR-poll while the main agent
+continues**, use `/autonomy` and skill `l9-bounded-autonomy` (explicit-only).
+Authority is a **campaign authorization packet** (not an envelope). Claude Code
+machine runtime remains `environment/claude-code/autonomy/` — see its README
+“Cursor SOP” link. Human merge only; do not rewrite the Python scheduler from Cursor.
+
 ## 2. Activation — how a session boots L9 governance
 
 **There is exactly one activation mechanism, and it is automatic.**
