@@ -41,3 +41,13 @@ All Claude Code autonomy-related hooks are **fail-open**. They inject context or
 
 - **Claude Code surface:** use `environment/claude-code/autonomy/cli.py` + profile — see `claude-code-bridge.md`.
 - **Cursor surface:** this skill + `/autonomy` + agent-requested rule — Task/background poll SOP only; no second Python scheduler.
+
+## Program Execution System (PES) Phase 0
+
+| Source | Path | Role |
+|---|---|---|
+| Phase 0 dial-in | `WIP/_program-execution-system-v2.0.0/.../PHASE0_USER_CONFIG.yaml` (promoted under `environment/program-execution/core/`) | Autonomy profile, blocking inventory, make pr / lock alignment, packet fields |
+| Autonomy bridge | `.../program-execution-controller-template/references/AUTONOMY_BRIDGE.md` | Packet ↔ Program Lock; Task Card `autonomy_action_id`; dual stores |
+| Lessons LL-001..004 | `.../LEARNED_LESSONS.md` | CI hygiene, Phase 0 max autonomy, make pr, uv.lock pins |
+
+When a PES program is deploying, Phase 0 selects `program_deploy_max_autonomy` (max within ceiling, `autonomous_merge: false`). Align campaign packet fields with Phase 0; never use “envelope.”

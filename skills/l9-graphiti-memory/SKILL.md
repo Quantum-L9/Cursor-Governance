@@ -36,7 +36,7 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "query" -
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py phase-lock
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py inject "current task"
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write --body "..." --kind lesson
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write --kind lesson "durable fact…"
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py stats
 ```
@@ -46,6 +46,17 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py stats
 1. **sessionStart** — `session_start_memory_orchestrator.sh` runs code-graph health + Graphiti prefetch (when enabled).
 2. **Resume** — read `memory-bank/activeContext.md` first; then cite prefetch episode names from `.cursor/graphiti-state/`.
 3. **sessionEnd** — `graphiti-session-end.sh` writes T0 distill to memory-bank only (no T1 unless `/end-session`).
+
+## Proactive writes (T2)
+
+When a durable doctrine, lesson, or ADR delta lands in-repo, write it to Graphiti **without waiting to be asked**:
+
+```bash
+python3 ops/graphiti/graphiti_memory_client.py resolve   # expect repo group, e.g. cursor-governance
+python3 ops/graphiti/graphiti_memory_client.py write --kind lesson "…"
+```
+
+**MUST NOT** hardcode `igor-workspace` (or any prefetch/read fan-in group) as the write target — `cmd_write` blocks the shared workspace group on purpose. Prefer the CLI over raw MCP `add_memory`.
 
 ## GMP Phase 0
 
