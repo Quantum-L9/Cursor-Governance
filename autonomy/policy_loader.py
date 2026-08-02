@@ -8,7 +8,7 @@ from typing import Any
 # Edit autonomy/{policies,examples,tests/golden} JSON, then regenerate this module.
 
 _POLICIES: dict[str, Any] = json.loads(
-"""
+    """
 {
   "adapter-requirements": {
     "allow_missing_executable_in_test": false,
@@ -324,7 +324,7 @@ _POLICIES: dict[str, Any] = json.loads(
 )
 
 _EXAMPLES: dict[str, Any] = json.loads(
-"""
+    """
 {
   "adapters/cursor.json": {
     "adapter_id": "cursor-local",
@@ -930,7 +930,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
 )
 
 _GOLDEN: dict[str, Any] = json.loads(
-"""
+    """
 {
   "task046-happy-path.spec.json": {
     "forbidden_events": [
@@ -966,6 +966,7 @@ _GOLDEN: dict[str, Any] = json.loads(
 """
 )
 
+
 def load_policy(name: str) -> Any:
     try:
         return copy.deepcopy(_POLICIES[name])
@@ -985,4 +986,3 @@ def load_golden_spec(name: str) -> Any:
         return copy.deepcopy(_GOLDEN[name])
     except KeyError as exc:
         raise KeyError(f"Unknown golden spec: {name}") from exc
-

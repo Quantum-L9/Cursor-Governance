@@ -57,9 +57,7 @@ class Wave3Tests(unittest.TestCase):
         self.tempdir.cleanup()
 
     def register_cursor(self) -> str:
-        result = self.orchestrator.register(
-            load_example("adapters/cursor.json")
-        )
+        result = self.orchestrator.register(load_example("adapters/cursor.json"))
         self.assertEqual(result["conformance"]["status"], "PASS")
         return result["session_id"]
 

@@ -39,9 +39,7 @@ class GoldenTraceValidator:
 
 
 def main() -> int:
-    raise SystemExit(
-        "golden_trace file-path CLI is disabled; call GoldenTraceValidator.validate()"
-    )
+    raise SystemExit("golden_trace file-path CLI is disabled; call GoldenTraceValidator.validate()")
 
 
 if __name__ == "__main__":

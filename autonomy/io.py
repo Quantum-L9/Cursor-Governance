@@ -10,9 +10,7 @@ def loads_json(raw: str | bytes) -> Any:
     try:
         return json.loads(text)
     except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"Invalid JSON: line {exc.lineno}, column {exc.colno}: {exc.msg}"
-        ) from exc
+        raise ValueError(f"Invalid JSON: line {exc.lineno}, column {exc.colno}: {exc.msg}") from exc
 
 
 def dumps_json(value: Any) -> str:

@@ -6,5 +6,6 @@ def main(argv: list[str] | None = None) -> int:
         "autonomy.runtime.cli file-path interface is disabled; use AutonomyRuntime APIs"
     )
 
+
 if __name__ == "__main__":
     raise SystemExit(main())
