@@ -117,6 +117,28 @@ if [ -f package.json ]; then
   fi
 fi
 
+# 4.5) pre-commit — REQUIRED by CANONICAL_LAW §12 (mandatory `make pr` gate).
+#      `make pr` shells out to pre-commit, so it must be on PATH by default in
+#      every L9 workspace, independent of language. Trigger is the presence of a
+#      committed .pre-commit-config.yaml (the exact condition that needs it).
+#      Warm the hook environments so the first `make pr` does not pay cold-start.
+#      Needs pypi.org (the package) + github.com (hook repos) egress — both are in
+#      the baseline Custom allowlist; Full covers them too (see network-policy.md).
+if [ -f .pre-commit-config.yaml ]; then
+  log "pre-commit (CANONICAL_LAW §12 — make pr gate)"
+  if ! have pre-commit; then
+    pip install --only-binary :all: pre-commit 2>/dev/null \
+      || python3 -m pip install pre-commit 2>/dev/null \
+      || echo "WARN: pre-commit install failed — 'make pr' will fail until installed (allowlist pypi.org)"
+  fi
+  if have pre-commit; then
+    pre-commit install --install-hooks 2>/dev/null \
+      || pre-commit install-hooks 2>/dev/null \
+      || echo "WARN: pre-commit hook warm-up failed — first 'make pr' will fetch hook repos (allowlist github.com)"
+    pre-commit --version 2>/dev/null || true
+  fi
+fi
+
 # 5) Optional shared memory — HTTP MCP client only (no local server).
 #    Primary wiring is .mcp.json from step 3.5. Production:
 #    https://memory.quantumaipartners.com  (set L9_MEMORY_HTTP_URL in env).
@@ -146,6 +168,7 @@ have gh      && gh --version | head -1        || true
 have python3 && python3 --version            || true
 have ruff    && ruff --version               || echo "ruff:   (per-repo via .[dev])"
 have mypy    && mypy --version               || echo "mypy:   (per-repo via .[dev])"
+have pre-commit && pre-commit --version      || echo "pre-commit: (installed only when .pre-commit-config.yaml present)"
 have node    && echo "node:   $(node --version)" || true
 uname -s 2>/dev/null | awk '{print "os:     "$0}' || true
 

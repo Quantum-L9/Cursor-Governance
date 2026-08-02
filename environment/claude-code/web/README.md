@@ -14,7 +14,7 @@ field.
 |---|---|---|
 | **Network access** | `network-policy.md` | let the sandbox reach GitHub, registries, scanners |
 | **Environment variables** | `environment.env.example` | credentials + governance/memory locations (placeholders → real values in the UI) |
-| **Setup script** | `setup.sh` | install `gh`, toolchains, clone governance, provision memory |
+| **Setup script** | `setup.sh` | install `gh`, toolchains, `pre-commit` (the `make pr` gate, CANONICAL_LAW §12), clone governance, provision memory |
 
 ## Steps
 
