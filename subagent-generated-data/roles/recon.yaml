@@ -1,0 +1,41 @@
+role: recon
+law_ref: "l9.subagent_generated_data_law.v1#11.1"
+primary_artifact_kinds:
+  - ReconReport
+promotion_authority: false
+default_epistemic_status: observed
+
+# The recon agent must assess every item below and emit a generated-data unit
+# (or an explicit empty assessment) for each. Silence is not "nothing found".
+must_assess:
+  - discovered_repository_structure
+  - relevant_paths
+  - irrelevant_paths
+  - ownership_evidence
+  - dependency_edges
+  - implementation_surfaces
+  - context_gaps
+  - unresolved_ambiguity
+  - efficient_future_inspection_methods
+
+# Classes this role is expected to produce.
+expected_generated_data_classes:
+  - repository_fact
+  - implementation_surface
+  - dependency_finding
+  - context_requirement
+  - context_waste
+  - unresolved_unknown
+  - execution_procedure
+
+# Hard prohibitions specific to this role.
+may_not:
+  - establish_canonical_ownership          # recon reports evidence; it does not decide the owner
+  - self_promote_findings
+  - emit_ownership_finding_as_observed_fact # ownership is at most derived/hypothesized from recon
+
+# When recon touches ownership it must downgrade epistemic status.
+ownership_evidence_constraint:
+  max_epistemic_status: derived
+  required_route: architecture
+  requires_independent_authority: true

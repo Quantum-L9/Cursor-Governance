@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/subagent-generated-data/learning-closure.schema.json",
+  "title": "L9 Campaign Learning Closure",
+  "description": "Campaign-level condition gating seal on generated-data processing (law §25).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["campaign_id", "requirements", "can_seal"],
+  "properties": {
+    "campaign_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._-]+$"},
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_packets_received",
+        "packets_schema_valid",
+        "provenance_validated",
+        "generated_units_classified",
+        "routing_decisions_recorded",
+        "promotion_decisions_recorded",
+        "unresolved_unknowns_registered",
+        "high_value_conflicts_routed",
+        "rejected_residue_has_reason",
+        "evidence_archive_complete"
+      ],
+      "properties": {
+        "required_packets_received": {"type": "boolean"},
+        "packets_schema_valid": {"type": "boolean"},
+        "provenance_validated": {"type": "boolean"},
+        "generated_units_classified": {"type": "boolean"},
+        "routing_decisions_recorded": {"type": "boolean"},
+        "promotion_decisions_recorded": {"type": "boolean"},
+        "unresolved_unknowns_registered": {"type": "boolean"},
+        "high_value_conflicts_routed": {"type": "boolean"},
+        "rejected_residue_has_reason": {"type": "boolean"},
+        "evidence_archive_complete": {"type": "boolean"}
+      }
+    },
+    "can_seal": {"type": "boolean"},
+    "failed_requirements": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "unprocessed_high_value_packets": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "evaluated_at": {"type": ["string", "null"]}
+  }
+}

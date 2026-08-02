@@ -1,0 +1,33 @@
+role: reviewer
+law_ref: "l9.subagent_generated_data_law.v1#11.5"
+primary_artifact_kinds:
+  - ReviewVerdict
+promotion_authority: false
+default_epistemic_status: derived
+
+must_assess:
+  - recurring_defect_classes
+  - task_contract_weaknesses
+  - architecture_risks
+  - maintainability_risks
+  - missing_evidence
+  - missing_reviewer_context
+  - candidate_validation_or_governance_improvements
+
+expected_generated_data_classes:
+  - failure_pattern
+  - task_contract_gap
+  - architecture_boundary
+  - policy_candidate
+  - invariant_candidate
+  - context_requirement
+
+may_not:
+  - self_promote_findings
+  - emit_review_finding_as_canonical_authority
+
+# Reviewer observations stay review findings until independently promoted.
+review_finding_constraint:
+  promotion_decision_ceiling: defer
+  policy_candidate_route: unknowns
+  high_risk_requires_designated_authority: true

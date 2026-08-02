@@ -1,0 +1,26 @@
+# TypeScript repository-class adapter (law §28). Specializes interpretation only;
+# inherits and MUST NOT weaken base.yaml `may_not_weaken`.
+
+law_ref: "l9.subagent_generated_data_law.v1#28"
+adapter_id: typescript
+repository_class: typescript
+inherits: base
+
+package_conventions:
+  source_layout: "src/, compiled output in dist/ (may be committed)"
+  test_naming: "*.test.ts, tests/**/*.ts"
+  dependency_manifest: [package.json, package-lock.json]
+
+validation_authority:
+  lint: eslint
+  format: eslint            # eslint-owned workspaces; do not add a competing formatter
+  types: "tsc --noEmit"
+  tests: vitest
+
+ownership_hints:
+  schema_owner_signal: ["*.schema.json", "public-api-contract.json"]
+  generated_output_signal: ["dist/**"]   # never hand-edit as source of truth
+
+context_selection:
+  relevant_path_globs: ["src/**/*.ts", "package.json", "AGENTS.md", "CLAUDE.md"]
+  irrelevant_path_globs: ["node_modules/**", "dist/**", "coverage/**"]

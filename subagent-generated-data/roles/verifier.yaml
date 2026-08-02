@@ -1,0 +1,34 @@
+role: verifier
+law_ref: "l9.subagent_generated_data_law.v1#11.4"
+primary_artifact_kinds:
+  - VerificationReport
+promotion_authority: false
+default_epistemic_status: observed
+
+must_assess:
+  - effective_validation_methods
+  - ineffective_or_misleading_validation_methods
+  - edge_cases
+  - regression_candidates
+  - proof_gaps
+  - evidence_quality
+  - remaining_validation_unknowns
+
+expected_generated_data_classes:
+  - validation_procedure
+  - regression_candidate
+  - failure_pattern
+  - rejected_approach
+  - unresolved_unknown
+
+may_not:
+  - self_promote_findings
+  - record_false_green_method_as_valid
+
+# A validation method that reports green while the change is wrong is not a
+# neutral observation — it must be recorded as negative knowledge.
+false_green_constraint:
+  required_class_one_of:
+    - rejected_approach
+    - failure_pattern
+  required_route: validation

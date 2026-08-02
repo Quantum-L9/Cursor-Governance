@@ -1,0 +1,34 @@
+{
+  "schema_version": "l9.subagent_generated_data_law.v1",
+  "packet_id": "pkt-bad-001",
+  "identity": {
+    "campaign_id": "camp-alpha",
+    "repository": "Quantum-L9/Cursor-Governance",
+    "base_sha": "d3611a9",
+    "action_id": "act-x",
+    "agent_id": "agent-9",
+    "role": "recon"
+  },
+  "primary_result": {
+    "artifact_kind": "ReconReport",
+    "completion_status": "completed"
+  },
+  "promotion_decisions": [
+    {"unit_id": "u-1", "promotion_decision": "promote"}
+  ],
+  "generated_data_units": [
+    {
+      "unit_id": "u-1",
+      "primary_class": "ownership_finding",
+      "epistemic_status": "observed",
+      "statement": "This module owns the canonical schema.",
+      "source_evidence": ["schema.py"],
+      "scope": {"repository": "Quantum-L9/Cursor-Governance"},
+      "confidence": 0.6,
+      "proposed_routes": ["architecture"],
+      "invalidation_conditions": ["architecture_owner_changed"]
+    }
+  ],
+  "reuse_assessment": {"confidence": 0.5},
+  "generated_at": "2026-08-02T15:10:00Z"
+}

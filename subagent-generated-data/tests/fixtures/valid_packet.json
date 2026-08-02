@@ -1,0 +1,82 @@
+{
+  "schema_version": "l9.subagent_generated_data_law.v1",
+  "packet_id": "pkt-recon-001",
+  "identity": {
+    "campaign_id": "camp-alpha",
+    "graph_id": "graph-1",
+    "repository": "Quantum-L9/Cursor-Governance",
+    "repository_class": "python",
+    "base_sha": "d3611a9",
+    "action_id": "act-recon-1",
+    "agent_id": "agent-7",
+    "role": "recon",
+    "lease_id": "lease-42"
+  },
+  "primary_result": {
+    "artifact_id": "recon-report-1",
+    "artifact_kind": "ReconReport",
+    "completion_status": "completed"
+  },
+  "generated_data_units": [
+    {
+      "unit_id": "u-repo-fact-1",
+      "primary_class": "repository_fact",
+      "epistemic_status": "observed",
+      "statement": "The autonomy runtime lives under environment/claude-code/autonomy.",
+      "source_evidence": ["environment/claude-code/autonomy/models.py"],
+      "scope": {"repository": "Quantum-L9/Cursor-Governance", "module": "autonomy"},
+      "confidence": 0.9,
+      "freshness": {"observed_at": "2026-08-02", "applies_to_base_sha": "d3611a9"},
+      "proposed_routes": ["memory"],
+      "expected_reuse": "future recon skips re-discovering the runtime location",
+      "invalidation_conditions": ["relevant_path_changed", "repository_base_changed"]
+    },
+    {
+      "unit_id": "u-proc-1",
+      "primary_class": "execution_procedure",
+      "epistemic_status": "derived",
+      "statement": "Run npm ci then npm run validate to reproduce the smoke gate.",
+      "source_evidence": ["Makefile", "CI/smoke"],
+      "scope": {"repository_class": "python", "task_type": "ci_convergence"},
+      "confidence": 0.7,
+      "proposed_routes": ["patterns"],
+      "invalidation_conditions": ["contract_version_changed"]
+    },
+    {
+      "unit_id": "u-evidence-1",
+      "primary_class": "evidence_only",
+      "epistemic_status": "observed",
+      "statement": "Raw grep output enumerating handler registrations.",
+      "source_evidence": ["command:grep -rn register_all engine/"],
+      "scope": {"campaign": "camp-alpha"},
+      "confidence": 1.0,
+      "proposed_routes": ["evidence"]
+    }
+  ],
+  "unresolved_unknowns": [
+    {
+      "unknown_id": "unk-1",
+      "description": "Whether PostgreSQL persistence is provisioned in this environment.",
+      "class": "blocking",
+      "blocking_status": "blocking",
+      "owner": "platform-team",
+      "next_action": "confirm docker-compose service",
+      "evidence_needed": "docker-compose.yml service list",
+      "source_action": "act-recon-1"
+    }
+  ],
+  "provenance": {
+    "input_artifacts": ["context-pack-1"],
+    "evidence_artifacts": ["recon-log-1"],
+    "inspected_paths": ["environment/claude-code/autonomy", "Makefile"],
+    "executed_commands": ["grep -rn register_all engine/"]
+  },
+  "reuse_assessment": {
+    "task_local_value": "high",
+    "cross_task_value": "medium",
+    "cross_repository_value": "low",
+    "confidence": 0.8
+  },
+  "visibility": "repository_local",
+  "generated_at": "2026-08-02T15:00:00Z"
+}

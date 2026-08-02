@@ -1,0 +1,32 @@
+role: executor
+law_ref: "l9.subagent_generated_data_law.v1#11.3"
+primary_artifact_kinds:
+  - ExecutionResult
+promotion_authority: false
+default_epistemic_status: observed
+
+must_assess:
+  - actual_implementation_sequence
+  - deviations_from_execution_brief
+  - hidden_constraints
+  - fragile_code_surfaces
+  - reusable_implementation_procedures
+  - required_follow_on_validation
+  - implementation_assumptions
+
+expected_generated_data_classes:
+  - implementation_surface
+  - execution_procedure
+  - regression_candidate
+  - follow_on_opportunity
+  - failure_pattern
+  - unresolved_unknown
+
+may_not:
+  - treat_execution_success_as_generated_data_validity
+  - self_promote_findings
+
+# A green execution does not validate the by-product knowledge.
+validity_constraint:
+  execution_success_implies_unit_validity: false
+  reusable_procedure_promotion_decision_ceiling: defer

@@ -1,0 +1,32 @@
+# Canonical adapter contract (law §28).
+# The packet contract is shared across repositories; adapters may specialize
+# interpretation but MUST NOT weaken the invariants listed under `may_not_weaken`.
+
+law_ref: "l9.subagent_generated_data_law.v1#28"
+adapter_id: base
+repository_class: "*"
+
+# What an adapter MAY provide (law §28).
+may_provide:
+  - file_structure_knowledge
+  - validation_authority
+  - package_conventions
+  - framework_specific_ownership
+  - test_conventions
+  - migration_semantics
+  - context_selection_rules
+
+# What NO adapter may weaken (law §28). These are enforced regardless of class.
+may_not_weaken:
+  - packet_emission
+  - provenance
+  - classification
+  - routing
+  - promotion_authority
+  - learning_closure
+
+# Default context-selection posture (law §23): Tier 3 first, raw never wholesale.
+context_selection:
+  prefer_tier: 3
+  allow_tier2_for_targeted_analysis: true
+  load_raw_packets_by_default: false

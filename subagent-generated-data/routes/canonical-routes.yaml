@@ -1,0 +1,88 @@
+# Destination route definitions (law §15, §16).
+# Each validated generated data unit must receive one or more of these routes.
+# A unit without a route is invalid unless its routing decision is `reject` (SGD-017).
+# `owner` names the authority domain that this law routes into but does not itself own (law §34).
+
+law_ref: "l9.subagent_generated_data_law.v1#15"
+schema_version: l9.subagent_generated_data_law.v1
+
+routes:
+  memory:
+    purpose: durable advisory knowledge and temporal retrieval
+    owner: canonical_memory_governance
+    accepts:
+      - repository_fact
+      - implementation_surface
+      - dependency_finding
+      - rejected_approach
+    advisory: true                       # remains advisory unless separately promoted (§16.1)
+    promotes_to: tier3_memory_entry
+
+  contracts:
+    purpose: future task inputs, outputs, boundaries, stop conditions, evidence requirements
+    owner: task_contract_authority
+    accepts:
+      - context_requirement
+      - context_waste
+      - task_contract_gap
+    promotes_to: task_contract_delta
+
+  validation:
+    purpose: tests, invariants, CI checks, evidence requirements, regression guards
+    owner: validation_authority
+    accepts:
+      - failure_pattern
+      - rejected_approach
+      - regression_candidate
+      - invariant_candidate
+      - validation_procedure
+    promotes_to: test_or_guard
+
+  patterns:
+    purpose: reusable execution, inspection, validation, or remediation procedures
+    owner: pattern_registry
+    accepts:
+      - execution_procedure
+      - validation_procedure
+      - reusable_pattern_candidate
+    promotes_to: reusable_pattern
+
+  architecture:
+    purpose: ownership, responsibility, dependency, and boundary candidates
+    owner: architecture_authority
+    accepts:
+      - architecture_boundary
+      - ownership_finding
+      - dependency_finding
+    requires_designated_authority: true  # architecture promotion (§16.5, SGD-014)
+    promotes_to: architecture_boundary_record
+
+  opportunities:
+    purpose: follow-on work, missing capabilities, open loops, next-action planning
+    owner: opportunity_registry
+    accepts:
+      - follow_on_opportunity
+    promotes_to: opportunity_entry
+
+  unknowns:
+    purpose: unresolved questions requiring owner, next action, and evidence path
+    owner: unknown_tracking
+    accepts:
+      - unresolved_unknown
+      - policy_candidate
+    promotes_to: tracked_unknown
+
+  evidence:
+    purpose: provenance retention without normal future-context injection
+    owner: evidence_archive
+    accepts:
+      - artifact_lineage
+      - evidence_only
+    injects_into_future_context: false   # Tier 1, retrieval by id only (§26, SGD-011)
+    promotes_to: tier1_evidence_record
+
+  reject:
+    purpose: explicit disposal of non-reusable residue
+    owner: subagent_generated_data
+    requires_reason: true                # rejection preserves a reason (§10 Reject, SGD-009)
+    promotes_to: null

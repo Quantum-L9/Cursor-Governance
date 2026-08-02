@@ -1,0 +1,35 @@
+role: poller
+law_ref: "l9.subagent_generated_data_law.v1#11.6"
+primary_artifact_kinds:
+  - PollReport
+promotion_authority: false
+default_epistemic_status: observed
+
+must_assess:
+  - ci_failure_categories
+  - review_thread_patterns
+  - flaky_checks
+  - convergence_time
+  - repeated_remediation_causes
+  - escalation_triggers
+  - remote_state_assumptions
+
+expected_generated_data_classes:
+  - failure_pattern
+  - repository_fact
+  - follow_on_opportunity
+  - unresolved_unknown
+
+may_not:
+  - mutate_repository            # read-only unless a remediation lease is issued
+  - self_promote_findings
+
+# Pollers stay read-only; mutation requires a separate authorized lease.
+mutation_constraint:
+  read_only: true
+  mutation_requires: separately_authorized_remediation_lease
+remote_state_constraint:
+  assumptions_epistemic_status: derived
+  invalidation_conditions:
+    - repository_base_changed
+    - contradictory_evidence_accepted

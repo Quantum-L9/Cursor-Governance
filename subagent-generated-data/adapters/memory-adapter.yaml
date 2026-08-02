@@ -1,0 +1,37 @@
+# Memory destination adapter (law §16.1, §26, §33 `memory_adapter`).
+# Maps promoted units routed to `memory` into Tier-3 memory entries. Memory
+# remains advisory and never overrides current repository state or canonical
+# authority (SGD-013).
+
+law_ref: "l9.subagent_generated_data_law.v1#16.1"
+adapter_id: memory
+target: canonical_memory_governance
+
+accepts_routes:
+  - memory
+
+# Only these promotion decisions reach memory as active entries.
+accepts_promotion_decisions:
+  - promote
+
+entry_mapping:
+  # generated data unit field -> memory entry field
+  unit_id: source_unit_id
+  statement: body
+  scope: scope
+  source_evidence: provenance
+  confidence: confidence
+  freshness: freshness
+  invalidation_conditions: invalidation
+
+guards:
+  advisory_only: true                    # §16.1
+  overrides_repository_state: false      # SGD-013
+  overrides_canonical_authority: false   # SGD-013
+  requires_provenance: true              # SGD-004
+  excludes_contested_units: true         # SGD-016
+  excludes_invalid_or_superseded: true   # SGD-016 / §22
+
+visibility_enforcement:
+  respect_unit_visibility: true          # §27
+  block_cross_repository_without_authorization: true   # SGD-015

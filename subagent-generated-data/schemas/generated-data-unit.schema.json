@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/subagent-generated-data/generated-data-unit.schema.json",
+  "title": "L9 Generated Data Unit",
+  "description": "Smallest independently classifiable and routable generated-data item (law §10).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unit_id",
+    "primary_class",
+    "epistemic_status",
+    "statement",
+    "scope",
+    "confidence"
+  ],
+  "$defs": {
+    "generatedDataClass": {
+      "type": "string",
+      "enum": [
+        "repository_fact",
+        "architecture_boundary",
+        "ownership_finding",
+        "dependency_finding",
+        "implementation_surface",
+        "execution_procedure",
+        "validation_procedure",
+        "failure_pattern",
+        "rejected_approach",
+        "context_requirement",
+        "context_waste",
+        "task_contract_gap",
+        "policy_candidate",
+        "invariant_candidate",
+        "regression_candidate",
+        "reusable_pattern_candidate",
+        "artifact_lineage",
+        "unresolved_unknown",
+        "follow_on_opportunity",
+        "evidence_only"
+      ]
+    },
+    "epistemicStatus": {
+      "type": "string",
+      "enum": [
+        "observed",
+        "derived",
+        "hypothesized",
+        "disproven",
+        "contested",
+        "unresolved"
+      ]
+    },
+    "routeName": {
+      "type": "string",
+      "enum": [
+        "memory",
+        "contracts",
+        "validation",
+        "patterns",
+        "architecture",
+        "opportunities",
+        "unknowns",
+        "evidence",
+        "reject"
+      ]
+    }
+  },
+  "properties": {
+    "unit_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "primary_class": {"$ref": "#/$defs/generatedDataClass"},
+    "secondary_tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "epistemic_status": {"$ref": "#/$defs/epistemicStatus"},
+    "statement": {"type": "string", "minLength": 1},
+    "source_evidence": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": []
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "description": "Where the unit applies (repository, repository_class, module, path, task_type, role, environment, contract_version, schema_version, campaign)."
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "freshness": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "observed_at": {"type": ["string", "null"]},
+        "applies_to_base_sha": {"type": ["string", "null"]},
+        "validity_limit": {"type": ["string", "null"]}
+      }
+    },
+    "proposed_routes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/routeName"},
+      "default": []
+    },
+    "expected_reuse": {"type": ["string", "null"]},
+    "invalidation_conditions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "default": []
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "campaign_local",
+        "repository_local",
+        "project_group",
+        "constellation_internal",
+        "restricted"
+      ],
+      "default": "campaign_local"
+    }
+  }
+}
