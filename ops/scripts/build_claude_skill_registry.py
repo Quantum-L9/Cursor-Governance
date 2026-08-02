@@ -154,7 +154,11 @@ def main() -> int:
     args = parser.parse_args()
 
     root = args.root.resolve()
-    out = args.out or (root / DEFAULT_OUT)
+    out = (args.out or (root / DEFAULT_OUT)).resolve()
+    # Validate the constructed path before any filesystem access so faulty
+    # --root/--out arguments cannot escape the repository root (path traversal).
+    if not out.is_relative_to(root):
+        raise SystemExit(f"refusing to access path outside repository root: {out}")
     registry_text = serialized(build_registry(root))
     if args.check:
         if not out.is_file() or out.read_text(encoding="utf-8") != registry_text:
