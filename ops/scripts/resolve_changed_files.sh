@@ -4,6 +4,10 @@
 #   explicit files win; else merge-base(base, HEAD) ∪ working-tree (staged/unstaged/untracked).
 # Fail-closed if no comparison ref and the working tree is clean (no false empty set).
 #
+# Scratch / reference trees (WIP/, archives, harvest dumps) are dropped from the
+# default change set so they never block make pr or burn CI bandwidth. Explicit
+# path arguments still win unchanged (escape hatch for intentional scans).
+#
 # Usage:
 #   resolve_changed_files.sh [--base REF] [--] [explicit paths...]
 # Env:
@@ -15,6 +19,31 @@ WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
 BASE_REF="${PR_BASE:-}"
 EXPLICIT=()
+
+# Keep in sync with ops/scripts/run_pr_security.sh EXCLUDE_PREFIXES and
+# .pre-commit-config.yaml exclude.
+SCRATCH_PREFIXES=(
+  _archived/ _archive/ archive/ archived/
+  WIP/ current_work/ C_GOV_FILES/
+  .venv/ node_modules/ reports/ workflows/
+)
+
+is_scratch() {
+  local f="$1" p
+  for p in "${SCRATCH_PREFIXES[@]}"; do
+    [[ "$f" == "$p"* ]] && return 0
+  done
+  return 1
+}
+
+filter_scratch() {
+  local f
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    is_scratch "$f" && continue
+    printf '%s\n' "$f"
+  done
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -96,16 +125,19 @@ else
   SOURCE="working-tree;comparison-unavailable"
 fi
 
-{
-  printf '%s\n' "$COMMITTED"
-  printf '%s\n' "$WORKING"
-} | awk 'NF' | sort -u
-
-echo "SOURCE:$SOURCE" >&2
-if [[ -z "$( {
-  printf '%s\n' "$COMMITTED"
-  printf '%s\n' "$WORKING"
-} | awk 'NF' | sort -u)" ]]; then
+RAW="$(
+  {
+    printf '%s\n' "$COMMITTED"
+    printf '%s\n' "$WORKING"
+  } | awk 'NF' | sort -u
+)"
+if [[ -z "$RAW" ]]; then
   echo "ERROR: resolved empty change set against $BASE (nothing to gate)" >&2
   exit 1
 fi
+
+RESOLVED="$(printf '%s\n' "$RAW" | filter_scratch || true)"
+printf '%s\n' "$RESOLVED"
+echo "SOURCE:$SOURCE" >&2
+# Empty after scratch exclusions is success: only WIP/archive/etc. changed.
+# Callers (pre-commit / security) treat an empty file list as nothing-in-scope.

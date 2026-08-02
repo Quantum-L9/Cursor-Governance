@@ -1,0 +1,15 @@
+schema: program-execution-blueprint.execution-targets.v2
+schema_version: 2.0.0
+targets:
+- id: TARGET-001
+  name: REPLACE_WITH_TARGET_NAME
+  kind: git_repository
+  authority_owner: REPLACE
+  execution_mode: repo_local
+  repository_id: repo-a
+  source_of_truth: REPLACE_WITH_REPOSITORY_OR_SYSTEM
+  environments:
+  - local
+  mutability: reversible
+  expected_revision: UNKNOWN
+  adapter: git

@@ -1,0 +1,9 @@
+schema: program-execution-controller.waiver-policy.v2
+schema_version: 2.0.0
+rules:
+- implicit_waiver_forbidden
+- waiver_must_exist_in_program_lock
+- waiver_must_be_active_unexpired_and_scoped
+- waiver_cannot_expand_action_authority
+- waiver_cannot_override_safety_legal_or_security_requirements
+- waiver_use_is_recorded_in_gate_evaluation

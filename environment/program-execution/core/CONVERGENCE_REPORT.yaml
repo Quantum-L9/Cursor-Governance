@@ -1,0 +1,25 @@
+schema: program-execution-system.convergence-report.v2
+schema_version: 2.0.0
+passes:
+- pass: 1
+  focus: inventory_and_boundary_audit
+  result: material_ambiguities_confirmed
+  findings:
+  - overloaded target identity
+  - duplicate dependency ownership
+  - definition_runtime_state_collapse
+  - gate_definition_result_collapse
+  - weak authorization subset proof
+  - absent canonical runtime-to-governance return channel
+- pass: 2
+  focus: contract_schema_and_ownership_realignment
+  result: canonical_owners_and_v2_contracts_established
+- pass: 3
+  focus: runtime_enforcement
+  result: source_drift_wave_order_evidence_authorization_and_waiver_laws_enforced
+- pass: 4
+  focus: hostile_validation_and_packaging
+  result: archive_extraction_manifest_and_pair_validation_passed
+stop_condition: all_structural_contract_runtime_hostile_and_archive_gates_pass
+remaining_unknowns: []
+final_status: APPROVED_EXECUTION_READY

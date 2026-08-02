@@ -1,0 +1,16 @@
+schema: program-execution-controller.authority-policy.v2
+schema_version: 2.0.0
+authority_order:
+- applicable_safety_legal_security_requirements
+- latest_exact_action_approval
+- immutable_program_lock
+- verified_repository_and_environment_state
+- admitted_source_contract
+- rendered_contract
+- worker_attempt_claim
+- UNKNOWN
+laws:
+- capability_is_not_authorization
+- lower_layers_may_not_widen_higher_layers
+- program_owner_accepts_terminal_verdict
+- controller_gate_evaluation_does_not_rewrite_gate_definition

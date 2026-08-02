@@ -1,0 +1,17 @@
+schema: program-execution-blueprint.waiver-register.v2
+schema_version: 2.0.0
+policy:
+  implicit_waivers_forbidden: true
+  expired_waiver_non_passing: true
+waivers:
+- id: WAIVER-001
+  scope:
+  - GATE-001
+  owner: '{{PROGRAM_OWNER}}'
+  reason: REPLACE_WITH_EXCEPTION_REASON
+  compensating_controls:
+  - REPLACE_WITH_CONTROL
+  evidence_ids: []
+  issued_at: '{{DATE}}'
+  expires_at: '{{DATE}}'
+  status: draft

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-controller.program-lock.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "created_at",
+    "blueprint_root",
+    "blueprint_contract",
+    "program",
+    "source_digests",
+    "targets",
+    "authority",
+    "decisions",
+    "unknowns",
+    "risks",
+    "waivers",
+    "evidence",
+    "workstreams",
+    "dependency_graph",
+    "waves",
+    "tasks",
+    "gates",
+    "observability",
+    "cutover_and_rollback",
+    "traceability",
+    "lock_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-controller.program-lock.v2"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "blueprint_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "blueprint_contract": {
+      "const": "program-execution-blueprint.v2"
+    },
+    "program": {
+      "type": "object"
+    },
+    "source_digests": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "authority": {
+      "type": "object"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "workstreams": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "dependency_graph": {
+      "type": "object"
+    },
+    "waves": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "observability": {
+      "type": "object"
+    },
+    "cutover_and_rollback": {
+      "type": "object"
+    },
+    "traceability": {
+      "type": "object"
+    },
+    "lock_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

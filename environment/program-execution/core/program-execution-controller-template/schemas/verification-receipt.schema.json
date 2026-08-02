@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-controller.verification-receipt.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "verification_id",
+    "task_id",
+    "contract_digest",
+    "program_digest",
+    "base_sha",
+    "candidate_sha",
+    "declared_changed_files",
+    "observed_changed_files",
+    "validations",
+    "gates",
+    "verdict",
+    "evidence_id",
+    "verified_at",
+    "receipt_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-controller.verification-receipt.v2"
+    },
+    "verification_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "contract_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "program_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "base_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40,64}$"
+    },
+    "candidate_sha": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{40,64}$"
+    },
+    "declared_changed_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "observed_changed_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "validations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "PASS",
+          "FAIL",
+          "BLOCKED",
+          "STALE",
+          "UNKNOWN"
+        ]
+      }
+    },
+    "verdict": {
+      "enum": [
+        "PASSED_LOCAL",
+        "FAILED",
+        "STALE"
+      ]
+    },
+    "evidence_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verified_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "receipt_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

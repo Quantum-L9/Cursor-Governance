@@ -1,0 +1,13 @@
+schema: program-execution-controller.template-variables.v2
+schema_version: 2.0.0
+variables:
+  CONTROLLER_NAME:
+    required: true
+    description: Human-readable controller name.
+  CONTROLLER_ID:
+    required: true
+    pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+  CONTROLLER_OWNER:
+    required: true
+  DATE:
+    required: true

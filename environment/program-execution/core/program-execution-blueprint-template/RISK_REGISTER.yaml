@@ -1,0 +1,19 @@
+schema: program-execution-blueprint.risk-register.v2
+schema_version: 2.0.0
+risks:
+- id: RISK-001
+  risk: REPLACE_WITH_RISK
+  severity: high
+  likelihood: UNKNOWN
+  owner: REPLACE
+  trigger: REPLACE_WITH_OBSERVABLE_TRIGGER
+  preventive_controls:
+  - REPLACE_WITH_PREVENTIVE_CONTROL
+  contingency:
+  - REPLACE_WITH_RESPONSE
+  related_tasks:
+  - TASK-001
+  related_gates:
+  - GATE-001
+  acceptance_decision_id: null
+  status: open

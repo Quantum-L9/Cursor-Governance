@@ -1,0 +1,13 @@
+schema: program-execution-system.compatibility.v2
+pair_contract: program-execution-system.v2
+blueprint_contract: program-execution-blueprint.v2
+controller_contract: program-execution-controller.v2
+compatibility:
+  major_version: exact_match_required
+  minor_version: allowed_only_when_declared_backward_compatible
+  unknown_contract: reject
+  missing_required_file: reject
+  source_digest_change: runtime_stale_until_relock
+direction:
+  blueprint_to_controller: immutable_program_lock
+  controller_to_blueprint: handoff_receipt_only

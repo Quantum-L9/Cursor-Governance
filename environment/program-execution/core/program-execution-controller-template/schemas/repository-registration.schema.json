@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-controller.repository-registration.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "repository_id",
+    "target_id",
+    "local_path",
+    "current_branch",
+    "head_sha",
+    "dirty",
+    "remote_url",
+    "reconciled_at"
+  ],
+  "properties": {
+    "repository_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "local_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "head_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40,64}$"
+    },
+    "dirty": {
+      "type": "boolean"
+    },
+    "remote_url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reconciled_at": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

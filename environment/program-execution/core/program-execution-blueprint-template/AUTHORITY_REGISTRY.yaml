@@ -1,0 +1,25 @@
+schema: program-execution-blueprint.authority-registry.v2
+schema_version: 2.0.0
+policy:
+  one_owner_per_responsibility: true
+  projection_does_not_transfer_authority: true
+  unresolved_conflict_result: BLOCKED
+responsibilities:
+- id: AUTH-001
+  responsibility: REPLACE_WITH_DURABLE_FACT_OR_EXECUTABLE_BEHAVIOR
+  owner_target_id: TARGET-001
+  source_of_truth: REPLACE_WITH_FILE_API_DATABASE_OR_PROCESS
+  consumers:
+  - REPLACE
+  allowed_roles:
+  - authority
+  - proposal_source
+  - projection
+  - cache
+  - display
+  prohibited_owner_target_ids: []
+  enforcement:
+  - REPLACE_WITH_SCHEMA_TEST_POLICY_OR_CODE_PATH
+  validation_gate_ids:
+  - GATE-001
+  definition_status: active

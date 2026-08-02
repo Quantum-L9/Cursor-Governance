@@ -1,0 +1,50 @@
+schema: program-execution-blueprint.convergence-gates.v2
+schema_version: 2.0.0
+result_values:
+- PASS
+- FAIL
+- BLOCKED
+- UNKNOWN
+- NOT_APPLICABLE_WITH_REASON
+unknown_is_non_passing: true
+gates:
+- id: GATE-001
+  name: authority_and_decision_lock
+  definition_status: active
+  owner: '{{PROGRAM_OWNER}}'
+  class: authority
+  scope:
+    wave_ids:
+    - W0
+    task_ids:
+    - TASK-001
+  method:
+    type: inspection
+    steps:
+    - Inspect authority, decisions, Unknowns, targets, and current-state evidence.
+  pass_condition: Every material responsibility has one owner and no required decision or Unknown blocks the scoped
+    work.
+  fail_condition: Duplicate authority, stale evidence, or unresolved scoped blocker remains.
+  blocking: true
+  required_evidence_ids:
+  - EVID-001
+  waiver_allowed: false
+- id: GATE-002
+  name: implementation_and_validation_complete
+  definition_status: active
+  owner: REPLACE
+  class: execution
+  scope:
+    wave_ids:
+    - W1
+    task_ids:
+    - TASK-002
+  method:
+    type: command_and_inspection
+    steps:
+    - REPLACE_WITH_COMMANDS_OR_EVIDENCE_METHOD
+  pass_condition: REPLACE_WITH_EXACT_PASS_CONDITION
+  fail_condition: REPLACE_WITH_EXACT_FAIL_CONDITION
+  blocking: true
+  required_evidence_ids: []
+  waiver_allowed: false
