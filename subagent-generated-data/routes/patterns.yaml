@@ -1,0 +1,42 @@
+route_id: patterns
+schema_version: "1.0.0"
+description: >
+  Route repeatable execution, inspection, validation, remediation, and
+  decomposition procedures into the reusable pattern candidate registry.
+destination: reusable_pattern_candidate_queue
+accepted_primary_classes:
+  - execution_procedure
+  - validation_procedure
+  - failure_pattern
+  - rejected_approach
+  - reusable_pattern_candidate
+forbidden_epistemic_statuses:
+  - hypothesized
+  - contested
+  - unresolved
+allowed_risk_levels:
+  - low
+  - medium
+required_unit_fields:
+  - unit_id
+  - statement
+  - source_evidence
+  - scope
+  - confidence
+  - expected_reuse
+  - invalidation_conditions
+promotion_authority: pattern_compiler
+independent_validation_required: true
+self_promotion_allowed: false
+default_visibility: constellation_internal
+output_contract:
+  kind: ReusablePatternCandidate
+  require_trigger_conditions: true
+  require_ordered_procedure: true
+  require_validation_method: true
+  require_failure_and_stop_conditions: true
+reject_when:
+  - procedure_is_task_specific_without_reuse
+  - repeated_execution_has_no_measured_delta
+  - procedure_duplicates_an_active_pattern
+  - procedure_bypasses_policy_or_assurance

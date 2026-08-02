@@ -1,0 +1,45 @@
+route_id: memory
+schema_version: "1.0.0"
+description: >
+  Route validated, advisory, reusable knowledge to the governed memory
+  candidate interface. Memory remains subordinate to current repository state,
+  canonical law, active policy, and current task contracts.
+destination: graphiti_memory_candidate_queue
+accepted_primary_classes:
+  - repository_fact
+  - dependency_finding
+  - implementation_surface
+  - rejected_approach
+  - context_requirement
+  - artifact_lineage
+forbidden_epistemic_statuses:
+  - hypothesized
+  - contested
+  - unresolved
+allowed_risk_levels:
+  - low
+  - medium
+required_unit_fields:
+  - unit_id
+  - statement
+  - source_evidence
+  - scope
+  - confidence
+  - freshness
+  - invalidation_conditions
+promotion_authority: memory_admission_runtime
+independent_validation_required: false
+self_promotion_allowed: false
+default_visibility: repository_local
+output_contract:
+  kind: MemoryCandidate
+  authority_class: advisory
+  preserve_provenance: true
+  preserve_epistemic_status: true
+  preserve_invalidation_conditions: true
+reject_when:
+  - current_repository_state_contradicts_unit
+  - canonical_authority_conflicts
+  - scope_is_undefined
+  - provenance_is_missing
+  - unit_is_duplicate_without_new_evidence

@@ -1,0 +1,39 @@
+route_id: contracts
+schema_version: "1.0.0"
+description: >
+  Route generated data that can improve future task inputs, outputs,
+  boundaries, stop conditions, context requirements, or evidence obligations.
+destination: task_contract_delta_queue
+accepted_primary_classes:
+  - implementation_surface
+  - context_requirement
+  - context_waste
+  - task_contract_gap
+forbidden_epistemic_statuses:
+  - contested
+  - unresolved
+allowed_risk_levels:
+  - low
+  - medium
+required_unit_fields:
+  - unit_id
+  - statement
+  - source_evidence
+  - scope
+  - confidence
+  - expected_reuse
+  - invalidation_conditions
+promotion_authority: task_contract_compiler
+independent_validation_required: true
+self_promotion_allowed: false
+default_visibility: constellation_internal
+output_contract:
+  kind: TaskContractDeltaCandidate
+  preserve_source_contract: true
+  require_behavioral_change: true
+  require_rollback_or_rejection_path: true
+reject_when:
+  - proposed_delta_only_rephrases_existing_contract
+  - no_future_behavior_change_is_identified
+  - destination_contract_owner_is_unknown
+  - unit_conflicts_with_higher_authority

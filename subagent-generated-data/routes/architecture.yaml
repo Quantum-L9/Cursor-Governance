@@ -1,0 +1,44 @@
+route_id: architecture
+schema_version: "1.0.0"
+description: >
+  Route ownership, responsibility, dependency, and must-not-own findings to
+  architecture review. This route never grants canonical architecture authority
+  automatically.
+destination: architecture_candidate_queue
+accepted_primary_classes:
+  - architecture_boundary
+  - ownership_finding
+  - dependency_finding
+  - policy_candidate
+forbidden_epistemic_statuses:
+  - hypothesized
+  - contested
+  - unresolved
+allowed_risk_levels:
+  - low
+  - medium
+  - high
+  - critical
+required_unit_fields:
+  - unit_id
+  - statement
+  - source_evidence
+  - scope
+  - confidence
+  - expected_reuse
+  - invalidation_conditions
+promotion_authority: designated_architecture_authority
+independent_validation_required: true
+self_promotion_allowed: false
+default_visibility: constellation_internal
+output_contract:
+  kind: ArchitectureCandidate
+  canonical_on_submission: false
+  require_owner_of_truth_check: true
+  require_conflict_search: true
+  require_human_or_designated_authority_approval: true
+reject_when:
+  - claim_blurs_existing_authority
+  - canonical_owner_cannot_be_named
+  - proposed_boundary_increases_coupling_without_leverage
+  - evidence_is_only_naming_or_directory_proximity
