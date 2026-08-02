@@ -76,8 +76,8 @@ class MemoryTransport(Protocol):
 class FileOutboxTransport:
     """Durably enqueue candidates for later Graphiti ingestion."""
 
-    def __init__(self) -> None:
-        self.outbox_dir = _MEMORY_OUTBOX_DIR
+    def __init__(self, outbox_dir: str | Path | None = None) -> None:
+        self.outbox_dir = Path(outbox_dir) if outbox_dir else _MEMORY_OUTBOX_DIR
         self.outbox_dir.mkdir(parents=True, exist_ok=True)
 
     def deliver(
