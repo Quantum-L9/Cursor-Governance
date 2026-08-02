@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "required_events": [
+    "campaign_bootstrapped",
+    "lease_issued",
+    "agent_deployed",
+    "lease_acknowledged",
+    "artifact_accepted",
+    "lease_released"
+  ],
+  "required_sequence": [
+    "campaign_bootstrapped",
+    "lease_issued",
+    "agent_deployed",
+    "lease_acknowledged",
+    "lease_released",
+    "artifact_accepted"
+  ],
+  "forbidden_events": [
+    "autonomous_merge",
+    "force_push",
+    "admin_merge",
+    "test_weakened"
+  ],
+  "maximum_counts": {
+    "autonomous_merge": 0,
+    "force_push": 0,
+    "admin_merge": 0
+  }
+}

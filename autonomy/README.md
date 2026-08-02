@@ -232,3 +232,87 @@ Wave 2 mediates capability decisions in the runtime. The IDE must still be
 wired so every relevant tool invocation calls the gateway before execution.
 Wave 3 supplies the Cursor and Claude Code adapters, conformance checks,
 deployment handshake, pipeline simulator, and negative/chaos validation.
+
+---
+
+# Wave 3 — Mandatory IDE Deployment and Conformance
+
+Wave 3 makes Cursor and Claude Code constrained orchestration clients.
+
+## Enforcement boundary
+
+An IDE may not start autonomous work unless:
+
+1. its adapter configuration passes every blocking conformance check;
+2. the requested action is READY in the compiled DAG;
+3. the scheduler selects the action under resource capacity;
+4. the runtime issues a lease bound to one agent identity;
+5. the agent acknowledges the exact role capability set;
+6. every tool call passes through the capability gateway;
+7. heartbeats preserve lease and base-SHA validity;
+8. completion is represented by a valid typed artifact;
+9. required verifier and reviewer dependencies complete;
+10. human authorization and merge gates remain outside autonomy.
+
+## Adapter doctor
+
+```bash
+python -m autonomy.validation.doctor \
+  --root . \
+  --adapter autonomy/examples/adapters/cursor.json
+
+python -m autonomy.validation.doctor \
+  --root . \
+  --adapter autonomy/examples/adapters/claude-code.json
+```
+
+A missing executable is a blocking failure in production. Do not set
+`allow_missing_executable_in_test` outside tests.
+
+## Register an adapter
+
+```bash
+python -m autonomy.wave3_cli \
+  --root . \
+  register-adapter \
+  --config autonomy/examples/adapters/cursor.json
+```
+
+## Deploy / ack / authorize / heartbeat / submit / status
+
+See `python -m autonomy.wave3_cli --help` for `deploy`, `ack`, `authorize`,
+`heartbeat`, `submit`, and `status`. Deploy supports `--render cursor` or
+`--render claude-code` and injects `L9_ADAPTER_SESSION_ID`.
+
+## Simulate before execution
+
+```bash
+python -m autonomy.wave3_cli \
+  --root . \
+  simulate \
+  --graph .l9/autonomy/w7-compiled-graph.json \
+  --output .l9/autonomy/w7-simulation.json
+```
+
+## JSON-line bridge and tool hooks
+
+```bash
+python -m autonomy.adapters.bridge --root .
+python -m autonomy.adapters.tool_hook --phase pre
+python -m autonomy.adapters.heartbeat_hook
+```
+
+The pre-tool hook requires `L9_ADAPTER_SESSION_ID`, `L9_CAMPAIGN_ID`,
+`L9_ACTION_ID`, `L9_AGENT_ID`, `L9_LEASE_ID`, and `L9_BASE_SHA`. Unknown tools
+fail closed.
+
+## Production rule
+
+Do not expose direct repository mutation tools alongside the mediated adapter.
+
+```text
+IDE task → adapter session → runtime lease → capability gateway → tool
+```
+
+A direct side channel around the gateway is a deployment defect and must block
+campaign start.

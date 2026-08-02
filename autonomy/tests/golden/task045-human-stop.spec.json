@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "required_events": [
+    "campaign_bootstrapped"
+  ],
+  "required_sequence": [
+    "campaign_bootstrapped"
+  ],
+  "forbidden_events": [
+    "human_gate_auto_approved",
+    "autonomous_merge",
+    "admin_merge"
+  ],
+  "maximum_counts": {
+    "human_gate_auto_approved": 0,
+    "autonomous_merge": 0
+  }
+}
