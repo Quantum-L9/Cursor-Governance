@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Mapping
 from datetime import timedelta
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.errors import PolicyViolation
 from autonomy.runtime.claims import ClaimRegistry
@@ -34,9 +35,7 @@ class LeaseManager:
         if stale_after_seconds <= 0:
             raise ValueError("stale_after_seconds must be positive")
         if revoke_after_seconds < stale_after_seconds:
-            raise ValueError(
-                "revoke_after_seconds must be >= stale_after_seconds"
-            )
+            raise ValueError("revoke_after_seconds must be >= stale_after_seconds")
         self.store = store
         self.claims = claims
         self.receipts = receipts
@@ -66,13 +65,11 @@ class LeaseManager:
             "INDEPENDENT_REVIEW",
         }:
             raise PolicyViolation(
-                "CAMPAIGN_NOT_EXECUTABLE: campaign state is "
-                f"{campaign['state']!r}"
+                f"CAMPAIGN_NOT_EXECUTABLE: campaign state is {campaign['state']!r}"
             )
         if action_row["status"] != "READY":
             raise PolicyViolation(
-                f"ACTION_NOT_READY: {action_id!r} status is "
-                f"{action_row['status']!r}"
+                f"ACTION_NOT_READY: {action_id!r} status is {action_row['status']!r}"
             )
         role = str(action["role"])
         lease_id = f"lease-{uuid.uuid4().hex}"
@@ -213,13 +210,10 @@ class LeaseManager:
         lease = self.get(lease_id)
         if lease.agent_id != agent_id:
             raise PolicyViolation(
-                "LEASE_AGENT_MISMATCH: acknowledgment agent does not "
-                "match lease subject"
+                "LEASE_AGENT_MISMATCH: acknowledgment agent does not match lease subject"
             )
         if lease.status is not LeaseStatus.ACTIVE:
-            raise PolicyViolation(
-                f"LEASE_NOT_ACTIVE: status={lease.status.value}"
-            )
+            raise PolicyViolation(f"LEASE_NOT_ACTIVE: status={lease.status.value}")
         metadata = dict(lease.metadata)
         metadata["acknowledged"] = True
         metadata["accepted_capabilities"] = sorted(set(accepted_capabilities))
@@ -256,9 +250,7 @@ class LeaseManager:
             actor=agent_id,
             action_id=lease.action_id,
             lease_id=lease_id,
-            event={
-                "accepted_capabilities": sorted(set(accepted_capabilities))
-            },
+            event={"accepted_capabilities": sorted(set(accepted_capabilities))},
         )
 
     def heartbeat(
@@ -273,17 +265,13 @@ class LeaseManager:
         lease = self.get(lease_id)
         if lease.agent_id != agent_id:
             raise PolicyViolation(
-                "LEASE_AGENT_MISMATCH: heartbeat agent does not match "
-                "lease subject"
+                "LEASE_AGENT_MISMATCH: heartbeat agent does not match lease subject"
             )
         self.assert_active(lease)
         if observed_base_sha != lease.base_sha:
             self.revoke(
                 lease_id=lease_id,
-                reason=(
-                    "BASE_SHA_DRIFT: expected "
-                    f"{lease.base_sha}, observed {observed_base_sha}"
-                ),
+                reason=(f"BASE_SHA_DRIFT: expected {lease.base_sha}, observed {observed_base_sha}"),
                 actor="heartbeat-monitor",
             )
             raise PolicyViolation(
@@ -353,10 +341,7 @@ class LeaseManager:
             elif heartbeat_age >= self.revoke_after_seconds:
                 self.revoke(
                     lease_id=lease_id,
-                    reason=(
-                        "HEARTBEAT_TIMEOUT: no heartbeat for "
-                        f"{int(heartbeat_age)} seconds"
-                    ),
+                    reason=(f"HEARTBEAT_TIMEOUT: no heartbeat for {int(heartbeat_age)} seconds"),
                     actor="lease-sweeper",
                 )
                 expired.append(lease_id)
@@ -486,9 +471,7 @@ class LeaseManager:
 
     def assert_active(self, lease: Lease) -> None:
         if lease.status is not LeaseStatus.ACTIVE:
-            raise PolicyViolation(
-                f"LEASE_NOT_ACTIVE: status={lease.status.value}"
-            )
+            raise PolicyViolation(f"LEASE_NOT_ACTIVE: status={lease.status.value}")
         now = utc_now()
         if now >= parse_timestamp(lease.expires_at):
             self.revoke(

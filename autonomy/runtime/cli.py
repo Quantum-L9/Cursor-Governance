@@ -9,9 +9,7 @@ from autonomy.runtime.engine import AutonomyRuntime
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="L9 Wave-2 autonomy runtime."
-    )
+    parser = argparse.ArgumentParser(description="L9 Wave-2 autonomy runtime.")
     parser.add_argument(
         "--root",
         default=".",

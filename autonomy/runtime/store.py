@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Mapping
+from typing import Any
 
 from autonomy.runtime.timeutil import utc_now_text
 
@@ -214,8 +215,7 @@ class RuntimeStore:
                     or existing["graph_json"] != graph_json
                 ):
                     raise ValueError(
-                        f"Campaign {campaign_id!r} is already registered "
-                        "with different contracts"
+                        f"Campaign {campaign_id!r} is already registered with different contracts"
                     )
                 return
             connection.execute(
@@ -306,9 +306,7 @@ class RuntimeStore:
                 (campaign_id, action_id),
             ).fetchone()
         if row is None:
-            raise KeyError(
-                f"Unknown action {action_id!r} in campaign {campaign_id!r}"
-            )
+            raise KeyError(f"Unknown action {action_id!r} in campaign {campaign_id!r}")
         return row
 
     def list_actions(
@@ -384,10 +382,7 @@ class RuntimeStore:
                 ),
             ).rowcount
             if updated != 1:
-                raise KeyError(
-                    f"Unknown action {action_id!r} "
-                    f"in campaign {campaign_id!r}"
-                )
+                raise KeyError(f"Unknown action {action_id!r} in campaign {campaign_id!r}")
 
     def decode_campaign(self, campaign_id: str) -> dict[str, Any]:
         row = self.get_campaign(campaign_id)

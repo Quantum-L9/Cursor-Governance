@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import fnmatch
 import uuid
+from collections.abc import Mapping
 from pathlib import PurePosixPath
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.runtime.leases import LeaseManager
 from autonomy.runtime.receipts import ReceiptChain
@@ -65,10 +66,7 @@ class CapabilityGateway:
                 decision=AuthorizationDecision(
                     allowed=False,
                     code="LEASE_AGENT_MISMATCH",
-                    message=(
-                        f"Lease belongs to {lease.agent_id!r}, "
-                        f"not {agent_id!r}"
-                    ),
+                    message=(f"Lease belongs to {lease.agent_id!r}, not {agent_id!r}"),
                     lease_id=lease_id,
                     capability=capability,
                     resource=resource,
@@ -104,9 +102,7 @@ class CapabilityGateway:
                 decision=AuthorizationDecision(
                     allowed=False,
                     code="GLOBALLY_FORBIDDEN_CAPABILITY",
-                    message=(
-                        f"Capability {capability!r} is globally forbidden"
-                    ),
+                    message=(f"Capability {capability!r} is globally forbidden"),
                     lease_id=lease_id,
                     capability=capability,
                     resource=resource,
@@ -126,10 +122,7 @@ class CapabilityGateway:
                 decision=AuthorizationDecision(
                     allowed=False,
                     code="ROLE_CAPABILITY_DENIED",
-                    message=(
-                        f"Role {lease.role!r} does not grant "
-                        f"{capability!r}"
-                    ),
+                    message=(f"Role {lease.role!r} does not grant {capability!r}"),
                     lease_id=lease_id,
                     capability=capability,
                     resource=resource,
@@ -145,10 +138,7 @@ class CapabilityGateway:
                 decision=AuthorizationDecision(
                     allowed=False,
                     code="CAPABILITY_NOT_ACCEPTED",
-                    message=(
-                        f"Agent did not acknowledge capability "
-                        f"{capability!r}"
-                    ),
+                    message=(f"Agent did not acknowledge capability {capability!r}"),
                     lease_id=lease_id,
                     capability=capability,
                     resource=resource,
@@ -166,9 +156,7 @@ class CapabilityGateway:
         ).get(capability)
         if operation:
             allowed_operations = set(campaign["scope"]["allowed_operations"])
-            forbidden_operations = set(
-                campaign["scope"]["forbidden_operations"]
-            )
+            forbidden_operations = set(campaign["scope"]["forbidden_operations"])
             if operation in forbidden_operations:
                 return self._record(
                     lease=lease,
@@ -177,10 +165,7 @@ class CapabilityGateway:
                     decision=AuthorizationDecision(
                         allowed=False,
                         code="CAMPAIGN_OPERATION_FORBIDDEN",
-                        message=(
-                            f"Operation {operation!r} is forbidden "
-                            "by the campaign"
-                        ),
+                        message=(f"Operation {operation!r} is forbidden by the campaign"),
                         lease_id=lease_id,
                         capability=capability,
                         resource=resource,
@@ -195,10 +180,7 @@ class CapabilityGateway:
                     decision=AuthorizationDecision(
                         allowed=False,
                         code="CAMPAIGN_OPERATION_NOT_ALLOWED",
-                        message=(
-                            f"Operation {operation!r} is not granted "
-                            "by the campaign"
-                        ),
+                        message=(f"Operation {operation!r} is not granted by the campaign"),
                         lease_id=lease_id,
                         capability=capability,
                         resource=resource,
@@ -258,9 +240,7 @@ class CapabilityGateway:
             return AuthorizationDecision(
                 allowed=False,
                 code="RESOURCE_REQUIRED",
-                message=(
-                    f"Capability {capability!r} requires a path resource"
-                ),
+                message=(f"Capability {capability!r} requires a path resource"),
                 lease_id=lease_id,
                 capability=capability,
                 resource=resource,
@@ -281,9 +261,7 @@ class CapabilityGateway:
             return AuthorizationDecision(
                 allowed=False,
                 code="PATH_OUTSIDE_CAMPAIGN_SCOPE",
-                message=(
-                    f"Path {normalized!r} is outside campaign scope"
-                ),
+                message=(f"Path {normalized!r} is outside campaign scope"),
                 lease_id=lease_id,
                 capability=capability,
                 resource=normalized,
@@ -292,15 +270,11 @@ class CapabilityGateway:
             "allowed_paths",
             [],
         )
-        if action_paths and not any(
-            path_matches(pattern, normalized) for pattern in action_paths
-        ):
+        if action_paths and not any(path_matches(pattern, normalized) for pattern in action_paths):
             return AuthorizationDecision(
                 allowed=False,
                 code="PATH_OUTSIDE_ACTION_SCOPE",
-                message=(
-                    f"Path {normalized!r} is outside action scope"
-                ),
+                message=(f"Path {normalized!r} is outside action scope"),
                 lease_id=lease_id,
                 capability=capability,
                 resource=normalized,
@@ -369,9 +343,7 @@ class CapabilityGateway:
         self.receipts.append(
             campaign_id=lease.campaign_id,
             graph_id=lease.graph_id,
-            event_type=(
-                "tool_authorized" if decision.allowed else "tool_denied"
-            ),
+            event_type=("tool_authorized" if decision.allowed else "tool_denied"),
             actor=lease.agent_id,
             action_id=lease.action_id,
             lease_id=lease.lease_id,

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from autonomy.errors import ContractError, PolicyViolation
 from autonomy.io import sha256_json
@@ -33,8 +34,7 @@ class ArtifactValidator:
         self.leases.assert_active(lease)
         if lease.agent_id != agent_id:
             raise PolicyViolation(
-                "LEASE_AGENT_MISMATCH: artifact producer does not "
-                "match lease subject"
+                "LEASE_AGENT_MISMATCH: artifact producer does not match lease subject"
             )
         action_row = self.store.get_action(
             lease.campaign_id,
@@ -42,8 +42,7 @@ class ArtifactValidator:
         )
         if action_row["status"] not in {"LEASED", "RUNNING"}:
             raise PolicyViolation(
-                "ACTION_NOT_RUNNING: cannot submit an artifact for "
-                f"status {action_row['status']!r}"
+                f"ACTION_NOT_RUNNING: cannot submit an artifact for status {action_row['status']!r}"
             )
         action = json.loads(action_row["action_json"])
         completion = action["completion"]
@@ -246,9 +245,7 @@ class ArtifactValidator:
         }
         missing = sorted(required - set(artifact))
         if missing:
-            raise ContractError(
-                "Artifact envelope is missing fields: " + ", ".join(missing)
-            )
+            raise ContractError("Artifact envelope is missing fields: " + ", ".join(missing))
         expected = {
             "campaign_id": campaign_id,
             "graph_id": graph_id,
@@ -280,16 +277,13 @@ class ArtifactValidator:
         expected_kind = completion["artifact_kind"]
         if artifact["kind"] != expected_kind:
             raise ContractError(
-                f"Artifact kind must be {expected_kind!r}, "
-                f"got {artifact['kind']!r}"
+                f"Artifact kind must be {expected_kind!r}, got {artifact['kind']!r}"
             )
         if (
             completion.get("require_base_sha_match", True)
             and artifact["base_sha"] != expected_base_sha
         ):
-            raise ContractError(
-                "Artifact base SHA does not match the lease base SHA"
-            )
+            raise ContractError("Artifact base SHA does not match the lease base SHA")
         payload = artifact["payload"]
         missing = [
             field_name
@@ -301,8 +295,7 @@ class ArtifactValidator:
         ]
         if missing:
             raise ContractError(
-                "Artifact payload is missing required fields: "
-                + ", ".join(sorted(missing))
+                "Artifact payload is missing required fields: " + ", ".join(sorted(missing))
             )
         if completion.get("require_empty_blockers", False):
             blockers = payload.get(
@@ -310,10 +303,7 @@ class ArtifactValidator:
                 payload.get("blockers", []),
             )
             if blockers:
-                raise ContractError(
-                    "Artifact cannot complete this action while blockers "
-                    "remain"
-                )
+                raise ContractError("Artifact cannot complete this action while blockers remain")
 
     def _validate_dependencies_current(
         self,
@@ -329,9 +319,7 @@ class ArtifactValidator:
                 dependency_id,
             )
             if dependency["status"] != "COMPLETED":
-                raise ContractError(
-                    f"Dependency {dependency_id!r} is not complete"
-                )
+                raise ContractError(f"Dependency {dependency_id!r} is not complete")
             dependency_artifact = dependency["result_artifact_id"]
             if dependency_artifact:
                 if dependency_artifact not in declared_inputs:
@@ -351,6 +339,5 @@ class ArtifactValidator:
                     ).fetchone()
                 if artifact_row is None or artifact_row["status"] != "VALID":
                     raise ContractError(
-                        f"Dependency artifact "
-                        f"{dependency_artifact!r} is stale or invalid"
+                        f"Dependency artifact {dependency_artifact!r} is stale or invalid"
                     )

@@ -22,16 +22,10 @@ class Wave2RuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.database = Path(self.tempdir.name) / "runtime.sqlite3"
-        self.campaign_payload = load_json(
-            ROOT / "autonomy/examples/w7-campaign.json"
-        )
+        self.campaign_payload = load_json(ROOT / "autonomy/examples/w7-campaign.json")
         self.campaign_payload["base_state"]["commit_sha"] = "abc1234"
-        self.deployment_payload = load_json(
-            ROOT / "autonomy/examples/w7-deployment.json"
-        )
-        self.actions_payload = load_json(
-            ROOT / "autonomy/examples/w7-actions.json"
-        )
+        self.deployment_payload = load_json(ROOT / "autonomy/examples/w7-deployment.json")
+        self.actions_payload = load_json(ROOT / "autonomy/examples/w7-actions.json")
         campaign = CampaignAuthorization.from_dict(self.campaign_payload)
         deployment = DeploymentManifest.from_dict(self.deployment_payload)
         compiled = compile_graph(

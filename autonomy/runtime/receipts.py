@@ -5,7 +5,8 @@ import hmac
 import json
 import os
 import uuid
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from autonomy.runtime.store import RuntimeStore, canonical_dump
 from autonomy.runtime.timeutil import utc_now_text
@@ -21,9 +22,7 @@ class ReceiptChain:
     ) -> None:
         self.store = store
         self.signing_key = (
-            signing_key
-            if signing_key is not None
-            else os.environ.get("L9_AUTONOMY_RECEIPT_KEY")
+            signing_key if signing_key is not None else os.environ.get("L9_AUTONOMY_RECEIPT_KEY")
         )
 
     def append(
@@ -50,9 +49,7 @@ class ReceiptChain:
                 """,
                 (campaign_id,),
             ).fetchone()
-            previous_hash = (
-                previous["receipt_hash"] if previous is not None else GENESIS_HASH
-            )
+            previous_hash = previous["receipt_hash"] if previous is not None else GENESIS_HASH
             receipt_id = f"rcpt-{uuid.uuid4().hex}"
             body = {
                 "receipt_id": receipt_id,
@@ -67,9 +64,7 @@ class ReceiptChain:
                 "previous_receipt_hash": previous_hash,
                 "created_at": created_at,
             }
-            receipt_hash = hashlib.sha256(
-                canonical_dump(body).encode("utf-8")
-            ).hexdigest()
+            receipt_hash = hashlib.sha256(canonical_dump(body).encode("utf-8")).hexdigest()
             signature = self._sign(receipt_hash)
             connection.execute(
                 """
@@ -141,9 +136,7 @@ class ReceiptChain:
                 "previous_receipt_hash": row["previous_receipt_hash"],
                 "created_at": row["created_at"],
             }
-            calculated = hashlib.sha256(
-                canonical_dump(body).encode("utf-8")
-            ).hexdigest()
+            calculated = hashlib.sha256(canonical_dump(body).encode("utf-8")).hexdigest()
             if row["previous_receipt_hash"] != previous_hash:
                 errors.append(f"{row['receipt_id']}: previous hash mismatch")
             if row["receipt_hash"] != calculated:

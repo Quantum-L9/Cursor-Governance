@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from autonomy.runtime.store import RuntimeStore
 from autonomy.runtime.timeutil import utc_now_text
@@ -24,9 +25,7 @@ class Scheduler:
     def refresh_readiness(self, campaign_id: str) -> list[str]:
         campaign = self.store.get_campaign(campaign_id)
         graph = json.loads(campaign["graph_json"])
-        action_rows = {
-            row["action_id"]: row for row in self.store.list_actions(campaign_id)
-        }
+        action_rows = {row["action_id"]: row for row in self.store.list_actions(campaign_id)}
         became_ready: list[str] = []
         now = utc_now_text()
         with self.store.transaction() as connection:
@@ -73,9 +72,7 @@ class Scheduler:
         self.refresh_readiness(campaign_id)
         action_rows = self.store.list_actions(campaign_id)
         active_by_resource = Counter(
-            row["resource_class"]
-            for row in action_rows
-            if row["status"] in ACTIVE_STATUSES
+            row["resource_class"] for row in action_rows if row["status"] in ACTIVE_STATUSES
         )
         resource_classes = self.resource_policy.get(
             "classes",
@@ -127,7 +124,4 @@ class Scheduler:
         if not conditional_on:
             return True
         condition_row = action_rows.get(conditional_on)
-        return (
-            condition_row is not None
-            and condition_row["status"] in TERMINAL_SUCCESS
-        )
+        return condition_row is not None and condition_row["status"] in TERMINAL_SUCCESS

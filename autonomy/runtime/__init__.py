@@ -10,4 +10,5 @@ This package provides:
 - critical-path scheduling
 - tamper-evident receipt chaining
 """
+
 __version__ = "1.0.0"

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Mapping
+from enum import StrEnum
+from typing import Any
 
 
-class ActionStatus(str, Enum):
+class ActionStatus(StrEnum):
     PENDING = "PENDING"
     READY = "READY"
     LEASED = "LEASED"
@@ -17,14 +18,14 @@ class ActionStatus(str, Enum):
     SKIPPED = "SKIPPED"
 
 
-class LeaseStatus(str, Enum):
+class LeaseStatus(StrEnum):
     ACTIVE = "ACTIVE"
     RELEASED = "RELEASED"
     REVOKED = "REVOKED"
     EXPIRED = "EXPIRED"
 
 
-class CampaignRuntimeState(str, Enum):
+class CampaignRuntimeState(StrEnum):
     AUTHORIZED = "AUTHORIZED"
     LOCKED = "LOCKED"
     EXECUTING = "EXECUTING"

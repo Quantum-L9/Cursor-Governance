@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from autonomy.io import load_json
 from autonomy.models import (
@@ -72,24 +73,14 @@ class AutonomyRuntime:
         repository_root: str | Path = ".",
         database_path: str | Path | None = None,
         signing_key: str | None = None,
-    ) -> "AutonomyRuntime":
+    ) -> AutonomyRuntime:
         root = Path(repository_root)
         return cls(
-            database_path=(
-                database_path or root / ".l9/autonomy/runtime.sqlite3"
-            ),
-            role_policy=load_json(
-                root / "autonomy/policies/role-capabilities.json"
-            ),
-            pipeline_policy=load_json(
-                root / "autonomy/policies/pipeline-invariants.json"
-            ),
-            resource_policy=load_json(
-                root / "autonomy/policies/resource-classes.json"
-            ),
-            operation_aliases=load_json(
-                root / "autonomy/policies/operation-aliases.json"
-            ),
+            database_path=(database_path or root / ".l9/autonomy/runtime.sqlite3"),
+            role_policy=load_json(root / "autonomy/policies/role-capabilities.json"),
+            pipeline_policy=load_json(root / "autonomy/policies/pipeline-invariants.json"),
+            resource_policy=load_json(root / "autonomy/policies/resource-classes.json"),
+            operation_aliases=load_json(root / "autonomy/policies/operation-aliases.json"),
             signing_key=signing_key,
         )
 
@@ -103,16 +94,12 @@ class AutonomyRuntime:
         campaign = CampaignAuthorization.from_dict(campaign_payload)
         deployment = DeploymentManifest.from_dict(deployment_payload)
         if graph_payload["campaign_id"] != campaign.campaign_id:
-            raise ValueError(
-                "Compiled graph campaign ID does not match campaign"
-            )
+            raise ValueError("Compiled graph campaign ID does not match campaign")
         if deployment.graph_id not in {
             "AUTO",
             graph_payload["graph_id"],
         }:
-            raise ValueError(
-                "Deployment graph ID does not match compiled graph"
-            )
+            raise ValueError("Deployment graph ID does not match compiled graph")
         linter = GraphLinter(
             deployment=deployment,
             role_policy=self.role_policy,

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from autonomy.errors import PolicyViolation
 from autonomy.runtime.store import RuntimeStore
