@@ -6,7 +6,7 @@ alwaysApply: true
 
 # Graphiti Memory (SSOT)
 
-**Graphiti memory gate hooks ≠ PlasticOS ADR-002 Gate hub** — this rule is Cursor episodic memory only.
+**Graphiti memory gate hooks ≠ consumer-repo ADR-002 Gate hub** — this rule is Cursor episodic memory only.
 
 ## Retrieval authority (canonical order)
 

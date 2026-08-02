@@ -1,66 +1,227 @@
-$schema: cursor-global-rules-manifest/1.0
-generated_utc: '2026-06-06T22:30:31Z'
-rules_directory: $HOME/.cursor-governance/rules
-purpose: Machine-readable index of GlobalCommands/rules/*.mdc for agents and tooling.
+$schema: l9.cursor-rules-manifest/v2
+generated_utc: '2026-08-02T13:06:10Z'
+generator: ops/scripts/generate_rules_manifest.py
+rules_directory: rules
+source_tree_digest: sha256:bb4e75459cc3630ccc0088159c74a3847bef5ea1b12d30b3ce4fe3b8bf0aa949
 summary:
-  total_mdc_files: 53
-  always_apply_true: 39
-  always_apply_false: 14
+  total_mdc_files: 58
+  always_apply_true: 38
+  always_apply_false: 20
   no_boolean_always_apply: 0
-  fractions:
-    always_apply_true: 39/53
-    always_apply_false: 14/53
-    no_boolean_always_apply: 0/53
-  identity_holds: true
+  explicit_rule_ids: 8
+  derived_rule_ids: 50
+  deprecated_rules: 1
 rules:
 - file: 00-global.mdc
-  description: 'Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding
-    standards.'
+  id: l9.rule.00.global
+  id_source: derived
+  version: null
+  description: 'Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards.'
+  scope: global
+  domain: security
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: L9 Secure AI OS – Global Rules
   has_yaml_frontmatter: true
+  line_count: 279
+  content_digest: sha256:617dac45e91dc46e34d443750d13b0b5f6b9d8debbfb67cc6bc1985612e909eb
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 01-git-push-prohibition.mdc
+  id: l9.rule.01.git.push.prohibition
+  id_source: derived
+  version: null
   description: 'NEVER commit or push to git without explicit user request. Push is #1 deployment risk.'
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: '🚨 #1 RULE: NEVER COMMIT OR PUSH WITHOUT EXPLICIT REQUEST'
   has_yaml_frontmatter: true
+  line_count: 73
+  content_digest: sha256:634b7fa04d1a1fe13abdf9072ef95ba4052ef91f587124dd135a0ec7512ef667
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 01-vps-rules.mdc
+  id: l9.rule.01.vps.rules
+  id_source: derived
+  version: null
   description: 'L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.'
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: VPS Rules
   has_yaml_frontmatter: true
+  line_count: 185
+  content_digest: sha256:b746e103e43953723f5d8c34430ffac9e1805ffa4c3acd009a40891c5507d5b4
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 02-slash-commands.mdc
+  id: l9.rule.02.slash.commands
+  id_source: derived
+  version: null
   description: Slash command recognition and execution - repo-agnostic governance protocols
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - '**/*'
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-- file: 03-mcp-memory.mdc
-  description: L9 Memory Stack - C1 PRIMARY server, PostgreSQL, Neo4j, Redis, pgvector
+  line_count: 180
+  content_digest: sha256:fc2501a7ed8e44fa9348094e434beb05ffeb6778ee33e591f95be68e8524573d
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 03-graphiti-memory.mdc
+  id: l9.rule.03.graphiti.memory
+  id_source: derived
+  version: null
+  description: Graphiti episodic memory SSOT — retrieval authority, group_id contract, no Cursor native memory for repo facts
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - '**/*'
-  first_heading: 🚨 C1 IS THE PRIMARY MEMORY SERVER
+  first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
+  line_count: 44
+  content_digest: sha256:f05a463d9f4d99a4dfb8d7191e73dcfdd7c2785b2771765d6e6d63b218c5372f
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 03-mcp-memory.mdc
+  id: l9.rule.03.mcp.memory
+  id_source: derived
+  version: null
+  description: DEPRECATED — superseded by 03-graphiti-memory.mdc (Graphiti VPS). C1 read-only.
+  scope: global
+  domain: deployment
+  activation: auto_attached
+  activation_source: derived
+  always_apply: false
+  globs:
+  - '**/*'
+  first_heading: 🚨 C1 IS THE PRIMARY MEMORY SERVER (LEGACY — DEPRECATED)
+  has_yaml_frontmatter: true
+  line_count: 419
+  content_digest: sha256:aa99208c2fcb072c39d3eabe06174c3849613cac2948ea7fb5a5660477dcba0c
+  authority: compatibility
+  context_cost: high
+  deprecated: true
+  replacement: 03-graphiti-memory.mdc
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 04-cursor-redis-session.mdc
-  description: Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid
-    cross-session amnesia.
+  id: l9.rule.04.cursor.redis.session
+  id_source: derived
+  version: null
+  description: Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia.
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Cursor + Redis Session Context (no amnesia)
   has_yaml_frontmatter: true
+  line_count: 64
+  content_digest: sha256:204ee35409fc0de805ff6a94b91f2cfceac535bbb53951ae5e83cb6efd20284d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 05-ask-mode.mdc
+  id: l9.rule.05.ask.mode
+  id_source: derived
+  version: null
   description: Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: []
   first_heading: Ask Mode Behavior Rules
   has_yaml_frontmatter: true
+  line_count: 60
+  content_digest: sha256:02606be85a98aa47427777698f3916b6873cbfed17c8b3a478715d842bf50c8b
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 05-recursive-execution-kernel.mdc
+  id: l9.rule.recursive-execution-kernel
+  id_source: explicit
+  version: 1.0.0
+  description: Domain-neutral convergence kernel for complete, source-grounded, validated deliverables.
+  scope: global
+  domain: execution
+  activation: agent_requested
+  activation_source: explicit
+  always_apply: false
+  globs: null
+  first_heading: Recursive Execution Kernel
+  has_yaml_frontmatter: true
+  line_count: 38
+  content_digest: sha256:7c60143d21bf08af194d062a6ca8f1633303371d4a0fd726db49dc089ff6d24c
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 10-lang-typescript.mdc
+  id: l9.rule.10.lang.typescript
+  id_source: derived
+  version: null
   description: TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
+  scope: global
+  domain: typescript
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - '**/*.ts'
@@ -69,31 +230,93 @@ rules:
   - '!**/*.test.tsx'
   first_heading: TypeScript/React Language Rules for L9 OS Frontend
   has_yaml_frontmatter: true
+  line_count: 181
+  content_digest: sha256:bd8fad3dd090f23921c9db95a4e28a719225c0698d8b4303a77c65fc8a0fae64
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 20-lang-python.mdc
-  description: Python rules for AI OS runtime, agents, orchestration, and backend services.
-  always_apply: true
+  id: l9.rule.20.lang.python
+  id_source: derived
+  version: null
+  description: Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo addon suites — use the repo's Odoo Python overlay rule.
+  scope: global
+  domain: python
+  activation: auto_attached
+  activation_source: derived
+  always_apply: false
   globs:
-  - '**/*.py'
+  - src/**/*.py
   - '!**/migrations/*.py'
-  - '!**/tests/**/*.py'
   first_heading: Python Language Rules for L9 OS Core Runtime
   has_yaml_frontmatter: true
+  line_count: 186
+  content_digest: sha256:8f9921b041c081ab00f7925975b1e5505ae9dcf455116c1c058cde34dcfb7ec9
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 22-context7-auto-invoke.mdc
-  description: Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new
-    platforms/tools.
+  id: l9.rule.22.context7.auto.invoke
+  id_source: derived
+  version: null
+  description: Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
+  line_count: 51
+  content_digest: sha256:0d3ad3e7d98260fda81fa7798dcbb03ebb6e8d260b767f85cd7757bde7c8a5d2
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 25-python-dora-header.mdc
+  id: l9.rule.25.python.dora.header
+  id_source: derived
+  version: null
   description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
+  scope: global
+  domain: python
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - '**/*.py'
   first_heading: 'Python L9 Module Structure: Three-Block System'
   has_yaml_frontmatter: true
+  line_count: 168
+  content_digest: sha256:e27ac2cc723bff50fec5f85f2b46a9c8d3f7a8e6adfd6dddb3fd3cbbfb4708dd
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 30-framework-react.mdc
+  id: l9.rule.30.framework.react
+  id_source: derived
+  version: null
   description: React UI rules for AI OS control panels, consoles, and visualization surfaces.
+  scope: global
+  domain: typescript
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - apps/web/**/*.tsx
@@ -102,16 +325,24 @@ rules:
   - packages/ui/**/*.jsx
   first_heading: React Framework Rules for L9 OS UI
   has_yaml_frontmatter: true
-- file: 30-odoo-native.mdc
-  description: 'Odoo-native code patterns for PlastOS modules: ORM, recordsets, domains, actions'
-  always_apply: true
-  globs:
-  - plasticos_*/**/*.py
-  - plasticos_*/**/*.xml
-  first_heading: Odoo-Native Code Patterns (PlastOS)
-  has_yaml_frontmatter: true
+  line_count: 143
+  content_digest: sha256:38c1291f4681d160b5f98bcc02ee4948c613191849ee5bd3c5a287ea344d3f25
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 40-domain-autonomy.mdc
+  id: l9.rule.40.domain.autonomy
+  id_source: derived
+  version: null
   description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.'
+  scope: global
+  domain: security
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - src/agents/**/*.ts
@@ -120,8 +351,24 @@ rules:
   - packages/agents/**/*
   first_heading: Autonomous Agent & Autonomy Domain Rules
   has_yaml_frontmatter: true
+  line_count: 180
+  content_digest: sha256:2af64ed1e71a5f8bb835a3f3f259ca5738847eb69200b6a3e712842f5d51bd28
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 43-lang-postgresql.mdc
+  id: l9.rule.43.lang.postgresql
+  id_source: derived
+  version: null
   description: PostgreSQL schema, query, migration, and safety invariants.
+  scope: global
+  domain: security
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - '**/*.sql'
@@ -131,8 +378,46 @@ rules:
   - '**/alembic/**/*.py'
   first_heading: PostgreSQL invariants
   has_yaml_frontmatter: true
+  line_count: 54
+  content_digest: sha256:376750159196a56bbbfd9ec8495cd7fa46be38e19b23ca0e04be82843cf6bf70
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 45-pre-action-verification.mdc
+  id: l9.rule.45.pre.action.verification
+  id_source: derived
+  version: null
+  description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure.'
+  scope: global
+  domain: general
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs: null
+  first_heading: Pre-Action Verification
+  has_yaml_frontmatter: true
+  line_count: 81
+  content_digest: sha256:bd895d6eef3fd12bda25e96520d27c282c7f0ac889134824db9eacffb7ad0635
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 50-qa-testing.mdc
+  id: l9.rule.50.qa.testing
+  id_source: derived
+  version: null
   description: Testing and QA rules for AI OS agents, runtimes, and integrations.
+  scope: global
+  domain: testing
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - '**/*.test.ts'
@@ -141,8 +426,24 @@ rules:
   - '**/__tests__/**/*'
   first_heading: Testing & QA Rules for L9 OS
   has_yaml_frontmatter: true
+  line_count: 206
+  content_digest: sha256:fba2fc9b34d339dae7026914e860fc8aa80cf8f9e3c80542588e4f8cfcfe0a5f
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 51-qa-playwright.mdc
+  id: l9.rule.51.qa.playwright
+  id_source: derived
+  version: null
   description: Playwright E2E test invariants for web UI flows.
+  scope: global
+  domain: testing
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - '**/*.spec.ts'
@@ -153,8 +454,24 @@ rules:
   - playwright.config.js
   first_heading: Playwright E2E invariants
   has_yaml_frontmatter: true
+  line_count: 34
+  content_digest: sha256:351a1f35357a33790bfdf6086f62db42a673ff37edfe1a925d46de898e4173ea
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 52-qa-jest.mdc
+  id: l9.rule.52.qa.jest
+  id_source: derived
+  version: null
   description: Jest unit test invariants for TypeScript and JavaScript.
+  scope: global
+  domain: testing
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - '**/*.test.ts'
@@ -169,15 +486,46 @@ rules:
   - jest.config.js
   first_heading: Jest unit test invariants
   has_yaml_frontmatter: true
+  line_count: 38
+  content_digest: sha256:493fb58ae77a4789a52d03e6bc226e4808027591ab7c295817a526be4268e555
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 60-anti-patterns.mdc
-  description: Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side
-    corrections.
+  id: l9.rule.60.anti.patterns
+  id_source: derived
+  version: null
+  description: Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections.
+  scope: global
+  domain: testing
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Cross-stack anti-patterns
   has_yaml_frontmatter: true
+  line_count: 351
+  content_digest: sha256:5bb1cfc03b2448ef42867d16c85636207f8b8649204a5a973e8cce39425477b4
+  authority: compatibility
+  context_cost: high
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 61-secrets-and-dependencies.mdc
+  id: l9.rule.61.secrets.and.dependencies
+  id_source: derived
+  version: null
   description: Secrets handling and dependency/supply-chain rules for L9.
+  scope: global
+  domain: security
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - '**/package.json'
@@ -189,8 +537,24 @@ rules:
   - .github/workflows/**
   first_heading: Secrets and dependencies (L9)
   has_yaml_frontmatter: true
+  line_count: 51
+  content_digest: sha256:bcf0390b7f242af124fc44c9e2cfa5ce8d05621fb5c70cd3318b564a3a27f81d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 65-observability-performance.mdc
+  id: l9.rule.65.observability.performance
+  id_source: derived
+  version: null
   description: Observability and performance rules for L9 runtime, agents, memory, and orchestration.
+  scope: global
+  domain: memory
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - l9/runtime/**/*
@@ -199,14 +563,46 @@ rules:
   - l9/orchestration/**/*
   first_heading: Observability and performance (L9)
   has_yaml_frontmatter: true
+  line_count: 41
+  content_digest: sha256:e935f52d5df68c2e66002807a1185ddc47b7d80ee86a15e85761da5475c3b563
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 70-tool-efficiency.mdc
+  id: l9.rule.70.tool.efficiency
+  id_source: derived
+  version: null
   description: 'Developer tooling efficiency: terminal usage, command batching, context budgeting, and Cursor tool ergonomics.'
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Tool efficiency and workflow
   has_yaml_frontmatter: true
+  line_count: 184
+  content_digest: sha256:4ff48f649686403443c0f2010c47dddd1ccb30549a5f3d89f346d7f3a4395bc9
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 71-ci-cd-pipeline.mdc
+  id: l9.rule.71.ci.cd.pipeline
+  id_source: derived
+  version: null
   description: CI/CD pipeline and policy enforcement rules for L9.
+  scope: global
+  domain: ci
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - .github/workflows/**/*.yml
@@ -215,8 +611,24 @@ rules:
   - .gitlab-ci.yml
   first_heading: CI/CD pipeline (L9)
   has_yaml_frontmatter: true
+  line_count: 38
+  content_digest: sha256:394c3835f9e74d41c6f870f9b6d19739ad1bd573432fb6361437b1bca546c987
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 72-review-ergonomics.mdc
+  id: l9.rule.72.review.ergonomics
+  id_source: derived
+  version: null
   description: Review ergonomics, PR size guidance, and checklists for L9.
+  scope: global
+  domain: output
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - .github/PULL_REQUEST_TEMPLATE*
@@ -224,8 +636,24 @@ rules:
   - '**/*.md'
   first_heading: Review ergonomics (L9)
   has_yaml_frontmatter: true
+  line_count: 166
+  content_digest: sha256:70e8536a09e55cf14e0a458c190037026825fefbbd150c46b4cfeb19598c079c
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 73-prompts-and-evals.mdc
+  id: l9.rule.73.prompts.and.evals
+  id_source: derived
+  version: null
   description: Prompt, kernel, and eval discipline for L9.
+  scope: global
+  domain: general
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - config/kernels/**/*
@@ -234,8 +662,24 @@ rules:
   - scripts/eval_*.py
   first_heading: Prompts and evals (L9)
   has_yaml_frontmatter: true
+  line_count: 36
+  content_digest: sha256:d4ebf11f79dbe95843fc5301e9a011262bce2185922ffbebff0583cc3fe972dc
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 74-ai-safety-policy.mdc
+  id: l9.rule.74.ai.safety.policy
+  id_source: derived
+  version: null
   description: AI content safety and policy rules for prompts and kernels in L9.
+  scope: global
+  domain: security
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - config/kernels/**/*
@@ -243,21 +687,68 @@ rules:
   - policy/**/*
   first_heading: AI safety policy (L9)
   has_yaml_frontmatter: true
+  line_count: 42
+  content_digest: sha256:ea84fcc114777193ac37c67e8de0b952804df6f0bb3f63322ea7b59955741862
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 80-gmp-execution.mdc
+  id: l9.rule.80.gmp.execution
+  id_source: derived
+  version: null
   description: 'GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.'
+  scope: global
+  domain: ci
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: GMP v1.7 execution rules (L9)
   has_yaml_frontmatter: true
+  line_count: 65
+  content_digest: sha256:3c14113e0d099bd7e89b788142d00f41245a69bf4c837441f13e16455968c722
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 81-gmp-audit.mdc
+  id: l9.rule.81.gmp.audit
+  id_source: derived
+  version: null
   description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: GMP audit and verification (L9)
   has_yaml_frontmatter: true
+  line_count: 90
+  content_digest: sha256:a7998c5521fdf40f11d754837c415c78900925007d011945ff24fe83e596ca9d
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 82-deployment-manifest.mdc
-  description: Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator
-    prompts.
+  id: l9.rule.82.deployment.manifest
+  id_source: derived
+  version: null
+  description: Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator prompts.
+  scope: global
+  domain: deployment
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - docker-compose.yml
@@ -267,41 +758,135 @@ rules:
   - helm/**/*
   first_heading: Deployment & orchestrator manifests (L9)
   has_yaml_frontmatter: true
+  line_count: 71
+  content_digest: sha256:cf96edc3a20d384cf95e1316331e3fd39a5a6fd650e9aab6224f49bc8dd4184d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 83-gmp-contracts.mdc
+  id: l9.rule.83.gmp.contracts
+  id_source: derived
+  version: null
   description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: GMP Contract Enforcement (L9)
   has_yaml_frontmatter: true
+  line_count: 129
+  content_digest: sha256:c2b50866ca5569024b9428c355ecaeb4c4d55b490f7c500d0d004de963b9f963
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 84-cursor-governance-wiring.mdc
-  description: 'Where cursor memory and wiring live: .cursor-commands in every repo, executables in governance. Applies to
-    all repos (global).'
+  id: l9.rule.cursor-governance-wiring
+  id_source: explicit
+  version: 3.0.0
+  description: GlobalCommands loads as a Cursor local plugin, not a whole-directory rules symlink. Supersedes v2.0.0.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: explicit
   always_apply: true
-  globs:
-  - '**/*'
-  first_heading: Cursor memory and wiring — repo vs governance
+  globs: null
+  first_heading: Cursor Governance Wiring Boundary
   has_yaml_frontmatter: true
+  line_count: 71
+  content_digest: sha256:ebf45d7841f368370114f831983f70e46462688856a606e1e70904a6c48a7f43
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 85-workflow-state-bridge.mdc
+  id: l9.rule.85.workflow.state.bridge
+  id_source: derived
+  version: null
   description: 'Bridge Cursor runs to workflow_state.md: enforce state sync, phases, and next-step alignment for the L9 repo.'
+  scope: global
+  domain: ci
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: workflow_state.md bridge (L9)
   has_yaml_frontmatter: true
+  line_count: 123
+  content_digest: sha256:7225ed66e89f8d66d3afbe00389b4170906707cd1c0e915272b56cc8218e9435
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 86-module-tier-mapping.mdc
+  id: l9.rule.86.module.tier.mapping
+  id_source: derived
+  version: null
   description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Module ↔ tier mapping (L9)
   has_yaml_frontmatter: true
+  line_count: 52
+  content_digest: sha256:f3dd67b5e50883c42aed6f49e5f7586513e4dbbc53fe3422160b3f99ee50085d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 87-cursor-memory-kernel.mdc
+  id: l9.rule.87.cursor.memory.kernel
+  id_source: derived
+  version: null
   description: Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - '**/*'
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
+  line_count: 154
+  content_digest: sha256:e6cc99f835001b433683e76140969871063bc3c6a0291eb453317ef169189f43
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 87-wire-workflow-guard.mdc
+  id: l9.rule.87.wire.workflow.guard
+  id_source: derived
+  version: null
   description: Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
+  scope: global
+  domain: ci
+  activation: auto_attached
+  activation_source: derived
   always_apply: false
   globs:
   - l9/**/orchestrator*.py
@@ -311,22 +896,70 @@ rules:
   - deploy/**/*
   first_heading: Wiring and workflow guards (L9)
   has_yaml_frontmatter: true
+  line_count: 52
+  content_digest: sha256:57cc1b6ac3176627978118851118e54079d7acf626be5ac48d5b25c59f4159d7
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 88-perplexity-run-harness.mdc
+  id: l9.rule.88.perplexity.run.harness
+  id_source: derived
+  version: null
   description: 'L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.'
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Perplexity ↔ L9 run harness
   has_yaml_frontmatter: true
+  line_count: 51
+  content_digest: sha256:e599b2b56828a2444969490d82028abe42542988cffacd61eba09ccce1e5cf3d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 89-constellation-gate-workspace-session.mdc
+  id: l9.rule.89.constellation.gate.workspace.session
+  id_source: derived
+  version: null
   description: 'Constellation.Gate monorepo: one L9 Governance symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.'
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - '**/Constellation.Gate/**'
   - '**/constellation-gate/**'
   first_heading: Constellation.Gate — workspace session summary (2026-04-11, updated)
   has_yaml_frontmatter: true
+  line_count: 35
+  content_digest: sha256:b6b565182a82ee8c349f623f7f8ac45df546319da43e122038d178f36e24879b
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 90-protected-core.mdc
+  id: l9.rule.90.protected.core
+  id_source: derived
+  version: null
   description: 'Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.'
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
   always_apply: true
   globs:
   - l9/kernel_loader.py
@@ -340,98 +973,419 @@ rules:
   - helm/**/*
   first_heading: Protected L9 core files
   has_yaml_frontmatter: true
+  line_count: 110
+  content_digest: sha256:3d0a8c303d9dbef75f91eefd7d66d9c333dda365c501536d4a6bbdc6ff19e7dd
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 91-existing-code-source-of-truth.mdc
+  id: l9.rule.91.existing.code.source.of.truth
+  id_source: derived
+  version: null
   description: Existing code is source of truth — new code adapts to established patterns
+  scope: global
+  domain: general
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Existing Code Is Source of Truth
   has_yaml_frontmatter: true
+  line_count: 64
+  content_digest: sha256:b15272f75d3d4a50dcd0100bd445d508a91673553e964e29886df1c2a504385d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 92-learned-lessons.mdc
+  id: l9.rule.92.learned.lessons
+  id_source: derived
+  version: null
   description: Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.
+  scope: global
+  domain: general
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Learned Lessons — Critical Prevention Rules
   has_yaml_frontmatter: true
+  line_count: 778
+  content_digest: sha256:7a7ff8fa50b46f45625805713846755929c6afba244848f431fac80a456c221d
+  authority: compatibility
+  context_cost: high
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 93-c1-server-protection.mdc
-  description: 'C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user
-    approval.'
+  id: l9.rule.93.c1.server.protection
+  id_source: derived
+  version: null
+  description: 'C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval.'
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: C1 Server Protection Rules
   has_yaml_frontmatter: true
+  line_count: 82
+  content_digest: sha256:e0d5aa093de552846f76cbc4c70a91aa1a57b5236ef80ed170f8ac72dcb68893
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 94-deployment-prohibition.mdc
+  id: l9.rule.94.deployment.prohibition
+  id_source: derived
+  version: null
   description: Prohibits AI agents from using the 10X deployment script.
+  scope: global
+  domain: deployment
+  activation: always
+  activation_source: derived
   always_apply: true
-  globs: scripts/deployment/10X_Deploy_Script.sh
+  globs:
+  - scripts/deployment/10X_Deploy_Script.sh
   first_heading: '🚨 ULTRA-CRITICAL: 10X Deploy Script Prohibition'
   has_yaml_frontmatter: true
+  line_count: 19
+  content_digest: sha256:3f41555552fdd6dd9bb3a13ec86f3b39ef6950f26376bd720c56319fc3d6b677
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 95-agent-pattern-activation.mdc
+  id: l9.rule.95.agent.pattern.activation
+  id_source: derived
+  version: null
   description: 'Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations.'
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Agent Pattern System Auto-Activation
   has_yaml_frontmatter: true
-- file: 95-plasticos-equipment-policy.mdc
-  description: Equipment type wiring policy for PlasticOS facility profiles
-  always_apply: true
-  globs:
-  - plasticos_facility_profile/**/*
-  - '**/equipment_type*.xml'
-  first_heading: PlasticOS Equipment Type Policy
-  has_yaml_frontmatter: true
+  line_count: 109
+  content_digest: sha256:1faa1aae16046caa3f56add93ccaa1fcda8c0f8c468c1952d5643231bf1d1d81
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 95-test-fix-policy.mdc
-  description: Never skip tests to avoid failures — fix the underlying issue
+  id: l9.rule.testing.integrity
+  id_source: explicit
+  version: 2.0.0
+  description: Preserve test intent and fix root causes instead of manufacturing a green suite.
+  scope: global
+  domain: testing
+  activation: always
+  activation_source: explicit
   always_apply: true
   globs: null
-  first_heading: Test Fix Policy — Never Skip, Always Fix
+  first_heading: Test Integrity Policy
   has_yaml_frontmatter: true
+  line_count: 57
+  content_digest: sha256:06536d954dd0a29ec1c7bd6803bdfd2f01b48c3b05c0bc14f74e14de1c5f1391
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 96-env-no-hardcode.mdc
-  description: Use .env for configuration — never hardcode database, hosts, ports
-  always_apply: true
-  globs: null
-  first_heading: 'Configuration: Use .env, Do Not Hardcode'
+  id: l9.rule.configuration.no-hardcode
+  id_source: explicit
+  version: 2.0.0
+  description: Keep environment-specific hosts, credentials, ports, and identifiers outside source code.
+  scope: global
+  domain: security
+  activation: auto_attached
+  activation_source: explicit
+  always_apply: false
+  globs:
+  - '**/*.sh'
+  - '**/*.env*'
+  - '**/Dockerfile*'
+  - '**/docker-compose*.yml'
+  - '**/docker-compose*.yaml'
+  - '**/*config*.py'
+  - '**/*config*.ts'
+  first_heading: 'Configuration: Use Environment Inputs, Do Not Hardcode'
   has_yaml_frontmatter: true
+  line_count: 47
+  content_digest: sha256:11a14cef03f9d8bd67449ba5e1d482747d81cdd61d0880d9df7a4da700d63999
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 96-git-push-approval.mdc
+  id: l9.rule.96.git.push.approval
+  id_source: derived
+  version: null
   description: Git push requires explicit user approval — never auto-push
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Git Push Approval Policy
   has_yaml_frontmatter: true
+  line_count: 90
+  content_digest: sha256:d83de4c11329dbabbb08b8fe3fa6adc5f2cc65dfd864848c10cde2ba68d91a56
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 96-output-discipline.mdc
+  id: l9.rule.output-discipline
+  id_source: explicit
+  version: 1.0.0
+  description: Concise output discipline with one decision, no repetition, and explicit validation status.
+  scope: global
+  domain: output
+  activation: agent_requested
+  activation_source: explicit
+  always_apply: false
+  globs: null
+  first_heading: Output Discipline
+  has_yaml_frontmatter: true
+  line_count: 25
+  content_digest: sha256:503f33079bd962bcb0a9f5049d73835bb40fe685da8cd9c9ae24562071c70ac4
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 97-governance-ssot-paths.mdc
-  description: 'Governance SSOT path contract — $HOME/Dropbox only; never hardcode /Users/ or machine-specific paths. Authority:
-    CANONICAL_LAW.md §9.'
+  id: l9.rule.governance-ssot-paths
+  id_source: explicit
+  version: 2.0.0
+  description: Use the local GitHub clone at $HOME/.cursor-governance as the sole governance root.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: explicit
   always_apply: true
   globs: null
   first_heading: Governance SSOT Path Contract
   has_yaml_frontmatter: true
+  line_count: 55
+  content_digest: sha256:85fc156798a182ae08be98ff29d4b0e9ca265cdba854f1815b4b74c03f0f6330
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
 - file: 97-graph-engine-architecture.mdc
+  id: l9.rule.97.graph.engine.architecture
+  id_source: derived
+  version: null
   description: 'Graph Engine architecture: chassis contract, gates, Cypher security, action handlers'
+  scope: global
+  domain: security
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
-  first_heading: ''
+  first_heading: Core Principles
   has_yaml_frontmatter: true
-- file: 98-odoo-sh-staging.mdc
-  description: 'Odoo.sh staging reference: instance URL, build ID, SSH access, and shell commands for Odoo 19.'
+  line_count: 98
+  content_digest: sha256:c7210c913c175aa04e9a1f939be3a42ce8bafdbcb26a2edd696dce0af15d3548
+  authority: compatibility
+  context_cost: moderate
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 97-graph-layer-boundary.mdc
+  id: l9.rule.graph-layer-boundary
+  id_source: explicit
+  version: 2.0.0
+  description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: explicit
   always_apply: true
-  globs: null
-  first_heading: Odoo.sh Staging Environment
+  globs:
+  - '**/*'
+  first_heading: Graph Layer Boundary
   has_yaml_frontmatter: true
+  line_count: 29
+  content_digest: sha256:127f9ae133ff96958ab5a1aea2053aad3da18033a328f1d980c2a8e1b7ce978a
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
+- file: 97-ide-profile-exceptions.mdc
+  id: l9.rule.ide-profile-exceptions
+  id_source: explicit
+  version: 1.0.0
+  description: IDE profile exceptions — eslint_owned workspaces and formatter exclusivity for governed editor settings.
+  scope: global
+  domain: governance
+  activation: agent_requested
+  activation_source: explicit
+  always_apply: false
+  globs: null
+  first_heading: IDE profile exceptions
+  has_yaml_frontmatter: true
+  line_count: 48
+  content_digest: sha256:6d019ab496ca6eeca058de5c1a61220533b8299ac55850fcf714508dd85e25ba
+  authority: canonical_global
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: explicit
+- file: 98-graphiti-memory-gate.mdc
+  id: l9.rule.98.graphiti.memory.gate
+  id_source: derived
+  version: null
+  description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs:
+  - '**/*'
+  first_heading: Graphiti Memory Gate
+  has_yaml_frontmatter: true
+  line_count: 34
+  content_digest: sha256:eb667b616bfa745b920fce1c34a8e66385ec8e585c62dca31cb3854c3bde338b
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 99-execute-as-instructed.mdc
+  id: l9.rule.99.execute.as.instructed
+  id_source: derived
+  version: null
   description: Execute exactly as instructed — no autonomous reasoning or skipping steps
+  scope: global
+  domain: general
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: Execute As Instructed — No Autonomous Reasoning
   has_yaml_frontmatter: true
+  line_count: 41
+  content_digest: sha256:8a91df91897f69174205cfec3e0de8fbdd8883c25dbcda5a8cb399a49ce2876d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 99-graphiti-temporal.mdc
+  id: l9.rule.99.graphiti.temporal
+  id_source: derived
+  version: null
+  description: Graphiti temporal contract — Supersedes, conflicts_with, bi-temporal invalidation
+  scope: global
+  domain: memory
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs:
+  - '**/*'
+  first_heading: Graphiti Temporal Memory
+  has_yaml_frontmatter: true
+  line_count: 24
+  content_digest: sha256:7689319b256247a6300dfdbdf9083c59633aa640393dc2f34aba0f9d06e6ec9b
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 99-incident-report.mdc
-  description: 'Governance incident reports: unauthorized deletion, VPS overstepping, corrective actions, and permanent enforcement
-    lessons.'
+  id: l9.rule.99.incident.report
+  id_source: derived
+  version: null
+  description: 'Governance incident reports: unauthorized deletion, VPS overstepping, corrective actions, and permanent enforcement lessons.'
+  scope: global
+  domain: deployment
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: 'Incident Report: Unauthorized File Deletion'
   has_yaml_frontmatter: true
+  line_count: 463
+  content_digest: sha256:9674bb08f2bf0ca34ed436bbd063aadec5f4f2cb745ae19b1d27c956d37e1c00
+  authority: compatibility
+  context_cost: high
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 99-no-auto-commit.mdc
+  id: l9.rule.99.no.auto.commit
+  id_source: derived
+  version: null
   description: Never auto-commit or auto-push without explicit user approval
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
   always_apply: true
   globs: null
   first_heading: No Auto Commit/Push Rule
   has_yaml_frontmatter: true
+  line_count: 35
+  content_digest: sha256:d097a5c3d6fba7e8438610e9b80581d682289eec1bb036cfbc37649863796c6f
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived

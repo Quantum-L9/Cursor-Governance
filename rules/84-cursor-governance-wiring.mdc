@@ -36,7 +36,7 @@ different purposes, and they must not be conflated:
 |---|---|---|
 | Governance reference plane | `.cursor-commands -> $HOME/.cursor-governance` (per workspace) | Commands, skills, scripts, canonical documents, and explicit rule references — read by name, not auto-loaded |
 | Cursor plugin (rule/skill/command activation) | `~/.cursor/plugins/local/l9-governance -> $HOME/.cursor-governance` (user scope) | The `l9-governance` local plugin. Cursor discovers `rules/`, `skills/`, `commands/` under this path itself; nothing symlinks those subfolders individually |
-| Per-class addon plugin | `~/.cursor/plugins/local/<addon> -> $HOME/.cursor-governance/plugins/<addon>` or returned ad hoc via `workspaceOpen` | Class-specific rule bundles (e.g. `odoo-plasticos-addon`) loaded only in workspaces `environment/plugins/exceptions.yaml` classifies into that class — see `environment/plugins/README.md` |
+| Per-class addon plugin | `~/.cursor/plugins/local/<addon> -> $HOME/.cursor-governance/plugins/<addon>` or returned ad hoc via `workspaceOpen` | Class-specific rule bundles (e.g. `odoo-class-addon`) loaded only in workspaces `environment/plugins/exceptions.yaml` classifies into that class — see `environment/plugins/README.md` |
 
 `.cursor-commands` does not replace plugin-based rule activation, and the plugin
 does not replace `.cursor-commands` as the reference path used by scripts/commands

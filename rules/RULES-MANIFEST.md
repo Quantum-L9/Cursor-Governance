@@ -1,71 +1,84 @@
-# GlobalCommands rules manifest
+# Cursor governance rules manifest
 
-Generated: `2026-06-06T22:30:31Z` (UTC). Folder: `~/.cursor-governance/rules`.
+Generated: `2026-08-02T13:06:10Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
-|--------|------:|
-| `alwaysApply: true` | **39** |
-| `alwaysApply: false` | **14** |
+|---|---:|
+| Total MDC files | **58** |
+| `alwaysApply: true` | **38** |
+| `alwaysApply: false` | **20** |
 | No boolean `alwaysApply` | **0** |
+| Explicit stable IDs | **8** |
+| Derived compatibility IDs | **50** |
+| Deprecated rules | **1** |
 
-## File index
+## Rule index
 
-- `00-global.mdc` — alwaysApply **true** — Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards.
-- `01-git-push-prohibition.mdc` — alwaysApply **true** — NEVER commit or push to git without explicit user request. Push is #1 deployment risk.
-- `01-vps-rules.mdc` — alwaysApply **true** — L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.
-- `02-slash-commands.mdc` — alwaysApply **true** — Slash command recognition and execution - repo-agnostic governance protocols
-- `03-mcp-memory.mdc` — alwaysApply **false** — DEPRECATED — superseded by 03-graphiti-memory.mdc (C1 read-only)
-- `03-graphiti-memory.mdc` — alwaysApply **true** — Graphiti VPS memory — prefetch, memory-bank T0, episode contract
-- `04-cursor-redis-session.mdc` — alwaysApply **true** — Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia.
-- `05-ask-mode.mdc` — alwaysApply **true** — Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
-- `10-lang-typescript.mdc` — alwaysApply **false** — TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
-- `20-lang-python.mdc` — alwaysApply **true** — Python rules for AI OS runtime, agents, orchestration, and backend services.
-- `22-context7-auto-invoke.mdc` — alwaysApply **true** — Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.
-- `25-python-dora-header.mdc` — alwaysApply **true** — L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.
-- `30-framework-react.mdc` — alwaysApply **false** — React UI rules for AI OS control panels, consoles, and visualization surfaces.
-- `30-odoo-native.mdc` — alwaysApply **true** — Odoo-native code patterns for PlastOS modules: ORM, recordsets, domains, actions
-- `40-domain-autonomy.mdc` — alwaysApply **false** — Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.
-- `43-lang-postgresql.mdc` — alwaysApply **false** — PostgreSQL schema, query, migration, and safety invariants.
-- `50-qa-testing.mdc` — alwaysApply **true** — Testing and QA rules for AI OS agents, runtimes, and integrations.
-- `51-qa-playwright.mdc` — alwaysApply **false** — Playwright E2E test invariants for web UI flows.
-- `52-qa-jest.mdc` — alwaysApply **false** — Jest unit test invariants for TypeScript and JavaScript.
-- `60-anti-patterns.mdc` — alwaysApply **true** — Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections.
-- `61-secrets-and-dependencies.mdc` — alwaysApply **false** — Secrets handling and dependency/supply-chain rules for L9.
-- `65-observability-performance.mdc` — alwaysApply **false** — Observability and performance rules for L9 runtime, agents, memory, and orchestration.
-- `70-tool-efficiency.mdc` — alwaysApply **true** — Developer tooling efficiency: terminal usage, command batching, context budgeting, and Cursor tool ergonomics.
-- `71-ci-cd-pipeline.mdc` — alwaysApply **false** — CI/CD pipeline and policy enforcement rules for L9.
-- `72-review-ergonomics.mdc` — alwaysApply **false** — Review ergonomics, PR size guidance, and checklists for L9.
-- `73-prompts-and-evals.mdc` — alwaysApply **false** — Prompt, kernel, and eval discipline for L9.
-- `74-ai-safety-policy.mdc` — alwaysApply **false** — AI content safety and policy rules for prompts and kernels in L9.
-- `80-gmp-execution.mdc` — alwaysApply **true** — GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.
-- `81-gmp-audit.mdc` — alwaysApply **true** — GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.
-- `82-deployment-manifest.mdc` — alwaysApply **false** — Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator prompts.
-- `83-gmp-contracts.mdc` — alwaysApply **true** — GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.
-- `84-cursor-governance-wiring.mdc` — alwaysApply **true** — Where cursor memory and wiring live: .cursor-commands in every repo, executables in governance. Applies to all repos (global).
-- `85-workflow-state-bridge.mdc` — alwaysApply **true** — Bridge Cursor runs to workflow_state.md: enforce state sync, phases, and next-step alignment for the L9 repo.
-- `86-module-tier-mapping.mdc` — alwaysApply **true** — Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.
-- `87-cursor-memory-kernel.mdc` — alwaysApply **true** — Cursor Memory Kernel enforcement — authoritative source for memory operations, scopes, and session lifecycle
-- `87-wire-workflow-guard.mdc` — alwaysApply **false** — Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
-- `88-perplexity-run-harness.mdc` — alwaysApply **true** — L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.
-- `89-constellation-gate-workspace-session.mdc` — alwaysApply **true** — Constellation.Gate monorepo: one L9 Governance symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.
-- `90-protected-core.mdc` — alwaysApply **true** — Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.
-- `91-existing-code-source-of-truth.mdc` — alwaysApply **true** — Existing code is source of truth — new code adapts to established patterns
-- `92-learned-lessons.mdc` — alwaysApply **true** — Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.
-- `93-c1-server-protection.mdc` — alwaysApply **true** — C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval.
-- `94-deployment-prohibition.mdc` — alwaysApply **true** — Prohibits AI agents from using the 10X deployment script.
-- `95-agent-pattern-activation.mdc` — alwaysApply **true** — Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations.
-- `95-plasticos-equipment-policy.mdc` — alwaysApply **true** — Equipment type wiring policy for PlasticOS facility profiles
-- `95-test-fix-policy.mdc` — alwaysApply **true** — Never skip tests to avoid failures — fix the underlying issue
-- `96-env-no-hardcode.mdc` — alwaysApply **true** — Use .env for configuration — never hardcode database, hosts, ports
-- `96-git-push-approval.mdc` — alwaysApply **true** — Git push requires explicit user approval — never auto-push
-- `97-governance-ssot-paths.mdc` — alwaysApply **true** — Governance SSOT path contract — $HOME/Dropbox only; never hardcode /Users/ or machine-specific paths. Authority: CANONICAL_LAW.md §9.
-- `97-graph-layer-boundary.mdc` — alwaysApply **true** — Graph layer boundary — code-graph vs Graphiti vs Neo4j PlasticOS
-- `97-graph-engine-architecture.mdc` — alwaysApply **true** — Graph Engine architecture: chassis contract, gates, Cypher security, action handlers
-- `98-graphiti-memory-gate.mdc` — alwaysApply **false** — Graphiti write gates (GATES-002) — active when GRAPHITI_WRITE_GATES=1
-- `98-odoo-sh-staging.mdc` — alwaysApply **true** — Odoo.sh staging reference: instance URL, build ID, SSH access, and shell commands for Odoo 19.
-- `99-graphiti-temporal.mdc` — alwaysApply **true** — Graphiti temporal episodes — supersedes, conflicts, prune policy
-- `99-execute-as-instructed.mdc` — alwaysApply **true** — Execute exactly as instructed — no autonomous reasoning or skipping steps
-- `99-incident-report.mdc` — alwaysApply **true** — Governance incident reports: unauthorized deletion, VPS overstepping, corrective actions, and permanent enforcement lessons.
-- `99-no-auto-commit.mdc` — alwaysApply **true** — Never auto-commit or auto-push without explicit user approval
+| File | ID | Scope | Domain | Activation | Lines | Digest |
+|---|---|---|---|---|---:|---|
+| `00-global.mdc` | `l9.rule.00.global` | global | security | always | 279 | `617dac45e91d` |
+| `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
+| `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
+| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 180 | `fc2501a7ed8e` |
+| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 44 | `f05a463d9f4d` |
+| `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
+| `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
+| `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 60 | `02606be85a98` |
+| `05-recursive-execution-kernel.mdc` | `l9.rule.recursive-execution-kernel` | global | execution | agent_requested | 38 | `7c60143d21bf` |
+| `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | auto_attached | 181 | `bd8fad3dd090` |
+| `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | auto_attached | 186 | `8f9921b041c0` |
+| `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 51 | `0d3ad3e7d982` |
+| `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | always | 168 | `e27ac2cc723b` |
+| `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | auto_attached | 143 | `38c1291f4681` |
+| `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | auto_attached | 180 | `2af64ed1e71a` |
+| `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | auto_attached | 54 | `376750159196` |
+| `45-pre-action-verification.mdc` | `l9.rule.45.pre.action.verification` | global | general | always | 81 | `bd895d6eef3f` |
+| `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | always | 206 | `fba2fc9b34d3` |
+| `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | auto_attached | 34 | `351a1f35357a` |
+| `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | auto_attached | 38 | `493fb58ae77a` |
+| `60-anti-patterns.mdc` | `l9.rule.60.anti.patterns` | global | testing | always | 351 | `5bb1cfc03b24` |
+| `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | auto_attached | 51 | `bcf0390b7f24` |
+| `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | auto_attached | 41 | `e935f52d5df6` |
+| `70-tool-efficiency.mdc` | `l9.rule.70.tool.efficiency` | global | governance | always | 184 | `4ff48f649686` |
+| `71-ci-cd-pipeline.mdc` | `l9.rule.71.ci.cd.pipeline` | global | ci | auto_attached | 38 | `394c3835f9e7` |
+| `72-review-ergonomics.mdc` | `l9.rule.72.review.ergonomics` | global | output | auto_attached | 166 | `70e8536a09e5` |
+| `73-prompts-and-evals.mdc` | `l9.rule.73.prompts.and.evals` | global | general | auto_attached | 36 | `d4ebf11f79db` |
+| `74-ai-safety-policy.mdc` | `l9.rule.74.ai.safety.policy` | global | security | auto_attached | 42 | `ea84fcc11477` |
+| `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 65 | `3c14113e0d09` |
+| `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | always | 90 | `a7998c5521fd` |
+| `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | auto_attached | 71 | `cf96edc3a20d` |
+| `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 129 | `c2b50866ca55` |
+| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 71 | `ebf45d7841f3` |
+| `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | ci | always | 123 | `7225ed66e89f` |
+| `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
+| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `e6cc99f83500` |
+| `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
+| `88-perplexity-run-harness.mdc` | `l9.rule.88.perplexity.run.harness` | global | governance | always | 51 | `e599b2b56828` |
+| `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | always | 35 | `b6b565182a82` |
+| `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 110 | `3d0a8c303d9d` |
+| `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 64 | `b15272f75d3d` |
+| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 778 | `7a7ff8fa50b4` |
+| `93-c1-server-protection.mdc` | `l9.rule.93.c1.server.protection` | global | git | always | 82 | `e0d5aa093de5` |
+| `94-deployment-prohibition.mdc` | `l9.rule.94.deployment.prohibition` | global | deployment | always | 19 | `3f41555552fd` |
+| `95-agent-pattern-activation.mdc` | `l9.rule.95.agent.pattern.activation` | global | memory | always | 109 | `1faa1aae1604` |
+| `95-test-fix-policy.mdc` | `l9.rule.testing.integrity` | global | testing | always | 57 | `06536d954dd0` |
+| `96-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | security | auto_attached | 47 | `11a14cef03f9` |
+| `96-git-push-approval.mdc` | `l9.rule.96.git.push.approval` | global | git | always | 90 | `d83de4c11329` |
+| `96-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 25 | `503f33079bd9` |
+| `97-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | governance | always | 55 | `85fc156798a1` |
+| `97-graph-engine-architecture.mdc` | `l9.rule.97.graph.engine.architecture` | global | security | always | 98 | `c7210c913c17` |
+| `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 29 | `127f9ae133ff` |
+| `97-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | governance | agent_requested | 48 | `6d019ab496ca` |
+| `98-graphiti-memory-gate.mdc` | `l9.rule.98.graphiti.memory.gate` | global | memory | always | 34 | `eb667b616bfa` |
+| `99-execute-as-instructed.mdc` | `l9.rule.99.execute.as.instructed` | global | general | always | 41 | `8a91df91897f` |
+| `99-graphiti-temporal.mdc` | `l9.rule.99.graphiti.temporal` | global | memory | always | 24 | `7689319b2562` |
+| `99-incident-report.mdc` | `l9.rule.99.incident.report` | global | deployment | always | 463 | `9674bb08f2bf` |
+| `99-no-auto-commit.mdc` | `l9.rule.99.no.auto.commit` | global | git | always | 35 | `d097a5c3d6fb` |
+
+## Notes
+
+- IDs marked as derived are compatibility identities. Add explicit immutable `id` metadata when a rule is materially edited.
+- The JSON and YAML files are generated from the same in-memory model as this document.
+- Never edit manifest counters by hand.
