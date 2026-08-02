@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/agent-deployment.schema.json",
+  "title": "L9 Agent Deployment Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "deployment_id",
+    "campaign_id",
+    "graph_id",
+    "required_roles",
+    "fail_closed"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "deployment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "campaign_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "required_roles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "min",
+          "max",
+          "mutation"
+        ],
+        "properties": {
+          "min": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mutation": {
+            "type": "boolean"
+          },
+          "conditional_on": {
+            "type": "string",
+            "minLength": 1
+          },
+          "independent_from": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "fail_closed": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "required": [
+        "missing_required_agent",
+        "invalid_agent_output",
+        "executor_without_synthesis",
+        "self_review",
+        "unverified_completion"
+      ],
+      "properties": {
+        "missing_required_agent": {
+          "const": true
+        },
+        "invalid_agent_output": {
+          "const": true
+        },
+        "executor_without_synthesis": {
+          "const": true
+        },
+        "self_review": {
+          "const": true
+        },
+        "unverified_completion": {
+          "const": true
+        }
+      }
+    }
+  }
+}

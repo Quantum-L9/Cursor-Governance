@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/adapter-config.schema.json",
+  "title": "L9 IDE Adapter Config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adapter_id",
+    "adapter_type",
+    "protocol_version",
+    "executable",
+    "tool_mediation_mode",
+    "direct_tool_access",
+    "autonomous_merge",
+    "supports_background_agents",
+    "supports_agent_identity",
+    "supports_lease_propagation",
+    "supports_heartbeat",
+    "supports_typed_artifacts",
+    "supports_independent_review",
+    "supports_human_gate"
+  ],
+  "properties": {
+    "adapter_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "adapter_type": {
+      "type": "string",
+      "enum": [
+        "cursor",
+        "claude-code"
+      ]
+    },
+    "protocol_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "executable": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tool_mediation_mode": {
+      "type": "string",
+      "const": "mandatory"
+    },
+    "direct_tool_access": {
+      "type": "boolean",
+      "const": false
+    },
+    "autonomous_merge": {
+      "type": "boolean",
+      "const": false
+    },
+    "supports_background_agents": {
+      "type": "boolean",
+      "const": true
+    },
+    "supports_agent_identity": {
+      "type": "boolean",
+      "const": true
+    },
+    "supports_lease_propagation": {
+      "type": "boolean",
+      "const": true
+    },
+    "supports_heartbeat": {
+      "type": "boolean",
+      "const": true
+    },
+    "supports_typed_artifacts": {
+      "type": "boolean",
+      "const": true
+    },
+    "supports_independent_review": {
+      "type": "boolean",
+      "const": true
+    },
+    "supports_human_gate": {
+      "type": "boolean",
+      "const": true
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

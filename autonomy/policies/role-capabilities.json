@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0.0",
+  "roles": {
+    "coordinator": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "campaign.inspect",
+        "graph.inspect",
+        "scheduler.request",
+        "status.inspect"
+      ]
+    },
+    "recon": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "repository.search",
+        "graphiti.read",
+        "artifact.write_recon_report"
+      ]
+    },
+    "synthesis": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "artifact.read_recon_report",
+        "artifact.write_execution_brief",
+        "graphiti.read"
+      ]
+    },
+    "executor": {
+      "mutation_allowed": true,
+      "capabilities": [
+        "repository.read",
+        "repository.write_scoped",
+        "test.run",
+        "git.diff",
+        "git.commit_local",
+        "artifact.write_execution_result"
+      ]
+    },
+    "verifier": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "diff.inspect",
+        "test.run",
+        "runtime.probe",
+        "evidence.inspect",
+        "artifact.write_verification_report"
+      ]
+    },
+    "reviewer": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "diff.inspect",
+        "test.inspect",
+        "evidence.inspect",
+        "receipt.inspect",
+        "artifact.write_review_verdict"
+      ]
+    },
+    "poller": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "pr.inspect",
+        "ci.inspect",
+        "review.inspect",
+        "artifact.write_poll_report"
+      ]
+    },
+    "failure_classifier": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "ci.inspect",
+        "test.inspect",
+        "diff.inspect",
+        "artifact.write_remediation_brief"
+      ]
+    },
+    "remediator": {
+      "mutation_allowed": true,
+      "capabilities": [
+        "repository.read",
+        "repository.write_scoped",
+        "test.run",
+        "git.diff",
+        "git.commit_local",
+        "git.push_non_force_declared_branch",
+        "artifact.write_remediation_result"
+      ]
+    },
+    "context_compiler": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "artifact.read",
+        "graphiti.read",
+        "artifact.write_context_pack"
+      ]
+    },
+    "sentinel": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "repository.read",
+        "git.inspect",
+        "graph.inspect",
+        "artifact.invalidate",
+        "campaign.suspend",
+        "artifact.write_sentinel_report"
+      ]
+    },
+    "evidence_writer": {
+      "mutation_allowed": false,
+      "capabilities": [
+        "artifact.read",
+        "receipt.append",
+        "artifact.write_evidence_receipt"
+      ]
+    }
+  },
+  "globally_forbidden_capabilities": [
+    "git.force_push",
+    "pr.merge",
+    "pr.admin_merge",
+    "secret.read",
+    "secret.write",
+    "test.weaken_for_green"
+  ]
+}

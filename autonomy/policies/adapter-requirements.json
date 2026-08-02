@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "allow_missing_executable_in_test": false,
+  "mandatory": {
+    "tool_mediation_mode": "mandatory",
+    "direct_tool_access": false,
+    "autonomous_merge": false,
+    "supports_background_agents": true,
+    "supports_agent_identity": true,
+    "supports_lease_propagation": true,
+    "supports_heartbeat": true,
+    "supports_typed_artifacts": true,
+    "supports_independent_review": true,
+    "supports_human_gate": true
+  },
+  "fail_closed_on": [
+    "adapter_protocol_mismatch",
+    "runtime_unavailable",
+    "gateway_unavailable",
+    "direct_tool_access_enabled",
+    "autonomous_merge_enabled",
+    "lease_propagation_missing",
+    "heartbeat_missing",
+    "typed_artifacts_missing",
+    "reviewer_independence_missing",
+    "human_gate_missing"
+  ]
+}

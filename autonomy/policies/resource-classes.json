@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "classes": {
+    "repository_read": {
+      "capacity": 4,
+      "mutation": false,
+      "preemptible": true
+    },
+    "repository_mutation": {
+      "capacity": 1,
+      "mutation": true,
+      "preemptible": false
+    },
+    "controller_mutation": {
+      "capacity": 1,
+      "mutation": true,
+      "preemptible": false
+    },
+    "live_runtime": {
+      "capacity": 2,
+      "mutation": false,
+      "preemptible": false
+    },
+    "poll_remote": {
+      "capacity": 3,
+      "mutation": false,
+      "preemptible": true
+    },
+    "human_gate": {
+      "capacity": 1,
+      "mutation": false,
+      "preemptible": false
+    }
+  }
+}

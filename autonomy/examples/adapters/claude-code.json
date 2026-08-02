@@ -1,0 +1,23 @@
+{
+  "adapter_id": "claude-code-local",
+  "adapter_type": "claude-code",
+  "protocol_version": "1.0.0",
+  "executable": "claude",
+  "tool_mediation_mode": "mandatory",
+  "direct_tool_access": false,
+  "autonomous_merge": false,
+  "supports_background_agents": true,
+  "supports_agent_identity": true,
+  "supports_lease_propagation": true,
+  "supports_heartbeat": true,
+  "supports_typed_artifacts": true,
+  "supports_independent_review": true,
+  "supports_human_gate": true,
+  "metadata": {
+    "database_path": ".l9/autonomy/runtime.sqlite3",
+    "task_transport": "claude-code-task",
+    "pre_tool_hook_required": true,
+    "poll_protocol": "protocol-b",
+    "merge_protocol": "human-only"
+  }
+}

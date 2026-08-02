@@ -1,0 +1,430 @@
+{
+  "schema_version": "1.0.0",
+  "actions": [
+    {
+      "id": "campaign-coordinator",
+      "role": "coordinator",
+      "kind": "work",
+      "depends_on": [],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [],
+      "completion": {
+        "artifact_kind": "CampaignStatus",
+        "required_fields": [
+          "campaign_id",
+          "state"
+        ],
+        "require_base_sha_match": true
+      },
+      "priority_weight": 10
+    },
+    {
+      "id": "context-compile-task046",
+      "role": "context_compiler",
+      "kind": "work",
+      "depends_on": [
+        "campaign-coordinator"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:odoo",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ContextPack",
+        "required_fields": [
+          "objective",
+          "authority",
+          "base_sha",
+          "allowed_paths",
+          "forbidden_paths",
+          "acceptance_criteria"
+        ],
+        "require_base_sha_match": true
+      },
+      "priority_weight": 9
+    },
+    {
+      "id": "ro-stack-inventory",
+      "role": "recon",
+      "kind": "work",
+      "depends_on": [
+        "context-compile-task046"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:stack-config",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ReconReport",
+        "required_fields": [
+          "status",
+          "feeds",
+          "evidence",
+          "impl_checklist"
+        ],
+        "require_base_sha_match": true,
+        "require_empty_blockers": false
+      },
+      "priority_weight": 8
+    },
+    {
+      "id": "ro-m0-gap",
+      "role": "recon",
+      "kind": "work",
+      "depends_on": [
+        "context-compile-task046"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:odoo",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ReconReport",
+        "required_fields": [
+          "status",
+          "feeds",
+          "evidence",
+          "impl_checklist"
+        ],
+        "require_base_sha_match": true,
+        "require_empty_blockers": false
+      },
+      "priority_weight": 10
+    },
+    {
+      "id": "ro-owner-schemas",
+      "role": "recon",
+      "kind": "work",
+      "depends_on": [
+        "context-compile-task046"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:owner-schemas",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ReconReport",
+        "required_fields": [
+          "status",
+          "feeds",
+          "evidence",
+          "impl_checklist"
+        ],
+        "require_base_sha_match": true,
+        "require_empty_blockers": false
+      },
+      "priority_weight": 9
+    },
+    {
+      "id": "ro-gate-actions",
+      "role": "recon",
+      "kind": "work",
+      "depends_on": [
+        "context-compile-task046"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:gate-actions",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ReconReport",
+        "required_fields": [
+          "status",
+          "feeds",
+          "evidence",
+          "impl_checklist"
+        ],
+        "require_base_sha_match": true,
+        "require_empty_blockers": false
+      },
+      "priority_weight": 7
+    },
+    {
+      "id": "synthesize-m0",
+      "role": "synthesis",
+      "kind": "synthesis",
+      "depends_on": [
+        "ro-stack-inventory",
+        "ro-m0-gap",
+        "ro-owner-schemas",
+        "ro-gate-actions"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [],
+      "completion": {
+        "artifact_kind": "ExecutionBrief",
+        "required_fields": [
+          "task_id",
+          "contract",
+          "base_sha",
+          "inputs",
+          "resolved_findings",
+          "conflicts",
+          "ordered_edits",
+          "parallelizable_test_work",
+          "unresolved_blockers"
+        ],
+        "require_base_sha_match": true,
+        "require_empty_blockers": true
+      },
+      "priority_weight": 10
+    },
+    {
+      "id": "execute-m0",
+      "role": "executor",
+      "kind": "work",
+      "depends_on": [
+        "synthesize-m0"
+      ],
+      "mutation": true,
+      "resource_class": "repository_mutation",
+      "claims": [
+        {
+          "key": "repo:odoo",
+          "mode": "write",
+          "exclusive": true
+        },
+        {
+          "key": "branch:feat/mothball-local-intelligence",
+          "mode": "write",
+          "exclusive": true
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ExecutionResult",
+        "required_fields": [
+          "task_id",
+          "base_sha",
+          "result_sha",
+          "changed_paths",
+          "test_results",
+          "scope_validation"
+        ],
+        "require_base_sha_match": true,
+        "require_empty_blockers": true
+      },
+      "priority_weight": 10,
+      "metadata": {
+        "operations": [
+          "edit_scoped",
+          "run_tests",
+          "commit_local"
+        ]
+      }
+    },
+    {
+      "id": "verify-m0-scope",
+      "role": "verifier",
+      "kind": "validation",
+      "depends_on": [
+        "execute-m0"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:odoo",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "VerificationReport",
+        "required_fields": [
+          "verification_type",
+          "target_sha",
+          "checks",
+          "verdict",
+          "evidence"
+        ],
+        "require_base_sha_match": false,
+        "require_empty_blockers": true
+      },
+      "priority_weight": 9
+    },
+    {
+      "id": "verify-m0-live",
+      "role": "verifier",
+      "kind": "validation",
+      "depends_on": [
+        "execute-m0",
+        "ro-stack-inventory",
+        "ro-gate-actions"
+      ],
+      "mutation": false,
+      "resource_class": "live_runtime",
+      "claims": [
+        {
+          "key": "docker:five-service",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "VerificationReport",
+        "required_fields": [
+          "verification_type",
+          "target_sha",
+          "checks",
+          "verdict",
+          "evidence",
+          "live_five_service_stack_exercised"
+        ],
+        "require_base_sha_match": false,
+        "require_empty_blockers": true
+      },
+      "priority_weight": 10
+    },
+    {
+      "id": "review-m0-independent",
+      "role": "reviewer",
+      "kind": "validation",
+      "depends_on": [
+        "verify-m0-scope",
+        "verify-m0-live"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:odoo",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "ReviewVerdict",
+        "required_fields": [
+          "authority_compliance",
+          "scope_compliance",
+          "invariant_preservation",
+          "correctness",
+          "security",
+          "verdict",
+          "findings"
+        ],
+        "require_base_sha_match": false,
+        "require_empty_blockers": false
+      },
+      "independent_from": [
+        "execute-m0"
+      ],
+      "priority_weight": 10
+    },
+    {
+      "id": "poll-m0",
+      "role": "poller",
+      "kind": "poll",
+      "depends_on": [
+        "review-m0-independent"
+      ],
+      "mutation": false,
+      "resource_class": "poll_remote",
+      "claims": [
+        {
+          "key": "pr:M0",
+          "mode": "observe",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "PollReport",
+        "required_fields": [
+          "pr_number",
+          "head_sha",
+          "checks",
+          "review_threads",
+          "terminal_state"
+        ],
+        "require_base_sha_match": false,
+        "require_empty_blockers": false
+      },
+      "conditional_on": "review-m0-independent",
+      "priority_weight": 8
+    },
+    {
+      "id": "base-sha-sentinel",
+      "role": "sentinel",
+      "kind": "validation",
+      "depends_on": [
+        "campaign-coordinator"
+      ],
+      "mutation": false,
+      "resource_class": "repository_read",
+      "claims": [
+        {
+          "key": "repo:odoo",
+          "mode": "read",
+          "exclusive": false
+        }
+      ],
+      "completion": {
+        "artifact_kind": "SentinelReport",
+        "required_fields": [
+          "campaign_id",
+          "expected_base_sha",
+          "observed_base_sha",
+          "scope_drift",
+          "policy_conflicts",
+          "decision"
+        ],
+        "require_base_sha_match": false,
+        "require_empty_blockers": false
+      },
+      "priority_weight": 10
+    },
+    {
+      "id": "evidence-writer",
+      "role": "evidence_writer",
+      "kind": "work",
+      "depends_on": [
+        "review-m0-independent",
+        "base-sha-sentinel"
+      ],
+      "mutation": false,
+      "resource_class": "controller_mutation",
+      "claims": [],
+      "completion": {
+        "artifact_kind": "EvidenceReceipt",
+        "required_fields": [
+          "campaign_id",
+          "graph_id",
+          "event_type",
+          "artifact_hash",
+          "previous_receipt_hash",
+          "receipt_hash"
+        ],
+        "require_base_sha_match": false,
+        "require_empty_blockers": true
+      },
+      "priority_weight": 7
+    }
+  ]
+}

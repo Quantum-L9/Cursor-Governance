@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/agent-contract.schema.json",
+  "title": "L9 Adapter Agent Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "campaign_id",
+    "graph_id",
+    "action_id",
+    "agent_id",
+    "lease_id",
+    "capability_id",
+    "role",
+    "mutation",
+    "base_sha",
+    "expires_at",
+    "objective",
+    "authority",
+    "scope",
+    "dependencies",
+    "completion",
+    "runtime_protocol",
+    "stop_conditions"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "campaign_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lease_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capability_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mutation": {
+      "type": "boolean"
+    },
+    "base_sha": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expires_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_capabilities",
+        "globally_forbidden_capabilities",
+        "allowed_operations",
+        "forbidden_operations"
+      ],
+      "properties": {
+        "allowed_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "globally_forbidden_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowed_operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbidden_operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "campaign_allowed_paths",
+        "campaign_forbidden_paths",
+        "action_allowed_paths",
+        "claims",
+        "resource_class"
+      ],
+      "properties": {
+        "campaign_allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "campaign_forbidden_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "action_allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "claims": {
+          "type": "array"
+        },
+        "resource_class": {
+          "type": "string"
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_ids",
+        "artifact_ids"
+      ],
+      "properties": {
+        "action_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "artifact_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "required_fields",
+        "require_base_sha_match",
+        "require_empty_blockers"
+      ],
+      "properties": {
+        "artifact_kind": {
+          "type": "string"
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "require_base_sha_match": {
+          "type": "boolean"
+        },
+        "require_empty_blockers": {
+          "type": "boolean"
+        }
+      }
+    },
+    "runtime_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acknowledge_before_tools",
+        "mediate_every_tool_call",
+        "heartbeat_required",
+        "submit_typed_artifact",
+        "natural_language_completion_is_invalid",
+        "lease_transfer_forbidden"
+      ],
+      "properties": {
+        "acknowledge_before_tools": {
+          "type": "boolean",
+          "const": true
+        },
+        "mediate_every_tool_call": {
+          "type": "boolean",
+          "const": true
+        },
+        "heartbeat_required": {
+          "type": "boolean",
+          "const": true
+        },
+        "submit_typed_artifact": {
+          "type": "boolean",
+          "const": true
+        },
+        "natural_language_completion_is_invalid": {
+          "type": "boolean",
+          "const": true
+        },
+        "lease_transfer_forbidden": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.dev/schemas/conformance-report.schema.json",
+  "title": "L9 Adapter Conformance Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adapter_id",
+    "adapter_type",
+    "protocol_version",
+    "status",
+    "checks"
+  ],
+  "properties": {
+    "adapter_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "adapter_type": {
+      "type": "string",
+      "enum": [
+        "cursor",
+        "claude-code"
+      ]
+    },
+    "protocol_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "check_id",
+          "passed",
+          "message",
+          "blocking"
+        ],
+        "properties": {
+          "check_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "blocking": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "config_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "passed": {
+      "type": "boolean"
+    }
+  }
+}
