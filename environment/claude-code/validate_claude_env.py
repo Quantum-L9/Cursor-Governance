@@ -204,6 +204,22 @@ def check_skill_activation(failures: list[str]) -> None:
         )
 
 
+def check_memory_enforcement(failures: list[str]) -> None:
+    script = HERE / "validate_memory_enforcement.py"
+    if not script.is_file():
+        return
+    result = subprocess.run(
+        [sys.executable, str(script)], capture_output=True, text=True, check=False
+    )
+    if result.returncode == 0:
+        print("  OK: memory enforcement contract valid and wired")
+    else:
+        _fail(
+            "memory enforcement validation failed:\n" + result.stdout + result.stderr,
+            failures,
+        )
+
+
 def main() -> int:
     print("=== Claude Code environment — structural validation ===")
     print(f"  root: {HERE}\n")
@@ -215,6 +231,7 @@ def main() -> int:
     check_setup_linux_sandbox_hygiene(failures)
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
+    check_memory_enforcement(failures)
     print()
     if failures:
         print(f"RESULT: FAIL — {len(failures)} issue(s)")
