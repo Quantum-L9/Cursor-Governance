@@ -189,5 +189,43 @@ class MemoryGateTests(unittest.TestCase):
         )
 
 
+class WorkspaceRootTests(unittest.TestCase):
+    """workspace_root() must anchor .l9/memory consistently for the gate (which
+    gets CLAUDE_PROJECT_DIR) and the CLI (which often does not, run from a subdir)."""
+
+    def setUp(self) -> None:
+        self._prev_project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
+        self._prev_cwd = os.getcwd()
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        (self.root / ".l9" / "memory").mkdir(parents=True)
+        self.subdir = self.root / "repo" / "nested"
+        self.subdir.mkdir(parents=True)
+
+    def tearDown(self) -> None:
+        os.chdir(self._prev_cwd)
+        if self._prev_project_dir is None:
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        else:
+            os.environ["CLAUDE_PROJECT_DIR"] = self._prev_project_dir
+
+    def test_env_var_wins(self) -> None:
+        os.environ["CLAUDE_PROJECT_DIR"] = str(self.root / "explicit")
+        os.chdir(self.subdir)
+        self.assertEqual(st.workspace_root(), (self.root / "explicit").resolve())
+
+    def test_walks_up_to_nearest_l9_memory_when_env_unset(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        os.chdir(self.subdir)
+        # No .l9/memory in the subdir chain until self.root — so a lock acquired
+        # here resolves the same state root the gate uses at the session root.
+        self.assertEqual(st.workspace_root(), self.root)
+
+    def test_falls_back_to_cwd_when_no_l9_memory_ancestor(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        bare = Path(tempfile.mkdtemp()).resolve()
+        os.chdir(bare)
+        self.assertEqual(st.workspace_root(), bare)
+
+
 if __name__ == "__main__":
     unittest.main()

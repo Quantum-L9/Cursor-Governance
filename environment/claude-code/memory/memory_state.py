@@ -27,7 +27,25 @@ def load_contract() -> dict[str, Any]:
 
 
 def workspace_root() -> Path:
-    return Path(os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())).resolve()
+    """Resolve the session workspace root that anchors ``.l9/memory``.
+
+    ``CLAUDE_PROJECT_DIR`` (injected by the Claude Code harness for hooks and the
+    PreToolUse gate) always wins. When it is unset — e.g. the ``memory_lock.py``
+    CLI invoked from a Bash tool after ``cd`` into a repo subdirectory — fall back
+    to walking up from the cwd to the nearest ancestor that already carries a
+    ``.l9/memory`` tree. This keeps the CLI's receipt/lock/task-signature anchor
+    identical to the gate's, so a lock acquired from a subdir is honored by the
+    gate (and vice versa) instead of silently pointing at a different state root.
+    If no ancestor has ``.l9/memory``, preserve the prior behavior (cwd).
+    """
+    env = os.environ.get("CLAUDE_PROJECT_DIR")
+    if env:
+        return Path(env).resolve()
+    cwd = Path.cwd().resolve()
+    for base in (cwd, *cwd.parents):
+        if (base / ".l9" / "memory").is_dir():
+            return base
+    return cwd
 
 
 def state_root(contract: dict[str, Any]) -> Path:
