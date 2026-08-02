@@ -136,6 +136,11 @@ class Action:
         metadata = value.get("metadata", {})
         if not isinstance(metadata, Mapping):
             raise ContractError(f"Action {action_id!r} metadata must be an object")
+        if "operations" in metadata:
+            require_string_list(
+                metadata.get("operations"),
+                f"Action {action_id!r} metadata.operations",
+            )
         return cls(
             id=action_id,
             role=role,
@@ -227,9 +232,20 @@ class CampaignAuthorization:
             )
         if self.validation.get("independent_review_required") is not True:
             raise ContractError("Campaign must require independent review")
+        if self.validation.get("human_merge_required") is not True:
+            raise ContractError("Campaign must require human-owned merge")
         base_sha = self.base_state.get("commit_sha")
         if not isinstance(base_sha, str) or not base_sha.strip():
             raise ContractError("Campaign base_state.commit_sha must be resolved before execution")
+        normalized_sha = base_sha.strip().lower()
+        if normalized_sha.startswith("replace_with") or "placeholder" in normalized_sha:
+            raise ContractError(
+                "Campaign base_state.commit_sha is still a placeholder; resolve the base SHA"
+            )
+        if len(normalized_sha) < 7 or any(ch not in "0123456789abcdef" for ch in normalized_sha):
+            raise ContractError(
+                "Campaign base_state.commit_sha must be a resolved git SHA (hex, ≥7 chars)"
+            )
         max_mutation = self.budgets.get("max_mutation_agents")
         if not isinstance(max_mutation, int) or max_mutation < 1:
             raise ContractError("budgets.max_mutation_agents must be a positive integer")

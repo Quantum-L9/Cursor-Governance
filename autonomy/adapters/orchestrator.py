@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
@@ -10,6 +9,7 @@ from autonomy.adapters.conformance import AdapterConformance
 from autonomy.adapters.contract_renderer import render_agent_contract
 from autonomy.adapters.protocol import AdapterConfig
 from autonomy.errors import PolicyViolation
+from autonomy.io import load_json
 from autonomy.runtime.engine import AutonomyRuntime
 from autonomy.runtime.store import canonical_dump
 from autonomy.runtime.timeutil import utc_now_text
@@ -20,10 +20,13 @@ class AdapterOrchestrator:
         self,
         runtime: AutonomyRuntime,
         repository_root: str | Path = ".",
+        requirements: Mapping[str, Any] | None = None,
     ) -> None:
         self.runtime = runtime
         self.repository_root = Path(repository_root).resolve()
-        self.requirements = self._load_requirements()
+        self.requirements = (
+            dict(requirements) if requirements is not None else self._load_requirements()
+        )
         self.conformance = AdapterConformance(
             self.requirements,
             self.repository_root,
@@ -356,8 +359,7 @@ class AdapterOrchestrator:
 
     def _load_requirements(self) -> dict[str, Any]:
         path = self.repository_root / "autonomy/policies/adapter-requirements.json"
-        with path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+        return load_json(path, root=self.repository_root)
 
     def _initialize_extension_tables(self) -> None:
         with self.runtime.store.connect() as connection:

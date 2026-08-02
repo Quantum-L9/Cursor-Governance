@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import Any
 
+from autonomy.errors import PolicyViolation
 from autonomy.runtime.leases import LeaseManager
 from autonomy.runtime.receipts import ReceiptChain
 from autonomy.runtime.store import RuntimeStore, canonical_dump
@@ -40,7 +41,7 @@ class CapabilityGateway:
         try:
             lease = self.leases.get(lease_id)
             self.leases.assert_active(lease)
-        except Exception as exc:
+        except (KeyError, LookupError, ValueError, RuntimeError, PolicyViolation) as exc:
             decision = AuthorizationDecision(
                 allowed=False,
                 code="LEASE_INVALID",
@@ -245,7 +246,17 @@ class CapabilityGateway:
                 capability=capability,
                 resource=resource,
             )
-        normalized = normalize_path(resource)
+        try:
+            normalized = normalize_path(resource)
+        except ValueError as exc:
+            return AuthorizationDecision(
+                allowed=False,
+                code="INVALID_PATH",
+                message=str(exc),
+                lease_id=lease_id,
+                capability=capability,
+                resource=resource,
+            )
         forbidden = campaign["scope"]["forbidden_paths"]
         allowed = campaign["scope"]["allowed_paths"]
         if any(path_matches(pattern, normalized) for pattern in forbidden):
@@ -367,9 +378,43 @@ class CapabilityGateway:
         decision: AuthorizationDecision,
         metadata: Mapping[str, Any] | None,
     ) -> None:
-        # Unknown or invalid leases cannot be associated safely with a
-        # campaign receipt chain. The caller still receives a hard denial.
-        return None
+        # Persist denials for unknown/invalid leases so audits see the attempt.
+        # Campaign/action are empty because the lease cannot be resolved safely.
+        decision_id = f"decision-{uuid.uuid4().hex}"
+        now = utc_now_text()
+        with self.store.transaction() as connection:
+            connection.execute(
+                """
+                INSERT INTO tool_decisions (
+                    decision_id,
+                    campaign_id,
+                    action_id,
+                    lease_id,
+                    agent_id,
+                    capability,
+                    resource,
+                    allowed,
+                    code,
+                    message,
+                    metadata_json,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    decision_id,
+                    "",
+                    "",
+                    lease_id,
+                    agent_id,
+                    capability,
+                    resource,
+                    int(decision.allowed),
+                    decision.code,
+                    decision.message,
+                    canonical_dump(dict(metadata or {})),
+                    now,
+                ),
+            )
 
 
 def normalize_path(value: str) -> str:

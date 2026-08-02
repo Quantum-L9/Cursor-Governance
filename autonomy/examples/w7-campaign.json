@@ -9,7 +9,6 @@
   },
   "scope": {
     "repositories": [
-      "cryptoxdog/IB-Odoo_19",
       "Quantum-L9/Cursor-Governance"
     ],
     "allowed_paths": [
@@ -66,9 +65,9 @@
     "human_merge_required": true
   },
   "base_state": {
-    "repository": "cryptoxdog/IB-Odoo_19",
-    "branch": "feat/mothball-local-intelligence",
-    "commit_sha": "REPLACE_WITH_RESOLVED_BASE_SHA"
+    "repository": "Quantum-L9/Cursor-Governance",
+    "branch": "main",
+    "commit_sha": "0000000"
   },
   "revocation": {
     "kill_switch_file": ".l9/autonomy/revoke",

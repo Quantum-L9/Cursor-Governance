@@ -43,29 +43,17 @@ class Wave3Tests(unittest.TestCase):
             deployment_payload=self.deployment_payload,
             graph_payload=self.graph_payload,
         )
+        # Override in-memory only — do not mutate tracked policy files (pytest-xdist safe).
+        requirements = load_json(ROOT / "autonomy/policies/adapter-requirements.json")
+        requirements["allow_missing_executable_in_test"] = True
         self.orchestrator = AdapterOrchestrator(
             self.runtime,
             repository_root=ROOT,
+            requirements=requirements,
         )
         self.campaign_id = self.campaign_payload["campaign_id"]
-        requirements_path = ROOT / "autonomy/policies/adapter-requirements.json"
-        self.original_requirements = requirements_path.read_text(encoding="utf-8")
-        requirements = load_json(requirements_path)
-        requirements["allow_missing_executable_in_test"] = True
-        requirements_path.write_text(
-            __import__("json").dumps(requirements, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        # Reload orchestrator requirements after mutation.
-        self.orchestrator = AdapterOrchestrator(
-            self.runtime,
-            repository_root=ROOT,
-        )
 
     def tearDown(self) -> None:
-        (ROOT / "autonomy/policies/adapter-requirements.json").write_text(
-            self.original_requirements, encoding="utf-8"
-        )
         self.tempdir.cleanup()
 
     def register_cursor(self) -> str:

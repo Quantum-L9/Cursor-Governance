@@ -130,6 +130,19 @@ class GraphLinter:
         for action in action_by_id.values():
             if action.role is not Role.EXECUTOR:
                 continue
+            missing = [
+                dependency for dependency in action.depends_on if dependency not in action_by_id
+            ]
+            if missing:
+                findings.append(
+                    Finding(
+                        "PIPE-DEP-MISSING",
+                        "ERROR",
+                        "Action depends on unknown action id(s): " + ", ".join(sorted(missing)),
+                        action.id,
+                    )
+                )
+                continue
             dependencies = [action_by_id[dependency] for dependency in action.depends_on]
             has_synthesis = any(dependency.role is Role.SYNTHESIS for dependency in dependencies)
             if not has_synthesis:
@@ -151,6 +164,18 @@ class GraphLinter:
         findings: list[Finding] = []
         for action in action_by_id.values():
             if action.role is not Role.REVIEWER:
+                continue
+            missing = [source for source in action.independent_from if source not in action_by_id]
+            if missing:
+                findings.append(
+                    Finding(
+                        "PIPE-INDEP-MISSING",
+                        "ERROR",
+                        "independent_from references unknown action id(s): "
+                        + ", ".join(sorted(missing)),
+                        action.id,
+                    )
+                )
                 continue
             executor_dependencies = {
                 source
@@ -186,6 +211,19 @@ class GraphLinter:
         for action in action_by_id.values():
             if action.role is not Role.REVIEWER:
                 continue
+            missing = [
+                dependency for dependency in action.depends_on if dependency not in action_by_id
+            ]
+            if missing:
+                findings.append(
+                    Finding(
+                        "PIPE-DEP-MISSING",
+                        "ERROR",
+                        "Action depends on unknown action id(s): " + ", ".join(sorted(missing)),
+                        action.id,
+                    )
+                )
+                continue
             dependencies = [action_by_id[dependency] for dependency in action.depends_on]
             verifier_count = sum(dependency.role is Role.VERIFIER for dependency in dependencies)
             if verifier_count < 1:
@@ -211,7 +249,23 @@ class GraphLinter:
                 "admin_merge",
                 "force_push",
             }
-            declared_operations = set(action.metadata.get("operations", []))
+            raw_operations = action.metadata.get("operations", [])
+            if raw_operations in (None, []):
+                declared_operations: set[str] = set()
+            elif not isinstance(raw_operations, list) or any(
+                not isinstance(item, str) for item in raw_operations
+            ):
+                findings.append(
+                    Finding(
+                        "PIPE-OPS-TYPE",
+                        "ERROR",
+                        "metadata.operations must be a list of strings",
+                        action.id,
+                    )
+                )
+                continue
+            else:
+                declared_operations = set(raw_operations)
             unsafe = forbidden & declared_operations
             if unsafe:
                 findings.append(

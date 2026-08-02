@@ -875,7 +875,7 @@ cat > "$ROOT/autonomy/examples/w7-campaign.json" <<'JSON'
   },
   "scope": {
     "repositories": [
-      "cryptoxdog/IB-Odoo_19",
+      "Quantum-L9/Cursor-Governance",
       "Quantum-L9/Cursor-Governance"
     ],
     "allowed_paths": [
@@ -932,9 +932,9 @@ cat > "$ROOT/autonomy/examples/w7-campaign.json" <<'JSON'
     "human_merge_required": true
   },
   "base_state": {
-    "repository": "cryptoxdog/IB-Odoo_19",
-    "branch": "feat/mothball-local-intelligence",
-    "commit_sha": "REPLACE_WITH_RESOLVED_BASE_SHA"
+    "repository": "Quantum-L9/Cursor-Governance",
+    "branch": "main",
+    "commit_sha": "0000000"
   },
   "revocation": {
     "kill_switch_file": ".l9/autonomy/revoke",
@@ -2525,7 +2525,7 @@ PY
 echo "Wave 1 installed under: $ROOT/autonomy"
 echo
 echo "Next steps:"
-echo "  1. Replace REPLACE_WITH_RESOLVED_BASE_SHA in autonomy/examples/w7-campaign.json"
+echo "  1. Replace 0000000 in autonomy/examples/w7-campaign.json"
 echo "  2. Run: python -m unittest discover -s autonomy/tests -v"
 echo "  3. Compile and lint using autonomy/README.md"
 
