@@ -1,7 +1,7 @@
 {
   "schema": "l9.rules-corpus-audit/v1",
-  "generated_utc": "2026-08-02T13:06:10Z",
-  "manifest_digest": "sha256:bb4e75459cc3630ccc0088159c74a3847bef5ea1b12d30b3ce4fe3b8bf0aa949",
+  "generated_utc": "2026-08-02T14:10:48Z",
+  "manifest_digest": "sha256:587ff4b080e5578e508545b95c93116ce680235cd03870eeb05b7a5615b66680",
   "summary": {
     "total_rules": 58,
     "always_rules": 38,

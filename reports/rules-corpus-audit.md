@@ -1,6 +1,6 @@
 # Global rules corpus audit
 
-Generated: `2026-08-02T13:06:10Z`
+Generated: `2026-08-02T14:10:48Z`
 
 ## Summary
 
