@@ -188,7 +188,6 @@ def check_memory_identity_distinct(failures: list[str]) -> None:
         print(f"  OK: memory identity distinct from Cursor (agent_id={agent_id!r})")
 
 
-
 def check_skill_activation(failures: list[str]) -> None:
     script = HERE / "validate_skill_activation.py"
     if not script.is_file():
@@ -203,6 +202,7 @@ def check_skill_activation(failures: list[str]) -> None:
             "proactive skill activation validation failed:\n" + result.stdout + result.stderr,
             failures,
         )
+
 
 def main() -> int:
     print("=== Claude Code environment — structural validation ===")
