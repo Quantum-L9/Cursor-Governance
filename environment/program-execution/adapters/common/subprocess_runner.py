@@ -13,6 +13,7 @@ from pathlib import Path
 
 _MAX_OUTPUT = 1_000_000
 _SECRET_MARKERS = ("TOKEN", "SECRET", "PASSWORD", "KEY", "CREDENTIAL")
+_SHA256_PREFIX = "sha256:"
 
 
 @dataclass(frozen=True)
@@ -50,7 +51,7 @@ def _fingerprint_environment(environment: Mapping[str, str]) -> str:
     visible["platform"] = platform.platform()
     visible["python"] = platform.python_version()
     payload = "\n".join(f"{key}={visible[key]}" for key in sorted(visible))
-    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return _SHA256_PREFIX + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def run_argv(
@@ -101,8 +102,8 @@ def run_argv(
         exit_code=process.returncode,
         stdout=stdout,
         stderr=stderr,
-        stdout_digest="sha256:" + hashlib.sha256(stdout.encode()).hexdigest(),
-        stderr_digest="sha256:" + hashlib.sha256(stderr.encode()).hexdigest(),
+        stdout_digest=_SHA256_PREFIX + hashlib.sha256(stdout.encode()).hexdigest(),
+        stderr_digest=_SHA256_PREFIX + hashlib.sha256(stderr.encode()).hexdigest(),
         duration_seconds=round(duration, 6),
         timed_out=timed_out,
         environment_fingerprint=_fingerprint_environment(env),

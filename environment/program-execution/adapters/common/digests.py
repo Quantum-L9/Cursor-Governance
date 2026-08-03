@@ -18,8 +18,11 @@ def canonical_json(value: Any) -> str:
     )
 
 
+SHA256_PREFIX = "sha256:"
+
+
 def sha256_bytes(value: bytes) -> str:
-    return "sha256:" + hashlib.sha256(value).hexdigest()
+    return SHA256_PREFIX + hashlib.sha256(value).hexdigest()
 
 
 def digest_object(value: Any) -> str:
@@ -30,9 +33,9 @@ def normalize_digest(value: str) -> str:
     lowered = value.strip().lower()
     if not _DIGEST.fullmatch(lowered):
         raise ValueError(f"invalid SHA-256 digest: {value!r}")
-    if lowered.startswith("sha256:"):
+    if lowered.startswith(SHA256_PREFIX):
         return lowered
-    return "sha256:" + lowered
+    return SHA256_PREFIX + lowered
 
 
 def verify_embedded_digest(

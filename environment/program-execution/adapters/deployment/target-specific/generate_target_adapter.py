@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 from validate_target_adapter import validate
+
+_SAFE_ADAPTER_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
 
 MODULE_TEMPLATE = """from __future__ import annotations
 
@@ -110,7 +113,15 @@ def generate(spec_path: Path, output_root: Path) -> Path:
     if errors:
         raise ValueError("; ".join(errors))
     spec: dict[str, Any] = json.loads(spec_path.read_text(encoding="utf-8"))
-    target = output_root.resolve() / spec["adapter_id"]
+    adapter_id = str(spec["adapter_id"])
+    if not _SAFE_ADAPTER_ID.fullmatch(adapter_id):
+        raise ValueError(f"unsafe adapter_id: {adapter_id!r}")
+    output_root = output_root.resolve()
+    target = (output_root / adapter_id).resolve()
+    try:
+        target.relative_to(output_root)
+    except ValueError as exc:
+        raise ValueError(f"adapter path escapes output root: {target}") from exc
     target.mkdir(parents=True, exist_ok=False)
 
     import yaml

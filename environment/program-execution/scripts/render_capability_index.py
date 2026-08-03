@@ -10,14 +10,28 @@ def render(root: Path) -> dict[str, object]:
     registry = yaml.safe_load(
         (root / "registry/EXECUTION_ADAPTER_REGISTRY.yaml").read_text(encoding="utf-8")
     )
-    index: dict[str, list[str]] = {}
+    entries: list[dict[str, object]] = []
     for entry in registry.get("adapters") or []:
         descriptor = yaml.safe_load((root / str(entry["descriptor"])).read_text(encoding="utf-8"))
-        for action in descriptor["capabilities"]["actions"]:
-            index.setdefault(str(action), []).append(str(entry["adapter_id"]))
+        capabilities = descriptor.get("capabilities") or {}
+        status = descriptor.get("status") or {}
+        entries.append(
+            {
+                "adapter_id": str(entry["adapter_id"]),
+                "adapter_kind": str(
+                    entry.get("adapter_kind") or descriptor.get("adapter_kind") or "unknown"
+                ),
+                "target_kinds": list(capabilities.get("target_kinds") or []),
+                "actions": list(capabilities.get("actions") or []),
+                "default_status": str(
+                    status.get("default") or entry.get("status") or "conditional"
+                ),
+            }
+        )
     return {
         "schema": "program-execution-adapter.capability-index.v1",
-        "actions": {key: sorted(value) for key, value in sorted(index.items())},
+        "generated_from": "EXECUTION_ADAPTER_REGISTRY.yaml",
+        "entries": entries,
     }
 
 

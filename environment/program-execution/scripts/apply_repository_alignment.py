@@ -98,17 +98,29 @@ def _append_once(path: Path, marker: str, block: str) -> bool:
     return True
 
 
+def _resolve_under_root(root: Path, relative: str) -> Path:
+    candidate = Path(relative)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise ValueError(f"unsafe relative path: {relative!r}")
+    path = (root / candidate).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"path escapes repository root: {relative}") from exc
+    return path
+
+
 def apply(repository_root: Path) -> list[str]:
     root = repository_root.expanduser().resolve()
     changed: list[str] = []
     for relative, block in BLOCKS.items():
-        path = root / relative
+        path = _resolve_under_root(root, relative)
         if not path.is_file():
             raise FileNotFoundError(path)
         marker = block.splitlines()[1]
         if _append_once(path, marker, block):
             changed.append(relative)
-    makefile = root / "Makefile"
+    makefile = _resolve_under_root(root, "Makefile")
     if not makefile.is_file():
         raise FileNotFoundError(makefile)
     if _append_once(

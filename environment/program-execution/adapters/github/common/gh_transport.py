@@ -30,9 +30,23 @@ class GhTransport:
         *,
         method: str = "GET",
         fields: dict[str, str] | None = None,
+        json_body: dict[str, Any] | None = None,
         timeout_seconds: int = 120,
     ) -> Any:
+        if fields is not None and json_body is not None:
+            raise ValueError("pass fields or json_body, not both")
         argv = ["api", endpoint, "--method", method]
+        if json_body is not None:
+            argv.extend(["--input", "-"])
+            result = run_argv(
+                ["gh", *argv],
+                cwd=self.cwd,
+                timeout_seconds=timeout_seconds,
+                stdin=json.dumps(json_body),
+            )
+            if result.exit_code != 0:
+                raise RuntimeError(result.stderr or "gh command failed")
+            return json.loads(result.stdout) if result.stdout.strip() else None
         for key, value in sorted((fields or {}).items()):
             argv.extend(["-f", f"{key}={value}"])
         return self.json(argv, timeout_seconds)

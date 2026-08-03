@@ -69,7 +69,7 @@ class BaseExecutionAdapter:
         self,
         context: ProbeContext,
         status: str,
-        evidence: list[dict[str, Any]],
+        evidence: list[dict[str, Any]],  # noqa: ARG002 — override hook signature
     ) -> tuple[str, ...]:
         if status != "PASS":
             return ()
@@ -151,7 +151,7 @@ class BaseExecutionAdapter:
             evidence=[{"type": "dispatch_record", "dispatch_id": dispatch_id}],
         )
 
-    def _dispatch_record(self, record: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    def _dispatch_record(self, record: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:  # noqa: ARG002
         return "RUNNING", []
 
     def dispatch(self, prepared: Mapping[str, Any]) -> LifecycleReceipt:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+from adapters.common.errors import AdapterFailure
 from scripts.router import route_contract
 
 
@@ -22,7 +23,7 @@ class RoutingTests(unittest.TestCase):
 
     def test_dormant_chatgpt_is_not_selected(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        with self.assertRaises(Exception):
+        with self.assertRaises(AdapterFailure):
             route_contract(
                 {
                     "action_class": "read_only_architecture_or_artifact_work",

@@ -60,7 +60,10 @@ class GitHubChecksAdapter(BaseExecutionAdapter):
     def _dispatch_record(self, record: dict[str, Any]):
         contract = record["contract"]
         actions = list(contract.get("requested_actions") or [])
-        if actions == ["read_checks"]:
+        if len(actions) != 1:
+            raise ValueError("exactly one checks action is required")
+        action = actions[0]
+        if action == "read_checks":
             module = load_module(
                 Path(__file__).with_name("status_reader.py"),
                 "pes_check_status_reader",
@@ -71,7 +74,7 @@ class GitHubChecksAdapter(BaseExecutionAdapter):
                 str(contract["candidate_sha"]),
             )
             approval_id = "READ_ONLY"
-        elif actions == ["publish_check"]:
+        elif action == "publish_check":
             approval = require_exact_approval(contract, "publish_check")
             module = load_module(
                 Path(__file__).with_name("check_publisher.py"),
@@ -87,9 +90,9 @@ class GitHubChecksAdapter(BaseExecutionAdapter):
         )
         record["result"] = mapper.remote_receipt(
             contract,
-            action=actions[0],
+            action=action,
             approval_id=approval_id,
             result=result or {},
-            evidence=[{"type": "github_checks", "action": actions[0]}],
+            evidence=[{"type": "github_checks", "action": action}],
         )
-        return "PASS", [{"type": "github_checks", "action": actions[0]}]
+        return "PASS", [{"type": "github_checks", "action": action}]

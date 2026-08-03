@@ -34,26 +34,38 @@ def _allowed_actions(value: Any) -> set[str]:
     return set()
 
 
+def _require_field(
+    raw: dict[str, Any], *keys: str, code: CanonicalErrorCode, detail: str, reason: str
+) -> str:
+    for key in keys:
+        value = raw.get(key)
+        if isinstance(value, str) and value:
+            return value
+    raise AdapterFailure(code, detail, reason)
+
+
 def validate_contract(
     contract: Mapping[str, Any],
     *,
     expected_program_lock_digest: str | None = None,
 ) -> ContractBinding:
     raw = dict(contract)
-    task_id = raw.get("task_id") or raw.get("id")
-    if not isinstance(task_id, str) or not task_id:
-        raise AdapterFailure(
-            CanonicalErrorCode.VALIDATION_FAILURE,
-            "Rendered Contract is missing task_id",
-            "CONTRACT_TASK_ID_MISSING",
-        )
-    program_digest = raw.get("program_lock_digest") or raw.get("program_digest")
-    if not isinstance(program_digest, str):
-        raise AdapterFailure(
-            CanonicalErrorCode.PROGRAM_LOCK_STALE,
-            "Rendered Contract is missing Program Lock digest",
-            "PROGRAM_DIGEST_MISSING",
-        )
+    task_id = _require_field(
+        raw,
+        "task_id",
+        "id",
+        code=CanonicalErrorCode.VALIDATION_FAILURE,
+        detail="Rendered Contract is missing task_id",
+        reason="CONTRACT_TASK_ID_MISSING",
+    )
+    program_digest = _require_field(
+        raw,
+        "program_lock_digest",
+        "program_digest",
+        code=CanonicalErrorCode.PROGRAM_LOCK_STALE,
+        detail="Rendered Contract is missing Program Lock digest",
+        reason="PROGRAM_DIGEST_MISSING",
+    )
     normalized_program = normalize_digest(program_digest)
     if expected_program_lock_digest:
         expected = normalize_digest(expected_program_lock_digest)
@@ -63,13 +75,14 @@ def validate_contract(
                 "Rendered Contract does not match the active Program Lock",
                 "PROGRAM_DIGEST_MISMATCH",
             )
-    contract_digest = raw.get("rendered_contract_digest") or raw.get("contract_digest")
-    if not isinstance(contract_digest, str):
-        raise AdapterFailure(
-            CanonicalErrorCode.VALIDATION_FAILURE,
-            "Rendered Contract digest is missing",
-            "CONTRACT_DIGEST_MISSING",
-        )
+    contract_digest = _require_field(
+        raw,
+        "rendered_contract_digest",
+        "contract_digest",
+        code=CanonicalErrorCode.VALIDATION_FAILURE,
+        detail="Rendered Contract digest is missing",
+        reason="CONTRACT_DIGEST_MISSING",
+    )
     normalized_contract = normalize_digest(contract_digest)
     if "contract_digest" in raw:
         body = dict(raw)

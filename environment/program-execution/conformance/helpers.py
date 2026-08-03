@@ -7,6 +7,8 @@ from adapters.common.digests import digest_object
 PROGRAM_DIGEST = "sha256:" + "1" * 64
 BASE_SHA = "2" * 40
 CANDIDATE_SHA = "3" * 40
+WORKTREE_PATH = "worktrees/program-task-001"
+ATTEMPT_RECEIPT_PATH = "artifacts/attempt-receipt.json"
 
 
 def valid_contract(
@@ -25,7 +27,7 @@ def valid_contract(
         "objective": "Exercise the adapter contract.",
         "requested_actions": requested,
         "allowed_actions": allowed,
-        "authorization_ceiling": {action: True for action in allowed},
+        "authorization_ceiling": dict.fromkeys(allowed, True),
         "acceptance_obligation_ids": [],
         "writable_paths": ["src/**"],
         "validation_commands": [["python3", "-V"]],
@@ -39,10 +41,10 @@ def valid_contract(
         "source_contract_digest": "sha256:" + "4" * 64,
         "base_sha": BASE_SHA,
         "branch": "program/task-001",
-        "worktree": "/tmp/program-task-001",
+        "worktree": WORKTREE_PATH,
         "lease_id": "LEASE-001",
         "attempt_number": 1,
-        "attempt_receipt_path": "/tmp/attempt-receipt.json",
+        "attempt_receipt_path": ATTEMPT_RECEIPT_PATH,
         "action_class": "read_only_architecture_or_artifact_work",
         "target_kind": "git_repository",
     }

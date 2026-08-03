@@ -7,16 +7,23 @@ from .models import CapabilityReceipt, LifecycleReceipt, ProbeContext
 
 
 class ExecutionAdapter(Protocol):
-    def probe(self, context: ProbeContext) -> CapabilityReceipt: ...
+    def probe(self, context: ProbeContext) -> CapabilityReceipt:
+        pass
 
-    def prepare(self, contract: Mapping[str, Any]) -> LifecycleReceipt: ...
+    def prepare(self, contract: Mapping[str, Any]) -> LifecycleReceipt:
+        pass
 
-    def dispatch(self, prepared: Mapping[str, Any]) -> LifecycleReceipt: ...
+    def dispatch(self, prepared: Mapping[str, Any]) -> LifecycleReceipt:
+        pass
 
-    def status(self, dispatch_id: str) -> LifecycleReceipt: ...
+    def status(self, dispatch_id: str) -> LifecycleReceipt:
+        pass
 
-    def collect(self, dispatch_id: str) -> Mapping[str, Any]: ...
+    def collect(self, dispatch_id: str) -> Mapping[str, Any]:
+        pass
 
-    def cancel(self, dispatch_id: str) -> LifecycleReceipt: ...
+    def cancel(self, dispatch_id: str) -> LifecycleReceipt:
+        pass
 
-    def cleanup(self, dispatch_id: str) -> LifecycleReceipt: ...
+    def cleanup(self, dispatch_id: str) -> LifecycleReceipt:
+        pass

@@ -79,7 +79,7 @@ class TargetFactoryTests(unittest.TestCase):
             actual = {
                 path.relative_to(target).as_posix() for path in target.rglob("*") if path.is_file()
             }
-            self.assertTrue(required <= actual)
+            self.assertLessEqual(required, actual)
             self.assertFalse(list(target.rglob("__pycache__")))
             generated_tests = subprocess.run(
                 [

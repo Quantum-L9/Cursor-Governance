@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from adapters.common.contracts import validate_contract
+from adapters.common.errors import AdapterFailure
 
 from conformance.helpers import valid_contract
 
@@ -24,7 +25,7 @@ class ContractBindingTests(unittest.TestCase):
     def test_changed_body_invalidates_contract_digest(self) -> None:
         contract = valid_contract()
         contract["objective"] = "Tampered objective"
-        with self.assertRaises(Exception):
+        with self.assertRaises(AdapterFailure):
             validate_contract(contract)
 
 

@@ -7,6 +7,8 @@ from typing import Any
 
 from .digests import digest_object, normalize_digest, verify_embedded_digest
 
+CAPABILITY_RECEIPT_SCHEMA = "program-execution-adapter.capability-receipt.v1"
+
 
 def utc_now() -> str:
     return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
@@ -54,7 +56,7 @@ class CapabilityReceipt:
         observed = dt.datetime.now(dt.UTC).replace(microsecond=0)
         expires = observed + dt.timedelta(seconds=ttl_seconds)
         body = {
-            "schema": "program-execution-adapter.capability-receipt.v1",
+            "schema": CAPABILITY_RECEIPT_SCHEMA,
             "adapter_id": adapter_id,
             "adapter_version": adapter_version,
             "status": status,
@@ -80,7 +82,7 @@ class CapabilityReceipt:
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> CapabilityReceipt:
-        if value.get("schema") != "program-execution-adapter.capability-receipt.v1":
+        if value.get("schema") != CAPABILITY_RECEIPT_SCHEMA:
             raise ValueError("unsupported capability receipt schema")
         receipt = cls(
             adapter_id=str(value["adapter_id"]),
@@ -102,7 +104,7 @@ class CapabilityReceipt:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "schema": "program-execution-adapter.capability-receipt.v1",
+            "schema": CAPABILITY_RECEIPT_SCHEMA,
             "adapter_id": self.adapter_id,
             "adapter_version": self.adapter_version,
             "status": self.status,

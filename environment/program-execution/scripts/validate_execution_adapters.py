@@ -100,36 +100,13 @@ def _compressed_statement_errors(source: str) -> list[tuple[str, int]]:
     return errors
 
 
-def validate(root: str | Path) -> dict[str, Any]:
-    subsystem = Path(root).resolve()
-    errors: list[str] = []
-    warnings: list[str] = []
-    evidence: list[dict[str, Any]] = []
-
-    core = subsystem / "core"
-    required_core = {
-        "MANIFEST.yaml",
-        "shared/AUTHORIZATION_MODEL.yaml",
-        "program-execution-controller-template/schemas/task-contract.schema.json",
-        "program-execution-controller-template/schemas/attempt-receipt.schema.json",
-        "program-execution-controller-template/schemas/verification-receipt.schema.json",
-    }
-    for relative in sorted(required_core):
-        path = core / relative
-        if not path.is_file():
-            errors.append(f"core file missing: {relative}")
-
-    registry_path = subsystem / "registry/EXECUTION_ADAPTER_REGISTRY.yaml"
-    schema_path = subsystem / "conformance/schemas/execution-adapter-spec.schema.json"
-    if not registry_path.is_file() or not schema_path.is_file():
-        errors.append("registry or adapter specification schema is missing")
-        return _report(errors, warnings, evidence)
-
-    registry = _load_yaml(registry_path)
-    schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    Draft202012Validator.check_schema(schema)
-    validator = Draft202012Validator(schema)
-    entries = registry.get("adapters") or []
+def _validate_registry_entries(
+    *,
+    subsystem: Path,
+    entries: list[Any],
+    validator: Draft202012Validator,
+    errors: list[str],
+) -> dict[str, str]:
     ids = [str(item.get("adapter_id")) for item in entries]
     if set(ids) != EXPECTED_ADAPTERS:
         errors.append(
@@ -141,6 +118,14 @@ def validate(root: str | Path) -> dict[str, Any]:
         errors.append("registry contains duplicate adapter IDs")
 
     descriptor_digests: dict[str, str] = {}
+    required_security = {
+        "default_deny": True,
+        "may_narrow_authority": True,
+        "may_widen_authority": False,
+        "autonomous_merge": False,
+        "force_push": False,
+        "direct_graphiti_write": False,
+    }
     for entry in entries:
         adapter_id = str(entry.get("adapter_id"))
         descriptor_path = subsystem / str(entry.get("descriptor"))
@@ -163,45 +148,18 @@ def validate(root: str | Path) -> dict[str, Any]:
         if descriptor.get("adapter_kind") != entry.get("adapter_kind"):
             errors.append(f"{adapter_id}: registry kind mismatch")
         security = descriptor.get("security") or {}
-        required_security = {
-            "default_deny": True,
-            "may_narrow_authority": True,
-            "may_widen_authority": False,
-            "autonomous_merge": False,
-            "force_push": False,
-            "direct_graphiti_write": False,
-        }
         if any(security.get(key) != value for key, value in required_security.items()):
             errors.append(f"{adapter_id}: security invariants are not locked")
         descriptor_digests[adapter_id] = _digest(descriptor_path)
+    return descriptor_digests
 
-    if registry.get("schema") != "program-execution-adapter.registry.v1":
-        errors.append("registry schema identifier mismatch")
 
-    chatgpt = next(
-        (item for item in entries if item.get("adapter_id") == "chatgpt-manual-handoff"),
-        {},
-    )
-    if chatgpt.get("status") != "dormant":
-        errors.append("ChatGPT manual handoff must remain dormant")
-    factory = next(
-        (item for item in entries if item.get("adapter_id") == "target-deployment-factory"),
-        {},
-    )
-    if factory.get("status") != "non_routable":
-        errors.append("target deployment factory must remain non_routable")
-
-    core_schema_names = {
-        path.name
-        for path in (core / "program-execution-controller-template/schemas").glob("*.json")
-    }
-    adapter_schema_names = {
-        path.name for path in (subsystem / "conformance/schemas").glob("*.json")
-    }
-    duplicates = sorted(core_schema_names & adapter_schema_names)
-    if duplicates:
-        errors.append(f"canonical core schemas duplicated: {duplicates}")
-
+def _validate_source_hygiene(
+    *,
+    subsystem: Path,
+    core: Path,
+    errors: list[str],
+) -> None:
     for path in subsystem.rglob("*"):
         if path.name in DEBRIS_NAMES:
             errors.append(f"compiled or cache debris: {_relative(path, subsystem)}")
@@ -232,6 +190,73 @@ def validate(root: str | Path) -> dict[str, Any]:
             )
         for rule, number in _compressed_statement_errors(source):
             errors.append(f"compressed statement {rule}: {_relative(path, subsystem)}:{number}")
+
+
+def validate(root: str | Path) -> dict[str, Any]:
+    subsystem = Path(root).resolve()
+    errors: list[str] = []
+    warnings: list[str] = []
+    evidence: list[dict[str, Any]] = []
+
+    core = subsystem / "core"
+    required_core = {
+        "MANIFEST.yaml",
+        "shared/AUTHORIZATION_MODEL.yaml",
+        "program-execution-controller-template/schemas/task-contract.schema.json",
+        "program-execution-controller-template/schemas/attempt-receipt.schema.json",
+        "program-execution-controller-template/schemas/verification-receipt.schema.json",
+    }
+    for relative in sorted(required_core):
+        path = core / relative
+        if not path.is_file():
+            errors.append(f"core file missing: {relative}")
+
+    registry_path = subsystem / "registry/EXECUTION_ADAPTER_REGISTRY.yaml"
+    schema_path = subsystem / "conformance/schemas/execution-adapter-spec.schema.json"
+    if not registry_path.is_file() or not schema_path.is_file():
+        errors.append("registry or adapter specification schema is missing")
+        return _report(errors, warnings, evidence)
+
+    registry = _load_yaml(registry_path)
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    entries = registry.get("adapters") or []
+    descriptor_digests = _validate_registry_entries(
+        subsystem=subsystem,
+        entries=entries,
+        validator=validator,
+        errors=errors,
+    )
+
+    if registry.get("schema") != "program-execution-adapter.registry.v1":
+        errors.append("registry schema identifier mismatch")
+
+    chatgpt = next(
+        (item for item in entries if item.get("adapter_id") == "chatgpt-manual-handoff"),
+        {},
+    )
+    if chatgpt.get("status") != "dormant":
+        errors.append("ChatGPT manual handoff must remain dormant")
+    factory = next(
+        (item for item in entries if item.get("adapter_id") == "target-deployment-factory"),
+        {},
+    )
+    if factory.get("status") != "non_routable":
+        errors.append("target deployment factory must remain non_routable")
+
+    core_schema_names = {
+        path.name
+        for path in (core / "program-execution-controller-template/schemas").glob("*.json")
+    }
+    adapter_schema_names = {
+        path.name for path in (subsystem / "conformance/schemas").glob("*.json")
+    }
+    duplicates = sorted(core_schema_names & adapter_schema_names)
+    if duplicates:
+        errors.append(f"canonical core schemas duplicated: {duplicates}")
+
+    _validate_source_hygiene(subsystem=subsystem, core=core, errors=errors)
 
     graphiti = subsystem / "integrations/graphiti/context_reader.py"
     if graphiti.is_file():
