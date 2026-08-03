@@ -1,0 +1,156 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Canonical, declarative inventory of the repository's Python test-suite topology. This file is NOT a second version authority: exact package versions live in pyproject.toml and are mirrored in requirements.txt. It records which suites exist, who owns which paths, and which test-shaped paths are deliberately excluded, so local execution (ops/scripts/run_python_test_suites.py) and CI consume one identical topology.",
+  "import_map": {
+    "jsonschema": "jsonschema",
+    "langgraph": "langgraph",
+    "pydantic": "pydantic",
+    "yaml": "PyYAML",
+    "structlog": "structlog"
+  },
+  "required_dev_distributions": [
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "pytest-timeout"
+  ],
+  "non_test_exclusions": [
+    {
+      "path": "workflows/dags/test_pipeline_dag.py",
+      "reason": "Not a pytest test: a DAG module ('test pipeline' workflow) that only matches the test_*.py name. Its import chain hits the documented-but-unimplemented tools.validation.validate_external_code gap (TODO.md, 2026-07-19: leave broken, do not stub)."
+    },
+    {
+      "path": "skills/l9-cli-optimization/scripts/self_test.py",
+      "reason": "A standalone CLI self-test script, not a pytest module; matches the test naming convention but is invoked directly, not collected."
+    }
+  ],
+  "suites": [
+    {
+      "id": "repo-root",
+      "kind": "pytest",
+      "working_directory": ".",
+      "owned_paths": [
+        "."
+      ],
+      "environment": {
+        "TESTING": "true",
+        "PYTHONPATH": "${REPO_ROOT}"
+      },
+      "active_suite_ignores": [
+        "environment/claude-code/autonomy",
+        "subagent-generated-data/tests",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests"
+      ],
+      "profiles": {
+        "local": {
+          "argv": [
+            "."
+          ]
+        },
+        "ci": {
+          "argv": [
+            ".",
+            "-n",
+            "auto",
+            "--cov=.",
+            "--cov-report=xml",
+            "--cov-report=term-missing",
+            "--cov-fail-under=0",
+            "--timeout=300",
+            "--tb=short",
+            "-v"
+          ]
+        }
+      },
+      "append_user_pytest_args": true,
+      "allow_exit_5": true,
+      "rationale": "Root discovery suite. Runs from the repository root with the root autonomy/ package on PYTHONPATH. The three active_suite_ignores are separately owned suites (Claude Code autonomy, subagent-generated-data Wave 3, Program Execution controller) and are excluded here so they run exactly once, through their own owners. Non-test false-positive ignores are supplied by pyproject.toml addopts. Exit 5 (no tests collected) is tolerated with a printed notice because the collected set can legitimately shrink to zero as suites migrate to dedicated owners."
+    },
+    {
+      "id": "claude-code-autonomy",
+      "kind": "pytest",
+      "working_directory": ".",
+      "owned_paths": [
+        "environment/claude-code/autonomy"
+      ],
+      "environment": {
+        "TESTING": "true",
+        "PYTHONPATH": "environment/claude-code"
+      },
+      "profiles": {
+        "local": {
+          "argv": [
+            "environment/claude-code/autonomy/tests",
+            "-o",
+            "addopts="
+          ]
+        },
+        "ci": {
+          "argv": [
+            "environment/claude-code/autonomy/tests",
+            "-o",
+            "addopts=",
+            "-n",
+            "auto",
+            "--timeout=300",
+            "--tb=short",
+            "-v"
+          ]
+        }
+      },
+      "append_user_pytest_args": true,
+      "allow_exit_5": true,
+      "rationale": "Claude Code bounded-concurrency autonomy runtime. Its autonomy/ package shares the top-level name with the root control plane; running it with PYTHONPATH=environment/claude-code and -o addopts= prevents root pytest settings from reintroducing package shadowing. No root coverage arguments apply. Exit 5 is tolerated with a printed notice to match the existing intentional behavior."
+    },
+    {
+      "id": "subagent-generated-data-wave3",
+      "kind": "command",
+      "working_directory": ".",
+      "owned_paths": [
+        "subagent-generated-data/tests"
+      ],
+      "environment": {},
+      "command": [
+        "${PYTHON}",
+        "subagent-generated-data/tests/run_wave3_tests.py"
+      ],
+      "allow_exit_5": false,
+      "rationale": "subagent-generated-data Wave 3 uses a dedicated unittest runner (run_wave3_tests.py) that discovers the conformance, routing, negative, and golden suites. It is globally ignored by root pytest and must be driven through its own runner. Any nonzero exit fails the whole runner; no pytest arguments are appended."
+    },
+    {
+      "id": "program-execution-controller",
+      "kind": "command_sequence",
+      "working_directory": "environment/program-execution/core/program-execution-controller-template",
+      "owned_paths": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests"
+      ],
+      "environment": {},
+      "commands": [
+        [
+          "${PYTHON}",
+          "scripts/validate_controller.py",
+          ".",
+          "--mode",
+          "template"
+        ],
+        [
+          "${PYTHON}",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "scripts/tests",
+          "-p",
+          "test_*.py",
+          "-v"
+        ],
+        [
+          "${PYTHON}",
+          "scripts/run_negative_tests.py"
+        ]
+      ],
+      "allow_exit_5": false,
+      "rationale": "Program Execution controller validation. VALIDATION.md documents that fresh-process isolation is intentional because several lifecycle fixtures create and abandon or fail Git worktrees, so this suite must run as a sequence of fresh processes and must never be collected under root pytest / xdist. The sequence runs controller validation, unittest discovery, then negative tests; it stops on the first failed command and preserves that command's exact exit status."
+    }
+  ]
+}

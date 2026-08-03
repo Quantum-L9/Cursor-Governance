@@ -1,50 +1,19 @@
 #!/usr/bin/env bash
-# Run pytest for both autonomy packages without import shadowing.
+# Compatibility wrapper — historical entrypoint for `make test` / `make pr-full`.
 #
-# Root `autonomy/` (W7 control plane) and `environment/claude-code/autonomy/`
-# (Claude Code bounded-concurrency runtime) share the top-level package name.
-# A single `PYTHONPATH=. pytest .` therefore collects Claude Code tests under
-# the wrong package. Split into two suites:
-#   1) repo suite with root autonomy on PYTHONPATH (Claude suite ignored)
-#   2) Claude Code suite with environment/claude-code on PYTHONPATH
+# Suite topology is NOT defined here. The single source of truth for which
+# suites exist and how they run is ops/config/python-contract.json, executed by
+# ops/scripts/run_python_test_suites.py. This wrapper only forwards operator
+# pytest arguments to the canonical local profile and preserves its exit code.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-PYTEST_ARGS=("$@")
-if [[ ${#PYTEST_ARGS[@]} -eq 0 ]]; then
-  PYTEST_ARGS=(--tb=short -q)
+# Prefer the locked environment when it exists, so make test / make pr-full run
+# the exact pinned interpreter and dependencies (same as `make venv`).
+if command -v uv >/dev/null 2>&1 && [[ -x "$ROOT/.venv/bin/python" || -f "$ROOT/uv.lock" ]]; then
+  uv run --no-build python ops/scripts/run_python_test_suites.py --profile local -- "$@"
+else
+  python3 ops/scripts/run_python_test_suites.py --profile local -- "$@"
 fi
-
-run_pytest() {
-  if command -v uv >/dev/null 2>&1 && [[ -x "$ROOT/.venv/bin/python" || -f "$ROOT/uv.lock" ]]; then
-    uv run --no-build pytest "$@"
-  else
-    pytest "$@"
-  fi
-}
-
-status=0
-
-echo "--- pytest: repo suite (root autonomy) ---"
-TESTING=true PYTHONPATH="$ROOT" run_pytest . \
-  --ignore=environment/claude-code/autonomy \
-  "${PYTEST_ARGS[@]}" || status=$?
-if [[ "$status" -eq 5 ]]; then
-  echo "OK: repo suite collected zero tests (exit 5)"
-  status=0
-elif [[ "$status" -ne 0 ]]; then
-  exit "$status"
-fi
-
-echo "--- pytest: Claude Code autonomy suite ---"
-TESTING=true PYTHONPATH="$ROOT/environment/claude-code" run_pytest \
-  environment/claude-code/autonomy/tests \
-  -o addopts= \
-  "${PYTEST_ARGS[@]}" || status=$?
-if [[ "$status" -eq 5 ]]; then
-  echo "OK: Claude Code suite collected zero tests (exit 5)"
-  status=0
-fi
-exit "$status"
