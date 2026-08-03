@@ -348,3 +348,40 @@ make program-execution-conformance
 make program-execution-probe
 make pr
 ```
+
+<!-- ROOT_FILE_APPEND_ONLY_PROTECTION_V1 -->
+
+## Repository-root files are append-only
+
+Every file at the repository root is protected. Incoming changes may **add**
+content freely, but may **not delete or overwrite** existing content in a
+protected root file without both:
+
+1. an `ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>` line in a
+   commit message (highlighting the delta and justifying the removal), and
+2. CODEOWNERS approval from the repository owner.
+
+The authoritative protected-file list and the per-file rule live in
+`ops/config/root-file-protection.json`. Three tiers apply (every tier is
+CODEOWNERS-reviewed; the tier only decides whether the additive gate also fires):
+
+- **additive_only** (governance, legal, dependency, gate/security, and
+  environment-modifying files): deletions/overwrites fail the gate without a
+  justification marker.
+- **managed** (living/operational/community docs and low-risk config — e.g.
+  `README.md`, `CHANGELOG.md`, `TODO.md`, `.env.example`): edited freely with owner
+  review; no marker required, not additive-locked.
+- **regenerable** (machine-generated artifacts — `uv.lock`,
+  `governance-health-report.json`, `.harvest_executor_state.json`): exempt from the
+  additive check because they are rewritten wholesale by tooling.
+
+A new repository-root file must be registered in the policy with a tier — an
+unregistered new root file fails the gate, so "every root file is protected"
+cannot be silently bypassed by adding one.
+
+Enforcement is mechanical and fail-closed on every pull request via
+`.github/workflows/root-file-protection.yml` →
+`ops/scripts/validate_root_file_protection.py`. The gate is read-only and never
+edits files. Removing or weakening the gate is itself a protected-path change
+(`ORG_INVARIANTS.yaml` `protected_paths`). Every change stays traceable to its
+originating commit/agent and is reversible with `git revert`.

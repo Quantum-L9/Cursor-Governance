@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.1.0",
+  "description": "Append-only protection contract for repository-root files. Read by ops/scripts/validate_root_file_protection.py (the fail-closed CI gate). Review routing is registered separately in CODEOWNERS and ORG_INVARIANTS.yaml protected_paths. Every protected file is owner-reviewed via CODEOWNERS regardless of tier; the tier only decides whether the mechanical additive-only gate also applies.",
+  "rules": {
+    "additive_only": "Strict. A PR may only add lines. Any removal or in-place rewrite of an existing line (or whole-file deletion) fails the gate unless a matching justification marker is present in the PR's commit messages. Purely additive changes and brand-new files pass.",
+    "managed": "Human-edited operational file. Edits, overwrites, and deletions are allowed WITHOUT a justification marker, but the file is still routed to CODEOWNERS for human review. Not additive-locked.",
+    "regenerable": "Machine-generated artifact rewritten wholesale by tooling; exempt from the additive check. Still CODEOWNERS-reviewed."
+  },
+  "justification": {
+    "marker": "ALLOW-ROOT-DELETION",
+    "format": "ALLOW-ROOT-DELETION: <root-relative-path> — <reason with proof of necessity>",
+    "recorded_in": "any commit message in the PR range (base..head)",
+    "applies_to": "additive_only files only",
+    "note": "The marker authorizes the gate only; it never replaces human CODEOWNERS approval."
+  },
+  "tiers": {
+    "canonical": "Governance, legal, dependency, gate/security, and environment-modifying surface. rule=additive_only.",
+    "managed": "Living/operational/community docs and low-risk config. rule=managed (review-only).",
+    "regenerable": "Machine-generated artifact. rule=regenerable."
+  },
+  "protected_files": [
+    { "path": "AGENTS.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CANONICAL_LAW.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "ORG_INVARIANTS.yaml", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CODEOWNERS", "tier": "canonical", "rule": "additive_only" },
+    { "path": "LICENSE", "tier": "canonical", "rule": "additive_only" },
+    { "path": "SECURITY.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "pyproject.toml", "tier": "canonical", "rule": "additive_only" },
+    { "path": "requirements.txt", "tier": "canonical", "rule": "additive_only" },
+    { "path": "Makefile", "tier": "canonical", "rule": "additive_only" },
+    { "path": "conftest.py", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".pre-commit-config.yaml", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".gitleaks.toml", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".mcp.json", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_autonomy_wave1.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_autonomy_wave2.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_autonomy_wave3.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_subagent_generated_data_cursor_final.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_subagent_generated_data_wave2.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_subagent_generated_data_wave3.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "README.md", "tier": "managed", "rule": "managed" },
+    { "path": "CONTRIBUTING.md", "tier": "managed", "rule": "managed" },
+    { "path": "CODE_OF_CONDUCT.md", "tier": "managed", "rule": "managed" },
+    { "path": "SUPPORT.md", "tier": "managed", "rule": "managed" },
+    { "path": "PULL_REQUEST_TEMPLATE.md", "tier": "managed", "rule": "managed" },
+    { "path": "Activation Command.md", "tier": "managed", "rule": "managed" },
+    { "path": "TODO.md", "tier": "managed", "rule": "managed" },
+    { "path": "CHANGELOG.md", "tier": "managed", "rule": "managed" },
+    { "path": "sonar-project.properties", "tier": "managed", "rule": "managed" },
+    { "path": "end-session.yaml", "tier": "managed", "rule": "managed" },
+    { "path": ".editorconfig", "tier": "managed", "rule": "managed" },
+    { "path": ".env.example", "tier": "managed", "rule": "managed" },
+    { "path": ".env.template", "tier": "managed", "rule": "managed" },
+    { "path": ".gitattributes", "tier": "managed", "rule": "managed" },
+    { "path": ".gitignore", "tier": "managed", "rule": "managed" },
+    { "path": ".python-version", "tier": "managed", "rule": "managed" },
+    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" },
+    { "path": "governance-health-report.json", "tier": "regenerable", "rule": "regenerable" },
+    { "path": ".harvest_executor_state.json", "tier": "regenerable", "rule": "regenerable" }
+  ]
+}
