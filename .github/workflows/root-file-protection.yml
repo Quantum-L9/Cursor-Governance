@@ -40,10 +40,12 @@ jobs:
           git init -q .
           git remote add origin \
             "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
-          # Enough depth for the base<->head merge-base; the validator falls back to
-          # the base tip if the common ancestor is out of range.
-          git -c protocol.version=2 fetch --depth=200 origin "${HEAD_SHA}"
-          git -c protocol.version=2 fetch --depth=200 origin \
+          # Full history for both the PR head and the base branch: the validator
+          # relies on `git merge-base` and on scanning every commit message in the PR
+          # range for ALLOW-ROOT-DELETION markers, so a shallow fetch could drop older
+          # commits (and their markers) and cause false gate failures.
+          git -c protocol.version=2 fetch origin "${HEAD_SHA}"
+          git -c protocol.version=2 fetch origin \
             "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
           git checkout -q --detach "${HEAD_SHA}"
           git remote set-url origin "https://github.com/${REPOSITORY}.git"
