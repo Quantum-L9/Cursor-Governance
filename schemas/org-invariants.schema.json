@@ -1,0 +1,466 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.github.io/schemas/org-invariants.schema.json",
+  "title": "Quantum-L9 Organization Invariants",
+  "description": "Structural contract for the canonical ORG_INVARIANTS.yaml artifact.",
+  "type": "object",
+  "required": [
+    "l9_schema",
+    "artifact_type",
+    "status",
+    "canonical",
+    "metadata",
+    "invariants"
+  ],
+  "properties": {
+    "l9_schema": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifact_type": {
+      "const": "governance_policy"
+    },
+    "status": {
+      "enum": ["proposed", "active", "deprecated", "retired"]
+    },
+    "canonical": {
+      "const": true
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "authority_order": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "policy_defaults": {
+      "type": "object"
+    },
+    "principles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/principle"
+      }
+    },
+    "trust_model": {
+      "type": "object"
+    },
+    "lifecycle_model": {
+      "type": "object"
+    },
+    "time_policy": {
+      "type": "object"
+    },
+    "repository_scope": {
+      "type": "object"
+    },
+    "assertion_registry": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/embeddedAssertion"
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/invariant"
+      }
+    },
+    "control_registry": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    },
+    "control_coverage_requirements": {
+      "type": "object"
+    },
+    "integrity_contract": {
+      "type": "object"
+    },
+    "mirror_contract": {
+      "type": "object"
+    },
+    "exemption_policy": {
+      "type": "object"
+    },
+    "bypass_policy": {
+      "type": "object"
+    },
+    "validation_profiles": {
+      "type": "object"
+    },
+    "validation_contract": {
+      "type": "object"
+    },
+    "test_contract": {
+      "type": "object"
+    },
+    "evidence_contract": {
+      "type": "object"
+    },
+    "provenance_policy": {
+      "type": "object"
+    },
+    "report_contract": {
+      "type": "object"
+    },
+    "consumer_policy": {
+      "type": "object"
+    },
+    "change_control": {
+      "type": "object"
+    },
+    "rollout_gates": {
+      "type": "object"
+    },
+    "assurance_snapshot": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "policy_id",
+        "title",
+        "policy_version"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "schema_version": {
+          "type": ["integer", "string"]
+        },
+        "organization": {
+          "type": ["string", "object"]
+        },
+        "owner": {
+          "type": ["string", "object"]
+        },
+        "owner_team": {
+          "type": "string"
+        },
+        "canonical_source": {
+          "type": "object",
+          "required": ["repository", "path"],
+          "properties": {
+            "repository": {
+              "const": "Quantum-L9/Cursor-Governance"
+            },
+            "path": {
+              "const": "ORG_INVARIANTS.yaml"
+            },
+            "branch": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "classification": {
+          "type": "object"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "retrieval": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "principle": {
+      "type": "object",
+      "required": ["id", "statement"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^L9-PRINCIPLE-[0-9]{3}$"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "statement": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "additionalProperties": false
+    },
+    "assertionReference": {
+      "type": "object",
+      "required": ["type", "version"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "embeddedAssertion": {
+      "type": "object",
+      "required": ["type", "version"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "invariant": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "severity"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^L9-ORG-[0-9]{3}$"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "domain": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "status": {
+          "enum": ["proposed", "active", "deprecated", "retired"]
+        },
+        "policy_state": {
+          "enum": ["proposed", "active", "deprecated", "retired"]
+        },
+        "requirement": {
+          "type": "object"
+        },
+        "applies_to": {
+          "type": "object"
+        },
+        "assertion": {
+          "$ref": "#/$defs/assertionReference"
+        },
+        "allowed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decision": {
+          "type": "object"
+        },
+        "violation": {
+          "type": "object",
+          "required": ["code", "action"],
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^L9_ORG_[A-Z0-9_]+$"
+            },
+            "action": {
+              "enum": ["block", "alert", "block_and_alert", "warn"]
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "control_requirements": {
+          "type": "object"
+        },
+        "minimum_coverage": {
+          "type": "object"
+        },
+        "protected_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "implemented_requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "verified_requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocking_requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "critical_invariants_exemptible": {
+          "type": "boolean"
+        },
+        "required_repository_state": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbidden_actors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowed_reference_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assurance": {
+          "type": "object"
+        },
+        "enforcement": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "severity": {
+                "const": "critical"
+              }
+            },
+            "required": ["severity"]
+          },
+          "then": {
+            "required": ["violation"]
+          }
+        }
+      ]
+    },
+    "control": {
+      "type": "object",
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^L9-CTRL-[0-9]{3}$"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "control_type": {
+          "enum": ["preventive", "detective", "corrective"]
+        },
+        "execution_boundary": {
+          "type": "string"
+        },
+        "implementation_state": {
+          "enum": [
+            "absent",
+            "planned",
+            "implemented",
+            "verified",
+            "degraded",
+            "disabled"
+          ]
+        },
+        "enforcement_state": {
+          "enum": [
+            "unenforced",
+            "advisory",
+            "blocking",
+            "bypassed",
+            "indeterminate"
+          ]
+        },
+        "covers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^L9-ORG-[0-9]{3}$"
+          },
+          "uniqueItems": true
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_path": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_check_name": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

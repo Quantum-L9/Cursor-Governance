@@ -1,0 +1,66 @@
+---
+wave_id: CG-ORG-POLICY-SIBLINGS-001
+artifact_type: repository_install_wave
+status: ready_for_extraction
+
+repository: Quantum-L9/Cursor-Governance
+required_base:
+  contains_path: ORG_INVARIANTS.yaml
+  upstream_pull_request: 53
+
+branch: feat/org-invariants-policy-siblings
+pull_request:
+  title: "feat(governance): add normative siblings for org invariants"
+  body_path: .wave/CG-ORG-POLICY-SIBLINGS-001-PR.md
+  subscribe: true
+  merge_authorized: false
+
+scope:
+  create:
+    - governance/ASSERTION_TYPES.yaml
+    - governance/POLICY_MODEL.md
+    - governance/TRUST_MODEL.md
+    - governance/CHANGE_PROCESS.md
+    - schemas/org-invariants.schema.json
+    - releases/POLICY_RELEASE.schema.yaml
+    - releases/README.md
+    - docs/governance/ORG_INVARIANTS.md
+    - ops/scripts/validate_org_policy.py
+    - tests/org_policy/test_validate_org_policy.py
+    - .github/workflows/validate-org-policy.yml
+  forbidden:
+    - ORG_INVARIANTS.yaml
+    - CANONICAL_LAW.md
+    - AGENTS.md
+    - rulesets/**
+    - organization/**
+    - consumers/**
+    - assurance/**
+    - consumer repositories
+    - other repositories
+
+validation:
+  commands:
+    - python3 ops/scripts/validate_org_policy.py
+    - python3 -m unittest discover -s tests/org_policy -p 'test_*.py'
+  required_outcome: pass
+
+agent_authority:
+  may:
+    - extract_exact_files
+    - fix_mechanical_installation_error
+    - fix_concrete_validation_failure
+    - fix_valid_in_scope_review_finding
+    - push_branch
+    - open_pull_request
+    - subscribe_to_pull_request
+    - remediate_until_green
+  must_not:
+    - redesign_architecture
+    - rename_artifacts
+    - relocate_artifacts
+    - edit_org_invariants
+    - add_cross_repository_scope
+    - fabricate_validation
+    - fabricate_evidence
+    - merge_without_user_authorization
