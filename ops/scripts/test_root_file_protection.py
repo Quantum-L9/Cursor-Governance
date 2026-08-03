@@ -37,6 +37,7 @@ CONFIG = {
     "protected_files": [
         {"path": "AAA.md", "tier": "canonical", "rule": "additive_only"},
         {"path": "BBB.md", "tier": "canonical", "rule": "additive_only"},
+        {"path": "MMM.md", "tier": "managed", "rule": "managed"},
         {"path": "gen.lock", "tier": "regenerable", "rule": "regenerable"},
     ],
 }
@@ -64,6 +65,7 @@ def init_repo(tmp: Path) -> tuple[Path, str]:
     )
     (repo / "AAA.md").write_text("alpha\nbeta\ngamma\n", encoding="utf-8")
     (repo / "BBB.md").write_text("one\ntwo\nthree\n", encoding="utf-8")
+    (repo / "MMM.md").write_text("keep\nedit\ndrop\n", encoding="utf-8")
     (repo / "gen.lock").write_text("locked = 1\n", encoding="utf-8")
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "base")
@@ -109,6 +111,14 @@ class RootProtectionTests(unittest.TestCase):
                 repo, "fix BBB\n\nALLOW-ROOT-DELETION: BBB.md - corrects a typo, proof in issue 9"
             )
             self.assertEqual(self._findings(repo, base).get("BBB.md"), "justified")
+
+    def test_managed_overwrite_and_deletion_are_exempt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_repo(Path(tmp))
+            # Rewrite one line and delete another — no marker — must NOT be a violation.
+            (repo / "MMM.md").write_text("keep\nREWRITTEN\n", encoding="utf-8")
+            commit(repo, "edit managed file freely")
+            self.assertEqual(self._findings(repo, base).get("MMM.md"), "exempt")
 
     def test_regenerable_wholesale_rewrite_is_exempt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

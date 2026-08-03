@@ -76,7 +76,7 @@ def load_config(repo: Path) -> dict:
         if not isinstance(entry, dict) or "path" not in entry or "rule" not in entry:
             msg = "each protected_files entry needs a path and a rule"
             raise ProtectionError(msg)
-        if entry["rule"] not in ("additive_only", "regenerable"):
+        if entry["rule"] not in ("additive_only", "managed", "regenerable"):
             msg = f"unknown rule for {entry['path']!r}: {entry['rule']}"
             raise ProtectionError(msg)
     return data
@@ -123,8 +123,10 @@ def check(repo: Path, config: dict, base: str, head: str) -> list[dict]:
         stat = numstat(repo, mb, head, path)
         if stat is None:
             continue  # unchanged
-        if rule == "regenerable":
-            findings.append({"path": path, "verdict": "exempt", "detail": "regenerable"})
+        if rule in ("regenerable", "managed"):
+            # Exempt from the additive check; CODEOWNERS review still applies.
+            note = "regenerable" if rule == "regenerable" else "managed (review-only)"
+            findings.append({"path": path, "verdict": "exempt", "detail": note})
             continue
         if isinstance(stat, tuple):
             added, deleted = stat

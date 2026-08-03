@@ -362,14 +362,18 @@ protected root file without both:
 2. CODEOWNERS approval from the repository owner.
 
 The authoritative protected-file list and the per-file rule live in
-`ops/config/root-file-protection.json`. Two rules apply:
+`ops/config/root-file-protection.json`. Three tiers apply (every tier is
+CODEOWNERS-reviewed; the tier only decides whether the additive gate also fires):
 
-- **additive_only** (all hand-authored root files): deletions/overwrites fail the
-  gate without a justification marker.
+- **additive_only** (governance, legal, dependency, gate/security, and
+  environment-modifying files): deletions/overwrites fail the gate without a
+  justification marker.
+- **managed** (living/operational/community docs and low-risk config — e.g.
+  `README.md`, `CHANGELOG.md`, `TODO.md`, `.env.example`): edited freely with owner
+  review; no marker required, not additive-locked.
 - **regenerable** (machine-generated artifacts — `uv.lock`,
   `governance-health-report.json`, `.harvest_executor_state.json`): exempt from the
-  additive check because they are rewritten wholesale by tooling, but still
-  CODEOWNERS-reviewed.
+  additive check because they are rewritten wholesale by tooling.
 
 Enforcement is mechanical and fail-closed on every pull request via
 `.github/workflows/root-file-protection.yml` →

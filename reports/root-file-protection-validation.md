@@ -28,9 +28,12 @@ Two enforcement layers:
    registered in `ORG_INVARIANTS.yaml` `protected_paths` so it cannot be silently
    removed.
 
-Tier model (documented in the config; one-line switch to strict-everywhere by
-removing the `regenerable` entries): **additive_only** for all hand-authored root
-files; **regenerable** only for the three machine artifacts.
+Tier model (three tiers, documented in the config): **additive_only** (19 —
+governance, legal, dependency, gate/security, environment-modifying installers);
+**managed** (16 — living/operational/community docs and low-risk config; edited
+freely with owner review, no marker); **regenerable** (3 — machine artifacts,
+exempt). Every tier is CODEOWNERS-reviewed; the tier only decides whether the
+additive gate also fires.
 
 ## Files
 
@@ -46,10 +49,11 @@ Appended (additive only): `ORG_INVARIANTS.yaml` (both `protected_paths` lists),
 | Command | Result |
 |---|---|
 | `ruff check` / `ruff format --check` (new scripts) | PASS |
-| `python ops/scripts/test_root_file_protection.py` | Ran 10 tests, OK |
+| `python ops/scripts/test_root_file_protection.py` | Ran 11 tests, OK |
 | Gate self-check on this PR (`validate_root_file_protection.py --base origin/main`) | PASS — all protected-file edits are additive (`-0`); recorded below |
 
-The 10 fixture tests cover: pure addition passes; overwrite without justification
+The 11 fixture tests cover: pure addition passes; managed-tier overwrite/deletion
+is exempt (no marker needed); overwrite without justification
 fails; deletion without justification fails; overwrite/deletion **with** a valid
 marker passes; `regenerable` wholesale rewrite is exempt; a marker for the wrong
 path does not excuse; a marker without a reason is rejected; unchanged files are
