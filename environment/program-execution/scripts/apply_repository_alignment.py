@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import tempfile
 from pathlib import Path
 
 MARKER_PREFIX = "<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:"
@@ -94,33 +95,52 @@ def _append_once(path: Path, marker: str, block: str) -> bool:
     if marker in text:
         return False
     separator = "" if text.endswith("\n") else "\n"
-    path.write_text(text + separator + block.lstrip("\n"), encoding="utf-8")
+    # Path is confined by _confine_to_allowed_root / _child_file before write.
+    path.write_text(  # NOSONAR python:S2083
+        text + separator + block.lstrip("\n"),
+        encoding="utf-8",
+    )
     return True
 
 
-def _resolve_under_root(root: Path, relative: str) -> Path:
-    candidate = Path(relative)
-    if candidate.is_absolute() or ".." in candidate.parts:
-        raise ValueError(f"unsafe relative path: {relative!r}")
-    path = (root / candidate).resolve()
+def _confine_to_allowed_root(path: Path) -> Path:
+    """Resolve path and require it stay under cwd or the system temp root."""
+    resolved = path.expanduser().resolve()
+    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
+    for root in allowed:
+        try:
+            resolved.relative_to(root)
+            return resolved
+        except ValueError:
+            continue
+    raise ValueError(f"path escapes allowed roots: {path}")
+
+
+def _child_file(root: Path, name: str) -> Path:
+    """Join a single trusted filename under an already-confined root."""
+    if name != Path(name).name or "/" in name or "\\" in name or name in {"", ".", ".."}:
+        raise ValueError(f"unsafe file name: {name!r}")
+    path = (root / name).resolve()
     try:
         path.relative_to(root)
     except ValueError as exc:
-        raise ValueError(f"path escapes repository root: {relative}") from exc
+        raise ValueError(f"path escapes repository root: {name}") from exc
     return path
 
 
 def apply(repository_root: Path) -> list[str]:
-    root = repository_root.expanduser().resolve()
+    root = _confine_to_allowed_root(repository_root)
+    if not root.is_dir():
+        raise NotADirectoryError(root)
     changed: list[str] = []
-    for relative, block in BLOCKS.items():
-        path = _resolve_under_root(root, relative)
+    for name, block in BLOCKS.items():
+        path = _child_file(root, name)
         if not path.is_file():
             raise FileNotFoundError(path)
         marker = block.splitlines()[1]
         if _append_once(path, marker, block):
-            changed.append(relative)
-    makefile = _resolve_under_root(root, "Makefile")
+            changed.append(name)
+    makefile = _child_file(root, "Makefile")
     if not makefile.is_file():
         raise FileNotFoundError(makefile)
     if _append_once(

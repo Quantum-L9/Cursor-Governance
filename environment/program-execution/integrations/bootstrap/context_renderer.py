@@ -4,9 +4,17 @@ from collections.abc import Mapping
 
 
 def render_context(status: Mapping[str, object]) -> str:
-    programs = list(status.get("programs") or [])
+    raw_programs = status.get("programs")
+    programs = raw_programs if isinstance(raw_programs, list) else []
     lines = [f"programs: {status.get('active_programs', 0)} active"]
-    for item in programs[:5]:
-        if isinstance(item, dict):
-            lines.append(f"- {item.get('program_id', 'unknown')}: {item.get('state', 'UNKNOWN')}")
+    emitted = 0
+    for item in programs:
+        if emitted >= 5:
+            break
+        if not isinstance(item, dict):
+            continue
+        program_id = item.get("program_id", "unknown")
+        state = item.get("state", "UNKNOWN")
+        lines.append(f"- {program_id}: {state}")
+        emitted += 1
     return "\n".join(lines)

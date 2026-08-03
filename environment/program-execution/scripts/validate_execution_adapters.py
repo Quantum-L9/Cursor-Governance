@@ -33,6 +33,21 @@ FORBIDDEN_SOURCE_TERMS = {
     "git push --force",
     "--dangerously-skip-permissions",
 }
+REQUIRED_SECURITY = {
+    "default_deny": True,
+    "may_narrow_authority": True,
+    "may_widen_authority": False,
+    "autonomous_merge": False,
+    "force_push": False,
+    "direct_graphiti_write": False,
+}
+REQUIRED_CORE = {
+    "MANIFEST.yaml",
+    "shared/AUTHORIZATION_MODEL.yaml",
+    "program-execution-controller-template/schemas/task-contract.schema.json",
+    "program-execution-controller-template/schemas/attempt-receipt.schema.json",
+    "program-execution-controller-template/schemas/verification-receipt.schema.json",
+}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -50,22 +65,23 @@ def _relative(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
-def _compressed_statement_errors(source: str) -> list[tuple[str, int]]:
-    errors: list[tuple[str, int]] = []
-    physical_lines: dict[int, list[tuple[tokenize.TokenInfo, int]]] = {}
-    depth = 0
-    tokens = tokenize.generate_tokens(io.StringIO(source).readline)
-    for token in tokens:
-        if token.type in {tokenize.ENCODING, tokenize.ENDMARKER}:
-            continue
-        depth_before = depth
-        physical_lines.setdefault(token.start[0], []).append((token, depth_before))
-        if token.type == tokenize.OP and token.string in "([{":
-            depth += 1
-        elif token.type == tokenize.OP and token.string in ")]}":
-            depth = max(0, depth - 1)
-        elif token.type == tokenize.OP and token.string == ";":
-            errors.append(("E702", token.start[0]))
+def _track_token_depth(
+    token: tokenize.TokenInfo,
+    depth: int,
+    errors: list[tuple[str, int]],
+) -> int:
+    if token.type == tokenize.OP and token.string in "([{":
+        return depth + 1
+    if token.type == tokenize.OP and token.string in ")]}":
+        return max(0, depth - 1)
+    if token.type == tokenize.OP and token.string == ";":
+        errors.append(("E702", token.start[0]))
+    return depth
+
+
+def _compound_body_errors(
+    physical_lines: dict[int, list[tuple[tokenize.TokenInfo, int]]],
+) -> list[tuple[str, int]]:
     compound_keywords = {
         "if",
         "elif",
@@ -86,6 +102,7 @@ def _compressed_statement_errors(source: str) -> list[tuple[str, int]]:
         tokenize.NEWLINE,
         tokenize.COMMENT,
     }
+    errors: list[tuple[str, int]] = []
     for line_number, line_tokens in physical_lines.items():
         significant = [item for item in line_tokens if item[0].type not in ignored]
         if not significant or significant[0][0].string not in compound_keywords:
@@ -98,6 +115,48 @@ def _compressed_statement_errors(source: str) -> list[tuple[str, int]]:
         if colon_positions and colon_positions[-1] < len(significant) - 1:
             errors.append(("E701", line_number))
     return errors
+
+
+def _compressed_statement_errors(source: str) -> list[tuple[str, int]]:
+    errors: list[tuple[str, int]] = []
+    physical_lines: dict[int, list[tuple[tokenize.TokenInfo, int]]] = {}
+    depth = 0
+    for token in tokenize.generate_tokens(io.StringIO(source).readline):
+        if token.type in {tokenize.ENCODING, tokenize.ENDMARKER}:
+            continue
+        physical_lines.setdefault(token.start[0], []).append((token, depth))
+        depth = _track_token_depth(token, depth, errors)
+    errors.extend(_compound_body_errors(physical_lines))
+    return errors
+
+
+def _check_adapter_entry(
+    *,
+    subsystem: Path,
+    entry: Any,
+    validator: Draft202012Validator,
+    errors: list[str],
+) -> tuple[str, str] | None:
+    adapter_id = str(entry.get("adapter_id"))
+    descriptor_path = subsystem / str(entry.get("descriptor"))
+    provider_path = subsystem / str(entry.get("provider_module"))
+    if not descriptor_path.is_file():
+        errors.append(f"{adapter_id}: descriptor missing")
+        return None
+    if not provider_path.is_file():
+        errors.append(f"{adapter_id}: provider module missing")
+    descriptor = _load_yaml(descriptor_path)
+    for exc in sorted(validator.iter_errors(descriptor), key=lambda item: list(item.path)):
+        location = ".".join(str(item) for item in exc.path) or "<root>"
+        errors.append(f"{adapter_id}: descriptor {location}: {exc.message}")
+    if descriptor.get("adapter_id") != adapter_id:
+        errors.append(f"{adapter_id}: descriptor identity mismatch")
+    if descriptor.get("adapter_kind") != entry.get("adapter_kind"):
+        errors.append(f"{adapter_id}: registry kind mismatch")
+    security = descriptor.get("security") or {}
+    if any(security.get(key) != value for key, value in REQUIRED_SECURITY.items()):
+        errors.append(f"{adapter_id}: security invariants are not locked")
+    return adapter_id, _digest(descriptor_path)
 
 
 def _validate_registry_entries(
@@ -116,80 +175,81 @@ def _validate_registry_entries(
         )
     if len(ids) != len(set(ids)):
         errors.append("registry contains duplicate adapter IDs")
-
-    descriptor_digests: dict[str, str] = {}
-    required_security = {
-        "default_deny": True,
-        "may_narrow_authority": True,
-        "may_widen_authority": False,
-        "autonomous_merge": False,
-        "force_push": False,
-        "direct_graphiti_write": False,
-    }
+    digests: dict[str, str] = {}
     for entry in entries:
-        adapter_id = str(entry.get("adapter_id"))
-        descriptor_path = subsystem / str(entry.get("descriptor"))
-        provider_path = subsystem / str(entry.get("provider_module"))
-        if not descriptor_path.is_file():
-            errors.append(f"{adapter_id}: descriptor missing")
-            continue
-        if not provider_path.is_file():
-            errors.append(f"{adapter_id}: provider module missing")
-        descriptor = _load_yaml(descriptor_path)
-        validation_errors = sorted(
-            validator.iter_errors(descriptor),
-            key=lambda item: list(item.path),
+        checked = _check_adapter_entry(
+            subsystem=subsystem,
+            entry=entry,
+            validator=validator,
+            errors=errors,
         )
-        for exc in validation_errors:
-            location = ".".join(str(item) for item in exc.path) or "<root>"
-            errors.append(f"{adapter_id}: descriptor {location}: {exc.message}")
-        if descriptor.get("adapter_id") != adapter_id:
-            errors.append(f"{adapter_id}: descriptor identity mismatch")
-        if descriptor.get("adapter_kind") != entry.get("adapter_kind"):
-            errors.append(f"{adapter_id}: registry kind mismatch")
-        security = descriptor.get("security") or {}
-        if any(security.get(key) != value for key, value in required_security.items()):
-            errors.append(f"{adapter_id}: security invariants are not locked")
-        descriptor_digests[adapter_id] = _digest(descriptor_path)
-    return descriptor_digests
+        if checked is not None:
+            digests[checked[0]] = checked[1]
+    return digests
 
 
-def _validate_source_hygiene(
-    *,
-    subsystem: Path,
-    core: Path,
-    errors: list[str],
-) -> None:
+def _validate_debris(subsystem: Path, errors: list[str]) -> None:
     for path in subsystem.rglob("*"):
         if path.name in DEBRIS_NAMES:
             errors.append(f"compiled or cache debris: {_relative(path, subsystem)}")
-        if path.is_file() and path.suffix in DEBRIS_SUFFIXES:
+        elif path.is_file() and path.suffix in DEBRIS_SUFFIXES:
             errors.append(f"runtime debris: {_relative(path, subsystem)}")
-        if path.is_symlink():
+        elif path.is_symlink():
             errors.append(f"symlink forbidden in subsystem: {_relative(path, subsystem)}")
 
-    for path in subsystem.rglob("*.py"):
-        if core in path.parents:
-            continue
-        source = path.read_text(encoding="utf-8")
-        try:
-            ast.parse(source, filename=str(path))
-        except SyntaxError as exc:
-            errors.append(f"syntax error: {_relative(path, subsystem)}:{exc.lineno}")
-        relative = path.relative_to(subsystem)
-        implementation_source = relative.parts[0] == "adapters" and "tests" not in relative.parts
-        if implementation_source:
-            for term in FORBIDDEN_SOURCE_TERMS:
-                if term in source:
-                    errors.append(f"forbidden operation {term!r}: {_relative(path, subsystem)}")
-        for number, line in enumerate(source.splitlines(), 1):
-            if len(line) <= 100 or "# noqa: E501" in line:
-                continue
+
+def _validate_python_file(path: Path, subsystem: Path, errors: list[str]) -> None:
+    source = path.read_text(encoding="utf-8")
+    try:
+        ast.parse(source, filename=str(path))
+    except SyntaxError as exc:
+        errors.append(f"syntax error: {_relative(path, subsystem)}:{exc.lineno}")
+    relative = path.relative_to(subsystem)
+    if relative.parts[0] == "adapters" and "tests" not in relative.parts:
+        for term in FORBIDDEN_SOURCE_TERMS:
+            if term in source:
+                errors.append(f"forbidden operation {term!r}: {_relative(path, subsystem)}")
+    for number, line in enumerate(source.splitlines(), 1):
+        if len(line) > 100 and "# noqa: E501" not in line:
             errors.append(
                 f"line exceeds 100 characters: {_relative(path, subsystem)}:{number}:{len(line)}"
             )
-        for rule, number in _compressed_statement_errors(source):
-            errors.append(f"compressed statement {rule}: {_relative(path, subsystem)}:{number}")
+    for rule, number in _compressed_statement_errors(source):
+        errors.append(f"compressed statement {rule}: {_relative(path, subsystem)}:{number}")
+
+
+def _validate_source_hygiene(*, subsystem: Path, core: Path, errors: list[str]) -> None:
+    _validate_debris(subsystem, errors)
+    for path in subsystem.rglob("*.py"):
+        if core in path.parents:
+            continue
+        _validate_python_file(path, subsystem, errors)
+
+
+def _validate_status_locks(entries: list[Any], errors: list[str]) -> None:
+    chatgpt = next(
+        (item for item in entries if item.get("adapter_id") == "chatgpt-manual-handoff"),
+        {},
+    )
+    if chatgpt.get("status") != "dormant":
+        errors.append("ChatGPT manual handoff must remain dormant")
+    factory = next(
+        (item for item in entries if item.get("adapter_id") == "target-deployment-factory"),
+        {},
+    )
+    if factory.get("status") != "non_routable":
+        errors.append("target deployment factory must remain non_routable")
+
+
+def _validate_integrations(subsystem: Path, errors: list[str]) -> None:
+    graphiti = subsystem / "integrations/graphiti/context_reader.py"
+    if graphiti.is_file():
+        source = graphiti.read_text(encoding="utf-8")
+        for forbidden in ("add_memory", "write_memory", "cmd_write"):
+            if forbidden in source:
+                errors.append(f"Graphiti integration contains write path: {forbidden}")
+    if (subsystem / "environment/agents/agent_registry.yaml").exists():
+        errors.append("adapter layer must not carry a second agent registry")
 
 
 def validate(root: str | Path) -> dict[str, Any]:
@@ -197,18 +257,9 @@ def validate(root: str | Path) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     evidence: list[dict[str, Any]] = []
-
     core = subsystem / "core"
-    required_core = {
-        "MANIFEST.yaml",
-        "shared/AUTHORIZATION_MODEL.yaml",
-        "program-execution-controller-template/schemas/task-contract.schema.json",
-        "program-execution-controller-template/schemas/attempt-receipt.schema.json",
-        "program-execution-controller-template/schemas/verification-receipt.schema.json",
-    }
-    for relative in sorted(required_core):
-        path = core / relative
-        if not path.is_file():
+    for relative in sorted(REQUIRED_CORE):
+        if not (core / relative).is_file():
             errors.append(f"core file missing: {relative}")
 
     registry_path = subsystem / "registry/EXECUTION_ADAPTER_REGISTRY.yaml"
@@ -228,22 +279,9 @@ def validate(root: str | Path) -> dict[str, Any]:
         validator=validator,
         errors=errors,
     )
-
     if registry.get("schema") != "program-execution-adapter.registry.v1":
         errors.append("registry schema identifier mismatch")
-
-    chatgpt = next(
-        (item for item in entries if item.get("adapter_id") == "chatgpt-manual-handoff"),
-        {},
-    )
-    if chatgpt.get("status") != "dormant":
-        errors.append("ChatGPT manual handoff must remain dormant")
-    factory = next(
-        (item for item in entries if item.get("adapter_id") == "target-deployment-factory"),
-        {},
-    )
-    if factory.get("status") != "non_routable":
-        errors.append("target deployment factory must remain non_routable")
+    _validate_status_locks(entries, errors)
 
     core_schema_names = {
         path.name
@@ -257,23 +295,8 @@ def validate(root: str | Path) -> dict[str, Any]:
         errors.append(f"canonical core schemas duplicated: {duplicates}")
 
     _validate_source_hygiene(subsystem=subsystem, core=core, errors=errors)
-
-    graphiti = subsystem / "integrations/graphiti/context_reader.py"
-    if graphiti.is_file():
-        source = graphiti.read_text(encoding="utf-8")
-        for forbidden in ("add_memory", "write_memory", "cmd_write"):
-            if forbidden in source:
-                errors.append(f"Graphiti integration contains write path: {forbidden}")
-
-    if (subsystem / "environment/agents/agent_registry.yaml").exists():
-        errors.append("adapter layer must not carry a second agent registry")
-
-    evidence.append(
-        {
-            "type": "descriptor_digests",
-            "values": descriptor_digests,
-        }
-    )
+    _validate_integrations(subsystem, errors)
+    evidence.append({"type": "descriptor_digests", "values": descriptor_digests})
     return _report(errors, warnings, evidence)
 
 

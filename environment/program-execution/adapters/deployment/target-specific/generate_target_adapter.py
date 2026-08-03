@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -38,10 +39,37 @@ def run(
 
 
 def _write_json(path: Path, value: object) -> None:
-    path.write_text(
+    # Path is confined by _confine_to_allowed_root / _safe_output_dir before write.
+    path.write_text(  # NOSONAR python:S2083
         json.dumps(value, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _confine_to_allowed_root(path: Path) -> Path:
+    resolved = path.expanduser().resolve()
+    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
+    for root in allowed:
+        try:
+            resolved.relative_to(root)
+            return resolved
+        except ValueError:
+            continue
+    raise ValueError(f"path escapes allowed roots: {path}")
+
+
+def _safe_output_dir(output_root: Path, adapter_id: str) -> Path:
+    if not _SAFE_ADAPTER_ID.fullmatch(adapter_id):
+        raise ValueError(f"unsafe adapter_id: {adapter_id!r}")
+    if adapter_id != Path(adapter_id).name:
+        raise ValueError(f"adapter_id must be a single path segment: {adapter_id!r}")
+    root = _confine_to_allowed_root(output_root)
+    target = (root / adapter_id).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"adapter path escapes output root: {target}") from exc
+    return target
 
 
 def _descriptor(spec: dict[str, Any]) -> dict[str, Any]:
@@ -109,19 +137,13 @@ def _write_manifest(target: Path) -> None:
 
 def generate(spec_path: Path, output_root: Path) -> Path:
     schema = Path(__file__).with_name("target-adapter-spec.schema.json")
-    errors = validate(spec_path, schema)
+    confined_spec = _confine_to_allowed_root(spec_path)
+    errors = validate(confined_spec, schema)
     if errors:
         raise ValueError("; ".join(errors))
-    spec: dict[str, Any] = json.loads(spec_path.read_text(encoding="utf-8"))
+    spec: dict[str, Any] = json.loads(confined_spec.read_text(encoding="utf-8"))
     adapter_id = str(spec["adapter_id"])
-    if not _SAFE_ADAPTER_ID.fullmatch(adapter_id):
-        raise ValueError(f"unsafe adapter_id: {adapter_id!r}")
-    output_root = output_root.resolve()
-    target = (output_root / adapter_id).resolve()
-    try:
-        target.relative_to(output_root)
-    except ValueError as exc:
-        raise ValueError(f"adapter path escapes output root: {target}") from exc
+    target = _safe_output_dir(output_root, adapter_id)
     target.mkdir(parents=True, exist_ok=False)
 
     import yaml
@@ -190,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    target = generate(Path(args[0]).resolve(), Path(args[1]).resolve())
+    target = generate(Path(args[0]), Path(args[1]))
     print(target)
     return 0
 
