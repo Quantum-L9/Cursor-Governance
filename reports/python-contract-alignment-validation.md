@@ -153,3 +153,89 @@ Pending (Commit 4): `.github/workflows/l9-lint-test.yml`, `ops/scripts/run_pytho
 (validator wiring), this report (final evidence).
 
 All within the contract allowlist. No preserved runtime/governance file behavior changed.
+
+---
+
+## Commit 4 — `ci(test): consume the canonical locked runner`  (pending SHA below)
+
+Files: `.github/workflows/l9-lint-test.yml` (test job rewired), `ops/scripts/run_python_test_suites.py`
+(runner now calls the drift validator before any suite), `reports/python-contract-alignment-validation.md`
+(this final evidence).
+
+Workflow test job changes (lint job untouched; immutable event-revision checkout, pinned
+external action SHAs, `permissions: contents: read`, concurrency, and timeouts all preserved):
+
+- Bootstrap keeps `uv sync --locked --extra dev`.
+- **Removed** the floating fallback installs (`… || pip install pytest-xdist`,
+  `… || pip install pytest-timeout`) — these are now locked in the dev extra + uv.lock.
+- **Replaced** the duplicated root/Claude pytest shell block (≈35 lines) with a single
+  invocation: `uv run --no-build python ops/scripts/run_python_test_suites.py --profile ci`.
+- Dropped the now-unused `TEST_DIR` / `COVERAGE_THRESHOLD` env vars and the obsolete
+  "2 test files" comment; suite topology, coverage output, and the advisory 0% threshold
+  now live in the registry's root ci profile. `SOURCE_DIR` (lint mypy) is retained.
+
+Runner wiring: `main()` runs `validate_python_contract.py` (fail-closed) before executing
+any suite, so `make test`, `make pr-full`, and CI all receive the drift gate through the
+one runner. A missing validator fails closed.
+
+CI-path proof (`--profile ci`, exactly what the workflow now runs): drift validator all
+green → repo-root (xdist) **86 passed, 16 subtests**, `coverage.xml` written → claude
+**13 passed** → wave3 PASS → controller sequence PASS → overall PASS, exit 0.
+
+---
+
+## Final validation (whole tree, post-Commit-4)
+
+Run from the repository root in this order:
+
+| # | Command | Exit | Result |
+|---|---|---|---|
+| 1 | `uv sync --locked --extra dev` | 0 | environment resolved (82 packages) |
+| 2 | `uv lock --check` | 0 | lockfile in sync |
+| 3 | `uv run python ops/scripts/test_python_contract.py` | 0 | **Ran 23 tests, OK** |
+| 4 | `uv run python ops/scripts/validate_python_contract.py` | 0 | **all 11 drift check groups PASS** |
+| 5 | `bash ops/scripts/run_pytest_suites.sh --tb=short -q` | 0 | validator PASS → 4 suites PASS (repo-root 86 + 16 subtests, claude 13, wave3, controller) |
+| 6 | `uv run --no-build ruff check .` | 0 | All checks passed |
+| 7 | `uv run --no-build ruff format --check .` | 0 | 711 files already formatted |
+| 8 | `make pr-check` | 0 | **PASS** — suites green via runner; security gate pass=3 fail=0 skip=1 (bandit/semgrep/pip-audit PASS; gitleaks SKIP — brew CLI not on this sandbox PATH, non-blocking; mypy advisory) |
+| 9 | `git diff --check` | 0 | no whitespace errors |
+| 10 | `git status --short` | — | only tracked contract changes; no stray artifacts (ci-profile `coverage.xml`/`.coverage` removed) |
+
+Per-suite results (both profiles): `repo-root` PASS, `claude-code-autonomy` PASS,
+`subagent-generated-data-wave3` PASS, `program-execution-controller` PASS.
+
+Drift validator: **PASS** (11/11 groups) against the aligned tree.
+
+---
+
+## Operator handoff
+
+- **Branch**: `claude/python-contract-alignment` (local only; not pushed)
+- **Baseline**: `3c9ba5c675b91e5d1d2b20d777ff14fcb669a48c` (HEAD descends from it)
+- **Commits** (in order):
+  1. `fee4b92` chore(python): lock test contract dependencies
+  2. `48b1a95` feat(test): add canonical Python suite registry
+  3. `d4e6126` test(governance): enforce Python contract drift checks
+  4. `<commit-4>` ci(test): consume the canonical locked runner  *(this commit)*
+- **Changed files (9)**: `pyproject.toml`, `requirements.txt`, `uv.lock`,
+  `ops/config/python-contract.json`, `ops/scripts/run_python_test_suites.py`,
+  `ops/scripts/run_pytest_suites.sh`, `ops/scripts/validate_python_contract.py`,
+  `ops/scripts/test_python_contract.py`, `.github/workflows/l9-lint-test.yml`,
+  plus `reports/python-contract-alignment-validation.md` (evidence).
+- **Dependency diff**: +3 direct exact pins (`pytest-xdist==3.8.0`,
+  `pytest-timeout==2.4.0`, `types-jsonschema==4.26.0.20260518`) mirrored in
+  pyproject + requirements; uv.lock +those +transitive `execnet==2.1.2`; no other
+  dependency moved. `rfc3339-validator` intentionally not added.
+- **Suite registry**: 4 suites (repo-root pytest, claude-code-autonomy pytest,
+  subagent-generated-data-wave3 command, program-execution-controller command_sequence).
+- **Validator**: 11/11 drift check groups PASS.
+- **`make pr-check`**: PASS.
+- **Residual risks / UNKNOWNs**:
+  - `gitleaks` is not installed in this sandbox; its security scan was SKIP (non-blocking).
+    On CI/dev machines with gitleaks present it runs normally.
+  - `pre-commit` was installed into the local venv only to exercise `make pr-check`; it is
+    not a repo dependency and did not alter `uv.lock`, pyproject, or the worktree.
+  - CI green cannot be observed locally — it is asserted by running the exact ci-profile
+    command the workflow invokes. Real GitHub Actions status is confirmable only after a push.
+- **Halt**: stopped after local commits + green gates. **No push, PR, merge, tag, release,
+  or repository-settings change performed** (remote mutation prohibited by contract).

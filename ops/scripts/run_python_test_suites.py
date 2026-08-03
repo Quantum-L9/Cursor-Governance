@@ -297,6 +297,24 @@ def run_suite(
     return result
 
 
+def _run_drift_validator() -> int:
+    """Run the fail-closed drift validator before any suite. Missing = fail closed."""
+    validator_path = REPO_ROOT / "ops" / "scripts" / "validate_python_contract.py"
+    if not validator_path.is_file():
+        print(f"[runner] FATAL: drift validator missing: {validator_path}", file=sys.stderr)
+        return 2
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            [sys.executable, str(validator_path)],
+            timeout=SUITE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        print(f"[runner] FATAL: drift validator did not complete: {exc}", file=sys.stderr)
+        return 2
+    return completed.returncode
+
+
 def parse_args(argv: list[str] | None = None) -> tuple[str, list[str]]:
     parser = argparse.ArgumentParser(
         description="Run the canonical Cursor-Governance Python test suites.",
@@ -309,6 +327,13 @@ def parse_args(argv: list[str] | None = None) -> tuple[str, list[str]]:
 
 def main(argv: list[str] | None = None) -> int:
     profile, user_args = parse_args(argv)
+
+    # Fail-closed drift gate before any suite runs. This is why make test,
+    # make pr-full, and CI all receive the drift check through this one runner.
+    drift_code = _run_drift_validator()
+    if drift_code != 0:
+        print("[runner] FATAL: python contract drift check failed; suites not run", file=sys.stderr)
+        return drift_code
 
     try:
         registry = _load_json(REGISTRY_PATH)
