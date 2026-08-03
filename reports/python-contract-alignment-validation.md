@@ -173,4 +173,99 @@ only when configured.
 
 ## Commit 4 — `ci(test): consume the canonical locked runner`
 
-<!-- Appended after the workflow commit; see "Final validation" below. -->
+File: `.github/workflows/l9-lint-test.yml`, plus this final evidence.
+
+`.github/workflows/l9-lint-test.yml` test job rewired:
+
+- Kept: immutable event-revision checkout, pinned `actions/setup-python` SHA,
+  `permissions: contents: read`, concurrency group, and job timeouts.
+- Kept `uv sync --locked --extra dev` as the environment bootstrap.
+- Removed the fallback `python -c "import xdist" || pip install pytest-xdist`
+  and `pytest-timeout` floating installs.
+- Replaced the duplicated root/Claude shell orchestration with one line:
+  `uv run --no-build python ops/scripts/run_python_test_suites.py --profile ci`.
+- Coverage artifact generation and the advisory `--cov-fail-under=0` threshold
+  are preserved through the registry's `repo-root` CI profile (verified:
+  `coverage.xml` is written, `TOTAL … 33%`, job exits 0).
+- Dropped now-unused `TEST_DIR` / `COVERAGE_THRESHOLD` workflow env (owned by
+  the registry CI profile); `SOURCE_DIR` retained for the lint job's mypy step.
+  The obsolete two-test workflow comment was removed.
+
+---
+
+## Final validation (whole tree, all four commits in place)
+
+Run order and results:
+
+| # | Command | Result |
+|---|---|---|
+| 1 | `uv sync --locked --extra dev` | exit 0 |
+| 2 | `uv lock --check` | exit 0 |
+| 3 | `uv run python ops/scripts/test_python_contract.py` | exit 0 (`Ran 21 tests … OK`) |
+| 4 | `uv run python ops/scripts/validate_python_contract.py` | exit 0 (`no drift`) |
+| 5 | `bash ops/scripts/run_pytest_suites.sh --tb=short -q` | exit 0 (all four suites PASS) |
+| 6 | `uv run --no-build ruff check .` | exit 0 |
+| 7 | `uv run --no-build ruff format --check .` | exit 0 |
+| 8 | `make pr-check` | exit 0 (`RESULT: PASS — local PR gate clean`) |
+| 9 | `git diff --check` | exit 0 |
+| 10 | `git status --short` | only tracked in-scope changes |
+
+CI-profile run (as GitHub Actions invokes it,
+`run_python_test_suites.py --profile ci`): `repo-root` `84 passed, 16
+subtests` + `coverage.xml` written; `claude-code-autonomy` `13 passed`;
+`subagent-generated-data-wave3` PASS; `program-execution-controller` PASS
+(`validate_controller` PASS, `unittest` `Ran 14 tests … OK`, negative tests
+`status: PASS`); `overall: PASS`.
+
+`make pr-check` detail: pre-commit changed-files gate + canonical runner all
+green; security gate `pass=3 fail=0 skip=1` (bandit / semgrep / pip-audit
+PASS; gitleaks SKIP — not installed on this host, advisory). mypy advisory
+(unchanged policy).
+
+### Changed-file scope proof (vs baseline `3c9ba5c…`)
+
+```
+A  ops/config/python-contract.json
+A  ops/scripts/run_python_test_suites.py
+A  ops/scripts/test_python_contract.py
+A  ops/scripts/validate_python_contract.py
+A  reports/python-contract-alignment-validation.md
+M  .github/workflows/l9-lint-test.yml
+M  ops/scripts/run_pytest_suites.sh
+M  pyproject.toml
+M  requirements.txt
+M  uv.lock
+```
+
+Exactly the ten allowed paths; no preserved runtime or governance file
+changed behavior.
+
+### Behavior-preservation notes
+
+- Root pytest count moved 77 → 84: the 14 Program Execution `scripts/tests`
+  previously collected under root xdist now run through the documented
+  fresh-process `program-execution-controller` sequence (validate_controller +
+  unittest discover + negative tests, strictly more coverage than before), and
+  the 21 new contract tests are collected at root. No test was dropped; the
+  previously-omitted Wave 3 suite now runs.
+- `[tool.uv] package = false`, runtime dependency ranges, the build-system
+  declaration, the Makefile, and all preserved autonomy / memory /
+  generated-data / Program Execution runtimes are unchanged.
+
+### Residual risks / UNKNOWNs
+
+- `gitleaks` and `pre-commit` are not preinstalled on this host. `pre-commit`
+  was installed locally to run `make pr-check` (it passed); `gitleaks` is
+  skipped and advisory — CI and a fully-provisioned developer host run it.
+  Neither affects the committed change.
+- Remote required-check / branch-protection contexts are repository settings
+  outside the tree and were not inspected (out of scope; halt boundary).
+
+---
+
+## Operator handoff
+
+Local work is complete and every gate is green. Per the contract halt
+boundary, no push / PR / merge / tag / release / settings change was
+performed. The operator decides whether to push and open a pull request.
+
