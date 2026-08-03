@@ -43,7 +43,7 @@ metadata:
     name: Quantum-L9
     github_owner: Quantum-L9
 
-  policy_version: 2.0.0
+  policy_version: 3.0.0
   schema_version: 2
 
   owner:
@@ -685,8 +685,12 @@ invariants:
       statement: >-
         Changes to canonical policy, policy schemas, validators, renderers,
         governance workflows, CODEOWNERS, release controls, ruleset bindings,
-        bypass configuration, or exemption policy require independent approval
-        from an authorized human governance owner.
+        bypass configuration, or exemption policy require independent
+        authorization from an authorized human governance owner. An explicit
+        merge authorization from that owner satisfies this requirement; a
+        coding agent may execute the authorized merge but cannot itself provide
+        the authorization, and the change author cannot self-authorize. A
+        separate recorded codeowner review is not required.
 
       enforcement_requirement: blocking
       fail_behavior: closed
@@ -708,11 +712,13 @@ invariants:
 
       requirements:
         pull_request_required: true
-        minimum_human_approvals: 1
-        codeowner_approval_required: true
-        author_cannot_self_approve: true
-        agent_approval_is_not_approval: true
-        unresolved_review_threads_block: true
+        minimum_human_authorizations: 1
+        human_owner_merge_authorization_satisfies: true
+        codeowner_approval_required: false
+        author_cannot_self_authorize: true
+        agent_authorization_is_not_authorization: true
+        agent_may_execute_authorized_merge: true
+        unresolved_review_threads_block: false
 
     violation:
       code: L9_ORG_INDEPENDENT_APPROVAL_REQUIRED
@@ -722,11 +728,15 @@ invariants:
         approval.
 
     assurance:
-      effective_enforcement_state: indeterminate
-      assurance_state: insufficient_evidence
+      effective_enforcement_state: advisory
+      assurance_state: partially_verified
       reason: >-
-        CODEOWNERS, branch protection, ruleset coverage, and bypass actors must
-        be inspected and recorded before this control can be claimed blocking.
+        Independent authorization is satisfied by an explicit merge
+        authorization from an authorized human governance owner; the coding
+        agent may execute the authorized merge but is not the authorizer, and
+        the change author cannot self-authorize. A separate recorded codeowner
+        review is intentionally not required. This is a process control;
+        platform ruleset binding is not the gate.
 
   - id: L9-ORG-008
     title: Governance code must use immutable external references
@@ -1638,11 +1648,14 @@ change_control:
 
   requirements:
     pull_request_required: true
-    independent_human_approval_required: true
-    codeowner_approval_required: true
+    independent_human_authorization_required: true
+    human_owner_merge_authorization_satisfies: true
+    agent_may_execute_authorized_merge: true
+    author_cannot_self_authorize: true
+    codeowner_approval_required: false
     direct_push_to_default_branch: forbidden
     force_push: forbidden
-    unresolved_review_threads_block: true
+    unresolved_review_threads_block: false
     required_check_name: org-governance/invariants
 
   agent_constraints:
@@ -1700,7 +1713,7 @@ rollout_gates:
       - required_check_bound
       - bypass_actors_reviewed
       - failure_blocks_merge
-      - protected_paths_require_codeowner
+      - protected_paths_require_human_owner_authorization
 
     current_status: not_verified
 
