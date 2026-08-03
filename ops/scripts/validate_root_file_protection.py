@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
             repo = Path(run_git(Path.cwd(), ["rev-parse", "--show-toplevel"]).strip())
         config = load_config(repo)
         findings = check(repo, config, ns.base, ns.head)
-        advisories = added_root_files_outside_policy(repo, ns.base, ns.head, config)
+        unregistered = added_root_files_outside_policy(repo, ns.base, ns.head, config)
     except ProtectionError as exc:
         print(f"[root-protect] FATAL: {exc}", file=sys.stderr)
         return 2
@@ -193,19 +193,27 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[root-protect] base={ns.base} head={ns.head} protected={count}")
     for f in findings:
         print(f"[root-protect]   {tags[f['verdict']]} {f['path']}: {f['detail']}")
-    for name in advisories:
-        print(
-            f"[root-protect]   WARN new root file not in protection policy: {name} "
-            f"(add it to {CONFIG_RELPATH})"
-        )
-    if violations:
-        print(f"[root-protect] FAILED: {len(violations)} protected root file(s) rewritten/deleted")
-        print(
-            "[root-protect] To proceed, add a commit message line: "
-            "'ALLOW-ROOT-DELETION: <path> — <reason>' and obtain CODEOWNERS approval."
-        )
+    # A brand-new repository-root file that is not registered in the policy would be
+    # unprotected. Fail closed: every root file must be classified into a tier, so the
+    # guarantee "every root file is protected" cannot be silently bypassed.
+    for name in unregistered:
+        print(f"[root-protect]   FAIL {name}: new root file not registered in {CONFIG_RELPATH}")
+
+    failures = len(violations) + len(unregistered)
+    if failures:
+        print(f"[root-protect] FAILED: {failures} issue(s)")
+        if violations:
+            print(
+                "[root-protect] For a rewrite/deletion: add a commit message line "
+                "'ALLOW-ROOT-DELETION: <path> — <reason>' and obtain CODEOWNERS approval."
+            )
+        if unregistered:
+            print(
+                "[root-protect] For a new root file: register it in "
+                f"{CONFIG_RELPATH} with a tier (additive_only / managed / regenerable)."
+            )
         return 1
-    print("[root-protect] OK: no unjustified deletion/overwrite of protected root files")
+    print("[root-protect] OK: every changed root file is protected and compliant")
     return 0
 
 

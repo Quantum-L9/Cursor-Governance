@@ -49,10 +49,10 @@ Appended (additive only): `ORG_INVARIANTS.yaml` (both `protected_paths` lists),
 | Command | Result |
 |---|---|
 | `ruff check` / `ruff format --check` (new scripts) | PASS |
-| `python ops/scripts/test_root_file_protection.py` | Ran 11 tests, OK |
+| `python ops/scripts/test_root_file_protection.py` | Ran 12 tests, OK |
 | Gate self-check on this PR (`validate_root_file_protection.py --base origin/main`) | PASS — all protected-file edits are additive (`-0`); recorded below |
 
-The 11 fixture tests cover: pure addition passes; managed-tier overwrite/deletion
+The 12 fixture tests cover: pure addition passes; managed-tier overwrite/deletion
 is exempt (no marker needed); overwrite without justification
 fails; deletion without justification fails; overwrite/deletion **with** a valid
 marker passes; `regenerable` wholesale rewrite is exempt; a marker for the wrong

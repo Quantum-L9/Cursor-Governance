@@ -375,6 +375,10 @@ CODEOWNERS-reviewed; the tier only decides whether the additive gate also fires)
   `governance-health-report.json`, `.harvest_executor_state.json`): exempt from the
   additive check because they are rewritten wholesale by tooling.
 
+A new repository-root file must be registered in the policy with a tier — an
+unregistered new root file fails the gate, so "every root file is protected"
+cannot be silently bypassed by adding one.
+
 Enforcement is mechanical and fail-closed on every pull request via
 `.github/workflows/root-file-protection.yml` →
 `ops/scripts/validate_root_file_protection.py`. The gate is read-only and never

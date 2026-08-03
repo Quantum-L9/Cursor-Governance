@@ -150,14 +150,30 @@ class RootProtectionTests(unittest.TestCase):
             self.assertNotIn("BBB.md", findings)
             self.assertNotIn("gen.lock", findings)
 
-    def test_new_root_file_is_advisory_not_violation(self) -> None:
+    def test_unregistered_new_root_file_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo, base = init_repo(Path(tmp))
             (repo / "NEWFILE.md").write_text("brand new\n", encoding="utf-8")
-            commit(repo, "add a new root file")
-            advisories = rp.added_root_files_outside_policy(repo, base, "HEAD", CONFIG)
-            self.assertIn("NEWFILE.md", advisories)
-            self.assertEqual(self._findings(repo, base), {})
+            commit(repo, "add an unregistered new root file")
+            self.assertIn(
+                "NEWFILE.md", rp.added_root_files_outside_policy(repo, base, "HEAD", CONFIG)
+            )
+            # A new root file not registered in the policy must fail the gate.
+            self.assertEqual(rp.main(["--base", base, "--repo", str(repo)]), 1)
+
+    def test_new_root_file_registered_in_config_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_repo(Path(tmp))
+            (repo / "NEWFILE.md").write_text("brand new\n", encoding="utf-8")
+            updated = json.loads(json.dumps(CONFIG))
+            updated["protected_files"].append(
+                {"path": "NEWFILE.md", "tier": "managed", "rule": "managed"}
+            )
+            (repo / "ops" / "config" / "root-file-protection.json").write_text(
+                json.dumps(updated), encoding="utf-8"
+            )
+            commit(repo, "add new root file and register it in the policy")
+            self.assertEqual(rp.main(["--base", base, "--repo", str(repo)]), 0)
 
     def test_main_exit_codes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
