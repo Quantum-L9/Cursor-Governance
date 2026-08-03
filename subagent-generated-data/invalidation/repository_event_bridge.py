@@ -13,6 +13,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -27,6 +28,30 @@ _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _STATE_STORE_PATH = _PACKAGE_ROOT / "orchestration" / "state_store.py"
 
 SUPPORTED_SCHEMA_MAJOR = 1
+_SAFE_COMMIT_REF = re.compile(r"^[0-9a-fA-F]{7,40}$")
+
+
+def _require_safe_commit_ref(revision: str) -> str:
+    value = str(revision).strip()
+    if not _SAFE_COMMIT_REF.fullmatch(value):
+        raise RepositoryStateError(f"Unsafe commit ref: {revision!r}")
+    return value
+
+
+def _resolve_cli_input_path(raw: str, *, base: Path | None = None) -> Path:
+    root = (base or Path.cwd()).resolve()
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = root / path
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise SystemExit(f"Input path escapes workspace: {raw}") from exc
+    if not resolved.is_file():
+        raise SystemExit(f"Input path is not a file: {raw}")
+    return resolved
+
 
 SUPPORTED_EVENT_TYPES = {
     "repository_path_changed",
@@ -357,6 +382,9 @@ class RepositoryEventBridge:
         validate_commit(root, from_sha)
         validate_commit(root, to_sha)
 
+        safe_from = _require_safe_commit_ref(from_sha)
+        safe_to = _require_safe_commit_ref(to_sha)
+
         completed = subprocess.run(
             [
                 "git",
@@ -365,8 +393,8 @@ class RepositoryEventBridge:
                 "diff",
                 "--name-status",
                 "--find-renames",
-                from_sha,
-                to_sha,
+                safe_from,
+                safe_to,
             ],
             capture_output=True,
             text=True,
@@ -656,14 +684,21 @@ def normalize_repository_path(
     return "/".join(parts)
 
 
+# Public alias retained for callers/tests that still import the prior name.
+normalize_relative_path = normalize_repository_path
+
+
 def assert_git_repository(
     root: Path,
 ) -> None:
+    resolved = Path(root).expanduser().resolve()
+    if not resolved.is_dir():
+        raise RepositoryStateError(f"Not a directory: {root}")
     completed = subprocess.run(
         [
             "git",
             "-C",
-            str(root),
+            str(resolved),
             "rev-parse",
             "--is-inside-work-tree",
         ],
@@ -679,11 +714,14 @@ def assert_git_repository(
 def ensure_clean_repository(
     root: Path,
 ) -> None:
+    resolved = Path(root).expanduser().resolve()
+    if not resolved.is_dir():
+        raise RepositoryStateError(f"Not a directory: {root}")
     completed = subprocess.run(
         [
             "git",
             "-C",
-            str(root),
+            str(resolved),
             "status",
             "--porcelain",
         ],
@@ -702,14 +740,18 @@ def validate_commit(
     root: Path,
     revision: str,
 ) -> None:
+    resolved = Path(root).expanduser().resolve()
+    if not resolved.is_dir():
+        raise RepositoryStateError(f"Not a directory: {root}")
+    safe = _require_safe_commit_ref(revision)
     completed = subprocess.run(
         [
             "git",
             "-C",
-            str(root),
+            str(resolved),
             "cat-file",
             "-e",
-            f"{revision}^{{commit}}",
+            f"{safe}^{{commit}}",
         ],
         capture_output=True,
         text=True,
@@ -724,13 +766,17 @@ def resolve_commit(
     root: Path,
     revision: str,
 ) -> str:
+    resolved = Path(root).expanduser().resolve()
+    if not resolved.is_dir():
+        raise RepositoryStateError(f"Not a directory: {root}")
+    safe = _require_safe_commit_ref(revision)
     completed = subprocess.run(
         [
             "git",
             "-C",
-            str(root),
+            str(resolved),
             "rev-parse",
-            f"{revision}^{{commit}}",
+            f"{safe}^{{commit}}",
         ],
         capture_output=True,
         text=True,
@@ -867,7 +913,7 @@ def main(
     )
 
     if args.event:
-        payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
+        payload = json.loads(_resolve_cli_input_path(args.event).read_text(encoding="utf-8"))
         if not isinstance(payload, Mapping):
             raise SystemExit("Event root must be a JSON object")
         event = event_from_mapping(payload)

@@ -23,6 +23,22 @@ from typing import Any, Protocol
 
 SUPPORTED_SCHEMA_MAJOR = 1
 
+
+def _resolve_cli_input_path(raw: str, *, base: Path | None = None) -> Path:
+    root = (base or Path.cwd()).resolve()
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = root / path
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise SystemExit(f"Input path escapes workspace: {raw}") from exc
+    if not resolved.is_file():
+        raise SystemExit(f"Input path is not a file: {raw}")
+    return resolved
+
+
 _ALLOWED_VISIBILITY = {
     "campaign_local",
     "repository_local",
@@ -698,7 +714,7 @@ def main(
     args = parser.parse_args(argv)
 
     if args.query:
-        payload = json.loads(Path(args.query).read_text(encoding="utf-8"))
+        payload = json.loads(_resolve_cli_input_path(args.query).read_text(encoding="utf-8"))
     else:
         payload = json.load(os.sys.stdin)
 

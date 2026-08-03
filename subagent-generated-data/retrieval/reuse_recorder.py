@@ -26,8 +26,25 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Protocol
 
-_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 _STATE_STORE_PATH = _PACKAGE_ROOT / "orchestration" / "state_store.py"
+_UTC_OFFSET_SUFFIX = "+00:00"
+
+
+def _resolve_cli_input_path(raw: str, *, base: Path | None = None) -> Path:
+    root = (base or Path.cwd()).resolve()
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = root / path
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise SystemExit(f"Input path escapes workspace: {raw}") from exc
+    if not resolved.is_file():
+        raise SystemExit(f"Input path is not a file: {raw}")
+    return resolved
+
 
 SUPPORTED_SCHEMA_MAJOR = 1
 
@@ -146,7 +163,7 @@ class ReuseFinalization:
     correction_required: bool
     validity_confirmed: bool
     occurred_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        default_factory=lambda: datetime.now(UTC).isoformat().replace(_UTC_OFFSET_SUFFIX, "Z")
     )
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -369,7 +386,7 @@ class ReuseRecorder:
             },
         }
 
-        row, created = self._record_local(
+        _, created = self._record_local(
             event_id=event_id,
             pending=pending,
             stage=ReuseStage.FINALIZED,
@@ -546,7 +563,7 @@ def load_state_store_module() -> ModuleType:
 
 def validate_utc_timestamp(value: str) -> None:
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", _UTC_OFFSET_SUFFIX))
     except ValueError as exc:
         raise ValueError(f"Invalid occurred_at timestamp: {value}") from exc
 
@@ -598,7 +615,7 @@ def main(
     args = parser.parse_args(argv)
 
     if args.event:
-        payload = json.loads(Path(args.event).read_text(encoding="utf-8"))
+        payload = json.loads(_resolve_cli_input_path(args.event).read_text(encoding="utf-8"))
     else:
         payload = json.load(sys.stdin)
 
@@ -652,7 +669,7 @@ def main(
         occurred_at=str(
             payload.get(
                 "occurred_at",
-                datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                datetime.now(UTC).isoformat().replace(_UTC_OFFSET_SUFFIX, "Z"),
             )
         ),
         metadata=dict(payload.get("metadata", {})),
