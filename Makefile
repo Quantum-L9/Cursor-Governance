@@ -205,3 +205,18 @@ integrity-check:
 ## target because it overwrites working-tree files from the baseline.
 integrity-snapshot:
 	python3 integrity/hash-verifier.py --snapshot
+# PROGRAM_EXECUTION_ADAPTER_LAYER_V1
+PE_ROOT := environment/program-execution
+.PHONY: program-execution-core-validate program-execution-adapters 	program-execution-conformance program-execution-probe
+
+program-execution-core-validate:
+	PYTHONDONTWRITEBYTECODE=1 python3 -B $(PE_ROOT)/core/scripts/validate_pair.py 		$(PE_ROOT)/core --mode template
+
+program-execution-adapters:
+	PYTHONDONTWRITEBYTECODE=1 python3 -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
+
+program-execution-conformance:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/run_conformance.py
+
+program-execution-probe:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py

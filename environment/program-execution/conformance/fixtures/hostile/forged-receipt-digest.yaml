@@ -1,0 +1,3 @@
+schema: program-execution-adapter.fixture.v1
+receipt_digest: sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+expected_error: EVIDENCE_INVALID_OR_STALE

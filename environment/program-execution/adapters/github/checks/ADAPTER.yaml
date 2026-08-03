@@ -1,0 +1,35 @@
+schema: program-execution-adapter.spec.v1
+adapter_id: github-checks
+adapter_version: 1.0.0
+adapter_kind: remote_action
+contract_family: program-execution-system.v2
+provider:
+  type: gh_cli
+  protocol_version: 1.0.0
+capabilities:
+  target_kinds:
+  - github_repository
+  actions:
+  - read_checks
+  - publish_check
+  async_execution: false
+  cancellation: unsupported
+  structured_output: true
+  isolated_execution: false
+  remote_credentials: required
+identity:
+  binding: controller_contract
+  memory_write: forbidden
+security:
+  default_deny: true
+  may_narrow_authority: true
+  may_widen_authority: false
+  autonomous_merge: false
+  force_push: false
+  direct_graphiti_write: false
+receipts:
+  lifecycle_schema: program-execution-adapter.lifecycle-receipt.v1
+  terminal_core_receipt: remote_action
+status:
+  default: conditional
+  blocked_reason: Read and write capabilities are probed separately.

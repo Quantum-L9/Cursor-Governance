@@ -1,0 +1,126 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/lifecycle-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "adapter_id": {
+      "type": "string"
+    },
+    "adapter_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "canonical_error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "dispatch_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidence": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "phase": {
+      "enum": [
+        "probe",
+        "prepare",
+        "dispatch",
+        "progress",
+        "collect",
+        "cancel",
+        "cleanup"
+      ]
+    },
+    "previous_receipt_digest": {
+      "anyOf": [
+        {
+          "pattern": "^(sha256:)?[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "program_lock_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "receipt_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "receipt_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "rendered_contract_digest": {
+      "anyOf": [
+        {
+          "pattern": "^(sha256:)?[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "schema": {
+      "const": "program-execution-adapter.lifecycle-receipt.v1"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "RUNNING",
+        "CANCELLED",
+        "UNSUPPORTED"
+      ]
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "receipt_id",
+    "adapter_id",
+    "adapter_version",
+    "phase",
+    "program_lock_digest",
+    "rendered_contract_digest",
+    "task_id",
+    "dispatch_id",
+    "status",
+    "canonical_error_code",
+    "adapter_error_code",
+    "evidence",
+    "created_at",
+    "previous_receipt_digest",
+    "receipt_digest"
+  ],
+  "title": "Program Execution Adapter Lifecycle Receipt",
+  "type": "object"
+}

@@ -240,6 +240,13 @@ Changes to `CANONICAL_LAW.md`, `resolve_governance_paths.sh`,
 `ops/scripts/_archived/` (archived = intentionally retired, not missing —
 verify the archival rationale in git history before restoring anything).
 
+`pyproject.toml` is a **protected file** (`ORG_INVARIANTS.yaml` `protected_paths`
++ CODEOWNERS): it pins the dependency/interpreter contract and the local
+`make pr` / pre-commit gate config. **Append only — never overwrite existing
+keys or lines.** Single-key TOML fields such as `[tool.pytest.ini_options]`
+`addopts` cannot be extended by appending; put additive pytest collection
+controls in the root `conftest.py` instead of rewriting the field here.
+
 ### 5.3 Forbidden
 - Reintroducing Dropbox as an SSOT fallback in any resolver script
 - Restoring archived pre-Graphiti daemons without confirming they're not
@@ -320,3 +327,24 @@ Exactly one formatter owns each language. Do not reformat a file with a tool oth
 Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
 
 <!-- END L9 FORMATTER OWNERSHIP -->
+<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:AGENTS -->
+
+## Program Execution adapter layer
+
+The reusable subsystem lives at `environment/program-execution/`. Do not copy its
+core schemas, root `autonomy/`, the Claude bounded-autonomy scheduler, the agent
+registry, or the Graphiti client into an adapter.
+
+Program Execution tasks use the Program Execution Controller lease as the sole
+authoritative work claim. They must not acquire a competing Graphiti task claim.
+A Graphiti projection is observability only and is never authoritative.
+
+Validation:
+
+```bash
+make program-execution-core-validate
+make program-execution-adapters
+make program-execution-conformance
+make program-execution-probe
+make pr
+```

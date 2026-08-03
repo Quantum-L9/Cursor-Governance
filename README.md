@@ -140,3 +140,11 @@ clone at `~/.cursor-governance/` is the SSOT working copy — see
 
 **Last Updated:** 2026-07-19
 **Version:** 2.0.0
+<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:README -->
+
+## Program Execution
+
+`environment/program-execution/` contains the sealed Program Execution core,
+replaceable execution adapters, conformance contracts, routing policy, and bridges
+to existing Cursor-Governance runtimes. Mutable program state remains outside Git
+under `$HOME/.l9/programs/`.

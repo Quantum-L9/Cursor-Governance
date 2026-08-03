@@ -1,0 +1,4 @@
+schema: program-execution-adapter.fixture.v1
+adapter_id: chatgpt-manual-handoff
+producer_identity: null
+expected_error: IDENTITY_BINDING_MISSING

@@ -1,0 +1,4 @@
+schema: program-execution-adapter.fixture.v1
+status: CANCELLED
+host_evidence: []
+expected_error: VALIDATION_FAILURE

@@ -1,0 +1,99 @@
+schema: program-execution-adapter.capability-index.v1
+generated_from: EXECUTION_ADAPTER_REGISTRY.yaml
+entries:
+- adapter_id: cursor-foreground
+  adapter_kind: worker_host
+  target_kinds:
+  - git_repository
+  - document_artifact
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  default_status: conditional
+- adapter_id: cursor-background
+  adapter_kind: worker_host
+  target_kinds:
+  - git_repository
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  default_status: conditional
+- adapter_id: claude-code-direct
+  adapter_kind: worker_host
+  target_kinds:
+  - git_repository
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  default_status: conditional
+- adapter_id: claude-code-bounded-autonomy
+  adapter_kind: worker_host
+  target_kinds:
+  - git_repository
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  default_status: conditional
+- adapter_id: chatgpt-manual-handoff
+  adapter_kind: worker_host
+  target_kinds:
+  - document_artifact
+  - research_artifact
+  actions:
+  - inspect
+  - artifact_production
+  default_status: dormant
+- adapter_id: ci-generic-shell
+  adapter_kind: verifier
+  target_kinds:
+  - git_repository
+  - candidate_directory
+  actions:
+  - verify
+  default_status: active
+- adapter_id: ci-github-actions
+  adapter_kind: verifier
+  target_kinds:
+  - github_repository
+  actions:
+  - workflow_dispatch
+  - verify
+  default_status: conditional
+- adapter_id: github-remote-actions
+  adapter_kind: remote_action
+  target_kinds:
+  - github_repository
+  actions:
+  - create_branch
+  - push_branch
+  - create_draft_pr
+  - update_draft_pr
+  default_status: conditional
+- adapter_id: github-checks
+  adapter_kind: remote_action
+  target_kinds:
+  - github_repository
+  actions:
+  - read_checks
+  - publish_check
+  default_status: conditional
+- adapter_id: github-deployments
+  adapter_kind: deployment_record
+  target_kinds:
+  - github_environment
+  actions:
+  - read_environment
+  - create_deployment_record
+  default_status: conditional
+- adapter_id: target-deployment-factory
+  adapter_kind: target_deployment_factory
+  target_kinds:
+  - target_adapter_spec
+  actions:
+  - generate_adapter
+  - validate_adapter
+  default_status: non_routable

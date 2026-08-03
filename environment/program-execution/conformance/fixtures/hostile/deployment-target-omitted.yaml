@@ -1,0 +1,5 @@
+schema: program-execution-adapter.fixture.v1
+requested_actions:
+- deploy
+target_kind: null
+expected_error: CAPABILITY_UNSUPPORTED

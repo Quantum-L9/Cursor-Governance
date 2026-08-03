@@ -1,0 +1,7 @@
+schema: program-execution-adapter.fixture.v1
+adapter_id: cursor-foreground
+action_class: read_only_architecture_or_artifact_work
+requested_actions:
+- inspect
+target_kind: git_repository
+expected: eligible_after_probe

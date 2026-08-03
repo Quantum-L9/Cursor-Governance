@@ -1,0 +1,7 @@
+schema: program-execution-adapter.fixture.v1
+adapter_id: ci-generic-shell
+action_class: verification
+requested_actions:
+- verify
+target_kind: candidate_directory
+expected: eligible

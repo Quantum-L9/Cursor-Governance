@@ -1,0 +1,64 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/remote-action-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "create_branch",
+        "push_branch",
+        "create_draft_pr",
+        "update_draft_pr",
+        "read_checks",
+        "publish_check"
+      ]
+    },
+    "approval_id": {
+      "type": "string"
+    },
+    "contract_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "program_lock_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "receipt_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "result": {
+      "type": "object"
+    },
+    "schema": {
+      "const": "program-execution-adapter.remote-action-receipt.v1"
+    },
+    "task_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "action",
+    "repository",
+    "task_id",
+    "program_lock_digest",
+    "contract_digest",
+    "approval_id",
+    "result",
+    "evidence",
+    "receipt_digest"
+  ],
+  "title": "Program Execution Remote Action Receipt",
+  "type": "object"
+}

@@ -1,0 +1,21 @@
+schema: program-execution-adapter.compatibility.v1
+adapter_contract: program-execution-adapter.v1
+core_contract: program-execution-system.v2
+minimum_python: '3.12'
+providers:
+  root_autonomy:
+    protocol: 1.0.0
+    path: autonomy/
+  claude_bounded_autonomy:
+    path: environment/claude-code/autonomy/
+    state_root: .l9/autonomy/claude-code/
+  agent_identity:
+    path: environment/agents/agent_registry.yaml
+  graphiti:
+    path: ops/graphiti/
+  generated_data:
+    path: subagent-generated-data/
+forbidden:
+- autonomous_merge
+- force_push
+- direct_graphiti_write

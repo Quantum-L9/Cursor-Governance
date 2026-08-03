@@ -1,0 +1,108 @@
+schema: program-execution-adapter.matrix.v1
+base_sha: 3c9ba5c675b91e5d1d2b20d777ff14fcb669a48c
+adapter_count: 11
+adapters:
+- adapter_id: cursor-foreground
+  kind: worker_host
+  status: conditional
+  provider_type: cursor_task_tools
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  cancellation: unsupported
+  descriptor_sha256: 71cf1a629b8a7bd48d14a2fd3c8c03ea82e5607b6a8cbf129134d85c57099625
+- adapter_id: cursor-background
+  kind: worker_host
+  status: conditional
+  provider_type: cursor_task_tools
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  cancellation: conditional
+  descriptor_sha256: 238cadab5aceecbcb737f9ca88d0ac51a4c378327cf9b5b813538ff3f99accf7
+- adapter_id: claude-code-direct
+  kind: worker_host
+  status: conditional
+  provider_type: subprocess
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  cancellation: unsupported
+  descriptor_sha256: 0f7a825a8c875c18fa65bf236f65119ede6cb225397ce894171ccc2e2706d9ca
+- adapter_id: claude-code-bounded-autonomy
+  kind: worker_host
+  status: conditional
+  provider_type: claude_bounded_autonomy
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  cancellation: unsupported
+  descriptor_sha256: 0b5150413a66381eeaf00e3b5ce2a83edfeb319237ea7e4e6194064dfbaaa2a4
+- adapter_id: chatgpt-manual-handoff
+  kind: worker_host
+  status: dormant
+  provider_type: manual_handoff
+  actions:
+  - inspect
+  - artifact_production
+  cancellation: unsupported
+  descriptor_sha256: 381144680e3d90f1bd28742306f779049400a2e0ae018bfc0f0a57dfa02c1cfe
+- adapter_id: ci-generic-shell
+  kind: verifier
+  status: active
+  provider_type: subprocess
+  actions:
+  - verify
+  cancellation: unsupported
+  descriptor_sha256: 96de9b192bc2e98a75d886f60d9e6a41dcb87ff384f0d30bf00bb9e411ca3afd
+- adapter_id: ci-github-actions
+  kind: verifier
+  status: conditional
+  provider_type: gh_cli
+  actions:
+  - workflow_dispatch
+  - verify
+  cancellation: conditional
+  descriptor_sha256: 6eb2b5b0c7f3f579e2c2a2a0ba71d890b8a5c431a8aabe3eddab139a4087d5ae
+- adapter_id: github-remote-actions
+  kind: remote_action
+  status: conditional
+  provider_type: gh_cli
+  actions:
+  - create_branch
+  - push_branch
+  - create_draft_pr
+  - update_draft_pr
+  cancellation: unsupported
+  descriptor_sha256: 6d360b2f1c549ddfc62d1a277d1a69eda515f795c75c32f90f3b89b0829eb285
+- adapter_id: github-checks
+  kind: remote_action
+  status: conditional
+  provider_type: gh_cli
+  actions:
+  - read_checks
+  - publish_check
+  cancellation: unsupported
+  descriptor_sha256: 7d4fdb4376770769e2dde71be5cbd7dc1d20c9edceb3b4f64c22ca83dfc7d7b6
+- adapter_id: github-deployments
+  kind: deployment_record
+  status: conditional
+  provider_type: gh_cli
+  actions:
+  - read_environment
+  - create_deployment_record
+  cancellation: unsupported
+  descriptor_sha256: a9de436b5b7c1be44c0652ba07b734b2a74af5831c2fac9af4f68b90f141b08f
+- adapter_id: target-deployment-factory
+  kind: target_deployment_factory
+  status: non_routable
+  provider_type: factory
+  actions:
+  - generate_adapter
+  - validate_adapter
+  cancellation: unsupported
+  descriptor_sha256: 186c41ea561978315f5689e341f29916a697ab7ad310f69259291efabde289c1

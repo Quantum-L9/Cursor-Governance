@@ -1,0 +1,36 @@
+schema: program-execution-adapter.health.v1
+generated: true
+entries:
+- adapter_id: cursor-foreground
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: cursor-background
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: claude-code-direct
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: claude-code-bounded-autonomy
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: chatgpt-manual-handoff
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: ci-generic-shell
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: ci-github-actions
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: github-remote-actions
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: github-checks
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: github-deployments
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: target-deployment-factory
+  status: UNKNOWN
+  last_probe: null

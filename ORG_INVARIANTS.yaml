@@ -705,6 +705,7 @@ invariants:
       - scripts/render_org_invariants_mirror.py
       - .github/workflows/**
       - .github/CODEOWNERS
+      - pyproject.toml
 
     assertion:
       type: independent_approval
@@ -1645,6 +1646,7 @@ change_control:
     - scripts/render_org_invariants_mirror.py
     - .github/workflows/**
     - .github/CODEOWNERS
+    - pyproject.toml
 
   requirements:
     pull_request_required: true
