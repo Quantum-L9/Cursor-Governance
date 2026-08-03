@@ -1,0 +1,244 @@
+---
+l9_schema: 1
+artifact_type: assertion_type_registry
+status: active
+canonical: true
+metadata:
+  registry_id: quantum-l9.org-invariant-assertions
+  title: Quantum-L9 Organization-Invariant Assertion Types
+  owner_repository: Quantum-L9/Cursor-Governance
+  compatibility:
+    unknown_critical_assertion: reject
+    unknown_high_assertion: reject
+    unknown_medium_assertion: indeterminate
+    unknown_low_assertion: indeterminate
+assertion_types:
+  - type: repository_owner
+    version: 1
+    purpose: >-
+      Determine whether a repository or publication target belongs to the
+      expected GitHub organization owner.
+    required_inputs:
+      - observed_owner
+      - expected_owner
+    optional_inputs:
+      - repository_full_name
+      - remote_url
+    normalization:
+      trim_whitespace: true
+      owner_case_sensitive: false
+      normalize_git_remote_syntax: true
+    pass_condition: normalized_observed_owner_equals_normalized_expected_owner
+    fail_condition: normalized_observed_owner_differs_from_normalized_expected_owner
+    unknown_condition: observed_owner_cannot_be_determined_unambiguously
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - version_1_must_not_infer_owner_from_untrusted_free_text
+      - conflicting_owner_sources_produce_unknown
+      - missing_owner_produces_unknown
+  - type: canonical_source
+    version: 1
+    purpose: >-
+      Determine whether a declared policy source matches the uniquely
+      authoritative repository and path.
+    required_inputs:
+      - declared_repository
+      - declared_path
+      - expected_repository
+      - expected_path
+    optional_inputs:
+      - declared_commit
+      - expected_commit
+    normalization:
+      trim_whitespace: true
+      repository_case_sensitive: false
+      path_case_sensitive: true
+      remove_leading_path_separator: true
+    pass_condition: declared_repository_and_path_match_expected_repository_and_path
+    fail_condition: declared_repository_or_path_conflicts_with_expected_source
+    unknown_condition: required_source_identity_is_missing_or_unreadable
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - mutable_branch_identity_may_identify_source_but_not_immutable_release
+      - consumer_repository_must_not_declare_itself_canonical
+  - type: canonical_digest_match
+    version: 1
+    purpose: >-
+      Determine whether a consumer representation matches the normalized
+      authoritative policy payload.
+    required_inputs:
+      - canonical_payload
+      - consumer_payload
+      - canonicalization_profile
+      - expected_digest
+    optional_inputs:
+      - observed_digest
+      - canonical_commit
+    normalization:
+      canonicalization_profile_required: true
+      character_encoding: UTF-8
+    pass_condition: normalized_payload_digest_equals_expected_digest
+    fail_condition: normalized_payload_digest_differs_from_expected_digest
+    unknown_condition: payload_or_digest_cannot_be_computed_or_verified
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - digest_match_proves_payload_equality_not_signer_identity
+      - excluded_fields_must_be_declared_by_the_canonical_policy
+      - canonicalization_profile_changes_require_assertion_version_change
+  - type: monotonic_policy_enforcement
+    version: 1
+    purpose: >-
+      Determine whether a downstream policy or binding is equal to or stricter
+      than the canonical requirement.
+    required_inputs:
+      - canonical_requirement
+      - downstream_requirement
+    optional_inputs:
+      - approved_exception
+    normalization:
+      normalize_enforcement_states: true
+      normalize_severity_states: true
+      normalize_fail_behavior: true
+    pass_condition: downstream_requirement_is_equal_to_or_stricter_than_canonical
+    fail_condition: downstream_requirement_weakens_or_bypasses_canonical
+    unknown_condition: semantic_comparison_is_unsupported_or_ambiguous
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - blocking_must_not_become_advisory
+      - fail_closed_must_not_become_fail_open
+      - block_must_not_become_warn
+      - severity_must_not_be_lowered
+      - unknown_critical_semantics_must_not_be_ignored
+  - type: independent_approval
+    version: 1
+    purpose: >-
+      Determine whether a governance-sensitive change has qualifying approval
+      from an authorized human other than the change author.
+    required_inputs:
+      - author_identity
+      - approval_events
+      - authorized_approver_group
+    optional_inputs:
+      - codeowner_requirement
+      - unresolved_review_threads
+    normalization:
+      identities_must_be_platform_verified: true
+      bot_and_agent_approvals_are_non_human: true
+    pass_condition: qualifying_independent_authorized_human_approval_exists
+    fail_condition: approval_is_missing_self_approval_or_agent_only
+    unknown_condition: approver_identity_or_authorization_cannot_be_verified
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - pull_request_author_cannot_satisfy_independence
+      - coding_agent_cannot_satisfy_human_approval
+      - unresolved_required_review_threads_prevent_pass
+  - type: enforcement_evidence
+    version: 1
+    purpose: >-
+      Determine whether a claimed implementation or enforcement state is
+      supported by current implementation, validation, and platform evidence.
+    required_inputs:
+      - claimed_state
+      - implementation_evidence
+      - validation_evidence
+      - platform_binding_evidence
+    optional_inputs:
+      - bypass_evidence
+      - evidence_freshness_policy
+    normalization:
+      stale_evidence_is_not_current: true
+      absent_evidence_is_not_failure_evidence: true
+    pass_condition: all_evidence_required_for_claimed_state_is_current_and_valid
+    fail_condition: evidence_proves_claimed_state_is_false
+    unknown_condition: required_evidence_is_missing_stale_or_unverifiable
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - workflow_presence_does_not_prove_required_check_binding
+      - check_success_does_not_prove_failure_blocks_merge
+      - documentation_does_not_prove_implementation
+      - planned_control_must_not_be_reported_implemented
+      - digest_does_not_prove_authenticity
+  - type: repository_coverage
+    version: 1
+    purpose: >-
+      Determine whether every in-scope repository is classified and bound to
+      the controls required by its governance class.
+    required_inputs:
+      - authoritative_repository_inventory
+      - repository_classifications
+      - required_control_bindings
+      - observed_control_bindings
+    optional_inputs:
+      - approved_exemptions
+    normalization:
+      stable_repository_identity_preferred: true
+      archived_repository_handling_must_be_explicit: true
+    pass_condition: every_in_scope_repository_is_classified_and_covered
+    fail_condition: one_or_more_in_scope_repositories_are_uncovered
+    unknown_condition: inventory_is_incomplete_stale_or_unverifiable
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - incomplete_pagination_must_not_pass
+      - absence_from_registry_does_not_imply_exemption
+      - declared_binding_does_not_prove_observed_binding
+  - type: authorized_bypass
+    version: 1
+    purpose: >-
+      Determine whether a break-glass bypass is authorized, scoped,
+      time-limited, incident-linked, and auditable.
+    required_inputs:
+      - actor_identity
+      - authorization
+      - affected_controls
+      - incident_reference
+      - started_at
+      - expires_at
+      - audit_event
+    optional_inputs:
+      - notification_event
+      - retrospective_review
+    normalization:
+      timestamps: RFC3339
+      timezone: UTC
+    pass_condition: bypass_is_authorized_scoped_unexpired_and_audited
+    fail_condition: bypass_is_unauthorized_expired_overbroad_or_incomplete
+    unknown_condition: authorization_or_audit_evidence_cannot_be_verified
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - coding_agents_cannot_be_break_glass_actors
+      - pull_request_author_self_bypass_is_forbidden
+      - expiration_is_mandatory
+      - incident_reference_is_mandatory
+      - retrospective_review_requirement_survives_bypass_expiration

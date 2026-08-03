@@ -1,0 +1,8 @@
+schema: program-execution-adapter.fixture.v1
+adapter_id: github-remote-actions
+action_class: remote_repository_action
+requested_actions:
+- create_draft_pr
+target_kind: github_repository
+exact_approval: true
+expected: eligible_after_probe

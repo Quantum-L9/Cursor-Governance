@@ -1,0 +1,20 @@
+schema: program-execution-adapter.source-reuse-report.v1
+sources:
+- path: environment/program-execution/core/
+  use: canonical Program Lock, task, attempt, verification, and handoff contracts
+  mutation: forbidden
+- path: autonomy/
+  use: mediated local-agent enforcement provider
+  mutation: none
+- path: environment/claude-code/autonomy/
+  use: bounded Claude campaign execution
+  mutation: none
+- path: environment/agents/agent_registry.yaml
+  use: stable agent identity binding
+  mutation: none
+- path: ops/graphiti/
+  use: read-only context retrieval
+  mutation: none
+- path: subagent-generated-data/
+  use: existing outcome publication pipeline
+  mutation: none

@@ -1,0 +1,7 @@
+schema: program-execution-adapter.fixture.v1
+adapter_id: claude-code-direct
+action_class: repository_implementation
+requested_actions:
+- local_write
+target_kind: git_repository
+expected: eligible_after_probe

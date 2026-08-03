@@ -1,0 +1,17 @@
+schema: program-execution-adapter.collision-report.v1
+status: PASS_WITH_PUBLICATION_BLOCKER
+base_sha: 3c9ba5c675b91e5d1d2b20d777ff14fcb669a48c
+core_modified: false
+core_in_adapter_manifest: false
+reuse_boundaries:
+  root_autonomy: wrapped_not_copied
+  claude_bounded_autonomy: wrapped_not_copied
+  agent_registry: read_only_reuse
+  graphiti: read_only_context_reuse
+  subagent_generated_data: existing_publisher_reuse
+open_pr_overlap:
+  pr_56: no_path_overlap; it modifies subagent-generated-data producers
+publication:
+  requested_branch: feat/program-execution-adapter-layer-v1
+  result: BLOCKED
+  reason: GitHub integration returned 403 Resource not accessible by integration

@@ -1,0 +1,12 @@
+schema: program-execution-adapter.hostile-fixture.v1
+cases:
+- id: stale-program-lock
+  expected: PROGRAM_LOCK_STALE
+- id: forged-receipt
+  expected: EVIDENCE_INVALID_OR_STALE
+- id: autonomous-merge
+  expected: AUTHORIZATION_INFLATION
+- id: path-escape
+  expected: SCOPE_VIOLATION
+- id: self-verification
+  expected: VALIDATION_FAILURE
