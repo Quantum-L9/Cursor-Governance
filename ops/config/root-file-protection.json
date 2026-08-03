@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Append-only protection contract for repository-root files. Incoming pull requests may freely ADD content to a protected root file, but may not delete or overwrite existing content without an explicit, proof-carrying justification recorded in a commit message AND CODEOWNERS review. This is the declarative source of truth read by ops/scripts/validate_root_file_protection.py (the fail-closed CI gate). Review routing is registered separately in CODEOWNERS and ORG_INVARIANTS.yaml protected_paths.",
+  "rules": {
+    "additive_only": "A PR may only add lines. Any removal or in-place rewrite of an existing line (or deletion of the whole file) fails the gate unless a matching justification marker is present in the PR's commit messages. Purely additive changes and brand-new files pass. CODEOWNERS review is still required.",
+    "regenerable": "Machine-generated artifact that is rewritten wholesale by tooling; exempt from the additive check because append-only is meaningless for it. Still CODEOWNERS-reviewed so a human sees the regeneration."
+  },
+  "justification": {
+    "marker": "ALLOW-ROOT-DELETION",
+    "format": "ALLOW-ROOT-DELETION: <root-relative-path> — <reason with proof of necessity>",
+    "recorded_in": "any commit message in the PR range (base..head)",
+    "note": "The marker authorizes the gate only; it does not replace human CODEOWNERS approval. It exists so every non-additive change to a protected root file carries a highlighted delta and a documented, traceable rationale."
+  },
+  "tiers": {
+    "canonical": "Hand-authored governance/contract/config surface. additive_only.",
+    "regenerable": "Machine-generated artifact. regenerable."
+  },
+  "protected_files": [
+    { "path": ".editorconfig", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".env.example", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".env.template", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".gitattributes", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".gitignore", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".gitleaks.toml", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".mcp.json", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".pre-commit-config.yaml", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".python-version", "tier": "canonical", "rule": "additive_only" },
+    { "path": "AGENTS.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "Activation Command.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CANONICAL_LAW.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CHANGELOG.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CODEOWNERS", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CODE_OF_CONDUCT.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CONTRIBUTING.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "LICENSE", "tier": "canonical", "rule": "additive_only" },
+    { "path": "Makefile", "tier": "canonical", "rule": "additive_only" },
+    { "path": "ORG_INVARIANTS.yaml", "tier": "canonical", "rule": "additive_only" },
+    { "path": "PULL_REQUEST_TEMPLATE.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "README.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "SECURITY.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "SUPPORT.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "TODO.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "conftest.py", "tier": "canonical", "rule": "additive_only" },
+    { "path": "end-session.yaml", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_autonomy_wave1.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_autonomy_wave2.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_autonomy_wave3.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_subagent_generated_data_cursor_final.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_subagent_generated_data_wave2.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "install_subagent_generated_data_wave3.sh", "tier": "canonical", "rule": "additive_only" },
+    { "path": "pyproject.toml", "tier": "canonical", "rule": "additive_only" },
+    { "path": "requirements.txt", "tier": "canonical", "rule": "additive_only" },
+    { "path": "sonar-project.properties", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".harvest_executor_state.json", "tier": "regenerable", "rule": "regenerable" },
+    { "path": "governance-health-report.json", "tier": "regenerable", "rule": "regenerable" },
+    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" }
+  ]
+}

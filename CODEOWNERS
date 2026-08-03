@@ -19,3 +19,22 @@
 # Protected build/dependency + gate contract — append-only, never overwritten
 # by tooling (ORG_INVARIANTS.yaml protected_paths; AGENTS.md §5.2).
 /pyproject.toml                        @cryptoxdog
+
+# Repository-root append-only protection. The `*` rule above already routes every
+# root file to the owner; these explicit entries keep that review requirement even
+# after a future multi-owner split. The authoritative protected-file list and the
+# additive-only rule live in ops/config/root-file-protection.json, mechanically
+# enforced on every PR by .github/workflows/root-file-protection.yml. (CODEOWNERS
+# cannot express the one root path containing a space, "Activation Command.md" —
+# the CI gate covers it.)
+/root-file-protection.json             @cryptoxdog
+/AGENTS.md                             @cryptoxdog
+/ORG_INVARIANTS.yaml                   @cryptoxdog
+/README.md                             @cryptoxdog
+/LICENSE                               @cryptoxdog
+/CODEOWNERS                            @cryptoxdog
+/Makefile                              @cryptoxdog
+/requirements.txt                      @cryptoxdog
+/conftest.py                           @cryptoxdog
+/ops/config/root-file-protection.json  @cryptoxdog
+/ops/scripts/validate_root_file_protection.py @cryptoxdog

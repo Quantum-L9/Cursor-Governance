@@ -1,0 +1,60 @@
+# Repository-root append-only protection gate.
+#
+# Fails any pull request that deletes or overwrites existing content in a protected
+# root file (ops/config/root-file-protection.json) without an
+#   ALLOW-ROOT-DELETION: <path> — <reason>
+# marker in a commit message. Purely additive changes and brand-new files pass;
+# machine-generated `regenerable` files are exempt. This is the mechanical half of
+# the policy — CODEOWNERS + ORG_INVARIANTS.yaml protected_paths supply human review.
+#
+# Conventions: immutable event-revision checkout (no floating source ref), pinned
+# external action SHAs, least-privilege permissions.
+name: L9 Root-File Protection
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: root-file-protection-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  append-only:
+    name: Root-file append-only gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout PR head with base history
+        env:
+          REPOSITORY: ${{ github.repository }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q .
+          git remote add origin \
+            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          # Enough depth for the base<->head merge-base; the validator falls back to
+          # the base tip if the common ancestor is out of range.
+          git -c protocol.version=2 fetch --depth=200 origin "${HEAD_SHA}"
+          git -c protocol.version=2 fetch --depth=200 origin \
+            "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          git checkout -q --detach "${HEAD_SHA}"
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Append-only gate
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python ops/scripts/validate_root_file_protection.py \
+            --base "origin/${BASE_REF}" --head "${HEAD_SHA}"
