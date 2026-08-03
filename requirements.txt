@@ -39,8 +39,14 @@
 ruff==0.16.0
 mypy==2.3.0
 types-PyYAML==6.0.12.20260724
+types-jsonschema==4.26.0.20260518
 pytest==9.1.1
 pytest-cov==7.1.0
+
+# --- CI-only test plugins (not SDK/Core-pinned; locked here so CI never falls
+#     back to a floating `pip install`; consumed by the canonical suite runner) -
+pytest-xdist==3.8.0
+pytest-timeout==2.4.0
 
 # --- l9-ci-core only (SDK does not pin these; used by make pr-security) -------
 bandit==1.8.6
