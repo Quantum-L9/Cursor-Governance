@@ -264,3 +264,15 @@ to "let CI catch it." CI is the second line of defence, not the first.
 | Scope | CHANGED FILES ONLY (`AGENTS.md` §2.3 invariant). Full-tree is `make pr-full` / `make precommit` — intentional/nightly, and never a substitute for `make pr`. |
 | Applies to | Every L9 / Quantum-L9 coding workspace and every agent surface (Cursor, Claude Code CLI · Web · Mobile, Codex, Gemini, …). |
 | Authority | Non-optional. Sits above per-session context in the authority order; enforced operationally in `AGENTS.md` §6. |
+<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:CANONICAL_LAW -->
+
+## Program Execution subsystem
+
+`environment/program-execution/` is the canonical Program Execution subsystem.
+Its sealed `core/` owns program-level truth, Program Locks, Controller state law,
+and canonical worker and verification receipts. Root `autonomy/` is a subordinate
+local enforcement provider, not a second Program Execution Controller.
+
+Program Execution adapters may narrow authority but must never widen it. Mutable
+program runtime, leases, attempts, receipts, and health state live outside this
+repository under `$HOME/.l9/programs/`.

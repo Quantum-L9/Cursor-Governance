@@ -1,0 +1,4 @@
+schema: program-execution-adapter.fixture.v1
+worker_adapter_id: claude-code-direct
+verifier_adapter_id: claude-code-direct
+expected_error: VALIDATION_FAILURE

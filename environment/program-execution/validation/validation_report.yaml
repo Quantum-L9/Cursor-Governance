@@ -1,0 +1,14 @@
+schema: program-execution-adapter.validation-report.v1
+status: BLOCKED_ON_VALIDATION
+module_status: PASS
+base_repository: Quantum-L9/Cursor-Governance
+base_sha: 3c9ba5c675b91e5d1d2b20d777ff14fcb669a48c
+adapter_count: 11
+conformance_tests: 57
+standard_discovery_tests: 35
+blocking_checks_passed: 11
+blocking_checks_total: 14
+publication_ready_after:
+- apply module and five alignment edits in authenticated worktree
+- run repository-pinned Ruff and full make pr
+- commit, push, and open one draft PR

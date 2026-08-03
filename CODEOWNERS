@@ -16,3 +16,6 @@
 /ops/scripts/backup_to_github.sh       @cryptoxdog
 /ops/hooks/session_start_bootstrap.sh  @cryptoxdog
 /ops/scripts/_archived/                @cryptoxdog
+# Protected build/dependency + gate contract — append-only, never overwritten
+# by tooling (ORG_INVARIANTS.yaml protected_paths; AGENTS.md §5.2).
+/pyproject.toml                        @cryptoxdog
