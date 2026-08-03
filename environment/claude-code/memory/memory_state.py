@@ -14,12 +14,16 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
 CONTRACT_PATH = HERE / "memory-enforcement.contract.json"
+
+sys.path.insert(0, str(HERE))
+from errors import MemoryWriteDenied  # noqa: E402
 
 
 def load_contract() -> dict[str, Any]:
@@ -60,6 +64,59 @@ def resolve_namespaces(contract: dict[str, Any]) -> list[str]:
     if raw:
         return [n.strip() for n in raw.split(",") if n.strip()]
     return list(contract.get("memory", {}).get("default_namespaces", []))
+
+
+# --- writer identity (runtime attribution enforcement) ----------------------
+# Identities reserved for the Cursor surface. Claude Code shares the memory
+# namespace with Cursor but must never write under Cursor's writer identity.
+RESERVED_WRITER_IDENTITIES = frozenset({"cursor_agent", "cursor-agent"})
+
+
+def resolve_writer_identity(
+    contract: dict[str, Any] | None = None, *, require_explicit: bool = True
+) -> dict[str, str]:
+    """Resolve the memory writer's identity from the environment.
+
+    ``agent_id`` comes from the contract-declared ``agent_id_env`` (default
+    ``L9_MEMORY_AGENT_ID``); ``user_id`` comes from ``USER_ID``. When
+    ``require_explicit`` is True — every write path — an unset value is returned
+    as an empty string so :func:`validate_memory_writer` denies it. The contract
+    defaults are applied only for read/bootstrap resolution
+    (``require_explicit=False``); this keeps a missing runtime identity from
+    being silently defaulted into a valid write, so ``test_missing_agent_id``
+    can actually deny.
+    """
+    mem = (contract or {}).get("memory", {})
+    agent_env = mem.get("agent_id_env", "L9_MEMORY_AGENT_ID")
+    default_agent = mem.get("default_agent_id", "claude-code")
+    agent_id = os.environ.get(agent_env, "").strip()
+    user_id = os.environ.get("USER_ID", "").strip()
+    if not require_explicit:
+        agent_id = agent_id or default_agent
+        user_id = user_id or "claude_code_agent"
+    return {"agent_id": agent_id, "user_id": user_id}
+
+
+def validate_memory_writer(identity: dict[str, str]) -> None:
+    """Deny a memory write whose attribution is missing or reserved.
+
+    Fail-closed guard invoked before any server-bound write. Raises
+    :class:`MemoryWriteDenied` when ``namespace`` or a core identity field is
+    absent, or when the agent/user identity is one reserved for another surface
+    (Cursor). This is the runtime complement of the static template check in
+    ``validate_claude_env.check_memory_identity_distinct``.
+    """
+    missing = [field for field in ("namespace", "agent_id", "user_id") if not identity.get(field)]
+    if missing:
+        msg = f"memory write denied: missing writer attribution: {', '.join(missing)}"
+        raise MemoryWriteDenied(msg)
+    for field in ("agent_id", "user_id"):
+        if identity[field] in RESERVED_WRITER_IDENTITIES:
+            msg = (
+                f"memory write denied: {field}={identity[field]!r} is reserved for the Cursor "
+                "surface; Claude Code must write under a distinct identity"
+            )
+            raise MemoryWriteDenied(msg)
 
 
 def task_signature(namespace: str) -> str:

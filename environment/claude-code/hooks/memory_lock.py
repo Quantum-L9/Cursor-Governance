@@ -39,6 +39,7 @@ def _current_session_id(contract: dict) -> str | None:
 
 def command_acquire(args: argparse.Namespace) -> int:
     import memory_client as mc
+    from errors import MemoryWriteDenied
 
     contract = st.load_contract()
     session_id = _current_session_id(contract)
@@ -59,7 +60,11 @@ def command_acquire(args: argparse.Namespace) -> int:
         print("conflicts present; resolve or re-run with --force", file=sys.stderr)
         return 4
 
-    granted = mc.phase_lock(namespace, signature, ttl_seconds=ttl)
+    try:
+        granted = mc.phase_lock(namespace, signature, ttl_seconds=ttl)
+    except MemoryWriteDenied as exc:
+        print(f"memory-lock: {exc}; not writing a lock artifact", file=sys.stderr)
+        return 6
     if not granted.get("granted", False):
         print(
             f"server did not grant the phase-lock for {namespace!r}; not writing a lock artifact",

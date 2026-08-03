@@ -54,17 +54,21 @@ def main() -> int:
 
     try:
         import memory_client as mc
+        from errors import MemoryWriteDenied
 
-        mc.ingest(
-            {
-                "namespace": namespaces[0],
-                "content": content,
-                "idempotency_key": f"cc-session-{session_id}",
-                "source_id": session_id,
-                "tags": ["claude-code", "session-episode"],
-            }
-        )
-    except Exception as exc:  # fail-open
+        try:
+            mc.ingest(
+                {
+                    "namespace": namespaces[0],
+                    "content": content,
+                    "idempotency_key": f"cc-session-{session_id}",
+                    "source_id": session_id,
+                    "tags": ["claude-code", "session-episode"],
+                }
+            )
+        except MemoryWriteDenied as exc:  # identity denial, not transport failure
+            print(f"memory-writeback: write disabled — {exc}", file=sys.stderr)
+    except Exception as exc:  # fail-open on any transport/import failure
         print(f"memory-writeback: skipped ({exc})", file=sys.stderr)
     return 0
 
