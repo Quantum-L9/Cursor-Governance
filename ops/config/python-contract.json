@@ -146,7 +146,9 @@
         "environment/program-execution/core/program-execution-controller-template/scripts/validate_controller.py",
         "environment/program-execution/core/program-execution-controller-template/scripts/run_negative_tests.py"
       ],
-      "env": {},
+      "env": {
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
       "append_user_pytest_args": false,
       "allow_exit_5": false,
       "profiles": {
@@ -203,7 +205,7 @@
           ]
         }
       },
-      "rationale": "Program Execution controller validation. Its VALIDATION.md states fresh-process isolation is intentional because several fixtures create and intentionally abandon or fail Git worktrees; therefore this suite is a command_sequence run in fresh processes and is NOT collected by root pytest or run through xdist. The three commands run sequentially from the controller-template directory; execution stops on the first failed command and preserves its exact exit status."
+      "rationale": "Program Execution controller validation. Its VALIDATION.md states fresh-process isolation is intentional because several fixtures create and intentionally abandon or fail Git worktrees; therefore this suite is a command_sequence run in fresh processes and is NOT collected by root pytest or run through xdist. The three commands run sequentially from the controller-template directory; execution stops on the first failed command and preserves its exact exit status. PYTHONDONTWRITEBYTECODE=1 is required because validate_controller.py rejects any __pycache__/.pyc under the template as 'compiled Python debris'; without it the unittest-discover step would leave bytecode that the negative-test step's controller validation then fails on (matches the subsystem's own PYTHONDONTWRITEBYTECODE=1 Makefile convention)."
     }
   ]
 }
