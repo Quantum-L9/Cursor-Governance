@@ -27,8 +27,17 @@ dev = [
     "ruff==0.16.0",
     "mypy==2.3.0",
     "types-PyYAML==6.0.12.20260724",
+    # jsonschema ships no inline types; the Program Execution validators
+    # (environment/program-execution/core) type-check against Draft202012Validator.
+    # Pinned to the live l9-ci-sdk requirements-ci.txt stub version (sdk wins).
+    "types-jsonschema==4.26.0.20260518",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
+    # CI-only test plugins — the canonical suite runner uses -n auto (xdist) and
+    # --timeout=300 (pytest-timeout) in its ci profile. Locked here so CI no longer
+    # installs them through floating fallback pip commands outside uv.lock.
+    "pytest-xdist==3.8.0",
+    "pytest-timeout==2.4.0",
     "bandit==1.8.6",
     "pip-audit==2.9.0",
 ]
