@@ -24,8 +24,8 @@
 # the owner; these explicit entries keep that review requirement even after a future
 # multi-owner split. The authoritative protected-file list and per-file tier live in
 # ops/config/root-file-protection.json, mechanically enforced on every PR by
-# .github/workflows/root-file-protection.yml — that CI gate is authoritative and
-# covers every root file (including any name CODEOWNERS cannot pattern-match).
+# .github/workflows/root-file-protection.yml — that CI gate enforces the policy on
+# every root file independently of CODEOWNERS pattern matching.
 /AGENTS.md                             @cryptoxdog
 /ORG_INVARIANTS.yaml                   @cryptoxdog
 /README.md                             @cryptoxdog

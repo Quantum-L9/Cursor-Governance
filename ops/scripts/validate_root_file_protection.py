@@ -34,24 +34,46 @@ from pathlib import Path
 
 DEFAULT_BASE = os.environ.get("ROOT_PROTECT_BASE", "origin/main")
 CONFIG_RELPATH = "ops/config/root-file-protection.json"
+GIT_TIMEOUT_SECONDS = 120
 
 # ALLOW-ROOT-DELETION: <path> — <reason>   (em-dash or " - " separator; reason required)
 _MARKER_RE = re.compile(
     r"^\s*ALLOW-ROOT-DELETION:\s*(?P<path>.+?)\s*(?:—|-)\s+(?P<reason>\S.*)$",
 )
 
+# Allowlists for untrusted values (CLI refs, config paths) that flow into git
+# subcommands or filesystem reads. Validating them before they reach an OS command
+# or a path keeps this fail-closed gate injection- and traversal-safe.
+_SAFE_REF = re.compile(r"\A[0-9A-Za-z._/+@^~-]{1,255}\Z")
+_SAFE_ROOT_RELPATH = re.compile(r"\A[0-9A-Za-z._ +@^~/-]{1,255}\Z")
+
 
 class ProtectionError(Exception):
     """Malformed invocation or unreadable inputs. Always fail closed."""
 
 
+def _require_safe(pattern: re.Pattern[str], value: object, kind: str) -> str:
+    if not isinstance(value, str) or not pattern.fullmatch(value) or ".." in value.split("/"):
+        msg = f"unsafe {kind}: {value!r}"
+        raise ProtectionError(msg)
+    return value
+
+
 def run_git(repo: Path, args: list[str]) -> str:
-    result = subprocess.run(  # noqa: S603 - fixed git argv, no shell
-        ["git", "-C", str(repo), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    # args are fixed git subcommands built internally; the only externally-derived
+    # values they can carry (refs and repo-relative paths) are allowlist-validated by
+    # callers before reaching this point. No shell is used.
+    try:
+        result = subprocess.run(  # noqa: S603 - fixed git argv, no shell
+            ["git", "-C", str(repo), *args],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        msg = f"git {' '.join(args)} timed out after {GIT_TIMEOUT_SECONDS}s"
+        raise ProtectionError(msg) from exc
     if result.returncode != 0:
         msg = f"git {' '.join(args)} failed: {result.stderr.strip()}"
         raise ProtectionError(msg)
@@ -59,9 +81,12 @@ def run_git(repo: Path, args: list[str]) -> str:
 
 
 def load_config(repo: Path) -> dict:
-    path = repo / CONFIG_RELPATH
-    if not path.is_file():
-        msg = f"protection config not found: {CONFIG_RELPATH}"
+    # Confine the config read to a fixed relative path under the (resolved) repo root
+    # so a caller-supplied repo cannot be steered outside it.
+    root = repo.resolve()
+    path = (root / CONFIG_RELPATH).resolve()
+    if root != path.parent.parent.parent or not path.is_file():
+        msg = f"protection config not found under repo root: {CONFIG_RELPATH}"
         raise ProtectionError(msg)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -76,6 +101,8 @@ def load_config(repo: Path) -> dict:
         if not isinstance(entry, dict) or "path" not in entry or "rule" not in entry:
             msg = "each protected_files entry needs a path and a rule"
             raise ProtectionError(msg)
+        # Protected paths flow into `git diff -- <path>`; allowlist-validate them.
+        _require_safe(_SAFE_ROOT_RELPATH, entry["path"], "protected path")
         if entry["rule"] not in ("additive_only", "managed", "regenerable"):
             msg = f"unknown rule for {entry['path']!r}: {entry['rule']}"
             raise ProtectionError(msg)
@@ -156,13 +183,15 @@ def check(repo: Path, config: dict, base: str, head: str) -> list[dict]:
 def added_root_files_outside_policy(repo: Path, base: str, head: str, config: dict) -> list[str]:
     protected = {e["path"] for e in config["protected_files"]}
     mb = merge_base(repo, base, head)
-    out = run_git(repo, ["diff", "--name-status", "--diff-filter=A", f"{mb}..{head}"])
+    # Include added (A), copied (C) and renamed (R): a file can be introduced into the
+    # repo root by a move/copy too, and its destination path is the LAST tab field.
+    out = run_git(repo, ["diff", "--name-status", "--diff-filter=ACR", f"{mb}..{head}"])
     new_root: list[str] = []
     for line in out.splitlines():
-        parts = line.split("\t", 1)
-        if len(parts) != 2:
+        fields = line.split("\t")
+        if len(fields) < 2:
             continue
-        name = parts[1]
+        name = fields[-1]  # destination path (A: only field; R/C: the new path)
         if "/" not in name and name not in protected:
             new_root.append(name)
     return new_root
@@ -176,13 +205,19 @@ def main(argv: list[str] | None = None) -> int:
     ns = parser.parse_args(argv)
 
     try:
+        # Validate untrusted refs before they are embedded in any git command.
+        base = _require_safe(_SAFE_REF, ns.base, "base ref")
+        head = _require_safe(_SAFE_REF, ns.head, "head ref")
         if ns.repo:
-            repo = Path(ns.repo)
+            repo = Path(ns.repo).resolve()
+            if not repo.is_dir():
+                msg = f"--repo is not a directory: {ns.repo}"
+                raise ProtectionError(msg)
         else:
             repo = Path(run_git(Path.cwd(), ["rev-parse", "--show-toplevel"]).strip())
         config = load_config(repo)
-        findings = check(repo, config, ns.base, ns.head)
-        unregistered = added_root_files_outside_policy(repo, ns.base, ns.head, config)
+        findings = check(repo, config, base, head)
+        unregistered = added_root_files_outside_policy(repo, base, head, config)
     except ProtectionError as exc:
         print(f"[root-protect] FATAL: {exc}", file=sys.stderr)
         return 2

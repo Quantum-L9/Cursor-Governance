@@ -161,6 +161,19 @@ class RootProtectionTests(unittest.TestCase):
             # A new root file not registered in the policy must fail the gate.
             self.assertEqual(rp.main(["--base", base, "--repo", str(repo)]), 1)
 
+    def test_rename_into_root_is_flagged(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_repo(Path(tmp))
+            (repo / "sub").mkdir()
+            (repo / "sub" / "x.md").write_text("nested content here\n", encoding="utf-8")
+            commit(repo, "add a nested file")
+            base2 = git(repo, "rev-parse", "HEAD")
+            git(repo, "mv", "sub/x.md", "MOVEDIN.md")
+            commit(repo, "move a nested file into the repo root")
+            self.assertIn(
+                "MOVEDIN.md", rp.added_root_files_outside_policy(repo, base2, "HEAD", CONFIG)
+            )
+
     def test_new_root_file_registered_in_config_passes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo, base = init_repo(Path(tmp))
