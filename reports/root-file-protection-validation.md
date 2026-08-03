@@ -57,8 +57,8 @@ is exempt (no marker needed); overwrite without justification
 fails; deletion without justification fails; overwrite/deletion **with** a valid
 marker passes; `regenerable` wholesale rewrite is exempt; a marker for the wrong
 path does not excuse; a marker without a reason is rejected; unchanged files are
-not reported; a new root file is advisory (not a violation); and `main()` returns
-0/1 correctly.
+not reported; an unregistered new root file **fails** the gate while a registered
+one passes; and `main()` returns 0/1 correctly.
 
 ## Self-consistency
 
