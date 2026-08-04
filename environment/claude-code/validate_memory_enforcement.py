@@ -130,9 +130,17 @@ def _contract_pin(failures: list[str]) -> None:
     if not CONTRACT_TEST.is_file():
         _fail(f"missing contract pin: {CONTRACT_TEST.relative_to(REPO)}", failures)
         return
-    result = subprocess.run(
-        [sys.executable, str(CONTRACT_TEST)], capture_output=True, text=True, check=False
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(CONTRACT_TEST)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        _fail("memory client<->server contract test timed out (>60s)", failures)
+        return
     if result.returncode:
         detail = f"{result.stdout}{result.stderr}"
         _fail(f"memory client<->server contract test failed\n{detail}", failures)

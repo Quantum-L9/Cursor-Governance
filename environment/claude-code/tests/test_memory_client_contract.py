@@ -92,9 +92,15 @@ class HydrateContract(unittest.TestCase):
         self.assertIn("[observation]", text)
 
     def test_render_is_budget_bounded(self) -> None:
-        text = mc.render_sections(HYDRATE_POPULATED, max_chars=20)
-        self.assertLessEqual(len(text), 20 + len("\n… (truncated to fit the context budget)"))
+        # The final string (suffix included) must never exceed max_chars.
+        text = mc.render_sections(HYDRATE_POPULATED, max_chars=100)
+        self.assertLessEqual(len(text), 100)
         self.assertIn("truncated", text)
+
+    def test_render_budget_smaller_than_suffix(self) -> None:
+        # Even a budget smaller than the truncation suffix stays within bound.
+        text = mc.render_sections(HYDRATE_POPULATED, max_chars=10)
+        self.assertLessEqual(len(text), 10)
 
     def test_empty_hydrate_is_zero_not_error(self) -> None:
         self.assertEqual(mc.hydrated_sections(HYDRATE_EMPTY), [])

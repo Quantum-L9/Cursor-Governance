@@ -59,7 +59,10 @@ def main() -> int:
             "L9 memory: ENFORCED. Prefetch complete for namespaces "
             f"{', '.join(namespaces)} ({len(sections)} section(s) hydrated).",
         ]
-        context = mc.render_sections(bundle)
+        # Bound injected context by the server-provided token budget (~4 chars/
+        # token) so a large hydration cannot overrun the SessionStart budget.
+        token_budget = int(bundle.get("token_budget") or 1200)
+        context = mc.render_sections(bundle, max_chars=max(500, token_budget * 4))
         if context:
             # Actually surface the retrieved memory to the session — a successful
             # prefetch that injects nothing is indistinguishable from no memory.

@@ -176,7 +176,14 @@ def render_sections(bundle: dict[str, Any], *, max_chars: int = 4000) -> str:
         parts.append(f"[{memory_class}] {content}")
     text = "\n\n".join(parts)
     if len(text) > max_chars:
-        text = text[:max_chars].rstrip() + "\n… (truncated to fit the context budget)"
+        suffix = "\n… (truncated to fit the context budget)"
+        # Keep the FINAL string within max_chars (suffix included), so a caller's
+        # context budget is never overrun. If the budget is smaller than the
+        # suffix itself, hard-truncate without it.
+        if max_chars <= len(suffix):
+            text = text[:max_chars]
+        else:
+            text = text[: max_chars - len(suffix)].rstrip() + suffix
     return text
 
 
