@@ -666,6 +666,17 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "audit, reconcile, and renovate a real software repository from fragmented manifests, duplicated automation, stale configuration, dead wiring, ignored tests, documentation drift, and ambiguous ownership into a coherent, validated implementation delivered through a governed pull request. use when the user asks to fix a messy repo end to end, align pyproject/package manifests with actual capabilities, collapse competing dependency or test authorities, turn an audit into full production files, modernize repository control planes, or continue remediation until the pr is green. do not use for audit-only commentary, isolated feature development, cosmetic refactors, or repositories the user has not authorized for modification.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-repository-renovation",
+      "path": "skills/l9-repository-renovation",
+      "reason": "audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR \u2014 high blast radius, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.",
       "disable_model_invocation": false,
@@ -755,6 +766,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "7c3131463315037b315e932eb05762764d85459b15f54a8d09c6a7c692df8701",
-  "source_skill_corpus_sha256": "a58a6237c63033e75fa9c5effb763590e828befe26e695ba24879934bdf4ef0c"
+  "source_manifest_sha256": "c026004dfeea2d9cc644be81a64dc74511836a99654ce1db4012f3fc77ba9448",
+  "source_skill_corpus_sha256": "81db1eb4a45325b7e42acd0f87541ae4d13bf3e2c27f35c369178ca36a1bb089"
 }

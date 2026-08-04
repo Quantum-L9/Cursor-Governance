@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/renovation-contract.schema.json",
+  "title": "Repository Renovation Contract",
+  "type": "object",
+  "required": ["schema_version", "contract_id", "generated_at", "source_audit_id", "objective", "repository", "mode", "authority_decisions", "scope", "phases", "validation_matrix", "acceptance_criteria", "rollback", "pr_policy", "unknowns"],
+  "properties": {
+    "schema_version": {"const": "renovation-contract-1.0"},
+    "contract_id": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "source_audit_id": {"type": ["string", "null"]},
+    "objective": {"type": "string", "minLength": 1},
+    "repository": {
+      "type": "object",
+      "required": ["name", "path", "base_ref", "base_commit", "target_branch"],
+      "properties": {
+        "name": {"type": "string"},
+        "path": {"type": "string"},
+        "base_ref": {"type": "string"},
+        "base_commit": {"type": "string"},
+        "target_branch": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "mode": {"enum": ["AUDIT_ONLY", "CONTRACT_ONLY", "PACK_ONLY", "RENOVATE_TO_PR", "BLOCKED_PACK"]},
+    "authority_decisions": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "scope": {
+      "type": "object",
+      "required": ["allowed_paths", "forbidden_paths", "preserved_behavior", "forbidden_capabilities"],
+      "properties": {
+        "allowed_paths": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "forbidden_paths": {"type": "array", "items": {"type": "string"}},
+        "preserved_behavior": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "forbidden_capabilities": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "phases": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "validation_matrix": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "acceptance_criteria": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "rollback": {"type": "object"},
+    "pr_policy": {"type": "object"},
+    "unknowns": {"type": "array"}
+  },
+  "additionalProperties": false
+}

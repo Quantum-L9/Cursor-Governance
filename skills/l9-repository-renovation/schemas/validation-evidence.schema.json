@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/validation-evidence.schema.json",
+  "title": "Renovation Validation Evidence",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "contract_id", "repository", "status", "required_failures", "missing_required", "records"],
+  "properties": {
+    "schema_version": {"const": "validation-evidence-1.0"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "contract_id": {"type": "string"},
+    "repository": {"type": "string"},
+    "status": {"enum": ["passed", "failed"]},
+    "required_failures": {"type": "array", "items": {"type": "string"}},
+    "missing_required": {"type": "array", "items": {"type": "string"}},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "command", "working_directory", "started_at", "ended_at", "duration_seconds", "exit_code", "status", "output", "required"],
+        "properties": {
+          "id": {"type": "string"},
+          "command": {"type": "array", "items": {"type": "string"}},
+          "working_directory": {"type": "string"},
+          "started_at": {"type": "string"},
+          "ended_at": {"type": "string"},
+          "duration_seconds": {"type": "number", "minimum": 0},
+          "exit_code": {"type": "integer"},
+          "status": {"enum": ["passed", "failed"]},
+          "output": {"type": "string"},
+          "required": {"type": "boolean"},
+          "timed_out": {"type": "boolean"},
+          "command_text": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

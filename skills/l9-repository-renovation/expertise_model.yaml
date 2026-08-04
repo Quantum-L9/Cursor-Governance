@@ -1,0 +1,81 @@
+experts:
+  - principal_repository_architect
+  - release_and_ci_engineer
+  - dependency_and_packaging_governor
+  - test_topology_designer
+  - github_pr_remediation_operator
+doctrine:
+  - collapse_competing_authorities_before_adding_new_abstractions
+  - executable_evidence_outranks_comments_and_templates
+  - local_and_ci_paths_must_share_canonical_entrypoints
+  - full_files_and_green_checkpoints_outrank_plan_volume
+  - renovation_is_complete_only_when_reviewable_as_one_governed_pr
+invariants:
+  - no_stubs_placeholders_or_deferred_design_choices
+  - no_unexplained_test_exclusion_or_gate_weakening
+  - no_dependency_install_outside_the_declared_lock_authority
+  - no_remote_merge_without_separate_authorization
+  - no_unrelated_worktree_changes_staged_or_overwritten
+authority_hierarchy:
+  - latest_user_instruction_and_platform_safety
+  - live_repository_state_at_resolved_base_commit
+  - executable_tests_schemas_lockfiles_ci_and_runtime_behavior
+  - repository_invariants_adrs_ownership_and_release_contracts
+  - newest_validated_audit_or_contract
+  - comments_docs_templates_and_historical_plans
+  - model_inference_labeled_unknown
+activation_signals:
+  - repo_described_as_messy_stale_fragmented_or_behind_its_capabilities
+  - request_to_align_pyproject_package_manifest_ci_tests_or_lockfiles_with_real_code
+  - request_to_turn_a_repo_audit_into_complete_files_and_a_pr
+  - duplicate_dependency_test_registry_or_ci_authorities
+  - ignored_tests_dead_wiring_ad_hoc_installs_or_documentation_code_drift
+reject_signals:
+  - audit_or_explanation_only
+  - isolated_feature_request
+  - cosmetic_refactor_without_operational_defect
+  - inaccessible_or_unauthorized_repository
+  - request_to_bypass_security_review_branch_protection_or_external_limits
+adapters:
+  - name: python_uv
+    load_when:
+      - pyproject.toml
+      - uv.lock
+    changes:
+      - inspect_package_false_and_build_system_semantics
+      - reconcile_project_optional_and_dependency_groups
+      - isolate_pytest_suites_and_pythonpath_collisions
+      - require_uv_lock_and_locked_sync_parity
+  - name: node_typescript
+    load_when:
+      - package.json
+      - pnpm-lock.yaml_or_package-lock.json_or_yarn.lock
+    changes:
+      - reconcile_package_manager_and_workspace_authority
+      - inspect_script_ci_duplication_and_test_discovery
+      - require_frozen_lockfile_install
+      - preserve_package_exports_and_build_contracts
+  - name: polyglot_monorepo
+    load_when:
+      - multiple_package_boundaries_or_languages
+    changes:
+      - renovate_per_package_boundary_then_reconcile_root_orchestration
+      - forbid_one_global_manifest_from_impersonating_all_packages
+      - require_changed_path_aware_validation_and_release_impact_mapping
+failure_modes:
+  - name: plan_only_output
+    prevention: terminal_objective_requires_complete_files_validation_and_pr_or_blocked_pack
+  - name: wrapper_accumulation
+    prevention: canonical_authority_decision_must_name_superseded_mechanisms
+  - name: hidden_regression
+    prevention: immutable_baseline_before_after_audits_and_green_checkpoints
+  - name: false_green
+    prevention: reject_ignored_failures_floating_installs_and_unregistered_suites
+  - name: scope_explosion
+    prevention: contract_allowed_paths_preserved_behavior_and_three_cycle_limit
+leverage_points:
+  - canonical_dependency_and_lock_authority
+  - canonical_test_suite_registry_and_runner
+  - ci_consumes_repository_owned_entrypoints
+  - deterministic_drift_validators
+  - before_after_evidence_and_pr_remediation_loop

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/pr-pack-validation.schema.json",
+  "title": "Renovation PR Pack Validation",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "contract_id", "status", "errors", "changed_files", "outside_scope", "forbidden_changed", "marker_hits", "validation_records", "diff_check"],
+  "properties": {
+    "schema_version": {"const": "pr-pack-validation-1.0"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "contract_id": {"type": ["string", "null"]},
+    "status": {"enum": ["passed", "failed"]},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "changed_files": {"type": "array", "items": {"type": "string"}},
+    "outside_scope": {"type": "array", "items": {"type": "string"}},
+    "forbidden_changed": {"type": "array", "items": {"type": "string"}},
+    "marker_hits": {"type": "array", "items": {"type": "object"}},
+    "validation_records": {"type": "array", "items": {"type": "string"}},
+    "diff_check": {"type": "object"}
+  },
+  "additionalProperties": false
+}

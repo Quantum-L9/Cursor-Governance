@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/renovation-delta.schema.json",
+  "title": "Repository Renovation Delta",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "before_audit_id", "after_audit_id", "before", "after", "resolved", "remaining", "introduced", "new_high_or_critical", "status"],
+  "properties": {
+    "schema_version": {"const": "renovation-delta-1.0"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "before_audit_id": {"type": ["string", "null"]},
+    "after_audit_id": {"type": ["string", "null"]},
+    "before": {"type": "object"},
+    "after": {"type": "object"},
+    "resolved": {"type": "array", "items": {"type": "object"}},
+    "remaining": {"type": "array", "items": {"type": "object"}},
+    "introduced": {"type": "array", "items": {"type": "object"}},
+    "new_high_or_critical": {"type": "array", "items": {"type": "object"}},
+    "status": {"enum": ["passed", "failed"]}
+  },
+  "additionalProperties": false
+}

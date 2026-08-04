@@ -101,6 +101,8 @@ tiers:
       reason: "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only"
     - skill: "l9-governance-symlinks"
       reason: "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only"
+    - skill: "l9-repository-renovation"
+      reason: "audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR — high blast radius, explicit only"
 
   do_not_migrate_to_skills:
     - item: "commands/violation.md"

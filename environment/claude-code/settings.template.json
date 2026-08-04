@@ -180,6 +180,7 @@
     "l9-cli-optimization": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
+    "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
     "l9-update-command": "user-invocable-only"
   }
