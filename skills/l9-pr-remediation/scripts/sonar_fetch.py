@@ -71,13 +71,16 @@ def _validated_base_url(value: str) -> str:
 def _validated_output(value: str) -> Path:
     """Sanitize the output path before any file write (S8707 / path traversal).
 
-    Reject `..` segments so a crafted --output cannot climb out of its intended
-    location; ordinary relative and absolute snapshot paths are preserved.
+    Resolve the requested path and require it to stay within the current working
+    directory, so a crafted --output cannot escape the working tree. The snapshot is a
+    working-directory artifact (e.g. sonarcloud-issues-before.json), so this preserves
+    the intended use while making arbitrary out-of-tree writes fail closed.
     """
-    path = Path(value)
-    if ".." in path.parts:
-        raise SystemExit("BLOCKED: --output must not contain '..' path traversal")
-    return path
+    base = Path.cwd().resolve()
+    resolved = (base / value).resolve()
+    if resolved != base and base not in resolved.parents:
+        raise SystemExit("BLOCKED: --output must stay within the working directory")
+    return resolved
 
 
 def _scope_params(branch: str | None, pull_request: str | None) -> dict[str, str]:
