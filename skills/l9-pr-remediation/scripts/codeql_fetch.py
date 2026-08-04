@@ -7,7 +7,7 @@ metadata for the exact analyzed commit, and writes a single secret-free JSON sna
 (`codeql-alerts-before.json` by convention).
 
 Read-only against GitHub: this never dismisses, reopens, or otherwise mutates alert
-state (dismissal is fail-closed policy, not an fetcher action). The API token is read
+state (dismissal is fail-closed policy, not a fetcher action). The API token is read
 from the environment by reference only (GITHUB_TOKEN / GH_TOKEN) and is never printed,
 stored, or written to the snapshot; the Authorization header is redacted in the receipt.
 
