@@ -21,6 +21,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import UTC, datetime
 
 MEASURE_METRICS = [
     "bugs",
@@ -120,6 +121,8 @@ def main() -> int:
         raise SystemExit("BLOCKED: pass only one of --branch / --pull-request")
 
     token = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARCLOUD_TOKEN")
+    if token and not args.base_url.lower().startswith("https://"):
+        raise SystemExit("BLOCKED: refusing to send SONAR_TOKEN to a non-HTTPS base URL")
     scope = _scope_params(args.branch, args.pull_request)
 
     issues_result = fetch_issues(args.base_url, args.project, args.organization, scope, token)
@@ -144,10 +147,9 @@ def main() -> int:
         token,
     )
 
-    revision = next(
-        (i.get("hash") for i in issues_result["issues"] if i.get("hash")),
-        gate.get("projectStatus", {}).get("analysisId"),
-    )
+    # The analysis identifier from the quality gate. A per-issue `hash` is a line hash,
+    # not the analyzed revision, so it must not stand in for identity binding.
+    revision = gate.get("projectStatus", {}).get("analysisId")
     snapshot = {
         "schema_version": "sonarcloud-snapshot-1.0",
         "status": "COMPLETE" if issues_result["complete"] else "BLOCKED",
@@ -161,6 +163,7 @@ def main() -> int:
             ],
             "authenticated": bool(token),
             "authorization_header": "REDACTED" if token else None,
+            "fetched_at": datetime.now(tz=UTC).isoformat(),
             "request_scope": scope or {"scope": "main-analysis"},
             "pagination": {
                 "page_size": PAGE_SIZE,
