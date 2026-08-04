@@ -133,6 +133,60 @@ def hydrate(task: str, namespaces: list[str], *, limit: int = 8) -> dict[str, An
     return tool_call("memory.hydrate", {"task": task, "namespaces": namespaces, "limit": limit})
 
 
+# --- one-contract accessors (shared by every hook entry point) --------------
+# The hook path (this stdlib client) and the model path (the l9-shared-memory
+# MCP server) speak the SAME memory.* contract. These helpers are the single
+# place that names the response keys, so a hook consumer cannot silently drift
+# from the server's schema. See docs/decisions/ADR-0003 and ADR-0004.
+#
+# Contract (l9-graphite-memory HydrationResult): a memory.hydrate result carries
+# hydrated context under ``sections`` (a list of ContextSection objects, each
+# ``{memory_class, content, record_ids, tokens_estimated, highest_score}``). It
+# has NO ``records`` or ``hits`` key: ``hits`` belongs to memory.search, and
+# ``records`` is an internal store count. Reading ``records``/``hits`` from a
+# hydrate result therefore always yields nothing — the exact drift that made
+# SessionStart report "0 record(s) hydrated" regardless of stored memory.
+def hydrated_sections(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the ContextSection list from a ``memory.hydrate`` result."""
+    if not isinstance(bundle, dict):
+        return []
+    sections = bundle.get("sections")
+    return [s for s in sections if isinstance(s, dict)] if isinstance(sections, list) else []
+
+
+def search_hits(bundle: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the hit list from a ``memory.search`` result."""
+    if not isinstance(bundle, dict):
+        return []
+    hits = bundle.get("hits")
+    return [h for h in hits if isinstance(h, dict)] if isinstance(hits, list) else []
+
+
+def render_sections(bundle: dict[str, Any], *, max_chars: int = 4000) -> str:
+    """Render hydrated sections into plain text for SessionStart context injection.
+
+    Bounded by ``max_chars`` so a large hydration cannot blow the context budget.
+    """
+    parts: list[str] = []
+    for section in hydrated_sections(bundle):
+        content = str(section.get("content", "")).strip()
+        if not content:
+            continue
+        memory_class = str(section.get("memory_class", "memory"))
+        parts.append(f"[{memory_class}] {content}")
+    text = "\n\n".join(parts)
+    if len(text) > max_chars:
+        suffix = "\n… (truncated to fit the context budget)"
+        # Keep the FINAL string within max_chars (suffix included), so a caller's
+        # context budget is never overrun. If the budget is smaller than the
+        # suffix itself, hard-truncate without it.
+        if max_chars <= len(suffix):
+            text = text[:max_chars]
+        else:
+            text = text[: max_chars - len(suffix)].rstrip() + suffix
+    return text
+
+
 def conflicts(namespace: str) -> dict[str, Any]:
     return tool_call("memory.conflicts", {"namespace": namespace})
 
