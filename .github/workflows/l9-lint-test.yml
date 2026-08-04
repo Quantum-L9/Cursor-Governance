@@ -66,10 +66,12 @@ jobs:
           # in [project.optional-dependencies].dev and uv.lock. Sync the locked env
           # (same as `make venv` and the test job) instead of floating `pip install
           # ruff/mypy`, so CI-lint runs the same versions as local `make lint` and the
-          # lock authority. The uv bootstrap is version-pinned and wheels-only, and every
-          # uv sync/run is --frozen/--no-build, so dependency installation never resolves
-          # an unlocked version or builds from source (SonarCloud githubactions S8541/S8544).
-          command -v uv >/dev/null 2>&1 || pip install --only-binary=:all: uv==0.12.1
+          # lock authority. The uv bootstrap is version-pinned and wheels-only; `uv sync`
+          # uses --no-build and every `uv run` uses --frozen --no-build, so dependency
+          # installation never resolves an unlocked version or builds from source
+          # (SonarCloud githubactions S8541/S8544). `python -m pip` targets the
+          # setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
       - name: ruff check
         run: uv run --frozen --no-build ruff check . --output-format=github
@@ -147,9 +149,10 @@ jobs:
           # project + dev deps via the lockfile (same as `make venv`). pytest-xdist
           # and pytest-timeout are now exact-pinned in the dev extra and uv.lock, so
           # there is no floating fallback install — the locked sync provides them. The uv
-          # bootstrap is version-pinned and wheels-only; --no-build/--frozen keep install
-          # off source builds and unlocked versions (SonarCloud S8541/S8544).
-          command -v uv >/dev/null 2>&1 || pip install --only-binary=:all: uv==0.12.1
+          # bootstrap is version-pinned and wheels-only; `uv sync` uses --no-build and every
+          # `uv run` uses --frozen --no-build (SonarCloud S8541/S8544). `python -m pip`
+          # targets the setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
       - name: pytest with coverage
         env:
