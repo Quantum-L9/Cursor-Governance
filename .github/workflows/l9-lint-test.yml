@@ -62,15 +62,21 @@ jobs:
       - name: Install lint tools
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
-          if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
-          command -v ruff >/dev/null 2>&1 || pip install ruff
-          command -v mypy >/dev/null 2>&1 || pip install mypy
-          command -v uv >/dev/null 2>&1 || pip install uv
+          # Single locked toolchain — ruff/mypy (and their type stubs) are exact-pinned
+          # in [project.optional-dependencies].dev and uv.lock. Sync the locked env
+          # (same as `make venv` and the test job) instead of floating `pip install
+          # ruff/mypy`, so CI-lint runs the same versions as local `make lint` and the
+          # lock authority. The uv bootstrap is version-pinned and wheels-only; `uv sync`
+          # uses --no-build and every `uv run` uses --frozen --no-build, so dependency
+          # installation never resolves an unlocked version or builds from source
+          # (SonarCloud githubactions S8541/S8544). `python -m pip` targets the
+          # setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
       - name: ruff check
-        run: ruff check . --output-format=github
+        run: uv run --frozen --no-build ruff check . --output-format=github
       - name: ruff format --check
-        run: ruff format --check .
+        run: uv run --frozen --no-build ruff format --check .
       - name: mypy
         # Advisory only (2026-07-28): 328 pre-existing type errors across 15 files
         # (see TODO.md "mypy debt") predate this step ever going green — ruff was
@@ -79,9 +85,12 @@ jobs:
         # in the Actions UI without blocking merges until the debt pass lands.
         continue-on-error: true
         run: |
-          mypy "${SOURCE_DIR}" \
+          # Locked mypy==2.3.0 with type stubs (types-PyYAML, types-jsonschema) already
+          # provided by the dev extra — no `--install-types` network fetch needed. Mirrors
+          # `make lint-mypy`.
+          uv run --frozen --no-build mypy "${SOURCE_DIR}" \
             --show-error-codes --pretty \
-            --install-types --non-interactive --ignore-missing-imports
+            --ignore-missing-imports
       - name: uv lock --check (lockfile drift guard)
         # Independent, second check of the same invariant ops/scripts/backup_to_github.sh
         # now enforces before every automated commit — catches uv.lock drift introduced
@@ -139,10 +148,12 @@ jobs:
           # `pip install -e ".[dev]"` cannot install [project.dependencies]. Own
           # project + dev deps via the lockfile (same as `make venv`). pytest-xdist
           # and pytest-timeout are now exact-pinned in the dev extra and uv.lock, so
-          # there is no floating fallback install — the locked sync provides them.
-          python -m pip install --upgrade pip
-          command -v uv >/dev/null 2>&1 || pip install uv
-          uv sync --locked --extra dev
+          # there is no floating fallback install — the locked sync provides them. The uv
+          # bootstrap is version-pinned and wheels-only; `uv sync` uses --no-build and every
+          # `uv run` uses --frozen --no-build (SonarCloud S8541/S8544). `python -m pip`
+          # targets the setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
       - name: pytest with coverage
         env:
           TESTING: "true"
@@ -154,4 +165,4 @@ jobs:
           # ops/config/python-contract.json — never duplicated here. The runner also
           # runs the fail-closed drift validator before any suite. The ci profile
           # keeps root coverage.xml + term-missing and the advisory 0% threshold.
-          uv run --no-build python ops/scripts/run_python_test_suites.py --profile ci
+          uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile ci

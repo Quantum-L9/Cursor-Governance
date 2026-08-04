@@ -335,8 +335,8 @@ def check_ci_workflow(root: Path) -> None:
             msg = f"CI contains a forbidden floating test-tool install: {line.strip()!r}"
             raise ContractError(msg)
 
-    if "uv sync --locked --extra dev" not in active_text:
-        msg = "CI does not bootstrap with 'uv sync --locked --extra dev'"
+    if "uv sync --locked --no-build --extra dev" not in active_text:
+        msg = "CI does not bootstrap with 'uv sync --locked --no-build --extra dev'"
         raise ContractError(msg)
 
 
@@ -445,7 +445,7 @@ CHECKS: tuple[str, ...] = (
     "wrapper delegates, no topology",
     "CI invokes canonical runner once",
     "CI has no floating test installs",
-    "CI bootstraps uv sync --locked --extra dev",
+    "CI bootstraps uv sync --locked --no-build --extra dev",
     "dev extra pins required test tools",
     "requirements mirrors dev pins",
     "import_map resolves to declared distributions",

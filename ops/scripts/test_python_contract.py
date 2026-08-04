@@ -96,8 +96,8 @@ on: [push]
 jobs:
   test:
     steps:
-      - run: uv sync --locked --extra dev
-      - run: uv run --no-build python ops/scripts/run_python_test_suites.py --profile ci
+      - run: uv sync --locked --no-build --extra dev
+      - run: uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile ci
 """
 
 VALID_WRAPPER = """\
@@ -226,7 +226,7 @@ class ValidatorTests(unittest.TestCase):
 
     def test_ci_bypassing_runner_detected(self) -> None:
         workflow = VALID_WORKFLOW.replace(
-            "uv run --no-build python ops/scripts/run_python_test_suites.py --profile ci",
+            "uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile ci",
             "pytest .",
         )
         with tempfile.TemporaryDirectory() as tmp:
