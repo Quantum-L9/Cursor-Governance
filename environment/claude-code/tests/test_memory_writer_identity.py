@@ -31,8 +31,9 @@ CLAUDE = {
 
 class ValidateMemoryWriter(unittest.TestCase):
     def test_distinct_claude_writer_shared_namespace_passes(self) -> None:
-        # A fully-attributed Claude identity on the shared namespace is allowed.
-        self.assertIsNone(st.validate_memory_writer(dict(CLAUDE)))
+        # A fully-attributed Claude identity on the shared namespace is allowed:
+        # validate_memory_writer returns None and does not raise.
+        st.validate_memory_writer(dict(CLAUDE))
 
     def test_missing_namespace_denies_write(self) -> None:
         ident = {"agent_id": "claude-code", "user_id": "claude_code_agent"}
@@ -111,7 +112,7 @@ class ClientWriteGuard(unittest.TestCase):
     def test_memory_read_remains_available_when_write_identity_fails(self) -> None:
         # Reserved identity blocks writes but must NOT block reads.
         env = {"L9_MEMORY_AGENT_ID": "cursor_agent", "USER_ID": "cursor_agent"}
-        sentinel = {"results": []}
+        sentinel: dict[str, object] = {"results": []}
         with (
             mock.patch.dict("os.environ", env, clear=True),
             mock.patch.object(mc, "tool_call", return_value=sentinel) as tool_call,
