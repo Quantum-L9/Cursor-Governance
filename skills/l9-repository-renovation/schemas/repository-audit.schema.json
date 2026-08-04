@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/repository-audit.schema.json",
+  "title": "Repository Audit",
+  "type": "object",
+  "required": ["schema_version", "audit_id", "generated_at", "repository", "inventory", "findings", "summary", "limitations"],
+  "properties": {
+    "schema_version": {"const": "repository-audit-1.0"},
+    "audit_id": {"type": "string", "minLength": 1},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "repository": {
+      "type": "object",
+      "required": ["root", "git_head", "git_branch", "dirty"],
+      "properties": {
+        "root": {"type": "string"},
+        "git_head": {"type": ["string", "null"]},
+        "git_branch": {"type": ["string", "null"]},
+        "dirty": {"type": ["boolean", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "inventory": {"type": "object"},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "class", "severity", "confidence", "summary", "consequence", "recommendation", "evidence"],
+        "properties": {
+          "id": {"type": "string"},
+          "class": {"type": "string"},
+          "severity": {"enum": ["critical", "high", "medium", "low"]},
+          "confidence": {"enum": ["high", "medium", "low"]},
+          "summary": {"type": "string"},
+          "consequence": {"type": "string"},
+          "recommendation": {"type": "string"},
+          "evidence": {"type": "array", "minItems": 1, "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {"type": "object"},
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,25 @@
+{
+  "mode": "RENOVATE_TO_PR",
+  "base_ref": "origin/main",
+  "preserve": [
+    "public APIs",
+    "data contracts",
+    "release compatibility",
+    "security and review gates"
+  ],
+  "forbid": [
+    "unrelated product feature work",
+    "floating CI dependency installs",
+    "hidden or unregistered active tests",
+    "duplicate dependency or runner authorities",
+    "merge without separate authorization"
+  ],
+  "publishing_authorization": {
+    "stage": false,
+    "commit": false,
+    "push": false,
+    "create_pr": false,
+    "remediation_push": false,
+    "merge": false
+  }
+}

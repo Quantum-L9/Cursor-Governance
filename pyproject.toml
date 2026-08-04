@@ -79,6 +79,9 @@ select = ["E", "F", "I", "UP"]
 # keep F/I/UP enforcement, suppress line-length noise only for these scripts.
 [tool.ruff.lint.per-file-ignores]
 "skills/l9-cli-optimization/scripts/**" = ["E501"]
+# Renovation skill scripts carry intentional long evidence/message strings, same
+# rationale as l9-cli-optimization above.
+"skills/l9-repository-renovation/scripts/**" = ["E501"]
 # subagent-generated-data runtime/adapters/tests bootstrap sys.path before
 # importing sibling modules (the packages are not installed), so imports
 # legitimately follow executable statements — E402 is expected here.
