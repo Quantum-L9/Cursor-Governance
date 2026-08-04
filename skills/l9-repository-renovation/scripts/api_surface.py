@@ -34,7 +34,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from common import iter_files, read_text, relative, utc_now  # noqa: E402
+from common import iter_files, read_text, relative, safe_cli_path, utc_now  # noqa: E402
 
 ARCHIVE_PARTS = {
     "_archived",
@@ -296,7 +296,7 @@ def main() -> int:
 
     if args.command == "extract":
         surface = extract_surface(Path(args.repo))
-        Path(args.output).write_text(
+        safe_cli_path(args.output).write_text(
             json.dumps(surface, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
         n = sum(
@@ -305,10 +305,10 @@ def main() -> int:
         print(f"surface: {args.output} ({len(surface['modules'])} modules, {n} top-level symbols)")
         return 0
 
-    before = json.loads(Path(args.before).read_text(encoding="utf-8"))
-    after = json.loads(Path(args.after).read_text(encoding="utf-8"))
+    before = json.loads(safe_cli_path(args.before).read_text(encoding="utf-8"))
+    after = json.loads(safe_cli_path(args.after).read_text(encoding="utf-8"))
     delta = diff_surface(before, after)
-    Path(args.output).write_text(
+    safe_cli_path(args.output).write_text(
         json.dumps(delta, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     print(

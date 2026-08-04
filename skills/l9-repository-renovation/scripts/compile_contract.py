@@ -8,7 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from common import load_json, stable_id, utc_now, write_json
+from common import load_json, safe_cli_path, stable_id, utc_now, write_json
 
 CLASS_PHASE = {
     "dependency_authority_drift": "dependency_and_lock_authority",
@@ -395,8 +395,8 @@ def main() -> int:
         },
         "unknowns": [],
     }
-    write_json(args.output, contract)
-    args.plan.write_text(build_plan(contract, audit), encoding="utf-8")
+    write_json(safe_cli_path(args.output), contract)
+    safe_cli_path(args.plan).write_text(build_plan(contract, audit), encoding="utf-8")
     print(
         json.dumps(
             {"contract_id": contract_id, "phases": len(phases), "allowed_paths": len(allowed)},

@@ -81,6 +81,22 @@ def load_json(path: Path) -> Any:
         return json.load(handle)
 
 
+def safe_cli_path(value: str | Path) -> Path:
+    """Resolve a CLI-supplied file path and require it to stay within the current working
+    directory, so a crafted argument cannot read or write outside the working tree.
+
+    The renovation artifacts (audits, contract, plan, delta, api surface) are
+    working-directory files, so this preserves intended use while making an out-of-tree
+    path fail closed (SonarCloud pythonsecurity S8707).
+    """
+    base = Path.cwd().resolve()
+    resolved = (base / Path(value)).resolve()
+    if resolved != base and base not in resolved.parents:
+        msg = f"path escapes the working directory: {value}"
+        raise SystemExit(msg)
+    return resolved
+
+
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:

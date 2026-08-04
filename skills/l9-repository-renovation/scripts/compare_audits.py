@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from common import load_json, utc_now, write_json
+from common import load_json, safe_cli_path, utc_now, write_json
 
 SEVERITY_WEIGHT = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
@@ -55,7 +55,7 @@ def main() -> int:
         ],
     }
     payload["status"] = "passed" if not payload["new_high_or_critical"] else "failed"
-    write_json(args.json, payload)
+    write_json(safe_cli_path(args.json), payload)
 
     lines = [
         "# Repository Renovation Delta",
@@ -94,7 +94,7 @@ def main() -> int:
             "",
         ]
     )
-    args.markdown.write_text("\n".join(lines), encoding="utf-8")
+    safe_cli_path(args.markdown).write_text("\n".join(lines), encoding="utf-8")
     print(
         json.dumps(
             {"status": payload["status"], "resolved": len(resolved), "introduced": len(introduced)},
