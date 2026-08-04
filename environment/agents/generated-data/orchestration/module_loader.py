@@ -48,7 +48,7 @@ class PriorWaveModuleLoader:
 
     def __init__(self, repository_root: str | Path) -> None:
         self.repository_root = Path(repository_root).resolve()
-        self.base = self.repository_root / "subagent-generated-data"
+        self.base = self.repository_root / "environment" / "agents" / "generated-data"
         self.runtime_dir = self.base / "runtime"
         self.adapters_dir = self.base / "adapters"
 

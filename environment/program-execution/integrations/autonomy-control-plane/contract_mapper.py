@@ -48,7 +48,9 @@ def map_program_contract(
             "authority_profile": "program_controller_bound",
             "program_lock_digest": contract.get("program_lock_digest")
             or contract.get("program_digest"),
-            "program_task_id": contract.get("task_id") or contract.get("id"),
+            # Campaign-domain field: the canonical Program task id is consumed as
+            # input (program_id / task_id) but re-emitted under campaign terminology.
+            "campaign_task_id": contract.get("task_id") or contract.get("id"),
         },
         "deployment": {
             "deployment_id": ids["campaign_id"] + "-deployment",

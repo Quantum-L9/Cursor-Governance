@@ -45,8 +45,8 @@ class DeliveryWorkerConfiguration:
     memory_mode: str = "outbox"
     memory_endpoint: str | None = None
     memory_command: tuple[str, ...] = ()
-    memory_outbox: str = "subagent-generated-data/.runtime/memory-outbox"
-    route_outbox_root: str = "subagent-generated-data/.runtime"
+    memory_outbox: str = "environment/agents/generated-data/.runtime/memory-outbox"
+    route_outbox_root: str = "environment/agents/generated-data/.runtime"
     timeout_seconds: int = 30
     claim_timeout_seconds: int = 300
 
@@ -608,6 +608,7 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=1)
     args = parser.parse_args()
     root = Path(args.root).resolve()
+    runtime_root = root / "environment" / "agents" / "generated-data" / ".runtime"
     configuration = DeliveryWorkerConfiguration(
         repository_root=str(root),
         database_path=(
@@ -616,8 +617,8 @@ def main() -> int:
         memory_mode=args.memory_mode,
         memory_endpoint=args.memory_endpoint,
         memory_command=tuple(args.memory_command),
-        memory_outbox=str(root / "subagent-generated-data" / ".runtime" / "memory-outbox"),
-        route_outbox_root=str(root / "subagent-generated-data" / ".runtime"),
+        memory_outbox=str(runtime_root / "memory-outbox"),
+        route_outbox_root=str(runtime_root),
     )
     worker = DeliveryWorker(configuration)
     if args.job_id:

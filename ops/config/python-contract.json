@@ -51,7 +51,7 @@
           "argv": [
             ".",
             "--ignore=environment/claude-code/autonomy",
-            "--ignore=subagent-generated-data/tests",
+            "--ignore=environment/agents/generated-data/tests",
             "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests"
           ]
         },
@@ -59,7 +59,7 @@
           "argv": [
             ".",
             "--ignore=environment/claude-code/autonomy",
-            "--ignore=subagent-generated-data/tests",
+            "--ignore=environment/agents/generated-data/tests",
             "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests",
             "-n",
             "auto",
@@ -116,7 +116,7 @@
       "kind": "command",
       "working_directory": ".",
       "owned_paths": [
-        "subagent-generated-data/tests"
+        "environment/agents/generated-data/tests"
       ],
       "env": {},
       "append_user_pytest_args": false,
@@ -125,13 +125,13 @@
         "local": {
           "argv": [
             "${PYTHON}",
-            "subagent-generated-data/tests/run_wave3_tests.py"
+            "environment/agents/generated-data/tests/run_wave3_tests.py"
           ]
         },
         "ci": {
           "argv": [
             "${PYTHON}",
-            "subagent-generated-data/tests/run_wave3_tests.py"
+            "environment/agents/generated-data/tests/run_wave3_tests.py"
           ]
         }
       },

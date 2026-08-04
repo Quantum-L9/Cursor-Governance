@@ -83,6 +83,7 @@ select = ["E", "F", "I", "UP"]
 # importing sibling modules (the packages are not installed), so imports
 # legitimately follow executable statements — E402 is expected here.
 "subagent-generated-data/**" = ["E402"]
+"environment/agents/generated-data/**" = ["E402"]
 
 # python_version pinned to match [project] requires-python — CI's --ignore-missing-imports
 # flag is mirrored here so `uv run mypy .` and the CI mypy step behave identically.

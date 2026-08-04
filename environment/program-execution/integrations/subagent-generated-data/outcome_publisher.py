@@ -41,7 +41,7 @@ class OutcomePublisher:
             raise TypeError("independent_validation_present must be a bool")
         if not isinstance(designated_authority_approval, bool):
             raise TypeError("designated_authority_approval must be a bool")
-        orchestration = self.root / "subagent-generated-data/orchestration"
+        orchestration = self.root / "environment/agents/generated-data/orchestration"
         if not orchestration.is_dir():
             raise FileNotFoundError(orchestration)
         projection = load_module(

@@ -3,7 +3,7 @@ Status: active contract
 Scope: Cursor-native subagents only  
 Runtime owner: active main Cursor agent  
 Safety owner: root `autonomy/`  
-Durable document owner: `subagent-generated-data/`
+Durable document owner: `environment/agents/generated-data/`
 ## Purpose
 This module lets the active main Cursor agent fan out bounded work to native
 Cursor subagents while continuing critical-path work.
@@ -48,7 +48,7 @@ ready campaign tasks and their authority boundaries.
 The Cursor subagent layer does not advance campaign state or evaluate gates.
 ### Generated-data pipeline
 Only accepted result documents are projected into the existing
-`subagent-generated-data/` packet format.
+`environment/agents/generated-data/` packet format.
 The generated-data subsystem remains authoritative for validation, harvesting,
 classification, routing, promotion, delivery, retrieval, and invalidation.
 Raw subagent chat must not be written directly to memory.

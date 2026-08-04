@@ -58,7 +58,7 @@ authority:
       - gate_evaluation
     may_not_be_advanced_by_cursor_subagent_documents: true
   generated_data:
-    canonical_path: subagent-generated-data/
+    canonical_path: environment/agents/generated-data/
     owns:
       - packet_validation
       - harvesting
