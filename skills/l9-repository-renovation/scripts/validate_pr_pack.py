@@ -12,7 +12,10 @@ from validate_contract import validate
 
 FORBIDDEN_ADDED_LINE_PATTERNS = {
     "unfinished_marker": re.compile(r"\b(?:TBD|TO_BE_DECIDED|INSERT_HERE)\b", re.I),
-    "conflict_marker": re.compile(r"^(?:<<<<<<<|=======|>>>>>>>)"),
+    # Match only real VCS conflict markers (git's 7-char forms), not decorative
+    # `====`/`----` documentation underlines: the opener/closer need a trailing space
+    # or end-of-line, and the separator is exactly seven `=` (mirrors audit_repository).
+    "conflict_marker": re.compile(r"^(?:<<<<<<<(?:\s|$)|={7}$|>>>>>>>(?:\s|$))"),
     "placeholder_ellipsis": re.compile(r"(?:implement here|placeholder|pseudo[- ]?code)", re.I),
 }
 
@@ -103,22 +106,29 @@ def main() -> int:
         errors.append("after audit introduces new high or critical findings")
 
     # Prefer the immutable base_commit; base_ref can move and misalign the baseline.
-    base = contract["repository"].get("base_commit") or contract["repository"]["base_ref"]
-    changed, changed_error = changed_files(repo, base)
-    if changed_error:
-        errors.append(changed_error)
-    allowed = contract.get("scope", {}).get("allowed_paths", [])
-    forbidden = contract.get("scope", {}).get("forbidden_paths", [])
-    outside = [path for path in changed if not matches_any(path, allowed)]
-    forbidden_changed = [path for path in changed if matches_any(path, forbidden)]
-    if outside:
-        errors.append(f"changed files outside allowed scope: {', '.join(outside)}")
-    if forbidden_changed:
-        errors.append(f"forbidden paths changed: {', '.join(forbidden_changed)}")
+    # Access defensively: a malformed contract must yield a clean failure, not a crash.
+    repository = contract.get("repository") if isinstance(contract.get("repository"), dict) else {}
+    base = repository.get("base_commit") or repository.get("base_ref")
+    changed: list[str] = []
+    lines: list[dict[str, Any]] = []
+    if not isinstance(base, str) or not base:
+        errors.append("contract repository base_commit/base_ref is missing or invalid")
+    else:
+        changed, changed_error = changed_files(repo, base)
+        if changed_error:
+            errors.append(changed_error)
+        allowed = contract.get("scope", {}).get("allowed_paths", [])
+        forbidden = contract.get("scope", {}).get("forbidden_paths", [])
+        outside = [path for path in changed if not matches_any(path, allowed)]
+        forbidden_changed = [path for path in changed if matches_any(path, forbidden)]
+        if outside:
+            errors.append(f"changed files outside allowed scope: {', '.join(outside)}")
+        if forbidden_changed:
+            errors.append(f"forbidden paths changed: {', '.join(forbidden_changed)}")
 
-    lines, line_error = added_lines(repo, base)
-    if line_error:
-        errors.append(line_error)
+        lines, line_error = added_lines(repo, base)
+        if line_error:
+            errors.append(line_error)
     marker_hits: list[dict[str, str]] = []
     for record in lines:
         for name, pattern in FORBIDDEN_ADDED_LINE_PATTERNS.items():
