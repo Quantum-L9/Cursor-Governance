@@ -63,7 +63,7 @@ function tierToComplexity(tier: LegacyTier): TaskComplexity {
 // ═══════════════════════════════════════════════════════════════
 
 export class LlmService {
-  private router: L9LLMRouter;
+  private readonly router: L9LLMRouter;
 
   constructor() {
     const config = getConfig();
@@ -454,7 +454,7 @@ export class LlmService {
 
   private extractModule(description?: string): string {
     if (!description) return 'unknown';
-    const match = description.match(/\[([^\]]+)\]/);
+    const match = /\[([^\]]+)\]/.exec(description);
     return match ? match[1] : 'unknown';
   }
 
@@ -472,9 +472,7 @@ export class LlmService {
 let _llmService: LlmService | null = null;
 
 export function getLlmService(): LlmService {
-  if (!_llmService) {
-    _llmService = new LlmService();
-  }
+  _llmService ??= new LlmService();
   return _llmService;
 }
 

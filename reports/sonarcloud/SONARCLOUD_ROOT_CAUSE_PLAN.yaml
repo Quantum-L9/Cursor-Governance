@@ -1,0 +1,145 @@
+# SonarCloud root-cause plan — Quantum-L9_SEO-Bot
+# Clusters ordered by priority (vulnerabilities and quality-gate drivers first).
+
+target:
+  repository: Quantum-L9/SEO-Bot
+  sonarcloud_project_key: Quantum-L9_SEO-Bot
+  organization: quantum-l9
+  branch: main (project default)
+  baseline_quality_gate: ERROR (new_security_rating = 3)
+  baseline_measures: { bugs: 0, vulnerabilities: 11, code_smells: 91, security_hotspots: 0, security_rating: 4.0, reliability_rating: 1.0, sqale_rating: 1.0 }
+
+clusters:
+  - cluster_id: C22-install-ignore-scripts
+    root_cause: Package installs (npm/pnpm in CI, Docker, session hook) run without --ignore-scripts, permitting dependency lifecycle scripts.
+    rules: [githubactions:S6505, docker:S6505, shell:S6505]
+    issue_count: 6
+    priority: 1
+    minimal_fix: Add --ignore-scripts to every install; switch CI/hook to `npm ci` now that package-lock.json is committed.
+    files: [.github/workflows/ci.yml, docker/Dockerfile, .claude/hooks/session-start.sh]
+    risk: T1
+    expected_impact: Removes 6 vulnerabilities; primary security-rating driver.
+
+  - cluster_id: C23-lock-versions
+    root_cause: CI installs/`npx` invocations do not lock resolved dependency versions.
+    rules: [githubactions:S8543]
+    issue_count: 3
+    priority: 1
+    minimal_fix: Use `npm ci` (lockfile) for install; invoke installed binaries directly (node_modules/.bin) instead of `npx`.
+    files: [.github/workflows/ci.yml]
+    risk: T1
+
+  - cluster_id: C24-docker-copy-glob
+    root_cause: Dockerfile COPY uses a wildcard (`pnpm-lock.yaml*`) that can pull unintended files.
+    rules: [docker:S6470]
+    issue_count: 1
+    priority: 1
+    minimal_fix: Explicit COPY of package.json + package-lock.json + .npmrc (no glob); aligns Dockerfile with the repo's canonical npm toolchain.
+    files: [docker/Dockerfile]
+    risk: T1
+
+  - cluster_id: C26-enforce-https
+    root_cause: `curl | sh` bootstrap does not pin the protocol to HTTPS, allowing a redirect downgrade.
+    rules: [shell:S6506]
+    issue_count: 1
+    priority: 1
+    minimal_fix: Add `--proto '=https' --tlsv1.2` to the curl invocation.
+    files: [scripts/deploy.sh]
+    risk: T0
+
+  - cluster_id: C25-docker-merge-run
+    root_cause: Consecutive Dockerfile RUN instructions inflate image layers.
+    rules: [docker:S7031]
+    issue_count: 1
+    priority: 2
+    minimal_fix: Collapse install into a single RUN per stage (corepack/pnpm bootstrap removed by the npm alignment).
+    files: [docker/Dockerfile]
+    risk: T0
+
+  - cluster_id: C01-cognitive-complexity
+    root_cause: Functions exceed the cognitive-complexity ceiling (15); deeply nested loops/branches.
+    rules: [typescript:S3776]
+    issue_count: 10
+    priority: 2
+    minimal_fix: Extract cohesive sub-blocks into well-named helper functions (behaviour-preserving; validated by tsc + tests).
+    files: [scripts/validation/cli.ts, scripts/validation/gate-registry.ts, src/services/maintenance-readiness.ts, src/api/clients/register.ts, src/services/llm-parse.ts, src/services/plan-executor.ts, src/modules/behavior-intelligence/recommendations.ts]
+    risk: T2
+
+  - cluster_id: C02-nested-ternary
+    root_cause: Nested ternaries embedded in template literals.
+    rules: [typescript:S3358]
+    issue_count: 8
+    priority: 3
+    minimal_fix: Extract each mapping into a small pure helper (if/else) — one statement per branch.
+    files: [src/api/dashboard.ts, src/services/maintenance-readiness.ts, src/services/weekly-report.ts]
+    risk: T1
+
+  - cluster_id: C09-top-level-await
+    root_cause: Module entry points use `.catch()` promise chains / fire-and-forget async calls instead of top-level await.
+    rules: [typescript:S7785]
+    issue_count: 7
+    priority: 3
+    minimal_fix: Replace `main().catch(...)` with top-level `await` + try/catch (ESM supports top-level await).
+    files: [scripts/validation/cli.ts, scripts/manifest/check.ts, scripts/manifest/generate.ts, scripts/request-site-build.ts, scripts/add-client.ts, src/core/database/migrate.ts, src/index.ts]
+    risk: T1
+
+  - cluster_id: C03-replaceAll / C04-string-raw / C05-regexp-exec / C06-regex-superlinear
+    root_cause: Assorted modern-JS/regex idioms (String#replace-global, escaped backslashes, String#match for non-global, super-linear regexes).
+    rules: [typescript:S7781, typescript:S7780, typescript:S6594, typescript:S8786]
+    issue_count: 22
+    priority: 3
+    minimal_fix: replaceAll for literal replacements; String.raw for backslash-heavy literals (byte-verified equal); RegExp#exec for non-global matches; simplify only provably-equivalent regexes.
+    files: [multiple — see change manifest]
+    risk: T1
+
+  - cluster_id: C07..C17-mechanical-smells
+    root_cause: Miscellaneous behaviour-preserving idiom upgrades (readonly members, ??=, startsWith, Object.hasOwn, Set.has, flatMap, node: protocol, TypeError, default-stringify guard, await of non-Promise).
+    rules: [typescript:S2933, typescript:S6606, typescript:S6557, typescript:S6653, typescript:S7776, typescript:S7752, typescript:S7772, typescript:S7786, typescript:S6551, typescript:S4123]
+    issue_count: 26
+    priority: 3
+    minimal_fix: Targeted single-symbol edits; readonly/await removals self-validate via tsc.
+    files: [multiple — see change manifest]
+    risk: T0
+
+  - cluster_id: C19-C21-shell-hardening
+    root_cause: POSIX-`[` tests, positional params used without locals, error output to stdout.
+    rules: [shelldre:S7688, shelldre:S7679, shelldre:S7677]
+    issue_count: 9
+    priority: 3
+    minimal_fix: Use `[[ ]]`, assign `$1` to a local, redirect error() to stderr.
+    files: [.claude/hooks/session-start.sh, scripts/deploy.sh]
+    risk: T0
+
+deferred_clusters:
+  - cluster_id: C06-regex-superlinear (subset)
+    rules: [typescript:S8786]
+    issue_keys_paths: [scripts/validation/core/redact.ts:28, src/services/plan-executor.ts:103, src/services/llm.ts:457]
+    issue_count: 3
+    reason: >
+      redact.ts:28 is the secret-redaction regex — rewriting it to satisfy a maintainability
+      rule risks a redaction regression (secret leak), which the suppression policy explicitly
+      forbids trading for. plan-executor.ts:103 (/\/+$/) and llm.ts:457 (/\[([^\]]+)\]/) are
+      already linear (single bounded quantifier); there is no behaviour-preserving simplification,
+      so no change is made. Deferred, not suppressed.
+
+  - cluster_id: C18-todo
+    rules: [typescript:S1135]
+    issue_keys_paths: [src/services/site-deployment.ts:212]
+    issue_count: 1
+    reason: >
+      The TODO documents a deliberate multi-tenant safety guard (the serp:execute-surpass-plans
+      job ships disabled). Completing it is a product/architecture decision (enabling multi-tenant
+      write fan-out), outside SonarCloud-debt scope; deleting the comment without doing the work
+      would be a prohibited cosmetic change.
+
+vendor_scope:
+  - cluster_id: C27-vendor-posthog
+    rules: [javascript:S1121, javascript:S878, javascript:S7721, javascript:S2681]
+    path: client-snippets/posthog-tracking.html (line 20)
+    issue_count: 9
+    reason: >
+      All nine findings are inside the official PostHog minified bootstrap snippet shipped
+      verbatim for client sites. Hand-editing vendor-minified analytics code is inappropriate and
+      risks breaking tracking. Correct remediation is an analysis exclusion; this project uses
+      SonarCloud automatic analysis with no sonar-project.properties, so an exclusion is not
+      applied here. Documented as vendor-scope.

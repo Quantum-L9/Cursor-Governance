@@ -27,13 +27,13 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@quantum-l9'
 
-      # No committed lockfile yet, so use `npm install` (not `npm ci`) and skip
-      # setup-node's npm cache (which requires a lockfile). NODE_AUTH_TOKEN +
-      # the @quantum-l9 registry scope let `npm install` pull
-      # @quantum-l9/llm-router from GitHub Packages. This step (and the whole
-      # job) stays red until that package is published and granted read access.
+      # package-lock.json is committed, so use `npm ci` for a reproducible,
+      # version-locked install. `--ignore-scripts` blocks dependency lifecycle
+      # scripts (the project defines none). NODE_AUTH_TOKEN + the @quantum-l9
+      # registry scope let the install pull @quantum-l9/llm-router from GitHub
+      # Packages; the job stays red until that package is granted read access.
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -41,7 +41,7 @@ jobs:
       # bullmq v5 / ioredis typings, ContentStrategyConfig) was cleared, so tsc
       # must stay at 0.
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: node_modules/.bin/tsc --noEmit
 
       - name: Lint (if configured)
         run: |
@@ -53,6 +53,6 @@ jobs:
 
       # Hard gate: the unit tests (register route + v2 contract schema).
       - name: Test
-        run: npx vitest run
+        run: node_modules/.bin/vitest run
         env:
           NODE_ENV: test

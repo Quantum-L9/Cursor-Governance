@@ -1,0 +1,1028 @@
+# SonarCloud issue register — Quantum-L9_SEO-Bot (project default branch)
+# Generated from SonarCloud /issues/search at remediation time. 102 OPEN issues.
+total_open_issues: 102
+dispositions:
+  FIXED_PENDING_REMOTE_ANALYSIS: 89
+  NOT_FIXED_VENDOR_SCOPE: 9
+  DEFERRED: 4
+issues:
+  - issue_key: "AZ97cbhw_8yZka3M3Dj_"
+    rule_key: shelldre:S7688
+    path: .claude/hooks/session-start.sh
+    line: 16
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C19-bash-double-bracket
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use '[[' instead of '[' for conditional tests. The '[[' construct is safer and more feature-rich."
+  - issue_key: "AZ97cbhw_8yZka3M3DkA"
+    rule_key: shelldre:S7688
+    path: .claude/hooks/session-start.sh
+    line: 27
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C19-bash-double-bracket
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use '[[' instead of '[' for conditional tests. The '[[' construct is safer and more feature-rich."
+  - issue_key: "AZ97cbhw_8yZka3M3DkB"
+    rule_key: shelldre:S7688
+    path: .claude/hooks/session-start.sh
+    line: 45
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C19-bash-double-bracket
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use '[[' instead of '[' for conditional tests. The '[[' construct is safer and more feature-rich."
+  - issue_key: "AZ97cbhw_8yZka3M3DkC"
+    rule_key: shelldre:S7688
+    path: .claude/hooks/session-start.sh
+    line: 45
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C19-bash-double-bracket
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use '[[' instead of '[' for conditional tests. The '[[' construct is safer and more feature-rich."
+  - issue_key: "AZ-Ry72b2Q-006oR7tWX"
+    rule_key: shell:S6505
+    path: .claude/hooks/session-start.sh
+    line: 46
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C22-install-ignore-scripts
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Omitting \"--ignore-scripts\" allows lifecycle scripts to run during package installation."
+  - issue_key: "AZ-Ry71G2Q-006oR7tWR"
+    rule_key: githubactions:S6505
+    path: .github/workflows/ci.yml
+    line: 36
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C22-install-ignore-scripts
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Omitting \"--ignore-scripts\" allows lifecycle scripts to run during package installation."
+  - issue_key: "AZ-Ry71G2Q-006oR7tWS"
+    rule_key: githubactions:S8543
+    path: .github/workflows/ci.yml
+    line: 36
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C23-lock-versions
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Using dependencies without locking resolved versions is security-sensitive."
+  - issue_key: "AZ-Ry71G2Q-006oR7tWT"
+    rule_key: githubactions:S6505
+    path: .github/workflows/ci.yml
+    line: 44
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C22-install-ignore-scripts
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "\"npx\" can install packages on-demand and run their lifecycle scripts."
+  - issue_key: "AZ-Ry71G2Q-006oR7tWU"
+    rule_key: githubactions:S8543
+    path: .github/workflows/ci.yml
+    line: 44
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C23-lock-versions
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Define exact package version to avoid installing unverified releases."
+  - issue_key: "AZ-Ry71G2Q-006oR7tWV"
+    rule_key: githubactions:S6505
+    path: .github/workflows/ci.yml
+    line: 56
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C22-install-ignore-scripts
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "\"npx\" can install packages on-demand and run their lifecycle scripts."
+  - issue_key: "AZ-Ry71G2Q-006oR7tWW"
+    rule_key: githubactions:S8543
+    path: .github/workflows/ci.yml
+    line: 56
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C23-lock-versions
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Define exact package version to avoid installing unverified releases."
+  - issue_key: "AZ934KfS7VSiD7VvihY-"
+    rule_key: javascript:S878
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Unexpected use of comma operator."
+  - issue_key: "AZ934KfS7VSiD7VvihY9"
+    rule_key: javascript:S7721
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Move function 'g' to the outer scope."
+  - issue_key: "AZ934KfS7VSiD7VvihY_"
+    rule_key: javascript:S1121
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Extract the assignment of \"p\" from this expression."
+  - issue_key: "AZ934KfS7VSiD7VvihZA"
+    rule_key: javascript:S878
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Unexpected use of comma operator."
+  - issue_key: "AZ934KfS7VSiD7VvihZB"
+    rule_key: javascript:S1121
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Extract the assignment of \"r\" from this expression."
+  - issue_key: "AZ934KfS7VSiD7VvihZC"
+    rule_key: javascript:S1121
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Extract the assignment of \"u\" from this expression."
+  - issue_key: "AZ934KfS7VSiD7VvihZD"
+    rule_key: javascript:S1121
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Extract the assignment of \"a\" from this expression."
+  - issue_key: "AZ934KfS7VSiD7VvihZE"
+    rule_key: javascript:S878
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "Unexpected use of comma operator."
+  - issue_key: "AZ934KfS7VSiD7VvihZF"
+    rule_key: javascript:S2681
+    path: client-snippets/posthog-tracking.html
+    line: 20
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: GENERATED_OR_VENDOR_SCOPE_ERROR
+    root_cause_cluster: C27-vendor-posthog
+    disposition: NOT_FIXED_VENDOR_SCOPE
+    message: "This statement will not be executed in a loop; only the first statement will be. The rest will execute only once."
+  - issue_key: "AZ-Ry7xV2Q-006oR7tWO"
+    rule_key: docker:S6505
+    path: docker/Dockerfile
+    line: 6
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C22-install-ignore-scripts
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Omitting \"--ignore-scripts\" allows lifecycle scripts to run during package installation."
+  - issue_key: "AZ934KfJ7VSiD7VvihY8"
+    rule_key: docker:S6470
+    path: docker/Dockerfile
+    line: 18
+    severity: CRITICAL
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C24-docker-copy-glob
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Copying using a glob pattern might inadvertently add sensitive data to the container. Make sure it is safe here."
+  - issue_key: "AZ934KfJ7VSiD7VvihY7"
+    rule_key: docker:S7031
+    path: docker/Dockerfile
+    line: 19
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C25-docker-merge-run
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Merge this RUN instruction with the consecutive ones."
+  - issue_key: "AZ-Ry7xV2Q-006oR7tWP"
+    rule_key: docker:S6505
+    path: docker/Dockerfile
+    line: 20
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C22-install-ignore-scripts
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Omitting \"--ignore-scripts\" allows lifecycle scripts to run during package installation."
+  - issue_key: "AZ934Kfp7VSiD7VvihZM"
+    rule_key: typescript:S7772
+    path: scripts/add-client.ts
+    line: 18
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C15-node-protocol
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `node:readline` over `readline`."
+  - issue_key: "AZ934Kfp7VSiD7VvihZN"
+    rule_key: typescript:S7785
+    path: scripts/add-client.ts
+    line: 109
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over using a promise chain."
+  - issue_key: "AZ934KfZ7VSiD7VvihZG"
+    rule_key: shelldre:S7679
+    path: scripts/deploy.sh
+    line: 26
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C20-shell-local
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Assign this positional parameter to a local variable."
+  - issue_key: "AZ934KfZ7VSiD7VvihZH"
+    rule_key: shelldre:S7679
+    path: scripts/deploy.sh
+    line: 27
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C20-shell-local
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Assign this positional parameter to a local variable."
+  - issue_key: "AZ934KfZ7VSiD7VvihZI"
+    rule_key: shelldre:S7677
+    path: scripts/deploy.sh
+    line: 28
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C21-shell-stderr
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Redirect this error message to stderr (>&2)."
+  - issue_key: "AZ934KfZ7VSiD7VvihZJ"
+    rule_key: shelldre:S7679
+    path: scripts/deploy.sh
+    line: 28
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C20-shell-local
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Assign this positional parameter to a local variable."
+  - issue_key: "AZ-Ry70l2Q-006oR7tWQ"
+    rule_key: shell:S6506
+    path: scripts/deploy.sh
+    line: 38
+    severity: MAJOR
+    type: VULNERABILITY
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C26-enforce-https
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Not enforcing HTTPS here might allow for redirections to insecure websites. Make sure it is safe here."
+  - issue_key: "AZ934KfZ7VSiD7VvihZK"
+    rule_key: shelldre:S7688
+    path: scripts/deploy.sh
+    line: 50
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C19-bash-double-bracket
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use '[[' instead of '[' for conditional tests. The '[[' construct is safer and more feature-rich."
+  - issue_key: "AZ-R2rtUPCyclghWA5UH"
+    rule_key: typescript:S7785
+    path: scripts/manifest/check.ts
+    line: 17
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over using a promise chain."
+  - issue_key: "AZ-R2rs8PCyclghWA5UG"
+    rule_key: typescript:S7785
+    path: scripts/manifest/generate.ts
+    line: 17
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over using a promise chain."
+  - issue_key: "AZ-R2rskPCyclghWA5UE"
+    rule_key: typescript:S7781
+    path: scripts/manifest/inventory.ts
+    line: 115
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ-R2rskPCyclghWA5UF"
+    rule_key: typescript:S7780
+    path: scripts/manifest/inventory.ts
+    line: 115
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C04-string-raw
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`String.raw` should be used to avoid escaping `\\`."
+  - issue_key: "AZ934Kfg7VSiD7VvihZL"
+    rule_key: typescript:S7785
+    path: scripts/request-site-build.ts
+    line: 54
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over using a promise chain."
+  - issue_key: "AZ-R2ykVzkWu0uAd2B-6"
+    rule_key: typescript:S3776
+    path: scripts/validation/cli.ts
+    line: 143
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 23 to the 15 allowed."
+  - issue_key: "AZ-R2ykVzkWu0uAd2B-7"
+    rule_key: typescript:S4123
+    path: scripts/validation/cli.ts
+    line: 148
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C10-await-non-promise
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Unexpected `await` of a non-Promise (non-\"Thenable\") value."
+  - issue_key: "AZ-R2ykVzkWu0uAd2B-8"
+    rule_key: typescript:S4123
+    path: scripts/validation/cli.ts
+    line: 149
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C10-await-non-promise
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Unexpected `await` of a non-Promise (non-\"Thenable\") value."
+  - issue_key: "AZ-R2ykVzkWu0uAd2B-9"
+    rule_key: typescript:S7785
+    path: scripts/validation/cli.ts
+    line: 276
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over using a promise chain."
+  - issue_key: "AZ-R2yjWzkWu0uAd2B-3"
+    rule_key: typescript:S7780
+    path: scripts/validation/core/redact.ts
+    line: 5
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C04-string-raw
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`String.raw` should be used to avoid escaping `\\`."
+  - issue_key: "AZ-R2yjWzkWu0uAd2B-4"
+    rule_key: typescript:S8786
+    path: scripts/validation/core/redact.ts
+    line: 28
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C06-regex-superlinear
+    disposition: DEFERRED
+    message: "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking."
+  - issue_key: "AZ-R2yipzkWu0uAd2B-2"
+    rule_key: typescript:S6594
+    path: scripts/validation/core/repository-context.ts
+    line: 22
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C05-regexp-exec
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use the \"RegExp.exec()\" method instead."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B--"
+    rule_key: typescript:S6557
+    path: scripts/validation/gate-registry.ts
+    line: 109
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C11-startsWith
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use 'String#startsWith' method instead."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B-_"
+    rule_key: typescript:S6557
+    path: scripts/validation/gate-registry.ts
+    line: 111
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C11-startsWith
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use 'String#startsWith' method instead."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_A"
+    rule_key: typescript:S8786
+    path: scripts/validation/gate-registry.ts
+    line: 120
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C06-regex-superlinear
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_B"
+    rule_key: typescript:S3776
+    path: scripts/validation/gate-registry.ts
+    line: 152
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_C"
+    rule_key: typescript:S7780
+    path: scripts/validation/gate-registry.ts
+    line: 158
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C04-string-raw
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`String.raw` should be used to avoid escaping `\\`."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_D"
+    rule_key: typescript:S3776
+    path: scripts/validation/gate-registry.ts
+    line: 257
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_E"
+    rule_key: typescript:S6594
+    path: scripts/validation/gate-registry.ts
+    line: 302
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C05-regexp-exec
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use the \"RegExp.exec()\" method instead."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_F"
+    rule_key: typescript:S3776
+    path: scripts/validation/gate-registry.ts
+    line: 311
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_G"
+    rule_key: typescript:S3776
+    path: scripts/validation/gate-registry.ts
+    line: 399
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 38 to the 15 allowed."
+  - issue_key: "AZ-R2ykzzkWu0uAd2B_H"
+    rule_key: typescript:S6551
+    path: scripts/validation/gate-registry.ts
+    line: 489
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C12-default-stringify
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "'value' may use Object's default stringification format ('[object Object]') when stringified."
+  - issue_key: "AZ-R2yjzzkWu0uAd2B-5"
+    rule_key: typescript:S7786
+    path: scripts/validation/profile-loader.ts
+    line: 15
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C13-typeerror
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`new Error()` is too unspecific for a type check. Use `new TypeError()` instead."
+  - issue_key: "AZ-RzeXtNmXpzgewy27W"
+    rule_key: typescript:S3776
+    path: src/api/clients/register.ts
+    line: 131
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed."
+  - issue_key: "AZ934NTlcUMiqJpT5otn"
+    rule_key: typescript:S6551
+    path: src/api/dashboard.ts
+    line: 39
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C12-default-stringify
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "'value ?? ''' will use Object's default stringification format ('[object Object]') when stringified."
+  - issue_key: "AZ934NTlcUMiqJpT5oto"
+    rule_key: typescript:S7781
+    path: src/api/dashboard.ts
+    line: 40
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934NTlcUMiqJpT5otp"
+    rule_key: typescript:S7781
+    path: src/api/dashboard.ts
+    line: 41
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934NTlcUMiqJpT5otq"
+    rule_key: typescript:S7781
+    path: src/api/dashboard.ts
+    line: 42
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934NTlcUMiqJpT5otr"
+    rule_key: typescript:S7781
+    path: src/api/dashboard.ts
+    line: 43
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934NTlcUMiqJpT5ots"
+    rule_key: typescript:S7781
+    path: src/api/dashboard.ts
+    line: 44
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934NTlcUMiqJpT5ott"
+    rule_key: typescript:S3358
+    path: src/api/dashboard.ts
+    line: 313
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934Ke67VSiD7VvihY1"
+    rule_key: typescript:S3358
+    path: src/api/dashboard.ts
+    line: 345
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934Ke67VSiD7VvihY2"
+    rule_key: typescript:S3358
+    path: src/api/dashboard.ts
+    line: 345
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934Ke67VSiD7VvihY3"
+    rule_key: typescript:S3358
+    path: src/api/dashboard.ts
+    line: 346
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934Ke67VSiD7VvihY4"
+    rule_key: typescript:S3358
+    path: src/api/dashboard.ts
+    line: 346
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934NTlcUMiqJpT5otu"
+    rule_key: typescript:S3358
+    path: src/api/dashboard.ts
+    line: 355
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934Kdw7VSiD7VvihYu"
+    rule_key: typescript:S6653
+    path: src/core/database/index.ts
+    line: 25
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C14-object-hasown
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use 'Object.hasOwn()' instead of 'Object.prototype.hasOwnProperty.call()'."
+  - issue_key: "AZ934Kdp7VSiD7VvihYt"
+    rule_key: typescript:S7785
+    path: src/core/database/migrate.ts
+    line: 40
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over an async function `runMigrations` call."
+  - issue_key: "AZ934KeB7VSiD7VvihYx"
+    rule_key: typescript:S2933
+    path: src/core/scheduler.ts
+    line: 169
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C07-readonly-members
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Mark these members as `readonly`."
+  - issue_key: "AZ934KeB7VSiD7VvihYy"
+    rule_key: typescript:S6606
+    path: src/core/scheduler.ts
+    line: 352
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C08-nullish-assign
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer using nullish coalescing operator (`??=`) instead of an assignment expression, as it is simpler to read."
+  - issue_key: "AZ934KfB7VSiD7VvihY6"
+    rule_key: typescript:S7785
+    path: src/index.ts
+    line: 66
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C09-top-level-await
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer top-level await over using a promise chain."
+  - issue_key: "AZ934Kc_7VSiD7VvihYk"
+    rule_key: typescript:S2933
+    path: src/modules/behavior-intelligence/index.ts
+    line: 48
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C07-readonly-members
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Mark these members as `readonly`."
+  - issue_key: "AZ934KdI7VSiD7VvihYn"
+    rule_key: typescript:S3776
+    path: src/modules/behavior-intelligence/recommendations.ts
+    line: 61
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed."
+  - issue_key: "AZ934KdR7VSiD7VvihYo"
+    rule_key: typescript:S2933
+    path: src/modules/serp-intelligence/index.ts
+    line: 40
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C07-readonly-members
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Mark these members as `readonly`."
+  - issue_key: "AZ934Kc17VSiD7VvihYi"
+    rule_key: typescript:S7776
+    path: src/modules/web-vitals/index.ts
+    line: 52
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C16-set-has
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`ratings` should be a `Set`, and use `ratings.has()` to check existence or non-existence."
+  - issue_key: "AZ934Kc17VSiD7VvihYj"
+    rule_key: typescript:S7752
+    path: src/modules/web-vitals/index.ts
+    line: 331
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C17-flatmap
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `.flatMap(…)` over `.map(…).flat()`."
+  - issue_key: "AZ934RvGCc1P49FnxSyW"
+    rule_key: typescript:S3776
+    path: src/services/llm-parse.ts
+    line: 29
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed."
+  - issue_key: "AZ934RvGCc1P49FnxSyX"
+    rule_key: typescript:S8786
+    path: src/services/llm-parse.ts
+    line: 65
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C06-regex-superlinear
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking."
+  - issue_key: "AZ934RvGCc1P49FnxSyY"
+    rule_key: typescript:S7786
+    path: src/services/llm-parse.ts
+    line: 94
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C13-typeerror
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`new Error()` is too unspecific for a type check. Use `new TypeError()` instead."
+  - issue_key: "AZ934KbD7VSiD7VvihYS"
+    rule_key: typescript:S2933
+    path: src/services/llm.ts
+    line: 65
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C07-readonly-members
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Mark this member as `readonly`."
+  - issue_key: "AZ934KbD7VSiD7VvihYU"
+    rule_key: typescript:S6594
+    path: src/services/llm.ts
+    line: 457
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C05-regexp-exec
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use the \"RegExp.exec()\" method instead."
+  - issue_key: "AZ934KbD7VSiD7VvihYV"
+    rule_key: typescript:S8786
+    path: src/services/llm.ts
+    line: 457
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C06-regex-superlinear
+    disposition: DEFERRED
+    message: "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking."
+  - issue_key: "AZ934KbD7VSiD7VvihYW"
+    rule_key: typescript:S6606
+    path: src/services/llm.ts
+    line: 475
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C08-nullish-assign
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer using nullish coalescing operator (`??=`) instead of an assignment expression, as it is simpler to read."
+  - issue_key: "AZ-RzOnlqMHMw0ceZY1R"
+    rule_key: typescript:S3776
+    path: src/services/maintenance-readiness.ts
+    line: 70
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed."
+  - issue_key: "AZ-RzOnlqMHMw0ceZY1S"
+    rule_key: typescript:S3358
+    path: src/services/maintenance-readiness.ts
+    line: 136
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."
+  - issue_key: "AZ934KcQ7VSiD7VvihYX"
+    rule_key: typescript:S2933
+    path: src/services/notifications.ts
+    line: 32
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C07-readonly-members
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Mark this member as `readonly`."
+  - issue_key: "AZ934KcQ7VSiD7VvihYY"
+    rule_key: typescript:S6606
+    path: src/services/notifications.ts
+    line: 150
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C08-nullish-assign
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer using nullish coalescing operator (`??=`) instead of an assignment expression, as it is simpler to read."
+  - issue_key: "AZ934KcY7VSiD7VvihYZ"
+    rule_key: typescript:S8786
+    path: src/services/plan-executor.ts
+    line: 103
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C06-regex-superlinear
+    disposition: DEFERRED
+    message: "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking."
+  - issue_key: "AZ934KcY7VSiD7VvihYa"
+    rule_key: typescript:S6594
+    path: src/services/plan-executor.ts
+    line: 115
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C05-regexp-exec
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use the \"RegExp.exec()\" method instead."
+  - issue_key: "AZ934KcY7VSiD7VvihYb"
+    rule_key: typescript:S6594
+    path: src/services/plan-executor.ts
+    line: 117
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C05-regexp-exec
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use the \"RegExp.exec()\" method instead."
+  - issue_key: "AZ934KcY7VSiD7VvihYc"
+    rule_key: typescript:S8786
+    path: src/services/plan-executor.ts
+    line: 117
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C06-regex-superlinear
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking."
+  - issue_key: "AZ934KcY7VSiD7VvihYd"
+    rule_key: typescript:S3776
+    path: src/services/plan-executor.ts
+    line: 128
+    severity: CRITICAL
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C01-cognitive-complexity
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Refactor this function to reduce its Cognitive Complexity from 20 to the 15 allowed."
+  - issue_key: "AZ934KZM7VSiD7VvihYL"
+    rule_key: typescript:S7781
+    path: src/services/site-deployment.ts
+    line: 50
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934KZM7VSiD7VvihYM"
+    rule_key: typescript:S7781
+    path: src/services/site-deployment.ts
+    line: 50
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C03-replaceAll
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Prefer `String#replaceAll()` over `String#replace()`."
+  - issue_key: "AZ934KZM7VSiD7VvihYN"
+    rule_key: typescript:S7780
+    path: src/services/site-deployment.ts
+    line: 50
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C04-string-raw
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`String.raw` should be used to avoid escaping `\\`."
+  - issue_key: "AZ934KZM7VSiD7VvihYO"
+    rule_key: typescript:S2933
+    path: src/services/site-deployment.ts
+    line: 70
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C07-readonly-members
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Mark these members as `readonly`."
+  - issue_key: "AZ934KZM7VSiD7VvihYP"
+    rule_key: typescript:S1135
+    path: src/services/site-deployment.ts
+    line: 212
+    severity: INFO
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C18-todo
+    disposition: DEFERRED
+    message: "Complete the task associated to this \"TODO\" comment."
+  - issue_key: "AZ934KZM7VSiD7VvihYQ"
+    rule_key: typescript:S7780
+    path: src/services/site-deployment.ts
+    line: 291
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C04-string-raw
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "`String.raw` should be used to avoid escaping `\\`."
+  - issue_key: "AZ934KZM7VSiD7VvihYR"
+    rule_key: typescript:S6594
+    path: src/services/site-deployment.ts
+    line: 344
+    severity: MINOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C05-regexp-exec
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Use the \"RegExp.exec()\" method instead."
+  - issue_key: "AZ934Kci7VSiD7VvihYe"
+    rule_key: typescript:S3358
+    path: src/services/weekly-report.ts
+    line: 264
+    severity: MAJOR
+    type: CODE_SMELL
+    validity: CONFIRMED_DEFECT
+    root_cause_cluster: C02-nested-ternary
+    disposition: FIXED_PENDING_REMOTE_ANALYSIS
+    message: "Extract this nested ternary operation into an independent statement."

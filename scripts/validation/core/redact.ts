@@ -2,7 +2,7 @@ const SENSITIVE_NAME = /(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|AUTH|C
 const MIN_SECRET_LENGTH = 8;
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return value.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 export function collectSecretValues(environment: NodeJS.ProcessEnv = process.env): Map<string, string> {

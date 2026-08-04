@@ -1,13 +1,16 @@
 FROM node:22-alpine AS builder
 
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm install --frozen-lockfile
+# npm is the canonical package manager for this repo (committed package-lock.json,
+# .npmrc scopes @quantum-l9 to GitHub Packages). Explicit COPY (no glob) avoids
+# pulling unintended files into the image. `--ignore-scripts` blocks dependency
+# lifecycle scripts (the project defines none).
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
 
 COPY tsconfig.json ./
 COPY src/ ./src/
-RUN pnpm build
+RUN npm run build
 
 # ─── Production Stage ───────────────────────────────────────────
 FROM node:22-alpine AS production
@@ -15,9 +18,8 @@ FROM node:22-alpine AS production
 WORKDIR /app
 RUN apk add --no-cache curl tini
 
-COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm install --prod --frozen-lockfile
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 COPY --from=builder /app/dist ./dist
 COPY config/ ./config/

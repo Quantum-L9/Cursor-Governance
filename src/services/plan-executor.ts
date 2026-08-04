@@ -112,9 +112,9 @@ function urlToFilePath(url: string): string | null {
  * e.g. 'Update title: "Best Roofer Austin TX"' → 'Best Roofer Austin TX'
  */
 function extractValue(actionText: string, _key: string): string | null {
-  const quoted = actionText.match(/["\u201C\u201D]([^"\u201C\u201D]+)["\u201C\u201D]/);
+  const quoted = /["\u201C\u201D]([^"\u201C\u201D]+)["\u201C\u201D]/.exec(actionText);
   if (quoted) return quoted[1];
-  const afterColon = actionText.match(/:\s*(.+)$/);
+  const afterColon = /:(.+)$/.exec(actionText);
   if (afterColon) return afterColon[1].trim();
   return null;
 }
@@ -125,6 +125,58 @@ function extractValue(actionText: string, _key: string): string | null {
  * routes each autonomous action through execution policy,
  * dispatches to site-deployment service.
  */
+type GapAnalysisRow = typeof schema.gapAnalyses.$inferSelect;
+
+/**
+ * Evaluate and (if approved) dispatch a single autonomous surpass action.
+ * Extracted from `executeSurpassPlans` so the proposal → decision → dispatch
+ * flow is a flat function instead of the innermost body of a nested loop.
+ * Returns 'success'/'failed' when a dispatcher was invoked, 'skipped' when the
+ * action was queued for approval or had no dispatcher (neither counts as an
+ * attempt).
+ */
+async function dispatchSurpassAction(
+  action: SurpassAction,
+  gap: GapAnalysisRow,
+  clientId: string,
+  clientDomain: string,
+  siteConfig: ReturnType<typeof siteConfigFromClient>,
+): Promise<'success' | 'failed' | 'skipped'> {
+  const actionType = inferActionType(action.action);
+  const proposal = createProposal({
+    clientId,
+    module: 'serp-intelligence',
+    action: actionType,
+    description: action.action,
+    rationale: `Surpass plan for keyword: ${gap.keyword}. Impact: ${action.impact}, Effort: ${action.effort}`,
+    triggeredBy: `gap-analysis:${gap.keyword}`,
+    estimatedImpact: action.impact,
+  });
+
+  const decision = evaluateExecution(proposal);
+  await logAction(proposal, decision);
+
+  if (!decision.execute) {
+    logger.info({ action: action.action, keyword: gap.keyword }, 'Action queued for approval (CRITICAL)');
+    return 'skipped';
+  }
+
+  const dispatcher = ACTION_DISPATCH_MAP[actionType];
+  if (!dispatcher) {
+    logger.warn({ actionType }, 'No dispatcher for action type — skipping');
+    return 'skipped';
+  }
+
+  try {
+    await dispatcher(action, clientDomain, gap.clientUrl, siteConfig);
+    logger.info({ actionType, keyword: gap.keyword }, 'Action dispatched to site-deployment');
+    return 'success';
+  } catch (err: any) {
+    logger.error({ actionType, keyword: gap.keyword, error: err.message }, 'Dispatch failed');
+    return 'failed';
+  }
+}
+
 export async function executeSurpassPlans(job: Job): Promise<void> {
   const { clientId, clientDomain } = job.data;
   if (!clientId) return;
@@ -170,39 +222,13 @@ export async function executeSurpassPlans(job: Job): Promise<void> {
     let dispatchSuccesses = 0;
 
     for (const action of autonomousActions) {
-      const actionType = inferActionType(action.action);
-      const proposal = createProposal({
-        clientId,
-        module: 'serp-intelligence',
-        action: actionType,
-        description: action.action,
-        rationale: `Surpass plan for keyword: ${gap.keyword}. Impact: ${action.impact}, Effort: ${action.effort}`,
-        triggeredBy: `gap-analysis:${gap.keyword}`,
-        estimatedImpact: action.impact,
-      });
-
-      const decision = evaluateExecution(proposal);
-      await logAction(proposal, decision);
-
-      if (!decision.execute) {
-        logger.info({ action: action.action, keyword: gap.keyword }, 'Action queued for approval (CRITICAL)');
-        continue;
-      }
-
-      const dispatcher = ACTION_DISPATCH_MAP[actionType];
-      if (!dispatcher) {
-        logger.warn({ actionType }, 'No dispatcher for action type — skipping');
-        continue;
-      }
-
-      dispatchAttempts += 1;
-      try {
-        await dispatcher(action, clientDomain, gap.clientUrl, siteConfig);
+      const result = await dispatchSurpassAction(action, gap, clientId, clientDomain, siteConfig);
+      if (result === 'success') {
+        dispatchAttempts += 1;
         dispatchSuccesses += 1;
         anyDeployed = true;
-        logger.info({ actionType, keyword: gap.keyword }, 'Action dispatched to site-deployment');
-      } catch (err: any) {
-        logger.error({ actionType, keyword: gap.keyword, error: err.message }, 'Dispatch failed');
+      } else if (result === 'failed') {
+        dispatchAttempts += 1;
       }
     }
 

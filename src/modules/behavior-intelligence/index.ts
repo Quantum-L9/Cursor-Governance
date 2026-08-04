@@ -46,7 +46,7 @@ const logger = createModuleLogger('behavior-intelligence');
 // ─── PostHog Query Client ────────────────────────────────────────────────────
 
 class PostHogClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
   private apiKey: string;
 
   constructor(baseUrl: string, apiKey: string) {

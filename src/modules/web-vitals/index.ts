@@ -49,12 +49,14 @@ function rateMetric(metric: string, value: number): 'good' | 'needs_improvement'
 }
 
 function overallRating(metrics: Record<string, number | null>): 'good' | 'needs_improvement' | 'poor' {
-  const ratings = Object.entries(metrics)
-    .filter(([_, v]) => v !== null)
-    .map(([k, v]) => rateMetric(k, v!));
+  const ratings = new Set(
+    Object.entries(metrics)
+      .filter(([_, v]) => v !== null)
+      .map(([k, v]) => rateMetric(k, v!)),
+  );
 
-  if (ratings.includes('poor')) return 'poor';
-  if (ratings.includes('needs_improvement')) return 'needs_improvement';
+  if (ratings.has('poor')) return 'poor';
+  if (ratings.has('needs_improvement')) return 'needs_improvement';
   return 'good';
 }
 
@@ -328,12 +330,12 @@ async function checkAllSources(job: Job): Promise<void> {
   // ─── Critical Alert: Any source reports "poor" ───────────────────────────
   const poorSources = sources.filter(s => overallRating(s.data) === 'poor');
   if (poorSources.length > 0) {
-    const worstMetrics = poorSources.map(s => {
+    const worstMetrics = poorSources.flatMap(s => {
       const metrics = s.data;
       return Object.entries(metrics)
         .filter(([_, v]) => v !== null && rateMetric(_, v as number) === 'poor')
         .map(([k, v]) => `${k}: ${v}`);
-    }).flat();
+    });
 
     await notifications.sendAlert({
       title: `Poor Core Web Vitals: ${clientDomain}`,

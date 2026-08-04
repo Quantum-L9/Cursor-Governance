@@ -63,7 +63,9 @@ async function main() {
   logger.info('═══════════════════════════════════════════════════════════');
 }
 
-main().catch((error) => {
+try {
+  await main();
+} catch (error) {
   console.error('Fatal startup error:', error);
   process.exit(1);
-});
+}

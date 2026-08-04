@@ -106,9 +106,9 @@ async function preflightGate(context: GateContext): Promise<GateResult> {
     [name, await exists(path.join(context.root, name))] as const,
   ))).filter(([, present]) => !present).map(([name]) => name);
   const assertions: ValidationAssertion[] = [
-    assertion('preflight.node', 'Node 22 is required', 'v22.x', process.version, /^v22\./.test(process.version) ? 'PASS' : 'FAIL'),
+    assertion('preflight.node', 'Node 22 is required', 'v22.x', process.version, process.version.startsWith('v22.') ? 'PASS' : 'FAIL'),
     assertion('preflight.package-manager', 'npm is canonical', 'npm@10.x', packageJson.packageManager ?? null,
-      /^npm@10\./.test(packageJson.packageManager ?? '') ? 'PASS' : 'FAIL'),
+      (packageJson.packageManager ?? '').startsWith('npm@10.') ? 'PASS' : 'FAIL'),
     assertion('preflight.lockfile', 'Exactly one npm lockfile exists', ['package-lock.json'], presentLockfiles,
       presentLockfiles.length === 1 && presentLockfiles[0] === 'package-lock.json' ? 'PASS' : 'FAIL'),
     assertion('preflight.required-files', 'Required assurance files exist', [], missingFiles,
@@ -117,7 +117,7 @@ async function preflightGate(context: GateContext): Promise<GateResult> {
   const configText = await readFile(path.join(context.root, 'src/core/config.ts'), 'utf8');
   const envText = await readFile(path.join(context.root, '.env.example'), 'utf8');
   const schemaKeys = [...configText.matchAll(/^\s{2}([A-Z][A-Z0-9_]+):\s*z\./gm)].map((match) => match[1]);
-  const envKeys = [...envText.matchAll(/^#?\s*([A-Z][A-Z0-9_]+)=/gm)].map((match) => match[1]);
+  const envKeys = [...envText.matchAll(/^#?[ \t]*([A-Z][A-Z0-9_]+)=/gm)].map((match) => match[1]);
   const infrastructureOnly = new Set([
     'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB', 'CLICKHOUSE_USER', 'CLICKHOUSE_PASSWORD',
     'POSTHOG_SECRET_KEY', 'POSTHOG_SITE_URL', 'INFISICAL_CLIENT_ID', 'INFISICAL_CLIENT_SECRET',
@@ -149,13 +149,12 @@ function parseScriptFileReferences(command: string): string[] {
   return [...references];
 }
 
-export async function sourceGate(context: GateContext): Promise<GateResult> {
-  const scanRoots = ['src', 'scripts', '.github/workflows'];
-  const files = (await Promise.all(scanRoots.map((root) => walk(path.join(context.root, root))))).flat();
-  const marker = ['TO', 'DO', '|FIX', 'ME', '|X', 'XX', '|HA', 'CK'].join('');
-  const unimplemented = ['Not', 'Implemented', '|Not', ' implemented'].join('');
-  const placeholderBehavior = ['place', 'holder behavior'].join('');
-  const forbidden = new RegExp(`\\b(?:${marker}|${unimplemented})\\b|${placeholderBehavior}`, 'i');
+/** Scan every file for forbidden unfinished-work markers, one finding per matching line. */
+async function collectForbiddenMarkerFindings(
+  context: GateContext,
+  files: string[],
+  forbidden: RegExp,
+): Promise<ValidationFinding[]> {
   const findings: ValidationFinding[] = [];
   for (const file of files) {
     const relative = path.relative(context.root, file).replaceAll(path.sep, '/');
@@ -168,9 +167,14 @@ export async function sourceGate(context: GateContext): Promise<GateResult> {
       ));
     });
   }
-  const packageJson = JSON.parse(await readFile(path.join(context.root, 'package.json'), 'utf8')) as {
-    scripts?: Record<string, string>;
-  };
+  return findings;
+}
+
+/** Resolve every non-`dist/` file target referenced by a package script and report the missing ones. */
+async function collectMissingScriptTargets(
+  context: GateContext,
+  packageJson: { scripts?: Record<string, string> },
+): Promise<string[]> {
   const missingTargets: string[] = [];
   for (const [name, command] of Object.entries(packageJson.scripts ?? {})) {
     for (const target of parseScriptFileReferences(command)) {
@@ -178,10 +182,11 @@ export async function sourceGate(context: GateContext): Promise<GateResult> {
       if (!(await exists(path.join(context.root, target)))) missingTargets.push(`${name} -> ${target}`);
     }
   }
-  const managerFiles = [
-    'package.json', 'README.md', 'RUNBOOK.md', 'VALIDATION.md', 'AGENTS.md', 'CONTRIBUTING.md',
-    'docker/Dockerfile', 'docker-compose.yml', 'scripts/deploy.sh', '.github/workflows/ci.yml',
-  ];
+  return missingTargets;
+}
+
+/** Report operational files that reference a non-npm package manager (pnpm/yarn/bun). */
+async function collectNonNpmRefs(context: GateContext, managerFiles: string[]): Promise<string[]> {
   const nonNpmRefs: string[] = [];
   for (const relative of managerFiles) {
     const target = path.join(context.root, relative);
@@ -190,6 +195,25 @@ export async function sourceGate(context: GateContext): Promise<GateResult> {
       if (/\b(?:pnpm|yarn|bun)\b/i.test(text)) nonNpmRefs.push(relative);
     }
   }
+  return nonNpmRefs;
+}
+
+export async function sourceGate(context: GateContext): Promise<GateResult> {
+  const scanRoots = ['src', 'scripts', '.github/workflows'];
+  const files = (await Promise.all(scanRoots.map((root) => walk(path.join(context.root, root))))).flat();
+  const marker = ['TO', 'DO', '|FIX', 'ME', '|X', 'XX', '|HA', 'CK'].join('');
+  const unimplemented = ['Not', 'Implemented', '|Not', ' implemented'].join('');
+  const placeholderBehavior = ['place', 'holder behavior'].join('');
+  const forbidden = new RegExp(String.raw`\b(?:${marker}|${unimplemented})\b|${placeholderBehavior}`, 'i');
+  const findings = await collectForbiddenMarkerFindings(context, files, forbidden);
+  const packageJson = JSON.parse(await readFile(path.join(context.root, 'package.json'), 'utf8')) as {
+    scripts?: Record<string, string>;
+  };
+  const missingTargets = await collectMissingScriptTargets(context, packageJson);
+  const nonNpmRefs = await collectNonNpmRefs(context, [
+    'package.json', 'README.md', 'RUNBOOK.md', 'VALIDATION.md', 'AGENTS.md', 'CONTRIBUTING.md',
+    'docker/Dockerfile', 'docker-compose.yml', 'scripts/deploy.sh', '.github/workflows/ci.yml',
+  ]);
   const legacy = [
     'validation/preflight_checks.jsonl', 'validation/source_checks.jsonl',
     'validation/build_checks.jsonl', 'validation/db_checks.jsonl',
@@ -254,6 +278,27 @@ async function buildGate(context: GateContext): Promise<GateResult> {
 async function manifestGate(context: GateContext): Promise<GateResult> {
   return commandGate(context, 'manifest', 'npm', ['run', 'manifest:check'], 2 * 60 * 1000);
 }
+/**
+ * Scan one documentation file for undefined `npm run` references and prohibited
+ * readiness claims. Extracted from `claimsGate` so the nested match loops live
+ * in a flat function.
+ */
+function collectDocumentationViolations(
+  relative: string,
+  text: string,
+  scriptNames: Set<string>,
+  patterns: RegExp[],
+): { undefinedCommands: string[]; prohibitedClaims: string[] } {
+  const undefinedCommands: string[] = [];
+  const prohibitedClaims: string[] = [];
+  const historical = relative === 'docs/alignment_report.md' && text.startsWith('# SUPERSEDED HISTORICAL REPORT');
+  for (const match of text.matchAll(/npm run ([a-zA-Z0-9:_-]+)/g)) {
+    if (!scriptNames.has(match[1])) undefinedCommands.push(`${relative}: npm run ${match[1]}`);
+  }
+  if (!historical) for (const pattern of patterns) if (pattern.test(text)) prohibitedClaims.push(`${relative}: ${pattern.source}`);
+  return { undefinedCommands, prohibitedClaims };
+}
+
 export async function claimsGate(context: GateContext): Promise<GateResult> {
   const packageJson = JSON.parse(await readFile(path.join(context.root, 'package.json'), 'utf8')) as {
     scripts?: Record<string, string>;
@@ -282,11 +327,9 @@ export async function claimsGate(context: GateContext): Promise<GateResult> {
     const filePath = path.join(context.root, relative);
     if (!(await exists(filePath))) continue;
     const text = await readFile(filePath, 'utf8');
-    const historical = relative === 'docs/alignment_report.md' && text.startsWith('# SUPERSEDED HISTORICAL REPORT');
-    for (const match of text.matchAll(/npm run ([a-zA-Z0-9:_-]+)/g)) {
-      if (!scriptNames.has(match[1])) undefinedCommands.push(`${relative}: npm run ${match[1]}`);
-    }
-    if (!historical) for (const pattern of patterns) if (pattern.test(text)) prohibitedClaims.push(`${relative}: ${pattern.source}`);
+    const violations = collectDocumentationViolations(relative, text, scriptNames, patterns);
+    undefinedCommands.push(...violations.undefinedCommands);
+    prohibitedClaims.push(...violations.prohibitedClaims);
   }
   const assertions = [
     assertion('claims.commands', 'Documented npm commands exist', [], undefinedCommands,
@@ -299,13 +342,32 @@ export async function claimsGate(context: GateContext): Promise<GateResult> {
 
 function parsePublishedPort(output: string): number {
   const line = output.trim().split(/\r?\n/)[0] ?? '';
-  const match = line.match(/:(\d+)$/);
+  const match = /:(\d+)$/.exec(line);
   if (!match) throw new Error(`Unable to parse Docker port mapping: ${line}`);
   return Number(match[1]);
 }
 async function dockerAvailable(root: string): Promise<boolean> {
   const result = await runCommand('docker', ['version', '--format', '{{.Server.Version}}'], { cwd: root, timeoutMs: 30_000 });
   return result.execution.exit_code === 0;
+}
+
+/** Poll `pg_isready` inside the disposable container until it reports ready (or the attempt budget is exhausted). */
+async function waitForPostgresReady(context: GateContext, containerName: string, databaseName: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const check = await runCommand('docker', ['exec', containerName, 'pg_isready', '-U', VALIDATION_DB_USER, '-d', databaseName], {
+      cwd: context.root, timeoutMs: 10_000,
+    });
+    if (check.execution.exit_code === 0) return true;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+/** Collect the distinct, sorted `pgTable('name')` identifiers declared across the schema source files. */
+function extractExpectedTables(schemaSources: string[]): string[] {
+  return [...new Set(schemaSources.flatMap((text) =>
+    [...text.matchAll(/pgTable\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]),
+  ))].sort((a, b) => a.localeCompare(b));
 }
 
 async function databaseGate(context: GateContext): Promise<GateResult> {
@@ -331,14 +393,7 @@ async function databaseGate(context: GateContext): Promise<GateResult> {
     ], { cwd: context.root, timeoutMs: 2 * 60 * 1000 });
     stdout += start.stdout; stderr += start.stderr;
     if (start.execution.exit_code !== 0) throw new Error('Unable to start disposable PostgreSQL container');
-    let ready = false;
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const check = await runCommand('docker', ['exec', containerName, 'pg_isready', '-U', VALIDATION_DB_USER, '-d', databaseName], {
-        cwd: context.root, timeoutMs: 10_000,
-      });
-      if (check.execution.exit_code === 0) { ready = true; break; }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+    const ready = await waitForPostgresReady(context, containerName, databaseName);
     assertions.push(assertion('database.ready', 'Disposable PostgreSQL becomes ready', true, ready, ready ? 'PASS' : 'FAIL'));
     if (!ready) throw new Error('Disposable PostgreSQL did not become ready');
     const portResult = await runCommand('docker', ['port', containerName, '5432/tcp'], { cwd: context.root, timeoutMs: 10_000 });
@@ -362,9 +417,7 @@ async function databaseGate(context: GateContext): Promise<GateResult> {
       await readFile(path.join(context.root, 'src/core/database/schema.ts'), 'utf8'),
       await readFile(path.join(context.root, 'src/core/database/schema-extensions.ts'), 'utf8'),
     ];
-    const expectedTables = [...new Set(schemaSources.flatMap((text) =>
-      [...text.matchAll(/pgTable\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]),
-    ))].sort((a, b) => a.localeCompare(b));
+    const expectedTables = extractExpectedTables(schemaSources);
     const missingTables = expectedTables.filter((table) => !actualTables.includes(table));
     assertions.push(assertion('database.tables', 'Every Drizzle table exists after migration', [], missingTables,
       missingTables.length === 0 ? 'PASS' : 'FAIL'));
@@ -394,6 +447,76 @@ async function databaseGate(context: GateContext): Promise<GateResult> {
     }
   }
   return { status: deriveStatus(assertions, findings), assertions, findings, stdout, stderr };
+}
+
+/** Poll pg_isready and redis-cli inside the validation network until both dependencies report ready. */
+async function waitForContainerDependencies(
+  context: GateContext,
+  postgresName: string,
+  redisName: string,
+  databaseName: string,
+): Promise<boolean> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const pgReady = await runCommand('docker', ['exec', postgresName, 'pg_isready', '-U', VALIDATION_DB_USER, '-d', databaseName], {
+      cwd: context.root, timeoutMs: 10_000,
+    });
+    const redisReady = await runCommand('docker', ['exec', redisName, 'redis-cli', 'ping'], {
+      cwd: context.root, timeoutMs: 10_000,
+    });
+    if (pgReady.execution.exit_code === 0 && redisReady.execution.exit_code === 0) return true;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+/** Poll the container's /health endpoint until it responds, returning the last body on success. */
+async function waitForContainerHealth(context: GateContext, appName: string): Promise<{ healthy: boolean; healthBody: string }> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const health = await runCommand('docker', ['exec', appName, 'curl', '--fail', '--silent', 'http://127.0.0.1:3100/health'], {
+      cwd: context.root, timeoutMs: 10_000,
+    });
+    if (health.execution.exit_code === 0) return { healthy: true, healthBody: health.stdout.trim() };
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return { healthy: false, healthBody: '' };
+}
+
+/** Record whether the container's health payload parses as JSON and reports status: healthy. */
+function recordContainerHealthStatus(healthBody: string, assertions: ValidationAssertion[]): void {
+  try {
+    const body = JSON.parse(healthBody) as Record<string, unknown>;
+    assertions.push(assertion('container.health-status', 'Container reports healthy', 'healthy', body.status,
+      body.status === 'healthy' ? 'PASS' : 'FAIL'));
+  } catch {
+    assertions.push(assertion('container.health-json', 'Health response is JSON', true, healthBody, 'FAIL'));
+  }
+}
+
+/** Best-effort teardown of the disposable containers, network, and image. Records a minor finding per failed removal. */
+async function cleanupContainerResources(
+  context: GateContext,
+  resources: { appName: string; redisName: string; postgresName: string; networkName: string; tag: string },
+  findings: ValidationFinding[],
+  append: (result: Awaited<ReturnType<typeof runCommand>>) => void,
+): Promise<void> {
+  const { appName, redisName, postgresName, networkName, tag } = resources;
+  for (const resource of [appName, redisName, postgresName]) {
+    const cleanup = await runCommand('docker', ['rm', '--force', resource], { cwd: context.root, timeoutMs: 30_000 });
+    if (cleanup.execution.exit_code !== 0 && !/No such container/i.test(cleanup.stderr)) {
+      findings.push(finding(`container.cleanup.${resource}`, 'minor', `Unable to remove ${resource}`, 'runtime-platform', false));
+      append(cleanup);
+    }
+  }
+  const networkCleanup = await runCommand('docker', ['network', 'rm', networkName], { cwd: context.root, timeoutMs: 30_000 });
+  if (networkCleanup.execution.exit_code !== 0 && !/not found/i.test(networkCleanup.stderr)) {
+    findings.push(finding('container.cleanup.network', 'minor', 'Unable to remove validation network', 'runtime-platform', false));
+    append(networkCleanup);
+  }
+  const imageCleanup = await runCommand('docker', ['image', 'rm', '--force', tag], { cwd: context.root, timeoutMs: 60_000 });
+  if (imageCleanup.execution.exit_code !== 0 && !/No such image/i.test(imageCleanup.stderr)) {
+    findings.push(finding('container.cleanup.image', 'minor', 'Unable to remove validation image', 'runtime-platform', false));
+    append(imageCleanup);
+  }
 }
 
 async function containerGate(context: GateContext): Promise<GateResult> {
@@ -468,17 +591,7 @@ async function containerGate(context: GateContext): Promise<GateResult> {
     ], { cwd: context.root, timeoutMs: 2 * 60 * 1000 });
     append(redis);
     if (redis.execution.exit_code !== 0) throw new Error('Unable to start validation Redis');
-    let ready = false;
-    for (let attempt = 0; attempt < 60; attempt += 1) {
-      const pgReady = await runCommand('docker', ['exec', postgresName, 'pg_isready', '-U', VALIDATION_DB_USER, '-d', databaseName], {
-        cwd: context.root, timeoutMs: 10_000,
-      });
-      const redisReady = await runCommand('docker', ['exec', redisName, 'redis-cli', 'ping'], {
-        cwd: context.root, timeoutMs: 10_000,
-      });
-      if (pgReady.execution.exit_code === 0 && redisReady.execution.exit_code === 0) { ready = true; break; }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+    const ready = await waitForContainerDependencies(context, postgresName, redisName, databaseName);
     assertions.push(assertion('container.dependencies-ready', 'Disposable dependencies become ready', true, ready,
       ready ? 'PASS' : 'FAIL'));
     if (!ready) throw new Error('Disposable dependencies did not become ready');
@@ -486,7 +599,7 @@ async function containerGate(context: GateContext): Promise<GateResult> {
       validationDatabaseUrl('postgres', 5432, databaseName),
       'redis://redis:6379',
     );
-    const envArgs = Object.entries(runtimeEnv).flatMap(([name, value]) => value === undefined ? [] : ['-e', `${name}=${value}`]);
+    const envArgs = Object.entries(runtimeEnv).flatMap(([name, value]) => typeof value !== 'string' ? [] : ['-e', `${name}=${value}`]);
     const migration = await runCommand('docker', [
       'run', '--rm', '--network', networkName, ...envArgs, '--entrypoint', 'node', tag, 'dist/core/database/migrate.js',
     ], { cwd: context.root, timeoutMs: 5 * 60 * 1000 });
@@ -499,48 +612,16 @@ async function containerGate(context: GateContext): Promise<GateResult> {
     ], { cwd: context.root, timeoutMs: 2 * 60 * 1000 });
     append(app);
     if (app.execution.exit_code !== 0) throw new Error('Unable to start production image');
-    let healthBody = '';
-    let healthy = false;
-    for (let attempt = 0; attempt < 60; attempt += 1) {
-      const health = await runCommand('docker', ['exec', appName, 'curl', '--fail', '--silent', 'http://127.0.0.1:3100/health'], {
-        cwd: context.root, timeoutMs: 10_000,
-      });
-      if (health.execution.exit_code === 0) { healthBody = health.stdout.trim(); healthy = true; break; }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+    const { healthy, healthBody } = await waitForContainerHealth(context, appName);
     assertions.push(assertion('container.health', 'Production container reaches health endpoint', true, healthy,
       healthy ? 'PASS' : 'FAIL'));
-    if (healthy) {
-      try {
-        const body = JSON.parse(healthBody) as Record<string, unknown>;
-        assertions.push(assertion('container.health-status', 'Container reports healthy', 'healthy', body.status,
-          body.status === 'healthy' ? 'PASS' : 'FAIL'));
-      } catch {
-        assertions.push(assertion('container.health-json', 'Health response is JSON', true, healthBody, 'FAIL'));
-      }
-    }
+    if (healthy) recordContainerHealthStatus(healthBody, assertions);
   } catch (error) {
     findings.push(finding('container.execution', 'critical', (error as Error).message, 'runtime-platform'));
     const logs = await runCommand('docker', ['logs', appName], { cwd: context.root, timeoutMs: 30_000 });
     append(logs);
   } finally {
-    for (const resource of [appName, redisName, postgresName]) {
-      const cleanup = await runCommand('docker', ['rm', '--force', resource], { cwd: context.root, timeoutMs: 30_000 });
-      if (cleanup.execution.exit_code !== 0 && !/No such container/i.test(cleanup.stderr)) {
-        findings.push(finding(`container.cleanup.${resource}`, 'minor', `Unable to remove ${resource}`, 'runtime-platform', false));
-        append(cleanup);
-      }
-    }
-    const networkCleanup = await runCommand('docker', ['network', 'rm', networkName], { cwd: context.root, timeoutMs: 30_000 });
-    if (networkCleanup.execution.exit_code !== 0 && !/not found/i.test(networkCleanup.stderr)) {
-      findings.push(finding('container.cleanup.network', 'minor', 'Unable to remove validation network', 'runtime-platform', false));
-      append(networkCleanup);
-    }
-    const imageCleanup = await runCommand('docker', ['image', 'rm', '--force', tag], { cwd: context.root, timeoutMs: 60_000 });
-    if (imageCleanup.execution.exit_code !== 0 && !/No such image/i.test(imageCleanup.stderr)) {
-      findings.push(finding('container.cleanup.image', 'minor', 'Unable to remove validation image', 'runtime-platform', false));
-      append(imageCleanup);
-    }
+    await cleanupContainerResources(context, { appName, redisName, postgresName, networkName, tag }, findings, append);
   }
   return { status: deriveStatus(assertions, findings), assertions, findings, execution: primaryExecution, stdout, stderr };
 }

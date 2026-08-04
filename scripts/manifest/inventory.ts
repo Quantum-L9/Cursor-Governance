@@ -112,7 +112,7 @@ export async function buildManifest(root: string): Promise<RepositoryManifest> {
 }
 export function renderManifestMarkdown(manifest: RepositoryManifest): string {
   const rows = manifest.entries.map((entry) =>
-    `| \`${entry.path}\` | ${entry.owner} | ${entry.classification} | ${entry.generated ? 'yes' : 'no'} | ${entry.purpose.replace(/\|/g, '\\|')} |`,
+    `| \`${entry.path}\` | ${entry.owner} | ${entry.classification} | ${entry.generated ? 'yes' : 'no'} | ${entry.purpose.replaceAll('|', String.raw`\|`)} |`,
   );
   return [
     '# L9 SEO Bot Repository Manifest', '',

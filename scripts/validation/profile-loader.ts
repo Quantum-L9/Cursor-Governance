@@ -12,7 +12,7 @@ function validateProfile(name: ValidationProfile, value: unknown): asserts value
     throw new Error(`Invalid validation policy: profile ${name} contains duplicate gates`);
   }
   if (typeof definition.allow_pass_with_findings !== 'boolean' || typeof definition.blocked_is_failure !== 'boolean') {
-    throw new Error(`Invalid validation policy: profile ${name} must define boolean result policies`);
+    throw new TypeError(`Invalid validation policy: profile ${name} must define boolean result policies`);
   }
 }
 

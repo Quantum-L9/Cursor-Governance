@@ -19,7 +19,7 @@ export function getRepositoryContext(root: string): RepositoryContext {
   const remote = (() => {
     try { return read('git', ['remote', 'get-url', 'origin'], root); } catch { return ''; }
   })();
-  const match = remote.match(/(?:github\.com[/:])([^/]+\/[^/.]+)(?:\.git)?$/i);
+  const match = /(?:github\.com[/:])([^/]+\/[^/.]+)(?:\.git)?$/i.exec(remote);
   return {
     name: match?.[1] ?? 'Quantum-L9/SEO-Bot',
     commit_sha: commitSha,
