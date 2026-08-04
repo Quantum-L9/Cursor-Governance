@@ -10,9 +10,8 @@ carrying missing or Cursor-reserved identity are denied while reads stay open.
 from __future__ import annotations
 
 import sys
-import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 CLAUDE_DIR = Path(__file__).resolve().parent.parent
 MEM = CLAUDE_DIR / "memory"
@@ -68,7 +67,7 @@ class ValidateMemoryWriter(unittest.TestCase):
 
 class ResolveWriterIdentity(unittest.TestCase):
     def test_unset_identity_denies_when_require_explicit(self) -> None:
-        with mock.patch.dict("os.environ", {}, clear=True):
+        with unittest.mock.patch.dict("os.environ", {}, clear=True):
             ident = st.resolve_writer_identity(require_explicit=True)
         self.assertEqual(ident, {"agent_id": "", "user_id": ""})
         ident["namespace"] = "cursor-governance"
@@ -76,13 +75,13 @@ class ResolveWriterIdentity(unittest.TestCase):
             st.validate_memory_writer(ident)
 
     def test_defaults_apply_only_in_bootstrap_mode(self) -> None:
-        with mock.patch.dict("os.environ", {}, clear=True):
+        with unittest.mock.patch.dict("os.environ", {}, clear=True):
             ident = st.resolve_writer_identity(require_explicit=False)
         self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
 
     def test_explicit_env_is_read_verbatim(self) -> None:
         env = {"L9_MEMORY_AGENT_ID": "claude-code", "USER_ID": "claude_code_agent"}
-        with mock.patch.dict("os.environ", env, clear=True):
+        with unittest.mock.patch.dict("os.environ", env, clear=True):
             ident = st.resolve_writer_identity(require_explicit=True)
         self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
 
@@ -93,8 +92,8 @@ class ClientWriteGuard(unittest.TestCase):
     def test_ingest_denies_reserved_identity_without_network(self) -> None:
         env = {"L9_MEMORY_AGENT_ID": "cursor_agent", "USER_ID": "claude_code_agent"}
         with (
-            mock.patch.dict("os.environ", env, clear=True),
-            mock.patch.object(mc, "tool_call") as tool_call,
+            unittest.mock.patch.dict("os.environ", env, clear=True),
+            unittest.mock.patch.object(mc, "tool_call") as tool_call,
         ):
             with self.assertRaises(MemoryWriteDenied):
                 mc.ingest({"namespace": "cursor-governance", "content": "x"})
@@ -102,8 +101,8 @@ class ClientWriteGuard(unittest.TestCase):
 
     def test_phase_lock_denies_missing_identity_without_network(self) -> None:
         with (
-            mock.patch.dict("os.environ", {}, clear=True),
-            mock.patch.object(mc, "tool_call") as tool_call,
+            unittest.mock.patch.dict("os.environ", {}, clear=True),
+            unittest.mock.patch.object(mc, "tool_call") as tool_call,
         ):
             with self.assertRaises(MemoryWriteDenied):
                 mc.phase_lock("cursor-governance", "sig")
@@ -114,8 +113,8 @@ class ClientWriteGuard(unittest.TestCase):
         env = {"L9_MEMORY_AGENT_ID": "cursor_agent", "USER_ID": "cursor_agent"}
         sentinel: dict[str, object] = {"results": []}
         with (
-            mock.patch.dict("os.environ", env, clear=True),
-            mock.patch.object(mc, "tool_call", return_value=sentinel) as tool_call,
+            unittest.mock.patch.dict("os.environ", env, clear=True),
+            unittest.mock.patch.object(mc, "tool_call", return_value=sentinel) as tool_call,
         ):
             self.assertEqual(mc.search("q", ["cursor-governance"]), sentinel)
             tool_call.assert_called_once()
