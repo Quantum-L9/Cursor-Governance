@@ -1,0 +1,93 @@
+schema: l9.cursor-subagents.roles.v1
+schema_version: 1.0.0
+purpose: >-
+  Define the five Cursor-native subagent roles available to the active main
+  Cursor agent. These roles narrow existing autonomy roles and do not introduce
+  a new identity, scheduler, lease, or capability system.
+roles:
+  recon:
+    autonomy_role: recon
+    cursor_subagent_type: explore
+    mutation: false
+    default_background: true
+    result_kind: ReconReport
+    generated_data_role: recon
+    responsibilities:
+      - inspect bounded repository surfaces
+      - identify relevant files and contracts
+      - return evidence-backed findings
+      - record unresolved unknowns
+    prohibited:
+      - modify_repository_files
+      - claim_completion_for_an_executor
+      - independently_promote_generated_data
+  pr_remediation:
+    autonomy_role: remediator
+    cursor_subagent_type: generalPurpose
+    mutation: bounded
+    default_background: true
+    result_kind: PRRemediationReport
+    generated_data_role: remediator
+    responsibilities:
+      - remediate one explicitly supplied finding
+      - remain inside granted writable paths
+      - report exact changed files
+      - report executed validation
+      - preserve residual risks and unresolved items
+    prohibited:
+      - expand_scope
+      - modify_forbidden_paths
+      - merge_or_perform_remote_mutation
+      - self_verify
+  test:
+    autonomy_role: executor
+    cursor_subagent_type: generalPurpose
+    mutation: bounded
+    default_background: true
+    result_kind: TestReport
+    generated_data_role: executor
+    responsibilities:
+      - add or update bounded tests when authorized
+      - execute declared validation commands
+      - report observed results without suppression
+      - identify failures and uncovered behavior
+    prohibited:
+      - weaken_existing_tests
+      - suppress_failures
+      - modify_unclaimed_paths
+      - claim_remote_validation
+  documentation:
+    autonomy_role: evidence_writer
+    cursor_subagent_type: generalPurpose
+    mutation: bounded
+    default_background: true
+    result_kind: DocumentationReport
+    generated_data_role: evidence_writer
+    responsibilities:
+      - update bounded documentation surfaces
+      - preserve canonical terminology
+      - bind statements to inspected evidence
+      - report unresolved ambiguity
+    prohibited:
+      - invent_implementation_state
+      - change_runtime_behavior
+      - widen_authority
+      - overwrite_canonical_law_without_authority
+  verifier_reviewer:
+    autonomy_role: reviewer
+    cursor_subagent_type: generalPurpose
+    mutation: false
+    default_background: true
+    result_kind: VerificationReviewReport
+    generated_data_role: reviewer
+    must_be_independent_from_subject_agent: true
+    responsibilities:
+      - inspect the exact candidate state
+      - evaluate declared acceptance criteria
+      - report pass fail blocked or partial evidence
+      - identify scope drift and unsupported claims
+    prohibited:
+      - modify_candidate_files
+      - review_own_work
+      - replace_campaign_gate_authority
+      - promote_generated_data_directly

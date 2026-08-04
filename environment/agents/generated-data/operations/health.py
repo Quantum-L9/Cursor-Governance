@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-ORCHESTRATION = ROOT / "subagent-generated-data" / "orchestration"
+ORCHESTRATION = ROOT / "generated-data" / "orchestration"
 sys.path.insert(0, str(ORCHESTRATION))
 from module_loader import PriorWaveModuleLoader
 from receipts import ProcessingReceiptChain
@@ -48,10 +48,11 @@ def run_health(
     root = Path(repository_root).resolve()
     store = PipelineStateStore(database_path)
     checks: list[HealthCheck] = []
+    generated_data = root / "environment" / "agents" / "generated-data"
     required = [
-        root / "subagent-generated-data" / "law" / "SUBAGENT_GENERATED_DATA_LAW.md",
-        root / "subagent-generated-data" / "runtime" / "packet_validator.py",
-        root / "subagent-generated-data" / "adapters" / "graphiti_memory.py",
+        generated_data / "law" / "SUBAGENT_GENERATED_DATA_LAW.md",
+        generated_data / "runtime" / "packet_validator.py",
+        generated_data / "adapters" / "graphiti_memory.py",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     checks.append(

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE = ROOT / "subagent-generated-data"
+BASE = ROOT / "generated-data"
 ORCHESTRATION = BASE / "orchestration"
 RETRIEVAL = BASE / "retrieval"
 INVALIDATION = BASE / "invalidation"

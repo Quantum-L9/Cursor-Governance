@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ORCHESTRATION = ROOT / "subagent-generated-data" / "orchestration"
+ORCHESTRATION = ROOT / "generated-data" / "orchestration"
 sys.path.insert(0, str(ORCHESTRATION))
 from receipts import ProcessingReceiptChain
 from state_store import (

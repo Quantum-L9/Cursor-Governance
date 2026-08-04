@@ -19,8 +19,29 @@ class OutcomePublisher:
         repository: str,
         base_sha: str,
         agent_id: str,
+        independent_validation_present: bool = False,
+        designated_authority_approval: bool = False,
     ) -> dict[str, Any]:
-        orchestration = self.root / "subagent-generated-data/orchestration"
+        """Project one accepted result receipt into the generated-data processor.
+
+        ``independent_validation_present`` and ``designated_authority_approval``
+        are evidence-derived and fail closed. The caller must set them only from
+        actual verification and approval evidence:
+
+        * ordinary recon or executor output before a distinct review -> both False;
+        * a result linked to a distinct passing VerificationReviewReport ->
+          ``independent_validation_present=True``;
+        * a result explicitly accepted by the named authority ->
+          ``designated_authority_approval=True``.
+
+        Neither flag may be inferred from ``status: completed`` or from the mere
+        presence of a result document.
+        """
+        if not isinstance(independent_validation_present, bool):
+            raise TypeError("independent_validation_present must be a bool")
+        if not isinstance(designated_authority_approval, bool):
+            raise TypeError("designated_authority_approval must be a bool")
+        orchestration = self.root / "environment/agents/generated-data/orchestration"
         if not orchestration.is_dir():
             raise FileNotFoundError(orchestration)
         projection = load_module(
@@ -46,8 +67,8 @@ class OutcomePublisher:
             result = processor.process_packet(
                 packet,
                 actor=agent_id,
-                independent_validation_present=True,
-                designated_authority_approval=True,
+                independent_validation_present=independent_validation_present,
+                designated_authority_approval=designated_authority_approval,
                 recurrence_counts={},
             )
             if hasattr(result, "to_dict"):

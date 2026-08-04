@@ -14,7 +14,7 @@ providers:
   graphiti:
     path: ops/graphiti/
   generated_data:
-    path: subagent-generated-data/
+    path: environment/agents/generated-data/
 forbidden:
 - autonomous_merge
 - force_push

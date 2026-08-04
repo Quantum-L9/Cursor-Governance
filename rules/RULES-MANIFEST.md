@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-04T03:37:31Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **59** |
-| `alwaysApply: true` | **38** |
+| Total MDC files | **60** |
+| `alwaysApply: true` | **39** |
 | `alwaysApply: false` | **21** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **8** |
-| Derived compatibility IDs | **51** |
+| Derived compatibility IDs | **52** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -54,6 +54,7 @@ Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | ci | always | 123 | `7225ed66e89f` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `e6cc99f83500` |
+| `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
 | `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
 | `88-perplexity-run-harness.mdc` | `l9.rule.88.perplexity.run.harness` | global | governance | always | 51 | `e599b2b56828` |

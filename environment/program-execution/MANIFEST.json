@@ -7,11 +7,11 @@
     },
     {
       "path": "COMPATIBILITY.yaml",
-      "sha256": "a060afcdb28b789667ac8fc0c267624f81d12605ae843eb9d5e3584882618a8f"
+      "sha256": "13b305405a534643bcda9601a38ebbba9bf599418fad0f01089028ca858417d0"
     },
     {
       "path": "OWNERSHIP.md",
-      "sha256": "3d09fbf81391e1aa7f839b1aedc176dd3affc8337f687b1374326dbb1a91ddbb"
+      "sha256": "fcf2fb69b265c1cfaba98aab3138e06bdd3080a89594334544549adacf0d55db"
     },
     {
       "path": "README.md",
@@ -171,11 +171,11 @@
     },
     {
       "path": "adapters/common/base.py",
-      "sha256": "2dbf5fc019909517b04c485d8c1b99d57d7bca05e2f87380e7925cb99b53ee52"
+      "sha256": "14f036115d628e0581940191c1312a2e9f8f8c7b96f7f817f18a4248f71f08a7"
     },
     {
       "path": "adapters/common/contracts.py",
-      "sha256": "4a243e1b86d92bc49a9943e90d6654d1060113199b9d32757c7c55f76e0773c7"
+      "sha256": "5081c1d49c390a185d06b71154060acbba085b31ade31607de1117896ac66424"
     },
     {
       "path": "adapters/common/core_receipts.py",
@@ -183,7 +183,7 @@
     },
     {
       "path": "adapters/common/digests.py",
-      "sha256": "3245a52d1860693d8297d116b8de903c78af726cc3ba360459812d76f4181be7"
+      "sha256": "4c56c084184e4a14900430d6073b33c69e40e538d7a687ed52fbab8f89de32ac"
     },
     {
       "path": "adapters/common/errors.py",
@@ -195,11 +195,11 @@
     },
     {
       "path": "adapters/common/models.py",
-      "sha256": "4c712d47c37e1c43ffd4ed8b25bc6567877b57d342ce3908f29dc4e90a53cf54"
+      "sha256": "36240dfa1415ffddaf75870ed5c30bc178e8e647ca97cccab8249ac76a8db620"
     },
     {
       "path": "adapters/common/protocol.py",
-      "sha256": "dc6fa09f725c082642355368a9418d5e12da7115428aa13919d3432a685b4e46"
+      "sha256": "86f24f4688b193cbecc6407468d1d083fab4ebb800820e143ec72f306f8615fe"
     },
     {
       "path": "adapters/common/receipts.py",
@@ -215,7 +215,7 @@
     },
     {
       "path": "adapters/common/subprocess_runner.py",
-      "sha256": "a1dccf6354898432a8ae6c4af258c07cfdc6c2375268e1a2d415f59362555ccb"
+      "sha256": "453858df8a5b7bcffdcb2abff48bbddbb9912a2d05c45faa415b570e9725bdd0"
     },
     {
       "path": "adapters/cursor-background/ADAPTER.yaml",
@@ -275,7 +275,7 @@
     },
     {
       "path": "adapters/deployment/target-specific/generate_target_adapter.py",
-      "sha256": "a696045ea4ba94f9c007bae6873d4458d44057c559e47a79ff40f0a40339c417"
+      "sha256": "9270768ae0147ccd6f5d1a5143b822e8eeef840c44a704e956976affa2d360be"
     },
     {
       "path": "adapters/deployment/target-specific/provider.py",
@@ -287,7 +287,7 @@
     },
     {
       "path": "adapters/deployment/target-specific/tests/test_target_adapter_factory.py",
-      "sha256": "3a50d6d25514b32f42853725b8c3406954537734098178a94bd6586552739abf"
+      "sha256": "d98e27fc00ad2811f3a39f32a39bfcaeb416abf15628793d2889aae0f7303afe"
     },
     {
       "path": "adapters/deployment/target-specific/validate_target_adapter.py",
@@ -311,7 +311,7 @@
     },
     {
       "path": "adapters/github/checks/provider.py",
-      "sha256": "68d6197499bd310d00f4bfca931914e4d4ca455ca5905fe67713795a9a45e19a"
+      "sha256": "ab83f8e0d08a04527c74e47a21d6b7d617b73613971b55f9837c1a2f40401647"
     },
     {
       "path": "adapters/github/checks/receipt_mapper.py",
@@ -335,7 +335,7 @@
     },
     {
       "path": "adapters/github/common/gh_transport.py",
-      "sha256": "bf3441b3c6c496bacac3e70c3d2b9aa7dbd2ca2b5def4462a051c79c73fabb6a"
+      "sha256": "1a8c4159933d808290b59140871055fc598e5e341d06099e93c1eff916111ebb"
     },
     {
       "path": "adapters/github/common/permission_probe.py",
@@ -355,7 +355,7 @@
     },
     {
       "path": "adapters/github/deployments/deployment_record.py",
-      "sha256": "b277dfab759c8f05df41f39bb319a8920b99d6e01cd7b91580067d254440b718"
+      "sha256": "e442b2b252600ed93cea3deb2c0fbc69e2b4892dd4bcce02d4d23b4fa0d02b86"
     },
     {
       "path": "adapters/github/deployments/environment_gate.py",
@@ -491,7 +491,7 @@
     },
     {
       "path": "conformance/helpers.py",
-      "sha256": "d99505bf121a4ff673359706a8b15ee4a3820a8d40ac1f0af747ec36ab35308b"
+      "sha256": "e5aec4c9373c15368eaa5672bb99b580116046106949448b78c45ad7de464a9e"
     },
     {
       "path": "conformance/schemas/capability-receipt.schema.json",
@@ -531,7 +531,7 @@
     },
     {
       "path": "conformance/test_contract_binding.py",
-      "sha256": "a14353da077ed16d9e90d16710cf03c1ef1ccaa6242f6d21ba9844ae9e862933"
+      "sha256": "93ecf5fb2f70b9ca05deff2c5eb88b279fad45c046ecabeb24cd413f155ba3a4"
     },
     {
       "path": "conformance/test_core_schema_references.py",
@@ -611,7 +611,7 @@
     },
     {
       "path": "integrations/bootstrap/context_renderer.py",
-      "sha256": "36431c647126b32ea8fe8c95aa8b846733b96e957609b9860436cab74ab68b91"
+      "sha256": "aab505d03993c5c6f82ec3390a5a29432ac3fc05d917eb7a294676a836efa47d"
     },
     {
       "path": "integrations/bootstrap/status_probe.py",
@@ -679,7 +679,7 @@
     },
     {
       "path": "integrations/subagent-generated-data/outcome_publisher.py",
-      "sha256": "2fe064029d47321c87e8263b7f734ebacb043d89de8bd9b5604325b9b402a70d"
+      "sha256": "214643b44dc6818b8e73f77269daec48625ccd2bb32c24e3b3a2b8239fae9a8d"
     },
     {
       "path": "integrations/subagent-generated-data/receipt_projection.py",
@@ -687,7 +687,7 @@
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_outcome_publisher.py",
-      "sha256": "e24d78b1de7991b742795ced93df6bd2abd667f53db43193e7ef8a395e537f56"
+      "sha256": "102612104b32ba4087447dcade932a00fd1a2e6f5cc44d7aa6ebb0a640e50890"
     },
     {
       "path": "registry/EXECUTION_ADAPTER_HEALTH.yaml",
@@ -727,7 +727,7 @@
     },
     {
       "path": "scripts/apply_repository_alignment.py",
-      "sha256": "552a4f4411daf207a76cc056e2efb95aea30771086d2cd4864bf0baffe5559ac"
+      "sha256": "a53a9e4d8f89aa6b6682b41c9b25ce7b5c1d91199625e1041adad82e7ec8e531"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -743,11 +743,11 @@
     },
     {
       "path": "scripts/render_capability_index.py",
-      "sha256": "fbf1c6a06d1d83fe45c9a8117075a224df416d0ddb9b90a074ccf6c90abd3fdb"
+      "sha256": "fcdb2618af4a2881ca47835174edc253caff145c19bc7578af2fc521c7dbc0cc"
     },
     {
       "path": "scripts/router.py",
-      "sha256": "f5f3d32e1a75d13b67c7163223b06940049718b307e4df2ddf392a96f8e118c4"
+      "sha256": "ddbb14180a275a296f24146befa4ba8450188c1f2917adff3ae8d5e65aa12e90"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -755,7 +755,7 @@
     },
     {
       "path": "scripts/validate_execution_adapters.py",
-      "sha256": "31684391b976f52538bdbad1a63f8f853ad62ed6df9d24a02e96afb216d7ecc2"
+      "sha256": "cf7ac4da17c265bdeb5c2cae7da9237da2ed2a359e8d72e1f66158475b973fcd"
     },
     {
       "path": "scripts/validate_manifest.py",
@@ -807,7 +807,7 @@
     },
     {
       "path": "tests/test_routing.py",
-      "sha256": "b0fb1a88f0a62cd810f6997fd3eae5d9667d5f2bc51a5c3f8a611b63b1cda935"
+      "sha256": "754709aba36d1fb061e470a1faa10eba761acd1f58cd8551cf0abf64da60c9a5"
     },
     {
       "path": "tests/test_runtime_state_locations.py",
