@@ -62,15 +62,19 @@ jobs:
       - name: Install lint tools
         run: |
           set -euo pipefail
+          # Single locked toolchain — ruff/mypy (and their type stubs) are exact-pinned
+          # in [project.optional-dependencies].dev and uv.lock. Sync the locked env
+          # (same as `make venv` and the test job) instead of floating `pip install
+          # ruff/mypy`, so CI-lint runs the same versions as local `make lint` and the
+          # lock authority. uv itself is the only unpinned bootstrap; its floor is
+          # enforced by [tool.uv] required-version.
           python -m pip install --upgrade pip
-          if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
-          command -v ruff >/dev/null 2>&1 || pip install ruff
-          command -v mypy >/dev/null 2>&1 || pip install mypy
           command -v uv >/dev/null 2>&1 || pip install uv
+          uv sync --locked --extra dev
       - name: ruff check
-        run: ruff check . --output-format=github
+        run: uv run --no-build ruff check . --output-format=github
       - name: ruff format --check
-        run: ruff format --check .
+        run: uv run --no-build ruff format --check .
       - name: mypy
         # Advisory only (2026-07-28): 328 pre-existing type errors across 15 files
         # (see TODO.md "mypy debt") predate this step ever going green — ruff was
@@ -79,9 +83,12 @@ jobs:
         # in the Actions UI without blocking merges until the debt pass lands.
         continue-on-error: true
         run: |
-          mypy "${SOURCE_DIR}" \
+          # Locked mypy==2.3.0 with type stubs (types-PyYAML, types-jsonschema) already
+          # provided by the dev extra — no `--install-types` network fetch needed. Mirrors
+          # `make lint-mypy`.
+          uv run mypy "${SOURCE_DIR}" \
             --show-error-codes --pretty \
-            --install-types --non-interactive --ignore-missing-imports
+            --ignore-missing-imports
       - name: uv lock --check (lockfile drift guard)
         # Independent, second check of the same invariant ops/scripts/backup_to_github.sh
         # now enforces before every automated commit — catches uv.lock drift introduced

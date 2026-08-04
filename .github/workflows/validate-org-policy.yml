@@ -44,8 +44,16 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install validation dependency
-        run: python -m pip install --disable-pip-version-check PyYAML==6.0.2
+        run: |
+          set -euo pipefail
+          # PyYAML is a core [project.dependencies] entry locked in uv.lock. Sync the
+          # locked environment and run through `uv run` so this validator consumes the
+          # same pyyaml as every other path (test job, make venv), instead of pinning a
+          # divergent version (was PyYAML==6.0.2 vs uv.lock's 6.0.3) outside the lock.
+          python -m pip install --upgrade pip
+          command -v uv >/dev/null 2>&1 || pip install uv
+          uv sync --locked
       - name: Validate normative policy artifacts
-        run: python ops/scripts/validate_org_policy.py
+        run: uv run --no-build python ops/scripts/validate_org_policy.py
       - name: Run organization-policy tests
-        run: python -m unittest discover -s tests/org_policy -p 'test_*.py'
+        run: uv run --no-build python -m unittest discover -s tests/org_policy -p 'test_*.py'
