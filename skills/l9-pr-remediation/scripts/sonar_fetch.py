@@ -22,6 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
+from pathlib import Path
 
 MEASURE_METRICS = [
     "bugs",
@@ -52,6 +53,31 @@ def _request(base_url: str, path: str, params: dict[str, str], token: str | None
         raise SystemExit(f"BLOCKED: SonarCloud {path} returned HTTP {exc.code}: {detail}") from exc
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
         raise SystemExit(f"BLOCKED: SonarCloud {path} request failed: {exc}") from exc
+
+
+def _validated_base_url(value: str) -> str:
+    """Sanitize the base URL before any network use (S8703 / SSRF).
+
+    Require HTTPS and an allow-listed SonarCloud host so a crafted --base-url cannot
+    redirect requests (and any Authorization header) to an attacker-controlled or
+    internal endpoint. A self-hosted SonarQube would extend this allow-list explicitly.
+    """
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme != "https" or parsed.hostname != "sonarcloud.io":
+        raise SystemExit("BLOCKED: --base-url must be https://sonarcloud.io")
+    return value
+
+
+def _validated_output(value: str) -> Path:
+    """Sanitize the output path before any file write (S8707 / path traversal).
+
+    Reject `..` segments so a crafted --output cannot climb out of its intended
+    location; ordinary relative and absolute snapshot paths are preserved.
+    """
+    path = Path(value)
+    if ".." in path.parts:
+        raise SystemExit("BLOCKED: --output must not contain '..' path traversal")
+    return path
 
 
 def _scope_params(branch: str | None, pull_request: str | None) -> dict[str, str]:
@@ -120,23 +146,24 @@ def main() -> int:
     if args.branch and args.pull_request:
         raise SystemExit("BLOCKED: pass only one of --branch / --pull-request")
 
+    # Sanitize both tainted CLI inputs before they reach a network or file-system sink.
+    base_url = _validated_base_url(args.base_url)
+    output_path = _validated_output(args.output)
     token = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARCLOUD_TOKEN")
-    if token and not args.base_url.lower().startswith("https://"):
-        raise SystemExit("BLOCKED: refusing to send SONAR_TOKEN to a non-HTTPS base URL")
     scope = _scope_params(args.branch, args.pull_request)
 
-    issues_result = fetch_issues(args.base_url, args.project, args.organization, scope, token)
+    issues_result = fetch_issues(base_url, args.project, args.organization, scope, token)
     rule_keys = [issue.get("rule", "") for issue in issues_result["issues"] if issue.get("rule")]
-    rules = fetch_rules(args.base_url, rule_keys, args.organization, token)
+    rules = fetch_rules(base_url, rule_keys, args.organization, token)
 
     gate = _request(
-        args.base_url,
+        base_url,
         "/qualitygates/project_status",
         {"projectKey": args.project, "organization": args.organization, **scope},
         token,
     )
     measures = _request(
-        args.base_url,
+        base_url,
         "/measures/component",
         {
             "component": args.project,
@@ -154,7 +181,7 @@ def main() -> int:
         "schema_version": "sonarcloud-snapshot-1.0",
         "status": "COMPLETE" if issues_result["complete"] else "BLOCKED",
         "api_metadata": {
-            "base_url": args.base_url,
+            "base_url": base_url,
             "endpoints": [
                 "/issues/search",
                 "/rules/show",
@@ -180,12 +207,12 @@ def main() -> int:
         "rules": rules,
         "issues": issues_result["issues"],
     }
-    with open(args.output, "w", encoding="utf-8") as handle:
+    with open(output_path, "w", encoding="utf-8") as handle:
         json.dump(snapshot, handle, indent=2, sort_keys=True)
         handle.write("\n")
 
     print(
-        f"snapshot: {args.output} status={snapshot['status']} "
+        f"snapshot: {output_path} status={snapshot['status']} "
         f"issues={issues_result['retrieved']}/{issues_result['total']} "
         f"rules={len(rules)} authenticated={bool(token)}"
     )
