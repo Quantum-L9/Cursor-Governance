@@ -1,14 +1,14 @@
 ---
 name: l9-pr-remediation
-description: recursive pr improvement loop — read ci failures and code review bot comments, apply fixes, push to pr branch, wait for re-run, loop until ci green and no new actionable comments. use when a pr has failing ci, unresolved review comments from gemini or coderabbit, or when the user asks to fix a pr, remediate review feedback, or run a pr improvement loop.
+description: recursive pr improvement loop — read ci failures, code review bot comments, and sonarcloud static-analysis findings, apply root-cause fixes, verify every gate locally, push one commit to the pr branch, reply to review threads, wait for re-run, loop until ci is green and no new actionable signals remain. use when a pr has failing ci, a failing sonarcloud quality gate or open sonarcloud issues, unresolved review comments from gemini or coderabbit, or when the user asks to fix a pr, remediate review feedback or static-analysis findings, or run a pr improvement loop.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
-tags: [l9, pr, ci, code-review, recursive, remediation, github, review-replies]
+tags: [l9, pr, ci, code-review, sonarcloud, static-analysis, recursive, remediation, github, review-replies]
 owner: igor_beylin
 status: active
-version: 2.1.0
-updated: 2026-06-18
+version: 2.2.0
+updated: 2026-08-04
 disable-model-invocation: true
 ---
 
@@ -31,6 +31,7 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 | Review comments | PR review threads | `gh api /repos/{owner}/{repo}/pulls/{pr}/reviews` + `gh pr view --comments` |
 | Inline suggestions | PR diff comments | `gh api /repos/{owner}/{repo}/pulls/{pr}/comments` |
 | CI workflow definitions | `.github/workflows/*.yml` | File read (for gate discovery) |
+| SonarCloud findings | SonarCloud API (`/issues/search`, `/rules/show`, quality gate) | `scripts/sonar_fetch.py` (stdlib, secret-safe) |
 
 | Output | Condition |
 |--------|-----------|
@@ -45,9 +46,10 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 1. User request (PR number, repo, specific instructions).
 2. CI failure logs (exact error output from the failing gate).
 3. Review bot comments (Gemini, CodeRabbit, human reviewers).
-4. Repo ground truth: `.github/workflows/*.yml`, `tsconfig.json`, `package.json`, lint configs.
-5. This skill's references.
-6. `Unknown` — do not invent fixes for unclear comments.
+4. Repo ground truth: `.github/workflows/*.yml`, `tsconfig.json`, `package.json`, lint configs, `sonar-project.properties`.
+5. Current SonarCloud API evidence (confirmed against source — never the raw finding alone).
+6. This skill's references.
+7. `Unknown` — do not invent fixes for unclear comments or unconfirmed findings.
 
 ## Non-Negotiable Rules
 
@@ -64,6 +66,10 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 11. **MUST label deferred items explicitly with reason and linked issue.**
 12. **When parallel CI jobs fail independently**, use parallel triage (one fix per job, still batched into one commit).
 13. **When review comments conflict with CI requirements**, CI wins (it blocks merge).
+14. **SonarCloud findings are retrieved from the API and confirmed against current source** before any fix. Never modify code solely because SonarCloud reported it; fix root causes, not symptoms, and cluster issues that share one defect.
+15. **No suppression shortcuts to clear SonarCloud.** MUST NOT use `NOSONAR`, blanket rule suppression, broad exclusions, or lower a quality-gate threshold. A narrow, documented suppression is allowed only for a *proven* false positive where a code fix would be less safe.
+16. **Never mutate remote SonarCloud state** (issue status, resolution, or hotspot review) and **never expose the token** — read `SONAR_TOKEN` by environment reference only.
+17. **A local fix is not a remote SonarCloud closure.** The quality gate is not green until observed green on the exact analyzed revision; otherwise report `PENDING_REMOTE_ANALYSIS` and claim no closure.
 
 ## Compact Workflow
 
@@ -72,13 +78,21 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 3. **Ingest signals** — load [references/signal-ingestion.md](references/signal-ingestion.md).
    - Fetch CI run status and failed logs.
    - Fetch all unresolved review comments and inline suggestions.
+   - If SonarCloud is configured (`sonar-project.properties`) or the SonarCloud check is
+     failing, load [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md),
+     bind project/branch identity, and run `scripts/sonar_fetch.py` to snapshot every issue
+     for the exact PR/branch (fail-closed on ambiguous identity or unreconcilable revision).
 4. **Classify findings** — load [references/finding-classifier.md](references/finding-classifier.md).
    - Route CI failures by type (lint, type-check, test, build, security).
    - Route review comments by actionability (actionable, discussion, deferred).
+   - Confirm each SonarCloud finding against current source; drop stale/false-positive/
+     generated-scope findings with evidence; cluster the rest by root cause.
    - → **Produce Gate B artifact.**
 5. **Apply ALL fixes** — load [references/fix-engine.md](references/fix-engine.md).
    - Fix ALL blocking items (CI failures).
    - Fix ALL actionable review comments.
+   - Fix confirmed SonarCloud root causes with the minimal change (one cluster at a time);
+     no suppression shortcuts.
    - Skip discussion-only and deferred items.
    - Do NOT commit or push yet.
    - → **Produce Gate C artifact** (git diff --stat).
@@ -111,11 +125,16 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 - [references/review-replies.md](references/review-replies.md) — canonical reply formats, thread resolution, batch summary, downstream leverage.
 - [references/convergence-loop.md](references/convergence-loop.md) — wait, poll, re-check, and convergence gate logic.
 - [references/validation-gates.md](references/validation-gates.md) — enforcement layer with required artifacts at each step.
+- [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) — SonarCloud signal: fail-closed API retrieval, root-cause clustering, minimal-fix contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule.
+- [scripts/sonar_fetch.py](scripts/sonar_fetch.py) — stdlib, secret-safe fetcher: paginates issues + rules + quality gate + measures into a secret-free snapshot; fail-closed on incomplete pagination.
 
 ## Validation
 
 Before declaring convergence:
 - CI status MUST be `success` on latest commit.
+- SonarCloud: confirmed root causes fixed and locally validated. Remote quality-gate closure
+  is `PENDING_REMOTE_ANALYSIS` until the candidate revision is analyzed — never claimed from
+  local reasoning. No remote issue/hotspot state was mutated.
 - No new unresolved review comments posted after last push.
 - All review threads replied to and resolved.
 - All actionable findings from initial ingestion addressed or explicitly deferred.
@@ -132,4 +151,10 @@ Before declaring convergence:
 - Thread resolution API fails → log, continue (non-blocking for merge).
 - Max cycles reached without convergence → emit `partial` status with remaining items.
 - Conflicting review comments → mark as deferred, ask user.
+- SonarCloud project/branch identity ambiguous, or analyzed revision cannot be reconciled with
+  local source → STOP; report `BLOCKED` (do not fix against a mismatched revision).
+- SonarCloud fetch incomplete (retrieved ≠ API total) → STOP; the partial set is `BLOCKED`,
+  not a smaller issue set.
+- A SonarCloud fix would require weakening a rule/gate or its root cause is `Unknown` → stop
+  that cluster; record it, do not suppress.
 - Gate artifact cannot be produced → STOP at that gate, report `blocked`.
