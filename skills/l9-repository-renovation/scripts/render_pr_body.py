@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from common import load_json
+from common import load_json, safe_cli_path
 
 
 def command_line(record: dict) -> str:
@@ -74,8 +74,9 @@ def main() -> int:
             "",
         ]
     )
-    args.output.write_text("\n".join(lines), encoding="utf-8")
-    print(f"pr body: {args.output}")
+    output = safe_cli_path(args.output)
+    output.write_text("\n".join(lines), encoding="utf-8")
+    print(f"pr body: {output}")
     return 0
 
 

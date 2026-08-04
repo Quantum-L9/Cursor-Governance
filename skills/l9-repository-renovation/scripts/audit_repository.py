@@ -22,6 +22,7 @@ from common import (
     read_text,
     relative,
     run,
+    safe_cli_path,
     stable_id,
     utc_now,
     write_json,
@@ -780,9 +781,10 @@ def main() -> int:
     if not args.repo.exists() or not args.repo.is_dir():
         parser.error(f"repository directory does not exist: {args.repo}")
     payload = audit(args.repo)
-    write_json(args.output, payload)
+    output = safe_cli_path(args.output)
+    write_json(output, payload)
     print(json.dumps(payload["summary"], indent=2, sort_keys=True))
-    print(f"audit: {args.output}")
+    print(f"audit: {output}")
     return 0
 
 

@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from common import load_json, matches_any, run, utc_now, write_json
+from common import load_json, matches_any, run, safe_cli_path, utc_now, write_json
 from validate_contract import validate
 
 FORBIDDEN_ADDED_LINE_PATTERNS = {
@@ -158,7 +158,7 @@ def main() -> int:
         "validation_records": sorted(passed_ids),
         "diff_check": diff_check,
     }
-    write_json(args.output, payload)
+    write_json(safe_cli_path(args.output), payload)
     print(
         json.dumps(
             {"status": payload["status"], "changed_files": len(changed), "errors": errors}, indent=2

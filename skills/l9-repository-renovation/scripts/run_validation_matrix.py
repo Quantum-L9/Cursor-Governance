@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from common import load_json, run, utc_now, write_json
+from common import load_json, run, safe_cli_path, utc_now, write_json
 from validate_contract import validate
 
 
@@ -57,8 +57,9 @@ def main() -> int:
         "missing_required": missing_required,
         "records": records,
     }
-    write_json(args.output, payload)
-    print(f"evidence: {args.output}")
+    output = safe_cli_path(args.output)
+    write_json(output, payload)
+    print(f"evidence: {output}")
     return 0 if payload["status"] == "passed" else 1
 
 
