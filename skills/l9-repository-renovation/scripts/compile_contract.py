@@ -102,7 +102,8 @@ def detect_validation(repo: Path, inventory: dict[str, Any]) -> list[dict[str, A
                     },
                 ]
             )
-        if "ruff.toml" in configs or ".ruff.toml" in configs or (repo / "pyproject.toml").exists():
+        pyproject_text = (repo / "pyproject.toml").read_text(encoding="utf-8")
+        if "ruff.toml" in configs or ".ruff.toml" in configs or "[tool.ruff]" in pyproject_text:
             commands.extend(
                 [
                     {

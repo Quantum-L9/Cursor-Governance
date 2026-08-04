@@ -374,7 +374,14 @@ def test_files_under(path: Path) -> list[Path]:
         return []
     if path.is_file():
         name = path.name
-        return [path] if name.startswith("test_") or ".test." in name or ".spec." in name else []
+        return (
+            [path]
+            if name.startswith("test_")
+            or name.endswith("_test.py")
+            or ".test." in name
+            or ".spec." in name
+            else []
+        )
     matches: list[Path] = []
     for item in path.rglob("*"):
         if not item.is_file():

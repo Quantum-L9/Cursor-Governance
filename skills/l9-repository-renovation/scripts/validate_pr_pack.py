@@ -102,7 +102,9 @@ def main() -> int:
     if introduced_high:
         errors.append("after audit introduces new high or critical findings")
 
-    changed, changed_error = changed_files(repo, contract["repository"]["base_ref"])
+    # Prefer the immutable base_commit; base_ref can move and misalign the baseline.
+    base = contract["repository"].get("base_commit") or contract["repository"]["base_ref"]
+    changed, changed_error = changed_files(repo, base)
     if changed_error:
         errors.append(changed_error)
     allowed = contract.get("scope", {}).get("allowed_paths", [])
@@ -114,7 +116,7 @@ def main() -> int:
     if forbidden_changed:
         errors.append(f"forbidden paths changed: {', '.join(forbidden_changed)}")
 
-    lines, line_error = added_lines(repo, contract["repository"]["base_ref"])
+    lines, line_error = added_lines(repo, base)
     if line_error:
         errors.append(line_error)
     marker_hits: list[dict[str, str]] = []
