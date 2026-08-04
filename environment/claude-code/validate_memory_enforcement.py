@@ -134,7 +134,8 @@ def _contract_pin(failures: list[str]) -> None:
         [sys.executable, str(CONTRACT_TEST)], capture_output=True, text=True, check=False
     )
     if result.returncode:
-        _fail(f"memory client<->server contract test failed\n{result.stdout}{result.stderr}", failures)
+        detail = f"{result.stdout}{result.stderr}"
+        _fail(f"memory client<->server contract test failed\n{detail}", failures)
     else:
         print("  OK: memory client<->server contract pin holds (sections/hits schema)")
 
