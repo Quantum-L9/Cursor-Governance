@@ -1,28 +1,35 @@
 #!/usr/bin/env python3
 """Deterministic, secret-safe pre-existing-debt baseline auditor (stdlib only).
 
-Detects a repository's owned toolchain (Python: ruff/mypy/pytest; Node:
-eslint/tsc/tests/build), records the exact repository-preferred invocation for each
-gate, runs the gates that are runnable in the current environment, and writes a single
-secret-free JSON baseline snapshot (`debt-baseline.json` by convention).
+================================================================================
+Module: debt_audit
+Purpose: Record a fail-closed, secret-free pre-existing debt baseline for remediation.
+================================================================================
 
-This captures EVIDENCE, it does not fix anything. It exists so the remediation loop
-starts from a recorded baseline (main SHA, tool versions, per-gate exit codes, truncated
-logs) instead of an unverified claim, and so hostile-audit false passes are surfaced:
-a gate that exits 0 while its output shows a crash, an empty target set, or a broad
-suppression is flagged, not trusted.
+Summary:
+    Detects a repository's owned toolchain (Python: ruff/mypy/pytest; Node:
+    eslint/tsc/tests/build), records preferred invocations, runs runnable gates, and
+    writes a secret-free JSON baseline snapshot (`debt-baseline.json` by convention).
 
-Fail-closed: unreadable repo, out-of-tree --output, or an unclassifiable toolchain exit
-non-zero rather than emit a misleading "clean" baseline. A gate whose tool is absent is
-recorded UNAVAILABLE (never silently PASS). No secrets are read or emitted: the auditor
-runs local tools with a fixed argv allowlist (never a shell string) and never dumps the
-environment; token-shaped substrings in captured output are redacted.
+Extended Metadata:
+    See __footer_meta__ at module footer for full governance, classification,
+    and audit metadata. Runtime trace in __l9_trace__ at very end.
+
+================================================================================
+# HEADER META - Module Identity (Static)
+# component_id: SKILL-PRREM-DEBT-001
+# layer: skill
+# domain: pr-remediation
+# governance_level: standard
+# created_at: 2026-08-04
+================================================================================
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -230,17 +237,19 @@ def count_suppressions(repo: Path, languages: list[str]) -> dict[str, int]:
     if "node" in languages:
         exts.update(NODE_EXTS)
     counts = dict.fromkeys(SUPPRESSION_PATTERNS, 0)
-    for path in repo.rglob("*"):
-        if not path.is_file() or path.suffix not in exts:
-            continue
-        if any(part in SKIP_DIRS for part in path.parts):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        for name, pattern in SUPPRESSION_PATTERNS.items():
-            counts[name] += len(pattern.findall(text))
+    # Prune SKIP_DIRS during walk so we never descend into node_modules/.git/etc.
+    for root, dirnames, filenames in os.walk(repo):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for filename in filenames:
+            path = Path(root) / filename
+            if path.suffix not in exts:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for name, pattern in SUPPRESSION_PATTERNS.items():
+                counts[name] += len(pattern.findall(text))
     return counts
 
 
@@ -370,6 +379,57 @@ def main() -> int:
         print("BLOCKED: no supported toolchain detected (pass --language to override)")
         return 2
     return 0
+
+
+__footer_meta__ = {
+    "component_id": "SKILL-PRREM-DEBT-001",
+    "component_name": "debt_audit",
+    "module_version": "1.0.0",
+    "created_at": "2026-08-04",
+    "created_by": "l9-pr-remediation",
+    "layer": "skill",
+    "domain": "pr-remediation",
+    "type": "cli_script",
+    "status": "active",
+    "governance_level": "standard",
+    "compliance_required": True,
+    "audit_trail": True,
+    "purpose": "Fail-closed pre-existing debt baseline auditor",
+    "summary": "Stdlib-only debt baseline snapshot for l9-pr-remediation",
+    "dependencies": [],
+}
+
+__all__ = [
+    "main",
+    "count_suppressions",
+    "detect_languages",
+    "run_gates",
+    "__footer_meta__",
+    "__l9_trace__",
+]
+
+# ============================================================================
+# L9 DORA BLOCK - AUTO-UPDATED - DO NOT EDIT
+# ============================================================================
+
+__l9_trace__ = {
+    "trace_id": "",
+    "task": "",
+    "timestamp": "",
+    "patterns_used": [],
+    "graph": {"nodes": [], "edges": []},
+    "inputs": {},
+    "outputs": {},
+    "metrics": {
+        "confidence": "",
+        "errors_detected": [],
+        "stability_score": "",
+    },
+}
+
+# ============================================================================
+# END L9 DORA BLOCK
+# ============================================================================
 
 
 if __name__ == "__main__":
