@@ -1,13 +1,13 @@
 ---
 name: l9-pr-remediation
-description: recursive pr improvement loop — read ci failures, code review bot comments, sonarcloud static-analysis findings, and pre-existing ruff/mypy/eslint/typescript/test/build debt on the baseline, apply root-cause fixes, verify every gate locally, push one commit to the pr branch, reply to review threads, wait for re-run, loop until ci is green and no new actionable signals remain. use when a pr has failing ci, a failing sonarcloud quality gate or open sonarcloud issues, unresolved review comments from gemini or coderabbit, pre-existing lint/type debt to pay down (ruff, mypy, eslint, tsc) via an audit-first entry mode, or when the user asks to fix a pr, remediate review feedback or static-analysis findings, or run a pr improvement loop.
+description: recursive pr improvement loop — read ci failures, code review bot comments, sonarcloud static-analysis findings, pre-existing ruff/mypy/eslint/typescript/test/build debt on the baseline, and codeql code-scanning security alerts, apply root-cause fixes, verify every gate locally, push one commit to the pr branch, reply to review threads, wait for re-run, loop until ci is green and no new actionable signals remain. use when a pr has failing ci, a failing sonarcloud quality gate or open sonarcloud issues, a failing codeql check or open code-scanning alerts, unresolved review comments from gemini or coderabbit, pre-existing lint/type debt to pay down (ruff, mypy, eslint, tsc) via an audit-first entry mode, or when the user asks to fix a pr, remediate review feedback, static-analysis findings, or codeql security alerts, or run a pr improvement loop.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
-tags: [l9, pr, ci, code-review, sonarcloud, static-analysis, ruff, mypy, eslint, typescript, technical-debt, recursive, remediation, github, review-replies]
+tags: [l9, pr, ci, code-review, sonarcloud, static-analysis, ruff, mypy, eslint, typescript, technical-debt, codeql, code-scanning, security, recursive, remediation, github, review-replies]
 owner: igor_beylin
 status: active
-version: 2.3.0
+version: 2.4.0
 updated: 2026-08-04
 disable-model-invocation: true
 ---
@@ -33,6 +33,7 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 | CI workflow definitions | `.github/workflows/*.yml` | File read (for gate discovery) |
 | SonarCloud findings | SonarCloud API (`/issues/search`, `/rules/show`, quality gate) | `scripts/sonar_fetch.py` (stdlib, secret-safe) |
 | Pre-existing lint/type/test/build debt | Repository-owned toolchain (Ruff, mypy, ESLint, `tsc`, tests, build) on the `main` baseline | `scripts/debt_audit.py` (stdlib, secret-safe) |
+| CodeQL code-scanning alerts | GitHub code-scanning API (`/code-scanning/alerts`, `/code-scanning/analyses`) | `scripts/codeql_fetch.py` (stdlib, secret-safe, read-only) |
 
 | Output | Condition |
 |--------|-----------|
@@ -74,6 +75,9 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 18. **Pre-existing debt is fixed at the root, never suppressed.** MUST NOT clear Ruff/mypy/ESLint/`tsc` by blanket `noqa`/`type: ignore`/`eslint-disable`/`@ts-ignore`, broad tool exclusions, weakening strictness or a quality threshold, deleting or skipping tests, replacing real logic with stubs, or adding `Any`/unsafe casts/non-null assertions to hide a design defect. A narrow, documented suppression is allowed only for a *proven* false positive where a code fix would be less safe.
 19. **Separate baseline debt from regressions.** MUST record pre-existing baseline failures (present on the recorded `main` SHA) distinctly from regressions introduced during remediation. Both are resolved before completion, but they are reported separately.
 20. **Use the repository-owned toolchain, unmodified.** MUST detect the repository's actual language/config and prefer its Make targets or package scripts; MUST NOT introduce Python or Node tooling into a repository that does not already use it.
+21. **CodeQL alerts are confirmed by dataflow, then fixed at the root — never dismissed or excluded.** MUST trace source→sink and confirm the unsafe behavior against current source before any fix; MUST NOT dismiss a valid alert, add a blanket CodeQL exclusion or `paths-ignore` to reduce counts, remove `security-extended`/weaken a query suite, suppress SARIF upload, or mark an alert false-positive without path-flow proof. A remote dismissal is fail-closed: allowed only for a proven false positive under documented repository security policy.
+22. **Fix the cause, not the reported line.** MUST resolve every equivalent path that shares the alert's root cause (allowlist over blacklist; parameterized API over escaping; validate after canonicalization; authorize before mutation), and MUST add a negative/regression test that reproduces the vulnerable path. Closing only the reported line while equivalent paths remain is a protocol failure.
+23. **A local CodeQL pass is not remote closure, and code-scanning reads are read-only.** The CodeQL check is not green until analysis completes for the exact candidate head SHA with no active in-scope alerts; `codeql_fetch.py` never mutates alert state and reads `GITHUB_TOKEN`/`GH_TOKEN` by environment reference only.
 
 ## Compact Workflow
 
@@ -84,6 +88,11 @@ other work — do not expect the parent turn to AwaitShell on this loop.
   fetch `origin/main` and record its SHA, create the isolated branch, run
   `scripts/debt_audit.py` to snapshot the baseline, classify and cluster the debt, fix
   root causes, then rejoin at step 6 (local verify) → push → open PR → converge.
+- *Security-remediation* — the task is CodeQL code-scanning alerts (failing CodeQL check
+  or open alerts on `main`). Load [references/codeql-remediation.md](references/codeql-remediation.md):
+  create the isolated branch, run `scripts/codeql_fetch.py` to snapshot the alert
+  baseline, audit analysis coverage, confirm each alert by tracing dataflow, cluster by
+  root cause, fix at the trust boundary with a negative test, then rejoin at step 6.
 
 1. **Identify PR** — get PR number, repo, branch from user or context.
 2. **Discover CI gates** — read ALL `.github/workflows/*.yml` files. Extract every `run:` command that can fail. Build the local verify command list. → **Produce Gate A artifact.**
@@ -99,6 +108,11 @@ other work — do not expect the parent turn to AwaitShell on this loop.
      [references/debt-remediation.md](references/debt-remediation.md) and run
      `scripts/debt_audit.py` to snapshot the toolchain baseline (detected languages, tool
      versions, per-gate exit codes, suppression counts, and false-pass flags).
+   - If the CodeQL check is failing or code-scanning alerts are open, load
+     [references/codeql-remediation.md](references/codeql-remediation.md) and run
+     `scripts/codeql_fetch.py` to snapshot every active (and dismissed, for review) alert
+     for the exact ref, plus the latest analysis SHA (fail-closed on incomplete pagination
+     or an unauthenticated code-scanning response).
 4. **Classify findings** — load [references/finding-classifier.md](references/finding-classifier.md).
    - Route CI failures by type (lint, type-check, test, build, security).
    - Route review comments by actionability (actionable, discussion, deferred).
@@ -107,6 +121,9 @@ other work — do not expect the parent turn to AwaitShell on this loop.
    - Confirm each pre-existing debt finding against current source; separate baseline debt
      from regressions introduced during remediation; apply the hostile-audit rules (empty
      targets, broad excludes, stale suppressions, false passes) before trusting any PASS.
+   - Confirm each CodeQL alert by tracing source→sink dataflow at the analyzed revision;
+     classify validity, verify analysis coverage isn't hiding equivalent paths, and cluster
+     by shared root cause (untrusted source, sink, missing validation, authz boundary).
    - → **Produce Gate B artifact.**
 5. **Apply ALL fixes** — load [references/fix-engine.md](references/fix-engine.md).
    - Fix ALL blocking items (CI failures).
@@ -116,6 +133,10 @@ other work — do not expect the parent turn to AwaitShell on this loop.
    - Fix confirmed pre-existing lint/type debt at the authoritative owner (one cluster at a
      time); add a regression test for every behavioral fix; no blanket `noqa`/`type: ignore`/
      `eslint-disable`, no strictness or threshold weakening, no deleted or skipped tests.
+   - Fix confirmed CodeQL alerts at the earliest trust boundary (allowlist / parameterized
+     API, validate after canonicalization, authorize before the sensitive action); add a
+     negative test proving the vulnerable path is closed and equivalent paths are covered.
+     No dismissals, CodeQL exclusions, query-suite weakening, or SARIF suppression.
    - Skip discussion-only and deferred items.
    - Do NOT commit or push yet.
    - → **Produce Gate C artifact** (git diff --stat).
@@ -150,8 +171,10 @@ other work — do not expect the parent turn to AwaitShell on this loop.
 - [references/validation-gates.md](references/validation-gates.md) — enforcement layer with required artifacts at each step.
 - [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) — SonarCloud signal: fail-closed API retrieval, root-cause clustering, minimal-fix contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule.
 - [references/debt-remediation.md](references/debt-remediation.md) — pre-existing Ruff/mypy/ESLint/`tsc`/test/build debt signal: language & toolchain detection, audit-first entry mode, hostile-audit rules, root-cause clustering, the prohibited-shortcut contract, required artifacts, and the final-verdict taxonomy.
+- [references/codeql-remediation.md](references/codeql-remediation.md) — CodeQL code-scanning signal: fail-closed alert retrieval, analysis-coverage audit, hostile dataflow review (sanitizer-dominates-sink, equivalent paths), root-cause clustering, the no-dismissal/no-exclusion contract, custom-query/model + dismissal policy, required artifacts, and the final-verdict taxonomy.
 - [scripts/sonar_fetch.py](scripts/sonar_fetch.py) — stdlib, secret-safe fetcher: paginates issues + rules + quality gate + measures into a secret-free snapshot; fail-closed on incomplete pagination.
 - [scripts/debt_audit.py](scripts/debt_audit.py) — stdlib, secret-safe baseline auditor: detects the owned toolchain, runs each gate with a fixed argv allowlist, and records exit codes, tool versions, suppression counts, and false-pass flags into a secret-free snapshot; fail-closed on an unclassifiable toolchain or out-of-tree output path.
+- [scripts/codeql_fetch.py](scripts/codeql_fetch.py) — stdlib, secret-safe, read-only code-scanning fetcher: paginates active + dismissed CodeQL alerts and the latest analysis metadata into a secret-free snapshot; host-allowlisted (SSRF), output confined to the tree, fail-closed on incomplete pagination or an unauthenticated response.
 
 ## Validation
 
@@ -164,6 +187,10 @@ Before declaring convergence:
   through the repository-owned invocation, with no new unexplained suppressions and no
   weakened gate; baseline debt and any remediation-introduced regressions are both resolved
   and reported separately; final verdict assigned per debt-remediation.md.
+- CodeQL: confirmed root causes fixed at the trust boundary with negative tests; no alert
+  dismissed and no query suite / path scope weakened. Remote closure is not claimed until
+  the CodeQL check is green for the exact head SHA with no active in-scope alerts; a local
+  CodeQL pass alone is `PENDING_REMOTE_ANALYSIS`. No code-scanning alert state was mutated.
 - No new unresolved review comments posted after last push.
 - All review threads replied to and resolved.
 - All actionable findings from initial ingestion addressed or explicitly deferred.
@@ -194,4 +221,10 @@ Before declaring convergence:
   treat the gate as failing; fix the real cause and re-verify before trusting it.
 - A pre-existing debt fix would require weakening Ruff/mypy/ESLint/TypeScript/tests/CI →
   STOP that cluster; record it, do not suppress or weaken the gate.
+- `codeql_fetch.py` reports incomplete pagination or an unauthenticated/forbidden
+  code-scanning response (status `BLOCKED`) → STOP; the partial set is not the real set.
+- A CodeQL alert's analyzed revision cannot be reconciled with current source, or its root
+  cause is `Unknown` → STOP that cluster; confirm by dataflow first, never fix blind.
+- A CodeQL fix would require dismissing an alert, excluding paths, or weakening a query
+  suite → STOP; record it, do not suppress. A dismissal needs proven authority + evidence.
 - Gate artifact cannot be produced → STOP at that gate, report `blocked`.
