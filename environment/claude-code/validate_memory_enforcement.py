@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 import py_compile
+import subprocess
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -23,6 +25,7 @@ MEM = HERE / "memory"
 CONTRACT = MEM / "memory-enforcement.contract.json"
 SCHEMA = MEM / "memory-enforcement.schema.json"
 SETTINGS = HERE / "settings.template.json"
+CONTRACT_TEST = HERE / "tests" / "test_memory_client_contract.py"
 
 
 def _fail(msg: str, failures: list[str]) -> None:
@@ -118,6 +121,24 @@ def _scripts_exist(contract: dict, failures: list[str]) -> None:
         print("  OK: all referenced scripts exist and compile")
 
 
+def _contract_pin(failures: list[str]) -> None:
+    """Run the network-free client<->server contract test (drift guard).
+
+    Presence is not proof: the pin only prevents divergence if it actually runs
+    (see docs/decisions/ADR-0004). Network-free, so CI without memory stays green.
+    """
+    if not CONTRACT_TEST.is_file():
+        _fail(f"missing contract pin: {CONTRACT_TEST.relative_to(REPO)}", failures)
+        return
+    result = subprocess.run(
+        [sys.executable, str(CONTRACT_TEST)], capture_output=True, text=True, check=False
+    )
+    if result.returncode:
+        _fail(f"memory client<->server contract test failed\n{result.stdout}{result.stderr}", failures)
+    else:
+        print("  OK: memory client<->server contract pin holds (sections/hits schema)")
+
+
 def main() -> int:
     failures: list[str] = []
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
@@ -127,6 +148,7 @@ def main() -> int:
     _schema_check(contract, schema, failures)
     _wiring_parity(contract, settings, failures)
     _scripts_exist(contract, failures)
+    _contract_pin(failures)
 
     if failures:
         print(f"\nRESULT: FAIL - {len(failures)} problem(s)")

@@ -2,6 +2,8 @@
 
 Hostile recursive audit of the Cursor-Governance Claude Code custom environment and the Graphiti memory activation chain. Read-only. No source/config/remote mutation occurred.
 
+> **Follow-up (2026-08-04):** RC1 (MEM-001/002) is fixed in this branch — `memory_prefetch.py` now reads `sections` via one-contract client accessors and injects the hydrated content (verified live: hook reported "1 section(s) hydrated" and surfaced the record). The client↔server contract is pinned by `environment/claude-code/tests/test_memory_client_contract.py`, executed by `validate_memory_enforcement.py`. The architecture decision (keep two entry points, unify the contract) is formalized in `docs/decisions/ADR-0003` and `ADR-0004`. RC2 (MEM-003, register `l9-shared-memory` on the managed surface) remains open.
+
 ## Executive verdict
 **`MULTIPLE_ROOT_CAUSES_CONFIRMED`.** Graphiti memory is inert in a Claude Code session for two independent, each-sufficient reasons, both owned by **Quantum-L9/Cursor-Governance** (the consumer), not by the memory service:
 
