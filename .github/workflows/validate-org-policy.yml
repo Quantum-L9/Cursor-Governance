@@ -50,10 +50,11 @@ jobs:
           # locked environment and run through `uv run` so this validator consumes the
           # same pyyaml as every other path (test job, make venv), instead of pinning a
           # divergent version (was PyYAML==6.0.2 vs uv.lock's 6.0.3) outside the lock.
-          python -m pip install --upgrade pip
-          command -v uv >/dev/null 2>&1 || pip install uv
-          uv sync --locked
+          # The uv bootstrap is version-pinned and wheels-only; --no-build/--frozen keep
+          # install off source builds and unlocked versions (SonarCloud S8541/S8544).
+          command -v uv >/dev/null 2>&1 || pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build
       - name: Validate normative policy artifacts
-        run: uv run --no-build python ops/scripts/validate_org_policy.py
+        run: uv run --frozen --no-build python ops/scripts/validate_org_policy.py
       - name: Run organization-policy tests
-        run: uv run --no-build python -m unittest discover -s tests/org_policy -p 'test_*.py'
+        run: uv run --frozen --no-build python -m unittest discover -s tests/org_policy -p 'test_*.py'
