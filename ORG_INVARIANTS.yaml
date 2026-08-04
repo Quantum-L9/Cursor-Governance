@@ -706,6 +706,8 @@ invariants:
       - .github/workflows/**
       - .github/CODEOWNERS
       - pyproject.toml
+      - ops/config/root-file-protection.json
+      - ops/scripts/validate_root_file_protection.py
 
     assertion:
       type: independent_approval
@@ -1647,6 +1649,8 @@ change_control:
     - .github/workflows/**
     - .github/CODEOWNERS
     - pyproject.toml
+    - ops/config/root-file-protection.json
+    - ops/scripts/validate_root_file_protection.py
 
   requirements:
     pull_request_required: true
