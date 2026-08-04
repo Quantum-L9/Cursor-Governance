@@ -612,7 +612,7 @@
     },
     {
       "composition_role": "general",
-      "description": "recursive pr improvement loop \u2014 read ci failures and code review bot comments, apply fixes, push to pr branch, wait for re-run, loop until ci green and no new actionable comments. use when a pr has failing ci, unresolved review comments from gemini or coderabbit, or when the user asks to fix a pr, remediate review feedback, or run a pr improvement loop.",
+      "description": "recursive pr improvement loop \u2014 read ci failures, code review bot comments, and sonarcloud static-analysis findings, apply root-cause fixes, verify every gate locally, push one commit to the pr branch, reply to review threads, wait for re-run, loop until ci is green and no new actionable signals remain. use when a pr has failing ci, a failing sonarcloud quality gate or open sonarcloud issues, unresolved review comments from gemini or coderabbit, or when the user asks to fix a pr, remediate review feedback or static-analysis findings, or run a pr improvement loop.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
@@ -756,5 +756,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "7c3131463315037b315e932eb05762764d85459b15f54a8d09c6a7c692df8701",
-  "source_skill_corpus_sha256": "a58a6237c63033e75fa9c5effb763590e828befe26e695ba24879934bdf4ef0c"
+  "source_skill_corpus_sha256": "98b32a44f435dfad9053b3be9e15b8502e901aed378ed69aaa89ea8270aa0cef"
 }
