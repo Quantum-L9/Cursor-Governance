@@ -111,6 +111,8 @@ def main() -> int:
     base = repository.get("base_commit") or repository.get("base_ref")
     changed: list[str] = []
     lines: list[dict[str, Any]] = []
+    outside: list[str] = []
+    forbidden_changed: list[str] = []
     if not isinstance(base, str) or not base:
         errors.append("contract repository base_commit/base_ref is missing or invalid")
     else:
