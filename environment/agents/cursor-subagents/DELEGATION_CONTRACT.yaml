@@ -1,0 +1,155 @@
+schema: l9.cursor-subagents.delegation-contract.v1
+schema_version: 1.0.0
+purpose: >-
+  Let the active main Cursor agent maximize safe concurrency by delegating
+  bounded work to native Cursor subagents and requiring one structured result
+  document from every subagent.
+scope:
+  included:
+    - native Cursor subagent delegation
+    - recon subagents
+    - PR-remediation subagents
+    - test subagents
+    - documentation subagents
+    - verifier and reviewer subagents
+    - autonomy campaign and lease bindings
+    - formal campaign task bindings when present
+    - structured result documents
+    - projection into the existing generated-data pipeline
+  excluded:
+    - CI signal ingestion
+    - GitHub polling or task discovery
+    - Cursor SDK integration
+    - external launcher services
+    - LLM or model routing
+    - multi-platform agent deployment
+    - new schedulers or databases
+    - direct memory or Graphiti writes
+    - remote mutation
+    - merge release publication or deployment
+authority:
+  main_cursor_agent:
+    owns:
+      - delegation choice
+      - critical_path_work
+      - native_subagent_launch
+      - result_document_acceptance
+      - cross_result_synthesis
+      - integration_decisions
+  autonomy:
+    canonical_path: autonomy/
+    owns:
+      - campaign_readiness
+      - action_readiness
+      - leases
+      - base_sha_binding
+      - capabilities
+      - resource_claims
+      - writable_path_exclusion
+      - artifact_acceptance
+      - executor_reviewer_separation
+  campaign_execution:
+    canonical_path: environment/program-execution/
+    owns_when_active:
+      - formal_campaign_task_readiness
+      - campaign_lock
+      - campaign_attempts
+      - verification_receipts
+      - gate_evaluation
+    may_not_be_advanced_by_cursor_subagent_documents: true
+  generated_data:
+    canonical_path: subagent-generated-data/
+    owns:
+      - packet_validation
+      - harvesting
+      - classification
+      - routing
+      - promotion
+      - delivery
+      - retrieval
+      - invalidation
+delegation:
+  input:
+    required:
+      - campaign_id
+      - graph_id
+      - action_id
+      - agent_id
+      - lease_id
+      - base_sha
+      - role
+      - objective
+      - allowed_paths
+      - forbidden_paths
+  delegate_when:
+    - action_is_ready
+    - lease_is_active
+    - work_is_bounded
+    - output_is_observable
+    - dependencies_are_satisfied
+    - main_agent_synthesis_is_not_required_during_execution
+    - resource_claims_do_not_conflict
+  retain_with_main_agent_when:
+    - architecture_authority_is_unresolved
+    - cross_component_synthesis_is_required
+    - user_interaction_is_imminent
+    - writable_scope_overlaps_active_mutation
+    - campaign_state_or_gate_authority_would_be_exercised
+    - delegation_contract_cannot_be_rendered_exactly
+concurrency:
+  objective: maximize_safe_concurrency
+  fixed_scoring_or_model_selection: false
+  rules:
+    - launch_all_currently_ready_non_conflicting_actions_as_one_wave
+    - allow_read_only_actions_to_run_concurrently
+    - allow_mutating_actions_only_with_non_conflicting_autonomy_claims
+    - forbid_more_than_one_mutator_per_path_lineage
+    - keep_integration_and_synthesis_with_the_main_agent
+    - require_a_distinct_agent_for_verification_or_review
+    - continue_main_agent_critical_path_work_while_background_agents_run
+    - do_not_launch_speculative_work_outside_the_campaign_or_user_scope
+completion:
+  natural_language_completion_is_valid: false
+  required_schema: schemas/cursor-subagent-result.schema.json
+  required_document_schema: l9.cursor-subagent.result.v1
+  acceptance_requires:
+    - schema_valid
+    - campaign_identity_matches
+    - action_identity_matches
+    - agent_identity_matches
+    - lease_identity_matches
+    - base_sha_matches
+    - role_matches_assignment
+    - result_kind_matches_role
+    - files_changed_are_truthful
+    - unresolved_items_are_explicit
+    - provenance_is_present
+  role_guards:
+    recon:
+      changed_files_allowed: false
+    pr_remediation:
+      changed_files_allowed: true
+    test:
+      changed_files_allowed: true
+    documentation:
+      changed_files_allowed: true
+    verifier_reviewer:
+      changed_files_allowed: false
+      subject_agent_required: true
+      subject_agent_must_differ_from_producer: true
+generated_data:
+  accepted_documents_only: true
+  raw_chat_is_not_a_packet: true
+  bridge: result_bridge.py
+  producing_agent_may_self_promote: false
+  direct_memory_write: false
+  direct_graphiti_write: false
+failure_behavior:
+  - reject_missing_or_malformed_document
+  - reject_stale_or_mismatched_base_sha
+  - reject_campaign_action_agent_or_lease_mismatch
+  - reject_role_and_result_kind_mismatch
+  - reject_recon_or_reviewer_changed_file_claims
+  - reject_self_review
+  - preserve_blocked_failed_and_partial_results
+  - do_not_infer_success_from_subagent_narrative
