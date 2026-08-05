@@ -58,6 +58,73 @@ interface DetectedIssue {
   description: string;
 }
 
+type PageEngagementRow = typeof schema.pageEngagement.$inferSelect;
+
+/**
+ * Evaluate a single page's engagement row against the bounce/time/scroll
+ * thresholds. Extracted from `detectBehaviorIssues` so the per-metric branching
+ * lives in one flat function instead of nested inside the dedup loop.
+ */
+function evaluatePageIssues(pagePath: string, data: PageEngagementRow): DetectedIssue[] {
+  const issues: DetectedIssue[] = [];
+
+  // Bounce rate check
+  if (data.bounceRate !== null && data.bounceRate > THRESHOLDS.bounceRate.critical) {
+    issues.push({
+      pagePath,
+      metric: 'bounce_rate',
+      currentValue: data.bounceRate,
+      benchmarkValue: BENCHMARKS.bounceRate,
+      severity: 'critical',
+      description: `Bounce rate is ${(data.bounceRate * 100).toFixed(0)}% (benchmark: ${(BENCHMARKS.bounceRate * 100).toFixed(0)}%)`,
+    });
+  } else if (data.bounceRate !== null && data.bounceRate > THRESHOLDS.bounceRate.warning) {
+    issues.push({
+      pagePath,
+      metric: 'bounce_rate',
+      currentValue: data.bounceRate,
+      benchmarkValue: BENCHMARKS.bounceRate,
+      severity: 'warning',
+      description: `Bounce rate is ${(data.bounceRate * 100).toFixed(0)}% (benchmark: ${(BENCHMARKS.bounceRate * 100).toFixed(0)}%)`,
+    });
+  }
+
+  // Time on page check (low = bad)
+  if (data.avgTimeOnPage !== null && data.avgTimeOnPage < THRESHOLDS.avgTimeOnPage.critical) {
+    issues.push({
+      pagePath,
+      metric: 'time_on_page',
+      currentValue: data.avgTimeOnPage,
+      benchmarkValue: BENCHMARKS.avgTimeOnPage,
+      severity: 'critical',
+      description: `Avg time on page is ${data.avgTimeOnPage.toFixed(0)}s (benchmark: ${BENCHMARKS.avgTimeOnPage}s)`,
+    });
+  } else if (data.avgTimeOnPage !== null && data.avgTimeOnPage < THRESHOLDS.avgTimeOnPage.warning) {
+    issues.push({
+      pagePath,
+      metric: 'time_on_page',
+      currentValue: data.avgTimeOnPage,
+      benchmarkValue: BENCHMARKS.avgTimeOnPage,
+      severity: 'warning',
+      description: `Avg time on page is ${data.avgTimeOnPage.toFixed(0)}s (benchmark: ${BENCHMARKS.avgTimeOnPage}s)`,
+    });
+  }
+
+  // Scroll depth check (low = bad)
+  if (data.avgScrollDepth !== null && data.avgScrollDepth < THRESHOLDS.scrollDepth.critical) {
+    issues.push({
+      pagePath,
+      metric: 'scroll_depth',
+      currentValue: data.avgScrollDepth,
+      benchmarkValue: BENCHMARKS.scrollDepth,
+      severity: 'critical',
+      description: `Avg scroll depth is ${(data.avgScrollDepth * 100).toFixed(0)}% (benchmark: ${(BENCHMARKS.scrollDepth * 100).toFixed(0)}%)`,
+    });
+  }
+
+  return issues;
+}
+
 export async function detectBehaviorIssues(clientId: string): Promise<DetectedIssue[]> {
   const db = getDb();
   const issues: DetectedIssue[] = [];
@@ -78,59 +145,7 @@ export async function detectBehaviorIssues(clientId: string): Promise<DetectedIs
   }
 
   for (const [pagePath, data] of latestByPage) {
-    // Bounce rate check
-    if (data.bounceRate !== null && data.bounceRate > THRESHOLDS.bounceRate.critical) {
-      issues.push({
-        pagePath,
-        metric: 'bounce_rate',
-        currentValue: data.bounceRate,
-        benchmarkValue: BENCHMARKS.bounceRate,
-        severity: 'critical',
-        description: `Bounce rate is ${(data.bounceRate * 100).toFixed(0)}% (benchmark: ${(BENCHMARKS.bounceRate * 100).toFixed(0)}%)`,
-      });
-    } else if (data.bounceRate !== null && data.bounceRate > THRESHOLDS.bounceRate.warning) {
-      issues.push({
-        pagePath,
-        metric: 'bounce_rate',
-        currentValue: data.bounceRate,
-        benchmarkValue: BENCHMARKS.bounceRate,
-        severity: 'warning',
-        description: `Bounce rate is ${(data.bounceRate * 100).toFixed(0)}% (benchmark: ${(BENCHMARKS.bounceRate * 100).toFixed(0)}%)`,
-      });
-    }
-
-    // Time on page check (low = bad)
-    if (data.avgTimeOnPage !== null && data.avgTimeOnPage < THRESHOLDS.avgTimeOnPage.critical) {
-      issues.push({
-        pagePath,
-        metric: 'time_on_page',
-        currentValue: data.avgTimeOnPage,
-        benchmarkValue: BENCHMARKS.avgTimeOnPage,
-        severity: 'critical',
-        description: `Avg time on page is ${data.avgTimeOnPage.toFixed(0)}s (benchmark: ${BENCHMARKS.avgTimeOnPage}s)`,
-      });
-    } else if (data.avgTimeOnPage !== null && data.avgTimeOnPage < THRESHOLDS.avgTimeOnPage.warning) {
-      issues.push({
-        pagePath,
-        metric: 'time_on_page',
-        currentValue: data.avgTimeOnPage,
-        benchmarkValue: BENCHMARKS.avgTimeOnPage,
-        severity: 'warning',
-        description: `Avg time on page is ${data.avgTimeOnPage.toFixed(0)}s (benchmark: ${BENCHMARKS.avgTimeOnPage}s)`,
-      });
-    }
-
-    // Scroll depth check (low = bad)
-    if (data.avgScrollDepth !== null && data.avgScrollDepth < THRESHOLDS.scrollDepth.critical) {
-      issues.push({
-        pagePath,
-        metric: 'scroll_depth',
-        currentValue: data.avgScrollDepth,
-        benchmarkValue: BENCHMARKS.scrollDepth,
-        severity: 'critical',
-        description: `Avg scroll depth is ${(data.avgScrollDepth * 100).toFixed(0)}% (benchmark: ${(BENCHMARKS.scrollDepth * 100).toFixed(0)}%)`,
-      });
-    }
+    issues.push(...evaluatePageIssues(pagePath, data));
   }
 
   return issues;

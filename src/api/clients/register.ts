@@ -23,7 +23,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply } from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
 import { getDb, schema } from '../../core/database/index.js';
 import { createModuleLogger } from '../../core/logger.js';
@@ -127,6 +127,49 @@ function buildEnrichedClientConfig(
   };
 }
 
+/**
+ * Fail-closed write path: persist the client as inactive when maintenance
+ * readiness could not be verified. Extracted from the register handler so the
+ * deeply nested try/catch lives in its own function.
+ */
+async function persistInactiveRegistration(
+  payload: EnrichedWebsiteFactoryContractV2,
+  domain: string,
+  error: MaintenanceReadinessError,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  try {
+    const [client] = await getDb()
+      .insert(schema.clients)
+      .values({
+        name: payload.name,
+        domain,
+        industry: payload.industry,
+        city: payload.city ?? null,
+        state: payload.state ?? null,
+        posthogProjectId: payload.posthog_project_id ?? null,
+        posthogApiKey: payload.posthog_api_key ?? null,
+        config: buildClientConfig(payload),
+        active: false,
+      })
+      .onConflictDoUpdate({
+        target: schema.clients.domain,
+        set: { config: buildClientConfig(payload), active: false, updatedAt: new Date() },
+      })
+      .returning();
+    return reply.status(202).send({
+      registered: true,
+      maintenance_ready: false,
+      clientId: client.id,
+      error: error.code,
+      probes: error.probes,
+    });
+  } catch (dbErr: any) {
+    logger.error({ err: dbErr, domain }, 'Inactive registration write failed');
+    return reply.status(409).send({ registered: false, maintenance_ready: false, error: dbErr?.message ?? 'registration_failed' });
+  }
+}
+
 export async function registerClientRoutes(app: FastifyInstance, deps: RegisterClientRouteDeps = {}): Promise<void> {
   app.post('/api/clients/register', async (request, reply) => {
     const env = deps.env ?? process.env;
@@ -162,36 +205,7 @@ export async function registerClientRoutes(app: FastifyInstance, deps: RegisterC
         if (!(error instanceof MaintenanceReadinessError)) throw error;
         // Fail closed: register the client but leave maintenance inactive.
         logger.warn({ code: error.code, probes: error.probes, domain }, 'Maintenance readiness failed; registering inactive');
-        try {
-          const [client] = await getDb()
-            .insert(schema.clients)
-            .values({
-              name: payload.name,
-              domain,
-              industry: payload.industry,
-              city: payload.city ?? null,
-              state: payload.state ?? null,
-              posthogProjectId: payload.posthog_project_id ?? null,
-              posthogApiKey: payload.posthog_api_key ?? null,
-              config: buildClientConfig(payload),
-              active: false,
-            })
-            .onConflictDoUpdate({
-              target: schema.clients.domain,
-              set: { config: buildClientConfig(payload), active: false, updatedAt: new Date() },
-            })
-            .returning();
-          return reply.status(202).send({
-            registered: true,
-            maintenance_ready: false,
-            clientId: client.id,
-            error: error.code,
-            probes: error.probes,
-          });
-        } catch (dbErr: any) {
-          logger.error({ err: dbErr, domain }, 'Inactive registration write failed');
-          return reply.status(409).send({ registered: false, maintenance_ready: false, error: dbErr?.message ?? 'registration_failed' });
-        }
+        return persistInactiveRegistration(payload, domain, error, reply);
       }
 
       const config = buildEnrichedClientConfig(payload, readiness);

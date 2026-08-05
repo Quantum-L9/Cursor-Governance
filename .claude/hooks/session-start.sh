@@ -13,7 +13,7 @@
 
 # Token gate — report, never crash. Without it the repo's committed .npmrc
 # cannot resolve @quantum-l9/*, and CI remains the validation gate.
-if [ -z "$NODE_AUTH_TOKEN" ]; then
+if [[ -z "$NODE_AUTH_TOKEN" ]]; then
   echo "WARN: NODE_AUTH_TOKEN not injected — @quantum-l9 packages will not resolve."
   echo "      Set a read:packages PAT as NODE_AUTH_TOKEN in the environment panel."
   echo "      CI remains the authoritative validation gate until then."
@@ -24,7 +24,7 @@ fi
 # CLAUDE_ENV_FILE is provided to SessionStart hooks; guard in case it is empty.
 # Use printf %q so a token with shell-significant characters is safely quoted
 # for when the env file is later sourced (no breakage, no injection).
-if [ -n "$CLAUDE_ENV_FILE" ]; then
+if [[ -n "$CLAUDE_ENV_FILE" ]]; then
   printf 'export NODE_AUTH_TOKEN=%q\n' "$NODE_AUTH_TOKEN" >> "$CLAUDE_ENV_FILE"
 fi
 
@@ -40,10 +40,11 @@ EOF
 fi
 
 # Install only when needed. Hooks run on every startup/resume, so guard against
-# redundant installs. No committed lockfile → `npm install` (never `npm ci`),
+# redundant installs. package-lock.json is committed, so use `npm ci`
+# (version-locked, `--ignore-scripts` blocks dependency lifecycle scripts),
 # matching .github/workflows/ci.yml.
-if [ -f "package.json" ] && [ ! -d "node_modules" ]; then
-  npm install --no-audit --no-fund || echo "WARN: npm install failed — run it manually in-session."
+if [[ -f "package.json" ]] && [[ ! -d "node_modules" ]]; then
+  npm ci --no-audit --no-fund --ignore-scripts || echo "WARN: npm ci failed — run it manually in-session."
 fi
 
 exit 0

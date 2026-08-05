@@ -1,0 +1,127 @@
+# Change manifest — files modified for SonarCloud remediation
+files_changed: 31
+changes:
+  - file: .claude/hooks/session-start.sh
+    clusters: ['C19-bash-double-bracket', 'C22-install-ignore-scripts']
+    checksum_before_sha256_16: ffd499621b29d721
+    checksum_after_sha256_16: 25b0b6c4cf9e5ef1
+  - file: .github/workflows/ci.yml
+    clusters: ['C22-install-ignore-scripts', 'C23-lock-versions']
+    checksum_before_sha256_16: 21e665157c2b469d
+    checksum_after_sha256_16: 576afb12c8ba5bef
+  - file: docker/Dockerfile
+    clusters: ['C22-install-ignore-scripts', 'C24-docker-copy-glob', 'C25-docker-merge-run']
+    checksum_before_sha256_16: d1c31e60f43a1fd5
+    checksum_after_sha256_16: 092c1df6a3e2a6dc
+  - file: scripts/add-client.ts
+    clusters: ['C09-top-level-await', 'C15-node-protocol']
+    checksum_before_sha256_16: 78f74eef15cda330
+    checksum_after_sha256_16: d7f628032e1d0540
+  - file: scripts/deploy.sh
+    clusters: ['C19-bash-double-bracket', 'C20-shell-local', 'C21-shell-stderr', 'C26-enforce-https']
+    checksum_before_sha256_16: 71516205071de125
+    checksum_after_sha256_16: 0b9671824cb9b9f6
+  - file: scripts/manifest/check.ts
+    clusters: ['C09-top-level-await']
+    checksum_before_sha256_16: c359c6df047c4355
+    checksum_after_sha256_16: 58007b28106d7239
+  - file: scripts/manifest/generate.ts
+    clusters: ['C09-top-level-await']
+    checksum_before_sha256_16: 36dc9c29bad68bfe
+    checksum_after_sha256_16: 95afcb7356a352d5
+  - file: scripts/manifest/inventory.ts
+    clusters: ['C03-replaceAll', 'C04-string-raw']
+    checksum_before_sha256_16: a6b7318246951965
+    checksum_after_sha256_16: 744037d110e9c744
+  - file: scripts/request-site-build.ts
+    clusters: ['C09-top-level-await']
+    checksum_before_sha256_16: 05cec05f66d66856
+    checksum_after_sha256_16: b7d53e2496b6cb46
+  - file: scripts/validation/cli.ts
+    clusters: ['C01-cognitive-complexity', 'C09-top-level-await', 'C10-await-non-promise']
+    checksum_before_sha256_16: 3bef8ddc964f856e
+    checksum_after_sha256_16: 56edbd34d7bd6e9b
+  - file: scripts/validation/core/redact.ts
+    clusters: ['C04-string-raw']
+    checksum_before_sha256_16: 7da489a955c37dc5
+    checksum_after_sha256_16: 75499bda6518cb01
+  - file: scripts/validation/core/repository-context.ts
+    clusters: ['C05-regexp-exec']
+    checksum_before_sha256_16: adc20fe3f733fd88
+    checksum_after_sha256_16: aab6699081059318
+  - file: scripts/validation/gate-registry.ts
+    clusters: ['C01-cognitive-complexity', 'C04-string-raw', 'C05-regexp-exec', 'C06-regex-superlinear', 'C11-startsWith', 'C12-default-stringify']
+    checksum_before_sha256_16: bcb37b5a8ec05c4c
+    checksum_after_sha256_16: f01ee00ea06e781a
+  - file: scripts/validation/profile-loader.ts
+    clusters: ['C13-typeerror']
+    checksum_before_sha256_16: b885eb759d5891fe
+    checksum_after_sha256_16: e6ebf757b5790674
+  - file: src/api/clients/register.ts
+    clusters: ['C01-cognitive-complexity']
+    checksum_before_sha256_16: c55f6d848f5e5888
+    checksum_after_sha256_16: 10b5f0562c14b743
+  - file: src/api/dashboard.ts
+    clusters: ['C02-nested-ternary', 'C03-replaceAll', 'C12-default-stringify']
+    checksum_before_sha256_16: 2f8306e98aec0ab3
+    checksum_after_sha256_16: 952fff0c04bda715
+  - file: src/core/database/index.ts
+    clusters: ['C14-object-hasown']
+    checksum_before_sha256_16: 35a3db184681d5eb
+    checksum_after_sha256_16: e5246ca91e1aba08
+  - file: src/core/database/migrate.ts
+    clusters: ['C09-top-level-await']
+    checksum_before_sha256_16: 79ce00b64fac407c
+    checksum_after_sha256_16: d1ea4f4379e7c3f0
+  - file: src/core/scheduler.ts
+    clusters: ['C07-readonly-members', 'C08-nullish-assign']
+    checksum_before_sha256_16: 4b7f7b50d09e82d5
+    checksum_after_sha256_16: f79b16f1fde1c67d
+  - file: src/index.ts
+    clusters: ['C09-top-level-await']
+    checksum_before_sha256_16: a146e4c6189d6b27
+    checksum_after_sha256_16: be62849ef8fe9ff1
+  - file: src/modules/behavior-intelligence/index.ts
+    clusters: ['C07-readonly-members']
+    checksum_before_sha256_16: ad6ce205ceeb0768
+    checksum_after_sha256_16: 9e279c1cdab801af
+  - file: src/modules/behavior-intelligence/recommendations.ts
+    clusters: ['C01-cognitive-complexity']
+    checksum_before_sha256_16: 55f526b9581aca28
+    checksum_after_sha256_16: 8a1ef9099c3bc864
+  - file: src/modules/serp-intelligence/index.ts
+    clusters: ['C07-readonly-members']
+    checksum_before_sha256_16: 7a7022b92a2048a9
+    checksum_after_sha256_16: c715651a99f9fbc7
+  - file: src/modules/web-vitals/index.ts
+    clusters: ['C16-set-has', 'C17-flatmap']
+    checksum_before_sha256_16: 6c645c91ae61d95a
+    checksum_after_sha256_16: 4d5aaac8c1b1e467
+  - file: src/services/llm-parse.ts
+    clusters: ['C01-cognitive-complexity', 'C06-regex-superlinear', 'C13-typeerror']
+    checksum_before_sha256_16: f44fa1e2398f1e90
+    checksum_after_sha256_16: ca69417c4ee3aae9
+  - file: src/services/llm.ts
+    clusters: ['C05-regexp-exec', 'C07-readonly-members', 'C08-nullish-assign']
+    checksum_before_sha256_16: 34bd4004131f9c58
+    checksum_after_sha256_16: fa9b69da4e78f960
+  - file: src/services/maintenance-readiness.ts
+    clusters: ['C01-cognitive-complexity', 'C02-nested-ternary']
+    checksum_before_sha256_16: a5205ad4dbf0823e
+    checksum_after_sha256_16: 317e9e6df644ea5a
+  - file: src/services/notifications.ts
+    clusters: ['C07-readonly-members', 'C08-nullish-assign']
+    checksum_before_sha256_16: 3b9c8de45846f839
+    checksum_after_sha256_16: 59036119bcf6399e
+  - file: src/services/plan-executor.ts
+    clusters: ['C01-cognitive-complexity', 'C05-regexp-exec', 'C06-regex-superlinear']
+    checksum_before_sha256_16: 05e91c72b5d211c8
+    checksum_after_sha256_16: 46be929fa009cde7
+  - file: src/services/site-deployment.ts
+    clusters: ['C03-replaceAll', 'C04-string-raw', 'C05-regexp-exec', 'C07-readonly-members']
+    checksum_before_sha256_16: e186e6f09142187e
+    checksum_after_sha256_16: abb0831bff79f380
+  - file: src/services/weekly-report.ts
+    clusters: ['C02-nested-ternary']
+    checksum_before_sha256_16: 8d6030e35b824b0f
+    checksum_after_sha256_16: ce5269e851baaf46

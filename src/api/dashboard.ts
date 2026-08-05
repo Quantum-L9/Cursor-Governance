@@ -36,14 +36,48 @@ const logger = createModuleLogger('dashboard');
  * session. Numbers/enums pass through harmlessly.
  */
 export function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  let str: string;
+  if (value == null) str = '';
+  else if (typeof value === 'object') str = JSON.stringify(value);
+  else str = String(value);
+  return str
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 const esc = escapeHtml;
+
+// ─── Presentation helpers ─────────────────────────────────────────────────────
+// Extracted from inline nested ternaries so each mapping is a single, testable
+// statement (keeps template literals flat and readable).
+
+function healthBadgeClass(rating: unknown): string {
+  if (rating === 'good') return 'good';
+  if (rating === 'needs-improvement') return 'warning';
+  return 'critical';
+}
+
+function riskBadgeClass(level: unknown): string {
+  if (level === 'low') return 'good';
+  if (level === 'medium') return 'warning';
+  return 'critical';
+}
+
+function rankDeltaColor(position: number | undefined, previous: number | undefined): string {
+  if (!position || !previous) return '#94a3b8';
+  if (position < previous) return '#6ee7b7';
+  if (position > previous) return '#fca5a5';
+  return '#94a3b8';
+}
+
+function rankDeltaText(position: number | undefined, previous: number | undefined): string {
+  if (!position || !previous) return '—';
+  if (position < previous) return `+${previous - position}`;
+  if (position > previous) return `-${position - previous}`;
+  return '=';
+}
 
 // ─── Dashboard Registration ───────────────────────────────────────────────────
 
@@ -310,7 +344,7 @@ function renderPortfolio(clients: any[], pendingCount: number, todaySpend: numbe
       <td>${esc(c.domain)}</td>
       <td>${esc(c.industry)}</td>
       <td>${c.avgPosition ? `#${c.avgPosition}` : '—'}</td>
-      <td><span class="badge badge-${c.healthRating === 'good' ? 'good' : c.healthRating === 'needs-improvement' ? 'warning' : 'critical'}">${esc(c.healthRating)}</span></td>
+      <td><span class="badge badge-${healthBadgeClass(c.healthRating)}">${esc(c.healthRating)}</span></td>
       <td>${c.pendingApprovals > 0 ? `<span class="badge badge-pending">${esc(c.pendingApprovals)} pending</span>` : '—'}</td>
     </tr>
   `).join('');
@@ -342,8 +376,8 @@ function renderClientDetail(client: any, rankings: any[], actions: any[], _engag
       <td>${esc(r.keyword)}</td>
       <td>${r.position || '—'}</td>
       <td>${r.previousPosition || '—'}</td>
-      <td style="color: ${!r.position || !r.previousPosition ? '#94a3b8' : r.position < r.previousPosition ? '#6ee7b7' : r.position > r.previousPosition ? '#fca5a5' : '#94a3b8'}">
-        ${!r.position || !r.previousPosition ? '—' : r.position < r.previousPosition ? `+${r.previousPosition - r.position}` : r.position > r.previousPosition ? `-${r.position - r.previousPosition}` : '='}
+      <td style="color: ${rankDeltaColor(r.position, r.previousPosition)}">
+        ${rankDeltaText(r.position, r.previousPosition)}
       </td>
     </tr>
   `).join('');
@@ -352,7 +386,7 @@ function renderClientDetail(client: any, rankings: any[], actions: any[], _engag
     <tr>
       <td>${esc(a.action)}</td>
       <td>${esc(a.description)}</td>
-      <td><span class="badge badge-${a.riskLevel === 'low' ? 'good' : a.riskLevel === 'medium' ? 'warning' : 'critical'}">${esc(a.riskLevel)}</span></td>
+      <td><span class="badge badge-${riskBadgeClass(a.riskLevel)}">${esc(a.riskLevel)}</span></td>
       <td><span class="badge badge-${a.status === 'auto_executed' ? 'good' : 'pending'}">${esc(a.status)}</span></td>
       <td style="font-style: italic; color: #94a3b8; font-size: 12px;">${esc(a.triggeredBy)}</td>
     </tr>

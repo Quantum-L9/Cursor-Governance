@@ -167,7 +167,7 @@ const JOB_DEFINITIONS: JobDefinition[] = [
 // ─── Scheduler Class ─────────────────────────────────────────────────────────
 
 export class Scheduler {
-  private connection: Redis;
+  private readonly connection: Redis;
   private queues: Map<string, Queue> = new Map();
   private workers: Map<string, Worker> = new Map();
   private handlers: Map<string, (job: Job) => Promise<void>> = new Map();
@@ -349,9 +349,7 @@ export class Scheduler {
 let _scheduler: Scheduler | null = null;
 
 export function getScheduler(): Scheduler {
-  if (!_scheduler) {
-    _scheduler = new Scheduler();
-  }
+  _scheduler ??= new Scheduler();
   return _scheduler;
 }
 

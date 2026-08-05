@@ -14,5 +14,10 @@ export async function generateManifest(root = process.cwd()): Promise<void> {
   console.log(`Generated ${manifest.entries.length} manifest entries (${manifest.inventory_digest})`);
 }
 if (import.meta.url === `file://${process.argv[1]}`) {
-  generateManifest().catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
+  try {
+    await generateManifest();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }
