@@ -28,14 +28,14 @@ identity:
   program_pack_sha256: dff1e09a2ce5cd62bdf6841fb29f3b959aa52ebee8acec8af352d1eebe4f0180
   program_lock_digest: c78baebb67318a532f2e79f24674d0d8aa5cf71f16476e6134233f851ac3aafe
   control_plane_version: 2.0.0
-  authorized_operator: ib@scrapmanagement.com
+  authorized_operator: '@cryptoxdog'
 
 # authority_bindings ---------------------------------------------------------
 authority_bindings:
-  issuer: ib@scrapmanagement.com
+  issuer: '@cryptoxdog'
   issued_at: '2026-08-05T19:24:57Z'
   expires_at: '2026-11-05T19:24:57Z'
-  authorized_operator: ib@scrapmanagement.com
+  authorized_operator: '@cryptoxdog'
   approver_roles:
     program_architecture: '@cryptoxdog'
     execution_operator: '@cryptoxdog'

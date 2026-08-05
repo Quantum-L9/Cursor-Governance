@@ -134,8 +134,12 @@ source_bindings:
       provenance: session
       method: session workspace root holding all constellation clones
     authorized_operator:
-      value: ib@scrapmanagement.com
+      value: '@cryptoxdog'
       provenance: session
+      method: >
+        sole-maintainer GitHub handle (CODEOWNERS owner); used as the operator
+        principal in place of a raw email to keep the artifact free of PII
+
     approver_roles:
       value:
         program_architecture: '@cryptoxdog'
@@ -560,7 +564,7 @@ output_file_digests:
     python3 -c "import yaml,json,hashlib,sys;
     print(hashlib.sha256(json.dumps(yaml.safe_load(open(sys.argv[1])),sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest())" FILE.yaml
   charter_records:
-    CAMPAIGN_AUTHORIZATION.yaml: 56a4bf3b026996a2d7a4fc932ec3a9adad9b2771e55e78c2f3c0fe8ad57317fa
+    CAMPAIGN_AUTHORIZATION.yaml: 420aabacb957e975b9b471ba1acd4321321d1c42801bc553444491f9be4aaadf
     CAMPAIGN_EXECUTION.yaml: f7406d669d8fd361ca767b8bfc9bbdda3aa6c5c62a694fb0652d5f73e39c0836
   pack_digest:
     definition: >
