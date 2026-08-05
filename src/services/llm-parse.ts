@@ -26,25 +26,43 @@
  * even when the reply contains multiple JSON blocks or trailing prose (a greedy
  * "first-open to last-close" match would over-capture and fail to parse).
  */
+/**
+ * Tracks whether the scan cursor is inside a JSON string literal, so braces and
+ * brackets inside strings don't miscount. `consume` returns true when the
+ * character belongs to a string literal (or opens one) and the caller should
+ * skip structural bracket handling for it.
+ */
+class JsonStringScanner {
+  private inString = false;
+  private escaped = false;
+
+  consume(ch: string): boolean {
+    if (this.inString) {
+      if (this.escaped) this.escaped = false;
+      else if (ch === '\\') this.escaped = true;
+      else if (ch === '"') this.inString = false;
+      return true;
+    }
+    if (ch === '"') {
+      this.inString = true;
+      return true;
+    }
+    return false;
+  }
+}
+
 function firstJsonSpan(text: string): string | null {
   const start = text.search(/[{[]/);
   if (start < 0) return null;
   const open = text[start];
   const close = open === '{' ? '}' : ']';
   let depth = 0;
-  let inString = false;
-  let escaped = false;
+  const scanner = new JsonStringScanner();
 
   for (let i = start; i < text.length; i++) {
     const ch = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') inString = true;
-    else if (ch === open) depth++;
+    if (scanner.consume(ch)) continue;
+    if (ch === open) depth++;
     else if (ch === close) {
       depth--;
       if (depth === 0) return text.slice(start, i + 1);
@@ -62,7 +80,7 @@ export function parseJsonFromLlm<T>(raw: string): T {
   const text = String(raw ?? '').trim();
   const unfenced = text
     .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
+    .replace(/```$/i, '')
     .trim();
 
   try {
@@ -91,7 +109,7 @@ export function parseScore(raw: string): number {
   const text = String(raw ?? '').trim();
   const n = Number.parseFloat(text);
   if (!Number.isFinite(n)) {
-    throw new Error(`LLM did not return a numeric score (response length=${text.length})`);
+    throw new TypeError(`LLM did not return a numeric score (response length=${text.length})`);
   }
   return Math.min(100, Math.max(0, n));
 }

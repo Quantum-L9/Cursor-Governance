@@ -22,7 +22,7 @@ const logger = createModuleLogger('database');
 
 // FIX(review): guard against silent key overwrites when merging base + extension schemas
 const _duplicateKeys = Object.keys(baseSchema).filter(
-  (key) => Object.prototype.hasOwnProperty.call(extSchema, key)
+  (key) => Object.hasOwn(extSchema, key)
 );
 if (_duplicateKeys.length > 0) {
   throw new Error(

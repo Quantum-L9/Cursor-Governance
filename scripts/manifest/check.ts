@@ -14,5 +14,10 @@ export async function checkManifest(root = process.cwd()): Promise<void> {
   console.log(`Manifest is current (${generated.entries.length} entries, ${generated.inventory_digest})`);
 }
 if (import.meta.url === `file://${process.argv[1]}`) {
-  checkManifest().catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
+  try {
+    await checkManifest();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }

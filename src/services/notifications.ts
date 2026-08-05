@@ -30,7 +30,7 @@ interface Alert {
 }
 
 export class NotificationService {
-  private transporter: nodemailer.Transporter | null = null;
+  private readonly transporter: nodemailer.Transporter | null = null;
 
   constructor() {
     const config = getConfig();
@@ -147,8 +147,6 @@ export class NotificationService {
 let _notificationService: NotificationService | null = null;
 
 export function getNotificationService(): NotificationService {
-  if (!_notificationService) {
-    _notificationService = new NotificationService();
-  }
+  _notificationService ??= new NotificationService();
   return _notificationService;
 }

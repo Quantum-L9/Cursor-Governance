@@ -38,7 +38,7 @@ const logger = createModuleLogger('serp-intelligence');
 // ─── DataForSEO Client ───────────────────────────────────────────────────────
 
 class DataForSeoClient {
-  private baseUrl = 'https://api.dataforseo.com/v3';
+  private readonly baseUrl = 'https://api.dataforseo.com/v3';
   private auth: string;
 
   constructor() {

@@ -31,7 +31,7 @@
   "dependencies": {
     "@quantum-l9/bot-interop": "^1.0.0",
     "@quantum-l9/graphiti-memory-client": "^2.0.0",
-    "@quantum-l9/llm-router": "^1.1.0",
+    "@quantum-l9/llm-router": "1.1.1",
     "@infisical/sdk": "^5.0.2",
     "@fastify/cors": "^9.0.0",
     "@fastify/helmet": "^11.1.1",

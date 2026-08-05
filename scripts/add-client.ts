@@ -15,7 +15,7 @@
 
 import { getDb, schema, closeDb } from '../src/core/database/index.js';
 import { loadConfig } from '../src/core/config.js';
-import readline from 'readline';
+import readline from 'node:readline';
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const ask = (q: string): Promise<string> => new Promise(r => rl.question(q, r));
@@ -106,4 +106,8 @@ async function main() {
   await closeDb();
 }
 
-main().catch(console.error);
+try {
+  await main();
+} catch (error) {
+  console.error(error);
+}

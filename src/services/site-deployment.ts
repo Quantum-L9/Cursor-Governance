@@ -47,7 +47,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
  */
 export function yamlDoubleQuoted(value: string | null | undefined): string {
   const oneLine = String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
-  const escaped = oneLine.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const escaped = oneLine.replaceAll('\\', String.raw`\\`).replaceAll('"', String.raw`\"`);
   return `"${escaped}"`;
 }
 
@@ -68,7 +68,7 @@ export interface FileUpdateResult {
 }
 
 class GitHubContentClient {
-  private baseUrl = 'https://api.github.com';
+  private readonly baseUrl = 'https://api.github.com';
   private config: SiteDeploymentConfig;
 
   constructor(config: SiteDeploymentConfig) {
@@ -288,7 +288,7 @@ ${JSON.stringify(schemaJson, null, 2)}
   // \{[^}]*) so nested objects/arrays in real-world schema don't cut the match
   // short and cause a duplicate block to be injected instead of replaced.
   const existingPattern = new RegExp(
-    `<script type="application/ld\\+json">[\\s\\S]*?"@type":\\s*"${schemaType}"[\\s\\S]*?</script>`,
+    String.raw`<script type="application/ld\+json">[\s\S]*?"@type":\s*"${schemaType}"[\s\S]*?</script>`,
     'g',
   );
 
@@ -341,7 +341,7 @@ export async function rewritePageContent(
   const { content, sha } = await client.readFile(filePath);
 
   // Preserve frontmatter (everything between --- delimiters), replace body
-  const frontmatterMatch = content.match(/^---[\s\S]*?---/);
+  const frontmatterMatch = /^---[\s\S]*?---/.exec(content);
   const frontmatter = frontmatterMatch ? frontmatterMatch[0] : '';
   const updated = frontmatter ? `${frontmatter}\n\n${newBodyMarkdown}` : newBodyMarkdown;
 

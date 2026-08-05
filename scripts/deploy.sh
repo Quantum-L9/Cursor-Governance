@@ -23,9 +23,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-log() { echo -e "${GREEN}[L9 SEO Bot]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+log() { local message="$1"; echo -e "${GREEN}[L9 SEO Bot]${NC} $message"; }
+warn() { local message="$1"; echo -e "${YELLOW}[WARNING]${NC} $message"; }
+error() { local message="$1"; echo -e "${RED}[ERROR]${NC} $message" >&2; exit 1; }
 
 # ─── Commands ─────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ cmd_setup() {
   # Check Docker
   if ! command -v docker &> /dev/null; then
     log "Installing Docker..."
-    curl -fsSL https://get.docker.com | sh
+    curl --proto '=https' --tlsv1.2 -fsSL https://get.docker.com | sh
     sudo usermod -aG docker $USER
     log "Docker installed. Please log out and back in, then re-run setup."
     exit 0
@@ -47,7 +47,7 @@ cmd_setup() {
   fi
 
   # Check .env
-  if [ ! -f "$PROJECT_DIR/.env" ]; then
+  if [[ ! -f "$PROJECT_DIR/.env" ]]; then
     warn ".env file not found. Copying from .env.example..."
     cp "$PROJECT_DIR/.env.example" "$PROJECT_DIR/.env"
     warn "IMPORTANT: Edit .env with your API keys before starting!"

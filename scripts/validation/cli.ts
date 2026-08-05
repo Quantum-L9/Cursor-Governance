@@ -140,13 +140,105 @@ function releaseReceipt(report: RunReport, evidence: GateEvidence[]): Omit<Relea
   };
 }
 
+interface GateRunContext {
+  profile: ValidationProfile;
+  requested: string[];
+  profileGates: string[];
+  gateStatuses: Map<string, ValidationStatus>;
+  writer: EvidenceWriter;
+  repository: ReturnType<typeof getRepositoryContext>;
+  environment: ReturnType<typeof getEnvironmentRecord>;
+}
+
+/** Run a single gate (or short-circuit to a dependency-blocked result), converting any throw into an internal-failure result. */
+async function executeGate(
+  gate: NonNullable<ReturnType<typeof GATE_BY_ID.get>>,
+  gateId: string,
+  failedDependencies: string[],
+  profile: ValidationProfile,
+): Promise<GateResult> {
+  try {
+    const context: GateContext = { root: ROOT, profile };
+    return failedDependencies.length > 0
+      ? dependencyBlockedResult(gate, failedDependencies)
+      : await gate.execute(context);
+  } catch (error) {
+    return internalFailureResult(gateId, error);
+  }
+}
+
+/** Persist a gate's artifact sources, always cleaning up temporary sources; a recording failure becomes an internal-failure result. */
+async function recordGateArtifacts(
+  writer: EvidenceWriter,
+  gateId: string,
+  result: GateResult,
+): Promise<{ result: GateResult; artifacts: NonNullable<GateResult['artifacts']> }> {
+  let artifacts = [...(result.artifacts ?? [])];
+  const artifactSources = [...(result.artifact_sources ?? [])];
+  try {
+    for (const source of artifactSources) {
+      artifacts.push(await writer.recordArtifact(source.path, source.media_type));
+    }
+  } catch (error) {
+    result = internalFailureResult(gateId, error);
+    artifacts = [];
+  } finally {
+    for (const source of artifactSources) {
+      if (source.cleanup) await rm(source.path, { force: true });
+    }
+  }
+  return { result, artifacts };
+}
+
+/** Execute one gate end to end: run it, record artifacts and logs, write its evidence record, and update shared gate status. */
+async function processGate(gateId: string, ctx: GateRunContext): Promise<GateEvidence> {
+  const { profile, requested, profileGates, gateStatuses, writer, repository, environment } = ctx;
+  const gate = GATE_BY_ID.get(gateId);
+  if (!gate) throw new Error(`Unknown gate after dependency expansion: ${gateId}`);
+  const failedDependencies = gate.dependencies.filter((dependency) => {
+    const status = gateStatuses.get(dependency);
+    return status !== 'PASS' && status !== 'PASS_WITH_FINDINGS';
+  });
+  const started = new Date();
+  const startTick = performance.now();
+  const executed = await executeGate(gate, gateId, failedDependencies, profile);
+  const completed = new Date();
+  const duration = performance.now() - startTick;
+  const recorded = await recordGateArtifacts(writer, gateId, executed);
+  const result = recorded.result;
+  const artifacts = recorded.artifacts;
+  const stdoutPath = await writer.writeLog(gateId, 'stdout', result.stdout ?? '');
+  const stderrPath = await writer.writeLog(gateId, 'stderr', result.stderr ?? '');
+  const required = requested.includes(gateId) || profileGates.includes(gateId);
+  const gateEvidence = await writer.writeGate({
+    schema_version: '1.0.0',
+    run_id: writer.runId,
+    gate_id: gateId,
+    gate_class: gate.gateClass,
+    profile,
+    required,
+    status: result.status,
+    repository,
+    execution: normalizeExecution(result.execution, started.toISOString(), completed.toISOString(), duration),
+    environment,
+    assertions: result.assertions ?? [],
+    findings: result.findings ?? [],
+    blocked_by: result.blocked_by ?? [],
+    unknowns: result.unknowns ?? [],
+    artifacts,
+    logs: { stdout_path: stdoutPath, stderr_path: stderrPath, redacted: true },
+  });
+  gateStatuses.set(gateId, result.status);
+  return gateEvidence;
+}
+
 async function executeRun(profile: ValidationProfile, requestedGate?: string): Promise<void> {
   const policy = await loadValidationPolicy(ROOT);
   const profileDefinition = policy.profiles[profile];
   const requested = requestedGate ? [requestedGate] : profileDefinition.gates;
   const gateOrder = dependencyClosure(requested);
-  const repository = await getRepositoryContext(ROOT);
-  const environment = await getEnvironmentRecord(ROOT);
+  const repository = getRepositoryContext(ROOT);
+  const environment = getEnvironmentRecord(ROOT);
   const writer = new EvidenceWriter(ROOT, requestedGate ? `gate-${requestedGate}` : profile, repository.commit_sha);
   await writer.initialize();
   const runStarted = new Date();
@@ -155,66 +247,16 @@ async function executeRun(profile: ValidationProfile, requestedGate?: string): P
   const allFindings: ValidationFinding[] = [];
   const allUnknowns: ValidationUnknown[] = [];
 
+  const runContext: GateRunContext = {
+    profile, requested, profileGates: profileDefinition.gates,
+    gateStatuses, writer, repository, environment,
+  };
   for (const gateId of gateOrder) {
-    const gate = GATE_BY_ID.get(gateId);
-    if (!gate) throw new Error(`Unknown gate after dependency expansion: ${gateId}`);
-    const failedDependencies = gate.dependencies.filter((dependency) => {
-      const status = gateStatuses.get(dependency);
-      return status !== 'PASS' && status !== 'PASS_WITH_FINDINGS';
-    });
-    const started = new Date();
-    const startTick = performance.now();
-    let result: GateResult;
-    try {
-      const context: GateContext = { root: ROOT, profile };
-      result = failedDependencies.length > 0
-        ? dependencyBlockedResult(gate, failedDependencies)
-        : await gate.execute(context);
-    } catch (error) {
-      result = internalFailureResult(gateId, error);
-    }
-    const completed = new Date();
-    const duration = performance.now() - startTick;
-    let artifacts = [...(result.artifacts ?? [])];
-    const artifactSources = [...(result.artifact_sources ?? [])];
-    try {
-      for (const source of artifactSources) {
-        artifacts.push(await writer.recordArtifact(source.path, source.media_type));
-      }
-    } catch (error) {
-      result = internalFailureResult(gateId, error);
-      artifacts = [];
-    } finally {
-      for (const source of artifactSources) {
-        if (source.cleanup) await rm(source.path, { force: true });
-      }
-    }
-    const stdoutPath = await writer.writeLog(gateId, 'stdout', result.stdout ?? '');
-    const stderrPath = await writer.writeLog(gateId, 'stderr', result.stderr ?? '');
-    const required = requested.includes(gateId) || profileDefinition.gates.includes(gateId);
-    const gateEvidence = await writer.writeGate({
-      schema_version: '1.0.0',
-      run_id: writer.runId,
-      gate_id: gateId,
-      gate_class: gate.gateClass,
-      profile,
-      required,
-      status: result.status,
-      repository,
-      execution: normalizeExecution(result.execution, started.toISOString(), completed.toISOString(), duration),
-      environment,
-      assertions: result.assertions ?? [],
-      findings: result.findings ?? [],
-      blocked_by: result.blocked_by ?? [],
-      unknowns: result.unknowns ?? [],
-      artifacts,
-      logs: { stdout_path: stdoutPath, stderr_path: stderrPath, redacted: true },
-    });
-    gateStatuses.set(gateId, result.status);
+    const gateEvidence = await processGate(gateId, runContext);
     evidence.push(gateEvidence);
     allFindings.push(...gateEvidence.findings.filter((item) => item.blocking));
     allUnknowns.push(...gateEvidence.unknowns);
-    console.log(`${gateId}: ${result.status}`);
+    console.log(`${gateId}: ${gateEvidence.status}`);
   }
 
   const requiredStatuses = evidence.filter((item) => item.required).map((item) => item.status);
@@ -273,7 +315,9 @@ async function main(): Promise<void> {
   await executeRun(args.profile ?? 'ci');
 }
 
-main().catch((error) => {
+try {
+  await main();
+} catch (error) {
   console.error(error instanceof Error ? error.stack ?? error.message : String(error));
   process.exitCode = 3;
-});
+}

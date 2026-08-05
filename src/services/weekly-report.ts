@@ -249,6 +249,14 @@ export async function collectWeeklyData(clientId: string): Promise<WeeklyReportD
 
 // ─── HTML Report Template ─────────────────────────────────────────────────────
 
+// Extracted from an inline nested ternary so the risk→color mapping is a single
+// statement (keeps the report template literal flat).
+function riskColor(level: unknown): string {
+  if (level === 'low') return '#d4edda';
+  if (level === 'medium') return '#fff3cd';
+  return '#f8d7da';
+}
+
 function generateHtmlReport(data: WeeklyReportData): string {
   const { client, period, rankings, vitals, actionsExecuted, pendingApprovals, linkBuilding, aeo, tokenUsage, behaviorInsights } = data;
 
@@ -261,7 +269,7 @@ function generateHtmlReport(data: WeeklyReportData): string {
         <td style="padding: 8px; border-bottom: 1px solid #eee;">${a.description}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee;">${a.rationale}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee; font-style: italic; color: #666;">${a.triggeredBy}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="background: ${a.riskLevel === 'low' ? '#d4edda' : a.riskLevel === 'medium' ? '#fff3cd' : '#f8d7da'}; padding: 2px 8px; border-radius: 4px;">${a.riskLevel}</span></td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;"><span style="background: ${riskColor(a.riskLevel)}; padding: 2px 8px; border-radius: 4px;">${a.riskLevel}</span></td>
       </tr>
     `).join('')
     : '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #999;">No actions executed this week</td></tr>';
