@@ -410,7 +410,7 @@ export class LlmService {
       const todayStr = new Date().toISOString().slice(0, 10);
       const log = this.router.getCallLog(Number.MAX_SAFE_INTEGER);
       return log
-        .filter(d => {
+        .filter((d: RoutingDecision) => {
           const raw = (d as { timestamp?: unknown }).timestamp;
           const ts = raw instanceof Date ? raw : new Date(raw as string);
           // Skip entries with an unparseable timestamp: an Invalid Date would
@@ -419,7 +419,7 @@ export class LlmService {
           if (Number.isNaN(ts.getTime())) return false;
           return ts.toISOString().slice(0, 10) === todayStr;
         })
-        .reduce((sum, d) => sum + ((d as any).actualCost ?? (d as any).cost ?? 0), 0);
+        .reduce((sum: number, d: RoutingDecision) => sum + ((d as any).actualCost ?? (d as any).cost ?? 0), 0);
     }
   }
 

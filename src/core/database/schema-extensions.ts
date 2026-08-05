@@ -25,6 +25,9 @@ import {
   timestamp,
   jsonb,
   index,
+  integer,
+  numeric,
+  bigserial,
 } from 'drizzle-orm/pg-core';
 import { clients } from './schema.js';
 
@@ -87,3 +90,50 @@ export const behaviorRecommendations = pgTable('behavior_recommendations', {
 }, (table) => ({
   clientWeekIdx: index('idx_behavior_rec_client_week').on(table.clientId, table.weekOf),
 }));
+
+// ─── Autonomy Runtime Controls (ADR-0008) ───────────────────────────────────────
+
+export const agentJobs = pgTable('agent_jobs', {
+  jobId: uuid('job_id').primaryKey().defaultRandom(),
+  repo: varchar('repo', { length: 100 }).notNull().default('seo-bot'),
+  clientId: varchar('client_id', { length: 255 }),
+  triggerType: varchar('trigger_type', { length: 50 }).notNull(),
+  triggerPayload: jsonb('trigger_payload'),
+  status: varchar('status', { length: 20 }).notNull().default('queued'),
+  assignedWorker: varchar('assigned_worker', { length: 100 }),
+  attemptCount: integer('attempt_count').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  costUsd: numeric('cost_usd', { precision: 10, scale: 6 }).notNull().default('0'),
+  costCapUsd: numeric('cost_cap_usd', { precision: 10, scale: 6 }).notNull().default('2.00'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  errorMessage: text('error_message'),
+  resultArtifact: jsonb('result_artifact'),
+  idempotencyKey: varchar('idempotency_key', { length: 255 }).unique(),
+}, (table) => ({
+  statusCreatedIdx: index('idx_seo_agent_jobs_status_created').on(table.status, table.createdAt),
+  clientIdIdx: index('idx_seo_agent_jobs_client_id').on(table.clientId, table.createdAt),
+}));
+
+export const budgetViolations = pgTable('budget_violations', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  jobId: uuid('job_id').notNull().references(() => agentJobs.jobId),
+  repo: varchar('repo', { length: 100 }).notNull().default('seo-bot'),
+  clientId: varchar('client_id', { length: 255 }),
+  costUsd: numeric('cost_usd', { precision: 10, scale: 6 }).notNull(),
+  costCapUsd: numeric('cost_cap_usd', { precision: 10, scale: 6 }).notNull(),
+  overageUsd: numeric('overage_usd', { precision: 10, scale: 6 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const compensationLog = pgTable('compensation_log', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  jobId: uuid('job_id'),
+  clientId: varchar('client_id', { length: 255 }),
+  stepId: varchar('step_id', { length: 255 }).notNull(),
+  actionType: varchar('action_type', { length: 100 }).notNull(),
+  status: varchar('status', { length: 20 }).notNull(),
+  errorMessage: text('error_message'),
+  compensatedAt: timestamp('compensated_at').notNull().defaultNow(),
+});
