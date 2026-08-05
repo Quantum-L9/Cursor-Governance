@@ -1,0 +1,85 @@
+# RC2 / MEM-003 — predecessor evidence package (T8)
+# Input to the shared-mcp-memory-adapter-foundation campaign admission.
+# This attests ONLY interactive MCP registration + readiness — NOT the shared
+# adapter foundation, lifecycle convergence, or legacy removal.
+schema: l9.predecessor-evidence/1
+predecessor: RC2-MEM-003
+claim: claude_code_interactive_shared_memory_MCP_path_is_registrable_and_ready
+generated_at: "2026-08-04"
+
+repository_revision: "branch claude/rc2-mem-003-interactive-mcp off origin/main@21d4efb (commit stamped at merge)"
+surface: "managed CCR (this session)"
+CLI_version: "2.1.221"
+launcher_mode: "--mcp-config + user-scope merge; NOT --strict-mcp-config (verified)"
+registration_carrier: user_scope   # claude mcp add-json --scope user
+
+server_registration:
+  result: PASS
+  detail: >
+    l9-shared-memory present in ~/.claude.json user scope; URL
+    ${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp;
+    Authorization = Bearer ${L9_MEMORY_CLIENT_TOKEN} (env-ref, not a literal token).
+
+secret_scan:
+  result: PASS
+  detail: >
+    Sentinel probe (SENTINEL_ZZZ...) via add-json --scope user stored the ${...}
+    ref verbatim; literal value occurred 0 times on disk; `claude mcp get` prints
+    the ref, not the token. Validator asserts the ${...} env-ref form.
+
+connectivity:
+  result: PASS
+  detail: "`claude mcp get l9-shared-memory` → Status: connected (health-checked, not Pending)."
+
+tool_invocation:
+  result: PENDING_FRESH_SESSION   # M2 residual — honest
+  detail: >
+    A model-issued mcp__l9-shared-memory__* call cannot be proven from within this
+    session (MCP tools bind at session start). Registration + CLI connectivity are
+    proven; the model-tool-call proof is the remaining M2 live gate for the NEXT
+    fresh session on this surface.
+
+setup_idempotency:
+  result: PASS
+  detail: >
+    Idempotency keys on USER scope (~/.claude.json), not `claude mcp get` (which a
+    repo-local project .mcp.json satisfies at approval-gated project scope). Re-run
+    with a matching user-scope URL is a no-op; a differing URL warns, never overwrites.
+
+hook_regression:
+  result: PASS
+  detail: >
+    validate_memory_enforcement.py PASS; SessionStart prefetch still emits valid
+    additionalContext JSON. No hook file or setting changed.
+
+local_gates:
+  ruff_check: PASS  # changed py
+  ruff_format: PASS
+  bash_syntax: PASS  # bash -n web/setup.sh
+  validate_claude_env: PASS  # incl. new interactive-MCP readiness (blocking here)
+  make_pr_check: BASELINE_FAIL
+  make_pr_check_detail: >
+    repo-root and claude-code-autonomy pytest suites FAIL identically with this
+    change stashed (proven against origin/main@21d4efb) — pre-existing baseline
+    debt, unrelated to this diff and owned elsewhere (see PR #69 debt tooling).
+    No test references the changed files. Not weakened or masked.
+
+changed_files:
+  - environment/claude-code/web/setup.sh            # T1/T4 user-scope registration
+  - environment/claude-code/validate_claude_env.py  # T2/T3 readiness + secret-safety
+  - environment/claude-code/README.md               # T6 pointer
+  - environment/claude-code/web/README.md           # T6 carriers + fallback
+  - docs/decisions/ADR-0005-interactive-memory-mcp-registration.md  # T7
+
+residual_limitations:
+  - model_tool_invocation_requires_fresh_session   # M2 live gate
+  - lifecycle_path_remains_legacy
+  - campaign_owns_future_convergence
+  - account_connector_fallback_is_operator_action_if_a_surface_ignores_user_scope
+
+non_goals_confirmed:
+  - not a canonical peer adapter
+  - shared adapter runtime does not exist
+  - lifecycle hooks do NOT use l9-memory-mcp
+  - capabilities.yaml not created
+  - legacy memory pipeline not retired

@@ -71,6 +71,50 @@ under Cursor's `cursor_agent`. Give Claude Code a token distinct from Cursor's.
 Network-access allowlist (or use Full). Authentication is required on the
 server; bearer tokens never go in `.mcp.json`.
 
+### Two memory entry points
+
+Memory reaches a session two ways (see `docs/decisions/ADR-0003`), both on the same
+server and contract:
+
+- **Lifecycle (hook) path** — the SessionStart prefetch injects context and the Stop
+  hook writes back, via the stdlib client. Always on; unchanged by RC2.
+- **Interactive (MCP tool) path** — `mcp__l9-shared-memory__*` tools the model calls
+  on demand. This needs the MCP server *registered* with Claude Code.
+
+### How the interactive server is registered (carriers)
+
+Registration depends on the surface (`render.claude.json` is the map):
+
+| Surface | Carrier | Installed by |
+|---|---|---|
+| CLI / managed (CCR) | **user scope** — `claude mcp add-json --scope user l9-shared-memory …` | `setup.sh` (step 5a), idempotent |
+| Web / mobile (repo-local) | git-tracked **`.mcp.json`** | `setup.sh` step 3.5 (copied from `mcp.template.json`) |
+| Any surface that honors neither | **account connector** (operator adds it in the managed-environment MCP settings) | manual, operator action |
+
+`setup.sh` registers user-scope only when the `claude` CLI and `L9_MEMORY_*` are
+present; it is idempotent (skips when already registered, warns — never overwrites —
+on a conflicting URL) and secret-safe (stores only `${...}` env-refs; the token
+resolves at runtime and is never written to disk). If registration cannot be
+performed on a surface, setup emits a WARN and continues — the hook path is
+unaffected — and readiness validation surfaces the gap rather than a false green.
+
+### Verify the interactive path (fresh session)
+
+```bash
+claude mcp list                     # l9-shared-memory should be listed
+claude mcp get l9-shared-memory     # Status: connected (env-ref auth, not a literal token)
+python3 environment/claude-code/validate_claude_env.py   # includes interactive-MCP readiness
+```
+
+`validate_claude_env.py` treats readiness as **blocking** where the CLI + memory env
+are present (the surface should expose tools) and **advisory** where the CLI is
+absent (CI / pre-clone web). A missing or malformed registration fails; a transient
+connectivity error is reported but does not fail.
+
+> RC2/MEM-003 covers interactive registration only. Convergence of the lifecycle
+> path onto the shared adapter runtime is owned by the shared-mcp-memory-adapter
+> foundation campaign, not this change.
+
 ## Security
 
 - Env vars are stored **in plaintext** in the environment config. Use a
