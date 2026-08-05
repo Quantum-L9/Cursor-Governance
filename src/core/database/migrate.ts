@@ -8,33 +8,98 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * L9 SEO Bot - Database Migration Runner
  * Run with: pnpm migrate
+ *
+ * --check performs a dry run: it compares migration files on disk against the
+ * drizzle-managed migrations-history table and reports pending migrations
+ * without executing any SQL other than a read-only SELECT against that history
+ * table. This mirrors the exact pending-migration logic drizzle-orm's
+ * PgDialect.migrate() uses internally.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { readMigrationFiles } from 'drizzle-orm/migrator';
+import { sql } from 'drizzle-orm';
 import { getDb, closeDb } from './index.js';
 import { createModuleLogger } from '../logger.js';
 import { loadSecrets } from '../secrets.js';
 
 const logger = createModuleLogger('migrate');
 
-async function runMigrations() {
-  // Hydrate process.env from Infisical so `npm run migrate` works on a VPS
-  // with no committed .env (no-op when Infisical isn't configured).
+const MIGRATIONS_FOLDER = './drizzle';
+const MIGRATIONS_TABLE = '__drizzle_migrations';
+const MIGRATIONS_SCHEMA = 'drizzle';
+
+interface MigrationHistoryRow {
+  id: number;
+  hash: string;
+  created_at: string | number;
+}
+
+async function checkMigrations(): Promise<void> {
+  const db = getDb();
+  const fileMigrations = readMigrationFiles({ migrationsFolder: MIGRATIONS_FOLDER });
+
+  let lastAppliedMillis = -1;
+  try {
+    const historyResult = await db.execute(
+      sql.raw(
+        `select id, hash, created_at from "${MIGRATIONS_SCHEMA}"."${MIGRATIONS_TABLE}" order by created_at desc limit 1`,
+      ),
+    );
+    const rows = (historyResult as unknown as { rows: MigrationHistoryRow[] }).rows;
+    if (rows.length > 0) {
+      lastAppliedMillis = Number(rows[0].created_at);
+    }
+  } catch (error) {
+    logger.warn(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Migrations history table not found — treating all migrations as pending',
+    );
+  }
+
+  const pending = fileMigrations.filter((migration) => migration.folderMillis > lastAppliedMillis);
+
+  if (pending.length > 0) {
+    logger.error(
+      { pendingCount: pending.length, totalCount: fileMigrations.length },
+      'Pending migrations detected — run `npm run migrate` to apply them',
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  logger.info(
+    { totalCount: fileMigrations.length },
+    'No pending migrations — database schema is current',
+  );
+}
+
+async function runMigrations(): Promise<void> {
+  const db = getDb();
+  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+  logger.info('Migrations completed successfully');
+}
+
+async function main(): Promise<void> {
   await loadSecrets();
 
-  logger.info('Starting database migrations...');
+  const checkOnly = process.argv.includes('--check');
+
+  logger.info(checkOnly ? 'Starting migration check (dry run)...' : 'Starting database migrations...');
 
   try {
-    const db = getDb();
-    await migrate(db, { migrationsFolder: './drizzle' });
-    logger.info('Migrations completed successfully');
+    if (checkOnly) {
+      await checkMigrations();
+    } else {
+      await runMigrations();
+    }
   } catch (error) {
-    logger.error({ error }, 'Migration failed');
-    process.exit(1);
+    logger.error({ error }, checkOnly ? 'Migration check failed' : 'Migration failed');
+    process.exitCode = 1;
   } finally {
     await closeDb();
   }
 }
 
-runMigrations();
+main();
