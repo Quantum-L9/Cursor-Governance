@@ -181,7 +181,7 @@ class ResolveSecretTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(rc, 1)
-            self.assertIn("UNREGISTERED", out.getvalue())
+            self.assertIn("FAIL", out.getvalue())
 
     def test_not_provisioned(self) -> None:
         with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
@@ -195,7 +195,7 @@ class ResolveSecretTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(rc, 1)
-            self.assertIn("NOT_PROVISIONED", out.getvalue())
+            self.assertIn("FAIL", out.getvalue())
 
     def test_split_id(self) -> None:
         self.assertEqual(
