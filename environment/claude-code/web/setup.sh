@@ -187,7 +187,7 @@ if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
   #     never a home-dir .mcp.json. Idempotent and secret-safe: the server object
   #     carries ${...} env-refs only — the CLI stores them verbatim and resolves at
   #     runtime, so no bearer token is written to disk. See docs/decisions/ADR-0005.
-  if have claude && [ -n "${L9_MEMORY_CLIENT_TOKEN:-}" ]; then
+  if have claude && [[ -n "${L9_MEMORY_CLIENT_TOKEN:-}" ]]; then
     mcp_obj=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["mcpServers"]["l9-shared-memory"]))' "$CC_ENV/mcp.template.json" 2>/dev/null)
     want_url=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["mcpServers"]["l9-shared-memory"].get("url",""))' "$CC_ENV/mcp.template.json" 2>/dev/null)
     # Idempotency keys on USER scope only: a repo-local .mcp.json registers the same
@@ -196,10 +196,10 @@ if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
     have_url=$(python3 -c 'import json,os
 s=(json.load(open(os.path.expanduser("~/.claude.json"))).get("mcpServers") or {}).get("l9-shared-memory") or {}
 print(s.get("url",""))' 2>/dev/null)
-    if [ -z "$mcp_obj" ]; then
+    if [[ -z "$mcp_obj" ]]; then
       echo "WARN: could not read l9-shared-memory from mcp.template.json — interactive MCP not registered"
-    elif [ -n "$have_url" ]; then
-      if [ "$have_url" = "$want_url" ]; then
+    elif [[ -n "$have_url" ]]; then
+      if [[ "$have_url" = "$want_url" ]]; then
         log "Interactive memory MCP already registered (l9-shared-memory, user scope)"
       else
         echo "WARN: l9-shared-memory user-scope URL differs ('$have_url' != '$want_url') — left unchanged; resolve manually"
