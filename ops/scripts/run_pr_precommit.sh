@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Run repo-portable pre-commit hooks on changed files only (not --all-files).
 # Full-tree: make precommit / nightly CI.
+# sync-generated-artifacts is SKIPPED here — run_pr_gate heals with WARN+continue.
+# On a local governance clone, do NOT skip symlinks-check (activation must be live).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -29,4 +31,10 @@ while IFS= read -r f; do
 done <"$tmp"
 echo "pre-commit (changed files: ${#files[@]})"
 cd "$WS"
-SKIP=symlinks-check pre-commit run --files "${files[@]}"
+
+# Always skip sync in make pr path (heal happens in run_pr_gate).
+SKIP_LIST="sync-generated-artifacts"
+if [[ -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" || ! -f "$WS/rules/RULES-MANIFEST.yaml" ]]; then
+  SKIP_LIST="${SKIP_LIST},symlinks-check"
+fi
+SKIP="$SKIP_LIST" pre-commit run --files "${files[@]}"

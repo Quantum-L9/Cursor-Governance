@@ -1,4 +1,12 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+
+# Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
+# (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
+_pr_case_aliases := $(foreach g,$(MAKECMDGOALS),$(if $(filter pr,$(shell printf '%s' '$(g)' | tr '[:upper:]' '[:lower:]')),$(if $(filter-out pr,$(g)),$(g))))
+ifneq ($(_pr_case_aliases),)
+.PHONY: $(_pr_case_aliases)
+$(_pr_case_aliases): pr
+endif
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
@@ -15,11 +23,23 @@ PR_SECURITY_ADVISORY ?= 0
 # Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
 PR_BASE ?= origin/main
 
+# When 1, `make pr` (any capitalization) push+open GitHub PR after gate PASS.
+# Gate-only: `make pr-check` or `OPEN_PR=0 make pr`.
+OPEN_PR ?= 1
+
+# When 1 (default), after open: GitHub-subscribe + emit L9_AGENT_REQUIRED so the
+# agent spawns background l9-pr-remediation (poll_worker). PR_REMEDIATE=0 to skip.
+PR_REMEDIATE ?= 1
+
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot"
-	@echo "  make pr           — CHANGED-FILES local PR gate (pre-commit + ruff + security); not full-tree"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
+	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
 	@echo "  make pr-full      — intentional full-tree local gate (nightly-equivalent; slow)"
+	@echo "  make secrets-sync — sync openclaw-igorbot registry from AWS Secrets Manager (refs only)"
+	@echo "  make secrets-check REF='openclaw-igorbot/github#token' — resolve --check (no value printed)"
+	@echo "  make ui-operator-sync — uv sync --extra ui-operator (then: playwright install)"
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" pr WS=\"\$$(pwd)\""
 	@echo "  Prefer l9-ci-core thin Makefile (identical across repos) when adopting the common workflow."
 
@@ -60,6 +80,11 @@ claude-plugins:
 claude-skill-registry:
 	uv run python3 ops/scripts/build_claude_skill_registry.py --root "$(CURDIR)"
 
+## Heal derived manifests/registries/overrides (rules, skills, commands, PE).
+## Idempotent; used by pre-commit and make pr. Never a reason to block make pr alone.
+sync-generated:
+	python3 ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check
+
 ## Reconcile L9 skills into Claude native user + project discovery paths.
 claude-skills: claude-skill-registry
 	python3 ops/scripts/reconcile_claude_l9_skills.py --root "$(CURDIR)" \
@@ -73,6 +98,7 @@ claude-skills-check:
 claude-skills-test:
 	python3 environment/claude-code/tests/test_skill_router.py
 	python3 environment/claude-code/tests/test_skill_reconciliation.py
+	python3 environment/claude-code/tests/test_cursor_skill_router.py
 
 ## Validate the Claude Code environment adapter and proactive skill activation.
 claude-env:
@@ -108,7 +134,9 @@ precommit:
 	@command -v pre-commit >/dev/null 2>&1 || { echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; exit 1; }
 	pre-commit run --all-files
 
-## Changed-files pre-commit for PR velocity (skips machine-local symlinks-check).
+## Changed-files pre-commit for PR velocity.
+## Skips machine-local symlinks-check unless WS is a local governance SSOT clone
+## (skills/AUTONOMY_MANIFEST.yaml + rules/RULES-MANIFEST.yaml present).
 precommit-repo:
 	PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh "$(WS)"
 
@@ -167,11 +195,26 @@ pr-security:
 		bash ops/scripts/run_pr_security.sh "$(WS)"
 
 ## Local PR gate — CHANGED FILES ONLY (invariant). Does not scan the whole tree.
-## Nightly GHA owns full-corpus scans. Alias: pr-check.
-pr pr-check:
+## Nightly GHA owns full-corpus scans. Gate only (no GitHub PR).
+pr-check:
 	PR_BASE="$(PR_BASE)" PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
 	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
 		bash ops/scripts/run_pr_gate.sh
+
+## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
+## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
+## Requires a feature branch with commits ahead of PR_BASE.
+## OPEN_PR=0 → gate only. PR_REMEDIATE=0 → open+subscribe without agent spawn marker.
+pr: pr-check
+	@if [ "$(OPEN_PR)" = "1" ]; then \
+		PR_BASE="$(PR_BASE)" PR_REMEDIATE="$(PR_REMEDIATE)" GOV_ROOT="$(CURDIR)" \
+			bash ops/scripts/open_pr_after_gate.sh "$(WS)"; \
+	else \
+		echo "OPEN_PR=0 — skipped GitHub PR open (gate already PASS)"; \
+	fi
+
+# Explicit aliases (also covered by _pr_case_aliases remap above).
+PR Pr pR: pr
 
 ## Intentional full-tree local gate (nightly-adjacent). Slow; not the default.
 pr-full: venv precommit lint-ruff-full uv-lock-check test rules-validate
@@ -207,6 +250,22 @@ integrity-check:
 ## target because it overwrites working-tree files from the baseline.
 integrity-snapshot:
 	python3 integrity/hash-verifier.py --snapshot
+
+## Sync ops/secrets/openclaw-igorbot.registry.yaml from AWS Secrets Manager (refs/key names only).
+secrets-sync:
+	$(CURDIR)/.venv/bin/python ops/secrets/sync_secrets_registry.py
+
+## Resolve a secret ref with --check (never prints the value). Example:
+##   make secrets-check REF='openclaw-igorbot/github#token'
+REF ?= openclaw-igorbot/github#token
+secrets-check:
+	$(CURDIR)/.venv/bin/python ops/secrets/resolve_secret.py --ref "$(REF)" --check
+
+## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
+## After this: playwright install
+ui-operator-sync:
+	uv sync --extra ui-operator
+
 # PROGRAM_EXECUTION_ADAPTER_LAYER_V1
 PE_ROOT := environment/program-execution
 .PHONY: program-execution-core-validate program-execution-adapters 	program-execution-conformance program-execution-probe

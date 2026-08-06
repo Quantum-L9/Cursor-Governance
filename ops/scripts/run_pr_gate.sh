@@ -23,9 +23,14 @@ git status --porcelain >"$status_before"
 bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS"
 
 if ! git status --porcelain | diff -q "$status_before" - >/dev/null; then
-  echo "FAIL: pre-commit autofixed files — review, stage, and re-run make pr"
-  git status --short
-  exit 1
+  if bash "$SCRIPT_DIR/classify_generated_dirtiness.sh" "$WS" "$status_before"; then
+    echo "WARN: generated artifacts updated by pre-commit — stage them with your commit:"
+    git status --short
+  else
+    echo "FAIL: pre-commit autofixed non-generated files — review, stage, and re-run make pr"
+    git status --short
+    exit 1
+  fi
 fi
 
 PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
@@ -41,8 +46,6 @@ if [[ "${py_count:-0}" -eq 0 ]]; then
   echo "OK: no changed Python files for ruff"
 else
   echo "ruff (changed): ${py_count} file(s)"
-  # xargs -n batch to stay under ARG_MAX; paths are repo-relative.
-  # --no-build: do not execute package build/setup scripts (Sonar shell:S8541).
   xargs uv run --no-build ruff check <"$py_list"
   xargs uv run --no-build ruff format --check <"$py_list"
 fi
@@ -60,34 +63,58 @@ fi
 
 echo "--- pytest ---"
 if grep -Eq '\.py$' "$changed_file"; then
-  # Root autonomy/ shadows environment/claude-code/autonomy — split suites.
   bash "$SCRIPT_DIR/run_pytest_suites.sh" --tb=short -q
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
 
-echo "--- rules-manifest ---"
-if grep -Eq '^rules/' "$changed_file"; then
-  # Autofix digests before the read-only check so rule edits are not a friction spot.
-  python3 "$GOV_ROOT/ops/scripts/generate_rules_manifest.py" --root "$WS"
-  python3 "$GOV_ROOT/ops/scripts/validate_rules_manifest.py" --root "$WS"
-else
-  echo "OK: skip rules-manifest (rules/ unchanged)"
-fi
-
-echo "--- claude-skill-registry ---"
-if grep -Eq '^(skills/|environment/claude-code/generated/skill-registry\.json)' "$changed_file"; then
-  python3 "$GOV_ROOT/ops/scripts/build_claude_skill_registry.py" --root "$WS"
-  python3 "$GOV_ROOT/ops/scripts/build_claude_skill_registry.py" --root "$WS" --check
-else
-  echo "OK: skip claude-skill-registry (skills/ registry inputs unchanged)"
-fi
-
-# Generators above may rewrite committed artifacts — same contract as pre-commit autofix.
+echo "--- sync-generated-artifacts ---"
+python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
+  --root "$WS" \
+  --changed-file "$changed_file" \
+  --check
 if ! git status --porcelain | diff -q "$status_before" - >/dev/null; then
-  echo "FAIL: manifest generators updated files — review, stage, and re-run make pr"
-  git status --short
-  exit 1
+  if bash "$SCRIPT_DIR/classify_generated_dirtiness.sh" "$WS" "$status_before"; then
+    echo "WARN: stage generated files with your commit (validators PASS):"
+    git status --short
+  else
+    echo "FAIL: unexpected non-generated dirtiness after sync"
+    git status --short
+    exit 1
+  fi
+fi
+
+echo "--- skill-activation ---"
+if [[ -f "$WS/environment/claude-code/validate_skill_activation.py" ]]; then
+  if grep -Eq '^(skills/|environment/claude-code/)' "$changed_file"; then
+    python3 "$WS/environment/claude-code/validate_skill_activation.py"
+  else
+    echo "OK: skip skill-activation (skills/ unchanged)"
+  fi
+fi
+
+echo "--- local-activation ---"
+is_local=0
+if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
+  is_local=1
+fi
+if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+  python3 "$GOV_ROOT/ops/scripts/reconcile_claude_l9_skills.py" \
+    --root "$WS" --scope user --scope project --workspace "$WS" --quiet || true
+  if ! python3 "$GOV_ROOT/ops/scripts/reconcile_claude_l9_skills.py" \
+    --root "$WS" --scope user --scope project --workspace "$WS" --check --quiet; then
+    echo "FAIL: Claude skill reconcile --check drifted — re-run make claude-skills"
+    python3 "$GOV_ROOT/ops/scripts/reconcile_claude_l9_skills.py" \
+      --root "$WS" --scope user --scope project --workspace "$WS" --check
+    exit 1
+  fi
+  echo "OK: Claude skills reconciled (user+project)"
+  if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
+    echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"
+    exit 1
+  fi
+else
+  echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
 fi
 
 echo "--- security ---"
