@@ -104,7 +104,7 @@ def map_match_response(payload: dict[str, Any]) -> dict[str, Any]:
     candidates = payload.get("candidates")
     if candidates is None:
         # Fail loudly on the OLD/wrong contract rather than silently emptying.
-        msg = "CEG match payload has no 'candidates' key (got keys: %s)" % sorted(payload)
+        msg = f"CEG match payload has no 'candidates' key (got keys: {sorted(payload)})"
         raise KeyError(msg)
 
     matches: list[dict[str, Any]] = []
@@ -136,8 +136,10 @@ def map_match_response(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     # Sort descending by normalized score; None scores sink to the bottom.
-    matches.sort(key=lambda r: (r["normalized_score"] is not None, r["normalized_score"] or 0.0),
-                 reverse=True)
+    matches.sort(
+        key=lambda r: (r["normalized_score"] is not None, r["normalized_score"] or 0.0),
+        reverse=True,
+    )
 
     # Preserve contract lineage verbatim (do NOT invent packet_id/correlation_id here;
     # those belong to the chassis envelope, not the payload).
