@@ -47,4 +47,4 @@ Then [expected result]
 - Acceptance criteria must be testable.
 - Suggest implementation approach without over-prescribing.
 - Link designs, APIs, and related tickets.
-- When the change alters agent-facing or human-facing contracts, include a doc/root surface AC (or explicit N/A). Prefer `l9-update-agent-docs` / `l9-wire-skill-into-repo` for those rewrites at implementation time.
+- When the change alters agent-facing or human-facing contracts, include a **Doc / Root Surface Impact** AC (or explicit N/A). Prefer `l9-update-agent-docs` / `l9-wire-skill-into-repo` for those rewrites at implementation time.

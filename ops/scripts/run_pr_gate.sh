@@ -66,11 +66,28 @@ else
   echo "OK: skip pytest (no changed Python files)"
 fi
 
-echo "--- rules-validate ---"
+echo "--- rules-manifest ---"
 if grep -Eq '^rules/' "$changed_file"; then
+  # Autofix digests before the read-only check so rule edits are not a friction spot.
+  python3 "$GOV_ROOT/ops/scripts/generate_rules_manifest.py" --root "$WS"
   python3 "$GOV_ROOT/ops/scripts/validate_rules_manifest.py" --root "$WS"
 else
-  echo "OK: skip rules-validate (rules/ unchanged)"
+  echo "OK: skip rules-manifest (rules/ unchanged)"
+fi
+
+echo "--- claude-skill-registry ---"
+if grep -Eq '^(skills/|environment/claude-code/generated/skill-registry\.json)' "$changed_file"; then
+  python3 "$GOV_ROOT/ops/scripts/build_claude_skill_registry.py" --root "$WS"
+  python3 "$GOV_ROOT/ops/scripts/build_claude_skill_registry.py" --root "$WS" --check
+else
+  echo "OK: skip claude-skill-registry (skills/ registry inputs unchanged)"
+fi
+
+# Generators above may rewrite committed artifacts — same contract as pre-commit autofix.
+if ! git status --porcelain | diff -q "$status_before" - >/dev/null; then
+  echo "FAIL: manifest generators updated files — review, stage, and re-run make pr"
+  git status --short
+  exit 1
 fi
 
 echo "--- security ---"

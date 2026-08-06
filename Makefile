@@ -186,8 +186,10 @@ rules-validate:
 ## Full rules-subsystem validation harness: overlay/fingerprint/selective-sync test
 ## suites, manifest generate+validate, and corpus audit; report at
 ## reports/rules-stabilization-validation.md. NOTE: the generate/audit gates rewrite
-## committed artifacts in place — run intentionally and review the diff. Not a
-## pre-commit/CI gate. For a pure read-only check use `make rules-validate`.
+## committed artifacts in place — run intentionally and review the diff.
+## Day-to-day: `generate-rules-manifest` in .pre-commit-config.yaml and
+## `make pr` (run_pr_gate.sh) auto-regenerate RULES-MANIFEST.* before validate.
+## For a pure read-only check use `make rules-validate`.
 rules-stabilize:
 	bash ops/scripts/run_rules_stabilization_validation.sh
 
