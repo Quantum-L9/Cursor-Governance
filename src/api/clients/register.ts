@@ -1,38 +1,19 @@
 /* L9_META
  * layer: api
- * role: seo_bot_engine
+ * role: canonical_website_handoff_ingress
  * status: active
+ * version: 3.0.0
  */
-
-/**
- * ═══════════════════════════════════════════════════════════════════════════════
- * L9 SEO Bot - Client Registration Route
- *
- * POST /api/clients/register
- *
- * The webhook onboarding path for the Website Factory v2 handoff. Website-Bot
- * POSTs a `WebsiteFactoryContractV2` payload here after a successful deploy;
- * this upserts on `clients.domain` so re-deploys refresh an existing client.
- *
- * Two shapes, one contract (both schema_version '2.0'):
- *   • Flat v2 (no `site` block) — behaves EXACTLY as before: upsert, active,
- *     `201 { registered, clientId }`. No readiness gate. Zero behavior change.
- *   • Enriched v2 (carries the `site` provenance block) — fail-closed: SEO-Bot
- *     verifies GitHub maintenance readiness before activating; on failure the
- *     client is still registered but maintenance stays inactive.
- * ═══════════════════════════════════════════════════════════════════════════════
- */
-
-import { FastifyInstance, FastifyReply } from 'fastify';
+import {
+  assertWebsiteFactoryHandoffV3,
+  buildSeoBotRegistrationAck,
+  type WebsiteFactoryHandoffV3,
+} from '@quantum-l9/bot-interop';
+import type { FastifyInstance } from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
 import { getDb, schema } from '../../core/database/index.js';
 import { createModuleLogger } from '../../core/logger.js';
-import {
-  WebsiteFactoryContractV2,
-  hasEnrichedSite,
-  verifyContractIntegrity,
-  type EnrichedWebsiteFactoryContractV2,
-} from '../../contracts/website_factory_v2.js';
+import { getLlmService } from '../../services/llm.js';
 import {
   MaintenanceReadinessError,
   verifyMaintenanceReadiness,
@@ -41,78 +22,51 @@ import {
 } from '../../services/maintenance-readiness.js';
 
 const logger = createModuleLogger('api:register');
-
 export type RegisterClientRouteDeps = MaintenanceReadinessDeps;
 
-/** Constant-time string compare (avoids leaking the key via timing). */
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
-
 function bearerToken(header: string | undefined): string {
-  return typeof header === 'string' && header.startsWith('Bearer ')
-    ? header.slice('Bearer '.length).trim()
-    : '';
+  return typeof header === 'string' && header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : '';
 }
-
-/** Strip protocol / www / trailing slash and lowercase, matching add-client.ts. */
 function normalizeDomain(domain: string): string {
-  return domain
-    .trim()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/$/, '')
-    .toLowerCase();
+  return domain.trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').toLowerCase();
 }
 
-/** Build the `config` jsonb for a flat v2 payload (unchanged from the original route). */
-function buildClientConfig(payload: WebsiteFactoryContractV2) {
+function buildClientConfig(contract: WebsiteFactoryHandoffV3, readiness?: MaintenanceReadinessResult) {
+  const repo = contract.site.repository;
+  const deployment = contract.site.deployment;
   return {
-    targetKeywords: payload.targetKeywords,
-    competitorUrls: payload.competitorUrls ?? [],
-    vercelUrl: payload.vercelUrl,
-    industry: payload.industry,
-    city: payload.city,
-    state: payload.state,
-    seo_contract: payload.seo_contract,
-  };
-}
-
-/** Build the `config` jsonb for a verified enriched v2 payload (canonical site_deployment). */
-function buildEnrichedClientConfig(
-  payload: EnrichedWebsiteFactoryContractV2,
-  readiness: MaintenanceReadinessResult,
-) {
-  const repo = payload.site.repository;
-  const deployment = payload.site.deployment;
-  return {
-    targetKeywords: payload.targetKeywords,
-    competitorUrls: payload.competitorUrls ?? [],
+    canonicalClientId: contract.client.id,
+    targetKeywords: contract.seo.target_keywords.map(item => ({ keyword: item.keyword, priority: item.priority })),
+    competitorUrls: contract.seo.competitor_urls,
     vercelUrl: deployment.deployment_url,
-    industry: payload.industry,
-    city: payload.city,
-    state: payload.state,
-    seo_contract: payload.seo_contract,
+    industry: contract.client.industry,
+    city: contract.client.city,
+    state: contract.client.state,
     website_factory_handoff: {
-      schemaVersion: payload.schema_version,
-      receiptId: payload.proof?.receipt_id,
-      sourceDigest: payload.proof?.source_digest,
-      distDigest: payload.proof?.dist_digest,
-      contractDigest: payload.integrity?.payload_digest,
-      verifiedAt: readiness.verifiedAt,
+      protocol: contract.protocol,
+      schemaVersion: contract.schema_version,
+      contractId: contract.contract_id,
+      receiptId: contract.proof.receipt_id,
+      sourceDigest: contract.proof.source_digest,
+      distDigest: contract.proof.dist_digest,
+      contractDigest: contract.integrity.payload_digest,
+      emittedAt: contract.emitted_at,
+      ...(readiness ? { verifiedAt: readiness.verifiedAt } : {}),
     },
     site_deployment: {
-      schemaVersion: payload.schema_version,
-      status: 'ready' as const,
-      transport: payload.site.maintenance.transport,
-      githubCredentialRef: readiness.githubCredentialRef,
-      vercelDeployHookRef: readiness.vercelDeployHookRef,
+      status: readiness ? 'ready' : 'inactive',
+      transport: contract.site.maintenance.transport,
+      githubCredentialRef: readiness?.githubCredentialRef ?? contract.site.maintenance.github_credential_ref,
+      vercelDeployHookRef: readiness?.vercelDeployHookRef ?? contract.site.maintenance.vercel_deploy_hook_ref,
       websiteBotRepo: repo.full_name,
       repositoryId: repo.repository_id,
       sourceBranch: repo.branch,
-      verifiedCommitSha: readiness.verifiedCommitSha,
+      verifiedCommitSha: readiness?.verifiedCommitSha,
       sourceDigest: repo.source_digest,
       managedManifestPath: repo.managed_manifest_path,
       editableRoot: repo.editable_root,
@@ -120,172 +74,86 @@ function buildEnrichedClientConfig(
       vercelProjectId: deployment.project_id,
       vercelDeploymentId: deployment.deployment_id,
       deploymentUrl: deployment.deployment_url,
-      contractId: payload.proof?.receipt_id,
-      contractDigest: payload.integrity?.payload_digest,
-      verifiedAt: readiness.verifiedAt,
+      contractId: contract.contract_id,
+      contractDigest: contract.integrity.payload_digest,
+      ...(readiness ? { verifiedAt: readiness.verifiedAt } : {}),
     },
   };
-}
-
-/**
- * Fail-closed write path: persist the client as inactive when maintenance
- * readiness could not be verified. Extracted from the register handler so the
- * deeply nested try/catch lives in its own function.
- */
-async function persistInactiveRegistration(
-  payload: EnrichedWebsiteFactoryContractV2,
-  domain: string,
-  error: MaintenanceReadinessError,
-  reply: FastifyReply,
-): Promise<FastifyReply> {
-  try {
-    const [client] = await getDb()
-      .insert(schema.clients)
-      .values({
-        name: payload.name,
-        domain,
-        industry: payload.industry,
-        city: payload.city ?? null,
-        state: payload.state ?? null,
-        posthogProjectId: payload.posthog_project_id ?? null,
-        posthogApiKey: payload.posthog_api_key ?? null,
-        config: buildClientConfig(payload),
-        active: false,
-      })
-      .onConflictDoUpdate({
-        target: schema.clients.domain,
-        set: { config: buildClientConfig(payload), active: false, updatedAt: new Date() },
-      })
-      .returning();
-    return reply.status(202).send({
-      registered: true,
-      maintenance_ready: false,
-      clientId: client.id,
-      error: error.code,
-      probes: error.probes,
-    });
-  } catch (dbErr: any) {
-    logger.error({ err: dbErr, domain }, 'Inactive registration write failed');
-    return reply.status(409).send({ registered: false, maintenance_ready: false, error: dbErr?.message ?? 'registration_failed' });
-  }
 }
 
 export async function registerClientRoutes(app: FastifyInstance, deps: RegisterClientRouteDeps = {}): Promise<void> {
   app.post('/api/clients/register', async (request, reply) => {
     const env = deps.env ?? process.env;
-    // API-key gate — fail closed.
     const expectedKey = env.SEO_BOT_API_KEY;
-    if (!expectedKey) {
-      logger.error({ ip: request.ip }, 'Registration rejected: SEO_BOT_API_KEY not configured');
-      return reply.status(503).send({ registered: false, error: 'registration not configured' });
-    }
+    if (!expectedKey) return reply.status(503).send({ registered: false, error: 'registration not configured' });
     const token = bearerToken(request.headers.authorization);
-    if (!token || !safeEqual(token, expectedKey)) {
-      logger.warn({ ip: request.ip }, 'Rejected register request: bad or missing API key');
-      return reply.status(401).send({ registered: false, error: 'unauthorized' });
-    }
+    if (!token || !safeEqual(token, expectedKey)) return reply.status(401).send({ registered: false, error: 'unauthorized' });
 
-    const parsed = WebsiteFactoryContractV2.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ registered: false, error: parsed.error.flatten() });
-    }
-    const payload = parsed.data;
-    const domain = normalizeDomain(payload.domain);
-
-    // ── Enriched v2: verified, fail-closed maintenance activation ────────────────
-    if (hasEnrichedSite(payload)) {
-      if (!verifyContractIntegrity(payload)) {
-        return reply.status(400).send({ registered: false, maintenance_ready: false, error: 'integrity_digest_mismatch' });
-      }
-
-      let readiness: MaintenanceReadinessResult;
-      try {
-        readiness = await verifyMaintenanceReadiness(payload, deps);
-      } catch (error) {
-        if (!(error instanceof MaintenanceReadinessError)) throw error;
-        // Fail closed: register the client but leave maintenance inactive.
-        logger.warn({ code: error.code, probes: error.probes, domain }, 'Maintenance readiness failed; registering inactive');
-        return persistInactiveRegistration(payload, domain, error, reply);
-      }
-
-      const config = buildEnrichedClientConfig(payload, readiness);
-      try {
-        const [client] = await getDb()
-          .insert(schema.clients)
-          .values({
-            name: payload.name,
-            domain,
-            industry: payload.industry,
-            city: payload.city ?? null,
-            state: payload.state ?? null,
-            posthogProjectId: payload.posthog_project_id ?? null,
-            posthogApiKey: payload.posthog_api_key ?? null,
-            config,
-            active: true,
-          })
-          .onConflictDoUpdate({
-            target: schema.clients.domain,
-            set: {
-              name: payload.name,
-              industry: payload.industry,
-              city: payload.city ?? null,
-              state: payload.state ?? null,
-              config,
-              active: true,
-              updatedAt: new Date(),
-            },
-          })
-          .returning();
-        logger.info({ clientId: client.id, domain, commit: readiness.verifiedCommitSha }, 'Client registered with verified maintenance readiness');
-        return reply.status(201).send({
-          registered: true,
-          maintenance_ready: true,
-          clientId: client.id,
-          verified_commit_sha: readiness.verifiedCommitSha,
-          probes: readiness.probes,
-        });
-      } catch (err: any) {
-        logger.error({ err, domain }, 'Verified registration write failed');
-        return reply.status(409).send({ registered: false, maintenance_ready: false, error: err?.message ?? 'registration_failed' });
-      }
-    }
-
-    // ── Flat v2: unchanged behavior (byte-identical to the original route) ────────
-    const config = buildClientConfig(payload);
+    let contract: WebsiteFactoryHandoffV3;
     try {
-      const [client] = await getDb()
-        .insert(schema.clients)
-        .values({
-          name: payload.name,
-          domain,
-          industry: payload.industry,
-          city: payload.city ?? null,
-          state: payload.state ?? null,
-          posthogProjectId: payload.posthog_project_id ?? null,
-          posthogApiKey: payload.posthog_api_key ?? null,
-          config,
-        })
-        .onConflictDoUpdate({
-          target: schema.clients.domain,
-          set: {
-            name: payload.name,
-            industry: payload.industry,
-            city: payload.city ?? null,
-            state: payload.state ?? null,
-            posthogProjectId: payload.posthog_project_id ?? null,
-            posthogApiKey: payload.posthog_api_key ?? null,
-            config,
-            active: true,
-            updatedAt: new Date(),
-          },
-        })
-        .returning();
-
-      logger.info({ clientId: client.id, domain }, 'Client registered via Website Factory v2 handoff');
-      return reply.status(201).send({ registered: true, clientId: client.id });
-    } catch (err: any) {
-      logger.error({ err, domain }, 'Client registration failed');
-      return reply.status(409).send({ registered: false, error: err?.message ?? 'registration_failed' });
+      assertWebsiteFactoryHandoffV3(request.body);
+      contract = request.body;
+    } catch (error) {
+      return reply.status(400).send({ registered: false, error: error instanceof Error ? error.message : String(error) });
     }
+    const idempotencyKey = request.headers['idempotency-key'];
+    if (idempotencyKey && idempotencyKey !== contract.contract_id) {
+      return reply.status(409).send({ registered: false, error: 'idempotency_key_contract_mismatch' });
+    }
+
+    const domain = normalizeDomain(contract.client.domain);
+    let readiness: MaintenanceReadinessResult;
+    try {
+      readiness = await verifyMaintenanceReadiness(contract, deps);
+    } catch (error) {
+      if (!(error instanceof MaintenanceReadinessError)) throw error;
+      const config = buildClientConfig(contract);
+      const [client] = await getDb().insert(schema.clients).values({
+        name: contract.client.name,
+        domain,
+        industry: contract.client.industry,
+        city: contract.client.city ?? null,
+        state: contract.client.state ?? null,
+        config,
+        active: false,
+      }).onConflictDoUpdate({
+        target: schema.clients.domain,
+        set: { name: contract.client.name, industry: contract.client.industry, city: contract.client.city ?? null, state: contract.client.state ?? null, config, active: false, updatedAt: new Date() },
+      }).returning();
+      logger.warn({ clientId: client.id, domain, code: error.code }, 'Maintenance readiness failed; client remains inactive');
+      return reply.status(202).send({ registered: true, maintenance_ready: false, clientId: client.id, error: error.code, probes: error.probes });
+    }
+
+    const config = buildClientConfig(contract, readiness);
+    const [client] = await getDb().insert(schema.clients).values({
+      name: contract.client.name,
+      domain,
+      industry: contract.client.industry,
+      city: contract.client.city ?? null,
+      state: contract.client.state ?? null,
+      config,
+      active: true,
+    }).onConflictDoUpdate({
+      target: schema.clients.domain,
+      set: { name: contract.client.name, industry: contract.client.industry, city: contract.client.city ?? null, state: contract.client.state ?? null, config, active: true, updatedAt: new Date() },
+    }).returning();
+
+    // Persist per-client LLM budgets at registration (fail-open on budget init).
+    try {
+      await getLlmService().initClient(client.id);
+    } catch (error) {
+      logger.warn(
+        { clientId: client.id, error: error instanceof Error ? error.message : String(error) },
+        'Client registered but LLM budget init failed',
+      );
+    }
+
+    const ack = buildSeoBotRegistrationAck(
+      contract,
+      readiness.probes.filter(probe => probe.ok).map(probe => ({ name: probe.name, ok: true as const, detail: probe.detail })),
+      readiness.verifiedAt,
+    );
+    logger.info({ clientId: client.id, canonicalClientId: contract.client.id, domain, commit: readiness.verifiedCommitSha }, 'Client registered with verified maintenance readiness');
+    return reply.status(201).send(ack);
   });
 }

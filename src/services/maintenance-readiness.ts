@@ -1,16 +1,5 @@
-import type { EnrichedWebsiteFactoryContractV2 } from '../contracts/website_factory_v2.js';
+import type { WebsiteFactoryHandoffV3 } from '@quantum-l9/bot-interop';
 import { resolveSecretRef, SecretReferenceError } from './secret-ref.js';
-
-/**
- * Maintenance readiness verification.
- *
- * Runs only for enriched v2 handoffs (those carrying the `site` block). It probes
- * GitHub with the client's env://-referenced credential to confirm the client repo,
- * branch head commit, and required managed/editable paths match the handoff before
- * SEO-Bot activates maintenance. Fail-closed: any mismatch throws and the caller
- * registers the client maintenance-inactive. Field paths are identical to the v3
- * handoff — only the contract TYPE changed (no wire v3).
- */
 
 const GITHUB_API = 'https://api.github.com';
 const TIMEOUT_MS = 15_000;
@@ -22,7 +11,7 @@ export interface MaintenanceProbe {
 }
 
 export interface MaintenanceReadinessResult {
-  ready: boolean;
+  ready: true;
   verifiedAt: string;
   verifiedCommitSha: string;
   githubCredentialRef: string;
@@ -67,85 +56,8 @@ function failed(probes: MaintenanceProbe[], code: MaintenanceReadinessError['cod
   throw new MaintenanceReadinessError(message, probes, code);
 }
 
-type SiteRepository = EnrichedWebsiteFactoryContractV2['site']['repository'];
-
-/** Probe repository existence and (optionally) its expected id. Throws via `failed()` on mismatch. */
-async function probeRepository(
-  fetchImpl: typeof fetch,
-  repo: SiteRepository,
-  githubToken: string,
-  probes: MaintenanceProbe[],
-): Promise<void> {
-  const repoResponse = await githubGet(fetchImpl, `${GITHUB_API}/repos/${repo.full_name}`, githubToken);
-  if (repoResponse.status === 404) {
-    probes.push({ name: 'repository', ok: false, detail: `${repo.full_name} not found or token lacks access` });
-    failed(probes, 'REPOSITORY_NOT_FOUND', probes.at(-1)?.detail ?? 'Repository unavailable');
-  }
-  if (!repoResponse.ok) {
-    probes.push({ name: 'repository', ok: false, detail: `GitHub returned ${repoResponse.status}` });
-    failed(probes, 'GITHUB_PROBE_FAILED', probes.at(-1)?.detail ?? 'Repository probe failed');
-  }
-  const repoBody = await repoResponse.json() as { id?: number | string; full_name?: string };
-  if (repo.repository_id && String(repoBody.id ?? '') !== repo.repository_id) {
-    probes.push({ name: 'repository', ok: false, detail: `expected id ${repo.repository_id}, observed ${String(repoBody.id ?? '')}` });
-    failed(probes, 'REPOSITORY_ID_MISMATCH', probes.at(-1)?.detail ?? 'Repository id mismatch');
-  }
-  probes.push({ name: 'repository', ok: true, detail: String(repoBody.full_name ?? repo.full_name) });
-}
-
-/** Probe that the branch head resolves to the contract's pinned commit. Throws via `failed()` on mismatch. */
-async function probeBranchHead(
-  fetchImpl: typeof fetch,
-  repo: SiteRepository,
-  githubToken: string,
-  probes: MaintenanceProbe[],
-): Promise<void> {
-  const refResponse = await githubGet(fetchImpl, `${GITHUB_API}/repos/${repo.full_name}/git/ref/heads/${branchRefPath(repo.branch)}`, githubToken);
-  if (refResponse.status === 404) {
-    probes.push({ name: 'branch_head', ok: false, detail: `branch ${repo.branch} not found` });
-    failed(probes, 'BRANCH_NOT_FOUND', probes.at(-1)?.detail ?? 'Branch unavailable');
-  }
-  if (!refResponse.ok) {
-    probes.push({ name: 'branch_head', ok: false, detail: `GitHub returned ${refResponse.status}` });
-    failed(probes, 'GITHUB_PROBE_FAILED', probes.at(-1)?.detail ?? 'Branch probe failed');
-  }
-  const refBody = await refResponse.json() as { object?: { sha?: string } };
-  const observedHead = refBody.object?.sha ?? '';
-  if (observedHead !== repo.commit_sha) {
-    probes.push({ name: 'branch_head', ok: false, detail: `expected ${repo.commit_sha}, observed ${observedHead || 'UNKNOWN'}` });
-    failed(probes, 'COMMIT_MISMATCH', probes.at(-1)?.detail ?? 'Branch head mismatch');
-  }
-  probes.push({ name: 'branch_head', ok: true, detail: observedHead });
-}
-
-/** Probe that every required path exists at the pinned commit. Throws via `failed()` on the first missing path. */
-async function probeRequiredPaths(
-  fetchImpl: typeof fetch,
-  contract: EnrichedWebsiteFactoryContractV2,
-  repo: SiteRepository,
-  githubToken: string,
-  probes: MaintenanceProbe[],
-): Promise<void> {
-  for (const path of contract.site.maintenance.required_paths) {
-    let name: MaintenanceProbe['name'];
-    if (path === repo.managed_manifest_path) name = 'managed_manifest';
-    else if (path === 'src/pages/index.astro') name = 'editable_home';
-    else name = 'required_path';
-    const response = await githubGet(
-      fetchImpl,
-      `${GITHUB_API}/repos/${repo.full_name}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${repo.commit_sha}`,
-      githubToken,
-    );
-    if (!response.ok) {
-      probes.push({ name, ok: false, detail: `${path} missing at ${repo.commit_sha}` });
-      failed(probes, 'REQUIRED_PATH_MISSING', probes.at(-1)?.detail ?? 'Required path missing');
-    }
-    probes.push({ name, ok: true, detail: path });
-  }
-}
-
 export async function verifyMaintenanceReadiness(
-  contract: EnrichedWebsiteFactoryContractV2,
+  contract: WebsiteFactoryHandoffV3,
   deps: MaintenanceReadinessDeps = {},
 ): Promise<MaintenanceReadinessResult> {
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -174,13 +86,38 @@ export async function verifyMaintenanceReadiness(
 
   const repo = contract.site.repository;
   try {
-    await probeRepository(fetchImpl, repo, githubToken, probes);
-    await probeBranchHead(fetchImpl, repo, githubToken, probes);
-    await probeRequiredPaths(fetchImpl, contract, repo, githubToken, probes);
+    const repoResponse = await githubGet(fetchImpl, `${GITHUB_API}/repos/${repo.full_name}`, githubToken);
+    if (repoResponse.status === 404) failed(probes, 'REPOSITORY_NOT_FOUND', `${repo.full_name} not found or token lacks access`);
+    if (!repoResponse.ok) failed(probes, 'GITHUB_PROBE_FAILED', `Repository probe returned ${repoResponse.status}`);
+    const repoBody = await repoResponse.json() as { id?: number | string; full_name?: string };
+    if (repo.repository_id && String(repoBody.id ?? '') !== repo.repository_id) {
+      failed(probes, 'REPOSITORY_ID_MISMATCH', `expected id ${repo.repository_id}, observed ${String(repoBody.id ?? '')}`);
+    }
+    probes.push({ name: 'repository', ok: true, detail: String(repoBody.full_name ?? repo.full_name) });
+
+    const refResponse = await githubGet(fetchImpl, `${GITHUB_API}/repos/${repo.full_name}/git/ref/heads/${branchRefPath(repo.branch)}`, githubToken);
+    if (refResponse.status === 404) failed(probes, 'BRANCH_NOT_FOUND', `branch ${repo.branch} not found`);
+    if (!refResponse.ok) failed(probes, 'GITHUB_PROBE_FAILED', `Branch probe returned ${refResponse.status}`);
+    const refBody = await refResponse.json() as { object?: { sha?: string } };
+    const observedHead = refBody.object?.sha ?? '';
+    if (observedHead !== repo.commit_sha) failed(probes, 'COMMIT_MISMATCH', `expected ${repo.commit_sha}, observed ${observedHead || 'UNKNOWN'}`);
+    probes.push({ name: 'branch_head', ok: true, detail: observedHead });
+
+    for (const path of contract.site.maintenance.required_paths) {
+      const name: MaintenanceProbe['name'] = path === repo.managed_manifest_path
+        ? 'managed_manifest'
+        : path === 'src/pages/index.astro' ? 'editable_home' : 'required_path';
+      const response = await githubGet(
+        fetchImpl,
+        `${GITHUB_API}/repos/${repo.full_name}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${repo.commit_sha}`,
+        githubToken,
+      );
+      if (!response.ok) failed(probes, 'REQUIRED_PATH_MISSING', `${path} missing at ${repo.commit_sha}`);
+      probes.push({ name, ok: true, detail: path });
+    }
   } catch (error) {
     if (error instanceof MaintenanceReadinessError) throw error;
-    probes.push({ name: 'repository', ok: false, detail: error instanceof Error ? error.message : String(error) });
-    failed(probes, 'GITHUB_PROBE_FAILED', probes.at(-1)?.detail ?? 'GitHub probe failed');
+    failed(probes, 'GITHUB_PROBE_FAILED', error instanceof Error ? error.message : String(error));
   }
 
   return {
