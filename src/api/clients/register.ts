@@ -138,6 +138,15 @@ export async function registerClientRoutes(app: FastifyInstance, deps: RegisterC
       set: { name: contract.client.name, industry: contract.client.industry, city: contract.client.city ?? null, state: contract.client.state ?? null, config, active: true, updatedAt: new Date() },
     }).returning();
 
+    // Persist per-client LLM budgets at registration (fail-open on budget init).
+    try {
+      await getLlmService().initClient(client.id);
+    } catch (error) {
+      logger.warn(
+        { clientId: client.id, error: error instanceof Error ? error.message : String(error) },
+        'Client registered but LLM budget init failed',
+      );
+    }
 
     const ack = buildSeoBotRegistrationAck(
       contract,

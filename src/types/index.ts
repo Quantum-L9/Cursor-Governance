@@ -315,7 +315,8 @@ export type ModuleName =
   | 'web-vitals'
   | 'aeo-geo'
   | 'link-building'
-  | 'behavior-intelligence';
+  | 'behavior-intelligence'
+  | 'memory';
 
 export interface TokenBudget {
   maxFastTokensPerRun: number;

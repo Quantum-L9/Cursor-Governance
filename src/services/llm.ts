@@ -264,9 +264,14 @@ export class LlmService {
   getCallLogByClient(clientId: string, limit = 50): RoutingDecision[] { return this.router.getCallLogByClient(clientId, limit); }
 
   private async logUsage(task: TaskDescriptor, response: LLMResponse): Promise<void> {
+    const clientId = task.clientId?.trim();
+    if (!clientId) {
+      logger.warn({ purpose: task.description }, 'Skipping LLM usage log: task.clientId missing');
+      return;
+    }
     try {
       await getDb().insert(schema.llmUsage).values({
-        clientId: task.clientId,
+        clientId,
         module: this.extractModule(task.description),
         tier: this.inferTier(task.complexity),
         purpose: task.description ?? 'unspecified',
