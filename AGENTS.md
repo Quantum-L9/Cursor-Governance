@@ -198,6 +198,24 @@ mechanism. If you need a human-readable narrative of what activation does,
 this section is that narrative — keep it in sync with the hook, not a
 separate spec file.
 
+### 2.6 AWS secrets registry + UI operator (2026-08-06)
+
+**SSOT:** this repository owns `ops/secrets/openclaw-igorbot.registry.yaml`.
+Sync pulls secret names (and JSON key names) from AWS Secrets Manager under
+namespace `openclaw-igorbot/*` (region `us-east-1`). Consumers (igorbot, bots,
+CI) depend on this registry — do not reverse the dependency.
+
+| Piece | Path / command |
+|---|---|
+| Registry + resolve | `ops/secrets/` — `make secrets-sync`, `make secrets-check REF='…'` |
+| Skill (refs) | `l9-aws-secrets` |
+| UI console + cartridges | `ops/ui-operator/` — skill `l9-ui-operator` (explicit-only) |
+| Optional install | `make ui-operator-sync` → `uv sync --extra ui-operator && playwright install` |
+
+**Rules:** secret **values** never in git/logs/receipts; inventory is IDs/keys
+only; no macOS Keychain or daily-Chrome cookie decrypt for governed UI
+automation; diagnose before mutating vault contents; UI receipts redact values.
+
 ---
 
 ## 3. Source-of-truth files
@@ -240,6 +258,13 @@ Changes to `CANONICAL_LAW.md`, `resolve_governance_paths.sh`,
 `ops/scripts/_archived/` (archived = intentionally retired, not missing —
 verify the archival rationale in git history before restoring anything).
 
+`pyproject.toml` is a **protected file** (`ORG_INVARIANTS.yaml` `protected_paths`
++ CODEOWNERS): it pins the dependency/interpreter contract and the local
+`make pr` / pre-commit gate config. **Append only — never overwrite existing
+keys or lines.** Single-key TOML fields such as `[tool.pytest.ini_options]`
+`addopts` cannot be extended by appending; put additive pytest collection
+controls in the root `conftest.py` instead of rewriting the field here.
+
 ### 5.3 Forbidden
 - Reintroducing Dropbox as an SSOT fallback in any resolver script
 - Restoring archived pre-Graphiti daemons without confirming they're not
@@ -256,12 +281,34 @@ Before opening *any* PR (opening or updating a PR triggers CI), the local
 changed-files pipeline MUST pass:
 
 ```bash
-make pr        # alias: make pr-check — changed-files pre-commit + ruff + security
+make pr-check  # gate only — changed-files pre-commit + ruff + security
+make pr        # gate → open PR → subscribe → agent spawns l9-pr-remediation
 ```
 
-Do not open the PR, and do not push to trigger CI, if `make pr` fails — fix and
-re-run first. Target is lowercase `make pr` (Make is case-sensitive; `make PR`
-errors). Then run the governance-wiring checks:
+Do not open the PR, and do not push to trigger CI, if `make pr` / `make pr-check`
+fails — fix and re-run first. `make pr` / `make PR` / `make Pr` / `make pR` are
+equivalent (Makefile remaps any capitalization of `pr`).
+
+`make pr` auto-heals derived artifacts via `ops/scripts/sync_generated_artifacts.py`
+(RULES-MANIFEST, skill-registry, skillOverrides, COMMANDS_MANIFEST, PE digests,
+orphan skills → `explicit_only`). Regenerated files are a **WARN to stage**, not
+a hard fail. On a local governance clone it also reconciles Claude skills and
+fail-closes on hooks/bootstrap/plugin wiring.
+
+After the gate PASSes, `make pr` (any capitalization) runs
+`ops/scripts/open_pr_after_gate.sh`: push the feature branch, open or reuse the
+GitHub PR, subscribe to PR notifications, write
+`memory-bank/pr-remediation-handoff.json`, and print an `L9_AGENT_REQUIRED`
+block. **Any agent that sees that block MUST immediately** spawn a background
+Task (`run_in_background=true`) using `l9-pr-remediation` + the
+`poll_worker` template in `skills/l9-bounded-autonomy/references/prompt-templates.md`
+(packet fields from the handoff JSON). Cap 3 fix-push cycles; never merge;
+never force-push; main agent continues (do not AwaitShell on that PR). Use
+`make pr-check`, `OPEN_PR=0 make pr`, or `PR_REMEDIATE=0 make pr` to skip
+open and/or remediation spawn. Opening requires commits ahead of `PR_BASE`
+(default `origin/main`) and refuses `main`/`master`.
+
+Then run the governance-wiring checks:
 
 ```bash
 bash ops/scripts/check_governance_wiring.sh "$(pwd)"
@@ -320,3 +367,61 @@ Exactly one formatter owns each language. Do not reformat a file with a tool oth
 Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
 
 <!-- END L9 FORMATTER OWNERSHIP -->
+<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:AGENTS -->
+
+## Program Execution adapter layer
+
+The reusable subsystem lives at `environment/program-execution/`. Do not copy its
+core schemas, root `autonomy/`, the Claude bounded-autonomy scheduler, the agent
+registry, or the Graphiti client into an adapter.
+
+Program Execution tasks use the Program Execution Controller lease as the sole
+authoritative work claim. They must not acquire a competing Graphiti task claim.
+A Graphiti projection is observability only and is never authoritative.
+
+Validation:
+
+```bash
+make program-execution-core-validate
+make program-execution-adapters
+make program-execution-conformance
+make program-execution-probe
+make pr
+```
+
+<!-- ROOT_FILE_APPEND_ONLY_PROTECTION_V1 -->
+
+## Repository-root files are append-only
+
+Every file at the repository root is protected. Incoming changes may **add**
+content freely, but may **not delete or overwrite** existing content in a
+protected root file without both:
+
+1. an `ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>` line in a
+   commit message (highlighting the delta and justifying the removal), and
+2. CODEOWNERS approval from the repository owner.
+
+The authoritative protected-file list and the per-file rule live in
+`ops/config/root-file-protection.json`. Three tiers apply (every tier is
+CODEOWNERS-reviewed; the tier only decides whether the additive gate also fires):
+
+- **additive_only** (governance, legal, dependency, gate/security, and
+  environment-modifying files): deletions/overwrites fail the gate without a
+  justification marker.
+- **managed** (living/operational/community docs and low-risk config — e.g.
+  `README.md`, `CHANGELOG.md`, `TODO.md`, `.env.example`): edited freely with owner
+  review; no marker required, not additive-locked.
+- **regenerable** (machine-generated artifacts — `uv.lock`,
+  `governance-health-report.json`, `.harvest_executor_state.json`): exempt from the
+  additive check because they are rewritten wholesale by tooling.
+
+A new repository-root file must be registered in the policy with a tier — an
+unregistered new root file fails the gate, so "every root file is protected"
+cannot be silently bypassed by adding one.
+
+Enforcement is mechanical and fail-closed on every pull request via
+`.github/workflows/root-file-protection.yml` →
+`ops/scripts/validate_root_file_protection.py`. The gate is read-only and never
+edits files. Removing or weakening the gate is itself a protected-path change
+(`ORG_INVARIANTS.yaml` `protected_paths`). Every change stays traceable to its
+originating commit/agent and is reversible with `git revert`.

@@ -433,3 +433,17 @@ Before ANY execution task:
 **Prevention:** Always use predefinedCredentialType + supabaseApi | Never add manual Authorization headers
 **Rule:** Apply prevention protocol before execution | Check existing lessons | Verify approach
 **Date Added:** 2026-03-28
+
+### **46. Compound `git add && git commit` under memory-lock gate drops the add**
+**Mistake:** Ran `git add ... && git commit ...` as one command under the L9 memory-lock PreToolUse gate; the gate denied the whole call, so `git add` never ran and only previously-staged changes committed — the commit silently diverged from the validated working tree.
+**Impact:** A pushed commit missing its regenerated manifest + test edit; CI caught it and cost a remediation round.
+**Prevention:** Run `git add` in a Bash call separate from the lock-gated `git commit`; after every governed commit verify with `git show HEAD:<path>`. "Validated locally" reflects the working tree, not necessarily what landed.
+**Rule:** Never chain staging into a lock-gated git mutation | stage, then commit, then verify HEAD
+**Date Added:** 2026-08-05
+
+### **47. Manually acquired phase-lock ignored on session / state-root mismatch**
+**Mistake:** Acquired a lock via `memory_lock.py` CLI with no hook event on stdin, so it recorded `session_id="unknown-session"` and anchored state at the cwd fallback; the gate uses the real `CLAUDE_CODE_SESSION_ID` and its own `CLAUDE_PROJECT_DIR` (the governed project root, machine-specific), so it ignored the lock and kept denying commits.
+**Impact:** Repeated "no phase-lock held" denials despite an "acquired: true" result.
+**Prevention:** Prefetch with `{"session_id":"$CLAUDE_CODE_SESSION_ID"}` on stdin, then acquire with `CLAUDE_PROJECT_DIR` set to the same governed project root the gate uses (match it via `$CLAUDE_PROJECT_DIR`, never a hardcoded path), or run the CLI from that project root so the state root matches; re-acquire before each governed write (locks carry a short TTL).
+**Rule:** A lock only counts if its session_id and state root match the gate's | verify with memory_lock.py status under the real project dir
+**Date Added:** 2026-08-05

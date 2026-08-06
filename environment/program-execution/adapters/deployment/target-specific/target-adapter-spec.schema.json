@@ -1,0 +1,122 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/target-adapter-spec.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "adapter_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "commands": {
+      "additionalProperties": false,
+      "properties": {
+        "cleanup": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "collect": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "deploy": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "observe": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "preflight": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "rollback": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "preflight",
+        "deploy",
+        "observe",
+        "rollback",
+        "collect",
+        "cleanup"
+      ],
+      "type": "object"
+    },
+    "required_environment": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "rollback_required": {
+      "const": true
+    },
+    "schema": {
+      "const": "program-execution-target-adapter.spec.v1"
+    },
+    "target_kind": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "adapter_id",
+    "target_kind",
+    "adapter_version",
+    "commands",
+    "required_environment",
+    "rollback_required"
+  ],
+  "title": "Program Execution Target Adapter Generation Specification",
+  "type": "object"
+}

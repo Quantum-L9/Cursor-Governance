@@ -59,6 +59,8 @@ tiers:
       use_when: "bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions"
     - skill: "l9-graphiti-memory"
       use_when: "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
+    - skill: "l9-aws-secrets"
+      use_when: "resolving openclaw-igorbot AWS Secrets Manager refs, syncing the Cursor-Governance ops/secrets registry from AWS, or fail-closed secret checks without Keychain"
 
   explicit_only:
     - skill: "l9-forge"
@@ -101,6 +103,10 @@ tiers:
       reason: "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only"
     - skill: "l9-governance-symlinks"
       reason: "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only"
+    - skill: "l9-repository-renovation"
+      reason: "audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR — high blast radius, explicit only"
+    - skill: "l9-ui-operator"
+      reason: "SaaS admin UI mutations via Playwright cartridges — high blast radius; requires human approve"
 
   do_not_migrate_to_skills:
     - item: "commands/violation.md"
@@ -133,10 +139,12 @@ reasoning_routing:
       reference: "l9-structured-reasoning/references/persona-lenses.md"
 
 claude_routing:
-  version: 1
+  version: 2
   purpose: >
-    Reinforce Claude Code's native skill selection with high-confidence routes while
-    preserving model judgment, explicit-only boundaries, and narrow composition.
+    Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and
+    Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce
+    native skill selection while preserving model judgment, explicit-only boundaries,
+    and narrow composition. Recommendation never grants mutation authority.
   max_primary: 1
   max_supporting: 2
   force_threshold: 8
@@ -152,6 +160,8 @@ claude_routing:
     - l9-pr-analysis
     - l9-ynp
     - l9-skill-compiler
+    - l9-wire-skill-into-repo
+    - l9-update-agent-docs
     - l9-api-smoke-testing
     - l9-auditing-performance
     - l9-auditing-security
@@ -159,6 +169,10 @@ claude_routing:
     - l9-incident-response
     - l9-setting-up-ci
     - l9-graphiti-memory
+    - l9-aws-secrets
+    - l9-code-graph-rag-mcp
+    - l9-architecture-decision-records
+    - l9-monitoring-terminal-errors
   supporting_skills:
     - l9-structured-reasoning
     - l9-context7-docs
@@ -168,6 +182,7 @@ claude_routing:
     - l9-architecture-decision-records
     - l9-update-agent-docs
     - l9-ynp
+    - l9-wire-skill-into-repo
   trivial_patterns:
     - '^fix (the )?typo\b'
     - '^correct (the )?spelling\b'
@@ -184,6 +199,8 @@ claude_routing:
         - review comments
         - pr readiness
         - ready to merge
+        - analyze this pr
+        - pr analysis
       negative_signals:
         - implement the review fixes
         - push commits
@@ -202,6 +219,8 @@ claude_routing:
         - map code flows
         - explore the codebase
         - identify hotspots
+        - analyze this code
+        - code analysis
       supporting:
         - l9-structured-reasoning
     - id: structured_reasoning
@@ -214,6 +233,7 @@ claude_routing:
         - root cause analysis
         - deep reasoning
         - decision support
+        - trade-off analysis
       supporting: []
     - id: gap_analysis
       primary: l9-gap-analysis
@@ -224,6 +244,32 @@ claude_routing:
         - percent complete
         - compliance drift
         - gap analysis
+        - delta gap
+      supporting:
+        - l9-structured-reasoning
+    - id: plan
+      primary: l9-plan
+      signal_weight: 8
+      positive_signals:
+        - create an execution plan
+        - write a plan first
+        - plan before building
+        - implementation plan
+        - scope is unclear
+        - decompose the requirements
+        - make a plan
+      supporting:
+        - l9-structured-reasoning
+    - id: gmp_protocol
+      primary: l9-gmp-protocol
+      signal_weight: 8
+      positive_signals:
+        - gmp protocol
+        - run gmp
+        - modification lock
+        - phased auditable change
+        - signed evidence report
+        - gmp phases
       supporting:
         - l9-structured-reasoning
     - id: skill_compiler
@@ -235,8 +281,31 @@ claude_routing:
         - compile this prompt into a skill
         - turn this workflow into a skill
         - turn this operating procedure into
+        - create a skill
+        - compile a skill
       supporting:
         - l9-prompt-engineering
+    - id: wire_skill
+      primary: l9-wire-skill-into-repo
+      signal_weight: 8
+      positive_signals:
+        - wire the skill
+        - wire skill into
+        - register the skill
+        - skill discovery tables
+        - subagent preload
+      supporting:
+        - l9-update-agent-docs
+    - id: update_agent_docs
+      primary: l9-update-agent-docs
+      signal_weight: 8
+      positive_signals:
+        - update agents.md
+        - refresh agent docs
+        - update claude.md
+        - update invariants.md
+        - update architecture.md
+      supporting: []
     - id: context7_docs
       primary: l9-context7-docs
       signal_weight: 8
@@ -246,6 +315,8 @@ claude_routing:
         - version-specific documentation
         - current api documentation
         - current next.js
+        - check the docs
+        - use context7
       supporting:
         - l9-structured-reasoning
     - id: api_smoke
@@ -257,6 +328,7 @@ claude_routing:
         - api returns 500
         - endpoint returns 404
         - verify api health
+        - smoke test api
       supporting:
         - l9-structured-reasoning
     - id: ci_setup
@@ -267,6 +339,7 @@ claude_routing:
         - bootstrap ci
         - add lint type checking and tests
         - add ci stages
+        - set up ci
       supporting:
         - l9-structured-reasoning
     - id: incident_response
@@ -288,6 +361,7 @@ claude_routing:
         - work is complete what next
         - priorities are unclear
         - next highest leverage action
+        - what next
       supporting: []
     - id: graphiti_memory
       primary: l9-graphiti-memory
@@ -298,6 +372,20 @@ claude_routing:
         - mcp health failure
         - memory bootstrap
         - episode write
+        - graphiti health
+      supporting:
+        - l9-structured-reasoning
+    - id: aws_secrets
+      primary: l9-aws-secrets
+      signal_weight: 8
+      positive_signals:
+        - resolve aws secret
+        - openclaw-igorbot
+        - secrets registry
+        - sync secrets registry
+        - sync_secrets_registry
+        - resolve_secret
+        - aws secrets manager ref
       supporting:
         - l9-structured-reasoning
     - id: performance_audit
@@ -340,8 +428,46 @@ claude_routing:
         - converge until execution-ready
         - recursive optimization
         - align this artifact pack
+        - harden this pack
+        - improve the skills
+        - proactively use skills
+        - skill router
+        - use skills more
+        - use skills
+        - wire it test it
+        - find it wire it
       supporting:
         - l9-structured-reasoning
+    - id: code_graph
+      primary: l9-code-graph-rag-mcp
+      signal_weight: 8
+      positive_signals:
+        - code graph
+        - batch_index
+        - semantic code search
+        - analyze_code_impact
+        - list_module_importers
+      supporting:
+        - l9-code-analysis
+    - id: adr
+      primary: l9-architecture-decision-records
+      signal_weight: 8
+      positive_signals:
+        - write an adr
+        - architecture decision record
+        - record this decision
+        - create an adr
+      supporting:
+        - l9-structured-reasoning
+    - id: terminal_errors
+      primary: l9-monitoring-terminal-errors
+      signal_weight: 8
+      positive_signals:
+        - watch the terminal
+        - fix terminal errors
+        - monitor running process
+        - stack traces from the server
+      supporting: []
     - id: bounded_autonomy
       primary: l9-bounded-autonomy
       signal_weight: 8

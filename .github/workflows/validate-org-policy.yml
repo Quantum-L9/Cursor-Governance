@@ -1,0 +1,61 @@
+name: Validate organization policy
+
+on:
+  pull_request:
+    paths:
+      - ORG_INVARIANTS.yaml
+      - governance/ASSERTION_TYPES.yaml
+      - governance/POLICY_MODEL.md
+      - governance/TRUST_MODEL.md
+      - governance/CHANGE_PROCESS.md
+      - schemas/org-invariants.schema.json
+      - releases/POLICY_RELEASE.schema.yaml
+      - releases/README.md
+      - docs/governance/ORG_INVARIANTS.md
+      - ops/scripts/validate_org_policy.py
+      - tests/org_policy/**
+      - .github/workflows/validate-org-policy.yml
+  push:
+    branches:
+      - main
+    paths:
+      - ORG_INVARIANTS.yaml
+      - governance/ASSERTION_TYPES.yaml
+      - schemas/org-invariants.schema.json
+      - releases/POLICY_RELEASE.schema.yaml
+      - ops/scripts/validate_org_policy.py
+      - tests/org_policy/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-org-policy:
+    name: validate-org-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bootstrap uv and sync the locked environment
+        run: |
+          set -euo pipefail
+          # PyYAML is a core [project.dependencies] entry locked in uv.lock. Sync the
+          # locked environment and run through `uv run` so this validator consumes the
+          # same pyyaml as every other path (test job, make venv), instead of pinning a
+          # divergent version (was PyYAML==6.0.2 vs uv.lock's 6.0.3) outside the lock.
+          # The uv bootstrap is version-pinned and wheels-only; `uv sync` uses --no-build
+          # and every `uv run` uses --frozen --no-build (SonarCloud S8541/S8544).
+          # `python -m pip` targets the setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build
+      - name: Validate normative policy artifacts
+        run: uv run --frozen --no-build python ops/scripts/validate_org_policy.py
+      - name: Run organization-policy tests
+        run: uv run --frozen --no-build python -m unittest discover -s tests/org_policy -p 'test_*.py'

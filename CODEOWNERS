@@ -16,3 +16,23 @@
 /ops/scripts/backup_to_github.sh       @cryptoxdog
 /ops/hooks/session_start_bootstrap.sh  @cryptoxdog
 /ops/scripts/_archived/                @cryptoxdog
+# Protected build/dependency + gate contract — append-only, never overwritten
+# by tooling (ORG_INVARIANTS.yaml protected_paths; AGENTS.md §5.2).
+/pyproject.toml                        @cryptoxdog
+
+# Repository-root protection. The `*` rule above already routes every root file to
+# the owner; these explicit entries keep that review requirement even after a future
+# multi-owner split. The authoritative protected-file list and per-file tier live in
+# ops/config/root-file-protection.json, mechanically enforced on every PR by
+# .github/workflows/root-file-protection.yml — that CI gate enforces the policy on
+# every root file independently of CODEOWNERS pattern matching.
+/AGENTS.md                             @cryptoxdog
+/ORG_INVARIANTS.yaml                   @cryptoxdog
+/README.md                             @cryptoxdog
+/LICENSE                               @cryptoxdog
+/CODEOWNERS                            @cryptoxdog
+/Makefile                              @cryptoxdog
+/requirements.txt                      @cryptoxdog
+/conftest.py                           @cryptoxdog
+/ops/config/root-file-protection.json  @cryptoxdog
+/ops/scripts/validate_root_file_protection.py @cryptoxdog

@@ -24,6 +24,15 @@ repos:
         language: system
         pass_filenames: false
 
+      # Commit-time heal. make pr SKIPs this hook and runs sync in run_pr_gate
+      # with WARN+continue so digest churn never blocks the PR gate.
+      - id: sync-generated-artifacts
+        name: Sync generated manifests, registries, and overrides
+        entry: python3 ops/scripts/sync_generated_artifacts.py --force
+        language: system
+        files: ^(rules/|skills/|commands/|environment/claude-code/|environment/program-execution/)
+        pass_filenames: false
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Pin must match requirements.txt / l9-ci-sdk ruff==0.16.0 (sdk wins over core).
     rev: v0.16.0

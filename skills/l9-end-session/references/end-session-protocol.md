@@ -8,7 +8,7 @@ tags: [l9, session, handoff, memory, governance]
 owner: igor_beylin
 status: active
 version: 1.2.0
-updated: 2026-07-28
+updated: 2026-08-06
 auto_chain: extract-chat
 --- /SKILL_META ---
 -->
@@ -38,10 +38,18 @@ write per learning fact, all to Graphiti. This is the canonical store — when
 this step succeeds, **skip step 1b entirely**; do not also write the same
 session summary into `memory-bank/`.
 
+Use governance **venv Python** (see `skills/l9-graphiti-memory/SKILL.md`). Bare `python3` often fails with `No module named 'yaml'`. Do **not** pass `--scope` / `--scope cursor` (not a CLI flag).
+
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
+GOV="${HOME}/.cursor-governance"
+GRAPHITI_PY="${GOV}/.venv/bin/python"
+CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
+[ -x "$GRAPHITI_PY" ] || GRAPHITI_PY="${HOME}/Cursor-Governance/.venv/bin/python"
+[ -f "$CLIENT" ] || CLIENT="${HOME}/Cursor-Governance/ops/graphiti/graphiti_memory_client.py"
+
+"$GRAPHITI_PY" "$CLIENT" health
 # If healthy:
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+"$GRAPHITI_PY" "$CLIENT" write \
   "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
   --kind pickup_context
 
@@ -103,12 +111,12 @@ Session learnings MUST be written through the **canonical memory path** so they 
 See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for the full spec.
 
 ```bash
-# One write per fact. Pre-classify with --kind. Terse, no preamble.
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+# One write per fact. Pre-classify with --kind only (no --scope). Terse, no preamble.
+"$GRAPHITI_PY" "$CLIENT" write \
   "{terse fact 1}" \
   --kind lesson --group-id {resolved_group_id}
 
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+"$GRAPHITI_PY" "$CLIENT" write \
   "{terse fact 2}" \
   --kind insight --group-id {resolved_group_id}
 ```

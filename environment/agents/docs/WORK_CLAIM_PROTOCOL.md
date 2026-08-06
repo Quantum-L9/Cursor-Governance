@@ -87,3 +87,11 @@ and tokens are never shared (validated by `validate_agents.py`; authenticated
 per-token by the memory server), any duplicated artifact in the graph is
 attributable to exactly one agent — making duplication auditable and the claim
 protocol enforceable after the fact, not just by convention.
+<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:WORK_CLAIM -->
+
+## Program Execution lease precedence
+
+- Non-program work continues to use Graphiti task claims.
+- Program Execution tasks use the Controller lease as the sole authoritative claim.
+- Program adapters must not create a competing Graphiti claim.
+- A derived Graphiti claim projection is non-authoritative observability only.

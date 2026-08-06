@@ -162,8 +162,10 @@
     "L9_SKILL_USAGE_LOGGING": "true"
   },
   "skillOverrides": {
+    "l9-bounded-autonomy": "user-invocable-only",
     "l9-chat-extraction": "user-invocable-only",
     "l9-ci-ops": "user-invocable-only",
+    "l9-cli-optimization": "user-invocable-only",
     "l9-code-maintenance": "user-invocable-only",
     "l9-component-verification": "user-invocable-only",
     "l9-dag-authoring": "user-invocable-only",
@@ -176,11 +178,11 @@
     "l9-inspect": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
-    "l9-bounded-autonomy": "user-invocable-only",
-    "l9-cli-optimization": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
+    "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
+    "l9-ui-operator": "user-invocable-only",
     "l9-update-command": "user-invocable-only"
   }
 }

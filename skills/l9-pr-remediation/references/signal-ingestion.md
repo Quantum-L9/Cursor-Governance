@@ -14,7 +14,27 @@ updated: 2026-06-18
 
 ## Purpose
 
-Fetch all actionable signals from an open PR: CI gate failures, code review comments, and workflow definitions. Normalize them into a unified finding list for classification.
+Fetch all actionable signals from an open PR: CI gate failures, code review comments, workflow definitions, and SonarCloud static-analysis findings. Normalize them into a unified finding list for classification.
+
+## SonarCloud finding ingestion
+
+When `sonar-project.properties` exists or the SonarCloud check is failing, SonarCloud is a
+signal source. Do not parse the SonarCloud check summary or dashboard screenshots — retrieve
+the structured issue set from the API and confirm it against current source. The full
+fail-closed protocol (identity binding, pagination, root-cause clustering, minimal-fix
+contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule) lives in
+[sonarcloud-remediation.md](sonarcloud-remediation.md). Deterministic retrieval:
+
+```bash
+python scripts/sonar_fetch.py \
+  --project "$(sed -n 's/^sonar.projectKey=//p' sonar-project.properties)" \
+  --organization "$(sed -n 's/^sonar.organization=//p' sonar-project.properties)" \
+  --pull-request <PR_NUMBER> --output sonarcloud-issues-before.json
+```
+
+Normalize each issue to the unified finding list with `source: sonarcloud`, its `rule_key`,
+`severity`, `type`, `component` path, `line`, and `message`, so it flows through the same
+classify → fix → validate gates as CI and review signals.
 
 ## Gate Discovery (FIRST — before CI log ingestion)
 

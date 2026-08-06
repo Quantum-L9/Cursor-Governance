@@ -15,6 +15,39 @@ CURSOR_REQUIRED_TASK_FIELDS = (
     "mutation",
 )
 
+# Exact autonomy-role -> Cursor-subagent result-kind mapping. Roles absent here
+# (synthesis, poller, coordinator, ...) carry no result-document contract.
+CURSOR_ROLE_TO_RESULT_KIND = {
+    "recon": "ReconReport",
+    "remediator": "PRRemediationReport",
+    "executor": "TestReport",
+    "test": "TestReport",
+    "evidence_writer": "DocumentationReport",
+    "documentation": "DocumentationReport",
+    "reviewer": "VerificationReviewReport",
+    "verifier": "VerificationReviewReport",
+    "verifier_reviewer": "VerificationReviewReport",
+}
+CURSOR_SUBAGENT_RESULT_SCHEMA = "l9.cursor-subagent.result.v1"
+CURSOR_SUBAGENT_RESULT_SCHEMA_PATH = (
+    "environment/agents/cursor-subagents/schemas/cursor-subagent-result.schema.json"
+)
+
+
+def _result_contract(role: str) -> dict[str, Any] | None:
+    """Result-document contract the subagent must return, or None if the role
+    has no Cursor-subagent result kind."""
+    result_kind = CURSOR_ROLE_TO_RESULT_KIND.get(role)
+    if result_kind is None:
+        return None
+    return {
+        "schema": CURSOR_SUBAGENT_RESULT_SCHEMA,
+        "schema_path": CURSOR_SUBAGENT_RESULT_SCHEMA_PATH,
+        "result_kind": result_kind,
+        "required_output": "one_structured_document",
+        "narrative_only_completion_allowed": False,
+    }
+
 
 def load_cursor_config(payload: Mapping[str, Any]) -> AdapterConfig:
     config = AdapterConfig.from_dict(payload)
@@ -58,6 +91,9 @@ def build_cursor_task(deployment: Mapping[str, Any]) -> dict[str, Any]:
     missing = [field for field in CURSOR_REQUIRED_TASK_FIELDS if field not in task]
     if missing:
         raise ValueError("Cursor task missing required fields: " + ", ".join(missing))
+    result_contract = _result_contract(role)
+    if result_contract is not None:
+        task["result_contract"] = result_contract
     return task
 
 

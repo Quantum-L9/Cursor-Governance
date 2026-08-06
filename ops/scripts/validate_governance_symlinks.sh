@@ -125,10 +125,10 @@ done
 
 echo ""
 echo "=== sessionEnd hook (full gate: check_governance_wiring.sh) ==="
-if bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WORKSPACE" >/dev/null 2>&1; then
+if bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WORKSPACE"; then
   pass "governance wiring + sessionEnd hook active"
 else
-  warn "governance wiring or sessionEnd hook incomplete — run /wire governance"
+  fail "governance wiring or sessionEnd hook incomplete — run setup_workspace_symlinks.sh / /wire governance"
 fi
 
 echo ""

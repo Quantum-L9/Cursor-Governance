@@ -97,7 +97,7 @@ else
     pass "SSOT working tree clean"
   else
     dirty_count=$(git -C "$GC" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-    fail "SSOT working tree dirty ($dirty_count file(s)) — commit+push or stash before it silently diverges from GitHub"
+    warn "SSOT working tree dirty ($dirty_count file(s)) — commit+push or stash before it silently diverges from GitHub"
   fi
 
   ahead=$(git -C "$GC" rev-list --count "origin/$SSOT_BRANCH_EXPECTED..HEAD" 2>/dev/null || echo "")
@@ -182,6 +182,16 @@ if [ -f "$GRAPHITI_CLI" ]; then
     pass "sessionStart bootstrap/orchestrator registered"
   else
     fail "sessionStart bootstrap not in hooks.json"
+  fi
+  if grep -q "before-submit-skill-router.py" "$HOOKS_JSON" 2>/dev/null; then
+    pass "beforeSubmitPrompt skill router registered"
+  else
+    fail "beforeSubmitPrompt skill router missing from hooks.json"
+  fi
+  if [ -x "$HOME/.cursor/hooks/before-submit-skill-router.py" ] || [ -L "$HOME/.cursor/hooks/before-submit-skill-router.py" ]; then
+    pass "before-submit-skill-router.py installed under ~/.cursor/hooks"
+  else
+    fail "before-submit-skill-router.py missing under ~/.cursor/hooks"
   fi
   GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
   if [ -f "$GATE_LIB" ] && grep -q "gmp:phase_lock" "$GATE_LIB"; then

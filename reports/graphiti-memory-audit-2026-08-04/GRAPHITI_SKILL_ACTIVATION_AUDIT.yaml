@@ -1,0 +1,53 @@
+schema: l9.graphiti-skill-activation-audit/1
+generated_at: "2026-08-04"
+source_path: skills/l9-graphiti-memory/SKILL.md
+source_revision: "Cursor-Governance /root/.cursor-governance main@3c9ba5c (== working-tree 1cccf49 for this file)"
+source_digest: "sha256:03f8885059986c86a60aa1fe4a0aca820d122a81dc2b6b0e20182afbe50aeb85"
+installed_path: /home/user/.claude/skills/l9-graphiti-memory -> /root/.cursor-governance/skills/l9-graphiti-memory
+installed_digest: "sha256:03f8885059986c86a60aa1fe4a0aca820d122a81dc2b6b0e20182afbe50aeb85  # identical to source"
+frontmatter_valid: true   # skill loaded via Skill tool; validate_skill_activation.py parses name+description
+references:
+  - "~/.cursor/graphiti.env            -> MISSING in runtime (legacy Cursor path)"
+  - ".cursor-commands/ops/graphiti/graphiti_memory_client.py -> legacy CLI, not the active hook path"
+  - "ops/graphiti/group_registry.yaml  -> present"
+  - "rules/03-graphiti-memory.mdc, 97/98/99 -> present in governance"
+  - "session_start_memory_orchestrator.sh -> Cursor SessionStart, NOT the registered claude-code hook"
+discovery_result: PASS   # symlinked into /home/user/.claude/skills; listed in .l9-managed-skills.json; loaded this session
+activation_result: PASS  # UserPromptSubmit router recommended l9-graphiti-memory; Skill tool activated it
+required_server_names:
+  doctrine_states: "(none by MCP name; SKILL.md speaks of a CLI + VPS, not an MCP server name)"
+  runtime_expects: "l9-shared-memory (per mcp.template.json)"
+observed_server_names: [github, google-calendar, vercel, anthropic-meta-x2]   # from runtime --mcp-config; l9-shared-memory ABSENT
+required_tool_names:
+  doctrine_cli: [health, resolve, search, conflicts, phase-lock, inject, write, bootstrap, stats]  # graphiti_memory_client.py subcommands
+  runtime_mcp: [memory.hydrate, memory.search, memory.ingest, memory.health, memory.conflicts, memory.phase_lock, memory.verify_phase_lock]
+observed_tool_names:
+  server_advertised: [memory.ingest, memory.hydrate, memory.search, memory.health, memory.conflicts, memory.phase_lock, memory.verify_phase_lock]  # via tools/list — MATCHES memory_client.py
+  in_session_available: []   # NO mcp__l9-shared-memory__* tools exposed to the model (RC2)
+environment_requirements:
+  doctrine: [GRAPHITI_MEMORY_ENABLED=1, GRAPHITI_WRITE_GATES, "~/.cursor/graphiti.env"]
+  runtime_actual: [L9_MEMORY_HTTP_URL(set), L9_MEMORY_CLIENT_TOKEN(set), L9_MEMORY_AGENT_ID=claude-code]
+observed_environment:
+  GRAPHITI_MEMORY_ENABLED: unset
+  GRAPHITI_WRITE_GATES: unset
+  "~/.cursor/graphiti.env": missing
+  L9_MEMORY_HTTP_URL: "https://memory.quantumaipartners.com"
+  L9_MEMORY_CLIENT_TOKEN: "set (redacted)"
+doctrine_runtime_drift: CONFIRMED
+  detail: >
+    SKILL.md is written for the legacy Cursor/self-hosted VPS path (.cursor-commands CLI, ~/.cursor/graphiti.env,
+    GRAPHITI_MEMORY_ENABLED, session_start_memory_orchestrator.sh, VPS 46.62.243.82). The active Claude Code runtime
+    uses an HTTP MCP control plane (L9_MEMORY_HTTP_URL -> l9-shared-memory, memory.* tools, memory_prefetch.py/
+    memory_client.py). SKILL.md never names the active transport, server, endpoint, or tool set. Operating the skill
+    as written does not drive the active memory path.
+shadowing_candidates:
+  - path: /home/user/l9-graphiti-memory/skill/SKILL.md
+    on_claude_skill_path: false   # inside the memory repo, not discovered by Claude Code
+  - path: /home/user/l9-graphiti-memory/tools/phase6/SKILL.md
+    on_claude_skill_path: false
+  verdict: no_active_shadowing   # exactly one skill on the discovery path
+verdict: >
+  Skill installation/discovery/activation PLUMBING is correct (installed, digest-matched, discoverable, activatable).
+  The skill is nonetheless operationally ineffective because (a) its doctrine targets a transport this environment does
+  not use (DOCTRINE_DRIFT) and (b) the interactive MCP server its read/write actions need is unregistered (RC2). Skill
+  presence is proven; skill EFFECTIVENESS is not.

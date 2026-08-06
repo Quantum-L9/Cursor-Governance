@@ -1,0 +1,57 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/deployment-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_id": {
+      "type": "string"
+    },
+    "artifact_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "environment": {
+      "type": "string"
+    },
+    "operation": {
+      "enum": [
+        "read_environment",
+        "create_deployment_record"
+      ]
+    },
+    "receipt_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "ref": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "result": {
+      "type": "object"
+    },
+    "rollback_plan_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "program-execution-adapter.deployment-receipt.v1"
+    }
+  },
+  "required": [
+    "schema",
+    "operation",
+    "repository",
+    "environment",
+    "ref",
+    "artifact_digest",
+    "approval_id",
+    "rollback_plan_digest",
+    "result",
+    "receipt_digest"
+  ],
+  "title": "Program Execution Deployment Record Receipt",
+  "type": "object"
+}

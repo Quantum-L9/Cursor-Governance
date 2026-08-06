@@ -1,0 +1,6 @@
+schema: program-execution-adapter.provider.v1
+provider_id: root-autonomy-control-plane
+canonical_path: autonomy/
+protocol_version: 1.0.0
+state_path: .l9/autonomy/runtime.sqlite3
+owns_program_state: false

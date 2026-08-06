@@ -168,6 +168,9 @@ def main() -> int:
         return 0
 
     out.parent.mkdir(parents=True, exist_ok=True)
+    if out.is_file() and out.read_text(encoding="utf-8") == registry_text:
+        print(f"CURRENT: {out}")
+        return 0
     out.write_text(registry_text, encoding="utf-8")
     print(f"WROTE: {out}")
     return 0

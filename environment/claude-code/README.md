@@ -60,6 +60,12 @@ both `disable-model-invocation: true` and `skillOverrides` in the settings templ
 A `UserPromptSubmit` hook reinforces only high-confidence routes. Claude still uses
 its native Skill tool, and routing never grants write or deployment authority.
 
+**Cursor** reuses the same `route_prompt()` scorer via
+`ops/hooks/before_submit_skill_router.py` on `beforeSubmitPrompt`, persists
+`~/.cursor/l9/skill-route.json`, and relies on always-apply
+`rules/23-l9-skill-routing.mdc` because Cursor's prompt hook cannot reliably inject
+`additional_context` today.
+
 `ops/scripts/reconcile_claude_l9_skills.py` preserves consumer-local skills and
 removes only entries recorded in its managed-state file. Validate registry,
 frontmatter, hooks, fixtures, and reconciliation with `make claude-skills-check`.

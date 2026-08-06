@@ -1,0 +1,75 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/capability-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {
+      "type": "string"
+    },
+    "adapter_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "blocked_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "evidence": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "program_lock_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "receipt_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "program-execution-adapter.capability-receipt.v1"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "UNSUPPORTED"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "adapter_id",
+    "adapter_version",
+    "status",
+    "capabilities",
+    "program_lock_digest",
+    "observed_at",
+    "expires_at",
+    "evidence",
+    "blocked_reason",
+    "receipt_digest"
+  ],
+  "title": "Program Execution Adapter Capability Receipt",
+  "type": "object"
+}

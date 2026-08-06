@@ -1,0 +1,4 @@
+schema: program-execution-adapter.fixture.v1
+requested_actions:
+- merge
+expected_error: AUTHORIZATION_INFLATION

@@ -1,15 +1,15 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-02T14:11:10Z'
+generated_utc: '2026-08-06T07:20:05Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:b30bbcc3b3ab95628a5d4960821ac9ec4a213897cc267f69b3eadd7249a0b523
+source_tree_digest: sha256:f350c4a06a282a8cb987b3be40163274358e528b1bd232ba81cd39091dd175e6
 summary:
-  total_mdc_files: 59
-  always_apply_true: 38
+  total_mdc_files: 62
+  always_apply_true: 41
   always_apply_false: 21
   no_boolean_always_apply: 0
   explicit_rule_ids: 8
-  derived_rule_ids: 51
+  derived_rule_ids: 54
   deprecated_rules: 1
 rules:
 - file: 00-global.mdc
@@ -278,6 +278,28 @@ rules:
   has_yaml_frontmatter: true
   line_count: 51
   content_digest: sha256:0d3ad3e7d98260fda81fa7798dcbb03ebb6e8d260b767f85cd7757bde7c8a5d2
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 23-l9-skill-routing.mdc
+  id: l9.rule.23.l9.skill.routing
+  id_source: derived
+  version: null
+  description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs: null
+  first_heading: L9 skill routing (Cursor)
+  has_yaml_frontmatter: true
+  line_count: 56
+  content_digest: sha256:fca5bf6694eab8ac46f30bbc2e8d829ecfd5d63a6d172e947f510b4adc5e2a08
   authority: compatibility
   context_cost: minimal
   deprecated: false
@@ -878,6 +900,28 @@ rules:
   removal_plan: null
   extends: null
   classification_source: mixed_or_derived
+- file: 87-cursor-subagent-orchestration.mdc
+  id: l9.rule.87.cursor.subagent.orchestration
+  id_source: derived
+  version: null
+  description: Govern Cursor-native concurrent subagent delegation.
+  scope: global
+  domain: governance
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs: null
+  first_heading: Cursor-native subagent orchestration (L9)
+  has_yaml_frontmatter: true
+  line_count: 18
+  content_digest: sha256:80f019c1481ca9698d9a96dce622b29d6ba07c20e6f2cee187ff89312369d0cf
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
 - file: 87-wire-workflow-guard.mdc
   id: l9.rule.87.wire.workflow.guard
   id_source: derived
@@ -1315,6 +1359,28 @@ rules:
   has_yaml_frontmatter: true
   line_count: 34
   content_digest: sha256:eb667b616bfa745b920fce1c34a8e66385ec8e585c62dca31cb3854c3bde338b
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 98-make-pr-remediation.mdc
+  id: l9.rule.98.make.pr.remediation
+  id_source: derived
+  version: null
+  description: After make pr opens a PR, spawn l9-pr-remediation poll worker
+  scope: global
+  domain: general
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs: null
+  first_heading: make pr → subscribe + PR remediation (agent contract)
+  has_yaml_frontmatter: true
+  line_count: 30
+  content_digest: sha256:53e7e259a9a77299ce766904b855d0e2c543aa4c05f77031a841e944e312d3d6
   authority: compatibility
   context_cost: minimal
   deprecated: false

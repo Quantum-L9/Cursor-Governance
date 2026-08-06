@@ -40,7 +40,7 @@ Extract durable value from conversation — lessons, patterns, errors, preferenc
 ### Memory extraction (learnings)
 
 1. Scan for lessons, patterns, errors, preferences, decisions.
-2. Write one fact per call with `--kind` and `--scope cursor`.
+2. Write one fact per call with `--kind` only (no `--scope` CLI flag; use governance `.venv` Python — see `l9-graphiti-memory`).
 3. Output extraction table.
 
 See [`references/extract-chat.md`](references/extract-chat.md).

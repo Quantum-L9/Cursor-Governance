@@ -1,11 +1,11 @@
 {
   "schema": "l9.rules-corpus-audit/v1",
-  "generated_utc": "2026-08-02T14:11:10Z",
-  "manifest_digest": "sha256:b30bbcc3b3ab95628a5d4960821ac9ec4a213897cc267f69b3eadd7249a0b523",
+  "generated_utc": "2026-08-06T07:04:26Z",
+  "manifest_digest": "sha256:6dd8b66b824c8d35f9a277d67da1ea7a027d14d5e3c3c4511e0f6fe4a2d90cfa",
   "summary": {
-    "total_rules": 59,
-    "always_rules": 38,
-    "derived_ids": 51,
+    "total_rules": 61,
+    "always_rules": 40,
+    "derived_ids": 53,
     "over_300_lines": 4,
     "over_500_lines": 1,
     "deprecated_rules": 1
@@ -26,7 +26,7 @@
       "title": "Always activation footprint requires per-rule justification",
       "severity": 3,
       "confidence": "confirmed",
-      "evidence": "38 of 59 rules (64%) resolve to always activation.",
+      "evidence": "40 of 61 rules (66%) resolve to always activation.",
       "impact": "Broad persistent context can create instruction collisions and consume agent context.",
       "recommended_action": "Review each Always rule; keep only short non-negotiable governance and irreversible-action constraints.",
       "priority_score": 61
@@ -56,7 +56,7 @@
       "title": "Most legacy rules still use derived compatibility IDs",
       "severity": 2,
       "confidence": "confirmed",
-      "evidence": "51 rules lack an explicit immutable frontmatter ID.",
+      "evidence": "53 rules lack an explicit immutable frontmatter ID.",
       "impact": "Renames cannot be distinguished reliably from replacement or deletion.",
       "recommended_action": "Add explicit IDs when rules are materially edited; do not mass-rewrite solely for metadata.",
       "priority_score": 46

@@ -1,0 +1,6 @@
+schema: program-execution-adapter.fixture.v1
+requested_actions:
+- local_write
+allowed_actions:
+- inspect
+expected_error: AUTHORIZATION_INFLATION

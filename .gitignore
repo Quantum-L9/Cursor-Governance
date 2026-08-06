@@ -90,4 +90,4 @@ WIP/*client_secret*.json
 .l9/subagent-generated-data/*.sqlite3
 .l9/subagent-generated-data/*.sqlite3-shm
 .l9/subagent-generated-data/*.sqlite3-wal
-subagent-generated-data/.runtime/
+environment/agents/generated-data/.runtime/

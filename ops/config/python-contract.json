@@ -1,0 +1,211 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Canonical, declarative inventory of Cursor-Governance Python test-suite topology. This is NOT a second version authority: exact dependency versions live in pyproject.toml and are mirrored in requirements.txt. This file declares only which suites exist, how they are isolated, and which false-positive test-shaped paths are intentionally excluded. Consumed by ops/scripts/run_python_test_suites.py (executor) and ops/scripts/validate_python_contract.py (fail-closed drift validator).",
+  "substitutions": {
+    "REPO_ROOT": "absolute path of the repository root, resolved by the runner from its own location",
+    "PYTHON": "absolute path of the current Python interpreter (sys.executable)"
+  },
+  "import_map": {
+    "jsonschema": "jsonschema",
+    "yaml": "pyyaml",
+    "pydantic": "pydantic",
+    "structlog": "structlog",
+    "langgraph": "langgraph",
+    "pytest": "pytest",
+    "xdist": "pytest-xdist",
+    "pytest_timeout": "pytest-timeout"
+  },
+  "required_dev_distributions": [
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "pytest-timeout",
+    "types-jsonschema"
+  ],
+  "non_test_exclusions": [
+    {
+      "path": "workflows/dags/test_pipeline_dag.py",
+      "reason": "Not a pytest test: a DAG module (a 'test pipeline' workflow) that only matches the test_*.py naming convention. Its import chain hits the documented-but-unimplemented tools.validation.validate_external_code gap (2026-07-19 decision: leave broken, do not stub). Ignored via pyproject addopts so root collection does not fail on a dormant path."
+    },
+    {
+      "path": "skills/l9-cli-optimization/scripts/self_test.py",
+      "reason": "Not a pytest test: a self-check script for the l9-cli-optimization skill that matches *_test.py-adjacent discovery patterns. Ignored via pyproject addopts."
+    }
+  ],
+  "suites": [
+    {
+      "id": "repo-root",
+      "kind": "pytest",
+      "working_directory": ".",
+      "owned_paths": [
+        "."
+      ],
+      "env": {
+        "TESTING": "true",
+        "PYTHONPATH": "${REPO_ROOT}"
+      },
+      "append_user_pytest_args": true,
+      "allow_exit_5": true,
+      "profiles": {
+        "local": {
+          "argv": [
+            ".",
+            "--ignore=environment/claude-code/autonomy",
+            "--ignore=environment/agents/generated-data/tests",
+            "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests"
+          ]
+        },
+        "ci": {
+          "argv": [
+            ".",
+            "--ignore=environment/claude-code/autonomy",
+            "--ignore=environment/agents/generated-data/tests",
+            "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests",
+            "-n",
+            "auto",
+            "--cov=.",
+            "--cov-report=xml",
+            "--cov-report=term-missing",
+            "--cov-fail-under=0",
+            "--timeout=300",
+            "--tb=short",
+            "-v"
+          ]
+        }
+      },
+      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold."
+    },
+    {
+      "id": "claude-code-autonomy",
+      "kind": "pytest",
+      "working_directory": ".",
+      "owned_paths": [
+        "environment/claude-code/autonomy/tests"
+      ],
+      "env": {
+        "TESTING": "true",
+        "PYTHONPATH": "${REPO_ROOT}/environment/claude-code"
+      },
+      "append_user_pytest_args": true,
+      "allow_exit_5": true,
+      "profiles": {
+        "local": {
+          "argv": [
+            "environment/claude-code/autonomy/tests",
+            "-o",
+            "addopts="
+          ]
+        },
+        "ci": {
+          "argv": [
+            "environment/claude-code/autonomy/tests",
+            "-o",
+            "addopts=",
+            "-n",
+            "auto",
+            "--timeout=300",
+            "--tb=short",
+            "-v"
+          ]
+        }
+      },
+      "rationale": "Root autonomy/ (W7 control plane) and environment/claude-code/autonomy/ (Claude Code bounded-concurrency runtime) share the top-level package name, so this suite runs with PYTHONPATH=environment/claude-code to bind the correct package. '-o addopts=' clears root pytest settings so the root active-suite ignores cannot reintroduce package shadowing here. CI profile keeps xdist and the 300s timeout with no root coverage arguments."
+    },
+    {
+      "id": "subagent-generated-data-wave3",
+      "kind": "command",
+      "working_directory": ".",
+      "owned_paths": [
+        "environment/agents/generated-data/tests"
+      ],
+      "env": {},
+      "append_user_pytest_args": false,
+      "allow_exit_5": false,
+      "profiles": {
+        "local": {
+          "argv": [
+            "${PYTHON}",
+            "environment/agents/generated-data/tests/run_wave3_tests.py"
+          ]
+        },
+        "ci": {
+          "argv": [
+            "${PYTHON}",
+            "environment/agents/generated-data/tests/run_wave3_tests.py"
+          ]
+        }
+      },
+      "rationale": "The Wave 3 generated-data suite is globally ignored by root pytest and driven by its own unittest orchestrator (run_wave3_tests.py), which shells out to `python -m unittest discover` over the conformance/routing/negative/golden directories. Run as an opaque command in both profiles: no pytest arguments are appended and any nonzero result fails the whole runner."
+    },
+    {
+      "id": "program-execution-controller",
+      "kind": "command_sequence",
+      "working_directory": "environment/program-execution/core/program-execution-controller-template",
+      "owned_paths": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests",
+        "environment/program-execution/core/program-execution-controller-template/scripts/validate_controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/run_negative_tests.py"
+      ],
+      "env": {
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "append_user_pytest_args": false,
+      "allow_exit_5": false,
+      "profiles": {
+        "local": {
+          "argv": [
+            [
+              "${PYTHON}",
+              "scripts/validate_controller.py",
+              ".",
+              "--mode",
+              "template"
+            ],
+            [
+              "${PYTHON}",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "scripts/tests",
+              "-p",
+              "test_*.py",
+              "-v"
+            ],
+            [
+              "${PYTHON}",
+              "scripts/run_negative_tests.py"
+            ]
+          ]
+        },
+        "ci": {
+          "argv": [
+            [
+              "${PYTHON}",
+              "scripts/validate_controller.py",
+              ".",
+              "--mode",
+              "template"
+            ],
+            [
+              "${PYTHON}",
+              "-m",
+              "unittest",
+              "discover",
+              "-s",
+              "scripts/tests",
+              "-p",
+              "test_*.py",
+              "-v"
+            ],
+            [
+              "${PYTHON}",
+              "scripts/run_negative_tests.py"
+            ]
+          ]
+        }
+      },
+      "rationale": "Program Execution controller validation. Its VALIDATION.md states fresh-process isolation is intentional because several fixtures create and intentionally abandon or fail Git worktrees; therefore this suite is a command_sequence run in fresh processes and is NOT collected by root pytest or run through xdist. The three commands run sequentially from the controller-template directory; execution stops on the first failed command and preserves its exact exit status. PYTHONDONTWRITEBYTECODE=1 is required because validate_controller.py rejects any __pycache__/.pyc under the template as 'compiled Python debris'; without it the unittest-discover step would leave bytecode that the negative-test step's controller validation then fails on (matches the subsystem's own PYTHONDONTWRITEBYTECODE=1 Makefile convention)."
+    }
+  ]
+}

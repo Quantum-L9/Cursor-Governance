@@ -1,11 +1,20 @@
 ---
 name: end-session
-version: "2.1.0"
+version: "2.2.0"
 description: "Close Cursor session — structured handoff, memory write, Redis resume context, governance backup"
 auto_chain: extract-chat
+skill: l9-end-session
+graphiti_skill: l9-graphiti-memory
 ---
 
 # /end-session — Session Shutdown
+
+## Agent preload (required)
+
+1. Load [`skills/l9-end-session/SKILL.md`](../skills/l9-end-session/SKILL.md)
+2. Load [`skills/l9-graphiti-memory/SKILL.md`](../skills/l9-graphiti-memory/SKILL.md) for **venv Python** + CLI flags
+3. Execute the Graphiti CLI **only** via governance `.venv` — never bare `python3`
+4. Never pass `--scope` / `--scope cursor` to `graphiti_memory_client.py write`
 
 ## WHAT IT DOES
 
@@ -17,7 +26,7 @@ Structured close-out so the next window resumes with zero amnesia:
 4. **Governance backup** — push `.cursor-commands` (GlobalCommands) SSOT to `Quantum-L9/Cursor-Governance`
 5. **Confirmation** — print a closed-session summary
 
-Full protocol spec: [`end-session.yaml`](../end-session.yaml) (v2.1). Skill entry point: [`skills/l9-end-session/SKILL.md`](../skills/l9-end-session/SKILL.md).
+Full protocol spec: [`end-session.yaml`](../end-session.yaml) (v2.1+). Skill entry point: [`skills/l9-end-session/SKILL.md`](../skills/l9-end-session/SKILL.md).
 
 ---
 
@@ -28,8 +37,14 @@ Full protocol spec: [`end-session.yaml`](../end-session.yaml) (v2.1). Skill entr
 Primary path — Graphiti (T1, canonical):
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
+GOV="${HOME}/.cursor-governance"
+GRAPHITI_PY="${GOV}/.venv/bin/python"
+CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
+[ -x "$GRAPHITI_PY" ] || GRAPHITI_PY="${HOME}/Cursor-Governance/.venv/bin/python"
+[ -f "$CLIENT" ] || CLIENT="${HOME}/Cursor-Governance/ops/graphiti/graphiti_memory_client.py"
+
+"$GRAPHITI_PY" "$CLIENT" health
+"$GRAPHITI_PY" "$CLIENT" write \
   "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
   --kind pickup_context
 ```
@@ -49,10 +64,12 @@ git -C "$CURSOR_PROJECT_DIR" check-ignore -q memory-bank/activeContext.md && \
 
 ### Phase 2 — LESSONS & ERRORS (optional — only if something non-obvious happened)
 
+Use the **same** Graphiti client (not deprecated `cursor_memory_client.py`):
+
 ```bash
-python3 agents/cursor/cursor_memory_client.py write \
+"$GRAPHITI_PY" "$CLIENT" write \
   "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" --kind lesson
-python3 agents/cursor/cursor_memory_client.py write \
+"$GRAPHITI_PY" "$CLIENT" write \
   "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" --kind error
 ```
 
@@ -69,8 +86,9 @@ If `UNCOMMITTED > 0`, surface it in the confirmation output and ask whether to c
 ### Phase 4 — GOVERNANCE GITHUB BACKUP (required)
 
 ```bash
-bash .cursor-commands/ops/scripts/backup_to_github.sh \
+bash "${GOV}/ops/scripts/backup_to_github.sh" \
   "chore(governance): end-session $(date +%Y-%m-%d)"
+# or: bash .cursor-commands/ops/scripts/backup_to_github.sh "…"
 ```
 
 Verify:
@@ -98,7 +116,7 @@ Skip only with `GOVERNANCE_BACKUP_SKIP=1`.
 ## RESUME AT NEXT SESSION
 
 ```bash
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
+"$GRAPHITI_PY" "$CLIENT" search "PICKUP|" --limit 3
 ```
 
 Handled automatically by `/start-session`.

@@ -46,20 +46,36 @@ def main() -> int:
         import memory_client as mc
 
         bundle = mc.hydrate(task, namespaces, limit=8)
-        records = bundle.get("records") or bundle.get("hits") or []
+        # memory.hydrate returns context under `sections` (HydrationResult); it has
+        # no `records`/`hits` key. Read via the one-contract accessor so this hook
+        # cannot drift from the server schema. See ADR-0003/ADR-0004.
+        sections = mc.hydrated_sections(bundle)
         st.write_receipt(
             contract,
             session_id,
-            {"namespaces": namespaces, "hydrated_records": len(records), "status": "prefetched"},
+            {"namespaces": namespaces, "hydrated_records": len(sections), "status": "prefetched"},
         )
         lines = [
             "L9 memory: ENFORCED. Prefetch complete for namespaces "
-            f"{', '.join(namespaces)} ({len(records)} record(s) hydrated).",
+            f"{', '.join(namespaces)} ({len(sections)} section(s) hydrated).",
+        ]
+        # Bound injected context by the server-provided token budget (~4 chars/
+        # token) so a large hydration cannot overrun the SessionStart budget.
+        token_budget = int(bundle.get("token_budget") or 1200)
+        context = mc.render_sections(bundle, max_chars=max(500, token_budget * 4))
+        if context:
+            # Actually surface the retrieved memory to the session — a successful
+            # prefetch that injects nothing is indistinguishable from no memory.
+            lines.append("--- prefetched memory (l9-shared-memory) ---")
+            lines.append(context)
+        for warning in bundle.get("warnings") or []:
+            lines.append(f"memory warning: {warning}")
+        lines.append(
             "Governed writes (authority-file edits, git commit/push/merge, PR "
             "create/merge) require a conflict-checked phase-lock: python3 "
             "environment/claude-code/hooks/memory_lock.py acquire --namespace "
-            f'{namespaces[0]} --task "<change>". The PreToolUse gate denies them otherwise.',
-        ]
+            f'{namespaces[0]} --task "<change>". The PreToolUse gate denies them otherwise.'
+        )
         _emit("\n".join(lines))
     except Exception as exc:  # fail-open: never block session start
         _emit(

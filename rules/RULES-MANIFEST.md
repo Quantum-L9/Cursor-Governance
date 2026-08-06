@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-06T07:20:05Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **59** |
-| `alwaysApply: true` | **38** |
+| Total MDC files | **62** |
+| `alwaysApply: true` | **41** |
 | `alwaysApply: false` | **21** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **8** |
-| Derived compatibility IDs | **51** |
+| Derived compatibility IDs | **54** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -30,6 +30,7 @@ Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | auto_attached | 181 | `bd8fad3dd090` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | auto_attached | 186 | `8f9921b041c0` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 51 | `0d3ad3e7d982` |
+| `23-l9-skill-routing.mdc` | `l9.rule.23.l9.skill.routing` | global | governance | always | 56 | `fca5bf6694ea` |
 | `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | always | 168 | `e27ac2cc723b` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | auto_attached | 143 | `38c1291f4681` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | auto_attached | 180 | `2af64ed1e71a` |
@@ -54,6 +55,7 @@ Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | ci | always | 123 | `7225ed66e89f` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `e6cc99f83500` |
+| `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
 | `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
 | `88-perplexity-run-harness.mdc` | `l9.rule.88.perplexity.run.harness` | global | governance | always | 51 | `e599b2b56828` |
@@ -73,6 +75,7 @@ Generated: `2026-08-02T14:11:10Z`. Source: `rules/*.mdc`.
 | `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 29 | `127f9ae133ff` |
 | `97-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | governance | agent_requested | 48 | `6d019ab496ca` |
 | `98-graphiti-memory-gate.mdc` | `l9.rule.98.graphiti.memory.gate` | global | memory | always | 34 | `eb667b616bfa` |
+| `98-make-pr-remediation.mdc` | `l9.rule.98.make.pr.remediation` | global | general | always | 30 | `53e7e259a9a7` |
 | `99-execute-as-instructed.mdc` | `l9.rule.99.execute.as.instructed` | global | general | always | 41 | `8a91df91897f` |
 | `99-graphiti-temporal.mdc` | `l9.rule.99.graphiti.temporal` | global | memory | always | 24 | `7689319b2562` |
 | `99-incident-report.mdc` | `l9.rule.99.incident.report` | global | deployment | always | 463 | `9674bb08f2bf` |

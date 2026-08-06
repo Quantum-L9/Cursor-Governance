@@ -251,10 +251,17 @@ def render_markdown(manifest: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def write_if_changed(path: Path, content: str) -> None:
+def write_if_changed(path: Path, content: str) -> bool:
     if path.exists() and path.read_text(encoding="utf-8") == content:
-        return
+        return False
     path.write_text(content, encoding="utf-8")
+    return True
+
+
+def _strip_volatile(manifest: dict[str, Any]) -> dict[str, Any]:
+    cleaned = dict(manifest)
+    cleaned.pop("generated_utc", None)
+    return cleaned
 
 
 def main() -> int:
@@ -264,14 +271,36 @@ def main() -> int:
     root = args.root.resolve()
     manifest = build_manifest(root)
     rules_dir = root / "rules"
+    json_path = rules_dir / "RULES-MANIFEST.json"
+
+    # Keep generated_utc stable when rule digests are unchanged so autofix hooks
+    # (pre-commit / make pr) are idempotent and do not churn every run.
+    if json_path.is_file():
+        try:
+            existing = json.loads(json_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            existing = None
+        if isinstance(existing, dict) and _strip_volatile(existing) == _strip_volatile(manifest):
+            print(
+                "CURRENT: "
+                f"{manifest['summary']['total_mdc_files']} rules; "
+                f"always={manifest['summary']['always_apply_true']}"
+            )
+            return 0
+
     json_text = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
     yaml_text = yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True, width=1000)
     markdown_text = render_markdown(manifest)
-    write_if_changed(rules_dir / "RULES-MANIFEST.json", json_text)
-    write_if_changed(rules_dir / "RULES-MANIFEST.yaml", yaml_text)
-    write_if_changed(rules_dir / "RULES-MANIFEST.md", markdown_text)
+    wrote = any(
+        [
+            write_if_changed(json_path, json_text),
+            write_if_changed(rules_dir / "RULES-MANIFEST.yaml", yaml_text),
+            write_if_changed(rules_dir / "RULES-MANIFEST.md", markdown_text),
+        ]
+    )
+    label = "GENERATED" if wrote else "CURRENT"
     print(
-        "GENERATED: "
+        f"{label}: "
         f"{manifest['summary']['total_mdc_files']} rules; "
         f"always={manifest['summary']['always_apply_true']}"
     )

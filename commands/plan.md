@@ -1,7 +1,7 @@
 ---
 name: plan
-version: "1.1.0"
-description: "Create deep execution plan before action (pre/final validation, milestones, checkpoints, checklist)"
+version: "1.2.0"
+description: "Create deep execution plan before action (pre/final validation, doc/root surface impact, milestones, checkpoints, checklist)"
 auto_chain: ynp
 ---
 
@@ -15,11 +15,12 @@ Create a structured plan before implementation. Delegates template authority to 
 2. Define objective + falsifiable success
 3. Identify scope
 4. List TODO items with depth
-5. Map dependencies, milestones, checkpoints
-6. Build checklist
-7. Estimate effort + risks
-8. Define Final Validation (mandatory; `make pr-check` when code in scope)
-9. Auto-chain to `/ynp`
+5. Doc / Root Surface Impact (mandatory) — README, AGENTS.md, and related surfaces; Update TODOs or N/A with reason
+6. Map dependencies, milestones, checkpoints
+7. Build checklist (include doc/root items or N/A)
+8. Estimate effort + risks
+9. Define Final Validation (mandatory; `make pr-check` when code in scope)
+10. Auto-chain to `/ynp`
 
 Planning-only — do not edit files, commit, or push from `/plan`.
 
@@ -33,13 +34,14 @@ Follow skill `l9-plan`. Required sections (fail-closed if any missing):
 2. Scope in/out
 3. Pre-Validation
 4. TODO Plan (+ Depth)
-5. Dependencies
-6. Milestones
-7. Checkpoints
-8. Checklist
-9. Risks
-10. Estimate
-11. Final Validation
+5. Doc / Root Surface Impact
+6. Dependencies
+7. Milestones
+8. Checkpoints
+9. Checklist
+10. Risks
+11. Estimate
+12. Final Validation
 
 ### Gate commands (governed workspaces)
 
@@ -79,6 +81,11 @@ Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
 ### Depth
 {contracts preserved, evidence, root-cause notes}
 
+### Doc / Root Surface Impact (mandatory)
+| Surface | Action | Files / notes |
+|---------|--------|---------------|
+| README.md / AGENTS.md / … | Update \| N/A | {TODO ids or reason} |
+
 ### Dependencies
 {graph}
 
@@ -92,6 +99,7 @@ Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
 
 ### Checklist
 - [ ] …
+- [ ] Doc / Root Surface Impact recorded
 - [ ] Final Validation PASS
 
 ### Risks
@@ -106,6 +114,7 @@ Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
 | Check | Command | Pass criteria |
 |-------|---------|---------------|
 | Clean scanners | `make pr-check` (when code in scope) | PASS; no commit/push |
+| Doc surfaces | Impact table complete | Update or N/A with reason |
 ```
 
 → **Auto-chains to /ynp** (recommends /gmp or /forge)

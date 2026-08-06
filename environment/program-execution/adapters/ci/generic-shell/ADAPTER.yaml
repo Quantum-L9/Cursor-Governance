@@ -1,0 +1,35 @@
+schema: program-execution-adapter.spec.v1
+adapter_id: ci-generic-shell
+adapter_version: 1.0.0
+adapter_kind: verifier
+contract_family: program-execution-system.v2
+provider:
+  type: subprocess
+  protocol_version: 1.0.0
+capabilities:
+  target_kinds:
+  - git_repository
+  - candidate_directory
+  actions:
+  - verify
+  async_execution: false
+  cancellation: unsupported
+  structured_output: true
+  isolated_execution: true
+  remote_credentials: forbidden
+identity:
+  binding: controller_contract
+  memory_write: forbidden
+security:
+  default_deny: true
+  may_narrow_authority: true
+  may_widen_authority: false
+  autonomous_merge: false
+  force_push: false
+  direct_graphiti_write: false
+receipts:
+  lifecycle_schema: program-execution-adapter.lifecycle-receipt.v1
+  terminal_core_receipt: verification
+status:
+  default: active
+  blocked_reason: null

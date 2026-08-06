@@ -27,6 +27,10 @@
       {
         "command": "./hooks/graphiti-reset-generation.sh",
         "timeout": 5
+      },
+      {
+        "command": "./hooks/before-submit-skill-router.py",
+        "timeout": 5
       }
     ],
     "postToolUse": [

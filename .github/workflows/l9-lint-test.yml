@@ -20,12 +20,12 @@ on:
 # ── Consumer config ─────────────────────────────────────────────────────────
 env:
   PYTHON_VERSION: "3.12"
+  # SOURCE_DIR scopes the lint job's mypy run. Test-suite topology, per-suite
+  # PYTHONPATH, coverage output, and the advisory coverage threshold are NOT set
+  # here — they are declared once in ops/config/python-contract.json and executed
+  # by ops/scripts/run_python_test_suites.py (the ci profile keeps root coverage.xml
+  # + term-missing and the advisory 0% threshold).
   SOURCE_DIR: "."
-  # No tests/ convention yet (2 test_*.py files total); pytest discovers from
-  # root, scoped by [tool.pytest.ini_options] norecursedirs in pyproject.toml.
-  TEST_DIR: "."
-  # Advisory only — no meaningful coverage baseline exists yet for this repo.
-  COVERAGE_THRESHOLD: "0"
 
 permissions:
   contents: read
@@ -62,15 +62,21 @@ jobs:
       - name: Install lint tools
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
-          if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
-          command -v ruff >/dev/null 2>&1 || pip install ruff
-          command -v mypy >/dev/null 2>&1 || pip install mypy
-          command -v uv >/dev/null 2>&1 || pip install uv
+          # Single locked toolchain — ruff/mypy (and their type stubs) are exact-pinned
+          # in [project.optional-dependencies].dev and uv.lock. Sync the locked env
+          # (same as `make venv` and the test job) instead of floating `pip install
+          # ruff/mypy`, so CI-lint runs the same versions as local `make lint` and the
+          # lock authority. The uv bootstrap is version-pinned and wheels-only; `uv sync`
+          # uses --no-build and every `uv run` uses --frozen --no-build, so dependency
+          # installation never resolves an unlocked version or builds from source
+          # (SonarCloud githubactions S8541/S8544). `python -m pip` targets the
+          # setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
       - name: ruff check
-        run: ruff check . --output-format=github
+        run: uv run --frozen --no-build ruff check . --output-format=github
       - name: ruff format --check
-        run: ruff format --check .
+        run: uv run --frozen --no-build ruff format --check .
       - name: mypy
         # Advisory only (2026-07-28): 328 pre-existing type errors across 15 files
         # (see TODO.md "mypy debt") predate this step ever going green — ruff was
@@ -79,9 +85,12 @@ jobs:
         # in the Actions UI without blocking merges until the debt pass lands.
         continue-on-error: true
         run: |
-          mypy "${SOURCE_DIR}" \
+          # Locked mypy==2.3.0 with type stubs (types-PyYAML, types-jsonschema) already
+          # provided by the dev extra — no `--install-types` network fetch needed. Mirrors
+          # `make lint-mypy`.
+          uv run --frozen --no-build mypy "${SOURCE_DIR}" \
             --show-error-codes --pretty \
-            --install-types --non-interactive --ignore-missing-imports
+            --ignore-missing-imports
       - name: uv lock --check (lockfile drift guard)
         # Independent, second check of the same invariant ops/scripts/backup_to_github.sh
         # now enforces before every automated commit — catches uv.lock drift introduced
@@ -137,49 +146,23 @@ jobs:
           set -euo pipefail
           # [tool.uv] package = false — this repo is not an installable package, so
           # `pip install -e ".[dev]"` cannot install [project.dependencies]. Own
-          # project + dev deps via the lockfile (same as `make venv`).
-          # pytest-xdist / pytest-timeout are CI-only and not in uv.lock today.
-          python -m pip install --upgrade pip
-          command -v uv >/dev/null 2>&1 || pip install uv
-          uv sync --locked --extra dev
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
-          export PATH="$PWD/.venv/bin:$PATH"
-          python -c "import xdist" 2>/dev/null || pip install pytest-xdist
-          python -c "import pytest_timeout" 2>/dev/null || pip install pytest-timeout
+          # project + dev deps via the lockfile (same as `make venv`). pytest-xdist
+          # and pytest-timeout are now exact-pinned in the dev extra and uv.lock, so
+          # there is no floating fallback install — the locked sync provides them. The uv
+          # bootstrap is version-pinned and wheels-only; `uv sync` uses --no-build and every
+          # `uv run` uses --frozen --no-build (SonarCloud S8541/S8544). `python -m pip`
+          # targets the setup-python interpreter this job runs on.
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
       - name: pytest with coverage
         env:
           TESTING: "true"
         run: |
-          # GitHub Actions runs `bash -e {0}` for this step regardless of any
-          # `set` call inside the script, so `pytest ... || status=$?` (not a
-          # bare command) is required to capture a non-zero exit without
-          # errexit aborting the script before the status check below runs.
-          #
-          # Root autonomy/ shadows environment/claude-code/autonomy (same package
-          # name). Run the repo suite first, then the Claude Code suite with a
-          # dedicated PYTHONPATH — see ops/scripts/run_pytest_suites.sh.
-          status=0
-          PYTHONPATH=. pytest "${TEST_DIR}" \
-            --ignore=environment/claude-code/autonomy \
-            -n auto \
-            --cov="${SOURCE_DIR}" \
-            --cov-report=xml --cov-report=term-missing \
-            --cov-fail-under="${COVERAGE_THRESHOLD}" \
-            --timeout=300 --tb=short -v || status=$?
-          if [ "$status" -eq 5 ]; then
-            echo "::notice::repo pytest suite collected zero tests (exit 5)"
-            status=0
-          elif [ "$status" -ne 0 ]; then
-            exit "$status"
-          fi
-          PYTHONPATH=environment/claude-code pytest \
-            environment/claude-code/autonomy/tests \
-            -o addopts= \
-            -n auto \
-            --timeout=300 --tb=short -v || status=$?
-          status=${status:-0}
-          if [ "$status" -eq 5 ]; then
-            echo "::notice::Claude Code autonomy suite collected zero tests (exit 5)"
-            exit 0
-          fi
-          exit "$status"
+          # Single canonical entrypoint: the registry-driven runner executes every
+          # active suite (root, Claude Code autonomy, subagent-generated-data Wave 3,
+          # Program Execution controller) with the correct per-suite PYTHONPATH,
+          # profiles, coverage, and exit-5 handling. Suite topology lives in
+          # ops/config/python-contract.json — never duplicated here. The runner also
+          # runs the fail-closed drift validator before any suite. The ci profile
+          # keeps root coverage.xml + term-missing and the advisory 0% threshold.
+          uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile ci

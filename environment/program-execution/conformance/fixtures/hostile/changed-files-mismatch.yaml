@@ -1,0 +1,6 @@
+schema: program-execution-adapter.fixture.v1
+declared:
+- src/a.py
+observed:
+- src/b.py
+expected_error: SCOPE_VIOLATION

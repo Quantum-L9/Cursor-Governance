@@ -1,0 +1,100 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://quantum-l9.github.io/schemas/org-policy-release.schema.json
+title: Quantum-L9 Organization Policy Release Record
+description: >-
+  Contract for an immutable release record. This schema is not itself a
+  populated release receipt.
+type: object
+required:
+  - schema_version
+  - policy_id
+  - policy_version
+  - canonical_repository
+  - canonical_path
+  - canonical_commit
+  - policy_digest
+  - schema_digest
+  - assertion_registry_digest
+  - released_at
+  - approval_reference
+  - compatibility
+properties:
+  schema_version:
+    type: integer
+    const: 1
+  policy_id:
+    type: string
+    pattern: "^[a-z0-9][a-z0-9._-]*$"
+  policy_version:
+    type: string
+    pattern: "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+  canonical_repository:
+    type: string
+    const: Quantum-L9/Cursor-Governance
+  canonical_path:
+    type: string
+    const: ORG_INVARIANTS.yaml
+  canonical_commit:
+    type: string
+    pattern: "^[0-9a-f]{40}$"
+  policy_digest:
+    $ref: "#/$defs/sha256"
+  schema_digest:
+    $ref: "#/$defs/sha256"
+  assertion_registry_digest:
+    $ref: "#/$defs/sha256"
+  released_at:
+    type: string
+    format: date-time
+  approval_reference:
+    type: object
+    required:
+      - type
+      - value
+    properties:
+      type:
+        enum:
+          - github_pull_request
+          - signed_change_record
+      value:
+        type: string
+        minLength: 1
+    additionalProperties: false
+  signing_or_attestation:
+    type: object
+    properties:
+      signature_required:
+        type: boolean
+      attestation_required:
+        type: boolean
+      signature_reference:
+        type: string
+      attestation_reference:
+        type: string
+    additionalProperties: false
+  compatibility:
+    type: object
+    required:
+      - minimum_consumer_schema
+      - breaking_change
+    properties:
+      minimum_consumer_schema:
+        type: integer
+        minimum: 1
+      breaking_change:
+        type: boolean
+      supersedes_policy_version:
+        type:
+          - string
+          - "null"
+      migration_reference:
+        type:
+          - string
+          - "null"
+    additionalProperties: false
+additionalProperties: false
+$defs:
+  sha256:
+    type: string
+    pattern: "^sha256:[0-9a-f]{64}$"

@@ -1,0 +1,49 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/host-envelope.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "adapter_id": {
+      "type": "string"
+    },
+    "artifacts": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "contract_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "envelope_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "producer_identity": {
+      "type": "string"
+    },
+    "program_lock_digest": {
+      "pattern": "^(sha256:)?[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "program-execution-adapter.host-envelope.v1"
+    },
+    "task_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "adapter_id",
+    "program_lock_digest",
+    "contract_digest",
+    "task_id",
+    "producer_identity",
+    "artifacts",
+    "envelope_digest"
+  ],
+  "title": "Program Execution Host Envelope",
+  "type": "object"
+}

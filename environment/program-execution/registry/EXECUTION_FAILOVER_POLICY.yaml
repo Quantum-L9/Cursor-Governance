@@ -1,0 +1,18 @@
+schema: program-execution-adapter.failover-policy.v1
+maximum_automatic_retries: 2
+retryable:
+- HOST_TRANSIENT
+- NETWORK_TRANSIENT
+- RATE_LIMITED
+non_retryable:
+- AUTHORIZATION_INFLATION
+- SCOPE_VIOLATION
+- IDENTITY_BINDING_MISSING
+- PROGRAM_LOCK_STALE
+- CAPABILITY_UNSUPPORTED
+- MALFORMED_OUTPUT
+rules:
+- new_dispatch_id_per_retry
+- no_mutating_failover_after_partial_mutation_without_proven_rollback
+- no_github_write_failover_across_principals
+- no_deployment_failover_across_targets

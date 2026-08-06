@@ -1,0 +1,88 @@
+activation_model:
+  strong_signals:
+    - messy_or_fragmented_repository_control_plane
+    - manifest_or_ci_behind_live_capabilities
+    - audit_to_implementation_and_pr_request
+    - duplicated_dependency_test_or_registry_authority
+    - ignored_tests_dead_wiring_or_ad_hoc_installs
+  reject_signals:
+    - audit_only
+    - narrow_feature_work
+    - cosmetic_cleanup
+    - no_repository_access_or_write_authority
+    - policy_or_security_bypass
+  false_positive_risks:
+    - large_feature_program_mistaken_for_control_plane_renovation
+    - intentional_dormancy_mistaken_for_dead_wiring
+authority_model:
+  order:
+    - user_and_safety
+    - live_base_commit
+    - executable_evidence
+    - repository_contracts
+    - validated_artifacts
+    - prose_and_templates
+    - labeled_inference
+  conflict_rule: higher_authority_wins_and_every_override_requires_a_recorded_reconciliation_decision
+expert_heuristics:
+  - condition: ci_installs_a_tool_outside_the_lock_contract
+    judgment: ci_has_become_a_second_environment_authority
+    action: declare_and_lock_the_tool_then_remove_the_fallback_install
+  - condition: a_test_path_is_globally_ignored
+    judgment: the_suite_is_ungoverned_until_explicit_execution_is_proven
+    action: register_and_run_it_or_prove_it_is_not_active_test_content
+  - condition: local_and_ci_duplicate_test_or_build_orchestration
+    judgment: topology_will_drift
+    action: make_ci_invoke_the_repository_owned_runner
+  - condition: noninstallable_repo_has_packaging_metadata
+    judgment: actual_bootstrap_behavior_not_aesthetic_preference_decides
+    action: prove_package_manager_semantics_before_removing_or_retaining_metadata
+  - condition: multiple_source_roots_share_a_package_name
+    judgment: broad_discovery_is_unsafe
+    action: isolate_suites_or_package_boundaries_instead_of_expanding_ignores
+  - condition: docs_claim_active_capability_without_executable_reachability
+    judgment: capability_is_dead_or_dormant_by_design
+    action: wire_and_test_it_or_record_intentional_dormancy_in_the_canonical_registry
+  - condition: inherited_debt_prevents_a_global_strict_gate
+    judgment: fake_strictness_hides_more_than_it_protects
+    action: scope_and_ratchet_the_gate_without_suppressing_failures
+adapter_map:
+  core_default: evidence_led_control_plane_renovation
+  adapters:
+    - python_uv
+    - node_typescript
+    - polyglot_monorepo
+failure_modes:
+  - plan_only_output: require_pr_or_blocked_pack
+  - wrapper_accumulation: require_superseded_authority_list
+  - hidden_regression: require_before_after_and_checkpoint_evidence
+  - false_green: prohibit_bypasses_and_unregistered_suites
+  - scope_explosion: enforce_contract_scope_and_cycle_limit
+leverage_points:
+  - name: one_authority_per_concern
+    score: 10
+  - name: local_ci_entrypoint_parity
+    score: 10
+  - name: registry_and_drift_validation
+    score: 9
+  - name: green_checkpoint_commits
+    score: 8
+  - name: pr_remediation_until_green
+    score: 9
+evidence_hierarchy:
+  conflict_handling: explicit_reconciliation_record
+  staleness_handling: reread_live_files_and_pin_base_commit
+  unknown_handling: block_architectural_or_safety_sensitive_edits
+  proof_floor: deterministic_audit_plus_manual_architecture_review
+exemplary_gate_results:
+  activation_precision: PASS
+  adapter_architecture: PASS
+  evidence_hierarchy: PASS
+  doctrine_extraction: PASS
+  expert_heuristics: PASS
+  failure_modes: PASS
+  leverage_model: PASS
+  self_improvement_hook: PASS
+  compiler_enforcement_gates: PASS
+  skill_intelligence_report: PASS
+tier_decision: exemplary

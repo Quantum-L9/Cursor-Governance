@@ -1,0 +1,12 @@
+schema: program-execution-adapter.concurrency-policy.v1
+limits:
+  max_active_dispatches: 4
+  max_mutating_dispatches: 2
+  max_mutating_dispatches_per_target_lineage: 1
+  max_remote_action_dispatches: 1
+  max_deployment_dispatches: 1
+  max_github_actions_verifications: 4
+weights:
+  claude-code-bounded-autonomy:
+    dispatch: 1
+    mutation: 2

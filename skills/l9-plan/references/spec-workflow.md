@@ -2,10 +2,10 @@
 l9_schema: 1
 parent: l9-plan
 origin: migrated-from spec command v7.1.0
-tags: [spec, specification, architecture, acceptance, validation]
+tags: [spec, specification, architecture, acceptance, validation, doc-surface]
 status: active
-version: 2.1.0
-updated: 2026-08-02
+version: 2.2.0
+updated: 2026-08-06
 /L9_META -->
 
 # Spec Workflow — Specification Generator
@@ -20,7 +20,8 @@ QUESTIONS:
 ├── Who are the users?
 ├── What are the constraints?
 ├── What already exists to leverage?
-└── What does success look like?
+├── What does success look like?
+└── Which root/agent docs would go stale if this ships?
 ```
 
 ## Spec sections
@@ -31,11 +32,12 @@ QUESTIONS:
 4. Components — table
 5. Data flow
 6. Operations — deploy, monitor, rollback
-7. Risks
-8. Acceptance criteria (checkboxes)
-9. Phases — scope and GMP count
-10. Pre-Validation (mandatory) — baseline gates before build
-11. Final Validation (mandatory) — post-build gates
+7. Doc / Root Surface Impact — README, AGENTS.md, and related surfaces (Update paths or N/A with reason)
+8. Risks
+9. Acceptance criteria (checkboxes; include doc-surface AC when contracts change)
+10. Phases — scope and GMP count
+11. Pre-Validation (mandatory) — baseline gates before build
+12. Final Validation (mandatory) — post-build gates
 
 ## Validation gates (mandatory)
 
@@ -47,6 +49,7 @@ Before implementation begins, record:
 |-------|------------------|---------------|
 | Target bind | Resolve authorized roots | Unambiguous scope |
 | Baseline | Inventory current behavior/contracts | Evidence captured |
+| Doc / Root Surface Impact | Probe README/AGENTS (+ present peers) | Update list or N/A with reason |
 | Clean gate (code in scope) | `make pr-check` | PASS — changed-files scanners; **no commit, no push** |
 
 ### Final Validation
@@ -56,10 +59,13 @@ Before claiming the spec is execution-complete / implementation-ready:
 | Check | Command / action | Pass criteria |
 |-------|------------------|---------------|
 | Acceptance | Map AC to evidence | All in-scope AC met or waived |
+| Doc surfaces | Scheduled updates applied or N/A still valid | No stale agent/human contract docs |
 | Clean gate (code in scope) | `make pr-check` | PASS; **no commit, no push** unless user explicitly asks |
 | Honesty | Status labels | Passed / Failed / Skipped / N/A / Unknown only |
 
 Omit `make pr-check` only when the spec covers pure planning/docs with no code edits — mark N/A with reason. Never weaken scanners to obtain PASS.
+
+Unjustified omission of Doc / Root Surface Impact fails closed. Prefer `l9-update-agent-docs` / `l9-wire-skill-into-repo` at implementation for agent/registry rewrites.
 
 ## Output location
 

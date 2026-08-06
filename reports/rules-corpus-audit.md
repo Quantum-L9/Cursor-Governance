@@ -1,12 +1,12 @@
 # Global rules corpus audit
 
-Generated: `2026-08-02T14:11:10Z`
+Generated: `2026-08-06T07:04:26Z`
 
 ## Summary
 
-- Total rules: **59**
-- Always rules: **38**
-- Derived compatibility IDs: **51**
+- Total rules: **61**
+- Always rules: **40**
+- Derived compatibility IDs: **53**
 - Rules over 300 lines: **4**
 - Deprecated rules: **1**
 
@@ -30,7 +30,7 @@ Generated: `2026-08-02T14:11:10Z`
 **Severity:** 3/5
 **Confidence:** confirmed
 
-**Evidence:** 38 of 59 rules (64%) resolve to always activation.
+**Evidence:** 40 of 61 rules (66%) resolve to always activation.
 
 **Impact:** Broad persistent context can create instruction collisions and consume agent context.
 
@@ -66,7 +66,7 @@ Generated: `2026-08-02T14:11:10Z`
 **Severity:** 2/5
 **Confidence:** confirmed
 
-**Evidence:** 51 rules lack an explicit immutable frontmatter ID.
+**Evidence:** 53 rules lack an explicit immutable frontmatter ID.
 
 **Impact:** Renames cannot be distinguished reliably from replacement or deletion.
 
