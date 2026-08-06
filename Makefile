@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 
 # Workspace a target acts on. Defaults to the directory make was invoked from, so
 # `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
@@ -16,11 +16,14 @@ PR_SECURITY_ADVISORY ?= 0
 PR_BASE ?= origin/main
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
 	@echo "  make pr           — CHANGED-FILES local PR gate (pre-commit + ruff + security); not full-tree"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
 	@echo "  make pr-full      — intentional full-tree local gate (nightly-equivalent; slow)"
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" pr WS=\"\$$(pwd)\""
+	@echo "  make secrets-sync — sync openclaw-igorbot registry from AWS Secrets Manager (refs only)"
+	@echo "  make secrets-check REF='openclaw-igorbot/github#token' — resolve --check (no value printed)"
+	@echo "  make ui-operator-sync — uv sync --extra ui-operator (then: playwright install)"
 	@echo "  Prefer l9-ci-core thin Makefile (identical across repos) when adopting the common workflow."
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
@@ -207,6 +210,22 @@ integrity-check:
 ## target because it overwrites working-tree files from the baseline.
 integrity-snapshot:
 	python3 integrity/hash-verifier.py --snapshot
+
+## Sync ops/secrets/openclaw-igorbot.registry.yaml from AWS Secrets Manager (refs/key names only).
+secrets-sync:
+	$(CURDIR)/.venv/bin/python ops/secrets/sync_secrets_registry.py
+
+## Resolve a secret ref with --check (never prints the value). Example:
+##   make secrets-check REF='openclaw-igorbot/github#token'
+REF ?= openclaw-igorbot/github#token
+secrets-check:
+	$(CURDIR)/.venv/bin/python ops/secrets/resolve_secret.py --ref "$(REF)" --check
+
+## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
+## After this: playwright install
+ui-operator-sync:
+	uv sync --extra ui-operator
+
 # PROGRAM_EXECUTION_ADAPTER_LAYER_V1
 PE_ROOT := environment/program-execution
 .PHONY: program-execution-core-validate program-execution-adapters 	program-execution-conformance program-execution-probe

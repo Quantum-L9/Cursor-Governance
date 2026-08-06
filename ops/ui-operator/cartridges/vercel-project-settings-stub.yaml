@@ -1,0 +1,46 @@
+schema_version: "1.0.0"
+id: vercel-project-settings-stub
+version: "0.1.0-stub"
+site: vercel
+goal: >-
+  STUB (M3): Scaffold for configuring a Vercel project dashboard when API is
+  insufficient. Fill selectors, mutation_allowlist, and targets; human must
+  approve before console --mode run. Meta/WhatsApp cartridges are out of v1 scope.
+urls:
+  primary: https://vercel.com/dashboard
+auth:
+  refs:
+    - openclaw-igorbot/vercel#token
+    - openclaw-igorbot/ui-session-vercel#storage_state
+  api_verify_ref: openclaw-igorbot/vercel#token
+  ui_session_ref: openclaw-igorbot/ui-session-vercel#storage_state
+mutation_allowlist: []
+forbidden:
+  - change_visibility
+  - remove_unrelated_entries
+  - create_pat
+  - destructive_delete
+  - rotate_production_secrets_without_approve
+targets: {}
+selectors: {}
+journey:
+  - step: bind_goal
+    description: Confirm project + goal (stub — fill before run)
+  - step: resolve_secrets
+    description: Check vercel#token and ui-session-vercel refs
+  - step: prefer_api
+    description: Prefer Vercel API/CLI; record why UI is required
+  - step: human_approve
+    description: REQUIRED — promote stub to v1 cartridge before mutate
+  - step: capture_before
+    description: Before evidence (stub)
+  - step: execute_journey
+    description: Fill selectors + allowlisted mutations (not yet defined)
+  - step: capture_after
+    description: After evidence (stub)
+  - step: emit_receipt
+    description: Redacted receipt
+human_approve_required: true
+notes: >-
+  JIT expansion stub from Portable UI Operator GMP-3. Not execution-ready.
+  Promote selectors/allowlist via human approve; do not treat as complete SaaS coverage.

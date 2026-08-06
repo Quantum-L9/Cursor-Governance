@@ -1,0 +1,67 @@
+schema_version: "1.0.0"
+id: github-packages-actions-access
+version: "1.0.0"
+site: github
+goal: >-
+  Ensure GitHub Actions repositories Website-Bot, LLM-Router, and SEO-Bot have
+  Read access on npm package @quantum-l9/graphiti-memory-client. Preserve package
+  visibility. Do not remove unrelated entries. Do not add the publisher as a
+  consumer. Leave Quantum-L9/l9-graphiti-memory as Admin.
+urls:
+  package_settings: >-
+    https://github.com/orgs/Quantum-L9/packages/npm/graphiti-memory-client/settings
+auth:
+  refs:
+    - openclaw-igorbot/github#token
+    - openclaw-igorbot/ui-session-github#storage_state
+  api_verify_ref: openclaw-igorbot/github#token
+  ui_session_ref: openclaw-igorbot/ui-session-github#storage_state
+mutation_allowlist:
+  - ensure_actions_read_access
+forbidden:
+  - change_visibility
+  - remove_unrelated_entries
+  - add_publisher_as_consumer
+  - demote_source_repo_admin
+  - create_pat
+targets:
+  package: "@quantum-l9/graphiti-memory-client"
+  repositories:
+    - name: Website-Bot
+      role: Read
+      permission: contents
+    - name: LLM-Router
+      role: Read
+      permission: contents
+    - name: SEO-Bot
+      role: Read
+      permission: contents
+  preserve_admin:
+    - l9-graphiti-memory
+selectors:
+  add_repo_summary: "#repo-add-access-selector-actions"
+  form_action: bulk_add_actions_access
+journey:
+  - step: bind_goal
+    description: Confirm cartridge goal and mutation allowlist
+  - step: resolve_secrets
+    description: Fail-closed resolve/check auth refs via l9-aws-secrets
+  - step: prefer_api
+    description: Attempt GitHub API verification first; record why UI is required
+  - step: load_session
+    description: Load Playwright storage_state from ui-session ref when provisioned
+  - step: capture_before
+    description: Snapshot current Manage Actions access list
+  - step: ensure_actions_read_access
+    description: Add missing repos via Add Repository → bulk_add_actions_access (Read)
+    mutation: ensure_actions_read_access
+  - step: capture_after
+    description: Snapshot access list after mutation
+  - step: api_verify
+    description: Re-check package permissions via API using github#token
+  - step: emit_receipt
+    description: Write redacted receipt (refs ids only)
+human_approve_required: true
+notes: >-
+  Verified UI evidence — form selector #repo-add-access-selector-actions;
+  role Read maps to permission contents. Source repo Admin left alone.

@@ -1,0 +1,58 @@
+# UI-operator execution receipt (refs only — never secret values).
+# schema_version: 1.0.0
+type: object
+required:
+  - schema_version
+  - receipt_id
+  - cartridge_id
+  - actor
+  - started_at
+  - mode
+  - refs_used
+  - actions
+  - verdict
+properties:
+  schema_version:
+    type: string
+    const: "1.0.0"
+  receipt_id:
+    type: string
+  cartridge_id:
+    type: string
+  cartridge_version:
+    type: string
+  actor:
+    type: string
+  started_at:
+    type: string
+  finished_at:
+    type: string
+  mode:
+    type: string
+    enum: [validate, dry_run, run]
+  refs_used:
+    type: array
+    items: { type: string }
+    description: "secret refs by id only"
+  actions:
+    type: array
+    items:
+      type: object
+      required: [step, status]
+      properties:
+        step: { type: string }
+        status:
+          type: string
+          enum: [ok, skipped, blocked, failed]
+        detail: { type: string }
+  evidence:
+    type: object
+    properties:
+      before: { type: string }
+      after: { type: string }
+      notes: { type: string }
+  stop_reason:
+    type: string
+  verdict:
+    type: string
+    enum: [PASS, FAIL, BLOCKED, DRY_RUN, VALIDATED]

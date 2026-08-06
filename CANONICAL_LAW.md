@@ -264,6 +264,14 @@ to "let CI catch it." CI is the second line of defence, not the first.
 | Scope | CHANGED FILES ONLY (`AGENTS.md` §2.3 invariant). Full-tree is `make pr-full` / `make precommit` — intentional/nightly, and never a substitute for `make pr`. |
 | Applies to | Every L9 / Quantum-L9 coding workspace and every agent surface (Cursor, Claude Code CLI · Web · Mobile, Codex, Gemini, …). |
 | Authority | Non-optional. Sits above per-session context in the authority order; enforced operationally in `AGENTS.md` §6. |
+
+### Anti-pattern: Keychain / Chrome cookie decrypt for UI automation
+
+Do **not** use macOS Keychain or daily-Chrome Safe Storage / cookie decrypt as
+the primary auth path for governed SaaS UI automation. Resolve secrets by ref
+via `ops/secrets` + skill `l9-aws-secrets` (AWS Secrets Manager,
+`openclaw-igorbot/*`). UI sessions use provisioned `ui-session-*` refs when
+needed — never commit `storage_state` blobs.
 <!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:CANONICAL_LAW -->
 
 ## Program Execution subsystem

@@ -198,6 +198,24 @@ mechanism. If you need a human-readable narrative of what activation does,
 this section is that narrative — keep it in sync with the hook, not a
 separate spec file.
 
+### 2.6 AWS secrets registry + UI operator (2026-08-06)
+
+**SSOT:** this repository owns `ops/secrets/openclaw-igorbot.registry.yaml`.
+Sync pulls secret names (and JSON key names) from AWS Secrets Manager under
+namespace `openclaw-igorbot/*` (region `us-east-1`). Consumers (igorbot, bots,
+CI) depend on this registry — do not reverse the dependency.
+
+| Piece | Path / command |
+|---|---|
+| Registry + resolve | `ops/secrets/` — `make secrets-sync`, `make secrets-check REF='…'` |
+| Skill (refs) | `l9-aws-secrets` |
+| UI console + cartridges | `ops/ui-operator/` — skill `l9-ui-operator` (explicit-only) |
+| Optional install | `make ui-operator-sync` → `uv sync --extra ui-operator && playwright install` |
+
+**Rules:** secret **values** never in git/logs/receipts; inventory is IDs/keys
+only; no macOS Keychain or daily-Chrome cookie decrypt for governed UI
+automation; diagnose before mutating vault contents; UI receipts redact values.
+
 ---
 
 ## 3. Source-of-truth files
@@ -263,12 +281,34 @@ Before opening *any* PR (opening or updating a PR triggers CI), the local
 changed-files pipeline MUST pass:
 
 ```bash
-make pr        # alias: make pr-check — changed-files pre-commit + ruff + security
+make pr-check  # gate only — changed-files pre-commit + ruff + security
+make pr        # gate → open PR → subscribe → agent spawns l9-pr-remediation
 ```
 
-Do not open the PR, and do not push to trigger CI, if `make pr` fails — fix and
-re-run first. Target is lowercase `make pr` (Make is case-sensitive; `make PR`
-errors). Then run the governance-wiring checks:
+Do not open the PR, and do not push to trigger CI, if `make pr` / `make pr-check`
+fails — fix and re-run first. `make pr` / `make PR` / `make Pr` / `make pR` are
+equivalent (Makefile remaps any capitalization of `pr`).
+
+`make pr` auto-heals derived artifacts via `ops/scripts/sync_generated_artifacts.py`
+(RULES-MANIFEST, skill-registry, skillOverrides, COMMANDS_MANIFEST, PE digests,
+orphan skills → `explicit_only`). Regenerated files are a **WARN to stage**, not
+a hard fail. On a local governance clone it also reconciles Claude skills and
+fail-closes on hooks/bootstrap/plugin wiring.
+
+After the gate PASSes, `make pr` (any capitalization) runs
+`ops/scripts/open_pr_after_gate.sh`: push the feature branch, open or reuse the
+GitHub PR, subscribe to PR notifications, write
+`memory-bank/pr-remediation-handoff.json`, and print an `L9_AGENT_REQUIRED`
+block. **Any agent that sees that block MUST immediately** spawn a background
+Task (`run_in_background=true`) using `l9-pr-remediation` + the
+`poll_worker` template in `skills/l9-bounded-autonomy/references/prompt-templates.md`
+(packet fields from the handoff JSON). Cap 3 fix-push cycles; never merge;
+never force-push; main agent continues (do not AwaitShell on that PR). Use
+`make pr-check`, `OPEN_PR=0 make pr`, or `PR_REMEDIATE=0 make pr` to skip
+open and/or remediation spawn. Opening requires commits ahead of `PR_BASE`
+(default `origin/main`) and refuses `main`/`master`.
+
+Then run the governance-wiring checks:
 
 ```bash
 bash ops/scripts/check_governance_wiring.sh "$(pwd)"

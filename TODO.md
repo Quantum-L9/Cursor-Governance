@@ -2,6 +2,14 @@
 
 Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L9 skills, `.cursor/rules/*.mdc`, `AGENTS.md`, and active wiring scripts). `start-session.yaml` was deleted (2026-07-19) — it was never wired into any hook and had drifted from the archived pre-Graphiti learning pipeline. `ops/hooks/session_start_bootstrap.sh` is the real, live activation script: installed at `~/.cursor/hooks/session-start-bootstrap.sh`, registered in `~/.cursor/hooks.json` under `sessionStart`, runs automatically every session.
 
+## Portable UI operator follow-ups (2026-08-06)
+
+- [ ] Provision AWS secrets `openclaw-igorbot/ui-session-github` and
+  `openclaw-igorbot/ui-session-vercel` (JSON key `storage_state`), then
+  `make secrets-sync` so overlays flip to `provisioned: true` for `--mode run`.
+- [ ] Promote `ops/ui-operator/cartridges/vercel-project-settings-stub.yaml` to a
+  filled v1 cartridge (selectors + mutation_allowlist) after human approve.
+
 ## Memory / session writes — blocked this session (2026-07-20)
 
 - [ ] ⚠️ **Graphiti (T1) memory writes** — blocked, not done. Health check:

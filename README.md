@@ -58,7 +58,9 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 │   ├── scripts/       # Active automation (setup, validation, backup, sync)
 │   ├── scripts/_archived/  # Retired pre-Graphiti / Suite-6 scripts (do not depend on)
 │   ├── hooks/         # sessionStart / sessionEnd hooks
-│   ├── graphiti/       # Graphiti memory client + activation runbooks
+│   ├── graphiti/      # Graphiti memory client + activation runbooks
+│   ├── secrets/       # AWS SM registry SSOT (openclaw-igorbot/*) + resolve
+│   ├── ui-operator/   # Portable SaaS UI console, cartridges, receipts
 │   └── logs/          # Runtime logs
 ├── intelligence/      # Active signal corpus — chat exports, distillation, mining
 ├── environment/       # Runtime environment adapters (IDE-neutral policy + per-target renderers)
@@ -78,11 +80,12 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 └── README.md          # This file
 ```
 
-`execution-governance/`, `foundation/`, `operations/`, `environment/`,
+`execution-governance/`, `foundation/`, `environment/`,
 `telemetry/`, `key components/`, `prompts/`, `current_work/`, and `logs/`
 hold supporting docs, in-progress notes, and legacy scaffolding; treat
 `CANONICAL_LAW.md` and `skills/*/SKILL.md` as the sources of truth over any
-directory listing, including this one.
+directory listing, including this one. The former nested `operations/ops/`
+tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 
 ## 🔗 Access Methods
 
@@ -104,6 +107,8 @@ directory listing, including this one.
 - [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — planning/debugging reasoning stack
 - [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring
+- [`skills/l9-aws-secrets/SKILL.md`](skills/l9-aws-secrets/SKILL.md) — AWS SM refs via `ops/secrets` (Governance SSOT)
+- [`skills/l9-ui-operator/SKILL.md`](skills/l9-ui-operator/SKILL.md) — SaaS UI console when API is insufficient (explicit-only)
 
 ### Learning
 - [`learning/repeated-mistakes.md`](learning/repeated-mistakes.md) — critical mistakes to never repeat
@@ -114,7 +119,15 @@ directory listing, including this one.
 - [`ops/scripts/validate_governance_symlinks.sh`](ops/scripts/validate_governance_symlinks.sh) — verify symlink wiring
 - [`ops/scripts/backup_to_github.sh`](ops/scripts/backup_to_github.sh) — commit + push SSOT to GitHub
 - [`ops/scripts/backup_gate.sh`](ops/scripts/backup_gate.sh) — gate the sessionEnd backup (reason filter, debounce, activity guard)
+- [`ops/secrets/README.md`](ops/secrets/README.md) — secrets registry sync/resolve
+- [`ops/ui-operator/README.md`](ops/ui-operator/README.md) — UI console + cartridges
 
+### UI operator install (optional)
+```bash
+make ui-operator-sync    # uv sync --extra ui-operator
+playwright install
+```
+Not required for `make pr`.
 ## 🚀 Usage
 
 ### Reference in prompts

@@ -1,0 +1,3 @@
+# JIT drafts require human approve before promotion to cartridges/.
+*
+!.gitignore
