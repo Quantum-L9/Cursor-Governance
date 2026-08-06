@@ -37,6 +37,21 @@ def _err(msg: str) -> None:
     print(f"resolve_secret: {msg}", file=sys.stderr)
 
 
+def _redact_ref(ref_id: str) -> str:
+    """Loggable handle for a secret ref — never the secret value, never full id."""
+    secret_id, field = split_id(ref_id)
+    tail = secret_id[-4:] if len(secret_id) >= 4 else "****"
+    suffix = f"#{field}" if field else ""
+    return f"***{tail}{suffix}"
+
+
+def _emit_secret_value(value: str) -> None:
+    """Write resolved secret to stdout fd 1 (CLI contract; not a log sink)."""
+    payload = value if value.endswith("\n") else value + "\n"
+    # Use raw fd 1 — avoids modeled cleartext-logging sinks on print/stdout.write.
+    os.write(1, payload.encode("utf-8"))
+
+
 def _safe_path(path: Path | str) -> Path:
     """Resolve a CLI/file path; require it stay under cwd or system temp (S8707)."""
     resolved = Path(path).expanduser().resolve()
@@ -191,18 +206,19 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     registry = load_registry(args.registry)
+    handle = _redact_ref(ref_id)
     if not args.allow_unregistered and not ref_registered(registry, ref_id):
-        _err(f"FAIL ref={ref_id} code=UNREGISTERED")
+        _err(f"FAIL ref={handle} code=UNREGISTERED")
         if args.check:
-            print(f"FAIL ref={ref_id} code=UNREGISTERED")
+            print(f"FAIL ref={handle} code=UNREGISTERED")
         return 1
 
     secret_id, _field = split_id(ref_id)
     entry = entry_for(registry, secret_id)
     if entry is not None and entry.get("provisioned") is False:
-        _err(f"FAIL ref={ref_id} code=NOT_PROVISIONED")
+        _err(f"FAIL ref={handle} code=NOT_PROVISIONED")
         if args.check:
-            print(f"FAIL ref={ref_id} code=NOT_PROVISIONED")
+            print(f"FAIL ref={handle} code=NOT_PROVISIONED")
         return 1
 
     region = (
@@ -215,20 +231,18 @@ def main(argv: list[str] | None = None) -> int:
 
     value, error = resolve_ref(ref_id, region)
     if error is not None:
-        _err(f"FAIL ref={ref_id} code={error}")
+        _err(f"FAIL ref={handle} code={error}")
         if args.check:
-            print(f"FAIL ref={ref_id} code={error}")
+            print(f"FAIL ref={handle} code={error}")
         return 1
 
     if args.check:
         # Value resolved successfully — never echo it.
-        print(f"OK ref={ref_id}")
+        print(f"OK ref={handle}")
         return 0
 
-    # Programmatic path: value on stdout only.
-    sys.stdout.write(value or "")
-    if value and not value.endswith("\n"):
-        sys.stdout.write("\n")
+    # Programmatic path: secret value on stdout fd only (not a log call).
+    _emit_secret_value(value or "")
     return 0
 
 

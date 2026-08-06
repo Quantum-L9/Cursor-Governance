@@ -292,8 +292,11 @@ def build_registry_from_aws(
         if should_inspect:
             key_names, err = inspect_json_keys(sid, region, runner=runner)
             if err:
+                # Do not log raw secret ids — CodeQL cleartext-logging sink.
+                sid_tail = sid[-4:] if len(sid) >= 4 else "****"
                 print(
-                    f"sync_secrets_registry: warn inspect {sid} code={err} (keeping prior keys)",
+                    f"sync_secrets_registry: warn inspect ***{sid_tail} "
+                    f"code={err} (keeping prior keys)",
                     file=sys.stderr,
                 )
                 key_names = None
@@ -454,8 +457,9 @@ def main(argv: list[str] | None = None) -> int:
         file=sys.stderr,
     )
     if stats["added"]:
+        # Count only — never list secret ids on stderr (cleartext-logging).
         print(
-            "sync_secrets_registry: added " + ", ".join(stats["added"]),
+            f"sync_secrets_registry: added_count={len(stats['added'])}",
             file=sys.stderr,
         )
     if args.json_summary:

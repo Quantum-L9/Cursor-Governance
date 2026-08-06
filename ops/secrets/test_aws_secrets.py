@@ -161,7 +161,7 @@ class ResolveSecretTests(unittest.TestCase):
                     stdout = out.getvalue()
                     stderr = err.getvalue()
         self.assertEqual(rc, 0)
-        self.assertIn("OK ref=openclaw-igorbot/github#token", stdout)
+        self.assertIn("OK ref=***thub#token", stdout)
         self.assertNotIn(secret_value, stdout)
         self.assertNotIn(secret_value, stderr)
 
