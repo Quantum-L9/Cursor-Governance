@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import tempfile
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,6 +37,7 @@ PROFILES_DIR = Path.home() / ".l9-ui-profiles"
 STOP_MISSING_APPROVE = "missing_human_approve"
 STOP_MISSING_AWS = "missing_aws_or_unregistered_ref"
 STOP_NOT_PROVISIONED = "ui_session_not_provisioned"
+STOP_PROFILE_NOT_SEEDED = "ui_profile_not_seeded"
 STOP_PLAYWRIGHT = "playwright_not_installed"
 STOP_FORBIDDEN = "mutation_exceeds_allowlist"
 STOP_VISIBILITY = "visibility_or_destructive_change"
@@ -47,6 +49,19 @@ def _die(msg: str, code: int = 1) -> None:
     raise SystemExit(code)
 
 
+def _safe_path(path: Path | str) -> Path:
+    """Resolve a CLI/file path; require it stay under cwd or system temp (S8707)."""
+    resolved = Path(path).expanduser().resolve()
+    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
+    for root in allowed:
+        try:
+            resolved.relative_to(root)
+            return resolved
+        except ValueError:
+            continue
+    _die(f"path escapes allowed roots: {path}")
+
+
 def _require_yaml() -> Any:
     if yaml is None:
         _die("PyYAML required")
@@ -55,6 +70,7 @@ def _require_yaml() -> Any:
 
 def load_yaml(path: Path) -> dict[str, Any]:
     y = _require_yaml()
+    path = _safe_path(path)
     data = y.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
         _die(f"invalid YAML object: {path}")
@@ -144,6 +160,7 @@ def playwright_available() -> bool:
 
 def write_receipt(receipt: dict[str, Any], path: Path) -> None:
     y = _require_yaml()
+    path = _safe_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         y.safe_dump(receipt, sort_keys=False, default_flow_style=False),
@@ -291,21 +308,22 @@ def run_console(
                     stop_reason = STOP_NOT_PROVISIONED
             if verdict not in {"FAIL", "BLOCKED"}:
                 # Live browser automation is intentionally gated: execute only when
-                # session is provisioned. Journey runner for GitHub is site-specific.
+                # session vault ref resolves AND a seeded profile exists under
+                # PROFILES_DIR. Journey runner for GitHub is site-specific.
                 actions.append(
                     {
                         "step": "execute_journey",
                         "status": "blocked",
                         "detail": (
                             "live UI mutate path ready but session profile seeding "
-                            f"from vault → {PROFILES_DIR}/<site>/ is not provisioned "
+                            f"from vault → {PROFILES_DIR}/<site>/ is not seeded "
                             "for automated mutate in this environment; use dry_run "
-                            "or provision ui-session then re-run"
+                            "or seed a profile under ~/.l9-ui-profiles/<site>/ then re-run"
                         ),
                     }
                 )
                 verdict = "BLOCKED"
-                stop_reason = STOP_NOT_PROVISIONED
+                stop_reason = STOP_PROFILE_NOT_SEEDED
     else:
         _die(f"unknown mode: {mode}")
 

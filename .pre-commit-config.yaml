@@ -24,22 +24,13 @@ repos:
         language: system
         pass_filenames: false
 
-      # Autofix: rewrite RULES-MANIFEST.{json,yaml,md} from rules/*.mdc.
-      # pre-commit fails once if files changed — stage the manifests and re-run.
-      - id: generate-rules-manifest
-        name: Regenerate rules manifests from rules/*.mdc
-        entry: python3 ops/scripts/generate_rules_manifest.py
+      # Commit-time heal. make pr SKIPs this hook and runs sync in run_pr_gate
+      # with WARN+continue so digest churn never blocks the PR gate.
+      - id: sync-generated-artifacts
+        name: Sync generated manifests, registries, and overrides
+        entry: python3 ops/scripts/sync_generated_artifacts.py --force
         language: system
-        files: ^rules/
-        pass_filenames: false
-
-      # Autofix: rewrite environment/claude-code/generated/skill-registry.json
-      # from skills/AUTONOMY_MANIFEST.yaml + skills/*/SKILL.md frontmatter.
-      - id: generate-claude-skill-registry
-        name: Regenerate Claude skill registry from skills SSOT
-        entry: python3 ops/scripts/build_claude_skill_registry.py
-        language: system
-        files: ^(skills/|environment/claude-code/generated/skill-registry\.json)
+        files: ^(rules/|skills/|commands/|environment/claude-code/|environment/program-execution/)
         pass_filenames: false
 
   - repo: https://github.com/astral-sh/ruff-pre-commit

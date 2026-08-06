@@ -19,6 +19,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,19 @@ def _die(msg: str, code: int = 1) -> None:
     raise SystemExit(code)
 
 
+def _safe_path(path: Path | str) -> Path:
+    """Resolve a CLI/file path; require it stay under cwd or system temp (S8707)."""
+    resolved = Path(path).expanduser().resolve()
+    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
+    for root in allowed:
+        try:
+            resolved.relative_to(root)
+            return resolved
+        except ValueError:
+            continue
+    _die(f"path escapes allowed roots: {path}")
+
+
 def _require_yaml() -> Any:
     if yaml is None:
         _die("PyYAML required (install via project deps / uv sync --extra dev)")
@@ -50,6 +64,7 @@ def _require_yaml() -> Any:
 
 
 def load_registry(path: Path) -> dict[str, Any]:
+    path = _safe_path(path)
     if not path.is_file():
         return {
             "schema_version": SCHEMA_VERSION,
@@ -67,6 +82,7 @@ def load_registry(path: Path) -> dict[str, Any]:
 
 
 def load_overlays(path: Path) -> list[dict[str, Any]]:
+    path = _safe_path(path)
     if not path.is_file():
         return []
     y = _require_yaml()
@@ -167,9 +183,7 @@ def inspect_json_keys(
         parsed = json.loads(raw)
     except json.JSONDecodeError:
         keys, err = None, None  # plain string secret — no JSON keys
-        raw = ""
         return keys, err
-    raw = ""  # noqa: F841 — explicit discard
     if isinstance(parsed, dict):
         return sorted(str(k) for k in parsed), None
     return None, None
@@ -343,6 +357,7 @@ def build_registry_from_aws(
 
 def write_registry(path: Path, registry: dict[str, Any]) -> None:
     y = _require_yaml()
+    path = _safe_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         y.safe_dump(registry, sort_keys=False, default_flow_style=False),
@@ -410,7 +425,8 @@ def main(argv: list[str] | None = None) -> int:
     overlays = load_overlays(args.overlays)
 
     if args.aws_ids_file is not None:
-        aws_ids = json.loads(args.aws_ids_file.read_text(encoding="utf-8"))
+        ids_path = _safe_path(args.aws_ids_file)
+        aws_ids = json.loads(ids_path.read_text(encoding="utf-8"))
         if not isinstance(aws_ids, list):
             _die("--aws-ids-file must be a JSON list")
         aws_ids = sorted(str(x) for x in aws_ids)

@@ -18,6 +18,14 @@
       "sha256": "5f80e55ed935354c3e6936940d1e7b11322fe0115321484060ee7f7174e98136"
     },
     {
+      "path": "Run 1 Agent Feedback Analysis.md",
+      "sha256": "bb8e2c0e477db15c6f73193e52588aaa41f0e518c4bf0ffeaebd7f03444e8ed0"
+    },
+    {
+      "path": "Run 1 Agent Feedback.md",
+      "sha256": "072a214f6766ff04ee0658a34683a1500b868f0c33903068aab3727757145048"
+    },
+    {
       "path": "adapters/__init__.py",
       "sha256": "c38173eb85f8826d1a645528df15ab4e3342dd07c76bce74838c67da2ba85f7c"
     },
@@ -595,7 +603,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/contract_mapper.py",
-      "sha256": "c9d947e304e063bd20b4e159aadf0ffef7cfb4644ed412c8ea71593cef00febf"
+      "sha256": "5d8f7251fae485a57b34f8efe03763576dfbd0b059ababf2dde142942ceb879f"
     },
     {
       "path": "integrations/autonomy-control-plane/receipt_mapper.py",
@@ -603,7 +611,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "723f243f2d57716e2a9664fa2fc40ef419b026dce2b560b761d186a31709206d"
+      "sha256": "6685663563ba8d5dec2985530f39fd8043f4f549f4812f22a78f959c117061be"
     },
     {
       "path": "integrations/bootstrap/README.md",

@@ -9,9 +9,9 @@ import json
 import sys
 import tempfile
 import unittest
+import unittest.mock as mock
 from pathlib import Path
 from typing import Any
-from unittest import mock
 
 SECRETS = Path(__file__).resolve().parent
 

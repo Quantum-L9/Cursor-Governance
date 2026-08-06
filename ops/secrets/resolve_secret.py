@@ -18,6 +18,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,20 @@ def _err(msg: str) -> None:
     print(f"resolve_secret: {msg}", file=sys.stderr)
 
 
+def _safe_path(path: Path | str) -> Path:
+    """Resolve a CLI/file path; require it stay under cwd or system temp (S8707)."""
+    resolved = Path(path).expanduser().resolve()
+    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
+    for root in allowed:
+        try:
+            resolved.relative_to(root)
+            return resolved
+        except ValueError:
+            continue
+    _err(f"path escapes allowed roots: {path}")
+    raise SystemExit(2)
+
+
 def split_id(ref_id: str) -> tuple[str, str | None]:
     if "#" in ref_id:
         secret_id, field = ref_id.split("#", 1)
@@ -47,6 +62,7 @@ def load_registry(path: Path) -> dict[str, Any]:
     if yaml is None:
         _err("PyYAML required")
         raise SystemExit(2)
+    path = _safe_path(path)
     if not path.is_file():
         _err(f"registry not found: {path}")
         raise SystemExit(2)
