@@ -14,7 +14,6 @@ Never writes a resolved secret value to stderr or logs.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import subprocess
@@ -53,16 +52,10 @@ _KNOWN_ERROR_CODES = frozenset(
 
 
 def _canonical_error(code: str | None) -> str:
-    """Barrier: only allowlisted status codes may be logged (no secret dataflow)."""
+    """Barrier: only allowlisted status codes may leave probe_ref."""
     if code in _KNOWN_ERROR_CODES:
         return code
     return "RESOLUTION_ERROR"
-
-
-def _redact_ref(ref_id: str) -> str:
-    """Opaque log token — SHA-256 barrier so CodeQL cannot taint substrings."""
-    digest = hashlib.sha256(ref_id.encode("utf-8")).hexdigest()[:12]
-    return f"ref:{digest}"
 
 
 def _emit_secret_value(value: str) -> None:
