@@ -60,10 +60,9 @@ def _canonical_error(code: str | None) -> str:
 
 
 def _redact_ref(ref_id: str) -> str:
-    """Loggable handle — last-4 of id only; never field names (e.g. token)."""
-    secret_id, _field = split_id(ref_id)
-    tail = secret_id[-4:] if len(secret_id) >= 4 else "****"
-    return f"ref-***{tail}"
+    """Opaque log token — SHA-256 barrier so CodeQL cannot taint substrings."""
+    digest = hashlib.sha256(ref_id.encode("utf-8")).hexdigest()[:12]
+    return f"ref:{digest}"
 
 
 def _emit_secret_value(value: str) -> None:
