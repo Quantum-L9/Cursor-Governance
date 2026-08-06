@@ -1,0 +1,577 @@
+api_version: l9.quantum/campaign-pack/v1
+kind: CampaignCharter
+ordinal: 1
+source_section: campaign_charter
+
+# ----------------------------------------------------------------------------
+# Compiled artifact. This charter is the human-facing entry point to the
+# 3-file initialization pack for spec CG-PES-RUN2-HARDENING. It records the
+# resolved compiler inputs (source_bindings.compile_inputs) and the canonical
+# digests of the two charter records (CAMPAIGN_AUTHORIZATION.yaml and
+# CAMPAIGN_EXECUTION.yaml).
+# ----------------------------------------------------------------------------
+compiled_by:
+  compiler_name: l9-unified-campaign-compiler
+  compiler_version: 1.0.0
+  compiled_at: '2026-08-05T19:24:57Z'
+  campaign_spec_id: CG-PES-RUN2-HARDENING
+  source_api_version: l9.quantum/campaign-source/v1
+  compiler_mode: strict
+  deterministic_output: true
+
+# Identity fields (required in every output file).
+campaign_id: cg-pes-run2-hardening-21d4efbe
+target_commit: 21d4efbea78756a23390c530f189d0fa4de25f24
+
+identity:
+  campaign_id: cg-pes-run2-hardening-21d4efbe
+  campaign_spec_id: CG-PES-RUN2-HARDENING
+  title: Program Execution Integrity and Concurrent Agent Spine
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-integrity-spine-abziou
+  target_commit: 21d4efbea78756a23390c530f189d0fa4de25f24
+  compiled_at: '2026-08-05T19:24:57Z'
+
+# source_bindings ------------------------------------------------------------
+# Full resolution of every required_compile_input. Provenance codes:
+#   git        - read from the bound git repository state
+#   computed   - deterministically derived (method stated)
+#   discovered - read from a repository file / configuration
+#   session    - taken from the active session/operator context
+#   minted     - assigned by the compiler at compile time
+#   default    - spec-declared default (no override present)
+source_bindings:
+  source_basis:
+    - id: RUN1_EXECUTION_DEBRIEF
+      path: environment/program-execution/Run 1 Agent Feedback.md
+      authority: artifact_backed_execution_feedback
+      status: distilled_into_historical_baseline
+    - id: RUN1_PHASE2_ANALYSIS
+      path: environment/program-execution/Run 1 Agent Feedback Analysis.md
+      authority: planning_and_architecture_analysis
+      status: distilled_into_historical_baseline
+    - id: OPERATOR_SCOPE_DECISION
+      authority: current_operator_instruction
+      statement: >
+        Memory delivery, memory distillation, procedure synthesis, memory
+        promotion, and learning-closure orchestration are out of scope.
+  compile_inputs:
+    campaign_instance_id:
+      value: cg-pes-run2-hardening-21d4efbe
+      provenance: minted
+      method: campaign_spec_id slug + short target_commit (21d4efbe)
+    compiled_at:
+      value: '2026-08-05T19:24:57Z'
+      provenance: session
+      method: UTC session clock at compile time
+    compiler_name:
+      value: l9-unified-campaign-compiler
+      provenance: minted
+    compiler_version:
+      value: 1.0.0
+      provenance: minted
+    target_repository:
+      value: Quantum-L9/Cursor-Governance
+      provenance: git
+      method: matches spec expected_value
+    target_branch:
+      value: claude/program-execution-integrity-spine-abziou
+      provenance: git
+    target_commit:
+      value: 21d4efbea78756a23390c530f189d0fa4de25f24
+      provenance: git
+      method: HEAD of target_branch, clean working tree
+    authorized_write_root:
+      value: /root/.l9/programs/cg-pes-run2-hardening
+      provenance: discovered
+      method: Controller workspace per program-execution/README ($HOME/.l9/programs)
+    program_pack_path:
+      value: /home/user/Cursor-Governance/environment/program-execution
+      provenance: discovered
+    program_pack_sha256:
+      value: dff1e09a2ce5cd62bdf6841fb29f3b959aa52ebee8acec8af352d1eebe4f0180
+      provenance: computed
+      method: >
+        sha256 over the canonical, LF-joined, path-sorted "path  sha256" lines
+        of environment/program-execution/MANIFEST.json (210 file entries,
+        MANIFEST.json self-excluded)
+    program_lock_digest:
+      value: c78baebb67318a532f2e79f24674d0d8aa5cf71f16476e6134233f851ac3aafe
+      provenance: computed
+      method: >
+        sha256 over the canonical JSON (sorted keys, compact separators) of the
+        immutable Program Lock binding {target_repository, target_branch,
+        target_commit, program_pack_path, program_pack_sha256,
+        control_plane_version, core_contract, adapter_contract,
+        execution_ceiling}
+    control_plane_version:
+      value: 2.0.0
+      provenance: discovered
+      method: >
+        program-execution/COMPATIBILITY.yaml core_contract
+        (program-execution-system.v2) and controller-template schema_version 2.0.0
+    controller_entrypoint:
+      value: environment/program-execution/core/program-execution-controller-template/scripts/pec.py
+      provenance: discovered
+    controller_home:
+      value: /root/.l9/programs
+      provenance: discovered
+      method: program-execution/README runtime home convention
+    controller_workspace:
+      value: /root/.l9/programs/cg-pes-run2-hardening
+      provenance: computed
+      method: controller_home + campaign slug
+    runtime_database_path:
+      value: /root/.l9/programs/cg-pes-run2-hardening/runtime/state.sqlite
+      provenance: computed
+      method: controller_workspace + CONTROLLER.yaml state.database (runtime/state.sqlite)
+    runtime_ledger_path:
+      value: /root/.l9/programs/cg-pes-run2-hardening/ledger/events.jsonl
+      provenance: computed
+      method: controller_workspace + CONTROLLER.yaml state.ledger (ledger/events.jsonl)
+    repositories_root:
+      value: /home/user
+      provenance: session
+      method: session workspace root holding all constellation clones
+    authorized_operator:
+      value: '@cryptoxdog'
+      provenance: session
+      method: >
+        sole-maintainer GitHub handle (CODEOWNERS owner); used as the operator
+        principal in place of a raw email to keep the artifact free of PII
+
+    approver_roles:
+      value:
+        program_architecture: '@cryptoxdog'
+        execution_operator: '@cryptoxdog'
+        repository_owner: '@cryptoxdog'
+        security_owner: '@cryptoxdog'
+      provenance: discovered
+      method: CODEOWNERS sole-maintainer routing (* -> @cryptoxdog)
+    publication_ceiling:
+      value: local_only
+      provenance: default
+    maximum_parallel_tasks:
+      value: 4
+      provenance: default
+
+# historical_baseline (baseline) --------------------------------------------
+historical_baseline:
+  run_id: constellation-run-1
+  recorded_outcome: COMPLETE_WITH_BLOCKERS
+  honest_terminal_status:
+    - CAMPAIGN_COMPLETE
+    - LIVE_TRANSPORT_QUALIFIED
+    - ODOO_CONSUMER_E2E_INCOMPLETE
+    - NOT_PRODUCTION
+  blocked_gate_count: 29
+  unattended_wave0_readiness_score: 58
+  observed_failures:
+    - contradictory_next_task_identity
+    - missing_session_state
+    - informal_wave_supersession
+    - dual_publication_and_merge_authority
+    - dated_evidence_risking_live_promotion
+    - narrative_only_pass_risk
+    - null_execution_contracts
+    - invented_audit_collectors
+    - ephemeral_controller_install_path
+    - split_runtime_database_paths
+    - unknown_blocking_approvers
+    - mutable_pack_evidence
+    - gate_status_flip_without_new_proof
+    - remote_and_branch_reconciliation_friction
+    - stale_checked_in_validation_reports
+  historical_only: true
+  may_not_authorize_current_claims: true
+
+# objectives -----------------------------------------------------------------
+objective: >
+  Produce an execution-ready Program Execution System that has one current
+  validation verdict, machine-enforced proof semantics, deterministic runtime
+  state, explicit authority supersession, durable runtime paths, bounded
+  concurrent Cursor Task execution, structured result ingestion, governed
+  collector contracts, and a falsifiable Run 2 admission decision.
+
+primary_outcomes:
+  - id: OUTCOME-VALIDATION-TRUTH
+    statement: >
+      Exactly one generated, commit-bound system validation receipt determines
+      the current implementation verdict.
+  - id: OUTCOME-PROOF-SAFETY
+    statement: >
+      Gate and program statuses can be promoted only by fresh evidence with
+      the required proof class.
+  - id: OUTCOME-RESUMABILITY
+    statement: >
+      A new agent can resume execution without chat history from Controller
+      state, the ledger, receipts, and SESSION_STATE.
+  - id: OUTCOME-AUTHORITY
+    statement: >
+      Wave ceilings, publication modes, and executor permissions are explicit,
+      bounded, and superseded only through typed receipts.
+  - id: OUTCOME-CONCURRENCY
+    statement: >
+      A ready set of independent tasks can be dispatched concurrently through
+      Cursor Tasks while the Controller remains the serial authority plane.
+  - id: OUTCOME-RESULT-INGESTION
+    statement: >
+      Every accepted agent result becomes a validated SGD packet with a durable
+      processing receipt; narrative-only PASS is impossible.
+  - id: OUTCOME-PACK-READINESS
+    statement: >
+      Every admitted executable task has a non-null execution contract and
+      every governed collector has typed request and receipt contracts.
+  - id: OUTCOME-ADMISSION
+    statement: >
+      The campaign produces an evidence-backed Run 2 go/no-go receipt without
+      executing the full constellation W0-W10 program.
+
+# architecture_decisions -----------------------------------------------------
+architecture_decisions:
+  - id: ADR-CAMPAIGN-001
+    decision: controller_is_serial_authority_plane
+    rationale: >
+      State transitions, gate evaluation, acceptance, and next-action
+      calculation require deterministic serialization.
+  - id: ADR-CAMPAIGN-002
+    decision: cursor_tasks_are_parallel_execution_plane
+    configuration:
+      global_parallel_limit: 4
+      default_per_repository_limit: 2
+      conflicting_mutation_limit: 1
+    rationale: >
+      Parallel work is permitted only after the Controller computes readiness
+      and autonomy leases prove resource independence.
+  - id: ADR-CAMPAIGN-003
+    decision: execution_pipeline_ends_at_sgd_delivery_pending
+    rationale: >
+      Memory ingestion and curation are separate product concerns and are not
+      required for execution-pipeline completion.
+  - id: ADR-CAMPAIGN-004
+    decision: human_merge_only
+    rationale: >
+      An approval may permit a human to merge but may not grant merge execution
+      authority to the Controller or an adapter.
+  - id: ADR-CAMPAIGN-005
+    decision: no_second_scheduler
+    rationale: >
+      The implementation must wrap the Program Execution ready set, autonomy
+      leases, and existing Cursor Task adapters rather than create an
+      independent scheduler.
+  - id: ADR-CAMPAIGN-006
+    decision: source_pack_is_immutable_during_execution
+    rationale: >
+      Runtime observations, generated contracts, and receipts belong in the
+      Controller workspace, not in the bound source pack.
+
+# scope ----------------------------------------------------------------------
+scope:
+  included:
+    - generated commit-bound validation receipt
+    - proof-class status-transition enforcement
+    - Controller-derived SESSION_STATE
+    - Controller-derived next_action
+    - typed Handoff Receipt
+    - authority supersession receipts
+    - executor-permission separation
+    - durable Controller entrypoint and database path
+    - split definition-of-done contracts
+    - blocking approver validation
+    - Phase 0 autonomy rail integration
+    - ready-set to leased Cursor Task dispatch
+    - concurrent task isolation
+    - mandatory agent result contracts
+    - accepted-result to SGD packet bridge
+    - processing and delivery-pending receipts
+    - collector request and receipt schemas
+    - non-null task execution contracts
+    - activation and campaign authorization schema
+    - preflight doctor
+    - recovery procedures
+    - negative test suite
+    - end-to-end golden fixture
+    - Run 2 go/no-go receipt
+  excluded:
+    - Graphiti ingestion
+    - graphite ingestion
+    - memory candidate delivery
+    - memory distillation
+    - memory synthesis
+    - memory promotion
+    - learning-closure orchestration
+    - full constellation W0-W10 execution
+    - Odoo enterprise or xmlsec live-stack bring-up
+    - Odoo production qualification
+    - automatic merge
+    - release publication
+    - deployment
+    - VPS mutation
+    - production cutover
+    - destructive production actions
+    - rewriting the Claude Code scheduler
+    - restoring a discarded Cursor skill backup as the durable runtime home
+    - wholesale import of WIP directories
+    - claiming PRODUCTION_READY
+
+# phases ---------------------------------------------------------------------
+phases:
+  - id: PHASE-1
+    name: Execution Integrity Foundation
+    sequencing: required_before_phase_2_admission
+    workstreams_may_run_concurrently: true
+    objectives:
+      - establish_validation_truth
+      - enforce_proof_classes
+      - establish_runtime_resumability
+      - establish_authority_lifecycle
+      - separate_executor_permissions
+      - establish_durable_runtime_health
+    exit_gate: GATE-P1-FOUNDATION
+  - id: PHASE-2
+    name: Concurrent Execution and Structured Result Spine
+    entry_gate: GATE-P1-FOUNDATION
+    workstreams_may_run_concurrently: true
+    workstreams:
+      - WS-2A-CONCURRENCY
+      - WS-2B-RESULT-INGESTION
+      - WS-2C-COLLECTORS-CONTRACTS
+      - WS-2D-ACTIVATION-POLICY
+      - WS-2E-VERIFICATION
+    exit_gate: GATE-P2-INTEGRATION
+  - id: PHASE-3
+    name: Run 2 Admission
+    entry_gate: GATE-P2-INTEGRATION
+    workstreams_may_run_concurrently: false
+    objective: issue_go_or_no_go_only
+    exit_gate: GATE-RUN2-ADMIT
+
+# workstreams ----------------------------------------------------------------
+phase_2_workstreams:
+  - id: WS-2A-CONCURRENCY
+    title: Concurrent Cursor Task Execution
+    owns:
+      - readiness_to_dispatch_compilation
+      - autonomy_leases
+      - bounded_parallel_dispatch
+      - join_behavior
+      - task_resource_isolation
+    does_not_own:
+      - Controller_state_transitions
+      - result_acceptance
+      - collectors
+      - campaign_authority
+  - id: WS-2B-RESULT-INGESTION
+    title: Structured Agent Result Ingestion
+    owns:
+      - mandatory_result_schema
+      - result_validation
+      - result_acceptance_receipt
+      - result_rejection_receipt
+      - SGD_packet_creation
+      - SGD_processing_receipt
+      - DELIVERY_PENDING_receipt
+    does_not_own:
+      - agent_scheduling
+      - memory_delivery
+      - gate_definition
+  - id: WS-2C-COLLECTORS-CONTRACTS
+    title: Collector and Execution Contract Completeness
+    owns:
+      - collector_request_schema
+      - collector_receipt_schema
+      - collector_registry
+      - collector_self_tests
+      - execution_contract_compilation
+      - null_contract_rejection
+    does_not_own:
+      - concurrency_policy
+      - publication_authority
+  - id: WS-2D-ACTIVATION-POLICY
+    title: Campaign Activation and Authority Policy
+    owns:
+      - activation_schema
+      - publication_ceiling
+      - merge_mode
+      - runtime_ceiling
+      - authority_supersession
+      - Auto_HITL_boundaries
+      - conflict_resolution_order
+    does_not_own:
+      - task_implementation
+      - evidence_collection
+  - id: WS-2E-VERIFICATION
+    title: Preflight, Negative Tests, and Golden Path
+    owns:
+      - doctor_command
+      - conformance_tests
+      - negative_tests
+      - golden_fixture
+      - readiness_score
+      - admission_receipt
+    integration_dependency:
+      - WS-2A-CONCURRENCY
+      - WS-2B-RESULT-INGESTION
+      - WS-2C-COLLECTORS-CONTRACTS
+      - WS-2D-ACTIVATION-POLICY
+
+# milestones -----------------------------------------------------------------
+milestones:
+  - id: M0
+    name: Evidence and Source Bind
+    required_evidence:
+      - source_commit_receipt
+      - program_pack_digest_receipt
+      - program_lock_digest_receipt
+      - baseline_inventory
+    unlocks:
+      - PHASE-1
+  - id: M1
+    name: Integrity Foundation Complete
+    required_evidence:
+      - system_validation_receipt_test
+      - proof_transition_negative_test
+      - session_resume_test
+      - supersession_negative_test
+      - runtime_doctor_test
+    unlocks:
+      - PHASE-2
+  - id: M2
+    name: Concurrent Dispatch Spine
+    required_evidence:
+      - two_task_parallel_fixture
+      - lease_isolation_receipt
+      - no_conflicting_write_receipt
+  - id: M3
+    name: Structured Result Spine
+    required_evidence:
+      - accepted_result_receipt
+      - rejected_result_receipt
+      - SGD_packet_receipt
+      - DELIVERY_PENDING_receipt
+      - narrative_only_pass_rejection
+  - id: M4
+    name: Contract and Collector Completeness
+    required_evidence:
+      - null_execution_contract_count_zero
+      - collector_schema_validation
+      - collector_self_test_receipts
+  - id: M5
+    name: Policy and Activation Complete
+    required_evidence:
+      - activation_schema_validation
+      - human_only_merge_negative_test
+      - ceiling_supersession_test
+      - authority_conflict_test
+  - id: M6
+    name: Run 2 Go or No-Go
+    required_evidence:
+      - golden_path_receipt
+      - doctor_receipt
+      - readiness_score_receipt
+      - current_validation_receipt
+      - operator_admission_decision
+
+# success_metrics ------------------------------------------------------------
+success_metrics:
+  - id: METRIC-01
+    measure: current_validation_verdict_count
+    target: 1
+  - id: METRIC-02
+    measure: blocking_unknown_approvers
+    target: 0
+  - id: METRIC-03
+    measure: null_execution_contracts_for_admitted_tasks
+    target: 0
+  - id: METRIC-04
+    measure: narrative_only_passes_accepted
+    target: 0
+  - id: METRIC-05
+    measure: illegal_live_promotions_accepted
+    target: 0
+  - id: METRIC-06
+    measure: successful_chat_free_resume
+    target: true
+  - id: METRIC-07
+    measure: concurrent_independent_tasks_in_golden_fixture
+    minimum: 2
+    maximum: 4
+  - id: METRIC-08
+    measure: overlapping_mutation_leases
+    target: 0
+  - id: METRIC-09
+    measure: accepted_results_with_SGD_and_DELIVERY_PENDING_receipts
+    target_percent: 100
+  - id: METRIC-10
+    measure: unattended_wave0_readiness_score
+    target_minimum: 85
+  - id: METRIC-11
+    measure: source_pack_mutations_during_execution
+    target: 0
+  - id: METRIC-12
+    measure: memory_system_dependencies_in_golden_path
+    target: 0
+
+# risks ----------------------------------------------------------------------
+risks:
+  - id: RISK-01
+    risk: second_scheduler_is_created
+    mitigation: >
+      Require adapters to consume Controller readiness and autonomy leases;
+      prohibit independent task graph ownership.
+  - id: RISK-02
+    risk: Controller_parallelism_causes_state_races
+    mitigation: >
+      Keep Controller state transitions serial and place execution fan-out in
+      Cursor Tasks.
+  - id: RISK-03
+    risk: campaign_approval_inflates_executor_authority
+    mitigation: >
+      Model action approval and executor permission as independent fields.
+  - id: RISK-04
+    risk: stale_validation_report_appears_current
+    mitigation: >
+      Bind the generated validation receipt to the target commit and expire or
+      reject reports for other commits.
+  - id: RISK-05
+    risk: dated_evidence_promotes_live_status
+    mitigation: >
+      Enforce proof-class and freshness rules in the Controller transition
+      function.
+  - id: RISK-06
+    risk: source_pack_is_mutated_during_campaign
+    mitigation: >
+      Mount or treat the bound pack as read-only and direct generated content
+      to the Controller workspace.
+  - id: RISK-07
+    risk: separate_workstreams_fork_shared_contracts
+    mitigation: >
+      Phase 1 freezes shared schema IDs before Phase 2 implementation begins.
+  - id: RISK-08
+    risk: SGD_delivery_pending_is_misrepresented_as_memory_success
+    mitigation: >
+      Declare DELIVERY_PENDING as the terminal boundary of this campaign and
+      prohibit memory-success statuses.
+
+# output_file_digests --------------------------------------------------------
+output_file_digests:
+  algorithm: sha256
+  canonicalization: utf8_lf_sorted_keys
+  canonicalization_method: >
+    Each YAML file is parsed and re-serialized as UTF-8 JSON with lexicographically
+    sorted keys and compact separators (',' and ':'); sha256 is taken over that
+    canonical byte stream. Reproduce with:
+    python3 -c "import yaml,json,hashlib,sys;
+    print(hashlib.sha256(json.dumps(yaml.safe_load(open(sys.argv[1])),sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest())" FILE.yaml
+  charter_records:
+    CAMPAIGN_AUTHORIZATION.yaml: 420aabacb957e975b9b471ba1acd4321321d1c42801bc553444491f9be4aaadf
+    CAMPAIGN_EXECUTION.yaml: f7406d669d8fd361ca767b8bfc9bbdda3aa6c5c62a694fb0652d5f73e39c0836
+  pack_digest:
+    definition: >
+      sha256 of the canonical (utf8_lf_sorted_keys) concatenation of all three
+      generated files in ordinal order (CAMPAIGN_CHARTER.yaml,
+      CAMPAIGN_AUTHORIZATION.yaml, CAMPAIGN_EXECUTION.yaml). Because the charter
+      would otherwise contain its own digest, the pack_digest value is not stored
+      inside any pack file; it is emitted with the compile receipt and is
+      recomputable from the three files as written.
+    charter_self_field_excluded: pack_digest.value

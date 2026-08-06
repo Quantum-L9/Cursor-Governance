@@ -1,0 +1,875 @@
+api_version: l9.quantum/campaign-pack/v1
+kind: CampaignExecution
+ordinal: 3
+source_section: campaign_execution
+
+# ----------------------------------------------------------------------------
+# Compiled artifact. Runtime next_action is Controller-derived, never
+# hand-written (see next_action.handwritten_pack_value_allowed: false).
+# ----------------------------------------------------------------------------
+compiled_by:
+  compiler_name: l9-unified-campaign-compiler
+  compiler_version: 1.0.0
+  compiled_at: '2026-08-05T19:24:57Z'
+  campaign_spec_id: CG-PES-RUN2-HARDENING
+  source_api_version: l9.quantum/campaign-source/v1
+
+# Identity fields (required in every output file).
+campaign_id: cg-pes-run2-hardening-21d4efbe
+target_commit: 21d4efbea78756a23390c530f189d0fa4de25f24
+
+identity:
+  campaign_id: cg-pes-run2-hardening-21d4efbe
+  target_commit: 21d4efbea78756a23390c530f189d0fa4de25f24
+  controller_entrypoint: environment/program-execution/core/program-execution-controller-template/scripts/pec.py
+  controller_home: /root/.l9/programs
+  controller_workspace: /root/.l9/programs/cg-pes-run2-hardening
+  runtime_database_path: /root/.l9/programs/cg-pes-run2-hardening/runtime/state.sqlite
+  runtime_ledger_path: /root/.l9/programs/cg-pes-run2-hardening/ledger/events.jsonl
+
+preflight:
+  mandatory:
+    - id: PF-001
+      check: target_repository_and_commit_bind
+      pass_when: >
+        Repository identity, target branch, and HEAD exactly match compiled
+        authorization values.
+    - id: PF-002
+      check: source_pack_digest
+      pass_when: >
+        SHA-256 equals dff1e09a2ce5cd62bdf6841fb29f3b959aa52ebee8acec8af352d1eebe4f0180.
+    - id: PF-003
+      check: program_lock_digest
+      pass_when: >
+        Program Lock digest equals
+        c78baebb67318a532f2e79f24674d0d8aa5cf71f16476e6134233f851ac3aafe.
+    - id: PF-004
+      check: source_pack_immutability
+      pass_when: >
+        Pack is clean and configured read-only for campaign execution.
+    - id: PF-005
+      check: Controller_entrypoint
+      pass_when: >
+        environment/program-execution/core/program-execution-controller-template/scripts/pec.py
+        exists, is executable, and reports control-plane version 2.0.0.
+    - id: PF-006
+      check: runtime_database_singleton
+      pass_when: >
+        /root/.l9/programs/cg-pes-run2-hardening/runtime/state.sqlite is the only
+        authoritative Controller database and no competing control.db is accepted.
+    - id: PF-007
+      check: ledger_health
+      pass_when: >
+        Event sequence, hashes, and receipt references validate.
+    - id: PF-008
+      check: repositories_root
+      pass_when: >
+        Required repositories are available through clean clones or isolated
+        worktrees under /home/user.
+    - id: PF-009
+      check: remote_and_branch_policy
+      pass_when: >
+        Observed remotes and branches match the explicit registry allowlist.
+    - id: PF-010
+      check: runtime_dependencies
+      pass_when:
+        - supported_python_available
+        - required_cli_tools_available
+        - gh_auth_scopes_observed_without_secret_disclosure
+        - filesystem_permissions_valid
+    - id: PF-011
+      check: current_validation_receipt
+      pass_when: >
+        A generated receipt for 21d4efbea78756a23390c530f189d0fa4de25f24 exists or
+        the campaign is explicitly in validation-construction mode.
+    - id: PF-012
+      check: blocking_approvers
+      pass_when: >
+        All blocking decision and authority roles resolve through the authorization
+        approver_roles (all -> @cryptoxdog); no blocking approver is UNKNOWN.
+  conditional:
+    - id: PF-C01
+      condition: task_requires_container_runtime
+      check: container_runtime_health
+    - id: PF-C02
+      condition: publication_ceiling_is_not_local_only
+      check: exact_publication_approval_and_authentication
+
+phase_1_work_items:
+  - id: F01
+    title: Generate One Commit-Bound Validation Verdict
+    workstream: integrity_validation
+    deliverables:
+      - SYSTEM_VALIDATION_RECEIPT schema
+      - validation aggregator
+      - stale-report rejection logic
+    receipt_fields:
+      - source_commit
+      - generated_at
+      - workflow_run_id
+      - core_verdict
+      - adapter_verdict
+      - conformance_verdict
+      - integration_verdict
+      - overall_verdict
+      - supersedes
+      - valid_until
+      - artifact_digest
+    acceptance:
+      - exactly_one_current_verdict
+      - receipt_for_other_commit_is_rejected
+      - checked_in_reports_are_historical_only
+  - id: F02
+    title: Enforce Proof-Class Status Transitions
+    workstream: evidence_integrity
+    deliverables:
+      - proof_class_schema
+      - freshness_schema
+      - transition_matrix
+      - Controller_transition_enforcement
+    acceptance:
+      - dated_snapshot_cannot_produce_LIVE_INTEGRATION_PASS
+      - missing_source_head_blocks_live_promotion
+      - expired_evidence_blocks_promotion
+  - id: F03
+    title: Generate SESSION_STATE and Controller next_action
+    workstream: resumability
+    deliverables:
+      - SESSION_STATE schema
+      - atomic_state_writer
+      - next_action_calculator
+      - handwritten_next_action_linter
+    acceptance:
+      - state_written_after_every_transition
+      - resume_without_chat_passes
+      - no_pack_file_declares_runtime_next_task
+  - id: F04
+    title: Implement Authority Supersession and Atomic Relock
+    workstream: authority
+    deliverables:
+      - AUTHORITY_SUPERSESSION_RECEIPT schema
+      - supersession_validator
+      - atomic_relock_operation
+      - supersession_chain_view
+    acceptance:
+      - W1_under_W0_lock_refused
+      - ordinary_approval_cannot_raise_ceiling
+      - valid_supersession_and_relock_can_raise_ceiling
+  - id: F05
+    title: Separate Action Approval from Executor Permission
+    workstream: authority
+    deliverables:
+      - executor_permission_fields
+      - human_only_action_enforcement
+      - remote_action_negative_tests
+    acceptance:
+      - merge_approval_does_not_enable_adapter_merge
+      - draft_pr_requires_exact_approval
+      - deploy_route_is_unavailable
+  - id: F06
+    title: Strongly Type Handoff and Authority Resolution
+    workstream: resumability
+    deliverables:
+      - typed_HANDOFF_RECEIPT
+      - canonical_schema_references
+      - AUTHORITY_UNRESOLVED state
+    acceptance:
+      - generic_untyped_object_arrays_rejected
+      - blocking_UNKNOWN_approver_rejected
+      - handoff_references_current_SESSION_STATE
+  - id: F07
+    title: Establish Durable Runtime Home and Doctor
+    workstream: operability
+    deliverables:
+      - repository_local_Controller_entrypoint
+      - L9CP_HOME compatibility contract
+      - single_database_resolution
+      - doctor command
+      - recovery runbook
+    acceptance:
+      - Controller_runs_without_Cursor_skill_backup
+      - database_path_is_unambiguous
+      - doctor_detects_missing_entrypoint
+      - doctor_detects_database_split
+      - recovery_tabletop_passes
+  - id: F08
+    title: Split Definitions of Done
+    workstream: validation
+    deliverables:
+      - PACK_DEFINITION_READY contract
+      - PHASE_EXIT_READY contract
+      - PROGRAM_PROMOTION_READY contract
+    acceptance:
+      - each_verdict_names_exact_contract
+      - template_validation_cannot_imply_program_readiness
+      - campaign_cannot_claim_production_contract
+
+phase_1_gate:
+  id: GATE-P1-FOUNDATION
+  result: PASS_only
+  requires:
+    - F01
+    - F02
+    - F03
+    - F04
+    - F05
+    - F06
+    - F07
+    - F08
+  proof_class: local_replay
+  independent_verification: required
+  waiver_allowed: false
+
+phase_2_work_items:
+  - id: C01
+    title: Freeze Concurrency Plane Decision
+    workstream: WS-2A-CONCURRENCY
+    depends_on:
+      - GATE-P1-FOUNDATION
+    deliverables:
+      - concurrency_policy
+      - Controller_seriality_test
+      - Cursor_Task_parallel_limit_configuration
+    acceptance:
+      - one_authority_plane
+      - no_dual_scheduler
+      - limits_match_authorization
+  - id: C02
+    title: Compile Ready Set into Leased Cursor Task Wave
+    workstream: WS-2A-CONCURRENCY
+    depends_on:
+      - C01
+    deliverables:
+      - ready_set_adapter
+      - lease_acquisition
+      - Task_dispatch_request
+      - join_receipt
+    acceptance:
+      - only_ready_tasks_dispatched
+      - every_task_holds_lease
+      - conflicting_tasks_not_dispatched_together
+  - id: C03
+    title: Require Structured Result from Every Cursor Role
+    workstream: WS-2B-RESULT-INGESTION
+    depends_on:
+      - GATE-P1-FOUNDATION
+    deliverables:
+      - AGENT_RESULT schema
+      - role_contract_binding
+      - result_validator
+    acceptance:
+      - narrative_only_result_rejected
+      - task_and_attempt_identity_required
+      - repository_heads_required
+      - claims_require_evidence_refs
+  - id: C04
+    title: Bridge Accepted Result to SGD
+    workstream: WS-2B-RESULT-INGESTION
+    depends_on:
+      - C03
+    deliverables:
+      - result_bridge_integration
+      - OutcomePublisher_integration
+      - SGD_packet_receipt
+      - processing_receipt
+      - DELIVERY_PENDING_receipt
+    acceptance:
+      - accepted_result_always_creates_packet
+      - rejected_result_never_creates_packet
+      - serial_and_parallel_results_use_same_path
+      - no_memory_dependency
+  - id: C05
+    title: Define Collector Request and Receipt Contracts
+    workstream: WS-2C-COLLECTORS-CONTRACTS
+    depends_on:
+      - GATE-P1-FOUNDATION
+    deliverables:
+      - COLLECTOR_REQUEST schema
+      - COLLECTOR_RECEIPT schema
+      - collector_registry
+    acceptance:
+      - missing_required_field_rejected
+      - raw_artifact_digest_required
+      - proof_class_required
+      - unknowns_explicit
+  - id: C06
+    title: Promote Invented Run 1 Collectors into Governed Collectors
+    workstream: WS-2C-COLLECTORS-CONTRACTS
+    depends_on:
+      - C05
+    deliverables:
+      - governed_audit_collectors
+      - collector_self_tests
+      - collector_version_bindings
+    acceptance:
+      - collector_has_schema
+      - collector_has_self_test
+      - collector_output_is_receipted
+      - no_ad_hoc_narrative_collector
+  - id: C07
+    title: Compile Non-Null Execution Contracts
+    workstream: WS-2C-COLLECTORS-CONTRACTS
+    depends_on:
+      - GATE-P1-FOUNDATION
+    deliverables:
+      - execution_contract_compiler
+      - pack_validator_rule
+      - contract_coverage_report
+    acceptance:
+      - admitted_task_null_contract_count_is_zero
+      - missing_contract_blocks_admission
+      - generated_contract_does_not_mutate_bound_pack
+  - id: C08
+    title: Define Campaign Activation Packet
+    workstream: WS-2D-ACTIVATION-POLICY
+    depends_on:
+      - GATE-P1-FOUNDATION
+    deliverables:
+      - CAMPAIGN_ACTIVATION schema
+      - runtime_ceiling_field
+      - publication_ceiling_field
+      - merge_mode_field
+      - concurrency_plane_field
+      - repository_scope_field
+    acceptance:
+      - all_authority_fields_explicit
+      - no_draft_only_plus_implicit_merge
+      - target_program_wave_defaults_to_none
+  - id: C09
+    title: Implement Halt and Fail-Forward Evaluator
+    workstream: WS-2D-ACTIVATION-POLICY
+    depends_on:
+      - C08
+    deliverables:
+      - halt_evaluator
+      - DEFER_reason_codes
+      - sibling_continue_logic
+    acceptance:
+      - security_failure_halts_globally
+      - optional_audit_failure_does_not_fake_pass
+      - DEFER_preserves_blocked_parent_status
+  - id: C10
+    title: Harden Gate State Mutation
+    workstream: WS-2D-ACTIVATION-POLICY
+    depends_on:
+      - C08
+    deliverables:
+      - idempotent_set_gate
+      - reason_codes
+      - new_proof_requirement
+    acceptance:
+      - repeated_identical_transition_is_idempotent
+      - LIVE_to_BLOCKED_flip_requires_new_evidence_or_revocation
+      - every_transition_has_receipt
+  - id: C11
+    title: Implement Negative Test Suite
+    workstream: WS-2E-VERIFICATION
+    depends_on:
+      - GATE-P1-FOUNDATION
+    deliverables:
+      - negative_test_harness
+      - failure_receipts
+    acceptance:
+      - all_required_negative_tests_pass
+  - id: C12
+    title: Execute Concurrent Golden Fixture
+    workstream: WS-2E-VERIFICATION
+    depends_on:
+      - C02
+      - C04
+      - C05
+      - C07
+      - C08
+      - C09
+      - C10
+      - C11
+    deliverables:
+      - golden_fixture_campaign
+      - dispatch_receipts
+      - result_receipts
+      - SGD_receipts
+      - SESSION_STATE_receipt
+      - final_next_action_receipt
+    acceptance:
+      - at_least_two_tasks_run_concurrently
+      - leases_do_not_overlap
+      - both_results_are_structured
+      - both_results_are_accepted_or_explicitly_rejected
+      - accepted_results_reach_DELIVERY_PENDING
+      - SESSION_STATE_updates_at_join
+      - no_memory_system_called
+  - id: C13
+    title: Calculate Updated Unattended W0 Readiness
+    workstream: WS-2E-VERIFICATION
+    depends_on:
+      - C12
+    deliverables:
+      - readiness_score_receipt
+    rubric:
+      - next_action_integrity
+      - collector_completeness
+      - runtime_operability
+      - approver_resolution
+      - SESSION_STATE_resumability
+      - authority_supersession
+      - proof_class_enforcement
+      - result_ingestion
+      - negative_test_coverage
+    acceptance:
+      minimum_score: 85
+
+dependency_rules:
+  phase_2_entry:
+    requires:
+      - GATE-P1-FOUNDATION
+  concurrent_build_allowed:
+    groups:
+      - [C01, C03, C05, C07, C08, C11]
+      - [C02, C04, C06, C09, C10]
+  final_integration_requires:
+    - C02
+    - C04
+    - C06
+    - C07
+    - C09
+    - C10
+    - C11
+  run_2_admission_requires:
+    - C12
+    - C13
+
+evidence_model:
+  proof_classes:
+    - id: template
+      rank: 0
+      meaning: static definition or schema evidence
+    - id: dated_snapshot
+      rank: 1
+      meaning: historical observation not guaranteed current
+    - id: local_replay
+      rank: 2
+      meaning: reproducible local execution against bound sources
+    - id: live_readonly
+      rank: 3
+      meaning: fresh observation of a live integration without mutation
+    - id: live_mutation
+      rank: 4
+      meaning: fresh controlled mutation and observed result
+    - id: production
+      rank: 5
+      meaning: production-environment evidence
+  evidence_required_fields:
+    - evidence_id
+    - proof_class
+    - observed_at
+    - valid_until
+    - repository
+    - source_head
+    - environment_identity
+    - commands
+    - raw_artifact_refs
+    - raw_artifact_digests
+    - supported_claims
+    - unknowns
+    - collector_version
+    - receipt_digest
+  transition_policy:
+    PACK_DEFINITION_READY:
+      minimum_proof_class: template
+    LOCAL_EXECUTION_PASS:
+      minimum_proof_class: local_replay
+    LIVE_READONLY_QUALIFIED:
+      minimum_proof_class: live_readonly
+    LIVE_INTEGRATION_PASS:
+      minimum_proof_class: gate_defined
+      allowed_values:
+        - live_readonly
+        - live_mutation
+      freshness_required: true
+      environment_identity_required: true
+    PRODUCTION_READY:
+      minimum_proof_class: production
+      independent_verifier_required: true
+      human_approval_required: true
+      authorized_in_this_campaign: false
+
+result_contract:
+  schema_id: AGENT_RESULT
+  required_fields:
+    - result_id
+    - task_id
+    - attempt_id
+    - agent_role
+    - execution_contract_id
+    - lease_id
+    - source_commit
+    - repository
+    - head_before
+    - head_after
+    - changed_files
+    - commands
+    - test_results
+    - evidence_refs
+    - claims
+    - unknowns
+    - final_status
+    - generated_at
+  final_status_enum:
+    - COMPLETE
+    - COMPLETE_WITH_BLOCKERS
+    - BLOCKED
+    - FAILED
+    - DEFERRED
+  prohibited_status:
+    - PASS
+  acceptance_rules:
+    - claimed_changed_files_match_observation
+    - source_commit_matches_campaign
+    - lease_covers_mutated_resources
+    - commands_and_tests_are_receipted
+    - claims_reference_evidence
+    - unknowns_are_explicit
+    - no_memory_write_claims
+
+SGD_boundary:
+  input: accepted_AGENT_RESULT
+  stages:
+    - validate
+    - convert_to_generated_data_packet
+    - process
+    - classify
+    - route_to_delivery_pending
+  required_receipts:
+    - RESULT_ACCEPTANCE_RECEIPT
+    - SGD_PACKET_RECEIPT
+    - SGD_PROCESSING_RECEIPT
+    - DELIVERY_PENDING_RECEIPT
+  terminal_campaign_state: DELIVERY_PENDING
+  downstream_memory_delivery_required: false
+  downstream_memory_delivery_authorized: false
+
+collector_contract:
+  request_required_fields:
+    - request_id
+    - collector_id
+    - collector_version
+    - task_id
+    - target_repository
+    - expected_head
+    - environment_requirements
+    - commands_allowed
+    - proof_class_requested
+    - output_location
+  receipt_required_fields:
+    - receipt_id
+    - request_id
+    - collector_id
+    - collector_version
+    - repository
+    - observed_head
+    - environment_identity
+    - commands_run
+    - exit_codes
+    - raw_artifact_refs
+    - raw_artifact_digests
+    - claims
+    - proof_class
+    - unknowns
+    - observed_at
+    - valid_until
+    - result
+    - receipt_digest
+  result_enum:
+    - PASS
+    - FAIL
+    - BLOCKED
+    - UNKNOWN
+  promotion_rule: >
+    Collector PASS alone does not promote a gate; the Controller evaluates the
+    receipt against gate proof and freshness requirements.
+
+execution_contract:
+  required_for_every_admitted_task: true
+  required_fields:
+    - contract_id
+    - task_id
+    - objective
+    - repositories
+    - allowed_paths
+    - forbidden_paths
+    - dependencies
+    - entry_gates
+    - required_approvals
+    - commands_allowed
+    - expected_artifacts
+    - validation_commands
+    - result_schema
+    - proof_requirements
+    - publication_limit
+    - rollback_or_recovery
+  null_contract_behavior: reject_pack_or_task_admission
+
+runtime_state:
+  canonical_database: /root/.l9/programs/cg-pes-run2-hardening/runtime/state.sqlite
+  canonical_ledger: /root/.l9/programs/cg-pes-run2-hardening/ledger/events.jsonl
+  generated_artifact: SESSION_STATE.json
+  write_triggers:
+    - campaign_initialization
+    - task_admission
+    - task_dispatch
+    - result_acceptance
+    - result_rejection
+    - gate_transition
+    - authority_change
+    - lease_change
+    - phase_join
+    - campaign_halt
+    - campaign_resume
+  required_fields:
+    - campaign_id
+    - target_commit
+    - program_lock_digest
+    - active_phase
+    - runtime_ceiling
+    - publication_ceiling
+    - active_leases
+    - running_tasks
+    - completed_receipt_digests
+    - blocking_gates
+    - unresolved_decisions
+    - unresolved_unknowns
+    - current_validation_receipt
+    - next_admissible_actions
+    - exact_resume_command
+    - forbidden_actions
+    - generated_at
+    - state_digest
+
+next_action:
+  authority: Controller_only
+  generated_from:
+    - immutable_dependency_graph
+    - current_runtime_state
+    - gates
+    - leases
+    - active_authorization
+    - unresolved_decisions
+  handwritten_pack_value_allowed: false
+  zero_action_state: WAITING_ON_EXPLICIT_BLOCKER
+  multiple_action_state: READY_SET
+
+handoff:
+  artifact_type: HANDOFF_RECEIPT
+  generated_from_SESSION_STATE: true
+  required_references:
+    - SESSION_STATE_digest
+    - current_validation_receipt
+    - program_lock_digest
+    - last_event_sequence
+    - active_authorization_digest
+  generic_untyped_objects_allowed: false
+  chat_history_required: false
+
+definitions_of_done:
+  PACK_DEFINITION_READY:
+    concerns:
+      - schema_validity
+      - digest_integrity
+      - non_null_execution_contracts
+      - resolved_blocking_approvers
+      - generated_next_action_policy
+    does_not_imply:
+      - executable_environment
+      - live_integration
+      - production_readiness
+  PHASE_EXIT_READY:
+    concerns:
+      - phase_tasks_complete
+      - phase_gates_pass
+      - receipts_valid
+      - SESSION_STATE_current
+      - no_illegal_authority_change
+  PROGRAM_PROMOTION_READY:
+    concerns:
+      - required_live_proof
+      - current_environment_identity
+      - independent_verification
+      - explicit_human_approval
+    authorized_in_this_campaign: false
+
+negative_tests:
+  - id: NEG-001
+    scenario: wrong_program_pack_digest
+    expected: global_halt
+  - id: NEG-002
+    scenario: dirty_audit_target
+    expected: affected_repository_halt_or_clean_clone_required
+  - id: NEG-003
+    scenario: stale_validation_receipt
+    expected: reject_current_verdict
+  - id: NEG-004
+    scenario: dated_snapshot_requests_live_promotion
+    expected: reject_transition
+  - id: NEG-005
+    scenario: null_execution_contract
+    expected: reject_task_admission
+  - id: NEG-006
+    scenario: missing_Controller_entrypoint
+    expected: doctor_fail
+  - id: NEG-007
+    scenario: competing_control_db_and_state_sqlite
+    expected: doctor_fail_and_halt
+  - id: NEG-008
+    scenario: ordinary_approval_raises_wave_ceiling
+    expected: reject_authority_change
+  - id: NEG-009
+    scenario: merge_approval_used_by_adapter
+    expected: reject_executor_action
+  - id: NEG-010
+    scenario: publication_ceiling_draft_only_but_campaign_requests_merge
+    expected: reject_authorization
+  - id: NEG-011
+    scenario: narrative_only_agent_pass
+    expected: reject_result
+  - id: NEG-012
+    scenario: result_source_head_mismatch
+    expected: reject_result
+  - id: NEG-013
+    scenario: overlapping_mutation_leases
+    expected: reject_second_dispatch
+  - id: NEG-014
+    scenario: handwritten_next_action_conflicts_with_Controller
+    expected: lint_fail
+  - id: NEG-015
+    scenario: source_pack_mutation_during_execution
+    expected: global_halt
+  - id: NEG-016
+    scenario: gate_flips_without_new_proof_or_revocation
+    expected: reject_transition
+  - id: NEG-017
+    scenario: collector_PASS_without_required_proof_class
+    expected: keep_gate_blocked
+  - id: NEG-018
+    scenario: accepted_result_does_not_create_SGD_receipt
+    expected: integration_test_fail
+  - id: NEG-019
+    scenario: golden_path_calls_memory_system
+    expected: test_fail
+
+golden_path:
+  id: GOLDEN-RUN2-SPINE
+  purpose: >
+    Prove bounded concurrent dispatch, structured result acceptance, SGD
+    conversion, delivery-pending receipts, and chat-free resumability.
+  fixture:
+    task_count: 2
+    task_type: independent_read_only_recon
+    repositories:
+      conflict: false
+    concurrency:
+      expected_parallel: true
+    memory_services:
+      required: false
+      permitted: false
+  steps:
+    - Controller_validates_campaign_and_computes_ready_set
+    - Controller_acquires_nonoverlapping_leases
+    - Cursor_adapter_dispatches_two_tasks
+    - both_tasks_return_AGENTS_RESULT_documents
+    - Controller_validates_and_accepts_or_rejects_each_result
+    - accepted_results_convert_to_SGD_packets
+    - processor_emits_processing_receipts
+    - delivery_boundary_emits_DELIVERY_PENDING_receipts
+    - Controller_releases_leases
+    - Controller_writes_SESSION_STATE
+    - Controller_calculates_next_action
+    - fresh_agent_resumes_from_receipts_without_chat
+  pass_criteria:
+    - at_least_two_tasks_overlap_in_execution_time
+    - no_resource_conflict
+    - zero_narrative_only_pass
+    - every_accepted_result_has_all_required_receipts
+    - SESSION_STATE_digest_valid
+    - resume_test_pass
+    - no_memory_service_invocation
+
+checkpoints:
+  - id: CP1
+    after: GATE-P1-FOUNDATION
+    requires:
+      - current_validation_receipt
+      - proof_class_negative_test
+      - session_resume_test
+      - supersession_test
+      - doctor_test
+    no_go_action: block_phase_2
+  - id: CP2
+    after: C02
+    requires:
+      - two_task_dispatch_receipt
+      - lease_isolation_receipt
+    no_go_action: block_concurrency_integration
+  - id: CP3
+    after: C04
+    requires:
+      - SGD_packet_receipt
+      - processing_receipt
+      - DELIVERY_PENDING_receipt
+    no_go_action: block_result_spine
+  - id: CP4
+    after: C07
+    requires:
+      - zero_null_execution_contracts
+      - collector_self_tests
+    no_go_action: block_pack_admission
+  - id: CP5
+    after: C10
+    requires:
+      - activation_validation
+      - human_only_merge_test
+      - supersession_test
+      - gate_transition_test
+    no_go_action: block_campaign_activation
+  - id: CP6
+    after: C13
+    requires:
+      - golden_path_PASS
+      - doctor_PASS
+      - readiness_score_at_least_85
+      - current_validation_verdict_APPROVED
+      - explicit_operator_admission
+    no_go_action: issue_RUN2_NO_GO
+
+admission:
+  gate_id: GATE-RUN2-ADMIT
+  default_result: NO_GO
+  required_for_GO:
+    - GATE-P1-FOUNDATION_PASS
+    - GATE-P2-INTEGRATION_PASS
+    - golden_path_PASS
+    - doctor_PASS
+    - unattended_wave0_readiness_score_at_least_85
+    - current_validation_receipt_APPROVED
+    - no_blocking_unknown_approvers
+    - no_null_admitted_execution_contracts
+    - no_pack_mutation
+    - explicit_human_admission_receipt
+  GO_authorizes:
+    - generation_of_separate_Run_2_activation_pack
+  GO_does_not_authorize:
+    - full_constellation_execution
+    - merge
+    - release
+    - deployment
+    - production_claim
+    - memory_ingestion
+
+final_receipts:
+  required:
+    - SYSTEM_VALIDATION_RECEIPT
+    - PHASE_1_EXIT_RECEIPT
+    - PHASE_2_INTEGRATION_RECEIPT
+    - GOLDEN_PATH_RECEIPT
+    - DOCTOR_RECEIPT
+    - READINESS_SCORE_RECEIPT
+    - RUN2_ADMISSION_RECEIPT
