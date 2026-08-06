@@ -15,15 +15,21 @@
       "l9-pr-analysis",
       "l9-ynp",
       "l9-skill-compiler",
+      "l9-wire-skill-into-repo",
+      "l9-update-agent-docs",
       "l9-api-smoke-testing",
       "l9-auditing-performance",
       "l9-auditing-security",
       "l9-prompt-engineering",
       "l9-incident-response",
       "l9-setting-up-ci",
-      "l9-graphiti-memory"
+      "l9-graphiti-memory",
+      "l9-aws-secrets",
+      "l9-code-graph-rag-mcp",
+      "l9-architecture-decision-records",
+      "l9-monitoring-terminal-errors"
     ],
-    "purpose": "Reinforce Claude Code's native skill selection with high-confidence routes while preserving model judgment, explicit-only boundaries, and narrow composition.\n",
+    "purpose": "Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce native skill selection while preserving model judgment, explicit-only boundaries, and narrow composition. Recommendation never grants mutation authority.\n",
     "routes": [
       {
         "id": "pr_analysis",
@@ -39,7 +45,9 @@
           "merge blockers",
           "review comments",
           "pr readiness",
-          "ready to merge"
+          "ready to merge",
+          "analyze this pr",
+          "pr analysis"
         ],
         "primary": "l9-pr-analysis",
         "signal_weight": 8,
@@ -56,7 +64,9 @@
           "map the code flows",
           "map code flows",
           "explore the codebase",
-          "identify hotspots"
+          "identify hotspots",
+          "analyze this code",
+          "code analysis"
         ],
         "primary": "l9-code-analysis",
         "signal_weight": 8,
@@ -72,7 +82,8 @@
           "compare trade-offs",
           "root cause analysis",
           "deep reasoning",
-          "decision support"
+          "decision support",
+          "trade-off analysis"
         ],
         "primary": "l9-structured-reasoning",
         "signal_weight": 8,
@@ -85,9 +96,43 @@
           "readiness gaps",
           "percent complete",
           "compliance drift",
-          "gap analysis"
+          "gap analysis",
+          "delta gap"
         ],
         "primary": "l9-gap-analysis",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "plan",
+        "positive_signals": [
+          "create an execution plan",
+          "write a plan first",
+          "plan before building",
+          "implementation plan",
+          "scope is unclear",
+          "decompose the requirements",
+          "make a plan"
+        ],
+        "primary": "l9-plan",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "gmp_protocol",
+        "positive_signals": [
+          "gmp protocol",
+          "run gmp",
+          "modification lock",
+          "phased auditable change",
+          "signed evidence report",
+          "gmp phases"
+        ],
+        "primary": "l9-gmp-protocol",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -100,7 +145,9 @@
           "skill pack",
           "compile this prompt into a skill",
           "turn this workflow into a skill",
-          "turn this operating procedure into"
+          "turn this operating procedure into",
+          "create a skill",
+          "compile a skill"
         ],
         "primary": "l9-skill-compiler",
         "signal_weight": 8,
@@ -109,13 +156,43 @@
         ]
       },
       {
+        "id": "wire_skill",
+        "positive_signals": [
+          "wire the skill",
+          "wire skill into",
+          "register the skill",
+          "skill discovery tables",
+          "subagent preload"
+        ],
+        "primary": "l9-wire-skill-into-repo",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-update-agent-docs"
+        ]
+      },
+      {
+        "id": "update_agent_docs",
+        "positive_signals": [
+          "update agents.md",
+          "refresh agent docs",
+          "update claude.md",
+          "update invariants.md",
+          "update architecture.md"
+        ],
+        "primary": "l9-update-agent-docs",
+        "signal_weight": 8,
+        "supporting": []
+      },
+      {
         "id": "context7_docs",
         "positive_signals": [
           "sdk documentation",
           "current library documentation",
           "version-specific documentation",
           "current api documentation",
-          "current next.js"
+          "current next.js",
+          "check the docs",
+          "use context7"
         ],
         "primary": "l9-context7-docs",
         "signal_weight": 8,
@@ -130,7 +207,8 @@
           "api endpoint returns 500",
           "api returns 500",
           "endpoint returns 404",
-          "verify api health"
+          "verify api health",
+          "smoke test api"
         ],
         "primary": "l9-api-smoke-testing",
         "signal_weight": 8,
@@ -144,7 +222,8 @@
           "set up github actions ci",
           "bootstrap ci",
           "add lint type checking and tests",
-          "add ci stages"
+          "add ci stages",
+          "set up ci"
         ],
         "primary": "l9-setting-up-ci",
         "signal_weight": 8,
@@ -173,7 +252,8 @@
           "what should i do next",
           "work is complete what next",
           "priorities are unclear",
-          "next highest leverage action"
+          "next highest leverage action",
+          "what next"
         ],
         "primary": "l9-ynp",
         "signal_weight": 8,
@@ -186,9 +266,27 @@
           "memory prefetch",
           "mcp health failure",
           "memory bootstrap",
-          "episode write"
+          "episode write",
+          "graphiti health"
         ],
         "primary": "l9-graphiti-memory",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "aws_secrets",
+        "positive_signals": [
+          "resolve aws secret",
+          "openclaw-igorbot",
+          "secrets registry",
+          "sync secrets registry",
+          "sync_secrets_registry",
+          "resolve_secret",
+          "aws secrets manager ref"
+        ],
+        "primary": "l9-aws-secrets",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -244,13 +342,62 @@
           "recursively improve",
           "converge until execution-ready",
           "recursive optimization",
-          "align this artifact pack"
+          "align this artifact pack",
+          "harden this pack",
+          "improve the skills",
+          "proactively use skills",
+          "skill router",
+          "use skills more",
+          "use skills",
+          "wire it test it",
+          "find it wire it"
         ],
         "primary": "l9-recursive-optimization",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "id": "code_graph",
+        "positive_signals": [
+          "code graph",
+          "batch_index",
+          "semantic code search",
+          "analyze_code_impact",
+          "list_module_importers"
+        ],
+        "primary": "l9-code-graph-rag-mcp",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-code-analysis"
+        ]
+      },
+      {
+        "id": "adr",
+        "positive_signals": [
+          "write an adr",
+          "architecture decision record",
+          "record this decision",
+          "create an adr"
+        ],
+        "primary": "l9-architecture-decision-records",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "terminal_errors",
+        "positive_signals": [
+          "watch the terminal",
+          "fix terminal errors",
+          "monitor running process",
+          "stack traces from the server"
+        ],
+        "primary": "l9-monitoring-terminal-errors",
+        "signal_weight": 8,
+        "supporting": []
       },
       {
         "id": "bounded_autonomy",
@@ -279,7 +426,8 @@
       "l9-graphiti-memory",
       "l9-architecture-decision-records",
       "l9-update-agent-docs",
-      "l9-ynp"
+      "l9-ynp",
+      "l9-wire-skill-into-repo"
     ],
     "trivial_patterns": [
       "^fix (the )?typo\\b",
@@ -287,7 +435,7 @@
       "^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$",
       "^show (me )?(the )?(file|status|diff)\\b"
     ],
-    "version": 1
+    "version": 2
   },
   "schema_version": 1,
   "skills": [
@@ -303,7 +451,7 @@
       "when_to_use": "verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes"
     },
     {
-      "composition_role": "supporting",
+      "composition_role": "primary",
       "description": "document technical decisions as Architecture Decision Records (ADRs) with context, options considered, and rationale. use when capturing a significant architecture or design decision, recording trade-offs, or creating an ADR.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -334,6 +482,17 @@
       "reason": "",
       "user_invocable": true,
       "when_to_use": "reviewing code for security risks, scanning for exposed secrets, or hardening before release"
+    },
+    {
+      "composition_role": "primary",
+      "description": "resolve openclaw-igorbot aws secrets manager refs via the cursor-governance ops/secrets registry \u2014 use when an agent needs a registered secret by ref (secret_id#json_key), to sync the local aws inventory, ui-session stubs, or fail-closed credential checks without keychain or printing values.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-aws-secrets",
+      "path": "skills/l9-aws-secrets",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "resolving openclaw-igorbot AWS Secrets Manager refs, syncing the Cursor-Governance ops/secrets registry from AWS, or fail-closed secret checks without Keychain"
     },
     {
       "composition_role": "general",
@@ -391,7 +550,7 @@
       "when_to_use": "exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots"
     },
     {
-      "composition_role": "general",
+      "composition_role": "primary",
       "description": "operate @er77/code-graph-rag-mcp for repo-local code structure \u2014 token-safe tool selection, cli indexing, importers, impact analysis, cross-module discovery. use when code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or mcp indexing is needed.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -524,7 +683,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, T0 memory-bank, episode writes, GMP Phase 0 MEMORY_PREFETCH. Use when wiring memory, debugging prefetch, bootstrap, or Graphiti health.",
+      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, T0 memory-bank, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
@@ -578,7 +737,7 @@
       "when_to_use": ""
     },
     {
-      "composition_role": "general",
+      "composition_role": "primary",
       "description": "watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -721,7 +880,18 @@
       "when_to_use": "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
     },
     {
-      "composition_role": "supporting",
+      "composition_role": "general",
+      "description": "portable saas dashboard ui operator \u2014 use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-aws-secrets for refs without keychain.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-ui-operator",
+      "path": "skills/l9-ui-operator",
+      "reason": "SaaS admin UI mutations via Playwright cartridges \u2014 high blast radius; requires human approve",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "primary",
       "description": "audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -743,7 +913,7 @@
       "when_to_use": ""
     },
     {
-      "composition_role": "general",
+      "composition_role": "primary",
       "description": "registers new or updated agent skills into repo discovery tables, subagent preload lists, and related agent docs after skill creation. use immediately after l9-skill-compiler finishes, when the user asks to wire or register a skill, or when a skill pack exists but is not yet discoverable.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -766,6 +936,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "c026004dfeea2d9cc644be81a64dc74511836a99654ce1db4012f3fc77ba9448",
-  "source_skill_corpus_sha256": "134a31129c9df0355fb302cf1aaf8e1be617146e5092371d20375516398a7c0f"
+  "source_manifest_sha256": "339753b8cdb47f275e07108e398fffe873d235cb957ac9f125adf0fb1ce69a07",
+  "source_skill_corpus_sha256": "ab148cdf36b2622b13221c6c600a28413c95d83fec605cd64948057fdedcc783"
 }

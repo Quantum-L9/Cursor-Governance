@@ -257,7 +257,8 @@ install_session_end_governance_hook() {
     "graphiti-mark-ok.sh:graphiti-mark-ok.sh" \
     "graphiti-gate-edits.sh:graphiti-gate-edits.sh" \
     "graphiti-gate-shell.sh:graphiti-gate-shell.sh" \
-    "graphiti-gate-subagent.sh:graphiti-gate-subagent.sh"; do
+    "graphiti-gate-subagent.sh:graphiti-gate-subagent.sh" \
+    "before_submit_skill_router.py:before-submit-skill-router.py"; do
     src_name="${pair%%:*}"
     link_name="${pair##*:}"
     src_path="$GLOBAL_COMMANDS/ops/hooks/$src_name"

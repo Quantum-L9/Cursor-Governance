@@ -8,7 +8,7 @@
 | UV fingerprint suite | PASS | `RESULT: PASS (fingerprint cache, input change, invalid venv)` |
 | Selective rule delivery suite | PASS | `RESULT: PASS (individual links, idempotence, collision fail-closed)` |
 | Python syntax compilation | PASS | `` |
-| Manifest generation | PASS | `GENERATED: 59 rules; always=38` |
+| Manifest generation | PASS | `GENERATED: 61 rules; always=40` |
 | Manifest validation | PASS | `RESULT: PASS - manifests match filesystem and rule contracts` |
 | Corpus audit generation | PASS | `WROTE: reports/rules-corpus-audit.md` |
 | Scoped ruff | PASS | `All checks passed!` |

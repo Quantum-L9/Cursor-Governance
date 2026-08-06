@@ -17,6 +17,9 @@ REGISTRY_PATH = HERE / "generated" / "skill-registry.json"
 MANIFEST_PATH = ROOT / "skills" / "AUTONOMY_MANIFEST.yaml"
 SETTINGS_PATH = HERE / "settings.template.json"
 ROUTER_PATH = HERE / "hooks" / "user_prompt_skill_router.py"
+CURSOR_ROUTER_PATH = ROOT / "ops" / "hooks" / "before_submit_skill_router.py"
+HOOKS_TEMPLATE_PATH = ROOT / "ops" / "hooks" / "hooks.json.template"
+CURSOR_RULE_PATH = ROOT / "rules" / "23-l9-skill-routing.mdc"
 CASES_PATH = HERE / "tests" / "skill_routing_cases.json"
 RULE_PATH = HERE / "rules" / "l9-skill-routing.md"
 
@@ -68,13 +71,40 @@ def main() -> int:
         print(f"  FAIL: {message}")
 
     print("=== Claude Code proactive skill activation validation ===")
-    for path in (REGISTRY_PATH, MANIFEST_PATH, SETTINGS_PATH, ROUTER_PATH, CASES_PATH, RULE_PATH):
+    for path in (
+        REGISTRY_PATH,
+        MANIFEST_PATH,
+        SETTINGS_PATH,
+        ROUTER_PATH,
+        CURSOR_ROUTER_PATH,
+        HOOKS_TEMPLATE_PATH,
+        CURSOR_RULE_PATH,
+        CASES_PATH,
+        RULE_PATH,
+    ):
         if path.is_file():
             print(f"  OK: present {path.relative_to(ROOT)}")
         else:
             fail(f"missing {path.relative_to(ROOT)}")
     if failures:
         return 1
+
+    hooks_template = json.loads(HOOKS_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    before_submit = hooks_template.get("hooks", {}).get("beforeSubmitPrompt", [])
+    if not any(
+        "before-submit-skill-router.py" in str(entry.get("command", ""))
+        for entry in before_submit
+        if isinstance(entry, dict)
+    ):
+        fail("hooks.json.template does not register Cursor beforeSubmitPrompt skill router")
+    else:
+        print("  OK: Cursor beforeSubmitPrompt skill router registered in template")
+
+    cursor_rule = CURSOR_RULE_PATH.read_text(encoding="utf-8")
+    if "alwaysApply: true" not in cursor_rule:
+        fail("rules/23-l9-skill-routing.mdc must be alwaysApply")
+    else:
+        print("  OK: Cursor skill-routing rule is alwaysApply")
 
     registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     actual_manifest_hash = hashlib.sha256(MANIFEST_PATH.read_bytes()).hexdigest()
@@ -165,6 +195,7 @@ def main() -> int:
     tests = [
         HERE / "tests" / "test_skill_router.py",
         HERE / "tests" / "test_skill_reconciliation.py",
+        HERE / "tests" / "test_cursor_skill_router.py",
     ]
     for test in tests:
         result = subprocess.run([sys.executable, str(test)], capture_output=True, text=True)
