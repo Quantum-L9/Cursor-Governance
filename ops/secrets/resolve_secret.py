@@ -240,21 +240,20 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     registry = load_registry(args.registry)
-    handle = _redact_ref(ref_id)
     if not args.allow_unregistered and not ref_registered(registry, ref_id):
-        code = _canonical_error("UNREGISTERED")
-        _err(f"FAIL handle={handle} code={code}")
         if args.check:
-            print(f"FAIL handle={handle} code={code}")
+            print("FAIL")
+        else:
+            print("FAIL", file=sys.stderr)
         return 1
 
     secret_id, _field = split_id(ref_id)
     entry = entry_for(registry, secret_id)
     if entry is not None and entry.get("provisioned") is False:
-        code = _canonical_error("NOT_PROVISIONED")
-        _err(f"FAIL handle={handle} code={code}")
         if args.check:
-            print(f"FAIL handle={handle} code={code}")
+            print("FAIL")
+        else:
+            print("FAIL", file=sys.stderr)
         return 1
 
     region = (
@@ -268,16 +267,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         error = probe_ref(ref_id, region)
         if error is not None:
-            _err(f"FAIL handle={handle} code={error}")
-            print(f"FAIL handle={handle} code={error}")
+            # Static status only — never interpolate codes/handles from the
+            # secret-resolution dataflow (CodeQL clear-text-logging).
+            print("FAIL")
             return 1
-        print(f"OK handle={handle}")
+        print("OK")
         return 0
 
     value, error = resolve_ref(ref_id, region)
     if error is not None:
-        code = _canonical_error(error)
-        _err(f"FAIL handle={handle} code={code}")
+        print("FAIL", file=sys.stderr)
         return 1
     _emit_secret_value(value or "")
     return 0
