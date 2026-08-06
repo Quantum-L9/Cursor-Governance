@@ -253,12 +253,14 @@ integrity-snapshot:
 
 ## Sync ops/secrets/openclaw-igorbot.registry.yaml from AWS Secrets Manager (refs/key names only).
 secrets-sync:
+	@$(MAKE) venv
 	$(CURDIR)/.venv/bin/python ops/secrets/sync_secrets_registry.py
 
 ## Resolve a secret ref with --check (never prints the value). Example:
 ##   make secrets-check REF='openclaw-igorbot/github#token'
 REF ?= openclaw-igorbot/github#token
 secrets-check:
+	@$(MAKE) venv
 	$(CURDIR)/.venv/bin/python ops/secrets/resolve_secret.py --ref "$(REF)" --check
 
 ## Install optional UI-operator deps (playwright + boto3). Not required for make pr.

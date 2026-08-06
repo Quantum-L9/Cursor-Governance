@@ -8,6 +8,12 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Added
+- **Portable UI Operator (GMP-1…3):** `ops/secrets/` AWS Secrets Manager registry
+  SSOT (`sync_secrets_registry.py`, `resolve_secret.py`), skills `l9-aws-secrets`
+  and `l9-ui-operator`, `ops/ui-operator/` console + cartridges (GitHub Packages
+  Actions access + Vercel stub), pyproject optional-extra `ui-operator`
+  (`playwright==1.56.0`, boto3). Make targets: `secrets-sync`, `secrets-check`,
+  `ui-operator-sync`. No Keychain; secret values never committed.
 - `AGENTS.md` — activation contract for future agent sessions (§2 documents
   the real `.sh`-hook activation mechanism)
 - `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`,

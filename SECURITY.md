@@ -50,3 +50,12 @@ All repositories use:
 
 Quantum-L9 follows coordinated disclosure. We request 90 days to remediate before public disclosure.
 After the patch is released, we will publish a GitHub Security Advisory crediting the reporter (unless anonymity is requested).
+
+## Secrets inventory and UI receipts (Cursor-Governance)
+
+- Secret **values** must never be committed to this repository (or pasted into
+  issues/PRs/chat logs). The AWS inventory at `ops/secrets/` stores **IDs and
+  JSON key names only**.
+- UI-operator receipts under `ops/ui-operator/receipts/` must record secret
+  **refs** (e.g. `openclaw-igorbot/github#token`) and redact all values.
+- Report accidental secret exposure as a Critical finding via the contact above.

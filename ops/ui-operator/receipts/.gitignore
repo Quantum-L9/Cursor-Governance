@@ -1,0 +1,4 @@
+# Receipts are generated; keep directory via this placeholder.
+# Local/sensitive receipts: *.local.* and receipts/local/ are gitignored.
+*
+!.gitignore

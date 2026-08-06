@@ -37,6 +37,8 @@ node_modules/
 
 # Environment variables (keep template)
 .env
+.env.local
+env.local
 !.env.template
 
 # Backup files
@@ -91,3 +93,8 @@ WIP/*client_secret*.json
 .l9/subagent-generated-data/*.sqlite3-shm
 .l9/subagent-generated-data/*.sqlite3-wal
 environment/agents/generated-data/.runtime/
+
+# ── Portable UI operator local residue (never commit profiles or live receipts) ──
+ops/ui-operator/receipts/*.local.*
+ops/ui-operator/receipts/local/
+.l9-ui-profiles/
