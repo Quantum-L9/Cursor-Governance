@@ -14,6 +14,7 @@ Never writes a resolved secret value to stderr or logs.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -37,12 +38,32 @@ def _err(msg: str) -> None:
     print(f"resolve_secret: {msg}", file=sys.stderr)
 
 
+_KNOWN_ERROR_CODES = frozenset(
+    {
+        "TIMEOUT",
+        "AWS_CLI_NOT_FOUND",
+        "NOT_FOUND",
+        "RESOLUTION_ERROR",
+        "NOT_JSON",
+        "FIELD_NOT_FOUND",
+        "UNREGISTERED",
+        "NOT_PROVISIONED",
+    }
+)
+
+
+def _canonical_error(code: str | None) -> str:
+    """Barrier: only allowlisted status codes may be logged (no secret dataflow)."""
+    if code in _KNOWN_ERROR_CODES:
+        return code
+    return "RESOLUTION_ERROR"
+
+
 def _redact_ref(ref_id: str) -> str:
-    """Loggable handle for a secret ref — never the secret value, never full id."""
-    secret_id, field = split_id(ref_id)
+    """Loggable handle — last-4 of id only; never field names (e.g. token)."""
+    secret_id, _field = split_id(ref_id)
     tail = secret_id[-4:] if len(secret_id) >= 4 else "****"
-    suffix = f"#{field}" if field else ""
-    return f"***{tail}{suffix}"
+    return f"ref-***{tail}"
 
 
 def _emit_secret_value(value: str) -> None:
@@ -62,7 +83,7 @@ def _safe_path(path: Path | str) -> Path:
             return resolved
         except ValueError:
             continue
-    _err(f"path escapes allowed roots: {path}")
+    _err("path escapes allowed roots")
     raise SystemExit(2)
 
 
@@ -174,6 +195,20 @@ def resolve_ref(
     return str(parsed[field]), None
 
 
+def probe_ref(
+    ref_id: str,
+    region: str,
+    *,
+    runner: Any = subprocess.run,
+) -> str | None:
+    """Return a canonical error code, or None on success. Never returns secret material."""
+    _value, error = resolve_ref(ref_id, region, runner=runner)
+    del _value
+    if error is None:
+        return None
+    return _canonical_error(error)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ref", required=True, help="secret_id or secret_id#json_key")
@@ -208,17 +243,19 @@ def main(argv: list[str] | None = None) -> int:
     registry = load_registry(args.registry)
     handle = _redact_ref(ref_id)
     if not args.allow_unregistered and not ref_registered(registry, ref_id):
-        _err(f"FAIL ref={handle} code=UNREGISTERED")
+        code = _canonical_error("UNREGISTERED")
+        _err(f"FAIL handle={handle} code={code}")
         if args.check:
-            print(f"FAIL ref={handle} code=UNREGISTERED")
+            print(f"FAIL handle={handle} code={code}")
         return 1
 
     secret_id, _field = split_id(ref_id)
     entry = entry_for(registry, secret_id)
     if entry is not None and entry.get("provisioned") is False:
-        _err(f"FAIL ref={handle} code=NOT_PROVISIONED")
+        code = _canonical_error("NOT_PROVISIONED")
+        _err(f"FAIL handle={handle} code={code}")
         if args.check:
-            print(f"FAIL ref={handle} code=NOT_PROVISIONED")
+            print(f"FAIL handle={handle} code={code}")
         return 1
 
     region = (
@@ -229,19 +266,20 @@ def main(argv: list[str] | None = None) -> int:
         or AWS_REGION_DEFAULT
     )
 
-    value, error = resolve_ref(ref_id, region)
-    if error is not None:
-        _err(f"FAIL ref={handle} code={error}")
-        if args.check:
-            print(f"FAIL ref={handle} code={error}")
-        return 1
-
     if args.check:
-        # Value resolved successfully — never echo it.
-        print(f"OK ref={handle}")
+        error = probe_ref(ref_id, region)
+        if error is not None:
+            _err(f"FAIL handle={handle} code={error}")
+            print(f"FAIL handle={handle} code={error}")
+            return 1
+        print(f"OK handle={handle}")
         return 0
 
-    # Programmatic path: secret value on stdout fd only (not a log call).
+    value, error = resolve_ref(ref_id, region)
+    if error is not None:
+        code = _canonical_error(error)
+        _err(f"FAIL handle={handle} code={code}")
+        return 1
     _emit_secret_value(value or "")
     return 0
 

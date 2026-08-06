@@ -292,11 +292,16 @@ def build_registry_from_aws(
         if should_inspect:
             key_names, err = inspect_json_keys(sid, region, runner=runner)
             if err:
-                # Do not log raw secret ids — CodeQL cleartext-logging sink.
-                sid_tail = sid[-4:] if len(sid) >= 4 else "****"
+                # Log allowlisted status code only — never secret ids or AWS payloads.
+                known = {
+                    "TIMEOUT",
+                    "AWS_CLI_NOT_FOUND",
+                    "NOT_FOUND",
+                    "RESOLUTION_ERROR",
+                }
+                code = err if err in known else "RESOLUTION_ERROR"
                 print(
-                    f"sync_secrets_registry: warn inspect ***{sid_tail} "
-                    f"code={err} (keeping prior keys)",
+                    f"sync_secrets_registry: warn inspect code={code} (keeping prior keys)",
                     file=sys.stderr,
                 )
                 key_names = None

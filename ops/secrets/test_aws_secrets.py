@@ -161,9 +161,11 @@ class ResolveSecretTests(unittest.TestCase):
                     stdout = out.getvalue()
                     stderr = err.getvalue()
         self.assertEqual(rc, 0)
-        self.assertIn("OK ref=***thub#token", stdout)
+        self.assertIn("OK handle=ref-***thub", stdout)
         self.assertNotIn(secret_value, stdout)
         self.assertNotIn(secret_value, stderr)
+        self.assertNotIn("#token", stdout)
+        self.assertNotIn("#token", stderr)
 
     def test_unregistered_fail_closed(self) -> None:
         with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
