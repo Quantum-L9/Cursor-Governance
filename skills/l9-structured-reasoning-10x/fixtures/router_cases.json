@@ -1,0 +1,247 @@
+[
+  {
+    "id": "trivial-rewrite-reject",
+    "request": {
+      "task_kind": "decision",
+      "simple_direct": true,
+      "risk_class": "reversible",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "activate": false,
+      "reject_reason": "simple_direct_task",
+      "output_profile": "answer"
+    }
+  },
+  {
+    "id": "domain-skill-reject",
+    "request": {
+      "task_kind": "architecture",
+      "domain_skill_complete": true,
+      "risk_class": "guarded",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "activate": false,
+      "reject_reason": "specific_domain_skill_complete"
+    }
+  },
+  {
+    "id": "explicit-overrides-simple",
+    "request": {
+      "task_kind": "decision",
+      "simple_direct": true,
+      "explicit_reasoning_request": true,
+      "risk_class": "reversible",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "activate": true,
+      "reasoning_depth": "rapid",
+      "action": "proceed"
+    }
+  },
+  {
+    "id": "architecture-standard",
+    "request": {
+      "task_kind": "architecture",
+      "risk_class": "guarded",
+      "evidence_state": "partial",
+      "capabilities": {
+        "tools": true
+      }
+    },
+    "expected": {
+      "activate": true,
+      "reasoning_depth": "standard",
+      "action": "proceed_with_validation",
+      "output_profile": "architecture_record",
+      "capability_strategy": "sequential_bounded_probes",
+      "proof_contains": [
+        "viable_options",
+        "blast_radius",
+        "rollback_or_containment",
+        "unknowns_and_next_probe"
+      ]
+    }
+  },
+  {
+    "id": "irreversible-absent-block",
+    "request": {
+      "task_kind": "architecture",
+      "risk_class": "irreversible",
+      "evidence_state": "absent"
+    },
+    "expected": {
+      "reasoning_depth": "deep",
+      "action": "block"
+    }
+  },
+  {
+    "id": "conflicting-probe",
+    "request": {
+      "task_kind": "decision",
+      "risk_class": "guarded",
+      "evidence_state": "conflicting",
+      "capabilities": {
+        "tools": true
+      }
+    },
+    "expected": {
+      "reasoning_depth": "deep",
+      "action": "bounded_probe",
+      "capability_strategy": "sequential_bounded_probes"
+    }
+  },
+  {
+    "id": "debug-proof",
+    "request": {
+      "task_kind": "debug",
+      "risk_class": "reversible",
+      "evidence_state": "partial",
+      "capabilities": {
+        "tools": true
+      }
+    },
+    "expected": {
+      "output_profile": "debug_report",
+      "proof_contains": [
+        "reproduce",
+        "testable_hypotheses",
+        "disconfirming_evidence",
+        "regression_proof"
+      ]
+    }
+  },
+  {
+    "id": "plan-proof",
+    "request": {
+      "task_kind": "plan",
+      "risk_class": "guarded",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "output_profile": "implementation_plan",
+      "proof_contains": [
+        "dependencies",
+        "critical_path",
+        "acceptance_criteria",
+        "rollback_or_containment"
+      ]
+    }
+  },
+  {
+    "id": "review-proof",
+    "request": {
+      "task_kind": "review",
+      "risk_class": "reversible",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "reasoning_depth": "rapid",
+      "proof_contains": [
+        "evidence_chain",
+        "contradictions",
+        "recommended_correction"
+      ]
+    }
+  },
+  {
+    "id": "decision-reasoning-only",
+    "request": {
+      "task_kind": "decision",
+      "risk_class": "reversible",
+      "evidence_state": "partial",
+      "capabilities": {
+        "tools": false
+      }
+    },
+    "expected": {
+      "capability_strategy": "reasoning_only",
+      "action": "proceed_with_validation"
+    }
+  },
+  {
+    "id": "parallel-empirical",
+    "request": {
+      "task_kind": "debug",
+      "risk_class": "guarded",
+      "evidence_state": "partial",
+      "distinct_empirical_strategies": 2,
+      "capabilities": {
+        "tools": true,
+        "parallel": true
+      }
+    },
+    "expected": {
+      "capability_strategy": "parallel_isolated_trials"
+    }
+  },
+  {
+    "id": "parallel-not-worth-it",
+    "request": {
+      "task_kind": "plan",
+      "risk_class": "guarded",
+      "evidence_state": "partial",
+      "distinct_empirical_strategies": 1,
+      "capabilities": {
+        "tools": true,
+        "parallel": true
+      }
+    },
+    "expected": {
+      "capability_strategy": "sequential_bounded_probes"
+    }
+  },
+  {
+    "id": "reversible-absent-probe",
+    "request": {
+      "task_kind": "decision",
+      "risk_class": "reversible",
+      "evidence_state": "absent"
+    },
+    "expected": {
+      "reasoning_depth": "deep",
+      "action": "bounded_probe"
+    }
+  },
+  {
+    "id": "guarded-sufficient",
+    "request": {
+      "task_kind": "architecture",
+      "risk_class": "guarded",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "reasoning_depth": "standard",
+      "action": "proceed_with_validation"
+    }
+  },
+  {
+    "id": "custom-output",
+    "request": {
+      "task_kind": "decision",
+      "risk_class": "reversible",
+      "evidence_state": "sufficient",
+      "requested_output": "answer"
+    },
+    "expected": {
+      "output_profile": "answer"
+    }
+  },
+  {
+    "id": "irreversible-sufficient",
+    "request": {
+      "task_kind": "decision",
+      "risk_class": "irreversible",
+      "evidence_state": "sufficient"
+    },
+    "expected": {
+      "reasoning_depth": "deep",
+      "action": "proceed_with_validation",
+      "proof_contains": [
+        "rollback_or_containment"
+      ]
+    }
+  }
+]

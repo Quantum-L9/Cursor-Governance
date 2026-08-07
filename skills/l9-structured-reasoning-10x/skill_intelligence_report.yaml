@@ -1,0 +1,187 @@
+{
+  "skill_intelligence_report": {
+    "activation_model": {
+      "strong_signals": [
+        "explicit trade-off or multi-option analysis",
+        "architecture decision or blast-radius review",
+        "plan stress test or dependency analysis",
+        "root-cause debugging with competing hypotheses",
+        "evidence-backed decision record request"
+      ],
+      "weak_signals": [
+        "multiple dependencies",
+        "material uncertainty",
+        "high consequence"
+      ],
+      "reject_signals": [
+        "simple factual answer or direct rewrite",
+        "deterministic file operation without trade-offs",
+        "trivial reversible fix already specified",
+        "more specific domain Skill has a complete contract",
+        "execution request with the decision already settled"
+      ],
+      "false_positive_risks": [
+        "broad use for any serious question",
+        "activation over domain-specific Skills"
+      ],
+      "specificity_score": 4.8,
+      "false_positive_risk_score": 1.2
+    },
+    "authority_model": {
+      "order": [
+        "current user instruction and platform safety",
+        "verified sources and repository invariants",
+        "most specific active domain Skill",
+        "l9-structured-reasoning",
+        "model inference"
+      ],
+      "conflict_rule": "higher authority wins; inference never overrides verified evidence"
+    },
+    "expert_heuristics": [
+      {
+        "condition": "a domain Skill already defines evidence and validation",
+        "judgment": "general reasoning would duplicate or conflict",
+        "action": "defer to the domain Skill and add only missing cross-domain reasoning"
+      },
+      {
+        "condition": "the decision is reversible and evidence is partial",
+        "judgment": "a bounded probe has higher value than more abstract analysis",
+        "action": "run the smallest discriminating test and proceed with validation"
+      },
+      {
+        "condition": "the decision is irreversible and evidence is not direct",
+        "judgment": "uncertainty cannot be safely absorbed",
+        "action": "block until evidence and authorization are sufficient"
+      },
+      {
+        "condition": "debugging has multiple plausible causes",
+        "judgment": "the first hypothesis is vulnerable to confirmation bias",
+        "action": "record disconfirming evidence and test the cheapest discriminating hypothesis"
+      },
+      {
+        "condition": "several options are viable",
+        "judgment": "selection requires explicit criteria and opportunity cost",
+        "action": "compare distinct options and preserve rejected rationale"
+      },
+      {
+        "condition": "tool availability or parallelism is unknown",
+        "judgment": "execution design is environment-dependent",
+        "action": "discover capabilities and choose parallel, sequential, reasoning-only, or handoff mode"
+      },
+      {
+        "condition": "new research no longer changes the decision",
+        "judgment": "continued exploration is recurring drag",
+        "action": "stop and deliver the proportional output profile"
+      }
+    ],
+    "doctrine": [
+      "Reasoning depth must be proportional to decision stakes and evidence gaps.",
+      "A general reasoning Skill must yield to a more specific valid domain Skill.",
+      "Users need auditable evidence and rationale, not private chain-of-thought.",
+      "Probe only the uncertainty that can change the decision.",
+      "Reversibility and authorization determine autonomy more reliably than arbitrary confidence percentages.",
+      "Validation must score outcome quality, not ritual compliance."
+    ],
+    "invariants": [
+      "No material claim without evidence grade or Unknown.",
+      "No irreversible action without direct evidence and authorization.",
+      "No unavailable tool or parallelism assumption may be unconditional.",
+      "No mandatory reasoning block that does not change the decision.",
+      "No generic Skill override of a more specific domain contract.",
+      "No continued research after the material uncertainty is resolved."
+    ],
+    "adapter_map": {
+      "core_default": "adaptive evidence and decision routing",
+      "adapters": [
+        {
+          "name": "task_kind",
+          "load_when": [
+            "plan",
+            "review",
+            "architecture",
+            "debug",
+            "decision"
+          ],
+          "changes": [
+            "proof obligations",
+            "output shape"
+          ]
+        },
+        {
+          "name": "risk_autonomy",
+          "load_when": [
+            "guarded or irreversible work",
+            "partial or conflicting evidence"
+          ],
+          "changes": [
+            "validation gates",
+            "proceed or block decision"
+          ]
+        },
+        {
+          "name": "capability",
+          "load_when": [
+            "tools, Git, writes, or parallelism matter"
+          ],
+          "changes": [
+            "execution mode",
+            "fallback behavior",
+            "forbidden moves"
+          ]
+        }
+      ]
+    },
+    "failure_modes": [
+      {
+        "name": "false_activation",
+        "prevention": "strong reject signals and domain Skill precedence"
+      },
+      {
+        "name": "ceremonial_output",
+        "prevention": "conditional proof obligations and proportional output profiles"
+      },
+      {
+        "name": "unsupported_capability_claim",
+        "prevention": "capability discovery before execution design"
+      },
+      {
+        "name": "false_confidence",
+        "prevention": "evidence quality and decision risk replace arbitrary percentages"
+      },
+      {
+        "name": "validation_theater",
+        "prevention": "router fixtures plus live benchmark contract"
+      }
+    ],
+    "leverage_points": [
+      "one orthogonal router replaces overlapping mode taxonomies",
+      "one ledger enables auditability, resumability, handoff, and run comparison",
+      "one capability adapter works across tool-rich and tool-poor environments",
+      "one benchmark contract turns iteration into measured improvement",
+      "domain Skill precedence reduces conflict and duplicated doctrine"
+    ],
+    "evidence_hierarchy": {
+      "order": [
+        "direct observation",
+        "primary source",
+        "corroborated evidence",
+        "single-source inference",
+        "Unknown"
+      ],
+      "rule": "lower grades cannot silently support irreversible decisions"
+    },
+    "exemplary_gate_results": {
+      "activation_precision": "pass",
+      "adapter_architecture": "pass",
+      "evidence_hierarchy": "pass",
+      "doctrine_extraction": "pass",
+      "expert_heuristics": "pass",
+      "failure_modes": "pass",
+      "leverage_model": "pass",
+      "self_improvement_hook": "pass",
+      "compiler_enforcement_gates": "pass",
+      "skill_intelligence_report": "pass"
+    },
+    "tier_decision": "exemplary"
+  }
+}
