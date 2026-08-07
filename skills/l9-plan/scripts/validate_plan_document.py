@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+from paths import safe_cli_path
+
 try:
     import jsonschema
 except ImportError as exc:  # pragma: no cover
@@ -14,6 +16,9 @@ except ImportError as exc:  # pragma: no cover
 PLACEHOLDER_RE = re.compile(r"\b(TBD|TODO|FIXME|maybe|should)\b", re.I)
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "schemas" / "plan-document.schema.json"
+WEAK_CRITERIA = frozenset({"success", "done", "works", "ok", "fine"})
+HIGH_RISK = frozenset({"high", "irreversible"})
+OPEN_STATUS = frozenset({"pending", "failed", "unknown"})
 
 
 def load_json(path: Path) -> dict:
@@ -24,7 +29,7 @@ def load_json(path: Path) -> dict:
 
 
 def has_cycle(deps: dict[str, list[str]]) -> bool:
-    indeg = {k: 0 for k in deps}
+    indeg = dict.fromkeys(deps, 0)
     adj: dict[str, list[str]] = {k: [] for k in deps}
     for node, parents in deps.items():
         for parent in parents:
@@ -44,55 +49,75 @@ def has_cycle(deps: dict[str, list[str]]) -> bool:
     return bool(deps) and seen != len(deps)
 
 
-def semantic_errors(plan: dict) -> list[str]:
-    errors: list[str] = []
-    scope = plan.get("scope") or {}
-    if not scope.get("out"):
-        errors.append("G_SCOPE_OUT: scope.out is empty")
+def _check_scope(plan: dict) -> list[str]:
+    if not (plan.get("scope") or {}).get("out"):
+        return ["G_SCOPE_OUT: scope.out is empty"]
+    return []
 
+
+def _check_success(plan: dict) -> list[str]:
+    errors: list[str] = []
     criteria = [str(c).strip() for c in (plan.get("success_criteria") or [])]
     if not criteria or all(not c for c in criteria):
         errors.append("G_SUCCESS: success_criteria missing or empty")
-    weak = {"success", "done", "works", "ok", "fine"}
-    if criteria and all(c.lower() in weak for c in criteria):
+    if criteria and all(c.lower() in WEAK_CRITERIA for c in criteria):
         errors.append("G_SUCCESS: success_criteria not falsifiable")
+    return errors
 
-    todos = [t for t in (plan.get("todos") or []) if isinstance(t, dict)]
+
+def _todo_ground_errors(todo: dict, todo_ids: set) -> list[str]:
+    errors: list[str] = []
+    tid = todo.get("id", "?")
+    files = todo.get("files") or []
+    blocker = str(todo.get("blocker") or "").strip()
+    if not files and not blocker:
+        errors.append(f"G_TODO_GROUND: todo {tid} lacks files and blocker")
+    blob = " ".join([str(todo.get("task", "")), " ".join(map(str, files)), blocker])
+    if PLACEHOLDER_RE.search(blob) and not blocker:
+        errors.append(f"G_PLACEHOLDER: todo {tid} has placeholder without blocker")
+    for dep in todo.get("dependencies") or []:
+        if dep not in todo_ids:
+            errors.append(f"G_DEPS_ACYCLIC: unknown dependency {dep} on {tid}")
+    return errors
+
+
+def _check_todos(todos: list[dict]) -> tuple[list[str], set, dict[str, list[str]]]:
+    errors: list[str] = []
     todo_ids = {t.get("id") for t in todos}
     deps = {t["id"]: list(t.get("dependencies") or []) for t in todos if t.get("id")}
     for todo in todos:
-        tid = todo.get("id", "?")
-        files = todo.get("files") or []
-        blocker = str(todo.get("blocker") or "").strip()
-        if not files and not blocker:
-            errors.append(f"G_TODO_GROUND: todo {tid} lacks files and blocker")
-        blob = " ".join([str(todo.get("task", "")), " ".join(map(str, files)), blocker])
-        if PLACEHOLDER_RE.search(blob) and not blocker:
-            errors.append(f"G_PLACEHOLDER: todo {tid} has placeholder without blocker")
-        for dep in todo.get("dependencies") or []:
-            if dep not in todo_ids:
-                errors.append(f"G_DEPS_ACYCLIC: unknown dependency {dep} on {tid}")
-
+        errors.extend(_todo_ground_errors(todo, todo_ids))
     if has_cycle(deps):
         errors.append("G_DEPS_ACYCLIC: dependency cycle detected")
+    return errors, todo_ids, deps
 
+
+def _check_critical_path(plan: dict, todo_ids: set) -> list[str]:
+    errors: list[str] = []
     critical = plan.get("critical_path") or []
     if not critical:
         errors.append("G_CRITICAL_PATH: critical_path empty")
     for cid in critical:
         if cid not in todo_ids:
             errors.append(f"G_CRITICAL_PATH: unknown todo id {cid}")
+    return errors
 
+
+def _check_stress(plan: dict, todos: list[dict]) -> list[str]:
+    errors: list[str] = []
     stress = plan.get("stress_test") or {}
     if not stress.get("disconfirming_questions"):
         errors.append("G_STRESS: disconfirming_questions empty")
     if not str(stress.get("blast_radius") or "").strip():
         errors.append("G_STRESS: blast_radius missing")
-
-    high = any(t.get("risk") in {"high", "irreversible"} for t in todos)
+    high = any(t.get("risk") in HIGH_RISK for t in todos)
     if high and not str(stress.get("rollback") or "").strip():
         errors.append("G_ROLLBACK: high/irreversible risk without rollback")
+    return errors
 
+
+def _check_doc_surface(plan: dict) -> list[str]:
+    errors: list[str] = []
     impacts = plan.get("doc_root_surface_impact") or []
     if not impacts:
         errors.append("G_DOC_SURFACE: doc_root_surface_impact missing")
@@ -104,35 +129,57 @@ def semantic_errors(plan: dict) -> list[str]:
             errors.append(f"G_DOC_SURFACE: N/A without reason for {surface}")
         if row.get("action") == "update" and not (row.get("todo_ids") or []):
             errors.append(f"G_DOC_SURFACE: update without todo_ids for {surface}")
+    return errors
 
+
+def _check_code_scope(plan: dict) -> list[str]:
+    if not plan.get("code_in_scope"):
+        return []
+    errors: list[str] = []
+    commands = " ".join(str(x.get("command", "")) for x in plan.get("final_validation") or [])
+    if "make pr-check" not in commands and re.search(r"\bmake\s+pr\b", commands) is None:
+        errors.append("G_PR_CHECK: code_in_scope true but final_validation lacks make pr-check")
+    handoff = plan.get("gmp_handoff") or {}
+    if not handoff.get("may_modify") or not handoff.get("must_not_modify"):
+        errors.append("G_GMP_LOCK: code_in_scope requires may_modify and must_not_modify")
+    return errors
+
+
+def _check_convergence(plan: dict, todos: list[dict]) -> list[str]:
+    errors: list[str] = []
+    conv = plan.get("convergence") or {}
+    if any(str(t.get("blocker") or "").strip() for t in todos) and not plan.get("unknowns"):
+        if conv.get("status") == "converged":
+            errors.append("G_UNKNOWN_HONESTY: blockers present but unknowns empty while converged")
+    if conv.get("status") != "converged":
+        return errors
+    for section_name in ("pre_validation", "final_validation"):
+        for item in plan.get(section_name) or []:
+            if item.get("status") in OPEN_STATUS:
+                item_id = item.get("id")
+                status = item.get("status")
+                errors.append(
+                    f"G_CONVERGENCE: converged while {section_name}.{item_id} is {status}"
+                )
+    return errors
+
+
+def semantic_errors(plan: dict) -> list[str]:
+    todos = [t for t in (plan.get("todos") or []) if isinstance(t, dict)]
+    todo_errs, todo_ids, _deps = _check_todos(todos)
+    errors: list[str] = []
+    errors.extend(_check_scope(plan))
+    errors.extend(_check_success(plan))
+    errors.extend(todo_errs)
+    errors.extend(_check_critical_path(plan, todo_ids))
+    errors.extend(_check_stress(plan, todos))
+    errors.extend(_check_doc_surface(plan))
     if not plan.get("pre_validation") or not plan.get("final_validation"):
         errors.append("G_PRE_FINAL: pre_validation or final_validation missing")
-
-    if plan.get("code_in_scope"):
-        commands = " ".join(str(x.get("command", "")) for x in plan.get("final_validation") or [])
-        if "make pr-check" not in commands and re.search(r"\bmake\s+pr\b", commands) is None:
-            errors.append("G_PR_CHECK: code_in_scope true but final_validation lacks make pr-check")
-        handoff = plan.get("gmp_handoff") or {}
-        if not handoff.get("may_modify") or not handoff.get("must_not_modify"):
-            errors.append("G_GMP_LOCK: code_in_scope requires may_modify and must_not_modify")
-
-    leverage = plan.get("leverage") or {}
-    if not leverage.get("ranked_todo_ids"):
+    errors.extend(_check_code_scope(plan))
+    if not (plan.get("leverage") or {}).get("ranked_todo_ids"):
         errors.append("G_LEVERAGE: leverage.ranked_todo_ids empty")
-
-    if any(str(t.get("blocker") or "").strip() for t in todos) and not plan.get("unknowns"):
-        if (plan.get("convergence") or {}).get("status") == "converged":
-            errors.append("G_UNKNOWN_HONESTY: blockers present but unknowns empty while converged")
-
-    if (plan.get("convergence") or {}).get("status") == "converged":
-        for section_name in ("pre_validation", "final_validation"):
-            for item in plan.get(section_name) or []:
-                if item.get("status") in {"pending", "failed", "unknown"}:
-                    item_id = item.get("id")
-                    status = item.get("status")
-                    errors.append(
-                        f"G_CONVERGENCE: converged while {section_name}.{item_id} is {status}"
-                    )
+    errors.extend(_check_convergence(plan, todos))
     return errors
 
 
@@ -165,7 +212,7 @@ def main(argv: list[str]) -> int:
         return 2
     rc = 0
     for arg in argv[1:]:
-        path = Path(arg)
+        path = safe_cli_path(arg)
         errs = validate_path(path)
         if errs:
             rc = 1
