@@ -169,6 +169,7 @@
     "l9-code-maintenance": "user-invocable-only",
     "l9-component-verification": "user-invocable-only",
     "l9-dag-authoring": "user-invocable-only",
+    "l9-e2e-blocker-resolution": "user-invocable-only",
     "l9-end-session": "user-invocable-only",
     "l9-forge": "user-invocable-only",
     "l9-governance-symlinks": "user-invocable-only",

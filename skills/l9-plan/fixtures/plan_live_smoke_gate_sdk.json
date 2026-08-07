@@ -1,0 +1,228 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Harden Gate client timeout docs alignment",
+  "objective": "Plan a docs+test alignment fix for GateClient timeout behavior without changing transport hash semantics",
+  "success_criteria": [
+    "pytest -q tests touching Gate client PASS",
+    "make pr-check PASS with no transport-hash drift",
+    "AGENTS.md Gate-only egress language unchanged or explicitly N/A"
+  ],
+  "scope": {
+    "in": [
+      "Gate client docs/examples/tests clarification"
+    ],
+    "out": [
+      "TransportPacket field changes",
+      "peer URL dispatch APIs",
+      "hashing input changes"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind Gate_SDK repo root",
+      "pass_criteria": "single repo",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "rg GateClient src tests",
+      "pass_criteria": "call sites inventoried",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "make pr-check",
+      "pass_criteria": "baseline recorded",
+      "status": "unknown"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Inventory GateClient timeout and error paths",
+      "files": [
+        "src/constellation_node_sdk/"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "class GateClient",
+      "leverage_rank": 1,
+      "shared_root_cause": "unclear timeout contract"
+    },
+    {
+      "id": "T2",
+      "task": "Add/adjust tests for timeout failure mode",
+      "files": [
+        "tests/"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "new test module or existing gate client tests",
+      "leverage_rank": 2
+    },
+    {
+      "id": "T3",
+      "task": "Align example docs to Gate-only egress",
+      "files": [
+        "examples/"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "GATE_URL usage",
+      "leverage_rank": 3
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "inventory complete",
+      "unlocks": "tests"
+    },
+    {
+      "id": "M2",
+      "outcome": "tests+docs aligned",
+      "unlocks": "pr-check"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "inventory note with file paths",
+      "no_go_action": "stop; do not edit"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "pytest targeted PASS",
+      "no_go_action": "fix tests before docs claim"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Gate-only egress law unchanged"
+    },
+    {
+      "surface": "examples/",
+      "action": "update",
+      "todo_ids": [
+        "T3"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is the timeout bug actually in Gate server policy rather than the SDK client?",
+      "Would changing defaults break existing workers relying on indefinite waits?",
+      "Does any example still show peer URL dispatch?"
+    ],
+    "assumed_false_ifs": [
+      "transport hash algorithm must change",
+      "peer dispatch is acceptable"
+    ],
+    "blast_radius": "worker nodes may mis-handle Gate timeouts; examples may teach illegal egress",
+    "rollback": "revert docs/tests commit; no protocol migration required"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3"
+    ],
+    "shared_causes": [
+      "unclear timeout and egress contract in examples"
+    ],
+    "deletions_or_consolidations": [
+      "remove any peer-URL example snippets if found"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "accidental transport contract edit",
+      "mitigation": "must-not-modify hashing/packet models; pr-check"
+    },
+    {
+      "risk": "flaky network tests",
+      "mitigation": "prefer unit tests with mocked transport"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Is current baseline make pr-check green?",
+      "decision_effect": "affects pre-validation status",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "pytest -q",
+      "pass_criteria": "PASS for affected tests",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make pr-check",
+      "pass_criteria": "PASS; no commit/push",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan validated; baseline pr-check still unknown"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "tests/",
+      "examples/",
+      "docs/"
+    ],
+    "must_not_modify": [
+      "src/constellation_node_sdk/transport/hashing.py",
+      "src/constellation_node_sdk/transport/models.py",
+      "contracts/transport-packet.schema.json"
+    ],
+    "preserved_contracts": [
+      "TransportPacket",
+      "Gate-only egress",
+      "transport_hash stable across hops"
+    ],
+    "validation_commands": [
+      "pytest -q",
+      "make pr-check"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "inventory",
+    "tests",
+    "examples",
+    "pr-check"
+  ],
+  "estimate": "1 GMP"
+}

@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://l9.local/schemas/plan-document.schema.json",
+  "title": "PLAN_DOCUMENT",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mode",
+    "title",
+    "objective",
+    "success_criteria",
+    "scope",
+    "pre_validation",
+    "todos",
+    "critical_path",
+    "milestones",
+    "checkpoints",
+    "doc_root_surface_impact",
+    "stress_test",
+    "leverage",
+    "risks",
+    "unknowns",
+    "final_validation",
+    "convergence",
+    "gmp_handoff",
+    "code_in_scope"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "enum": [
+        "plan",
+        "spec",
+        "ticket"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "success_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "in",
+        "out"
+      ],
+      "properties": {
+        "in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "out": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "code_in_scope": {
+      "type": "boolean"
+    },
+    "pre_validation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "command_or_action",
+          "pass_criteria",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "command_or_action": {
+            "type": "string"
+          },
+          "pass_criteria": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "passed",
+              "failed",
+              "skipped",
+              "not_applicable",
+              "unknown"
+            ]
+          }
+        }
+      }
+    },
+    "todos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "task",
+          "files",
+          "effort",
+          "risk",
+          "dependencies",
+          "leverage_rank"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effort": {
+            "type": "string"
+          },
+          "risk": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "irreversible"
+            ]
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "operation": {
+            "enum": [
+              "Insert",
+              "Replace",
+              "Delete",
+              "Wrap",
+              "Create"
+            ]
+          },
+          "anchor": {
+            "type": "string"
+          },
+          "blocker": {
+            "type": "string"
+          },
+          "leverage_rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "shared_root_cause": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "critical_path": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "outcome",
+          "unlocks"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "unlocks": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "after",
+          "evidence_required",
+          "no_go_action"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
+          "evidence_required": {
+            "type": "string"
+          },
+          "no_go_action": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "doc_root_surface_impact": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "surface",
+          "action"
+        ],
+        "properties": {
+          "surface": {
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "update",
+              "n_a"
+            ]
+          },
+          "todo_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "stress_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disconfirming_questions",
+        "assumed_false_ifs",
+        "blast_radius",
+        "rollback"
+      ],
+      "properties": {
+        "disconfirming_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "assumed_false_ifs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "blast_radius": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rollback": {
+          "type": "string"
+        }
+      }
+    },
+    "leverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ranked_todo_ids",
+        "shared_causes",
+        "deletions_or_consolidations"
+      ],
+      "properties": {
+        "ranked_todo_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "shared_causes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deletions_or_consolidations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "risk",
+          "mitigation"
+        ],
+        "properties": {
+          "risk": {
+            "type": "string"
+          },
+          "mitigation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "question",
+          "decision_effect",
+          "resolution"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "decision_effect": {
+            "type": "string"
+          },
+          "resolution": {
+            "enum": [
+              "ask",
+              "probe",
+              "block",
+              "accept_bounded"
+            ]
+          }
+        }
+      }
+    },
+    "final_validation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "command",
+          "pass_criteria",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "pass_criteria": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "passed",
+              "failed",
+              "skipped",
+              "not_applicable",
+              "unknown"
+            ]
+          }
+        }
+      }
+    },
+    "convergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "remaining_unknown_ids",
+        "next_skill",
+        "stop_reason"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "converged",
+            "partial",
+            "blocked"
+          ]
+        },
+        "remaining_unknown_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_skill": {
+          "type": "string"
+        },
+        "stop_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "gmp_handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "may_modify",
+        "must_not_modify",
+        "preserved_contracts",
+        "validation_commands"
+      ],
+      "properties": {
+        "may_modify": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "must_not_modify": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "preserved_contracts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "depth": {
+      "enum": [
+        "rapid",
+        "standard",
+        "deep"
+      ]
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "estimate": {
+      "type": "string"
+    }
+  }
+}

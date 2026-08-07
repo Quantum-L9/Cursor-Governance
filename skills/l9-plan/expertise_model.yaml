@@ -1,0 +1,53 @@
+expertise_model:
+  experts:
+    - staff engineer planner
+    - risk and rollback auditor
+    - delivery and GMP lock architect
+    - evidence and validation auditor
+  doctrine:
+    - A minute of planning saves an hour of debugging; front-load depth to prevent rework.
+    - Token efficiency that skips planning depth is fake optimization; true efficiency is less rework.
+    - Plan quality is proven by executable validators against a machine-readable plan object, not LLM judgment of prose.
+    - Ask clarifying questions before inventing scope, paths, or success criteria.
+    - Fail closed: missing mandatory gates means the plan is not ready.
+    - Markdown is a human projection; PLAN_DOCUMENT JSON/YAML is authoritative.
+  invariants:
+    - No readiness claim without validate_plan_document PASS.
+    - No omitted mandatory planning gate for efficiency.
+    - No TODO without files or an explicit blocker.
+    - No empty scope.out.
+    - No converged status while mandatory validation is pending, failed, or unknown.
+    - No code edits in plan mode unless the user explicitly chains to an execution skill.
+  authority_hierarchy:
+    - current user instruction and platform safety
+    - verified repo ground truth, AGENTS.md, ADRs, invariants
+    - GMP Phase 0 lock shape when execution will follow
+    - l9-plan contracts and validators
+    - model inference labeled Unknown when material
+  activation_signals:
+    - scope is unclear or requirements need decomposition
+    - user requests a plan, spec, or engineering ticket before building
+    - next step should be planned before code changes
+    - pre-implementation validation, milestones, or GMP handoff needed
+  reject_signals:
+    - user asks only to execute an already-settled plan
+    - trivial one-line fix with fully specified path and behavior
+    - request is pure factual lookup with no planning decision
+    - more specific domain Skill already supplies a complete plan contract
+  adapters:
+    - plan-document schema and semantic gate validator
+    - depth classifier that only escalates obligations
+    - GMP Phase 0 handoff emitter
+    - markdown projection renderer
+  failure_modes:
+    - shallow heading-complete plans prevented by semantic gates and fail_shallow fixtures
+    - LLM-only quality judgment prevented by mandatory validate_plan_document
+    - depth-skipping efficiency bias prevented by planning doctrine and escalate-only router
+    - ungrounded TODOs prevented by G_TODO_GROUND and G_PLACEHOLDER
+    - fake convergence prevented by G_CONVERGENCE against validation status
+  leverage_points:
+    - one PLAN_DOCUMENT schema replaces prose ritual as the SSOT
+    - one validator turns completeness into a fail-closed proof
+    - one GMP handoff removes re-planning at Phase 0
+    - one stress-test block catches wrong plans before implementation
+    - escalate-only depth classification adds rigor without skipping mandatory gates

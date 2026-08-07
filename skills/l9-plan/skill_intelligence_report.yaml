@@ -1,0 +1,112 @@
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - scope is unclear or requirements need decomposition
+      - user requests a plan, spec, or engineering ticket before building
+      - next step should be planned before code changes
+      - pre-implementation validation, milestones, or GMP handoff needed
+    weak_signals:
+      - multi-file change implied
+      - validation gates mentioned
+      - handoff to gmp or forge
+    reject_signals:
+      - user asks only to execute an already-settled plan
+      - trivial one-line fix with fully specified path and behavior
+      - request is pure factual lookup with no planning decision
+      - more specific domain Skill already supplies a complete plan contract
+    false_positive_risks:
+      - activating for pure execution after a locked plan
+      - activating for trivial edits that need no decomposition
+    specificity_score: 4.6
+    false_positive_risk_score: 1.4
+    measurement: "activation precision measured against 6 activation cases and 4 route fixtures in assets/"
+  authority_model:
+    order:
+      - current user instruction and platform safety
+      - verified repo ground truth, AGENTS.md, ADRs, invariants
+      - GMP Phase 0 lock shape when execution will follow
+      - l9-plan contracts and validators
+      - model inference labeled Unknown when material
+    conflict_rule: higher authority wins; inference never overrides verified evidence or validator FAIL
+  expert_heuristics:
+    - condition: objective or success criteria are ambiguous
+      judgment: inventing scope causes rework
+      action: STOP and ask; record unknowns; do not emit a ready plan
+    - condition: plan markdown looks complete but JSON is missing
+      judgment: prose-only plans are not authoritative
+      action: emit PLAN_DOCUMENT and run validate_plan_document before readiness
+    - condition: risk is high or irreversible
+      judgment: rollback and stress-test are mandatory, not optional depth
+      action: escalate obligations; never drop baseline gates
+    - condition: a TODO has no file path
+      judgment: ungrounded work cannot lock in GMP Phase 0
+      action: require files or an explicit blocker; fail closed otherwise
+    - condition: token pressure tempts skipping stress-test or critical path
+      judgment: skipped planning depth creates expensive rework
+      action: keep mandatory gates; reject efficiency-over-correctness
+    - condition: validator returns FAIL
+      judgment: the plan is not ready regardless of narrative quality
+      action: fix until PASS or set convergence blocked with unknowns
+  doctrine:
+    - A minute of planning saves an hour of debugging; front-load depth to prevent rework.
+    - Token efficiency that skips planning depth is fake optimization; true efficiency is less rework.
+    - Plan quality is proven by executable validators against a machine-readable plan object, not LLM judgment of prose.
+    - Ask clarifying questions before inventing scope, paths, or success criteria.
+    - Fail closed: missing mandatory gates means the plan is not ready.
+    - Markdown is a human projection; PLAN_DOCUMENT JSON/YAML is authoritative.
+  invariants:
+    - No readiness claim without validate_plan_document PASS.
+    - No omitted mandatory planning gate for efficiency.
+    - No TODO without files or an explicit blocker.
+    - No empty scope.out.
+    - No converged status while mandatory validation is pending, failed, or unknown.
+    - No code edits in plan mode unless the user explicitly chains to an execution skill.
+  adapter_map:
+    core_default: machine-validated PLAN_DOCUMENT emission
+    adapters:
+      - name: schema_validator
+        load_when: [every plan delivery]
+        changes: [readiness, fail-closed gates]
+      - name: depth_escalation
+        load_when: [guarded or irreversible risk, conflicting evidence]
+        changes: [extra stress questions, mandatory rollback detail]
+      - name: gmp_handoff
+        load_when: [execution will follow via l9-gmp-protocol]
+        changes: [Phase 0 lock projection]
+  failure_modes:
+    - name: shallow_heading_complete_plan
+      prevention: semantic gates plus fixtures/plan_fail_shallow.json
+    - name: llm_only_quality_judgment
+      prevention: mandatory validate_plan_document before readiness
+    - name: depth_skip_efficiency_bias
+      prevention: planning doctrine and escalate-only router
+    - name: ungrounded_todos
+      prevention: G_TODO_GROUND and G_PLACEHOLDER
+    - name: fake_convergence
+      prevention: G_CONVERGENCE against validation status
+  leverage_points:
+    - one PLAN_DOCUMENT schema replaces prose ritual as the SSOT
+    - one validator turns completeness into a fail-closed proof
+    - one GMP handoff removes re-planning at Phase 0
+    - one stress-test block catches wrong plans before implementation
+    - escalate-only depth classification adds rigor without skipping mandatory gates
+  evidence_hierarchy:
+    order:
+      - direct repo inspection and command output
+      - authoritative schemas and AGENTS.md
+      - corroborated fixtures and self_test
+      - model inference
+      - Unknown
+    rule: lower grades cannot silently support a converged ready plan
+  exemplary_gate_results:
+    activation_precision: pass
+    adapter_architecture: pass
+    evidence_hierarchy: pass
+    doctrine_extraction: pass
+    expert_heuristics: pass
+    failure_modes: pass
+    leverage_model: pass
+    self_improvement_hook: pass
+    compiler_enforcement_gates: pass
+    skill_intelligence_report: pass
+  tier_decision: exemplary

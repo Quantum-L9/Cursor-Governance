@@ -1,0 +1,38 @@
+# Escalate-only depth router for l9-plan.
+# Baseline gates ALWAYS apply. Depth never removes obligations.
+
+baseline_gates:
+  - G_SCOPE_OUT
+  - G_SUCCESS
+  - G_TODO_GROUND
+  - G_PLACEHOLDER
+  - G_CRITICAL_PATH
+  - G_DEPS_ACYCLIC
+  - G_STRESS
+  - G_DOC_SURFACE
+  - G_PRE_FINAL
+  - G_UNKNOWN_HONESTY
+  - G_CONVERGENCE
+
+depth_rules:
+  rapid:
+    omit_gates: []
+    note: "rapid only reduces markdown verbosity; same baseline gates"
+  standard:
+    omit_gates: []
+    add_gates: []
+  deep:
+    omit_gates: []
+    add_gates:
+      - G_ROLLBACK
+      - G_PR_CHECK
+    extra_obligations:
+      - at least 3 disconfirming_questions
+      - explicit rollback non-empty
+      - denser unknowns for each material ambiguity
+
+escalation:
+  when_risk_in: [high, irreversible]
+  force_depth: deep
+  when_evidence_in: [conflicting, absent]
+  force_depth: deep

@@ -1,13 +1,13 @@
 <!-- L9_META
 l9_schema: 1
-origin: skill-hardening GMP-SKILL-HARDEN-001
-tags: [plan, ticket, template, doc-surface]
+parent: l9-plan
+tags: [plan, ticket]
 status: active
-version: 2.2.0
-updated: 2026-08-06
+version: 3.0.0
+updated: 2026-08-07
 /L9_META -->
 
-# Engineering ticket template (reference)
+# Engineering ticket template
 
 ## List format
 
@@ -23,7 +23,7 @@ updated: 2026-08-06
 ## Acceptance criteria
 1. [Testable criterion]
 2. [Testable criterion]
-3. [When human/agent contracts change: README / AGENTS.md / peer surfaces updated or N/A justified]
+3. [Doc / Root Surface Impact updated or N/A justified]
 
 ## Testing
 - [What to verify]
@@ -32,7 +32,7 @@ updated: 2026-08-06
 - [Blockers or linked work]
 ```
 
-## Given-When-Then format
+## Given-When-Then
 
 ```markdown
 ### Scenario: [name]
@@ -41,10 +41,4 @@ When [action]
 Then [expected result]
 ```
 
-## Rules
-
-- Title summarizes the work in one line.
-- Acceptance criteria must be testable.
-- Suggest implementation approach without over-prescribing.
-- Link designs, APIs, and related tickets.
-- When the change alters agent-facing or human-facing contracts, include a **Doc / Root Surface Impact** AC (or explicit N/A). Prefer `l9-update-agent-docs` / `l9-wire-skill-into-repo` for those rewrites at implementation time.
+When ticket work will become a plan, upgrade to PLAN_DOCUMENT and validate.

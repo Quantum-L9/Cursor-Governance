@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "id": "D1",
+      "risk": "low",
+      "evidence": "sufficient",
+      "expect_depth": "standard"
+    },
+    {
+      "id": "D2",
+      "risk": "high",
+      "evidence": "sufficient",
+      "expect_depth": "deep"
+    },
+    {
+      "id": "D3",
+      "risk": "irreversible",
+      "evidence": "partial",
+      "expect_depth": "deep"
+    },
+    {
+      "id": "D4",
+      "risk": "low",
+      "evidence": "conflicting",
+      "expect_depth": "deep"
+    }
+  ]
+}

@@ -1,30 +1,16 @@
 <!-- L9_META
 l9_schema: 1
 parent: l9-plan
-origin: migrated-from plan command v1.0.0
-tags: [plan, todo, risks, estimate, milestones, checkpoints, validation, doc-surface]
+tags: [plan, todo, validation, projection]
 status: active
-version: 2.2.0
-updated: 2026-08-06
+version: 3.0.0
+updated: 2026-08-07
 /L9_META -->
 
-# Plan Workflow — Execution Planning
+# Plan Workflow — Markdown Projection
 
-Create structured plan before implementation. This file is the **SSOT output template** for plan mode.
-
-## Steps
-
-1. Pre-Validate (mandatory) — baseline gates before recommending edits.
-2. Define objective (what, why, falsifiable success criteria).
-3. Identify scope (in / out).
-4. List TODO items with files, effort, risk — add depth beyond the table.
-5. Doc / Root Surface Impact (mandatory) — probe README/AGENTS and related surfaces; Update TODOs or N/A with reason.
-6. Map dependencies.
-7. Define milestones and checkpoints.
-8. Build checklist tied to TODOs (include doc/root items or N/A).
-9. Identify risks and mitigations.
-10. Define Final Validation (mandatory) — post-implementation gates.
-11. Estimate and recommend next skill (`l9-ynp`).
+SSOT is `schemas/plan-document.schema.json`. This file is the human projection template.
+Emit JSON first; validate; then render (or hand-write matching sections).
 
 ## Output format
 
@@ -32,39 +18,41 @@ Create structured plan before implementation. This file is the **SSOT output tem
 ## PLAN: {title}
 
 ### Objective
-{what and why}
-**Success:** {falsifiable criteria}
+{objective}
+**Success:** {success_criteria}
 
 ### Scope
-**In:** {list}
-**Out:** {list}
+**In:** {scope.in}
+**Out:** {scope.out}
 
 ### Pre-Validation (mandatory)
-| Check | Command / action | Pass criteria |
-|-------|------------------|---------------|
-| P0 Target bind | {resolve write root} | Single authorized target |
-| P1 Baseline inventory | {inspect current state} | Gap list complete |
-| P2 Clean gate (code in scope) | `make pr-check` | PASS — changed-files scanners; **no commit, no push** |
-| P3 Wiring / env (if applicable) | {project check} | PASS or Skipped with reason |
-
-Halt modification planning if Pre-Validation cannot distinguish a safe baseline.
-Record actual results when this plan is executed; for planning-only drafts, list the commands that MUST run before edits.
+| Check | Command / action | Pass criteria | Status |
+|-------|------------------|---------------|--------|
 
 ### TODO Plan
-| # | Task | Files | Effort | Risk |
-|---|------|-------|--------|------|
+| # | Task | Files | Effort | Risk | Deps | Leverage |
+|---|------|-------|--------|------|------|----------|
+
+### Critical Path
+{ordered todo ids}
 
 ### Depth
-{behavioral notes, contracts preserved, root-cause vs symptom, evidence sources}
+{behavioral notes, contracts preserved}
+
+### Stress Test
+- Disconfirming: ...
+- Assumed false if: ...
+- Blast radius: ...
+- Rollback: ...
+
+### Leverage
+- Ranked todos: ...
+- Shared causes: ...
+- Deletions/consolidations: ...
 
 ### Doc / Root Surface Impact (mandatory)
-Probe (existence-based — do not invent paths). Always consider `README.md`, `AGENTS.md`. If present: `CLAUDE.md`, `ARCHITECTURE.md`, `INVARIANTS.md`, `CHANGELOG.md`, `.claude/README.md`. Governance extras when relevant: `commands/commands-index.md`, skill registries. New root file → include root-file-protection registration.
-
 | Surface | Action | Files / notes |
 |---------|--------|---------------|
-| {path or group} | Update \| N/A | {TODO ids or one-line reason} |
-
-Unjustified omission of this section fails closed. Prefer chaining `l9-update-agent-docs` / `l9-wire-skill-into-repo` at implementation time for agent/registry rewrites. Plan mode schedules only — does not edit.
 
 ### Dependencies
 {task graph}
@@ -78,37 +66,33 @@ Unjustified omission of this section fails closed. Prefer chaining `l9-update-ag
 |----|-------|-------------------|--------------|
 
 ### Checklist
-- [ ] {atomic item tied to a TODO}
-- [ ] Pre-Validation recorded
-- [ ] Doc / Root Surface Impact recorded (Update TODOs or N/A with reason)
-- [ ] Final Validation (`make pr-check` when code changed) PASS
-- [ ] No commit/push unless user explicitly requested
+- [ ] ...
 
 ### Risks
 | Risk | Mitigation |
 |------|------------|
 
+### Unknowns
+| ID | Question | Effect | Resolution |
+|----|----------|--------|------------|
+
 ### Estimate
 **Total:** {time}
-**GMPs:** {count}
 
 ### Final Validation (mandatory)
-| Check | Command | Pass criteria |
-|-------|---------|---------------|
-| V1 Section completeness | Review plan vs this template | All required headings present |
-| V2 Clean code / scanners | `make pr-check` (when code in scope) | PASS; changed-files only; **no commit, no push** |
-| V3 Doc / Root Surface Impact | Surfaces table complete | Every probed hit is Update or N/A with reason |
-| V4 Honesty | Report only checks actually run | Passed / Failed / Skipped / N/A / Unknown |
+| Check | Command | Pass criteria | Status |
+|-------|---------|---------------|--------|
 
-Do not claim implementation readiness until Final Validation passes (or N/A is justified for pure planning/docs with no code edits).
+### Convergence
+status / remaining unknowns / next_skill / stop_reason
+
+### GMP Handoff
+may_modify / must_not_modify / preserved_contracts / validation_commands
 ```
 
 ## Gate rules
 
-- **Every plan** MUST include Pre-Validation, Doc / Root Surface Impact, and Final Validation sections.
-- **Any plan that will edit code** MUST name `make pr-check` (alias `make pr`; Make is case-sensitive — not `PR-check`) in both gates when the workspace is Cursor-Governance or a consumer using the governance `pr` target.
-- Never weaken linters, types, schemas, security scanners, or tests to obtain PASS.
-- Do not push or open a PR from plan mode; implementation chains to `l9-gmp-protocol` / user-authorized commit.
-- Doc/root updates are scheduled in the plan; actual edits happen under implementation skills/GMP. Append-only / protected roots → flag Risks + KERNEL GMP for deletions/overwrites.
-
-Auto-chain recommendation: load `l9-ynp` (recommends gmp or forge).
+- Every plan must validate via `scripts/validate_plan_document.py`.
+- Code-editing plans must include `make pr-check` in final_validation.
+- Never weaken scanners to obtain PASS.
+- Do not push or open a PR from plan mode.

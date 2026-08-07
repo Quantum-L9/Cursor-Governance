@@ -88,6 +88,7 @@ select = ["E", "F", "I", "UP"]
 # Renovation skill scripts carry intentional long evidence/message strings, same
 # rationale as l9-cli-optimization above.
 "skills/l9-repository-renovation/scripts/**" = ["E501"]
+"skills/l9-plan/scripts/**" = ["E501"]
 # subagent-generated-data runtime/adapters/tests bootstrap sys.path before
 # importing sibling modules (the packages are not installed), so imports
 # legitimately follow executable statements — E402 is expected here.
@@ -151,9 +152,8 @@ norecursedirs = [
 # 2026-07-19 decision: leave broken, do not stub). Ignored here so collection
 # doesn't fail on a dormant, currently-unused code path; the underlying gap is
 # untouched.
-# skills/l9-cli-optimization/scripts/self_test.py is a skill self-check script,
-# not a pytest test.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py"
+# skills/*/scripts/self_test.py files are skill self-check scripts, not pytest tests.
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-code-maintenance/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]

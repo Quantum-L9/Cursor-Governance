@@ -157,7 +157,7 @@
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "route"
+      "expected_source": "explicit_hint"
     },
     {
       "prompt": "Start a bounded autonomy campaign with background PR poll while continuing",

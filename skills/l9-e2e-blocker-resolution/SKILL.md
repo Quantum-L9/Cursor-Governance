@@ -7,6 +7,7 @@ role: skill_entrypoint
 tags: [l9, e2e, blockers, verification, secrets, todo, brief, session-start]
 owner: igor_beylin
 status: active
+disable-model-invocation: true
 version: 1.0.0
 updated: 2026-07-31
 ---

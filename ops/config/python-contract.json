@@ -30,6 +30,22 @@
     {
       "path": "skills/l9-cli-optimization/scripts/self_test.py",
       "reason": "Not a pytest test: a self-check script for the l9-cli-optimization skill that matches *_test.py-adjacent discovery patterns. Ignored via pyproject addopts."
+    },
+    {
+      "path": "skills/l9-plan/scripts/self_test.py",
+      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
+    },
+    {
+      "path": "skills/l9-code-maintenance/scripts/self_test.py",
+      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
+    },
+    {
+      "path": "skills/l9-repository-renovation/scripts/self_test.py",
+      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
+    },
+    {
+      "path": "skills/l9-structured-reasoning/scripts/self_test.py",
+      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
     }
   ],
   "suites": [
