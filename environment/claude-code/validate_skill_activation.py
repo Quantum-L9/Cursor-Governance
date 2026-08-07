@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate proactive Claude Code discovery, routing, and invocation controls."""
+"""Validate proactive skill discovery, routing, and invocation controls."""
 
 from __future__ import annotations
 
@@ -13,15 +13,16 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-REGISTRY_PATH = HERE / "generated" / "skill-registry.json"
+REGISTRY_PATH = ROOT / "ops" / "generated" / "skill-registry.json"
 MANIFEST_PATH = ROOT / "skills" / "AUTONOMY_MANIFEST.yaml"
 SETTINGS_PATH = HERE / "settings.template.json"
-ROUTER_PATH = HERE / "hooks" / "user_prompt_skill_router.py"
+SHARED_ROUTER_PATH = ROOT / "ops" / "skill_routing" / "route_prompt.py"
+CLAUDE_ADAPTER_PATH = HERE / "hooks" / "user_prompt_skill_router.py"
 CURSOR_ROUTER_PATH = ROOT / "ops" / "hooks" / "before_submit_skill_router.py"
 HOOKS_TEMPLATE_PATH = ROOT / "ops" / "hooks" / "hooks.json.template"
 CURSOR_RULE_PATH = ROOT / "rules" / "23-l9-skill-routing.mdc"
-CASES_PATH = HERE / "tests" / "skill_routing_cases.json"
-RULE_PATH = HERE / "rules" / "l9-skill-routing.md"
+CASES_PATH = ROOT / "ops" / "skill_routing" / "tests" / "skill_routing_cases.json"
+RULE_PATH = ROOT / "environment" / "generated" / "llm-rules" / "l9-skill-routing.md"
 
 
 def frontmatter(path: Path) -> dict[str, Any]:
@@ -44,10 +45,10 @@ def frontmatter(path: Path) -> dict[str, Any]:
     return data
 
 
-def load_router():
-    spec = importlib.util.spec_from_file_location("l9_skill_router_validation", ROUTER_PATH)
+def load_shared_router():
+    spec = importlib.util.spec_from_file_location("l9_skill_router_validation", SHARED_ROUTER_PATH)
     if not spec or not spec.loader:
-        raise RuntimeError("cannot load skill router")
+        raise RuntimeError("cannot load shared skill routing")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -63,6 +64,36 @@ def hook_commands(settings: dict[str, Any], event: str) -> list[str]:
     return commands
 
 
+def check_ownership_guard(failures: list[str]) -> None:
+    """Fail closed if Cursor/ops adapters load Claude-owned scoring (CANONICAL_LAW §2.1)."""
+    cursor_src = CURSOR_ROUTER_PATH.read_text(encoding="utf-8")
+    forbidden_markers = (
+        "environment/claude-code/hooks/user_prompt_skill_router",
+        "environment/claude-code/hooks/",
+    )
+    for marker in forbidden_markers:
+        if marker in cursor_src:
+            failures.append(
+                f"ownership inverted: {CURSOR_ROUTER_PATH.relative_to(ROOT)} loads {marker!r}"
+            )
+            print(f"  FAIL: Cursor adapter must not load {marker!r}")
+            return
+    if "ops/skill_routing/route_prompt.py" not in cursor_src:
+        failures.append("Cursor adapter does not load ops/skill_routing/route_prompt.py")
+        print("  FAIL: Cursor adapter missing ops/skill_routing load path")
+        return
+    claude_src = CLAUDE_ADAPTER_PATH.read_text(encoding="utf-8")
+    if "def route_prompt(" in claude_src:
+        failures.append("Claude adapter still owns route_prompt() implementation")
+        print("  FAIL: Claude adapter must be thin — route_prompt belongs in ops/")
+        return
+    if "ops/skill_routing/route_prompt.py" not in claude_src:
+        failures.append("Claude adapter does not load ops/skill_routing/route_prompt.py")
+        print("  FAIL: Claude adapter missing ops/skill_routing load path")
+        return
+    print("  OK: ownership guard — scoring in ops/; adapters are thin")
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -70,12 +101,13 @@ def main() -> int:
         failures.append(message)
         print(f"  FAIL: {message}")
 
-    print("=== Claude Code proactive skill activation validation ===")
+    print("=== Proactive skill activation validation (Cursor-primary) ===")
     for path in (
         REGISTRY_PATH,
         MANIFEST_PATH,
         SETTINGS_PATH,
-        ROUTER_PATH,
+        SHARED_ROUTER_PATH,
+        CLAUDE_ADAPTER_PATH,
         CURSOR_ROUTER_PATH,
         HOOKS_TEMPLATE_PATH,
         CURSOR_RULE_PATH,
@@ -88,6 +120,8 @@ def main() -> int:
             fail(f"missing {path.relative_to(ROOT)}")
     if failures:
         return 1
+
+    check_ownership_guard(failures)
 
     hooks_template = json.loads(HOOKS_TEMPLATE_PATH.read_text(encoding="utf-8"))
     before_submit = hooks_template.get("hooks", {}).get("beforeSubmitPrompt", [])
@@ -173,7 +207,7 @@ def main() -> int:
     else:
         print("  OK: explicit-only skills hidden from model by settings override")
 
-    router = load_router()
+    router = load_shared_router()
     cases = json.loads(CASES_PATH.read_text(encoding="utf-8")).get("cases", [])
     for case in cases:
         result = router.route_prompt(case["prompt"], registry)
@@ -193,7 +227,7 @@ def main() -> int:
         print(f"  OK: {len(cases)} routing fixtures passed")
 
     tests = [
-        HERE / "tests" / "test_skill_router.py",
+        ROOT / "ops" / "skill_routing" / "tests" / "test_route_prompt.py",
         HERE / "tests" / "test_skill_reconciliation.py",
         HERE / "tests" / "test_cursor_skill_router.py",
     ]

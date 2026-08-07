@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, docs, agents, ci, maintenance]
 owner: igor_beylin
 status: active
-version: 2.0.1
-updated: 2026-06-06
+version: 2.0.2
+updated: 2026-08-06
 ---
 
 # Update Agent Documentation (L9)
@@ -42,8 +42,12 @@ Regenerate root-level agent instruction files so coding agents write CI-passing 
 - CI workflows (`.github/workflows/*`) changed
 - Pre-commit hooks (`.pre-commit-config.yaml`) changed
 - Lint/type config (`pyproject.toml`, `ruff.toml`, etc.) changed
-- Agent skill registry changed (new skills, subagent preload lists)
+- Agent skill registry changed (new skills, unwired/deprecated skills, subagent preload lists)
 - Periodic refresh (monthly or after large PRs)
+
+Skill **wire / unwire / deprecate / deregister** is owned by `l9-wire-skill-into-repo`
+(archive out of live `skills/`, clear autonomy tiers + adapter symlinks). Use this
+skill afterward only to refresh docs that still list skills.
 
 Load a **project adapter** when the repo has domain-specific docs (modules, domain pattern scripts, custom invariants).
 

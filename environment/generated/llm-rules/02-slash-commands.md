@@ -1,0 +1,153 @@
+---
+description: Slash command recognition and execution - repo-agnostic governance protocols
+---
+
+# Slash Command Recognition
+
+When the user types a message starting with `/` followed by a command name, this is a **slash command** that triggers a governance protocol.
+
+## Recognition Pattern
+
+If user message matches: `/commandname` or `/command-name` or `/command_name`
+
+Then:
+1. Read the corresponding file from the command locations (see below)
+2. Execute the protocol defined in that file
+3. Follow all steps, phases, and output formats specified
+
+## Command File Locations (Repo-Agnostic)
+
+Commands and workflows are resolved in this order:
+
+| Location | Purpose | Priority |
+|----------|---------|----------|
+| `.cursor/commands/{cmd}.md` | Repo-specific commands | 1st (highest) |
+| `.cursor-commands/commands/{cmd}.md` | Shared governance commands (symlink → SSOT) | 2nd |
+| `~/.cursor/plugins/local/l9-governance/commands/{cmd}.md` | Same SSOT via l9-governance plugin | 2nd (equivalent) |
+| L9 skill whose `SKILL.md` matches the command | Skill-backed fallback (see `skills/AUTONOMY_MANIFEST.yaml`) | 3rd |
+| `.cursor/workflows-synced/` | Synced workflow executors and DAGs | For DAG execution |
+| `.cursor/workflows-synced/dags/` | DAG definitions | For DAG-based commands |
+
+**Registry (machine + human):**
+
+- `commands/COMMANDS_MANIFEST.yaml` — enabled slash → file map (source of truth for what is active)
+- `commands/commands-index.md` — human quick reference
+
+> When governance is activated (`sessionStart` bootstrap, `/start-session`, or `make start`),
+> the `l9-governance` plugin + `.cursor-commands` symlink expose this entire `commands/`
+> library. Prefer the `.md` command file when present; use the L9 skill only if the file
+> is missing. Skills may still auto-invoke for overlapping work — the slash file is the
+> explicit protocol when the user typed `/…`.
+
+### Workflow/DAG Resolution
+
+When a command specifies `dag_file:` in its YAML header:
+1. First check: `.cursor/workflows-synced/dags/{dag_name}.py`
+2. Fallback: `.cursor-commands/workflows/dags/{dag_name}.py`
+
+### Script Resolution
+
+When a command needs generator scripts:
+1. First check: `.cursor/workflows-synced/scripts/{script}.py`
+2. Fallback: `scripts/{script}.py` (repo root)
+
+## Available Slash Commands (enabled)
+
+| Command | File | Description |
+|---------|------|-------------|
+| `/analyze` | `commands/analyze.md` | Codebase analysis |
+| `/autonomy` | `commands/autonomy.md` | Bounded autonomy — parallel Tasks + background PR poll |
+| `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
+| `/audit-component` | `commands/audit-component.md` | Audit component exports, wiring, API instantiation |
+| `/ci` | `commands/ci.md` | CI/CD operations |
+| `/ci-policy` | `commands/ci-policy.md` | CI policy / gate authoring |
+| `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
+| `/confirm-wiring` | `commands/confirm-wiring.md` | Integration audit — verify fully wired |
+| `/consolidate` | `commands/consolidate.md` | Consolidate code/files |
+| `/dag-authoring` | `commands/dag-authoring.md` | Create/update DAGs the proper way |
+| `/e2e-blockers` | `commands/e2e-blockers.md` | E2E / local-proof blockers + brief |
+| `/end-session` | `commands/end-session.md` | Close session — save context, handoff |
+| `/evaluate` | `commands/evaluate.md` | Code quality evaluation |
+| `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
+| `/extract-from-chat` | `commands/extract-from-chat.md` | Extract from chat (alternate) |
+| `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
+| `/forge` | `commands/forge.md` | Forge mode — rapid multi-GMP execution |
+| `/gap-analysis` | `commands/gap-analysis.md` | Gap analysis for PRs/features |
+| `/gap-analysis-new` | `commands/gap-analysis-new.md` | Gap analysis (alternate protocol) |
+| `/gmp` | `commands/gmp.md` | Governance Managed Process — phased execution |
+| `/governance` | `commands/governance.md` | Governance check and enforcement |
+| `/governance-backup` | `commands/governance-backup.md` | Push governance SSOT to GitHub |
+| `/harvest` | `commands/harvest.md` | Harvest patterns from code/conversation |
+| `/harvest2` | `commands/harvest2.md` | Harvest v2 — read source, write target |
+| `/index` | `commands/index.md` | Export repo indexes |
+| `/inspect` | `commands/inspect.md` | Code gate — validate external code before import |
+| `/lcto` | `commands/lcto.md` | L CTO mode — strategic technical decisions |
+| `/lint-fix` | `commands/lint-fix.md` | Systematic lint fixes |
+| `/mem` | `commands/mem.md` | Memory-aware execution |
+| `/migrate` | `commands/migrate.md` | Autonomous code migration |
+| `/plan` | `commands/plan.md` | Create execution plan |
+| `/pr` | `commands/pr.md` | PR analysis and gap assessment |
+| `/probe` | `commands/probe.md` | Import & wiring verification (safe) |
+| `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
+| `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |
+| `/refactor-sweep` | `commands/refactor-sweep.md` | Broad refactor sweep |
+| `/rules` | `commands/rules.md` | List and manage rules |
+| `/spec` | `commands/spec.md` | Generate specification |
+| `/start-session` | `commands/start-session.md` | Run L9 sessionStart bootstrap (`make start`) |
+| `/update-command` | `commands/update-command.md` | Slim slash commands to DAG triggers |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan |
+| `/verify-component` | `commands/verify-component.md` | Component verification ladder |
+| `/violation` | `commands/violation.md` | Report governance violation |
+| `/wire` | `commands/wire.md` | Wire/integrate components or governance |
+| `/readme` | `commands/readme-dag.md` | README generation pipeline via DAG |
+| `/ynp` | `commands/ynp.md` | Yes No Proceed — decision framework |
+
+Full map: `commands/COMMANDS_MANIFEST.yaml`. Human index: `commands/commands-index.md`.
+
+## Execution Protocol
+
+When a slash command is detected:
+
+1. **Resolve command file** using priority order above
+2. **Parse the YAML header** for metadata (auto_chain, dag_file, etc.)
+3. **If DAG-based**: Load DAG from `.cursor/workflows-synced/dags/` first, then fallback
+4. **Execute the protocol** following all steps in the markdown body
+5. **Produce the specified output format** as defined in the command file
+6. **Auto-chain** to the next command if `auto_chain` is specified in metadata
+
+## DAG Execution (Repo-Agnostic)
+
+For commands with `dag_file:` in their header:
+
+```python
+# Resolution order for DAG files:
+# 1. .cursor/workflows-synced/dags/{dag_name}.py
+# 2. .cursor-commands/workflows/dags/{dag_name}.py
+
+# Example for /readme:
+dag_path = ".cursor/workflows-synced/dags/readme_pipeline_dag.py"
+# Load and execute DAG nodes in sequence
+```
+
+## 🔒 LOCKED: Execution Flow (v1.0)
+
+**All significant commands follow this LOCKED execution flow:**
+
+```
+PLAN (Phase 0) → EXECUTE (Phase 1-6) → CHAIN (/ynp or next)
+```
+
+## Variations
+
+Commands may be typed with variations:
+- `/analyze+evaluate` → `commands/analyze_evaluate.md`
+- `/analyze-evaluate` → `commands/analyze_evaluate.md`
+- `/analyzeEvaluate` → `commands/analyze_evaluate.md`
+
+Normalize to underscore format for file lookup.
+
+## CRITICAL: Always Read the File
+
+**NEVER** execute a slash command from memory. **ALWAYS** read the actual command file to ensure you have the current protocol version.
+
+<!-- generated-from: rules/02-slash-commands.mdc; do-not-edit -->

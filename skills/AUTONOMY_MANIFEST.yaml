@@ -39,7 +39,7 @@ tiers:
     - skill: "l9-skill-compiler"
       use_when: "compiling prompts, SOPs, kernels, or workflows into standalone zero-stub skill packs"
     - skill: "l9-wire-skill-into-repo"
-      use_when: "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
+      use_when: "registering, relocating, renaming, or retiring a skill — including deprecate/unwire/archive/deregister so deprecated packs leave live skills/ and every discovery registry"
     - skill: "l9-update-agent-docs"
       use_when: "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
     - skill: "l9-code-graph-rag-mcp"
@@ -112,8 +112,10 @@ tiers:
       reason: "SaaS admin UI mutations via Playwright cartridges — high blast radius; requires human approve"
 
   do_not_migrate_to_skills:
-    - item: "skills/l9-structured-reasoning-deprecated/"
-      reason: "superseded by skills/l9-structured-reasoning/; retain for historical comparison only — never auto-invoke or reconcile into discovery"
+    - item: "skills/_archived/l9-structured-reasoning-deprecated/"
+      reason: "superseded by skills/l9-structured-reasoning/; archived out of live skills/ discovery — never auto-invoke or reconcile"
+    - item: "skills/_archived/l9-pr-remediation-deprecated/"
+      reason: "superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile"
     - item: "commands/violation.md"
       reason: "violation handling belongs in always-applied rules or hooks, not optional skill context"
     - item: "commands/mem.md"
@@ -130,7 +132,7 @@ tiers:
 reasoning_routing:
   purpose: "Which l9-structured-reasoning reference applies to which task class."
   sources: ["profiles/orchestrator.md", "profiles/reasoning_l9.md"]
-  note: "Advisory routing context for the model, not an execution order. No orchestrator process exists. Canonical pack is the adaptive router rebuild; Block-protocol pack is l9-structured-reasoning-deprecated."
+  note: "Advisory routing context for the model, not an execution order. No orchestrator process exists. Canonical pack is skills/l9-structured-reasoning/; Block-protocol pack is archived at skills/_archived/l9-structured-reasoning-deprecated/."
   routes:
     - task_class: "Adaptive routing, proof obligations, risk/evidence autonomy"
       reference: "l9-structured-reasoning/references/reasoning-router.yaml"
@@ -299,6 +301,11 @@ claude_routing:
         - register the skill
         - skill discovery tables
         - subagent preload
+        - deprecate the skill
+        - unwire the skill
+        - deregister the skill
+        - archive the skill
+        - retire the skill
       supporting:
         - l9-update-agent-docs
     - id: update_agent_docs

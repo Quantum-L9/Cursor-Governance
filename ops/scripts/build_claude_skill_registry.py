@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Build the deterministic Claude Code skill registry from L9 governance SSOT.
+"""Build the deterministic L9 skill registry from governance SSOT.
 
 The registry is generated from:
   * skills/AUTONOMY_MANIFEST.yaml (invocation tier + routing policy)
   * skills/*/SKILL.md frontmatter (name, description, when_to_use, controls)
 
-It is committed because Claude Code Web/Mobile setup and prompt hooks must run
-without importing PyYAML in an arbitrary consumer repository.
+Owned under ops/ (CANONICAL_LAW §2.1). Committed so Cursor and Claude Code
+hooks can score without importing PyYAML in an arbitrary consumer repository.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from typing import Any
 
 import yaml
 
-DEFAULT_OUT = Path("environment/claude-code/generated/skill-registry.json")
+DEFAULT_OUT = Path("ops/generated/skill-registry.json")
 
 
 def sha256_bytes(data: bytes) -> str:

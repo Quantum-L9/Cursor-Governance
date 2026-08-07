@@ -1,0 +1,39 @@
+---
+description: CI/CD pipeline and policy enforcement rules for L9.
+paths:
+- .github/workflows/**/*.yml
+- .github/workflows/**/*.yaml
+- Makefile
+- .gitlab-ci.yml
+---
+
+# CI/CD pipeline (L9)
+
+## Required checks
+
+- Pipelines affecting core code must, at minimum, run:
+  - Linting and type-checking for relevant languages.
+  - Unit tests and integration tests for affected modules.
+  - Any configured security/SCA scans for dependencies.
+- All required checks must be **green** before changes are merged into protected branches.
+
+---
+
+## Branch and merge policy
+
+- Protected branches (e.g., main, release branches) should:
+  - Require status checks from CI.
+  - Require at least one human review for non-trivial changes.
+- Avoid force-merging or bypassing CI except under documented emergency procedures.
+
+---
+
+## Pipeline evolution
+
+- Any change to CI workflows or Makefile targets must:
+  - Preserve existing safety checks or replace them with strictly stronger ones.
+  - Be documented briefly in the PR description (what changed, why, and how it is validated).
+
+---
+
+<!-- generated-from: rules/71-ci-cd-pipeline.mdc; do-not-edit -->

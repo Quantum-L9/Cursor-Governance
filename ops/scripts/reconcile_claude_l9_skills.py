@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-REGISTRY_REL = Path("environment/claude-code/generated/skill-registry.json")
-RULE_REL = Path("environment/claude-code/rules/l9-skill-routing.md")
+REGISTRY_REL = Path("ops/generated/skill-registry.json")
+RULE_REL = Path("environment/generated/llm-rules/l9-skill-routing.md")
 STATE_NAME = ".l9-managed-skills.json"
 
 

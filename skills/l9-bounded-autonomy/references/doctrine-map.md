@@ -10,8 +10,8 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 | Settings | `environment/claude-code/settings.template.json` | Allow scoped push/PR create; omit merge; deny force/admin |
 | Profile | `environment/claude-code/autonomy/profiles/pr-convergence.json` | Lanes 4/2, waiting_external, merge_gate |
 | Runtime | `environment/claude-code/autonomy/*.py` | Claude-only machine scheduler (do not rewrite for Cursor) |
-| Hooks | `environment/claude-code/hooks/*` | Fail-open only (SessionStart context, skill route hint, usage log) |
-| Routing | `environment/claude-code/rules/l9-skill-routing.md` | Recommendation ≠ authority; explicit_only never auto-invoked |
+| Hooks | `environment/claude-code/hooks/*` | Thin fail-open adapters over `ops/skill_routing/` (SessionStart, route hint, usage log) |
+| Routing | `ops/skill_routing/` + `ops/generated/skill-registry.json`; rule `rules/23-l9-skill-routing.mdc` (+ generated `environment/generated/llm-rules/l9-skill-routing.md`) | Recommendation ≠ authority; explicit_only never auto-invoked |
 
 ## Settings posture (summary)
 

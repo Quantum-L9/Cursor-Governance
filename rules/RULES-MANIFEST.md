@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-07T01:17:28Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-07T01:23:06Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -30,7 +30,7 @@ Generated: `2026-08-07T01:17:28Z`. Source: `rules/*.mdc`.
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | auto_attached | 181 | `bd8fad3dd090` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | auto_attached | 186 | `8f9921b041c0` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 51 | `0d3ad3e7d982` |
-| `23-l9-skill-routing.mdc` | `l9.rule.23.l9.skill.routing` | global | governance | always | 68 | `1742fb2e796d` |
+| `23-l9-skill-routing.mdc` | `l9.rule.23.l9.skill.routing` | global | governance | always | 71 | `a11baa35c046` |
 | `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | always | 168 | `e27ac2cc723b` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | auto_attached | 143 | `38c1291f4681` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | auto_attached | 180 | `2af64ed1e71a` |

@@ -86,10 +86,10 @@ fi
 
 echo "--- skill-activation ---"
 if [[ -f "$WS/environment/claude-code/validate_skill_activation.py" ]]; then
-  if grep -Eq '^(skills/|environment/claude-code/)' "$changed_file"; then
+  if grep -Eq '^(skills/|ops/skill_routing/|ops/generated/skill-registry\.json|environment/claude-code/)' "$changed_file"; then
     python3 "$WS/environment/claude-code/validate_skill_activation.py"
   else
-    echo "OK: skip skill-activation (skills/ unchanged)"
+    echo "OK: skip skill-activation (skills/routing unchanged)"
   fi
 fi
 
@@ -99,6 +99,14 @@ if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${
   is_local=1
 fi
 if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+  if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
+    if ! python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --check --quiet; then
+      echo "FAIL: llm-rules projection drift — re-run: python3 ops/scripts/project_llm_rules.py --root \"$WS\""
+      python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --check
+      exit 1
+    fi
+    echo "OK: llm-rules projection matches rules/*.mdc"
+  fi
   python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
     --root "$WS" --workspace "$WS" --quiet || true
   if ! python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
@@ -109,6 +117,16 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     exit 1
   fi
   echo "OK: LLM skill adapters reconciled to skills/ SSOT"
+  if [[ -f "$GOV_ROOT/ops/scripts/reconcile_llm_rule_adapters.py" ]]; then
+    if ! python3 "$GOV_ROOT/ops/scripts/reconcile_llm_rule_adapters.py" \
+      --root "$WS" --workspace "$WS" --check --quiet; then
+      echo "FAIL: LLM rule adapter reconcile --check drifted — re-run reconcile_llm_rule_adapters"
+      python3 "$GOV_ROOT/ops/scripts/reconcile_llm_rule_adapters.py" \
+        --root "$WS" --workspace "$WS" --check
+      exit 1
+    fi
+    echo "OK: LLM rule adapters reconciled to environment/generated/llm-rules/"
+  fi
   if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
     echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"
     exit 1

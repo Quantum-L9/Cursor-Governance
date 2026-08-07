@@ -6,7 +6,8 @@ not a failure — callers should WARN to stage and continue when validators PASS
 
 Covered artifacts:
   * rules/RULES-MANIFEST.{json,yaml,md}
-  * environment/claude-code/generated/skill-registry.json
+  * environment/generated/llm-rules/** (projected .md peers)
+  * ops/generated/skill-registry.json
   * environment/claude-code/settings.template.json skillOverrides
   * skills/AUTONOMY_MANIFEST.yaml (orphan skills → explicit_only)
   * commands/COMMANDS_MANIFEST.yaml
@@ -30,7 +31,8 @@ SCRIPTS = Path(__file__).resolve().parent
 
 GENERATED_PATH_PREFIXES = (
     "rules/RULES-MANIFEST.",
-    "environment/claude-code/generated/skill-registry.json",
+    "environment/generated/llm-rules/",
+    "ops/generated/skill-registry.json",
     "environment/claude-code/settings.template.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
@@ -67,29 +69,66 @@ def run_generator(cmd: list[str], cwd: Path) -> None:
 
 
 def disk_skill_names(root: Path) -> list[str]:
+    """Live discoverable skill pack names (top-level skills/*/SKILL.md only)."""
     skills_dir = root / "skills"
     return sorted(
         path.name
         for path in skills_dir.iterdir()
-        if path.is_dir() and (path / "SKILL.md").is_file()
+        if path.is_dir()
+        and not path.name.startswith("_")
+        and path.name not in {"_archived", "archive", "archived"}
+        and (path / "SKILL.md").is_file()
+    )
+
+
+def _frontmatter_status(skill_md: Path) -> str:
+    try:
+        text = skill_md.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    if not text.startswith("---\n"):
+        return ""
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        return ""
+    fm = yaml.safe_load(text[4:end]) or {}
+    if not isinstance(fm, dict):
+        return ""
+    return str(fm.get("status") or "").strip().lower()
+
+
+def find_live_deprecated_skills(root: Path) -> list[str]:
+    """Deprecated packs must not remain under live skills/ discovery."""
+    bad: list[str] = []
+    for name in disk_skill_names(root):
+        if name.endswith("-deprecated"):
+            bad.append(name)
+            continue
+        if _frontmatter_status(root / "skills" / name / "SKILL.md") == "deprecated":
+            bad.append(name)
+    return bad
+
+
+def assert_no_live_deprecated_skills(root: Path) -> None:
+    bad = find_live_deprecated_skills(root)
+    if not bad:
+        return
+    joined = ", ".join(bad)
+    raise RuntimeError(
+        "deprecated skills cannot remain in the live skills/ folder; "
+        f"archive + unregister first: {joined} "
+        "(git mv skills/<name> skills/_archived/<name>; remove from AUTONOMY_MANIFEST tiers)"
     )
 
 
 def skill_is_retired(root: Path, name: str, manifest: dict[str, Any]) -> bool:
-    """Skip deprecated / do-not-migrate skill packs from orphan auto-registration."""
-    if name.endswith("-deprecated"):
-        return True
-    skill_md = root / "skills" / name / "SKILL.md"
-    try:
-        text = skill_md.read_text(encoding="utf-8")
-    except OSError:
-        return False
-    if text.startswith("---\n"):
-        end = text.find("\n---\n", 4)
-        if end > 0:
-            fm = yaml.safe_load(text[4:end]) or {}
-            if isinstance(fm, dict) and str(fm.get("status") or "").lower() == "deprecated":
-                return True
+    """Skip do-not-migrate / non-skill paths from orphan auto-registration.
+
+    Deprecated packs must not appear as live top-level skills at all — see
+    assert_no_live_deprecated_skills. This helper only covers explicit
+    do_not_migrate_to_skills entries that still point at live paths during
+    transitional heals.
+    """
     for item in manifest.get("do_not_migrate_to_skills") or []:
         if not isinstance(item, dict):
             continue
@@ -191,8 +230,54 @@ def sync_rules(root: Path, wrote: list[str]) -> None:
             wrote.append(str(path.relative_to(root)))
 
 
+def project_llm_rules(root: Path, wrote: list[str]) -> None:
+    """Project rules/*.mdc → environment/generated/llm-rules/*.md."""
+    out = root / "environment" / "generated" / "llm-rules"
+    prior: dict[str, bytes | None] = {}
+    if out.is_dir():
+        for path in out.iterdir():
+            if path.is_file():
+                prior[path.name] = path.read_bytes()
+    run_generator(
+        [sys.executable, str(SCRIPTS / "project_llm_rules.py"), "--root", str(root)],
+        root,
+    )
+    if out.is_dir():
+        for path in out.iterdir():
+            if not path.is_file():
+                continue
+            rel = str(path.relative_to(root))
+            if prior.get(path.name) != path.read_bytes():
+                wrote.append(rel)
+
+
+def reconcile_llm_rule_adapters(
+    root: Path,
+    warnings: list[str],
+    *,
+    workspace: Path | None = None,
+) -> None:
+    """Refresh .claude/rules directory symlinks to the generated llm-rules mount."""
+    script = SCRIPTS / "reconcile_llm_rule_adapters.py"
+    if not script.is_file():
+        warnings.append("reconcile_llm_rule_adapters.py missing — skip rule adapter refresh")
+        return
+    cmd = [sys.executable, str(script), "--root", str(root), "--quiet"]
+    if workspace is not None:
+        cmd.extend(["--workspace", str(workspace)])
+    result = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
+    if result.returncode != 0:
+        detail = (result.stdout or result.stderr or "").strip()
+        warnings.append(
+            "LLM rule adapter reconcile reported drift/conflicts"
+            + (f": {detail}" if detail else "")
+        )
+    else:
+        print("OK: LLM rule adapters reconciled to environment/generated/llm-rules/")
+
+
 def sync_skill_registry(root: Path, wrote: list[str]) -> None:
-    out = root / "environment" / "claude-code" / "generated" / "skill-registry.json"
+    out = root / "ops" / "generated" / "skill-registry.json"
     prior = out.read_bytes() if out.is_file() else None
     run_generator(
         [sys.executable, str(SCRIPTS / "build_claude_skill_registry.py"), "--root", str(root)],
@@ -294,18 +379,31 @@ def sync(
     changed = None if force else changed_paths
 
     try:
-        if should_run(changed, ("rules/",)):
+        rules_touched = should_run(
+            changed,
+            (
+                "rules/",
+                "ops/config/llm_rules_projection.yaml",
+                "environment/generated/llm-rules/",
+                "environment/skill-adapters/LLM_RULE_ADAPTER_ROOTS.yaml",
+            ),
+        )
+        if rules_touched:
             sync_rules(root, wrote)
+            project_llm_rules(root, wrote)
+            reconcile_llm_rule_adapters(root, warnings, workspace=workspace)
         skills_touched = should_run(
             changed,
             (
                 "skills/",
-                "environment/claude-code/generated/skill-registry.json",
+                "ops/generated/skill-registry.json",
+                "ops/skill_routing/",
                 "environment/claude-code/settings.template.json",
                 "environment/skill-adapters/",
             ),
         )
         if skills_touched:
+            assert_no_live_deprecated_skills(root)
             heal_orphan_skills(root, wrote, warnings)
             sync_skill_registry(root, wrote)
             sync_skill_overrides(root, wrote)
@@ -330,6 +428,13 @@ def validate_after_sync(root: Path) -> list[str]:
     errors: list[str] = []
     checks = [
         [sys.executable, str(SCRIPTS / "validate_rules_manifest.py"), "--root", str(root)],
+        [
+            sys.executable,
+            str(SCRIPTS / "project_llm_rules.py"),
+            "--root",
+            str(root),
+            "--check",
+        ],
         [
             sys.executable,
             str(SCRIPTS / "build_claude_skill_registry.py"),

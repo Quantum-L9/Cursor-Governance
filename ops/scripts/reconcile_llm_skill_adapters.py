@@ -29,11 +29,16 @@ ADAPTER_CONFIG_REL = Path("environment/skill-adapters/SKILL_ADAPTER_ROOTS.yaml")
 
 
 def expand_path(raw: str, workspace: Path) -> Path:
-    expanded = os.path.expanduser(raw)
+    """Return the mount path without following a final-component symlink.
+
+    Mirrors rule-adapter safety: resolving `.claude/skills` into governance
+    `skills/` would make per-skill installs mutate the SSOT tree.
+    """
+    expanded = os.path.expanduser(str(raw))
     path = Path(expanded)
-    if path.is_absolute():
-        return path
-    return (workspace / path).resolve()
+    if not path.is_absolute():
+        path = workspace / path
+    return path.parent.resolve() / path.name
 
 
 def load_config(root: Path) -> dict[str, Any]:
@@ -82,7 +87,7 @@ def reconcile_adapters(
             continue
 
         target = expand_path(str(raw_path), workspace)
-        # Rules are whole-dir symlinked separately (reconcile_claude_rules.py).
+        # Rules are whole-dir symlinked separately (reconcile_llm_rule_adapters.py).
         scope = "project" if kind == "project" else "user"
         result = reconcile_scope(
             root,
@@ -170,8 +175,8 @@ def main() -> int:
     if migration is not None:
         payload["orphan_migration"] = migration
 
-    # Claude rules: whole-dir symlink → governance rules/ (== .cursor-commands/rules)
-    rules_script = SCRIPT_DIR / "reconcile_claude_rules.py"
+    # Claude rules: whole-dir symlink → environment/generated/llm-rules/
+    rules_script = SCRIPT_DIR / "reconcile_llm_rule_adapters.py"
     if rules_script.is_file():
         rules_cmd = [
             sys.executable,
@@ -186,14 +191,14 @@ def main() -> int:
             rules_cmd.append("--check")
         rules_proc = subprocess.run(rules_cmd, capture_output=True, text=True)
         try:
-            payload["claude_rules"] = json.loads(rules_proc.stdout or "{}")
+            payload["llm_rule_adapters"] = json.loads(rules_proc.stdout or "{}")
         except json.JSONDecodeError:
-            payload["claude_rules"] = {
+            payload["llm_rule_adapters"] = {
                 "returncode": rules_proc.returncode,
                 "stdout": rules_proc.stdout,
                 "stderr": rules_proc.stderr,
             }
-        payload["claude_rules"]["returncode"] = rules_proc.returncode
+        payload["llm_rule_adapters"]["returncode"] = rules_proc.returncode
 
     if not args.quiet:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -203,7 +208,7 @@ def main() -> int:
     )
     if migration and migration.get("returncode", 0) != 0:
         has_problem = True
-    if payload.get("claude_rules", {}).get("returncode", 0) != 0:
+    if payload.get("llm_rule_adapters", {}).get("returncode", 0) != 0:
         has_problem = True
     return 1 if has_problem else 0
 

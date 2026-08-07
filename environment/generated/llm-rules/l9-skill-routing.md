@@ -1,0 +1,72 @@
+---
+description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints; fail closed if skipped.
+---
+
+# L9 skill routing (Cursor)
+
+Rules SSOT: this folder (`rules/` / `.cursor-commands/rules`) as `.mdc`. Claude Code
+mounts the projected `.md` tree at `.claude/rules` →
+`environment/generated/llm-rules/` (alias `l9-skill-routing.md`). Skills SSOT:
+`.cursor-commands/skills` via the `l9-governance` plugin — not a second copy under
+`.cursor/skills`.
+
+**Selecting a skill is not optional theater.** For non-trivial work, load the
+skill contract before improvising.
+
+## Mandatory — first action on non-trivial tasks
+
+1. Scan available L9 skills for the closest match to the user request.
+2. **Read that skill's `SKILL.md` immediately** (first tool action) and follow it.
+3. Use **one primary** skill. Add at most **two supporting** skills when each supplies
+   a capability the primary does not own.
+4. Prefer a domain skill over `l9-structured-reasoning`; use structured reasoning as
+   support for architecture, planning, debugging, trade-offs, corpus analysis, or
+   material uncertainty.
+5. Never auto-invoke skills marked `explicit_only` in `skills/AUTONOMY_MANIFEST.yaml`
+   (e.g. `l9-bounded-autonomy`, `l9-pr-remediation`, `l9-forge`, `l9-ui-operator`).
+6. Skip skill load only for trivial edits / direct factual lookups where no skill
+   would improve correctness or evidence.
+7. A router hint is routing evidence, not mutation authority.
+
+## Fail-closed
+
+- Non-trivial task + no skill loaded → load a skill before irreversible edits.
+- Domain skill vs general reasoning → domain skill wins.
+- Irreversible action without evidence → block or bounded probe.
+
+## Live route hint (hook)
+
+`beforeSubmitPrompt` runs `ops/hooks/before_submit_skill_router.py`, which writes:
+
+`~/.cursor/l9/skill-route.json`
+
+When that file exists and `recommended_at` is **within the last 2 minutes**, treat
+`primary` / `supporting` as the high-confidence route and Read those skills first.
+If the file is stale or absent, still select from available skills yourself.
+
+## Common triggers → primary skill
+
+| User intent | Read first |
+|---|---|
+| Plan / unclear scope / decompose | `l9-plan` |
+| PR review / merge blockers / readiness | `l9-pr-analysis` |
+| Explore unfamiliar code / map flows | `l9-code-analysis` |
+| Gaps / readiness / % complete | `l9-gap-analysis` |
+| Library/SDK/API docs before coding | `l9-context7-docs` |
+| Compile SOP/prompt into a skill | `l9-skill-compiler` |
+| Register/wire a new skill | `l9-wire-skill-into-repo` |
+| Harden/converge packs or skill usage | `l9-recursive-optimization` |
+| Graphiti / memory prefetch / health | `l9-graphiti-memory` |
+| Deep trade-offs / architecture / debug / corpus | `l9-structured-reasoning` |
+| What should I do next | `l9-ynp` |
+| CI bootstrap | `l9-setting-up-ci` |
+| Security / secrets exposure | `l9-auditing-security` |
+| Performance / slow app | `l9-auditing-performance` |
+| Active incident | `l9-incident-response` |
+
+Authority: `skills/AUTONOMY_MANIFEST.yaml` (`claude_routing`) +
+`ops/generated/skill-registry.json`. Shared scorer: `ops/skill_routing/`.
+Claude projection: `environment/generated/llm-rules/l9-skill-routing.md`
+(generated; do not hand-edit).
+
+<!-- generated-from: rules/23-l9-skill-routing.mdc; do-not-edit -->

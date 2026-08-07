@@ -106,7 +106,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 ### Skills
 - [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)
-- [`skills/l9-structured-reasoning-deprecated/`](skills/l9-structured-reasoning-deprecated/) — deprecated Block-protocol pack (not registered; do not activate)
+- [`skills/_archived/`](skills/_archived/) — retired skill packs (not discoverable; do not activate)
 - [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring
 - [`skills/l9-aws-secrets/SKILL.md`](skills/l9-aws-secrets/SKILL.md) — AWS SM refs via `ops/secrets` (Governance SSOT)
 - [`skills/l9-ui-operator/SKILL.md`](skills/l9-ui-operator/SKILL.md) — SaaS UI console when API is insufficient (explicit-only)

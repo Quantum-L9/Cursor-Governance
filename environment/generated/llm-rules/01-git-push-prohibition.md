@@ -1,0 +1,74 @@
+---
+description: 'NEVER commit or push to git without explicit user request. Push is #1 deployment risk.'
+---
+
+# 🚨 #1 RULE: NEVER COMMIT OR PUSH WITHOUT EXPLICIT REQUEST
+
+## The Rule
+
+- **NEVER** run `git commit` unless the user explicitly asks ("commit", "commit this", "commit and push", etc.).
+- **NEVER** run `git push` unless the user explicitly says "push", "push it", "push to remote", or similar.
+
+This is non-negotiable. No exceptions. No "I thought you wanted me to commit/push."
+
+See also: `99-no-auto-commit.mdc`, `96-git-push-approval.mdc`.
+
+## What You CAN Do Without Asking
+
+- `git status`
+- `git diff`
+- `git log`
+- `git fetch`
+- `git branch`
+
+## What REQUIRES Explicit User Request
+
+- `git add` followed by `git commit` (or any `git commit`)
+- `git add && git commit` chains
+- `git push` (any form)
+- `git push origin`
+- `git push -u origin HEAD`
+- `git push --force` (EXTREMELY dangerous — requires explicit request)
+
+## Why This Matters
+
+1. **Push = Deployment** — In many repos, pushing triggers CI/CD or Odoo.sh deploy
+2. **Commit needs review** — User must verify the diff before it is recorded
+3. **No Undo on remote** — Once pushed, the code is visible and may deploy
+4. **Commit ≠ Push** — Both require separate explicit approval unless user says "commit and push" in one request
+
+## Correct Workflow
+
+```
+1. Make changes
+2. Show the user what changed (diff or summary)
+3. WAIT for user to say "commit" or "commit and push"
+4. Only then: git add + git commit
+5. STOP and tell user: "Committed locally. Ready to push when you say so."
+6. WAIT for user to say "push" or "push it"
+7. Only then: git push
+```
+
+## Anti-Pattern (What NOT To Do)
+
+```bash
+# ❌❌❌ WRONG — NEVER DO THIS ❌❌❌
+git add -A && git commit -m "fix something" && git push
+
+# ❌ WRONG — commit without being asked
+git add -A && git commit -m "fix something"
+
+# ✅✅✅ CORRECT ✅✅✅
+# [show diff, wait for "commit"]
+git add -A && git commit -m "fix something"
+# [wait for "push"]
+git push
+```
+
+## Lesson Learned
+
+**2026-03-17** — Agent pushed multiple commits without explicit request, triggering unwanted deployments. User was extremely clear this must never happen again.
+
+**2026-06-06** — Aligned with `99-no-auto-commit.mdc`: commit also requires explicit user approval.
+
+<!-- generated-from: rules/01-git-push-prohibition.mdc; do-not-edit -->

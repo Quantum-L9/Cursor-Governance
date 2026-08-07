@@ -5,9 +5,11 @@ alwaysApply: true
 
 # L9 skill routing (Cursor)
 
-Rules SSOT: this folder (`rules/` / `.cursor-commands/rules`). Claude Code mounts the
-same folder at `.claude/rules`. Skills SSOT: `.cursor-commands/skills` via the
-`l9-governance` plugin — not a second copy under `.cursor/skills`.
+Rules SSOT: this folder (`rules/` / `.cursor-commands/rules`) as `.mdc`. Claude Code
+mounts the projected `.md` tree at `.claude/rules` →
+`environment/generated/llm-rules/` (alias `l9-skill-routing.md`). Skills SSOT:
+`.cursor-commands/skills` via the `l9-governance` plugin — not a second copy under
+`.cursor/skills`.
 
 **Selecting a skill is not optional theater.** For non-trivial work, load the
 skill contract before improvising.
@@ -64,5 +66,6 @@ If the file is stale or absent, still select from available skills yourself.
 | Active incident | `l9-incident-response` |
 
 Authority: `skills/AUTONOMY_MANIFEST.yaml` (`claude_routing`) +
-`environment/claude-code/generated/skill-registry.json`. Sibling Claude projection:
-`l9-skill-routing.md` in this same folder.
+`ops/generated/skill-registry.json`. Shared scorer: `ops/skill_routing/`.
+Claude projection: `environment/generated/llm-rules/l9-skill-routing.md`
+(generated; do not hand-edit).

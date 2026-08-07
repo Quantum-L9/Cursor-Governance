@@ -162,7 +162,12 @@
           "wire skill into",
           "register the skill",
           "skill discovery tables",
-          "subagent preload"
+          "subagent preload",
+          "deprecate the skill",
+          "unwire the skill",
+          "deregister the skill",
+          "archive the skill",
+          "retire the skill"
         ],
         "primary": "l9-wire-skill-into-repo",
         "signal_weight": 8,
@@ -914,14 +919,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "registers new or updated agent skills into repo discovery tables, subagent preload lists, and related agent docs after skill creation. use immediately after l9-skill-compiler finishes, when the user asks to wire or register a skill, or when a skill pack exists but is not yet discoverable.",
+      "description": "registers, updates, or retires agent skills in discovery tables, autonomy manifests, adapter symlinks, subagent preloads, and related agent docs. use immediately after l9-skill-compiler finishes, when a skill pack exists but is not discoverable, when the user asks to wire or register a skill, or when a skill must be deprecated, unwired, archived, deregistered, or superseded \u2014 deprecate means archive out of live skills/ and clear every registry, never leave a deprecated pack discoverable.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-wire-skill-into-repo",
       "path": "skills/l9-wire-skill-into-repo",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
+      "when_to_use": "registering, relocating, renaming, or retiring a skill \u2014 including deprecate/unwire/archive/deregister so deprecated packs leave live skills/ and every discovery registry"
     },
     {
       "composition_role": "primary",
@@ -936,6 +941,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "ccce7cd5fa1f83c4a25f3988185ee27ab3176b500ef664f175bfefd9f4f64440",
-  "source_skill_corpus_sha256": "4b0d909e92426510852fd545f6c3464e04310075c670f100d70f4c8e3df751a3"
+  "source_manifest_sha256": "97c5d8ff72c8c1f51ad21b4d20b224ff5e9d24b3c3e4b5498662a9dbda0b5b99",
+  "source_skill_corpus_sha256": "b7436af3285567f50f8809ed166c30f56e177e3fce066e64557458b39d5167d7"
 }

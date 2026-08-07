@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Cursor beforeSubmitPrompt adapter for the L9 proactive skill router.
 
-Claude Code already injects route hints via UserPromptSubmit. Cursor's
-beforeSubmitPrompt schema only guarantees continue/user_message today, so this
-hook:
+Thin I/O wrapper over ops/skill_routing (CANONICAL_LAW §2.1):
 
-1. Reuses the shared route_prompt() scorer against the generated skill registry
+1. Scores via shared route_prompt() against ops/generated/skill-registry.json
 2. Persists the recommendation for the always-apply skill-routing rule to read
 3. Emits additional_context when present (forward-compatible; ignored if unsupported)
 4. Fail-opens on any error — never blocks a prompt
@@ -21,37 +19,41 @@ import time
 from pathlib import Path
 from typing import Any
 
-REGISTRY_REL = Path("environment/claude-code/generated/skill-registry.json")
-ROUTER_REL = Path("environment/claude-code/hooks/user_prompt_skill_router.py")
+ROUTER_REL = Path("ops/skill_routing/route_prompt.py")
 STATE_PATH = Path.home() / ".cursor" / "l9" / "skill-route.json"
+
+
+def load_routing(root: Path):
+    path = root / ROUTER_REL
+    spec = importlib.util.spec_from_file_location("l9_skill_routing_cursor", path)
+    if not spec or not spec.loader:
+        raise RuntimeError(f"cannot load skill routing: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def resolve_root() -> Path:
     configured = os.environ.get("L9_GOVERNANCE_DIR", "").strip()
     if configured:
         candidate = Path(configured).expanduser()
-        if (candidate / REGISTRY_REL).is_file():
-            return candidate
+        if (candidate / ROUTER_REL).is_file():
+            routing = load_routing(candidate)
+            if (candidate / routing.REGISTRY_REL).is_file():
+                return candidate
     home = Path.home() / ".cursor-governance"
-    if (home / REGISTRY_REL).is_file():
-        return home
-    # Dev/worktree fallback when this file lives inside the clone.
+    if (home / ROUTER_REL).is_file():
+        routing = load_routing(home)
+        if (home / routing.REGISTRY_REL).is_file():
+            return home
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / REGISTRY_REL).is_file():
-            return parent
+        if (parent / ROUTER_REL).is_file():
+            routing = load_routing(parent)
+            if (parent / routing.REGISTRY_REL).is_file():
+                return parent
     return home
-
-
-def load_router(root: Path):
-    path = root / ROUTER_REL
-    spec = importlib.util.spec_from_file_location("l9_skill_router_cursor", path)
-    if not spec or not spec.loader:
-        raise RuntimeError(f"cannot load skill router: {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def extract_prompt(payload: dict[str, Any]) -> str:
@@ -114,9 +116,10 @@ def main() -> int:
             print(json.dumps({"continue": True}))
             return 0
         root = resolve_root()
-        registry = json.loads((root / REGISTRY_REL).read_text(encoding="utf-8"))
-        router = load_router(root)
-        recommendation = router.route_prompt(prompt, registry)
+        routing = load_routing(root)
+        root = routing.resolve_root(Path(__file__))
+        registry = routing.load_registry(root)
+        recommendation = routing.route_prompt(prompt, registry)
         if recommendation is None:
             print(json.dumps({"continue": True}))
             return 0

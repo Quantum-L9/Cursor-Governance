@@ -65,14 +65,17 @@ both `disable-model-invocation: true` and `skillOverrides` in the settings templ
 A `UserPromptSubmit` hook reinforces only high-confidence routes. Claude still uses
 its native Skill tool, and routing never grants write or deployment authority.
 
-**Cursor** reuses the same `route_prompt()` scorer via
-`ops/hooks/before_submit_skill_router.py` on `beforeSubmitPrompt`, persists
-`~/.cursor/l9/skill-route.json`, and relies on always-apply
-`rules/23-l9-skill-routing.mdc` because Cursor's prompt hook cannot reliably inject
-`additional_context` today.
+Shared scoring lives in `ops/skill_routing/` (Cursor-primary). Claude's
+`UserPromptSubmit` hook and Cursor's `ops/hooks/before_submit_skill_router.py`
+are thin I/O adapters over that ingress. Cursor persists
+`~/.cursor/l9/skill-route.json` and relies on always-apply
+`rules/23-l9-skill-routing.mdc` because its prompt hook cannot reliably inject
+`additional_context` today. Registry: `ops/generated/skill-registry.json`.
 
 `ops/scripts/reconcile_claude_l9_skills.py` preserves consumer-local skills and
-removes only entries recorded in its managed-state file. Validate registry,
+removes only entries recorded in its managed-state file. Claude `.claude/rules`
+is a directory symlink to `environment/generated/llm-rules/` (projected from
+`rules/*.mdc` — never hand-edit; never mount raw `.mdc`). Validate registry,
 frontmatter, hooks, fixtures, and reconciliation with `make claude-skills-check`.
 
 ### Memory identity — distinct from Cursor, shared graph

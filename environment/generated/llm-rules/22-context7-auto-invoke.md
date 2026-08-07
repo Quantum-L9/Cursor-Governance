@@ -1,0 +1,52 @@
+---
+description: Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.
+---
+
+# Context7 Auto-Invoke (External Docs)
+
+**MCP server:** `user-Context7` · **Skill:** `@.cursor-commands/skills/l9-context7-docs/`
+
+## Mandatory — call Context7 before first implementation
+
+When the task touches any item below, **read MCP tool schemas**, then call `resolve-library-id` → `query-docs` **before writing or editing code**. Do not wait for the user to say "use context7".
+
+| Trigger | Examples | Seed library names |
+|---------|----------|-------------------|
+| **FastAPI / ASGI** | routes, middleware, deps, Pydantic v2, lifespan | `FastAPI`, `Starlette`, `Pydantic` |
+| **Neo4j** | Cypher, Python driver, graph sync/scoring | `Neo4j Python Driver`, `Neo4j` |
+| **pytest** | fixtures, markers, parametrize, asyncio, plugins | `pytest`, `pytest-asyncio` |
+| **GitHub Actions / gh** | workflow syntax, actions, expressions, `gh` CLI | `GitHub Actions`, `actions/checkout` |
+| **New software** | unfamiliar SDK, platform, plugin, MCP server, CLI tool | official product name |
+| **Dev tooling** | Docker Compose, pre-commit, ruff, semgrep, MCP SDK | tool's official name |
+
+Also invoke when: version-specific API, migration syntax, deprecated patterns, or errors suggesting stale/wrong API shape.
+
+## Verify before codegen
+
+- Before calling a third-party library function, verify the symbol exists in the project's installed version (`package.json`, `pyproject.toml`, `go.mod`, etc.).
+- If unverified after Context7 + local search, mark the line `# VERIFY: <lib>.<symbol> against version X` and surface uncertainty in the response.
+- Never invent function signatures, parameter names, or return types — propose adding the dependency (with version) before writing code that depends on it.
+
+## Skip Context7
+
+- Task is purely local repo code with no external API/dependency behavior.
+- Repo rules, invariants, or local files are the SSOT (e.g. Odoo module patterns).
+- Secrets, credentials, proprietary payloads must never go in Context7 queries.
+
+## MCP flow (max 3 calls each)
+
+1. `resolve-library-id` — `{ "libraryName": "...", "query": "specific task, no secrets" }`
+2. `query-docs` — `{ "libraryId": "/org/project", "query": "..." }`
+
+If user gives a library ID (`/org/project`), skip step 1.
+
+## Output
+
+```markdown
+Context7 checked: `/org/project`
+Key constraints:
+- …
+Applied in: …
+```
+
+<!-- generated-from: rules/22-context7-auto-invoke.mdc; do-not-edit -->

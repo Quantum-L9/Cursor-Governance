@@ -1,11 +1,15 @@
----
-description: Compatibility shim — canonical file is rules/l9-skill-routing.md (Claude .claude/rules → rules/).
----
+# Moved — do not edit
 
-# Moved
+Claude `.claude/rules` is a directory symlink to the **generated** mount:
 
-Canonical skill-routing rule for Claude and Cursor lives in the single rules SSOT:
+`environment/generated/llm-rules/`
 
-`rules/l9-skill-routing.md` (and Cursor `rules/23-l9-skill-routing.mdc`)
+Skill routing for Claude is projected from `rules/23-l9-skill-routing.mdc` as
+`l9-skill-routing.md` in that generated tree.
 
-`.claude/rules` is a directory symlink to `rules/`. Do not maintain a second copy here.
+Author only `rules/*.mdc`. Regenerate with:
+
+```bash
+python3 ops/scripts/project_llm_rules.py --root "$HOME/.cursor-governance"
+python3 ops/scripts/reconcile_llm_rule_adapters.py --root "$HOME/.cursor-governance"
+```

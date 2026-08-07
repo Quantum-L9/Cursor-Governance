@@ -1,6 +1,6 @@
 # Protocol D — Skill routing
 
-Harvests PR #41 / `environment/claude-code/rules/l9-skill-routing.md` for bounded-autonomy campaigns.
+Harvests PR #41 / `rules/23-l9-skill-routing.mdc` (Claude projection: `environment/generated/llm-rules/l9-skill-routing.md`) for bounded-autonomy campaigns.
 
 ## Composition
 

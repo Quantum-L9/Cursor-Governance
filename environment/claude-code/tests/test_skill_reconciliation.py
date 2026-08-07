@@ -20,7 +20,7 @@ class SkillReconciliationTests(unittest.TestCase):
             skill = root / "skills" / name
             skill.mkdir(parents=True)
             (skill / "SKILL.md").write_text(f"---\nname: {name}\ndescription: test\n---\n")
-        generated = root / "environment" / "claude-code" / "generated"
+        generated = root / "ops" / "generated"
         generated.mkdir(parents=True)
         (generated / "skill-registry.json").write_text(
             json.dumps(
@@ -33,7 +33,7 @@ class SkillReconciliationTests(unittest.TestCase):
                 }
             )
         )
-        rules = root / "environment" / "claude-code" / "rules"
+        rules = root / "environment" / "generated" / "llm-rules"
         rules.mkdir(parents=True)
         (rules / "l9-skill-routing.md").write_text("# routing\n")
 
@@ -73,7 +73,7 @@ class SkillReconciliationTests(unittest.TestCase):
             self.assertTrue((workspace / ".claude" / "skills" / "l9-alpha").is_symlink())
             self.assertTrue((workspace / ".claude" / "skills" / "l9-beta").is_symlink())
             self.assertTrue(local.is_dir())
-            # Rules are whole-dir symlinked by reconcile_claude_rules.py, not per-file here.
+            # Rules are whole-dir symlinked by reconcile_llm_rule_adapters.py, not per-file here.
 
             check = self.run_script(root, workspace, "--check")
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
@@ -106,7 +106,7 @@ class SkillReconciliationTests(unittest.TestCase):
             workspace.mkdir()
             self.make_fixture(root)
             # Inject a non-l9 registry name to prove consumer-owned non-l9 still fails closed.
-            registry = root / "environment" / "claude-code" / "generated" / "skill-registry.json"
+            registry = root / "ops" / "generated" / "skill-registry.json"
             data = json.loads(registry.read_text())
             data["skills"].append({"name": "plasticos-local", "path": "skills/plasticos-local"})
             registry.write_text(json.dumps(data))

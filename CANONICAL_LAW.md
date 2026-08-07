@@ -25,9 +25,10 @@ status: active
 |-------|----------------|---------------|
 | **Governance body** | `~/.cursor-governance/` (clone root) | `.cursor-commands/` symlink |
 | CANONICAL_LAW | `~/.cursor-governance/CANONICAL_LAW.md` | `.cursor/governance/CANONICAL_LAW.md` (file symlink) |
-| L9 skills | `skills/` | `@.cursor-commands/skills/` |
+| L9 skills | `skills/` (live packs only; retired → `skills/_archived/`) | `@.cursor-commands/skills/` |
 | Workflows/DAGs | `workflows/dags/` | Executed by DAG runner |
-| Global rules | `rules/` | `@.cursor-commands/rules/` |
+| Global rules | `rules/*.mdc` (SSOT) | Cursor: `@.cursor-commands/rules/` via `l9-governance` plugin |
+| LLM rules (.md peers) | `environment/generated/llm-rules/` (projected; do not hand-edit) | Claude: `.claude/rules` → generated mount via `reconcile_llm_rule_adapters.py` |
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
 | **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
@@ -89,11 +90,9 @@ are **not** owners of shared capability.
 | Cursor binding | Cursor adapter paths | `~/.cursor/hooks.json`, `l9-governance` plugin, `.cursor-commands` |
 | Other LLM/IDE binding | Thin wrapper only | `environment/claude-code/hooks/*` imports shared ops; does not own the scorer |
 
-**Known debt to reverse when touched:** skill routing currently scores in
-`environment/claude-code/hooks/user_prompt_skill_router.py` with Cursor wrapping
-via `ops/hooks/before_submit_skill_router.py`. New work must relocate shared
-scoring to Cursor-primary/ops and make Claude the thin consumer — do not extend
-the inverted pattern.
+**Skill routing ownership:** shared scoring lives in `ops/skill_routing/`;
+registry at `ops/generated/skill-registry.json`. Claude and Cursor hooks are
+thin I/O adapters only.
 
 Multi-agent identity (WHO writes memory: agent IDs, roles, tokens-by-name) is
 governed by `environment/agents/agent_registry.yaml` — peer of
@@ -195,6 +194,11 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
 
 - New global skill → `l9-skill-compiler`, then `l9-wire-skill-into-repo`
 - New repo-local skill → `.claude/skills/plasticos-*` (not governance root)
+- **Deprecated skills cannot remain in live `skills/`.** Archive with
+  `git mv skills/<name> skills/_archived/<name>`, remove from
+  `AUTONOMY_MANIFEST.yaml` tiers, and keep them out of adapter reconcile /
+  skill-registry generation. `status: deprecated` or `*-deprecated` at the
+  top level of `skills/` is a fail-closed sync error.
 
 ---
 
@@ -204,6 +208,7 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
 - Hard-resetting or force-pushing the SSOT clone
 - Committing `.cursor-commands` symlink target into app repos (symlink only; content lives in `~/.cursor-governance`)
 - Referencing archived scripts (`ops/scripts/_archived/`) as active dependencies
+- Leaving deprecated skill packs under live `skills/<name>/` (must live under `skills/_archived/`)
 - Using `cursor_memory_client.py` — deprecated, use Graphiti
 - "Fire and hope" command execution — issuing a write/execute command with no prior read-only diagnosis (see §11)
 - Implementing shared cross-surface capability under a dependent adapter (e.g. `environment/claude-code/`) and wrapping Cursor to import it — violates §2.1; causes adapter spaghetti

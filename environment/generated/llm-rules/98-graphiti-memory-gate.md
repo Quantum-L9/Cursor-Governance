@@ -1,0 +1,34 @@
+---
+description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
+---
+
+# Graphiti Memory Gate
+
+## group_id contract
+
+- Resolve via `graphiti_memory_client.py resolve` or `GRAPHITI_GROUP_ID` env
+- **Forbidden:** `main`, `default`, empty, `test`
+- An explicit override (`--group-id` / `GRAPHITI_GROUP_ID`) must match the
+  resolved repo (git remote or path hint); a contradicting override fails
+  closed to readonly. Overrides are honored only when no repo match exists
+- Path hints match whole path segments only, never substrings
+- Cross-repo edges live in `igor-workspace` only — and only bootstrap's
+  integration-edge mirror may write there; `write` rejects `igor-workspace`
+  unconditionally
+
+## Write gates (GATES-002)
+
+Active only when `GRAPHITI_WRITE_GATES=1` in `~/.cursor/graphiti.env`.
+
+When active:
+
+- Write/Shell/Task denied until task in `memory_satisfied_for` or fresh prefetch
+- GMP prompts require `gmp:phase_lock` in satisfied list after prefetch + conflicts check
+
+Default (`GRAPHITI_WRITE_GATES=0`): advisory prefetch only — no Write blocking.
+
+Runbook: `ops/graphiti/GATES-002-ACTIVATION.md`
+
+Must cite Graphiti prefetch episode names and run `graphiti_memory_client.py conflicts` before plan lock.
+
+<!-- generated-from: rules/98-graphiti-memory-gate.mdc; do-not-edit -->

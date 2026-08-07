@@ -1,0 +1,52 @@
+---
+description: Preserve test intent and fix root causes instead of manufacturing a green suite.
+---
+
+# Test Integrity Policy
+
+## Non-negotiable rule
+
+A failing test is evidence. Repair the implementation, fixture, test defect, or environment problem that the evidence reveals. Do not manufacture a green suite by hiding the failure.
+
+## Prohibited shortcuts
+
+- Do not add blanket skips, conditional skips, or expected-failure markers merely to avoid investigation.
+- Do not weaken assertions until an incorrect result passes.
+- Do not delete legitimate coverage because the setup is inconvenient.
+- Do not replace meaningful tests with mocks that bypass the behavior under test.
+- Do not change production behavior solely to satisfy an invalid test without proving the intended contract.
+
+## Required diagnosis
+
+Classify the failure before changing code:
+
+1. **Product defect:** implementation violates the intended contract.
+2. **Test defect:** assertion or setup encodes the wrong contract.
+3. **Fixture defect:** required valid state was not constructed.
+4. **Environment defect:** dependency, service, clock, platform, or configuration is not controlled.
+5. **Flake or race:** result depends on timing, ordering, shared state, or nondeterminism.
+
+Then repair the narrowest true cause while preserving test intent.
+
+## Legitimate exceptions
+
+A skip or expected failure is permitted only when the condition is real, narrow, documented, and externally unavoidable, such as an unsupported platform or an optional integration that is not part of the current test contract.
+
+Every exception must state:
+
+- the exact condition;
+- why a deterministic fixture or mock is not appropriate;
+- the owner or removal trigger;
+- evidence that unrelated failures are not being hidden.
+
+## Completion evidence
+
+Before declaring the tests fixed:
+
+- run the targeted failing test;
+- run the nearest affected test group;
+- preserve or improve the original assertions;
+- record any legitimate exception;
+- distinguish product changes from test-only changes in the summary.
+
+<!-- generated-from: rules/95-test-fix-policy.mdc; do-not-edit -->

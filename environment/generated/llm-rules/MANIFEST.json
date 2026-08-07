@@ -1,0 +1,573 @@
+{
+  "generator": "ops/scripts/project_llm_rules.py",
+  "output_relative": "environment/generated/llm-rules",
+  "rules": [
+    {
+      "alias": null,
+      "class": "always",
+      "output": "00-global.md",
+      "output_sha256": "71464b1473327b38db955649df791f0983b834749ac9eb84ecf04cd357450295",
+      "source": "rules/00-global.mdc",
+      "source_sha256": "617dac45e91dc46e34d443750d13b0b5f6b9d8debbfb67cc6bc1985612e909eb",
+      "stem": "00-global"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "01-git-push-prohibition.md",
+      "output_sha256": "5dbf023418dc869d435d14886a2e42e23abb635c962a803547fe30ba69e2f19e",
+      "source": "rules/01-git-push-prohibition.mdc",
+      "source_sha256": "634b7fa04d1a1fe13abdf9072ef95ba4052ef91f587124dd135a0ec7512ef667",
+      "stem": "01-git-push-prohibition"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "01-vps-rules.md",
+      "output_sha256": "5ccea06706c62642c30b0f7bb3197a3027dbb37f18d65a66f4ec1ac5e6cd1ceb",
+      "source": "rules/01-vps-rules.mdc",
+      "source_sha256": "b746e103e43953723f5d8c34430ffac9e1805ffa4c3acd009a40891c5507d5b4",
+      "stem": "01-vps-rules"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "02-slash-commands.md",
+      "output_sha256": "63fa6b2f976f792165400d8e4b7bfb9954581493ec2d59c247a83fa0a88e2a27",
+      "source": "rules/02-slash-commands.mdc",
+      "source_sha256": "a976f968cd15b1a8e1d26df9b67e66b44712de1b0e9123f78f6f0063e480177e",
+      "stem": "02-slash-commands"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "03-graphiti-memory.md",
+      "output_sha256": "e3afc6d580d3232df8f5fabe52844f05e5372674c9055d7e9676283120dbca69",
+      "source": "rules/03-graphiti-memory.mdc",
+      "source_sha256": "f05a463d9f4d99a4dfb8d7191e73dcfdd7c2785b2771765d6e6d63b218c5372f",
+      "stem": "03-graphiti-memory"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "03-mcp-memory.md",
+      "output_sha256": "fcc822a51433f161854baa58906984d6fb5595c5674536fae5550dc8d42ddfc1",
+      "source": "rules/03-mcp-memory.mdc",
+      "source_sha256": "aa99208c2fcb072c39d3eabe06174c3849613cac2948ea7fb5a5660477dcba0c",
+      "stem": "03-mcp-memory"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "04-cursor-redis-session.md",
+      "output_sha256": "c03e4dceef12e367cde58889f90fef15bedddc6def8b391052fe8e0c0eacb968",
+      "source": "rules/04-cursor-redis-session.mdc",
+      "source_sha256": "204ee35409fc0de805ff6a94b91f2cfceac535bbb53951ae5e83cb6efd20284d",
+      "stem": "04-cursor-redis-session"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "05-ask-mode.md",
+      "output_sha256": "1dc9a659f231e205858a605c0592d0db995cee612f7e0187d26538dae3ef2d15",
+      "source": "rules/05-ask-mode.mdc",
+      "source_sha256": "02606be85a98aa47427777698f3916b6873cbfed17c8b3a478715d842bf50c8b",
+      "stem": "05-ask-mode"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/05-recursive-execution-kernel.mdc",
+      "source_sha256": "7c60143d21bf08af194d062a6ca8f1633303371d4a0fd726db49dc089ff6d24c",
+      "stem": "05-recursive-execution-kernel"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "10-lang-typescript.md",
+      "output_sha256": "4a36c7a18f3edab8730a0ea88c4f676723a28131ccbda54ec16fc5b98040c111",
+      "source": "rules/10-lang-typescript.mdc",
+      "source_sha256": "bd8fad3dd090f23921c9db95a4e28a719225c0698d8b4303a77c65fc8a0fae64",
+      "stem": "10-lang-typescript"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "20-lang-python.md",
+      "output_sha256": "fc7f7da2ee1ed404c5544d0b35285ea6a7ad99a46634c2f4b73e5dbe5013b82f",
+      "source": "rules/20-lang-python.mdc",
+      "source_sha256": "8f9921b041c081ab00f7925975b1e5505ae9dcf455116c1c058cde34dcfb7ec9",
+      "stem": "20-lang-python"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "22-context7-auto-invoke.md",
+      "output_sha256": "db295057a5e6f1d9bd1242114d974841033200535f55ea4249115a2c95b006e1",
+      "source": "rules/22-context7-auto-invoke.mdc",
+      "source_sha256": "0d3ad3e7d98260fda81fa7798dcbb03ebb6e8d260b767f85cd7757bde7c8a5d2",
+      "stem": "22-context7-auto-invoke"
+    },
+    {
+      "alias": "l9-skill-routing.md",
+      "class": "always",
+      "output": "l9-skill-routing.md",
+      "output_sha256": "5dfdba5a0b7a691580cf891720bcb3e69731e0013f10f8161c6803bb2ec5086c",
+      "source": "rules/23-l9-skill-routing.mdc",
+      "source_sha256": "a11baa35c04651c8728d5120afe723c7a66cd597e21cc2f889aa9b94329a1184",
+      "stem": "23-l9-skill-routing"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "25-python-dora-header.md",
+      "output_sha256": "623716e98230870b0113862ed780501cc30e85b4084f6e361da846d309dcf720",
+      "source": "rules/25-python-dora-header.mdc",
+      "source_sha256": "e27ac2cc723bff50fec5f85f2b46a9c8d3f7a8e6adfd6dddb3fd3cbbfb4708dd",
+      "stem": "25-python-dora-header"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "30-framework-react.md",
+      "output_sha256": "67f6ef7f128a8b2ae24c23f73511e03d2a7145f0ad56760ac648dcc447952117",
+      "source": "rules/30-framework-react.mdc",
+      "source_sha256": "38c1291f4681d160b5f98bcc02ee4948c613191849ee5bd3c5a287ea344d3f25",
+      "stem": "30-framework-react"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "40-domain-autonomy.md",
+      "output_sha256": "f29e43a1c17b738f2608b8984b41060f3852505998c754cfeeac21b918d007d6",
+      "source": "rules/40-domain-autonomy.mdc",
+      "source_sha256": "2af64ed1e71a5f8bb835a3f3f259ca5738847eb69200b6a3e712842f5d51bd28",
+      "stem": "40-domain-autonomy"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "43-lang-postgresql.md",
+      "output_sha256": "af98bbc160a9890376f422471dd21be6e3ae64ae72a894c44f2f345139993753",
+      "source": "rules/43-lang-postgresql.mdc",
+      "source_sha256": "376750159196a56bbbfd9ec8495cd7fa46be38e19b23ca0e04be82843cf6bf70",
+      "stem": "43-lang-postgresql"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "45-pre-action-verification.md",
+      "output_sha256": "de0c35936ddbed97b3df6289ebdf247e60ce369301e03d428bf6c81c8b7713de",
+      "source": "rules/45-pre-action-verification.mdc",
+      "source_sha256": "bd895d6eef3fd12bda25e96520d27c282c7f0ac889134824db9eacffb7ad0635",
+      "stem": "45-pre-action-verification"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "50-qa-testing.md",
+      "output_sha256": "8e69b4b7ca39c6b237904d46e1d9841cc7d5ec213231e8e2c4a9bf7816eac47f",
+      "source": "rules/50-qa-testing.mdc",
+      "source_sha256": "fba2fc9b34d339dae7026914e860fc8aa80cf8f9e3c80542588e4f8cfcfe0a5f",
+      "stem": "50-qa-testing"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "51-qa-playwright.md",
+      "output_sha256": "9c31c991789bcd3f60acff703451db780fc6dd33d9748382fcda46f4519e6242",
+      "source": "rules/51-qa-playwright.mdc",
+      "source_sha256": "351a1f35357a33790bfdf6086f62db42a673ff37edfe1a925d46de898e4173ea",
+      "stem": "51-qa-playwright"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "52-qa-jest.md",
+      "output_sha256": "486337af333a4e5e6c43f9b92219b6a5fabe5a5f283dd728aad21b301bedbb34",
+      "source": "rules/52-qa-jest.mdc",
+      "source_sha256": "493fb58ae77a4789a52d03e6bc226e4808027591ab7c295817a526be4268e555",
+      "stem": "52-qa-jest"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "60-anti-patterns.md",
+      "output_sha256": "c178711dbbe80037d990fa650b5baf265f0e850d29f64a093a302858fc79961d",
+      "source": "rules/60-anti-patterns.mdc",
+      "source_sha256": "5bb1cfc03b2448ef42867d16c85636207f8b8649204a5a973e8cce39425477b4",
+      "stem": "60-anti-patterns"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "61-secrets-and-dependencies.md",
+      "output_sha256": "e833c08faffca81084218f067627ebf0739dffcc553e55494b349fee967eef54",
+      "source": "rules/61-secrets-and-dependencies.mdc",
+      "source_sha256": "bcf0390b7f242af124fc44c9e2cfa5ce8d05621fb5c70cd3318b564a3a27f81d",
+      "stem": "61-secrets-and-dependencies"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "65-observability-performance.md",
+      "output_sha256": "3e3ac769dd2b4fa4acc9040ec5d187dbf81ef4fbdc0a143b5769ae89ecf1f37e",
+      "source": "rules/65-observability-performance.mdc",
+      "source_sha256": "e935f52d5df68c2e66002807a1185ddc47b7d80ee86a15e85761da5475c3b563",
+      "stem": "65-observability-performance"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "70-tool-efficiency.md",
+      "output_sha256": "999b5fdd1ed94edeeea180537ab167bf5fc6573f9f43c8b09bc3352b761afa6a",
+      "source": "rules/70-tool-efficiency.mdc",
+      "source_sha256": "4ff48f649686403443c0f2010c47dddd1ccb30549a5f3d89f346d7f3a4395bc9",
+      "stem": "70-tool-efficiency"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "71-ci-cd-pipeline.md",
+      "output_sha256": "aaed5e1f0ee27e95b9804ceec872bceda61a220b047237bee54bb99dd816cce7",
+      "source": "rules/71-ci-cd-pipeline.mdc",
+      "source_sha256": "394c3835f9e74d41c6f870f9b6d19739ad1bd573432fb6361437b1bca546c987",
+      "stem": "71-ci-cd-pipeline"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "72-review-ergonomics.md",
+      "output_sha256": "379d4b77a7c3c266061188c112f012ad6e0bc3d08b69b37f4a509e2f48ef852a",
+      "source": "rules/72-review-ergonomics.mdc",
+      "source_sha256": "70e8536a09e55cf14e0a458c190037026825fefbbd150c46b4cfeb19598c079c",
+      "stem": "72-review-ergonomics"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "73-prompts-and-evals.md",
+      "output_sha256": "e78643c1e4858bf9ebd1c813db7ff8bf58f04125003ec2296e8bfb7109e90efc",
+      "source": "rules/73-prompts-and-evals.mdc",
+      "source_sha256": "d4ebf11f79dbe95843fc5301e9a011262bce2185922ffbebff0583cc3fe972dc",
+      "stem": "73-prompts-and-evals"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "74-ai-safety-policy.md",
+      "output_sha256": "607aab450efe457f927f6407b1cef97d3847f2fc6630636dc4615281e16dbdaf",
+      "source": "rules/74-ai-safety-policy.mdc",
+      "source_sha256": "ea84fcc114777193ac37c67e8de0b952804df6f0bb3f63322ea7b59955741862",
+      "stem": "74-ai-safety-policy"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "80-gmp-execution.md",
+      "output_sha256": "a59c797f4ed73342f5c6a0460fab5ef596adf42139e62ce65eadedf54b70ddb7",
+      "source": "rules/80-gmp-execution.mdc",
+      "source_sha256": "3c14113e0d099bd7e89b788142d00f41245a69bf4c837441f13e16455968c722",
+      "stem": "80-gmp-execution"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "81-gmp-audit.md",
+      "output_sha256": "2c86bacd25ed9ab432f72d5c1fc5394f561a6cfb1e8b4ca399940098561f77a4",
+      "source": "rules/81-gmp-audit.mdc",
+      "source_sha256": "a7998c5521fdf40f11d754837c415c78900925007d011945ff24fe83e596ca9d",
+      "stem": "81-gmp-audit"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "82-deployment-manifest.md",
+      "output_sha256": "0ea7c3505b44b6e37656d61287d461714e479114c33f431a1be9d91cfb2aa8e5",
+      "source": "rules/82-deployment-manifest.mdc",
+      "source_sha256": "cf96edc3a20d384cf95e1316331e3fd39a5a6fd650e9aab6224f49bc8dd4184d",
+      "stem": "82-deployment-manifest"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "83-gmp-contracts.md",
+      "output_sha256": "0ca828dd87c73e774efb2521f7916eb0cfb86a233644aedbfab26f2f3bfdcf3d",
+      "source": "rules/83-gmp-contracts.mdc",
+      "source_sha256": "c2b50866ca5569024b9428c355ecaeb4c4d55b490f7c500d0d004de963b9f963",
+      "stem": "83-gmp-contracts"
+    },
+    {
+      "alias": null,
+      "class": "denied",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/84-cursor-governance-wiring.mdc",
+      "source_sha256": "ebf45d7841f368370114f831983f70e46462688856a606e1e70904a6c48a7f43",
+      "stem": "84-cursor-governance-wiring"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "85-workflow-state-bridge.md",
+      "output_sha256": "d7925aa73861efad52870feb820db5750c852ec8a8ddb498ba772d0f76fc2a6a",
+      "source": "rules/85-workflow-state-bridge.mdc",
+      "source_sha256": "7225ed66e89f8d66d3afbe00389b4170906707cd1c0e915272b56cc8218e9435",
+      "stem": "85-workflow-state-bridge"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "86-module-tier-mapping.md",
+      "output_sha256": "5efb7ea6e4b16c7eb34632b34f591d1d18fb7f20845f98fb4cb8c8e6c1f3fdb9",
+      "source": "rules/86-module-tier-mapping.mdc",
+      "source_sha256": "f3dd67b5e50883c42aed6f49e5f7586513e4dbbc53fe3422160b3f99ee50085d",
+      "stem": "86-module-tier-mapping"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "87-cursor-memory-kernel.md",
+      "output_sha256": "1808e2c2bbf2b5b67a834b13ee5e429456b2b5624b7274102a15a648eab0f348",
+      "source": "rules/87-cursor-memory-kernel.mdc",
+      "source_sha256": "e6cc99f835001b433683e76140969871063bc3c6a0291eb453317ef169189f43",
+      "stem": "87-cursor-memory-kernel"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "87-cursor-subagent-orchestration.md",
+      "output_sha256": "e47ac46ed730782764d4e5f833155de856e23f388fdf5659834862da3d31bd13",
+      "source": "rules/87-cursor-subagent-orchestration.mdc",
+      "source_sha256": "80f019c1481ca9698d9a96dce622b29d6ba07c20e6f2cee187ff89312369d0cf",
+      "stem": "87-cursor-subagent-orchestration"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "87-wire-workflow-guard.md",
+      "output_sha256": "989e138ef178a6eac35a7a8234e89ccb948f722473e2c3377808f4b961c0bdaf",
+      "source": "rules/87-wire-workflow-guard.mdc",
+      "source_sha256": "57cc1b6ac3176627978118851118e54079d7acf626be5ac48d5b25c59f4159d7",
+      "stem": "87-wire-workflow-guard"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/88-bounded-session-autonomy.mdc",
+      "source_sha256": "d6d9f3ceb747c2afe9652d2fac6915afe183f91fb7b289b530d01fd438db59d9",
+      "stem": "88-bounded-session-autonomy"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "88-perplexity-run-harness.md",
+      "output_sha256": "d37abdcc2da34d77feeae4d743188b72445f012d0dfec31558961d53a126f95f",
+      "source": "rules/88-perplexity-run-harness.mdc",
+      "source_sha256": "e599b2b56828a2444969490d82028abe42542988cffacd61eba09ccce1e5cf3d",
+      "stem": "88-perplexity-run-harness"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "89-constellation-gate-workspace-session.md",
+      "output_sha256": "28277ccec3ce3441e71b79143b1b5c9f6fa555d1879220f36a17419c2c9a7587",
+      "source": "rules/89-constellation-gate-workspace-session.mdc",
+      "source_sha256": "b6b565182a82ee8c349f623f7f8ac45df546319da43e122038d178f36e24879b",
+      "stem": "89-constellation-gate-workspace-session"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "90-protected-core.md",
+      "output_sha256": "f40231bec8753dcbb3aa20b33a005462a88c5769b1f6991a39ca4f6ce46e181b",
+      "source": "rules/90-protected-core.mdc",
+      "source_sha256": "3d0a8c303d9dbef75f91eefd7d66d9c333dda365c501536d4a6bbdc6ff19e7dd",
+      "stem": "90-protected-core"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "91-existing-code-source-of-truth.md",
+      "output_sha256": "0636b16608b55d6c8029499a71a4201ae0ec5e6c6edf0ef72ef03bd3706a592c",
+      "source": "rules/91-existing-code-source-of-truth.mdc",
+      "source_sha256": "b15272f75d3d4a50dcd0100bd445d508a91673553e964e29886df1c2a504385d",
+      "stem": "91-existing-code-source-of-truth"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "92-learned-lessons.md",
+      "output_sha256": "5f99fbd699925609152a38ec0b896a33d8a417743da7f16742966b76e3c084bc",
+      "source": "rules/92-learned-lessons.mdc",
+      "source_sha256": "7a7ff8fa50b46f45625805713846755929c6afba244848f431fac80a456c221d",
+      "stem": "92-learned-lessons"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "93-c1-server-protection.md",
+      "output_sha256": "1e072b39495b55116e5c9689d8a82a1743cd84896d205e7ab3c1abd480caac80",
+      "source": "rules/93-c1-server-protection.mdc",
+      "source_sha256": "e0d5aa093de552846f76cbc4c70a91aa1a57b5236ef80ed170f8ac72dcb68893",
+      "stem": "93-c1-server-protection"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "94-deployment-prohibition.md",
+      "output_sha256": "fc3a11f9369585d6cc89f39f9b582787d4a99ef1599a109debac1a77e835a210",
+      "source": "rules/94-deployment-prohibition.mdc",
+      "source_sha256": "3f41555552fdd6dd9bb3a13ec86f3b39ef6950f26376bd720c56319fc3d6b677",
+      "stem": "94-deployment-prohibition"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "95-agent-pattern-activation.md",
+      "output_sha256": "0a1744a94f6b3e49938e20f5ad10f8c2f99cf44a369c3255816ede43a910722d",
+      "source": "rules/95-agent-pattern-activation.mdc",
+      "source_sha256": "1faa1aae16046caa3f56add93ccaa1fcda8c0f8c468c1952d5643231bf1d1d81",
+      "stem": "95-agent-pattern-activation"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "95-test-fix-policy.md",
+      "output_sha256": "2043d8a124a30820d550f4d1051727398f6ee818597c778f2d3f167e0fe3a002",
+      "source": "rules/95-test-fix-policy.mdc",
+      "source_sha256": "06536d954dd0a29ec1c7bd6803bdfd2f01b48c3b05c0bc14f74e14de1c5f1391",
+      "stem": "95-test-fix-policy"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "96-env-no-hardcode.md",
+      "output_sha256": "38a9346d4ec91252638a646d08f2e51e397177b566d2b46c95020879d0037887",
+      "source": "rules/96-env-no-hardcode.mdc",
+      "source_sha256": "11a14cef03f9d8bd67449ba5e1d482747d81cdd61d0880d9df7a4da700d63999",
+      "stem": "96-env-no-hardcode"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "96-git-push-approval.md",
+      "output_sha256": "63bc891667dbe83bfcb65573cffa76c50b53267fcd5481191a4c9ed39fae5baf",
+      "source": "rules/96-git-push-approval.mdc",
+      "source_sha256": "d83de4c11329dbabbb08b8fe3fa6adc5f2cc65dfd864848c10cde2ba68d91a56",
+      "stem": "96-git-push-approval"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/96-output-discipline.mdc",
+      "source_sha256": "503f33079bd962bcb0a9f5049d73835bb40fe685da8cd9c9ae24562071c70ac4",
+      "stem": "96-output-discipline"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "97-governance-ssot-paths.md",
+      "output_sha256": "885f9f13577d8e2e9f67791dc29286085ea5a3d945a952e47accda0e524706ce",
+      "source": "rules/97-governance-ssot-paths.mdc",
+      "source_sha256": "85fc156798a182ae08be98ff29d4b0e9ca265cdba854f1815b4b74c03f0f6330",
+      "stem": "97-governance-ssot-paths"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "97-graph-engine-architecture.md",
+      "output_sha256": "8e25bca6ea070512ee6f77cd2c7dd9f7c21061fa0ccb679c1bbc904a8b679f51",
+      "source": "rules/97-graph-engine-architecture.mdc",
+      "source_sha256": "c7210c913c175aa04e9a1f939be3a42ce8bafdbcb26a2edd696dce0af15d3548",
+      "stem": "97-graph-engine-architecture"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "97-graph-layer-boundary.md",
+      "output_sha256": "61ef9d20e13dd166d72634fed411e0f452bec755b416f1ba886a5e67c9ec7aa5",
+      "source": "rules/97-graph-layer-boundary.mdc",
+      "source_sha256": "127f9ae133ff96958ab5a1aea2053aad3da18033a328f1d980c2a8e1b7ce978a",
+      "stem": "97-graph-layer-boundary"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/97-ide-profile-exceptions.mdc",
+      "source_sha256": "6d019ab496ca6eeca058de5c1a61220533b8299ac55850fcf714508dd85e25ba",
+      "stem": "97-ide-profile-exceptions"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "98-graphiti-memory-gate.md",
+      "output_sha256": "4100a76ba82d53b0607ccd9c6cbbe2a6ffc22d7f2384ef0c61aed31397eab52b",
+      "source": "rules/98-graphiti-memory-gate.mdc",
+      "source_sha256": "eb667b616bfa745b920fce1c34a8e66385ec8e585c62dca31cb3854c3bde338b",
+      "stem": "98-graphiti-memory-gate"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "98-make-pr-remediation.md",
+      "output_sha256": "79aab24eff7b9a4b8cf01efb24708c41fe7df0f0633a1e6f96ae537bf8cc4c28",
+      "source": "rules/98-make-pr-remediation.mdc",
+      "source_sha256": "53e7e259a9a77299ce766904b855d0e2c543aa4c05f77031a841e944e312d3d6",
+      "stem": "98-make-pr-remediation"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "99-execute-as-instructed.md",
+      "output_sha256": "a6a548adfad67a42ad273e0bb145e43f14b8ba9f6c7aa70869e4e8d2ba55528d",
+      "source": "rules/99-execute-as-instructed.mdc",
+      "source_sha256": "8a91df91897f69174205cfec3e0de8fbdd8883c25dbcda5a8cb399a49ce2876d",
+      "stem": "99-execute-as-instructed"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "99-graphiti-temporal.md",
+      "output_sha256": "5b78ac984645ed55089924489a0498a05149a66665ac34b6fffca0eeb5190daf",
+      "source": "rules/99-graphiti-temporal.mdc",
+      "source_sha256": "7689319b256247a6300dfdbdf9083c59633aa640393dc2f34aba0f9d06e6ec9b",
+      "stem": "99-graphiti-temporal"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "99-incident-report.md",
+      "output_sha256": "29e1dbcea5971470d6b067678e45c4405a4ef91e4a907db6a1e7a1bad80f3ed6",
+      "source": "rules/99-incident-report.mdc",
+      "source_sha256": "9674bb08f2bf0ca34ed436bbd063aadec5f4f2cb745ae19b1d27c956d37e1c00",
+      "stem": "99-incident-report"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "99-no-auto-commit.md",
+      "output_sha256": "e6c14723863217efa2b0b164bb6c46ae9fba8ec0b2314fcf581240465fe054c3",
+      "source": "rules/99-no-auto-commit.mdc",
+      "source_sha256": "d097a5c3d6fba7e8438610e9b80581d682289eec1bb036cfbc37649863796c6f",
+      "stem": "99-no-auto-commit"
+    }
+  ],
+  "schema": "l9.llm-rules-projection/v1",
+  "source_relative": "rules",
+  "summary": {
+    "denied": 1,
+    "projected": 57,
+    "skipped_agent_requested": 4,
+    "source_mdc": 62
+  },
+  "tree_sha256": "552975bd77c8a70ea8bb1dda58c954e7d7fbf97d4048eec5fd3a69a63f60e57c"
+}

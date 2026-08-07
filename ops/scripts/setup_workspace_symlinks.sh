@@ -397,14 +397,16 @@ else
   echo "HINT: migrate_claude_orphan_skills.py missing — skip orphan skill migration"
 fi
 
-# Claude rules: whole-dir symlink → governance rules/ (== .cursor-commands/rules)
+# Claude rules: whole-dir symlink → environment/generated/llm-rules/ (.md peers)
 echo ""
-if [ -f "$SCRIPT_DIR/reconcile_claude_rules.py" ]; then
-  python3 "$SCRIPT_DIR/reconcile_claude_rules.py" \
+if [ -f "$SCRIPT_DIR/reconcile_llm_rule_adapters.py" ]; then
+  python3 "$SCRIPT_DIR/project_llm_rules.py" --root "$GOV_ROOT" --quiet \
+    || echo "WARN: llm-rules projection failed (non-blocking)"
+  python3 "$SCRIPT_DIR/reconcile_llm_rule_adapters.py" \
     --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" \
-    || echo "WARN: Claude rules SSOT symlink failed (non-blocking)"
+    || echo "WARN: LLM rule adapter reconcile failed (non-blocking)"
 else
-  echo "HINT: reconcile_claude_rules.py missing — skip Claude rules link"
+  echo "HINT: reconcile_llm_rule_adapters.py missing — skip Claude rules link"
 fi
 
 # All LLM skill adapters: per-skill symlinks → governance skills/ SSOT

@@ -1,0 +1,186 @@
+---
+description: 'L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.'
+---
+
+# VPS Rules
+
+## VPS Reference — L9 Production
+
+### Host & Paths
+
+| Item | Value |
+|------|-------|
+| **SSH** | `admin@L9` or `admin@157.180.73.53` |
+| **Root SSH** | `root@157.180.73.53` (for system commands) |
+| **Repo Path** | `/opt/l9` |
+| **Compose File** | `/opt/l9/docker-compose.yml` |
+| **Env File** | `/opt/l9/.env` (NOT in git, contains secrets) |
+
+### Stack (Docker Compose Services)
+
+| Service | Container | Ports (host) | Health Check |
+|---------|-----------|--------------|--------------|
+| Redis | `l9-redis` | `127.0.0.1:6379` | `redis-cli ping` |
+| Postgres | `l9-postgres` | `127.0.0.1:5432` | DB: `l9memory`, pgvector |
+| Neo4j | `l9-neo4j` | `127.0.0.1:7474,7687` | HTTP 7474 |
+| API | `l9-api` | `127.0.0.1:8000` | `/health` |
+| Prometheus | `l9-prometheus` | `127.0.0.1:9090` | `/-/healthy` |
+| Grafana | `l9-grafana` | `127.0.0.1:3000` | Admin UI |
+| Jaeger | `l9-jaeger` | `127.0.0.1:16686` | Tracing UI |
+
+### External Access (Caddy)
+
+| External Port | Caddy Routes To | Purpose |
+|---------------|-----------------|---------|
+| `9001` (HTTPS) | `127.0.0.1:8000` (l9-api) | Cursor/external access |
+| `9001/mcp/*` | `127.0.0.1:9002` (MCP Memory) | MCP tools for Cursor |
+
+### Source of Truth
+
+- **Local repo**: `$HOME/Projects/L9` (Mac)
+- **Remote**: GitHub `main` branch
+- **VPS syncs via**: `git fetch origin && git reset --hard origin/main`
+
+### Key Env Vars (in `/opt/l9/.env`)
+
+| Variable | Purpose |
+|----------|---------|
+| `POSTGRES_PASSWORD` | DB auth |
+| `OPENAI_API_KEY` | Embeddings |
+| `MCP_API_KEY_L` | L-CTO MCP auth |
+| `MCP_API_KEY_C` | Cursor MCP auth |
+| `NEO4J_PASSWORD` | Graph DB auth |
+| `SLACK_*` | Slack integration |
+
+### MRI Commands (Read-Only Status Check)
+
+```bash
+cd /opt/l9
+
+# Git status
+git status
+git diff
+
+# Docker status
+docker compose ps
+docker compose logs l9-api --tail=50
+
+# Health checks
+curl -s http://127.0.0.1:8000/health | jq .
+curl -s http://127.0.0.1:9090/-/healthy
+```
+
+### Important Notes
+
+- **Prod image is tests-stripped**: No `tests/` folder in container
+- **Tests run locally + CI**, not on prod VPS
+- **`.env` is NOT in git**: Secrets stay on VPS only
+
+---
+
+## Rule 01: VPS Workflow — Local Edit → Git Push → VPS Pull
+
+### 🚨 CRITICAL CONSTRAINT
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   LOCAL EDIT  →  GIT PUSH  →  VPS PULL                 │
+│                                                         │
+│   VPS must ALWAYS match git.                           │
+│   NEVER edit directly on VPS.                          │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Why This Matters
+
+If you edit files directly on VPS:
+- VPS diverges from git
+- Next `git pull` may fail or cause conflicts
+- User may have to restore from git (hours of work lost)
+- Sync is broken
+
+### Allowed VPS Commands
+
+| Command | Allowed | Purpose |
+|---------|---------|---------|
+| `git pull` | ✅ | Sync from git |
+| `docker compose up/down/restart` | ✅ | Service management |
+| `systemctl restart/reload` | ✅ | System services |
+| `cat`, `grep`, `ls`, `ps` | ✅ | Read-only inspection |
+| `curl` (to test endpoints) | ✅ | Testing |
+
+### FORBIDDEN VPS Commands
+
+| Command | Forbidden | Why |
+|---------|-----------|-----|
+| `vim`, `nano`, `echo >` | 🚫 | Creates/edits files |
+| `touch`, `mkdir` | 🚫 | Creates files/dirs |
+| `sed -i`, `awk` (with write) | 🚫 | Edits files in place |
+| `rm` (without approval) | 🚫 | Deletes files |
+| `cp`, `mv` | 🚫 | Modifies file structure |
+| `pip install` (outside venv) | 🚫 | Modifies system |
+| Editing `/etc/caddy/Caddyfile` | 🚫 | System config |
+
+### The Correct Workflow
+
+1. **Make changes locally** (in Cursor/IDE)
+2. **Commit to git** (`git add`, `git commit`)
+3. **Push to remote** (`git push`)
+4. **SSH to VPS and pull** (`git pull`)
+5. **Restart services if needed** (`docker compose restart`)
+
+### Exception: Cleanup of Agent Mistakes
+
+If agent created files on VPS that shouldn't exist:
+- Agent describes the `rm` command
+- Agent waits for explicit user approval
+- Agent executes ONLY after approval
+
+---
+
+## Rule 02: VPS Command Approval Required
+
+### Before ANY VPS Command
+
+1. **DESCRIBE** the exact command(s)
+2. **EXPLAIN** what it will do
+3. **WAIT** for user to say "approved" or "go ahead"
+4. **EXECUTE** only after approval
+
+### Format
+
+```
+## Command I Want to Run on VPS
+
+\`\`\`bash
+<exact command here>
+\`\`\`
+
+**What it does:** <explanation>
+
+**Do I have your approval?**
+```
+
+---
+
+## Rule 03: No Architectural Decisions
+
+The agent does NOT decide:
+- Port numbers
+- File paths
+- Directory structure
+- Config values
+- Service names
+
+The user decides. The agent executes.
+
+If the user already chose something (e.g., port 9001), the agent uses that choice. The agent does NOT substitute their own choice (e.g., port 9002).
+
+---
+
+*Created: 2026-01-07 14:45 EST*
+*Memory ID: 13067954*
+
+<!-- generated-from: rules/01-vps-rules.mdc; do-not-edit -->

@@ -72,7 +72,9 @@ __pycache__/
 # .claude/skills/.l9-managed-skills.json). The canonical skills/ and rules/
 # source trees live at the clone root; these mirrors are machine-local.
 .claude/skills/
+.claude/skills
 .claude/rules/
+.claude/rules
 
 # ── Credential-shaped files that must never be committed ────────────────────
 # 2026-07-21: session-end governance sync hook auto-staged a live Google OAuth

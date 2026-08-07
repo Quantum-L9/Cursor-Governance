@@ -1,0 +1,421 @@
+---
+description: DEPRECATED — superseded by 03-graphiti-memory.mdc (Graphiti VPS). C1 read-only.
+paths:
+- '**/*'
+---
+
+> **DEPRECATED 2026-06-06** — L9 decommissioned **2026-06-07**. Use **`03-graphiti-memory.mdc`** + Graphiti at `/opt/graphiti-cursor` (`graphiti_memory_client.py`, SSH tunnel `127.0.0.1:8100`).
+> Do not use C1 `:9002` / `/memory` or L9 endpoints.
+
+# 🚨 C1 IS THE PRIMARY MEMORY SERVER (LEGACY — DEPRECATED)
+
+**Effective: 2026-01-24**
+
+All memory operations go through **C1 Hetzner Server** (46.62.243.82).
+
+## C1 Memory Endpoints
+
+| Service | Endpoint | Purpose |
+|---------|----------|---------|
+| **MCP Memory** | `http://46.62.243.82/memory/` | PRIMARY - All memory read/write |
+| **L9 API** | `http://46.62.243.82` | API gateway, MCP proxy |
+| **PostgreSQL** | `46.62.243.82:30432` | PacketStore + pgvector |
+| **Neo4j** | `http://46.62.243.82:30474` | Knowledge graph |
+| **Redis** | `46.62.243.82:30379` | Session cache |
+
+## Environment Configuration
+
+```bash
+# .env for C1 Memory (PRIMARY)
+# NOTE: Actual credentials loaded from .env - see .env.example
+# C1_HOST, POSTGRES_USER, POSTGRES_PASSWORD, NEO4J_PASSWORD defined in .env
+
+C1_HOST=46.62.243.82  # C1 Hetzner server IP
+C1_API_URL=http://${C1_HOST}
+# C1_MCP_URL removed — MCP Memory accessed via L9 API at http://${C1_HOST}/memory/
+C1_NEO4J_URL=bolt://${C1_HOST}:30687
+C1_POSTGRES_DSN=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@46.62.243.82:30432/l9_memory
+C1_REDIS_URL=redis://${C1_HOST}:30379
+```
+
+## Memory Client Commands (Use C1)
+
+```bash
+# PRIMARY METHOD: MCP Server on C1
+python3 agents/cursor/cursor_memory_client.py health              # Check C1 MCP health
+python3 agents/cursor/cursor_memory_client.py search "query"      # Search via MCP
+python3 agents/cursor/cursor_memory_client.py write "content" --kind lesson  # Write via MCP
+python3 agents/cursor/cursor_memory_client.py inject "task"       # Context injection
+python3 agents/cursor/cursor_memory_client.py stats               # Memory statistics
+```
+
+**Note:** The client uses `L9_API_URL` environment variable. Override to point to C1:
+```bash
+export L9_API_URL=http://46.62.243.82
+```
+
+---
+
+# L9 Memory Stack Integration
+
+You have access to a **full memory stack** on C1:
+
+1. **PostgreSQL + PacketStore** — Persistent memories, lessons, audit trail
+2. **pgvector** — Semantic embeddings for finding similar solutions
+3. **Neo4j** — Graph database with **REPO STRUCTURE** for instant file/module location
+4. **Redis** — Real-time session context, fast key-value cache
+
+## 🧠 Memory Systems Available
+
+| System | Purpose | When to Use |
+|--------|---------|-------------|
+| Cursor native `update_memory` | User preferences, corrections, quick facts | User says "remember this" |
+| **PostgreSQL (PacketStore)** | Persistent learnings, code patterns, audit trail | Important insights worth preserving |
+| **pgvector** | Semantic search across memories | "Find similar solutions to this problem" |
+| **Neo4j (Repo Graph)** | Codebase structure, module relationships | "Where is X?" "What uses Y?" |
+| **Redis** | Session context, real-time state, temporary data | Context that needs fast access |
+
+## 🔍 Neo4j REPO GRAPH — Know Where Everything Is
+
+The L9 codebase structure is indexed in Neo4j on C1. **Query it instead of searching!**
+
+### What's In The Graph
+```
+(:File {path, name, type, lines})
+(:Module {name, path})
+(:Class {name, file, lines})
+(:Function {name, file, lines, args})
+(:Import {from, to})
+
+Relationships:
+(File)-[:CONTAINS]->(Class|Function)
+(Module)-[:HAS_FILE]->(File)
+(File)-[:IMPORTS]->(File)
+(Class)-[:INHERITS]->(Class)
+(Function)-[:CALLS]->(Function)
+```
+
+### When to Query the Repo Graph
+| Question | Use Repo Graph |
+|----------|----------------|
+| "Where is the tool registry?" | `MATCH (f:File) WHERE f.name CONTAINS 'registry' RETURN f.path` |
+| "What imports executor.py?" | `MATCH (f)-[:IMPORTS]->(e:File {name: 'executor.py'}) RETURN f.path` |
+| "Show all agent classes" | `MATCH (c:Class)-[:INHERITS]->(:Class {name: 'BaseAgent'}) RETURN c` |
+| "What files are in core/tools/?" | `MATCH (f:File) WHERE f.path STARTS WITH 'core/tools/' RETURN f` |
+
+### Retrieval Order (from cursor_retrieval_kernel.py)
+
+**ALWAYS follow this 3-tier retrieval order:**
+
+1. **Working memory** (same session cache) — FASTEST. Check Redis session context first.
+2. **Long-term memory** (semantic search via MCP) — FAST. `python3 agents/cursor/cursor_memory_client.py search "query"`
+3. **Repo scan** (grep/codebase_search) — SLOWEST, last resort.
+
+**NEVER skip to repo scan without checking memory first.**
+
+### PROACTIVE: Query Graph Before Searching
+**Before using grep/codebase_search**, consider:
+1. Is this a "where is X?" question? → Query Neo4j graph
+2. Is this about relationships/imports? → Query Neo4j graph
+3. Is this about content/implementation? → Use codebase_search
+
+## 💾 PostgreSQL PacketStore — Persistent Memory
+
+### What to Store
+| Content Type | Store In PacketStore |
+|--------------|---------------------|
+| Lessons learned | ✅ Yes |
+| Code patterns discovered | ✅ Yes |
+| User corrections | ✅ Yes (also Cursor native) |
+| GMP completion summaries | ✅ Yes |
+| Important decisions | ✅ Yes |
+| Session context | ❌ No (use Redis) |
+
+### PacketEnvelope Structure
+```python
+PacketEnvelope(
+    source_id="cursor_session",
+    agent_id="cursor_agent",
+    thread_id="current_session_id",
+    kind="LESSON" | "PATTERN" | "DECISION" | "MEMORY",
+    payload={
+        "content": "...",
+        "tags": ["tag1", "tag2"],
+        "confidence": 0.85
+    },
+    metadata={
+        "workspace": "L9",
+        "timestamp": "..."
+    }
+)
+```
+
+## 🔎 pgvector — Semantic Search
+
+### When to Use Semantic Search
+- "Have we solved something like this before?"
+- "Find patterns similar to this error handling"
+- "What lessons apply to this type of task?"
+
+### Query Pattern
+```
+memory_search(
+    query="error handling in API routes",
+    limit=5,
+    min_similarity=0.7
+)
+```
+
+## 📍 Session Startup: Full Context Load
+
+At the START of each session, you SHOULD:
+
+1. **Check C1 Memory Health:**
+   - Run `python3 agents/cursor/cursor_memory_client.py health`
+   - Verify MCP endpoint is reachable
+   - If unhealthy, note in session context
+
+2. **Query Neo4j Repo Graph:**
+   - Get familiar with current codebase structure
+   - Know where key modules are located
+   - Understand import relationships
+
+3. **Check Redis for session context:**
+   - Recent conversation summaries
+   - Active TODO items
+   - Current phase/state
+
+4. **Query PostgreSQL/pgvector if relevant:**
+   - Lessons learned for current workspace
+   - Patterns relevant to current task
+   - Past solutions to similar problems
+
+## 🔄 Continuous Context Updates (Redis)
+
+**PROACTIVELY use Redis to maintain session context:**
+
+### What to Store in Redis
+| Key Pattern | Content | TTL |
+|-------------|---------|-----|
+| `cursor:session:{id}:context` | Current conversation summary | 24h |
+| `cursor:session:{id}:todos` | Active TODO items | 24h |
+| `cursor:session:{id}:phase` | Current GMP phase | 24h |
+| `cursor:workspace:{name}:state` | Workspace state summary | 7d |
+
+### When to Update Redis
+- After completing a significant task
+- After user provides important context
+- Before ending a session (summary)
+- When switching between tasks
+
+### How to Update
+If Redis tools are available (`redis_set`, `redis_get`, etc.):
+
+```
+# Save context
+redis_set("cursor:session:current:context", {
+  "summary": "Working on MCP-Memory integration",
+  "files_touched": ["rules/03-mcp-memory.mdc"],
+  "current_task": "GMP-31"
+})
+
+# Retrieve context
+context = redis_get("cursor:session:current:context")
+```
+
+## 💾 When to Use MCP-Memory (Long-Term)
+
+Store in MCP-Memory when:
+- Learning something important from user correction
+- Discovering a code pattern worth preserving
+- User explicitly says "remember this for future"
+- Completing a GMP (store lessons learned)
+- Finding a solution to a recurring problem
+
+### MCP-Memory Tools
+Check your available MCP tools for:
+- `memory_store` / `memory_write` — Save content with tags
+- `memory_search` / `memory_query` — Find past memories
+- `memory_list` — List recent memories
+
+## 🔴 Priority: Which Memory System?
+
+| Scenario | Use | Why |
+|----------|-----|-----|
+| "Where is file X?" | **Neo4j Repo Graph** | Instant location, no search |
+| "What imports Y?" | **Neo4j Repo Graph** | Relationship query |
+| User preference/correction | Cursor native `update_memory` | Simple, built-in |
+| Session context (current work) | **Redis** | Fast, temporary |
+| Important lesson/pattern | **PostgreSQL PacketStore** | Persistent, auditable |
+| "Find similar solutions" | **pgvector** | Semantic similarity |
+| TODO items (short-term) | **Redis** | Session-scoped |
+| TODO items (persistent) | **PostgreSQL** | Cross-session |
+| Code patterns discovered | **PostgreSQL** | Worth preserving |
+| Quick facts | Cursor native | Lightweight |
+
+## 🧭 Decision Flow: Which System?
+
+```
+Question Type?
+│
+├─► "Where is X?" / "What uses Y?" ──► Neo4j Repo Graph (C1)
+│
+├─► "Have we done this before?" ──► pgvector semantic search (C1)
+│
+├─► Need to remember for THIS session ──► Redis (C1)
+│
+├─► Need to remember FOREVER ──► PostgreSQL PacketStore (C1)
+│
+└─► User preference/correction ──► Cursor native update_memory
+```
+
+## 📋 Session End: Save Context
+
+Before session ends (if detectable), save to Redis:
+- Summary of what was accomplished
+- Open TODOs
+- Next steps
+- Any blockers identified
+
+## 🚀 Proactive Behavior
+
+**DO:**
+- Check C1 memory health at session start
+- Check Redis for context at session start
+- Update Redis after significant milestones
+- Store lessons in MCP-Memory after GMP completion
+- Query MCP-Memory when starting work in unfamiliar area
+
+**DON'T:**
+- Store sensitive data (credentials, secrets)
+- Duplicate the same lesson multiple times
+- Store trivial information
+- Forget to check for existing context
+
+## Integration with L9 Stack (C1)
+
+This rule integrates with C1 services:
+
+| Component | C1 Location | Purpose |
+|-----------|-------------|---------|
+| MCP Memory Server | `46.62.243.82/memory/` | Memory read/write API |
+| L9 API | `46.62.243.82` | API gateway |
+| PostgreSQL | `46.62.243.82:30432` | PacketStore + pgvector |
+| Neo4j | `46.62.243.82:30474` | Knowledge graph |
+| Redis | `46.62.243.82:30379` | Session cache |
+
+## Example: Session Start (Full Stack)
+
+```
+# At session start, full context load:
+1. Check C1 health: python3 agents/cursor/cursor_memory_client.py health
+2. Read workflow_state.md (always - file-based)
+3. Query Neo4j (C1): Get repo structure overview for current area
+4. Check Redis (C1): cursor:session:current:context
+5. Query pgvector (C1): Related lessons for current task type
+6. Proceed with STATE_SYNC complete + graph awareness
+```
+
+## Example: After GMP Completion
+
+```
+# After completing GMP-31:
+1. Update Redis (C1) with completion status
+2. Store lessons learned in PostgreSQL PacketStore (C1)
+3. Update workflow_state.md
+4. Save session context to Redis for next time
+5. (If new patterns discovered) Update repo graph in Neo4j
+```
+
+## Example: Finding Code (Use Graph First!)
+
+```
+# User asks: "Where is the tool registry?"
+
+❌ OLD WAY (slow):
+   grep "tool.*registry" --recursive
+   codebase_search("tool registry location")
+
+✅ NEW WAY (instant):
+   Query Neo4j (C1): MATCH (f:File) WHERE f.name CONTAINS 'registry' 
+                AND f.path CONTAINS 'tool' RETURN f.path
+   → "core/tools/registry_adapter.py"
+```
+
+## 📂 REPO INDEX FILES (33 Total — Use Before Searching!)
+
+Run `/index` or `python3 tools/export_repo_indexes.py` to regenerate.
+
+L9 has **33 repo index files** at `reports/repo-index/`:
+
+### Core Indexes
+| Index File | Contents | Use For |
+|------------|----------|---------|
+| `class_definitions.txt` | 1,900+ classes with paths | "Where is class X?" |
+| `function_signatures.txt` | **4,794 functions** (ALL) | "What args does Y take?" |
+| `inheritance_graph.txt` | 802 inheritance relationships | "What extends BaseAgent?" |
+| `method_catalog.txt` | 5,288 class methods | "What methods does X have?" |
+| `route_handlers.txt` | 180 API routes | "What handles POST /api/memory?" |
+
+### Analysis Indexes
+| Index File | Contents | Use For |
+|------------|----------|---------|
+| `pydantic_models.txt` | 470 BaseModel subclasses | "What's the schema for X?" |
+| `async_function_map.txt` | 2,599 async functions | "Is this function async?" |
+| `file_metrics.txt` | Lines/complexity per file | "What are the big files?" |
+| `decorator_catalog.txt` | All decorators used | "Find all @router.post" |
+| `dynamic_tool_catalog.txt` | Scanned from core/tools/ | Accurate tool discovery |
+
+### Structure Indexes
+| Index File | Contents | Use For |
+|------------|----------|---------|
+| `tree.txt` | Full directory tree | Directory navigation |
+| `wiring_map.txt` | Module connections | Architecture understanding |
+| `imports.txt` | Import graph | "What imports Z?" |
+| `agent_catalog.txt` | All agents | Agent discovery |
+| `entrypoints.txt` | API entrypoints | Route finding |
+| `api_surfaces.txt` | API definitions | Endpoint discovery |
+| `dependencies.txt` | Package deps | Dependency check |
+
+### PROACTIVE: Read Index Files First!
+
+**Before searching the codebase**, check the indexes:
+
+```
+# User asks: "Where is the ToolRegistry class?"
+✅ Read class_definitions.txt → "core/tools/registry_adapter.py::ToolRegistry"
+
+# User asks: "What methods does ToolRegistry have?"
+✅ Read method_catalog.txt → "ToolRegistry::register_tool(tool_id, definition)"
+
+# User asks: "What inherits from BaseAgent?"
+✅ Read inheritance_graph.txt → All subclasses listed
+
+# User asks: "What handles POST /api/memory/ingest?"
+✅ Read route_handlers.txt → "POST /memory/ingest → ingest_packet() @ api/memory/router.py"
+
+❌ SLOW WAY: codebase_search (only if index doesn't have it)
+   grep "class ToolRegistry" --recursive
+```
+
+### Regenerating Indexes
+
+If indexes are stale (after major refactoring):
+```bash
+python tools/export_repo_indexes.py
+```
+
+## 🚀 Neo4j Graph (Future Enhancement)
+
+To load indexes into Neo4j for relationship queries:
+
+```python
+# scripts/load_indexes_to_neo4j.py (to be created)
+# Reads from reports/repo-index/*.txt
+# Creates nodes: File, Class, Function, Module
+# Creates relationships: CONTAINS, IMPORTS, INHERITS
+```
+
+**Current status:** Indexes exist as text files. Neo4j loading is a future enhancement for relationship queries like "show me all classes that inherit from BaseAgent".
+
+<!-- generated-from: rules/03-mcp-memory.mdc; do-not-edit -->

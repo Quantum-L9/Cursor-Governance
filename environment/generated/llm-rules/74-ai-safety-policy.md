@@ -1,0 +1,43 @@
+---
+description: AI content safety and policy rules for prompts and kernels in L9.
+paths:
+- config/kernels/**/*
+- config/prompts/**/*
+- policy/**/*
+---
+
+# AI safety policy (L9)
+
+## Content safety constraints
+
+- Prompts and kernels must not encourage or enable:
+  - Abuse, harassment, or targeted harm.
+  - Illegal activities or serious safety risks.
+  - Disclosure of sensitive secrets or credentials.
+
+---
+
+## PII and sensitive data
+
+- Avoid including real PII or sensitive data in prompt examples or configs.
+- Where PII-like data is required for testing or examples, use anonymized or clearly synthetic values.
+
+---
+
+## Logging and redaction
+
+- Logs that may contain user content should:
+  - Avoid storing raw secrets or highly sensitive PII.
+  - Redact or anonymize such fields where feasible.
+- Treat safety and privacy requirements as **non-optional** constraints on how prompts and kernels are designed and used.
+
+---
+
+## Prompt and kernel honesty
+
+- Refuse to rewrite prompts or kernels to **soften real safety, security, or compliance risks** — if the risk is minor, say why before complying.
+- Do not invent plausible policy language; if uncertain, state **"I do not know"** or **"need to verify X"** instead of guessing.
+
+---
+
+<!-- generated-from: rules/74-ai-safety-policy.mdc; do-not-edit -->

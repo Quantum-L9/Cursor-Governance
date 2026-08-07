@@ -36,19 +36,14 @@ REQUIRED_FILES: tuple[str, ...] = (
     "web/environment.env.example",
     "web/setup.sh",
     "adapters/claude-code.md",
-    "generated/skill-registry.json",
     "hooks/user_prompt_skill_router.py",
     "hooks/skill_usage_logger.py",
-    "rules/l9-skill-routing.md",
-    "tests/skill_routing_cases.json",
-    "tests/test_skill_router.py",
     "tests/test_skill_reconciliation.py",
+    "tests/test_cursor_skill_router.py",
     "validate_skill_activation.py",
 )
 
 JSON_FILES: tuple[str, ...] = (
-    "generated/skill-registry.json",
-    "tests/skill_routing_cases.json",
     "render.claude.json",
     "settings.template.json",
     "mcp.template.json",
@@ -73,6 +68,15 @@ def check_files_exist(failures: list[str]) -> None:
             print(f"  OK: present  {rel}")
         else:
             _fail(f"missing required file: {rel}", failures)
+    # Shared routing SSOT lives under ops/ (CANONICAL_LAW §2.1), not this adapter tree.
+    root = HERE.parents[1]
+    shared_registry = root / "ops" / "generated" / "skill-registry.json"
+    shared_scorer = root / "ops" / "skill_routing" / "route_prompt.py"
+    for path in (shared_registry, shared_scorer):
+        if path.is_file():
+            print(f"  OK: present  {path.relative_to(root)}")
+        else:
+            _fail(f"missing Cursor-primary routing artifact: {path.relative_to(root)}", failures)
 
 
 def check_json_parses(failures: list[str]) -> None:

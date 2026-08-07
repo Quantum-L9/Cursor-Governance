@@ -1,0 +1,167 @@
+---
+description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
+---
+
+# Python L9 Module Structure: Three-Block System
+
+## Purpose
+
+All Python files in L9 MUST include THREE distinct metadata blocks for governance, CI/CD validation, runtime tracing, and audit trails.
+
+## Source of Truth
+
+- **Template:** `codegen/templates/python-l9-module-template.py`
+- **Contract:** `codegen/sympy/phase 4/l9-codegen-dora-contract.yaml`
+- **DORA Block Spec:** `codegen/sympy/phase 4/Dora-Block.md`
+
+## 🔒 LOCKED TERMINOLOGY - Three Distinct Blocks
+
+| Block | Variable | Location | Updates |
+|-------|----------|----------|---------|
+| **Header Meta** | Docstring | TOP of file | On generation (static) |
+| **Footer Meta** | `__footer_meta__` | BOTTOM (before DORA) | On generation (static) |
+| **DORA Block** | `__l9_trace__` | VERY END | Auto on EVERY run (machine-only) |
+
+**CRITICAL:**
+- `__footer_meta__` ≠ DORA Block (it's Footer Meta)
+- `__l9_trace__` = DORA Block (runtime trace, auto-updated)
+
+## Deprecated
+
+❌ **DO NOT USE:** `.cursor-commands/templates/python-header-template.py`
+
+This template is deprecated as of 2026-01-02.
+
+## File Structure
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  HEADER META (Docstring)                                    │
+│  - Module name, purpose, summary                            │
+│  - Points to footer: "See __footer_meta__ at footer"      │
+├─────────────────────────────────────────────────────────────┤
+│  [... IMPORTS, CONSTANTS, ALL CODE ...]                     │
+├─────────────────────────────────────────────────────────────┤
+│  FOOTER META: __footer_meta__ = { ... }                   │
+│  - 14 governance fields                                     │
+│  - Static, set on generation                                │
+├─────────────────────────────────────────────────────────────┤
+│  __all__ = [...]                                            │
+├─────────────────────────────────────────────────────────────┤
+│  DORA BLOCK: __l9_trace__ = { ... }                         │
+│  - L9_TRACE_TEMPLATE (runtime trace)                        │
+│  - 100% machine-managed, auto-updates                       │
+│  - NEVER human-edited                                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Header Meta (Docstring)
+
+```python
+"""
+================================================================================
+Module: {component_name}
+Purpose: {one_sentence_business_value}
+================================================================================
+
+Summary:
+    {2-3 sentence description}
+
+Extended Metadata:
+    See __footer_meta__ at module footer for full governance, classification,
+    and audit metadata. Runtime trace in __l9_trace__ at very end.
+
+================================================================================
+# HEADER META - Module Identity (Static)
+# component_id: {LAYER}-{ABBREV}-{NUM}
+# layer: {layer}
+# domain: {domain}
+# governance_level: {level}
+# created_at: {timestamp}
+================================================================================
+"""
+```
+
+## Footer Meta: `__footer_meta__`
+
+```python
+__footer_meta__ = {
+    "component_id": "{LAYER}-{ABBREV}-{NUM}",
+    "component_name": "{name}",
+    "module_version": "1.0.0",
+    "created_at": "{timestamp}",
+    "created_by": "{creator}",
+    "layer": "{layer}",
+    "domain": "{domain}",
+    "type": "{type}",
+    "status": "active",
+    "governance_level": "{level}",
+    "compliance_required": True,
+    "audit_trail": True,
+    "purpose": "{purpose}",
+    "summary": "{summary}",
+    "dependencies": ["list", "of", "deps"],
+}
+```
+
+## DORA Block: `__l9_trace__` (Machine-Only)
+
+```python
+# ============================================================================
+# L9 DORA BLOCK - AUTO-UPDATED - DO NOT EDIT
+# ============================================================================
+
+__l9_trace__ = {
+    "trace_id": "",
+    "task": "",
+    "timestamp": "",
+    "patterns_used": [],
+    "graph": {"nodes": [], "edges": []},
+    "inputs": {},
+    "outputs": {},
+    "metrics": {
+        "confidence": "",
+        "errors_detected": [],
+        "stability_score": ""
+    }
+}
+
+# ============================================================================
+# END L9 DORA BLOCK
+# ============================================================================
+```
+
+## Exports
+
+Always include both in `__all__`:
+
+```python
+__all__ = [
+    "public_api",
+    "__footer_meta__",  # Footer meta (CI validation)
+    "__l9_trace__",       # DORA block (runtime trace)
+]
+```
+
+## Validation Rules
+
+1. Header Meta must include component_id, layer, domain, governance_level
+2. Footer Meta (`__footer_meta__`) must have all 14+ required fields
+3. DORA Block (`__l9_trace__`) must be at VERY END, empty template on generation
+4. No placeholders in Footer Meta
+5. DORA Block is 100% machine-managed - never human-edited
+
+## CI/CD Enforcement
+
+- Codegen validates Footer Meta before generation
+- CI validates Footer Meta fields
+- Runtime hook updates DORA Block after each execution
+- Merge blocked if Footer Meta invalid
+
+## See Also
+
+- `codegen/sympy/phase 4/Dora-Block.md` - DORA Block (trace) specification
+- `codegen/sympy/phase 4/l9-codegen-dora-contract.yaml` - Full contract
+- `codegen/sympy/phase 4/validate_dora_blocks.py` - Validation script
+
+<!-- generated-from: rules/25-python-dora-header.mdc; do-not-edit -->
