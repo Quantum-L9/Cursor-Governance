@@ -1,0 +1,28 @@
+{
+  "blockers": [],
+  "config_sha256": "0ad9f9ad0bfb77d293d23e10fa686dda10872372f0f2a118b7fba10cce7ec505",
+  "exists": true,
+  "inspected_at": "2026-08-07T14:52:30.093707Z",
+  "inspection_id": "dc3eb28c-b3f0-48df-b838-ba8a85368d9e",
+  "is_regular_file": true,
+  "is_symlink": false,
+  "managed_entry_current": false,
+  "managed_entry_has_env": false,
+  "managed_entry_present": true,
+  "parent_is_symlink": false,
+  "parseable": true,
+  "path": "/Users/ib-mac/.cursor/mcp.json",
+  "policy_version": "client-config/v1",
+  "root_is_object": true,
+  "servers_is_object": true,
+  "unknown_top_level_keys": [],
+  "unmanaged_server_keys": [
+    "Context7",
+    "GitHub",
+    "Notion",
+    "code-graph-rag",
+    "firecrawl",
+    "graphiti-memory",
+    "perplexity"
+  ]
+}
