@@ -45,6 +45,8 @@ class SkillRouterCases(unittest.TestCase):
                 self.assertEqual(case.get("expected_primary"), actual_primary)
                 if result:
                     self.assertEqual(case.get("expected_supporting", []), result["supporting"])
+                    if "expected_source" in case:
+                        self.assertEqual(case["expected_source"], result.get("source"))
                     for forbidden in case.get("forbidden", []):
                         self.assertNotEqual(forbidden, result["primary"])
                         self.assertNotIn(forbidden, result["supporting"])

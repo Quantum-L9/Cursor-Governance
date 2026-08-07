@@ -101,7 +101,8 @@
       "expected_primary": "l9-plan",
       "expected_supporting": [
         "l9-structured-reasoning"
-      ]
+      ],
+      "expected_source": "route"
     },
     {
       "prompt": "Wire the skill into the repo discovery tables after compiling it",
@@ -140,6 +141,43 @@
       "expected_primary": null,
       "forbidden": [
         "l9-kubernetes-deploying"
+      ]
+    },
+    {
+      "prompt": "plan this before coding",
+      "expected_primary": "l9-plan",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "route"
+    },
+    {
+      "prompt": "Run e2e and clear the e2e blockers in this repo",
+      "expected_primary": "l9-e2e-blocker-resolution",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "route"
+    },
+    {
+      "prompt": "Start a bounded autonomy campaign with background PR poll while continuing",
+      "expected_primary": "l9-bounded-autonomy",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "explicit_hint"
+    },
+    {
+      "prompt": "Configure GitHub Packages access via the admin UI cartridge when the API is insufficient",
+      "expected_primary": "l9-ui-operator",
+      "expected_supporting": [],
+      "expected_source": "explicit_hint"
+    },
+    {
+      "prompt": "Run full-throttle cli optimization and flip all off-by-default flags",
+      "expected_primary": null,
+      "forbidden": [
+        "l9-cli-optimization"
       ]
     }
   ]

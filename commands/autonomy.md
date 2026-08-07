@@ -4,7 +4,9 @@ description: Bounded autonomy campaign — Phase-0 packet, parallel Tasks, backg
 
 # /autonomy
 
-Load skill **`l9-bounded-autonomy`**. Explicit-only. Do not auto-route.
+Load skill **`l9-bounded-autonomy`**. Explicit-only with optional proactive **hint**
+(`hint_allowed` → `source: explicit_hint`). Router may recommend Read; **packet still
+required**. Recommendation ≠ mutation authority.
 
 ## Steps
 
@@ -24,3 +26,4 @@ At most two: `l9-pr-remediation`, `l9-structured-reasoning`, and/or `l9-cli-opti
 ## References
 
 Skill pack: `skills/l9-bounded-autonomy/` (especially `pr-poll-subagent.md`, `prompt-templates.md`, `examples.md`).
+Authority split SSOT: `rules/23-l9-skill-routing.mdc`.

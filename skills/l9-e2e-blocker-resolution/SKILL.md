@@ -9,7 +9,6 @@ owner: igor_beylin
 status: active
 version: 1.0.0
 updated: 2026-07-31
-disable-model-invocation: true
 ---
 
 # E2E Blocker Resolution

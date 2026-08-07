@@ -85,13 +85,22 @@ def main() -> int:
             if supporting
             else ""
         )
-        context = (
-            "High-confidence L9 skill route: invoke "
-            f"`{recommendation['primary']}` through the Skill tool before normal execution."
-            f"{support_text} Use at most one primary and two supporting skills. "
-            "Do not invoke explicit-only skills automatically. "
-            "This route grants no mutation authority."
-        )
+        if recommendation.get("source") == "explicit_hint":
+            context = (
+                "L9 explicit skill hint: Read "
+                f"`{recommendation['primary']}` (SKILL.md) before continuing."
+                f"{support_text} Do not execute mutations from this hint alone — requires "
+                "explicit user authority, campaign packet, and/or human approve. "
+                "This route grants no mutation authority."
+            )
+        else:
+            context = (
+                "High-confidence L9 skill route: invoke "
+                f"`{recommendation['primary']}` through the Skill tool before normal execution."
+                f"{support_text} Use at most one primary and two supporting skills. "
+                "Do not auto-execute explicit-only skills without a hint_allowed route. "
+                "This route grants no mutation authority."
+            )
         log_recommendation(payload, recommendation)
         print(
             json.dumps(

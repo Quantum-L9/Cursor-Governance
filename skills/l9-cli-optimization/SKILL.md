@@ -4,10 +4,16 @@ skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
 disable-model-invocation: true
+future_home: https://github.com/Quantum-L9/l9-tools
+status: active
 description: Identify underutilized, verified repository-owned capabilities and enable their full utilization — activating dormant or miswired code, off-by-default features, unread config, and unused signals — then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.
 ---
 
 # Optimize CLI PR Pack
+
+## Future home
+
+Marked for relocation to [`Quantum-L9/l9-tools`](https://github.com/Quantum-L9/l9-tools). **Do not move yet.** Remains an explicit-only L9 skill in Cursor-Governance until extracted.
 
 ## Terminal Objective
 

@@ -11,7 +11,7 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 | Profile | `environment/claude-code/autonomy/profiles/pr-convergence.json` | Lanes 4/2, waiting_external, merge_gate |
 | Runtime | `environment/claude-code/autonomy/*.py` | Claude-only machine scheduler (do not rewrite for Cursor) |
 | Hooks | `environment/claude-code/hooks/*` | Thin fail-open adapters over `ops/skill_routing/` (SessionStart, route hint, usage log) |
-| Routing | `ops/skill_routing/` + `ops/generated/skill-registry.json`; rule `rules/23-l9-skill-routing.mdc` (+ generated `environment/generated/llm-rules/l9-skill-routing.md`) | Recommendation ≠ authority; explicit_only never auto-invoked |
+| Routing | `ops/skill_routing/` + `ops/generated/skill-registry.json`; rule `rules/23-l9-skill-routing.mdc` (+ generated `environment/generated/llm-rules/l9-skill-routing.md`) | Recommendation ≠ authority; `hint_allowed` may surface Read (`explicit_hint`); mutate only with packet |
 
 ## Settings posture (summary)
 

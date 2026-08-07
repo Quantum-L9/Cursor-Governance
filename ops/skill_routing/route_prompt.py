@@ -1,6 +1,12 @@
 """Shared L9 skill-routing scorer — Cursor-primary ownership (CANONICAL_LAW §2.1).
 
 Surface adapters import this module; they must not own scoring logic.
+
+Doctrine:
+  * auto_invoke / model_allowed — may force-route (source: route | advisory_route | description)
+  * explicit_only + route.hint_allowed — may surface Read/attach only (source: explicit_hint)
+  * explicit_only without hint_allowed — never scored
+  * Recommendation never grants mutation authority
 """
 
 from __future__ import annotations
@@ -134,6 +140,51 @@ def score_description_match(prompt: str, skill: dict[str, Any]) -> int:
     return score
 
 
+def _score_route(normalized: str, route: dict[str, Any], primary: str) -> int:
+    positives = [
+        phrase for phrase in route.get("positive_signals", []) if phrase_hit(normalized, phrase)
+    ]
+    weight = int(route.get("signal_weight", 4))
+    score = len(positives) * weight
+    slug = primary.removeprefix("l9-").replace("-", " ")
+    if primary in normalized:
+        score += 20
+    elif " " in slug and phrase_hit(normalized, slug):
+        # Multi-word slugs only (avoid "plan" matching "architecture plan").
+        score += 20
+    elif len(slug) >= 10 and phrase_hit(normalized, slug):
+        score += 20
+    required = route.get("required_any", [])
+    if required and not any(phrase_hit(normalized, phrase) for phrase in required):
+        return 0
+    return score
+
+
+def _hint_gate(route: dict[str, Any], score: int) -> int:
+    """Fail-closed for explicit hint routes: required_any match or score >= 2× weight."""
+    weight = int(route.get("signal_weight", 4))
+    required = route.get("required_any", [])
+    if required:
+        # required_any already enforced in _score_route; one solid hit is enough.
+        return score
+    if score < 2 * weight:
+        return 0
+    return score
+
+
+def _supporting(
+    route: dict[str, Any],
+    known: dict[str, Any],
+    explicit: set[str],
+    max_supporting: int,
+) -> list[str]:
+    return [
+        name
+        for name in route.get("supporting", [])
+        if name in known and name not in explicit and name != route.get("primary")
+    ][:max_supporting]
+
+
 def route_prompt(prompt: str, registry: dict[str, Any]) -> dict[str, Any] | None:
     routing = registry.get("routing", {})
     normalized = normalize(prompt)
@@ -149,49 +200,37 @@ def route_prompt(prompt: str, registry: dict[str, Any]) -> dict[str, Any] | None
     best: tuple[int, dict[str, Any], str] | None = None
     for route in routing.get("routes", []):
         primary = str(route.get("primary", ""))
-        if not primary or primary in explicit:
+        if not primary:
+            continue
+        hint_allowed = bool(route.get("hint_allowed", False))
+        if primary in explicit and not hint_allowed:
             continue
         if any(phrase_hit(normalized, phrase) for phrase in route.get("negative_signals", [])):
             blocked_primaries.add(primary)
             continue
-        positives = [
-            phrase for phrase in route.get("positive_signals", []) if phrase_hit(normalized, phrase)
-        ]
-        score = len(positives) * int(route.get("signal_weight", 4))
-        slug = primary.removeprefix("l9-").replace("-", " ")
-        if primary in normalized:
-            score += 20
-        elif " " in slug and phrase_hit(normalized, slug):
-            # Multi-word slugs only (avoid "plan" matching "architecture plan").
-            score += 20
-        elif len(slug) >= 10 and phrase_hit(normalized, slug):
-            score += 20
-        required = route.get("required_any", [])
-        if required and not any(phrase_hit(normalized, phrase) for phrase in required):
-            score = 0
+        score = _score_route(normalized, route, primary)
+        source = "route"
+        if primary in explicit and hint_allowed:
+            score = _hint_gate(route, score)
+            source = "explicit_hint"
         if best is None or score > best[0]:
-            best = (score, route, "route")
+            best = (score, route, source)
 
     threshold = int(routing.get("force_threshold", 8))
     advisory = int(routing.get("advisory_threshold", max(6, threshold - 2)))
+    max_supporting = int(routing.get("max_supporting", 2))
 
     if best is not None and best[0] >= threshold:
         score, route, source = best
-        max_supporting = int(routing.get("max_supporting", 2))
-        supporting = [
-            name
-            for name in route.get("supporting", [])
-            if name in known and name not in explicit and name != route.get("primary")
-        ][:max_supporting]
         return {
             "route_id": route.get("id", "unknown"),
             "primary": route["primary"],
-            "supporting": supporting,
+            "supporting": _supporting(route, known, explicit, max_supporting),
             "score": score,
             "source": source,
         }
 
-    # Description fallback: only when no high-confidence route matched.
+    # Description fallback: only model_allowed skills when no high-confidence route matched.
     desc_best: tuple[int, dict[str, Any]] | None = None
     for skill in registry.get("skills", []):
         name = str(skill.get("name", ""))
@@ -214,24 +253,18 @@ def route_prompt(prompt: str, registry: dict[str, Any]) -> dict[str, Any] | None
         return {
             "route_id": f"description:{skill['name']}",
             "primary": skill["name"],
-            "supporting": supporting[: int(routing.get("max_supporting", 2))],
+            "supporting": supporting[:max_supporting],
             "score": score,
             "source": "description",
         }
 
-    # Soft route hit below force_threshold still surfaces as advisory when useful.
-    if best is not None and best[0] >= advisory:
+    # Soft route hit below force_threshold — never advisory for explicit_hint (stricter).
+    if best is not None and best[0] >= advisory and best[2] != "explicit_hint":
         score, route, source = best
-        max_supporting = int(routing.get("max_supporting", 2))
-        supporting = [
-            name
-            for name in route.get("supporting", [])
-            if name in known and name not in explicit and name != route.get("primary")
-        ][:max_supporting]
         return {
             "route_id": route.get("id", "unknown"),
             "primary": route["primary"],
-            "supporting": supporting,
+            "supporting": _supporting(route, known, explicit, max_supporting),
             "score": score,
             "source": "advisory_route",
         }

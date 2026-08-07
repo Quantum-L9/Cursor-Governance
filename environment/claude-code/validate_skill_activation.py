@@ -220,6 +220,11 @@ def main() -> int:
             continue
         if result and result.get("supporting", []) != case.get("expected_supporting", []):
             fail(f"supporting route mismatch for: {case['prompt']!r}")
+        if result and "expected_source" in case and result.get("source") != case["expected_source"]:
+            fail(
+                f"source mismatch for: {case['prompt']!r}: expected "
+                f"{case['expected_source']!r}, got {result.get('source')!r}"
+            )
         for forbidden in case.get("forbidden", []):
             if result and (forbidden == result["primary"] or forbidden in result["supporting"]):
                 fail(f"forbidden skill routed: {forbidden}")

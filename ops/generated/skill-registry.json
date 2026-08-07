@@ -27,9 +27,10 @@
       "l9-aws-secrets",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
-      "l9-monitoring-terminal-errors"
+      "l9-monitoring-terminal-errors",
+      "l9-e2e-blocker-resolution"
     ],
-    "purpose": "Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce native skill selection while preserving model judgment, explicit-only boundaries, and narrow composition. Recommendation never grants mutation authority.\n",
+    "purpose": "Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce native skill selection while preserving model judgment and narrow composition. Three layers: auto_invoke (force Read/select); explicit_only+hint_allowed (source explicit_hint \u2014 Read/attach only); explicit_only without hint (never routed). Recommendation never grants mutation authority.",
     "routes": [
       {
         "id": "pr_analysis",
@@ -114,7 +115,13 @@
           "implementation plan",
           "scope is unclear",
           "decompose the requirements",
-          "make a plan"
+          "make a plan",
+          "plan this",
+          "plan before coding",
+          "write a plan",
+          "planning mode",
+          "execution plan",
+          "decompose requirements"
         ],
         "primary": "l9-plan",
         "signal_weight": 8,
@@ -405,8 +412,9 @@
         "supporting": []
       },
       {
+        "hint_allowed": true,
         "id": "bounded_autonomy",
-        "note": "explicit_only \u2014 recommendation is routing evidence only; requires /autonomy or explicit user campaign authority (campaign authorization packet).\n",
+        "note": "explicit_only + hint_allowed \u2014 recommendation is routing evidence only (source: explicit_hint); requires /autonomy or explicit user campaign authority (campaign authorization packet). Never mutate from a hint alone.",
         "positive_signals": [
           "/autonomy",
           "bounded autonomy campaign",
@@ -416,9 +424,75 @@
           "poll pr while continuing"
         ],
         "primary": "l9-bounded-autonomy",
+        "required_any": [
+          "/autonomy",
+          "bounded autonomy",
+          "autonomy campaign",
+          "campaign authorization",
+          "pr convergence",
+          "background pr poll"
+        ],
         "signal_weight": 8,
         "supporting": [
-          "l9-pr-remediation",
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "ui_operator",
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only; human approve required for console.py --mode run. Recommendation grants no mutation authority.",
+        "positive_signals": [
+          "github packages",
+          "vercel dashboard",
+          "admin ui",
+          "saas dashboard",
+          "ui operator",
+          "cartridge",
+          "api insufficient",
+          "configure via ui"
+        ],
+        "primary": "l9-ui-operator",
+        "required_any": [
+          "github packages",
+          "vercel",
+          "admin ui",
+          "dashboard",
+          "cartridge",
+          "api insufficient",
+          "ui operator"
+        ],
+        "signal_weight": 8,
+        "supporting": []
+      },
+      {
+        "id": "e2e_blocker",
+        "negative_signals": [
+          "deploy to production",
+          "merge the pr",
+          "kubernetes deploy"
+        ],
+        "positive_signals": [
+          "run e2e",
+          "clear e2e blockers",
+          "e2e blockers",
+          "e2e tests",
+          "local proof",
+          "fix e2e",
+          "e2e failure",
+          "end-to-end tests"
+        ],
+        "primary": "l9-e2e-blocker-resolution",
+        "required_any": [
+          "e2e",
+          "end to end",
+          "end-to-end",
+          "playwright",
+          "cypress",
+          "local proof",
+          "local-proof"
+        ],
+        "signal_weight": 8,
+        "supporting": [
           "l9-structured-reasoning"
         ]
       }
@@ -539,7 +613,7 @@
       "invocation": "explicit_only",
       "name": "l9-cli-optimization",
       "path": "skills/l9-cli-optimization",
-      "reason": "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) \u2014 high blast radius, explicit only",
+      "reason": "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) \u2014 high blast radius, explicit only; future home https://github.com/Quantum-L9/l9-tools (do not move yet)",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -610,15 +684,15 @@
       "when_to_use": ""
     },
     {
-      "composition_role": "general",
+      "composition_role": "primary",
       "description": "run repo e2e or local-proof tests, classify and fix in-repo blockers, then write a brief for remaining external gates and a todo.md session-reference entry. use when the user asks to run e2e, clear e2e blockers, document remaining secrets/env gaps, or produce a session-start surface for blocked proof paths.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
       "name": "l9-e2e-blocker-resolution",
       "path": "skills/l9-e2e-blocker-resolution",
-      "reason": "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets \u2014 high blast radius, explicit only",
+      "reason": "",
       "user_invocable": true,
-      "when_to_use": ""
+      "when_to_use": "running e2e or local-proof tests, clearing e2e blockers, documenting remaining secrets/env gaps, or producing a session-start surface for blocked proof paths"
     },
     {
       "composition_role": "general",
@@ -688,7 +762,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, T0 memory-bank, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.",
+      "description": "Graphiti VPS memory \u2014 prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-graphiti-memory",
@@ -941,6 +1015,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "97c5d8ff72c8c1f51ad21b4d20b224ff5e9d24b3c3e4b5498662a9dbda0b5b99",
-  "source_skill_corpus_sha256": "b7436af3285567f50f8809ed166c30f56e177e3fce066e64557458b39d5167d7"
+  "source_manifest_sha256": "8b288ddd5edd9d0c50317c4a85a9023540fcd5d6f93a17995489b6090a28a92e",
+  "source_skill_corpus_sha256": "75bd2c57bd13bf9951076d8dc5ac57598b705e8d002ead04ae8db7a057a02fb0"
 }

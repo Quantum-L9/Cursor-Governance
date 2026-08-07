@@ -114,9 +114,9 @@
       "alias": "l9-skill-routing.md",
       "class": "always",
       "output": "l9-skill-routing.md",
-      "output_sha256": "5dfdba5a0b7a691580cf891720bcb3e69731e0013f10f8161c6803bb2ec5086c",
+      "output_sha256": "71d00867df94255c93d9a94661577d2934a1a05d1eac213d635d327e2e921eb6",
       "source": "rules/23-l9-skill-routing.mdc",
-      "source_sha256": "a11baa35c04651c8728d5120afe723c7a66cd597e21cc2f889aa9b94329a1184",
+      "source_sha256": "03814e9b84a3014a51bc36046fa0c96d9a9e1fa4691d3f3a48ea85ae1b6b5c41",
       "stem": "23-l9-skill-routing"
     },
     {
@@ -569,5 +569,5 @@
     "skipped_agent_requested": 4,
     "source_mdc": 62
   },
-  "tree_sha256": "552975bd77c8a70ea8bb1dda58c954e7d7fbf97d4048eec5fd3a69a63f60e57c"
+  "tree_sha256": "1ae73e16ccfe4e78918f5b8578af312ecc8c5f57ff10538d9cadf39b04e61b02"
 }

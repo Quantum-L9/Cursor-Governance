@@ -95,12 +95,20 @@ def context_text(recommendation: dict[str, Any]) -> str:
     support_text = (
         " Supporting: " + ", ".join(f"`{name}`" for name in supporting) + "." if supporting else ""
     )
+    if recommendation.get("source") == "explicit_hint":
+        return (
+            "L9 explicit skill hint: Read "
+            f"`{recommendation['primary']}` (SKILL.md) before continuing.{support_text} "
+            "Do not execute mutations from this hint alone — requires explicit user "
+            "authority, campaign packet, and/or human approve per the skill contract. "
+            "This route grants no mutation authority."
+        )
     return (
         "High-confidence L9 skill route: Read and follow "
         f"`{recommendation['primary']}` (SKILL.md) as your first action before normal "
         f"execution.{support_text} Use at most one primary and two supporting skills. "
-        "Do not invoke explicit-only skills automatically. This route grants no "
-        "mutation authority."
+        "Do not auto-execute explicit-only skills without a hint_allowed route. "
+        "This route grants no mutation authority."
     )
 
 
