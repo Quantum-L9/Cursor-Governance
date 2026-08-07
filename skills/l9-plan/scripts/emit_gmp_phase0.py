@@ -3,24 +3,29 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
+
+from paths import safe_cli_path
+
+
+def _todo_block(todo: dict) -> list[str]:
+    files = todo.get("files") or []
+    file_field = files[0] if files else f"BLOCKED: {todo.get('blocker') or 'ungrounded'}"
+    return [
+        f"[TODO {todo.get('id')}]",
+        "Phase: 2",
+        f"File: {file_field}",
+        f"Operation: {todo.get('operation') or 'Replace'}",
+        f"Anchor: {todo.get('anchor') or 'UNSPECIFIED'}",
+        f"Description: {todo.get('task')}",
+        f"Dependencies: {', '.join(todo.get('dependencies') or []) or 'none'}",
+        "",
+    ]
 
 
 def emit(plan: dict) -> str:
     lines = ["# GMP Phase 0 — TODO PLAN LOCK (from l9-plan)", ""]
     for todo in plan.get("todos") or []:
-        files = todo.get("files") or []
-        file_field = files[0] if files else f"BLOCKED: {todo.get('blocker') or 'ungrounded'}"
-        lines += [
-            f"[TODO {todo.get('id')}]",
-            "Phase: 2",
-            f"File: {file_field}",
-            f"Operation: {todo.get('operation') or 'Replace'}",
-            f"Anchor: {todo.get('anchor') or 'UNSPECIFIED'}",
-            f"Description: {todo.get('task')}",
-            f"Dependencies: {', '.join(todo.get('dependencies') or []) or 'none'}",
-            "",
-        ]
+        lines.extend(_todo_block(todo))
     handoff = plan.get("gmp_handoff") or {}
     lines += [
         "MODIFICATION LOCK",
@@ -38,7 +43,7 @@ def main() -> int:
     if len(sys.argv) < 2:
         print("usage: emit_gmp_phase0.py <plan.json>", file=sys.stderr)
         return 2
-    plan = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    plan = json.loads(safe_cli_path(sys.argv[1]).read_text(encoding="utf-8"))
     sys.stdout.write(emit(plan))
     return 0
 
