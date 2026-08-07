@@ -35,6 +35,14 @@ Authority is a **campaign authorization packet** (not an envelope). Claude Code
 machine runtime remains `environment/claude-code/autonomy/` — see its README
 “Cursor SOP” link. Human merge only; do not rewrite the Python scheduler from Cursor.
 
+### 2.0.1 Adapter Autonomy Velocity (Claude Code / peers)
+
+SSOT: `ops/autonomy/surface_profile.yaml` (CANONICAL_LAW §6.1). On adapter
+surfaces with `L9_AUTONOMY_ENABLED=true`, scoped commit/push/PR/remediation is
+authorized without per-action ask; merge is denied by `ops/autonomy/merge_gate.py`.
+Install settings: `make claude-settings WS="$(pwd)"`. Cursor remains ask-first
+except campaign packet / `make pr` remediation.
+
 ## 2. Activation — how a session boots L9 governance
 
 **There is exactly one activation mechanism, and it is automatic.**

@@ -200,6 +200,28 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
   skill-registry generation. `status: deprecated` or `*-deprecated` at the
   top level of `skills/` is a fail-closed sync error.
 
+## 6.1 Autonomy Velocity Doctrine (adapter surfaces)
+
+SSOT fragment: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml).
+
+When `L9_AUTONOMY_ENABLED=true` and `L9_GOVERNANCE_SURFACE` is an LLM adapter
+(`claude-code`, `codex`, `gemini`, `manus` — **not** `cursor`):
+
+| Action | Default |
+|--------|---------|
+| Scoped commit / push on feature branches | Autonomous — no per-action ask |
+| Create / update PR | Autonomous |
+| Load + run `l9-pr-remediation` after PR exists | Autonomous **behavior** (skill stays explicit-only) |
+| Multi-lane campaign | `/autonomy` + runtime |
+| Merge / force-push / hard-reset / secrets | Forbidden; merge denied by `ops/autonomy/merge_gate.py` |
+
+**Authority order (adapters):** CANONICAL_LAW (this section + Profile) → ADR-0001 →
+settings allow/deny + merge_gate → AGENTS.md → skills → **agent-invented contracts (lowest)**.
+
+Cursor remains ask-first except campaign packet / `make pr` remediation.
+Deploy settings via `ops/scripts/reconcile_claude_settings.py` (`make claude-settings`).
+Do not fork Profile prose into SessionStart/README/ADR — cite the Profile.
+
 ---
 
 ## 7. Anti-Patterns

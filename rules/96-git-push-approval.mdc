@@ -56,6 +56,13 @@ Agent: [executes git push]
 Agent: [commits and immediately pushes without asking]
 ```
 
+### Exception: Adapter Autonomy Velocity (Profile)
+
+When `L9_GOVERNANCE_SURFACE` ∈ {claude-code, codex, gemini, manus} and
+`L9_AUTONOMY_ENABLED=true`, scoped non-force `git push` on feature branches and
+PR create/update are authorized by `ops/autonomy/surface_profile.yaml` without a
+per-action ask. Force-push and merge remain denied. Cursor is unchanged.
+
 ### Exception: Explicit Request in Same Message
 
 If user says "commit and push" or "commit push" in their request, this counts as pre-approval:

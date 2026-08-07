@@ -66,6 +66,16 @@
         ]
       },
       {
+        "matcher": "Bash|mcp__github__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.cursor-governance/environment/claude-code/hooks/merge_gate_wrap.py\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write|NotebookEdit|Bash|mcp__github__.*",
         "hooks": [
           {

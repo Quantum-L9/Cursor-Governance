@@ -8,6 +8,11 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Added
+- **Autonomy Surface Parity:** `ops/autonomy/surface_profile.yaml` (standing A4
+  doctrine SSOT), `ops/scripts/reconcile_claude_settings.py` + `make claude-settings`,
+  `ops/autonomy/merge_gate.py` PreToolUse enforcement, SessionStart Profile inject,
+  llm-rules `zz-autonomy-surface-override.md`, CANONICAL_LAW §6.1. Peers cite Profile
+  via ADAPTER_CONTRACT autonomy carrier.
 - **Portable UI Operator (GMP-1…3):** `ops/secrets/` AWS Secrets Manager registry
   SSOT (`sync_secrets_registry.py`, `resolve_secret.py`), skills `l9-aws-secrets`
   and `l9-ui-operator`, `ops/ui-operator/` console + cartridges (GitHub Packages

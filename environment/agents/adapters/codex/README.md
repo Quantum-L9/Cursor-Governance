@@ -21,6 +21,14 @@ role `implementer`, **active**). Contract: `../ADAPTER_CONTRACT.md`.
 | Shared memory | `mcp.template.json` / `config.toml.example` + `environment.env.example` |
 | Network | `docs/network-allowlist.md` |
 | Operator steps | **`setup.md`** |
+| Autonomy surface | `ops/autonomy/surface_profile.yaml` via `agents-block.md` + env |
+
+## Autonomy
+
+Codex mounts the shared Autonomy Surface Profile (CANONICAL_LAW §6.1): standing
+A4 when `L9_GOVERNANCE_SURFACE=codex` and `L9_AUTONOMY_ENABLED=true`. Merge
+remains human-only (`ops/autonomy/merge_gate.py` semantics). See
+`../ADAPTER_CONTRACT.md` autonomy carrier.
 
 ## Setup
 
