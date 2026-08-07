@@ -5,7 +5,13 @@ import argparse
 import json
 from pathlib import Path
 
-QUALITY_FIELDS = ["correctness", "evidence_fidelity", "option_quality", "actionability", "calibration"]
+QUALITY_FIELDS = [
+    "correctness",
+    "evidence_fidelity",
+    "option_quality",
+    "actionability",
+    "calibration",
+]
 
 
 def summarize(rows: list[dict]) -> dict:
@@ -31,11 +37,16 @@ def main() -> int:
         "baseline": baseline,
         "candidate": candidate,
         "quality_delta": candidate["quality_score"] - baseline["quality_score"],
-        "token_reduction_fraction": 1 - candidate["token_count"] / baseline["token_count"] if baseline["token_count"] else 0,
-        "tool_call_reduction_fraction": 1 - candidate["tool_calls"] / baseline["tool_calls"] if baseline["tool_calls"] else 0,
+        "token_reduction_fraction": 1 - candidate["token_count"] / baseline["token_count"]
+        if baseline["token_count"]
+        else 0,
+        "tool_call_reduction_fraction": 1 - candidate["tool_calls"] / baseline["tool_calls"]
+        if baseline["tool_calls"]
+        else 0,
         "acceptance": {
             "no_correctness_regression": candidate["correctness"] >= baseline["correctness"],
-            "no_unsupported_claim_regression": candidate["unsupported_claims"] <= baseline["unsupported_claims"],
+            "no_unsupported_claim_regression": candidate["unsupported_claims"]
+            <= baseline["unsupported_claims"],
             "quality_improved": candidate["quality_score"] > baseline["quality_score"],
         },
     }

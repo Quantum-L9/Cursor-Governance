@@ -27,7 +27,17 @@ def main() -> int:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
     activated = sum(1 for case in cases if route(case["request"])["activate"])
-    print(json.dumps({"status": "PASS", "cases": len(cases), "activated": activated, "rejected": len(cases) - activated}, indent=2))
+    print(
+        json.dumps(
+            {
+                "status": "PASS",
+                "cases": len(cases),
+                "activated": activated,
+                "rejected": len(cases) - activated,
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

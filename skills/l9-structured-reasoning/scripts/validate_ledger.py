@@ -6,7 +6,16 @@ import json
 import sys
 from pathlib import Path
 
-REQUIRED = {"objective", "task_kind", "claims", "options", "selected_option", "selection_rationale", "action", "stop_condition"}
+REQUIRED = {
+    "objective",
+    "task_kind",
+    "claims",
+    "options",
+    "selected_option",
+    "selection_rationale",
+    "action",
+    "stop_condition",
+}
 TASKS = {"plan", "review", "architecture", "debug", "decision", "corpus"}
 ACTIONS = {"proceed", "proceed_with_validation", "bounded_probe", "block"}
 GRADES = {"direct", "corroborated", "inferred", "unknown"}
@@ -32,7 +41,9 @@ def validate(data: dict) -> list[str]:
                 errors.append(f"claim {index} has invalid evidence_grade")
             if claim.get("evidence_grade") == "unknown" and not claim.get("uncertainty_type"):
                 errors.append(f"claim {index} unknown evidence requires uncertainty_type")
-    if data.get("action") == "proceed" and any(c.get("decision_effect") == "blocks" for c in data.get("claims", []) if isinstance(c, dict)):
+    if data.get("action") == "proceed" and any(
+        c.get("decision_effect") == "blocks" for c in data.get("claims", []) if isinstance(c, dict)
+    ):
         errors.append("cannot proceed with a blocking claim")
     return errors
 

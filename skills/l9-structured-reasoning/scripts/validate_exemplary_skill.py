@@ -5,16 +5,53 @@ import json
 import sys
 from pathlib import Path
 
-REQUIRED_EXPERTISE = ["experts", "doctrine", "invariants", "authority_hierarchy", "activation_signals", "reject_signals", "adapters", "failure_modes", "leverage_points"]
-REQUIRED_REPORT = ["activation_model", "authority_model", "expert_heuristics", "doctrine", "invariants", "adapter_map", "failure_modes", "leverage_points", "evidence_hierarchy", "exemplary_gate_results", "tier_decision"]
-REQUIRED_GATES = ["activation_precision", "adapter_architecture", "evidence_hierarchy", "doctrine_extraction", "expert_heuristics", "failure_modes", "leverage_model", "self_improvement_hook", "compiler_enforcement_gates", "skill_intelligence_report"]
+REQUIRED_EXPERTISE = [
+    "experts",
+    "doctrine",
+    "invariants",
+    "authority_hierarchy",
+    "activation_signals",
+    "reject_signals",
+    "adapters",
+    "failure_modes",
+    "leverage_points",
+]
+REQUIRED_REPORT = [
+    "activation_model",
+    "authority_model",
+    "expert_heuristics",
+    "doctrine",
+    "invariants",
+    "adapter_map",
+    "failure_modes",
+    "leverage_points",
+    "evidence_hierarchy",
+    "exemplary_gate_results",
+    "tier_decision",
+]
+REQUIRED_GATES = [
+    "activation_precision",
+    "adapter_architecture",
+    "evidence_hierarchy",
+    "doctrine_extraction",
+    "expert_heuristics",
+    "failure_modes",
+    "leverage_model",
+    "self_improvement_hook",
+    "compiler_enforcement_gates",
+    "skill_intelligence_report",
+]
 
 
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     errors = []
-    expertise = json.loads((root / "expertise_model.yaml").read_text(encoding="utf-8")).get("expertise_model", {})
-    report = json.loads((root / "skill_intelligence_report.yaml").read_text(encoding="utf-8")).get("skill_intelligence_report", {})
+    expertise = json.loads((root / "expertise_model.yaml").read_text(encoding="utf-8")).get(
+        "expertise_model", {}
+    )
+    report = json.loads((root / "skill_intelligence_report.yaml").read_text(encoding="utf-8")).get(
+        "skill_intelligence_report", {}
+    )
     for field in REQUIRED_EXPERTISE:
         if field not in expertise or (field != "adapters" and not expertise[field]):
             errors.append(f"expertise_model missing or empty: {field}")

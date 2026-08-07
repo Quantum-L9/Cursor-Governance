@@ -76,6 +76,7 @@ exclude = [
     "WIP",
     "**/.cursor-commands",
     "**/.cursor",
+    "environment/generated/llm-rules",
 ]
 
 [tool.ruff.lint]

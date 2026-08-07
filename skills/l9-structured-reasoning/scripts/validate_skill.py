@@ -53,7 +53,9 @@ def main() -> int:
     try:
         frontmatter = parse_frontmatter(skill)
         if set(frontmatter) != {"name", "description"}:
-            errors.append(f"frontmatter keys must be name and description only: {sorted(frontmatter)}")
+            errors.append(
+                f"frontmatter keys must be name and description only: {sorted(frontmatter)}"
+            )
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", frontmatter.get("name", "")):
             errors.append("name must be lowercase hyphenated")
         if len(frontmatter.get("description", "")) < 120:
@@ -64,7 +66,12 @@ def main() -> int:
     if len(skill.splitlines()) > 500:
         errors.append("SKILL.md exceeds 500 lines")
 
-    required_terms = ["extract_expertise", "compress_expertise", "skill_intelligence_report", "exemplary_gate"]
+    required_terms = [
+        "extract_expertise",
+        "compress_expertise",
+        "skill_intelligence_report",
+        "exemplary_gate",
+    ]
     for term in required_terms:
         if term not in skill:
             errors.append(f"missing exemplary term: {term}")
@@ -86,7 +93,12 @@ def main() -> int:
 
     for path in root.rglob("*"):
         rel = path.relative_to(root).as_posix()
-        if "__MACOSX" in rel or path.name.startswith("._") or path.name == "__pycache__" or path.suffix == ".pyc":
+        if (
+            "__MACOSX" in rel
+            or path.name.startswith("._")
+            or path.name == "__pycache__"
+            or path.suffix == ".pyc"
+        ):
             errors.append(f"forbidden generated artifact: {rel}")
 
     link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -104,7 +116,11 @@ def main() -> int:
             if not resolved.exists():
                 errors.append(f"broken link: {path.relative_to(root)} -> {target}")
 
-    for path in [root / "expertise_model.yaml", root / "skill_intelligence_report.yaml", root / "fixtures/router_cases.json"]:
+    for path in [
+        root / "expertise_model.yaml",
+        root / "skill_intelligence_report.yaml",
+        root / "fixtures/router_cases.json",
+    ]:
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except Exception as exc:

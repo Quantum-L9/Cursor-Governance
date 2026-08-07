@@ -12,10 +12,36 @@ EVIDENCE = {"sufficient", "partial", "conflicting", "absent"}
 
 PROOFS = {
     "plan": ["objective", "dependencies", "critical_path", "acceptance_criteria", "material_risks"],
-    "review": ["evidence_chain", "contradictions", "missing_coverage", "priority", "recommended_correction"],
-    "architecture": ["viable_options", "tradeoffs", "blast_radius", "reversibility", "migration_and_rollback"],
-    "debug": ["reproduce", "isolate", "testable_hypotheses", "disconfirming_evidence", "minimal_fix", "regression_proof"],
-    "decision": ["options", "criteria", "evidence", "opportunity_cost", "selected_option", "reconsideration_trigger"],
+    "review": [
+        "evidence_chain",
+        "contradictions",
+        "missing_coverage",
+        "priority",
+        "recommended_correction",
+    ],
+    "architecture": [
+        "viable_options",
+        "tradeoffs",
+        "blast_radius",
+        "reversibility",
+        "migration_and_rollback",
+    ],
+    "debug": [
+        "reproduce",
+        "isolate",
+        "testable_hypotheses",
+        "disconfirming_evidence",
+        "minimal_fix",
+        "regression_proof",
+    ],
+    "decision": [
+        "options",
+        "criteria",
+        "evidence",
+        "opportunity_cost",
+        "selected_option",
+        "reconsideration_trigger",
+    ],
     "corpus": [
         "corpus_scope",
         "selected_modes",
@@ -103,7 +129,11 @@ def route(request: dict[str, Any]) -> dict[str, Any]:
     proofs = list(PROOFS[task_kind]) if activate else []
     if activate and risk in {"guarded", "irreversible"} and "rollback_or_containment" not in proofs:
         proofs.append("rollback_or_containment")
-    if activate and evidence in {"partial", "conflicting", "absent"} and "unknowns_and_next_probe" not in proofs:
+    if (
+        activate
+        and evidence in {"partial", "conflicting", "absent"}
+        and "unknowns_and_next_probe" not in proofs
+    ):
         proofs.append("unknowns_and_next_probe")
 
     return {

@@ -122,11 +122,11 @@ class RuleAdapterSafetyTests(unittest.TestCase):
             self.assertNotEqual(expanded.resolve(), expanded)
             self.assertEqual(expanded.resolve(), ssot.resolve())
 
-    
     def test_quiet_emits_json(self) -> None:
         import json
         import subprocess
         import sys
+
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             root = base / "governance"
