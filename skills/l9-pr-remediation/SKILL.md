@@ -1,14 +1,14 @@
 ---
 name: l9-pr-remediation
-description: converge a github pr in the fewest cycles by concurrently remediating every actionable signal — ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt — with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.
+description: diagnose or converge a github pr — read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
-tags: [l9, pr, ci, code-review, sonarcloud, codeql, debt, remediation, concurrent, github]
+tags: [l9, pr, ci, code-review, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-08-06
+version: 3.1.0
+updated: 2026-08-07
 disable-model-invocation: true
 ---
 
@@ -16,15 +16,32 @@ disable-model-invocation: true
 
 ## Purpose
 
-Drive one open pull request to merge-ready in the **fewest cycles and wall-clock time**. Ingest every actionable signal, remediate all safe codebase defects in parallel, verify locally, push once, reply, short-poll CI, repeat until green or the cycle cap.
+One pack, two intents: **Diagnose** (read-only readiness) or **Converge** (mutate to green). No packaging theater. Converge remains one path, max depth.
 
-One path. Full depth. No modes. No packaging theater.
+| Intent | Mutates | Triggers | Behavior |
+|--------|---------|----------|----------|
+| **Diagnose** | no | review / readiness / blockers / `/pr` / “ready to merge?” | Fetch PR+reviews+CI; slim verdict; optional review angles; YNP; **never** commit/push |
+| **Converge** | yes | fix / remediate / babysit / make-pr poll / autonomy packet | Hot path below; **never** merges (law 12) |
+
+**Merge** is not a third intent — it is a **Diagnose exit** after explicit user confirm (`gh pr merge` only; never unpack diffs). Load [references/merge-advise.md](references/merge-advise.md).
+
+### Intent precedence (hard)
+
+1. If mutate language is present (`fix`, `remediate`, `babysit`, `push`, make-pr handoff, autonomy packet) → **Converge** (Diagnose may run as cycle-0 status inside Converge, but must not stop at advise-only).
+2. Else if review/readiness/blockers/`/pr` → **Diagnose** only.
+3. Ambiguous mixed ask without mutate verbs → **Diagnose**; ask one question before Converge.
 
 ## Target
 
-Resolve `{owner}/{repo}#{pr}` (or open a remediation PR on the current branch when the user points at baseline debt/alerts with no PR yet). Stay on that PR until converged or blocked.
+Resolve `{owner}/{repo}#{pr}` (or open a remediation PR on the current branch when Converge points at baseline debt/alerts with no PR yet). Stay on that PR until diagnosed, converged, or blocked.
 
-## Inputs → Actions
+## Diagnose
+
+Load [references/diagnose-workflow.md](references/diagnose-workflow.md). Optional focused lenses: [references/review-angles.md](references/review-angles.md).
+
+**Forbidden in Diagnose:** commit, push, force-push, edit worktree for fixes, alignment %, gap matrix, deep-eval, index theater, babysit loops.
+
+## Converge — Inputs → Actions
 
 | Signal | Source | Action |
 |--------|--------|--------|
@@ -35,7 +52,7 @@ Resolve `{owner}/{repo}#{pr}` (or open a remediation PR on the current branch wh
 | CodeQL | `scripts/codeql_fetch.py` | Dataflow-confirm; fix + negative test |
 | Lint/type/test/build debt | `scripts/debt_audit.py` + repo toolchain | Fix baseline + regressions |
 
-## Outputs (per cycle that changes code)
+## Converge — Outputs (per cycle that changes code)
 
 - One commit, one push
 - Canonical replies on touched threads
@@ -53,7 +70,7 @@ No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
 6. This skill + references
 7. Unknown — do not invent; note and continue independent work
 
-## Laws
+## Laws (Converge)
 
 1. **One path, max depth.** Always ingest CI + reviews + Sonar (if configured/failing) + CodeQL (if failing/open) + debt (if baseline/toolchain red). No dry-run / audit-first / security / CI-signal modes.
 2. **Max three cycles.** Never start cycle 4.
@@ -69,7 +86,7 @@ No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
 12. **Never** force-push, rewrite history, expose tokens, merge, or touch out-of-scope PRs.
 13. **Scanner closure is remote.** Local fix ≠ Sonar/CodeQL closed until the exact head SHA is green remotely (`PENDING_REMOTE_ANALYSIS` otherwise). Fetch scripts are read-only; never mutate remote issue/alert state.
 
-## Hot Path
+## Hot Path (Converge)
 
 0. **Resolve PR + resume.** Identify repo/PR/branch. Reuse prior cycle markers if present (`Remediation-Cycle:` trailer, `<!-- l9-remediation:... -->` replies). If no PR and the user wants baseline debt/alerts fixed: create branch, remediate, open PR, continue on that PR — same path.
 1. **Discover gates (read-only).** Parse workflows + package/Make scripts into a local verify list. Do not edit CI surfaces.
@@ -87,7 +104,7 @@ No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
 7. **Reply.** Canonical replies; resolve completed threads. [references/review-replies.md](references/review-replies.md)
 8. **Short-poll + decide.** [references/convergence-loop.md](references/convergence-loop.md). If green and no new actionable signals → converge. If new codebase work and cycles < 3 → next cycle. If only CI-pipeline / human blockers remain → stop early (more cycles cannot help).
 
-## Done When
+## Done When (Converge)
 
 On the final observed head SHA:
 
@@ -100,6 +117,12 @@ On the final observed head SHA:
 
 ## Resource Map
 
+### Diagnose
+- [references/diagnose-workflow.md](references/diagnose-workflow.md)
+- [references/review-angles.md](references/review-angles.md)
+- [references/merge-advise.md](references/merge-advise.md)
+
+### Converge
 - [references/ownership-boundary.md](references/ownership-boundary.md) — codebase vs CI vs human
 - [references/signal-ingestion.md](references/signal-ingestion.md)
 - [references/finding-classifier.md](references/finding-classifier.md)
@@ -127,6 +150,12 @@ ci_pipeline_policy: note_and_skip  # never edit; no issue-file packaging
 
 ## Failure Handling
 
+### Diagnose
+- PR number missing → STOP; ask or list open PRs
+- Skip review comments → BLOCK verdict; fetch comments first
+- CI logs unavailable → note `Unknown` for CI; still report reviews/blockers
+
+### Converge
 - CI logs missing → retry annotations/job logs once; if ownership unknown, note and continue other clusters
 - Rate limit → honor reset, retry once, continue
 - Fix breaks a gate → revert that fix, defer with reason, keep the rest of the batch
@@ -136,4 +165,8 @@ ci_pipeline_policy: note_and_skip  # never edit; no issue-file packaging
 
 ## Final Status (required)
 
+### Diagnose
+Verdict · blockers · warnings · key review concerns · YNP
+
+### Converge
 Cycles run · head SHA · CI result · fixed clusters · remaining codebase / CI-pipeline / human blockers · scanner pending-remote if any.

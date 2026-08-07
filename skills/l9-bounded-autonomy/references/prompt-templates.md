@@ -27,7 +27,7 @@ Loop:
 4. If conflicts: fetch base, attempt resolve only when intent is clear; else escalate
 
 Remediation (only if packet covers this PR):
-- Follow l9-pr-remediation / babysit: scoped fix → local verify → ONE commit → push → recheck
+- Follow l9-pr-remediation Converge: scoped fix → local verify → ONE commit → push → recheck
 - Max 3 fix-push cycles; then escalate with blockers
 - Without packet coverage: watch-only; escalate proposed diffs to main
 
