@@ -1,0 +1,1188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.github.io/l9-pr-remediation/schemas/run-report.schema.json",
+  "title": "L9 PR Remediation Run Report",
+  "description": "Normative evidence for bounded codebase-only PR remediation, CI-pipeline signal handoff, PR readiness, terminal escalation, and final tarball.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run",
+    "preflight",
+    "cycles",
+    "gates",
+    "findings",
+    "ci_pipeline_signals",
+    "pr_readiness",
+    "terminal_escalation",
+    "convergence",
+    "summary",
+    "deliverable"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "3.0"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "repo",
+        "mode",
+        "configured_max_cycles",
+        "pr"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[^/]+/[^/]+$"
+        },
+        "mode": {
+          "enum": [
+            "mutating",
+            "dry_run"
+          ]
+        },
+        "configured_max_cycles": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "pr": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "number",
+            "branch",
+            "head_sha_before",
+            "cycles_run"
+          ],
+          "properties": {
+            "number": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "branch": {
+              "type": "string",
+              "minLength": 1
+            },
+            "head_sha_before": {
+              "$ref": "#/$defs/Sha"
+            },
+            "cycles_run": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            }
+          }
+        }
+      }
+    },
+    "preflight": {
+      "$ref": "#/$defs/Preflight"
+    },
+    "cycles": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/Cycle"
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_registry",
+        "classified_findings",
+        "local_verify_log",
+        "push_record",
+        "reply_record",
+        "report_record"
+      ],
+      "properties": {
+        "gate_registry": {
+          "$ref": "#/$defs/GateRegistry"
+        },
+        "classified_findings": {
+          "$ref": "#/$defs/ClassifiedFindings"
+        },
+        "local_verify_log": {
+          "$ref": "#/$defs/LocalVerifyLog"
+        },
+        "push_record": {
+          "$ref": "#/$defs/PushRecord"
+        },
+        "reply_record": {
+          "$ref": "#/$defs/ReplyRecord"
+        },
+        "report_record": {
+          "$ref": "#/$defs/ReportRecord"
+        }
+      }
+    },
+    "findings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applied",
+        "deferred",
+        "rejected",
+        "human_decision"
+      ],
+      "properties": {
+        "applied": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AppliedFinding"
+          }
+        },
+        "deferred": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReasonedFinding"
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReasonedFinding"
+          }
+        },
+        "human_decision": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReasonedFinding"
+          }
+        }
+      }
+    },
+    "pr_readiness": {
+      "$ref": "#/$defs/PrReadiness"
+    },
+    "terminal_escalation": {
+      "$ref": "#/$defs/TerminalEscalation"
+    },
+    "convergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "convergence_status",
+        "pushes_total",
+        "commits_pushed",
+        "cycles_exhausted",
+        "protocol_violations",
+        "minimum_safe_next_action"
+      ],
+      "properties": {
+        "convergence_status": {
+          "enum": [
+            "converged",
+            "partial",
+            "blocked"
+          ]
+        },
+        "pushes_total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "commits_pushed": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/Sha"
+          }
+        },
+        "cycles_exhausted": {
+          "type": "boolean"
+        },
+        "protocol_violations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "minimum_safe_next_action": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixes_applied",
+        "deferred",
+        "rejected",
+        "human_decisions",
+        "ci_pipeline_signals"
+      ],
+      "properties": {
+        "fixes_applied": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deferred": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "human_decisions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReviewSource"
+          }
+        },
+        "ci_pipeline_signals": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "deliverable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created",
+        "tarball_path",
+        "contains_run_report",
+        "contains_convergence_report",
+        "contains_pr_ready_evidence",
+        "contains_issue_fallback",
+        "contains_ci_issue_files",
+        "ci_issue_file_count"
+      ],
+      "properties": {
+        "created": {
+          "type": "boolean"
+        },
+        "tarball_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contains_run_report": {
+          "type": "boolean"
+        },
+        "contains_convergence_report": {
+          "type": "boolean"
+        },
+        "contains_pr_ready_evidence": {
+          "type": "boolean"
+        },
+        "contains_issue_fallback": {
+          "type": "boolean"
+        },
+        "contains_ci_issue_files": {
+          "type": "boolean"
+        },
+        "ci_issue_file_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ci_pipeline_signals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CiPipelineSignal"
+      }
+    }
+  },
+  "$defs": {
+    "Sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "NullableSha": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Sha"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "github_connection_established",
+        "repo_resolved",
+        "pr_resolved",
+        "local_checkout_available",
+        "branch_write_available",
+        "issue_write_available",
+        "mutation_authorized",
+        "resume_source",
+        "blockers"
+      ],
+      "properties": {
+        "github_connection_established": {
+          "type": "boolean"
+        },
+        "repo_resolved": {
+          "type": "boolean"
+        },
+        "pr_resolved": {
+          "type": "boolean"
+        },
+        "local_checkout_available": {
+          "type": "boolean"
+        },
+        "branch_write_available": {
+          "type": "boolean"
+        },
+        "issue_write_available": {
+          "type": "boolean"
+        },
+        "mutation_authorized": {
+          "type": "boolean"
+        },
+        "resume_source": {
+          "enum": [
+            "fresh",
+            "checkpoint",
+            "remote_markers"
+          ]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "Cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cycle_number",
+        "input_head_sha",
+        "output_head_sha",
+        "signals_ingested",
+        "actionable_findings",
+        "ci_pipeline_signals_discovered",
+        "ci_pipeline_mutations_attempted",
+        "changes_applied",
+        "local_verify_iterations",
+        "local_verify_green",
+        "commit_sha",
+        "push_count",
+        "remote_ci",
+        "new_actionable_comments",
+        "outcome",
+        "checkpoint_path"
+      ],
+      "properties": {
+        "cycle_number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "input_head_sha": {
+          "$ref": "#/$defs/Sha"
+        },
+        "output_head_sha": {
+          "$ref": "#/$defs/Sha"
+        },
+        "signals_ingested": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actionable_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "changes_applied": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "local_verify_iterations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "local_verify_green": {
+          "type": "boolean"
+        },
+        "commit_sha": {
+          "$ref": "#/$defs/NullableSha"
+        },
+        "push_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "remote_ci": {
+          "enum": [
+            "success",
+            "failure",
+            "pending",
+            "not_run",
+            "unavailable"
+          ]
+        },
+        "new_actionable_comments": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outcome": {
+          "enum": [
+            "converged",
+            "retry",
+            "blocked",
+            "noop"
+          ]
+        },
+        "checkpoint_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ci_pipeline_signals_discovered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ci_pipeline_mutations_attempted": {
+          "const": 0
+        }
+      }
+    },
+    "GateRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pr_scope_total",
+        "total_gates",
+        "locally_reproducible_gates",
+        "gates"
+      ],
+      "properties": {
+        "pr_scope_total": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "total_gates": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "locally_reproducible_gates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "source",
+              "required",
+              "can_run_locally"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "command": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "can_run_locally": {
+                "type": "boolean"
+              },
+              "requires_secrets": {
+                "type": "boolean"
+              },
+              "remote_confirmation_required": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ClassifiedFindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ci_pipeline_signal",
+        "total",
+        "cycle_scope"
+      ],
+      "properties": {
+        "blocking": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "auto_apply": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "validate": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "discussion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deferred": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ignored": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "human_decision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cycle_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ci_pipeline_signal": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "LocalVerifyLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "iteration",
+        "gates_run",
+        "gates_passed",
+        "all_green",
+        "results"
+      ],
+      "properties": {
+        "iteration": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "gates_run": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gates_passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "all_green": {
+          "type": "boolean"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "gate",
+              "command",
+              "exit_code"
+            ],
+            "properties": {
+              "gate": {
+                "type": "string",
+                "minLength": 1
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exit_code": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "PushRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit_sha",
+        "commit_message",
+        "files_in_commit",
+        "ci_pipeline_files_in_commit",
+        "changed_paths",
+        "push_count_this_cycle",
+        "branch",
+        "idempotency_trailer"
+      ],
+      "properties": {
+        "commit_sha": {
+          "$ref": "#/$defs/NullableSha"
+        },
+        "commit_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "files_in_commit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "push_count_this_cycle": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "idempotency_trailer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "changed_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ci_pipeline_files_in_commit": {
+          "const": 0
+        }
+      }
+    },
+    "ReplyRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threads_total",
+        "threads_replied",
+        "threads_resolved",
+        "threads_requiring_human",
+        "threads_routed_ci",
+        "issues_created",
+        "ci_issue_files_created",
+        "batch_summary_posted"
+      ],
+      "properties": {
+        "threads_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "threads_replied": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "threads_resolved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "threads_requiring_human": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues_created": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "batch_summary_posted": {
+          "type": "boolean"
+        },
+        "threads_routed_ci": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ci_issue_files_created": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ReportRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_report_emitted",
+        "deliverable_emitted"
+      ],
+      "properties": {
+        "run_report_emitted": {
+          "type": "boolean"
+        },
+        "deliverable_emitted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "AppliedFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "reviewer",
+        "file",
+        "commit",
+        "confidence",
+        "disposition",
+        "repair_domain",
+        "tests"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lines": {
+          "type": "string"
+        },
+        "commit": {
+          "$ref": "#/$defs/Sha"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "disposition": {
+          "enum": [
+            "AUTO_APPLY",
+            "VALIDATE"
+          ]
+        },
+        "tests": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "repair_domain": {
+          "const": "codebase"
+        }
+      }
+    },
+    "ReasonedFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "reviewer",
+        "file",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "PrReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ready",
+        "evaluated_head_sha",
+        "head_sha_matches_remote",
+        "required_checks_green",
+        "mergeable",
+        "draft",
+        "review_decision_acceptable",
+        "actionable_threads_remaining",
+        "human_decisions_remaining",
+        "ci_pipeline_threads_remaining",
+        "codebase_blockers_remaining",
+        "ci_pipeline_blockers_remaining",
+        "blocking_findings_remaining",
+        "worktree_clean"
+      ],
+      "properties": {
+        "ready": {
+          "type": "boolean"
+        },
+        "evaluated_head_sha": {
+          "$ref": "#/$defs/Sha"
+        },
+        "head_sha_matches_remote": {
+          "type": "boolean"
+        },
+        "required_checks_green": {
+          "type": "boolean"
+        },
+        "mergeable": {
+          "type": "boolean"
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "review_decision_acceptable": {
+          "type": "boolean"
+        },
+        "actionable_threads_remaining": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "human_decisions_remaining": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocking_findings_remaining": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "worktree_clean": {
+          "type": "boolean"
+        },
+        "codebase_blockers_remaining": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ci_pipeline_blockers_remaining": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ci_pipeline_threads_remaining": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "TerminalEscalation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "creation_attempted"
+          ],
+          "properties": {
+            "mode": {
+              "const": "none"
+            },
+            "creation_attempted": {
+              "const": false
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "creation_attempted",
+            "marker",
+            "title",
+            "issue_url"
+          ],
+          "properties": {
+            "mode": {
+              "const": "github_issue"
+            },
+            "creation_attempted": {
+              "const": true
+            },
+            "marker": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issue_url": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "creation_attempted",
+            "marker",
+            "title",
+            "fallback_issue_path"
+          ],
+          "properties": {
+            "mode": {
+              "const": "fallback_artifact"
+            },
+            "creation_attempted": {
+              "type": "boolean"
+            },
+            "marker": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fallback_issue_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "creation_error": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "creation_attempted",
+            "issue_paths"
+          ],
+          "properties": {
+            "mode": {
+              "const": "ci_signal_bundle"
+            },
+            "creation_attempted": {
+              "const": false
+            },
+            "issue_paths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^issues/ci-pipeline/[^/]+\\.md$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ReviewSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "enabled",
+        "queried",
+        "required_source"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "queried": {
+          "type": "boolean"
+        },
+        "required_source": {
+          "type": "boolean"
+        },
+        "gate_status": {
+          "enum": [
+            "passed",
+            "failed",
+            "none",
+            "unavailable"
+          ]
+        },
+        "issues_ingested": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skip_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "CiPipelineSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "fingerprint",
+        "classification",
+        "title",
+        "root_cause",
+        "owning_surface",
+        "affected_checks",
+        "evidence",
+        "source_repo",
+        "source_pr",
+        "head_sha",
+        "blocks_pr",
+        "repair_attempted",
+        "repository_files_modified",
+        "downstream_owner",
+        "issue_file_path",
+        "acceptance_criteria"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CI-[A-Za-z0-9._-]+$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "classification": {
+          "const": "CI_PIPELINE_SIGNAL"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root_cause": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owning_surface": {
+          "enum": [
+            "workflow",
+            "reusable_workflow",
+            "action",
+            "runner",
+            "permissions",
+            "secrets",
+            "oidc",
+            "branch_protection",
+            "check_wiring",
+            "cache",
+            "external_service",
+            "shared_ci",
+            "ci_only_script",
+            "policy_config",
+            "unknown"
+          ]
+        },
+        "affected_checks": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_repo": {
+          "type": "string",
+          "pattern": "^[^/]+/[^/]+$"
+        },
+        "source_pr": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "$ref": "#/$defs/Sha"
+        },
+        "blocks_pr": {
+          "type": "boolean"
+        },
+        "repair_attempted": {
+          "const": false
+        },
+        "repository_files_modified": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "downstream_owner": {
+          "const": "ci_remediation_agent"
+        },
+        "issue_file_path": {
+          "type": "string",
+          "pattern": "^issues/ci-pipeline/[^/]+\\.md$"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reproduction": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

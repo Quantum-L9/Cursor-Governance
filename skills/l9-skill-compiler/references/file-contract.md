@@ -45,7 +45,7 @@ Avoid:
 
 `SKILL.md` also carries audit fields in the same YAML frontmatter block (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
 
-Do **not** create `agents/openai.yaml` or duplicate metadata in HTML comments on `SKILL.md`.
+Always create `agents/meta.yaml` for adapter display metadata. Never create `agents/openai.yaml`. Do not duplicate metadata in HTML comments on `SKILL.md`.
 
 ### Repo registries (PlasticOS)
 

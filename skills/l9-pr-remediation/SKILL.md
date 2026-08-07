@@ -1,230 +1,139 @@
 ---
 name: l9-pr-remediation
-description: recursive pr improvement loop — read ci failures, code review bot comments, sonarcloud static-analysis findings, pre-existing ruff/mypy/eslint/typescript/test/build debt on the baseline, and codeql code-scanning security alerts, apply root-cause fixes, verify every gate locally, push one commit to the pr branch, reply to review threads, wait for re-run, loop until ci is green and no new actionable signals remain. use when a pr has failing ci, a failing sonarcloud quality gate or open sonarcloud issues, a failing codeql check or open code-scanning alerts, unresolved review comments from gemini or coderabbit, pre-existing lint/type debt to pay down (ruff, mypy, eslint, tsc) via an audit-first entry mode, or when the user asks to fix a pr, remediate review feedback, static-analysis findings, or codeql security alerts, or run a pr improvement loop.
+description: converge a github pr in the fewest cycles by concurrently remediating every actionable signal — ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt — with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
-tags: [l9, pr, ci, code-review, sonarcloud, static-analysis, ruff, mypy, eslint, typescript, technical-debt, codeql, code-scanning, security, recursive, remediation, github, review-replies]
+tags: [l9, pr, ci, code-review, sonarcloud, codeql, debt, remediation, concurrent, github]
 owner: igor_beylin
 status: active
-version: 2.4.0
-updated: 2026-08-04
+version: 3.0.0
+updated: 2026-08-06
 disable-model-invocation: true
 ---
 
-# PR Remediation Loop
+# PR Remediation
 
 ## Purpose
 
-Operate a closed-loop remediation cycle on an open pull request: ingest CI gate failures AND code review bot comments (Gemini, CodeRabbit, GitHub reviewers), apply fixes, verify ALL gates locally, push ONE commit, reply to every review thread with canonical responses, wait for CI confirmation, then loop until converged or max cycles reached.
+Drive one open pull request to merge-ready in the **fewest cycles and wall-clock time**. Ingest every actionable signal, remediate all safe codebase defects in parallel, verify locally, push once, reply, short-poll CI, repeat until green or the cycle cap.
 
-**Bounded autonomy:** when used as a **background PR-poll worker** under
-`l9-bounded-autonomy` / `/autonomy`, run inside the campaign authorization
-**packet** (declared PR/branch only; ≤3 cycles; never merge). Main continues
-other work — do not expect the parent turn to AwaitShell on this loop.
+One path. Full depth. No modes. No packaging theater.
 
-## Core Contract
+## Target
 
-| Input | Source | Tool |
-|-------|--------|------|
-| CI failures | GitHub Actions logs | `gh run view --log-failed` |
-| Review comments | PR review threads | `gh api /repos/{owner}/{repo}/pulls/{pr}/reviews` + `gh pr view --comments` |
-| Inline suggestions | PR diff comments | `gh api /repos/{owner}/{repo}/pulls/{pr}/comments` |
-| CI workflow definitions | `.github/workflows/*.yml` | File read (for gate discovery) |
-| SonarCloud findings | SonarCloud API (`/issues/search`, `/rules/show`, quality gate) | `scripts/sonar_fetch.py` (stdlib, secret-safe) |
-| Pre-existing lint/type/test/build debt | Repository-owned toolchain (Ruff, mypy, ESLint, `tsc`, tests, build) on the `main` baseline | `scripts/debt_audit.py` (stdlib, secret-safe) |
-| CodeQL code-scanning alerts | GitHub code-scanning API (`/code-scanning/alerts`, `/code-scanning/analyses`) | `scripts/codeql_fetch.py` (stdlib, secret-safe, read-only) |
+Resolve `{owner}/{repo}#{pr}` (or open a remediation PR on the current branch when the user points at baseline debt/alerts with no PR yet). Stay on that PR until converged or blocked.
 
-| Output | Condition |
-|--------|-----------|
-| ONE commit pushed to PR branch | Every cycle that produces actionable changes |
-| Canonical replies to ALL review threads | Every cycle, after push |
-| Batch summary comment on PR | Every cycle, after replies |
-| Deferred issues created | When findings are deferred |
-| Convergence report | Final cycle |
+## Inputs → Actions
+
+| Signal | Source | Action |
+|--------|--------|--------|
+| CI failures | `gh run view --log-failed`, annotations | Fix codebase root cause |
+| Review + inline | `gh api` reviews/comments | Validate against current code; fix or reply |
+| Workflows | `.github/workflows/*.yml` | Read-only gate discovery |
+| SonarCloud | `scripts/sonar_fetch.py` | Confirm vs source; fix clusters |
+| CodeQL | `scripts/codeql_fetch.py` | Dataflow-confirm; fix + negative test |
+| Lint/type/test/build debt | `scripts/debt_audit.py` + repo toolchain | Fix baseline + regressions |
+
+## Outputs (per cycle that changes code)
+
+- One commit, one push
+- Canonical replies on touched threads
+- Short convergence status (what fixed, what remains, CI note)
+
+No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
 
 ## Authority Order
 
-1. User request (PR number, repo, specific instructions).
-2. CI failure logs (exact error output from the failing gate).
-3. Review bot comments (Gemini, CodeRabbit, human reviewers).
-4. Repo ground truth: `.github/workflows/*.yml`, `tsconfig.json`, `package.json`, lint configs, `sonar-project.properties`.
-5. Current SonarCloud API evidence (confirmed against source — never the raw finding alone).
-6. This skill's references.
-7. `Unknown` — do not invent fixes for unclear comments or unconfirmed findings.
+1. Latest user instruction and explicit PR/scope
+2. Current repository source and tests
+3. Required-check logs and branch-protection evidence
+4. Human review, then blocking bots, then newer/higher-confidence comments
+5. Scanner API evidence confirmed against current source
+6. This skill + references
+7. Unknown — do not invent; note and continue independent work
 
-## Non-Negotiable Rules
+## Laws
 
-1. **ONE commit, ONE push per cycle.** ALL fixes for a cycle MUST be batched into a single commit with a single push. Multiple pushes per cycle is a protocol violation.
-2. **Local verify is a BLOCKING GATE.** MUST run ALL CI gate commands locally and confirm exit 0 before any push. If local verify fails, fix the failure BEFORE pushing — do NOT push and hope CI catches it.
-3. **Gate discovery BEFORE fixing.** MUST parse ALL workflow YAML files to enumerate every CI gate command BEFORE applying any fixes. No surprises from unknown gates.
-4. **Remote CI is confirmation, not discovery.** After push, CI polling confirms what local verify already proved. If CI finds something local verify missed, that's a protocol failure to document.
-5. **Every thread gets a reply.** No silent fixes. Every review comment receives a canonical-format response and is resolved.
-6. **Validation gates are mandatory.** Each workflow step produces a required artifact (see validation-gates.md). Cannot advance without the artifact.
-7. **MUST NOT loop more than 3 cycles** (configurable via `max_cycles`).
-8. **MUST NOT fix comments marked as "discussion" or "question"** without user confirmation.
-9. **MUST NOT force-push or rewrite history** on the PR branch.
-10. **MUST preserve existing PR description and metadata.**
-11. **MUST label deferred items explicitly with reason and linked issue.**
-12. **When parallel CI jobs fail independently**, use parallel triage (one fix per job, still batched into one commit).
-13. **When review comments conflict with CI requirements**, CI wins (it blocks merge).
-14. **SonarCloud findings are retrieved from the API and confirmed against current source** before any fix. Never modify code solely because SonarCloud reported it; fix root causes, not symptoms, and cluster issues that share one defect.
-15. **No suppression shortcuts to clear SonarCloud.** MUST NOT use `NOSONAR`, blanket rule suppression, broad exclusions, or lower a quality-gate threshold. A narrow, documented suppression is allowed only for a *proven* false positive where a code fix would be less safe.
-16. **Never mutate remote SonarCloud state** (issue status, resolution, or hotspot review) and **never expose the token** — read `SONAR_TOKEN` by environment reference only.
-17. **A local fix is not a remote SonarCloud closure.** The quality gate is not green until observed green on the exact analyzed revision; otherwise report `PENDING_REMOTE_ANALYSIS` and claim no closure.
-18. **Pre-existing debt is fixed at the root, never suppressed.** MUST NOT clear Ruff/mypy/ESLint/`tsc` by blanket `noqa`/`type: ignore`/`eslint-disable`/`@ts-ignore`, broad tool exclusions, weakening strictness or a quality threshold, deleting or skipping tests, replacing real logic with stubs, or adding `Any`/unsafe casts/non-null assertions to hide a design defect. A narrow, documented suppression is allowed only for a *proven* false positive where a code fix would be less safe.
-19. **Separate baseline debt from regressions.** MUST record pre-existing baseline failures (present on the recorded `main` SHA) distinctly from regressions introduced during remediation. Both are resolved before completion, but they are reported separately.
-20. **Use the repository-owned toolchain, unmodified.** MUST detect the repository's actual language/config and prefer its Make targets or package scripts; MUST NOT introduce Python or Node tooling into a repository that does not already use it.
-21. **CodeQL alerts are confirmed by dataflow, then fixed at the root — never dismissed or excluded.** MUST trace source→sink and confirm the unsafe behavior against current source before any fix; MUST NOT dismiss a valid alert, add a blanket CodeQL exclusion or `paths-ignore` to reduce counts, remove `security-extended`/weaken a query suite, suppress SARIF upload, or mark an alert false-positive without path-flow proof. A remote dismissal is fail-closed: allowed only for a proven false positive under documented repository security policy.
-22. **Fix the cause, not the reported line.** MUST resolve every equivalent path that shares the alert's root cause (allowlist over blacklist; parameterized API over escaping; validate after canonicalization; authorize before mutation), and MUST add a negative/regression test that reproduces the vulnerable path. Closing only the reported line while equivalent paths remain is a protocol failure.
-23. **A local CodeQL pass is not remote closure, and code-scanning reads are read-only.** The CodeQL check is not green until analysis completes for the exact candidate head SHA with no active in-scope alerts; `codeql_fetch.py` never mutates alert state and reads `GITHUB_TOKEN`/`GH_TOKEN` by environment reference only.
+1. **One path, max depth.** Always ingest CI + reviews + Sonar (if configured/failing) + CodeQL (if failing/open) + debt (if baseline/toolchain red). No dry-run / audit-first / security / CI-signal modes.
+2. **Max three cycles.** Never start cycle 4.
+3. **Codebase only.** Repair source, tests, fixtures, package deps. Never edit `.github/workflows/**`, actions, runners, permissions, secrets, OIDC, branch protection, check wiring, or CI-only infra. Pipeline blockers: record one line in the status and keep remediating everything else.
+4. **Ownership before edit.** Load [references/ownership-boundary.md](references/ownership-boundary.md). Edit only codebase-owned defects.
+5. **Concurrent by default.** Independent failure clusters (CI jobs, review clusters, scanner clusters) are triaged/fixed in parallel (parallel agents/Tasks). Merge into one worktree batch → one commit.
+6. **One commit, one push per cycle.** Zero if nothing codebase-safe remains.
+7. **Local verify blocks push.** Run every locally reproducible required gate; fix until green (≤5 re-diag iterations). Remote CI confirms; it does not discover.
+8. **Short poll.** After push: poll every **15s** (or `gh run watch`); max **8 minutes** per cycle. Do not idle.
+9. **Validate suggestions against current code.** Comment snippets are not ground truth.
+10. **No gate weakening / suppressions.** No `NOSONAR`, blanket noqa/type-ignore/eslint-disable, CodeQL dismissals/exclusions, skipped tests, or lowered thresholds. Narrow documented suppression only for a *proven* false positive where a code fix is less safe.
+11. **Every thread answered.** Reply Fixed / Deferred / Acknowledged / Disagreed. Resolve when done; leave true human-decision threads open with the decision named.
+12. **Never** force-push, rewrite history, expose tokens, merge, or touch out-of-scope PRs.
+13. **Scanner closure is remote.** Local fix ≠ Sonar/CodeQL closed until the exact head SHA is green remotely (`PENDING_REMOTE_ANALYSIS` otherwise). Fetch scripts are read-only; never mutate remote issue/alert state.
 
-## Compact Workflow
+## Hot Path
 
-**Entry modes.** Two ways in, one convergence loop:
-- *PR-attached* (default) — a PR already exists; start at step 1 and react to its signals.
-- *Audit-first* — no PR yet, the task is pre-existing Ruff/mypy/ESLint/`tsc`/test/build
-  debt on the baseline. Load [references/debt-remediation.md](references/debt-remediation.md):
-  fetch `origin/main` and record its SHA, create the isolated branch, run
-  `scripts/debt_audit.py` to snapshot the baseline, classify and cluster the debt, fix
-  root causes, then rejoin at step 6 (local verify) → push → open PR → converge.
-- *Security-remediation* — the task is CodeQL code-scanning alerts (failing CodeQL check
-  or open alerts on `main`). Load [references/codeql-remediation.md](references/codeql-remediation.md):
-  create the isolated branch, run `scripts/codeql_fetch.py` to snapshot the alert
-  baseline, audit analysis coverage, confirm each alert by tracing dataflow, cluster by
-  root cause, fix at the trust boundary with a negative test, then rejoin at step 6.
+0. **Resolve PR + resume.** Identify repo/PR/branch. Reuse prior cycle markers if present (`Remediation-Cycle:` trailer, `<!-- l9-remediation:... -->` replies). If no PR and the user wants baseline debt/alerts fixed: create branch, remediate, open PR, continue on that PR — same path.
+1. **Discover gates (read-only).** Parse workflows + package/Make scripts into a local verify list. Do not edit CI surfaces.
+2. **Ingest all signals in parallel.**
+   - CI failed logs + annotations
+   - Unresolved reviews + inline comments
+   - Sonar when configured or check failing → [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) + `scripts/sonar_fetch.py`
+   - CodeQL when check failing or alerts open → [references/codeql-remediation.md](references/codeql-remediation.md) + `scripts/codeql_fetch.py`
+   - Debt when toolchain/baseline red → [references/debt-remediation.md](references/debt-remediation.md) + `scripts/debt_audit.py`
+   - Details: [references/signal-ingestion.md](references/signal-ingestion.md)
+3. **Classify once.** Ownership (`CODEBASE` / `CI_PIPELINE` / `HUMAN` / `FALSE_POSITIVE`) then severity. Cluster by root cause. [references/finding-classifier.md](references/finding-classifier.md) + [references/ownership-boundary.md](references/ownership-boundary.md)
+4. **Fix the full safe batch concurrently.** All codebase clusters this cycle. Skip only true human-product forks and CI-pipeline surfaces (note them). Methodology: [references/fix-engine.md](references/fix-engine.md) + scanner refs. Do not commit yet.
+5. **Local verify (blocking).** Every local gate green. On fail: fix and re-run all. ≤5 iterations.
+6. **Commit + push once.** Conventional message; trailer `Remediation-Cycle: {repo}#{pr}/cycle-{N}`.
+7. **Reply.** Canonical replies; resolve completed threads. [references/review-replies.md](references/review-replies.md)
+8. **Short-poll + decide.** [references/convergence-loop.md](references/convergence-loop.md). If green and no new actionable signals → converge. If new codebase work and cycles < 3 → next cycle. If only CI-pipeline / human blockers remain → stop early (more cycles cannot help).
 
-1. **Identify PR** — get PR number, repo, branch from user or context.
-2. **Discover CI gates** — read ALL `.github/workflows/*.yml` files. Extract every `run:` command that can fail. Build the local verify command list. → **Produce Gate A artifact.**
-3. **Ingest signals** — load [references/signal-ingestion.md](references/signal-ingestion.md).
-   - Fetch CI run status and failed logs.
-   - Fetch all unresolved review comments and inline suggestions.
-   - If SonarCloud is configured (`sonar-project.properties`) or the SonarCloud check is
-     failing, load [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md),
-     bind project/branch identity, and run `scripts/sonar_fetch.py` to snapshot every issue
-     for the exact PR/branch (fail-closed on ambiguous identity or unreconcilable revision).
-   - If remediating pre-existing lint/type debt (audit-first mode, or a baseline-level
-     Ruff/mypy/ESLint/`tsc`/test/build failure), load
-     [references/debt-remediation.md](references/debt-remediation.md) and run
-     `scripts/debt_audit.py` to snapshot the toolchain baseline (detected languages, tool
-     versions, per-gate exit codes, suppression counts, and false-pass flags).
-   - If the CodeQL check is failing or code-scanning alerts are open, load
-     [references/codeql-remediation.md](references/codeql-remediation.md) and run
-     `scripts/codeql_fetch.py` to snapshot every active (and dismissed, for review) alert
-     for the exact ref, plus the latest analysis SHA (fail-closed on incomplete pagination
-     or an unauthenticated code-scanning response).
-4. **Classify findings** — load [references/finding-classifier.md](references/finding-classifier.md).
-   - Route CI failures by type (lint, type-check, test, build, security).
-   - Route review comments by actionability (actionable, discussion, deferred).
-   - Confirm each SonarCloud finding against current source; drop stale/false-positive/
-     generated-scope findings with evidence; cluster the rest by root cause.
-   - Confirm each pre-existing debt finding against current source; separate baseline debt
-     from regressions introduced during remediation; apply the hostile-audit rules (empty
-     targets, broad excludes, stale suppressions, false passes) before trusting any PASS.
-   - Confirm each CodeQL alert by tracing source→sink dataflow at the analyzed revision;
-     classify validity, verify analysis coverage isn't hiding equivalent paths, and cluster
-     by shared root cause (untrusted source, sink, missing validation, authz boundary).
-   - → **Produce Gate B artifact.**
-5. **Apply ALL fixes** — load [references/fix-engine.md](references/fix-engine.md).
-   - Fix ALL blocking items (CI failures).
-   - Fix ALL actionable review comments.
-   - Fix confirmed SonarCloud root causes with the minimal change (one cluster at a time);
-     no suppression shortcuts.
-   - Fix confirmed pre-existing lint/type debt at the authoritative owner (one cluster at a
-     time); add a regression test for every behavioral fix; no blanket `noqa`/`type: ignore`/
-     `eslint-disable`, no strictness or threshold weakening, no deleted or skipped tests.
-   - Fix confirmed CodeQL alerts at the earliest trust boundary (allowlist / parameterized
-     API, validate after canonicalization, authorize before the sensitive action); add a
-     negative test proving the vulnerable path is closed and equivalent paths are covered.
-     No dismissals, CodeQL exclusions, query-suite weakening, or SARIF suppression.
-   - Skip discussion-only and deferred items.
-   - Do NOT commit or push yet.
-   - → **Produce Gate C artifact** (git diff --stat).
-6. **Local verify (BLOCKING GATE)** — run EVERY CI gate command locally.
-   - If ANY gate fails → fix it immediately, re-run ALL gates.
-   - Repeat until ALL gates pass locally (max 5 iterations).
-   - Only proceed to step 7 when local verify is fully green.
-   - → **Produce Gate D artifact** (all exit codes = 0).
-7. **Commit and push (ONCE)** — single commit with conventional message, single push.
-   - → **Produce Gate E artifact** (commit SHA, push count = 1).
-8. **Reply to review threads** — load [references/review-replies.md](references/review-replies.md).
-   - Reply to every thread using canonical format (Fixed/Deferred/Acknowledged/Disagreed).
-   - Create issues for deferred items.
-   - Resolve all threads.
-   - Post batch summary comment.
-   - → **Produce Gate F artifact** (reply count, resolved count).
-9. **Wait and confirm** — load [references/convergence-loop.md](references/convergence-loop.md).
-   - Wait for CI to complete (poll `gh run list` on the branch).
-   - CI should pass (local verify already confirmed). If it fails, investigate the delta.
-   - Check for new review comments posted after push.
-   - If new actionable signals exist → loop back to step 3.
-   - If CI green AND no new actionable comments → converge.
-10. **Report** — emit convergence block and deferred items list.
+## Done When
+
+On the final observed head SHA:
+
+- required checks success (or only recorded CI-pipeline blockers remain)
+- no merge conflict; review not requesting changes from unaddressed codebase items
+- no unanswered actionable review threads
+- Sonar/CodeQL/debt: confirmed codebase root causes fixed; remote scanner closure claimed only when observed
+- worktree clean
+- status names remaining CI-pipeline and human blockers (if any)
 
 ## Resource Map
 
-- [references/signal-ingestion.md](references/signal-ingestion.md) — how to fetch and parse CI logs + review comments + workflow YAML.
-- [references/finding-classifier.md](references/finding-classifier.md) — classification rules for routing signals to fix strategies.
-- [references/fix-engine.md](references/fix-engine.md) — fix methodology per finding type, local verification protocol, batch discipline.
-- [references/review-replies.md](references/review-replies.md) — canonical reply formats, thread resolution, batch summary, downstream leverage.
-- [references/convergence-loop.md](references/convergence-loop.md) — wait, poll, re-check, and convergence gate logic.
-- [references/validation-gates.md](references/validation-gates.md) — enforcement layer with required artifacts at each step.
-- [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md) — SonarCloud signal: fail-closed API retrieval, root-cause clustering, minimal-fix contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule.
-- [references/debt-remediation.md](references/debt-remediation.md) — pre-existing Ruff/mypy/ESLint/`tsc`/test/build debt signal: language & toolchain detection, audit-first entry mode, hostile-audit rules, root-cause clustering, the prohibited-shortcut contract, required artifacts, and the final-verdict taxonomy.
-- [references/codeql-remediation.md](references/codeql-remediation.md) — CodeQL code-scanning signal: fail-closed alert retrieval, analysis-coverage audit, hostile dataflow review (sanitizer-dominates-sink, equivalent paths), root-cause clustering, the no-dismissal/no-exclusion contract, custom-query/model + dismissal policy, required artifacts, and the final-verdict taxonomy.
-- [scripts/sonar_fetch.py](scripts/sonar_fetch.py) — stdlib, secret-safe fetcher: paginates issues + rules + quality gate + measures into a secret-free snapshot; fail-closed on incomplete pagination.
-- [scripts/debt_audit.py](scripts/debt_audit.py) — stdlib, secret-safe baseline auditor: detects the owned toolchain, runs each gate with a fixed argv allowlist, and records exit codes, tool versions, suppression counts, and false-pass flags into a secret-free snapshot; fail-closed on an unclassifiable toolchain or out-of-tree output path.
-- [scripts/codeql_fetch.py](scripts/codeql_fetch.py) — stdlib, secret-safe, read-only code-scanning fetcher: paginates active + dismissed CodeQL alerts and the latest analysis metadata into a secret-free snapshot; host-allowlisted (SSRF), output confined to the tree, fail-closed on incomplete pagination or an unauthenticated response.
+- [references/ownership-boundary.md](references/ownership-boundary.md) — codebase vs CI vs human
+- [references/signal-ingestion.md](references/signal-ingestion.md)
+- [references/finding-classifier.md](references/finding-classifier.md)
+- [references/fix-engine.md](references/fix-engine.md)
+- [references/review-replies.md](references/review-replies.md)
+- [references/convergence-loop.md](references/convergence-loop.md) — 15s poll, early stop
+- [references/validation-gates.md](references/validation-gates.md) — inline cycle proofs (not deliverables)
+- [references/sonarcloud-remediation.md](references/sonarcloud-remediation.md)
+- [references/debt-remediation.md](references/debt-remediation.md)
+- [references/codeql-remediation.md](references/codeql-remediation.md)
+- [scripts/sonar_fetch.py](scripts/sonar_fetch.py)
+- [scripts/debt_audit.py](scripts/debt_audit.py)
+- [scripts/codeql_fetch.py](scripts/codeql_fetch.py)
 
-## Validation
+## Defaults
 
-Before declaring convergence:
-- CI status MUST be `success` on latest commit.
-- SonarCloud: confirmed root causes fixed and locally validated. Remote quality-gate closure
-  is `PENDING_REMOTE_ANALYSIS` until the candidate revision is analyzed — never claimed from
-  local reasoning. No remote issue/hotspot state was mutated.
-- Pre-existing debt: every applicable Ruff/mypy/ESLint/`tsc`/test/build gate passes locally
-  through the repository-owned invocation, with no new unexplained suppressions and no
-  weakened gate; baseline debt and any remediation-introduced regressions are both resolved
-  and reported separately; final verdict assigned per debt-remediation.md.
-- CodeQL: confirmed root causes fixed at the trust boundary with negative tests; no alert
-  dismissed and no query suite / path scope weakened. Remote closure is not claimed until
-  the CodeQL check is green for the exact head SHA with no active in-scope alerts; a local
-  CodeQL pass alone is `PENDING_REMOTE_ANALYSIS`. No code-scanning alert state was mutated.
-- No new unresolved review comments posted after last push.
-- All review threads replied to and resolved.
-- All actionable findings from initial ingestion addressed or explicitly deferred.
-- All deferred items have linked issues.
-- All 6 gate artifacts produced for the final cycle.
-- Convergence block emitted with all required fields.
+```yaml
+max_cycles: 3
+max_local_verify_iterations: 5
+poll_interval_seconds: 15
+max_wait_per_cycle_minutes: 8
+parallel_clusters: true
+ci_pipeline_policy: note_and_skip  # never edit; no issue-file packaging
+```
 
 ## Failure Handling
 
-- CI logs unavailable → STOP; ask user for run ID or paste logs.
-- Review API rate-limited → wait 60s, retry once, then STOP.
-- Fix causes new CI failure → revert that fix, mark as deferred, continue.
-- Local verify passes but remote CI fails → investigate environment delta, document, defer if unresolvable.
-- Thread resolution API fails → log, continue (non-blocking for merge).
-- Max cycles reached without convergence → emit `partial` status with remaining items.
-- Conflicting review comments → mark as deferred, ask user.
-- SonarCloud project/branch identity ambiguous, or analyzed revision cannot be reconciled with
-  local source → STOP; report `BLOCKED` (do not fix against a mismatched revision).
-- SonarCloud fetch incomplete (retrieved ≠ API total) → STOP; the partial set is `BLOCKED`,
-  not a smaller issue set.
-- A SonarCloud fix would require weakening a rule/gate or its root cause is `Unknown` → stop
-  that cluster; record it, do not suppress.
-- No supported toolchain detected (`debt_audit.py` status `BLOCKED`) → STOP; report
-  `BLOCKED`. Do not introduce tooling the repository does not already use.
-- A required gate's tool is `UNAVAILABLE` / `UNAVAILABLE_NEEDS_INSTALL` → install via the
-  repository-owned method and re-run; never treat an unavailable gate as a pass.
-- `debt_audit.py` reports a `FALSE_PASS` (gate exit 0 with crash / empty-target output) →
-  treat the gate as failing; fix the real cause and re-verify before trusting it.
-- A pre-existing debt fix would require weakening Ruff/mypy/ESLint/TypeScript/tests/CI →
-  STOP that cluster; record it, do not suppress or weaken the gate.
-- `codeql_fetch.py` reports incomplete pagination or an unauthenticated/forbidden
-  code-scanning response (status `BLOCKED`) → STOP; the partial set is not the real set.
-- A CodeQL alert's analyzed revision cannot be reconciled with current source, or its root
-  cause is `Unknown` → STOP that cluster; confirm by dataflow first, never fix blind.
-- A CodeQL fix would require dismissing an alert, excluding paths, or weakening a query
-  suite → STOP; record it, do not suppress. A dismissal needs proven authority + evidence.
-- Gate artifact cannot be produced → STOP at that gate, report `blocked`.
+- CI logs missing → retry annotations/job logs once; if ownership unknown, note and continue other clusters
+- Rate limit → honor reset, retry once, continue
+- Fix breaks a gate → revert that fix, defer with reason, keep the rest of the batch
+- Local green / remote red → classify ownership; codebase → next cycle; pipeline → note and stop cycling on that item
+- Scanner identity/pagination blocked → stop that scanner cluster; continue others
+- Max cycles → report remaining items; do not start cycle 4
+
+## Final Status (required)
+
+Cycles run · head SHA · CI result · fixed clusters · remaining codebase / CI-pipeline / human blockers · scanner pending-remote if any.

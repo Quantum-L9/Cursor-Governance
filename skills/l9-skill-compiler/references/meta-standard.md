@@ -67,7 +67,7 @@ Each non-SKILL file must include a short Purpose paragraph in the comment or bod
 
 ## YAML Format
 
-Use YAML comments at the top of non-SKILL config files when needed. Prefer keeping all skill metadata in `SKILL.md` — do not create `agents/openai.yaml`.
+Use YAML comments at the top of non-SKILL config files when needed. Discovery triggers stay in `SKILL.md` frontmatter. Adapter display metadata belongs in `agents/meta.yaml` (required on build) — never `agents/openai.yaml`.
 
 ## Script Format
 

@@ -19,8 +19,10 @@ the three surfaces (CLI · Web · Mobile).
 | CLI | `$HOME/.claude/skills/` (user scope) | `ops/scripts/setup_claude_code_plugins.sh` |
 | Web · Mobile | referenced from the governance clone at `$L9_GOVERNANCE_DIR/skills/` | `web/setup.sh` (clones governance) |
 
-The governance skill corpus is reconciled into Claude Code's native skill
-locations as managed per-skill links. Model-invocable skills are selected
+The governance skill corpus (`skills/` / `.cursor-commands/skills`) is the only
+maintainable tree. Claude Code discovery dirs receive managed **per-skill
+symlinks** via `ops/scripts/reconcile_llm_skill_adapters.py` whenever the
+manifest/registry syncs — never skill copies. Model-invocable skills are selected
 proactively from their `description` / `when_to_use` signals and the canonical
 routing manifest. Explicit-only skills require direct invocation or established
 campaign authority. Skill visibility and routing are context, not mutation authority.

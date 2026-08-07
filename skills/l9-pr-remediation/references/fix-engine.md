@@ -6,26 +6,28 @@ role: fix_engine
 tags: [pr, fix, code, methodology, local-verify, batch]
 owner: igor_beylin
 status: active
-version: 2.0.0
-updated: 2026-06-18
+version: 3.0.0
+updated: 2026-08-06
 /L9_META -->
 
 # Fix Engine
 
 ## Purpose
 
-Apply fixes for classified findings. Each fix type has a specific methodology to minimize regression risk and maximize first-attempt success. ALL fixes for a cycle are batched, verified locally, and committed as ONE unit.
+Apply fixes for classified **codebase** findings. Independent clusters run concurrently (parallel agents/Tasks), then merge into one worktree batch, verify locally, and commit as ONE unit.
 
 ## Hard Rules
 
+- MUST classify ownership before editing; never edit CI_PIPELINE surfaces.
 - MUST read the target file before editing.
 - MUST understand the surrounding context (imports, types, dependencies).
 - MUST NOT change code unrelated to the finding.
 - MUST NOT introduce new warnings or errors.
-- MUST NOT commit or push until ALL fixes are applied AND local verify passes.
+- MUST NOT commit or push until ALL codebase fixes for the cycle are applied AND local verify passes.
 - MUST use the smallest diff that resolves the finding.
+- MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
-- NEVER push partial fixes — all or nothing per cycle.
+- NEVER push partial fixes — all or nothing per cycle for the codebase batch.
 
 ## Gate Discovery (MANDATORY FIRST STEP)
 

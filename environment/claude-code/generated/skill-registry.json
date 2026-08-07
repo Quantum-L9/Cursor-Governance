@@ -776,7 +776,7 @@
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "recursive PR loop that pushes commits and posts review replies \u2014 high blast radius, explicit only",
+      "reason": "unified max-depth PR remediation (concurrent clusters, push + review replies) \u2014 high blast radius, explicit only",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -877,7 +877,7 @@
       "path": "skills/l9-structured-reasoning",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "planning, architecture decisions, debugging, corpus analysis, trade-off analysis, or deep reasoning is needed"
+      "when_to_use": "planning, architecture decisions, debugging, multi-document corpus analysis, trade-off analysis, or evidence-backed decision records are needed"
     },
     {
       "composition_role": "general",
@@ -936,6 +936,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "339753b8cdb47f275e07108e398fffe873d235cb957ac9f125adf0fb1ce69a07",
-  "source_skill_corpus_sha256": "ab148cdf36b2622b13221c6c600a28413c95d83fec605cd64948057fdedcc783"
+  "source_manifest_sha256": "ccce7cd5fa1f83c4a25f3988185ee27ab3176b500ef664f175bfefd9f4f64440",
+  "source_skill_corpus_sha256": "4b0d909e92426510852fd545f6c3464e04310075c670f100d70f4c8e3df751a3"
 }

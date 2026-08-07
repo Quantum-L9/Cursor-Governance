@@ -18,7 +18,8 @@ updated: 2026-06-06
 - [ ] Frontmatter `name` matches directory name
 - [ ] L9 universal skills use `l9-` prefix and live under `~/.cursor/skills/`
 - [ ] Frontmatter `description` has explicit triggers
-- [ ] No `agents/openai.yaml`
+- [ ] `agents/meta.yaml` present when packaging for adapter display; no `agents/openai.yaml`
+- [ ] Skill discoverable under `.claude/skills/{name}/` (not a sibling under `.claude/`)
 
 ## Repo registry (when maintaining agent docs)
 

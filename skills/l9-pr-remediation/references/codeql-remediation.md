@@ -6,10 +6,10 @@ vulnerable code, and the task is to remediate the authoritative root causes and 
 green, review-clean pull request — never to dismiss, exclude, or weaken the analysis into
 silence.
 
-It shares the skill's convergence machinery (local-verify gate, one-commit-per-cycle,
-review-reply protocol, CI polling). What it adds is a **security-remediation entry mode**:
-confirm each alert against current source by tracing dataflow before touching code, fix at
-the earliest trust boundary, and prove the fix with a negative test.
+It shares the skill's single hot path (local-verify gate, one-commit-per-cycle,
+concurrent clusters, short-poll CI). For every CodeQL alert: confirm against current
+source by tracing dataflow before touching code, fix at the earliest trust boundary, and
+prove the fix with a negative test — same path, not a separate mode.
 
 ## When this signal applies
 

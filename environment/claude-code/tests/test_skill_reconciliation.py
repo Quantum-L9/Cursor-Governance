@@ -73,12 +73,12 @@ class SkillReconciliationTests(unittest.TestCase):
             self.assertTrue((workspace / ".claude" / "skills" / "l9-alpha").is_symlink())
             self.assertTrue((workspace / ".claude" / "skills" / "l9-beta").is_symlink())
             self.assertTrue(local.is_dir())
-            self.assertTrue((workspace / ".claude" / "rules" / "l9-skill-routing.md").is_symlink())
+            # Rules are whole-dir symlinked by reconcile_claude_rules.py, not per-file here.
 
             check = self.run_script(root, workspace, "--check")
             self.assertEqual(0, check.returncode, check.stdout + check.stderr)
 
-    def test_unmanaged_name_conflict_fails_closed(self) -> None:
+    def test_l9_directory_duplicate_replaced_with_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             root = base / "governance"
@@ -87,11 +87,39 @@ class SkillReconciliationTests(unittest.TestCase):
             self.make_fixture(root)
             conflict = workspace / ".claude" / "skills" / "l9-alpha"
             conflict.mkdir(parents=True)
+            (conflict / "SKILL.md").write_text("consumer-owned-copy\n")
+
+            result = self.run_script(root, workspace)
+            self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+            link = workspace / ".claude" / "skills" / "l9-alpha"
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(
+                link.resolve(),
+                (root / "skills" / "l9-alpha").resolve(),
+            )
+
+    def test_non_l9_unmanaged_conflict_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            root = base / "governance"
+            workspace = base / "workspace"
+            workspace.mkdir()
+            self.make_fixture(root)
+            # Inject a non-l9 registry name to prove consumer-owned non-l9 still fails closed.
+            registry = root / "environment" / "claude-code" / "generated" / "skill-registry.json"
+            data = json.loads(registry.read_text())
+            data["skills"].append({"name": "plasticos-local", "path": "skills/plasticos-local"})
+            registry.write_text(json.dumps(data))
+            skill = root / "skills" / "plasticos-local"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: plasticos-local\ndescription: x\n---\n")
+            conflict = workspace / ".claude" / "skills" / "plasticos-local"
+            conflict.mkdir(parents=True)
             (conflict / "SKILL.md").write_text("consumer-owned\n")
 
             result = self.run_script(root, workspace)
             self.assertEqual(1, result.returncode)
-            self.assertIn("unmanaged-conflict:l9-alpha", result.stdout)
+            self.assertIn("unmanaged-conflict:plasticos-local", result.stdout)
             self.assertEqual("consumer-owned\n", (conflict / "SKILL.md").read_text())
 
 

@@ -3,7 +3,7 @@
 ## Control plane
 
 - `SKILL.md`
-- `agents/openai.yaml`
+- `agents/meta.yaml`
 - `expertise_model.yaml`
 - `skill_intelligence_report.yaml`
 

@@ -1,12 +1,15 @@
 ---
-description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints.
+description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints; fail closed if skipped.
 alwaysApply: true
 ---
 
 # L9 skill routing (Cursor)
 
-Governance skills are model-visible through the `l9-governance` plugin / agent skill
-list. **Selecting a skill is not optional theater** — for non-trivial work, load the
+Rules SSOT: this folder (`rules/` / `.cursor-commands/rules`). Claude Code mounts the
+same folder at `.claude/rules`. Skills SSOT: `.cursor-commands/skills` via the
+`l9-governance` plugin — not a second copy under `.cursor/skills`.
+
+**Selecting a skill is not optional theater.** For non-trivial work, load the
 skill contract before improvising.
 
 ## Mandatory — first action on non-trivial tasks
@@ -16,12 +19,19 @@ skill contract before improvising.
 3. Use **one primary** skill. Add at most **two supporting** skills when each supplies
    a capability the primary does not own.
 4. Prefer a domain skill over `l9-structured-reasoning`; use structured reasoning as
-   support for architecture, planning, debugging, trade-offs, or material uncertainty.
+   support for architecture, planning, debugging, trade-offs, corpus analysis, or
+   material uncertainty.
 5. Never auto-invoke skills marked `explicit_only` in `skills/AUTONOMY_MANIFEST.yaml`
-   (e.g. `l9-bounded-autonomy`, `l9-pr-remediation`, `l9-chat-extraction`).
+   (e.g. `l9-bounded-autonomy`, `l9-pr-remediation`, `l9-forge`, `l9-ui-operator`).
 6. Skip skill load only for trivial edits / direct factual lookups where no skill
    would improve correctness or evidence.
 7. A router hint is routing evidence, not mutation authority.
+
+## Fail-closed
+
+- Non-trivial task + no skill loaded → load a skill before irreversible edits.
+- Domain skill vs general reasoning → domain skill wins.
+- Irreversible action without evidence → block or bounded probe.
 
 ## Live route hint (hook)
 
@@ -46,6 +56,7 @@ If the file is stale or absent, still select from available skills yourself.
 | Register/wire a new skill | `l9-wire-skill-into-repo` |
 | Harden/converge packs or skill usage | `l9-recursive-optimization` |
 | Graphiti / memory prefetch / health | `l9-graphiti-memory` |
+| Deep trade-offs / architecture / debug / corpus | `l9-structured-reasoning` |
 | What should I do next | `l9-ynp` |
 | CI bootstrap | `l9-setting-up-ci` |
 | Security / secrets exposure | `l9-auditing-security` |
@@ -53,4 +64,5 @@ If the file is stale or absent, still select from available skills yourself.
 | Active incident | `l9-incident-response` |
 
 Authority: `skills/AUTONOMY_MANIFEST.yaml` (`claude_routing`) +
-`environment/claude-code/generated/skill-registry.json`.
+`environment/claude-code/generated/skill-registry.json`. Sibling Claude projection:
+`l9-skill-routing.md` in this same folder.

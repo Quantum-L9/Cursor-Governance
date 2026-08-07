@@ -1,0 +1,82 @@
+# L9_META
+# l9_schema: 1
+# parent: l9-pr-remediation
+# layer: reference
+# role: expertise_model
+# tags: [pr, ci, review, codebase-remediation, ci-signal, exemplary]
+# owner: igor_beylin
+# status: active
+# version: 3.5.0
+# updated: 2026-07-28
+
+expertise_model:
+  experts:
+    - staff-code-reviewer (validates suggestions against current source)
+    - release-engineer (maps required checks without mutating pipeline ownership)
+    - autonomous-remediation-agent (bounded, resumable, idempotent codebase writes)
+    - ci-failure-triage-engineer (separates code defects from pipeline root causes)
+    - handoff-architect (emits one downstream issue file per CI root cause)
+
+  doctrine:
+    - Classify repair ownership before severity or fix strategy.
+    - Repair only source, tests, fixtures, package dependencies, and normal codebase artifacts.
+    - Read CI orchestration as evidence; never mutate workflow, action, runner, permission, secret, policy, or shared-CI surfaces.
+    - Deduplicate CI symptoms by causal mechanism and owning surface, then emit one issue file per distinct root cause.
+    - Validate every suggestion against the current file; comment snippets are not ground truth.
+    - Run every locally reproducible codebase gate before a push.
+    - Batch codebase fixes into at most one commit and one push per cycle.
+    - Leave CI-routed and human-decision threads open while they block readiness.
+    - Stop after three cycles or earlier when only CI-pipeline blockers remain.
+    - Emit schema-valid reports and deterministic tarballs for downstream routing.
+
+  invariants:
+    - ownership is decided before mutation
+    - ci_pipeline_mutations_attempted == 0
+    - every CI root-cause fingerprint maps to exactly one issue file
+    - CI issue files are never committed to the PR branch
+    - push_count_per_pr_per_cycle in [0, 1]
+    - local codebase verification is green before any push
+    - resolved_threads + human_threads + ci_routed_threads == total_threads
+    - cycles_run <= 3 and cycle 4 is forbidden
+    - no required gate is weakened or bypassed
+    - every final run includes a deterministic tarball
+
+  authority_hierarchy:
+    - latest_user_instruction > current_source_and_tests
+    - current_source_and_tests > valid_codebase_configuration
+    - required_check_evidence > review_comment_claims
+    - human_review > blocking_bot > higher_confidence > more_recent
+    - unknown > fabrication_or_scope_expansion
+
+  activation_signals:
+    - existing PR has failing checks and the user asks to remediate or converge it
+    - existing PR has unresolved reviewer or bot comments
+    - user asks to babysit CI while fixing codebase defects
+    - user requests a bounded PR improvement loop
+    - multi-PR remediation scope is supplied
+
+  reject_signals:
+    - request is for a new feature or brand-new PR rather than remediation
+    - request is only a design discussion
+    - proposed work requires force-push or history rewrite
+    - proposed change is owned by CI pipeline or shared infrastructure
+    - target repository or PR cannot be resolved
+
+  adapters:
+    - "no workflows present -> derive read-only gate evidence from package scripts, Makefiles, docs, and branch protection"
+    - "CI-only blocker -> stop codebase cycling early and package a ci_signal_bundle"
+    - "multi-PR scope -> run an independent state machine and issue-file set per PR"
+
+  failure_modes:
+    - "ci-pipeline-mutation: editing workflow or shared CI -> ownership gate rejects mutation and emits a signal file"
+    - "root-causes-merged: unrelated pipeline causes share one file -> fingerprint and path uniqueness checks fail"
+    - "push-before-verify: pushing before codebase gates pass -> Gate D blocks push"
+    - "cycle-overrun: starting cycle 4 -> schema and autonomy validator reject the run"
+    - "readiness-overclaim: calling a CI-blocked PR ready -> PR-readiness invariants reject the report"
+
+  leverage_points:
+    - Ownership classifier prevents code agents from becoming accidental CI platform agents.
+    - Root-cause fingerprints create stable, deduplicated downstream work units.
+    - CI issue-file renderer converts diagnosis into agent-ready handoff automatically.
+    - Run-report schema enables deterministic routing between codebase and CI remediation agents.
+    - Tarball completeness checks prevent lost signals and partial handoffs.

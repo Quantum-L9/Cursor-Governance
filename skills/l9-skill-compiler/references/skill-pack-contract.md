@@ -6,8 +6,8 @@ role: pack_contract
 tags: [skill, standalone_protocol, structure, packaging, validation]
 owner: igor_beylin
 status: active
-version: 1.2.1
-updated: 2026-06-06
+version: 1.3.0
+updated: 2026-08-06
 /L9_META -->
 
 # Skill Pack Contract
@@ -24,7 +24,9 @@ Every complete Skill must include:
 
 ```text
 skill-name/
-└── SKILL.md
+├── SKILL.md
+└── agents/
+    └── meta.yaml
 ```
 
 Optional folders:
@@ -37,7 +39,9 @@ assets/
 
 Create optional folders only when they provide reusable value.
 
-**PlasticOS repo:** After creating a skill, wire via global **`l9-wire-skill-into-repo`** and `.claude/adapters/plasticos-repo-wiring.md`. Do **not** create `agents/openai.yaml`.
+`agents/meta.yaml` is the canonical adapter display metadata file (same role as the former `agents/openai.yaml`). Never create `agents/openai.yaml`. Template: [agents-meta.template.yaml](agents-meta.template.yaml).
+
+**PlasticOS / Claude discovery:** After creating a skill, wire via global **`l9-wire-skill-into-repo`**. The pack must live under or be symlinked into `.claude/skills/{name}/`. Do not leave skill packs as siblings under `.claude/` outside `skills/`.
 
 ## SKILL.md Contract
 
@@ -218,10 +222,12 @@ Produce:
 Create or update:
 
 - `SKILL.md` (single frontmatter block + body)
+- `agents/meta.yaml` (from template; display_name / short_description / brand_color)
 - needed references
 - needed scripts
 - needed assets
 - `.claude/README.md`, `AGENTS.md`, relevant `.claude/agents/*.md` (PlasticOS repo wiring)
+- placement under `.claude/skills/{name}/` for Claude discovery
 
 Remove:
 
@@ -231,7 +237,7 @@ Remove:
 - stale assumptions
 - unlinked resources
 - unused files
-- **`agents/openai.yaml` if present** — deprecated for this repo
+- **`agents/openai.yaml` if present** — rename to `agents/meta.yaml` (do not keep both)
 
 ### 6. Validate
 

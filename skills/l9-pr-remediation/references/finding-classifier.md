@@ -6,15 +6,26 @@ role: finding_classifier
 tags: [pr, classification, triage, severity]
 owner: igor_beylin
 status: active
-version: 2.0.0
-updated: 2026-06-18
+version: 3.0.0
+updated: 2026-08-06
 /L9_META -->
 
 # Finding Classifier
 
 ## Purpose
 
-Classify each ingested finding by severity and fix strategy. Determines execution order and whether a finding is actionable in the current cycle.
+Classify each ingested finding by **ownership first**, then severity and fix strategy. Determines what may be edited and what runs in parallel this cycle.
+
+## Ownership (before severity)
+
+| Class | Edit? | Action |
+|-------|-------|--------|
+| **CODEBASE** | yes | Fix in the concurrent batch |
+| **CI_PIPELINE** | no | Note in status; continue other clusters |
+| **HUMAN** | no | Name the decision; continue other clusters |
+| **FALSE_POSITIVE** | no | Reply with evidence |
+
+See [ownership-boundary.md](ownership-boundary.md). Unknown ownership → do not edit that cluster.
 
 ## Severity Classification
 

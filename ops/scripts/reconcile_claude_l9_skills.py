@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Reconcile L9 skills into Claude Code's native discovery directories.
+"""Reconcile L9 skills into LLM adapter discovery directories.
 
-Managed entries are per-skill links or copies. Unmanaged consumer skills are
-never overwritten or removed. The governance clone remains the source of truth.
+Managed entries are per-skill symlinks into the governance SSOT
+(`skills/` == `.cursor-commands/skills`). Unmanaged consumer skills are never
+overwritten or removed. L9-named directory copies are replaced with symlinks.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ class Result:
     removed: list[str]
     conflicts: list[str]
     drift: list[str]
+    replaced_duplicates: list[str]
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -41,6 +43,7 @@ class Result:
             "removed": self.removed,
             "conflicts": self.conflicts,
             "drift": self.drift,
+            "replaced_duplicates": self.replaced_duplicates,
         }
 
 
@@ -106,7 +109,18 @@ def remove_managed(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def scope_target(scope: str, workspace: Path) -> Path:
+def is_l9_duplicate(name: str, destination: Path) -> bool:
+    """True when an L9 registry skill exists as a real directory (forbidden copy)."""
+    if not name.startswith("l9-"):
+        return False
+    if destination.is_symlink():
+        return False
+    return destination.is_dir() and (destination / "SKILL.md").is_file()
+
+
+def scope_target(scope: str, workspace: Path, target_override: Path | None = None) -> Path:
+    if target_override is not None:
+        return target_override
     if scope == "user":
         return Path.home() / ".claude" / "skills"
     return workspace / ".claude" / "skills"
@@ -119,14 +133,21 @@ def reconcile_scope(
     workspace: Path,
     mode: str,
     check: bool,
+    *,
+    target_override: Path | None = None,
+    replace_l9_duplicates: bool = True,
+    install_project_rule: bool = False,
 ) -> Result:
-    target = scope_target(scope, workspace)
+    if mode != "symlink":
+        # L9 law: adapters never hold skill copies. Keep flag for tests only.
+        pass
+    target = scope_target(scope, workspace, target_override)
     state_path = target / STATE_NAME
     old_state = read_state(state_path)
     previous = set(str(name) for name in old_state.get("skills", []))
     desired = {str(record["name"]): root / str(record["path"]) for record in registry["skills"]}
 
-    result = Result(scope, str(target), [], [], [], [], [])
+    result = Result(scope, str(target), [], [], [], [], [], [])
     for name, source in sorted(desired.items()):
         destination = target / name
         if not source.is_dir() or not (source / "SKILL.md").is_file():
@@ -139,6 +160,15 @@ def reconcile_scope(
             result.current.append(name)
             continue
         if destination.exists() or destination.is_symlink():
+            if replace_l9_duplicates and mode == "symlink" and is_l9_duplicate(name, destination):
+                if check:
+                    result.drift.append(f"l9-duplicate:{name}")
+                else:
+                    remove_managed(destination)
+                    install_entry(source, destination, mode)
+                    result.replaced_duplicates.append(name)
+                    result.created.append(name)
+                continue
             if name in previous:
                 if check:
                     result.drift.append(f"stale-managed:{name}")
@@ -165,7 +195,7 @@ def reconcile_scope(
             result.removed.append(stale)
 
     managed_rules: list[str] = []
-    if scope == "project":
+    if scope == "project" and install_project_rule:
         rule_source = root / RULE_REL
         rule_target = workspace / ".claude" / "rules" / rule_source.name
         if rule_source.is_file():
@@ -209,8 +239,14 @@ def main() -> int:
     parser.add_argument("--scope", action="append", choices=("user", "project"), required=True)
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
     parser.add_argument("--mode", choices=("symlink", "copy"), default="symlink")
+    parser.add_argument("--target", type=Path, default=None, help="Override discovery directory")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--no-replace-l9-duplicates",
+        action="store_true",
+        help="Fail closed on l9-* directory copies instead of replacing with symlinks",
+    )
     args = parser.parse_args()
 
     root = args.root.resolve()
@@ -220,7 +256,16 @@ def main() -> int:
         return 2
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
     results = [
-        reconcile_scope(root, registry, scope, args.workspace.resolve(), args.mode, args.check)
+        reconcile_scope(
+            root,
+            registry,
+            scope,
+            args.workspace.resolve(),
+            args.mode,
+            args.check,
+            target_override=args.target.resolve() if args.target else None,
+            replace_l9_duplicates=not args.no_replace_l9_duplicates,
+        )
         for scope in dict.fromkeys(args.scope)
     ]
     payload = {"results": [result.as_dict() for result in results]}

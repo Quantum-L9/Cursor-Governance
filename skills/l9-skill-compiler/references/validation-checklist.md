@@ -6,8 +6,8 @@ role: validation_contract
 tags: [skill, validation, quality_gates, zero_stub, packaging]
 owner: igor_beylin
 status: active
-version: 1.3.1
-updated: 2026-06-06
+version: 1.4.0
+updated: 2026-08-06
 /L9_META -->
 
 # Validation Checklist
@@ -17,9 +17,11 @@ updated: 2026-06-06
 - [ ] `SKILL.md` exists.
 - [ ] `SKILL.md` frontmatter includes `name`, `description`, and audit fields (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
 - [ ] No duplicate `SKILL_META` HTML comment on `SKILL.md`.
+- [ ] `agents/meta.yaml` exists (display_name, short_description, brand_color).
+- [ ] **No** `agents/openai.yaml` (rename to `agents/meta.yaml` if found).
+- [ ] Pack is under or symlinked into `.claude/skills/{name}/` for Claude discovery.
 - [ ] Optional folders exist only when useful.
 - [ ] Initializer-generated example files are absent.
-- [ ] **No** `agents/openai.yaml` or `agents/` folder created.
 
 ## Repo Wiring (mandatory for project-scoped skills)
 
@@ -104,7 +106,8 @@ Reject the Skill if it contains:
 - [ ] unlinked references
 - [ ] bloated control plane
 - [ ] partial artifact delivery
-- [ ] `agents/openai.yaml` created (use `SKILL.md` metadata + repo wiring instead)
+- [ ] `agents/openai.yaml` left in place (must be `agents/meta.yaml`)
+- [ ] skill pack left under `.claude/` outside `.claude/skills/`
 
 ## Design Principles (command / skill authoring)
 

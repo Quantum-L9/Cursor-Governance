@@ -386,6 +386,38 @@ else
   echo "HINT: setup_claude_code_plugins.sh missing — skip Claude plugin reconcile"
 fi
 
+# Move any skill packs misplaced under .claude/ (outside .claude/skills/) into
+# .claude/skills/, and rename legacy agents/openai.yaml → agents/meta.yaml.
+echo ""
+if [ -f "$SCRIPT_DIR/migrate_claude_orphan_skills.py" ]; then
+  python3 "$SCRIPT_DIR/migrate_claude_orphan_skills.py" \
+    --workspace "$WORKSPACE_DIR" --json \
+    || echo "WARN: Claude orphan skill migration reported conflicts (non-blocking)"
+else
+  echo "HINT: migrate_claude_orphan_skills.py missing — skip orphan skill migration"
+fi
+
+# Claude rules: whole-dir symlink → governance rules/ (== .cursor-commands/rules)
+echo ""
+if [ -f "$SCRIPT_DIR/reconcile_claude_rules.py" ]; then
+  python3 "$SCRIPT_DIR/reconcile_claude_rules.py" \
+    --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" \
+    || echo "WARN: Claude rules SSOT symlink failed (non-blocking)"
+else
+  echo "HINT: reconcile_claude_rules.py missing — skip Claude rules link"
+fi
+
+# All LLM skill adapters: per-skill symlinks → governance skills/ SSOT
+# (.cursor-commands/skills). Manifest/registry is the only inventory to maintain.
+echo ""
+if [ -f "$SCRIPT_DIR/reconcile_llm_skill_adapters.py" ]; then
+  python3 "$SCRIPT_DIR/reconcile_llm_skill_adapters.py" \
+    --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" \
+    || echo "WARN: LLM skill adapter reconcile failed (non-blocking)"
+else
+  echo "HINT: reconcile_llm_skill_adapters.py missing — skip multi-adapter skill links"
+fi
+
 # IDE profile: extensions are machine-scoped, .vscode/settings.json is workspace-scoped.
 # Wiring a workspace is exactly the moment to reconcile both.
 echo ""

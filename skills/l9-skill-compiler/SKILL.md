@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, skill, compiler, control_plane, zero_stub, standalone]
 owner: igor_beylin
 status: active
-version: 1.2.1
-updated: 2026-06-06
+version: 1.3.0
+updated: 2026-08-06
 ---
 
 # Strict Skill Compiler
@@ -51,7 +51,8 @@ Mandatory final step: **`l9-wire-skill-into-repo`**.
 - Use assets only for reusable final-output material.
 - Do not invent connectors, tools, file paths, assets, commands, or dependencies.
 - Do not ship dummy scaffolds, unfinished sections, unlinked files, or partial artifacts.
-- Do not create `agents/openai.yaml` — wire new skills via global **`l9-wire-skill-into-repo`** (mandatory final step).
+- Always create `agents/meta.yaml` on build/rebuild (adapter display metadata). Never create `agents/openai.yaml`. If a legacy `agents/openai.yaml` exists, rename it to `agents/meta.yaml`.
+- Wire new skills via global **`l9-wire-skill-into-repo`** (mandatory final step), then ensure Claude discovery is under `.claude/skills/` (symlink or pack) — never leave a skill pack as a sibling under `.claude/`.
 - Fail closed when correctness requires information that is missing and cannot be safely labeled `Unknown`.
 
 ## Compact Workflow
@@ -60,10 +61,11 @@ Mandatory final step: **`l9-wire-skill-into-repo`**.
 2. Apply first-order and compounding-leverage filters to choose the smallest structure with durable reuse.
 3. Select mode: discuss, design, analyze, build, rebuild, or package.
 4. Design the file tree and resource map before writing files.
-5. Build or revise complete files only.
-6. **Wire into repo registries** — load and execute global **`l9-wire-skill-into-repo`** (`~/.cursor/skills/l9-wire-skill-into-repo/SKILL.md`). Pass `skill-name`, `skill-path`, `description`, and `scope`. Load `.claude/adapters/plasticos-repo-wiring.md` when present in PlasticOS repos.
-7. Validate metadata, structure, references, repo wiring, zero-stub gates, and package readiness.
-8. Deliver the requested artifact and, when useful, one highest-leverage next prompt or next action.
+5. Build or revise complete files only — including `agents/meta.yaml` from [references/agents-meta.template.yaml](references/agents-meta.template.yaml).
+6. **Wire into repo registries** — load and execute global **`l9-wire-skill-into-repo`**. Pass `skill-name`, `skill-path`, `description`, and `scope`. Load `.claude/adapters/plasticos-repo-wiring.md` when present in PlasticOS repos.
+7. Place or symlink the pack under `.claude/skills/{name}/` for Claude discovery. Migrate any orphan skill dirs sitting under `.claude/` (but not under `.claude/skills/`) into `.claude/skills/`.
+8. Validate metadata, structure, references, repo wiring, zero-stub gates, and package readiness.
+9. Deliver the requested artifact and, when useful, one highest-leverage next prompt or next action.
 
 For the full standalone creation protocol, load `references/skill-pack-contract.md`.
 
@@ -81,6 +83,7 @@ Load references only when relevant:
 
 - [references/project-adapters.md](references/project-adapters.md): repo-local wiring adapters — loaded by **`l9-wire-skill-into-repo`** Step 3.
 - [references/skill-pack-contract.md](references/skill-pack-contract.md): complete standalone Skill creation, analysis, rebuild, validation, and packaging protocol.
+- [references/agents-meta.template.yaml](references/agents-meta.template.yaml): required `agents/meta.yaml` scaffold (replaces deprecated `agents/openai.yaml`).
 - [references/meta-standard.md](references/meta-standard.md): file metadata and first-class primitive rules.
 - [references/file-contract.md](references/file-contract.md): file and folder responsibilities, routing, and resource placement rules.
 - [references/output-modes.md](references/output-modes.md): response contracts for discuss, design, analyze, build, rebuild, and package modes.
@@ -97,7 +100,7 @@ Load references only when relevant:
 
 Before final delivery, validate against `references/validation-checklist.md` and confirm **`l9-wire-skill-into-repo`** completed successfully.
 
-A Skill may not be considered complete unless required files exist, metadata is present, references are linked, **repo registries are updated via `l9-wire-skill-into-repo`**, trigger logic is strong, kernels are compressed, no dummy scaffolds remain, no `agents/openai.yaml` was created, and package readiness is confirmed.
+A Skill may not be considered complete unless required files exist (`SKILL.md` + `agents/meta.yaml`), metadata is present, references are linked, **repo registries are updated via `l9-wire-skill-into-repo`**, the pack is discoverable under `.claude/skills/`, trigger logic is strong, kernels are compressed, no dummy scaffolds remain, no `agents/openai.yaml` remains, and package readiness is confirmed.
 
 ## Failure Handling
 

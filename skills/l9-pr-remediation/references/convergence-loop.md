@@ -6,15 +6,15 @@ role: convergence_loop
 tags: [pr, convergence, loop, polling, ci, local-verify]
 owner: igor_beylin
 status: active
-version: 2.0.0
-updated: 2026-06-18
+version: 3.0.0
+updated: 2026-08-06
 /L9_META -->
 
 # Convergence Loop
 
 ## Purpose
 
-After pushing fixes (which have ALREADY passed local verification), wait for CI to confirm, check for new reviews, then determine whether another remediation cycle is needed or convergence has been reached.
+After pushing fixes (which have ALREADY passed local verification), short-poll CI to confirm, check for new reviews, then decide: converge, next cycle, or early stop.
 
 ## Key Principle: Local-First Verification
 
@@ -64,15 +64,15 @@ After push, poll for CI completion:
 gh run list --branch {branch} --limit 1 --json databaseId,status,conclusion
 ```
 
-Poll interval: 45 seconds (since local verify already passed, no urgency).
-Max wait: 10 minutes per cycle.
+Poll interval: **15 seconds**. Max wait: **8 minutes** per cycle.
+Prefer `gh run watch` when a run ID is known — do not idle between polls.
 
-If CI hasn't started after 2 minutes, check if workflows are configured:
+If CI hasn't started after 90 seconds, check workflows:
 ```bash
 gh workflow list --json name,state
 ```
 
-### Alternative: Watch mode
+### Prefer watch
 
 ```bash
 gh run watch {RUN_ID} --exit-status
@@ -174,7 +174,8 @@ minimum_safe_next_action: "merge" | "manual review of deferred items" | "run ano
 
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
-- CI passes AND no new comments → emit `converged`
+- CI passes AND no new actionable codebase signals → emit `converged`
+- Only `CI_PIPELINE` / `HUMAN` blockers remain → emit `partial` early (more cycles cannot help)
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`
 - User sends a stop signal → emit `partial` with current state
@@ -185,10 +186,10 @@ Defaults (overridable by user):
 
 ```yaml
 max_cycles: 3
-poll_interval_seconds: 45
-max_wait_per_cycle_minutes: 10
+poll_interval_seconds: 15
+max_wait_per_cycle_minutes: 8
 max_local_verify_iterations: 5
-auto_fix_nits: false          # if true, treat "nit:" as actionable
-skip_bot_discussions: true    # skip non-actionable bot comments
-parallel_triage_threshold: 3  # use parallel fix when >= 3 independent job failures
+auto_fix_nits: true           # clear one-line nits; skip only true product forks
+skip_bot_discussions: true     # skip non-actionable bot chatter
+parallel_clusters: true        # always parallelize independent clusters
 ```

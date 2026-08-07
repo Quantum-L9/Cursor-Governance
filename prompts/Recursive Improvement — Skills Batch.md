@@ -17,7 +17,7 @@ compiled_prompt:
   hard_rules_additions:
     - MUST NOT edit AGENTS.md, .claude/README.md, or AUTONOMY_MANIFEST.yaml
     - MUST NOT duplicate L9 packs into .claude/skills/
-    - MUST NOT create agents/openai.yaml
+    - MUST NOT create agents/openai.yaml (use agents/meta.yaml only if adapter display metadata is required)
     - MUST preserve disable-model-invocation if present in source SKILL.md
     - MUST label Unknown when repo-specific gate tables cannot be verified
 

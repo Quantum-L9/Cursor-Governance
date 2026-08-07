@@ -5,10 +5,10 @@ carries pre-existing Ruff, mypy, ESLint, TypeScript, test, or build failures on 
 `main` baseline, and the task is to remediate the underlying causes and drive a green,
 review-clean pull request — not to suppress the tools into silence.
 
-It shares the skill's convergence machinery (local-verify gate, one-commit-per-cycle,
-review-reply protocol, CI polling). What it adds is an **audit-first entry mode**: there
-is no PR to react to yet, so the loop begins by recording a baseline, classifying the
-debt, and fixing root causes before the first push.
+It shares the skill's single hot path (local-verify gate, one-commit-per-cycle,
+concurrent clusters, short-poll CI). When no PR exists yet, record a baseline SHA,
+classify debt, fix root causes, open a remediation PR, and continue on that PR — same
+path, not a separate mode.
 
 ## When this signal applies
 

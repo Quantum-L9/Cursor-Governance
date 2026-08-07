@@ -99,16 +99,16 @@ if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${
   is_local=1
 fi
 if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/reconcile_claude_l9_skills.py" \
-    --root "$WS" --scope user --scope project --workspace "$WS" --quiet || true
-  if ! python3 "$GOV_ROOT/ops/scripts/reconcile_claude_l9_skills.py" \
-    --root "$WS" --scope user --scope project --workspace "$WS" --check --quiet; then
-    echo "FAIL: Claude skill reconcile --check drifted — re-run make claude-skills"
-    python3 "$GOV_ROOT/ops/scripts/reconcile_claude_l9_skills.py" \
-      --root "$WS" --scope user --scope project --workspace "$WS" --check
+  python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
+    --root "$WS" --workspace "$WS" --quiet || true
+  if ! python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
+    --root "$WS" --workspace "$WS" --check --quiet; then
+    echo "FAIL: LLM skill adapter reconcile --check drifted — re-run sync_generated_artifacts / reconcile_llm_skill_adapters"
+    python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
+      --root "$WS" --workspace "$WS" --check
     exit 1
   fi
-  echo "OK: Claude skills reconciled (user+project)"
+  echo "OK: LLM skill adapters reconciled to skills/ SSOT"
   if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
     echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"
     exit 1

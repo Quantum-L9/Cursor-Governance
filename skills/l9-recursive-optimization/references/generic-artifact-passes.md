@@ -35,7 +35,7 @@ When artifact type is a skill pack, also verify against `l9-skill-compiler` skil
 
 - `SKILL.md` frontmatter complete; `name` matches directory
 - Every reference linked from `SKILL.md`
-- No `agents/openai.yaml`
+- No `agents/openai.yaml` (prefer `agents/meta.yaml` only when display metadata is required)
 - No raw source dumps in control plane
 - Repo wiring present when project-scoped
 

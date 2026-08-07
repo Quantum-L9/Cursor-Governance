@@ -8,7 +8,7 @@ from pathlib import Path
 
 REQUIRED = [
     "SKILL.md",
-    "agents/openai.yaml",
+    "agents/meta.yaml",
     "expertise_model.yaml",
     "skill_intelligence_report.yaml",
     "references/reasoning-router.yaml",
@@ -46,6 +46,8 @@ def main() -> int:
     for item in REQUIRED:
         if not (root / item).exists():
             errors.append(f"missing required file: {item}")
+    if (root / "agents" / "openai.yaml").exists():
+        errors.append("legacy agents/openai.yaml present — rename to agents/meta.yaml")
 
     skill = (root / "SKILL.md").read_text(encoding="utf-8")
     try:

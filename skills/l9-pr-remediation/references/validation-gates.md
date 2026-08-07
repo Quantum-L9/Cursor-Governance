@@ -6,15 +6,15 @@ role: validation_gates
 tags: [pr, validation, enforcement, checkpoints, artifacts]
 owner: igor_beylin
 status: active
-version: 2.1.0
-updated: 2026-06-18
+version: 3.0.0
+updated: 2026-08-06
 /L9_META -->
 
 # Validation Gates (Enforcement Layer)
 
 ## Purpose
 
-Prevent protocol violations by requiring concrete artifacts at each workflow step. Rules without validation are suggestions. This file defines the **proof-of-compliance** checkpoints that the agent MUST produce before advancing to the next step.
+Prevent protocol violations with lightweight **inline** proofs at each step (logged in the cycle, not packaged as deliverables). No tarballs, run-report schemas, or issue-file bundles.
 
 ## Gate Architecture
 

@@ -1,0 +1,176 @@
+# L9_META
+# l9_schema: 1
+# parent: l9-pr-remediation
+# layer: reference
+# role: skill_intelligence_report
+# tags: [pr, ci, codebase-remediation, ci-signal, exemplary]
+# owner: igor_beylin
+# status: active
+# version: 3.5.0
+# updated: 2026-07-28
+
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - existing PR has failing CI and user requests remediation or convergence
+      - existing PR has unresolved human or bot review findings
+      - user asks for a bounded PR repair loop
+      - user asks to distinguish code failures from CI pipeline failures
+      - multi-PR remediation scope is provided
+    weak_signals:
+      - a PR is mentioned without repair intent
+      - user asks a general CI question without a target PR
+    reject_signals:
+      - authoring a new feature or PR
+      - pure design discussion
+      - force-push or shared-history rewrite is required
+      - task is direct CI-pipeline repair rather than codebase remediation
+      - repository or PR cannot be resolved
+    false_positive_risks:
+      - treating every CI failure as a code defect
+      - treating repository-local workflow files as codebase repair authority
+    specificity_score: 5
+    false_positive_risk_score: 1
+
+  authority_model:
+    order:
+      - latest_user_instruction
+      - current_source_and_tests
+      - valid_codebase_configuration
+      - required_check_evidence
+      - human_review_comments
+      - automated_review_comments
+      - skill_references
+      - unknown_fail_closed
+    conflict_rules:
+      - current code decides whether a suggested code fix is still valid
+      - CI evidence proves a failure but does not expand mutation authority
+      - pipeline ownership routes to issue files, never code edits
+      - unknown ownership blocks mutation
+
+  expert_heuristics:
+    - condition: CI command fails locally on source with the same error
+      judgment: likely codebase-owned
+      action: validate current code, repair minimally, and rerun all codebase gates
+    - condition: failure occurs before source checkout or command execution
+      judgment: pipeline-owned
+      action: create a CI root-cause signal file and do not edit the repository
+    - condition: proposed fix changes workflow, action pin, runner, permission, secret, OIDC, check wiring, or branch protection
+      judgment: pipeline-owned regardless of confidence
+      action: route to downstream CI remediation
+    - condition: multiple jobs show the same runner-image or permission failure
+      judgment: one causal mechanism
+      action: deduplicate to one fingerprint and list all affected checks
+    - condition: the same job has a source type error and a permission error
+      judgment: mixed ownership
+      action: repair the source error and emit a separate permission signal file
+    - condition: only CI-pipeline blockers remain after a cycle
+      judgment: more codebase cycles cannot create value
+      action: stop early, emit ci_signal_bundle, and package
+    - condition: a bot requests a CI config change to silence a source failure
+      judgment: invalid scope transfer
+      action: reject the config change and fix source only when source evidence supports it
+
+  doctrine:
+    - ownership-first classification
+    - codebase-only mutation
+    - signal-only CI pipeline handling
+    - one issue file per CI root cause
+    - local verification before push
+    - bounded three-cycle convergence
+    - deterministic evidence and handoff packaging
+
+  invariants:
+    - ci_pipeline_mutations_attempted == 0
+    - repository_files_modified is empty for every CI signal
+    - CI issue-file count equals unique CI fingerprint count
+    - CI issue files are excluded from PR commits
+    - one commit and one push maximum per cycle
+    - cycle 4 is forbidden
+    - ready requires zero codebase and CI blockers
+    - CI-only blockers use ci_signal_bundle
+
+  adapter_map:
+    core_default: codebase-only PR remediation for any language and CI provider
+    adapters:
+      - no_workflows_present: derive read-only gate evidence from repository commands
+      - ci_only_blocker: stop early and package separate CI issue files
+      - multi_pr_scope: isolate state, commits, fingerprints, and artifacts per PR
+    adapter_rule: add an adapter only when decision rules change
+
+  failure_modes:
+    - ci_pipeline_mutation -> ownership gate and forbidden-path validation
+    - merged_root_causes -> unique fingerprint and issue-path validation
+    - missing_issue_file -> renderer and packager completeness failure
+    - push_before_verify -> local verification invariant
+    - readiness_overclaim -> exact PR-readiness invariant
+
+  leverage_points:
+    - ownership_classifier
+    - ci_root_cause_fingerprint
+    - deterministic_ci_issue_renderer
+    - canonical_run_report
+    - tarball_completeness_validator
+
+  evidence_hierarchy:
+    - current source and reproducible local command output
+    - exact remote check and job logs
+    - valid repository codebase configuration
+    - workflow and platform configuration as read-only ownership evidence
+    - review comment text
+    - model inference
+
+  leverage_model:
+    scoring_dimensions:
+      - future_action_acceleration
+      - drift_reduction
+      - cross_agent_handoff_quality
+      - scope_safety
+      - implementation_simplicity
+    scored_points:
+      - point: ownership_classifier
+        score: 24
+      - point: ci_root_cause_fingerprint
+        score: 22
+      - point: deterministic_ci_issue_renderer
+        score: 23
+      - point: canonical_run_report
+        score: 22
+      - point: tarball_completeness_validator
+        score: 21
+    exemplary_threshold: at least one leverage point scores 18 or higher
+    threshold_met: true
+
+  self_improvement_hook:
+    capture_only_when_user_reports_bad_run_or_requests_iteration: true
+    capture:
+      - code finding misclassified as CI
+      - CI finding incorrectly mutated
+      - root causes incorrectly merged or split
+      - downstream issue file required manual reconstruction
+    routes_to:
+      - ci-signal-boundary.md
+      - finding-classifier.md
+      - run-report fixtures
+
+  exemplary_gate_results:
+    activation_precision: pass
+    adapter_architecture: pass
+    evidence_hierarchy: pass
+    doctrine_extraction: pass
+    expert_heuristics: pass
+    failure_modes: pass
+    leverage_model: pass
+    self_improvement_hook: pass
+    compiler_enforcement_gates: pass
+    autonomy_controller: pass
+    bounded_convergence: pass
+    terminal_escalation: pass
+    pr_readiness_proof: pass
+    deliverable_packaging: pass
+    skill_intelligence_report: pass
+    ci_signal_boundary: pass
+
+  tier_decision:
+    tier: exemplary
+    rationale: The Skill enforces codebase-only mutation, machine-validates zero CI repair attempts, creates one downstream issue file per CI root cause, and proves tarball completeness with positive and negative fixtures.

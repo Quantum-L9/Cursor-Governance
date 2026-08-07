@@ -75,6 +75,30 @@ def disk_skill_names(root: Path) -> list[str]:
     )
 
 
+def skill_is_retired(root: Path, name: str, manifest: dict[str, Any]) -> bool:
+    """Skip deprecated / do-not-migrate skill packs from orphan auto-registration."""
+    if name.endswith("-deprecated"):
+        return True
+    skill_md = root / "skills" / name / "SKILL.md"
+    try:
+        text = skill_md.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if text.startswith("---\n"):
+        end = text.find("\n---\n", 4)
+        if end > 0:
+            fm = yaml.safe_load(text[4:end]) or {}
+            if isinstance(fm, dict) and str(fm.get("status") or "").lower() == "deprecated":
+                return True
+    for item in manifest.get("do_not_migrate_to_skills") or []:
+        if not isinstance(item, dict):
+            continue
+        entry = str(item.get("item") or "").rstrip("/")
+        if entry in {f"skills/{name}", name}:
+            return True
+    return False
+
+
 def ensure_explicit_frontmatter(skill_md: Path) -> bool:
     text = skill_md.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
@@ -106,7 +130,11 @@ def heal_orphan_skills(root: Path, wrote: list[str], warnings: list[str]) -> Non
         if isinstance(entry, dict) and entry.get("skill")
     }
     listed = auto | explicit
-    orphans = [name for name in disk_skill_names(root) if name not in listed]
+    orphans = [
+        name
+        for name in disk_skill_names(root)
+        if name not in listed and not skill_is_retired(root, name, manifest)
+    ]
     if not orphans:
         return
     for name in orphans:
@@ -174,6 +202,31 @@ def sync_skill_registry(root: Path, wrote: list[str]) -> None:
         wrote.append(str(out.relative_to(root)))
 
 
+def reconcile_llm_adapters(
+    root: Path,
+    warnings: list[str],
+    *,
+    workspace: Path | None = None,
+) -> None:
+    """Refresh per-skill symlinks in every configured LLM adapter after registry sync."""
+    script = SCRIPTS / "reconcile_llm_skill_adapters.py"
+    if not script.is_file():
+        warnings.append("reconcile_llm_skill_adapters.py missing — skip adapter symlink refresh")
+        return
+    cmd = [sys.executable, str(script), "--root", str(root), "--quiet"]
+    if workspace is not None:
+        cmd.extend(["--workspace", str(workspace)])
+    result = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
+    if result.returncode != 0:
+        detail = (result.stdout or result.stderr or "").strip()
+        warnings.append(
+            "LLM skill adapter reconcile reported drift/conflicts"
+            + (f": {detail}" if detail else "")
+        )
+    else:
+        print("OK: LLM skill adapter symlinks reconciled to skills/ SSOT")
+
+
 def sync_commands(root: Path, wrote: list[str]) -> None:
     out = root / "commands" / "COMMANDS_MANIFEST.yaml"
     prior = out.read_bytes() if out.is_file() else None
@@ -232,6 +285,7 @@ def sync(
     *,
     changed_paths: set[str] | None = None,
     force: bool = False,
+    workspace: Path | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
     wrote: list[str] = []
@@ -242,17 +296,20 @@ def sync(
     try:
         if should_run(changed, ("rules/",)):
             sync_rules(root, wrote)
-        if should_run(
+        skills_touched = should_run(
             changed,
             (
                 "skills/",
                 "environment/claude-code/generated/skill-registry.json",
                 "environment/claude-code/settings.template.json",
+                "environment/skill-adapters/",
             ),
-        ):
+        )
+        if skills_touched:
             heal_orphan_skills(root, wrote, warnings)
             sync_skill_registry(root, wrote)
             sync_skill_overrides(root, wrote)
+            reconcile_llm_adapters(root, warnings, workspace=workspace)
         if should_run(changed, ("commands/",)):
             sync_commands(root, wrote)
         pe_touched = should_run(changed, ("environment/program-execution/",))
@@ -305,6 +362,12 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Sync all covered artifacts")
     parser.add_argument("--check", action="store_true", help="Validate after sync")
     parser.add_argument("--json", action="store_true", help="Print machine-readable result")
+    parser.add_argument(
+        "--workspace",
+        type=Path,
+        default=None,
+        help="Consumer workspace for project-scoped LLM skill adapters",
+    )
     args = parser.parse_args()
     root = args.root.resolve()
 
@@ -319,7 +382,12 @@ def main() -> int:
             # Empty change set → still force on governance trees so local drift heals.
             args.force = True
 
-    result = sync(root, changed_paths=changed, force=args.force)
+    result = sync(
+        root,
+        changed_paths=changed,
+        force=args.force,
+        workspace=args.workspace.resolve() if args.workspace else None,
+    )
     if args.check and not result["errors"]:
         result["errors"].extend(validate_after_sync(root))
 

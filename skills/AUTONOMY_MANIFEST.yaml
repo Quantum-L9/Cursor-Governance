@@ -4,14 +4,17 @@ principle: "Model-invocable skills are selected from SKILL.md descriptions; expl
 
 cursor_discovery:
   enabled_by:
-    - "~/.cursor/skills symlinked to GlobalCommands/skills"
-    - "skill folder contains SKILL.md"
-    - "frontmatter name matches folder name"
+    - "SSOT: .cursor-commands/skills (== ~/.cursor-governance/skills) — only maintainable skill corpus"
+    - "Cursor plugin ~/.cursor/plugins/local/l9-governance → governance root (discovers skills/ in-plugin)"
+    - "LLM adapters receive per-skill symlinks via ops/scripts/reconcile_llm_skill_adapters.py after manifest/registry sync"
+    - "skill folder contains SKILL.md; frontmatter name matches folder name"
     - "description states what the skill does and when to use it"
   automatic_invocation:
     rule: "available unless disable-model-invocation: true is present"
   explicit_invocation:
     rule: "set disable-model-invocation: true for high-blast-radius or lifecycle-boundary skills"
+  anti_duplication:
+    rule: "never copy L9 skills into adapter trees; never recreate ~/.cursor/skills or repo .cursor/skills"
 
 tiers:
   auto_invoke:
@@ -20,7 +23,7 @@ tiers:
     - skill: "l9-recursive-optimization"
       use_when: "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
     - skill: "l9-structured-reasoning"
-      use_when: "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
+      use_when: "planning, architecture decisions, debugging, multi-document corpus analysis, trade-off analysis, or evidence-backed decision records are needed"
     - skill: "l9-gmp-protocol"
       use_when: "work must be phased, auditable, traceable, or touches protected/high-risk areas"
     - skill: "l9-plan"
@@ -94,7 +97,7 @@ tiers:
     - skill: "l9-setting-up-terraform"
       reason: "infra-as-code bootstrap — high blast radius, explicit only"
     - skill: "l9-pr-remediation"
-      reason: "recursive PR loop that pushes commits and posts review replies — high blast radius, explicit only"
+      reason: "unified max-depth PR remediation (concurrent clusters, push + review replies) — high blast radius, explicit only"
     - skill: "l9-bounded-autonomy"
       reason: "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only"
     - skill: "l9-cli-optimization"
@@ -109,6 +112,8 @@ tiers:
       reason: "SaaS admin UI mutations via Playwright cartridges — high blast radius; requires human approve"
 
   do_not_migrate_to_skills:
+    - item: "skills/l9-structured-reasoning-deprecated/"
+      reason: "superseded by skills/l9-structured-reasoning/; retain for historical comparison only — never auto-invoke or reconcile into discovery"
     - item: "commands/violation.md"
       reason: "violation handling belongs in always-applied rules or hooks, not optional skill context"
     - item: "commands/mem.md"
@@ -125,18 +130,18 @@ tiers:
 reasoning_routing:
   purpose: "Which l9-structured-reasoning reference applies to which task class."
   sources: ["profiles/orchestrator.md", "profiles/reasoning_l9.md"]
-  note: "Advisory routing context for the model, not an execution order. No orchestrator process exists."
+  note: "Advisory routing context for the model, not an execution order. No orchestrator process exists. Canonical pack is the adaptive router rebuild; Block-protocol pack is l9-structured-reasoning-deprecated."
   routes:
-    - task_class: "L9 platform work — kernel, executor, memory substrate, tool dispatch, approval gates"
-      reference: "l9-structured-reasoning/references/reasoning-protocol.md#l9-platform-invariants"
-    - task_class: "Tool, library, API, or architecture selection"
-      reference: "l9-structured-reasoning/references/technical-operations-reasoning.md"
+    - task_class: "Adaptive routing, proof obligations, risk/evidence autonomy"
+      reference: "l9-structured-reasoning/references/reasoning-router.yaml"
+    - task_class: "Tool, capability, parallelism, or write-authority constraints"
+      reference: "l9-structured-reasoning/references/capability-adapters.md"
     - task_class: "Multi-document corpus analysis — gaps, coherence, dependency mapping"
       reference: "l9-structured-reasoning/references/document-corpus-reasoning.md"
-    - task_class: "Depth selection for a single problem"
-      reference: "l9-structured-reasoning/references/reasoning-modes.md"
-    - task_class: "Strategic angle, only when the user explicitly requests one"
-      reference: "l9-structured-reasoning/references/persona-lenses.md"
+    - task_class: "Evidence ledger / auditable decision handoff"
+      reference: "l9-structured-reasoning/references/evidence-decision-contract.yaml"
+    - task_class: "Proceed / probe / block under uncertainty"
+      reference: "l9-structured-reasoning/references/risk-and-autonomy-policy.md"
 
 claude_routing:
   version: 2

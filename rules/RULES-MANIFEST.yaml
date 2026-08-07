@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-06T07:20:05Z'
+generated_utc: '2026-08-07T00:58:19Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:f350c4a06a282a8cb987b3be40163274358e528b1bd232ba81cd39091dd175e6
+source_tree_digest: sha256:a72fe4ca3d08cde02bd7227b01bfb623c7bafbe06e0a87eb2c64b1b9b3b1b655
 summary:
   total_mdc_files: 62
   always_apply_true: 41
@@ -289,7 +289,7 @@ rules:
   id: l9.rule.23.l9.skill.routing
   id_source: derived
   version: null
-  description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints.
+  description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints; fail closed if skipped.
   scope: global
   domain: governance
   activation: always
@@ -298,8 +298,8 @@ rules:
   globs: null
   first_heading: L9 skill routing (Cursor)
   has_yaml_frontmatter: true
-  line_count: 56
-  content_digest: sha256:fca5bf6694eab8ac46f30bbc2e8d829ecfd5d63a6d172e947f510b4adc5e2a08
+  line_count: 67
+  content_digest: sha256:52b9285078cc09a5f581f137e260f16ac5762e3812cc325beaa430c2648e8f84
   authority: compatibility
   context_cost: minimal
   deprecated: false

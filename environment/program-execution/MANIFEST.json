@@ -18,14 +18,6 @@
       "sha256": "5f80e55ed935354c3e6936940d1e7b11322fe0115321484060ee7f7174e98136"
     },
     {
-      "path": "Run 1 Agent Feedback Analysis.md",
-      "sha256": "bb8e2c0e477db15c6f73193e52588aaa41f0e518c4bf0ffeaebd7f03444e8ed0"
-    },
-    {
-      "path": "Run 1 Agent Feedback.md",
-      "sha256": "072a214f6766ff04ee0658a34683a1500b868f0c33903068aab3727757145048"
-    },
-    {
       "path": "adapters/__init__.py",
       "sha256": "c38173eb85f8826d1a645528df15ab4e3342dd07c76bce74838c67da2ba85f7c"
     },
@@ -412,6 +404,38 @@
     {
       "path": "adapters/github/remote-actions/tests/test_remote_actions.py",
       "sha256": "53d47cc43f8c1a88f990d24aa1842c7f8b92de7ae45e7f34c01b9613f480a529"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/CAMPAIGN_SOURCE.yaml",
+      "sha256": "2e6e137597958203e595bcbceea52fc9fbb83dcb71cbc18dfa901a84f572ee79"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/README.md",
+      "sha256": "8d8612bd899f2ccc25c013cbe089ab0bd2c0f74927b5d74f395b437b155e7c9d"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/IB-Odoo_19-INTEGRATION-DELIVERY.md",
+      "sha256": "061968bf587598fca2ebd0555e30259a5956d2150e20fd87ae5896c8272281d8"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_ceg_match_mapper.py",
+      "sha256": "eb14d197d73accc50eaf693fd9cf3510ac50d7a431c809cc9d4232c2c35a7ebb"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_eie_converge_mapper.py",
+      "sha256": "0f935e12fec8576779c3a3c0433119f8c8616ac511a81b689ad587d449f7dafd"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/handoff/CAMPAIGN_HANDOFF.md",
+      "sha256": "152780687ea5f0839749cbf9485c7c915eb374797a3a92255d656c551af47f86"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/handoff/handoff.json",
+      "sha256": "eb80f6f418cd968632afcd95472c4544b97099e141d8ed2a88174b73f906b732"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
+      "sha256": "337bb070d9e5d1fec322e3c09c7fc3894bc938c0b3d0e640e3c94f70bb7a767b"
     },
     {
       "path": "conformance/README.md",

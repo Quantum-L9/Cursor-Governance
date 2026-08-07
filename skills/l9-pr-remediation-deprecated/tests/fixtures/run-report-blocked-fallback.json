@@ -1,0 +1,254 @@
+{
+  "schema_version": "3.0",
+  "run": {
+    "run_id": "run-1",
+    "repo": "Quantum-L9/example",
+    "mode": "mutating",
+    "configured_max_cycles": 3,
+    "pr": {
+      "number": 7,
+      "branch": "fix/pr-7",
+      "head_sha_before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "cycles_run": 3
+    }
+  },
+  "preflight": {
+    "github_connection_established": false,
+    "repo_resolved": true,
+    "pr_resolved": true,
+    "local_checkout_available": true,
+    "branch_write_available": true,
+    "issue_write_available": false,
+    "mutation_authorized": true,
+    "resume_source": "fresh",
+    "blockers": []
+  },
+  "cycles": [
+    {
+      "cycle_number": 1,
+      "input_head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "output_head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "signals_ingested": 1,
+      "actionable_findings": 1,
+      "changes_applied": 0,
+      "local_verify_iterations": 1,
+      "local_verify_green": false,
+      "commit_sha": null,
+      "push_count": 0,
+      "remote_ci": "failure",
+      "new_actionable_comments": 0,
+      "outcome": "retry",
+      "checkpoint_path": "/tmp/state-1.json",
+      "ci_pipeline_signals_discovered": 0,
+      "ci_pipeline_mutations_attempted": 0
+    },
+    {
+      "cycle_number": 2,
+      "input_head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "output_head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "signals_ingested": 1,
+      "actionable_findings": 1,
+      "changes_applied": 0,
+      "local_verify_iterations": 1,
+      "local_verify_green": false,
+      "commit_sha": null,
+      "push_count": 0,
+      "remote_ci": "failure",
+      "new_actionable_comments": 0,
+      "outcome": "retry",
+      "checkpoint_path": "/tmp/state-2.json",
+      "ci_pipeline_signals_discovered": 0,
+      "ci_pipeline_mutations_attempted": 0
+    },
+    {
+      "cycle_number": 3,
+      "input_head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "output_head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "signals_ingested": 1,
+      "actionable_findings": 1,
+      "changes_applied": 0,
+      "local_verify_iterations": 1,
+      "local_verify_green": false,
+      "commit_sha": null,
+      "push_count": 0,
+      "remote_ci": "failure",
+      "new_actionable_comments": 0,
+      "outcome": "blocked",
+      "checkpoint_path": "/tmp/state-3.json",
+      "ci_pipeline_signals_discovered": 0,
+      "ci_pipeline_mutations_attempted": 0
+    }
+  ],
+  "gates": {
+    "gate_registry": {
+      "pr_scope_total": 1,
+      "total_gates": 3,
+      "locally_reproducible_gates": 2,
+      "gates": [
+        {
+          "name": "test",
+          "command": "pytest -q",
+          "source": "workflow",
+          "required": true,
+          "can_run_locally": true,
+          "requires_secrets": false,
+          "remote_confirmation_required": false
+        },
+        {
+          "name": "lint",
+          "command": "ruff check .",
+          "source": "workflow",
+          "required": true,
+          "can_run_locally": true,
+          "requires_secrets": false,
+          "remote_confirmation_required": false
+        },
+        {
+          "name": "deploy-check",
+          "command": null,
+          "source": "branch-protection",
+          "required": true,
+          "can_run_locally": false,
+          "requires_secrets": true,
+          "remote_confirmation_required": true
+        }
+      ]
+    },
+    "classified_findings": {
+      "blocking": 1,
+      "auto_apply": 1,
+      "validate": 0,
+      "discussion": 0,
+      "deferred": 0,
+      "ignored": 1,
+      "human_decision": 0,
+      "total": 2,
+      "cycle_scope": [
+        "f1",
+        "f2"
+      ],
+      "ci_pipeline_signal": 0
+    },
+    "local_verify_log": {
+      "iteration": 1,
+      "gates_run": 2,
+      "gates_passed": 1,
+      "all_green": false,
+      "results": [
+        {
+          "gate": "test",
+          "command": "pytest -q",
+          "exit_code": 1
+        },
+        {
+          "gate": "lint",
+          "command": "ruff check .",
+          "exit_code": 0
+        }
+      ]
+    },
+    "push_record": {
+      "commit_sha": null,
+      "commit_message": null,
+      "files_in_commit": 0,
+      "push_count_this_cycle": 0,
+      "branch": "fix/pr-7",
+      "idempotency_trailer": null,
+      "changed_paths": [],
+      "ci_pipeline_files_in_commit": 0
+    },
+    "reply_record": {
+      "threads_total": 1,
+      "threads_replied": 1,
+      "threads_resolved": 1,
+      "threads_requiring_human": 0,
+      "issues_created": 0,
+      "batch_summary_posted": true,
+      "threads_routed_ci": 0,
+      "ci_issue_files_created": 0
+    },
+    "report_record": {
+      "run_report_emitted": true,
+      "deliverable_emitted": true
+    }
+  },
+  "findings": {
+    "applied": [],
+    "deferred": [],
+    "rejected": [
+      {
+        "id": "f2",
+        "reviewer": "bot",
+        "file": "x.py",
+        "reason": "false positive"
+      }
+    ],
+    "human_decision": [
+      {
+        "id": "h1",
+        "reviewer": "human",
+        "file": "x.py",
+        "reason": "architecture decision required"
+      }
+    ]
+  },
+  "pr_readiness": {
+    "ready": false,
+    "evaluated_head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "head_sha_matches_remote": true,
+    "required_checks_green": false,
+    "mergeable": true,
+    "draft": false,
+    "review_decision_acceptable": false,
+    "actionable_threads_remaining": 0,
+    "human_decisions_remaining": 1,
+    "blocking_findings_remaining": 1,
+    "worktree_clean": true,
+    "codebase_blockers_remaining": 1,
+    "ci_pipeline_blockers_remaining": 0,
+    "ci_pipeline_threads_remaining": 0
+  },
+  "terminal_escalation": {
+    "mode": "fallback_artifact",
+    "creation_attempted": false,
+    "marker": "<!-- l9-pr-remediation-blocker:Quantum-L9/example#7:abc -->",
+    "title": "[PR Remediation Blocked] PR #7: decision required",
+    "fallback_issue_path": "issues/pr-7-terminal-blocker.md"
+  },
+  "convergence": {
+    "convergence_status": "blocked",
+    "pushes_total": 0,
+    "commits_pushed": [],
+    "cycles_exhausted": true,
+    "protocol_violations": [],
+    "minimum_safe_next_action": "owner decides architecture"
+  },
+  "summary": {
+    "fixes_applied": 0,
+    "deferred": 0,
+    "rejected": 1,
+    "human_decisions": 1,
+    "review_sources": [
+      {
+        "id": "github_comments",
+        "enabled": true,
+        "queried": true,
+        "required_source": true,
+        "gate_status": "passed",
+        "issues_ingested": 1
+      }
+    ],
+    "ci_pipeline_signals": 0
+  },
+  "deliverable": {
+    "created": true,
+    "tarball_path": "artifacts/run.tar.gz",
+    "contains_run_report": true,
+    "contains_convergence_report": true,
+    "contains_pr_ready_evidence": true,
+    "contains_issue_fallback": true,
+    "contains_ci_issue_files": false,
+    "ci_issue_file_count": 0
+  },
+  "ci_pipeline_signals": []
+}
