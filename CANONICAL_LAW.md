@@ -15,7 +15,7 @@ status: active
 **Runtime:** L9 Governance  
 **Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone  
 **GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`  
-**Updated:** 2026-07-27 (Cursor-plugin governance wiring, rule 84 v3.0.0)
+**Updated:** 2026-08-06 (Cursor-primary capability ownership — adapter wrap-out law)
 
 ---
 
@@ -39,12 +39,14 @@ status: active
 
 ## 2. IDE Adapter Model
 
-This governance layer is **IDE-agnostic**. The `.cursor-commands/` symlink is one adapter. Future adapters (Windsurf, VS Code, CLI) will consume the same root via their own conventions.
+This governance layer is **IDE-agnostic at the consumption edge**. The
+`.cursor-commands/` symlink is one adapter. Future adapters (Windsurf, VS Code,
+CLI) will consume the same root via their own conventions.
 
 | Adapter | Entry point | Status |
 |---------|-------------|--------|
-| Cursor | `.cursor-commands/` → clone root | Active |
-| Claude Code (CLI · Web · Mobile) | `environment/claude-code/` — committed `.claude/` + account environment | Active |
+| Cursor | `.cursor-commands/` → clone root; `l9-governance` local plugin | Active (**primary coding surface**) |
+| Claude Code (CLI · Web · Mobile) | `environment/claude-code/` — committed `.claude/` + account environment | Active (**dependent adapter**) |
 | Manus | `environment/agents/adapters/manus/` — connector + env + session bootstrap, identity from `environment/agents/agent_registry.yaml` | Active |
 | Codex / OpenAI | `environment/agents/adapters/codex/` — AGENTS.md block + env, identity from `environment/agents/agent_registry.yaml` | Planned |
 | Gemini CLI | `environment/agents/adapters/gemini/` — settings template + env, identity from `environment/agents/agent_registry.yaml` | Planned |
@@ -52,17 +54,59 @@ This governance layer is **IDE-agnostic**. The `.cursor-commands/` symlink is on
 | VS Code | TBD | Planned |
 | CLI (direct) | Direct path reference | Active |
 
+### 2.1 Cursor-primary capability ownership (anti-spaghetti)
+
+**This repo is `Cursor-Governance`.** Cursor is the superior coding surface for
+authoritative product work. Other LLM/IDE runtimes (Claude Code, Codex, Gemini,
+Manus, …) are **dependent adapters** that consume this SSOT. They are surface
+peers for *activation shape* (hooks, settings templates, discovery paths) — they
+are **not** owners of shared capability.
+
+**Law — build inward, wrap outward:**
+
+1. Implement shared capability **first** in Cursor-primary (or adapter-neutral)
+   homes: `ops/`, `rules/`, `skills/`, `commands/`, top-level governance contracts.
+2. Only then add a **thin adapter wrapper** under `environment/<adapter>/` (or
+   `environment/agents/adapters/<adapter>/`) that binds the same capability to
+   that surface’s hooks, settings, and discovery paths.
+3. Adapters may narrow, translate, or fail-open for surface limits. Adapters must
+   **never** become the implementation home that Cursor then imports.
+
+**Forbidden (causes spaghetti):**
+
+| Anti-pattern | Why |
+|---|---|
+| Shared scorer / router / autonomy brain lives under `environment/claude-code/` and Cursor imports it | Inverts ownership — Claude adapter owns Cursor’s brain |
+| “Claude implemented it; wrap Cursor to reuse Claude” | Dependent adapter dictating the SSOT |
+| Duplicating the same brain in each adapter folder | Drift and dual maintenance |
+| Treating “peer of `environment/ide/`” as equal ownership of cross-surface logic | Peer = surface parity, not capability ownership |
+
+**Required shape:**
+
+| Layer | Owner | Example |
+|---|---|---|
+| Shared capability | Cursor-primary / adapter-neutral governance | `ops/hooks/*`, `ops/scripts/*`, `rules/*`, `skills/*`, shared libs under `ops/` |
+| Cursor binding | Cursor adapter paths | `~/.cursor/hooks.json`, `l9-governance` plugin, `.cursor-commands` |
+| Other LLM/IDE binding | Thin wrapper only | `environment/claude-code/hooks/*` imports shared ops; does not own the scorer |
+
+**Known debt to reverse when touched:** skill routing currently scores in
+`environment/claude-code/hooks/user_prompt_skill_router.py` with Cursor wrapping
+via `ops/hooks/before_submit_skill_router.py`. New work must relocate shared
+scoring to Cursor-primary/ops and make Claude the thin consumer — do not extend
+the inverted pattern.
+
 Multi-agent identity (WHO writes memory: agent IDs, roles, tokens-by-name) is
 governed by `environment/agents/agent_registry.yaml` — peer of
 `ops/graphiti/group_registry.yaml` (WHAT repo memory is about). Validate with
 `make agents-env`. See `environment/agents/README.md`.
 
-The Claude Code adapter is defined in `environment/claude-code/` (peer of
-`environment/ide/`). It reuses `environment/ide/policy.json` unchanged; formatter
-ownership reaches a Claude Code session through the `agentdocs` `CLAUDE.md` block,
-not a second authority. It adds **no** second activation path for Cursor. On
-Claude Code Web/Mobile the sandbox is cloned fresh and reclaimed per session, so
-its activation is carried by **git-tracked** files (`.claude/settings.json`, the
+The Claude Code adapter is defined in `environment/claude-code/` (surface peer of
+`environment/ide/` for activation templates — **not** capability owner). It
+reuses `environment/ide/policy.json` unchanged; formatter ownership reaches a
+Claude Code session through the `agentdocs` `CLAUDE.md` block, not a second
+authority. It adds **no** second activation path for Cursor. On Claude Code
+Web/Mobile the sandbox is cloned fresh and reclaimed per session, so its
+activation is carried by **git-tracked** files (`.claude/settings.json`, the
 SessionStart hook, `.mcp.json`) plus the account-level environment — never by
 `~/.cursor/` machine state, which never reaches the sandbox.
 
@@ -162,6 +206,7 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
 - Referencing archived scripts (`ops/scripts/_archived/`) as active dependencies
 - Using `cursor_memory_client.py` — deprecated, use Graphiti
 - "Fire and hope" command execution — issuing a write/execute command with no prior read-only diagnosis (see §11)
+- Implementing shared cross-surface capability under a dependent adapter (e.g. `environment/claude-code/`) and wrapping Cursor to import it — violates §2.1; causes adapter spaghetti
 
 ---
 

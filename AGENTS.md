@@ -244,6 +244,11 @@ Forbidden: a second governance tree in any repo, `.cursor/commands` or
 `.cursor/skills` duplicating `.cursor-commands/*`, hard-reset/force-push of
 this clone.
 
+**Cursor-primary ownership (`CANONICAL_LAW.md` §2.1):** build shared capability
+in Cursor-primary / `ops/` first; wrap outward for Claude Code and other
+adapters. Never implement a shared brain under `environment/claude-code/` and
+have Cursor import it — that is adapter spaghetti.
+
 ---
 
 ## 5. Change policy
@@ -267,6 +272,8 @@ controls in the root `conftest.py` instead of rewriting the field here.
 
 ### 5.3 Forbidden
 - Reintroducing Dropbox as an SSOT fallback in any resolver script
+- Owning shared cross-surface capability under a dependent adapter and wrapping
+  Cursor to consume it (violates `CANONICAL_LAW.md` §2.1)
 - Restoring archived pre-Graphiti daemons without confirming they're not
   superseded (check `git log` for the archiving commit's stated rationale
   first)

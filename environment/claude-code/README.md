@@ -1,10 +1,15 @@
 # Claude Code environment (CLI · Web · Mobile)
 
 First-class, **no-friction** activation of L9 governance for Claude Code, across
-all three surfaces it runs on. This is the Claude Code peer of
+all three surfaces it runs on. This is the Claude Code **surface peer** of
 `environment/ide/` (which renders the editor profile for Cursor/VS Code): same
-IDE-neutral `policy.json`, a different adapter.
+IDE-neutral `policy.json`, a different activation adapter.
 
+**Ownership law (`CANONICAL_LAW.md` §2.1):** Claude Code is a *dependent*
+adapter. Shared capability (scorers, routers, autonomy brains) must live in
+Cursor-primary / adapter-neutral homes (`ops/`, `rules/`, `skills/`). This
+directory wraps those capabilities for Claude discovery — it must **not** own
+them for Cursor to import.
 > **Not to be confused with `profiles/`.** `profiles/*.md` shape how the LLM
 > *reasons*. This directory configures the Claude Code *runtime* — how a session
 > boots governance, discovers skills, reaches shared memory, and stays within
