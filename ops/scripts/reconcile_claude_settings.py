@@ -47,7 +47,9 @@ def dump_json(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
-def merge_user_settings(template: dict[str, Any], existing: dict[str, Any] | None) -> dict[str, Any]:
+def merge_user_settings(
+    template: dict[str, Any], existing: dict[str, Any] | None
+) -> dict[str, Any]:
     """Template wins for managed keys; preserve plugins/theme and unknown user keys."""
     base = dict(existing or {})
     out: dict[str, Any] = {}
@@ -112,9 +114,7 @@ def reconcile_gov_claude(root: Path, template: dict[str, Any], *, check: bool) -
     hooks_src = root / HOOKS_SRC_REL
     hooks_dest = root / ".claude" / "hooks"
     for name in CONSUMER_HOOK_FILES:
-        drift.extend(
-            sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote)
-        )
+        drift.extend(sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote))
     return {"wrote": wrote, "drift": drift}
 
 
@@ -143,9 +143,7 @@ def reconcile_workspace(
     hooks_src = root / HOOKS_SRC_REL
     hooks_dest = claude / "hooks"
     for name in CONSUMER_HOOK_FILES:
-        drift.extend(
-            sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote)
-        )
+        drift.extend(sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote))
     return {"wrote": wrote, "drift": drift, "workspace": str(workspace)}
 
 

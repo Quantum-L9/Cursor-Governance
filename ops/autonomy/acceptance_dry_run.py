@@ -73,7 +73,10 @@ def main() -> int:
     allow = subprocess.run(
         [sys.executable, str(gate)],
         input=json.dumps(
-            {"tool_name": "Bash", "tool_input": {"command": "git commit -m x && git push origin HEAD"}}
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "git commit -m x && git push origin HEAD"},
+            }
         ),
         text=True,
         capture_output=True,
@@ -82,7 +85,10 @@ def main() -> int:
     step("merge_gate allows commit/push", allow.stdout.strip() == "")
 
     ovr = ROOT / "environment" / "generated" / "llm-rules" / "zz-autonomy-surface-override.md"
-    step("llm-rules override", ovr.is_file() and "99-no-auto-commit" in ovr.read_text(encoding="utf-8"))
+    step(
+        "llm-rules override",
+        ovr.is_file() and "99-no-auto-commit" in ovr.read_text(encoding="utf-8"),
+    )
 
     print("RESULT: PASS — structural autonomy surface dry-run")
     print("NOTE: live Claude session PR remediation still requires operator smoke test")

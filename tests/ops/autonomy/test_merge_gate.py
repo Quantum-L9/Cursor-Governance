@@ -39,9 +39,7 @@ def test_denies_force_push() -> None:
 
 
 def test_allows_normal_commit() -> None:
-    code, out = _run(
-        {"tool_name": "Bash", "tool_input": {"command": "git commit -m 'ok'"}}
-    )
+    code, out = _run({"tool_name": "Bash", "tool_input": {"command": "git commit -m 'ok'"}})
     assert code == 0
     assert out.strip() == ""
 
