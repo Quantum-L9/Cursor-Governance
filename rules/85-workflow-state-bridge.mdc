@@ -19,13 +19,13 @@ alwaysApply: true
 
 When starting a run, use:
 
-> 1. Graphiti `inject` + search PICKUP for this repo group.  
-> 2. Summarize in bullets:  
->    - Last PICKUP task / next / blocker  
->    - Context summary  
->    - Open questions  
->    - Current next steps  
-> 3. Propose an updated Next steps list for THIS run only.  
+> 1. Graphiti `inject` + search PICKUP for this repo group.
+> 2. Summarize in bullets:
+>    - Last PICKUP task / next / blocker
+>    - Context summary
+>    - Open questions
+>    - Current next steps
+> 3. Propose an updated Next steps list for THIS run only.
 > 4. Wait for my confirmation before editing code (when the user requires it).
 
 Do not modify repository files until STATE_SYNC is complete (and confirmed when required).
@@ -68,10 +68,10 @@ Do not modify repository files until STATE_SYNC is complete (and confirmed when 
 
 ## Anti-patterns
 
-❌ **DON'T** treat `memory-bank/` or `workflow_state.md` as resume SSOT  
+❌ **DON'T** treat `memory-bank/` or `workflow_state.md` as resume SSOT
 ✅ **DO** resume from Graphiti inject / PICKUP
 
-❌ **DON'T** skip PICKUP writes at session end when Graphiti is healthy  
+❌ **DON'T** skip PICKUP writes at session end when Graphiti is healthy
 ✅ **DO** write `--kind pickup_context` via the locked governance venv
 
 ---
