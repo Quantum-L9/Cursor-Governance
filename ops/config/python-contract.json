@@ -36,10 +36,6 @@
       "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
     },
     {
-      "path": "skills/l9-code-maintenance/scripts/self_test.py",
-      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
-    },
-    {
       "path": "skills/l9-repository-renovation/scripts/self_test.py",
       "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
     },

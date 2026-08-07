@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
 from pathlib import Path
 
 SKIP_DIR_NAMES = {
@@ -117,7 +116,12 @@ def main() -> int:
         type=Path,
         help="Path to a .claude directory (repeatable). Defaults to ~/.claude",
     )
-    parser.add_argument("--workspace", type=Path, default=None, help="Also scan <workspace>/.claude")
+    parser.add_argument(
+        "--workspace",
+        type=Path,
+        default=None,
+        help="Also scan <workspace>/.claude",
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
