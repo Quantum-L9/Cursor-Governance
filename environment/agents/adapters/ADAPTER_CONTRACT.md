@@ -23,6 +23,16 @@ Code itself stays at `environment/claude-code/` (preexisting peer of
 | **Reach shared memory** | `mcp.template.json` + account env | One of: `mcp.template.json`, `mcp-connector.json`, `settings.template.json`, `config.toml.example` |
 | **Identity env** | `web/environment.env.example` | `environment.env.example` with registry-matching `USER_ID` / `L9_MEMORY_AGENT_ID` / `L9_MEMORY_SOURCE` |
 | **Network** | `web/network-policy.md` | Point at `docs/network-allowlist.md` (shared) |
+| **Autonomy surface** | Profile + settings triad + merge_gate | Cite `ops/autonomy/surface_profile.yaml`; set `L9_GOVERNANCE_SURFACE=<adapter>`; mount Profile `session_start_block` in boot carrier; do not fork doctrine prose |
+
+## Autonomy carrier (binding)
+
+Shared SSOT: [`ops/autonomy/surface_profile.yaml`](../../../ops/autonomy/surface_profile.yaml).
+
+- Env: `L9_AUTONOMY_ENABLED=true`, `L9_GOVERNANCE_SURFACE` matching the adapter name, `L9_AUTONOMY_AUTONOMOUS_MERGE=false`
+- Boot text: include or reference Profile `session_start_block` (verbatim via loader preferred)
+- Merge forbid: call or document `ops/autonomy/merge_gate.py` semantics
+- Cursor is excluded from standing A4 (ask-first retained)
 
 ## Memory endpoint (binding)
 

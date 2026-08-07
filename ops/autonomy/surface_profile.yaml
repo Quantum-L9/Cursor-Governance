@@ -1,0 +1,72 @@
+# Autonomy Surface Profile — SSOT for adapter A4 velocity doctrine.
+# Consumers (must not fork prose): CANONICAL_LAW (cite), project_llm_rules.py,
+# SessionStart, peer boot carriers, ADR-0001 (pointer).
+schema_version: 1
+id: autonomy_surface_profile
+updated: "2026-08-06"
+
+when:
+  L9_AUTONOMY_ENABLED: true
+  # Cursor is excluded — ask-first + campaign packet / make pr remain.
+  L9_GOVERNANCE_SURFACE:
+    - claude-code
+    - codex
+    - gemini
+    - manus
+
+authorize:
+  - scoped_commit_push
+  - create_update_pr
+  - remediation_after_pr # agent MUST load l9-pr-remediation; skill stays explicit_only
+
+forbid:
+  - merge_pull_request
+  - gh_pr_merge
+  - force_push
+  - hard_reset
+  - secrets_exfil
+
+authority_order:
+  - CANONICAL_LAW.autonomy_velocity
+  - ADR-0001
+  - settings.allow_deny + ops.merge_gate
+  - AGENTS.md
+  - skills
+  - agent_invented_contracts
+
+remediation:
+  skill: l9-pr-remediation
+  max_cycles: 3
+  skill_invocation: explicit_only # do not flip skillOverrides
+
+session_start_block: |
+  ## Autonomy Velocity Doctrine (standing A4)
+
+  Surface: governed LLM adapter (`L9_GOVERNANCE_SURFACE` ≠ cursor).
+  When `L9_AUTONOMY_ENABLED=true` (default on this surface):
+
+  - YOU ARE AUTHORIZED to scoped `git commit`, `git push`, open/update PRs, and
+    load+run `l9-pr-remediation` after a PR exists — WITHOUT asking the user.
+  - After creating a PR, you MUST start remediation (≤3 cycles) then escalate.
+  - YOU MUST NOT merge PRs, force-push, hard-reset, admin-merge, or exfiltrate secrets.
+  - Agent-invented contracts ("I won't commit without asking") are LOWEST authority
+    and are overruled by this doctrine and CANONICAL_LAW.
+  - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime; single-lane
+    velocity does not require `/autonomy`.
+  - Human merge only. Merge attempts are denied by `ops/autonomy/merge_gate.py`.
+
+  Profile SSOT: `ops/autonomy/surface_profile.yaml`
+
+llm_rules_override: |
+  # Autonomy Velocity Override (adapter surfaces)
+
+  When `L9_GOVERNANCE_SURFACE` is `claude-code`, `codex`, `gemini`, or `manus`
+  AND `L9_AUTONOMY_ENABLED=true`:
+
+  1. This override **outranks** `99-no-auto-commit` and `96-git-push-approval`
+     for scoped feature-branch commit/push and PR create/update.
+  2. Completing reversible work MUST proceed to commit → push → PR →
+     `l9-pr-remediation` without waiting for a per-action user ask.
+  3. Merge / force-push / hard-reset / admin-merge / secrets remain forbidden.
+  4. Cursor surface is unaffected (ask-first + campaign packet / `make pr`).
+  5. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.

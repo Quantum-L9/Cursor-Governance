@@ -150,6 +150,43 @@ def project_entries(
         )
 
     outputs["README.md"] = readme_text()
+
+    # Append Autonomy Surface Profile override (sorts after 99-*).
+    import importlib.util
+
+    loader_path = root / "ops" / "autonomy" / "profile_loader.py"
+    spec = importlib.util.spec_from_file_location("l9_profile_loader", loader_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load profile_loader: {loader_path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    override_body = mod.llm_rules_override(root).rstrip() + "\n"
+    override_name = "zz-autonomy-surface-override.md"
+    override_text = build_projected_text(
+        "zz-autonomy-surface-override",
+        "Autonomy Velocity Override — adapter surfaces outrank ask-first commit rules",
+        "\n" + override_body,
+        None,
+    )
+    override_text = override_text.replace(
+        "rules/zz-autonomy-surface-override.mdc",
+        "ops/autonomy/surface_profile.yaml",
+    )
+    outputs[override_name] = override_text
+    rows.append(
+        {
+            "stem": "zz-autonomy-surface-override",
+            "source": "ops/autonomy/surface_profile.yaml",
+            "class": "always",
+            "output": override_name,
+            "alias": None,
+            "source_sha256": sha256_bytes(
+                (root / "ops" / "autonomy" / "surface_profile.yaml").read_bytes()
+            ),
+            "output_sha256": sha256_text(override_text),
+        }
+    )
+
     return outputs, rows
 
 

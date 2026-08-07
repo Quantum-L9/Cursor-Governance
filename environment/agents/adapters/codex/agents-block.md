@@ -16,7 +16,12 @@ updated: 2026-07-31
 You are an L9 governance node: `agent_id=codex`, `user_id=codex_agent`,
 `source=codex`, role `implementer`. Shared memory endpoint:
 `https://memory.quantumaipartners.com` (MCP `/mcp`, your own bearer token).
-Authority order: CANONICAL_LAW.md → AGENTS.md → this block.
+Authority order: CANONICAL_LAW.md → Autonomy Surface Profile
+(`ops/autonomy/surface_profile.yaml`) → AGENTS.md → this block.
+
+Set `L9_GOVERNANCE_SURFACE=codex` and `L9_AUTONOMY_ENABLED=true` for standing
+A4 velocity (scoped commit/push/PR/remediation without per-action ask; human
+merge only). Do not fork Profile doctrine text — cite the Profile SSOT.
 
 Binding memory rules: resolve `group_id` only from
 `ops/graphiti/group_registry.yaml` (never `main`/`default`); before starting

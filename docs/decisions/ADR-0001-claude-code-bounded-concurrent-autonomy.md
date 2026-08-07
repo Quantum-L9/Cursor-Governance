@@ -63,15 +63,23 @@ Adopt the bounded-concurrency runtime under
 - New `L9_AUTONOMY_*` environment flags; per-workspace durable state under
   `L9_AUTONOMY_STATE_DIR` (default `.l9/autonomy/`, git-ignored). The SessionStart
   probe is read-only; only `init`/run create the state tree.
-- **Known limitation (follow-up):** the merge gate is advisory. Merge is held
-  back at the permission layer (prompt), not by a `PreToolUse` hook that runs
-  `merge_coordinator.evaluate_merge`. Enforcing the gate programmatically is a
-  candidate for a future ADR if/when autonomous merge is ever revisited.
+- **Merge gate (2026-08-06):** enforced at PreToolUse via
+  `ops/autonomy/merge_gate.py` (Claude wrap:
+  `environment/claude-code/hooks/merge_gate_wrap.py`). Permission omit of
+  `merge_pull_request` remains. Standing A4 velocity doctrine is the
+  Autonomy Surface Profile (`ops/autonomy/surface_profile.yaml`).
 - The state digest is an unkeyed SHA-256: it detects corruption, not malicious
   tampering, and is never authoritative after GitHub/target identity drift.
+
+## Addendum — Autonomy Surface Profile (2026-08-06)
+
+Standing single-lane velocity on adapter surfaces does **not** require
+`/autonomy` or auto-init of the Python campaign scheduler. SessionStart injects
+the Profile `session_start_block`. Multi-lane fan-out still uses `/autonomy`.
+`99-no-auto-commit` / `96-git-push-approval` are waived on adapter surfaces per
+Profile; Cursor is unchanged. See CANONICAL_LAW §6.1.
 
 ## Follow-ups
 
 - Distribution-owner sign-off is required before `L9_AUTONOMY_AUTONOMOUS_MERGE`
   is ever set to `true`; that change would supersede this ADR.
-- Consider a `PreToolUse` enforcement hook for the merge gate.

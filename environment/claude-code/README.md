@@ -48,7 +48,8 @@ context**, **reach shared memory** — without a human wiring step.
 | Need | CLI | Web / Mobile |
 |---|---|---|
 | Discover L9 skills | `~/.claude/skills/` fed by `setup_claude_code_plugins.sh` (user scope, machine-wide) | governance cloned by `web/setup.sh`; skills referenced from the clone |
-| Boot session context | `hooks/session_start_claude_governance.sh` registered in `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` in the consumer repo |
+| Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
+| Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate PreToolUse | same Profile; standing A4; human merge |
 | Reach shared memory | `mcp.template.json` → user-scope MCP server | committed `.mcp.json` (env-refs only) + `L9_MEMORY_*` from the account environment |
 
 ### Proactive L9 skill discovery and routing
