@@ -81,7 +81,11 @@ def main() -> int:
             text=True,
             check=False,
         )
-        step("reconcile --check", check.returncode == 0, check.stdout.strip() or check.stderr.strip())
+        step(
+            "reconcile --check",
+            check.returncode == 0,
+            check.stdout.strip() or check.stderr.strip(),
+        )
 
     gate = ROOT / "ops" / "autonomy" / "merge_gate.py"
     deny = subprocess.run(

@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
+GOV_ROOT = SCRIPTS.parent.parent
 sys.path.insert(0, str(SCRIPTS))
 
 from project_llm_rules import check_projection, materialize  # noqa: E402
@@ -68,6 +70,10 @@ class ProjectLlmRulesTests(unittest.TestCase):
             "---\ndescription: routing\nalwaysApply: true\n---\n\n# Routing\n",
             encoding="utf-8",
         )
+        autonomy = root / "ops" / "autonomy"
+        autonomy.mkdir(parents=True)
+        for name in ("profile_loader.py", "surface_profile.yaml"):
+            shutil.copy2(GOV_ROOT / "ops" / "autonomy" / name, autonomy / name)
         return root
 
     def test_projection_classes_alias_deny_skip(self) -> None:
@@ -78,6 +84,7 @@ class ProjectLlmRulesTests(unittest.TestCase):
             self.assertTrue((out / "00-always.md").is_file())
             self.assertTrue((out / "20-paths.md").is_file())
             self.assertTrue((out / "l9-skill-routing.md").is_file())
+            self.assertTrue((out / "zz-autonomy-surface-override.md").is_file())
             self.assertFalse((out / "23-l9-skill-routing.md").exists())
             self.assertFalse((out / "84-cursor-governance-wiring.md").exists())
             self.assertFalse((out / "88-agent.md").exists())
@@ -86,10 +93,10 @@ class ProjectLlmRulesTests(unittest.TestCase):
             self.assertIn("src/**/*.py", paths_text)
             self.assertIn("generated-from: rules/20-paths.mdc", paths_text)
             manifest = json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["summary"]["projected"], 3)
+            self.assertEqual(manifest["summary"]["projected"], 4)
             self.assertEqual(manifest["summary"]["denied"], 1)
             self.assertEqual(manifest["summary"]["skipped_agent_requested"], 1)
-            self.assertEqual(result["summary"]["projected"], 3)
+            self.assertEqual(result["summary"]["projected"], 4)
             self.assertEqual([], check_projection(root))
 
     def test_check_detects_drift(self) -> None:

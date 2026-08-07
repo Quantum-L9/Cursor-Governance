@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-settings claude-settings-check claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -100,6 +100,8 @@ claude-skills-test:
 	python3 environment/claude-code/tests/test_skill_reconciliation.py
 	python3 environment/claude-code/tests/test_cursor_skill_router.py
 
+.PHONY: claude-settings claude-settings-check
+
 ## Reconcile Claude settings triad (template → gov .claude → ~/.claude → optional WS).
 ## Usage: make claude-settings WS=/path/to/repo
 ## Check: make claude-settings-check WS=/path/to/repo
@@ -113,7 +115,8 @@ claude-settings-check:
 
 ## Validate the Claude Code environment adapter and proactive skill activation.
 ## Heals the settings triad first (idempotent), then runs structural validation.
-claude-env: claude-settings
+claude-env:
+	$(MAKE) claude-settings
 	python3 environment/claude-code/validate_claude_env.py
 
 ## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).

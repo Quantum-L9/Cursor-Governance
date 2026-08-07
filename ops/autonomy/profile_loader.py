@@ -58,11 +58,13 @@ def _extract_block_scalar(text: str, key: str) -> str:
 
 
 def session_start_block(root: Path | None = None) -> str:
-    return _extract_block_scalar(profile_path(root).read_text(encoding="utf-8"), "session_start_block")
+    text = profile_path(root).read_text(encoding="utf-8")
+    return _extract_block_scalar(text, "session_start_block")
 
 
 def llm_rules_override(root: Path | None = None) -> str:
-    return _extract_block_scalar(profile_path(root).read_text(encoding="utf-8"), "llm_rules_override")
+    text = profile_path(root).read_text(encoding="utf-8")
+    return _extract_block_scalar(text, "llm_rules_override")
 
 
 def load_profile(root: Path | None = None) -> dict[str, Any]:
