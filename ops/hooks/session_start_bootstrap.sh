@@ -138,25 +138,6 @@ if [ -x "$IDE_SETUP" ] && [ -n "$REPO" ]; then
   fi
 fi
 
-# Excerpt files from the *loaded workspace* memory-bank (CURSOR_PROJECT_DIR), never from
-# the Cursor-Governance clone. Skip missing files; keep excerpts short for hook payload.
-append_repo_memory_bank() {
-  local repo="$1"
-  local bank="$repo/memory-bank"
-  local f excerpt
-  if [ -z "$repo" ] || [ ! -d "$bank" ]; then
-    PARTS+=("memory-bank: absent in workspace (wire/scaffold via setup_workspace_symlinks)")
-    return 0
-  fi
-  PARTS+=("memory-bank repo=$(basename "$repo")")
-  for f in activeContext.md SESSION_HANDOFF.md progress.md tasks.md tech-debt.md; do
-    if [ -f "$bank/$f" ]; then
-      excerpt="$(head -20 "$bank/$f" | tr '\n' ' ' | cut -c1-500)"
-      PARTS+=("memory-bank/$f: ${excerpt}")
-    fi
-  done
-}
-
 needs_wire=0
 if [ -n "$REPO" ]; then
   # Governance loads as a Cursor local plugin (rules/84-cursor-governance-wiring.mdc
@@ -191,14 +172,11 @@ else
   PARTS+=("claude-plugins: claude CLI not on PATH")
 fi
 
-# Graphiti env (defaults → machine → secrets → keychain) + memory-bank scaffold
+# Graphiti env (defaults → machine → secrets → keychain). Resume SSOT is Graphiti
+# inject/PICKUP — memory-bank is deprecated and not scaffolded or excerpted here.
 # shellcheck source=/dev/null
 [ -f "$GC/ops/hooks/graphiti_common.sh" ] && source "$GC/ops/hooks/graphiti_common.sh"
 graphiti_load_env 2>/dev/null || true
-
-if [ -f "$GC/ops/hooks/graphiti_common.sh" ]; then
-  graphiti_scaffold_memory_bank "$REPO" 2>/dev/null || true
-fi
 
 # Ensure Graphiti SSH tunnel before health check (defaults + keychain + .env.local C1_SSH)
 ENSURE_TUNNEL="$GC/ops/hooks/ensure_graphiti_tunnel.sh"
@@ -228,8 +206,6 @@ if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
 else
   PARTS+=("graphiti: disabled or CLI missing")
 fi
-
-append_repo_memory_bank "$REPO"
 
 if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   if bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" >/dev/null 2>&1; then

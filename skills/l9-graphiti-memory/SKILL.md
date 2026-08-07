@@ -1,13 +1,13 @@
 ---
 name: l9-graphiti-memory
-description: Graphiti VPS memory — prefetch, group resolution, T0 memory-bank, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.
+description: Graphiti VPS memory — prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
 tags: [l9, graphiti, memory, prefetch, gmp, end-session]
 owner: igor_beylin
 status: active
-version: 1.2.0
+version: 1.3.0
 updated: 2026-08-06
 disable-model-invocation: false
 ---
@@ -16,7 +16,9 @@ disable-model-invocation: false
 
 ## Purpose
 
-Operate the Graphiti VPS memory layer (T1/T2) with local **memory-bank/** (T0) as resume SSOT. C1 MCP is **read-only legacy**.
+Operate the Graphiti VPS memory layer (T1/T2). **Resume SSOT** is Graphiti
+`inject` / PICKUP episodes. Local `memory-bank/` (former T0) is **deprecated**
+— hooks and `/end-session` do not read or write it. C1 MCP is **read-only legacy**.
 
 **Required by:** `/end-session` / skill `l9-end-session` for PICKUP + learning writes. Load this skill (or follow its CLI block) before invoking `graphiti_memory_client.py`.
 
@@ -75,9 +77,9 @@ Semantic “cursor scope” from older memory-kernel docs means tags/kind discip
 
 ## Session lifecycle
 
-1. **sessionStart** — `session_start_memory_orchestrator.sh` runs code-graph health + Graphiti prefetch (when enabled).
-2. **Resume** — read `memory-bank/activeContext.md` first; then cite prefetch episode names from `.cursor/graphiti-state/`.
-3. **sessionEnd hook** — `graphiti-session-end.sh` writes T0 distill to memory-bank only (no T1 unless `/end-session`).
+1. **sessionStart** — `session_start_memory_orchestrator.sh` runs code-graph health + Graphiti `inject` (when enabled).
+2. **Resume** — cite prefetch / `inject` results and search PICKUP episodes; do not read `memory-bank/` as SSOT.
+3. **sessionEnd hook** — `graphiti-session-end.sh` writes Graphiti `--kind session_summary` only; on failure, WARN and skip (no memory-bank).
 4. **`/end-session` / `l9-end-session`** — agent **must** use this skill’s `GRAPHITI_PY` + `CLIENT` for T1 PICKUP + one `--kind` write per learning. See `skills/l9-end-session/SKILL.md` and `commands/end-session.md`.
 
 ## Proactive writes (T2)
@@ -114,7 +116,7 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ## Authority
 
 1. `rules/03-graphiti-memory.mdc`
-2. `ops/graphiti/MEMORY_BANK_POLICY.md`
+2. `ops/graphiti/MEMORY_BANK_POLICY.md` (deprecated — archival note only)
 3. `ops/graphiti/group_registry.yaml`
 4. `rules/97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`
 5. `skills/l9-end-session/SKILL.md` — session-close write path

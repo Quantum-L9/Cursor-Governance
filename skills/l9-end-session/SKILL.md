@@ -7,7 +7,7 @@ role: skill_entrypoint
 tags: [l9, session, handoff, memory, governance, graphiti]
 owner: igor_beylin
 status: active
-version: 1.3.0
+version: 1.4.0
 updated: 2026-08-06
 disable-model-invocation: true
 ---
@@ -29,10 +29,10 @@ Slash command entry: [`commands/end-session.md`](../../commands/end-session.md) 
 
 ## Core Contract
 
-`GRAPHITI (T1, primary) → MEMORY-BANK (T0, fallback only) → REDIS → HOOKS → GOVERNANCE BACKUP → HANDOFF`
+`GRAPHITI (T1) → REDIS → HOOKS → GOVERNANCE BACKUP → HANDOFF`
 
-1. **MEMORY (primary)** — health-check via `GRAPHITI_PY` + `graphiti_memory_client.py`, then write PICKUP (`--kind pickup_context`) + one atomic write per learning (`--kind` only). This is the canonical store. When it succeeds, this is the **only** memory write for the session — do not also write the same summary into memory-bank.
-2. **MEMORY-BANK (fallback only)** — ONLY when the Graphiti health check fails or a write errors: append a dated PICKUP section to `$CURSOR_PROJECT_DIR/memory-bank/activeContext.md` (T0, target repo — never `$GLOBAL_COMMANDS`) instead of Graphiti, not in addition to it. Never truncate/overwrite the file. If `memory-bank/` is gitignored in the target repo (commonly this machine's global `~/.gitignore_global`), add a repo-local negation before relying on it being trackable.
+1. **MEMORY** — health-check via `GRAPHITI_PY` + `graphiti_memory_client.py`, then write PICKUP (`--kind pickup_context`) + one atomic write per learning (`--kind` only). This is the canonical store. **Do not** write `memory-bank/` (deprecated).
+2. **Graphiti failure** — if health check fails or a write errors: warn explicitly, skip memory persistence for this close, and continue Redis/handoff. No memory-bank fallback.
 3. **REDIS** — `cache_set_session_context` for next-window resume when the MCP tool exists; if unavailable, keep full handoff in Graphiti/PICKUP and warn.
 4. **HOOKS** — teardown session hooks if activated at start.
 5. **GOVERNANCE** — backup GlobalCommands to GitHub.
@@ -69,7 +69,7 @@ CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
 ```
 
 1. Check Graphiti health with `GRAPHITI_PY`. If healthy: write PICKUP + one learning write per fact with `--kind` only (no `--scope`).
-2. Only if Graphiti is unreachable or a write errors: fall back to memory-bank instead.
+2. If Graphiti is unreachable or a write errors: warn and continue — do not write memory-bank.
 3. Call MCP `cache_set_session_context` when available; else note Redis unavailable.
 4. Run session hooks teardown if `/start-session` activated hooks.
 5. Run governance backup script.
@@ -92,7 +92,7 @@ Auto-chains to `/extract-chat` for learnings pass.
 
 ## Validation
 
-- PICKUP context + learnings written to Graphiti (primary), OR to memory-bank if and only if Graphiti was unavailable — never both for the same session.
+- PICKUP context + learnings written to Graphiti when healthy; otherwise explicit warn (no memory-bank).
 - Redis session context saved when MCP exists; otherwise Graphiti PICKUP is the resume source (warn explicitly).
 - Governance backup script executed or `make governance-backup` / `backup_to_github.sh` run.
 - Handoff lists completed, in-progress, and next steps.
@@ -104,11 +104,9 @@ Auto-chains to `/extract-chat` for learnings pass.
 |---------|--------|
 | `No module named 'yaml'` | Wrong interpreter — switch to `$GOV/.venv/bin/python`; run `make -C "$GOV" venv` if missing |
 | `unrecognized arguments: --scope` | Drop `--scope` / `--scope cursor`; use `--kind` only |
-| Graphiti health check fails, or a Graphiti write errors | Fall back to `$CURSOR_PROJECT_DIR/memory-bank/` only |
-| Redis MCP unavailable | Write full handoff to Graphiti (or memory-bank); warn next window |
+| Graphiti health check fails, or a Graphiti write errors | Warn; skip memory persistence; continue Redis/handoff — **no** memory-bank |
+| Redis MCP unavailable | Write full handoff to Graphiti when healthy; warn next window |
 | Governance backup fails | Report failure; retry `backup_to_github.sh`; do not skip silently |
 | Session hooks not active | Skip teardown; note in report |
-| `memory-bank/` gitignored in target repo | Append `!/memory-bank/` + `!/memory-bank/**` to that repo's `.gitignore` — never edit `~/.gitignore_global` |
-| Target repo has unrelated uncommitted diff | Do not commit memory-bank on top; use isolated worktree + PR |
 
 When blocked: state exact gap, label `Unknown`, give smallest next action.

@@ -17,28 +17,8 @@ if [ -n "$REPO" ] && [ -d "$REPO/plasticos_base" ] && [ -x "$HOOK_DIR/code-graph
   [ -n "$CG_CTX" ] && PARTS+=("$CG_CTX")
 fi
 
-# T0 memory-bank — always from loaded workspace (CURSOR_PROJECT_DIR), never gated on Graphiti.
-# Stack with Graphiti when online; full local suite while Graphiti is down.
-append_repo_memory_bank() {
-  local repo="$1"
-  local bank="$repo/memory-bank"
-  local f
-  if [ -z "$repo" ] || [ ! -d "$bank" ]; then
-    PARTS+=("memory-bank: absent in workspace")
-    return 0
-  fi
-  PARTS+=("memory-bank repo=$(basename "$repo")")
-  for f in activeContext.md SESSION_HANDOFF.md progress.md tasks.md tech-debt.md; do
-    if [ -f "$bank/$f" ]; then
-      PARTS+=("memory-bank/$f: $(head -20 "$bank/$f" | tr '\n' ' ' | cut -c1-500)")
-    fi
-  done
-}
+# Graphiti inject/PICKUP is the resume SSOT (memory-bank deprecated).
 graphiti_load_env
-graphiti_scaffold_memory_bank "$REPO" 2>/dev/null || true
-append_repo_memory_bank "$REPO"
-
-# Graphiti segment (additive — failure must not skip T0 above)
 if graphiti_enabled; then
   graphiti_resolve_cli
   if [ -f "$GRAPHITI_CLI" ]; then
@@ -48,13 +28,13 @@ if graphiti_enabled; then
       GID="$(echo "$OUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('group_id',''))" 2>/dev/null || true)"
       PARTS+=("graphiti: prefetch ok group_id=${GID:-unknown}. Rule 03-graphiti-memory; skill l9-graphiti-memory.")
     else
-      PARTS+=("graphiti: prefetch degraded — T0 memory-bank still loaded; VPS may be down.")
+      PARTS+=("graphiti: prefetch degraded — resume via PICKUP search when online; VPS may be down.")
     fi
   else
-    PARTS+=("graphiti: CLI missing — T0 memory-bank still loaded")
+    PARTS+=("graphiti: CLI missing — resume via PICKUP search when online")
   fi
 else
-  PARTS+=("graphiti: disabled — T0 memory-bank still loaded")
+  PARTS+=("graphiti: disabled — no memory-bank fallback (deprecated)")
 fi
 
 COMBINED="$(printf '%s | ' "${PARTS[@]}")"

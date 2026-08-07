@@ -7,7 +7,7 @@ role: session_close_protocol
 tags: [l9, session, handoff, memory, governance]
 owner: igor_beylin
 status: active
-version: 1.2.0
+version: 1.3.0
 updated: 2026-08-06
 auto_chain: extract-chat
 --- /SKILL_META ---
@@ -19,7 +19,7 @@ auto_chain: extract-chat
 
 Clean session close:
 
-1. Write structured PICKUP context to Graphiti (primary) — memory-bank only as a fallback
+1. Write structured PICKUP context to Graphiti (sole memory path — memory-bank deprecated)
 2. Extract learnings to memory (via canonical pipeline; see `docs/MEMORY_PIPELINE_MAP.md`)
 3. Save Redis session context for cross-window resume
 4. Create handoff summary
@@ -31,12 +31,14 @@ Protocol spec: `end-session.yaml` (v2.1)
 
 ## EXECUTION
 
-### 1. MEMORY WRITE — Graphiti (primary, REQUIRED)
+### 1. MEMORY WRITE — Graphiti (REQUIRED)
 
 Health-check first, then write the structured PICKUP packet + one atomic
-write per learning fact, all to Graphiti. This is the canonical store — when
-this step succeeds, **skip step 1b entirely**; do not also write the same
-session summary into `memory-bank/`.
+write per learning fact, all to Graphiti. This is the canonical store.
+
+If health check fails or a write errors: **warn and skip** memory persistence
+for this close — do **not** fall back to `memory-bank/` (deprecated; see
+`MEMORY_BANK_POLICY.md`). Continue with Redis/handoff.
 
 Use governance **venv Python** (see `skills/l9-graphiti-memory/SKILL.md`). Bare `python3` often fails with `No module named 'yaml'`. Do **not** pass `--scope` / `--scope cursor` (not a CLI flag).
 
@@ -56,52 +58,13 @@ CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
 # One atomic write per learning fact (see step 2 below for format).
 ```
 
-### 1b. MEMORY-BANK FALLBACK (only if Graphiti unreachable or a write fails)
-
-Trigger this step **only** when step 1's health check fails or a write
-errors — it replaces the Graphiti write for this session, it does not
-supplement it. Fall back to the T0 `memory-bank/` files directly in the
-**target repo being worked on** (`$CURSOR_PROJECT_DIR`) — never in
-`$GLOBAL_COMMANDS` / the Cursor-Governance clone. See `MEMORY_BANK_POLICY.md`.
-
-1. **Read current files first** — `activeContext.md`, `tasks.md`,
-   `progress.md`, `tech-debt.md`. If another agent/thread is actively
-   writing to them concurrently, wait for it to finish before editing.
-2. **Append, never overwrite** — add a new dated section per file. Do not
-   truncate or replace existing content; a full-file rewrite destroys any
-   detail a prior session wrote manually. If `activeContext.md` has grown
-   past ~1 screen, a manual consolidation pass may rewrite the "current
-   state" summary as a fresh top section, but must not delete prior
-   sessions' appended history outright (`85-workflow-state-bridge.mdc`).
-3. **Check gitignore before assuming it's trackable:**
-   ```bash
-   git -C "$CURSOR_PROJECT_DIR" check-ignore -q memory-bank/activeContext.md
-   ```
-   If this exits `0` (ignored — commonly this machine's global
-   `~/.gitignore_global`, not the repo's own `.gitignore`), append a
-   repo-local negation to that repo's `.gitignore` (after any blanket ignore
-   rule already in the file):
-   ```
-   !/memory-bank/
-   !/memory-bank/**
-   ```
-   Then re-run `git check-ignore` to confirm it now resolves as trackable.
-4. **Push without touching unrelated in-flight work** — if the target repo's
-   current branch has a large unrelated uncommitted diff, do not commit on
-   top of it. Create an isolated `git worktree` off a fresh copy of the
-   repo's default branch, copy the `memory-bank/` files + `.gitignore`
-   negation there, commit, push, and open a normal PR.
-
 `ops/hooks/graphiti-session-end.sh` on automatic `sessionEnd` tries Graphiti
-first; it runs `ensure_memory_bank_trackable()` + append-only `activeContext.md`
-write **only** when Graphiti is unavailable or the write fails. This section
-documents the same fallback contract for the manual `/end-session` flow.
+only; on failure it WARNs and exits without writing `memory-bank/`.
 
-### 2. EXTRACT LEARNINGS (canonical memory pipeline — part of step 1, primary path)
+### 2. EXTRACT LEARNINGS (canonical memory pipeline — part of step 1)
 
-Only runs when step 1's Graphiti health check passed (if it didn't, learnings
-go into the memory-bank fallback in step 1b instead — e.g. as bullet points
-appended to `progress.md` — not written a second time here).
+Only runs when step 1's Graphiti health check passed. If it did not, skip
+learnings writes and note the gap in the handoff report.
 
 Session learnings MUST be written through the **canonical memory path** so they get governance, audit, DAG (packet_store → graph_sync → semantic_embed → insights), and persistence. See `docs/MEMORY_PIPELINE_MAP.md`.
 
@@ -189,13 +152,13 @@ Also runs automatically on **sessionEnd** after `setup_workspace_symlinks.sh` (s
 **Reports generated:** {list}
 
 ### Handoff
-- PICKUP context + learnings written to Graphiti (or memory-bank fallback, if noted) ✅
+- PICKUP context + learnings written to Graphiti (or warned if Graphiti unavailable) ✅
 - Redis session context saved (cache_set_session_context) ✅
 - Next steps defined ✅
 - GlobalCommands pushed to Cursor-Governance ✅
 
 ### When you open a new window
-→ Use **/start-session** to load Redis context + Graphiti/memory-bank and resume.
+→ Use **/start-session** to load Redis context + Graphiti PICKUP/inject and resume.
 ```
 
 → **Auto-chains to /extract-chat**

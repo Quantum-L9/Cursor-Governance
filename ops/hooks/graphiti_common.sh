@@ -67,17 +67,13 @@ graphiti_state_file() {
   echo "$HOME/.cursor/graphiti-state/${conv}.json"
 }
 
+# Deprecated 2026-08-06: memory-bank scaffolding removed from session hooks.
+# Resume SSOT is Graphiti inject/PICKUP. Kept as a no-op so leftover callers
+# cannot reintroduce T0 silently.
 graphiti_scaffold_memory_bank() {
-  local repo="${1:-${CURSOR_PROJECT_DIR:-}}"
-  local template_dir=""
-  graphiti_resolve_cli
-  template_dir="$(dirname "$GRAPHITI_CLI")/memory-bank-template"
-  [ -d "$template_dir" ] || return 0
-  local bank="$repo/memory-bank"
-  mkdir -p "$bank"
-  for f in activeContext.md tasks.md progress.md tech-debt.md; do
-    if [ ! -f "$bank/$f" ]; then
-      cp "$template_dir/$f" "$bank/$f"
-    fi
-  done
+  if [ -z "${GRAPHITI_SCAFFOLD_MEMORY_BANK_WARNED:-}" ]; then
+    echo "WARN: graphiti_scaffold_memory_bank is deprecated (no-op); memory-bank removed from session hooks" >&2
+    export GRAPHITI_SCAFFOLD_MEMORY_BANK_WARNED=1
+  fi
+  return 0
 }
