@@ -35,3 +35,8 @@ repos:
     path_hints: [l9-meta-injector]
     remote_patterns: ["*/l9-meta-injector*"]
     integrates_with: [cursor-governance]
+  gate-sdk:
+    github: Quantum-L9/Gate_SDK
+    path_hints: [Gate_SDK, constellation-node-sdk]
+    remote_patterns: ["*/Gate_SDK*", "*/Gate_SDK.git"]
+    integrates_with: [cursor-governance]
