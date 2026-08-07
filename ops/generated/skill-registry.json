@@ -636,7 +636,7 @@
     },
     {
       "composition_role": "general",
-      "description": "lint-fix, migrate, clean/compress, consolidate, and refactor-sweep via dag executors with a --dry-run CLI. use for systematic lint fixes, pattern migrations, or read-only refactor impact analysis before mutating.",
+      "description": "lint-fix, migrate, clean/compress, consolidate, and refactor-sweep operations via dag executors. use for systematic lint fixes, pattern migrations, or read-only refactor impact analysis.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-code-maintenance",
@@ -1011,5 +1011,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "f0392ffecff0795a4a7124ece525ea0403784a5173cbd61058988319e8fbef57",
-  "source_skill_corpus_sha256": "5e327764a186093e775aa354f8ddff747ca9f1e43fbb14fbf4fe8b95ab9df7aa"
+  "source_skill_corpus_sha256": "f5a6ccee2cf876e6fd361e286e4007d9ed34ec5f2d2b17e5dfeddf20b784ef0f"
 }
