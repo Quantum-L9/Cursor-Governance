@@ -56,9 +56,7 @@ def validation_parity() -> None:
 
 
 def test_refactor_sweep_dry_run() -> None:
-    before = _porcelain_without_coverage_artifacts(
-        run(["git", "status", "--porcelain"]).stdout
-    )
+    before = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
     intent = "toy rename foo_unique_token_xyz to bar_unique_token_xyz"
     result = run(
         [
@@ -86,22 +84,16 @@ def test_refactor_sweep_dry_run() -> None:
                 and "REFACTOR SWEEP REPORT" not in direct.stdout
             ):
                 raise RuntimeError(f"missing report:\n{direct.stdout}")
-    after = _porcelain_without_coverage_artifacts(
-        run(["git", "status", "--porcelain"]).stdout
-    )
+    after = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
     if before != after:
-        raise RuntimeError(
-            f"dry-run mutated tree:\nbefore={before!r}\nafter={after!r}"
-        )
+        raise RuntimeError(f"dry-run mutated tree:\nbefore={before!r}\nafter={after!r}")
 
 
 def test_migrate_dry_run_no_state() -> None:
     state = ROOT / ".migrate_executor_state.json"
     if state.exists():
         state.unlink()
-    before = _porcelain_without_coverage_artifacts(
-        run(["git", "status", "--porcelain"]).stdout
-    )
+    before = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
     run(
         [
             sys.executable,
@@ -113,9 +105,7 @@ def test_migrate_dry_run_no_state() -> None:
     )
     if state.exists():
         raise RuntimeError("migrate --dry-run wrote state file")
-    after = _porcelain_without_coverage_artifacts(
-        run(["git", "status", "--porcelain"]).stdout
-    )
+    after = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
     if before != after:
         raise RuntimeError("migrate dry-run mutated git status")
 
