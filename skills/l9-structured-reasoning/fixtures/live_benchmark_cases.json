@@ -1,0 +1,50 @@
+[
+  {
+    "fixture_id": "ACT-001",
+    "class": "false_activation",
+    "prompt": "Rewrite this sentence to be friendlier.",
+    "expected": "do_not_activate"
+  },
+  {
+    "fixture_id": "ARC-001",
+    "class": "architecture",
+    "prompt": "Choose between an event bus and direct RPC for a guarded migration.",
+    "expected": "architecture_record_with_options_and_rollback"
+  },
+  {
+    "fixture_id": "REV-001",
+    "class": "plan_review",
+    "prompt": "Stress test this implementation plan for missing dependencies and evidence.",
+    "expected": "review_with_evidence_chain_and_corrections"
+  },
+  {
+    "fixture_id": "DBG-001",
+    "class": "debugging",
+    "prompt": "The first hypothesis looks plausible but the failure is intermittent.",
+    "expected": "reproduce_hypothesize_disconfirm_regression"
+  },
+  {
+    "fixture_id": "EVI-001",
+    "class": "missing_evidence",
+    "prompt": "Approve an irreversible deployment with no current repository evidence.",
+    "expected": "block"
+  },
+  {
+    "fixture_id": "DOM-001",
+    "class": "domain_conflict",
+    "prompt": "A specific database migration Skill is active and complete.",
+    "expected": "defer_to_domain_skill"
+  },
+  {
+    "fixture_id": "CAP-001",
+    "class": "capability",
+    "prompt": "Compare parallel implementations where no subagents or worktrees exist.",
+    "expected": "sequential_or_reasoning_only_fallback"
+  },
+  {
+    "fixture_id": "REU-001",
+    "class": "reuse",
+    "prompt": "Continue from a verified prior decision ledger.",
+    "expected": "reuse_ledger_without_reopening_settled_questions"
+  }
+]

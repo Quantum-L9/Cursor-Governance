@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "objective",
+    "task_kind",
+    "claims",
+    "options",
+    "selected_option",
+    "selection_rationale",
+    "action",
+    "stop_condition"
+  ],
+  "properties": {
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_kind": {
+      "enum": [
+        "plan",
+        "review",
+        "architecture",
+        "debug",
+        "decision",
+        "corpus"
+      ]
+    },
+    "claims": {
+      "type": "array"
+    },
+    "options": {
+      "type": "array"
+    },
+    "selected_option": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "selection_rationale": {
+      "type": "string"
+    },
+    "action": {
+      "enum": [
+        "proceed",
+        "proceed_with_validation",
+        "bounded_probe",
+        "block"
+      ]
+    },
+    "next_probe": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stop_condition": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": true
+}

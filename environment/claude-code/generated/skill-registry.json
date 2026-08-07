@@ -771,7 +771,7 @@
     },
     {
       "composition_role": "general",
-      "description": "recursive pr improvement loop \u2014 read ci failures, code review bot comments, sonarcloud static-analysis findings, pre-existing ruff/mypy/eslint/typescript/test/build debt on the baseline, and codeql code-scanning security alerts, apply root-cause fixes, verify every gate locally, push one commit to the pr branch, reply to review threads, wait for re-run, loop until ci is green and no new actionable signals remain. use when a pr has failing ci, a failing sonarcloud quality gate or open sonarcloud issues, a failing codeql check or open code-scanning alerts, unresolved review comments from gemini or coderabbit, pre-existing lint/type debt to pay down (ruff, mypy, eslint, tsc) via an audit-first entry mode, or when the user asks to fix a pr, remediate review feedback, static-analysis findings, or codeql security alerts, or run a pr improvement loop.",
+      "description": "converge a github pr in the fewest cycles by concurrently remediating every actionable signal \u2014 ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt \u2014 with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
@@ -870,14 +870,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "structured multi-modal reasoning for planning, plan analysis, architecture decisions, and debugging. use when decomposing complex tasks, evaluating trade-offs, root cause analysis, pre-implementation verification, reviewing proposed plans, or when the user asks for deep reasoning, strategy, or decision support.",
+      "description": "Adaptive evidence-based reasoning for difficult planning, plan review, architecture, debugging, multi-document corpus analysis, and multi-option decisions. Use when the user explicitly needs trade-off analysis, root-cause reasoning, architecture choices, a plan stress test, corpus gap/coherence/dependency work, or a decision record grounded in evidence. Route only the proof obligations needed for the task, risk, evidence state, and available capabilities. Do not activate for simple factual answers, direct rewrites, deterministic file operations, trivial reversible fixes, or when a more specific domain Skill already supplies a complete reasoning contract.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-structured-reasoning",
       "path": "skills/l9-structured-reasoning",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
+      "when_to_use": "planning, architecture decisions, debugging, corpus analysis, trade-off analysis, or deep reasoning is needed"
     },
     {
       "composition_role": "general",
