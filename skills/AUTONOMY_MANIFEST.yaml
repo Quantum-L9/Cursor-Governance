@@ -29,8 +29,6 @@ tiers:
       use_when: "exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots"
     - skill: "l9-gap-analysis"
       use_when: "assessing readiness, missing pieces, compliance drift, or percent-complete status"
-    - skill: "l9-pr-analysis"
-      use_when: "reviewing PRs, merge blockers, review comments, or PR readiness"
     - skill: "l9-ynp"
       use_when: "work just completed, priorities are unclear, or the user asks what to do next"
     - skill: "l9-skill-compiler"
@@ -94,7 +92,7 @@ tiers:
     - skill: "l9-setting-up-terraform"
       reason: "infra-as-code bootstrap — high blast radius, explicit only"
     - skill: "l9-pr-remediation"
-      reason: "unified max-depth PR remediation (concurrent clusters, push + review replies) — high blast radius, explicit only"
+      reason: "PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) — high blast radius, explicit only; hint_allowed for read-only Diagnose"
     - skill: "l9-bounded-autonomy"
       reason: "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only"
     - skill: "l9-cli-optimization"
@@ -121,6 +119,10 @@ tiers:
       reason: "obsolete duplicate executor folder; prefer Cursor-native skill instructions and optional skill-local scripts only when needed"
     - item: "commands/dora-commands/"
       reason: "unwired legacy DORA commands; archive or rebuild only if aligned to the current stack"
+    - item: "skills/_archived/l9-pr-analysis/"
+      reason: "superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile"
+    - item: "skills/_archived/l9-pr-remediation-deprecated/"
+      reason: "superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile"
 
 reasoning_routing:
   purpose: "Which l9-structured-reasoning reference applies to which task class."
@@ -157,7 +159,6 @@ claude_routing:
     - l9-plan
     - l9-code-analysis
     - l9-gap-analysis
-    - l9-pr-analysis
     - l9-ynp
     - l9-skill-compiler
     - l9-wire-skill-into-repo
@@ -190,8 +191,9 @@ claude_routing:
     - '^show (me )?(the )?(file|status|diff)\b'
   routes:
     - id: pr_analysis
-      primary: l9-pr-analysis
+      primary: l9-pr-remediation
       signal_weight: 8
+      hint_allowed: true
       positive_signals:
         - review pr
         - pull request review
@@ -201,14 +203,18 @@ claude_routing:
         - ready to merge
         - analyze this pr
         - pr analysis
+        - diagnose this pr
       negative_signals:
         - implement the review fixes
         - push commits
         - merge the pr
         - merge this pr
-      supporting:
-        - l9-gap-analysis
-        - l9-structured-reasoning
+        - remediate the pr
+        - babysit the pr
+      supporting: []
+      note: >
+        explicit_only + hint_allowed — Read Diagnose path only; Converge mutate
+        requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.
     - id: code_analysis
       primary: l9-code-analysis
       signal_weight: 8

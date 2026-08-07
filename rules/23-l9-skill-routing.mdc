@@ -68,7 +68,7 @@ If the file is stale or absent, still select from available skills yourself.
 | Run e2e / clear e2e blockers / local-proof | `l9-e2e-blocker-resolution` |
 | Campaign / `/autonomy` / PR poll while continuing | `l9-bounded-autonomy` (hint; packet required) |
 | SaaS admin UI / cartridge / API insufficient | `l9-ui-operator` (hint; human approve for run) |
-| PR review / merge blockers / readiness | `l9-pr-analysis` |
+| PR review / merge blockers / readiness | `l9-pr-remediation` (hint; Diagnose only unless mutate intent) |
 | Explore unfamiliar code / map flows | `l9-code-analysis` |
 | Gaps / readiness / % complete | `l9-gap-analysis` |
 | Library/SDK/API docs before coding | `l9-context7-docs` |
