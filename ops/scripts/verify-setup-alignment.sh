@@ -91,10 +91,10 @@ else
 fi
 echo ""
 
-# Test 5: Utility Scripts (MCP)
-echo "5️⃣  Utility Scripts (MCP):"
+# Test 5: Utility Scripts (Docker)
+echo "5️⃣  Utility Scripts (Docker):"
 UTIL_PASS=0
-for script in cleanup_mcp_containers.sh fix_mcp_config.sh verify_docker.sh; do
+for script in verify_docker.sh; do
     if [ -f "./ops/scripts/$script" ]; then
         echo "   ✅ $script exists"
         ((UTIL_PASS++))
@@ -102,7 +102,7 @@ for script in cleanup_mcp_containers.sh fix_mcp_config.sh verify_docker.sh; do
         echo "   ❌ $script missing"
     fi
 done
-if [ "$UTIL_PASS" -eq 3 ]; then
+if [ "$UTIL_PASS" -eq 1 ]; then
     ((PASS_COUNT++))
 else
     ((FAIL_COUNT++))

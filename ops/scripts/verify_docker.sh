@@ -104,7 +104,7 @@ if [ -f "$CONFIG_FILE" ]; then
     fi
 else
     echo "❌ MCP config file not found: $CONFIG_FILE"
-    echo "   Run: ./fix_mcp_config.sh to create it"
+    echo "   Configure MCP in Cursor settings (or recreate the Cline MCP settings file)."
 fi
 
 echo ""
