@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,15 @@ def test_llm_override_outranks_ask_first() -> None:
 
 
 def test_session_start_emits_profile(tmp_path: Path) -> None:
+    """SessionStart resolves gov at $HOME/.cursor-governance (spec).
+
+    Point HOME at a temp tree whose `.cursor-governance` symlinks to this
+    checkout so the test proves the branch tip, not whatever is checked out
+    in the developer's live clone.
+    """
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".cursor-governance").symlink_to(ROOT)
     script = ROOT / "environment" / "claude-code" / "hooks" / "session_start_claude_governance.sh"
     proc = subprocess.run(
         ["bash", str(script)],
@@ -34,13 +44,13 @@ def test_session_start_emits_profile(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         env={
-            **dict(**{k: v for k, v in __import__("os").environ.items()}),
-            "HOME": str(Path.home()),
+            **os.environ,
+            "HOME": str(home),
             "CLAUDE_PROJECT_DIR": str(tmp_path),
         },
         check=False,
     )
-    assert proc.returncode == 0
+    assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout.strip().splitlines()[-1])
     ctx = payload["hookSpecificOutput"]["additionalContext"]
     assert "Autonomy Velocity Doctrine" in ctx

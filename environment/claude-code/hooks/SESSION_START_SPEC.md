@@ -19,7 +19,7 @@
 
 1. Governance rev (branch@sha)
 2. Authority order including Autonomy Surface Profile
-3. Verbatim Profile `session_start_block` via `ops/autonomy/profile_loader.py`
+3. Verbatim Profile `session_start_block` via `ops/autonomy/profile_loader.py` (stdlib-only extract; no PyYAML required on SessionStart path)
 4. Read-only autonomy `bootstrap.py` context when available
 5. Skill-router readiness hint (`ops/generated/skill-registry.json`)
 6. Optional `memory-bank/activeContext.md` excerpt

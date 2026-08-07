@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Structural acceptance dry-run for Autonomy Surface Parity (no remote PR).
 
-Proves: Profile → SessionStart → reconcile --check → merge_gate deny/allow.
+Proves: Profile → SessionStart → reconcile apply/check → merge_gate deny/allow.
 Does not open a real GitHub PR (network/product side-effect); that remains an
 operator verification after install.
 """
@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -29,37 +30,58 @@ def main() -> int:
     from profile_loader import session_start_block  # noqa: E402
 
     block = session_start_block(ROOT)
-    step("profile doctrine", "Autonomy Velocity Doctrine" in block)
+    step("profile doctrine", "Autonomy Velocity Doctrine" in block and "l9-pr-remediation" in block)
 
     script = ROOT / "environment" / "claude-code" / "hooks" / "session_start_claude_governance.sh"
-    proc = subprocess.run(
-        ["bash", str(script)],
-        cwd=str(ROOT),
-        capture_output=True,
-        text=True,
-        env={**os.environ, "CLAUDE_PROJECT_DIR": str(ROOT)},
-        check=False,
-    )
-    step("session_start exit 0", proc.returncode == 0)
-    payload = json.loads(proc.stdout.strip().splitlines()[-1])
-    ctx = payload["hookSpecificOutput"]["additionalContext"]
-    step("session_start injects profile", "Autonomy Velocity Doctrine" in ctx)
+    with tempfile.TemporaryDirectory(prefix="l9-autonomy-dry-") as td:
+        home = Path(td) / "home"
+        home.mkdir()
+        (home / ".cursor-governance").symlink_to(ROOT)
+        workspace = Path(td) / "workspace"
+        workspace.mkdir()
+        proc = subprocess.run(
+            ["bash", str(script)],
+            cwd=str(workspace),
+            capture_output=True,
+            text=True,
+            env={**os.environ, "HOME": str(home), "CLAUDE_PROJECT_DIR": str(workspace)},
+            check=False,
+        )
+        step("session_start exit 0", proc.returncode == 0)
+        payload = json.loads(proc.stdout.strip().splitlines()[-1])
+        ctx = payload["hookSpecificOutput"]["additionalContext"]
+        step("session_start injects profile", "Autonomy Velocity Doctrine" in ctx)
 
-    check = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "ops" / "scripts" / "reconcile_claude_settings.py"),
-            "--root",
-            str(ROOT),
-            "--workspace",
-            "/Users/ib-mac/Gate_SDK",
-            "--check",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    step("reconcile --check", check.returncode == 0, check.stdout.strip() or check.stderr.strip())
+        apply = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "ops" / "scripts" / "reconcile_claude_settings.py"),
+                "--root",
+                str(ROOT),
+                "--workspace",
+                str(workspace),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        step("reconcile apply", apply.returncode == 0, apply.stdout.strip() or apply.stderr.strip())
+
+        check = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "ops" / "scripts" / "reconcile_claude_settings.py"),
+                "--root",
+                str(ROOT),
+                "--workspace",
+                str(workspace),
+                "--check",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        step("reconcile --check", check.returncode == 0, check.stdout.strip() or check.stderr.strip())
 
     gate = ROOT / "ops" / "autonomy" / "merge_gate.py"
     deny = subprocess.run(

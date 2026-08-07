@@ -68,8 +68,15 @@ if GOV=$(resolve_governance_dir); then
 
   # --- Autonomy Surface Profile doctrine (standing A4) ---------------------
   PROFILE_LOADER="$GOV/ops/autonomy/profile_loader.py"
-  if [ -f "$PROFILE_LOADER" ] && command -v python3 >/dev/null 2>&1; then
-    PROFILE_BLOCK=$(python3 "$PROFILE_LOADER" 2>/dev/null || true)
+  if [ -x "$GOV/.venv/bin/python3" ]; then
+    PY="$GOV/.venv/bin/python3"
+  elif [ -x "$GOV/.venv/bin/python" ]; then
+    PY="$GOV/.venv/bin/python"
+  else
+    PY="python3"
+  fi
+  if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
+    PROFILE_BLOCK=$("$PY" "$PROFILE_LOADER" 2>/dev/null || true)
     if [ -n "$PROFILE_BLOCK" ]; then
       LINES+=("--- autonomy surface profile ---")
       while IFS= read -r line || [ -n "$line" ]; do
@@ -84,8 +91,8 @@ if GOV=$(resolve_governance_dir); then
 
   # --- Bounded-autonomy campaign context (fail-open; read-only probe) ------
   AUTONOMY_BOOTSTRAP="$GOV/environment/claude-code/autonomy/bootstrap.py"
-  if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v python3 >/dev/null 2>&1; then
-    AUTONOMY_CONTEXT=$(python3 "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null || true)
+  if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v "$PY" >/dev/null 2>&1; then
+    AUTONOMY_CONTEXT=$("$PY" "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null || true)
     [ -n "$AUTONOMY_CONTEXT" ] && LINES+=("--- bounded autonomy ---" "$AUTONOMY_CONTEXT")
   else
     LINES+=("bounded autonomy: runtime unavailable; continue under base governance")
