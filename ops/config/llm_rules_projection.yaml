@@ -1,0 +1,13 @@
+# Projection policy: rules/*.mdc → environment/generated/llm-rules/*.md
+# Author only rules/*.mdc. Never hand-edit the generated tree.
+schema_version: 1
+source_relative: rules
+output_relative: environment/generated/llm-rules
+# Cursor-platform / plugin-only rules — do not project to .md peers.
+deny_stems:
+  - 84-cursor-governance-wiring
+# Emit under an alternate filename (Claude-facing stable name).
+aliases:
+  23-l9-skill-routing: l9-skill-routing.md
+# alwaysApply:false with no globs are agent-requested in Cursor; skip until a peer loads them.
+project_agent_requested: false

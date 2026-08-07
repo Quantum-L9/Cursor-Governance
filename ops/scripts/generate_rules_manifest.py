@@ -7,54 +7,38 @@ import argparse
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
+from lib.rule_frontmatter import (  # noqa: E402
+    ParsedRule,
+    normalize_globs,
+    parse_rule,
+)
+
 SCHEMA = "l9.cursor-rules-manifest/v2"
 
-
-@dataclass(frozen=True)
-class ParsedRule:
-    path: Path
-    metadata: dict[str, Any]
-    body: str
-    has_frontmatter: bool
-
-
-def parse_rule(path: Path) -> ParsedRule:
-    text = path.read_text(encoding="utf-8")
-    metadata: dict[str, Any] = {}
-    body = text
-    has_frontmatter = False
-    if text.startswith("---\n"):
-        parts = text.split("---\n", 2)
-        if len(parts) == 3:
-            raw = yaml.safe_load(parts[1]) or {}
-            if not isinstance(raw, dict):
-                raise ValueError(f"frontmatter must be a mapping: {path}")
-            metadata = raw
-            body = parts[2]
-            has_frontmatter = True
-    return ParsedRule(path=path, metadata=metadata, body=body, has_frontmatter=has_frontmatter)
+__all__ = [
+    "SCHEMA",
+    "ParsedRule",
+    "parse_rule",
+    "normalize_globs",
+    "build_manifest",
+    "build_entry",
+]
 
 
 def slug(value: str) -> str:
     value = re.sub(r"[^a-z0-9]+", ".", value.lower()).strip(".")
     return value or "unnamed"
-
-
-def normalize_globs(value: Any) -> list[str] | None:
-    if value is None:
-        return None
-    if isinstance(value, str):
-        return [value] if value.strip() else []
-    if isinstance(value, list):
-        return [str(item) for item in value if str(item).strip()]
-    return [str(value)]
 
 
 def first_heading(body: str) -> str:

@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-07T00:58:19Z'
+generated_utc: '2026-08-07T01:17:28Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:a72fe4ca3d08cde02bd7227b01bfb623c7bafbe06e0a87eb2c64b1b9b3b1b655
+source_tree_digest: sha256:05a646d0ee60424e00e53cda44e422fa5310e2927827699336664e39efe542dc
 summary:
   total_mdc_files: 62
   always_apply_true: 41
@@ -298,8 +298,8 @@ rules:
   globs: null
   first_heading: L9 skill routing (Cursor)
   has_yaml_frontmatter: true
-  line_count: 67
-  content_digest: sha256:52b9285078cc09a5f581f137e260f16ac5762e3812cc325beaa430c2648e8f84
+  line_count: 68
+  content_digest: sha256:1742fb2e796d8ab3fcd036b1cbc5ff2406ef62f4c24c38af66aedb13459ec04e
   authority: compatibility
   context_cost: minimal
   deprecated: false
