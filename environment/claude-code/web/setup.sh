@@ -179,6 +179,39 @@ if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
       echo "WARN: Memory healthz HTTP ${code} from ${mem_base}/healthz — allowlist the host or check the control plane"
     fi
   fi
+
+  # 5a) Interactive memory tools — register l9-shared-memory as a USER-SCOPE MCP
+  #     server so a fresh session exposes mcp__l9-shared-memory__* (RC2/MEM-003).
+  #     The tracked .mcp.json above only reaches surfaces that read a repo-local
+  #     config; the managed/CLI launcher sources MCP from user scope + --mcp-config,
+  #     never a home-dir .mcp.json. Idempotent and secret-safe: the server object
+  #     carries ${...} env-refs only — the CLI stores them verbatim and resolves at
+  #     runtime, so no bearer token is written to disk. See docs/decisions/ADR-0005.
+  if have claude && [[ -n "${L9_MEMORY_CLIENT_TOKEN:-}" ]]; then
+    mcp_obj=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["mcpServers"]["l9-shared-memory"]))' "$CC_ENV/mcp.template.json" 2>/dev/null)
+    want_url=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["mcpServers"]["l9-shared-memory"].get("url",""))' "$CC_ENV/mcp.template.json" 2>/dev/null)
+    # Idempotency keys on USER scope only: a repo-local .mcp.json registers the same
+    # name at PROJECT scope (approval-gated) but does not reach the managed launcher,
+    # so 'claude mcp get' succeeding there must NOT suppress the user-scope carrier.
+    have_url=$(python3 -c 'import json,os
+s=(json.load(open(os.path.expanduser("~/.claude.json"))).get("mcpServers") or {}).get("l9-shared-memory") or {}
+print(s.get("url",""))' 2>/dev/null)
+    if [[ -z "$mcp_obj" ]]; then
+      echo "WARN: could not read l9-shared-memory from mcp.template.json — interactive MCP not registered"
+    elif [[ -n "$have_url" ]]; then
+      if [[ "$have_url" = "$want_url" ]]; then
+        log "Interactive memory MCP already registered (l9-shared-memory, user scope)"
+      else
+        echo "WARN: l9-shared-memory user-scope URL differs ('$have_url' != '$want_url') — left unchanged; resolve manually"
+      fi
+    elif claude mcp add-json --scope user l9-shared-memory "$mcp_obj" >/dev/null 2>&1; then
+      log "Registered interactive memory MCP (l9-shared-memory, user scope)"
+    else
+      echo "WARN: 'claude mcp add-json' failed — interactive memory tools unavailable on this surface; use the account-connector fallback (see environment/claude-code/README.md)"
+    fi
+  else
+    echo "note: claude CLI or L9_MEMORY_CLIENT_TOKEN absent — interactive MCP registration skipped (hook path unaffected; .mcp.json carrier still installed)"
+  fi
 fi
 
 # 6) Versions for the setup log.

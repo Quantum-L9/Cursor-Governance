@@ -15,7 +15,9 @@ Exit 0 on PASS, 1 on FAIL. Stdlib only, so it runs on a fresh sandbox.
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -140,6 +142,85 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
             )
 
 
+def _user_scope_server(name: str) -> dict | None:
+    """Return the user-scope MCP server object from ~/.claude.json, or None."""
+    try:
+        data = json.loads(Path(os.path.expanduser("~/.claude.json")).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    server = (data.get("mcpServers") or {}).get(name)
+    return server if isinstance(server, dict) else None
+
+
+def check_interactive_mcp_readiness(failures: list[str]) -> None:
+    """Runtime readiness for the interactive l9-shared-memory MCP path (RC2/MEM-003).
+
+    Presence is not proof (the MEM-005 lesson): when this surface is expected to
+    expose memory tools (the ``claude`` CLI is present and the memory env is set),
+    the server MUST be registered, secret-safe, and pointed at the memory endpoint,
+    or this fails. Where the CLI is absent (e.g. CI, or a pre-clone web surface),
+    the check is advisory — it never silently passes a surface it could not test.
+    """
+    claude = shutil.which("claude")
+    if not claude:
+        print("  ADVISORY: 'claude' CLI not on PATH — interactive MCP readiness not checked")
+        return
+    if not os.environ.get("L9_MEMORY_HTTP_URL"):
+        print("  ADVISORY: L9_MEMORY_HTTP_URL unset — interactive MCP readiness not checked")
+        return
+
+    # Blocking from here: claude CLI + memory env ⇒ this surface should expose tools.
+    # Readiness keys on USER scope specifically. A repo-local .mcp.json registers the
+    # same name at PROJECT scope but is approval-gated and does NOT reach the managed
+    # launcher — so its presence must not be mistaken for a ready interactive path.
+    server = _user_scope_server("l9-shared-memory")
+    if server is None:
+        _fail(
+            "l9-shared-memory is NOT registered at user scope — interactive memory tools "
+            "(mcp__l9-shared-memory__*) will not reach the managed/CLI launcher (a repo-local "
+            ".mcp.json is a separate, approval-gated carrier). Run web/setup.sh, or register: "
+            "claude mcp add-json --scope user l9-shared-memory <mcp.template.json object>",
+            failures,
+        )
+        return
+
+    auth = (server.get("headers") or {}).get("Authorization", "")
+    url = server.get("url", "")
+    if "${" not in auth or "Bearer" not in auth:
+        _fail(
+            "registered l9-shared-memory Authorization is not a ${...} env-reference "
+            "(a literal bearer token may be persisted on disk)",
+            failures,
+        )
+    elif "memory.quantumaipartners.com" not in url and "${L9_MEMORY_HTTP_URL" not in url:
+        _fail(
+            f"registered l9-shared-memory URL is not the expected memory endpoint: {url!r}",
+            failures,
+        )
+    else:
+        print("  OK: l9-shared-memory registered (user scope), secret-safe, expected endpoint")
+
+    # Connectivity is advisory: token/network/approval may be unavailable at validation
+    # time, and a transient dial failure must not turn a correctly-registered surface red.
+    try:
+        probe = subprocess.run(
+            [claude, "mcp", "get", "l9-shared-memory"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        connected = (
+            probe.returncode == 0
+            and "Failed to connect" not in probe.stdout
+            and "Pending approval" not in probe.stdout
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        connected = False
+    status = "connected" if connected else "not verified (advisory)"
+    print(f"  INFO: interactive MCP connectivity: {status}")
+
+
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
     """Web setup must stay GitHub-main / Linux-sandbox shaped (no host-IDE SSOT)."""
     setup = HERE / "web" / "setup.sh"
@@ -248,6 +329,7 @@ def main() -> int:
     check_json_parses(failures)
     check_no_secrets(failures)
     check_mcp_uses_env_refs(failures)
+    check_interactive_mcp_readiness(failures)
     check_setup_linux_sandbox_hygiene(failures)
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
