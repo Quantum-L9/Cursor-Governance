@@ -18,9 +18,12 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+from urllib.parse import urlparse
 
 PROD_MEMORY_MCP_DEFAULT = "http://127.0.0.1:8100/mcp/"
+_FORBIDDEN_MEMORY_HOST_SUFFIX = "quantumaipartners.com"
 
 HERE = Path(__file__).resolve().parent
 
@@ -107,6 +110,24 @@ def check_no_secrets(failures: list[str]) -> None:
     print("  OK: no committed secrets detected")
 
 
+def _iter_http_urls(obj: object) -> Iterator[str]:
+    if isinstance(obj, dict):
+        for value in obj.values():
+            yield from _iter_http_urls(value)
+    elif isinstance(obj, list):
+        for value in obj:
+            yield from _iter_http_urls(value)
+    elif isinstance(obj, str) and obj.startswith(("http://", "https://")):
+        yield obj
+
+
+def _host_is_forbidden_memory(host: str) -> bool:
+    host = host.lower().rstrip(".")
+    return host == _FORBIDDEN_MEMORY_HOST_SUFFIX or host.endswith(
+        "." + _FORBIDDEN_MEMORY_HOST_SUFFIX
+    )
+
+
 def check_mcp_uses_env_refs(failures: list[str]) -> None:
     path = HERE / "mcp.template.json"
     if not path.is_file():
@@ -139,8 +160,14 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
             f"mcp.template.json URL must be Graphiti front door ({PROD_MEMORY_MCP_DEFAULT!r})",
             failures,
         )
-    if "quantumaipartners.com" in json.dumps(server):
-        _fail("mcp.template.json must not reference memory.quantumaipartners.com", failures)
+    for candidate in _iter_http_urls(server):
+        host = urlparse(candidate).hostname or ""
+        if _host_is_forbidden_memory(host):
+            _fail(
+                "mcp.template.json must not reference memory.quantumaipartners.com",
+                failures,
+            )
+            break
 
 
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:

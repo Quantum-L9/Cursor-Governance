@@ -76,8 +76,9 @@ def command_acquire(args: argparse.Namespace) -> int:
         data["transport"] = "cursor-graphiti-phase-lock"
         data["granted"] = True
         lock_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    except (OSError, json.JSONDecodeError):
-        pass
+    except (OSError, json.JSONDecodeError) as exc:
+        # write_lock already persisted the lock; transport annotation is best-effort.
+        print(f"memory-lock: transport annotation skipped ({exc})", file=sys.stderr)
 
     print(
         json.dumps(
