@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.l9.tunnel</string>
+    <string>com.l9.agent_ui_control.tunnel</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/opt/l9_agent/reverse_tunnel.sh</string>
+        <string>__PACK_DIR__/reverse_tunnel.sh</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -18,12 +18,12 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/opt/l9_agent/logs/tunnel.log</string>
+    <string>__LOG_DIR__/tunnel.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/opt/l9_agent/logs/tunnel.error.log</string>
+    <string>__LOG_DIR__/tunnel.error.log</string>
 
     <key>WorkingDirectory</key>
-    <string>/opt/l9_agent</string>
+    <string>__PACK_DIR__</string>
 </dict>
 </plist>

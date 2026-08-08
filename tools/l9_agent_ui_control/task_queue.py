@@ -1,5 +1,5 @@
 """
-File-based task queue for local Cursor ↔ Mac Agent control.
+File-based task queue for local Cursor ↔ Agent UI Control.
 
 No VPS, WebSocket, or reverse tunnel required.
 
@@ -44,11 +44,11 @@ def get_next_task() -> dict[str, Any] | None:
 
 
 def mark_task_completed(task_id: str, result: dict[str, Any] | None = None) -> None:
-    """Runner: persist result for Cursor to poll."""
+    """Runner: persist result for Cursor to poll. Always stores a result object."""
     COMPLETED_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
         "task_id": task_id,
-        "result": result or {},
+        "result": result if result is not None else {"status": "done"},
         "completed_at": time.time(),
     }
     (COMPLETED_DIR / f"{task_id}.json").write_text(json.dumps(payload, indent=2) + "\n")

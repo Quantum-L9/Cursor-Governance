@@ -3,16 +3,12 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.l9.agent</string>
+    <string>com.l9.agent_ui_control</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/opt/l9_agent/agent.py</string>
-        <string>--vps-url</string>
-        <string>http://localhost:8000</string>
-        <string>--poll-interval</string>
-        <string>5</string>
+        <string>__PACK_DIR__/runner.py</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -22,20 +18,24 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/opt/l9_agent/logs/agent.log</string>
+    <string>__LOG_DIR__/agent_ui_control.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/opt/l9_agent/logs/agent.error.log</string>
+    <string>__LOG_DIR__/agent_ui_control.error.log</string>
 
     <key>WorkingDirectory</key>
-    <string>/opt/l9_agent</string>
+    <string>__PACK_DIR__</string>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>PYTHONPATH</key>
-        <string>/opt/l9_agent</string>
+        <string>__TOOLS_DIR__</string>
+        <key>L9_AGENT_UI_MODE</key>
+        <string>local</string>
+        <key>L9_AGENT_UI_ENABLED</key>
+        <string>true</string>
     </dict>
 </dict>
 </plist>

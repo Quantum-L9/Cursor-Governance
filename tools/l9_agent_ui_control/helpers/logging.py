@@ -1,49 +1,85 @@
-"""L9 Mac Agent package."""
+"""
+Mac Agent Logging Helpers
+==========================
+
+Structured logging utilities for Mac Agent execution.
+"""
 
 # ============================================================================
 __dora_meta__ = {
-    "component_name": "  Init  ",
+    "component_name": "Logging",
     "module_version": "1.0.0",
     "created_by": "Igor Beylin",
-    "created_at": "2025-12-09T01:02:49Z",
-    "updated_at": "2026-01-31T22:21:54Z",
+    "created_at": "2025-12-14T12:48:58Z",
+    "updated_at": "2026-01-07T13:35:57Z",
     "layer": "integration",
     "domain": "mac_integration",
-    "module_name": "__init__",
+    "module_name": "logging",
     "type": "utility",
     "status": "active",
     "integrates_with": {
         "api_endpoints": [],
         "datasources": [],
         "memory_layers": [],
-        "imported_by": [],
+        "imported_by": ["l9_agent_ui_control.executor"],
     },
 }
 # ============================================================================
 
-from .executor import AutomationExecutor
-from .websocket_client import AgentConfig, EventType, MacAgentClient, TaskExecutor
+from datetime import datetime, timezone
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = timezone.utc  # py<3.11
+from typing import Any
 
-__all__ = [
-    "AgentConfig",
-    "AutomationExecutor",
-    "EventType",
-    "MacAgentClient",
-    "TaskExecutor",
-]
+
+def ts() -> str:
+    """Get current timestamp in ISO format."""
+    return datetime.now(UTC).isoformat()
+
+
+def log_step(
+    log_list: list[dict[str, Any]],
+    step_num: int,
+    action: str,
+    status: str,
+    details: str = "",
+) -> None:
+    """
+    Append a structured log entry for a step.
+
+    Args:
+        log_list: List to append log entry to
+        step_num: Step number (1-indexed)
+        action: Action name
+        status: "success" or "error"
+        details: Optional details string
+    """
+    log_list.append(
+        {
+            "step": step_num,
+            "action": action,
+            "status": status,
+            "details": details,
+            "timestamp": ts(),
+        }
+    )
+
+
 # ============================================================================
 # DORA FOOTER META - AUTO-GENERATED - DO NOT EDIT MANUALLY
 # ============================================================================
 __dora_footer__ = {
-    "component_id": "MAC-INTE-004",
+    "component_id": "MAC-INTE-001",
     "governance_level": "medium",
     "compliance_required": True,
     "audit_trail": True,
     "dependencies": [],
-    "tags": ["event-driven", "integration", "mac-integration", "realtime", "utility"],
-    "keywords": ["agent"],
-    "business_value": "Utility module for   init  ",
-    "last_modified": "2026-01-31T22:21:54Z",
+    "tags": ["integration", "mac-integration", "utility"],
+    "keywords": ["agent", "log", "logging", "step"],
+    "business_value": "Utility module for logging",
+    "last_modified": "2026-01-07T13:35:57Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",
 }

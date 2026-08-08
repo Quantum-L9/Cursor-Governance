@@ -54,13 +54,17 @@ import signal
 import socket
 import sys
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = timezone.utc  # py<3.11
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import structlog
 
-from core.decorators import must_stay_async
+from l9_agent_ui_control.decorators import must_stay_async
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -450,7 +454,7 @@ class TaskExecutor:
             }
 
         try:
-            from mac_agent.executor import AutomationExecutor
+            from l9_agent_ui_control.executor import AutomationExecutor
 
             executor = AutomationExecutor()
 

@@ -20,10 +20,10 @@ __dora_meta__ = {
         "datasources": [],
         "memory_layers": [],
         "imported_by": [
-            "mac_agent.runner",
-            "mac_agent.websocket_client",
-            "orchestrators.agent_execution.orchestrator",
-            "tests.mac_agent.test_executor",
+            "l9_agent_ui_control.runner",
+            "l9_agent_ui_control.websocket_client",
+            "l9_agent_ui_control.runner",
+            "tests.l9_agent_ui_control.test_executor",
         ],
     },
 }
@@ -32,7 +32,11 @@ __dora_meta__ = {
 import asyncio
 import os
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = timezone.utc  # py<3.11
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +44,7 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
-from mac_agent.helpers.logging import log_step, ts
+from l9_agent_ui_control.helpers.logging import log_step, ts
 
 # Playwright imports
 try:
@@ -62,8 +66,8 @@ except ImportError:
     PYTHON_AUTOGUI_AVAILABLE = False
     logger.warning("pyautogui/Pillow not installed. GUI fallback disabled.")
 
-from core.decorators import must_stay_async
-from mac_agent.config import get_config
+from l9_agent_ui_control.decorators import must_stay_async
+from l9_agent_ui_control.config import get_config
 
 
 class AutomationExecutor:
@@ -667,7 +671,7 @@ __dora_footer__ = {
     "governance_level": "medium",
     "compliance_required": True,
     "audit_trail": True,
-    "dependencies": ["core.decorators"],
+    "dependencies": ["l9_agent_ui_control.decorators"],
     "tags": [
         "api",
         "async",
