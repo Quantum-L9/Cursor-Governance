@@ -10,16 +10,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import shlex
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc  # py<3.11
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -30,10 +25,10 @@ _TOOLS_DIR = _PACK_DIR.parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-import structlog
+import structlog  # noqa: E402
 
-from l9_agent_ui_control.config import get_config
-from l9_agent_ui_control.task_queue import get_next_task, mark_task_completed
+from l9_agent_ui_control.config import get_config  # noqa: E402
+from l9_agent_ui_control.task_queue import get_next_task, mark_task_completed  # noqa: E402
 
 
 def must_stay_async(reason: str = ""):
@@ -69,9 +64,7 @@ def _soft_post_result(channel: str | None, task: dict[str, Any], result: dict[st
         pass
 
 
-def _resolve_argv(
-    cmd: str | None = None, argv: list[str] | None = None
-) -> list[str]:
+def _resolve_argv(cmd: str | None = None, argv: list[str] | None = None) -> list[str]:
     """Build argv for subprocess with shell=False (no shell injection surface)."""
     if argv:
         if not all(isinstance(x, str) for x in argv):
@@ -219,9 +212,7 @@ async def _run_gui_steps(task: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": raw.get("status", "done"),
         "stdout": raw.get("stdout", "") or str(raw.get("data") or ""),
-        "stderr": raw.get("stderr", "")
-        or (raw.get("data", {}) or {}).get("error", "")
-        or "",
+        "stderr": raw.get("stderr", "") or (raw.get("data", {}) or {}).get("error", "") or "",
         "exit_code": 0 if raw.get("status") in ("done", "success", None) else 1,
         "logs": raw.get("logs", []),
         "screenshots": raw.get("screenshots", []),
@@ -325,9 +316,7 @@ async def poll_and_execute() -> None:
                 _soft_post_result(channel, task, result)
 
             mark_task_completed(task_id, result)
-            logger.info(
-                "Task %s completed status=%s", task_id, result.get("status")
-            )
+            logger.info("Task %s completed status=%s", task_id, result.get("status"))
 
         except KeyboardInterrupt:
             logger.info("Agent UI Control runner stopped by user")

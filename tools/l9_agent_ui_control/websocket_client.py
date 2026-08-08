@@ -54,11 +54,7 @@ import signal
 import socket
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc  # py<3.11
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -77,9 +73,7 @@ try:
     import websockets
     from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 except ImportError:
-    logger.error(
-        "ERROR: websockets library required. Install with: pip install websockets"
-    )
+    logger.error("ERROR: websockets library required. Install with: pip install websockets")
     sys.exit(1)
 
 
@@ -94,14 +88,10 @@ class AgentConfig:
 
     # Connection
     ws_url: str = field(
-        default_factory=lambda: os.getenv(
-            "L9_WS_URL", "wss://mcp.quantumaipartners.com/ws/agent"
-        )
+        default_factory=lambda: os.getenv("L9_WS_URL", "wss://mcp.quantumaipartners.com/ws/agent")
     )
     agent_id: str = field(
-        default_factory=lambda: os.getenv(
-            "L9_AGENT_ID", f"mac-agent-{socket.gethostname()}"
-        )
+        default_factory=lambda: os.getenv("L9_AGENT_ID", f"mac-agent-{socket.gethostname()}")
     )
     agent_version: str = "1.0.0"
 
@@ -309,15 +299,16 @@ class TaskExecutor:
             else:
                 # Unknown task type - return error, don't silently succeed
                 logger.warning("[Executor] Unknown task type: %s", task_type)
+                supported = (
+                    "shell, browser, python, file_read, file_write, memory_read, memory_write"
+                )
                 result = {
                     "status": "error",
                     "output": {},
-                    "error": f"Unknown task type: {task_type}. Supported: shell, browser, python, file_read, file_write, memory_read, memory_write",
+                    "error": f"Unknown task type: {task_type}. Supported: {supported}",
                 }
 
-            logger.info(
-                "[Executor] Task %s completed: status=%s", task_id, result.get("status")
-            )
+            logger.info("[Executor] Task %s completed: status=%s", task_id, result.get("status"))
             return result
 
         except TimeoutError:
@@ -370,9 +361,11 @@ class TaskExecutor:
             api = LocalAPI({"base_path": cwd, "request_timeout": timeout})
 
             if not api.validate_command(command):
+                parts = command.split()
+                cmd0 = parts[0] if parts else "empty"
                 return {
                     "status": "error",
-                    "error": f"Command not allowed: {command.split()[0] if command.split() else 'empty'}",
+                    "error": f"Command not allowed: {cmd0}",
                     "output": "",
                     "exit_code": -1,
                     "allowed_commands": list(api.ALLOWED_COMMANDS),
@@ -474,7 +467,10 @@ class TaskExecutor:
         except ImportError as e:
             return {
                 "status": "error",
-                "error": f"Playwright not available: {e}. Install with: pip install playwright && playwright install",
+                "error": (
+                    f"Playwright not available: {e}. "
+                    "Install with: pip install playwright && playwright install"
+                ),
                 "logs": [],
                 "screenshots": [],
             }
@@ -564,9 +560,7 @@ class TaskExecutor:
                 )
 
         # Fallback: subprocess with restricted environment (less secure)
-        logger.warning(
-            "Using subprocess fallback for Python execution - less secure than Docker"
-        )
+        logger.warning("Using subprocess fallback for Python execution - less secure than Docker")
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(code)
@@ -715,9 +709,7 @@ class MacAgentClient:
                 pass
 
             # Exponential backoff
-            delay = min(
-                delay * self.config.reconnect_factor, self.config.reconnect_max_delay
-            )
+            delay = min(delay * self.config.reconnect_factor, self.config.reconnect_max_delay)
 
         logger.info("[MacAgent] Stopped")
 
@@ -771,11 +763,7 @@ class MacAgentClient:
             # Notify callbacks
             for callback in self._on_connect_callbacks:
                 try:
-                    (
-                        await callback()
-                        if asyncio.iscoroutinefunction(callback)
-                        else callback()
-                    )
+                    (await callback() if asyncio.iscoroutinefunction(callback) else callback())
                 except Exception as e:
                     logger.error("[MacAgent] Connect callback error: %s", e)
 
@@ -807,11 +795,7 @@ class MacAgentClient:
                 # Notify disconnect callbacks
                 for callback in self._on_disconnect_callbacks:
                     try:
-                        (
-                            await callback()
-                            if asyncio.iscoroutinefunction(callback)
-                            else callback()
-                        )
+                        (await callback() if asyncio.iscoroutinefunction(callback) else callback())
                     except Exception as e:
                         logger.error("[MacAgent] Disconnect callback error: %s", e)
 
@@ -878,11 +862,7 @@ class MacAgentClient:
         # Notify callbacks
         for callback in self._on_task_callbacks:
             try:
-                (
-                    await callback(data)
-                    if asyncio.iscoroutinefunction(callback)
-                    else callback(data)
-                )
+                (await callback(data) if asyncio.iscoroutinefunction(callback) else callback(data))
             except Exception as e:
                 logger.error("[MacAgent] Task callback error: %s", e)
 
@@ -1021,9 +1001,7 @@ class MacAgentClient:
 
         for sig in (signal.SIGINT, signal.SIGTERM):
             try:
-                loop.add_signal_handler(
-                    sig, lambda: asyncio.create_task(self.shutdown())
-                )
+                loop.add_signal_handler(sig, lambda: asyncio.create_task(self.shutdown()))
             except NotImplementedError:
                 # Windows doesn't support add_signal_handler
                 pass
@@ -1110,7 +1088,9 @@ __dora_footer__ = {
         "create",
         "disconnect",
     ],
-    "business_value": "Provides websocket client components including AgentConfig, EventType, TaskExecutor",
+    "business_value": (
+        "Provides websocket client components including AgentConfig, EventType, TaskExecutor"
+    ),
     "last_modified": "2026-01-17T23:47:56Z",
     "modified_by": "L9_Codegen_Engine",
     "change_summary": "Initial generation with DORA compliance",

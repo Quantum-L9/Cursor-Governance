@@ -49,9 +49,7 @@ tell application "System Events"
 end tell
 return "missing"
 """
-    proc = subprocess.run(
-        ["osascript", "-e", script], capture_output=True, text=True, check=False
-    )
+    proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=False)
     if "ok" not in (proc.stdout or ""):
         print(f"warn: IB-PC raise failed: {proc.stdout!r}", file=sys.stderr)
 
@@ -98,9 +96,7 @@ def clear_editor() -> None:
 
 
 def paste_text(text: str) -> None:
-    proc = subprocess.run(
-        ["pbcopy"], input=text, text=True, capture_output=True, check=False
-    )
+    proc = subprocess.run(["pbcopy"], input=text, text=True, capture_output=True, check=False)
     if proc.returncode != 0:
         raise RuntimeError(f"pbcopy failed: {proc.stderr}")
     import pyautogui
@@ -211,7 +207,10 @@ def main() -> int:
     clip = read_mac_clipboard()
 
     if clip.strip() == marker or len(clip.strip()) < args.min_chars:
-        print("FAIL: clipboard unchanged after Ctrl+Shift+C (results not focused?)", file=sys.stderr)
+        print(
+            "FAIL: clipboard unchanged after Ctrl+Shift+C (results not focused?)",
+            file=sys.stderr,
+        )
         return 1
     if looks_like_sql(clip):
         print(
@@ -222,7 +221,8 @@ def main() -> int:
         return 1
     if not looks_like_grid(clip):
         print(
-            f"FAIL: clipboard does not look like a result grid (len={len(clip)} head={clip[:60]!r})",
+            "FAIL: clipboard does not look like a result grid "
+            f"(len={len(clip)} head={clip[:60]!r})",
             file=sys.stderr,
         )
         return 1
@@ -230,7 +230,9 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(clip, encoding="utf-8")
     nz = sum(1 for b in clip.encode("utf-8", errors="replace") if b != 0)
-    print(f"OK wrote {args.out} chars={len(clip)} nonzero≈{nz} grid_lines={clip.count(chr(10))+1}")
+    print(
+        f"OK wrote {args.out} chars={len(clip)} nonzero≈{nz} grid_lines={clip.count(chr(10)) + 1}"
+    )
     return 0
 
 
