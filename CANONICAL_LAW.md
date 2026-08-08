@@ -230,9 +230,19 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
 
 Session start prefetch: `ops/hooks/session_start_memory_orchestrator.sh`
 
+### Single front door (ADR-0006)
+
+- Lifecycle + interactive MCP: Graphiti only (`graphiti_memory_client.py`, tunnel `:8100`)
+- Claude/Manus/Codex adapters: **thin wrap** — never a second HTTP memory plane
+- Forbidden residue: `L9_MEMORY_HTTP_URL`, `L9_MEMORY_CLIENT_TOKEN`,
+  `environment/claude-code/memory/memory_client.py`, `l9-shared-memory` @
+  `memory.quantumaipartners.com`, `L9_MEMORY_ENFORCEMENT=off`
+- Operator-only back door: `L9_MEMORY_ENFORCEMENT_BREAKGLASS` (admin; not agent-settable)
+
 ### Deprecated (archived)
 
 - `cursor_memory_client.py` — replaced by `graphiti_memory_client.py`
+- `environment/claude-code/memory/memory_client.py` — HTTP side door removed (ADR-0006)
 - `learning_to_mcp_bridge.py` — archived
 - All `install_*.sh` scripts (except `install_export_job.sh`) — archived
 - All recursive learning daemon scripts — archived

@@ -10,8 +10,8 @@
 # Env vars (from the Environment variables field):
 #   GH_TOKEN                          — required for gh
 #   L9_GOVERNANCE_REMOTE / _BRANCH    — defaults: GitHub Quantum-L9/Cursor-Governance @ main
-#   L9_MEMORY_HTTP_URL + CLIENT_TOKEN — optional shared HTTP memory
-#   USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE — memory identity
+#   USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE — writer identity only
+#   Memory plane: Cursor Graphiti front door (mcp.template.json); no HTTP side door
 #
 # Governance always lands at $HOME/.cursor-governance (GitHub main).
 # See environment.env.example and network-policy.md.
@@ -82,7 +82,8 @@ if [ -d "$CC_ENV" ]; then
   [ -f .claude/hooks/session_start_claude_governance.sh ] \
     || cp "$CC_ENV/hooks/session_start_claude_governance.sh" .claude/hooks/
   chmod +x .claude/hooks/session_start_claude_governance.sh 2>/dev/null || true
-  if [ -n "${L9_MEMORY_HTTP_URL:-}" ] && [ ! -f .mcp.json ]; then
+  # Always install Graphiti front-door MCP template when absent (ADR-0006).
+  if [ ! -f .mcp.json ] && [ -f "$CC_ENV/mcp.template.json" ]; then
     cp "$CC_ENV/mcp.template.json" .mcp.json
   fi
   echo "activated: .claude/settings.json + SessionStart hook -> $GOV_DIR"
@@ -158,27 +159,14 @@ if [ -f .pre-commit-config.yaml ]; then
   fi
 fi
 
-# 5) Optional shared memory — HTTP MCP client only (no local server).
-#    Primary wiring is .mcp.json from step 3.5. Production:
-#    https://memory.quantumaipartners.com  (set L9_MEMORY_HTTP_URL in env).
-if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
-  if [ "${USER_ID:-}" = "cursor_agent" ] || [ "${L9_MEMORY_AGENT_ID:-}" = "cursor_agent" ]; then
-    echo "WARNING: memory identity 'cursor_agent' is reserved — set USER_ID=claude_code_agent and L9_MEMORY_AGENT_ID=claude-code."
-  fi
-  log "Memory identity: agent_id=${L9_MEMORY_AGENT_ID:-claude-code} user_id=${USER_ID:-claude_code_agent}"
-  log "Shared memory: ${L9_MEMORY_HTTP_URL} (MCP /mcp via .mcp.json + Bearer env)"
-  if [ ! -f .mcp.json ]; then
-    echo "WARN: .mcp.json missing — step 3.5 should have copied mcp.template.json when L9_MEMORY_HTTP_URL is set."
-  fi
-  if have curl; then
-    mem_base="${L9_MEMORY_HTTP_URL%/}"
-    code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 8 "${mem_base}/healthz" 2>/dev/null || echo "000")
-    if [ "$code" = "200" ] || [ "$code" = "204" ]; then
-      log "Memory healthz: HTTP ${code} OK"
-    else
-      echo "WARN: Memory healthz HTTP ${code} from ${mem_base}/healthz — allowlist the host or check the control plane"
-    fi
-  fi
+# 5) Memory — Cursor Graphiti front door only (ADR-0006). No HTTP side door.
+if [ "${USER_ID:-}" = "cursor_agent" ] || [ "${L9_MEMORY_AGENT_ID:-}" = "cursor_agent" ]; then
+  echo "WARNING: memory identity 'cursor_agent' is reserved — set USER_ID=claude_code_agent and L9_MEMORY_AGENT_ID=claude-code."
+fi
+log "Memory identity: agent_id=${L9_MEMORY_AGENT_ID:-claude-code} user_id=${USER_ID:-claude_code_agent}"
+log "Shared memory: Cursor Graphiti front door (graphiti-memory @ 127.0.0.1:8100 via mcp.template.json)"
+if [ ! -f .mcp.json ]; then
+  echo "WARN: .mcp.json missing — step 3.5 should have copied mcp.template.json (Graphiti front door)."
 fi
 
 # 6) Versions for the setup log.

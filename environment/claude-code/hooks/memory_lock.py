@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Acquire / inspect conflict-checked memory phase-locks.
-
-`acquire` runs memory.conflicts then memory.phase_lock for a namespace and
-writes a local lock artifact the PreToolUse gate re-verifies against the server.
-The session id is read from the current SessionStart receipt, so a lock cannot
-be acquired before memory was prefetched.
-"""
+"""Acquire / inspect phase-locks via Cursor Graphiti (front door only)."""
 
 from __future__ import annotations
 
@@ -14,8 +8,10 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "memory"))
+MEM = Path(__file__).resolve().parent.parent / "memory"
+sys.path.insert(0, str(MEM))
 
+import graphiti_bridge as gb  # noqa: E402
 import memory_state as st  # noqa: E402
 
 
@@ -38,9 +34,6 @@ def _current_session_id(contract: dict) -> str | None:
 
 
 def command_acquire(args: argparse.Namespace) -> int:
-    import memory_client as mc
-    from errors import MemoryWriteDenied
-
     contract = st.load_contract()
     session_id = _current_session_id(contract)
     if not session_id:
@@ -51,27 +44,41 @@ def command_acquire(args: argparse.Namespace) -> int:
         return 3
     namespace = args.namespace
     signature = st.task_signature(namespace)
-    ttl = int(contract.get("state", {}).get("lock_ttl_seconds", 3600))
+    workspace = st.workspace_root()
 
-    conflict = mc.conflicts(namespace)
-    overlaps = conflict.get("conflicts") or conflict.get("overlaps") or []
-    if overlaps and not args.force:
-        print(json.dumps({"namespace": namespace, "conflicts": overlaps}, indent=2))
-        print("conflicts present; resolve or re-run with --force", file=sys.stderr)
-        return 4
-
+    # Optional advisory conflicts print (Graphiti phase-lock also runs conflicts).
     try:
-        granted = mc.phase_lock(namespace, signature, ttl_seconds=ttl)
-    except MemoryWriteDenied as exc:
-        print(f"memory-lock: {exc}; not writing a lock artifact", file=sys.stderr)
-        return 6
-    if not granted.get("granted", False):
+        conflict = gb.conflicts(workspace=workspace, session_id=session_id)
+        overlaps = conflict.get("conflicts") or []
+        if overlaps:
+            print(json.dumps({"namespace": namespace, "conflicts": overlaps}, indent=2))
+            if not args.force:
+                print(
+                    "conflicts reported by Graphiti; re-run with --force to acquire anyway",
+                    file=sys.stderr,
+                )
+                return 4
+    except Exception as exc:  # advisory only
+        print(f"memory-lock: conflicts check skipped ({exc})", file=sys.stderr)
+
+    granted = gb.phase_lock(workspace=workspace, session_id=session_id)
+    if str(granted.get("phase_lock", "")).lower() not in {"granted", "ok", "active"}:
         print(
-            f"server did not grant the phase-lock for {namespace!r}; not writing a lock artifact",
+            f"Graphiti did not grant phase-lock for {namespace!r}; not writing a lock artifact",
             file=sys.stderr,
         )
         return 5
+
     st.write_lock(contract, namespace, session_id, signature)
+    lock_path = st.state_root(contract) / "locks" / f"{namespace.replace('/', '_')}.json"
+    try:
+        data = json.loads(lock_path.read_text(encoding="utf-8"))
+        data["transport"] = "cursor-graphiti-phase-lock"
+        data["granted"] = True
+        lock_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    except (OSError, json.JSONDecodeError):
+        pass
+
     print(
         json.dumps(
             {
@@ -79,8 +86,9 @@ def command_acquire(args: argparse.Namespace) -> int:
                 "namespace": namespace,
                 "task": args.task,
                 "session_id": session_id,
-                "server_granted": bool(granted.get("granted", False)),
-                "lock_id": granted.get("lock_id"),
+                "transport": "cursor-graphiti-phase-lock",
+                "server_granted": True,
+                "graphiti": granted,
             },
             indent=2,
             sort_keys=True,
@@ -89,7 +97,7 @@ def command_acquire(args: argparse.Namespace) -> int:
     return 0
 
 
-def command_status(args: argparse.Namespace) -> int:
+def command_status(_args: argparse.Namespace) -> int:
     contract = st.load_contract()
     for namespace in st.resolve_namespaces(contract):
         lock = st.read_lock(contract, namespace)
@@ -100,7 +108,7 @@ def command_status(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="memory_lock")
     sub = parser.add_subparsers(dest="command", required=True)
-    acq = sub.add_parser("acquire", help="conflict-check and acquire a phase-lock")
+    acq = sub.add_parser("acquire", help="conflict-check and acquire a Graphiti phase-lock")
     acq.add_argument("--namespace", required=True)
     acq.add_argument("--task", required=True)
     acq.add_argument("--force", action="store_true", help="proceed despite reported conflicts")
