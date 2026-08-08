@@ -1,17 +1,9 @@
 {
   "_comment": [
-    "LEGACY / SELF-HOSTED ONLY — NOT the authoritative memory config.",
-    "This block wires the retired local-tunnel model: graphiti-memory reached at",
-    "127.0.0.1:8100 via an SSH tunnel to the self-hosted Hetzner VPS, with the token",
-    "pulled from GRAPHITI_MCP_TOKEN (macOS Keychain / ~/.cursor/secrets on that host).",
-    "",
-    "AUTHORITATIVE CONFIG: environment/claude-code/mcp.template.json — the hosted HTTP",
-    "control plane (l9-shared-memory @ https://memory.quantumaipartners.com/mcp,",
-    "Bearer ${L9_MEMORY_CLIENT_TOKEN}). Claude Code CLI/Web/Mobile use that; it supersedes",
-    "this file and needs no SSH tunnel, no Keychain, and no VPS reachability.",
-    "",
-    "Keep this example ONLY if you are deliberately running the self-hosted VPS tunnel",
-    "deployment. For every hosted/managed environment, ignore it and use the template above."
+    "AUTHORITATIVE Graphiti MCP shape (Cursor + Claude adapters).",
+    "Front door: graphiti-memory @ 127.0.0.1:8100 via SSH tunnel + GRAPHITI_MCP_TOKEN.",
+    "Claude Code copies the same block from environment/claude-code/mcp.template.json.",
+    "Retired: l9-shared-memory @ https://memory.quantumaipartners.com (HTTP side door)."
   ],
   "mcpServers": {
     "graphiti-memory": {

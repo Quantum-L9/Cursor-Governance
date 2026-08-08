@@ -18,10 +18,12 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlparse
 
-PROD_MEMORY_MCP_DEFAULT = "${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp"
+PROD_MEMORY_MCP_DEFAULT = "http://127.0.0.1:8100/mcp/"
+_FORBIDDEN_MEMORY_HOST_SUFFIX = "quantumaipartners.com"
 
 HERE = Path(__file__).resolve().parent
 
@@ -108,36 +110,64 @@ def check_no_secrets(failures: list[str]) -> None:
     print("  OK: no committed secrets detected")
 
 
+def _iter_http_urls(obj: object) -> Iterator[str]:
+    if isinstance(obj, dict):
+        for value in obj.values():
+            yield from _iter_http_urls(value)
+    elif isinstance(obj, list):
+        for value in obj:
+            yield from _iter_http_urls(value)
+    elif isinstance(obj, str) and obj.startswith(("http://", "https://")):
+        yield obj
+
+
+def _host_is_forbidden_memory(host: str) -> bool:
+    host = host.lower().rstrip(".")
+    return host == _FORBIDDEN_MEMORY_HOST_SUFFIX or host.endswith(
+        "." + _FORBIDDEN_MEMORY_HOST_SUFFIX
+    )
+
+
 def check_mcp_uses_env_refs(failures: list[str]) -> None:
     path = HERE / "mcp.template.json"
     if not path.is_file():
         return
     server = json.loads(path.read_text(encoding="utf-8"))
-    mem = server.get("mcpServers", {}).get("l9-shared-memory", {})
-    auth = mem.get("headers", {}).get("Authorization", "")
-    url = mem.get("url", "")
-    if "${" in auth and "Bearer" in auth:
-        print("  OK: mcp auth is an env-reference, not a literal token")
-    else:
-        _fail("mcp.template.json Authorization must be a ${...} env-reference", failures)
-    loopback = url.startswith("http://127.0.0.1") or url.startswith("http://localhost")
-    if loopback:
+    servers = server.get("mcpServers", {})
+    if "l9-shared-memory" in servers:
         _fail(
-            "mcp.template.json default URL must not be loopback (use production HTTPS fallback)",
+            "mcp.template.json must not register l9-shared-memory HTTP side door; "
+            "use graphiti-memory front door only",
             failures,
         )
-    elif url == PROD_MEMORY_MCP_DEFAULT:
-        print("  OK: mcp URL defaults to production HTTPS / env expansion")
+    mem = servers.get("graphiti-memory", {})
+    if not mem:
+        _fail("mcp.template.json must define graphiti-memory front door", failures)
+        return
+    auth = mem.get("headers", {}).get("Authorization", "")
+    url = mem.get("url", "")
+    if "${GRAPHITI_MCP_TOKEN}" in auth and "Bearer" in auth:
+        print("  OK: mcp auth is GRAPHITI_MCP_TOKEN env-reference")
     else:
-        parsed = urlsplit(url)
-        if parsed.scheme == "https" and parsed.hostname == "memory.quantumaipartners.com":
-            print("  OK: mcp URL is production HTTPS host")
-        else:
+        _fail(
+            "mcp.template.json Authorization must be Bearer ${GRAPHITI_MCP_TOKEN}",
+            failures,
+        )
+    if url.rstrip("/").endswith("127.0.0.1:8100/mcp") or url == PROD_MEMORY_MCP_DEFAULT:
+        print("  OK: mcp URL is Cursor Graphiti front door (127.0.0.1:8100)")
+    else:
+        _fail(
+            f"mcp.template.json URL must be Graphiti front door ({PROD_MEMORY_MCP_DEFAULT!r})",
+            failures,
+        )
+    for candidate in _iter_http_urls(server):
+        host = urlparse(candidate).hostname or ""
+        if _host_is_forbidden_memory(host):
             _fail(
-                "mcp.template.json URL must be production HTTPS default "
-                f"({PROD_MEMORY_MCP_DEFAULT!r}) or https://memory.quantumaipartners.com/…",
+                "mcp.template.json must not reference memory.quantumaipartners.com",
                 failures,
             )
+            break
 
 
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:

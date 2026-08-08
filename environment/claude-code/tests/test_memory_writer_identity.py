@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Runtime writer-identity enforcement on the memory write path (M1).
-
-Network-free: exercises the pure attribution policy in ``memory_state`` and the
-client-side guard in ``memory_client`` with ``tool_call`` patched out, so the
-suite is green with or without a reachable memory server. Proves that writes
-carrying missing or Cursor-reserved identity are denied while reads stay open.
-"""
+"""Runtime writer-identity enforcement (policy layer only — Graphiti front door)."""
 
 from __future__ import annotations
 
@@ -17,7 +11,6 @@ CLAUDE_DIR = Path(__file__).resolve().parent.parent
 MEM = CLAUDE_DIR / "memory"
 sys.path.insert(0, str(MEM))
 
-import memory_client as mc  # noqa: E402
 import memory_state as st  # noqa: E402
 from errors import MemoryWriteDenied  # noqa: E402
 
@@ -30,8 +23,6 @@ CLAUDE = {
 
 class ValidateMemoryWriter(unittest.TestCase):
     def test_distinct_claude_writer_shared_namespace_passes(self) -> None:
-        # A fully-attributed Claude identity on the shared namespace is allowed:
-        # validate_memory_writer returns None and does not raise.
         st.validate_memory_writer(dict(CLAUDE))
 
     def test_missing_namespace_denies_write(self) -> None:
@@ -86,38 +77,12 @@ class ResolveWriterIdentity(unittest.TestCase):
         self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
 
 
-class ClientWriteGuard(unittest.TestCase):
-    """The guard fires on writes (ingest/phase_lock) but never on reads."""
+class NoHttpSideDoor(unittest.TestCase):
+    def test_memory_client_deleted(self) -> None:
+        self.assertFalse((MEM / "memory_client.py").exists())
 
-    def test_ingest_denies_reserved_identity_without_network(self) -> None:
-        env = {"L9_MEMORY_AGENT_ID": "cursor_agent", "USER_ID": "claude_code_agent"}
-        with (
-            unittest.mock.patch.dict("os.environ", env, clear=True),
-            unittest.mock.patch.object(mc, "tool_call") as tool_call,
-        ):
-            with self.assertRaises(MemoryWriteDenied):
-                mc.ingest({"namespace": "cursor-governance", "content": "x"})
-            tool_call.assert_not_called()  # denied before the network POST
-
-    def test_phase_lock_denies_missing_identity_without_network(self) -> None:
-        with (
-            unittest.mock.patch.dict("os.environ", {}, clear=True),
-            unittest.mock.patch.object(mc, "tool_call") as tool_call,
-        ):
-            with self.assertRaises(MemoryWriteDenied):
-                mc.phase_lock("cursor-governance", "sig")
-            tool_call.assert_not_called()
-
-    def test_memory_read_remains_available_when_write_identity_fails(self) -> None:
-        # Reserved identity blocks writes but must NOT block reads.
-        env = {"L9_MEMORY_AGENT_ID": "cursor_agent", "USER_ID": "cursor_agent"}
-        sentinel: dict[str, object] = {"results": []}
-        with (
-            unittest.mock.patch.dict("os.environ", env, clear=True),
-            unittest.mock.patch.object(mc, "tool_call", return_value=sentinel) as tool_call,
-        ):
-            self.assertEqual(mc.search("q", ["cursor-governance"]), sentinel)
-            tool_call.assert_called_once()
+    def test_graphiti_bridge_present(self) -> None:
+        self.assertTrue((MEM / "graphiti_bridge.py").is_file())
 
 
 if __name__ == "__main__":
