@@ -10,7 +10,7 @@ alwaysApply: true
 
 **Updated: 2026-08-06** — Resume SSOT is **Graphiti** (`inject` / PICKUP episodes). Local `memory-bank/` is **deprecated/archival** (see `ops/graphiti/MEMORY_BANK_POLICY.md`). Hooks and `/end-session` do not read or write it.
 
-**Updated: 2026-08-07** — **One agent episodic memory** (ADR-0005). CLI + MCP are transports to the same Graphiti / L9 shared-memory store — not two SSOTs. Product/domain stores (Odoo ORM, PlasticOS Neo4j matching/enrichment, Gate/CEG) are **out of band** and must never be treated as Cursor agent resume memory.
+**Updated: 2026-08-07** — **One agent episodic memory** (ADR-0005). CLI + MCP are transports to the same Graphiti / L9 shared-memory store — not two SSOTs. Product/domain stores (Odoo ORM, consumer-app graph matching/enrichment, Gate/CEG) are **out of band** and must never be treated as Cursor agent resume memory.
 
 
 ## Retrieval authority (canonical order)
@@ -39,7 +39,7 @@ alwaysApply: true
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use Graphiti)
 - Treat Graphiti CLI and `l9-graphite-memory` / `memory.*` MCP as one agent-memory store (ADR-0005); fix transport/auth wiring instead of inventing a second stack
-- Never treat consumer-product runtime graphs (Odoo / PlasticOS Neo4j / Gate) as agent episodic memory
+- Never treat consumer-product runtime graphs (consumer ERP/graph / Gate) as agent episodic memory
 
 ## CLI (terminal / hooks only)
 
