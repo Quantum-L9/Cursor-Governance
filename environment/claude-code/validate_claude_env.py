@@ -19,7 +19,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import urlsplit
 
 PROD_MEMORY_MCP_DEFAULT = "http://127.0.0.1:8100/mcp/"
 
@@ -137,8 +136,7 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         print("  OK: mcp URL is Cursor Graphiti front door (127.0.0.1:8100)")
     else:
         _fail(
-            "mcp.template.json URL must be Graphiti front door "
-            f"({PROD_MEMORY_MCP_DEFAULT!r})",
+            f"mcp.template.json URL must be Graphiti front door ({PROD_MEMORY_MCP_DEFAULT!r})",
             failures,
         )
     if "quantumaipartners.com" in json.dumps(server):
