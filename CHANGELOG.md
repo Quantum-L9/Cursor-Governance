@@ -8,6 +8,28 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Added
+- **Universal Agent Peer Execution:** every executable peer now has an explicit
+  Program Execution mapping, closing the silent-partial-coverage gap. New
+  dormant program adapters `codex-cloud` (worker_host), `gemini-review`
+  (verifier), `manus-cloud` (worker_host, manual handoff) under
+  `environment/program-execution/adapters/`, each registered and conformant
+  (probe BLOCKED until a transport is provisioned). `agent_registry.yaml` gains
+  a per-agent `program_execution: {enabled, adapters}` block (v1.2.0); surface
+  adapters gain a `program-execution.yaml` cross-link. New cross-registry
+  validator `peer_execution_conformance.py` (10 rules) and universal
+  `peer_execution_probe.py`, wired as `make peer-execution-conformance`,
+  `make peer-execution-probe`, and `make peer-execution`, plus a
+  `Peer Execution Conformance` CI workflow. Contract:
+  `environment/agents/PEER_EXECUTION.md`.
+
+### Fixed
+- `environment/program-execution/scripts/apply_repository_alignment.py` could
+  never apply its own nested `BLOCKS` key
+  (`environment/agents/docs/WORK_CLAIM_PROTOCOL.md`) because `_child_file`
+  rejected any path separator; replaced with a confined nested-path join
+  (`_child_path`) that still blocks absolute paths and traversal. The
+  adapter-layer conformance suite is now fully green (64 tests).
+
 - **Portable UI Operator (GMP-1…3):** `ops/secrets/` AWS Secrets Manager registry
   SSOT (`sync_secrets_registry.py`, `resolve_secret.py`), skills `l9-aws-secrets`
   and `l9-ui-operator`, `ops/ui-operator/` console + cartridges (GitHub Packages

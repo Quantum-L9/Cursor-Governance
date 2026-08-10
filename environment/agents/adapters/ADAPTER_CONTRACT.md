@@ -54,7 +54,34 @@ Values come only from `agent_registry.yaml`. Adapters never invent a second
 `agent_id`. Writing identity is distinct from Cursor's `cursor_agent`.
 `group_id` stays shared (repo namespace from `ops/graphiti/group_registry.yaml`).
 
+## Program Execution binding (peer-execution cross-link)
+
+Beyond the three memory carriers, each adapter declares **which Program
+Execution adapter the Controller uses to execute a task on this surface** via a
+`program-execution.yaml` file in the adapter directory:
+
+```yaml
+schema: l9.agent-program-execution-binding.v1
+agent_id: codex          # matches agent_registry.yaml (or a template id)
+surface: codex
+binding_kind: agent      # or "template" for copy-me generic onboarding
+program_execution:
+  enabled: true
+  adapters: [codex-cloud]   # ids in EXECUTION_ADAPTER_REGISTRY.yaml
+```
+
+The surface adapter answers *"how does this agent enter L9?"*; the named
+program adapter (`environment/program-execution/adapters/<x>/`) answers *"how
+does the Controller execute a task on this host?"*. The binding must agree with
+the agent's `program_execution` block in `agent_registry.yaml`, and the named
+program adapters must exist in the execution registry. See
+`environment/agents/PEER_EXECUTION.md` for the full contract.
+
 ## Validator
 
-`tools/validate_agents.py` enforces this contract for every **active** agent
-whose `adapter` is not `cursor` or `claude-code`. Run `make agents-env`.
+`tools/validate_agents.py` enforces the memory-carrier contract for every
+**active** agent whose `adapter` is not `cursor` or `claude-code`
+(`make agents-env`). `tools/peer_execution_conformance.py` enforces the
+cross-registry peer-execution contract, and `tools/peer_execution_probe.py`
+proves every executable peer is ready (`make peer-execution-conformance` /
+`make peer-execution-probe`).

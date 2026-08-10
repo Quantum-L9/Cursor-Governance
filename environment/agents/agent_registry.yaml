@@ -5,10 +5,18 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.1.0
-#   updated: 2026-07-31
+#   version: 1.2.0
+#   updated: 2026-08-10
 #
-# AGENT REGISTRY — the single source of truth for WHO writes memory.
+# AGENT REGISTRY — the single source of truth for WHO writes memory AND which
+# Program Execution adapters each peer may be routed to. The optional
+# `program_execution:` block per agent (enabled + adapters) is the identity
+# side of the peer-execution contract; the execution side lives in
+# environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml. The
+# two are cross-validated by `make peer-execution-conformance`. An agent whose
+# `program_execution.enabled` is true MUST name adapters that exist in the
+# execution registry; declare `enabled: false` to mark a peer non-executable
+# rather than leaving coverage silently partial.
 # Peer of ops/graphiti/group_registry.yaml (which answers WHAT repo memory
 # is about). Together they complete the identity matrix:
 #   group_id  = repo namespace  -> SHARED across all agents (group_registry.yaml)
@@ -91,6 +99,9 @@ agents:
     surfaces: [cursor-ide]
     assigned_groups: ["*"]
     adapter: cursor                  # existing .cursor-commands activation, unchanged
+    program_execution:               # peer of environment/program-execution registry
+      enabled: true
+      adapters: [cursor-foreground, cursor-background]
     status: active
 
   claude-code:
@@ -104,6 +115,9 @@ agents:
     surfaces: [claude-cli, claude-web, claude-mobile]
     assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]
     adapter: claude-code             # existing environment/claude-code/, identities now rendered from here
+    program_execution:
+      enabled: true
+      adapters: [claude-code-direct, claude-code-bounded-autonomy]
     status: active
 
   manus:
@@ -116,6 +130,9 @@ agents:
     surfaces: [manus-cloud]
     assigned_groups: [cursor-governance, l9-graphiti-memory, cognitive-engine-graphs, igorbot]
     adapter: manus
+    program_execution:
+      enabled: true
+      adapters: [manus-cloud]
     status: active
 
   codex:
@@ -128,6 +145,9 @@ agents:
     surfaces: [codex-cloud, codex-cli]
     assigned_groups: [l9-node-template]
     adapter: codex
+    program_execution:
+      enabled: true
+      adapters: [codex-cloud]
     status: active
 
   gemini:
@@ -140,6 +160,9 @@ agents:
     surfaces: [gemini-cli]
     assigned_groups: [cursor-governance, l9-graphiti-memory]
     adapter: gemini
+    program_execution:
+      enabled: true
+      adapters: [gemini-review]
     status: active
 
 # ---------------------------------------------------------------------------

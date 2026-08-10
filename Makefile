@@ -283,3 +283,19 @@ program-execution-conformance:
 
 program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
+
+AGENTS_TOOLS := environment/agents/tools
+.PHONY: peer-execution-conformance peer-execution-probe peer-execution
+
+# Universal peer-execution conformance — cross-validates agent_registry,
+# environment/agents/adapters, environment/program-execution adapters +
+# registry, and the autonomy provider (Universal Agent Peer Execution Plan).
+peer-execution-conformance:
+	python3 -B $(AGENTS_TOOLS)/peer_execution_conformance.py
+
+peer-execution-probe:
+	python3 -B $(AGENTS_TOOLS)/peer_execution_probe.py
+
+# Full peer-execution validation path (section 17).
+peer-execution: agents-env program-execution-adapters \
+	program-execution-conformance peer-execution-conformance peer-execution-probe

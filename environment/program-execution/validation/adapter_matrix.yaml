@@ -1,6 +1,6 @@
 schema: program-execution-adapter.matrix.v1
 base_sha: 3c9ba5c675b91e5d1d2b20d777ff14fcb669a48c
-adapter_count: 11
+adapter_count: 14
 adapters:
 - adapter_id: cursor-foreground
   kind: worker_host
@@ -106,3 +106,30 @@ adapters:
   - validate_adapter
   cancellation: unsupported
   descriptor_sha256: 186c41ea561978315f5689e341f29916a697ab7ad310f69259291efabde289c1
+- adapter_id: codex-cloud
+  kind: worker_host
+  status: dormant
+  provider_type: subprocess
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  cancellation: unsupported
+  descriptor_sha256: 09892596b788320cb05340f0c313c69e3a621f726504dd0ae6ff6fb5031cba43
+- adapter_id: gemini-review
+  kind: verifier
+  status: dormant
+  provider_type: subprocess
+  actions:
+  - verify
+  cancellation: unsupported
+  descriptor_sha256: 994f02e76b42eeee2721fa03d1973f4803fff3c78db6714b17a6e52817cc5dc5
+- adapter_id: manus-cloud
+  kind: worker_host
+  status: dormant
+  provider_type: manual_handoff
+  actions:
+  - inspect
+  - artifact_production
+  cancellation: unsupported
+  descriptor_sha256: b9f56d12f8d5c925b41038b6e7a69c446d9a2c3a978b5d84cd612d1452bc5139
