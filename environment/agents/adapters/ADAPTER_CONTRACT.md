@@ -54,34 +54,41 @@ Values come only from `agent_registry.yaml`. Adapters never invent a second
 `agent_id`. Writing identity is distinct from Cursor's `cursor_agent`.
 `group_id` stays shared (repo namespace from `ops/graphiti/group_registry.yaml`).
 
-## Program Execution binding (peer-execution cross-link)
+## Executable-peer carriers (Program Execution / autonomy / readiness)
 
-Beyond the three memory carriers, each adapter declares **which Program
-Execution adapter the Controller uses to execute a task on this surface** via a
-`program-execution.yaml` file in the adapter directory:
+An agent declared **executable** carries three capabilities beyond the memory
+contract (Executable Peer Contract v1). They are bindings, not copied files:
 
-```yaml
-schema: l9.agent-program-execution-binding.v1
-agent_id: codex          # matches agent_registry.yaml (or a template id)
-surface: codex
-binding_kind: agent      # or "template" for copy-me generic onboarding
-program_execution:
-  enabled: true
-  adapters: [codex-cloud]   # ids in EXECUTION_ADAPTER_REGISTRY.yaml
-```
+1. **Program Execution** — the agent's `execution.bindings` in
+   `agent_registry.yaml` map each surface to a registered `worker_host`
+   Program Execution adapter. The bound adapter's descriptor carries
+   `identity.agent_ref` back to the agent key (the foreign key that replaces
+   the old hardcoded adapter→agent map). The surface adapter answers *"how does
+   this agent enter L9?"*; the program adapter
+   (`environment/program-execution/adapters/<x>/`) answers *"how does the
+   Controller execute a task on this host?"*.
+2. **Canonical autonomy** — the peer resolves `autonomy/` through the single
+   `root-autonomy-control-plane` provider
+   (`environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml`,
+   `owns_program_state: false`). Copying an `autonomy/` implementation into an
+   adapter is forbidden.
+3. **Execution readiness** — a fresh, machine-generated readiness receipt per
+   `(agent_id, surface, adapter_id)` binding, produced by
+   `probe_executable_peers.py` under `$HOME/.l9/programs/_peer-readiness/`.
+   Readiness is never statically asserted in `agent_registry.yaml`.
 
-The surface adapter answers *"how does this agent enter L9?"*; the named
-program adapter (`environment/program-execution/adapters/<x>/`) answers *"how
-does the Controller execute a task on this host?"*. The binding must agree with
-the agent's `program_execution` block in `agent_registry.yaml`, and the named
-program adapters must exist in the execution registry. See
-`environment/agents/PEER_EXECUTION.md` for the full contract.
+`execution.enabled: true` is a strong assertion: at least one surface is backed
+by a sealed, non-dormant worker adapter. Set `enabled: false` with
+`bindings: []` for a peer whose worker adapter is still dormant. See
+`environment/agents/PEER_EXECUTION.md` for the full contract and coverage
+matrix.
 
-## Validator
+## Validators
 
 `tools/validate_agents.py` enforces the memory-carrier contract for every
 **active** agent whose `adapter` is not `cursor` or `claude-code`
-(`make agents-env`). `tools/peer_execution_conformance.py` enforces the
-cross-registry peer-execution contract, and `tools/peer_execution_probe.py`
-proves every executable peer is ready (`make peer-execution-conformance` /
-`make peer-execution-probe`).
+(`make agents-env`). `tools/validate_executable_peers.py` enforces the
+cross-registry Executable Peer Contract (rules E1-E15), and
+`environment/program-execution/scripts/probe_executable_peers.py` proves every
+enabled peer has a READY binding (`make peer-execution-conformance` runs the
+whole chain).

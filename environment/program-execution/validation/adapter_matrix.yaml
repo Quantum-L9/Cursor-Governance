@@ -11,7 +11,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 71cf1a629b8a7bd48d14a2fd3c8c03ea82e5607b6a8cbf129134d85c57099625
+  descriptor_sha256: f0d87c97ecd8fc7e32ad7afca0c77f5dd2bb515cf0bf32ddec66423e411821f1
 - adapter_id: cursor-background
   kind: worker_host
   status: conditional
@@ -21,7 +21,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: conditional
-  descriptor_sha256: 238cadab5aceecbcb737f9ca88d0ac51a4c378327cf9b5b813538ff3f99accf7
+  descriptor_sha256: a8c639e8f9f4a810711a01698fb1a0d37f258ce3e4b0bb33c88f1d6253dc14cf
 - adapter_id: claude-code-direct
   kind: worker_host
   status: conditional
@@ -31,7 +31,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 0f7a825a8c875c18fa65bf236f65119ede6cb225397ce894171ccc2e2706d9ca
+  descriptor_sha256: 1eac2d5380b53f28379a722421143ae21c7066c91aeeb9c15239bac73a75f4a9
 - adapter_id: claude-code-bounded-autonomy
   kind: worker_host
   status: conditional
@@ -41,7 +41,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 0b5150413a66381eeaf00e3b5ce2a83edfeb319237ea7e4e6194064dfbaaa2a4
+  descriptor_sha256: 3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da
 - adapter_id: chatgpt-manual-handoff
   kind: worker_host
   status: dormant
@@ -115,7 +115,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 09892596b788320cb05340f0c313c69e3a621f726504dd0ae6ff6fb5031cba43
+  descriptor_sha256: 234213da69470b82b119c50d3a895d4ae22c047db0115bb02fbe9fa5ea61fb2b
 - adapter_id: gemini-review
   kind: verifier
   status: dormant
@@ -123,7 +123,7 @@ adapters:
   actions:
   - verify
   cancellation: unsupported
-  descriptor_sha256: 994f02e76b42eeee2721fa03d1973f4803fff3c78db6714b17a6e52817cc5dc5
+  descriptor_sha256: cf017ca086ff3088b35a16617d926b57695ec0fc1a8b146172f6f946ed14e103
 - adapter_id: manus-cloud
   kind: worker_host
   status: dormant
@@ -132,4 +132,4 @@ adapters:
   - inspect
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: b9f56d12f8d5c925b41038b6e7a69c446d9a2c3a978b5d84cd612d1452bc5139
+  descriptor_sha256: 26d14fe6aed3e4351237bb3213247304bf0cc6e33fb70c04843fe9263b24a8bd

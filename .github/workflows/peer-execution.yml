@@ -83,11 +83,14 @@ jobs:
         run: |
           uv run --frozen --no-build python \
             environment/program-execution/scripts/validate_manifest.py
-      - name: Peer-execution conformance (cross-registry)
+      - name: Executable peer contract (E1-E15, cross-registry)
         run: |
           uv run --frozen --no-build python \
-            environment/agents/tools/peer_execution_conformance.py
-      - name: Universal peer-execution probe
+            environment/agents/tools/validate_executable_peers.py
+      - name: Executable peer readiness probe (binding-level)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
         run: |
           uv run --frozen --no-build python \
-            environment/agents/tools/peer_execution_probe.py
+            environment/program-execution/scripts/probe_executable_peers.py

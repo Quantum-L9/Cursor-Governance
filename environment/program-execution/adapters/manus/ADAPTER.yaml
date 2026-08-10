@@ -20,6 +20,7 @@ capabilities:
   remote_credentials: forbidden
 identity:
   binding: agent_registry
+  agent_ref: manus
   memory_write: via_generated_data_pipeline
 security:
   default_deny: true

@@ -111,7 +111,7 @@
     },
     {
       "path": "adapters/claude-code/ADAPTER.yaml",
-      "sha256": "0f7a825a8c875c18fa65bf236f65119ede6cb225397ce894171ccc2e2706d9ca"
+      "sha256": "1eac2d5380b53f28379a722421143ae21c7066c91aeeb9c15239bac73a75f4a9"
     },
     {
       "path": "adapters/claude-code/README.md",
@@ -143,7 +143,7 @@
     },
     {
       "path": "adapters/claude-code-bounded-autonomy/ADAPTER.yaml",
-      "sha256": "0b5150413a66381eeaf00e3b5ce2a83edfeb319237ea7e4e6194064dfbaaa2a4"
+      "sha256": "3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da"
     },
     {
       "path": "adapters/claude-code-bounded-autonomy/README.md",
@@ -163,7 +163,7 @@
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
-      "sha256": "09892596b788320cb05340f0c313c69e3a621f726504dd0ae6ff6fb5031cba43"
+      "sha256": "234213da69470b82b119c50d3a895d4ae22c047db0115bb02fbe9fa5ea61fb2b"
     },
     {
       "path": "adapters/codex/README.md",
@@ -239,7 +239,7 @@
     },
     {
       "path": "adapters/cursor-background/ADAPTER.yaml",
-      "sha256": "238cadab5aceecbcb737f9ca88d0ac51a4c378327cf9b5b813538ff3f99accf7"
+      "sha256": "a8c639e8f9f4a810711a01698fb1a0d37f258ce3e4b0bb33c88f1d6253dc14cf"
     },
     {
       "path": "adapters/cursor-background/README.md",
@@ -263,7 +263,7 @@
     },
     {
       "path": "adapters/cursor-foreground/ADAPTER.yaml",
-      "sha256": "71cf1a629b8a7bd48d14a2fd3c8c03ea82e5607b6a8cbf129134d85c57099625"
+      "sha256": "f0d87c97ecd8fc7e32ad7afca0c77f5dd2bb515cf0bf32ddec66423e411821f1"
     },
     {
       "path": "adapters/cursor-foreground/README.md",
@@ -315,7 +315,7 @@
     },
     {
       "path": "adapters/gemini/ADAPTER.yaml",
-      "sha256": "994f02e76b42eeee2721fa03d1973f4803fff3c78db6714b17a6e52817cc5dc5"
+      "sha256": "cf017ca086ff3088b35a16617d926b57695ec0fc1a8b146172f6f946ed14e103"
     },
     {
       "path": "adapters/gemini/README.md",
@@ -447,7 +447,7 @@
     },
     {
       "path": "adapters/manus/ADAPTER.yaml",
-      "sha256": "b9f56d12f8d5c925b41038b6e7a69c446d9a2c3a978b5d84cd612d1452bc5139"
+      "sha256": "26d14fe6aed3e4351237bb3213247304bf0cc6e33fb70c04843fe9263b24a8bd"
     },
     {
       "path": "adapters/manus/README.md",
@@ -594,8 +594,12 @@
       "sha256": "3e531b97c6764935015523ce7cf2d8cc13e375c4753d907ed94d3b8fdd5f8618"
     },
     {
+      "path": "conformance/schemas/executable-peer-readiness.schema.json",
+      "sha256": "6b30c6ecec76301921151a8b553ff337ce99b7cbd020c2baf31abd30ecb6d001"
+    },
+    {
       "path": "conformance/schemas/execution-adapter-spec.schema.json",
-      "sha256": "4ae65397971f91fc4a7dd95e1fc11023c995b6d5aded7a03d11a59392ce73b03"
+      "sha256": "6ce961b09ef4967290e83dfd19b5d4989e215a18bd074f6527fa2717a5f924c8"
     },
     {
       "path": "conformance/schemas/host-envelope.schema.json",
@@ -608,6 +612,10 @@
     {
       "path": "conformance/schemas/remote-action-receipt.schema.json",
       "sha256": "ce5e8476958448663177a771872196f78ca5afedec7d7335619a2d5563422919"
+    },
+    {
+      "path": "conformance/test_agent_ref_binding.py",
+      "sha256": "401746560182bb52ce64612055c3f0fb8deb398ef77330fe28bf0f2ad6eb57f4"
     },
     {
       "path": "conformance/test_authority_narrowing.py",
@@ -632,6 +640,10 @@
     {
       "path": "conformance/test_descriptor_schema.py",
       "sha256": "ebd6734fd72b01549f50d94f9ea504d1e865990bef2b3d948d413217c2b0f970"
+    },
+    {
+      "path": "conformance/test_executable_peer_binding.py",
+      "sha256": "b3a89a00bbf7a125493943ea6db7d10f478ccf615464ac437217fbb5783e5498"
     },
     {
       "path": "conformance/test_failure_mapping.py",
@@ -663,7 +675,7 @@
     },
     {
       "path": "integrations/agent-identity/identity_binding.py",
-      "sha256": "f91661a50b1109f425ee8a26df7d754020e8194dbc7645169e57f165eb0abdf1"
+      "sha256": "bec02061b3a03beac6c383f7743968e51d88644ebb59d5d1a8caf3d6f8bbbf08"
     },
     {
       "path": "integrations/agent-identity/registry_reader.py",
@@ -671,7 +683,7 @@
     },
     {
       "path": "integrations/agent-identity/tests/test_identity_binding.py",
-      "sha256": "db25d26da67946719acf2eaa6951e9296c4ac32a149da28528fb15142552fbe6"
+      "sha256": "b898a1f9b893a59053b91624509227745e322cfb4a5f9debed91be40831e1a16"
     },
     {
       "path": "integrations/autonomy-control-plane/PROVIDER.yaml",
@@ -704,6 +716,14 @@
     {
       "path": "integrations/bootstrap/context_renderer.py",
       "sha256": "aab505d03993c5c6f82ec3390a5a29432ac3fc05d917eb7a294676a836efa47d"
+    },
+    {
+      "path": "integrations/bootstrap/peer_context.py",
+      "sha256": "91c6c4c4738df305536313a209ba10d5fa4e135d15655989511918f23d76029c"
+    },
+    {
+      "path": "integrations/bootstrap/peer_readiness.py",
+      "sha256": "f3eb1889a38d995139d84f153edb69b5e0a865debddb118141d7807acc31aaae"
     },
     {
       "path": "integrations/bootstrap/status_probe.py",
@@ -826,6 +846,10 @@
       "sha256": "6124b4c210eaf5878b8104089e936f8fb54ee78ff97a4bd6d25ed6444c582bc7"
     },
     {
+      "path": "scripts/probe_executable_peers.py",
+      "sha256": "87c7712fad9ba798b4c5794534a0bbf06487a9e3d40fd4fc75c6b8b972b544f9"
+    },
+    {
       "path": "scripts/probe_execution_adapters.py",
       "sha256": "2bcf664e9807eb8e2f9915c4eea6a8533f48a91e2ca4a46fad4bb58bd26b1d1b"
     },
@@ -911,7 +935,7 @@
     },
     {
       "path": "validation/adapter_matrix.yaml",
-      "sha256": "475cc69f63dde30452b56fefd6d9312e6c613ea7e3c2bf006b35a796d17b746f"
+      "sha256": "91c2797fca83d74da7e483cb5772896243bbc9c814e7b08af85d4dccd63c2de3"
     },
     {
       "path": "validation/collision_report.yaml",

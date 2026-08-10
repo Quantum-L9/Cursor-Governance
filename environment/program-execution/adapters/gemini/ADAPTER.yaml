@@ -18,6 +18,7 @@ capabilities:
   remote_credentials: conditional
 identity:
   binding: agent_registry
+  agent_ref: gemini
   memory_write: via_generated_data_pipeline
 security:
   default_deny: true

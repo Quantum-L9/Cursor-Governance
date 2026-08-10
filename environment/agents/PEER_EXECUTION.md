@@ -5,134 +5,183 @@ path: environment/agents/PEER_EXECUTION.md
 layer: contract
 owner: governance-control-plane
 status: active
-version: 1.0.0
+version: 2.0.0
 updated: 2026-08-10
 /L9_META -->
 
-# Universal Agent Peer Execution
+# Executable Peer Contract v1
 
 > One governance. One Program Controller. One autonomy plane. Many executable
 > peers. Zero copied brains.
 
-Every registered L9 agent surface can participate in Program Execution from the
-**same** canonical governance and workspace state. A peer deterministically
-discovers the same governance SSOT, the same Program Execution subsystem, the
-same autonomy control plane, and the same target workspace revision — then
-executes through a surface-specific adapter. Adapters translate capabilities to
-a surface; **no adapter becomes an alternative Controller.**
-
-## Two roots (never conflated)
-
-| Root | Meaning | Resolution |
-|---|---|---|
-| `L9_GOVERNANCE_ROOT` | canonical L9 infrastructure (`autonomy/`, `environment/`, `skills/`, `rules/`, `commands/`, `ops/`) | governance clone (`$HOME/.cursor-governance`) |
-| `L9_WORKSPACE_ROOT` | the product/program repository being modified | `L9_WORKSPACE_ROOT` env; Controller-resolved repo + SHA per task |
-
-Cursor-Governance stays governance infrastructure; product code stays in the
-consumer repository. The peer probe verifies both roots resolve independently.
-
-## Two adapter planes, one cross-link
+An **executable agent** is not an agent with shell access. It is an active
+registry identity with a valid surface→Program-adapter binding, access to the
+canonical autonomy enforcement plane, and fresh machine-verifiable readiness
+evidence:
 
 ```
-Agent Surface Adapter                 Program Execution Adapter
-environment/agents/adapters/<x>       environment/program-execution/adapters/<x>
-  "how does this agent enter L9?"        "how does the Controller execute here?"
-        │                                         │
-        └── program-execution.yaml ───────────────┘
-              (binding, cross-validated)
+active agent
+  + execution enabled
+  + valid surface -> Program adapter binding
+  + canonical autonomy available
+  + fresh readiness evidence
+  = ROUTABLE EXECUTABLE PEER
 ```
 
-- **Identity plane** — `agent_registry.yaml`. Each agent carries an optional
-  `program_execution: {enabled, adapters}` block: the peer's declared execution
-  participation.
-- **Execution plane** — `environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml`.
-  The Controller-side adapters that run a task on a host.
-- **Cross-link** — each surface adapter ships a `program-execution.yaml`
-  binding naming its program adapter(s). `make peer-execution-conformance`
-  proves identity ↔ binding ↔ execution registry all agree.
+This **extends** the identity/memory adapter contract — it does not replace it.
 
-## Ownership (unchanged)
+## Authority boundaries (unchanged)
 
-`environment/program-execution/` remains the **single** Program Execution
-Controller and the only owner of program state, Program Locks, leases, task
-state, canonical receipts, and convergence decisions. Root `autonomy/` remains
-the subordinate mediated-execution provider — reachable by every peer, **never
-copied** into an adapter.
+```
+agent_registry.yaml   WHO is this? which surfaces? is execution enabled?
+        │
+environment/program-execution/   HOW does work execute? is the adapter conformant?
+        │
+autonomy/   MAY this leased agent perform this operation? (gateway / leases)
+        │
+provider / host / tool
+```
+
+Program Execution remains the controller. Root `autonomy/` is subordinate and
+declares `owns_program_state: false`; its lease may not outlive the
+authoritative Program lease.
+
+## Execution bindings (identity plane)
+
+`agent_registry.yaml` (schema v2) declares each peer's executable relationship —
+never implementation paths, autonomy versions, or runtime health:
+
+```yaml
+cursor:
+  role: orchestrator
+  surfaces: [cursor-ide]
+  adapter: cursor
+  execution:
+    enabled: true
+    bindings:
+      - surface: cursor-ide
+        adapter_id: cursor-foreground
+      - surface: cursor-ide
+        adapter_id: cursor-background
+codex:
+  execution:
+    enabled: false      # codex-cloud worker adapter is dormant (Wave B)
+    bindings: []
+```
+
+`execution.enabled: true` asserts at least one surface is backed by a sealed,
+non-dormant `worker_host` adapter with a resolvable `agent_ref`. It never means
+"we intend to support this."
+
+## agent_ref foreign key (execution plane)
+
+The hardcoded adapter→agent map is gone. Each Program adapter descriptor that
+binds to the registry carries the foreign key:
+
+```yaml
+# environment/program-execution/adapters/cursor-foreground/ADAPTER.yaml
+identity:
+  binding: agent_registry
+  agent_ref: cursor
+  memory_write: via_generated_data_pipeline
+```
+
+The spec schema requires `agent_ref` whenever `binding == agent_registry`;
+`controller_contract` / `external_receipt` adapters (CI, GitHub, ChatGPT
+manual-handoff) omit it. `identity_binding.agent_ref_for()` resolves it, and
+rule E8 proves it equals the registry agent key.
+
+## Two gates (never combined)
+
+**Gate A — peer/session readiness** answers *"can this peer currently accept
+Program work?"* independent of any task. It produces an
+`l9.executable-peer-readiness.v1` receipt per `(agent_id, surface, adapter_id)`
+binding, stored outside Git under `$HOME/.l9/programs/_peer-readiness/`.
+
+**Gate B — task admission** answers *"can this READY peer execute this specific
+Controller contract?"* — the existing Program-Lock-digest-bound, TTL-fresh
+capability receipt checked before `prepare()`/`dispatch()`.
+
+```
+peer readiness -> router selects binding -> Program Lock / task contract
+  -> adapter capability probe -> fresh digest-bound capability receipt
+  -> prepare -> dispatch -> autonomy gateway -> execution
+```
+
+Task SHA / lease / Program Lock never live in the long-lived peer bootstrap.
+
+## Readiness is binding-level
+
+Readiness is computed per `(agent_id, surface, adapter_id)`, not per agent. A
+broken `cursor-background` transport never disables a healthy
+`cursor-foreground` peer; the aggregate agent status may read `PARTIAL` while
+the router still schedules the healthy binding.
 
 ## Coverage matrix
 
-`enabled` peers must pass conformance or probe BLOCKED honestly; a dormant
-program adapter is registered coverage, not silent absence.
-
-| Surface | Role | Env adapter | Program adapter | Kind | Program status |
+| Surface | Role | Program adapter | Kind | Registry status | `execution.enabled` |
 |---|---|---|---|---|---|
-| Cursor foreground | orchestrator | `.cursor` activation | `cursor-foreground` | worker_host | conditional |
-| Cursor background | orchestrator | `.cursor` activation | `cursor-background` | worker_host | conditional |
-| Claude Code | implementer | `environment/claude-code/` | `claude-code-direct` | worker_host | conditional |
-| Claude Code (bounded) | implementer | `environment/claude-code/` | `claude-code-bounded-autonomy` | worker_host | conditional |
-| Codex | implementer | `adapters/codex/` | `codex-cloud` | worker_host | dormant |
-| Gemini | reviewer | `adapters/gemini/` | `gemini-review` | verifier | dormant |
-| Manus | researcher-builder | `adapters/manus/` | `manus-cloud` | worker_host | dormant |
-| ChatGPT | (external) | surface/runtime | `chatgpt-manual-handoff` | worker_host | dormant |
-| Generic shell | (template) | `adapters/generic/` | `ci-generic-shell` | verifier | active |
-| CI / GitHub | (service) | machine | `ci-github-actions`, `github-*` | verifier / remote | conditional |
+| Cursor foreground | orchestrator | `cursor-foreground` | worker_host | conditional | **true** |
+| Cursor background | orchestrator | `cursor-background` | worker_host | conditional | **true** |
+| Claude Code | implementer | `claude-code-direct` | worker_host | conditional | **true** |
+| Claude Code (bounded) | implementer | `claude-code-bounded-autonomy` | worker_host | conditional | **true** |
+| Codex | implementer | `codex-cloud` | worker_host | dormant | false (Wave B) |
+| Gemini | reviewer | `gemini-review` | verifier | dormant | false (Wave C) |
+| Manus | researcher-builder | `manus-cloud` | worker_host | dormant | false (Wave D) |
 
-`codex-cloud`, `gemini-review`, and `manus-cloud` are **dormant**: registered
-for explicit coverage, probing BLOCKED until a transport is provisioned. Their
-promotion paths live in each adapter's README.
+Only peers whose worker adapter is sealed, registered, non-dormant, and
+readiness-probed are flipped to `enabled: true`. This keeps `execution.enabled`
+a trustworthy architectural assertion, not a roadmap flag.
 
-## Authority is narrowed, never widened (section 14)
-
-Adapter capabilities may narrow the Controller contract; they never widen it.
-The role → adapter-kind mapping is enforced by `peer-execution-conformance`:
-
-| Role | Permitted adapter kinds |
-|---|---|
-| orchestrator | worker_host, verifier |
-| implementer | worker_host |
-| researcher-builder | worker_host |
-| reviewer | verifier |
-| observer | (none — read-only) |
-
-## Runtime state stays outside Git
-
-Mutable execution state — attempts, leases, worktrees, task claims, mutable
-receipts, worker/health state — lives under `$HOME/.l9/programs/` and
-`$HOME/.l9/program-worktrees/`. Git holds contracts and code only. The peer
-probe asserts the runtime root is external to the governance tree.
-
-## Prove the whole topology
+## Validate the whole topology
 
 ```bash
-make agents-env                       # identity plane
-make program-execution-adapters       # execution plane descriptors
-make program-execution-conformance    # adapter-layer conformance (64 tests)
-make program-execution-probe          # per-adapter capability probes
-make peer-execution-conformance       # cross-registry: the 10 rules
-make peer-execution-probe             # universal per-peer readiness probe
-make peer-execution                   # all of the above in one target
+make agents-env                    # identity plane
+make program-execution-adapters    # execution plane descriptors + spec schema
+make program-execution-conformance # adapter-layer conformance (70 tests)
+make peer-execution-validate       # Executable Peer Contract E1-E15
+make peer-execution-probe          # binding-level readiness receipts
+make peer-execution-conformance    # composes all of the above
 ```
 
-### Peer-execution conformance rules (`peer_execution_conformance.py`)
+### Cross-registry rules (`validate_executable_peers.py`)
 
-1. Every executable agent has an environment (surface) adapter.
-2. Every program-enabled agent maps to registered program adapter(s).
-3. Every adapter-binding references a registered agent (unless a template) and
-   agrees with `agent_registry.yaml`.
-4. No adapter copies root `autonomy/`.
-5. No adapter copies the Program Execution core or a second agent registry.
-6. Adapter authority never exceeds the agent's declared role.
-7. Every program adapter emits canonical lifecycle receipts.
-8. Every program adapter declares a cancellation posture honestly.
-9. Every program adapter reports health (registry status + health entry).
-10. Every executable peer's program adapter ships conformance tests.
+- **E1** `execution.enabled` is boolean.
+- **E2** active + enabled requires ≥1 binding.
+- **E3** `binding.surface` exists in the agent's `surfaces`.
+- **E4** `binding.adapter_id` exists exactly once in the execution registry.
+- **E5** bound adapter is `worker_host`.
+- **E6** bound descriptor validates against `execution-adapter-spec.schema.json`.
+- **E7** descriptor `identity.binding == agent_registry`.
+- **E8** descriptor `identity.agent_ref` equals the registry agent key.
+- **E9** bound adapter is not `dormant`/`non_routable`.
+- **E10** root autonomy resolves from `COMPATIBILITY.yaml`.
+- **E11** `PROVIDER.yaml` exists and declares `owns_program_state: false`.
+- **E12** canonical autonomy path resolves inside the governance root.
+- **E13** no adapter copies an `autonomy/` implementation.
+- **E14** every executable peer has a bootstrap/readiness carrier.
+- **E15** no readiness state is statically asserted in `agent_registry.yaml`.
 
-### Universal peer probe (`peer_execution_probe.py`)
+### Readiness receipt (`l9.executable-peer-readiness.v1`)
 
-Emits, per peer: agent identity resolved · governance root present · workspace
-root present · workspace SHA resolved · Program Execution core validated ·
-autonomy provider available · execution adapter registered · adapter
-capabilities declared · permissions do not exceed Controller authority · receipt
-mapping available · cancellation supported honestly · mutable runtime external
-to Git · peer ready → `PROGRAM_EXECUTION_READY`. A peer that is not ready must
-not be scheduled by the router.
+Per-binding checks — `identity_binding`, `adapter_conformance`, `adapter_probe`,
+`autonomy_provider`, `autonomy_conformance`, `execution_gateway` — all PASS ⇒
+`status: READY`; otherwise `BLOCKED` with the first failing check as
+`blocked_reason`. `probe_executable_peers.py` exits non-zero if any enabled
+agent has no READY binding, while still emitting every binding receipt so
+partial availability stays visible.
+
+## Runtime model
+
+```
+agent_registry.yaml -> execution bindings -> Executable Peer Binder
+  -> (agent identity + PE adapter + root autonomy) -> readiness evaluator
+  -> readiness receipt -> BLOCKED | READY
+  READY -> router eligible -> Controller contract -> Program Lock probe
+    -> capability receipt -> prepare/dispatch -> autonomy gateway -> execution
+```
+
+**Ownership invariant.** Agent Registry declares who may participate. Program
+Execution determines how work executes. Root Autonomy constrains what leased
+execution may do. Readiness proves the path currently works. Mutable runtime
+state stays outside Git under `$HOME/.l9/programs/`.
