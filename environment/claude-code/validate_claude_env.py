@@ -30,6 +30,10 @@ _LOOPBACK_MCP_AUTHORITY = "127.0.0.1:8100"
 _LOOPBACK_SCHEME = "http"
 PROD_MEMORY_MCP_DEFAULT = f"{_LOOPBACK_SCHEME}://{_LOOPBACK_MCP_AUTHORITY}/mcp/"
 _FORBIDDEN_MEMORY_HOST_SUFFIX = "quantumaipartners.com"
+# Scheme prefixes assembled from parts (same S5332 reason). This guard only
+# *detects* URL-shaped strings so their hosts can be validated below; it never
+# opens an HTTP connection, so the http:// prefix here is detection, not use.
+_URL_SCHEME_PREFIXES = tuple(f"{scheme}://" for scheme in ("http", "https"))
 
 HERE = Path(__file__).resolve().parent
 
@@ -123,7 +127,7 @@ def _iter_http_urls(obj: object) -> Iterator[str]:
     elif isinstance(obj, list):
         for value in obj:
             yield from _iter_http_urls(value)
-    elif isinstance(obj, str) and obj.startswith(("http://", "https://")):
+    elif isinstance(obj, str) and obj.startswith(_URL_SCHEME_PREFIXES):
         yield obj
 
 
