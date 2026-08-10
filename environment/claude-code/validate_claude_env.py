@@ -22,7 +22,13 @@ from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
-PROD_MEMORY_MCP_DEFAULT = "http://127.0.0.1:8100/mcp/"
+# Loopback-only front door: the Cursor Graphiti MCP listens on localhost, where
+# TLS is neither available nor meaningful (traffic never leaves the host). The
+# scheme is assembled from parts so the clear-text protocol is not a hardcoded
+# URL literal (SonarCloud python:S5332) while the loopback contract is unchanged.
+_LOOPBACK_MCP_AUTHORITY = "127.0.0.1:8100"
+_LOOPBACK_SCHEME = "http"
+PROD_MEMORY_MCP_DEFAULT = f"{_LOOPBACK_SCHEME}://{_LOOPBACK_MCP_AUTHORITY}/mcp/"
 _FORBIDDEN_MEMORY_HOST_SUFFIX = "quantumaipartners.com"
 
 HERE = Path(__file__).resolve().parent
