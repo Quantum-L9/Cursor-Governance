@@ -97,3 +97,28 @@ entries:
   - generate_adapter
   - validate_adapter
   default_status: non_routable
+- adapter_id: codex-cloud
+  adapter_kind: worker_host
+  target_kinds:
+  - git_repository
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  default_status: dormant
+- adapter_id: gemini-review
+  adapter_kind: verifier
+  target_kinds:
+  - git_repository
+  actions:
+  - verify
+  default_status: dormant
+- adapter_id: manus-cloud
+  adapter_kind: worker_host
+  target_kinds:
+  - git_repository
+  - research_artifact
+  actions:
+  - inspect
+  - artifact_production
+  default_status: dormant

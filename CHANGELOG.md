@@ -8,6 +8,36 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Added
+- **Executable Peer Contract v1:** an executable agent is now an active registry
+  identity with a valid surface→Program-adapter binding, canonical autonomy
+  access, and fresh machine-verifiable readiness — not merely shell access.
+  `agent_registry.yaml` moves to schema v2 with a per-agent
+  `execution: {enabled, bindings:[{surface, adapter_id}]}` block; `enabled` is a
+  strong assertion (Wave A: `cursor` + `claude-code` enabled; `codex`/`gemini`/
+  `manus` `enabled: false` until their dormant worker adapters are promoted).
+  Each registry-bound Program adapter descriptor now carries an
+  `identity.agent_ref` foreign key (spec schema requires it when
+  `binding == agent_registry`), replacing the hardcoded adapter→agent map in
+  `identity_binding.py`. New `executable-peer-readiness.schema.json` +
+  `integrations/bootstrap/peer_readiness.py` / `peer_context.py` produce
+  binding-level readiness receipts under `$HOME/.l9/programs/_peer-readiness/`.
+  New cross-registry validator `validate_executable_peers.py` (rules E1-E15) and
+  `scripts/probe_executable_peers.py`, wired as `make peer-execution-validate`,
+  `make peer-execution-probe`, and the composed `make peer-execution-conformance`
+  (plus the `Peer Execution Conformance` CI workflow). Program Execution stays
+  the sole controller and `autonomy/` is referenced, never copied. Contract:
+  `environment/agents/PEER_EXECUTION.md`. New dormant program adapters
+  `codex-cloud` (worker_host), `gemini-review` (verifier), `manus-cloud`
+  (worker_host, manual handoff) remain registered for coverage.
+
+### Fixed
+- `environment/program-execution/scripts/apply_repository_alignment.py` could
+  never apply its own nested `BLOCKS` key
+  (`environment/agents/docs/WORK_CLAIM_PROTOCOL.md`) because `_child_file`
+  rejected any path separator; replaced with a confined nested-path join
+  (`_child_path`) that still blocks absolute paths and traversal. The
+  adapter-layer conformance suite is now fully green (70 tests).
+
 - **Portable UI Operator (GMP-1…3):** `ops/secrets/` AWS Secrets Manager registry
   SSOT (`sync_secrets_registry.py`, `resolve_secret.py`), skills `l9-aws-secrets`
   and `l9-ui-operator`, `ops/ui-operator/` console + cartridges (GitHub Packages

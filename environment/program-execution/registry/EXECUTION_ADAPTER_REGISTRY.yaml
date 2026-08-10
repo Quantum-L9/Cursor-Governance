@@ -66,3 +66,21 @@ adapters:
   status: non_routable
   adapter_kind: target_deployment_factory
   priority: 11
+- adapter_id: codex-cloud
+  descriptor: adapters/codex/ADAPTER.yaml
+  provider_module: adapters/codex/provider.py
+  status: dormant
+  adapter_kind: worker_host
+  priority: 12
+- adapter_id: gemini-review
+  descriptor: adapters/gemini/ADAPTER.yaml
+  provider_module: adapters/gemini/provider.py
+  status: dormant
+  adapter_kind: verifier
+  priority: 13
+- adapter_id: manus-cloud
+  descriptor: adapters/manus/ADAPTER.yaml
+  provider_module: adapters/manus/provider.py
+  status: dormant
+  adapter_kind: worker_host
+  priority: 14

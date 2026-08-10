@@ -1,27 +1,26 @@
 schema: program-execution-adapter.spec.v1
-adapter_id: cursor-foreground
+adapter_id: manus-cloud
 adapter_version: 1.0.0
 adapter_kind: worker_host
 contract_family: program-execution-system.v2
 provider:
-  type: cursor_task_tools
+  type: manual_handoff
   protocol_version: 1.0.0
 capabilities:
   target_kinds:
   - git_repository
-  - document_artifact
+  - research_artifact
   actions:
   - inspect
-  - local_write
   - artifact_production
-  async_execution: false
+  async_execution: true
   cancellation: unsupported
   structured_output: true
-  isolated_execution: false
+  isolated_execution: true
   remote_credentials: forbidden
 identity:
   binding: agent_registry
-  agent_ref: cursor
+  agent_ref: manus
   memory_write: via_generated_data_pipeline
 security:
   default_deny: true
@@ -34,5 +33,7 @@ receipts:
   lifecycle_schema: program-execution-adapter.lifecycle-receipt.v1
   terminal_core_receipt: attempt
 status:
-  default: conditional
-  blocked_reason: Requires a conformant root-autonomy session and Cursor task transport.
+  default: dormant
+  blocked_reason: Manus is a cloud research-builder surface with no automated Controller execution
+    transport; the adapter is registered for coverage but reports BLOCKED until a manual-handoff
+    transport and external identity are provisioned.
