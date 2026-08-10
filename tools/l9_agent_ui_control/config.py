@@ -28,9 +28,7 @@ class AgentUIControlConfig:
         self.mode = os.getenv("L9_AGENT_UI_MODE", "local").strip().lower() or "local"
         self.l9_base_url = os.getenv("L9_BASE_URL", "http://127.0.0.1:8000")
         self.l9_api_key = os.getenv("L9_API_KEY", "")
-        self.playwright_headless = (
-            os.getenv("PLAYWRIGHT_HEADLESS", "false").lower() == "true"
-        )
+        self.playwright_headless = os.getenv("PLAYWRIGHT_HEADLESS", "false").lower() == "true"
         self.poll_interval = float(os.getenv("L9_AGENT_POLL_INTERVAL", "3"))
         self.enabled = os.getenv("L9_AGENT_UI_ENABLED", "true").lower() != "false"
 
@@ -48,21 +46,13 @@ class AgentUIControlConfig:
                     self.mode = str(config_data["mode"]).strip().lower() or "local"
                 if "vps_url" in config_data and not os.getenv("L9_BASE_URL"):
                     self.l9_base_url = config_data["vps_url"]
-                if "browser_headless" in config_data and not os.getenv(
-                    "PLAYWRIGHT_HEADLESS"
-                ):
+                if "browser_headless" in config_data and not os.getenv("PLAYWRIGHT_HEADLESS"):
                     self.playwright_headless = bool(config_data["browser_headless"])
-                if "poll_interval" in config_data and not os.getenv(
-                    "L9_AGENT_POLL_INTERVAL"
-                ):
+                if "poll_interval" in config_data and not os.getenv("L9_AGENT_POLL_INTERVAL"):
                     self.poll_interval = float(config_data["poll_interval"])
                 if "screenshot_dir" in config_data:
-                    self.screenshot_dir = os.path.expanduser(
-                        str(config_data["screenshot_dir"])
-                    )
-                self.default_browser = config_data.get(
-                    "default_browser", self.default_browser
-                )
+                    self.screenshot_dir = os.path.expanduser(str(config_data["screenshot_dir"]))
+                self.default_browser = config_data.get("default_browser", self.default_browser)
                 self.gui_safety = bool(config_data.get("gui_safety", True))
             except Exception as exc:  # noqa: BLE001 — config load must not crash runner
                 logger.warning("Failed to load config.yaml: %s", exc)

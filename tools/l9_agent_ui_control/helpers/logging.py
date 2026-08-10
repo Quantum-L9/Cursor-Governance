@@ -26,11 +26,7 @@ __dora_meta__ = {
 }
 # ============================================================================
 
-from datetime import datetime, timezone
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc  # py<3.11
+from datetime import UTC, datetime
 from typing import Any
 
 

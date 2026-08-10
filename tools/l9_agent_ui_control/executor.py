@@ -32,19 +32,17 @@ __dora_meta__ = {
 import asyncio
 import os
 import time
-from datetime import datetime, timezone
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc  # py<3.11
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import structlog
 
-logger = structlog.get_logger(__name__)
-
+from l9_agent_ui_control.config import get_config
+from l9_agent_ui_control.decorators import must_stay_async
 from l9_agent_ui_control.helpers.logging import log_step, ts
+
+logger = structlog.get_logger(__name__)
 
 # Playwright imports
 try:
@@ -54,6 +52,9 @@ try:
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
+    Browser = BrowserContext = Page = Any  # type: ignore[misc, assignment]
+    async_playwright = None  # type: ignore[assignment]
+    PlaywrightTimeoutError = TimeoutError  # type: ignore[misc, assignment]
     logger.warning("Playwright not installed. Browser automation disabled.")
 
 # GUI fallback imports
@@ -65,9 +66,6 @@ try:
 except ImportError:
     PYTHON_AUTOGUI_AVAILABLE = False
     logger.warning("pyautogui/Pillow not installed. GUI fallback disabled.")
-
-from l9_agent_ui_control.decorators import must_stay_async
-from l9_agent_ui_control.config import get_config
 
 
 class AutomationExecutor:
@@ -89,7 +87,8 @@ class AutomationExecutor:
 
         if not PLAYWRIGHT_AVAILABLE:
             raise RuntimeError(
-                "Playwright not available. Install with: pip install playwright && playwright install"
+                "Playwright not available. "
+                "Install with: pip install playwright && playwright install"
             )
 
         try:
@@ -108,9 +107,7 @@ class AutomationExecutor:
             else:
                 logger.warning(f"Browser installation may have failed: {result.stderr}")
         except Exception as e:
-            logger.warning(
-                f"Could not auto-install browsers: {e}. Attempting to continue..."
-            )
+            logger.warning(f"Could not auto-install browsers: {e}. Attempting to continue...")
             self._browser_installed = True  # Assume browsers are installed
 
     async def _init_browser(self, headless: bool | None = None):
@@ -131,9 +128,7 @@ class AutomationExecutor:
                 "webkit": playwright.webkit,
             }
 
-            browser_type = browser_type_map.get(
-                self.config.default_browser, playwright.chromium
-            )
+            browser_type = browser_type_map.get(self.config.default_browser, playwright.chromium)
             self.browser = await browser_type.launch(headless=headless_mode)
             log_step(
                 self.logs,
@@ -187,9 +182,7 @@ class AutomationExecutor:
             if not self.page:
                 return None
 
-            screenshot_dir = Path(
-                os.path.expanduser(f"~/.l9/mac_tasks/screenshots/{task_id}")
-            )
+            screenshot_dir = Path(os.path.expanduser(f"~/.l9/mac_tasks/screenshots/{task_id}"))
             screenshot_dir.mkdir(parents=True, exist_ok=True)
 
             timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
@@ -238,9 +231,7 @@ class AutomationExecutor:
                     if not url:
                         raise ValueError("goto action requires 'url' parameter")
                     await self.page.goto(url, wait_until="networkidle")
-                    log_step(
-                        self.logs, step_num, action, "success", f"Navigated to {url}"
-                    )
+                    log_step(self.logs, step_num, action, "success", f"Navigated to {url}")
                     return {"status": "success", "details": f"Navigated to {url}"}
 
                 if action == "click":
@@ -262,9 +253,7 @@ class AutomationExecutor:
                         }
 
                     await self.page.click(selector, timeout=10000)
-                    log_step(
-                        self.logs, step_num, action, "success", f"Clicked: {selector}"
-                    )
+                    log_step(self.logs, step_num, action, "success", f"Clicked: {selector}")
                     return {"status": "success", "details": f"Clicked: {selector}"}
 
                 if action == "fill":
@@ -374,9 +363,7 @@ class AutomationExecutor:
                     return {"status": "success", "details": f"Scrolled {direction}"}
 
                 if action == "screenshot":
-                    screenshot_path = await self._take_screenshot(
-                        task_id, f"_step{step_num}"
-                    )
+                    screenshot_path = await self._take_screenshot(task_id, f"_step{step_num}")
                     if screenshot_path:
                         log_step(
                             self.logs,
@@ -436,9 +423,7 @@ class AutomationExecutor:
                     "error",
                     f"{error_type}: {error_str}",
                 )
-                screenshot_path = await self._take_screenshot(
-                    task_id, f"_error_step{step_num}"
-                )
+                screenshot_path = await self._take_screenshot(task_id, f"_error_step{step_num}")
                 return {
                     "status": "error",
                     "details": f"{error_type}: {error_str}",
@@ -506,9 +491,7 @@ class AutomationExecutor:
                         overall_status = "error"
                         # Take error screenshot if not already taken
                         if not screenshots:
-                            error_screenshot = await self._take_screenshot(
-                                task_id, "_final_error"
-                            )
+                            error_screenshot = await self._take_screenshot(task_id, "_final_error")
                             if error_screenshot:
                                 screenshots.append(error_screenshot)
                         break  # Stop execution on error
@@ -516,14 +499,10 @@ class AutomationExecutor:
                 except Exception as e:
                     # Unexpected error in step execution wrapper
                     error_msg = f"Step {i} execution error: {e!s}"
-                    log_step(
-                        self.logs, i, step.get("action", "unknown"), "error", error_msg
-                    )
+                    log_step(self.logs, i, step.get("action", "unknown"), "error", error_msg)
                     logger.error(error_msg, exc_info=True)
                     overall_status = "error"
-                    error_screenshot = await self._take_screenshot(
-                        task_id, f"_error_step{i}"
-                    )
+                    error_screenshot = await self._take_screenshot(task_id, f"_error_step{i}")
                     if error_screenshot:
                         screenshots.append(error_screenshot)
                     break
@@ -563,9 +542,7 @@ class AutomationExecutor:
             logger.error(error_msg, exc_info=True)
 
             # Try to take error screenshot
-            error_screenshot = await self._take_screenshot(
-                task_id, "_catastrophic_error"
-            )
+            error_screenshot = await self._take_screenshot(task_id, "_catastrophic_error")
             if error_screenshot:
                 screenshots.append(error_screenshot)
 

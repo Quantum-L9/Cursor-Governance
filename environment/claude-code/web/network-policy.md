@@ -23,12 +23,10 @@ needs. Baseline allowlist for L9 work:
 | `pypi.org`, `files.pythonhosted.org` | Python toolchain (`ruff`, `mypy`, `pytest`) |
 | `registry.npmjs.org` | Node toolchain (`biome`, project deps) |
 | `cli.github.com` | `gh` install in `setup.sh` |
-| `memory.quantumaipartners.com` | shared L9 memory HTTP MCP (`L9_MEMORY_HTTP_URL`) |
 
 Add scanner hosts **only** if that repo's gate uses them, e.g.
 `sonarcloud.io`, `*.sonarcloud.io`, `semgrep.dev`, `*.semgrep.dev`.
 
-Production shared memory is `https://memory.quantumaipartners.com` (must be on
 the Custom allowlist, or use Full). See `../mcp.template.json` and
 `README.md` §Shared memory.
 
@@ -37,3 +35,8 @@ the Custom allowlist, or use Full). See `../mcp.template.json` and
 Start with **Full** to prove the environment end-to-end with no allowlist
 friction, then tighten to **Custom** with the table above once the workflow is
 known. Both are valid; Custom is the least-privilege posture for shared sandboxes.
+
+
+## Memory
+
+Cursor Graphiti front door only (ADR-0006). No HTTP memory host allowlist.

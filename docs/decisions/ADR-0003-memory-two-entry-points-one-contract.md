@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted for **hook vs interactive roles**. Transport/store duality via `L9_MEMORY_HTTP_URL` / `memory_client.py` is **superseded by ADR-0006** (single Graphiti front door).
 
 ## Date
 

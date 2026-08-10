@@ -2,8 +2,8 @@
 """Behavioral proof that the memory gate enforces (denies) rather than advises.
 
 Network-free assertions run everywhere. A live section that exercises a real
-phase-lock against the memory server runs only when L9_MEMORY_HTTP_URL and
-L9_MEMORY_CLIENT_TOKEN are set and reachable, so CI without memory stays green.
+live Graphiti phase-lock section runs only when GRAPHITI_MCP_URL/TOKEN are
+reachable; CI without Graphiti stays green.
 """
 
 from __future__ import annotations
@@ -125,8 +125,9 @@ class MemoryGateTests(unittest.TestCase):
         )
         self.assertTrue(is_deny(out))
 
-    def test_disable_env_allows(self) -> None:
-        out, code = run_gate(
+    def test_enforcement_off_is_not_a_side_door(self) -> None:
+        """L9_MEMORY_ENFORCEMENT=off must not bypass the gate — admin breakglass only."""
+        out, _ = run_gate(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": "skills/x/SKILL.md"},
@@ -134,8 +135,7 @@ class MemoryGateTests(unittest.TestCase):
             },
             {**self.env, "L9_MEMORY_ENFORCEMENT": "off"},
         )
-        self.assertFalse(is_deny(out))
-        self.assertEqual(code, 0)
+        self.assertTrue(is_deny(out), "ENFORCEMENT=off must not be an agent escape hatch")
 
     def test_breakglass_allows_and_is_operator_only(self) -> None:
         out, _ = run_gate(
@@ -153,8 +153,8 @@ class MemoryGateTests(unittest.TestCase):
         self.assertIn("incident-123", overrides.read_text(encoding="utf-8"))
 
     @unittest.skipUnless(
-        os.environ.get("L9_MEMORY_HTTP_URL") and os.environ.get("L9_MEMORY_CLIENT_TOKEN"),
-        "live memory endpoint not configured",
+        os.environ.get("GRAPHITI_MCP_URL") and os.environ.get("GRAPHITI_MCP_TOKEN"),
+        "live Graphiti endpoint not configured",
     )
     def test_live_lock_allows_authority_edit(self) -> None:
         self._write_receipt()
