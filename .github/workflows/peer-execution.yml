@@ -54,10 +54,12 @@ jobs:
       - name: Install validators (locked, wheels-only)
         run: |
           set -euo pipefail
-          # pyyaml + jsonschema are base project deps in uv.lock; the locked sync
-          # provides the exact validator toolchain (same as `make venv`).
+          # pyyaml + jsonschema are base project deps in uv.lock; the dev extra
+          # adds pytest, which the target-deployment-factory conformance test
+          # shells out to as a subprocess. Sync both so run_conformance.py is
+          # fully green (same toolchain as `make venv`).
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
-          uv sync --locked --no-build
+          uv sync --locked --no-build --extra dev
       - name: Agent registry validator (make agents-env)
         run: uv run --frozen --no-build python environment/agents/tools/validate_agents.py
       - name: Program Execution adapter layer
