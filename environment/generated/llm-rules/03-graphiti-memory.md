@@ -8,6 +8,9 @@ description: Graphiti episodic memory SSOT — retrieval authority, group_id con
 
 **Updated: 2026-08-06** — Resume SSOT is **Graphiti** (`inject` / PICKUP episodes). Local `memory-bank/` is **deprecated/archival** (see `ops/graphiti/MEMORY_BANK_POLICY.md`). Hooks and `/end-session` do not read or write it.
 
+**Updated: 2026-08-07** — **One agent episodic memory** (ADR-0005). CLI + MCP are transports to the same Graphiti / L9 shared-memory store — not two SSOTs. Product/domain stores (Odoo ORM, consumer-app graph matching/enrichment, Gate/CEG) are **out of band** and must never be treated as Cursor agent resume memory.
+
+
 ## Retrieval authority (canonical order)
 
 1. Rules / `AGENTS.md` — always, $0
@@ -33,6 +36,8 @@ description: Graphiti episodic memory SSOT — retrieval authority, group_id con
 - Never write to `group_id=main` or `group_id=default`
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use Graphiti)
+- Treat Graphiti CLI and `l9-graphite-memory` / `memory.*` MCP as one agent-memory store (ADR-0005); fix transport/auth wiring instead of inventing a second stack
+- Never treat consumer-product runtime graphs (consumer ERP/graph / Gate) as agent episodic memory
 
 ## CLI (terminal / hooks only)
 

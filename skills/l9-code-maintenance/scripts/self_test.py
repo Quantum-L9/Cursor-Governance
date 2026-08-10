@@ -33,6 +33,18 @@ def run(
     return result
 
 
+def _porcelain_for_mutation_check(text: str) -> str:
+    """Drop pytest-cov parallel artifacts that appear mid-suite under xdist."""
+    kept: list[str] = []
+    for line in text.splitlines():
+        path = line[3:] if len(line) >= 4 and line[2] == " " else line
+        name = Path(path).name
+        if name == ".coverage" or name.startswith(".coverage."):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
+
+
 def validation_parity() -> None:
     skill_md = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     # Extract fenced bash under ## Validation
@@ -75,7 +87,7 @@ def test_refactor_sweep_dry_run() -> None:
             ):
                 raise RuntimeError(f"missing report:\n{direct.stdout}")
     after = run(["git", "status", "--porcelain"])
-    if before.stdout != after.stdout:
+    if _porcelain_for_mutation_check(before.stdout) != _porcelain_for_mutation_check(after.stdout):
         raise RuntimeError(
             f"dry-run mutated tree:\nbefore={before.stdout!r}\nafter={after.stdout!r}"
         )
@@ -98,7 +110,7 @@ def test_migrate_dry_run_no_state() -> None:
     if state.exists():
         raise RuntimeError("migrate --dry-run wrote state file")
     after = run(["git", "status", "--porcelain"])
-    if before.stdout != after.stdout:
+    if _porcelain_for_mutation_check(before.stdout) != _porcelain_for_mutation_check(after.stdout):
         raise RuntimeError("migrate dry-run mutated git status")
 
 

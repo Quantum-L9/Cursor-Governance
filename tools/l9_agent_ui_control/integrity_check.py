@@ -84,9 +84,7 @@ def main() -> int:
         print(json.dumps({"root": str(root), "files": rows}, indent=2))
     else:
         for row in rows:
-            print(
-                f"{row['status']}\t{row['size']}\tnz={row['nonzero_bytes']}\t{row['path']}"
-            )
+            print(f"{row['status']}\t{row['size']}\tnz={row['nonzero_bytes']}\t{row['path']}")
         accepted = sum(1 for r in rows if r["status"] == "ACCEPT")
         rejected = sum(1 for r in rows if r["status"] == "REJECT")
         print(f"summary accept={accepted} reject={rejected} total={len(rows)}")

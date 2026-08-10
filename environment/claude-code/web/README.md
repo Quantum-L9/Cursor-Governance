@@ -46,18 +46,19 @@ field.
 ```bash
 gh auth status                              # Logged in as <bot-user>
 ls "$HOME/.cursor-governance/CANONICAL_LAW.md"   # governance clone present
-# Optional: curl -sS -o /dev/null -w "%{http_code}\n" "$L9_MEMORY_HTTP_URL/healthz"
+# Memory = Cursor Graphiti front door only (ADR-0006).
+# Optional: curl -sS -o /dev/null -w "%{http_code}\n" "$GRAPHITI_FRONT_DOOR/healthz"
 # The SessionStart hook should have injected an "L9 Governance — Claude Code session"
 # context block listing the governance clone and available skills.
 ```
 
 ## Shared memory (optional, cross-session)
 
-`environment.env.example` sets `L9_MEMORY_HTTP_URL` / `L9_MEMORY_CLIENT_TOKEN`;
+`environment.env.example` sets `GRAPHITI_FRONT_DOOR` / `GRAPHITI_MCP_TOKEN`;
 `../mcp.template.json` is the MCP block that consumes them (URL expands to
-`${L9_MEMORY_HTTP_URL}/mcp`). One long-running HTTP control plane owns the
+`${GRAPHITI_FRONT_DOOR}/mcp`). One long-running HTTP control plane owns the
 canonical DB; all sessions share it. Production endpoint:
-`https://memory.quantumaipartners.com` (Caddy TLS → C1 `l9-memory-server` on
+`http://127.0.0.1:8100` (Caddy TLS → C1 `l9-memory-server` on
 `:8200`). `setup.sh` only wires the client (`.mcp.json`); it never starts a
 local memory server.
 
@@ -67,7 +68,7 @@ is **not**: Claude Code uses `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=c
 and its **own** bearer token (a separate server principal), so it never writes
 under Cursor's `cursor_agent`. Give Claude Code a token distinct from Cursor's.
 
-**Allowlist:** Add `memory.quantumaipartners.com` to the Claude environment
+**Allowlist:** Add `127.0.0.1:8100` to the Claude environment
 Network-access allowlist (or use Full). Authentication is required on the
 server; bearer tokens never go in `.mcp.json`.
 
@@ -75,6 +76,6 @@ server; bearer tokens never go in `.mcp.json`.
 
 - Env vars are stored **in plaintext** in the environment config. Use a
   least-privilege dedicated bot account; rotate any token ever pasted in chat.
-- Never commit `GH_TOKEN` / `L9_MEMORY_CLIENT_TOKEN` / `SONAR_TOKEN` to a repo. A
+- Never commit `GH_TOKEN` / `GRAPHITI_MCP_TOKEN` / `SONAR_TOKEN` to a repo. A
   committed `.env` is a leaked secret. `.mcp.json` carries only `${...}`
   references, never the token itself.

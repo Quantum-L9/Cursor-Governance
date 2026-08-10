@@ -19,7 +19,7 @@ _TOOLS_DIR = _PACK_DIR.parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
 
-from l9_agent_ui_control.task_queue import enqueue_task, poll_for_result
+from l9_agent_ui_control.task_queue import enqueue_task, poll_for_result  # noqa: E402
 
 
 def cmd_shell(args: argparse.Namespace) -> int:
