@@ -1,124 +1,86 @@
 ---
-description: 'Bridge Cursor runs to workflow_state.md: enforce state sync, phases, and next-step alignment for the L9 repo.'
+description: 'Bridge Cursor runs to session resume: Graphiti PICKUP/inject SSOT; workflow_state.md legacy where present.'
 ---
 
-# workflow_state.md bridge (L9)
+# Session resume bridge (L9)
 
-**Updated: 2026-06-06** — **`memory-bank/activeContext.md`** is the resume SSOT for Cursor sessions. `workflow_state.md` is legacy where still present.
+**Updated: 2026-08-06** — Resume SSOT is **Graphiti** (`inject` / PICKUP episodes via `graphiti_memory_client.py`). `memory-bank/activeContext.md` and `workflow_state.md` are **legacy/archival** where still present — do not treat them as SSOT.
 
 ## State sync required before edits
 
 - Before making ANY code changes, always:
-  - Open and read `workflow_state.md`.
-  - Extract: current PHASE, context summary, recent changes, decision log, open questions, next steps.
+  - Run Graphiti health + `inject` for the current task (skill `l9-graphiti-memory`).
+  - Search recent PICKUP episodes for this repo `group_id`.
+  - If a legacy `workflow_state.md` exists, skim it as archival context only.
 - For every task, first produce a **STATE_SYNC summary** in the chat before touching any file.
 
 ### STATE_SYNC prompt pattern
 
 When starting a run, use:
 
-> 1. Read `workflow_state.md`.  
-> 2. Summarize in bullets:  
->    - PHASE  
->    - Context summary  
->    - Last 3 recent changes  
->    - Any open questions  
->    - Current next steps  
-> 3. Propose an updated Next steps list for THIS run only.  
-> 4. Wait for my confirmation before editing code.
+> 1. Graphiti `inject` + search PICKUP for this repo group.
+> 2. Summarize in bullets:
+>    - Last PICKUP task / next / blocker
+>    - Context summary
+>    - Open questions
+>    - Current next steps
+> 3. Propose an updated Next steps list for THIS run only.
+> 4. Wait for my confirmation before editing code (when the user requires it).
 
-Do not modify repository files until STATE_SYNC is complete and confirmed.
+Do not modify repository files until STATE_SYNC is complete (and confirmed when required).
 
 ---
 
 ## Phase and GMP alignment
 
-- Map the PHASE in `workflow_state.md` to GMP v1.7 phases (0–6) used in the L9 rules and prompts.
+- When a legacy `workflow_state.md` records PHASE, map it to GMP v1.7 phases (0–6).
 - For each run, explicitly state:
-  - `PHASE: <0–6>`
-  - Why this phase is correct given the current state.
+  - `PHASE: <0–6>` (or `n/a` if no GMP)
+  - Why this phase is correct given Graphiti/PICKUP context.
 - Do not silently advance phases:
   - Only move from one phase to the next after its closure conditions are satisfied (plan locked, baseline verified, tests passing, audit done, etc.).
 
 ---
 
-## Recording outcomes back to workflow_state.md
+## Recording outcomes
 
-- After a change set is implemented and validated:
-  - Append a new entry to **Recent changes** summarizing:
-    - Files touched.
-    - Behavior changed.
-    - Tests run (unit, integration, critical-path, etc.).
-    - Phase(s) completed.
-  - Update **Decision log** and **Next steps** to reflect the completed work and what remains.
-- Keep `workflow_state.md` concise:
-  - Prune or compress old entries when it becomes too long to read in one screen.
+- Prefer Graphiti writes: PICKUP at session end (`--kind pickup_context`) and atomic lessons (`--kind lesson`).
+- Do **not** append handoffs to `memory-bank/`.
+- If a legacy `workflow_state.md` is still maintained in a repo, keep it concise and archival — it is not the resume authority.
 
 ---
 
 ## Hand-off and resume discipline
 
 - When ending a session:
-  - Ensure `Next steps` contains 2–5 concrete items suitable for the next Phase 0/1 run.
+  - Write Graphiti PICKUP with 2–5 concrete next items.
 - When resuming:
-  - Always perform STATE_SYNC first and restate:
+  - Always perform STATE_SYNC from Graphiti first and restate:
     - What was last done.
     - What the next smallest safe change is.
-- Treat `workflow_state.md` as the single source of truth for:
-  - Phase tracking.
-  - Active TODOs.
-  - Known risks and open questions.
-
----
-
-## Recent Sessions (7-day window) format
-
-The "Recent Sessions (7-day window)" section at the bottom provides quick context.
-
-### Adding entries
-
-- Add new session at TOP (newest first)
-- Format: `- YYYY-MM-DD: Brief description`
-- Include: GMPs completed, key files, test counts
-
-### Marking complete
-
-- When session work is done, add `✅` prefix
-- Example: `- ✅ 2026-01-01: Forge Mode – 4 HIGH GMPs`
-
-### Pruning
-
-- Keep only last 7 days
-- Remove entries older than 7 days during updates
-- Never delete entries from current day
-
-### Example format
-
-```
-**Recent Sessions (7-day window):**
-- 2026-01-02: Current work...
-- ✅ 2026-01-01: Forge Mode – 4 HIGH GMPs (16, 18, 19, 21)
-- ✅ 2026-01-01: Emma Substrate 10X, Migration 0009
-```
+- Treat Graphiti PICKUP / `inject` as the source of truth for:
+  - Session resume.
+  - Active TODOs handed off between agents.
+  - Known risks and open questions from the prior session.
 
 ---
 
 ## Anti-patterns
 
-❌ **DON'T** overwrite or delete previous session entries
-✅ **DO** mark previous entries with `✅` and add new entry at top
+❌ **DON'T** treat `memory-bank/` or `workflow_state.md` as resume SSOT
+✅ **DO** resume from Graphiti inject / PICKUP
 
-❌ **DON'T** use verbose checkbox lists for completed work
-✅ **DO** use concise Recent Sessions entries instead
+❌ **DON'T** skip PICKUP writes at session end when Graphiti is healthy
+✅ **DO** write `--kind pickup_context` via the locked governance venv
 
 ---
 
 ## Session end checklist
 
 Before closing a session, verify:
-- [ ] Next Steps has 2-5 concrete actionable items
-- [ ] Recent Sessions reflects what was accomplished
-- [ ] Open Questions captures any unresolved blockers
-- [ ] Test Status is current if tests were run
+- [ ] Graphiti PICKUP written (or WARN logged if Graphiti unavailable)
+- [ ] Next steps in PICKUP are 2–5 concrete actionable items
+- [ ] Atomic lessons written for durable corrections
+- [ ] No new writes to `memory-bank/`
 
 <!-- generated-from: rules/85-workflow-state-bridge.mdc; do-not-edit -->

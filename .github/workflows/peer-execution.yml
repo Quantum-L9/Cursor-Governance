@@ -1,0 +1,98 @@
+# Peer-execution conformance — proves the whole peer topology is coherent
+# (Universal Agent Peer Execution Plan, section 17). Runs the agent-registry
+# validator, the Program Execution adapter-layer validators + conformance +
+# probe, and the cross-registry peer-execution conformance + probe. Every
+# executable peer must either pass conformance or be declared non-executable;
+# silent partial coverage fails the gate.
+#
+# Conventions mirror l9-lint-test.yml: immutable event-revision checkout,
+# SHA-pinned external actions, least-privilege permissions.
+name: Peer Execution Conformance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peer-execution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  peer-execution:
+    name: Peer Execution Conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin \
+            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch --depth=1 origin "${REVISION}"
+          git checkout --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install validators (locked, wheels-only)
+        run: |
+          set -euo pipefail
+          # pyyaml + jsonschema are base project deps in uv.lock; the dev extra
+          # adds pytest, which the target-deployment-factory conformance test
+          # shells out to as a subprocess. Sync both so run_conformance.py is
+          # fully green (same toolchain as `make venv`).
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+      - name: Agent registry validator (make agents-env)
+        run: uv run --frozen --no-build python environment/agents/tools/validate_agents.py
+      - name: Program Execution adapter layer
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/validate_execution_adapters.py
+      - name: Program Execution conformance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/run_conformance.py
+      - name: Program Execution probe
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/probe_execution_adapters.py
+      - name: Program Execution manifest integrity
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/validate_manifest.py
+      - name: Executable peer contract (E1-E15, cross-registry)
+        run: |
+          uv run --frozen --no-build python \
+            environment/agents/tools/validate_executable_peers.py
+      - name: Executable peer readiness probe (binding-level)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/probe_executable_peers.py

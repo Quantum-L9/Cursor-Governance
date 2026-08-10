@@ -1,5 +1,5 @@
 name: refactor-sweep
-version: "2.0.0"
+version: "3.0.0"
 description: "Deterministic refactor impact analysis and execution gating (NO code changes)"
 auto_chain: gmp
 
@@ -38,6 +38,19 @@ Input MUST describe:
 - transformation rule
 
 If intent is vague → STOP → ask clarification.
+
+---
+
+MACHINE ENTRY (preferred)
+
+```bash
+python3 skills/l9-code-maintenance/scripts/code_maintenance.py \
+  --mode refactor-sweep --dry-run "<intent>"
+```
+
+Skill: `l9-code-maintenance` (explicit). Analyzer: `skills/l9-code-maintenance/scripts/refactor_sweep.py`.
+`--dry-run` is required/default for this mode. NO code changes.
+
 
 ---
 

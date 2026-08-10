@@ -1,0 +1,37 @@
+schema: program-execution-adapter.spec.v1
+adapter_id: gemini-review
+adapter_version: 1.0.0
+adapter_kind: verifier
+contract_family: program-execution-system.v2
+provider:
+  type: subprocess
+  protocol_version: 1.0.0
+capabilities:
+  target_kinds:
+  - git_repository
+  actions:
+  - verify
+  async_execution: false
+  cancellation: unsupported
+  structured_output: true
+  isolated_execution: true
+  remote_credentials: conditional
+identity:
+  binding: agent_registry
+  agent_ref: gemini
+  memory_write: via_generated_data_pipeline
+security:
+  default_deny: true
+  may_narrow_authority: true
+  may_widen_authority: false
+  autonomous_merge: false
+  force_push: false
+  direct_graphiti_write: false
+receipts:
+  lifecycle_schema: program-execution-adapter.lifecycle-receipt.v1
+  terminal_core_receipt: verification
+status:
+  default: dormant
+  blocked_reason: No local gemini executable or Gemini verification transport is available in this
+    environment; the adapter is registered for coverage but reports BLOCKED until a transport is
+    provisioned.

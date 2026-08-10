@@ -1,0 +1,14 @@
+# Agent UI Control — non-sensitive defaults only.
+# Secrets (L9_BASE_URL, L9_API_KEY) MUST come from environment variables.
+# Env always wins over this file.
+
+mode: local
+
+# Polling (seconds) — override with L9_AGENT_POLL_INTERVAL
+poll_interval: 3
+
+# Automation settings
+gui_safety: true
+browser_headless: false
+screenshot_dir: "~/Desktop/l9_screenshots"
+default_browser: chromium

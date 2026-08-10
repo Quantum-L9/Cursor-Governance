@@ -34,3 +34,12 @@ entries:
 - adapter_id: target-deployment-factory
   status: UNKNOWN
   last_probe: null
+- adapter_id: codex-cloud
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: gemini-review
+  status: UNKNOWN
+  last_probe: null
+- adapter_id: manus-cloud
+  status: UNKNOWN
+  last_probe: null
