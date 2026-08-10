@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
-"""Stop-hook session write-back: deterministically ingest a session episode.
-
-Captures what the session did (branch, HEAD, commit subjects) as a governed
-memory record so provenance lands whether or not the agent chose to write it.
-Fail-open: never blocks session end.
-"""
+"""Stop-hook write-back via Cursor Graphiti write (front door only)."""
 
 from __future__ import annotations
 
 import json
-import subprocess  # noqa: S404 - fixed argv, no shell
+import subprocess  # noqa: S404
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "memory"))
+MEM = Path(__file__).resolve().parent.parent / "memory"
+sys.path.insert(0, str(MEM))
 
+import graphiti_bridge as gb  # noqa: E402
 import memory_state as st  # noqa: E402
 
 
 def _git(args: list[str], cwd: Path) -> str:
     try:
-        out = subprocess.run(  # noqa: S603 - fixed argv
+        out = subprocess.run(  # noqa: S603
             ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=10, check=False
         )
         return out.stdout.strip() if out.returncode == 0 else ""
@@ -40,10 +37,9 @@ def main() -> int:
     except (OSError, json.JSONDecodeError):
         return 0
     if not st.fresh_receipt(contract, session_id):
-        return 0  # session never prefetched memory; nothing governed happened
+        return 0
 
     workspace = st.workspace_root()
-    namespaces = st.resolve_namespaces(contract) or ["cursor-governance"]
     branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], workspace) or "?"
     head = _git(["rev-parse", "--short", "HEAD"], workspace) or "?"
     subjects = _git(["log", "--oneline", "-5", "--no-decorate"], workspace)
@@ -53,22 +49,13 @@ def main() -> int:
     )
 
     try:
-        import memory_client as mc
-        from errors import MemoryWriteDenied
-
-        try:
-            mc.ingest(
-                {
-                    "namespace": namespaces[0],
-                    "content": content,
-                    "idempotency_key": f"cc-session-{session_id}",
-                    "source_id": session_id,
-                    "tags": ["claude-code", "session-episode"],
-                }
-            )
-        except MemoryWriteDenied as exc:  # identity denial, not transport failure
-            print(f"memory-writeback: write disabled — {exc}", file=sys.stderr)
-    except Exception as exc:  # fail-open on any transport/import failure
+        gb.write_episode(
+            content,
+            kind="session_summary",
+            workspace=workspace,
+            session_id=session_id,
+        )
+    except Exception as exc:  # fail-open
         print(f"memory-writeback: skipped ({exc})", file=sys.stderr)
     return 0
 

@@ -1,6 +1,6 @@
 ---
 id: l9.rule.graph-layer-boundary
-version: 2.1.0
+version: 2.2.0
 description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
 scope: global
 domain: memory
@@ -15,7 +15,7 @@ globs: ["**/*"]
 | Layer | Tool | Answers |
 |---|---|---|
 | Structural | `code-graph-rag` MCP | Where in code? Who imports it? What is the blast radius? |
-| Episodic | `graphiti-memory` MCP / CLI | What was decided? Which ADR or operating lesson applies? |
+| Episodic | Graphiti / L9 shared-memory (**one store**; CLI + MCP transports — ADR-0005) | What was decided? Which ADR or operating lesson applies? |
 | Session resume | Graphiti `inject` / PICKUP | Where did the repository session stop? |
 | Static law | Rules and `AGENTS.md` | Which constraints are non-negotiable? |
 
@@ -29,3 +29,10 @@ Repository overlays may add domain-specific structural-graph procedures without 
 - Use a structural code graph as a substitute for decisions, provenance, or temporal history.
 - Collapse distinct MCP servers into one authority model.
 - Treat local `memory-bank/` or other resume files as canonical global memory.
+
+## Agent memory vs product memory (ADR-0005)
+
+- **Agent episodic memory** — Graphiti / L9 shared-memory only. CLI and MCP are access paths, not competing products.
+- **Product / domain memory** — application runtime stores (e.g. consumer product Neo4j matching, Odoo state, Gate intelligence) are **not** agent resume SSOT and must not be written or read as Cursor session memory.
+- Do not invent a second agent-memory stack when one transport (CLI or MCP) is unhealthy — fix wiring.
+

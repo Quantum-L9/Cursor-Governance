@@ -18,6 +18,7 @@ NO USER CONFIRMATION GATES — Fully autonomous execution.
 
 Usage:
     python3 workflows/lint_fix_executor.py
+    python3 workflows/lint_fix_executor.py --dry-run
     python3 workflows/lint_fix_executor.py --only B904
     python3 workflows/lint_fix_executor.py --status
     python3 workflows/lint_fix_executor.py --resume
@@ -136,10 +137,13 @@ STEP_ORDER = [
 class LintFixExecutor:
     """Executes the /lint-fix DAG — fully autonomous, no user gates."""
 
-    def __init__(self):
+    def __init__(self, dry_run: bool = False):
         self.state: LintFixState | None = None
+        self.dry_run = dry_run
 
     def _save_state(self):
+        if self.dry_run:
+            return
         if self.state:
             STATE_FILE.write_text(json.dumps(self.state.to_dict(), indent=2))
 
@@ -569,7 +573,10 @@ class LintFixExecutor:
                 print(f"  ⏳ {step}")  # noqa: ADR-0019
 
     def run(self, target_codes: list[str] | None = None, resume: bool = False):
-        """Execute the /lint-fix DAG — fully autonomous."""
+        """Execute the /lint-fix DAG — fully autonomous (or dry-run plan)."""
+        if resume and self.dry_run:
+            print("❌ --dry-run cannot resume; omit --resume")  # noqa: ADR-0019
+            return False
         # Initialize or resume
         if resume and self._load_state():
             print("Resuming lint-fix...")  # noqa: ADR-0019
@@ -581,7 +588,8 @@ class LintFixExecutor:
             )
             self._save_state()
 
-        self._print_header("LINT-FIX EXECUTOR")
+        mode = "DRY-RUN " if self.dry_run else ""
+        self._print_header(f"{mode}LINT-FIX EXECUTOR")
         if self.state.target_codes:
             print(f"Target codes: {', '.join(self.state.target_codes)}")  # noqa: ADR-0019
 
@@ -597,10 +605,20 @@ class LintFixExecutor:
             "commit": self._step_commit,
         }
 
+        dry_run_stop_after = {"scan_errors", "categorize"}
+
         # Execute steps in order
         for step in STEP_ORDER:
             if step in self.state.completed_steps:
                 continue
+
+            if self.dry_run and step not in dry_run_stop_after:
+                self._print_header("DRY-RUN STOP — skipping mutate steps")
+                before = len(self.state.errors_before)
+                print(f"Errors found: {before}")  # noqa: ADR-0019
+                print(f"Would run next: {step}")  # noqa: ADR-0019
+                print("\nNo fixes applied. No state file. No commit.")  # noqa: ADR-0019
+                return True
 
             self.state.current_step = step
             self._save_state()
@@ -648,6 +666,7 @@ def main():
         epilog="""
 Examples:
     python3 workflows/lint_fix_executor.py
+    python3 workflows/lint_fix_executor.py --dry-run
     python3 workflows/lint_fix_executor.py --only B904 N811
     python3 workflows/lint_fix_executor.py --resume
     python3 workflows/lint_fix_executor.py --status
@@ -658,10 +677,15 @@ Examples:
     parser.add_argument("--resume", action="store_true", help="Resume interrupted execution")
     parser.add_argument("--status", action="store_true", help="Show current status")
     parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan only: scan+categorize — no apply, state, report, or commit",
+    )
 
     args = parser.parse_args()
 
-    executor = LintFixExecutor()
+    executor = LintFixExecutor(dry_run=args.dry_run)
 
     if args.reset:
         if STATE_FILE.exists():

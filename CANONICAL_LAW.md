@@ -15,7 +15,7 @@ status: active
 **Runtime:** L9 Governance  
 **Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone  
 **GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`  
-**Updated:** 2026-08-06 (Cursor-primary capability ownership — adapter wrap-out law)
+**Updated:** 2026-08-07 (integration-branch-first + local runtime discipline §13)
 
 ---
 
@@ -230,9 +230,19 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
 
 Session start prefetch: `ops/hooks/session_start_memory_orchestrator.sh`
 
+### Single front door (ADR-0006)
+
+- Lifecycle + interactive MCP: Graphiti only (`graphiti_memory_client.py`, tunnel `:8100`)
+- Claude/Manus/Codex adapters: **thin wrap** — never a second HTTP memory plane
+- Forbidden residue: `L9_MEMORY_HTTP_URL`, `L9_MEMORY_CLIENT_TOKEN`,
+  `environment/claude-code/memory/memory_client.py`, `l9-shared-memory` @
+  `memory.quantumaipartners.com`, `L9_MEMORY_ENFORCEMENT=off`
+- Operator-only back door: `L9_MEMORY_ENFORCEMENT_BREAKGLASS` (admin; not agent-settable)
+
 ### Deprecated (archived)
 
 - `cursor_memory_client.py` — replaced by `graphiti_memory_client.py`
+- `environment/claude-code/memory/memory_client.py` — HTTP side door removed (ADR-0006)
 - `learning_to_mcp_bridge.py` — archived
 - All `install_*.sh` scripts (except `install_export_job.sh`) — archived
 - All recursive learning daemon scripts — archived
@@ -322,6 +332,36 @@ the primary auth path for governed SaaS UI automation. Resolve secrets by ref
 via `ops/secrets` + skill `l9-aws-secrets` (AWS Secrets Manager,
 `openclaw-igorbot/*`). UI sessions use provisioned `ui-session-*` refs when
 needed — never commit `storage_state` blobs.
+
+---
+
+## 13. Integration Branch & Local Runtime Discipline
+
+**Law (multi-environment app repos):** When a consumer repository declares an
+integration branch and a production branch (e.g. PlasticOS `Staging` /
+`Production`), **all product work must hit the integration branch first** via
+PR. Production is a promote-from-integration path only — never a feature-PR
+target. Ship-intended work must not remain only in local tips, stashes, or
+deleted remotes without an open or merged integration-branch PR.
+
+**Law (local runtime before remote shell):** When a repository declares a local
+full-stack runtime (PlasticOS: Docker Compose via `make up` / `make test-odoo` /
+`make test-module` / `make install-smoke`), that runtime is the **primary**
+develop–debug–fix loop. Agents must run it when the operator asks for e2e /
+Docker / full proof, and when the agent judges runtime proof necessary. Remote
+PaaS shells (e.g. Odoo.sh) are for diagnosis and deploy confirmation — not for
+inventing fixes that are reverse-integrated into git afterward.
+
+| Principle | Requirement |
+|-----------|-------------|
+| Integration-first | Feature/fix/docs/test PRs → declared integration branch only |
+| No lost work | Remote branch + integration PR (draft OK) for ship-intended WIP |
+| Local runtime primacy | Prove in declared local stack before remote shell hotfixes |
+| Honesty | If required runtime was unavailable, report `NOT RUN` — never fake green |
+
+**Repo overlays** may tighten (never weaken) this law. PlasticOS SSOT:
+`IB-Odoo_19/.cursor/rules/72-plasticos-staging-first-docker-law.mdc`.
+
 <!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:CANONICAL_LAW -->
 
 ## Program Execution subsystem

@@ -1,0 +1,11 @@
+# Agent UI Control — Python dependencies
+# Install: pip3 install -r requirements.txt
+# Optional GUI: python3 -m playwright install chromium
+
+aiofiles>=23.2.1
+playwright>=1.41.0
+pyautogui>=0.9.54
+Pillow>=10.0.0
+structlog>=24.1.0
+websockets>=12.0
+pyyaml>=6.0.1

@@ -4,6 +4,9 @@
 episodes via `graphiti_memory_client.py`). Hooks and `/end-session` no longer
 read, scaffold, or write `memory-bank/`.
 
+See also **ADR-0005**: one agent episodic memory (CLI + MCP transports); product
+runtime graphs are out of band.
+
 ## Current contract
 
 - **sessionStart** (`session_start_bootstrap.sh`,

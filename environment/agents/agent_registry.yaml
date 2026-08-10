@@ -5,10 +5,27 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.1.0
-#   updated: 2026-07-31
+#   version: 2.0.0
+#   updated: 2026-08-10
 #
-# AGENT REGISTRY — the single source of truth for WHO writes memory.
+# AGENT REGISTRY — the single source of truth for WHO writes memory AND which
+# Program Execution adapters each peer's surfaces are bound to (Executable Peer
+# Contract v1). The optional `execution:` block per agent declares the peer's
+# executable relationship as {enabled, bindings:[{surface, adapter_id}]}. The
+# execution side lives in
+# environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml, and
+# each bound adapter's descriptor carries identity.agent_ref back to this agent
+# key. The two registries are cross-validated by
+# `make peer-execution-conformance` (validate_executable_peers.py, rules
+# E1-E15).
+#
+# `execution.enabled: true` is a STRONG assertion: this agent has at least one
+# surface backed by a sealed, non-dormant worker_host Program Execution adapter
+# with a resolvable agent_ref. It never means "we intend to support this" — set
+# `enabled: false` with `bindings: []` for a peer whose worker adapter is not
+# yet routable (dormant), rather than leaving coverage silently partial.
+# Readiness is NEVER statically asserted here; it is proven per binding by
+# probe_executable_peers.py against fresh receipts under $HOME/.l9/programs/.
 # Peer of ops/graphiti/group_registry.yaml (which answers WHAT repo memory
 # is about). Together they complete the identity matrix:
 #   group_id  = repo namespace  -> SHARED across all agents (group_registry.yaml)
@@ -26,7 +43,7 @@
 #     of each surface and in agent_tokens.local.json (gitignored) on the
 #     machine that renders auth_tokens.json for the memory server.
 
-schema_version: 1
+schema_version: 2
 workspace_group: igor-workspace
 
 # ---------------------------------------------------------------------------
@@ -91,6 +108,13 @@ agents:
     surfaces: [cursor-ide]
     assigned_groups: ["*"]
     adapter: cursor                  # existing .cursor-commands activation, unchanged
+    execution:                       # bound to environment/program-execution worker adapters
+      enabled: true
+      bindings:
+        - surface: cursor-ide
+          adapter_id: cursor-foreground
+        - surface: cursor-ide
+          adapter_id: cursor-background
     status: active
 
   claude-code:
@@ -104,6 +128,13 @@ agents:
     surfaces: [claude-cli, claude-web, claude-mobile]
     assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]
     adapter: claude-code             # existing environment/claude-code/, identities now rendered from here
+    execution:
+      enabled: true
+      bindings:
+        - surface: claude-cli
+          adapter_id: claude-code-direct
+        - surface: claude-cli
+          adapter_id: claude-code-bounded-autonomy
     status: active
 
   manus:
@@ -116,6 +147,9 @@ agents:
     surfaces: [manus-cloud]
     assigned_groups: [cursor-governance, l9-graphiti-memory, cognitive-engine-graphs, igorbot]
     adapter: manus
+    execution:                       # manus-cloud worker adapter is dormant (Wave D)
+      enabled: false
+      bindings: []
     status: active
 
   codex:
@@ -128,6 +162,9 @@ agents:
     surfaces: [codex-cloud, codex-cli]
     assigned_groups: [l9-node-template]
     adapter: codex
+    execution:                       # codex-cloud worker adapter is dormant (Wave B)
+      enabled: false
+      bindings: []
     status: active
 
   gemini:
@@ -140,6 +177,9 @@ agents:
     surfaces: [gemini-cli]
     assigned_groups: [cursor-governance, l9-graphiti-memory]
     adapter: gemini
+    execution:                       # gemini-review verifier adapter is dormant (Wave C)
+      enabled: false
+      bindings: []
     status: active
 
 # ---------------------------------------------------------------------------

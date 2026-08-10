@@ -19,6 +19,7 @@ NO USER CONFIRMATION GATES — Fully autonomous execution.
 
 Usage:
     python3 workflows/migrate_executor.py "old_pattern" "new_pattern"
+    python3 workflows/migrate_executor.py --dry-run "old_pattern" "new_pattern"
     python3 workflows/migrate_executor.py --status
     python3 workflows/migrate_executor.py --resume
 
@@ -135,10 +136,13 @@ STEP_ORDER = [
 class MigrateExecutor:
     """Executes the /migrate DAG — fully autonomous, no user gates."""
 
-    def __init__(self):
+    def __init__(self, dry_run: bool = False):
         self.state: MigrateState | None = None
+        self.dry_run = dry_run
 
     def _save_state(self):
+        if self.dry_run:
+            return
         if self.state:
             STATE_FILE.write_text(json.dumps(self.state.to_dict(), indent=2))
 
@@ -562,7 +566,10 @@ class MigrateExecutor:
                 print(f"  ⏳ {step}")  # noqa: ADR-0019
 
     def run(self, old_pattern: str = "", new_pattern: str = "", resume: bool = False):
-        """Execute the /migrate DAG — fully autonomous."""
+        """Execute the /migrate DAG — fully autonomous (or dry-run plan)."""
+        if resume and self.dry_run:
+            print("❌ --dry-run cannot resume; omit --resume")  # noqa: ADR-0019
+            return False
         # Initialize or resume
         if resume and self._load_state():
             print(f"Resuming migration: {self.state.old_pattern} → {self.state.new_pattern}")  # noqa: ADR-0019
@@ -578,7 +585,10 @@ class MigrateExecutor:
             )
             self._save_state()
 
-        self._print_header(f"MIGRATE EXECUTOR: {self.state.old_pattern} → {self.state.new_pattern}")
+        mode = "DRY-RUN " if self.dry_run else ""
+        self._print_header(
+            f"{mode}MIGRATE EXECUTOR: {self.state.old_pattern} → {self.state.new_pattern}"
+        )
 
         # Step executors
         executors = {
@@ -593,10 +603,23 @@ class MigrateExecutor:
             "commit": self._step_commit,
         }
 
+        dry_run_stop_after = {"index_analysis", "pattern_extract", "batch_generate"}
+
         # Execute steps in order
         for step in STEP_ORDER:
             if step in self.state.completed_steps:
                 continue
+
+            if self.dry_run and step not in dry_run_stop_after:
+                self._print_header("DRY-RUN STOP — skipping mutate steps")
+                print(f"Would run next: {step}")  # noqa: ADR-0019
+                print(f"Planned files: {len(self.state.files_modified)}")  # noqa: ADR-0019
+                for f in self.state.files_modified[:40]:
+                    print(f"  - {f}")  # noqa: ADR-0019
+                if len(self.state.files_modified) > 40:
+                    print(f"  ... +{len(self.state.files_modified) - 40} more")  # noqa: ADR-0019
+                print("\nNo files written. No state file. No commit.")  # noqa: ADR-0019
+                return True
 
             self.state.current_step = step
             self._save_state()
@@ -643,6 +666,7 @@ def main():
 Examples:
     python3 workflows/migrate_executor.py "old_function" "new_function"
     python3 workflows/migrate_executor.py "from old.module" "from new.module"
+    python3 workflows/migrate_executor.py --dry-run "old" "new"
     python3 workflows/migrate_executor.py --resume
     python3 workflows/migrate_executor.py --status
         """,
@@ -653,10 +677,15 @@ Examples:
     parser.add_argument("--resume", action="store_true", help="Resume interrupted execution")
     parser.add_argument("--status", action="store_true", help="Show current status")
     parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan only: index/extract/batch — no apply, state, report, or commit",
+    )
 
     args = parser.parse_args()
 
-    executor = MigrateExecutor()
+    executor = MigrateExecutor(dry_run=args.dry_run)
 
     if args.reset:
         if STATE_FILE.exists():
