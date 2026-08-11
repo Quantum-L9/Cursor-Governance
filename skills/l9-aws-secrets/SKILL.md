@@ -21,6 +21,24 @@ This repository **owns** the inventory. Sync pulls secret *names* (and JSON key 
 
 Values never go into git, logs, receipts, or chat unless the human explicitly needs a one-shot programmatic capture.
 
+## Law — check registry before asking the human
+
+**Hard rule:** If a task needs a credential, token, API key, or password, agents
+MUST attempt resolution via this skill / `ops/secrets/` **before** asking the
+human. Asking first while the secret is already in AWS is a protocol failure.
+
+1. `sync_secrets_registry.py` (or use current registry if fresh)
+2. `resolve_secret.py --ref '…' --check` then resolve into the process env
+3. Only after `UNREGISTERED` / `NOT_PROVISIONED` / `NOT_FOUND` may you ask —
+   and you must name the failing ref
+
+**Known aliases (non-exhaustive):**
+
+| Need | Prefer ref |
+|------|------------|
+| `NODE_AUTH_TOKEN` / GitHub Packages `@quantum-l9/*` | `openclaw-igorbot/github#token` |
+| GitHub API PAT for `gh` automation | `openclaw-igorbot/github#token` |
+
 ## Interpreter
 
 Prefer the governance locked venv:
