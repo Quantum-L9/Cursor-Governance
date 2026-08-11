@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "cc-pe-intent-compiler-v1",
+  "source_file": "CONTRACT_SOURCE.md",
+  "digest_algorithm": "sha256",
+  "digest": "1380d7dbb306f142a2682d593f7bb2a99ed2228c5bb67c2d7d727b4ddbdea196",
+  "bytes": 23708,
+  "pack_recorded_digest": "1380d7dbb306f142a2682d593f7bb2a99ed2228c5bb67c2d7d727b4ddbdea196",
+  "pack_recorded_bytes": 23708,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-11",
+  "collection_method": "read_only_inspection",
+  "producer": "controller-admission"
+}

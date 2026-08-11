@@ -1,0 +1,139 @@
+{
+  "schema": "program-execution-controller.handoff-receipt.v2",
+  "handoff_id": "HANDOFF-cc-pe-intent-compiler-admission-0001",
+  "program_id": "cc-pe-intent-compiler-v1",
+  "program_digest": "1380d7dbb306f142a2682d593f7bb2a99ed2228c5bb67c2d7d727b4ddbdea196",
+  "controller_id": "cc-pe-intent-compiler-controller",
+  "exported_at": "2026-08-11T00:00:00+00:00",
+  "runtime_summary": {
+    "blocking_gates_passed": 0,
+    "completed_tasks": 0,
+    "global_halt": false,
+    "ledger_valid": true,
+    "total_blocking_gates": 6,
+    "total_required_tasks": 1,
+    "unresolved_decisions": 0,
+    "unresolved_unknowns": 1,
+    "admission_wave": "W0",
+    "note": "Contract registered as immutable operator seed. No intent->resolution->synthesis pipeline was run and no Blueprint was materialized: the sole target repository l9-devpack-compiler is out of session scope (UNK-001), so the compiler cannot be built or validated in place. Quality Gates A-F are unevaluated."
+  },
+  "tasks": [
+    {
+      "id": "CONTRACT-ADMISSION",
+      "runtime_state": "BLOCKED",
+      "target_id": "l9-devpack-compiler",
+      "last_error": "target repository l9-devpack-compiler not in session scope; intent-compiler cannot be implemented or validated (UNK-001)."
+    }
+  ],
+  "gates": [
+    {
+      "id": "GATE-A",
+      "name": "Contract (intent.v1)",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-B",
+      "name": "Resolution (INTENT_RESOLUTION)",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-C",
+      "name": "Synthesis (Blueprint v2 source set)",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-D",
+      "name": "Validation (official validator)",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-E",
+      "name": "UX (minimal front door)",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-F",
+      "name": "Regression (no weakened tests/authority)",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ADR-0007",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0008",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0009",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0010",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0011",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0012",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0013",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0014",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0015",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "ADR-0016",
+      "status": "accepted",
+      "evidence_ids": []
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-001",
+      "status": "open",
+      "evidence_ids": [],
+      "topic": "l9-devpack-compiler base SHA / reachability"
+    }
+  ],
+  "approvals": [],
+  "residual_risks": [
+    "target-out-of-scope",
+    "no-blueprint-synthesized-yet"
+  ],
+  "recommended_program_verdict": "INCONCLUSIVE",
+  "receipt_digest": "325c5c761aceeb1975c294f1070077b2c6b8fda43c74e73c1ee670aa6b960b15"
+}
