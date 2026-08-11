@@ -1,7 +1,0 @@
-validation_id: l9.mobile_chat_hydration_pack.manifest_readme_patch.v1
-status: passed
-yaml_files_checked: 34
-errors: []
-runtime_ci: not_run
-readme_present: true
-manifest_present: true

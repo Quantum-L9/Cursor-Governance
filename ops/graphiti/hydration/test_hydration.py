@@ -59,14 +59,13 @@ def test_episode_contract_requires_agent_id():
 def test_transcript_cap_and_redact(tmp_path):
     path = tmp_path / "t.jsonl"
     path.write_text(
-        json.dumps({"role": "user", "content": "email me at a@b.com please"}) + "\n"
+        json.dumps({"role": "user", "content": "email me at a@b.com please"})
+        + "\n"
         + json.dumps({"role": "assistant", "content": "ok"})
         + "\n",
         encoding="utf-8",
     )
-    text, source = tr.load_transcript_excerpt(
-        transcript_path=str(path), max_chars=500
-    )
+    text, source = tr.load_transcript_excerpt(transcript_path=str(path), max_chars=500)
     assert source == "stdin_transcript_path"
     assert "a@b.com" not in text
     assert "EMAIL_REDACTED" in text

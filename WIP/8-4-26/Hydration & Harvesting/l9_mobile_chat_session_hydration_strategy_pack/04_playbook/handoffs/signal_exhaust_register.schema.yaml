@@ -1,9 +1,0 @@
-schema_id: l9.handoff.signal_exhaust_register.v1
-status: canonical_draft
-required:
-- id
-- source_step
-- target_step
-- payload
-- unknowns
-payload_rule: Payload must be minimal and mobile-safe.
