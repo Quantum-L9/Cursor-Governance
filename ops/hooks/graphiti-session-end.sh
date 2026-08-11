@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# sessionEnd — Graphiti-only; memory-bank deprecated (no T0 fallback)
+# sessionEnd — automatic Phase A/B close (PICKUP + atomic writes); fail-open
+# Budget: hooks.json Graphiti sessionEnd timeout is 30s (Phase A ≤8s, B ≤18s).
 set -uo pipefail
 set +x
 
@@ -7,101 +8,123 @@ REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "$
 # shellcheck source=graphiti_common.sh
 source "$(dirname "$REAL_HOOK")/graphiti_common.sh"
 
+# Resolve project dir from Cursor env / stdin — never ~/.cursor cwd
 REPO="${CURSOR_PROJECT_DIR:-}"
-[ -n "$REPO" ] || exit 0
-
-graphiti_resolve_cli
-graphiti_load_env
-export CURSOR_CONVERSATION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"
-
-SESSION_SUMMARY=""
 INPUT="$(cat 2>/dev/null || true)"
+SESSION_ID="${CURSOR_CONVERSATION_ID:-${CURSOR_SESSION_ID:-default}}"
+REASON="completed"
+TRANSCRIPT_PATH=""
+IS_BG="0"
+
 if [ -n "$INPUT" ]; then
-  SESSION_SUMMARY="$(INPUT="$INPUT" python3 - <<'PY'
+  PARSED="$(INPUT="$INPUT" python3 - <<'PY'
 import json, os
 raw = os.environ.get("INPUT", "")
-if not raw.strip():
-    raise SystemExit
+out = {"repo": "", "session_id": "", "reason": "completed", "transcript_path": "", "background": "0"}
 try:
-    data = json.loads(raw)
-    print(
-        data.get("summary")
-        or data.get("session_summary")
-        or data.get("user_message")
-        or data.get("message")
-        or data.get("text")
+    data = json.loads(raw) if raw.strip() else {}
+except json.JSONDecodeError:
+    data = {}
+if isinstance(data, dict):
+    roots = data.get("workspace_roots") or data.get("workspaceRoots") or []
+    if isinstance(roots, list) and roots:
+        out["repo"] = str(roots[0])
+    for key in ("cwd", "workspace_root", "project_dir", "CURSOR_PROJECT_DIR"):
+        if data.get(key):
+            out["repo"] = str(data[key])
+            break
+    out["session_id"] = str(
+        data.get("session_id")
+        or data.get("conversation_id")
+        or data.get("CURSOR_CONVERSATION_ID")
         or ""
     )
-except json.JSONDecodeError:
-    print(raw[:1500])
+    out["reason"] = str(
+        data.get("reason")
+        or data.get("status")
+        or data.get("end_reason")
+        or "completed"
+    )
+    tp = data.get("transcript_path") or data.get("transcriptPath") or ""
+    out["transcript_path"] = str(tp) if tp else ""
+    if data.get("is_background_agent") or data.get("isBackgroundAgent"):
+        out["background"] = "1"
+print(json.dumps(out))
 PY
 )"
+  REPO_FROM_STDIN="$(echo "$PARSED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('repo',''))" 2>/dev/null || true)"
+  [ -n "$REPO_FROM_STDIN" ] && REPO="$REPO_FROM_STDIN"
+  SID_FROM_STDIN="$(echo "$PARSED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('session_id',''))" 2>/dev/null || true)"
+  [ -n "$SID_FROM_STDIN" ] && SESSION_ID="$SID_FROM_STDIN"
+  REASON="$(echo "$PARSED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('reason','completed'))" 2>/dev/null || echo completed)"
+  TRANSCRIPT_PATH="$(echo "$PARSED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null || true)"
+  IS_BG="$(echo "$PARSED" | python3 -c "import sys,json; print(json.load(sys.stdin).get('background','0'))" 2>/dev/null || echo 0)"
 fi
 
-if [ -z "$SESSION_SUMMARY" ]; then
-  echo "INFO: no session summary — nothing to write" >&2
+[ -n "$REPO" ] || {
+  echo "WARN: no project dir (CURSOR_PROJECT_DIR / workspace_roots) — close skipped" >&2
   exit 0
-fi
+}
 
+export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
+export USER_ID="${USER_ID:-cursor_agent}"
+export CURSOR_CONVERSATION_ID="$SESSION_ID"
+
+graphiti_load_env
 if ! graphiti_enabled; then
-  echo "WARN: Graphiti disabled — session summary not persisted (memory-bank deprecated)" >&2
+  echo "WARN: Graphiti disabled — close skipped" >&2
   exit 0
 fi
 
-GROUP_ID="$(python3 "$GRAPHITI_CLI" resolve 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('group_id',''))" 2>/dev/null || echo "")"
-if [ -z "$GROUP_ID" ]; then
-  echo "WARN: group_id unresolvable — session summary not persisted (memory-bank deprecated)" >&2
+GOV_ROOT="$(cd "$(dirname "$REAL_HOOK")/../.." && pwd)"
+if [ ! -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
+  GOV_ROOT="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+fi
+if [ ! -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
+  echo "WARN: hydration CLI missing — close skipped" >&2
   exit 0
 fi
 
-PAYLOAD="$SESSION_SUMMARY"
-if [ -n "${OPENAI_API_KEY:-}" ]; then
-  DISTILL_BUDGET="${MEMORY_DISTILL_TOKEN_BUDGET:-300}"
-  DISTILLED="$(SESSION_SUMMARY="$SESSION_SUMMARY" DISTILL_BUDGET="$DISTILL_BUDGET" python3 - <<'PY'
-import json, os, urllib.request, urllib.error
+PY="${GOV_ROOT}/.venv/bin/python3"
+[ -x "$PY" ] || PY="python3"
 
-summary = os.environ.get("SESSION_SUMMARY", "")[:1500]
-budget = int(os.environ.get("DISTILL_BUDGET", "300"))
-payload = json.dumps({
-    "model": "gpt-4o-mini",
-    "max_tokens": budget,
-    "messages": [
-        {
-            "role": "system",
-            "content": (
-                "Extract durable facts from this session. Output ONLY a JSON object with keys: "
-                "decisions, constraints, ci_gotchas, preferences, tech_debt (lists). "
-                "Omit empty keys. No prose."
-            ),
-        },
-        {"role": "user", "content": summary},
-    ],
-}).encode()
-req = urllib.request.Request(
-    "https://api.openai.com/v1/chat/completions",
-    data=payload,
-    headers={
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
-    },
+CLOSE_ARGS=(
+  --project-dir "$REPO"
+  --session-id "$SESSION_ID"
+  --reason "$REASON"
+  --agent-id "$L9_MEMORY_AGENT_ID"
 )
+[ -n "$TRANSCRIPT_PATH" ] && CLOSE_ARGS+=(--transcript-path "$TRANSCRIPT_PATH")
+[ "$IS_BG" = "1" ] && CLOSE_ARGS+=(--background)
+
+# Ensure cwd for any incidental resolve matches the project (close passes --project-dir)
+cd "$REPO" || true
+
+if REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -m ops.graphiti.hydration.cli close \
+    "${CLOSE_ARGS[@]}" 2>/dev/null)"; then
+  echo "$REPORT" | python3 -c '
+import sys, json
 try:
-    with urllib.request.urlopen(req, timeout=25) as resp:
-        body = json.loads(resp.read())
-    text = body["choices"][0]["message"]["content"].strip()
-    json.loads(text)
-    print(text)
-except (urllib.error.URLError, KeyError, json.JSONDecodeError) as exc:
-    print(json.dumps({"error": str(exc), "fallback": summary[:200]}))
-PY
-)"
-  PAYLOAD="$DISTILLED"
+    d = json.load(sys.stdin)
+except Exception:
+    print("INFO: session close finished (unparsed)", file=sys.stderr)
+    raise SystemExit(0)
+status = d.get("status", "?")
+writes = len(d.get("writes") or [])
+agent = (d.get("receipt") or {}).get("agent_id") or d.get("agent_id") or ""
+gid = d.get("group_id") or ""
+print(
+    "INFO: session close status=%s writes=%s group=%s agent=%s"
+    % (status, writes, gid, agent),
+    file=sys.stderr,
+)
+if status == "idempotent_skip":
+    print("INFO: close receipt already present — skipped duplicate writes", file=sys.stderr)
+for w in d.get("warnings") or []:
+    print("WARN: %s" % w, file=sys.stderr)
+' 2>&1 || echo "INFO: session close finished" >&2
+else
+  echo "WARN: session close failed — Phase A may be missing; use /end-session force-retry" >&2
 fi
-
-if python3 "$GRAPHITI_CLI" write "$PAYLOAD" --kind session_summary --group-id "$GROUP_ID" >/dev/null 2>&1; then
-  echo "INFO: T1 Graphiti episode written for $GROUP_ID" >&2
-  exit 0
-fi
-
-echo "WARN: T1 episode write failed — session summary not persisted (memory-bank deprecated)" >&2
 exit 0

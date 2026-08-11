@@ -1,0 +1,22 @@
+# Slim promotion rules for session close (v1).
+# Full 13-signal ontology is out of scope; thresholds only.
+version: 1
+promote_min_score: 0.65
+defer_min_score: 0.35
+# Kinds eligible for Phase B atomic writes when decision=promote
+promotable_kinds:
+  - lesson
+  - insight
+  - decision
+do_not_promote:
+  - raw transcript dumps
+  - secrets or credentials
+  - ephemeral tool noise
+  - full chat logs
+  - personal PII
+max_promotions_per_close: 5
+phase_a_budget_seconds: 8
+phase_b_budget_seconds: 18
+total_close_budget_seconds: 30
+transcript_char_cap_default: 12000
+hydration_char_budget_default: 4000
