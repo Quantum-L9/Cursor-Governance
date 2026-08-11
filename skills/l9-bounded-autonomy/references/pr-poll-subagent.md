@@ -20,8 +20,8 @@ prompt: <from references/prompt-templates.md poll_worker; includes campaign auth
 
 ## Poll worker responsibilities
 
-1. Loop: status → checks → comments → conflicts (babysit / pr-babysitting structure).
-2. On in-scope CI failure **and** an active campaign authorization packet covering this PR: remediate via `l9-pr-remediation` / Cursor `babysit` — scoped fix → push → recheck. Cap **3** fix-push cycles then escalate to main with blockers.
+1. Loop: status → checks → comments → conflicts (remediation **Converge** loop).
+2. On in-scope CI failure **and** an active campaign authorization packet covering this PR: remediate via `l9-pr-remediation` Converge — scoped fix → push → recheck. Cap **3** fix-push cycles then escalate to main with blockers.
 3. Without a packet: **watch-only**; escalate proposed fixes to main for approval.
 4. Never force-push; never merge; never weaken tests for green; never change CI workflows to hide failures; never expand campaign scope.
 5. **Notify main only on:** check status change (pending→fail/pass), new actionable review comment, conflict introduced, terminal merge-eligible, or escalation. No no-op spam.
