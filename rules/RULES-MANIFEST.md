@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-11T00:34:07Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -21,7 +21,7 @@ Generated: `2026-08-11T00:34:07Z`. Source: `rules/*.mdc`.
 | `00-global.mdc` | `l9.rule.00.global` | global | security | always | 279 | `617dac45e91d` |
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
-| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `a976f968cd15` |
+| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `760117869bfd` |
 | `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 58 | `637edb920ec4` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
@@ -30,7 +30,7 @@ Generated: `2026-08-11T00:34:07Z`. Source: `rules/*.mdc`.
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | auto_attached | 181 | `bd8fad3dd090` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | auto_attached | 186 | `8f9921b041c0` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 51 | `0d3ad3e7d982` |
-| `23-l9-skill-routing.mdc` | `l9.rule.23.l9.skill.routing` | global | governance | always | 89 | `03814e9b84a3` |
+| `23-l9-skill-routing.mdc` | `l9.rule.23.l9.skill.routing` | global | governance | always | 89 | `a33ee9440db9` |
 | `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | always | 168 | `e27ac2cc723b` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | auto_attached | 143 | `38c1291f4681` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | auto_attached | 180 | `2af64ed1e71a` |

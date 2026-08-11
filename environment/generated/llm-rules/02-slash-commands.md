@@ -86,7 +86,7 @@ When a command needs generator scripts:
 | `/mem` | `commands/mem.md` | Memory-aware execution |
 | `/migrate` | `commands/migrate.md` | Autonomous code migration |
 | `/plan` | `commands/plan.md` | Create execution plan |
-| `/pr` | `commands/pr.md` | PR analysis and gap assessment |
+| `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
 | `/probe` | `commands/probe.md` | Import & wiring verification (safe) |
 | `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
 | `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |

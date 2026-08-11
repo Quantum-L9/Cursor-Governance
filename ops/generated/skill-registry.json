@@ -12,7 +12,6 @@
       "l9-plan",
       "l9-code-analysis",
       "l9-gap-analysis",
-      "l9-pr-analysis",
       "l9-ynp",
       "l9-skill-compiler",
       "l9-wire-skill-into-repo",
@@ -32,13 +31,17 @@
     "purpose": "Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce native skill selection while preserving model judgment, explicit-only boundaries, and narrow composition. Recommendation never grants mutation authority.\n",
     "routes": [
       {
+        "hint_allowed": true,
         "id": "pr_analysis",
         "negative_signals": [
           "implement the review fixes",
           "push commits",
           "merge the pr",
-          "merge this pr"
+          "merge this pr",
+          "remediate the pr",
+          "babysit the pr"
         ],
+        "note": "explicit_only + hint_allowed \u2014 Read Diagnose path only; Converge mutate requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.\n",
         "positive_signals": [
           "review pr",
           "pull request review",
@@ -47,14 +50,12 @@
           "pr readiness",
           "ready to merge",
           "analyze this pr",
-          "pr analysis"
+          "pr analysis",
+          "diagnose this pr"
         ],
-        "primary": "l9-pr-analysis",
+        "primary": "l9-pr-remediation",
         "signal_weight": 8,
-        "supporting": [
-          "l9-gap-analysis",
-          "l9-structured-reasoning"
-        ]
+        "supporting": []
       },
       {
         "id": "code_analysis",
@@ -833,24 +834,13 @@
       "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
     },
     {
-      "composition_role": "primary",
-      "description": "analyze pull requests, review comments, merge blockers, gap status, and adoption strategy. use when the user asks about a PR, merge decision, review findings, or PR readiness.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-pr-analysis",
-      "path": "skills/l9-pr-analysis",
-      "reason": "",
-      "user_invocable": true,
-      "when_to_use": "reviewing PRs, merge blockers, review comments, or PR readiness"
-    },
-    {
       "composition_role": "general",
-      "description": "converge a github pr in the fewest cycles by concurrently remediating every actionable signal \u2014 ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt \u2014 with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
+      "description": "diagnose or converge a github pr \u2014 read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "unified max-depth PR remediation (concurrent clusters, push + review replies) \u2014 high blast radius, explicit only",
+      "reason": "PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) \u2014 high blast radius, explicit only; hint_allowed for read-only Diagnose",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1010,6 +1000,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "f0392ffecff0795a4a7124ece525ea0403784a5173cbd61058988319e8fbef57",
-  "source_skill_corpus_sha256": "5e53922ce282118dec7c4cb9a7c6f0cec22544170012fe13392061f827235651"
+  "source_manifest_sha256": "f63037cc050526c91c9b72380d45b6d1a11f9d7a7889dc1562aab7d38a5cb356",
+  "source_skill_corpus_sha256": "bbd49d6dc9590169641e6bd667f59a837a22c7e8d7b37fd9ff258b74e32d25ca"
 }

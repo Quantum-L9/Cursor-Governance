@@ -2,11 +2,8 @@
   "cases": [
     {
       "prompt": "Review PR 72 and identify merge blockers and unresolved review comments",
-      "expected_primary": "l9-pr-analysis",
-      "expected_supporting": [
-        "l9-gap-analysis",
-        "l9-structured-reasoning"
-      ]
+      "expected_primary": "l9-pr-remediation",
+      "expected_supporting": []
     },
     {
       "prompt": "Implement the review fixes, push commits, and merge the PR",
