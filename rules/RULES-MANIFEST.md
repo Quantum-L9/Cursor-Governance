@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-11T00:31:30Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -68,7 +68,7 @@ Generated: `2026-08-11T00:31:30Z`. Source: `rules/*.mdc`.
 | `95-agent-pattern-activation.mdc` | `l9.rule.95.agent.pattern.activation` | global | memory | always | 109 | `1faa1aae1604` |
 | `95-test-fix-policy.mdc` | `l9.rule.testing.integrity` | global | testing | always | 57 | `06536d954dd0` |
 | `96-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | security | auto_attached | 47 | `11a14cef03f9` |
-| `96-git-push-approval.mdc` | `l9.rule.96.git.push.approval` | global | git | always | 90 | `d83de4c11329` |
+| `96-git-push-approval.mdc` | `l9.rule.96.git.push.approval` | global | git | always | 97 | `e2996467d9c4` |
 | `96-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 25 | `503f33079bd9` |
 | `97-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | governance | always | 55 | `85fc156798a1` |
 | `97-graph-engine-architecture.mdc` | `l9.rule.97.graph.engine.architecture` | global | security | always | 98 | `c7210c913c17` |
@@ -79,7 +79,7 @@ Generated: `2026-08-11T00:31:30Z`. Source: `rules/*.mdc`.
 | `99-execute-as-instructed.mdc` | `l9.rule.99.execute.as.instructed` | global | general | always | 41 | `8a91df91897f` |
 | `99-graphiti-temporal.mdc` | `l9.rule.99.graphiti.temporal` | global | memory | always | 24 | `7689319b2562` |
 | `99-incident-report.mdc` | `l9.rule.99.incident.report` | global | deployment | always | 463 | `9674bb08f2bf` |
-| `99-no-auto-commit.mdc` | `l9.rule.99.no.auto.commit` | global | git | always | 35 | `d097a5c3d6fb` |
+| `99-no-auto-commit.mdc` | `l9.rule.99.no.auto.commit` | global | git | always | 48 | `7421b248bc43` |
 
 ## Notes
 

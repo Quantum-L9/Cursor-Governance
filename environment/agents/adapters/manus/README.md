@@ -25,6 +25,12 @@ not replace it.
 | Shared memory | account env + `.mcp.json` | `mcp-connector.json` + `environment.env.example` |
 | Network | `web/network-policy.md` | `docs/network-allowlist.md` |
 | GitHub | `GH_TOKEN` account env | GitHub integration (already authenticated) |
+| Autonomy surface | Profile SSOT | Cite `ops/autonomy/surface_profile.yaml`; `L9_GOVERNANCE_SURFACE=manus` |
+
+## Autonomy
+
+Mount the shared Autonomy Surface Profile (CANONICAL_LAW §6.1 / ADAPTER_CONTRACT).
+Standing A4 when enabled; human merge only. Do not fork Profile prose.
 
 ## Setup
 

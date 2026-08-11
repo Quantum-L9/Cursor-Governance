@@ -33,4 +33,17 @@ Only proceed with git operations when user says:
 - "That looks good"
 - Silence
 
+## Adapter Autonomy Velocity waiver
+
+When **all** of the following are true, this rule is **waived** for scoped
+feature-branch `git commit` / `git push` and PR create/update:
+
+1. `L9_GOVERNANCE_SURFACE` is an adapter (`claude-code`, `codex`, `gemini`, `manus`) — **not** `cursor`
+2. `L9_AUTONOMY_ENABLED=true`
+3. Action is on the Autonomy Surface Profile authorize list (`ops/autonomy/surface_profile.yaml`)
+
+Merge, force-push, hard-reset, admin-merge, and secrets remain forbidden.
+Cursor remains ask-first unless a campaign packet or `make pr` remediation path applies.
+Projected override: `zz-autonomy-surface-override.md`.
+
 <!-- generated-from: rules/99-no-auto-commit.mdc; do-not-edit -->

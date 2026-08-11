@@ -8,6 +8,11 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Added
+- **Autonomy Surface Parity:** `ops/autonomy/surface_profile.yaml` (standing A4
+  doctrine SSOT), `ops/scripts/reconcile_claude_settings.py` + `make claude-settings`,
+  `ops/autonomy/merge_gate.py` PreToolUse enforcement, SessionStart Profile inject,
+  llm-rules `zz-autonomy-surface-override.md`, CANONICAL_LAW §6.1. Peers cite Profile
+  via ADAPTER_CONTRACT autonomy carrier.
 - **Executable Peer Contract v1:** an executable agent is now an active registry
   identity with a valid surface→Program-adapter binding, canonical autonomy
   access, and fresh machine-verifiable readiness — not merely shell access.

@@ -23,6 +23,12 @@ assigned repos — the server rejects anything else once principals are rendered
 | Boot context | `gemini-block.md` in `GEMINI.md` |
 | Shared memory | `settings.template.json` → `~/.gemini/settings.json` + env |
 | Operator steps | **`setup.md`** |
+| Autonomy surface | Cite `ops/autonomy/surface_profile.yaml`; set `L9_GOVERNANCE_SURFACE=gemini` |
+
+## Autonomy
+
+Mount the shared Autonomy Surface Profile (CANONICAL_LAW §6.1 / ADAPTER_CONTRACT).
+Standing A4 when enabled; human merge only. Do not fork Profile prose.
 
 ## Setup
 
