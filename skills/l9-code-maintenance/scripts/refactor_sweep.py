@@ -143,36 +143,41 @@ def _intent_tokens(intent: str) -> list[str]:
     return out[:12]
 
 
-_SKIP_DIR_NAMES = {".git", ".venv", "node_modules", "__pycache__", "WIP"}
-
-
-def _should_skip_path(path: Path) -> bool:
-    return any(part in _SKIP_DIR_NAMES for part in path.parts)
+_RG_SKIP_DIR_NAMES = {".venv", "node_modules", ".git", "__pycache__", "WIP"}
 
 
 def _rg_python(pattern: str, root: Path) -> list[tuple[str, int, str]]:
+    """Pure-Python scan when ripgrep is not installed (e.g. CI runners)."""
+    hits: list[tuple[str, int, str]] = []
     try:
         regex = re.compile(pattern, re.IGNORECASE)
     except re.error:
         regex = re.compile(re.escape(pattern), re.IGNORECASE)
-    hits: list[tuple[str, int, str]] = []
-    for file_path in root.rglob("*"):
-        if not file_path.is_file() or _should_skip_path(file_path.relative_to(root)):
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        if any(part in _RG_SKIP_DIR_NAMES for part in path.parts):
             continue
         try:
-            lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+            text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        rel = str(file_path.relative_to(root))
-        for line_no, content in enumerate(lines, start=1):
+        for line_no, content in enumerate(text.splitlines(), start=1):
             if regex.search(content):
+                try:
+                    rel = str(path.resolve().relative_to(root))
+                except ValueError:
+                    rel = str(path)
                 hits.append((rel, line_no, content.strip()[:200]))
+                if len(hits) >= 500:
+                    return hits
     return hits
 
 
 def _rg(pattern: str, root: Path) -> list[tuple[str, int, str]]:
     if shutil.which("rg") is None:
         return _rg_python(pattern, root)
+
     cmd = [
         "rg",
         "-n",
@@ -192,8 +197,6 @@ def _rg(pattern: str, root: Path) -> list[tuple[str, int, str]]:
         "!**/WIP/**",
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if proc.returncode not in (0, 1):
-        return _rg_python(pattern, root)
     hits: list[tuple[str, int, str]] = []
     for line in proc.stdout.splitlines():
         parts = line.split(":", 2)
@@ -204,6 +207,7 @@ def _rg(pattern: str, root: Path) -> list[tuple[str, int, str]]:
             line_no = int(ln)
         except ValueError:
             continue
+        # normalize if rg returned absolute
         try:
             rel = str(Path(path).resolve().relative_to(root))
         except Exception:

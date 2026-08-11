@@ -25,6 +25,9 @@ class FullAdapterMatrixTests(unittest.TestCase):
             "github-checks",
             "github-deployments",
             "target-deployment-factory",
+            "codex-cloud",
+            "gemini-review",
+            "manus-cloud",
         }
         self.assertEqual(actual, expected)
 

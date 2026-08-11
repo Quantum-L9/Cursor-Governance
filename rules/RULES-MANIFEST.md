@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-07T02:13:00Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T00:34:07Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -22,7 +22,7 @@ Generated: `2026-08-07T02:13:00Z`. Source: `rules/*.mdc`.
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
 | `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `a976f968cd15` |
-| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 44 | `f05a463d9f4d` |
+| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 58 | `637edb920ec4` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 60 | `02606be85a98` |
@@ -52,9 +52,9 @@ Generated: `2026-08-07T02:13:00Z`. Source: `rules/*.mdc`.
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | auto_attached | 71 | `cf96edc3a20d` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 129 | `c2b50866ca55` |
 | `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 71 | `ebf45d7841f3` |
-| `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | ci | always | 123 | `7225ed66e89f` |
+| `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | always | 85 | `f67abad4e816` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
-| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `e6cc99f83500` |
+| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `55705b8d4a42` |
 | `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
 | `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
@@ -68,18 +68,18 @@ Generated: `2026-08-07T02:13:00Z`. Source: `rules/*.mdc`.
 | `95-agent-pattern-activation.mdc` | `l9.rule.95.agent.pattern.activation` | global | memory | always | 109 | `1faa1aae1604` |
 | `95-test-fix-policy.mdc` | `l9.rule.testing.integrity` | global | testing | always | 57 | `06536d954dd0` |
 | `96-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | security | auto_attached | 47 | `11a14cef03f9` |
-| `96-git-push-approval.mdc` | `l9.rule.96.git.push.approval` | global | git | always | 90 | `d83de4c11329` |
+| `96-git-push-approval.mdc` | `l9.rule.96.git.push.approval` | global | git | always | 97 | `e2996467d9c4` |
 | `96-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 25 | `503f33079bd9` |
 | `97-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | governance | always | 55 | `85fc156798a1` |
 | `97-graph-engine-architecture.mdc` | `l9.rule.97.graph.engine.architecture` | global | security | always | 98 | `c7210c913c17` |
-| `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 29 | `127f9ae133ff` |
+| `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 38 | `899601a990cb` |
 | `97-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | governance | agent_requested | 48 | `6d019ab496ca` |
 | `98-graphiti-memory-gate.mdc` | `l9.rule.98.graphiti.memory.gate` | global | memory | always | 34 | `eb667b616bfa` |
 | `98-make-pr-remediation.mdc` | `l9.rule.98.make.pr.remediation` | global | general | always | 30 | `53e7e259a9a7` |
 | `99-execute-as-instructed.mdc` | `l9.rule.99.execute.as.instructed` | global | general | always | 41 | `8a91df91897f` |
 | `99-graphiti-temporal.mdc` | `l9.rule.99.graphiti.temporal` | global | memory | always | 24 | `7689319b2562` |
 | `99-incident-report.mdc` | `l9.rule.99.incident.report` | global | deployment | always | 463 | `9674bb08f2bf` |
-| `99-no-auto-commit.mdc` | `l9.rule.99.no.auto.commit` | global | git | always | 35 | `d097a5c3d6fb` |
+| `99-no-auto-commit.mdc` | `l9.rule.99.no.auto.commit` | global | git | always | 48 | `7421b248bc43` |
 
 ## Notes
 

@@ -95,7 +95,7 @@ def _append_once(path: Path, marker: str, block: str) -> bool:
     if marker in text:
         return False
     separator = "" if text.endswith("\n") else "\n"
-    # Path is confined by _confine_to_allowed_root / _child_file before write.
+    # Path is confined by _confine_to_allowed_root / _child_path before write.
     path.write_text(  # NOSONAR python:S2083
         text + separator + block.lstrip("\n"),
         encoding="utf-8",
@@ -116,11 +116,19 @@ def _confine_to_allowed_root(path: Path) -> Path:
     raise ValueError(f"path escapes allowed roots: {path}")
 
 
-def _child_file(root: Path, name: str) -> Path:
-    """Join a single trusted filename under an already-confined root."""
-    if name != Path(name).name or "/" in name or "\\" in name or name in {"", ".", ".."}:
+def _child_path(root: Path, name: str) -> Path:
+    """Join a trusted relative path (possibly nested) under a confined root.
+
+    Permits forward-slash subdirectories (the BLOCKS keys include
+    ``environment/agents/docs/WORK_CLAIM_PROTOCOL.md``) while still rejecting
+    absolute paths, backslashes, and any traversal component, then requires the
+    resolved path to remain under ``root``.
+    """
+    candidate = Path(name)
+    unsafe = candidate.is_absolute() or "\\" in name or name in {"", ".", ".."}
+    if unsafe or any(part in {"", ".", ".."} for part in candidate.parts):
         raise ValueError(f"unsafe file name: {name!r}")
-    path = (root / name).resolve()
+    path = (root / candidate).resolve()
     try:
         path.relative_to(root)
     except ValueError as exc:
@@ -134,13 +142,13 @@ def apply(repository_root: Path) -> list[str]:
         raise NotADirectoryError(root)
     changed: list[str] = []
     for name, block in BLOCKS.items():
-        path = _child_file(root, name)
+        path = _child_path(root, name)
         if not path.is_file():
             raise FileNotFoundError(path)
         marker = block.splitlines()[1]
         if _append_once(path, marker, block):
             changed.append(name)
-    makefile = _child_file(root, "Makefile")
+    makefile = _child_path(root, "Makefile")
     if not makefile.is_file():
         raise FileNotFoundError(makefile)
     if _append_once(

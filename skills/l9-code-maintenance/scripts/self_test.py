@@ -33,14 +33,16 @@ def run(
     return result
 
 
-def _porcelain_without_coverage_artifacts(text: str) -> str:
-    """Drop pytest-cov/xdist temp files from porcelain (CI runs under --cov -n auto)."""
-    kept = [
-        line
-        for line in text.splitlines()
-        if line and ".coverage" not in Path(line[3:].strip()).name
-    ]
-    return "\n".join(kept) + ("\n" if kept else "")
+def _porcelain_for_mutation_check(text: str) -> str:
+    """Drop pytest-cov parallel artifacts that appear mid-suite under xdist."""
+    kept: list[str] = []
+    for line in text.splitlines():
+        path = line[3:] if len(line) >= 4 and line[2] == " " else line
+        name = Path(path).name
+        if name == ".coverage" or name.startswith(".coverage."):
+            continue
+        kept.append(line)
+    return "\n".join(kept)
 
 
 def validation_parity() -> None:
@@ -56,7 +58,7 @@ def validation_parity() -> None:
 
 
 def test_refactor_sweep_dry_run() -> None:
-    before = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
+    before = run(["git", "status", "--porcelain"])
     intent = "toy rename foo_unique_token_xyz to bar_unique_token_xyz"
     result = run(
         [
@@ -84,16 +86,18 @@ def test_refactor_sweep_dry_run() -> None:
                 and "REFACTOR SWEEP REPORT" not in direct.stdout
             ):
                 raise RuntimeError(f"missing report:\n{direct.stdout}")
-    after = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
-    if before != after:
-        raise RuntimeError(f"dry-run mutated tree:\nbefore={before!r}\nafter={after!r}")
+    after = run(["git", "status", "--porcelain"])
+    if _porcelain_for_mutation_check(before.stdout) != _porcelain_for_mutation_check(after.stdout):
+        raise RuntimeError(
+            f"dry-run mutated tree:\nbefore={before.stdout!r}\nafter={after.stdout!r}"
+        )
 
 
 def test_migrate_dry_run_no_state() -> None:
     state = ROOT / ".migrate_executor_state.json"
     if state.exists():
         state.unlink()
-    before = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
+    before = run(["git", "status", "--porcelain"])
     run(
         [
             sys.executable,
@@ -105,8 +109,8 @@ def test_migrate_dry_run_no_state() -> None:
     )
     if state.exists():
         raise RuntimeError("migrate --dry-run wrote state file")
-    after = _porcelain_without_coverage_artifacts(run(["git", "status", "--porcelain"]).stdout)
-    if before != after:
+    after = run(["git", "status", "--porcelain"])
+    if _porcelain_for_mutation_check(before.stdout) != _porcelain_for_mutation_check(after.stdout):
         raise RuntimeError("migrate dry-run mutated git status")
 
 

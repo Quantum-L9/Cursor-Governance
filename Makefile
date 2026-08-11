@@ -298,3 +298,28 @@ program-execution-conformance:
 
 program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
+
+AGENTS_TOOLS := environment/agents/tools
+.PHONY: peer-execution-validate peer-execution-probe peer-execution-conformance
+
+# Executable Peer Contract v1 — structural cross-registry gate (E1-E15):
+# agent_registry.yaml execution bindings <-> program-execution adapters +
+# registry <-> canonical autonomy provider. validate_executable_peers.py.
+peer-execution-validate:
+	python3 -B $(AGENTS_TOOLS)/validate_executable_peers.py
+
+# Binding-level readiness probe. Emits per-(agent,surface,adapter) receipts
+# under $$HOME/.l9/programs/_peer-readiness/ and fails if any enabled agent
+# has no READY binding. Runtime/session-scoped availability gate.
+peer-execution-probe:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B \
+		$(PE_ROOT)/scripts/probe_executable_peers.py
+
+# Full executable-peer conformance: compose the identity, adapter, program,
+# and readiness gates (Executable Peer Contract v1, section 14).
+peer-execution-conformance:
+	$(MAKE) agents-env
+	$(MAKE) program-execution-adapters
+	$(MAKE) program-execution-conformance
+	$(MAKE) peer-execution-validate
+	$(MAKE) peer-execution-probe

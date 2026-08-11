@@ -24,6 +24,9 @@ EXPECTED_ADAPTERS = {
     "github-checks",
     "github-deployments",
     "target-deployment-factory",
+    "codex-cloud",
+    "gemini-review",
+    "manus-cloud",
 }
 DEBRIS_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 DEBRIS_SUFFIXES = {".pyc", ".pyo", ".sqlite", ".sqlite3"}

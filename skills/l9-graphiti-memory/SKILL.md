@@ -7,8 +7,8 @@ role: skill_entrypoint
 tags: [l9, graphiti, memory, prefetch, gmp, end-session]
 owner: igor_beylin
 status: active
-version: 1.3.0
-updated: 2026-08-06
+version: 1.4.0
+updated: 2026-08-07
 disable-model-invocation: false
 ---
 
@@ -19,6 +19,11 @@ disable-model-invocation: false
 Operate the Graphiti VPS memory layer (T1/T2). **Resume SSOT** is Graphiti
 `inject` / PICKUP episodes. Local `memory-bank/` (former T0) is **deprecated**
 — hooks and `/end-session` do not read or write it. C1 MCP is **read-only legacy**.
+
+**One agent memory (ADR-0005):** CLI (`graphiti_memory_client.py`) and MCP
+(`l9-graphite-memory` / `memory.*`) are **transports to the same store**. Do not
+treat them as two SSOTs. Consumer product graphs (Odoo / PlasticOS Neo4j / Gate)
+are **out of band** — never use them as Cursor agent episodic memory.
 
 **Required by:** `/end-session` / skill `l9-end-session` for PICKUP + learning writes. Load this skill (or follow its CLI block) before invoking `graphiti_memory_client.py`.
 
@@ -120,6 +125,7 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 3. `ops/graphiti/group_registry.yaml`
 4. `rules/97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`
 5. `skills/l9-end-session/SKILL.md` — session-close write path
+6. `docs/decisions/ADR-0005-one-agent-memory-domain-out-of-band.md`
 
 ## VPS deploy (human gate)
 
