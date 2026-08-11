@@ -123,3 +123,7 @@ The system is configured entirely via `.env`.
 | `SMTP_PASS` | No | Notification delivery |
 | `TELEGRAM_BOT_TOKEN` | No | Emergency alerts |
 | `TELEGRAM_CHAT_ID` | No | Emergency alerts |
+
+## Infisical
+
+Secrets hydrate via `src/core/secrets.ts` → `@quantum-l9/infisical-config` (same contract as Website-Bot ADR-0009).
