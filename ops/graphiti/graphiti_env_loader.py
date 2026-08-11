@@ -3,8 +3,8 @@
 LEGACY / SELF-HOSTED ONLY. This loader configures the retired local-tunnel model
 (graphiti-memory @ 127.0.0.1:8100 over an SSH tunnel to the Hetzner VPS, token in
 GRAPHITI_MCP_TOKEN). The authoritative memory path for hosted/managed environments
-is the HTTP control plane (l9-shared-memory @ L9_MEMORY_HTTP_URL, Bearer
-L9_MEMORY_CLIENT_TOKEN) — see environment/claude-code/mcp.template.json. That path
+is Cursor Graphiti (GRAPHITI_MCP_URL / GRAPHITI_MCP_TOKEN) — see
+environment/claude-code/mcp.template.json (graphiti-memory front door). That path
 uses NONE of the values below: no SSH tunnel, no Keychain, no VPS reachability.
 
 Repo clones never carry graphiti secrets. Where the token comes from, by platform:

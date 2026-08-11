@@ -29,7 +29,7 @@ class ProbeCommandTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             report = json.loads(completed.stdout)
             self.assertEqual(report["status"], "PASS")
-            self.assertEqual(len(report["receipts"]), 11)
+            self.assertEqual(len(report["receipts"]), 14)
             self.assertGreater(report["status_counts"].get("BLOCKED", 0), 0)
 
 

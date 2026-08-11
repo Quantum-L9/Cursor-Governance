@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted for **hook vs interactive roles**. Transport/store duality via `L9_MEMORY_HTTP_URL` / `memory_client.py` is **superseded by ADR-0006** (single Graphiti front door).
 
 ## Date
 
@@ -119,3 +119,7 @@ that they were allowed to **diverge**:
 - `reports/graphiti-memory-audit-2026-08-04/` — the audit that motivated this ADR
 - `environment/claude-code/mcp.template.json`, `memory/memory_client.py`,
   `hooks/memory_prefetch.py`
+
+## See also
+
+- ADR-0005 — one agent memory; product/domain memory out of band

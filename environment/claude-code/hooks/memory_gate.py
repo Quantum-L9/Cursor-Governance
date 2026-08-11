@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-"""PreToolUse memory-enforcement gate for the Claude Code surface.
+"""PreToolUse memory gate — Cursor Graphiti front door only.
 
-Reads the tool call on stdin, classifies it against
-`environment/claude-code/memory/memory-enforcement.contract.json`, and emits a
-`deny` permission decision when a governed write's preconditions are unmet.
-It only ever ADDS denials — it never emits `allow`, so normal permission
-prompts are preserved for everything it does not block.
+Operator-only escape hatch (admin key, never agent-settable):
+  L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>
 
-Fail-closed for governed writes: a missing prefetch receipt or an
-unverifiable phase-lock blocks the write. Non-governed tools are never blocked,
-even if this gate errors. Operator-only escape hatches:
-  L9_MEMORY_ENFORCEMENT=off            disable entirely (surfaces w/o memory)
-  L9_MEMORY_ENFORCEMENT_BREAKGLASS=... allow + record an override event
+There is no ``ENFORCEMENT-off`` side door.
 """
 
 from __future__ import annotations
@@ -21,8 +14,10 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "memory"))
+MEM = Path(__file__).resolve().parent.parent / "memory"
+sys.path.insert(0, str(MEM))
 
+import graphiti_bridge as gb  # noqa: E402
 import memory_state as st  # noqa: E402
 
 
@@ -49,8 +44,7 @@ def _governed_tool_names(contract: dict) -> set[str]:
 
 
 def main() -> int:
-    if os.environ.get("L9_MEMORY_ENFORCEMENT", "on").strip().lower() == "off":
-        return 0
+    # Deliberately NO ENFORCEMENT-off escape hatch.
     try:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
@@ -62,11 +56,9 @@ def main() -> int:
     try:
         contract = st.load_contract()
     except (OSError, json.JSONDecodeError):
-        # Cannot load the contract: fail open rather than brick every tool.
         print("memory-gate: contract unreadable; enforcement inactive", file=sys.stderr)
         return 0
 
-    # A crash after this point only fails closed for governed tool names.
     if tool_name not in _governed_tool_names(contract):
         return 0
 
@@ -80,7 +72,6 @@ def main() -> int:
             try:
                 st.record_override(contract, rule["id"], breakglass)
             except OSError as exc:
-                # Non-fatal: the override still applies, but note the audit gap.
                 print(
                     f"memory-gate: could not persist override event ({exc}); "
                     "continuing under breakglass",
@@ -98,7 +89,7 @@ def main() -> int:
         if "session_prefetch" in requires and not st.fresh_receipt(contract, session_id):
             _deny(
                 f"Memory not prefetched this session. Governed write '{rule['id']}' requires the "
-                "SessionStart memory prefetch to have run. Start a fresh session, or run "
+                "SessionStart Graphiti prefetch (front door). Start a fresh session, or run "
                 "environment/claude-code/hooks/memory_prefetch.py, then retry."
             )
 
@@ -106,39 +97,32 @@ def main() -> int:
             if not _has_verified_lock(contract, namespaces, session_id):
                 _deny(
                     f"No conflict-checked phase-lock held. Governed write '{rule['id']}' "
-                    f"requires a verified lock on one of {namespaces}. Acquire one: python3 "
-                    "environment/claude-code/hooks/memory_lock.py acquire "
+                    f"requires a verified Graphiti lock on one of {namespaces}. Acquire: "
+                    "python3 environment/claude-code/hooks/memory_lock.py acquire "
                     f'--namespace {namespaces[0]} --task "<what you are changing>".'
                 )
         return 0
-    except Exception as exc:  # governed tool + unexpected failure -> fail closed
+    except Exception as exc:
         _deny(
             f"memory-gate could not verify preconditions for '{tool_name}' ({exc}). "
-            "Failing closed. Set L9_MEMORY_ENFORCEMENT_BREAKGLASS with a reason to override."
+            "Failing closed. Operator override: L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>."
         )
     return 0
 
 
 def _has_verified_lock(contract: dict, namespaces: list[str], session_id: str) -> bool:
-    import memory_client as mc  # local import; only lock-gated writes pay this cost
-
+    """Verify local lock artifact + Cursor Graphiti phase-lock state. No HTTP."""
+    graphiti_ok = gb.phase_lock_satisfied(session_id)
     for namespace in namespaces:
         lock = st.read_lock(contract, namespace)
         if not lock or lock.get("session_id") != session_id:
             continue
-        signature = str(lock.get("task_signature", ""))
-        try:
-            verdict = mc.verify_phase_lock(namespace, signature)
-        except mc.MemoryError:
-            continue  # cannot confirm this lock; try the next namespace
-        status = str(verdict.get("status", verdict.get("state", ""))).lower()
-        if verdict.get("valid") is True or status in {
-            "granted",
-            "current",
-            "valid",
-            "active",
-            "ok",
-        }:
+        if not lock.get("task_signature"):
+            continue
+        # Front-door acquire stamps transport + granted after Graphiti phase-lock.
+        if lock.get("transport") == "cursor-graphiti-phase-lock" and lock.get("granted"):
+            return True
+        if graphiti_ok:
             return True
     return False
 
