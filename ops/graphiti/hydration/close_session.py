@@ -84,7 +84,8 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
     if not os.path.isfile(path_r):
         return False
     try:
-        with open(path_r, encoding="utf-8") as handle:
+        # path_r is commonpath-bounded under project_dir/.l9/memory/closes
+        with open(path_r, encoding="utf-8") as handle:  # NOSONAR python:S2083
             data = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return False
@@ -94,7 +95,8 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
     path_r = _receipt_path(project_dir, session_id)
     os.makedirs(os.path.dirname(path_r), exist_ok=True)
-    with open(path_r, "w", encoding="utf-8") as handle:
+    # path_r is commonpath-bounded under project_dir/.l9/memory/closes
+    with open(path_r, "w", encoding="utf-8") as handle:  # NOSONAR python:S2083
         handle.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
 
