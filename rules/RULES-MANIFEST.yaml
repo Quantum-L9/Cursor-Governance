@@ -1,5 +1,5 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-11T21:24:11Z'
+generated_utc: '2026-08-11T21:25:50Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
 source_tree_digest: sha256:1acbc3cf4480ebbef787860106bc9de85c268471067be155b0e6cebcf9f4186b

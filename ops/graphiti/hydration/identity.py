@@ -58,5 +58,6 @@ def envelope_body(body: str, *, agent_id: str, user_id: str, kind: str) -> str:
                 data.setdefault("kind", kind)
                 return json.dumps(data, ensure_ascii=False)
         except (json.JSONDecodeError, TypeError):
+            # Malformed or non-serializable JSON: fall back to the text envelope below.
             pass
     return f"[agent={agent_id} user={user_id} kind={kind}]\n{text}"

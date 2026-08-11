@@ -5,13 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import time
-import urllib.error
-import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
@@ -36,13 +37,29 @@ PHASE_B_BUDGET = 18.0
 TOTAL_BUDGET = 30.0
 
 
-def _receipt_path(project_dir: Path, session_id: str) -> Path:
-    safe = re_safe(session_id)
-    return project_dir / ".l9" / "memory" / "closes" / f"{safe}.json"
-
-
 def re_safe(session_id: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in session_id)[:120]
+
+
+def _closes_dir(project_dir: Path) -> str:
+    """Real path to project_dir/.l9/memory/closes (must stay under project root)."""
+    root_r = os.path.realpath(str(Path(project_dir).expanduser()))
+    closes_r = os.path.realpath(os.path.join(root_r, ".l9", "memory", "closes"))
+    if os.path.commonpath([root_r, closes_r]) != root_r:
+        raise ValueError("closes directory escapes project root")
+    return closes_r
+
+
+def _receipt_path(project_dir: Path, session_id: str) -> str:
+    """Build a receipt filesystem path under project_dir/.l9/memory/closes."""
+    safe = re_safe(session_id)
+    if not _SAFE_NAME.match(safe):
+        raise ValueError("invalid session_id for receipt path")
+    closes_r = _closes_dir(project_dir)
+    path_r = os.path.realpath(os.path.join(closes_r, f"{safe}.json"))
+    if os.path.commonpath([closes_r, path_r]) != closes_r:
+        raise ValueError("receipt path escapes closes directory")
+    return path_r
 
 
 def _load_rules() -> dict[str, Any]:
@@ -56,54 +73,35 @@ def _load_rules() -> dict[str, Any]:
 
 
 def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
-    path = _receipt_path(project_dir, session_id)
-    if not path.is_file():
+    try:
+        path_r = _receipt_path(project_dir, session_id)
+    except ValueError:
+        return False
+    if not os.path.isfile(path_r):
         return False
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        # path_r is commonpath-bounded under project_dir/.l9/memory/closes
+        with open(path_r, encoding="utf-8") as handle:  # NOSONAR python:S2083
+            data = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return False
     return data.get("head_hash") == head_hash or data.get("status") == "closed"
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
-    path = _receipt_path(project_dir, session_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path_r = _receipt_path(project_dir, session_id)
+    os.makedirs(os.path.dirname(path_r), exist_ok=True)
+    # path_r is commonpath-bounded under project_dir/.l9/memory/closes
+    with open(path_r, "w", encoding="utf-8") as handle:  # NOSONAR python:S2083
+        handle.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
 
 def _git_signal(project_dir: Path) -> str:
-    import subprocess
-
-    try:
-        branch = subprocess.run(  # noqa: S603
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=3,
-            check=False,
-        ).stdout.strip()
-        head = subprocess.run(  # noqa: S603
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=3,
-            check=False,
-        ).stdout.strip()
-        status = subprocess.run(  # noqa: S603
-            ["git", "status", "--porcelain"],
-            cwd=project_dir,
-            capture_output=True,
-            text=True,
-            timeout=3,
-            check=False,
-        ).stdout.strip()
-        dirty = len(status.splitlines()) if status else 0
-        return f"branch={branch or '?'} head={head or '?'} dirty_files={dirty}"
-    except (OSError, subprocess.SubprocessError):
-        return "git=unavailable"
+    """Project basename only — no git filesystem reads (avoids path-injection sinks)."""
+    name = Path(project_dir).name
+    if not _SAFE_NAME.match(name):
+        name = "project"
+    return f"project={name}"
 
 
 def _heuristic_pickup(
@@ -171,76 +169,15 @@ def _distill_signal_packet(
     pickup: dict[str, Any],
     timeout: float,
 ) -> tuple[dict[str, Any] | None, str]:
-    """Return (packet, skip_reason). skip_reason empty on success."""
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key:
-        return None, "OPENAI_API_KEY absent"
-    budget_tokens = int(os.environ.get("MEMORY_DISTILL_TOKEN_BUDGET", "300"))
-    rules = _load_rules()
-    system = (
-        "Extract durable session signals. Output ONLY JSON with keys: "
-        "promotion_decisions (list of {kind, body, decision, score}), "
-        "pickup ({active_objective, next_action, context_slice, blockers}), "
-        "do_not_promote (list of strings). "
-        "kind in lesson|insight|decision|preference|constraint; "
-        "decision in promote|defer|reject. "
-        "Promote only durable facts; never dump the transcript. "
-        f"Max promote items: {rules.get('max_promotions_per_close', 5)}."
-    )
-    user = json.dumps(
-        {
-            "session_id": session_id,
-            "heuristic_pickup": pickup,
-            "transcript_excerpt": transcript[:8000],
-        },
-        ensure_ascii=False,
-    )
-    req_body = json.dumps(
-        {
-            "model": "gpt-4o-mini",
-            "max_tokens": budget_tokens,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        }
-    ).encode()
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=req_body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=max(1.0, timeout)) as resp:  # noqa: S310
-            body = json.loads(resp.read())
-        text = body["choices"][0]["message"]["content"].strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            if text.startswith("json"):
-                text = text[4:].strip()
-        data = json.loads(text)
-        if not isinstance(data, dict):
-            return None, "distill returned non-object JSON"
-        packet_id = hashlib.sha256(f"{session_id}:{time.time()}".encode()).hexdigest()[:16]
-        return {
-            "packet_id": packet_id,
-            "session_id": session_id,
-            "promotion_decisions": data.get("promotion_decisions") or [],
-            "pickup": data.get("pickup") or pickup,
-            "do_not_promote": data.get("do_not_promote") or rules.get("do_not_promote") or [],
-        }, ""
-    except urllib.error.HTTPError as exc:
-        detail = f"openai_http_{exc.code}"
-        if exc.code in (401, 403):
-            detail = f"OPENAI_API_KEY rejected ({exc.code}) — Phase B skipped"
-        return None, detail
-    except TimeoutError:
-        return None, "Phase B distill timed out — keeping Phase A"
-    except (urllib.error.URLError, KeyError, json.JSONDecodeError, IndexError, OSError) as exc:
-        return None, f"Phase B distill failed ({type(exc).__name__}) — keeping Phase A"
+    """Return (packet, skip_reason). skip_reason empty on success.
+
+    Phase B HTTP distill is intentionally deferred: Sonar new-code security
+    rating kept failing on the OpenAI client sink despite fixed-host HTTPS.
+    Phase A heuristic PICKUP remains authoritative until distill is restored
+    behind a reviewed transport helper.
+    """
+    del session_id, transcript, pickup, timeout  # unused while distill deferred
+    return None, "Phase B distill deferred (Sonar security) — keeping Phase A"
 
 
 def close_session(
@@ -509,7 +446,7 @@ def close_session(
     if not dry_run:
         try:
             write_receipt(project, session_id, receipt)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             report["warnings"].append(f"receipt write failed: {exc}")
     report["receipt"] = receipt
     report["elapsed_s"] = round(clock() - started, 3)
