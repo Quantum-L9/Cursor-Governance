@@ -224,6 +224,11 @@ CI) depend on this registry — do not reverse the dependency.
 only; no macOS Keychain or daily-Chrome cookie decrypt for governed UI
 automation; diagnose before mutating vault contents; UI receipts redact values.
 
+**GitHub authority (CANONICAL_LAW.md §14):** agents **MUST** resolve
+`openclaw-igorbot/github#token` for `gh`/API work and **MUST NOT** ask the
+human to operate `github.com` UI when that PAT can complete the outcome. Do
+**not** provision a second GitHub PAT in AWS while this ref works.
+
 ---
 
 ## 3. Source-of-truth files

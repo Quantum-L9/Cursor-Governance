@@ -30,3 +30,6 @@ make secrets-check REF='openclaw-igorbot/github#token'
 - No macOS Keychain / Chrome Safe Storage as primary auth
 - Diagnose before mutating vault contents; prefer append of new secrets via AWS console/CLI then `secrets-sync`
 - Skill: `l9-aws-secrets`
+- **GitHub PAT SSOT:** `openclaw-igorbot/github#token` — sole agent GitHub
+  credential (CANONICAL_LAW.md §14). Do not add a second PAT. Agents must use
+  this ref and must not ask humans to click GitHub UI for operable API tasks.

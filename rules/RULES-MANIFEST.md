@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T21:24:11Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **62** |
-| `alwaysApply: true` | **41** |
+| Total MDC files | **63** |
+| `alwaysApply: true` | **42** |
 | `alwaysApply: false` | **21** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **8** |
-| Derived compatibility IDs | **54** |
+| Derived compatibility IDs | **55** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -22,7 +22,7 @@ Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
 | `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `760117869bfd` |
-| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 58 | `637edb920ec4` |
+| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 62 | `c32f8bbc9533` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 60 | `02606be85a98` |
@@ -41,6 +41,7 @@ Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | auto_attached | 38 | `493fb58ae77a` |
 | `60-anti-patterns.mdc` | `l9.rule.60.anti.patterns` | global | testing | always | 351 | `5bb1cfc03b24` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | auto_attached | 51 | `bcf0390b7f24` |
+| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 17 | `35863ea0c0ab` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | auto_attached | 41 | `e935f52d5df6` |
 | `70-tool-efficiency.mdc` | `l9.rule.70.tool.efficiency` | global | governance | always | 184 | `4ff48f649686` |
 | `71-ci-cd-pipeline.mdc` | `l9.rule.71.ci.cd.pipeline` | global | ci | auto_attached | 38 | `394c3835f9e7` |
@@ -54,7 +55,7 @@ Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
 | `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 71 | `ebf45d7841f3` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | always | 85 | `f67abad4e816` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
-| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `55705b8d4a42` |
+| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 161 | `9747bd0abea4` |
 | `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
 | `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |

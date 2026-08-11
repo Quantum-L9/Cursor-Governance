@@ -1,112 +1,103 @@
 ---
 name: l9-end-session
-description: close agent session — save pickup context, extract learnings, redis handoff, governance backup. use when ending a work session, creating handoff for next window, or confirming Graphiti sessionEnd summary wiring.
+description: force-retry session close — manual PICKUP/learnings when auto sessionEnd failed or offline. use for recovery, richer handoff, or governance backup — not required for normal X-out.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
-tags: [l9, session, handoff, memory, governance, graphiti]
+tags: [l9, session, handoff, memory, governance, graphiti, force-retry]
 owner: igor_beylin
 status: active
-version: 1.4.0
-updated: 2026-08-06
+version: 1.5.0
+updated: 2026-08-11
 disable-model-invocation: true
 ---
 
-# End Session
+# End Session (force-retry / offline recovery)
 
 ## Purpose
 
-Clean session close: structured PICKUP context, canonical memory extraction, Redis cross-window resume, governance GitHub backup, and handoff summary.
+**Normal closes are automatic.** Cursor `sessionEnd` runs
+`ops/hooks/graphiti-session-end.sh` → `ops/graphiti/hydration/close_session.py`
+(Phase A heuristic PICKUP ≤8s, Phase B distill ≤18s). You should **not** need
+this skill for a routine X-out / window close.
+
+Use `/end-session` only when:
+
+- the auto-close hook failed, was skipped, or Graphiti was offline
+- you need a richer manual PICKUP after a degraded Phase A-only close
+- you must force governance backup / Redis handoff interactively
+
+Map: [`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md).
 
 ## Mandatory preload
 
-Before any Graphiti CLI call, **load and follow** [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md) interpreter rules:
+Before any Graphiti CLI call, **load and follow** [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md):
 
-- Use governance **`.venv` Python** (`GRAPHITI_PY`), never bare `python3` (avoids `No module named 'yaml'`).
-- `write` accepts only `--kind`, `--group-id`, `--dry-run` — **never** `--scope` / `--scope cursor`.
+- Use governance **`.venv` Python** (`GRAPHITI_PY`), never bare `python3`.
+- `write` accepts `--kind`, `--group-id`, `--agent-id`, `--dry-run` — **never** `--scope`.
+- Stamp `L9_MEMORY_AGENT_ID=cursor` (or `--agent-id cursor`).
 
-Slash command entry: [`commands/end-session.md`](../../commands/end-session.md) (`/end-session`).
+Slash command entry: [`commands/end-session.md`](../../commands/end-session.md).
 
-## Core Contract
+## Core Contract (recovery path)
 
-`GRAPHITI (T1) → REDIS → HOOKS → GOVERNANCE BACKUP → HANDOFF`
+`HEALTH → PICKUP + atomics (agent_id) → REDIS (optional) → GOVERNANCE BACKUP → HANDOFF`
 
-1. **MEMORY** — health-check via `GRAPHITI_PY` + `graphiti_memory_client.py`, then write PICKUP (`--kind pickup_context`) + one atomic write per learning (`--kind` only). This is the canonical store. **Do not** write `memory-bank/` (deprecated).
-2. **Graphiti failure** — if health check fails or a write errors: warn explicitly, skip memory persistence for this close, and continue Redis/handoff. No memory-bank fallback.
-3. **REDIS** — `cache_set_session_context` for next-window resume when the MCP tool exists; if unavailable, keep full handoff in Graphiti/PICKUP and warn.
-4. **HOOKS** — rely on `ops/hooks/graphiti-session-end.sh` (Cursor `sessionEnd`); skip agent-side hook teardown if no Graphiti summary was produced.
-5. **GOVERNANCE** — backup GlobalCommands to GitHub.
-6. **HANDOFF** — emit completed/in-progress/next-steps summary. If a bounded
-   autonomy campaign was active, include PICKUP fields from
-   `l9-bounded-autonomy/references/campaign-handoff.md` (`packet_id`, declared
-   PRs, lock owners, join/merge_gate status, next_actions, blockers).
-
-## Authority Order
-
-1. `end-session.yaml` (v2.1) — protocol spec
-2. `docs/MEMORY_PIPELINE_MAP.md` — canonical memory path
-3. `.cursor/rules/87-cursor-memory-kernel.mdc` — memory write format (kinds; **not** a `--scope` CLI flag)
-4. [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md) — **venv + CLI flags**
-5. [`references/end-session-protocol.md`](references/end-session-protocol.md) — step-by-step execution
-6. `ops/graphiti/graphiti_memory_client.py` — memory CLI (primary); `agents/cursor/cursor_memory_client.py` (C1, deprecated, fallback path only)
-7. `ops/scripts/backup_to_github.sh` — governance backup
-
-## Compact Workflow
+Prefer the shared closer when possible:
 
 ```bash
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
-CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
-[ -x "$GRAPHITI_PY" ] || GRAPHITI_PY="${HOME}/Cursor-Governance/.venv/bin/python"
-[ -f "$CLIENT" ] || CLIENT="${HOME}/Cursor-Governance/ops/graphiti/graphiti_memory_client.py"
-
-"$GRAPHITI_PY" "$CLIENT" health
-# If healthy:
-"$GRAPHITI_PY" "$CLIENT" write \
-  "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
-  --kind pickup_context
-"$GRAPHITI_PY" "$CLIENT" write "{terse fact}" --kind lesson
+export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
+cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli close \
+  --project-dir "$(pwd)" --session-id "${CURSOR_CONVERSATION_ID:-manual}" \
+  --reason force_retry --agent-id cursor
 ```
 
-1. Check Graphiti health with `GRAPHITI_PY`. If healthy: write PICKUP + one learning write per fact with `--kind` only (no `--scope`).
-2. If Graphiti is unreachable or a write errors: warn and continue — do not write memory-bank.
-3. Call MCP `cache_set_session_context` when available; else note Redis unavailable.
-4. Confirm Graphiti `sessionEnd` path (`ops/hooks/graphiti-session-end.sh`); if no summary was available/written, skip and note in the report — do not invoke CEG session hooks.
-5. Run governance backup script.
-6. Output session-closed report.
+Manual writes (if CLI close unavailable):
 
-See [`references/end-session-protocol.md`](references/end-session-protocol.md).
+```bash
+"$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" health
+"$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" write \
+  "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|next={NEXT}|blocker={BLOCKER}" \
+  --kind pickup_context --agent-id cursor
+"$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" write "{terse fact}" \
+  --kind lesson --agent-id cursor
+```
 
-Auto-chains to `/extract-chat` for learnings pass.
+## Authority Order
+
+1. `docs/MEMORY_PIPELINE_MAP.md` — live hydrate/close path
+2. `ops/graphiti/hydration/close_session.py` — automatic closer (primary)
+3. `.cursor/rules/87-cursor-memory-kernel.mdc` — kinds + identity
+4. [`l9-graphiti-memory`](../l9-graphiti-memory/SKILL.md) — venv + CLI flags
+5. [`references/end-session-protocol.md`](references/end-session-protocol.md) — step-by-step recovery
+6. `ops/scripts/backup_to_github.sh` — governance backup
+
+## Compact Workflow
+
+1. Confirm auto-close receipt missing or degraded (`.l9/memory/closes/` or Graphiti search).
+2. Run shared `hydration.cli close` or manual PICKUP + atomic writes with `--agent-id`.
+3. Optional Redis `cache_set_session_context`; else PICKUP is resume SSOT.
+4. Run governance backup if needed.
+5. Emit handoff summary (completed / in-progress / next).
 
 ## Resource Map
 
-- [`../l9-graphiti-memory/SKILL.md`](../l9-graphiti-memory/SKILL.md) — interpreter + CLI contract
-- [`references/end-session-protocol.md`](references/end-session-protocol.md) — full execution steps and output templates
-- [`../../commands/end-session.md`](../../commands/end-session.md) — slash command
-- `end-session.yaml` — protocol spec (v2.1)
-- `docs/MEMORY_PIPELINE_MAP.md` — memory pipeline routing
-- `ops/graphiti/graphiti_memory_client.py` — memory writes (primary)
-- `ops/hooks/graphiti-session-end.sh` — automatic Graphiti `session_summary` on Cursor sessionEnd
-- `ops/scripts/backup_to_github.sh` — governance backup
-
-## Validation
-
-- PICKUP context + learnings written to Graphiti when healthy; otherwise explicit warn (no memory-bank).
-- Redis session context saved when MCP exists; otherwise Graphiti PICKUP is the resume source (warn explicitly).
-- Governance backup script executed or `make governance-backup` / `backup_to_github.sh` run.
-- Handoff lists completed, in-progress, and next steps.
-- No `ModuleNotFoundError: yaml` (venv used); no `unrecognized arguments: --scope`.
+- [`../../docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md)
+- [`../l9-graphiti-memory/SKILL.md`](../l9-graphiti-memory/SKILL.md)
+- [`references/end-session-protocol.md`](references/end-session-protocol.md)
+- [`../../commands/end-session.md`](../../commands/end-session.md)
+- `ops/hooks/graphiti-session-end.sh` — automatic primary close
+- `ops/graphiti/hydration/` — shared compile/close library
 
 ## Failure Handling
 
 | Symptom | Action |
 |---------|--------|
-| `No module named 'yaml'` | Wrong interpreter — switch to `$GOV/.venv/bin/python`; run `make -C "$GOV" venv` if missing |
-| `unrecognized arguments: --scope` | Drop `--scope` / `--scope cursor`; use `--kind` only |
-| Graphiti health check fails, or a Graphiti write errors | Warn; skip memory persistence; continue Redis/handoff — **no** memory-bank |
-| Redis MCP unavailable | Write full handoff to Graphiti when healthy; warn next window |
-| Governance backup fails | Report failure; retry `backup_to_github.sh`; do not skip silently |
-| No Graphiti session summary (hook wrote nothing / Graphiti disabled) | Skip HOOKS step; note in report — PICKUP from this skill remains resume SSOT |
+| Auto-close already wrote PICKUP | Skip duplicate unless superseding with richer next= |
+| `No module named 'yaml'` | Use `$GOV/.venv/bin/python` |
+| `missing agent_id` | Export `L9_MEMORY_AGENT_ID` or pass `--agent-id` |
+| Graphiti down | Warn; continue backup/handoff — no memory-bank |
 
 When blocked: state exact gap, label `Unknown`, give smallest next action.

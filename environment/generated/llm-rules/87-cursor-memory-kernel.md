@@ -8,6 +8,8 @@ description: Cursor Memory Kernel enforcement — authoritative source for memor
 
 **Updated: 2026-08-07** — One agent episodic memory (ADR-0005): CLI + MCP = same store; product/domain graphs (Odoo/consumer product/Gate) are out of band.
 
+**Updated: 2026-08-11** — Auto hydrate/close via `ops/graphiti/hydration/`; required `agent_id` on writes; `/end-session` demoted to force-retry. Map: `docs/MEMORY_PIPELINE_MAP.md`.
+
 **Effective: 2026-02-14**
 
 The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source** for all Cursor memory behavior. This rule enforces its contracts.
@@ -35,9 +37,9 @@ CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
 
 When starting a session (whether via `/start-session` or manually):
 
-1. **Health check:** `"$GRAPHITI_PY" "$CLIENT" health`
-2. **Inject context:** `"$GRAPHITI_PY" "$CLIENT" inject "current task"`
-3. **Search PICKUP:** `"$GRAPHITI_PY" "$CLIENT" search "PICKUP" --limit 5` (or cite SessionStart prefetch)
+1. Prefer SessionStart `additional_context` hydration (`next=` + packet JSON) from `ops/graphiti/hydration/`
+2. **Health check** if hydration degraded: `"$GRAPHITI_PY" "$CLIENT" health`
+3. **Search PICKUP** if `next=` empty: `"$GRAPHITI_PY" "$CLIENT" search "PICKUP" --limit 5`
 4. **Do not** read `memory-bank/activeContext.md` as SSOT
 
 ---
@@ -80,7 +82,7 @@ Each write = one terse, pre-classified fact:
 ```bash
 "$GRAPHITI_PY" "$CLIENT" write \
   "_require_X() guard pattern fixes nullable service attrs. Helper raises RuntimeError if None, caller uses local var." \
-  --kind lesson
+  --kind lesson --agent-id cursor
 ```
 
 ### Rules
@@ -89,6 +91,7 @@ Each write = one terse, pre-classified fact:
 2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
 3. **Pre-classify.** Use the correct `--kind` (lesson, insight, error, note, rule, preference, pickup_context).
 4. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
+5. **Stamp identity.** Pass `--agent-id` or export `L9_MEMORY_AGENT_ID` (Cursor=`cursor`).
 
 ### Anti-pattern (NEVER do this)
 
@@ -122,9 +125,10 @@ After completing a GMP, major refactor, or multi-file change:
 
 ## Session End
 
-1. **Write Graphiti PICKUP** (`--kind pickup_context`) with task/files/next/blocker
-2. **Write atomic memories** — NOT one big session summary blob (see Memory Write Format above)
-3. **Do not** write session handoffs to `memory-bank/`
+1. **Normal close:** Cursor `sessionEnd` → `graphiti-session-end.sh` → Phase A/B close (automatic PICKUP). No `/end-session` required on X-out.
+2. **Force-retry only:** `/end-session` when the hook failed, offline, or a richer manual PICKUP is needed.
+3. **Atomic memories** — NOT one big session summary blob (see Memory Write Format above)
+4. **Do not** write session handoffs to `memory-bank/`
 
 ---
 
@@ -133,12 +137,13 @@ After completing a GMP, major refactor, or multi-file change:
 Before committing, verify:
 
 - [ ] Memory writes use resolved repo `group_id` (not `main` / `default` / shared workspace write target)
+- [ ] Every write includes `agent_id` (`agent=` in `source_description`)
 - [ ] No fake `--scope` flag on `write`
 - [ ] CLI invoked with governance locked `.venv` Python
 - [ ] No hardcoded credentials in any agent file (ADR-0090)
 - [ ] Lessons from user corrections are written to memory immediately
 - [ ] Error solutions are checked in memory before debugging from scratch
-- [ ] Resume path uses Graphiti inject/PICKUP, not `memory-bank/`
+- [ ] Resume path uses sessionStart hydrate / Graphiti PICKUP, not `memory-bank/`
 
 ---
 
@@ -146,6 +151,8 @@ Before committing, verify:
 
 | File | Purpose |
 |------|---------|
+| `docs/MEMORY_PIPELINE_MAP.md` | Live hydrate/close path SSOT |
+| `ops/graphiti/hydration/` | SessionHydrationPacket + close_session |
 | `agents/cursor/cursor_memory_kernel.yaml` | Authoritative memory behavior contract |
 | `ops/graphiti/graphiti_memory_client.py` | CLI for Graphiti memory (health, search, write, inject, bootstrap) |
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |

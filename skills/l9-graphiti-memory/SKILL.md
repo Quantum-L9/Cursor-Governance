@@ -76,16 +76,19 @@ Config: `~/.cursor/graphiti.env` (copy from `ops/graphiti/graphiti.env.example`)
 |---------|----------------|
 | `--kind KIND` | **`--scope`** — does not exist; do not pass `--scope cursor` |
 | `--group-id GROUP_ID` | (optional; omit to use registry resolve) |
+| `--agent-id AGENT` | (or `L9_MEMORY_AGENT_ID`; required on every write) |
 | `--dry-run` | |
 
 Semantic “cursor scope” from older memory-kernel docs means tags/kind discipline, **not** a `write` argument.
 
+Live path map: [`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md).
+
 ## Session lifecycle
 
-1. **sessionStart** — `session_start_memory_orchestrator.sh` runs code-graph health + Graphiti `inject` (when enabled).
-2. **Resume** — cite prefetch / `inject` results and search PICKUP episodes; do not read `memory-bank/` as SSOT.
-3. **sessionEnd hook** — `graphiti-session-end.sh` writes Graphiti `--kind session_summary` only; on failure, WARN and skip (no memory-bank).
-4. **`/end-session` / `l9-end-session`** — agent **must** use this skill’s `GRAPHITI_PY` + `CLIENT` for T1 PICKUP + one `--kind` write per learning. See `skills/l9-end-session/SKILL.md` and `commands/end-session.md`.
+1. **sessionStart** — `session_start_memory_orchestrator.sh` compiles `SessionHydrationPacket` (`next=` + facts) via `ops/graphiti/hydration/`, plus inject receipt for gates.
+2. **Resume** — follow hydrated `next=`; search PICKUP if degraded; do not read `memory-bank/` as SSOT.
+3. **sessionEnd hook** — `graphiti-session-end.sh` → Phase A/B close (PICKUP + atomics, `agent_id` stamped). Normal X-out does **not** need `/end-session`.
+4. **`/end-session` / `l9-end-session`** — **force-retry / offline recovery only**. See `skills/l9-end-session/SKILL.md`.
 
 ## Proactive writes (T2)
 

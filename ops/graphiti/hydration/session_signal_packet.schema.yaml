@@ -1,0 +1,61 @@
+# SessionSignalPacket — distilled close packet (Phase B); Phase A may omit.
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$title: SessionSignalPacket
+type: object
+additionalProperties: false
+required:
+  - packet_id
+  - session_id
+  - promotion_decisions
+  - pickup
+  - do_not_promote
+properties:
+  packet_id:
+    type: string
+    minLength: 8
+  session_id:
+    type: string
+    minLength: 1
+  promotion_decisions:
+    type: array
+    items:
+      type: object
+      required: [kind, body, decision]
+      properties:
+        kind:
+          type: string
+          enum: [lesson, insight, decision, preference, constraint]
+        body:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        decision:
+          type: string
+          enum: [promote, defer, reject]
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+  pickup:
+    type: object
+    required: [active_objective, next_action]
+    properties:
+      active_objective:
+        type: string
+        minLength: 1
+        maxLength: 500
+      next_action:
+        type: string
+        minLength: 1
+        maxLength: 1000
+      context_slice:
+        type: string
+        maxLength: 4000
+      blockers:
+        type: array
+        items: { type: string, maxLength: 300 }
+        maxItems: 8
+  do_not_promote:
+    type: array
+    items: { type: string, maxLength: 500 }
+    maxItems: 32
