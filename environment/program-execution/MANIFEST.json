@@ -482,6 +482,14 @@
       "sha256": "6de0e8ab06b65b7f98f8bbd60aa1d6ac21fd505f1cd25e165a7d6bf1abee1e50"
     },
     {
+      "path": "campaigns/l9-devpack-program-execution-hardening/deliverables/l9-devpack-compiler/README.md",
+      "sha256": "df37980dc868bc72fd2de072683eda934d7600014608c0cf3d28d2334a8a08cc"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/deliverables/l9-devpack-compiler/REMEDIATION_DESIGN.md",
+      "sha256": "67eec9f94085ffcd5c2cc11f840f9ea24357fcbbd3ecae6d730423cb1869496f"
+    },
+    {
       "path": "campaigns/l9-devpack-program-execution-hardening/handoff/CAMPAIGN_HANDOFF.md",
       "sha256": "8f987bf160d19cb0613c1e0f28988eb4043c1a9265237e33e8460831138a3fe9"
     },
