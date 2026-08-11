@@ -1,0 +1,4 @@
+interface:
+  display_name: "L9 Issue Remediation"
+  short_description: "Diagnose or converge open Quantum-L9 GitHub issues and leave resume breadcrumbs"
+  brand_color: "#B45309"
