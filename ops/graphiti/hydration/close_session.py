@@ -41,8 +41,16 @@ TOTAL_BUDGET = 30.0
 
 
 def _receipt_path(project_dir: Path, session_id: str) -> Path:
+    """Build a receipt path constrained under project_dir/.l9/memory/closes."""
     safe = re_safe(session_id)
-    return project_dir / ".l9" / "memory" / "closes" / f"{safe}.json"
+    if not safe or safe in {".", ".."}:
+        raise ValueError("invalid session_id for receipt path")
+    root = project_dir.expanduser().resolve()
+    closes = (root / ".l9" / "memory" / "closes").resolve()
+    path = (closes / f"{safe}.json").resolve()
+    if not path.is_relative_to(closes):
+        raise ValueError("receipt path escapes closes directory")
+    return path
 
 
 def re_safe(session_id: str) -> str:
@@ -534,7 +542,7 @@ def close_session(
     if not dry_run:
         try:
             write_receipt(project, session_id, receipt)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             report["warnings"].append(f"receipt write failed: {exc}")
     report["receipt"] = receipt
     report["elapsed_s"] = round(clock() - started, 3)
