@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.l9.agent_ui_control</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>__PACK_DIR__/runner.py</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>__LOG_DIR__/agent_ui_control.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__LOG_DIR__/agent_ui_control.error.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>__PACK_DIR__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PYTHONPATH</key>
+        <string>__TOOLS_DIR__</string>
+        <key>L9_AGENT_UI_MODE</key>
+        <string>local</string>
+        <key>L9_AGENT_UI_ENABLED</key>
+        <string>true</string>
+    </dict>
+</dict>
+</plist>

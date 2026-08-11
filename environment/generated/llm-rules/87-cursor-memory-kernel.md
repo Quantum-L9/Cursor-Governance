@@ -6,6 +6,8 @@ description: Cursor Memory Kernel enforcement — authoritative source for memor
 
 **Updated: 2026-08-06** — Resume SSOT is **Graphiti only** (`inject` / PICKUP). `memory-bank/` (former T0) is **deprecated/archival**. C1 L9 **decommissioned**; Graphiti at `/opt/graphiti-cursor` via SSH tunnel. See `03-graphiti-memory.mdc` and `ops/graphiti/MEMORY_BANK_POLICY.md`.
 
+**Updated: 2026-08-07** — One agent episodic memory (ADR-0005): CLI + MCP = same store; product/domain graphs (Odoo/consumer product/Gate) are out of band.
+
 **Effective: 2026-02-14**
 
 The file `agents/cursor/cursor_memory_kernel.yaml` is the **authoritative source** for all Cursor memory behavior. This rule enforces its contracts.

@@ -25,7 +25,7 @@ MEM = HERE / "memory"
 CONTRACT = MEM / "memory-enforcement.contract.json"
 SCHEMA = MEM / "memory-enforcement.schema.json"
 SETTINGS = HERE / "settings.template.json"
-CONTRACT_TEST = HERE / "tests" / "test_memory_client_contract.py"
+CONTRACT_TEST = HERE / "tests" / "test_graphiti_front_door.py"
 
 
 def _fail(msg: str, failures: list[str]) -> None:
@@ -122,10 +122,10 @@ def _scripts_exist(contract: dict, failures: list[str]) -> None:
 
 
 def _contract_pin(failures: list[str]) -> None:
-    """Run the network-free client<->server contract test (drift guard).
+    """Run the network-free Graphiti front-door pin (no HTTP side door).
 
     Presence is not proof: the pin only prevents divergence if it actually runs
-    (see docs/decisions/ADR-0004). Network-free, so CI without memory stays green.
+    (see docs/decisions/ADR-0006). Network-free.
     """
     if not CONTRACT_TEST.is_file():
         _fail(f"missing contract pin: {CONTRACT_TEST.relative_to(REPO)}", failures)
@@ -139,13 +139,13 @@ def _contract_pin(failures: list[str]) -> None:
             timeout=60,
         )
     except subprocess.TimeoutExpired:
-        _fail("memory client<->server contract test timed out (>60s)", failures)
+        _fail("Graphiti front-door pin test timed out (>60s)", failures)
         return
     if result.returncode:
         detail = f"{result.stdout}{result.stderr}"
-        _fail(f"memory client<->server contract test failed\n{detail}", failures)
+        _fail(f"Graphiti front-door pin test failed\n{detail}", failures)
     else:
-        print("  OK: memory client<->server contract pin holds (sections/hits schema)")
+        print("  OK: Graphiti front-door pin holds (no HTTP side door)")
 
 
 def main() -> int:

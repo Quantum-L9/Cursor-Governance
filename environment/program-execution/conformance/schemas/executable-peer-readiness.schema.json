@@ -1,0 +1,142 @@
+{
+  "$id": "https://quantum-l9.dev/program-execution/executable-peer-readiness.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "title": "Executable Peer Readiness Receipt",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "l9.executable-peer-readiness.v1"
+    },
+    "agent_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "surface": {
+      "type": "string"
+    },
+    "adapter_id": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "identity": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "principal_id": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["status", "principal_id"]
+    },
+    "program_execution": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "contract_family": {
+          "type": ["string", "null"]
+        },
+        "descriptor_digest": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["status", "contract_family", "descriptor_digest"]
+    },
+    "autonomy": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "provider_id": {
+          "type": ["string", "null"]
+        },
+        "protocol_version": {
+          "type": ["string", "null"]
+        },
+        "canonical_path": {
+          "type": ["string", "null"]
+        },
+        "gateway_enforced": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "status",
+        "provider_id",
+        "protocol_version",
+        "canonical_path",
+        "gateway_enforced"
+      ]
+    },
+    "checks": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "identity_binding": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "adapter_conformance": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "adapter_probe": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "autonomy_provider": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "autonomy_conformance": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "execution_gateway": {
+          "enum": ["PASS", "FAIL"]
+        }
+      },
+      "required": [
+        "identity_binding",
+        "adapter_conformance",
+        "adapter_probe",
+        "autonomy_provider",
+        "autonomy_conformance",
+        "execution_gateway"
+      ]
+    },
+    "observed_at": {
+      "type": "string"
+    },
+    "expires_at": {
+      "type": "string"
+    },
+    "status": {
+      "enum": ["READY", "BLOCKED"]
+    },
+    "blocked_reason": {
+      "type": ["string", "null"]
+    },
+    "receipt_digest": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "agent_id",
+    "surface",
+    "adapter_id",
+    "identity",
+    "program_execution",
+    "autonomy",
+    "checks",
+    "observed_at",
+    "expires_at",
+    "status",
+    "blocked_reason",
+    "receipt_digest"
+  ]
+}

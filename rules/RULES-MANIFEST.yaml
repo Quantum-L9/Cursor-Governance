@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-07T14:55:20Z'
+generated_utc: '2026-08-11T00:31:30Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:51c57e22f1bbcc3913d85765022f857a2a06e30f0806523256e2f1fc9c373518
+source_tree_digest: sha256:c72cc6bc3b5359c0ebfaf160b9887a76979a3acfeacbb75a04e9c0de7e3a68fb
 summary:
   total_mdc_files: 62
   always_apply_true: 41
@@ -115,8 +115,8 @@ rules:
   - '**/*'
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 53
-  content_digest: sha256:a7732753a25b64a6f0c37915f8e0b7d60c8ffdab25f922d710f417b84c0a05bc
+  line_count: 58
+  content_digest: sha256:637edb920ec46ef71aeafe97c405984767d97bcb9461738784b97c404d4b473b
   authority: compatibility
   context_cost: minimal
   deprecated: false
@@ -891,8 +891,8 @@ rules:
   - '**/*'
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 152
-  content_digest: sha256:0d7ed3e31cbd42343681058c7ab03ba048004e06712b8cad91b91c092ee2a985
+  line_count: 154
+  content_digest: sha256:55705b8d4a4270a5d519a6cd12237ba6ae3699ecbd6473e206b9f7eff639b5ac
   authority: compatibility
   context_cost: moderate
   deprecated: false
@@ -1301,7 +1301,7 @@ rules:
 - file: 97-graph-layer-boundary.mdc
   id: l9.rule.graph-layer-boundary
   id_source: explicit
-  version: 2.1.0
+  version: 2.2.0
   description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
   scope: global
   domain: memory
@@ -1312,8 +1312,8 @@ rules:
   - '**/*'
   first_heading: Graph Layer Boundary
   has_yaml_frontmatter: true
-  line_count: 31
-  content_digest: sha256:ec1c1246d6cda97cb41d93d70f300c0b75a8afecc4afffc23f3512e327c82e1f
+  line_count: 38
+  content_digest: sha256:899601a990cbef7f3c62944e46e7c49868655492b9d6f503fc6c762ebff7bb88
   authority: canonical_global
   context_cost: minimal
   deprecated: false

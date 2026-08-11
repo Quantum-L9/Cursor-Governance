@@ -19,7 +19,7 @@ def classify(risk: str, evidence: str) -> str:
     return "standard"
 
 
-def omitted_gates(depth: str) -> list[str]:
+def omitted_gates(_depth: str) -> list[str]:
     # Escalate-only: never omit.
     return []
 

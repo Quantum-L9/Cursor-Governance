@@ -54,7 +54,41 @@ Values come only from `agent_registry.yaml`. Adapters never invent a second
 `agent_id`. Writing identity is distinct from Cursor's `cursor_agent`.
 `group_id` stays shared (repo namespace from `ops/graphiti/group_registry.yaml`).
 
-## Validator
+## Executable-peer carriers (Program Execution / autonomy / readiness)
 
-`tools/validate_agents.py` enforces this contract for every **active** agent
-whose `adapter` is not `cursor` or `claude-code`. Run `make agents-env`.
+An agent declared **executable** carries three capabilities beyond the memory
+contract (Executable Peer Contract v1). They are bindings, not copied files:
+
+1. **Program Execution** — the agent's `execution.bindings` in
+   `agent_registry.yaml` map each surface to a registered `worker_host`
+   Program Execution adapter. The bound adapter's descriptor carries
+   `identity.agent_ref` back to the agent key (the foreign key that replaces
+   the old hardcoded adapter→agent map). The surface adapter answers *"how does
+   this agent enter L9?"*; the program adapter
+   (`environment/program-execution/adapters/<x>/`) answers *"how does the
+   Controller execute a task on this host?"*.
+2. **Canonical autonomy** — the peer resolves `autonomy/` through the single
+   `root-autonomy-control-plane` provider
+   (`environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml`,
+   `owns_program_state: false`). Copying an `autonomy/` implementation into an
+   adapter is forbidden.
+3. **Execution readiness** — a fresh, machine-generated readiness receipt per
+   `(agent_id, surface, adapter_id)` binding, produced by
+   `probe_executable_peers.py` under `$HOME/.l9/programs/_peer-readiness/`.
+   Readiness is never statically asserted in `agent_registry.yaml`.
+
+`execution.enabled: true` is a strong assertion: at least one surface is backed
+by a sealed, non-dormant worker adapter. Set `enabled: false` with
+`bindings: []` for a peer whose worker adapter is still dormant. See
+`environment/agents/PEER_EXECUTION.md` for the full contract and coverage
+matrix.
+
+## Validators
+
+`tools/validate_agents.py` enforces the memory-carrier contract for every
+**active** agent whose `adapter` is not `cursor` or `claude-code`
+(`make agents-env`). `tools/validate_executable_peers.py` enforces the
+cross-registry Executable Peer Contract (rules E1-E15), and
+`environment/program-execution/scripts/probe_executable_peers.py` proves every
+enabled peer has a READY binding (`make peer-execution-conformance` runs the
+whole chain).

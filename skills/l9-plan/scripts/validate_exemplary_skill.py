@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+from paths import safe_cli_path
+
 REQUIRED_EXPERTISE = [
     "experts",
     "doctrine",
@@ -53,19 +55,24 @@ def load_mapping(path: Path) -> dict:
     return data
 
 
-def main() -> int:
-    root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    errors = []
-    expertise = load_mapping(root / "expertise_model.yaml").get("expertise_model", {})
-    report = load_mapping(root / "skill_intelligence_report.yaml").get(
-        "skill_intelligence_report", {}
-    )
+def _expertise_errors(expertise: dict) -> list[str]:
+    errors: list[str] = []
     for field in REQUIRED_EXPERTISE:
         if field not in expertise or (field != "adapters" and not expertise[field]):
             errors.append(f"expertise_model missing or empty: {field}")
-    for field in REQUIRED_REPORT:
-        if field not in report:
-            errors.append(f"skill_intelligence_report missing: {field}")
+    return errors
+
+
+def _report_field_errors(report: dict) -> list[str]:
+    return [
+        f"skill_intelligence_report missing: {field}"
+        for field in REQUIRED_REPORT
+        if field not in report
+    ]
+
+
+def _activation_errors(report: dict, root: Path) -> list[str]:
+    errors: list[str] = []
     activation = report.get("activation_model", {})
     if not activation.get("reject_signals"):
         errors.append("activation reject signals missing")
@@ -93,6 +100,20 @@ def main() -> int:
             "activation_model.measurement disagree with assets "
             f"({n_act} activation, {n_route} route)"
         )
+    return errors
+
+
+def main() -> int:
+    root = safe_cli_path(sys.argv[1] if len(sys.argv) > 1 else ".")
+    expertise = load_mapping(root / "expertise_model.yaml").get("expertise_model", {})
+    report = load_mapping(root / "skill_intelligence_report.yaml").get(
+        "skill_intelligence_report", {}
+    )
+    errors = (
+        _expertise_errors(expertise)
+        + _report_field_errors(report)
+        + _activation_errors(report, root)
+    )
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)

@@ -13,3 +13,9 @@ keeps host-specific execution behind replaceable adapters.
 
 Mutable runtime belongs under `$HOME/.l9/programs/` and
 `$HOME/.l9/program-worktrees/`, never in this source tree.
+
+Each execution adapter is the Controller-side peer of a surface adapter in
+`environment/agents/adapters/`. The identity ↔ execution cross-link and the
+universal peer-execution contract are documented in
+`environment/agents/PEER_EXECUTION.md` and validated by
+`make peer-execution-conformance` / `make peer-execution-probe`.
