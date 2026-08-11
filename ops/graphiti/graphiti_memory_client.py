@@ -14,6 +14,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from circuit_breaker import CircuitBreaker
 from episode_contract import FORBIDDEN_GROUPS, EpisodeContract
@@ -36,12 +37,33 @@ def memory_enabled() -> bool:
 _session_id: str | None = None
 
 
+def _require_http_url(url: str) -> str:
+    """Refuse non-http(s) schemes (CWE-939 / urllib file:// SSRF).
+
+    GRAPHITI_MCP_URL is env-sourced; never pass it to urlopen unchecked.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"refusing non-http(s) Graphiti URL scheme {parsed.scheme!r}: {url[:120]}")
+    if not parsed.netloc:
+        raise ValueError(f"refusing Graphiti URL without host: {url[:120]}")
+    return url
+
+
+def _urlopen_http(req: urllib.request.Request, *, timeout: float, context: ssl.SSLContext):
+    """urlopen only after http(s) scheme check (Bandit B310 / Semgrep CWE-939)."""
+    _require_http_url(req.full_url)
+    # Scheme validated above; urllib still supports file:// for unchecked URLs.
+    return urllib.request.urlopen(req, timeout=timeout, context=context)  # noqa: S310
+
+
 def mcp_url() -> str:
     # Server canonicalizes to no trailing slash (redirects /mcp/ -> /mcp with
     # 307); target the canonical path directly rather than relying on urllib
     # to follow the redirect.
     base = os.environ.get("GRAPHITI_MCP_URL", "http://127.0.0.1:8100/mcp").rstrip("/")
-    return base if base.endswith("/mcp") else f"{base}/mcp"
+    url = base if base.endswith("/mcp") else f"{base}/mcp"
+    return _require_http_url(url)
 
 
 def mcp_headers(session_id: str | None = None) -> dict[str, str]:
@@ -93,7 +115,7 @@ def _mcp_post(payload: dict[str, Any], session_id: str | None, timeout: int) -> 
         method="POST",
     )
     _ssl_ctx = ssl.create_default_context()
-    with urllib.request.urlopen(req, timeout=timeout, context=_ssl_ctx) as resp:
+    with _urlopen_http(req, timeout=timeout, context=_ssl_ctx) as resp:
         body = _parse_mcp_body(resp.read().decode())
         return body, resp.headers
 
@@ -258,10 +280,10 @@ def health_check() -> int:
 
     # 1. Liveness — GET /health (process up?)
     try:
-        health_url = mcp_url().replace("/mcp", "/health")
+        health_url = _require_http_url(mcp_url().replace("/mcp", "/health"))
         req = urllib.request.Request(health_url, headers=mcp_headers())
         _ssl_ctx = ssl.create_default_context()
-        with urllib.request.urlopen(req, timeout=10, context=_ssl_ctx) as resp:
+        with _urlopen_http(req, timeout=10, context=_ssl_ctx) as resp:
             out["liveness"] = json.loads(resp.read().decode())
         out["liveness_ok"] = True
     except Exception as exc:  # noqa: BLE001
@@ -314,6 +336,40 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_cli_identity(args: argparse.Namespace) -> dict[str, str]:
+    """Require agent_id on every CLI write; dual-stamp body + source_description."""
+    root = Path(__file__).resolve().parent.parent.parent
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from ops.graphiti.hydration.identity import (  # noqa: E402
+        IdentityError,
+        envelope_body,
+        resolve_write_identity,
+        stamp_source_description,
+    )
+
+    explicit = getattr(args, "agent_id", None)
+    surface = (
+        "claude-code"
+        if (explicit or os.environ.get("L9_MEMORY_AGENT_ID", "")).startswith("claude")
+        else "cursor"
+    )
+    try:
+        identity = resolve_write_identity(explicit_agent_id=explicit, surface=surface)
+    except IdentityError as exc:
+        raise SystemExit(str(exc)) from exc
+    return {
+        **identity,
+        "body": envelope_body(
+            args.body,
+            agent_id=identity["agent_id"],
+            user_id=identity["user_id"],
+            kind=args.kind,
+        ),
+        "source_description": stamp_source_description(identity["agent_id"], args.kind),
+    }
+
+
 def cmd_write(args: argparse.Namespace) -> int:
     load_env()
     resolved = resolve_group_id(Path.cwd(), explicit=getattr(args, "group_id", None))
@@ -329,18 +385,21 @@ def cmd_write(args: argparse.Namespace) -> int:
         )
     if not _rate.allow():
         raise SystemExit("rate limited")
+    identity = _resolve_cli_identity(args)
     now = datetime.now(UTC)
     episode_name = (
         getattr(args, "episode_name", None) or f"{args.kind}-{group_id}-{int(now.timestamp())}"
     )
     contract = EpisodeContract(
         name=episode_name,
-        episode_body=args.body,
-        source="json" if args.body.strip().startswith("{") else "text",
-        source_description=f"CLI write kind={args.kind}",
+        episode_body=identity["body"],
+        source="json" if identity["body"].strip().startswith("{") else "text",
+        source_description=identity["source_description"],
         reference_time=now,
         group_id=group_id,
         kind=args.kind,
+        agent_id=identity["agent_id"],
+        user_id=identity["user_id"],
     )
     if args.dry_run:
         payload = contract.to_mcp_payload()
@@ -457,14 +516,21 @@ def _discover_bootstrap_sources(repo: Path) -> list[Path]:
 
 def _write_episode(name: str, body: str, group_id: str, source_description: str) -> Any:
     now = datetime.now(UTC)
+    agent_id = (os.environ.get("L9_MEMORY_AGENT_ID") or "bootstrap").strip()
+    user_id = (os.environ.get("USER_ID") or "bootstrap_agent").strip()
+    desc = source_description
+    if "agent=" not in desc:
+        desc = f"agent={agent_id};{source_description}"[:500]
     contract = EpisodeContract(
         name=name,
         episode_body=body,
         source="json" if body.strip().startswith("{") else "text",
-        source_description=source_description,
+        source_description=desc,
         reference_time=now,
         group_id=group_id,
         kind="manifest",
+        agent_id=agent_id,
+        user_id=user_id,
     )
     return call_tool("add_memory", contract.to_mcp_payload())
 
@@ -670,6 +736,7 @@ def main() -> int:
     p_write.add_argument("body")
     p_write.add_argument("--kind", default="lesson")
     p_write.add_argument("--group-id", default=None)
+    p_write.add_argument("--agent-id", default=None, help="Writer agent_id (or L9_MEMORY_AGENT_ID)")
     p_write.add_argument("--dry-run", action="store_true")
     p_inject = sub.add_parser("inject")
     p_inject.add_argument("task", default="session start")

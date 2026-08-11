@@ -10,6 +10,8 @@ description: Graphiti episodic memory SSOT — retrieval authority, group_id con
 
 **Updated: 2026-08-07** — **One agent episodic memory** (ADR-0005). CLI + MCP are transports to the same Graphiti / L9 shared-memory store — not two SSOTs. Product/domain stores (Odoo ORM, consumer-app graph matching/enrichment, Gate/CEG) are **out of band** and must never be treated as Cursor agent resume memory.
 
+**Updated: 2026-08-11** — Auto hydrate/close: `sessionStart` emits `SessionHydrationPacket` (`next=` + facts) via `ops/graphiti/hydration/`; `sessionEnd` Phase A/B writes PICKUP without `/end-session`. Every write requires `agent_id` (`agent=` stamp). See `docs/MEMORY_PIPELINE_MAP.md`. `/end-session` is **force-retry / offline recovery only**.
+
 
 ## Retrieval authority (canonical order)
 
@@ -25,19 +27,21 @@ description: Graphiti episodic memory SSOT — retrieval authority, group_id con
 | Tier | Target | Trigger |
 |------|--------|---------|
 | T0 | `memory-bank/` | **DEPRECATED** — archival only; do not write |
-| T1 | Graphiti JSON episode | sessionEnd distill / PICKUP — budget capped |
+| T1 | Graphiti JSON episode | auto sessionEnd Phase A/B / PICKUP — budget capped |
 | T2 | Graphiti search-before-write | lessons, ADR deltas |
 | T3 | Full chat ingest | **FORBIDDEN** |
 
 ## MUST
 
-- Resume from Graphiti `inject` / search PICKUP — never treat `memory-bank/` as SSOT
+- Resume from sessionStart hydration (`next=`) / Graphiti PICKUP — never treat `memory-bank/` as SSOT
 - Every Graphiti read/write includes resolved `group_id` from `graphiti_memory_client.py resolve`
+- Every write stamps `agent_id` (`L9_MEMORY_AGENT_ID`; Cursor=`cursor`, Claude=`claude-code`)
 - Never write to `group_id=main` or `group_id=default`
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use Graphiti)
 - Treat Graphiti CLI and `l9-graphite-memory` / `memory.*` MCP as one agent-memory store (ADR-0005); fix transport/auth wiring instead of inventing a second stack
 - Never treat consumer-product runtime graphs (consumer ERP/graph / Gate) as agent episodic memory
+- Do not require `/end-session` for normal X-out — hook close is the primary path
 
 ## CLI (terminal / hooks only)
 

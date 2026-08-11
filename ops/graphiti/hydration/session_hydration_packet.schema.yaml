@@ -1,0 +1,66 @@
+# SessionHydrationPacket — slim resume packet for sessionStart additional_context.
+# Design evidence: WIP packs @ a57d49b (not a runtime dependency).
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$title: SessionHydrationPacket
+type: object
+additionalProperties: false
+required:
+  - packet_id
+  - active_objective
+  - context_slice
+  - next_action_contract
+  - group_id
+  - agent_id
+properties:
+  packet_id:
+    type: string
+    minLength: 8
+  active_objective:
+    type: string
+    minLength: 1
+    maxLength: 500
+  context_slice:
+    type: string
+    minLength: 0
+    maxLength: 8000
+  next_action_contract:
+    type: object
+    required: [next_action]
+    properties:
+      next_action:
+        type: string
+        minLength: 1
+        maxLength: 1000
+      rationale:
+        type: string
+        maxLength: 1000
+      blockers:
+        type: array
+        items: { type: string, maxLength: 300 }
+        maxItems: 8
+  group_id:
+    type: string
+    minLength: 3
+    maxLength: 100
+  agent_id:
+    type: string
+    minLength: 1
+    maxLength: 64
+  anchors:
+    type: array
+    items: { type: string, maxLength: 400 }
+    maxItems: 12
+  artifacts:
+    type: array
+    items: { type: string, maxLength: 400 }
+    maxItems: 12
+  blockers:
+    type: array
+    items: { type: string, maxLength: 300 }
+    maxItems: 8
+  degraded:
+    type: boolean
+    default: false
+  degrade_reason:
+    type: string
+    maxLength: 500
