@@ -84,51 +84,34 @@ def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def _git_dir(project_dir: Path) -> Path | None:
-    """Resolve .git directory without shelling out (avoids tainted cwd sinks)."""
-    root = project_dir.resolve()
-    if not root.is_dir():
-        return None
-    meta = root / ".git"
-    if meta.is_dir():
-        return meta
-    if meta.is_file():
-        # worktree: ".git" file contains "gitdir: <path>"
-        try:
-            line = meta.read_text(encoding="utf-8").strip()
-        except OSError:
-            return None
-        if line.startswith("gitdir:"):
-            gitdir = Path(line.split(":", 1)[1].strip())
-            if not gitdir.is_absolute():
-                gitdir = (root / gitdir).resolve()
-            return gitdir if gitdir.is_dir() else None
-    return None
-
-
 def _git_signal(project_dir: Path) -> str:
-    """Best-effort branch/head/dirty signal via .git files only."""
+    """Best-effort branch/head signal from a local `.git` directory only.
+
+    Does not shell out (avoids tainted cwd sinks) and does not follow
+    worktree `gitdir:` pointers (avoids path-injection sinks from file content).
+    """
     try:
-        gitdir = _git_dir(project_dir)
-        if gitdir is None:
+        root = project_dir.resolve()
+        if not root.is_dir():
             return "git=unavailable"
-        head_file = gitdir / "HEAD"
-        head_raw = head_file.read_text(encoding="utf-8").strip()
+        gitdir = root / ".git"
+        # Only the directory form — never read/follow a `.git` file's gitdir path.
+        if not gitdir.is_dir():
+            return "git=unavailable"
+        head_raw = (gitdir / "HEAD").read_text(encoding="utf-8").strip()
         branch = "?"
         head = "?"
         if head_raw.startswith("ref:"):
             ref = head_raw.split(":", 1)[1].strip()
-            branch = ref.rsplit("/", 1)[-1] or "?"
-            ref_path = gitdir / ref
-            if ref_path.is_file():
-                head = ref_path.read_text(encoding="utf-8").strip()[:7] or "?"
-        elif len(head_raw) >= 7:
+            # Refuse absolute / parent-escaping refs; only refs/ under .git.
+            if ref.startswith("refs/") and ".." not in Path(ref).parts:
+                branch = ref.rsplit("/", 1)[-1] or "?"
+                ref_path = gitdir.joinpath(*Path(ref).parts)
+                if ref_path.is_file():
+                    head = ref_path.read_text(encoding="utf-8").strip()[:7] or "?"
+        elif len(head_raw) >= 7 and all(c in "0123456789abcdef" for c in head_raw[:40].lower()):
             head = head_raw[:7]
-        # dirty: presence of an index lock or unmerged paths is out of scope;
-        # approximate via whether MERGE_HEAD / index changes exist is heavy —
-        # report dirty_files=unknown when not using porcelain.
-        dirty = "unknown"
-        return f"branch={branch} head={head} dirty_files={dirty}"
+        return f"branch={branch} head={head} dirty_files=unknown"
     except OSError:
         return "git=unavailable"
 
@@ -244,10 +227,9 @@ def _distill_signal_packet(
         },
     )
     try:
-        _ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        _ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-        _ssl_ctx.load_default_certs()
-        with urllib.request.urlopen(req, timeout=max(1.0, timeout), context=_ssl_ctx) as resp:
+        # Match graphiti_memory_client: default TLS context + https-only URL.
+        _ssl_ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, timeout=max(1.0, timeout), context=_ssl_ctx) as resp:  # noqa: S310
             body = json.loads(resp.read())
         text = body["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):
