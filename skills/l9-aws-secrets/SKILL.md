@@ -38,6 +38,9 @@ human. Asking first while the secret is already in AWS is a protocol failure.
 |------|------------|
 | `NODE_AUTH_TOKEN` / GitHub Packages `@quantum-l9/*` | `openclaw-igorbot/github#token` |
 | GitHub API PAT for `gh` automation | `openclaw-igorbot/github#token` |
+| Infisical Cursor UA (`INFISICAL_CLIENT_ID` / `_SECRET`) | `openclaw-igorbot/infisical-cursor#client_id` / `#client_secret` |
+| Infisical Website-Bot bootstrap (`INFISICAL_PROJECT_ID`) | `openclaw-igorbot/infisical-website-bot#project_id` (+ `#client_id` / `#client_secret`) |
+| PostHog personal / project keys | `openclaw-igorbot/posthog#personal_api_key` / `#project_api_key` |
 
 ## Interpreter
 
