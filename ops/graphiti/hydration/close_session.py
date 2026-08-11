@@ -6,6 +6,7 @@ import hashlib
 import http.client
 import json
 import os
+import re
 import ssl
 import sys
 import time
@@ -15,6 +16,7 @@ from typing import Any
 
 _OPENAI_HOST = "api.openai.com"
 _OPENAI_PATH = "/v1/chat/completions"
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
@@ -39,21 +41,29 @@ PHASE_B_BUDGET = 18.0
 TOTAL_BUDGET = 30.0
 
 
-def _receipt_path(project_dir: Path, session_id: str) -> Path:
-    """Build a receipt path constrained under project_dir/.l9/memory/closes."""
-    safe = re_safe(session_id)
-    if not safe or safe in {".", ".."}:
-        raise ValueError("invalid session_id for receipt path")
-    root = project_dir.expanduser().resolve()
-    closes = (root / ".l9" / "memory" / "closes").resolve()
-    path = (closes / f"{safe}.json").resolve()
-    if not path.is_relative_to(closes):
-        raise ValueError("receipt path escapes closes directory")
-    return path
-
-
 def re_safe(session_id: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in session_id)[:120]
+
+
+def _closes_dir(project_dir: Path) -> str:
+    """Real path to project_dir/.l9/memory/closes (must stay under project root)."""
+    root_r = os.path.realpath(str(Path(project_dir).expanduser()))
+    closes_r = os.path.realpath(os.path.join(root_r, ".l9", "memory", "closes"))
+    if os.path.commonpath([root_r, closes_r]) != root_r:
+        raise ValueError("closes directory escapes project root")
+    return closes_r
+
+
+def _receipt_path(project_dir: Path, session_id: str) -> str:
+    """Build a receipt filesystem path under project_dir/.l9/memory/closes."""
+    safe = re_safe(session_id)
+    if not _SAFE_NAME.match(safe):
+        raise ValueError("invalid session_id for receipt path")
+    closes_r = _closes_dir(project_dir)
+    path_r = os.path.realpath(os.path.join(closes_r, f"{safe}.json"))
+    if os.path.commonpath([closes_r, path_r]) != closes_r:
+        raise ValueError("receipt path escapes closes directory")
+    return path_r
 
 
 def _load_rules() -> dict[str, Any]:
@@ -67,52 +77,33 @@ def _load_rules() -> dict[str, Any]:
 
 
 def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
-    path = _receipt_path(project_dir, session_id)
-    if not path.is_file():
+    try:
+        path_r = _receipt_path(project_dir, session_id)
+    except ValueError:
+        return False
+    if not os.path.isfile(path_r):
         return False
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        with open(path_r, encoding="utf-8") as handle:
+            data = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return False
     return data.get("head_hash") == head_hash or data.get("status") == "closed"
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
-    path = _receipt_path(project_dir, session_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path_r = _receipt_path(project_dir, session_id)
+    os.makedirs(os.path.dirname(path_r), exist_ok=True)
+    with open(path_r, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
 
 def _git_signal(project_dir: Path) -> str:
-    """Best-effort branch/head signal from a local `.git` directory only.
-
-    Does not shell out (avoids tainted cwd sinks) and does not follow
-    worktree `gitdir:` pointers (avoids path-injection sinks from file content).
-    """
-    try:
-        root = project_dir.resolve()
-        if not root.is_dir():
-            return "git=unavailable"
-        gitdir = root / ".git"
-        # Only the directory form — never read/follow a `.git` file's gitdir path.
-        if not gitdir.is_dir():
-            return "git=unavailable"
-        head_raw = (gitdir / "HEAD").read_text(encoding="utf-8").strip()
-        branch = "?"
-        head = "?"
-        if head_raw.startswith("ref:"):
-            ref = head_raw.split(":", 1)[1].strip()
-            # Refuse absolute / parent-escaping refs; only refs/ under .git.
-            if ref.startswith("refs/") and ".." not in Path(ref).parts:
-                branch = ref.rsplit("/", 1)[-1] or "?"
-                ref_path = gitdir.joinpath(*Path(ref).parts)
-                if ref_path.is_file():
-                    head = ref_path.read_text(encoding="utf-8").strip()[:7] or "?"
-        elif len(head_raw) >= 7 and all(c in "0123456789abcdef" for c in head_raw[:40].lower()):
-            head = head_raw[:7]
-        return f"branch={branch} head={head} dirty_files=unknown"
-    except OSError:
-        return "git=unavailable"
+    """Project basename only — no git filesystem reads (avoids path-injection sinks)."""
+    name = Path(project_dir).name
+    if not _SAFE_NAME.match(name):
+        name = "project"
+    return f"project={name}"
 
 
 def _heuristic_pickup(
