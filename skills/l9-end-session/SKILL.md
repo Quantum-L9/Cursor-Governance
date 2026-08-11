@@ -1,6 +1,6 @@
 ---
 name: l9-end-session
-description: close agent session — save pickup context, extract learnings, redis handoff, governance backup. use when ending a work session, creating handoff for next window, or running session teardown hooks.
+description: close agent session — save pickup context, extract learnings, redis handoff, governance backup. use when ending a work session, creating handoff for next window, or confirming Graphiti sessionEnd summary wiring.
 skill_schema: 1
 layer: control_plane
 role: skill_entrypoint
@@ -34,7 +34,7 @@ Slash command entry: [`commands/end-session.md`](../../commands/end-session.md) 
 1. **MEMORY** — health-check via `GRAPHITI_PY` + `graphiti_memory_client.py`, then write PICKUP (`--kind pickup_context`) + one atomic write per learning (`--kind` only). This is the canonical store. **Do not** write `memory-bank/` (deprecated).
 2. **Graphiti failure** — if health check fails or a write errors: warn explicitly, skip memory persistence for this close, and continue Redis/handoff. No memory-bank fallback.
 3. **REDIS** — `cache_set_session_context` for next-window resume when the MCP tool exists; if unavailable, keep full handoff in Graphiti/PICKUP and warn.
-4. **HOOKS** — teardown session hooks if activated at start.
+4. **HOOKS** — rely on `ops/hooks/graphiti-session-end.sh` (Cursor `sessionEnd`); skip agent-side hook teardown if no Graphiti summary was produced.
 5. **GOVERNANCE** — backup GlobalCommands to GitHub.
 6. **HANDOFF** — emit completed/in-progress/next-steps summary. If a bounded
    autonomy campaign was active, include PICKUP fields from
@@ -71,7 +71,7 @@ CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
 1. Check Graphiti health with `GRAPHITI_PY`. If healthy: write PICKUP + one learning write per fact with `--kind` only (no `--scope`).
 2. If Graphiti is unreachable or a write errors: warn and continue — do not write memory-bank.
 3. Call MCP `cache_set_session_context` when available; else note Redis unavailable.
-4. Run session hooks teardown if `/start-session` activated hooks.
+4. Confirm Graphiti `sessionEnd` path (`ops/hooks/graphiti-session-end.sh`); if no summary was available/written, skip and note in the report — do not invoke CEG session hooks.
 5. Run governance backup script.
 6. Output session-closed report.
 
@@ -87,7 +87,7 @@ Auto-chains to `/extract-chat` for learnings pass.
 - `end-session.yaml` — protocol spec (v2.1)
 - `docs/MEMORY_PIPELINE_MAP.md` — memory pipeline routing
 - `ops/graphiti/graphiti_memory_client.py` — memory writes (primary)
-- `agents/cursor/cursor_session_hooks.py` — session hook teardown
+- `ops/hooks/graphiti-session-end.sh` — automatic Graphiti `session_summary` on Cursor sessionEnd
 - `ops/scripts/backup_to_github.sh` — governance backup
 
 ## Validation
@@ -107,6 +107,6 @@ Auto-chains to `/extract-chat` for learnings pass.
 | Graphiti health check fails, or a Graphiti write errors | Warn; skip memory persistence; continue Redis/handoff — **no** memory-bank |
 | Redis MCP unavailable | Write full handoff to Graphiti when healthy; warn next window |
 | Governance backup fails | Report failure; retry `backup_to_github.sh`; do not skip silently |
-| Session hooks not active | Skip teardown; note in report |
+| No Graphiti session summary (hook wrote nothing / Graphiti disabled) | Skip HOOKS step; note in report — PICKUP from this skill remains resume SSOT |
 
 When blocked: state exact gap, label `Unknown`, give smallest next action.

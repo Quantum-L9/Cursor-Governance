@@ -100,13 +100,13 @@ See `.cursor/rules/87-cursor-memory-kernel.mdc` → "Memory Write Format" for th
 
 This step is mandatory: without it, the next window will not have this handoff in Redis.
 
-### 3b. SESSION HOOKS TEARDOWN
+### 3b. SESSION HOOKS (Graphiti sessionEnd)
 
-If session hooks were activated at `/start-session`, close them now:
+Rely on the installed Cursor hook `ops/hooks/graphiti-session-end.sh` (wired via `~/.cursor/hooks.json` after `setup_workspace_symlinks.sh`).
 
-- Call `CursorSessionHooks.on_session_end(repo_id="l9", branch="main", promote=True)` to escalate high-confidence items to long-term memory
-- This promotes recent decisions and errors-to-avoid into persistent storage
-- Reference: `agents/cursor/cursor_session_hooks.py`
+- On automatic `sessionEnd`, that script writes Graphiti `--kind session_summary` when a summary payload is present and Graphiti is enabled.
+- If no summary was available, Graphiti is disabled, or the write fails: **skip** — warn in the close report; do not fall back to memory-bank or CEG working-memory promotion.
+- **Do not** invoke CEG working-memory session hooks (not part of Cursor-Governance). Agent-side close persistence is Graphiti PICKUP + lessons (step 1).
 
 ### 4. GOVERNANCE GITHUB BACKUP (mandatory)
 
