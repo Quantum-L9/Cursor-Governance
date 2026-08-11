@@ -13,6 +13,9 @@ name: L9 Root-File Protection
 
 on:
   pull_request:
+    paths-ignore:
+      # Scratch/reference dumps — never gate CI on WIP-only changes
+      - "WIP/**"
 
 permissions:
   contents: read
