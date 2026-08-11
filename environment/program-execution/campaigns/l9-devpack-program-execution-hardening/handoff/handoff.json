@@ -1,0 +1,153 @@
+{
+  "schema": "program-execution-controller.handoff-receipt.v2",
+  "handoff_id": "HANDOFF-devpack-admission-0001",
+  "program_id": "l9-devpack-program-execution-hardening",
+  "program_digest": "aa1bc91c4c784aacd7be79e77149f776f95ef218439ec3f5e54dcab25314f78d",
+  "controller_id": "l9-devpack-hardening-controller",
+  "exported_at": "2026-08-11T00:00:00+00:00",
+  "runtime_summary": {
+    "blocking_gates_passed": 0,
+    "completed_tasks": 0,
+    "global_halt": false,
+    "ledger_valid": true,
+    "total_blocking_gates": 5,
+    "total_required_tasks": 7,
+    "unresolved_decisions": 0,
+    "unresolved_unknowns": 1,
+    "admission_wave": "W0",
+    "note": "Definition materialized and validated green (blueprint + controller instantiated PASS). No controller runtime lock created: TASK-001 target binding blocked by UNK-001 (l9-devpack-compiler out of session scope)."
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "repository_id=l9-devpack-compiler not in session scope; exact base SHA cannot be bound (UNK-001)."
+    },
+    {
+      "id": "TASK-002",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": null
+    },
+    {
+      "id": "TASK-003",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": null
+    },
+    {
+      "id": "TASK-004",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": null
+    },
+    {
+      "id": "TASK-005",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": null
+    },
+    {
+      "id": "TASK-006",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": null
+    },
+    {
+      "id": "TASK-007",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": null
+    }
+  ],
+  "gates": [
+    {
+      "id": "GATE-001",
+      "result": "BLOCKED",
+      "evaluation_receipt": null,
+      "evidence_ids": [
+        "EVID-006"
+      ],
+      "note": "EVID-006 (governing PE v2 contract) available; EVID-005 (target base SHA) unavailable -> cannot PASS."
+    },
+    {
+      "id": "GATE-002",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-003",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-004",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    },
+    {
+      "id": "GATE-005",
+      "result": "UNKNOWN",
+      "evaluation_receipt": null,
+      "evidence_ids": []
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "DEC-002",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "DEC-003",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "DEC-004",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "DEC-005",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "DEC-006",
+      "status": "accepted",
+      "evidence_ids": []
+    },
+    {
+      "id": "DEC-007",
+      "status": "accepted",
+      "evidence_ids": []
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-001",
+      "status": "open",
+      "evidence_ids": []
+    }
+  ],
+  "approvals": [],
+  "residual_risks": [
+    "RISK-001",
+    "RISK-002",
+    "RISK-003",
+    "RISK-004",
+    "RISK-005"
+  ],
+  "recommended_program_verdict": "INCONCLUSIVE",
+  "receipt_digest": "529708a310bd8ddf93d859452de8e9a7de6c6903a645e5da90e4bb6c6c43ddf6"
+}

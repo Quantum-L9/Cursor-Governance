@@ -466,6 +466,50 @@
       "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
     },
     {
+      "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619"
+    },
+    {
+      "path": "campaigns/bounded-replanning-v1/README.md",
+      "sha256": "218c0f0d2320ab043f3e5c448f4e754314ecd0d9d53331002cf1b443ecdb4558"
+    },
+    {
+      "path": "campaigns/bounded-replanning-v1/source-integrity-receipt.json",
+      "sha256": "393a7e928c3279368fb9eb5cace717afe7182b0bac73d5eb0d22b218825615f8"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "3313927710d864d74117dffd9387334b5feff2700125d2b2fed1c149d28ae215"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/CONTRACT_SOURCE.md",
+      "sha256": "1380d7dbb306f142a2682d593f7bb2a99ed2228c5bb67c2d7d727b4ddbdea196"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/README.md",
+      "sha256": "2e12d559863d264bb62f7e35fcf35df46a9d14f2c0684fd31310621d575e5f8f"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/deliverables/l9-devpack-compiler/IMPLEMENTATION_DESIGN.md",
+      "sha256": "9a31c00ce6e71e0affd2bc4371408112db0b0fb8ab4af49be67c2b229eb09c50"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/deliverables/l9-devpack-compiler/README.md",
+      "sha256": "36341e55e249fa9e2ad5782a2dc07a8a1be846181ef0e1c4df85e8a34e1b098f"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/handoff/CAMPAIGN_HANDOFF.md",
+      "sha256": "493ad01c5b818e4a5d3cbab6d1481a768b263c818194ca7a11d97032ff6a51c5"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/handoff/handoff.json",
+      "sha256": "1e28d5de6964219cee3848504ebe38e9f7792d5db2b857fa5481d45fc76f912c"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json",
+      "sha256": "2ea63b166d68fb70332021c0f9a414f9518ae71b67ae13a5069fae15885c2754"
+    },
+    {
       "path": "campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml",
       "sha256": "042931a858409d9fe3c16c2aeaa09e328061576615d8f39bf2a93750cdca8692"
     },
@@ -476,6 +520,26 @@
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/README.md",
       "sha256": "1b065350a9896baa86d09fe0b9d689c97d1aef4326818c8f584087e60b6b108d"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/VALIDATION_EVIDENCE.md",
+      "sha256": "6de0e8ab06b65b7f98f8bbd60aa1d6ac21fd505f1cd25e165a7d6bf1abee1e50"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/deliverables/l9-devpack-compiler/README.md",
+      "sha256": "df37980dc868bc72fd2de072683eda934d7600014608c0cf3d28d2334a8a08cc"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/deliverables/l9-devpack-compiler/REMEDIATION_DESIGN.md",
+      "sha256": "67eec9f94085ffcd5c2cc11f840f9ea24357fcbbd3ecae6d730423cb1869496f"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/handoff/CAMPAIGN_HANDOFF.md",
+      "sha256": "8f987bf160d19cb0613c1e0f28988eb4043c1a9265237e33e8460831138a3fe9"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/handoff/handoff.json",
+      "sha256": "383f9804aef53f4a95ed6c7796573996a3286a73ff16d1df8fc0efce4e32273b"
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/source-integrity-receipt.json",

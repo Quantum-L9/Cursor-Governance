@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "bounded-replanning-v1",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619",
+  "bytes": 50487,
+  "pack_recorded_digest": "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619",
+  "pack_recorded_bytes": 50487,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-11",
+  "collection_method": "read_only_inspection",
+  "producer": "controller-admission"
+}
