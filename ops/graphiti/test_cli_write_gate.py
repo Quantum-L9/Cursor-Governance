@@ -43,7 +43,8 @@ def test_cli_write_explicit_igor_workspace_rejected(tmp_path):
     # tmp cwd has no repo match, so the explicit override survives resolution
     # and must be stopped by the workspace gate itself.
     result = _run_cli(
-        ["write", "test body", "--group-id", "igor-workspace", "--dry-run"], cwd=tmp_path
+        ["write", "test body", "--group-id", "igor-workspace", "--agent-id", "cursor", "--dry-run"],
+        cwd=tmp_path,
     )
     assert result.returncode != 0
     assert "shared workspace group" in result.stderr
@@ -53,7 +54,7 @@ def test_cli_write_env_igor_workspace_rejected(tmp_path):
     result = _run_cli(
         ["write", "test body", "--dry-run"],
         cwd=tmp_path,
-        extra_env={"GRAPHITI_GROUP_ID": "igor-workspace"},
+        extra_env={"GRAPHITI_GROUP_ID": "igor-workspace", "L9_MEMORY_AGENT_ID": "cursor"},
     )
     assert result.returncode != 0
     assert "shared workspace group" in result.stderr
@@ -78,11 +79,27 @@ def test_cmd_write_gate_fires_before_any_network(monkeypatch, tmp_path):
 
     monkeypatch.setattr(gmc, "call_tool", _no_network)
     args = argparse.Namespace(
-        body="test body", kind="lesson", group_id="igor-workspace", dry_run=False
+        body="test body",
+        kind="lesson",
+        group_id="igor-workspace",
+        dry_run=False,
+        agent_id="cursor",
     )
     with pytest.raises(SystemExit) as excinfo:
         gmc.cmd_write(args)
     assert "shared workspace group" in str(excinfo.value)
+
+
+def test_require_http_url_rejects_file_scheme(monkeypatch):
+    with pytest.raises(ValueError, match="non-http"):
+        gmc._require_http_url("file:///etc/passwd")
+    monkeypatch.setenv("GRAPHITI_MCP_URL", "file:///tmp/evil")
+    with pytest.raises(ValueError, match="non-http"):
+        gmc.mcp_url()
+
+
+def test_require_http_url_accepts_localhost():
+    assert gmc._require_http_url("http://127.0.0.1:8100/mcp").startswith("http://")
 
 
 def test_bootstrap_mirror_path_can_still_write_workspace_group(monkeypatch):

@@ -21,6 +21,32 @@ This repository **owns** the inventory. Sync pulls secret *names* (and JSON key 
 
 Values never go into git, logs, receipts, or chat unless the human explicitly needs a one-shot programmatic capture.
 
+## Law — check registry before asking the human
+
+**Hard rule:** If a task needs a credential, token, API key, or password, agents
+MUST attempt resolution via this skill / `ops/secrets/` **before** asking the
+human. Asking first while the secret is already in AWS is a protocol failure.
+
+1. `sync_secrets_registry.py` (or use current registry if fresh)
+2. `resolve_secret.py --ref '…' --check` then resolve into the process env
+3. Only after `UNREGISTERED` / `NOT_PROVISIONED` / `NOT_FOUND` may you ask —
+   and you must name the failing ref
+
+**Known aliases (non-exhaustive):**
+
+| Need | Prefer ref |
+|------|------------|
+| `NODE_AUTH_TOKEN` / GitHub Packages `@quantum-l9/*` | `openclaw-igorbot/github#token` |
+| GitHub API PAT for `gh` automation | `openclaw-igorbot/github#token` |
+| Infisical Cursor UA (`INFISICAL_CLIENT_ID` / `_SECRET`) | `openclaw-igorbot/infisical-cursor#client_id` / `#client_secret` |
+| Infisical Website-Bot bootstrap (`INFISICAL_PROJECT_ID`) | `openclaw-igorbot/infisical-website-bot#project_id` (+ `#client_id` / `#client_secret`) |
+| PostHog personal / project keys | `openclaw-igorbot/posthog#personal_api_key` / `#project_api_key` |
+
+**CANONICAL_LAW.md §14:** That GitHub ref is the **sole** agent PAT. Do not
+create a second token in AWS. Export it as `GH_TOKEN` / `GITHUB_TOKEN` and
+complete operable GitHub work via API/`gh`. **Do not** ask the human to click
+`github.com` UI when this PAT can finish the job.
+
 ## Interpreter
 
 Prefer the governance locked venv:

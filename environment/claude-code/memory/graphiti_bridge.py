@@ -120,9 +120,23 @@ def write_episode(
     kind: str = "session_summary",
     workspace: Path,
     session_id: str,
+    agent_id: str | None = None,
 ) -> dict[str, Any]:
+    import memory_state as st
+
+    contract = st.load_contract()
+    identity = st.resolve_writer_identity(contract, require_explicit=True)
+    identity["namespace"] = (st.resolve_namespaces(contract) or ["cursor-governance"])[0]
+    # Fail-closed attribution for Claude surface (must not stamp as Cursor).
+    st.validate_memory_writer(identity)
+    aid = (agent_id or identity.get("agent_id") or "claude-code").strip()
+    env_agent = os.environ.get("L9_MEMORY_AGENT_ID", "").strip()
+    if not env_agent:
+        os.environ["L9_MEMORY_AGENT_ID"] = aid
+    if not os.environ.get("USER_ID", "").strip():
+        os.environ["USER_ID"] = identity.get("user_id") or "claude_code_agent"
     return run_graphiti(
-        ["write", body, "--kind", kind],
+        ["write", body, "--kind", kind, "--agent-id", aid],
         workspace=workspace,
         session_id=session_id,
         timeout=90.0,

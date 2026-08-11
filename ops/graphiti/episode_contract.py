@@ -61,7 +61,17 @@ class EpisodeContract(BaseModel):
     reference_time: datetime
     group_id: str = Field(..., min_length=3, max_length=100)
     kind: str | None = Field(None, description="lesson|pickup|manifest|gmp|session")
+    agent_id: str = Field(..., min_length=1, max_length=64)
+    user_id: str | None = Field(None, max_length=64)
     pii_redaction: bool = True
+
+    @field_validator("agent_id")
+    @classmethod
+    def require_agent_id(cls, value: str) -> str:
+        cleaned = (value or "").strip()
+        if not cleaned:
+            raise ValueError("agent_id is required on every episode write")
+        return cleaned
 
     @field_validator("reference_time")
     @classmethod

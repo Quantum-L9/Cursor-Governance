@@ -42,9 +42,9 @@
       "alias": null,
       "class": "always",
       "output": "03-graphiti-memory.md",
-      "output_sha256": "d816ea169b42ea92dbc063faf0b2b5c52bfca1ed626ab9ae1177f93d0d6cd2a3",
+      "output_sha256": "ae05b6546ef6fa8b9bff84d3d4399047f93a3efae210308cc992b89facfa4118",
       "source": "rules/03-graphiti-memory.mdc",
-      "source_sha256": "637edb920ec46ef71aeafe97c405984767d97bcb9461738784b97c404d4b473b",
+      "source_sha256": "c32f8bbc95334b718019736c5fc1c7b1ed871ca8ae3597720c49b8a46fd9404e",
       "stem": "03-graphiti-memory"
     },
     {
@@ -211,6 +211,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "62-github-openclaw-authority.md",
+      "output_sha256": "5a708c7ad3a03fd4a1d072850dd2b033a0d286d3584cf9df07df6fad5220c17f",
+      "source": "rules/62-github-openclaw-authority.mdc",
+      "source_sha256": "35863ea0c0ab14108427b89f6b836e418ad57a7fe5a0d07a9258bee416458801",
+      "stem": "62-github-openclaw-authority"
+    },
+    {
+      "alias": null,
       "class": "paths",
       "output": "65-observability-performance.md",
       "output_sha256": "3e3ac769dd2b4fa4acc9040ec5d187dbf81ef4fbdc0a143b5769ae89ecf1f37e",
@@ -330,9 +339,9 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "08f2cb965303c06c33c0faa7e2c5f235482ccffef41a682d04d062a8b7691da6",
+      "output_sha256": "399be95ce8aa2bc97306c4eedeb2a6a1efc83434201960fe17bf614f833145e0",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "55705b8d4a4270a5d519a6cd12237ba6ae3699ecbd6473e206b9f7eff639b5ac",
+      "source_sha256": "9747bd0abea4fc06b237c267cb5efbb2fdeeacc8437745cb04a9e474ccf4a1e5",
       "stem": "87-cursor-memory-kernel"
     },
     {
@@ -574,9 +583,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 58,
+    "projected": 59,
     "skipped_agent_requested": 4,
-    "source_mdc": 63
+    "source_mdc": 64
   },
-  "tree_sha256": "9559e8e953e0ee8a578765b680be58599065b7c2780155b6977359ab6b2c6a11"
+  "tree_sha256": "a27e5f7abcdfd79cb52890b0ba6bbfb1b53ae244047e10dd5a541076090f0bac"
 }

@@ -93,6 +93,8 @@ tiers:
       reason: "infra-as-code bootstrap — high blast radius, explicit only"
     - skill: "l9-pr-remediation"
       reason: "PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) — high blast radius, explicit only; hint_allowed for read-only Diagnose"
+    - skill: "l9-issue-remediation"
+      reason: "Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose"
     - skill: "l9-bounded-autonomy"
       reason: "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only"
     - skill: "l9-cli-optimization"
@@ -215,6 +217,31 @@ claude_routing:
       note: >
         explicit_only + hint_allowed — Read Diagnose path only; Converge mutate
         requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.
+    - id: issue_remediation
+      primary: l9-issue-remediation
+      signal_weight: 8
+      hint_allowed: true
+      positive_signals:
+        - open issues
+        - github issues
+        - issue blockers
+        - unblock issues
+        - org issues
+        - cross-repo issues
+        - diagnose issues
+        - /issues
+      negative_signals:
+        - remediate the issue
+        - fix the issue
+        - unblock the issue
+        - babysit issues
+        - converge issues
+      supporting:
+        - l9-pr-remediation
+      note: >
+        explicit_only + hint_allowed — Read Diagnose path only; Converge mutate
+        requires explicit fix/remediate/unblock/babysit or autonomy packet.
+        PR green/merge stays on l9-pr-remediation.
     - id: code_analysis
       primary: l9-code-analysis
       signal_weight: 8

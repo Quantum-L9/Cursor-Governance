@@ -186,6 +186,7 @@
     "l9-governance-wiring": "user-invocable-only",
     "l9-harvest-pipeline": "user-invocable-only",
     "l9-inspect": "user-invocable-only",
+    "l9-issue-remediation": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Stop-hook write-back via Cursor Graphiti write (front door only)."""
+"""Stop-hook write-back — thin wrap of shared close_session (Cursor-primary)."""
 
 from __future__ import annotations
 
 import json
-import subprocess  # noqa: S404
+import os
 import sys
 from pathlib import Path
 
@@ -13,16 +13,6 @@ sys.path.insert(0, str(MEM))
 
 import graphiti_bridge as gb  # noqa: E402
 import memory_state as st  # noqa: E402
-
-
-def _git(args: list[str], cwd: Path) -> str:
-    try:
-        out = subprocess.run(  # noqa: S603
-            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=10, check=False
-        )
-        return out.stdout.strip() if out.returncode == 0 else ""
-    except (OSError, subprocess.SubprocessError):
-        return ""
 
 
 def main() -> int:
@@ -40,21 +30,32 @@ def main() -> int:
         return 0
 
     workspace = st.workspace_root()
-    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], workspace) or "?"
-    head = _git(["rev-parse", "--short", "HEAD"], workspace) or "?"
-    subjects = _git(["log", "--oneline", "-5", "--no-decorate"], workspace)
-    content = (
-        f"Claude Code session on {workspace.name} (branch {branch} @ {head}). "
-        f"Recent commits:\n{subjects or '(none)'}"
-    )
+    os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
+    os.environ.setdefault("USER_ID", "claude_code_agent")
+
+    root = gb.find_governance_root()
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
 
     try:
-        gb.write_episode(
-            content,
-            kind="session_summary",
-            workspace=workspace,
+        from ops.graphiti.hydration.close_session import close_session
+
+        report = close_session(
+            project_dir=workspace,
             session_id=session_id,
+            reason=str(event.get("reason") or "completed"),
+            transcript_path=event.get("transcript_path") or event.get("transcriptPath"),
+            agent_id="claude-code",
+            is_background_agent=bool(event.get("is_background_agent")),
+            dry_run=False,
         )
+        status = report.get("status")
+        print(
+            f"memory-writeback: status={status} writes={len(report.get('writes') or [])}",
+            file=sys.stderr,
+        )
+        for warn in report.get("warnings") or []:
+            print(f"memory-writeback: {warn}", file=sys.stderr)
     except Exception as exc:  # fail-open
         print(f"memory-writeback: skipped ({exc})", file=sys.stderr)
     return 0

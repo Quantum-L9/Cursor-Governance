@@ -104,6 +104,9 @@ commands:
 - slash: /inspect
   file: commands/inspect.md
   enabled: true
+- slash: /issues
+  file: commands/issues.md
+  enabled: true
 - slash: /lcto
   file: commands/lcto.md
   enabled: true
