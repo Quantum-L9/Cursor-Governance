@@ -58,6 +58,33 @@
         "supporting": []
       },
       {
+        "hint_allowed": true,
+        "id": "issue_remediation",
+        "negative_signals": [
+          "remediate the issue",
+          "fix the issue",
+          "unblock the issue",
+          "babysit issues",
+          "converge issues"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read Diagnose path only; Converge mutate requires explicit fix/remediate/unblock/babysit or autonomy packet. PR green/merge stays on l9-pr-remediation.\n",
+        "positive_signals": [
+          "open issues",
+          "github issues",
+          "issue blockers",
+          "unblock issues",
+          "org issues",
+          "cross-repo issues",
+          "diagnose issues",
+          "/issues"
+        ],
+        "primary": "l9-issue-remediation",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-pr-remediation"
+        ]
+      },
+      {
         "id": "code_analysis",
         "positive_signals": [
           "unfamiliar repository",
@@ -802,6 +829,17 @@
     },
     {
       "composition_role": "general",
+      "description": "diagnose or converge open github issues across all non-archived quantum-l9 repos \u2014 inventory and rank blockers, fix at the obvious owning repo, hand prs to l9-pr-remediation, and leave graphiti pickup plus issue comment plus conditional root session-reference markdown so the next agent can resume. use when reviewing org issue readiness or blockers, or when the user asks to fix, remediate, unblock, or converge open issues across repos.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-issue-remediation",
+      "path": "skills/l9-issue-remediation",
+      "reason": "Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs \u2014 high blast radius, explicit only; hint_allowed for read-only Diagnose",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "deploy applications to Kubernetes \u2014 Deployments, Services, Ingress, ConfigMaps, Secrets, health checks, and scaling. use when writing or debugging Kubernetes manifests, deploying to a cluster, or configuring scaling/health checks.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1000,6 +1038,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "f63037cc050526c91c9b72380d45b6d1a11f9d7a7889dc1562aab7d38a5cb356",
-  "source_skill_corpus_sha256": "bbd49d6dc9590169641e6bd667f59a837a22c7e8d7b37fd9ff258b74e32d25ca"
+  "source_manifest_sha256": "85366cd090b7c9d6de94aae1a033e575e5d244f627d23832ffd37a9b4c806393",
+  "source_skill_corpus_sha256": "8f36e38f6db704086ae5262c1ed2eecc6ac077d1e771bde7e53bd0fa7f3594d6"
 }

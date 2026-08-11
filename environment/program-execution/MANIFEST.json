@@ -110,26 +110,6 @@
       "sha256": "c1548b269ef265ae11f8f21157ad48cba6f3535b4f9def455161aa6ffbe20d33"
     },
     {
-      "path": "adapters/claude-code-bounded-autonomy/ADAPTER.yaml",
-      "sha256": "3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/README.md",
-      "sha256": "2dc4a9d1ef502bb8dfc4ece3b794dba9c67c46eb2f20222c77572e0301efb764"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/provider.py",
-      "sha256": "122a6e46484ef7e6cb7a79db30acf8802477bef214f3d0a0acbd5af85cf51000"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/receipt_mapper.py",
-      "sha256": "a03ba3b3d51f9184ccbb515df9f10c1f84b634aef0bce426b900c6f703619202"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/tests/test_provider.py",
-      "sha256": "64726b34e3c51c59d8abf75d27bda03c73accaf1436a1f13018a79e0dee35029"
-    },
-    {
       "path": "adapters/claude-code/ADAPTER.yaml",
       "sha256": "1eac2d5380b53f28379a722421143ae21c7066c91aeeb9c15239bac73a75f4a9"
     },
@@ -160,6 +140,26 @@
     {
       "path": "adapters/claude-code/tests/test_driver.py",
       "sha256": "7f960f429531ca6e92792e5c82d4a80f37cd59eed5f6e859bb6b0985b32c487d"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/ADAPTER.yaml",
+      "sha256": "3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/README.md",
+      "sha256": "2dc4a9d1ef502bb8dfc4ece3b794dba9c67c46eb2f20222c77572e0301efb764"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/provider.py",
+      "sha256": "122a6e46484ef7e6cb7a79db30acf8802477bef214f3d0a0acbd5af85cf51000"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/receipt_mapper.py",
+      "sha256": "a03ba3b3d51f9184ccbb515df9f10c1f84b634aef0bce426b900c6f703619202"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/tests/test_provider.py",
+      "sha256": "64726b34e3c51c59d8abf75d27bda03c73accaf1436a1f13018a79e0dee35029"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
