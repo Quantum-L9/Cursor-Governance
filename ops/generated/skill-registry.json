@@ -719,7 +719,7 @@
     },
     {
       "composition_role": "general",
-      "description": "close agent session \u2014 save pickup context, extract learnings, redis handoff, governance backup. use when ending a work session, creating handoff for next window, or confirming Graphiti sessionEnd summary wiring.",
+      "description": "force-retry session close \u2014 manual PICKUP/learnings when auto sessionEnd failed or offline. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
@@ -1039,5 +1039,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "85366cd090b7c9d6de94aae1a033e575e5d244f627d23832ffd37a9b4c806393",
-  "source_skill_corpus_sha256": "d0d1f783bca4ec5aa614dbbcddfa8d106233c0ae6544c8b88001a469870b851b"
+  "source_skill_corpus_sha256": "38b261d67f11739329c64fdd57e9052fd0968dd83806817f1143ccafbea93ff5"
 }

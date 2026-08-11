@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-11T19:56:20Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T21:24:11Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -22,7 +22,7 @@ Generated: `2026-08-11T19:56:20Z`. Source: `rules/*.mdc`.
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
 | `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `760117869bfd` |
-| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 58 | `637edb920ec4` |
+| `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 62 | `c32f8bbc9533` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 60 | `02606be85a98` |
@@ -55,7 +55,7 @@ Generated: `2026-08-11T19:56:20Z`. Source: `rules/*.mdc`.
 | `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 71 | `ebf45d7841f3` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | always | 85 | `f67abad4e816` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
-| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 154 | `55705b8d4a42` |
+| `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 161 | `9747bd0abea4` |
 | `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
 | `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
