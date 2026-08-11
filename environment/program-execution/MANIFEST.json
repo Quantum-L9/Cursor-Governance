@@ -466,6 +466,38 @@
       "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
     },
     {
+      "path": "campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "3313927710d864d74117dffd9387334b5feff2700125d2b2fed1c149d28ae215"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/CONTRACT_SOURCE.md",
+      "sha256": "1380d7dbb306f142a2682d593f7bb2a99ed2228c5bb67c2d7d727b4ddbdea196"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/README.md",
+      "sha256": "2e12d559863d264bb62f7e35fcf35df46a9d14f2c0684fd31310621d575e5f8f"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/deliverables/l9-devpack-compiler/IMPLEMENTATION_DESIGN.md",
+      "sha256": "9a31c00ce6e71e0affd2bc4371408112db0b0fb8ab4af49be67c2b229eb09c50"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/deliverables/l9-devpack-compiler/README.md",
+      "sha256": "36341e55e249fa9e2ad5782a2dc07a8a1be846181ef0e1c4df85e8a34e1b098f"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/handoff/CAMPAIGN_HANDOFF.md",
+      "sha256": "493ad01c5b818e4a5d3cbab6d1481a768b263c818194ca7a11d97032ff6a51c5"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/handoff/handoff.json",
+      "sha256": "1e28d5de6964219cee3848504ebe38e9f7792d5db2b857fa5481d45fc76f912c"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json",
+      "sha256": "2ea63b166d68fb70332021c0f9a414f9518ae71b67ae13a5069fae15885c2754"
+    },
+    {
       "path": "campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml",
       "sha256": "042931a858409d9fe3c16c2aeaa09e328061576615d8f39bf2a93750cdca8692"
     },
