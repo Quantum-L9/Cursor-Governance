@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import ssl
 import sys
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-_OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
+_OPENAI_HOST = "api.openai.com"
+_OPENAI_PATH = "/v1/chat/completions"
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
@@ -215,22 +214,29 @@ def _distill_signal_packet(
             ],
         }
     ).encode()
-    endpoint = _OPENAI_CHAT_COMPLETIONS_URL
-    if urllib.parse.urlparse(endpoint).scheme != "https":
-        return None, "refusing non-https distill endpoint"
-    req = urllib.request.Request(
-        endpoint,
-        data=req_body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
-        },
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+    }
     try:
-        # Match graphiti_memory_client: default TLS context + https-only URL.
+        # Fixed-host HTTPS only (no urllib urlopen) — clears Sonar SSRF sinks.
         _ssl_ctx = ssl.create_default_context()
-        with urllib.request.urlopen(req, timeout=max(1.0, timeout), context=_ssl_ctx) as resp:  # noqa: S310
-            body = json.loads(resp.read())
+        conn = http.client.HTTPSConnection(
+            _OPENAI_HOST,
+            context=_ssl_ctx,
+            timeout=max(1.0, timeout),
+        )
+        try:
+            conn.request("POST", _OPENAI_PATH, body=req_body, headers=headers)
+            resp = conn.getresponse()
+            raw = resp.read()
+            if resp.status in (401, 403):
+                return None, f"OPENAI_API_KEY rejected ({resp.status}) — Phase B skipped"
+            if resp.status >= 400:
+                return None, f"openai_http_{resp.status}"
+            body = json.loads(raw)
+        finally:
+            conn.close()
         text = body["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):
             text = text.strip("`")
@@ -247,14 +253,9 @@ def _distill_signal_packet(
             "pickup": data.get("pickup") or pickup,
             "do_not_promote": data.get("do_not_promote") or rules.get("do_not_promote") or [],
         }, ""
-    except urllib.error.HTTPError as exc:
-        detail = f"openai_http_{exc.code}"
-        if exc.code in (401, 403):
-            detail = f"OPENAI_API_KEY rejected ({exc.code}) — Phase B skipped"
-        return None, detail
     except TimeoutError:
         return None, "Phase B distill timed out — keeping Phase A"
-    except (urllib.error.URLError, KeyError, json.JSONDecodeError, IndexError, OSError) as exc:
+    except (KeyError, json.JSONDecodeError, IndexError, OSError, http.client.HTTPException) as exc:
         return None, f"Phase B distill failed ({type(exc).__name__}) — keeping Phase A"
 
 
