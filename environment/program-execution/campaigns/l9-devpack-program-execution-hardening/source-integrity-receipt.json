@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "l9-devpack-program-execution-hardening",
+  "source_file": "PROGRAM_SOURCE.md",
+  "digest_algorithm": "sha256",
+  "digest": "aa1bc91c4c784aacd7be79e77149f776f95ef218439ec3f5e54dcab25314f78d",
+  "bytes": 86909,
+  "pack_recorded_digest": "aa1bc91c4c784aacd7be79e77149f776f95ef218439ec3f5e54dcab25314f78d",
+  "pack_recorded_bytes": 86909,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-11",
+  "collection_method": "read_only_inspection",
+  "producer": "controller-admission"
+}
