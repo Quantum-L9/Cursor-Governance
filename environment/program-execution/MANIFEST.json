@@ -478,6 +478,18 @@
       "sha256": "1b065350a9896baa86d09fe0b9d689c97d1aef4326818c8f584087e60b6b108d"
     },
     {
+      "path": "campaigns/l9-devpack-program-execution-hardening/VALIDATION_EVIDENCE.md",
+      "sha256": "6de0e8ab06b65b7f98f8bbd60aa1d6ac21fd505f1cd25e165a7d6bf1abee1e50"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/handoff/CAMPAIGN_HANDOFF.md",
+      "sha256": "8f987bf160d19cb0613c1e0f28988eb4043c1a9265237e33e8460831138a3fe9"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/handoff/handoff.json",
+      "sha256": "383f9804aef53f4a95ed6c7796573996a3286a73ff16d1df8fc0efce4e32273b"
+    },
+    {
       "path": "campaigns/l9-devpack-program-execution-hardening/source-integrity-receipt.json",
       "sha256": "75483a4eba8fa290c70331c6a932f66b8100bd21d7fb44dec28b1f4bea8f20d3"
     },
