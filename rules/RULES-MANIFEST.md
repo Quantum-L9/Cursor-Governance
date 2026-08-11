@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T19:56:20Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **62** |
-| `alwaysApply: true` | **41** |
+| Total MDC files | **63** |
+| `alwaysApply: true` | **42** |
 | `alwaysApply: false` | **21** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **8** |
-| Derived compatibility IDs | **54** |
+| Derived compatibility IDs | **55** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -41,6 +41,7 @@ Generated: `2026-08-11T00:37:08Z`. Source: `rules/*.mdc`.
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | auto_attached | 38 | `493fb58ae77a` |
 | `60-anti-patterns.mdc` | `l9.rule.60.anti.patterns` | global | testing | always | 351 | `5bb1cfc03b24` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | auto_attached | 51 | `bcf0390b7f24` |
+| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 17 | `35863ea0c0ab` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | auto_attached | 41 | `e935f52d5df6` |
 | `70-tool-efficiency.mdc` | `l9.rule.70.tool.efficiency` | global | governance | always | 184 | `4ff48f649686` |
 | `71-ci-cd-pipeline.mdc` | `l9.rule.71.ci.cd.pipeline` | global | ci | auto_attached | 38 | `394c3835f9e7` |
