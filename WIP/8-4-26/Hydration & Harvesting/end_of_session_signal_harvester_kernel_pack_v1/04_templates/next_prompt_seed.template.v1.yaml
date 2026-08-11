@@ -1,0 +1,10 @@
+template_id: l9.next_prompt_seed.template.v1
+status: canonical_draft
+prompt_id: ''
+objective: ''
+source_context: ''
+hard_rules: []
+required_inputs: []
+required_outputs: []
+do_not_include: []
+success_criteria: []

@@ -1,0 +1,65 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://l9.dev/schemas/session-signal-packet.v1.schema.json
+title: L9 Session Signal Packet v1
+type: object
+additionalProperties: false
+required:
+- packet_id
+- session_id
+- trigger
+- canonical_decisions
+- laws_to_add
+- signals
+- artifacts_current
+- artifacts_superseded
+- constellation_updates
+- next_best_actions
+- do_not_promote
+- validation_status
+properties:
+  packet_id:
+    type: string
+  session_id:
+    type: string
+  trigger:
+    type: string
+  canonical_decisions:
+    type: array
+    items:
+      type: string
+  laws_to_add:
+    type: array
+    items:
+      type: string
+  signals:
+    type: array
+    items:
+      type: object
+  artifacts_current:
+    type: array
+    items:
+      type: string
+  artifacts_superseded:
+    type: array
+    items:
+      type: string
+  constellation_updates:
+    type: array
+    items:
+      type: string
+  next_best_actions:
+    type: array
+    items:
+      type: string
+  do_not_promote:
+    type: array
+    items:
+      type: string
+  validation_status:
+    type: string
+    enum:
+    - not_run
+    - passed
+    - failed
+    - partial
+    - unknown

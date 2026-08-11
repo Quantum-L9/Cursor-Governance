@@ -1,0 +1,15 @@
+contract_id: l9.mobile_chat.constraint_contract.v1
+status: canonical_draft
+constraints:
+- must_be_copy_paste_usable_in_mobile_chat
+- must_avoid_large_context_payloads
+- must_prefer_short_boot_prompts_plus_links_to_artifacts
+- must_use_clean_markdown_for_advisory
+- must_use_yaml_for_canonical_artifacts
+- must_include_next_action_contract
+anti_patterns:
+- desktop_only_workflow
+- requires_local_filesystem_access_by_user
+- requires_full_pack_unzip_by_user
+- requires_many_manual_steps
+- long_prompt_wall

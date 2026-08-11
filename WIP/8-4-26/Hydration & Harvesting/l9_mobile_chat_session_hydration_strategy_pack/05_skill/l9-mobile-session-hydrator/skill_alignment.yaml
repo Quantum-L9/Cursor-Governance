@@ -1,0 +1,18 @@
+alignment_id: l9.mobile_session_hydrator.skill_alignment.v1
+status: hardened
+skill_scope: mobile_session_hydration_only
+allowed:
+- compile_hydration_packet
+- emit_mobile_boot_prompt
+- capture_session_exhaust
+- emit_next_action_contract
+forbidden:
+- own_v20_kernel_stack
+- make_assurance_verdict
+- run_policy_decision
+- execute_code_generation
+- mutate_repos
+must_reference:
+- KERNEL_REFERENCE_REGISTRY.yaml
+- context_slice_hydration_law.v1.yaml
+- signal_propulsion_contract.v1.yaml

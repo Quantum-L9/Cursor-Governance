@@ -1,0 +1,21 @@
+change_id: l9.mobile_chat_session_hydration_strategy_pack.v1_1_hardening
+status: hardened_canonical_draft
+generated_at: '2026-07-09T20:57:09.536211+00:00'
+basis: v1 pack hardened against v20 kernel-stack alignment laws
+adds:
+- artifact_registry
+- kernel_reference_registry
+- traceability_map
+- l9_alignment_matrix
+- context_slice_regression_guard
+- registration_law
+- mobile_constraint_contract
+- signal_propulsion_contract
+- validation_honesty_contract
+- unknown_register
+- hardening_report
+non_changes:
+- does_not_embed_v20_kernel_stack
+- does_not_become_general_runtime
+- does_not_execute_code
+- does_not_own_assurance_or_policy_verdicts

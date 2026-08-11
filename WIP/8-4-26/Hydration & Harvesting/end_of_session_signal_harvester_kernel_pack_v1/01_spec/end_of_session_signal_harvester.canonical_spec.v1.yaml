@@ -1,0 +1,104 @@
+specId: l9.end_of_session_signal_harvester.v1
+status: canonical_draft
+artifact_type: l9_session_closeout_kernel_pack_spec
+version: 1.0.0
+identity:
+  name: L9 End-of-Session Signal Harvester
+  true_form: session_signal_extraction_and_propulsion_compiler
+  purpose: Run at the end of a long or drift-heavy session to extract reusable L9 fuel from the full chat, convert it into
+    typed canonical signals, and route those signals into future leverage loops without preserving noise.
+  not_a:
+  - chat_summary_bot
+  - transcript_compressor
+  - memory_dump
+  - artifact_rewriter
+  - universal_kernel_runner
+prime_directive: Do not summarize the session. Mine it. Extract only reusable decisions, laws, boundaries, patterns, drift
+  corrections, schema gaps, artifact lineage, mesh loops, and next-action seeds that improve future L9 execution.
+activation:
+  use_when:
+  - context_window_near_limit
+  - session_drift_detected
+  - multiple_artifacts_generated
+  - architecture_boundary_shift_occurred
+  - user_said_reset_realign_lock_in
+  - session_contains_reusable_patterns
+  - handoff_to_next_session_needed
+  do_not_use_when:
+  - single_simple_answer
+  - no_reusable_signal_present
+  - user_requested_no_memory_or_no_artifact
+  - active_task_not_finished_and_no_handoff_needed
+authority_model:
+  owns:
+  - session_signal_extraction
+  - fuel_signal_classification
+  - promotion_decision_for_session_signals
+  - artifact_lineage_capture
+  - anti_drift_guardrail_capture
+  - next_prompt_seed_generation
+  - constellation_update_candidates
+  must_not_own:
+  - canonical_kernel_stack
+  - assurance_verdicts
+  - policy_decisions
+  - live_repo_mutation
+  - source_transcript_storage
+  - automatic_promotion_to_canon_without_rules
+fuel_to_propulsion_model:
+  fuel_definition: A session-derived signal that changes future behavior, reduces ambiguity, strengthens boundaries, improves
+    schemas, or enables compounding loops.
+  propulsion_definition: A routed reusable signal that makes a future L9 loop faster, safer, cleaner, or more leverage-dense.
+  conversion_path:
+  - read_full_session
+  - extract_candidate_signals
+  - classify_signal_type
+  - score_reuse_value
+  - apply_promotion_rules
+  - emit_session_signal_packet
+  - route_promoted_signals_to_target_loops
+  - defer_or_reject_non_fuel
+extraction_lenses:
+- architecture_boundary_lens
+- leverage_loop_lens
+- drift_pattern_lens
+- artifact_lineage_lens
+- schema_gap_lens
+- task_contract_lens
+- validation_assurance_lens
+- mesh_integration_lens
+- user_correction_lens
+- next_prompt_lens
+required_end_artifact: SessionSignalPacket
+output_contract:
+  chat_mode: clean_markdown_summary_with_download_link_when_pack_generated
+  canonical_mode: yaml_signal_packet
+  must_include:
+  - decisions_to_pin
+  - laws_to_add
+  - boundaries_changed
+  - drift_patterns_detected
+  - reusable_runtime_patterns
+  - schema_gaps_discovered
+  - artifacts_created
+  - artifacts_superseded
+  - current_canonical_links
+  - constellation_updates
+  - next_best_actions
+  - do_not_promote
+anti_drift_rules:
+- Do not promote every interesting thought.
+- Do not preserve full transcript as fuel.
+- Do not confuse user formatting preference with architecture law unless it changes future execution.
+- Do not claim validation or artifact status without evidence.
+- Do not rewrite locked artifacts unless explicitly instructed.
+- Do not let signal extraction become doctrine sprawl.
+acceptance_criteria:
+- typed_signal_templates_exist
+- session_signal_packet_schema_exists
+- promotion_rules_exist
+- fuel_scoring_model_exists
+- do_not_promote_bucket_exists
+- artifact_lineage_schema_exists
+- next_prompt_seed_schema_exists
+- validation_report_exists

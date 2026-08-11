@@ -1,0 +1,20 @@
+law_id: l9.pack_artifact_registration_law.v1
+status: canonical
+applies_to: all_future_modifications_to_this_pack
+law: Every artifact added after this rule must be registered in MANIFEST.yaml, ARTIFACT_REGISTRY.yaml, and TRACEABILITY_MAP.yaml
+  at integration time.
+fail_closed_if:
+- unregistered_file_detected
+- manifest_missing_hash
+- traceability_missing
+- artifact_has_no_owner_or_purpose
+required_registration_fields:
+- path
+- artifact_id
+- artifact_type
+- owner_concern
+- purpose
+- authority_level
+- source_or_derivation
+- validation_status
+- sha256

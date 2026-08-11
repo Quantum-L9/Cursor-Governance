@@ -1,0 +1,29 @@
+contract_id: l9.mobile_chat_hydration.activation_contract.v1
+status: canonical_draft
+activation_conditions:
+- new ChatGPT mobile session
+- context window exhausted or near limit
+- handoff from prior L9 session
+- resume L9 architecture work
+- drift reset requested
+reject_conditions:
+- casual one-off question
+- non-L9 task with no continuity requirement
+- direct final answer only
+- no hydration packet or active objective available
+load_order:
+- hydration packet summary
+- current artifacts
+- active objective
+- authority boundaries
+- open unknowns
+- next action
+forbidden_loads:
+- full transcript by default
+- full kernel stack by default
+- raw source bulk by default
+mobile_response_shape:
+- short activation receipt
+- active state
+- next move
+- one blocking question only if required

@@ -1,0 +1,34 @@
+scoring_id: l9.session_signal_fuel_scoring_model.v1
+status: canonical_draft
+score_dimensions:
+  future_reuse:
+    weight: 5
+    question: Will this improve future sessions or artifacts?
+  drift_prevention:
+    weight: 5
+    question: Does this prevent a recurring failure mode?
+  boundary_clarity:
+    weight: 4
+    question: Does this clarify owner-of-truth or must-not-own rules?
+  schema_or_contract_value:
+    weight: 4
+    question: Does this enable a schema, contract, or typed artifact?
+  context_reduction:
+    weight: 3
+    question: Does this reduce future context load?
+  compounding_loop_gain:
+    weight: 5
+    question: Does this enable a recurring leverage loop?
+  confidence:
+    weight: 3
+    question: Is the signal supported by evidence?
+  noise_risk:
+    weight: -4
+    question: Could this become memory sludge or canon bloat?
+formula: future_reuse*5 + drift_prevention*5 + boundary_clarity*4 + schema_or_contract_value*4 + context_reduction*3 + compounding_loop_gain*5
+  + confidence*3 - noise_risk*4
+promotion_thresholds:
+  promote: score >= 75 and noise_risk <= 2
+  defer: score >= 50 and unresolved_unknowns_exist
+  evidence_only: score >= 40 but not behavior_changing
+  reject: score < 40 or noise_risk_high

@@ -1,0 +1,41 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://l9.dev/schemas/hydration-loop-signal.v1.schema.json
+title: L9 Hydration Loop Signal
+type: object
+additionalProperties: false
+required:
+- signal_id
+- step_horizon
+- signal_type
+- source
+- target_loop
+- expected_leverage
+- capture_method
+properties:
+  signal_id:
+    type: string
+  step_horizon:
+    type: integer
+    minimum: 1
+    maximum: 3
+  signal_type:
+    type: string
+    enum:
+    - two_way_feedback
+    - mesh_edge
+    - artifact_delta
+    - drift_correction
+    - context_budget
+    - validation_gap
+    - assurance_readiness
+    - exhaust
+  source:
+    type: string
+  target_loop:
+    type: string
+  expected_leverage:
+    type: string
+  capture_method:
+    type: string
+  promotion_rule:
+    type: string

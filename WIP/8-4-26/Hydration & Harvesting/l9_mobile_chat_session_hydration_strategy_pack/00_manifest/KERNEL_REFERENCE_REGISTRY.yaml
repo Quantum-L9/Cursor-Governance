@@ -1,0 +1,21 @@
+registry_id: l9.mobile_hydration.kernel_reference_registry.v1
+status: canonical_draft
+purpose: Reference v20 laws without embedding or duplicating the v20 kernel stack.
+baseline_reference:
+  pack: l9_recursive_design_refine_build_pack_v20_hygiene_aligned
+  path: /mnt/data/l9_recursive_design_refine_build_pack_v20_hygiene_aligned.zip
+  relationship: reference_only_not_absorbed
+active_law_refs:
+- no_full_context_by_default
+- no_full_kernel_stack_by_default
+- hydrate_by_slice_not_transcript
+- signals_and_exhaust_feed_future_loops
+- unknown_over_invention
+- validation_honesty
+- artifact_registration_at_integration
+- advisory_markdown_for_mobile_chat
+- canonical_yaml_for_artifacts
+must_not_do:
+- copy_full_v20_into_pack
+- turn_mobile_hydration_into_kernel_orchestrator
+- claim_runtime_ci_without_run

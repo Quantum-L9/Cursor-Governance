@@ -11,9 +11,14 @@ name: Peer Execution Conformance
 
 on:
   pull_request:
+    paths-ignore:
+      # Scratch/reference dumps — never gate CI on WIP-only changes
+      - "WIP/**"
   push:
     branches:
       - main
+    paths-ignore:
+      - "WIP/**"
   workflow_dispatch:
 
 env:

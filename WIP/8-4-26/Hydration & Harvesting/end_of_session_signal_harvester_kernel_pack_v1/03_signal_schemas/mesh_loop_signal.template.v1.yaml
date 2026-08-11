@@ -1,0 +1,35 @@
+schema_id: l9.mesh_loop_signal.template.v1
+status: canonical_draft
+signal_type: mesh_loop_signal
+extends: session_signal_base.v1
+purpose: Capture mesh loop signal as reusable L9 fuel when it changes future execution.
+required_signal_fields:
+- loop_name
+- nodes_connected
+- artifact_exchanged
+- compounding_effect
+- spaghetti_risk
+default_target_loops: &id001
+- mesh_integration
+- integration_priority_scoring
+- living_constellation_state
+template:
+  signal_id: ''
+  signal_type: mesh_loop_signal
+  summary: ''
+  source_evidence:
+    session_refs: []
+    evidence_level: unknown
+  reuse_value:
+    score: 0
+    reason: ''
+  promotion_decision: candidate
+  target_loop: *id001
+  confidence: unknown
+  unknowns: []
+  payload:
+    loop_name: ''
+    nodes_connected: ''
+    artifact_exchanged: ''
+    compounding_effect: ''
+    spaghetti_risk: ''

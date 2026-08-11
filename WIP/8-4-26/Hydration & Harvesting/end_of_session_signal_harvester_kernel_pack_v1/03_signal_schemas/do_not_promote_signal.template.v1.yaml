@@ -1,0 +1,35 @@
+schema_id: l9.do_not_promote_signal.template.v1
+status: canonical_draft
+signal_type: do_not_promote_signal
+extends: session_signal_base.v1
+purpose: Capture do not promote signal as reusable L9 fuel when it changes future execution.
+required_signal_fields:
+- material
+- reason_not_promoted
+- safe_storage
+- review_condition
+- risk_if_promoted
+default_target_loops: &id001
+- memory_hygiene
+- canon_quality
+- anti_sediment
+template:
+  signal_id: ''
+  signal_type: do_not_promote_signal
+  summary: ''
+  source_evidence:
+    session_refs: []
+    evidence_level: unknown
+  reuse_value:
+    score: 0
+    reason: ''
+  promotion_decision: candidate
+  target_loop: *id001
+  confidence: unknown
+  unknowns: []
+  payload:
+    material: ''
+    reason_not_promoted: ''
+    safe_storage: ''
+    review_condition: ''
+    risk_if_promoted: ''

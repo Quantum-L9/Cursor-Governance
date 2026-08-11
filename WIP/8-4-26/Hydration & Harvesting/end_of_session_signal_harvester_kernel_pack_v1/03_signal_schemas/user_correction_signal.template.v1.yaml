@@ -1,0 +1,35 @@
+schema_id: l9.user_correction_signal.template.v1
+status: canonical_draft
+signal_type: user_correction_signal
+extends: session_signal_base.v1
+purpose: Capture user correction signal as reusable L9 fuel when it changes future execution.
+required_signal_fields:
+- correction
+- scope
+- behavior_change
+- architecture_law_candidate
+- do_not_overgeneralize
+default_target_loops: &id001
+- collaboration_kernel
+- anti_drift_guardrails
+- output_contracts
+template:
+  signal_id: ''
+  signal_type: user_correction_signal
+  summary: ''
+  source_evidence:
+    session_refs: []
+    evidence_level: unknown
+  reuse_value:
+    score: 0
+    reason: ''
+  promotion_decision: candidate
+  target_loop: *id001
+  confidence: unknown
+  unknowns: []
+  payload:
+    correction: ''
+    scope: ''
+    behavior_change: ''
+    architecture_law_candidate: ''
+    do_not_overgeneralize: ''

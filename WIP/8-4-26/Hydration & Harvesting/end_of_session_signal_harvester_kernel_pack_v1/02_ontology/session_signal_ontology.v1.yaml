@@ -1,0 +1,26 @@
+ontology_id: l9.session_signal_ontology.v1
+status: canonical_draft
+terms:
+  SessionSignal: A discrete reusable extraction from a session that may improve future L9 behavior.
+  Fuel: A signal that has future execution value.
+  Propulsion: Fuel routed into a loop that improves future velocity, precision, safety, or leverage.
+  SignalType: The canonical class of reusable signal.
+  PromotionDecision: The decision to promote, defer, reject, or keep evidence-only.
+  SessionSignalPacket: The final structured packet emitted at session close.
+  DoNotPromote: A holding bucket for interesting but non-canonical material.
+  ArtifactLineage: Current, superseded, and derivative artifact state created during the session.
+  NextPromptSeed: A concise executable continuation prompt derived from session state.
+signal_types:
+- architecture_boundary_signal
+- drift_pattern_signal
+- schema_gap_signal
+- task_contract_signal
+- validation_signal
+- assurance_signal
+- mesh_loop_signal
+- artifact_lineage_signal
+- user_correction_signal
+- next_prompt_signal
+- constellation_update_signal
+- kernel_selection_signal
+- do_not_promote_signal

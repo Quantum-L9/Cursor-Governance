@@ -1,0 +1,49 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://l9.dev/schemas/mobile-session-hydration-packet.v1.schema.json
+title: L9 Mobile Session Hydration Packet
+type: object
+additionalProperties: false
+required:
+- packet_id
+- active_objective
+- anchor_bundle
+- artifact_register
+- context_slice
+- loop_forecast
+- next_action_contract
+- exhaust_capture
+- validation_status
+properties:
+  packet_id:
+    type: string
+  active_objective:
+    type: string
+  anchor_bundle:
+    type: array
+    items:
+      type: string
+  artifact_register:
+    type: array
+    items:
+      type: object
+  context_slice:
+    type: array
+    items:
+      type: string
+  loop_forecast:
+    type: array
+    items:
+      type: object
+  next_action_contract:
+    type: object
+  exhaust_capture:
+    type: array
+    items:
+      type: object
+  validation_status:
+    type: string
+    enum:
+    - not_run
+    - passed
+    - failed
+    - unknown

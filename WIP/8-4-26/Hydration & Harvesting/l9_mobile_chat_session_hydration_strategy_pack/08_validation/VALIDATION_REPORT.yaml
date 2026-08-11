@@ -1,0 +1,8 @@
+validation_id: l9.mobile_session_hydration.validation.v1
+status: passed
+stdout: 'validation_passed
+
+  '
+stderr: ''
+yaml_files_checked: 21
+runtime_ci: not_run

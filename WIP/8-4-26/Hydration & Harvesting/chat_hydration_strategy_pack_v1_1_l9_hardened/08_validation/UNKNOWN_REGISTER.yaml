@@ -1,0 +1,15 @@
+unknown_register_id: l9.mobile_hydration.unknown_register.v1
+status: active
+unknowns:
+- id: U001
+  unknown: runtime_ci_not_run
+  impact: cannot claim full runtime validation
+  action: run pack validation in target runtime if needed
+- id: U002
+  unknown: exact_future_chat_context_shape
+  impact: hydration templates must remain adaptable
+  action: use request/schema based hydration
+- id: U003
+  unknown: whether_future_agent_has_file_access
+  impact: mobile boot prompt must work with links or pasted packet
+  action: always include compact fallback prompt

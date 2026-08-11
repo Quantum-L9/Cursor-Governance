@@ -1,0 +1,30 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://l9.dev/schemas/session-exhaust-capture.v1.schema.json
+title: L9 Session Exhaust Capture
+type: object
+additionalProperties: false
+required:
+- exhaust_id
+- exhaust_type
+- reason_not_active_context
+- future_use
+- discard_rule
+properties:
+  exhaust_id:
+    type: string
+  exhaust_type:
+    type: string
+    enum:
+    - superseded_artifact
+    - repeated_discussion
+    - discarded_branch
+    - stale_context
+    - failed_assumption
+    - unvalidated_claim
+    - non_promoted_signal
+  reason_not_active_context:
+    type: string
+  future_use:
+    type: string
+  discard_rule:
+    type: string

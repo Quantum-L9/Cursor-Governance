@@ -1,0 +1,50 @@
+validation_id: l9.mobile_chat_hydration.polish_delivery.validation.v1
+status: passed
+commands:
+- cmd: /opt/pyvenv/bin/python 08_validation/validate_pack.py
+  returncode: 0
+  stdout: 'validation_passed
+
+    '
+  stderr: ''
+- cmd: /opt/pyvenv/bin/python 08_validation/validate_l9_hardening.py
+  returncode: 0
+  stdout: 'l9_hardening_validation_passed
+
+    '
+  stderr: ''
+- cmd: /opt/pyvenv/bin/python run_all.py
+  returncode: 0
+  stdout: 'required_file_check_passed
+
+    disallowed_marker_scan_passed
+
+    [1/5] base pack validation: /opt/pyvenv/bin/python 08_validation/validate_pack.py
+
+    validation_passed
+
+    [2/5] L9 hardening validation: /opt/pyvenv/bin/python 08_validation/validate_l9_hardening.py
+
+    l9_hardening_validation_passed
+
+    [3/5] recursive hardening validation: /opt/pyvenv/bin/python -c import yaml, pathlib; [yaml.safe_load(p.read_text()) for
+    p in pathlib.Path(''.'').rglob(''*.yaml'')]; print(''yaml_parse_passed'')
+
+    yaml_parse_passed
+
+    [4/5] manifest presence: /opt/pyvenv/bin/python -c from pathlib import Path; assert Path(''00_manifest/MANIFEST.yaml'').exists();
+    print(''manifest_present'')
+
+    manifest_present
+
+    [5/5] quick artifact count: /opt/pyvenv/bin/python -c from pathlib import Path; print(''file_count='' + str(sum(1 for
+    p in Path(''.'').rglob(''*'') if p.is_file())))
+
+    file_count=66
+
+    polish_validation_passed
+
+    '
+  stderr: ''
+runtime_ci: not_run
+live_mobile_execution: not_run

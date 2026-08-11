@@ -16,12 +16,15 @@ name: "CodeQL (security + code quality)"
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "WIP/**"
   pull_request:
     branches: [main]
-    paths-ignore:            # skip docs-only PRs (save CI; see rollout handoff)
+    paths-ignore:            # skip docs-only / WIP-only PRs (save CI; see rollout handoff)
       - "**/*.md"
       - "docs/**"
       - "**/*.mdc"
+      - "WIP/**"
   schedule:
     - cron: "24 3 * * 1"     # weekly, Monday 03:24 UTC
   workflow_dispatch: {}

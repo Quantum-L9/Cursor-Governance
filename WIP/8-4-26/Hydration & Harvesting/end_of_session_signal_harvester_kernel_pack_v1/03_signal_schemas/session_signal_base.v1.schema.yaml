@@ -1,0 +1,79 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://l9.dev/schemas/session-signal-base.v1.schema.json
+title: L9 Session Signal Base v1
+type: object
+additionalProperties: false
+required:
+- signal_id
+- signal_type
+- summary
+- source_evidence
+- reuse_value
+- promotion_decision
+- target_loop
+- confidence
+properties:
+  signal_id:
+    type: string
+    minLength: 1
+  signal_type:
+    type: string
+  summary:
+    type: string
+    minLength: 1
+  source_evidence:
+    type: object
+    additionalProperties: false
+    required:
+    - session_refs
+    - evidence_level
+    properties:
+      session_refs:
+        type: array
+        items:
+          type: string
+      evidence_level:
+        type: string
+        enum:
+        - explicit_user_instruction
+        - artifact_created
+        - assistant_observation
+        - inferred_pattern
+        - unknown
+  reuse_value:
+    type: object
+    additionalProperties: false
+    required:
+    - score
+    - reason
+    properties:
+      score:
+        type: integer
+        minimum: 0
+        maximum: 100
+      reason:
+        type: string
+  promotion_decision:
+    type: string
+    enum:
+    - promote
+    - defer
+    - reject
+    - evidence_only
+    - candidate
+  target_loop:
+    type: array
+    items:
+      type: string
+  confidence:
+    type: string
+    enum:
+    - confirmed
+    - high
+    - medium
+    - low
+    - unknown
+  unknowns:
+    type: array
+    items:
+      type: string
