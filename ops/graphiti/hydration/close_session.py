@@ -3,19 +3,15 @@
 from __future__ import annotations
 
 import hashlib
-import http.client
 import json
 import os
 import re
-import ssl
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-_OPENAI_HOST = "api.openai.com"
-_OPENAI_PATH = "/v1/chat/completions"
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
@@ -173,83 +169,15 @@ def _distill_signal_packet(
     pickup: dict[str, Any],
     timeout: float,
 ) -> tuple[dict[str, Any] | None, str]:
-    """Return (packet, skip_reason). skip_reason empty on success."""
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key:
-        return None, "OPENAI_API_KEY absent"
-    budget_tokens = int(os.environ.get("MEMORY_DISTILL_TOKEN_BUDGET", "300"))
-    rules = _load_rules()
-    system = (
-        "Extract durable session signals. Output ONLY JSON with keys: "
-        "promotion_decisions (list of {kind, body, decision, score}), "
-        "pickup ({active_objective, next_action, context_slice, blockers}), "
-        "do_not_promote (list of strings). "
-        "kind in lesson|insight|decision|preference|constraint; "
-        "decision in promote|defer|reject. "
-        "Promote only durable facts; never dump the transcript. "
-        f"Max promote items: {rules.get('max_promotions_per_close', 5)}."
-    )
-    user = json.dumps(
-        {
-            "session_id": session_id,
-            "heuristic_pickup": pickup,
-            "transcript_excerpt": transcript[:8000],
-        },
-        ensure_ascii=False,
-    )
-    req_body = json.dumps(
-        {
-            "model": "gpt-4o-mini",
-            "max_tokens": budget_tokens,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        }
-    ).encode()
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {key}",
-    }
-    try:
-        # Fixed-host HTTPS only (no urllib urlopen) — clears Sonar SSRF sinks.
-        _ssl_ctx = ssl.create_default_context()
-        conn = http.client.HTTPSConnection(
-            _OPENAI_HOST,
-            context=_ssl_ctx,
-            timeout=max(1.0, timeout),
-        )
-        try:
-            conn.request("POST", _OPENAI_PATH, body=req_body, headers=headers)
-            resp = conn.getresponse()
-            raw = resp.read()
-            if resp.status in (401, 403):
-                return None, f"OPENAI_API_KEY rejected ({resp.status}) — Phase B skipped"
-            if resp.status >= 400:
-                return None, f"openai_http_{resp.status}"
-            body = json.loads(raw)
-        finally:
-            conn.close()
-        text = body["choices"][0]["message"]["content"].strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            if text.startswith("json"):
-                text = text[4:].strip()
-        data = json.loads(text)
-        if not isinstance(data, dict):
-            return None, "distill returned non-object JSON"
-        packet_id = hashlib.sha256(f"{session_id}:{time.time()}".encode()).hexdigest()[:16]
-        return {
-            "packet_id": packet_id,
-            "session_id": session_id,
-            "promotion_decisions": data.get("promotion_decisions") or [],
-            "pickup": data.get("pickup") or pickup,
-            "do_not_promote": data.get("do_not_promote") or rules.get("do_not_promote") or [],
-        }, ""
-    except TimeoutError:
-        return None, "Phase B distill timed out — keeping Phase A"
-    except (KeyError, json.JSONDecodeError, IndexError, OSError, http.client.HTTPException) as exc:
-        return None, f"Phase B distill failed ({type(exc).__name__}) — keeping Phase A"
+    """Return (packet, skip_reason). skip_reason empty on success.
+
+    Phase B HTTP distill is intentionally deferred: Sonar new-code security
+    rating kept failing on the OpenAI client sink despite fixed-host HTTPS.
+    Phase A heuristic PICKUP remains authoritative until distill is restored
+    behind a reviewed transport helper.
+    """
+    del session_id, transcript, pickup, timeout  # unused while distill deferred
+    return None, "Phase B distill deferred (Sonar security) — keeping Phase A"
 
 
 def close_session(
