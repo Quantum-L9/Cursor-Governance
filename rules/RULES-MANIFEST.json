@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-08-11T21:07:37Z",
+  "generated_utc": "2026-08-11T21:25:50Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:cbc3e43d88156271ef5ec1fc685ec50d84f6fafaf83aec4fb51f5a92651ba664",
+  "source_tree_digest": "sha256:1acbc3cf4480ebbef787860106bc9de85c268471067be155b0e6cebcf9f4186b",
   "summary": {
     "total_mdc_files": 63,
     "always_apply_true": 42,
