@@ -148,7 +148,7 @@ def main() -> int:
         )
         case(
             "T3b absolute --tokens rejected",
-            r.returncode != 0 and "relative" in r.stderr,
+            r.returncode != 0 and ("relative" in r.stderr or "basename" in r.stderr),
             r.stderr.strip(),
         )
 
@@ -170,7 +170,8 @@ def main() -> int:
         )
         case(
             "T3c --out path escape rejected",
-            r.returncode != 0 and (".." in r.stderr or "escape" in r.stderr),
+            r.returncode != 0
+            and (".." in r.stderr or "escape" in r.stderr or "basename" in r.stderr),
             r.stderr.strip(),
         )
 

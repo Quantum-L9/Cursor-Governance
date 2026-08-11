@@ -19,8 +19,9 @@ Writes:
 
 CLI contract (Sonar LLM/CLI path-escape):
   * ``--root`` and ``--out-dir`` are the only trusted directory roots.
-  * ``--registry``, ``--tokens``, and ``--out`` MUST be relative paths with no
-    ``..`` segments; they are joined under the matching root via
+  * ``--registry``, ``--tokens``, and ``--out`` MUST be basenames only
+    (single path segment — no directories, no ``..``, no absolute paths, no
+    ``~``, no ``/`` or ``\\``); they are joined under the matching root via
     ``os.path.join`` + ``realpath`` + ``commonpath``.
 
 Fails loudly on: path escape, duplicate identities, unknown roles,
@@ -49,28 +50,35 @@ def fail(msg: str) -> None:
     sys.exit(1)
 
 
-def require_relative(rel: str, *, label: str) -> str:
-    """Reject absolute paths and ``..`` segments in CLI-supplied relative names."""
-    if not rel or rel.strip() != rel:
-        fail(f"{label} must be a non-empty relative path without surrounding whitespace")
-    path = Path(rel)
+def require_basename(name: str, *, label: str) -> str:
+    """Reject anything that is not a single path segment (basename only)."""
+    if not name or name.strip() != name:
+        fail(f"{label} must be a non-empty basename without surrounding whitespace")
+    if name in (".", ".."):
+        fail(f"{label} must be a basename (single path segment; not '.' or '..'): {name}")
+    if "/" in name or "\\" in name or os.sep in name or (os.altsep and os.altsep in name):
+        fail(
+            f"{label} must be a basename only (no directories, absolute paths, "
+            f"relative multi-segment paths, ~, or '..'): {name}"
+        )
+    path = Path(name)
     if path.is_absolute() or path.expanduser() != path:
-        fail(f"{label} must be relative (no absolute path or ~): {rel}")
-    if ".." in path.parts:
-        fail(f"{label} must not contain '..' path segments: {rel}")
-    return rel
+        fail(f"{label} must be a basename (no absolute path or ~): {name}")
+    if path.name != name or len(path.parts) != 1:
+        fail(f"{label} must be a basename (single path segment): {name}")
+    return name
 
 
 def under_root(root: Path, rel: str, *, label: str) -> Path:
-    """Join ``rel`` under trusted ``root``; refuse escapes (Sonar-recognized pattern)."""
-    rel = require_relative(rel, label=label)
+    """Join basename under trusted ``root``; refuse escapes (Sonar-recognized pattern)."""
+    name = require_basename(rel, label=label)
     base = os.path.realpath(str(root))
     if not os.path.isdir(base):
         fail(f"trusted root is not a directory: {root}")
-    # Construct from base + relative only — never trust a free-form absolute CLI path.
-    target = os.path.realpath(os.path.join(base, rel))
+    # Construct from base + basename only — never trust a free-form relative escape.
+    target = os.path.realpath(os.path.join(base, name))
     if os.path.commonpath([base, target]) != base:
-        fail(f"{label} escapes trusted root {base}: {rel}")
+        fail(f"{label} escapes trusted root {base}: {name}")
     return Path(target)
 
 
@@ -232,17 +240,17 @@ def main() -> int:
     ap.add_argument(
         "--registry",
         default="agent_registry.yaml",
-        help="Registry path relative to --root (default: agent_registry.yaml)",
+        help="Registry basename under --root (default: agent_registry.yaml)",
     )
     ap.add_argument(
         "--tokens",
         default="agent_tokens.local.json",
-        help="Token map path relative to --out-dir (default: agent_tokens.local.json)",
+        help="Token map basename under --out-dir (default: agent_tokens.local.json)",
     )
     ap.add_argument(
         "--out",
         default="auth_tokens.json",
-        help="Output path relative to --out-dir (default: auth_tokens.json)",
+        help="Output basename under --out-dir (default: auth_tokens.json)",
     )
     ap.add_argument("--tenant", default="l9")
     ap.add_argument("--organization", default="quantum-l9")
@@ -256,7 +264,7 @@ def main() -> int:
     root = Path(os.path.realpath(str(args.root.expanduser())))
     out_dir = Path(os.path.realpath(str((args.out_dir or args.root).expanduser())))
 
-    # Validate relative path contracts up front (before any file I/O).
+    # Validate basename-only path contracts up front (before any file I/O).
     registry_path = under_root(root, args.registry, label="--registry")
     tokens_path = under_root(out_dir, args.tokens, label="--tokens")
     _ = under_root(out_dir, args.out, label="--out")  # reject .. / absolute early

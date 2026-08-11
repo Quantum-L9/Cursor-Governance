@@ -5,20 +5,20 @@
 **Issue:** https://github.com/Quantum-L9/Cursor-Governance/issues/26  
 **Rule message:** "LLMs running this code with faulty CLI arguments can escape file system restrictions. Refactor this code to validate the constructed path before accessing the file system."
 
-## Why this is a false positive (after API change)
+## Resolution (basename-only API — issue #26)
 
-Cycle 4 changed the CLI so tainted free-form paths are **rejected**:
+Issue #26 / Sonar S6396 is addressed by narrowing the CLI contract further:
 
-1. `--root` / `--out-dir` are the only trusted directory bases.
-2. `--registry`, `--tokens`, `--out` MUST be relative (no absolute, no `~`, no `..`).
-3. Paths are constructed only as `os.path.join(base, rel)` then checked with
+1. `--root` / `--out-dir` remain the only trusted directory bases.
+2. `--registry`, `--tokens`, `--out` MUST be **basenames only** (a single path
+   segment — no directories, no `..`, no absolute paths, no `~`, no `/` or `\`).
+3. Paths are constructed only as `os.path.join(base, basename)` then checked with
    `os.path.realpath` + `os.path.commonpath([base, target]) == base` before
    every `open()` read/write.
 
-This is the Sonar-documented sanitizer pattern for path traversal. Residual
-flags after that pattern (pre-cycle-4 absolute CLI paths, and post-cycle-4
-join+commonpath sinks) indicate the analyzer does not clear taint through
-this helper for Python `Path`/`open` sinks in this rule family.
+Free-form relative escapes under trusted roots are no longer accepted, so the
+taint source Sonar flagged cannot reach a traversable path. See
+`require_basename` / `under_root` in `render_principals.py` and tests T3b/T3c.
 
 ## Reproduction
 
@@ -32,7 +32,7 @@ python3 environment/agents/tools/render_principals.py \
 ```
 
 Absolute `--tokens /etc/passwd` or `--out ../escape.json` exit non-zero with
-an explicit relative-path / escape error (covered by `test_validators.py`
+an explicit basename / escape error (covered by `test_validators.py`
 T3b / T3c).
 
 ## Ask
