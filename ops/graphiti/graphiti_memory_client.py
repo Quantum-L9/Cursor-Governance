@@ -44,9 +44,7 @@ def _require_http_url(url: str) -> str:
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
-        raise ValueError(
-            f"refusing non-http(s) Graphiti URL scheme {parsed.scheme!r}: {url[:120]}"
-        )
+        raise ValueError(f"refusing non-http(s) Graphiti URL scheme {parsed.scheme!r}: {url[:120]}")
     if not parsed.netloc:
         raise ValueError(f"refusing Graphiti URL without host: {url[:120]}")
     return url
@@ -351,9 +349,11 @@ def _resolve_cli_identity(args: argparse.Namespace) -> dict[str, str]:
     )
 
     explicit = getattr(args, "agent_id", None)
-    surface = "claude-code" if (explicit or os.environ.get("L9_MEMORY_AGENT_ID", "")).startswith(
-        "claude"
-    ) else "cursor"
+    surface = (
+        "claude-code"
+        if (explicit or os.environ.get("L9_MEMORY_AGENT_ID", "")).startswith("claude")
+        else "cursor"
+    )
     try:
         identity = resolve_write_identity(explicit_agent_id=explicit, surface=surface)
     except IdentityError as exc:

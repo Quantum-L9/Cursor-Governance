@@ -30,6 +30,7 @@ def _read_groups(group_id: str) -> list[str]:
     except Exception:  # noqa: BLE001
         return [group_id]
 
+
 _RULES_PATH = Path(__file__).resolve().parent / "promotion_rules.yaml"
 
 
@@ -183,9 +184,7 @@ def compile_session_packet(
 
     resolved = resolve_group_id(project)
     group_id = str(resolved.get("group_id") or "")
-    packet_id = hashlib.sha256(
-        f"{conversation_id}:{group_id}:{project}".encode()
-    ).hexdigest()[:16]
+    packet_id = hashlib.sha256(f"{conversation_id}:{group_id}:{project}".encode()).hexdigest()[:16]
 
     degraded = False
     degrade_reason = ""
@@ -206,11 +205,15 @@ def compile_session_packet(
             degraded = True
             degrade_reason = f"search failed: {exc}"[:500]
 
-    pickup = _extract_pickup(facts) if facts else {
-        "active_objective": "No PICKUP found — start fresh or search when Graphiti is online",
-        "next_action": "Proceed from user request; hydrate when memory is available",
-        "context_slice": "",
-    }
+    pickup = (
+        _extract_pickup(facts)
+        if facts
+        else {
+            "active_objective": "No PICKUP found — start fresh or search when Graphiti is online",
+            "next_action": "Proceed from user request; hydrate when memory is available",
+            "context_slice": "",
+        }
+    )
     if not facts and not degraded:
         degraded = True
         degrade_reason = degrade_reason or "hydration degraded: empty PICKUP search"

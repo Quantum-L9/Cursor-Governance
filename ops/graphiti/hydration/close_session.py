@@ -433,8 +433,7 @@ def close_session(
                             "type": "PICKUP",
                             "active_objective": rich["active_objective"],
                             "next_action": rich["next_action"],
-                            "context_slice": rich.get("context_slice")
-                            or pickup["context_slice"],
+                            "context_slice": rich.get("context_slice") or pickup["context_slice"],
                             "session_id": session_id,
                             "packet_id": signal.get("packet_id"),
                             "agent_id": identity["agent_id"],
