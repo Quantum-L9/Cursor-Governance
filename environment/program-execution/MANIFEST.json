@@ -466,6 +466,18 @@
       "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
     },
     {
+      "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619"
+    },
+    {
+      "path": "campaigns/bounded-replanning-v1/README.md",
+      "sha256": "218c0f0d2320ab043f3e5c448f4e754314ecd0d9d53331002cf1b443ecdb4558"
+    },
+    {
+      "path": "campaigns/bounded-replanning-v1/source-integrity-receipt.json",
+      "sha256": "393a7e928c3279368fb9eb5cace717afe7182b0bac73d5eb0d22b218825615f8"
+    },
+    {
       "path": "campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml",
       "sha256": "3313927710d864d74117dffd9387334b5feff2700125d2b2fed1c149d28ae215"
     },
