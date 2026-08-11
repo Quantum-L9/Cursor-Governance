@@ -5,13 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import ssl
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+_OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _GRAPHITI_DIR.parent.parent
@@ -205,8 +209,11 @@ def _distill_signal_packet(
             ],
         }
     ).encode()
+    endpoint = _OPENAI_CHAT_COMPLETIONS_URL
+    if urllib.parse.urlparse(endpoint).scheme != "https":
+        return None, "refusing non-https distill endpoint"
     req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
+        endpoint,
         data=req_body,
         headers={
             "Content-Type": "application/json",
@@ -214,7 +221,8 @@ def _distill_signal_packet(
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=max(1.0, timeout)) as resp:  # noqa: S310
+        _ssl_ctx = ssl.create_default_context()
+        with urllib.request.urlopen(req, timeout=max(1.0, timeout), context=_ssl_ctx) as resp:
             body = json.loads(resp.read())
         text = body["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):

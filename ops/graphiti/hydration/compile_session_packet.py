@@ -158,6 +158,7 @@ def _extract_pickup(facts: list[dict[str, Any]]) -> dict[str, str]:
                     objective = o2 or objective
                     next_action = n2 or next_action
         except json.JSONDecodeError:
+            # pickup_text may be prose/mixed; ignore malformed JSON and keep pipe/defaults.
             pass
     return {
         "active_objective": objective or "Resume prior work from Graphiti PICKUP",
