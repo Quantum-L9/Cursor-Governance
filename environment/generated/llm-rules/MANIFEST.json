@@ -211,6 +211,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "62-github-openclaw-authority.md",
+      "output_sha256": "5a708c7ad3a03fd4a1d072850dd2b033a0d286d3584cf9df07df6fad5220c17f",
+      "source": "rules/62-github-openclaw-authority.mdc",
+      "source_sha256": "35863ea0c0ab14108427b89f6b836e418ad57a7fe5a0d07a9258bee416458801",
+      "stem": "62-github-openclaw-authority"
+    },
+    {
+      "alias": null,
       "class": "paths",
       "output": "65-observability-performance.md",
       "output_sha256": "3e3ac769dd2b4fa4acc9040ec5d187dbf81ef4fbdc0a143b5769ae89ecf1f37e",
@@ -574,9 +583,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 58,
+    "projected": 59,
     "skipped_agent_requested": 4,
-    "source_mdc": 63
+    "source_mdc": 64
   },
   "tree_sha256": "cf40196c7eac1c7df8809ce6dee50667c3ccd5ec14cc1f98c5c5e652cd63ba3d"
 }

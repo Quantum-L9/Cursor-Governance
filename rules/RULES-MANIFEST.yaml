@@ -4,12 +4,12 @@ generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
 source_tree_digest: sha256:cbc3e43d88156271ef5ec1fc685ec50d84f6fafaf83aec4fb51f5a92651ba664
 summary:
-  total_mdc_files: 62
-  always_apply_true: 41
+  total_mdc_files: 63
+  always_apply_true: 42
   always_apply_false: 21
   no_boolean_always_apply: 0
   explicit_rule_ids: 8
-  derived_rule_ids: 54
+  derived_rule_ids: 55
   deprecated_rules: 1
 rules:
 - file: 00-global.mdc
@@ -561,6 +561,28 @@ rules:
   has_yaml_frontmatter: true
   line_count: 51
   content_digest: sha256:bcf0390b7f242af124fc44c9e2cfa5ce8d05621fb5c70cd3318b564a3a27f81d
+  authority: compatibility
+  context_cost: minimal
+  deprecated: false
+  replacement: null
+  removal_plan: null
+  extends: null
+  classification_source: mixed_or_derived
+- file: 62-github-openclaw-authority.mdc
+  id: l9.rule.62.github.openclaw.authority
+  id_source: derived
+  version: null
+  description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask humans to operate github.com UI.
+  scope: global
+  domain: git
+  activation: always
+  activation_source: derived
+  always_apply: true
+  globs: null
+  first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
+  has_yaml_frontmatter: true
+  line_count: 17
+  content_digest: sha256:35863ea0c0ab14108427b89f6b836e418ad57a7fe5a0d07a9258bee416458801
   authority: compatibility
   context_cost: minimal
   deprecated: false

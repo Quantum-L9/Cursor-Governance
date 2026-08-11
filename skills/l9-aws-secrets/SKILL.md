@@ -38,6 +38,14 @@ human. Asking first while the secret is already in AWS is a protocol failure.
 |------|------------|
 | `NODE_AUTH_TOKEN` / GitHub Packages `@quantum-l9/*` | `openclaw-igorbot/github#token` |
 | GitHub API PAT for `gh` automation | `openclaw-igorbot/github#token` |
+| Infisical Cursor UA (`INFISICAL_CLIENT_ID` / `_SECRET`) | `openclaw-igorbot/infisical-cursor#client_id` / `#client_secret` |
+| Infisical Website-Bot bootstrap (`INFISICAL_PROJECT_ID`) | `openclaw-igorbot/infisical-website-bot#project_id` (+ `#client_id` / `#client_secret`) |
+| PostHog personal / project keys | `openclaw-igorbot/posthog#personal_api_key` / `#project_api_key` |
+
+**CANONICAL_LAW.md §14:** That GitHub ref is the **sole** agent PAT. Do not
+create a second token in AWS. Export it as `GH_TOKEN` / `GITHUB_TOKEN` and
+complete operable GitHub work via API/`gh`. **Do not** ask the human to click
+`github.com` UI when this PAT can finish the job.
 
 ## Interpreter
 
