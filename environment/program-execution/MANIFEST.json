@@ -110,6 +110,26 @@
       "sha256": "c1548b269ef265ae11f8f21157ad48cba6f3535b4f9def455161aa6ffbe20d33"
     },
     {
+      "path": "adapters/claude-code-bounded-autonomy/ADAPTER.yaml",
+      "sha256": "3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/README.md",
+      "sha256": "2dc4a9d1ef502bb8dfc4ece3b794dba9c67c46eb2f20222c77572e0301efb764"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/provider.py",
+      "sha256": "122a6e46484ef7e6cb7a79db30acf8802477bef214f3d0a0acbd5af85cf51000"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/receipt_mapper.py",
+      "sha256": "a03ba3b3d51f9184ccbb515df9f10c1f84b634aef0bce426b900c6f703619202"
+    },
+    {
+      "path": "adapters/claude-code-bounded-autonomy/tests/test_provider.py",
+      "sha256": "64726b34e3c51c59d8abf75d27bda03c73accaf1436a1f13018a79e0dee35029"
+    },
+    {
       "path": "adapters/claude-code/ADAPTER.yaml",
       "sha256": "1eac2d5380b53f28379a722421143ae21c7066c91aeeb9c15239bac73a75f4a9"
     },
@@ -140,26 +160,6 @@
     {
       "path": "adapters/claude-code/tests/test_driver.py",
       "sha256": "7f960f429531ca6e92792e5c82d4a80f37cd59eed5f6e859bb6b0985b32c487d"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/ADAPTER.yaml",
-      "sha256": "3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/README.md",
-      "sha256": "2dc4a9d1ef502bb8dfc4ece3b794dba9c67c46eb2f20222c77572e0301efb764"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/provider.py",
-      "sha256": "122a6e46484ef7e6cb7a79db30acf8802477bef214f3d0a0acbd5af85cf51000"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/receipt_mapper.py",
-      "sha256": "a03ba3b3d51f9184ccbb515df9f10c1f84b634aef0bce426b900c6f703619202"
-    },
-    {
-      "path": "adapters/claude-code-bounded-autonomy/tests/test_provider.py",
-      "sha256": "64726b34e3c51c59d8abf75d27bda03c73accaf1436a1f13018a79e0dee35029"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
@@ -464,6 +464,22 @@
     {
       "path": "adapters/manus/tests/test_driver.py",
       "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml",
+      "sha256": "042931a858409d9fe3c16c2aeaa09e328061576615d8f39bf2a93750cdca8692"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/PROGRAM_SOURCE.md",
+      "sha256": "aa1bc91c4c784aacd7be79e77149f776f95ef218439ec3f5e54dcab25314f78d"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/README.md",
+      "sha256": "1b065350a9896baa86d09fe0b9d689c97d1aef4326818c8f584087e60b6b108d"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/source-integrity-receipt.json",
+      "sha256": "75483a4eba8fa290c70331c6a932f66b8100bd21d7fb44dec28b1f4bea8f20d3"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/CAMPAIGN_SOURCE.yaml",
