@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.0.0"
+version: "3.1.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -9,7 +9,9 @@ auto_chain: null
 
 ## WHAT IT DOES
 
-Runs the **same** sessionStart bootstrap Cursor already uses on hook fire — wiring, Graphiti, memory-bank T0 excerpts, IDE/plugin reconcile — without the user locating any script.
+Runs the **same** sessionStart bootstrap Cursor already uses on hook fire —
+wiring, Graphiti health/inject, IDE/plugin reconcile — without the user locating
+any script. Local `memory-bank/` T0 is **retired**; resume SSOT is Graphiti.
 
 Canonical implementation (single source of truth):
 
@@ -17,7 +19,7 @@ Canonical implementation (single source of truth):
 - Installed hook copy: `$HOME/.cursor/hooks/session-start-bootstrap.sh`
 - Human/agent entry: `make -C "$HOME/.cursor-governance" start WS="<repo>"`
 
-Do **not** re-implement wiring / Graphiti / memory-bank steps in this command. The bootstrap owns them.
+Do **not** re-implement wiring / Graphiti steps in this command. The bootstrap owns them.
 
 ---
 
@@ -28,14 +30,6 @@ Agent runs this from the **open consumer workspace** (never ask the user for the
 ```bash
 REPO="${CURSOR_PROJECT_DIR:-$(pwd)}"
 GC="$HOME/.cursor-governance"
-
-# SSOT resolve (same order as bootstrap) — only if clone root missing
-if [ ! -f "$GC/CANONICAL_LAW.md" ]; then
-  for root in "$HOME/Dropbox/cursor governance" "$HOME/Dropbox/Cursor Governance"; do
-    if [ -f "$root/CANONICAL_LAW.md" ]; then GC="$root"; break; fi
-    if [ -f "$root/GlobalCommands/CANONICAL_LAW.md" ]; then GC="$root/GlobalCommands"; break; fi
-  done
-fi
 
 # Prefer make start (renders hook JSON for humans). Fallback = hook binary + renderer.
 if [ -f "$GC/Makefile" ]; then
@@ -50,7 +44,7 @@ fi
 | Flag / env | Meaning |
 |------------|---------|
 | `L9_BOOTSTRAP_SYNC=1` | Foreground reconcilers (set by `make start`) |
-| `CURSOR_PROJECT_DIR` | Workspace the bootstrap wires + reads `memory-bank/` from |
+| `CURSOR_PROJECT_DIR` | Workspace the bootstrap wires + Graphiti-resolves |
 
 ### After bootstrap output
 
@@ -63,7 +57,7 @@ make -C "$GC" start WS="$REPO"
 ```
 
 3. Present the **STATE_SYNC** block below from bootstrap context (do not invent checks the bootstrap did not run).
-4. If `memory-bank/activeContext.md` excerpt is thin or absent, optionally `head` the workspace `memory-bank/*.md` files for the user — still do not replace the bootstrap.
+4. Resume from Graphiti PICKUP / hydration `next=` — do **not** read `memory-bank/`.
 
 ---
 
@@ -73,7 +67,7 @@ make -C "$GC" start WS="$REPO"
 /start-session --quick
 ```
 
-Same bootstrap, but agent may skip re-reading full `memory-bank/` bodies after the hook excerpts (still run `make start`).
+Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still run `make start`).
 
 ---
 
@@ -88,7 +82,7 @@ Same bootstrap, but agent may skip re-reading full `memory-bank/` bodies after t
 | Bootstrap script | ✅ ran via make start / session_start_bootstrap.sh |
 | Governance wiring | ✅ PASS / ❌ FAIL (from context) |
 | Graphiti | ✅ healthy / ⚠️ degraded / ❌ down (from context) |
-| memory-bank T0 | ✅ excerpts / ⚠️ absent (from context) |
+| Resume SSOT | Graphiti inject / PICKUP (memory-bank retired) |
 | Slash commands | ✅ `.cursor-commands/commands` via l9-governance plugin |
 
 ### Context (from bootstrap)
@@ -106,8 +100,6 @@ Same bootstrap, but agent may skip re-reading full `memory-bank/` bodies after t
 
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
-- Legacy C1 / Redis steps are **not** part of this command; use Graphiti + memory-bank (T0) as the resume stack.
+- Resume stack is Graphiti only (`ops/graphiti/MEMORY_BANK_POLICY.md`).
 
 --- End Command ---
-
-<!-- pr-remediation: ci retrigger -->

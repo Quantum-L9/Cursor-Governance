@@ -11,7 +11,8 @@ Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, rules `03-graphiti-memory` + `87
 | `ops/graphiti/graphiti_memory_client.py` | Cursor-primary front door |
 | `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close |
 | Claude `environment/claude-code/memory/` | Thin adapter only (no second brain) |
-| `memory-bank/` | Deprecated / archival — never resume SSOT |
+| `memory-bank/` | **RETIRED** — do not scaffold/read/write; delete residual trees |
+| `.l9/pr/` | `make pr` remediation handoff JSON (not memory) |
 | PE Graphiti projection | Observability only — never write authority |
 
 ## Normal session lifecycle (no `/end-session` required)

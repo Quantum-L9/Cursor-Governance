@@ -215,7 +215,6 @@ install_session_end_governance_hook() {
   local before_mcp_link="$HOME/.cursor/hooks/before-mcp-code-graph-gate.sh"
   local workspace_open_src="$GLOBAL_COMMANDS/ops/hooks/workspace_open_plugin_loader.py"
   local workspace_open_link="$HOME/.cursor/hooks/workspace-open-plugin-loader.py"
-  local graphiti_template="$GLOBAL_COMMANDS/ops/graphiti/memory-bank-template"
   local hooks_json="$HOME/.cursor/hooks.json"
   local template="$GLOBAL_COMMANDS/ops/hooks/hooks.json.template"
 
@@ -268,14 +267,10 @@ install_session_end_governance_hook() {
     fi
   done
 
-  if [ -d "$graphiti_template" ]; then
-    mkdir -p "$WORKSPACE_DIR/memory-bank"
-    for f in activeContext.md tasks.md progress.md tech-debt.md; do
-      if [ ! -f "$WORKSPACE_DIR/memory-bank/$f" ] && [ -f "$graphiti_template/$f" ]; then
-        cp "$graphiti_template/$f" "$WORKSPACE_DIR/memory-bank/$f"
-        echo "SCAFFOLD: memory-bank/$f"
-      fi
-    done
+  # memory-bank scaffold retired 2026-08-11 — resume SSOT is Graphiti only.
+  # Template dir may remain as RETIRED.md archival; do not mkdir or copy.
+  if [ -d "$WORKSPACE_DIR/memory-bank" ]; then
+    echo "WARN: memory-bank/ present in workspace (deprecated archival); not scaffolded"
   fi
 
   # Graphiti autoseed — opt-in via GRAPHITI_AUTOSEED=1 in ~/.cursor/graphiti.env

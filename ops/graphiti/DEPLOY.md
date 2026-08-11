@@ -68,7 +68,7 @@ Edit that file and `docker compose up -d --force-recreate graphiti-mcp` to apply
 In `~/.cursor/graphiti.env`:
 
 ```bash
-GRAPHITI_AUTOSEED=1   # default off — runs bootstrap after memory-bank scaffold in setup_workspace_symlinks.sh
+GRAPHITI_AUTOSEED=1   # default off — runs bootstrap via setup_workspace_symlinks.sh (memory-bank scaffold retired)
 ```
 
 Manual check: `python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py autoseed-check` (exit 2 = not seeded).

@@ -1,12 +1,12 @@
 # Protocol D — Campaign handoff (Graphiti-primary)
 
-Harvests PR #43 / `l9-end-session`: Graphiti (T1) is primary; memory-bank (T0) is fallback only.
+Harvests PR #43 / `l9-end-session`: Graphiti is the sole resume SSOT. `memory-bank/` is retired.
 
 ## When closing a campaign or session
 
 1. Health-check Graphiti.
-2. If healthy: write **one** PICKUP episode (and atomic lessons) to Graphiti. Do **not** also write the same summary to memory-bank.
-3. If Graphiti fails: append PICKUP to `memory-bank/activeContext.md` (and related T0 files) instead — never dual-write for the same close.
+2. If healthy: write **one** PICKUP episode (and atomic lessons) to Graphiti.
+3. If Graphiti fails: warn and continue handoff/backup — do **not** write `memory-bank/`.
 
 ## PICKUP fields for autonomy campaigns
 

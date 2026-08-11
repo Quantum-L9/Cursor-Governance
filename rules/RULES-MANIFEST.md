@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-11T21:25:50Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-11T22:56:37Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -76,7 +76,7 @@ Generated: `2026-08-11T21:25:50Z`. Source: `rules/*.mdc`.
 | `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 38 | `899601a990cb` |
 | `97-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | governance | agent_requested | 48 | `6d019ab496ca` |
 | `98-graphiti-memory-gate.mdc` | `l9.rule.98.graphiti.memory.gate` | global | memory | always | 34 | `eb667b616bfa` |
-| `98-make-pr-remediation.mdc` | `l9.rule.98.make.pr.remediation` | global | general | always | 30 | `53e7e259a9a7` |
+| `98-make-pr-remediation.mdc` | `l9.rule.98.make.pr.remediation` | global | general | always | 30 | `1694ccc8e3ac` |
 | `99-execute-as-instructed.mdc` | `l9.rule.99.execute.as.instructed` | global | general | always | 41 | `8a91df91897f` |
 | `99-graphiti-temporal.mdc` | `l9.rule.99.graphiti.temporal` | global | memory | always | 24 | `7689319b2562` |
 | `99-incident-report.mdc` | `l9.rule.99.incident.report` | global | deployment | always | 463 | `9674bb08f2bf` |

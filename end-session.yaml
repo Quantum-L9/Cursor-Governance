@@ -75,52 +75,27 @@ phase_1_pickup_context:
   priority: 1
   required: true
   description: |
-    Write structured pickup + learnings to Graphiti (T1) — the primary,
-    canonical store. memory-bank/activeContext.md (T0) is written ONLY as a
-    fallback when Graphiti's health check fails or a write errors — it is
-    never written in addition to a successful Graphiti write; the two stores
-    are not meant to hold duplicate copies of the same session summary.
-    Legacy C1 PICKUP writes are deprecated (see 03-graphiti-memory.mdc).
+    Write structured pickup + learnings to Graphiti — the sole resume SSOT.
+    memory-bank/ is RETIRED (2026-08-11); never write it on Graphiti failure
+    (warn and continue). See MEMORY_BANK_POLICY.md and ADR-0005.
 
   primary_target: |
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
     # If healthy: write PICKUP (see `template` below) + one atomic write per
-    # learning fact to Graphiti. This is the only memory write. Do NOT also
-    # write memory_bank_target below in this case.
+    # learning fact to Graphiti. This is the only memory write.
 
   memory_bank_target: |
-    FALLBACK ONLY (Graphiti health check failed or a write errored). Target:
-    ALWAYS $CURSOR_PROJECT_DIR/memory-bank/ (the workspace/repo currently
-    open — the consumer repo). NEVER $GLOBAL_COMMANDS or the
-    Cursor-Governance clone (~/.cursor-governance). See MEMORY_BANK_POLICY.md.
+    RETIRED — do not write. If Graphiti is down, log WARN and continue
+    backup/handoff without a local T0 file.
 
   memory_bank_update: |
-    APPEND a new dated section to memory-bank/activeContext.md — task, files
-    touched, next action, blockers, GMP IDs, outcome. Do NOT truncate or
-    replace the whole file; a full overwrite destroys prior manually-written
-    detail (see MEMORY_BANK_POLICY.md "Append, never overwrite"). Same
-    append-only rule for tasks.md / progress.md / tech-debt.md.
+    RETIRED — no-op. Do not append to memory-bank/*.md.
 
   memory_bank_gitignore_check: |
-    Before relying on `memory-bank/` being trackable in the target repo, run:
-      git -C "$CURSOR_PROJECT_DIR" check-ignore -q memory-bank/activeContext.md
-    If it exits 0 (ignored — commonly this machine's global
-    ~/.gitignore_global, not the repo's own .gitignore), append a repo-local
-    negation to that repo's .gitignore (after any blanket ignore rule):
-      !/memory-bank/
-      !/memory-bank/**
-    ops/hooks/graphiti-session-end.sh does this automatically via
-    ensure_memory_bank_trackable(); the manual /end-session flow must do the
-    same check when memory-bank changes are meant to be pushed.
+    RETIRED — no-op. memory-bank/ is not a write target.
 
   memory_bank_push: |
-    If the target repo's memory-bank changes need to reach GitHub and the
-    current branch has an unrelated large uncommitted diff, do NOT commit on
-    top of it. Instead: create an isolated `git worktree` off a fresh copy of
-    the repo's default branch, copy the memory-bank/ files + .gitignore
-    negation there, commit, push, and open a normal PR. See
-    MEMORY_BANK_POLICY.md "Push via clean branch when the working branch is
-    dirty/diverged".
+    RETIRED — no-op. Do not open PRs to push memory-bank/ content.
 
   template: |
     PICKUP|date={YYYY-MM-DD}|task={current_task}|files={file1,file2,file3}|next={next_action}|blocker={blocker_or_none}|gmps={GMP-XX,GMP-YY}|outcome={success|partial|blocked}
@@ -134,8 +109,7 @@ phase_1_pickup_context:
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
       "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
       --kind pickup_context
-    # Fallback ONLY if the health check fails or the write errors — see
-    # memory_bank_target above. Do not run both for the same session.
+    # If health/write fails: WARN only — do not write memory-bank/ (retired).
   
   fields:
     date: "YYYY-MM-DD format"
@@ -147,10 +121,8 @@ phase_1_pickup_context:
     outcome: "success|partial|blocked"
   
   search_at_resume: |
-    # Graphiti primary (when enabled)
+    # Graphiti only (memory-bank retired)
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
-    # memory-bank only if Graphiti was down / as local supplement
-    cat memory-bank/activeContext.md 2>/dev/null || true
 
 # ═══════════════════════════════════════════════════════════
 # PHASE 2: LESSONS & ERRORS (If Any)

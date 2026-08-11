@@ -437,13 +437,9 @@ def cmd_write(args: argparse.Namespace) -> int:
 
 
 def _read_memory_bank(repo: Path) -> str:
-    parts: list[str] = []
-    bank = repo / "memory-bank"
-    for name in ("activeContext.md", "tasks.md", "progress.md", "tech-debt.md"):
-        path = bank / name
-        if path.is_file():
-            parts.append(f"## {name}\n{path.read_text(encoding='utf-8')[:2000]}")
-    return "\n\n".join(parts)
+    """Deprecated no-op — memory-bank/ is retired; resume SSOT is Graphiti only."""
+    del repo  # unused; signature kept for call-site compatibility
+    return ""
 
 
 def cmd_inject(args: argparse.Namespace) -> int:
@@ -466,7 +462,6 @@ def cmd_inject(args: argparse.Namespace) -> int:
         except Exception:  # noqa: BLE001
             continue
     prefetch_text = "".join(prefetch_parts)[: int(os.environ.get("MEMORY_TOKEN_BUDGET", "400")) * 4]
-    bank = _read_memory_bank(repo)
     state = {
         "group_id": group_id,
         "prefetch_ts": datetime.now(UTC).isoformat(),
@@ -485,7 +480,7 @@ def cmd_inject(args: argparse.Namespace) -> int:
             {
                 "state_file": str(state_dir / f"{conv}.json"),
                 "task_signature": task_sig,
-                "memory_bank_chars": len(bank),
+                "memory_bank_chars": 0,
                 "prefetch_chars": len(prefetch_text),
                 "group_id": group_id,
             },
@@ -501,7 +496,6 @@ def _discover_bootstrap_sources(repo: Path) -> list[Path]:
         "ARCHITECTURE.md",
         "docs/adr/README.md",
         "README.md",
-        "memory-bank/activeContext.md",
     ]
     found: list[Path] = []
     for rel in priority:

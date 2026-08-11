@@ -109,14 +109,10 @@ else
   LINES+=("remote: https://github.com/Quantum-L9/Cursor-Governance (branch main)")
 fi
 
-ACTIVE="$WORKSPACE/memory-bank/activeContext.md"
-if [ -f "$ACTIVE" ]; then
-  EXCERPT=$(head -c 1200 "$ACTIVE" 2>/dev/null || true)
-  [ -n "$EXCERPT" ] && LINES+=("--- resume context (memory-bank/activeContext.md) ---" "$EXCERPT")
-fi
+# memory-bank/ retired — resume from Graphiti inject/PICKUP only (no T0 excerpt)
 
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
-LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / phase-lock / write); no L9_MEMORY_HTTP side door")
+LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / phase-lock / write); no L9_MEMORY_HTTP side door; memory-bank retired")
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

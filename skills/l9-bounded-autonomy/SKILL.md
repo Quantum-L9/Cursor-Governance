@@ -86,4 +86,4 @@ Packet → Phase-0 → validate locks/budgets
 - Lock conflict → serialize; do not guess.
 - Poll exceeds 3 remediation cycles → escalate with blockers.
 - No packet → poll watch-only; escalate pushes to main.
-- Graphiti down at close → memory-bank fallback only (no dual-write).
+- Graphiti down at close → warn and continue; do **not** fall back to memory-bank/ (retired).
