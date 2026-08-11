@@ -15,7 +15,7 @@ status: active
 **Runtime:** L9 Governance  
 **Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone  
 **GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`  
-**Updated:** 2026-08-07 (integration-branch-first + local runtime discipline §13)
+**Updated:** 2026-08-11 (§14 Openclaw GitHub PAT authority — no human GitHub UI)
 
 ---
 
@@ -396,3 +396,30 @@ local enforcement provider, not a second Program Execution Controller.
 Program Execution adapters may narrow authority but must never widen it. Mutable
 program runtime, leases, attempts, receipts, and health state live outside this
 repository under `$HOME/.l9/programs/`.
+
+---
+
+## 14. Openclaw GitHub PAT Authority (no human GitHub UI)
+
+**Law:** For any Quantum-L9 GitHub API / `gh` / org-admin / workflow-file /
+seed / PR / issue operation that a credential can perform, agents **MUST**
+authenticate with the registered AWS secret ref
+
+```text
+openclaw-igorbot/github#token
+```
+
+resolved via `ops/secrets` + skill `l9-aws-secrets` (typically exported as
+`GH_TOKEN` / `GITHUB_TOKEN` for the duration of the command). This is why
+openclaw was given access: **agents share that authority** and must exercise it.
+
+| Rule | Detail |
+|------|--------|
+| Single PAT | **Do not** create a second “cursor” / “agent-admin” GitHub PAT in AWS while `openclaw-igorbot/github#token` works. Rotate that secret in place if scopes change. |
+| No human GitHub UI | Agents **MUST NOT** ask the human to operate `github.com` UI (App install accepts, permission review clicks, settings toggles, manual secret paste into Actions UI, etc.) when the openclaw PAT (or an already-wired App credential in AWS/Actions) can complete the same outcome via API/`gh`. |
+| Prefer API outcome | If a GitHub App install lacks a permission (e.g. `workflows`), use the PAT (which includes `workflow` scope) to perform the file/API mutation, or fix the App via API when available — **do not** stop and send the human to an Installations settings URL. |
+| Secrets SSOT | Namespace remains `openclaw-igorbot/*` in AWS SM (`us-east-1`). No parallel `cursor-secrets` inventory. Values never in git, chat, or receipts. |
+| Already-wired App env | `GOVERNANCE_APP_ID` / `GOVERNANCE_APP_PRIVATE_KEY` on `Quantum-L9/.github` environment `governance-distribution` are for Actions `create-github-app-token` (seeder). Agents still use the openclaw PAT for interactive/`gh` authority; do not demand a duplicate App PEM in chat. |
+| Ask-human exception | Only after `resolve_secret.py --check` fails (`UNREGISTERED` / `NOT_PROVISIONED` / `NOT_FOUND` / AWS auth broken), or for true non-API human factors (physical 2FA device, legal acceptance the API cannot perform). Name the failing ref. |
+
+**Authority order note:** This section outranks agent-invented “I need you to click GitHub” contracts. It does not authorize merge-to-`main` bypass, force-push, or secret exfiltration — those remain forbidden under §6.1 / autonomy merge gate.

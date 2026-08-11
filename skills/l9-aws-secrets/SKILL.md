@@ -39,6 +39,11 @@ human. Asking first while the secret is already in AWS is a protocol failure.
 | `NODE_AUTH_TOKEN` / GitHub Packages `@quantum-l9/*` | `openclaw-igorbot/github#token` |
 | GitHub API PAT for `gh` automation | `openclaw-igorbot/github#token` |
 
+**CANONICAL_LAW.md §14:** That GitHub ref is the **sole** agent PAT. Do not
+create a second token in AWS. Export it as `GH_TOKEN` / `GITHUB_TOKEN` and
+complete operable GitHub work via API/`gh`. **Do not** ask the human to click
+`github.com` UI when this PAT can finish the job.
+
 ## Interpreter
 
 Prefer the governance locked venv:
