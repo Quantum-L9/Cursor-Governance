@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# beforeShellExecution — deny mid-execution git push / gh pr create until L4 release.
+# beforeShellExecution — L4 remote gate + shared-worktree isolation (scoop/revert/switch).
 set -uo pipefail
 REAL_HOOK="$(python3 -c "import os,sys; print(os.path.realpath(sys.argv[1]))" "${BASH_SOURCE[0]}")"
 HOOK_DIR="$(dirname "$REAL_HOOK")"

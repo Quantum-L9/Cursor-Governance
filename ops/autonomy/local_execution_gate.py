@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Deny mid-execution git push / PR create until L4 release is authorized.
 
+Also enforces shared-worktree isolation (scoop/revert/switch/reset of foreign
+dirty files) via ``worktree_isolation_gate``.
+
 Claude Code PreToolUse adapter:
-  environment/claude-code/hooks/local_execution_gate_wrap.py
+  environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
 
 Cursor beforeShellExecution adapter:
   ops/hooks/l4-local-execution-gate-shell.sh
@@ -12,6 +15,11 @@ Brain lives under ops/ per CANONICAL_LAW §2.1.
 Escape hatches (human / ops only):
   L9_LOCAL_PUSH_AUTHORIZED=<reason>
   L9_L4_LOCAL_AUTONOMY=0
+  L9_GIT_REVERT_AUTHORIZED=<reason>
+  L9_GIT_BROAD_ADD_AUTHORIZED=<reason>
+  L9_GIT_SWITCH_AUTHORIZED=<reason>
+  L9_GIT_RESET_AUTHORIZED=<reason>
+  L9_WORKTREE_ISOLATION=0
 """
 
 from __future__ import annotations
@@ -27,6 +35,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
+from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
 REMOTE_BASH_PATTERNS = (
     re.compile(r"\bgit\s+push\b", re.I),
@@ -56,6 +65,9 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
 
     if tool_name in {"Bash", "bash", "Shell", "shell"}:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        iso = command_violates_worktree_isolation(command, root=root)
+        if iso:
+            return iso
         if not command_is_remote_mutation(command):
             return None
         allowed, reason = release_allows_remote(root)
@@ -111,9 +123,12 @@ def main_cursor_shell() -> int:
     if not isinstance(event, dict):
         return _emit_cursor("allow")
     command = str(event.get("command") or event.get("full_command") or "")
+    root = workspace_from_event(event)
+    iso = command_violates_worktree_isolation(command, root=root)
+    if iso:
+        return _emit_cursor("deny", iso)
     if not command_is_remote_mutation(command):
         return _emit_cursor("allow")
-    root = workspace_from_event(event)
     allowed, reason = release_allows_remote(root)
     if allowed:
         return _emit_cursor("allow")
