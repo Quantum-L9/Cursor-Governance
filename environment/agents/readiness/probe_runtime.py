@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from environment.agents.readiness.compose import execution_ready
+from environment.agents.readiness.compose import execution_ready  # noqa: E402
 
 
 def main() -> int:
