@@ -128,10 +128,11 @@ doc = {
     "agent_action": "spawn_background_poll_remediate",
     "prompt_template": "skills/l9-bounded-autonomy/references/prompt-templates.md#poll_worker",
 }
-path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
-print(f"l9_emit_pr_assignment || true
-Handoff written: {path}")
+path.write_text(json.dumps(doc, indent=2) + "
+", encoding="utf-8")
+print(f"Handoff written: {path}")
 PY
+l9_emit_pr_assignment || true
 
 if [[ "$PR_REMEDIATE" == "1" ]]; then
   cat <<EOF
