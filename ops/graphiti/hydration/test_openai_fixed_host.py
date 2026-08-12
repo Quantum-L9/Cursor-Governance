@@ -1,10 +1,10 @@
-"""Tests for fixed-host OpenAI transport (mocked urlopen)."""
+"""Tests for fixed-host OpenAI transport (mocked HTTPSConnection)."""
 
 from __future__ import annotations
 
-import io
 import json
 import os
+import ssl
 import sys
 from pathlib import Path
 
@@ -17,43 +17,65 @@ from ops.graphiti.hydration import openai_fixed_host as ofh  # noqa: E402
 from ops.graphiti.hydration import openai_key as ok  # noqa: E402
 
 
-class _FakeHTTPResponse(io.BytesIO):
+class _FakeHTTPResponse:
     def __init__(self, payload: bytes, status: int = 200):
-        super().__init__(payload)
+        self._payload = payload
         self.status = status
 
-    def getcode(self) -> int:
-        return self.status
+    def read(self) -> bytes:
+        return self._payload
 
-    def __enter__(self):
-        return self
 
-    def __exit__(self, *exc):
-        return False
+class _FakeHTTPSConnection:
+    last: dict | None = None
+
+    def __init__(self, host, timeout=None, context=None):
+        self.host = host
+        self.timeout = timeout
+        self.context = context
+        self._resp: _FakeHTTPResponse | None = None
+
+    def request(self, method, path, body=None, headers=None):
+        type(self).last = {
+            "host": self.host,
+            "method": method,
+            "path": path,
+            "body": body,
+            "headers": dict(headers or {}),
+            "timeout": self.timeout,
+            "context": self.context,
+        }
+
+    def getresponse(self):
+        assert self._resp is not None
+        return self._resp
+
+    def close(self):
+        return None
 
 
 def test_chat_completions_uses_fixed_host(monkeypatch):
-    captured: dict = {}
+    conn = _FakeHTTPSConnection("unused")
+    conn._resp = _FakeHTTPResponse(
+        json.dumps({"choices": [{"message": {"content": '{"ok": true}'}}]}).encode()
+    )
 
-    def fake_urlopen(req, timeout=None, context=None):
-        captured["url"] = req.full_url
-        captured["method"] = req.get_method()
-        captured["headers"] = dict(req.header_items())
-        captured["body"] = req.data
-        captured["timeout"] = timeout
-        captured["context"] = context
-        return _FakeHTTPResponse(
-            json.dumps({"choices": [{"message": {"content": '{"ok": true}'}}]}).encode()
-        )
+    def fake_conn(host, timeout=None, context=None):
+        c = _FakeHTTPSConnection(host, timeout=timeout, context=context)
+        c._resp = conn._resp
+        return c
 
-    monkeypatch.setattr(ofh.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(ofh.http.client, "HTTPSConnection", fake_conn)
     out = ofh.chat_completions(
         api_key="sk-test",
         messages=[{"role": "user", "content": "hi"}],
         max_tokens=50,
         timeout=5.0,
     )
-    assert captured["url"] == "https://api.openai.com/v1/chat/completions"
+    assert _FakeHTTPSConnection.last is not None
+    captured = _FakeHTTPSConnection.last
+    assert captured["host"] == "api.openai.com"
+    assert captured["path"] == "/v1/chat/completions"
     assert captured["method"] == "POST"
     assert any("sk-test" in v for k, v in captured["headers"].items() if "auth" in k.lower())
     assert captured["context"] is not None
@@ -61,18 +83,12 @@ def test_chat_completions_uses_fixed_host(monkeypatch):
 
 
 def test_chat_completions_http_error(monkeypatch):
-    import urllib.error
+    def fake_conn(host, timeout=None, context=None):
+        c = _FakeHTTPSConnection(host, timeout=timeout, context=context)
+        c._resp = _FakeHTTPResponse(b'{"error":"nope"}', status=401)
+        return c
 
-    def fake_urlopen(req, timeout=None, context=None):
-        raise urllib.error.HTTPError(
-            url=req.full_url,
-            code=401,
-            msg="Unauthorized",
-            hdrs=None,
-            fp=io.BytesIO(b'{"error":"nope"}'),
-        )
-
-    monkeypatch.setattr(ofh.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(ofh.http.client, "HTTPSConnection", fake_conn)
     with pytest.raises(ofh.OpenAIFixedHostError, match="openai_http_401"):
         ofh.chat_completions(
             api_key="sk-bad",
@@ -96,13 +112,28 @@ def test_absent_key():
         )
 
 
-def test_urlopen_fixed_refuses_file_scheme():
-    import ssl
-    import urllib.request
+def test_https_post_fixed_uses_literal_host_path(monkeypatch):
+    """CWE-939: transport must never accept a caller-controlled URL/scheme."""
 
-    req = urllib.request.Request("file:///etc/passwd")
-    with pytest.raises(ofh.OpenAIFixedHostError, match="refusing non-fixed"):
-        ofh._urlopen_fixed(req, timeout=1.0, context=ssl.create_default_context())
+    def fake_conn(host, timeout=None, context=None):
+        c = _FakeHTTPSConnection(host, timeout=timeout, context=context)
+        c._resp = _FakeHTTPResponse(b"{}")
+        return c
+
+    monkeypatch.setattr(ofh.http.client, "HTTPSConnection", fake_conn)
+    status, raw = ofh._https_post_fixed(
+        body=b"{}",
+        headers={"Content-Type": "application/json"},
+        timeout=1.0,
+        context=ssl.create_default_context(),
+    )
+    assert status == 200
+    assert raw == b"{}"
+    assert _FakeHTTPSConnection.last is not None
+    assert _FakeHTTPSConnection.last["host"] == ofh._OPENAI_HOST
+    assert _FakeHTTPSConnection.last["path"] == ofh._CHAT_PATH
+    assert "file" not in ofh._OPENAI_HOST
+    assert ofh._CHAT_PATH.startswith("/")
 
 
 def test_resolve_key_from_env(monkeypatch):
