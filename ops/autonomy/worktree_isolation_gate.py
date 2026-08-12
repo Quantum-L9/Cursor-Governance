@@ -114,7 +114,7 @@ _MV_CP_WIP_TMP = re.compile(
     rf"(?:\b(?:mv|cp|rsync)\b.*\bWIP\b.*{_TMP_PUBLIC})|(?:\b(?:mv|cp|rsync)\b.*{_TMP_PUBLIC}.*\bWIP\b)",
     re.I | re.DOTALL,
 )
-_RM_RF_WIP = re.compile(r"\brm\s+-[a-zA-Z]*[rf][a-zA-Z]*\b[^\n]*\bWIP\b", re.I)
+_RM_RF_WIP = re.compile(r"\brm\s+-[a-z]*[rf][a-z]*\b[^\n]*\bWIP\b", re.I)
 _GIT_CLEAN_WIP = re.compile(r"\bgit\s+clean\b[^\n]*\bWIP\b", re.I)
 _GIT_CLEAN_FORCE = re.compile(r"\bgit\s+clean\b(?:\s+-\S+)*\s+-(?:f|fd|fdx|df|dfx)\b", re.I)
 _TMP_HOLD_CREATE = re.compile(

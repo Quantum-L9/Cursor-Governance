@@ -225,7 +225,7 @@ def _collect_legacy_files(candidate: Path) -> list[dict[str, str]]:
             rel = str(path.relative_to(candidate)).replace("\\", "/")
         except ValueError:
             continue
-        if not (rel.startswith("WIP/") or rel.startswith("reports/") or rel.startswith("ops/")):
+        if not rel.startswith(("WIP/", "reports/", "ops/")):
             continue
         entries.append({"relpath": rel, "src": str(path)})
     return entries
