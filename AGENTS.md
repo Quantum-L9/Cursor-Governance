@@ -462,4 +462,3 @@ Authoritative corrections (do not treat older bullets above as SSOT):
    matches this path.
 3. Residual `memory-bank/` trees are archival residue; wiring checks WARN if
    present and PASS when absent. Agents must not recreate them.
-

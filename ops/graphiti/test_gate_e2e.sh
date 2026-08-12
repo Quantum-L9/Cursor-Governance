@@ -7,6 +7,12 @@ GC_ROOT="$(cd "$(dirname "$REAL_HOOK")/.." && pwd)"
 source "$GC_ROOT/hooks/graphiti_common.sh"
 graphiti_resolve_cli
 GATE_LIB="$(dirname "$GRAPHITI_CLI")/graphiti_gate_lib.py"
+REPO_ROOT="$(cd "$(dirname "$GATE_LIB")/../.." && pwd)"
+if [ -x "$REPO_ROOT/.venv/bin/python3" ]; then
+  GRAPHITI_PYTHON="$REPO_ROOT/.venv/bin/python3"
+else
+  GRAPHITI_PYTHON="$(command -v python3)"
+fi
 STATE_DIR="$HOME/.cursor/graphiti-state"
 mkdir -p "$STATE_DIR"
 TEST_STATE="$STATE_DIR/e2e-test.json"
@@ -23,7 +29,7 @@ cat > "$TEST_STATE" <<'JSON'
   "cache_ttl_minutes": 30
 }
 JSON
-RESULT="$(python3 "$GATE_LIB" pre_tool_use < /tmp/gate_in.json)"
+RESULT="$("$GRAPHITI_PYTHON" "$GATE_LIB" pre_tool_use < /tmp/gate_in.json)"
 echo "$RESULT" | grep -q '"deny"' || { echo "FAIL: expected deny"; exit 1; }
 
 # Force satisfied — expect allow
@@ -36,7 +42,7 @@ cat > "$TEST_STATE" <<'JSON'
   "cache_ttl_minutes": 30
 }
 JSON
-RESULT="$(python3 "$GATE_LIB" pre_tool_use < /tmp/gate_in.json)"
+RESULT="$("$GRAPHITI_PYTHON" "$GATE_LIB" pre_tool_use < /tmp/gate_in.json)"
 echo "$RESULT" | grep -q '"allow"' || { echo "FAIL: expected allow"; exit 1; }
 
 rm -f "$TEST_STATE"
