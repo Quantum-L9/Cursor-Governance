@@ -89,26 +89,25 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
-    """Persist a close receipt with an allowlisted field set only."""
+    """Persist a close receipt with taint-safe scalars only."""
     path_r = _receipt_path(project_dir, session_id)
     os.makedirs(os.path.dirname(path_r), exist_ok=True)
-    # Allowlist only — never persist exception text or secret-adjacent strings
-    # (CodeQL clear-text-storage).
+    # Use the function-arg session_id (not payload) and head_hash digest only.
+    # Omit reason/agent/group/enqueue error text so CodeQL password taint from
+    # Phase B key handling cannot reach this storage sink.
+    status = payload.get("status")
+    status_out = status if status in {"closed", "closed_enqueue_failed"} else "other"
+    enqueue_ok = payload.get("enqueue_ok")
     safe = {
-        "status": payload.get("status"),
-        "session_id": payload.get("session_id"),
-        "head_hash": payload.get("head_hash"),
-        "group_id": payload.get("group_id"),
-        "agent_id": payload.get("agent_id"),
-        "phase_a": payload.get("phase_a"),
-        "phase_b": payload.get("phase_b"),
-        "enqueue_ok": payload.get("enqueue_ok"),
-        "enqueue": payload.get("enqueue"),
-        "enqueue_error": payload.get("enqueue_error"),
-        "write_count": payload.get("write_count"),
-        "closed_at": payload.get("closed_at"),
-        "reason": payload.get("reason"),
-        "packet_id": payload.get("packet_id"),
+        "status": status_out,
+        "session_id": str(session_id),
+        "head_hash": str(payload.get("head_hash") or ""),
+        "phase_a": bool(payload.get("phase_a") is True),
+        "phase_b": bool(payload.get("phase_b") is True),
+        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
+        "enqueue_error_present": bool(payload.get("enqueue_error")),
+        "write_count": int(payload.get("write_count") or 0),
+        "closed_at": str(payload.get("closed_at") or "")[:64],
     }
     # path_r is commonpath-bounded under project_dir/.l9/memory/closes
     with open(path_r, "w", encoding="utf-8") as handle:  # NOSONAR python:S2083
