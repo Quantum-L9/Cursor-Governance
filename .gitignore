@@ -76,13 +76,21 @@ __pycache__/
 .claude/rules/
 .claude/rules
 
-# ── Credential-shaped files that must never be committed ────────────────────
-# 2026-07-21: session-end governance sync hook auto-staged a live Google OAuth
-# client secret from WIP/google_oauth_*.json (not pushed; caught + removed
-# before it reached origin). These patterns stop the hook from re-adding them.
+# ── WIP/ is intentionally tracked (sacred backlog / glorified todo) ─────────
+# Do NOT add a blanket `WIP/` ignore — the tree is commit-eligible draft corpus.
+# Agents must read and respect it; scanners exclude it via tool configs, not git.
+# Only credential-shaped filenames under WIP are denylisted (2026-07-21: a
+# session-end sync hook nearly staged a live Google OAuth client secret from
+# WIP/google_oauth_*.json — caught before origin). Keep these patterns.
 WIP/*oauth*.json
 WIP/*credentials*.json
 WIP/*client_secret*.json
+
+# ── reports/ is local evidence only — never commit or track ─────────────────
+# GMP receipts, audits, validation dumps. Pre-commit already excludes reports/;
+# git must too so agents cannot stage them. Historical blobs may remain in git
+# history; the working tree must stay untracked going forward.
+reports/
 
 # ── Bounded-autonomy durable state (per-consumer-workspace, never committed) ──
 # environment/claude-code/autonomy/ writes campaign state, leases, and locks
