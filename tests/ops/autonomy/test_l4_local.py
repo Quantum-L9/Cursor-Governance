@@ -26,7 +26,7 @@ def _git(repo: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def stacked_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
