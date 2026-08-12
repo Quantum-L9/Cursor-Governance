@@ -8,10 +8,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
+
+def _repo_root(start: Path) -> Path:
+    for parent in [start, *start.parents]:
+        if (parent / "CANONICAL_LAW.md").is_file() or (parent / ".git").exists():
+            return parent
+    raise RuntimeError(f"repo root not found from {start}")
+
+
 SCRIPT = (
-    Path(__file__).resolve().parents[2] / ".." / "ops" / "scripts" / "reconcile_claude_l9_skills.py"
+    _repo_root(Path(__file__).resolve().parent)
+    / "ops"
+    / "scripts"
+    / "reconcile_claude_l9_skills.py"
 )
-SCRIPT = SCRIPT.resolve()
 
 
 class SkillReconciliationTests(unittest.TestCase):

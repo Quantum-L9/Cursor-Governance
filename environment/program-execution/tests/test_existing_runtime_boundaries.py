@@ -9,7 +9,8 @@ class ExistingRuntimeBoundaryTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         bridge = root / "integrations/claude-code-bounded-autonomy/bridge.py"
         text = bridge.read_text(encoding="utf-8")
-        self.assertIn("environment/claude-code/autonomy/cli.py", text)
+        self.assertIn("environment/agents/adapters/claude-code/autonomy", text)
+        self.assertIn('autonomy / "cli.py"', text)
         self.assertNotIn("class Scheduler", text)
 
     def test_root_autonomy_bridge_does_not_define_leases(self) -> None:

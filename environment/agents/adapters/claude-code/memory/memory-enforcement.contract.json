@@ -6,8 +6,8 @@
   "summary": "Memory prefetch and conflict-checked phase-locks are preconditions for governed writes on the Claude Code surface. Single front door: Cursor Graphiti (ops/graphiti/graphiti_memory_client.py) via thin hooks. Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door.",
   "memory": {
     "front_door": "ops/graphiti/graphiti_memory_client.py",
-    "bridge": "environment/claude-code/memory/graphiti_bridge.py",
-    "mcp_template": "environment/claude-code/mcp.template.json",
+    "bridge": "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+    "mcp_template": "environment/agents/adapters/claude-code/mcp.template.json",
     "agent_id_env": "L9_MEMORY_AGENT_ID",
     "default_agent_id": "claude-code",
     "namespace_env": "L9_MEMORY_NAMESPACES",
@@ -17,7 +17,7 @@
     "forbidden_side_doors": [
       "L9_MEMORY_HTTP_URL",
       "L9_MEMORY_CLIENT_TOKEN",
-      "environment/claude-code/memory/memory_client.py",
+      "environment/agents/adapters/claude-code/memory/memory_client.py",
       "l9-shared-memory@memory.quantumaipartners.com",
       "L9_MEMORY_ENFORCEMENT=off"
     ]
@@ -33,19 +33,19 @@
   "hooks": {
     "prefetch": {
       "event": "SessionStart",
-      "script": "environment/claude-code/hooks/memory_prefetch.py",
+      "script": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
       "fail_mode": "open",
       "note": "SessionStart thin wrap of Cursor Graphiti inject. Writes receipt on success. Fail-open."
     },
     "gate": {
       "event": "PreToolUse",
-      "script": "environment/claude-code/hooks/memory_gate.py",
+      "script": "environment/agents/adapters/claude-code/hooks/memory_gate.py",
       "fail_mode": "closed",
       "note": "Emits a PreToolUse permissionDecision. Denies a matched governed write when its required preconditions are unmet."
     },
     "writeback": {
       "event": "Stop",
-      "script": "environment/claude-code/hooks/memory_writeback.py",
+      "script": "environment/agents/adapters/claude-code/hooks/memory_writeback.py",
       "fail_mode": "open",
       "note": "Stop thin wrap of Cursor Graphiti write --kind session_summary. Fail-open."
     }
@@ -54,12 +54,12 @@
     "session_prefetch": {
       "id": "session_prefetch",
       "satisfied_by": "a session receipt under state.session_receipt_glob whose session_id matches the current session and whose age is < state.session_ttl_seconds",
-      "established_by": "environment/claude-code/hooks/memory_prefetch.py"
+      "established_by": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py"
     },
     "phase_lock": {
       "id": "phase_lock",
       "satisfied_by": "a lock artifact under state.lock_glob for at least one required namespace, conflict-checked, unexpired (< state.lock_ttl_seconds), and bound to the current session",
-      "established_by": "environment/claude-code/hooks/memory_lock.py acquire --namespace <ns> --task <text>",
+      "established_by": "environment/agents/adapters/claude-code/hooks/memory_lock.py acquire --namespace <ns> --task <text>",
       "verifies_against": [
         "graphiti conflicts",
         "graphiti phase-lock",

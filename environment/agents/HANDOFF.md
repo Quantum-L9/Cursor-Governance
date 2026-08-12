@@ -32,7 +32,7 @@ Verified live on 2026-07-28 (EDT), shallow clones at these SHAs:
 
 | Repo | SHA | Fact base |
 |---|---|---|
-| Quantum-L9/Cursor-Governance | `bda773b` | Adapter model in CANONICAL_LAW §2 (Cursor + Claude Code active; Windsurf/VS Code planned). Memory layer §8: Graphiti/Neo4j on C1 VPS (Hetzner 46.62.243.82), container `zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone`, Cursor reaches it via SSH tunnel `localhost:8100/mcp/`. Group registry: `ops/graphiti/group_registry.yaml` (schema 2, workspace_group `igor-workspace`, forbidden groups `main/default/""/test`, repos: ib-odoo-19, cursor-governance, cognitive-engine-graphs, l9-node-template, igorbot). Cursor identity `${USER_ID:cursor_agent}` in `ops/graphiti/config-docker-neo4j.yaml`. Claude Code env pack at `environment/claude-code/` (same content as the user's uploaded `l9-claude-code-env-pack.zip`; the repo wins on disagreement). |
+| Quantum-L9/Cursor-Governance | `bda773b` | Adapter model in CANONICAL_LAW §2 (Cursor + Claude Code active; Windsurf/VS Code planned). Memory layer §8: Graphiti/Neo4j on C1 VPS (Hetzner 46.62.243.82), container `zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone`, Cursor reaches it via SSH tunnel `localhost:8100/mcp/`. Group registry: `ops/graphiti/group_registry.yaml` (schema 2, workspace_group `igor-workspace`, forbidden groups `main/default/""/test`, repos: ib-odoo-19, cursor-governance, cognitive-engine-graphs, l9-node-template, igorbot). Cursor identity `${USER_ID:cursor_agent}` in `ops/graphiti/config-docker-neo4j.yaml`. Claude Code env pack at `environment/agents/adapters/claude-code/` (same content as the user's uploaded `l9-claude-code-env-pack.zip`; the repo wins on disagreement). |
 | Quantum-L9/l9-graphiti-memory | `4aa86f2` | v2.3.0 memory control plane. `MemoryPrincipal` contract (`contracts/identity.py`): principal_id, tenant, org, workspace, user_id, agent_id, roles tuple, read/write/promote namespace globs, is_admin. Bearer-token auth (`authz/authenticator.py`, constant-time), namespace policy (`authz/policy.py`, fnmatch globs). `auth_tokens.json` maps token → principal. Server: `l9-memory-server --transport stdio|http|sse`; `http_auth_required` defaults true; refuses unauthenticated non-loopback bind. Guarantees used by our design: deterministic admission, idempotency (duplicate outcome), supersession, bi-temporal lineage. |
 
 GitHub access: Manus's `gh` is authenticated as `cryptoxdog` with **admin/push
@@ -84,7 +84,7 @@ on both repos** — no adapter needed for repo access (answered in this session)
    env (production URL), MCP carrier, bootstrap, README, `setup.md`;
    `ADAPTER_CONTRACT.md` + `docs/DEPLOY.md` + `docs/network-allowlist.md`.
    Codex + Gemini flipped to `status: active`. Claude Code **unchanged** at
-   `environment/claude-code/`.
+   `environment/agents/adapters/claude-code/`.
 2. **`validate_agents.py` A3** — adapter contract enforced; production_url
    must match env examples. `make agents-env` + self-tests green.
 3. **Memory Option A LIVE** — `https://memory.quantumaipartners.com` documented

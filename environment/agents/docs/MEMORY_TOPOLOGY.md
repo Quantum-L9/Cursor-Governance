@@ -24,11 +24,11 @@ HTTPS URL, never loopback.
 | Item | Value |
 |---|---|
 | Public URL | `https://memory.quantumaipartners.com` |
-| MCP | `https://memory.quantumaipartners.com/mcp` |
-| Origin | C1 `46.62.243.82` — Caddy TLS → `127.0.0.1:8200` |
-| Process | systemd `l9-memory-server` under `/opt/l9-memory` |
-| Package | `l9-graphite-memory[server]` |
-| Auth | `auth_tokens.json` from `tools/render_principals.py` |
+| MCP | `https://memory.quantumaipartners.com/graphiti/mcp` |
+| Origin | C1 `46.62.243.82` — Caddy TLS → Graphiti `:8100` via `/graphiti/*` |
+| Process | docker `graphiti-mcp-cursor` (Cursor Graphiti plane) |
+| Auth | `GRAPHITI_MCP_TOKEN` (plane bearer) + distinct writer identity env |
+| Note | Retired L9 HTTP tool plane on `:8200` is not the lifecycle front door (ADR-0006) |
 
 Registry field: `memory.production_url` in `agent_registry.yaml`.
 
@@ -57,8 +57,8 @@ python3 environment/agents/tools/render_principals.py \
 Every surface sets:
 
 ```bash
-L9_MEMORY_HTTP_URL=https://memory.quantumaipartners.com
-L9_MEMORY_CLIENT_TOKEN=<that agent's own bearer>
+GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
+GRAPHITI_MCP_TOKEN=<Graphiti plane bearer>
 USER_ID=<registry user_id>
 L9_MEMORY_AGENT_ID=<registry agent_id>
 L9_MEMORY_SOURCE=<registry source>
@@ -75,8 +75,8 @@ unchanged (`ops/graphiti/group_registry.yaml`).
 
 | Plane | Reach | Used by |
 |---|---|---|
-| Graphiti MCP (Cursor) | SSH tunnel `127.0.0.1:8100` | Cursor IDE / `graphiti_memory_client.py` |
-| L9 memory HTTP control plane | `https://memory.quantumaipartners.com` | Claude Code Web/Mobile, Manus, Codex, Gemini, generic |
+| Graphiti MCP (CLI/host) | SSH tunnel `127.0.0.1:8100` | Cursor IDE / local CLI |
+| Graphiti MCP (cloud HTTPS) | `https://memory.quantumaipartners.com/graphiti/mcp` | Claude Code Web/Mobile, Manus, Codex, Gemini, generic |
 
 Cursor may later also consume the HTTPS plane; until then its registry entry
 honors `legacy_token_env: GRAPHITI_MCP_TOKEN` for the tunnel path.

@@ -17,6 +17,10 @@
 # See environment.env.example and network-policy.md.
 # ---------------------------------------------------------------------------
 set -uo pipefail
+
+# Cloud Graphiti default when unset (CLI hosts export loopback tunnel URL).
+: "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
+
 log() { printf '\n=== %s ===\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 

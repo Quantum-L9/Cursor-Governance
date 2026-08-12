@@ -302,10 +302,19 @@ def _adapter_dirs(model: ExecutablePeerModel) -> list[Path]:
 
 def _check_no_copied_autonomy_and_carriers(model: ExecutablePeerModel, errors: list[str]) -> None:
     """E14."""
+    # Owned Claude scheduler is not a forbidden copy of root autonomy/.
+    _E14_AUTONOMY_ALLOW = {
+        Path("environment/agents/adapters/claude-code/autonomy"),
+        Path("environment/claude-code/autonomy"),  # transitional symlink target pre/post move
+    }
     for adir in _adapter_dirs(model):
         for offender in adir.rglob("autonomy"):
             if offender.is_dir():
                 rel = offender.relative_to(model.repo_root)
+                if rel in _E14_AUTONOMY_ALLOW or rel.as_posix().endswith(
+                    "adapters/claude-code/autonomy"
+                ):
+                    continue
                 errors.append(f"[E14] adapter copies autonomy/: {rel}")
 
     for key, peer in model.required_peers().items():

@@ -12,9 +12,9 @@
   },
   "mcpServers": {
     "l9-shared-memory": {
-      "httpUrl": "${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp",
+      "httpUrl": "https://memory.quantumaipartners.com/graphiti/mcp",
       "headers": {
-        "Authorization": "Bearer $L9_MEMORY_CLIENT_TOKEN",
+        "Authorization": "Bearer $GRAPHITI_MCP_TOKEN",
         "X-L9-User-Id": "gemini_agent",
         "X-L9-Agent-Id": "gemini",
         "X-L9-Source": "gemini"

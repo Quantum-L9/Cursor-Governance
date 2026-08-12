@@ -14,7 +14,7 @@ updated: 2026-07-31
 One work environment replicated across every LLM surface; one shared memory;
 unique agent IDs; role-scoped work; no overlap, no duplication.
 
-**Claude Code stays at `environment/claude-code/`** (thicker peer of
+**Claude Code stays at `environment/agents/adapters/claude-code/`** (thicker peer of
 `environment/ide/`). This pack thickens Manus / Codex / Gemini / generic to
 the same deployable contract (`adapters/ADAPTER_CONTRACT.md`).
 
@@ -45,7 +45,7 @@ environment/agents/
 ```
 
 Existing surfaces are unchanged: Cursor keeps `.cursor-commands` +
-`ops/graphiti`; Claude Code keeps `environment/claude-code/`. Their registry
+`ops/graphiti`; Claude Code keeps `environment/agents/adapters/claude-code/`. Their registry
 entries record deployed identities (`legacy_token_env`) so nothing breaks.
 
 **Workspace-group contract (aligned with the hardened `ops/graphiti` gate):**

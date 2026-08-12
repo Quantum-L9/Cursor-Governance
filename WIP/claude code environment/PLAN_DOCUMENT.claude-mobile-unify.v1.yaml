@@ -1,0 +1,277 @@
+schema_id: canonical.schema.plan_document.v1
+schema_version: 1.0.0
+metadata:
+  plan_id: PLAN-CLAUDE-MOBILE-ADAPTER-UNIFY-001
+  name: Claude Code Mobile Adapter Unification
+  overview: >
+    Unify environment/claude-code under environment/agents/adapters/claude-code,
+    realign Web/Mobile to Anthropic cloud triad + HTTPS Graphiti reachability,
+    and revise WIP variables/script into a cache-safe autonomy-ready cloud pack.
+  status: executable
+  is_project: false
+  owner: igor_beylin
+  created_at: "2026-08-12"
+  updated_at: "2026-08-12T13:19:00Z"
+todos:
+  - id: wave0-align-lock
+    content: Lock PLAN_DOCUMENT + baseline; rotate Graphiti token; confirm /graphiti MCP; AWS check-only
+    status: in_progress
+    phase: wave0
+    evidence_property_refs: [P0, P7]
+  - id: wave0-memory-contract
+    content: Memory-carrier contract delta + front-door tests/validators
+    status: pending
+    phase: wave0
+    depends_on: [wave0-align-lock]
+    evidence_property_refs: [P6]
+  - id: wave1-wip-triad
+    content: Revise WIP variables.md script.md network note
+    status: pending
+    phase: wave1
+    depends_on: [wave0-memory-contract]
+    evidence_property_refs: [P1, P2]
+  - id: wave2-move-symlink
+    content: git mv pack to agents/adapters/claude-code + symlink + E14 exemption
+    status: pending
+    phase: wave2
+    depends_on: [wave1-wip-triad]
+    evidence_property_refs: [P3]
+  - id: wave2-path-consumers
+    content: Rewrite PE bridge Makefile settings hooks paths
+    status: pending
+    phase: wave2
+    depends_on: [wave2-move-symlink]
+  - id: wave2-promote-ssot
+    content: Promote WIP triad into adapters/claude-code/web + mcp.template env refs
+    status: pending
+    phase: wave2
+    depends_on: [wave2-path-consumers]
+  - id: wave3-pe-surfaces
+    content: Bind claude-web + claude-mobile; MEMORY_TOPOLOGY + ADR append
+    status: pending
+    phase: wave3
+    depends_on: [wave2-promote-ssot]
+    evidence_property_refs: [P4]
+  - id: wave4-validate-converge
+    content: Validators + make pr-check + cloud smoke + symlink extinguishment note
+    status: pending
+    phase: wave4
+    depends_on: [wave3-pe-surfaces]
+    evidence_property_refs: [P5, P6]
+architect_framing:
+  planning_ssot: WIP/claude code environment/PLAN_DOCUMENT.claude-mobile-unify.v1.yaml
+  plan_class: migration_plan
+  redesign_allowed: true
+  follow_on_schema_evolution_separate: true
+  framing_notes: >
+    Layout redesign moves Claude gold-standard pack under agents/adapters.
+    Memory transport reachability for cloud is fixed; ADR-0006 single Graphiti
+    front door is preserved (no L9 HTTP side door revival).
+immutable_baseline:
+  captured_at: "2026-08-12T13:17:35Z"
+  repository: Quantum-L9/Cursor-Governance
+  workspace: /Users/ib-mac/Cursor-Governance
+  ssot_clone: /Users/ib-mac/.cursor-governance
+  branch: feat/claude-mobile-adapter-unify
+  commit_sha: fcbd5ed73f102b9f4f34e28858630b3a434f6085
+  dirty: true
+  artifact_hashes:
+    plan_projection: claude_mobile_adapter_unify_4290aa95.plan.md
+  allowed_local_dirt:
+    - WIP/**
+    - ops/secrets/openclaw-igorbot.registry.yaml
+    - reports/GMP-Report-001-*
+  overlap_policy: stop_if_dirty_overlaps_may_modify
+  verification_rule: reverify_at_execution_start
+  on_drift: stop_and_replan
+objective:
+  mission: >
+    Make Claude Code Mobile a first-class L9 peer with Anthropic triad compliance,
+    shared Graphiti store with Cursor, A4 autonomy, and adapter-layout unification.
+  success_properties:
+    - id: P0
+      property: Exposed Graphiti bearer rotated; WIP has no live secrets
+      evidence_type: proof_receipt
+      proof: TOKEN_ROTATION_RECEIPT.md + grep
+      blocking: true
+    - id: P1
+      property: WIP variables include GH_TOKEN Sonar keys HTTPS Graphiti placeholders
+      evidence_type: filesystem
+      proof: variables.md content
+      blocking: true
+    - id: P2
+      property: WIP script is thin Anthropic bootstrap
+      evidence_type: structural
+      proof: script.md review
+      blocking: true
+    - id: P3
+      property: Pack at environment/agents/adapters/claude-code with symlink
+      evidence_type: filesystem
+      proof: path checks
+      blocking: true
+    - id: P4
+      property: PE bindings include claude-web and claude-mobile
+      evidence_type: repository_state
+      proof: PEER_RUNTIME_BINDINGS.yaml
+      blocking: true
+    - id: P5
+      property: Cloud Graphiti initialize + tools/list on shared store
+      evidence_type: network_observation
+      proof: HTTPS MCP probe
+      blocking: true
+    - id: P6
+      property: Front-door tests make claude-env agents/PE validate make pr-check PASS
+      evidence_type: quality_gate
+      proof: command receipts
+      blocking: true
+    - id: P7
+      property: PLAN_DOCUMENT instance present with required sections
+      evidence_type: structural
+      proof: this file
+      blocking: true
+capability_preflight:
+  probes:
+    - id: baseline
+      result: pass
+      evidence: fcbd5ed73f102b9f4f34e28858630b3a434f6085
+    - id: graphiti_health
+      result: pass
+      evidence: "GET /graphiti/health -> 200"
+    - id: graphiti_mcp
+      result: pass
+      evidence: "POST /graphiti/mcp initialize -> 200"
+    - id: aws_github
+      result: pass
+      evidence: openclaw-igorbot/github#token OK
+    - id: aws_sonar
+      result: pass
+      evidence: openclaw-igorbot/sonarcloud#token OK
+    - id: token_rotation
+      result: pass
+      evidence: TOKEN_ROTATION_RECEIPT.md new_token_sha256_16=95eaa0776ae5e66b
+execution_envelope:
+  filesystem:
+    write_allow:
+      - WIP/claude code environment/**
+      - environment/claude-code/**
+      - environment/agents/adapters/claude-code/**
+      - environment/agents/adapters/ADAPTER_CONTRACT.md
+      - environment/agents/agent_registry.yaml
+      - environment/agents/PEER_RUNTIME_BINDINGS.yaml
+      - environment/agents/docs/**
+      - environment/agents/README.md
+      - environment/agents/DESIGN.md
+      - environment/agents/HANDOFF.md
+      - environment/agents/INDEX.md
+      - environment/agents/tools/validate_agents.py
+      - environment/agents/tools/validate_executable_peers.py
+      - environment/program-execution/integrations/claude-code-bounded-autonomy/**
+      - environment/program-execution/OWNERSHIP.md
+      - environment/program-execution/COMPATIBILITY.yaml
+      - Makefile
+      - ops/scripts/**
+      - docs/decisions/**
+      - AGENTS.md
+    write_deny:
+      - autonomy/**
+      - "**/memory_client.py"
+    delete_allow:
+      - environment/claude-code  # only as move source after git mv
+  external:
+    allow:
+      - c1_graphiti_env_rotate
+      - aws_secrets_check_only
+    deny:
+      - force_push
+      - hard_reset
+      - second_memory_store
+rollback:
+  strategy: git_revert_plus_symlink
+  steps:
+    - Restore pack via git if move fails; keep symlink pointing at recoverable tree
+    - On HTTPS Graphiti down fail-closed; never fall back to L9_MEMORY_HTTP_*
+    - Revert mcp.template + front-door tests as a unit
+    - Rotate bearer again if secrets re-leak
+complexity_and_uncertainty:
+  complexity: high
+  uncertainty: medium
+  blast_radius: high
+  architectural_boundaries_crossed: 4
+  external_systems_touched: 3
+  migration_required: true
+  unknown_dependency_count: 2
+execution_DAG:
+  nodes:
+    - wave0-align-lock
+    - wave0-memory-contract
+    - wave1-wip-triad
+    - wave2-move-symlink
+    - wave2-path-consumers
+    - wave2-promote-ssot
+    - wave3-pe-surfaces
+    - wave4-validate-converge
+  edges:
+    - [wave0-align-lock, wave0-memory-contract]
+    - [wave0-memory-contract, wave1-wip-triad]
+    - [wave1-wip-triad, wave2-move-symlink]
+    - [wave2-move-symlink, wave2-path-consumers]
+    - [wave2-path-consumers, wave2-promote-ssot]
+    - [wave2-promote-ssot, wave3-pe-surfaces]
+    - [wave3-pe-surfaces, wave4-validate-converge]
+property_evidence_matrix:
+  properties:
+    - ref: P0
+      gate: TOKEN_ROTATION_RECEIPT + WIP scrub
+    - ref: P1
+      gate: variables.md keys present
+    - ref: P2
+      gate: script.md thin bootstrap
+    - ref: P3
+      gate: path + symlink
+    - ref: P4
+      gate: PEER_RUNTIME_BINDINGS surfaces
+    - ref: P5
+      gate: HTTPS MCP probe
+    - ref: P6
+      gate: make claude-env + validates + pr-check
+    - ref: P7
+      gate: this PLAN_DOCUMENT
+stress_and_disconfirm:
+  disconfirming_cases:
+    - MCP custom URL bypasses session allowlist
+    - Caddy /graphiti regression
+    - E14 fails without exemption after move
+  assumption_failure_conditions:
+    - Treating hostname ban as ADR-0006 (blocks Mobile)
+    - Symlink removed before path rewrites
+  rollback_constraints:
+    - No L9 HTTP side-door fallback
+out_of_scope:
+  - Rewrite Claude scheduler algorithms
+  - Manus/Codex/Gemini feature builds beyond Graphiti carrier inheritance
+  - Claude Tag org-shared admin environments
+  - Self-hosted CCR / base-image replacement
+  - Merging PE worker adapters into agents adapters
+  - Immediate symlink deletion
+follow_on_milestone:
+  name: extinguish_transitional_symlink
+  description: >
+    Remove environment/claude-code symlink after zero hardcoded path refs in CI.
+unknowns:
+  - id: U1
+    detail: Whether Anthropic .mcp.json HTTP egress uses session allowlist
+  - id: U2
+    detail: Personal vs org-shared cloud environment for secrets visibility
+convergence:
+  status: executable
+  blocking_open: []
+  next_action: wave0-memory-contract
+locked_decisions:
+  cloud_graphiti_url: https://memory.quantumaipartners.com/graphiti/mcp
+  writer_identity: USER_ID + L9_MEMORY_AGENT_ID + L9_MEMORY_SOURCE
+  auth_model: shared GRAPHITI_MCP_TOKEN plane token
+  layout_target: environment/agents/adapters/claude-code
+token_rotation:
+  receipt: WIP/claude code environment/TOKEN_ROTATION_RECEIPT.md
+  new_token_sha256_16: 95eaa0776ae5e66b
+  rotated_at: "2026-08-12T13:18:00Z"

@@ -14,7 +14,7 @@ updated: 2026-07-31
 **2026-07-31:** Adapters thickened to Claude Code contract; live memory
 `https://memory.quantumaipartners.com`; codex+gemini `active`. See
 `docs/DEPLOY.md`, `adapters/ADAPTER_CONTRACT.md`. Claude Code remains at
-`environment/claude-code/`.
+`environment/agents/adapters/claude-code/`.
 
 Read order: `README.md` → `HANDOFF.md` → `DESIGN.md` → `agent_registry.yaml`.
 Intended repo destination: `Quantum-L9/Cursor-Governance` at `environment/agents/`.

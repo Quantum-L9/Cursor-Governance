@@ -20,7 +20,16 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parent.parent
+
+
+def _repo_root(start: Path) -> Path:
+    for parent in [start, *start.parents]:
+        if (parent / "CANONICAL_LAW.md").is_file() or (parent / ".git").exists():
+            return parent
+    return start.parent.parent.parent.parent  # adapters/claude-code → repo
+
+
+REPO = _repo_root(HERE)
 MEM = HERE / "memory"
 CONTRACT = MEM / "memory-enforcement.contract.json"
 SCHEMA = MEM / "memory-enforcement.schema.json"
@@ -107,7 +116,7 @@ def _scripts_exist(contract: dict, failures: list[str]) -> None:
     scripts.append(
         contract.get("preconditions", {}).get("phase_lock", {}).get("established_by", "").split()[0]
     )
-    scripts.append("environment/claude-code/validate_memory_enforcement.py")
+    scripts.append("environment/agents/adapters/claude-code/validate_memory_enforcement.py")
     for rel in filter(None, scripts):
         path = REPO / rel
         if not path.is_file():

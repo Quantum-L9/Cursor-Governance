@@ -7,11 +7,11 @@
     },
     {
       "path": "COMPATIBILITY.yaml",
-      "sha256": "13b305405a534643bcda9601a38ebbba9bf599418fad0f01089028ca858417d0"
+      "sha256": "e86486c162bcb40ac45e4a69daa34b7e06ff722e640c96f41cabe4adfb896822"
     },
     {
       "path": "OWNERSHIP.md",
-      "sha256": "fcf2fb69b265c1cfaba98aab3138e06bdd3080a89594334544549adacf0d55db"
+      "sha256": "b8955337b6ccd099f44ee983462c540d48510d91c4d4164a18275d889926e46d"
     },
     {
       "path": "README.md",
@@ -827,7 +827,7 @@
     },
     {
       "path": "integrations/claude-code-bounded-autonomy/bridge.py",
-      "sha256": "f4bcbca44af5523a6ff3b96e62077bda43797a4f968d139996fcc9f92dd4fcda"
+      "sha256": "3ac8c9461a149ab4e6486b06af7a656df9f8cd4244e0a65787022c7262353438"
     },
     {
       "path": "integrations/claude-code-bounded-autonomy/campaign_mapper.py",
@@ -975,7 +975,7 @@
     },
     {
       "path": "tests/test_existing_runtime_boundaries.py",
-      "sha256": "5475ee5f1692c96d98b620589dd67d5bc7295442a2dde78f98df7b52f4f20ea0"
+      "sha256": "2138dbbe565dc751c31da9c404d6775d9fbb51c187c666428c6c7e8ff7a9a5bf"
     },
     {
       "path": "tests/test_full_adapter_matrix.py",
@@ -1031,7 +1031,7 @@
     },
     {
       "path": "validation/source_reuse_report.yaml",
-      "sha256": "7515627e493c7612f19840d799beeac0983b21acc6a0df57463caedd04b1c1a4"
+      "sha256": "300e96c9b5ab70b4e04ca6136a93a94d0dc7eb9a57070cdea84a0ac3a0ecf3bc"
     },
     {
       "path": "validation/validation_checks.jsonl",

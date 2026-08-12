@@ -15,7 +15,7 @@ One work environment, N agents, one shared memory graph, zero identity collision
 
 ## 1. Problem
 
-The L9 governance environment activates today on exactly two surfaces (Cursor via `.cursor-commands`, Claude Code via `environment/claude-code/`). Each surface hand-declares its memory identity in its own env file. There is no single place that answers: **which agents exist, what is each agent's unique ID, what role does it hold, which token maps to it on the memory server, and what work is it allowed to claim?** Adding a third agent (Manus, Codex, Gemini, Windsurf) today means copying a directory and hand-editing identities — the exact drift pattern CANONICAL_LAW forbids.
+The L9 governance environment activates today on exactly two surfaces (Cursor via `.cursor-commands`, Claude Code via `environment/agents/adapters/claude-code/`). Each surface hand-declares its memory identity in its own env file. There is no single place that answers: **which agents exist, what is each agent's unique ID, what role does it hold, which token maps to it on the memory server, and what work is it allowed to claim?** Adding a third agent (Manus, Codex, Gemini, Windsurf) today means copying a directory and hand-editing identities — the exact drift pattern CANONICAL_LAW forbids.
 
 ## 2. Design axis
 
@@ -64,7 +64,7 @@ Roles are enforced at two levels — **namespace grants** (hard, server-side) an
 | Surface | Adapter artifact | Identity carrier |
 |---|---|---|
 | Cursor | existing `.cursor-commands` + `ops/graphiti` (unchanged) | `USER_ID=cursor_agent` machine env |
-| Claude Code | existing `environment/claude-code/` (env example now rendered from registry) | account environment |
+| Claude Code | existing `environment/agents/adapters/claude-code/` (env example now rendered from registry) | account environment |
 | Manus | `environment/agents/adapters/manus/` — connector + env + bootstrap + setup.md | Manus session env / custom MCP connector |
 | Codex / OpenAI | `environment/agents/adapters/codex/` — MCP + config.toml + AGENTS.md block + setup.md | account env / `~/.codex/config.toml` |
 | Gemini CLI | `environment/agents/adapters/gemini/` — settings + GEMINI.md block + setup.md | `~/.gemini/settings.json` env refs |

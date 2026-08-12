@@ -20,19 +20,11 @@ import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
-from urllib.parse import urlparse
 
-# Loopback-only front door: the Cursor Graphiti MCP listens on localhost, where
-# TLS is neither available nor meaningful (traffic never leaves the host). The
-# scheme is assembled from parts so the clear-text protocol is not a hardcoded
-# URL literal (SonarCloud python:S5332) while the loopback contract is unchanged.
-_LOOPBACK_MCP_AUTHORITY = "127.0.0.1:8100"
-_LOOPBACK_SCHEME = "http"
-PROD_MEMORY_MCP_DEFAULT = f"{_LOOPBACK_SCHEME}://{_LOOPBACK_MCP_AUTHORITY}/mcp/"
-_FORBIDDEN_MEMORY_HOST_SUFFIX = "quantumaipartners.com"
-# Scheme prefixes assembled from parts (same S5332 reason). This guard only
-# *detects* URL-shaped strings so their hosts can be validated below; it never
-# opens an HTTP connection, so the http:// prefix here is detection, not use.
+# Graphiti front door is env-sourced (cloud HTTPS or CLI loopback tunnel).
+# Template must reference ${GRAPHITI_MCP_URL}; never register l9-shared-memory.
+GRAPHITI_MCP_URL_ENV_REF = "${GRAPHITI_MCP_URL}"
+# Scheme prefixes assembled from parts (SonarCloud python:S5332). Detection only.
 _URL_SCHEME_PREFIXES = tuple(f"{scheme}://" for scheme in ("http", "https"))
 
 HERE = Path(__file__).resolve().parent
@@ -84,7 +76,11 @@ def check_files_exist(failures: list[str]) -> None:
         else:
             _fail(f"missing required file: {rel}", failures)
     # Shared routing SSOT lives under ops/ (CANONICAL_LAW §2.1), not this adapter tree.
-    root = HERE.parents[1]
+    root = HERE
+    for parent in HERE.parents:
+        if (parent / "CANONICAL_LAW.md").is_file() or (parent / ".git").exists():
+            root = parent
+            break
     shared_registry = root / "ops" / "generated" / "skill-registry.json"
     shared_scorer = root / "ops" / "skill_routing" / "route_prompt.py"
     for path in (shared_registry, shared_scorer):
@@ -134,13 +130,6 @@ def _iter_http_urls(obj: object) -> Iterator[str]:
         yield obj
 
 
-def _host_is_forbidden_memory(host: str) -> bool:
-    host = host.lower().rstrip(".")
-    return host == _FORBIDDEN_MEMORY_HOST_SUFFIX or host.endswith(
-        "." + _FORBIDDEN_MEMORY_HOST_SUFFIX
-    )
-
-
 def check_mcp_uses_env_refs(failures: list[str]) -> None:
     path = HERE / "mcp.template.json"
     if not path.is_file():
@@ -166,21 +155,17 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
             "mcp.template.json Authorization must be Bearer ${GRAPHITI_MCP_TOKEN}",
             failures,
         )
-    if url.rstrip("/").endswith("127.0.0.1:8100/mcp") or url == PROD_MEMORY_MCP_DEFAULT:
-        print("  OK: mcp URL is Cursor Graphiti front door (127.0.0.1:8100)")
+    if url == GRAPHITI_MCP_URL_ENV_REF:
+        print("  OK: mcp URL is GRAPHITI_MCP_URL env-reference (cloud HTTPS or CLI tunnel)")
     else:
         _fail(
-            f"mcp.template.json URL must be Graphiti front door ({PROD_MEMORY_MCP_DEFAULT!r})",
+            f"mcp.template.json URL must be {GRAPHITI_MCP_URL_ENV_REF!r}",
             failures,
         )
-    for candidate in _iter_http_urls(server):
-        host = urlparse(candidate).hostname or ""
-        if _host_is_forbidden_memory(host):
-            _fail(
-                "mcp.template.json must not reference memory.quantumaipartners.com",
-                failures,
-            )
-            break
+    raw = (HERE / "mcp.template.json").read_text(encoding="utf-8")
+    for banned in ("L9_MEMORY_HTTP_URL", "L9_MEMORY_CLIENT_TOKEN"):
+        if banned in raw:
+            _fail(f"mcp.template.json must not reference {banned}", failures)
 
 
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:

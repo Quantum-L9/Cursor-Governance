@@ -22,7 +22,7 @@ field.
    `network-policy.md`.
 2. **Environment variables** — paste `environment.env.example`, then replace every
    `REPLACE_WITH_*` **in the UI, not in chat or a repo**. At minimum set `GH_TOKEN`
-   (dedicated bot-user fine-grained PAT).
+   and `GRAPHITI_MCP_TOKEN` (dedicated bot-user PAT + Graphiti bearer).
 3. **Setup script** — **paste `setup.bootstrap.sh` (recommended), not `setup.sh`.**
    The account field is a *copy*, not a live link to the repo, so pasting the full
    `setup.sh` drifts from the file on every edit until someone re-pastes it. The
@@ -52,25 +52,20 @@ ls "$HOME/.cursor-governance/CANONICAL_LAW.md"   # governance clone present
 # context block listing the governance clone and available skills.
 ```
 
-## Shared memory (optional, cross-session)
+## Shared memory (required for governed Mobile/Web)
 
-`environment.env.example` sets `GRAPHITI_FRONT_DOOR` / `GRAPHITI_MCP_TOKEN`;
-`../mcp.template.json` is the MCP block that consumes them (URL expands to
-`${GRAPHITI_FRONT_DOOR}/mcp`). One long-running HTTP control plane owns the
-canonical DB; all sessions share it. Production endpoint:
-`http://127.0.0.1:8100` (Caddy TLS → C1 `l9-memory-server` on
-`:8200`). `setup.sh` only wires the client (`.mcp.json`); it never starts a
-local memory server.
+Cloud sessions use HTTPS Graphiti reachability to the **same** store as Cursor:
 
-**Identity (shared graph, distinct author).** The `group_id` (repo namespace) is
-shared with Cursor — that is what makes memory shared. The writing-agent identity
-is **not**: Claude Code uses `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claude-code`
-and its **own** bearer token (a separate server principal), so it never writes
-under Cursor's `cursor_agent`. Give Claude Code a token distinct from Cursor's.
+`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`
 
-**Allowlist:** Add `127.0.0.1:8100` to the Claude environment
-Network-access allowlist (or use Full). Authentication is required on the
-server; bearer tokens never go in `.mcp.json`.
+(`mcp.template.json` expands `${GRAPHITI_MCP_URL}` / `${GRAPHITI_MCP_TOKEN}`).
+This is **not** the retired `L9_MEMORY_HTTP_*` side door (ADR-0006).
+CLI hosts may set `GRAPHITI_MCP_URL=http://127.0.0.1:8100/mcp` via the SSH tunnel.
+
+**Identity (shared graph, distinct author).** `group_id` is shared with Cursor.
+Writing identity is not: `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claude-code`.
+
+**Allowlist:** add `memory.quantumaipartners.com` (Custom) or use Full.
 
 ## Security
 

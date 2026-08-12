@@ -17,6 +17,9 @@ tests use repo-root-compatible imports and remain in the default suite.
 """
 
 collect_ignore = [
+    # Transitional symlink + owned Claude autonomy suite (python-contract.json).
+    "environment/claude-code/autonomy",
+    "environment/agents/adapters/claude-code/autonomy",
     "environment/program-execution/adapters",
     "environment/program-execution/integrations",
     "environment/program-execution/conformance",

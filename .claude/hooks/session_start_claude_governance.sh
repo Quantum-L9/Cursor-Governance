@@ -110,11 +110,9 @@ else
 fi
 
 # memory-bank/ retired — resume from Graphiti inject/PICKUP only (no T0 excerpt)
-LINES+=("shared memory: Cursor Graphiti front door only; memory-bank retired")
 
-if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
-  LINES+=("shared memory: L9_MEMORY_HTTP_URL set — l9-shared-memory MCP expected (see mcp.template.json)")
-fi
+# --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
+LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / phase-lock / write); no L9_MEMORY_HTTP side door; memory-bank retired")
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

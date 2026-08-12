@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "AUTHORITATIVE memory MCP for Claude Code — Cursor Graphiti front door only.",
+    "Same store/lifecycle as ops/graphiti/graphiti_memory_client.py (CANONICAL_LAW §8).",
+    "URL and token come from env: GRAPHITI_MCP_URL + GRAPHITI_MCP_TOKEN.",
+    "Cloud/Mobile: https://memory.quantumaipartners.com/graphiti/mcp (Caddy → C1 :8100).",
+    "CLI host: http://127.0.0.1:8100/mcp via SSH tunnel (set GRAPHITI_MCP_URL locally).",
+    "FORBIDDEN: retired HTTP l9-shared-memory side door and L9_MEMORY_HTTP_* lifecycle env.",
+    "Adapters must not reintroduce a second memory plane."
+  ],
+  "mcpServers": {
+    "graphiti-memory": {
+      "url": "${GRAPHITI_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
+      },
+      "timeout": 120000,
+      "alwaysLoad": true
+    }
+  }
+}

@@ -98,9 +98,9 @@ claude-skills-check:
 
 ## Behavioral router + reconciliation fixture tests.
 claude-skills-test:
-	python3 environment/claude-code/tests/test_skill_router.py
-	python3 environment/claude-code/tests/test_skill_reconciliation.py
-	python3 environment/claude-code/tests/test_cursor_skill_router.py
+	python3 environment/agents/adapters/claude-code/tests/test_skill_router.py
+	python3 environment/agents/adapters/claude-code/tests/test_skill_reconciliation.py
+	python3 environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py
 
 .PHONY: claude-settings claude-settings-check
 
@@ -119,11 +119,11 @@ claude-settings-check:
 ## Heals the settings triad first (idempotent), then runs structural validation.
 claude-env:
 	$(MAKE) claude-settings
-	python3 environment/claude-code/validate_claude_env.py
+	python3 environment/agents/adapters/claude-code/validate_claude_env.py
 
 ## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
 autonomy-validate:
-	python3 environment/claude-code/autonomy/validate_autonomy.py
+	python3 environment/agents/adapters/claude-code/autonomy/validate_autonomy.py
 
 
 ## L4 local autonomy (stacked local commits → kernels → authorize → push/PR).
