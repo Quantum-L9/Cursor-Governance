@@ -47,6 +47,21 @@ def workspace_root(explicit: str | None = None) -> Path:
     return _validated_git_root(candidate)
 
 
+def workspace_from_event(event: dict[str, Any]) -> Path:
+    """Resolve workspace from a Claude/Cursor hook event, else cwd git root."""
+    tool_input = event.get("tool_input") or {}
+    if isinstance(tool_input, dict):
+        for key in ("cwd", "working_directory", "workspace"):
+            val = tool_input.get(key)
+            if val:
+                return Path(str(val)).expanduser().resolve()
+    for key in ("cwd", "working_directory", "workspace"):
+        val = event.get(key)
+        if val:
+            return Path(str(val)).expanduser().resolve()
+    return workspace_root()
+
+
 def _validated_git_root(candidate: Path) -> Path:
     """Resolve a workspace only when it is an existing git work tree."""
     root = candidate.resolve()

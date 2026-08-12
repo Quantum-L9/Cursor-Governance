@@ -46,7 +46,7 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 | `waiting_external_releases_compute_lane` | `kind:poll` → `Task(run_in_background: true)`; main continues |
 | `waiting_external_preserves_declared_locks` | Poll owns `pr:<n>` until join/hand-back |
 | `require_join_barrier` | All Tasks terminal + evidence before merge-ready claim |
-| `autonomous_merge: false` | Report merge gate only; human merges |
+| `autonomous_merge: false` | No standing random merges; L4 program/plan Build launch authorizes merge for that stack after green+mergeable (bottom-up) |
 | `concurrency_budget` 4 / 2 | Max 4 Tasks; max 2 `mutation: true` |
 
 ## Dual-surface rule

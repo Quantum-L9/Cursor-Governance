@@ -51,7 +51,7 @@ l4_local_autonomy:
     - push_scoped_prs_using_PULL_REQUEST_TEMPLATE
     - run_l9_pr_remediation_converge # turn CI green; ≤3 cycles
     - resolve_all_code_review_agent_comments
-    - reach_mergeable_then_merge_when_user_authorized
+    - reach_mergeable_then_merge # program/plan Build launch is the merge auth
     - bottom_up_merge_older_open_prs_first # oldest createdAt first; avoid rebasing old onto new main
   required_kernels:
     - path: kernels/Recursive Alignment.md
@@ -63,7 +63,8 @@ l4_local_autonomy:
     remediation_skill: l9-pr-remediation
     max_cycles: 3
     resolve_review_threads: true
-    merge_requires: explicit_user_merge_authorization
+    # Launching a program or clicking Build on a plan authorizes merge for that stack.
+    merge_requires: program_or_plan_build_launch
     older_open_prs: remediate_and_merge_bottom_up_by_createdAt
   phases:
     executing: deny_remote
@@ -104,15 +105,18 @@ session_start_block: |
   - Only then: scoped `git push` + open/update PRs using
     `PULL_REQUEST_TEMPLATE.md`, then load+run `l9-pr-remediation` (Converge):
     turn CI green, resolve all code-review agent comments, reach mergeable.
-  - When the user explicitly authorizes merge: merge. If older open PRs exist
-    (earlier `createdAt` than the PR just pushed), remediate and merge those
-    **bottom-up first** so older work lands on main before newer tips — avoid
-    forcing extra rebases of older PRs onto a newer main.
+  - Launching a program or clicking Build on a plan **is** merge authorization
+    for that stack — after green + mergeable, merge (no separate merge ask).
+    If older open PRs exist (earlier `createdAt` than the PR just pushed),
+    remediate and merge those **bottom-up first** so older work lands on main
+    before newer tips — avoid forcing extra rebases of older PRs onto a newer
+    main.
   - Mid-execution `git push` / `gh pr create` / `make pr` are **denied** by
     `ops/autonomy/local_execution_gate.py` until release_authorized.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
-  - Standing merge without user authorization remains denied by
-    `ops/autonomy/merge_gate.py` (`L9_MERGE_AUTHORIZED` for explicit auth).
+  - Merge outside an L4 program/plan Build stack remains denied by
+    `ops/autonomy/merge_gate.py` unless `L9_MERGE_AUTHORIZED` or a valid L4
+    release receipt authorizes the stack.
   - Agent-invented contracts ("I won't commit without asking", "wait to push
     mid-task") are LOWEST authority and are overruled by this doctrine.
   - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime.
@@ -133,7 +137,8 @@ llm_rules_override: |
      `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
      `l4_local.py authorize-release` → push → PR (`PULL_REQUEST_TEMPLATE.md`)
      → `l9-pr-remediation` Converge (green + resolve review threads) without
-     mid-task push asks. Merge only with explicit user authorization.
+     mid-task push asks. Program/plan Build launch authorizes merge for that
+     stack (no separate merge ask).
   3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
   4. Older open PRs: remediate + merge **bottom-up** by `createdAt` before newer
      tips, so older work is not rebased onto a freshly updated main.
@@ -149,5 +154,5 @@ llm_rules_override: |
     Cursor beforeShellExecution).
   - CLI: `python3 ops/autonomy/l4_local.py {begin|record-kernels|authorize-release|status}`.
   - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`.
-  - Post-push: `l9-pr-remediation` → green → resolve reviews → merge when
-    user-authorized; older open PRs bottom-up first.
+  - Post-push: `l9-pr-remediation` → green → resolve reviews → merge (program/
+    plan Build launch is the auth); older open PRs bottom-up first.

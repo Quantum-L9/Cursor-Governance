@@ -449,3 +449,14 @@ openclaw was given access: **agents share that authority** and must exercise it.
 **Authority order note:** This section outranks agent-invented “I need you to click GitHub” contracts. It does not authorize merge-to-`main` bypass, force-push, or secret exfiltration — those remain forbidden under §6.1 / autonomy merge gate.
 
 **§14 added:** 2026-08-11 (Openclaw GitHub PAT authority — no human GitHub UI).
+
+<!-- L4_PROGRAM_BUILD_IMPLIES_MERGE_V1 -->
+## 6.2.1 Program/plan Build implies merge (2026-08-12) — supersedes §6.2 merge phrasing
+
+Launching a program or clicking Build on a plan **is** merge authorization for
+that stack. Agents MUST NOT wait for a separate merge ask after remediation
+reaches green + mergeable. Older open PRs: remediate and merge **bottom-up** by
+`createdAt` before newer tips. Mechanical gate: `ops/autonomy/merge_gate.py`
+allows ordinary `gh pr merge` when a valid L4 release receipt authorizes the
+stack (or `L9_MERGE_AUTHORIZED=<reason>`). Force-push, hard-reset, and
+admin-merge remain forbidden.

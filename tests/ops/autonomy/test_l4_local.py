@@ -22,28 +22,6 @@ from l4_local import (  # noqa: E402
 from local_execution_gate import evaluate  # noqa: E402
 
 
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
-
-
-@pytest.fixture
-def stacked_repo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git(repo, "init")
-    _git(repo, "config", "user.email", "test@example.com")
-    _git(repo, "config", "user.name", "test")
-    (repo / "README.md").write_text("x\n", encoding="utf-8")
-    _git(repo, "add", "README.md")
-    _git(repo, "commit", "-m", "init")
-    _git(repo, "branch", "-M", "main")
-    _git(repo, "checkout", "-b", "feat/l4-stack")
-    (repo / "a.txt").write_text("a\n", encoding="utf-8")
-    _git(repo, "add", "a.txt")
-    _git(repo, "commit", "-m", "local work")
-    return repo
-
-
 def test_denies_remote_without_release(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
