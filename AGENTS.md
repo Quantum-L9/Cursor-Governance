@@ -490,3 +490,17 @@ Authoritative corrections (do not treat older bullets above as SSOT):
    matches this path.
 3. Residual `memory-bank/` trees are archival residue; wiring checks WARN if
    present and PASS when absent. Agents must not recreate them.
+
+<!-- L4_PROGRAM_BUILD_IMPLIES_MERGE_V1 -->
+## L4 program/plan Build implies merge (2026-08-12) — supersedes §2.0.2 merge phrasing
+
+Authoritative correction (do not treat older “when the user authorizes merge”
+bullets above as requiring a second ask):
+
+1. Launching a program or clicking Build on a plan **is** merge authorization
+   for that stack. After `l9-pr-remediation` reaches green + mergeable: merge.
+2. Older open PRs (earlier `createdAt`): remediate and merge **bottom-up first**.
+3. Merge outside that L4 program/plan Build stack still requires
+   `L9_MERGE_AUTHORIZED` (or a valid L4 release receipt for ordinary
+   `gh pr merge` via `ops/autonomy/merge_gate.py`). Force-push / admin-merge /
+   hard-reset remain forbidden.

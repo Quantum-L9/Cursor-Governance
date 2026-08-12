@@ -27,9 +27,11 @@ make pr
 
 6. After push: run `l9-pr-remediation` Converge — turn CI green, resolve all
    code-review agent comments, reach mergeable.
-7. When the user authorizes merge: merge. If older open PRs exist (earlier
-   `createdAt` than the PR just pushed), remediate and merge those
-   **bottom-up first** so older work is not rebased onto a newer main.
+7. Launching a program or clicking Build on a plan **is** merge authorization
+   for that stack — do not wait for a separate merge ask. After remediation
+   reaches mergeable: merge. If older open PRs exist (earlier `createdAt` than
+   the PR just pushed), remediate and merge those **bottom-up first** so older
+   work is not rebased onto a newer main.
 
 ## Enforcement
 

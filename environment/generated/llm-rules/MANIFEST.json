@@ -357,9 +357,9 @@
       "alias": null,
       "class": "always",
       "output": "87-l4-local-autonomy.md",
-      "output_sha256": "af7cf95144637ec6126cbf59ff1296a0ec6163ef2d30b87c2ad8a9e749e36f0b",
+      "output_sha256": "97dda1f29de3fc7b8f37f9d26df531d211c1ae85dd7ab158548812ef1cd455c5",
       "source": "rules/87-l4-local-autonomy.mdc",
-      "source_sha256": "d04f2292aebeaba4fa62330136ee9ad223f63b282b78910dcfb5602129387895",
+      "source_sha256": "991f1089bcd354731063a6491d1bd5d9541372098f15f7e57773c63ae4ab9c9e",
       "stem": "87-l4-local-autonomy"
     },
     {
@@ -582,9 +582,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "4aae477331ac0df2931891d2b2c0828e1684709248625afc8a5c684ad190e95f",
+      "output_sha256": "2fc16daa8c59cea0e47c26edcf7e77dae683ff387c804c4e00f77856377af975",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "cc91bfbd6dc3d82b715adb02c00e724f8c0491469d86714d6382f4d3c4645ab8",
+      "source_sha256": "6843f97be15dd6f1277dd1d55adf0d4ac9581de7f484ee1eb428814c1adb8002",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -596,5 +596,5 @@
     "skipped_agent_requested": 4,
     "source_mdc": 65
   },
-  "tree_sha256": "60de51d5ecca26b8a22621c6dd55f0bd69b14526a57a12fc59237b46173bc302"
+  "tree_sha256": "3c6a88dbc16ff02ec0fe06e46b842fdf48e9ada908955aae400884082248c81c"
 }
