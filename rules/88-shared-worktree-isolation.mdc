@@ -1,0 +1,42 @@
+---
+description: Parallel agents must not scoop, revert, or branch-thrash foreign dirty work on a shared git clone.
+alwaysApply: true
+---
+
+# Shared worktree isolation
+
+## Incident (2026-08-12)
+
+A parallel agent on the same Cursor-Governance working tree:
+
+1. Piped `git diff --name-only` into `git add` (skipped only `WIP/*` + `skills/l9-plan/*`)
+2. Committed another chat's dirty `commands/plan.md` v2.0.0 as a "style" commit
+3. Ran `git revert` on that commit → plan.md restored to v1.2.0
+
+Same session: other agents kept `git checkout` / `git reset` on the primary clone,
+wiping untracked in-flight fix files.
+
+## MUST
+
+1. **One mutating agent per worktree.** Parallel contracts use
+   `git worktree add <path> -b <branch>` (or a separate clone). Do not share the
+   primary Cursor-Governance checkout for concurrent mutation.
+2. **Stage only paths you authored this session** — explicit pathspecs.
+3. **Never** `git diff --name-only | … git add`, `git add -A`, `git add .`,
+   or `git add -u` without pathspecs on a shared clone.
+4. **Never** `git revert` a commit that may contain foreign/out-of-scope paths.
+   Prefer `git restore --staged --worktree -- <your-paths>` or a new corrective
+   commit that does not rewind other agents' files.
+5. **Never** `git checkout`/`git switch` between branches or `git reset` on a
+   shared dirty clone — use a dedicated worktree instead.
+6. When editing slash commands in a governance checkout that is **not**
+   `$HOME/.cursor-governance`, remember `.cursor-commands` → SSOT: `/plan`
+   loads SSOT until your change is merged + SSOT activated (or you sync the
+   command file into the SSOT clone deliberately).
+
+## Enforcement
+
+- `ops/autonomy/worktree_isolation_gate.py` via `local_execution_gate.py`
+  (Cursor `beforeShellExecution` + Claude PreToolUse)
+- Escape (human/ops only): `L9_GIT_REVERT_AUTHORIZED`, `L9_GIT_BROAD_ADD_AUTHORIZED`,
+  `L9_GIT_SWITCH_AUTHORIZED`, `L9_GIT_RESET_AUTHORIZED`, or `L9_WORKTREE_ISOLATION=0`

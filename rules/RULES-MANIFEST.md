@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-12T15:22:05Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-12T16:40:35Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **64** |
-| `alwaysApply: true` | **43** |
+| Total MDC files | **65** |
+| `alwaysApply: true` | **44** |
 | `alwaysApply: false` | **21** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **8** |
-| Derived compatibility IDs | **56** |
+| Derived compatibility IDs | **57** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -52,19 +52,20 @@ Generated: `2026-08-12T15:22:05Z`. Source: `rules/*.mdc`.
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | always | 90 | `a7998c5521fd` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | auto_attached | 71 | `cf96edc3a20d` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 129 | `c2b50866ca55` |
-| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 71 | `ebf45d7841f3` |
+| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 74 | `4a015b7b40f4` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | always | 85 | `f67abad4e816` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 161 | `9747bd0abea4` |
 | `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
-| `87-l4-local-autonomy.mdc` | `l9.rule.87.l4.local.autonomy` | global | git | always | 48 | `991f1089bcd3` |
+| `87-l4-local-autonomy.mdc` | `l9.rule.87.l4.local.autonomy` | global | git | always | 49 | `7c709b33b6d7` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
-| `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
+| `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `a99f7b00c3b2` |
 | `88-perplexity-run-harness.mdc` | `l9.rule.88.perplexity.run.harness` | global | governance | always | 51 | `e599b2b56828` |
+| `88-shared-worktree-isolation.mdc` | `l9.rule.88.shared.worktree.isolation` | global | git | always | 42 | `65e2a9c8fa6c` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | always | 35 | `b6b565182a82` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 110 | `3d0a8c303d9d` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 64 | `b15272f75d3d` |
-| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 778 | `d8436ca0e53a` |
+| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 792 | `f7a407576c93` |
 | `93-c1-server-protection.mdc` | `l9.rule.93.c1.server.protection` | global | git | always | 82 | `e0d5aa093de5` |
 | `94-deployment-prohibition.mdc` | `l9.rule.94.deployment.prohibition` | global | deployment | always | 19 | `3f41555552fd` |
 | `95-agent-pattern-activation.mdc` | `l9.rule.95.agent.pattern.activation` | global | memory | always | 109 | `1faa1aae1604` |
