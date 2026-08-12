@@ -58,13 +58,9 @@ def test_denies_branch_checkout_when_dirty(
 ) -> None:
     monkeypatch.delenv("L9_GIT_SWITCH_AUTHORIZED", raising=False)
     (stacked_repo / "dirt.txt").write_text("x\n", encoding="utf-8")
+    assert command_violates_worktree_isolation("git checkout main", root=stacked_repo) is not None
     assert (
-        command_violates_worktree_isolation("git checkout main", root=stacked_repo)
-        is not None
-    )
-    assert (
-        command_violates_worktree_isolation("git switch feat/other", root=stacked_repo)
-        is not None
+        command_violates_worktree_isolation("git switch feat/other", root=stacked_repo) is not None
     )
 
 
@@ -72,10 +68,7 @@ def test_allows_branch_checkout_when_clean(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GIT_SWITCH_AUTHORIZED", raising=False)
-    assert (
-        command_violates_worktree_isolation("git checkout main", root=stacked_repo)
-        is None
-    )
+    assert command_violates_worktree_isolation("git checkout main", root=stacked_repo) is None
 
 
 def test_allows_create_branch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -86,10 +79,7 @@ def test_allows_create_branch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_allows_path_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_GIT_SWITCH_AUTHORIZED", raising=False)
-    assert (
-        command_violates_worktree_isolation("git checkout -- AGENTS.md CANONICAL_LAW.md")
-        is None
-    )
+    assert command_violates_worktree_isolation("git checkout -- AGENTS.md CANONICAL_LAW.md") is None
     assert (
         command_violates_worktree_isolation(
             "git checkout origin/main -- AGENTS.md CANONICAL_LAW.md"
@@ -98,20 +88,13 @@ def test_allows_path_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def test_denies_reset_when_dirty(
-    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_denies_reset_when_dirty(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_GIT_RESET_AUTHORIZED", raising=False)
     (stacked_repo / "dirt.txt").write_text("x\n", encoding="utf-8")
-    assert (
-        command_violates_worktree_isolation("git reset HEAD -- .", root=stacked_repo)
-        is not None
-    )
+    assert command_violates_worktree_isolation("git reset HEAD -- .", root=stacked_repo) is not None
 
 
-def test_evaluate_shell_hits_isolation(
-    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_evaluate_shell_hits_isolation(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_GIT_REVERT_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     reason = evaluate(
