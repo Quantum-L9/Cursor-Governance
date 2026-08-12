@@ -48,6 +48,13 @@ Program Execution remains the controller. Root `autonomy/` is subordinate and
 declares `owns_program_state: false`; its lease may not outlive the
 authoritative Program lease.
 
+**First-class family registry:**
+[`environment/contracts/autonomy/MANIFEST.yaml`](../contracts/autonomy/MANIFEST.yaml)
+registers the autonomy SSOTs (root control plane, `ops/autonomy` surface/L4,
+Claude scheduler) for discovery and fail-closed validation
+(`make autonomy-contracts-validate`). Elevation does **not** flip
+`owns_program_state` or invent a second controller.
+
 `agent_registry.yaml` MUST NOT declare `execution:` — topology lives only in
 `PEER_RUNTIME_BINDINGS.yaml`. Dual-read shims are forbidden.
 

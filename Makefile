@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
@@ -33,7 +33,7 @@ OPEN_PR ?= 1
 PR_REMEDIATE ?= 1
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
@@ -121,8 +121,12 @@ claude-env:
 	$(MAKE) claude-settings
 	python3 environment/agents/adapters/claude-code/validate_claude_env.py
 
+## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).
+autonomy-contracts-validate:
+	python3 ops/scripts/validate_autonomy_contracts.py
+
 ## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
-autonomy-validate:
+autonomy-validate: autonomy-contracts-validate
 	python3 environment/agents/adapters/claude-code/autonomy/validate_autonomy.py
 
 
@@ -319,7 +323,7 @@ program-execution-core-validate:
 program-execution-adapters:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
 
-program-execution-conformance:
+program-execution-conformance: autonomy-contracts-validate
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/run_conformance.py
 
 program-execution-probe:

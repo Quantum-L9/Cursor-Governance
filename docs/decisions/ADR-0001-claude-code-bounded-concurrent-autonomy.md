@@ -26,8 +26,10 @@ by default. That collides with the L9 fail-closed norm for irreversible actions.
 ## Decision
 
 Adopt the bounded-concurrency runtime under
-`environment/claude-code/autonomy/`, with this default posture in the committed
-`settings.template.json` and `web/environment.env.example`:
+`environment/agents/adapters/claude-code/autonomy/` (sole live home; the
+transitional `environment/claude-code/autonomy` path is extinguished), with this
+default posture in the committed `settings.template.json` and
+`web/environment.env.example`:
 
 - **Autonomy ENABLED by default.** Completed work opens a PR and is driven to
   green unattended. The scheduler runs only dependency-ready, non-conflicting

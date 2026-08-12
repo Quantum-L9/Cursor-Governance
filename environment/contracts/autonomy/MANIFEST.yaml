@@ -1,0 +1,96 @@
+schema: l9.autonomy-contracts.manifest.v1
+schema_version: 1.0.0
+family: l9_autonomy_architecture
+status: active
+updated: "2026-08-12"
+purpose: >
+  First-class autonomy family registry (Cursor-primary). Registers the three live
+  autonomy homes and their SSOT paths. Program Execution remains the controller;
+  root autonomy declares owns_program_state: false and must not outlive a Program
+  lease. This MANIFEST elevates discovery and fail-closed validation — it does
+  not relocate runtime brains into environment/contracts/.
+law:
+  program_execution_controller: environment/program-execution
+  peer_contract: environment/agents/PEER_EXECUTION.md
+  subordinate_invariant: owns_program_state_false
+artifacts:
+  - artifact_id: root-autonomy-control-plane
+    kind: control_plane
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    canonical_path: autonomy/
+    provider_id: root-autonomy-control-plane
+    provider_manifest: environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml
+    owns_program_state: false
+    meta: meta/root-autonomy-control-plane.meta.md
+    consumed_by:
+      - environment/program-execution
+      - environment/agents/PEER_EXECUTION.md
+      - commands/autonomy.md
+      - skills/l9-bounded-autonomy
+    not_for:
+      - owning_program_state
+      - free_form_mutation_without_program_lease
+  - artifact_id: autonomy-surface-profile
+    kind: surface_doctrine
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    canonical_path: ops/autonomy/surface_profile.yaml
+    meta: meta/autonomy-surface-profile.meta.md
+    consumed_by:
+      - CANONICAL_LAW.md
+      - ops/scripts/project_llm_rules.py
+      - environment/generated/llm-rules/zz-autonomy-surface-override.md
+    not_for:
+      - skill_local_forks_of_surface_profile
+      - adapter_prose_forks
+  - artifact_id: l4-local-autonomy
+    kind: local_execution_gate
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    canonical_path: ops/autonomy/l4_local.py
+    profile_fragment: l4_local_autonomy
+    profile_path: ops/autonomy/surface_profile.yaml
+    gate: ops/autonomy/local_execution_gate.py
+    merge_gate: ops/autonomy/merge_gate.py
+    state_path: .l9/autonomy/l4-local-phase.json
+    receipt_path: .l9/autonomy/l4-release-receipt.json
+    meta: meta/l4-local-autonomy.meta.md
+    consumed_by:
+      - rules/87-l4-local-autonomy.mdc
+      - ops/hooks/l4-local-execution-gate-shell.sh
+      - skills/l9-bounded-autonomy
+    not_for:
+      - mid_execution_push_before_release_authorized
+  - artifact_id: claude-code-bounded-autonomy-scheduler
+    kind: adapter_scheduler
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    canonical_path: environment/agents/adapters/claude-code/autonomy/
+    e14_exemption: true
+    note: >
+      Claude-owned bounded-concurrency scheduler (E14). Not a forbidden copy of
+      root autonomy/; Cursor maps invariants via l9-bounded-autonomy Tasks.
+    meta: meta/claude-code-bounded-autonomy-scheduler.meta.md
+    consumed_by:
+      - make autonomy-validate
+      - environment/agents/adapters/claude-code
+    not_for:
+      - cursor_reimplementation_of_scheduler_python
+      - citing_environment/claude-code/autonomy_as_live_path
+forbidden_second_ssots:
+  - path_glob: skills/**/surface_profile.yaml
+    reason: surface profile must remain ops/autonomy/surface_profile.yaml
+  - path_glob: environment/claude-code/autonomy/**
+    reason: transitional symlink extinguished; adapters path is sole Claude home
+projections:
+  - path: commands/autonomy.md
+    relation: discovery_pointer
+  - path: skills/l9-bounded-autonomy/SKILL.md
+    relation: discovery_pointer
+  - path: environment/generated/llm-rules/zz-autonomy-surface-override.md
+    relation: generated_from_surface_profile

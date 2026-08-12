@@ -708,6 +708,7 @@ invariants:
       - pyproject.toml
       - ops/config/root-file-protection.json
       - ops/scripts/validate_root_file_protection.py
+      - environment/contracts/**
 
     assertion:
       type: independent_approval
@@ -1651,6 +1652,7 @@ change_control:
     - pyproject.toml
     - ops/config/root-file-protection.json
     - ops/scripts/validate_root_file_protection.py
+    - environment/contracts/**
 
   requirements:
     pull_request_required: true
