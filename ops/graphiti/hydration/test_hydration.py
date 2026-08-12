@@ -159,6 +159,8 @@ def test_extract_pickup_graphiti_paraphrase():
 
 def test_phase_a_without_api_key(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("MEMORY_PHASE_B_RESOLVE_SM", "0")
+    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
     monkeypatch.setattr(
         cs,
         "resolve_group_id",
@@ -191,6 +193,100 @@ def test_phase_a_without_api_key(monkeypatch, tmp_path):
     assert report["phase_b"] is False
     assert any(w.get("kind") == "pickup_context" for w in writes)
     assert any("OPENAI_API_KEY" in w for w in report["warnings"])
+
+
+def test_phase_b_success_with_mocked_transport(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
+    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "0")
+    monkeypatch.setattr(
+        cs,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship phase b", "test"))
+    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
+    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
+    monkeypatch.setattr(
+        cs,
+        "_write_kind",
+        lambda body, **kwargs: {"written": True, "kind": kwargs["kind"]},
+    )
+    import graphiti_memory_client as gmc
+
+    monkeypatch.setattr(gmc, "load_env", lambda: None)
+
+    packet = {
+        "packet_id": "abcdef0123456789",
+        "session_id": "close-b",
+        "promotion_decisions": [
+            {
+                "kind": "lesson",
+                "body": "Use fixed-host OpenAI helper for Phase B.",
+                "decision": "promote",
+                "score": 0.9,
+            }
+        ],
+        "pickup": {
+            "active_objective": "Finish Phase B restore",
+            "next_action": "Open PR after pr-check",
+            "context_slice": "phase b",
+            "blockers": [],
+        },
+        "do_not_promote": [],
+    }
+    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (packet, ""))
+
+    report = cs.close_session(
+        project_dir=tmp_path,
+        session_id="close-b",
+        agent_id="cursor",
+        dry_run=True,
+    )
+    assert report["phase_a"] is True
+    assert report["phase_b"] is True
+    assert report["receipt"]["phase_b"] is True
+    assert report.get("promoted") == 1
+
+
+def test_enqueue_fail_loud(monkeypatch, tmp_path):
+    monkeypatch.setenv("MEMORY_PHASE_B", "0")
+    monkeypatch.setenv("MEMORY_DISTILL_ENQUEUE", "1")
+    monkeypatch.setenv("MEMORY_DISTILL_S3_BUCKET", "l9-test-distill")
+    monkeypatch.setattr(
+        cs,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: enqueue me", "test"))
+    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
+    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
+    monkeypatch.setattr(
+        cs,
+        "_write_kind",
+        lambda body, **kwargs: {"written": True, "kind": kwargs["kind"]},
+    )
+    import graphiti_memory_client as gmc
+
+    monkeypatch.setattr(gmc, "load_env", lambda: None)
+
+    def boom(**kwargs):
+        raise RuntimeError("s3 put-object failed: AccessDenied")
+
+    import ops.graphiti.distill_queue.enqueue as enq
+
+    monkeypatch.setattr(enq, "enqueue_job", boom)
+
+    report = cs.close_session(
+        project_dir=tmp_path,
+        session_id="close-enq",
+        agent_id="cursor",
+        dry_run=False,
+    )
+    assert report["phase_a"] is True
+    assert report["enqueue_ok"] is False
+    assert report["receipt"]["enqueue_ok"] is False
+    assert any("enqueue failed" in w for w in report["warnings"])
 
 
 def test_idempotent_reclose(monkeypatch, tmp_path):

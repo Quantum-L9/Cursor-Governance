@@ -1,0 +1,130 @@
+# Batch distill worker — pull redacted SessionEnd jobs from S3, distill via
+# OpenAI (AWS SM), ingest to Graphiti HTTPS. Does not require a Mac awake.
+#
+# Required repository configuration (fail-loud if missing):
+#   vars/secrets:
+#     MEMORY_DISTILL_S3_BUCKET   — S3 bucket name
+#     AWS_ROLE_TO_ASSUME         — OIDC role ARN with s3 + secretsmanager read
+#     GRAPHITI_MCP_TOKEN         — bearer for public Graphiti MCP (secret)
+#   Optional:
+#     MEMORY_DISTILL_S3_PREFIX   — default distill-queue/pending/
+#     OPENAI_API_KEY             — if unset, worker resolves l9/OPENAI_API_KEY via SM
+#
+# Never set continue-on-error on the distill job.
+name: Memory Distill Queue
+
+on:
+  schedule:
+    # Every 6 hours UTC — laptop need not be awake
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      max_jobs:
+        description: Max pending jobs to process
+        required: false
+        default: "20"
+      dry_run:
+        description: Distill without Graphiti writes / S3 done move
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  id-token: write  # AWS OIDC
+
+concurrency:
+  group: memory-distill
+  cancel-in-progress: false
+
+jobs:
+  distill:
+    name: Process distill queue
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin \
+            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch --depth=1 origin "${REVISION}"
+          git checkout --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+
+      - name: Require bucket configuration
+        env:
+          BUCKET: ${{ vars.MEMORY_DISTILL_S3_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUCKET}" ]; then
+            echo "::error::MEMORY_DISTILL_S3_BUCKET repository variable is unset"
+            exit 1
+          fi
+          echo "MEMORY_DISTILL_S3_BUCKET=${BUCKET}" >> "$GITHUB_ENV"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@be2e7ad815e27b890489a89ce2717b0f9e26b56e  # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install locked toolchain
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+
+      - name: Resolve OpenAI key from Secrets Manager
+        id: openai
+        run: |
+          set -euo pipefail
+          # Prefer repository secret if present; else SM l9/OPENAI_API_KEY
+          if [ -n "${OPENAI_API_KEY_SECRET:-}" ]; then
+            echo "OPENAI_API_KEY=${OPENAI_API_KEY_SECRET}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          VAL="$(aws secretsmanager get-secret-value \
+            --secret-id l9/OPENAI_API_KEY \
+            --region us-east-1 \
+            --query SecretString \
+            --output text)"
+          if [ -z "${VAL}" ] || [ "${VAL}" = "None" ]; then
+            echo "::error::failed to resolve l9/OPENAI_API_KEY from AWS Secrets Manager"
+            exit 1
+          fi
+          echo "OPENAI_API_KEY=${VAL}" >> "$GITHUB_ENV"
+        env:
+          OPENAI_API_KEY_SECRET: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Run distill worker
+        env:
+          MEMORY_DISTILL_S3_BUCKET: ${{ env.MEMORY_DISTILL_S3_BUCKET }}
+          MEMORY_DISTILL_S3_PREFIX: ${{ vars.MEMORY_DISTILL_S3_PREFIX || 'distill-queue/pending/' }}
+          GRAPHITI_MCP_URL: https://memory.quantumaipartners.com/graphiti/mcp
+          GRAPHITI_MCP_TOKEN: ${{ secrets.GRAPHITI_MCP_TOKEN }}
+          GRAPHITI_MEMORY_ENABLED: "1"
+          L9_MEMORY_AGENT_ID: gha-distill
+          USER_ID: gha_distill_agent
+          MAX_JOBS: ${{ github.event.inputs.max_jobs || '20' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GRAPHITI_MCP_TOKEN}" ]; then
+            echo "::error::GRAPHITI_MCP_TOKEN secret is unset"
+            exit 1
+          fi
+          ARGS=(--max-jobs "${MAX_JOBS}")
+          if [ "${DRY_RUN}" = "true" ]; then
+            ARGS+=(--dry-run)
+          fi
+          uv run --frozen --no-build python -m ops.graphiti.distill_queue.worker "${ARGS[@]}"
