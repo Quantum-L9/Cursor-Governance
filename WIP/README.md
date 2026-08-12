@@ -1,25 +1,80 @@
-# WIP — active backlog only
+# WIP — sacred tracked backlog (expanded glorified todo)
 
-This folder holds **unpromoted design deltas** for Cursor-Governance.
-It is not a second SSOT. Live authority stays under `environment/`, `skills/`,
-`ops/`, `kernels/`, and related wiring.
+This folder is a **first-class, git-tracked design backlog** for Cursor-Governance.
+Treat it like an expanded glorified todo list: **tracked, read, and respected**.
+It is not disposable scratch, not “ignore me,” and not a second SSOT.
+
+## Purpose
+
+Hold unpromoted design deltas, parked specs, and in-flight packs that agents and
+humans must be able to find later. Work here is intentional backlog — keep it
+visible in git history until it is promoted or deliberately retired.
+
+## Authority
+
+`WIP/` is **not** live runtime authority. Canonical surfaces remain:
+
+- `environment/`, `skills/`, `ops/`, `kernels/`, `rules/`, `commands/`
+- `CANONICAL_LAW.md`, `AGENTS.md`, and related wiring
+
+Do not import or depend on `WIP/` paths from production code, hooks, or CI
+entrypoints. Read it for context; promote before execution.
+
+## Git policy
+
+- The **tree is committed**. Do **not** add a blanket `WIP/` entry to `.gitignore`.
+- Only credential-shaped filenames under WIP are denylisted (see root `.gitignore`):
+  `WIP/*oauth*.json`, `WIP/*credentials*.json`, `WIP/*client_secret*.json`.
+- `.DS_Store` and other global ignores still apply.
+
+## CI / scanner policy
+
+WIP is intentionally **never gated** by quality or security scanners. Exclusions
+live in each tool’s native config (keep them in sync when adding scanners):
+
+| Surface | How WIP is excluded |
+|---|---|
+| pre-commit | root `exclude` regex includes `WIP/` |
+| ruff / mypy / pytest | `pyproject.toml` exclude / `norecursedirs` |
+| gitleaks (`make pr-security`) | `.gitleaks.toml` allowlist + `run_pr_security.sh` prefixes |
+| changed-file PR gate | `ops/scripts/resolve_changed_files.sh` scratch prefixes |
+| SonarCloud | `sonar.exclusions` + `sonar.cpd.exclusions` |
+| CodeQL | `.github/codeql/codeql-config.yml` `paths-ignore` |
+| Workflows | `paths-ignore: WIP/**` (skips WIP-*only* events) |
+| Conflict-marker tripwire | `l9-lint-test.yml` pathspec `:!**/WIP/**` (needed on **mixed** PRs; `paths-ignore` alone is not enough) |
+
+Draft kernels and duplicate packs here must not fail PR quality gates.
+
+## Agent rules
+
+1. **Read and respect** — open relevant WIP before planning or “cleaning up.”
+2. **Do not delete or gitignore** the tree to make status look clean.
+3. **Do not treat paths here as runtime imports** or activation dependencies.
+4. **Promote deliberately** — land the live-tree change, then delete the WIP copy
+   in the **same** change.
+5. **Never commit credential-shaped files** under WIP (oauth / credentials /
+   client_secret JSON).
 
 ## Layout
 
 ```text
 WIP/
-├── README.md                          ← this file
-└── backlog/
-    ├── program-execution/
-    │   └── phase0-autonomy-rail/      ← PE Phase 0 / LL-001–004 (not in live core)
-    ├── plan-schema/
-    │   └── canonical.schema.plan_document.v1.yaml
-    ├── kernels/
-    │   ├── diagnose-first/            ← full kernel; law §11 is distill only
-    │   ├── preflight/                 ← not compiled as skills
-    │   └── control-plane-stages/      ← Audit→Release cousins; not Cursor skills
-    └── memory/
-        └── graphiti-memory-integration-waves/  ← cross-repo wave notes
+├── README.md                         ← this file (policy SSOT for the folder)
+├── backlog/
+│   ├── program-execution/
+│   │   └── phase0-autonomy-rail/     ← PE Phase 0 / LL-001–004 (not in live core)
+│   ├── plan-schema/
+│   │   └── canonical.schema.plan_document.v1.yaml
+│   ├── kernels/
+│   │   ├── diagnose-first/           ← full kernel; law §11 is distill only
+│   │   ├── preflight/                ← not compiled as skills
+│   │   └── control-plane-stages/     ← Audit→Release cousins; not Cursor skills
+│   └── memory/
+│       └── graphiti-memory-integration-waves/
+├── Execution Schemas/                ← draft execution contract schemas
+├── claude code environment/          ← cloud/mobile Claude pack drafts + receipts
+├── out-of-scope-hold/                ← parked items (scripts, schemas, …)
+└── quantum_animation_spec_pack_v3/   ← animation system build-spec pack
 ```
 
 ## Deliberately removed (already live or superseded)
