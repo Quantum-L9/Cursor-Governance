@@ -1,0 +1,4093 @@
+metadata:
+  spec_id: quantum.animation.world_model.build_spec.v2
+  version: "2.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  supersedes:
+    spec_id: quantum.animation.world_model.build_spec.v1
+    date: "2026-08-10"
+  source:
+    primary:
+      document: "World Model.md"
+      ingested_file: "World Model(1).md"
+      sha256: "2fdbcb4b319efb3e5c0e7080ddeb6a2689632ed393f8fb9a896cf7579ab79509"
+      lines: 17960
+    refinement_basis:
+      - persistent fictional reality
+      - operational state versus durable memory
+      - exact state graph versus semantic graph
+      - persistent entity as reusable IP
+      - WorldCoordinate
+      - immutable canonical events
+      - deterministic reducer
+      - knowledge versus belief
+      - executable world rules
+      - affordance derivation
+      - branch simulation
+      - World Intelligence Layer
+      - first-class WorldSignal
+      - NarrativeOpportunity as reified convergence
+      - perception and information-flow mechanics
+      - state ownership and derived-effect semantics
+      - concurrent world-process semantics
+      - typed causal lineage
+      - verification oracle
+      - production-experience learning
+      - strict boundary from Cognitive Workspace
+      - strict boundary from Polycognitive Runtime
+      - strict boundary from Creator/Audience/Product/Self/Production models
+  precedence:
+    rule: >
+      Later concrete contracts in this specification supersede earlier
+      exploratory descriptions when they conflict.
+  ownership:
+    system: WORLD_MODEL
+    owner_question: "What is true?"
+    canonical_authority: fictional_reality
+    not_owner_of:
+      - creative intent
+      - subjective film quality
+      - audience target preferences
+      - product-market strategy
+      - Quantum self-capabilities
+      - production manufacturing strategy
+      - temporary cognition
+      - cognitive scheduling
+      - reasoning-depth allocation
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Operate a persistent fictional reality whose exact state, history,
+    perspectives, causes, capabilities, constraints and possible valid
+    transitions can be reconstructed, explained, queried, simulated and
+    compiled into bounded role-specific context.
+  persistent_unit:
+    primary: fictional_world
+    reusable_primitives:
+      - character
+      - location
+      - prop
+      - vehicle
+      - organization
+      - species
+      - technology
+      - system
+      - relationship
+      - concept
+  required_answer: >
+    What is true at this precise WorldCoordinate, from this requested
+    perspective, under this canon revision, and how did that state become true?
+  success_conditions:
+    - agents operate inside one authoritative universe
+    - continuity never depends on prompt history
+    - past and present fictional reality are exactly reconstructable
+    - false beliefs can coexist safely with objective truth
+    - knowledge cannot appear without a valid information path
+    - agents receive exact bounded context before critical execution
+    - invalid actions are rejected before expensive production
+    - hypothetical futures remain isolated from canon
+    - persistent characters and worlds survive across episodes and productions
+    - graphs expose high-leverage relationships without becoming authority
+    - semantic memory assists discovery without defining operational truth
+# =====================================================================
+# 2. CORE CONCEPT
+# =====================================================================
+core_definition: >
+  The Quantum World Model is a temporally versioned, event-driven,
+  multi-perspective model of fictional reality that acts as the authoritative
+  state substrate for every autonomous creative, production and quality-control
+  subsystem.
+simplified_definition: >
+  What is true right now, from whose perspective, and how did it become true?
+fundamental_equation:
+  authoritative_reality:
+    formula: >
+      ResolvedState(WorldCoordinate) =
+      Reduce(
+        nearest_valid_canonical_snapshot,
+        ordered_canonical_events_after_snapshot_through_coordinate
+      )
+  agent_context:
+    formula: >
+      AgentContext(role, coordinate) =
+      Project(
+        ResolvedState(coordinate)
+        + applicable canon
+        + applicable rules
+        + relevant durable memory
+        + required adjacent references,
+        role_context_contract
+      )
+  narrative_candidate_space:
+    formula: >
+      CandidateEvents =
+      Intentions
+      x Affordances
+      x Conflicts
+      x WorldRules
+      x ActiveNarrativeOpportunities
+  canonical_transition:
+    formula: >
+      CurrentWorldState
+      + AcceptedWorldEvent
+      -> DeterministicReducer
+      -> NewWorldState
+# =====================================================================
+# 3. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  P-001:
+    name: OPERATIONAL_STATE_NOT_MEMORY
+    statement: >
+      The World Model represents authoritative operational fictional reality.
+      Durable memory represents history, associative relevance and retrieval.
+      They are separate systems.
+  P-002:
+    name: EVENT_ONLY_CANONICAL_MUTATION
+    statement: >
+      Canonical World State changes only through accepted governed WorldEvents
+      or explicitly governed equivalent transitions recorded in the canonical
+      event ledger.
+  P-003:
+    name: GENERATED_MEDIA_IS_OBSERVATION
+    statement: >
+      Generated image, video, audio or text artifacts do not establish reality.
+      Accepted semantic events establish canon. Media depicts or observes canon.
+  P-004:
+    name: IDENTITY_STATE_SEPARATION
+    statement: >
+      Persistent entity identity is separate from mutable state such as
+      location, injury, ownership, relationship state, knowledge and psychology.
+  P-005:
+    name: DETERMINISTIC_REDUCTION
+    statement: >
+      Creativity and judgment occur before canonical event acceptance.
+      The reducer performs no fuzzy inference, model calls or subjective judgment.
+  P-006:
+    name: TRUTH_PERSPECTIVE_SEPARATION
+    statement: >
+      Objective truth, character knowledge, character belief, audience
+      disclosure and hypothetical state are distinct planes.
+  P-007:
+    name: EXACT_BEFORE_ASSOCIATIVE
+    statement: >
+      Operational claims must resolve from exact canonical state.
+      Semantic memory and semantic graphs may nominate relevance but may never
+      define exact state.
+  P-008:
+    name: PREVENT_BEFORE_REPAIR
+    statement: >
+      Rules, preconditions, state-derived constraints and production enforcement
+      should prevent invalid outputs before expensive generation whenever possible.
+  P-009:
+    name: BRANCH_ISOLATION
+    statement: >
+      Hypothetical branches are copy-on-write overlays and never mutate canon.
+      Promotion revalidates selected events against current canonical reality.
+  P-010:
+    name: SHARED_REALITY
+    statement: >
+      Autonomous subsystems share one world through authoritative state, not by
+      remembering previous agent conversations.
+  P-011:
+    name: QUALITY_OUTSIDE_TRUTH
+    statement: >
+      Subjective evaluation of whether a film is good does not become fictional
+      truth and does not belong to exact World State.
+  P-012:
+    name: COGNITION_OUTSIDE_TRUTH
+    statement: >
+      Temporary hypotheses, candidate branches, cognitive disagreement and
+      workspace state never directly patch canonical World State.
+  P-013:
+    name: CAUSE_BEFORE_DERIVED_STATE
+    statement: >
+      Where possible, cognition proposes causal events; governed domain effect
+      engines derive knowledge, belief, relationship and psychological changes.
+  P-014:
+    name: NO_SILENT_INFORMATION_TELEPORTATION
+    statement: >
+      Knowledge or observation may not appear without a valid information or
+      perception path.
+  P-015:
+    name: PROVIDER_INDEPENDENCE
+    statement: >
+      The World Model core depends on typed ports and contracts rather than
+      Neo4j, SQL, Graphiti, Zep or any provider-specific query language.
+  P-016:
+    name: REBUILDABLE_DERIVATIONS
+    statement: >
+      Snapshots, exact graph projections, semantic projections, affordances,
+      WorldSignals, NarrativeOpportunities and compiled contexts are derived
+      and rebuildable.
+  P-017:
+    name: CAUSAL_EXPLAINABILITY
+    statement: >
+      Authoritative facts should be explainable through event, authority,
+      provenance and causal lineage.
+  P-018:
+    name: TIME_AXES_ARE_INDEPENDENT
+    statement: >
+      Fictional valid time, transaction time, narrative placement and audience
+      playback position are independent coordinate axes.
+  P-019:
+    name: WORLD_CONTINUES_OFFSCREEN
+    statement: >
+      Fictional reality may evolve through world processes independently from
+      what is currently shown to the audience.
+  P-020:
+    name: AUTHORITY_IS_NEVER_SELF_GRANTED
+    statement: >
+      Agents, operators, learned policies, semantic memory and projections may
+      not elevate their own authority.
+# =====================================================================
+# 4. NON-GOALS
+# =====================================================================
+non_goals:
+  explicitly_not_owned:
+    - renderer provider selection
+    - production DAG execution
+    - prompt-history continuity
+    - creator-value modeling
+    - audience-target modeling
+    - product-market modeling
+    - Quantum capability self-modeling
+    - global cognitive scheduling
+    - global reasoning-depth allocation
+    - temporary cognitive workspace persistence as truth
+    - subjective film-quality scoring as factual state
+    - automatic learned-policy promotion
+    - direct Graphiti authority
+    - direct model-generated state mutation
+    - marketing execution
+    - back-office operations
+  future_adjacent_specs:
+    - quantum.polycognitive_runtime
+    - quantum.creative_intelligence
+    - quantum.audience_product_intelligence
+    - quantum.self_model
+    - quantum.production_model
+    - quantum.autonomous_qc
+    - quantum.production_engine
+# =====================================================================
+# 5. GLOBAL ARCHITECTURAL INVARIANTS
+# =====================================================================
+architectural_invariants:
+  truth:
+    - authoritative state resolves deterministically from canonical records
+    - fuzzy semantic retrieval cannot establish operational truth
+    - objective truth outranks observer belief
+    - branch truth never outranks canon
+    - production experience never becomes fictional truth
+  mutation:
+    - accepted WorldEvent is the normal canonical mutation primitive
+    - reducer never invents effects
+    - all reducer-applied mutations are explicit in resolved event form
+    - direct snapshot mutation is forbidden
+    - direct exact-graph mutation is forbidden
+    - direct semantic-graph mutation cannot alter exact state
+  identity:
+    - persistent entity IDs are immutable
+    - names are attributes rather than identity
+    - entity rename does not change entity ID
+    - entity identity excludes mutable location/injury/relationship state
+  epistemic:
+    - knowledge and belief are independent
+    - false belief may coexist with objective truth
+    - knowledge acquisition requires an information path
+    - belief revision requires evidence, inference or governed psychological cause
+    - audience disclosure is independent from character knowledge
+  temporal:
+    - valid time is fictional time
+    - transaction time is Quantum acceptance/recording time
+    - narrative position is authored story position
+    - playback position is viewer-facing temporal position
+    - these axes may differ
+  branching:
+    - branches are isolated overlays
+    - branch state is never copied wholesale into canon
+    - promotion appends revalidated events
+    - stale branch proposals require revalidation/rebase
+  cognition:
+    - Cognitive Workspace is temporary
+    - CognitiveResult may propose but not mutate canon
+    - cognitive requests do not imply authority
+    - higher-order reasoning policy belongs outside World Model
+  context:
+    - required exact views are compiled before critical operations
+    - missing/stale mandatory exact context fails closed
+    - optional semantic context may degrade without falsifying exact state
+  projections:
+    - exact graph is rebuildable
+    - semantic graph is rebuildable
+    - exact graph may be unavailable without losing canonical truth
+    - semantic graph may be unavailable without losing canonical truth
+  learning:
+    - experience may recommend production or cognitive policy
+    - learning cannot self-promote into canon or authority
+    - learned recommendations require external policy gates
+  concurrency:
+    - canonical commit is serialized or conflict-detected
+    - last-write-wins is forbidden for semantic state
+    - concurrent cognition reads immutable revision-tagged state
+    - concurrent fictional processes are resolved through governed temporal semantics
+# =====================================================================
+# 6. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  world_model_owns:
+    - fictional persistent identities
+    - propositions
+    - canonical event ledger
+    - state reduction
+    - exact state reconstruction
+    - world rules
+    - capability/affordance derivation
+    - observer knowledge state
+    - observer belief state
+    - relationship state
+    - psychological state
+    - perception and information-flow mechanics
+    - typed causal lineage
+    - exact-state graph projection
+    - WorldCoordinate
+    - snapshots
+    - hypothetical world branches
+    - world-process scheduling semantics
+    - ContextCompiler
+    - WorldQueryAPI
+    - WorldSignal detection
+    - NarrativeOpportunity derivation
+    - verification expected-state oracle
+    - world-to-memory projection boundary
+  adjacent_not_owned:
+    CreatorModel:
+      owner: creative_intelligence
+      question: "What constitutes the intended creative result?"
+    AudienceModel:
+      owner: audience_product_intelligence
+      question: "What experience should the intended audience have?"
+    ProductMarketModel:
+      owner: audience_product_intelligence
+      question: "What makes the entertainment product compelling and viable?"
+    SelfModel:
+      owner: self_model
+      question: "What can Quantum reliably do right now?"
+    ProductionIntent:
+      owner: production_model
+      question: "What does this film demand from production?"
+    ProductionModel:
+      owner: production_model
+      question: "How should Quantum satisfy those demands right now?"
+    CognitiveWorkspace:
+      owner: polycognitive_runtime
+      question: "What is Quantum actively thinking about?"
+    CognitiveExecutive:
+      owner: polycognitive_runtime
+      question: "What deserves cognition and how deeply?"
+    ExecutionOrchestrator:
+      owner: polycognitive_runtime
+      question: "How should selected cognition execute?"
+    AutonomousQC:
+      owner: autonomous_qc
+      question: "Is the artifact/decision acceptable?"
+    ProductionEngine:
+      owner: production_engine
+      question: "How is the approved film manufactured?"
+# =====================================================================
+# 7. DOMAIN MODEL
+# =====================================================================
+domain_model:
+  definition: >
+    Temporally versioned, event-driven, multi-perspective persistent fictional
+    state substrate shared by creative, cinematic, production and QC cognition.
+  converged_equation:
+    - persistent_entities
+    - explicit_propositions
+    - immutable_canonical_events
+    - executable_rules
+    - explicit_state_addresses
+    - deterministic_reducer
+    - governed_effect_derivers
+    - perception_and_information_flow
+    - immutable_rebuildable_snapshots
+    - exact_state_graph
+    - hypothetical_branches
+    - world_processes
+    - typed_causal_lineage
+  canonical:
+    - WorldEntity registry
+    - Proposition registry
+    - WorldEvent ledger
+    - WorldRule versions
+    - CanonRevision history
+    - accepted Relationship identities
+    - accepted WorldProcess lifecycle events
+    - branch metadata prior to promotion
+  derived_rebuildable:
+    - WorldSnapshot
+    - WorldStateGraph
+    - semantic graph projections
+    - Affordance
+    - PerceptualAccess
+    - ObservationView
+    - ContextPackage
+    - WorldSignal
+    - NarrativeOpportunity
+    - causal indexes
+    - dependency indexes
+    - expected-visible-state views
+    - exact graph indexes
+    - quality-support views
+  non_fictional_experience:
+    - ProductionAttempt
+    - QCObservation
+    - FailureSignature
+    - ReliabilityAggregate
+    - CandidateProductionPolicy
+  major_components:
+    - CanonStore
+    - EntityStore
+    - PropositionStore
+    - WorldEventStore
+    - SnapshotStore
+    - BranchStore
+    - RuleStore
+    - StateReducer
+    - EventCompiler
+    - EffectDerivationPipeline
+    - EpistemicStateEngine
+    - BeliefRevisionEngine
+    - PsychologicalStateEngine
+    - RelationshipStateEngine
+    - PerceptionEngine
+    - InformationFlowEngine
+    - CapabilityEngine
+    - AffordanceEngine
+    - WorldProcessScheduler
+    - CausalLineageEngine
+    - WorldStateGraphProjector
+    - ContextCompiler
+    - WorldQueryAPI
+    - CausalBranchSimulator
+    - WorldSignalEngine
+    - NarrativeOpportunityMiner
+    - VerificationOracle
+    - L9MemoryBridge
+    - ProductionExperiencePlane
+# =====================================================================
+# 8. IDENTIFIER MODEL
+# =====================================================================
+identifier_model:
+  rules:
+    - IDs are stable and immutable
+    - names and labels may change without changing IDs
+    - references resolve or are explicitly external
+    - canonical IDs are never reused
+    - branch-local IDs must identify branch namespace
+    - IDs must be sortable only when contract explicitly guarantees ordering
+  prefixes:
+    universe: quniv_
+    continuity: qcont_
+    canon_revision: qcanon_
+    character: qchar_
+    location: qloc_
+    prop: qprop_
+    vehicle: qveh_
+    organization: qorg_
+    species: qspecies_
+    technology: qtech_
+    system: qsys_
+    relationship: qrel_
+    proposition: qpropst_
+    knowledge: qknow_
+    belief: qbelief_
+    intent: qintent_
+    event: qevent_
+    process: qprocess_
+    snapshot: qstate_
+    branch: qbranch_
+    rule: qrule_
+    signal: qsignal_
+    narrative_opportunity: qopp_
+    context: qctx_
+    observation: qobs_
+    perception: qpercept_
+    causal_relation: qcause_
+  canonicalization:
+    field_order: stable
+    unicode_normalization: NFC
+    scalar_serialization: deterministic
+    map_key_order: lexical
+    timestamp_format: RFC3339_or_declared_world_calendar
+  integrity_digest:
+    algorithm: sha256
+    required_for:
+      - canonical_event
+      - snapshot
+      - context_package
+      - exact_projection_checkpoint
+      - branch_checkpoint
+# =====================================================================
+# 9. AUTHORITY MODEL
+# =====================================================================
+authority_model:
+  classes:
+    ESTABLISHED_CANON:
+      rank: 100
+    AUTHORIZED_CANON_REVISION:
+      rank: 95
+    ACCEPTED_STORY_EVENT:
+      rank: 90
+    GOVERNED_DERIVED_STATE:
+      rank: 80
+    OBSERVER_KNOWLEDGE:
+      rank: 70
+    OBSERVER_BELIEF:
+      rank: 60
+    AUDIENCE_DISCLOSURE:
+      rank: 55
+    HYPOTHETICAL_BRANCH:
+      rank: 40
+    PRODUCTION_OBSERVATION:
+      rank: 30
+    SEMANTIC_MEMORY:
+      rank: 20
+    AGENT_HYPOTHESIS:
+      rank: 10
+  precedence:
+    - objective canon outranks observer belief
+    - canon revision supersedes earlier conflicting canon non-destructively
+    - branch state never outranks canon
+    - semantic-memory retrieval never outranks exact state
+    - production observation may identify mismatch but cannot mutate truth
+    - learned policy cannot increase its own authority
+  mutation_gate:
+    required:
+      - authorized caller
+      - typed event proposal
+      - authority envelope
+      - expected world revision
+      - valid preconditions
+      - applicable rules
+      - resolved effects
+      - postconditions
+      - global invariants
+      - idempotency validation
+# =====================================================================
+# 10. PROVENANCE MODEL
+# =====================================================================
+provenance_model:
+  required_fields:
+    - authority_class
+    - establishing_event_id
+    - valid_from
+    - recorded_at
+    - commit_sequence
+    - causal_refs
+    - evidence_refs
+    - source_artifact_refs
+    - source_digest_if_external
+  optional_fields:
+    - originating_proposal_id
+    - branch_id
+    - cognitive_trace_ref
+    - compiler_version
+    - effect_deriver_versions
+    - rule_set_version
+  must_answer:
+    - why_is_this_true
+    - when_did_it_become_true
+    - when_was_it_recorded
+    - what_event_established_it
+    - what_caused_the_event
+    - what_evidence_supported_acceptance
+    - who_knows_it
+    - who_believes_the_opposite
+    - what_depends_on_it
+    - which artifacts depict_it
+# =====================================================================
+# 11. STATE ADDRESSING
+# =====================================================================
+state_address_model:
+  StateAddress:
+    fields:
+      universe_id:
+        required: true
+      continuity_id:
+        required: true
+      plane:
+        required: true
+      subject_id:
+        required: true
+      path:
+        required: true
+      perspective_id:
+        required_when:
+          - knowledge
+          - belief
+          - audience_disclosure
+          - observer_specific_state
+    examples:
+      damaged_shoulder:
+        plane: objective_ontic
+        subject_id: qchar_aria
+        path: physical.left_shoulder.condition
+      receiver_owner:
+        plane: objective_ontic
+        subject_id: qprop_receiver
+        path: ownership.owner_id
+      aria_belief:
+        plane: belief
+        subject_id: qchar_aria
+        perspective_id: qchar_aria
+        path: propositions.qpropst_marcus_alive
+      aria_eva_trust:
+        plane: relational_social
+        subject_id: qrel_aria_eva
+        path: trust.aria_to_eva
+# =====================================================================
+# 12. STATE CELL
+# =====================================================================
+state_cell_model:
+  StateCell:
+    fields:
+      address:
+        type: StateAddress
+      value:
+        type: typed_value
+      valid_since_event_id:
+        type: WorldEventId
+      last_modified_event_id:
+        type: WorldEventId
+      authority:
+        type: AuthorityClass
+      provenance:
+        type: Provenance
+      reducer_version:
+        type: semantic_version
+  invariant:
+    - every authoritative mutable value is addressable
+    - every value is explainable to an establishing event
+    - no ambient mutable state exists outside governed state addressing
+# =====================================================================
+# 13. STATE PLANES
+# =====================================================================
+state_planes:
+  objective_ontic:
+    purpose: actual fictional reality
+    canonical_authority: true
+  knowledge:
+    purpose: information actually acquired by observer
+    observer_specific: true
+  belief:
+    purpose: propositions considered true/false/uncertain
+    observer_specific: true
+    may_conflict_with_objective: true
+  audience_disclosure:
+    purpose: information actually revealed through the film
+    observer_specific: false
+    audience_specific_views_allowed: true
+  intentional:
+    purpose:
+      - goal
+      - desire
+      - avoidance
+      - plan
+      - commitment
+  psychological_affective:
+    purpose:
+      - emotion
+      - stress
+      - hope
+      - resolve
+      - fear
+      - attention
+      - suppression
+      - active_need
+  relational_social:
+    purpose:
+      - trust
+      - intimacy
+      - affection
+      - hostility
+      - dependence
+      - obligation
+      - authority
+      - alliance
+      - unresolved_conflict
+  capability:
+    purpose: current capability state
+  affordance:
+    purpose: executable actions available in current state
+    canonical: false
+    derived: true
+  normative_rule:
+    purpose: world/canon constraints
+  environment:
+    purpose:
+      - power
+      - lighting
+      - atmosphere
+      - weather
+      - geometry
+      - active_emitters
+      - local_system_state
+  asset_adjacent:
+    purpose: references to canonical embodiment/asset versions
+    note: asset binaries remain outside World Model
+  hypothetical_branch:
+    canonical: false
+    purpose: simulated alternative reality
+  cinematic_adjacent:
+    canonical_fictional_truth: false
+    purpose:
+      - screen_direction
+      - axis_side
+      - eyelines
+      - shot_geography
+      - coverage
+      - framing
+      - temporal_edit_context
+  production_experience:
+    fictional_truth: false
+    canonical_world_plane: false
+    namespace_isolated: true
+# =====================================================================
+# 14. PERSISTENT ENTITY MODEL
+# =====================================================================
+entity_model:
+  WorldEntity:
+    purpose: persistent reusable fictional identity
+    fields:
+      entity_id:
+        required: true
+      entity_type:
+        enum:
+          - character
+          - location
+          - prop
+          - vehicle
+          - organization
+          - species
+          - technology
+          - system
+          - artifact
+          - relationship
+          - concept
+      canonical_name:
+        required: true
+      aliases:
+        type: list[string]
+      universe_id:
+        required: true
+      lifecycle_status:
+        enum:
+          - active
+          - inactive
+          - destroyed
+          - dead
+          - retired
+          - unknown
+      asset_family_id:
+        nullable: true
+      created_by_event_id:
+        nullable: true
+      provenance:
+        required: true
+  forbidden_in_identity:
+    - current_location
+    - current_injury
+    - current_owner
+    - current_relationship_trust
+    - current_emotion
+    - current_knowledge
+    - current_belief
+    - wardrobe_state
+# =====================================================================
+# 15. PROPOSITION MODEL
+# =====================================================================
+proposition_model:
+  rule: >
+    Proposition existence is independent from whether the proposition is true.
+  Proposition:
+    fields:
+      proposition_id:
+      subject_id:
+        nullable: true
+      predicate:
+      object:
+      qualifiers:
+        type: map
+    examples:
+      - proposition_id: qpropst_marcus_alive_true
+        subject_id: qchar_marcus
+        predicate: alive
+        object: true
+      - proposition_id: qpropst_marcus_alive_false
+        subject_id: qchar_marcus
+        predicate: alive
+        object: false
+  truth_resolution:
+    rule: >
+      Objective truth is established through objective state and accepted canon,
+      not by proposition existence.
+# =====================================================================
+# 16. KNOWLEDGE MODEL
+# =====================================================================
+knowledge_model:
+  Knowledge:
+    fields:
+      knowledge_id:
+      holder_id:
+      proposition_id:
+      acquired_at:
+        type: WorldCoordinate
+      acquired_via_event_id:
+      source_entity_id:
+        nullable: true
+      source_observation_id:
+        nullable: true
+      status:
+        enum:
+          - active
+          - stale
+          - forgotten
+          - retracted
+      last_verified_at:
+        nullable: true
+      provenance:
+  persistence_semantics:
+    persistent_facts:
+      example:
+        - parentage
+        - historical_event
+        - creator_identity
+    volatile_facts:
+      example:
+        - door_open
+        - person_current_location
+        - device_current_power
+  invariant:
+    - knowledge is about what was acquired
+    - current truth may diverge from previously acquired volatile knowledge
+    - knowledge cannot be created without information-path evidence
+# =====================================================================
+# 17. BELIEF MODEL
+# =====================================================================
+belief_model:
+  Belief:
+    fields:
+      belief_id:
+      holder_id:
+      proposition_id:
+      polarity:
+        enum:
+          - believes_true
+          - believes_false
+          - uncertain
+      confidence:
+        type: float
+        range: [0.0, 1.0]
+      formed_at:
+        type: WorldCoordinate
+      caused_by_event_ids:
+        type: list[WorldEventId]
+      basis:
+        enum:
+          - observation
+          - testimony
+          - inference
+          - memory
+          - deception
+          - assumption
+          - cultural_prior
+          - hallucination
+          - simulation
+      status:
+        enum:
+          - active
+          - weakened
+          - superseded
+          - abandoned
+      provenance:
+  invariants:
+    - belief may contradict objective truth
+    - belief confidence must have causal/evidence lineage
+    - knowledge of testimony does not imply belief in testimony
+# =====================================================================
+# 18. INTENT MODEL
+# =====================================================================
+intent_model:
+  Intent:
+    fields:
+      intent_id:
+      actor_id:
+      kind:
+        enum:
+          - goal
+          - plan
+          - desire
+          - avoidance
+          - commitment
+      description:
+      target_condition:
+        type: PredicateExpression
+      priority:
+        type: float
+        range: [0.0, 1.0]
+      commitment:
+        type: float
+        range: [0.0, 1.0]
+      horizon:
+        enum:
+          - immediate
+          - scene
+          - sequence
+          - episode
+          - season
+          - long_term
+      status:
+        enum:
+          - active
+          - blocked
+          - satisfied
+          - abandoned
+          - superseded
+      parent_intent_id:
+        nullable: true
+      created_by_event_id:
+      provenance:
+  importance:
+    statement: >
+      Intentions are a principal causal source for candidate story events.
+# =====================================================================
+# 19. PSYCHOLOGICAL STATE
+# =====================================================================
+psychological_state_model:
+  PsychologicalState:
+    fields:
+      character_id:
+      emotions:
+        type: list[EmotionActivation]
+      stress:
+        type: float
+        range: [0.0, 1.0]
+      hope:
+        type: float
+        range: [0.0, 1.0]
+      resolve:
+        type: float
+        range: [0.0, 1.0]
+      active_fears:
+        type: list[string]
+      active_needs:
+        type: list[string]
+      attention_targets:
+        type: list[EntityOrPropositionRef]
+      suppressing_emotions:
+        type: list[string]
+      last_modified_event_id:
+  EmotionActivation:
+    fields:
+      emotion:
+      intensity:
+        range: [0.0, 1.0]
+      target_id:
+        nullable: true
+  precision_policy:
+    statement: >
+      Numeric values are authored/derived control representations rather than
+      claims that fictional psychology is scientifically reducible to exact numbers.
+  state_ownership:
+    direct_arbitrary_assignment: forbidden
+    normal_source:
+      - psychologically_relevant WorldEvent
+      - PsychologicalStateEngine
+      - explicit established canon
+    requirement:
+      - provenance
+      - causal event
+      - derivation version
+# =====================================================================
+# 20. RELATIONSHIP MODEL
+# =====================================================================
+relationship_model:
+  first_class: true
+  Relationship:
+    fields:
+      relationship_id:
+      relationship_type:
+      participants:
+        type: list[RelationshipParticipant]
+      established_by_event_id:
+      status:
+        enum:
+          - active
+          - broken
+          - dormant
+          - ended
+      provenance:
+  RelationshipParticipant:
+    fields:
+      entity_id:
+      role:
+  dynamic_state:
+    dimensions:
+      - trust
+      - intimacy
+      - affection
+      - dependence
+      - hostility
+      - authority
+      - obligation
+      - vulnerability
+      - unresolved_conflict
+  directionality:
+    rule: >
+      Relationship dimensions may be asymmetric.
+    example:
+      trust:
+        aria_to_eva: 0.24
+        eva_to_aria: 0.72
+  graph_semantics:
+    simple_binary_relations:
+      representation: edge_allowed
+    provenance_rich_or_n_ary_relations:
+      representation: reified_node
+  state_ownership:
+    direct_arbitrary_assignment: forbidden
+    normal_source:
+      - accepted interaction event
+      - RelationshipStateEngine
+      - explicit canon transition
+# =====================================================================
+# 21. PERCEPTION AND INFORMATION FLOW
+# =====================================================================
+perception_model:
+  purpose: >
+    Mechanically determine how an event becomes perceptible information and
+    how perceptible information may become observation, knowledge and belief.
+  distinction:
+    runtime_attention:
+      owner: polycognitive_runtime
+      description: Quantum's processing attention
+    fictional_observer_attention:
+      owner: world_model
+      description: attention of characters or in-world sensors
+  PerceptionChannel:
+    fields:
+      channel_id:
+      modality:
+        enum:
+          - vision
+          - hearing
+          - touch
+          - smell
+          - taste
+          - electronic_sensor
+          - network
+          - telemetric
+          - fictional_special_sense
+      range_model:
+      obstruction_model:
+      signal_decay_model:
+      world_rule_refs:
+  PerceptualAccess:
+    classification: derived_rebuildable
+    fields:
+      access_id:
+      observer_id:
+      source_event_id:
+      modality:
+      coordinate:
+      accessible:
+        type: bool
+      blocking_reasons:
+        type: list[string]
+      evidence_refs:
+      state_revision:
+  Observation:
+    classification: governed_derived_information_object
+    fields:
+      observation_id:
+      observer_id:
+      source_event_id:
+      proposition_refs:
+      modality:
+      observed_at:
+      fidelity:
+        type: float
+        range: [0.0, 1.0]
+      ambiguity:
+        type: float
+        range: [0.0, 1.0]
+      evidence_refs:
+      perception_access_ref:
+  InformationPath:
+    fields:
+      path_id:
+      origin_ref:
+      receiver_id:
+      intermediary_refs:
+      channel_refs:
+      observation_refs:
+      valid:
+      broken_at:
+        nullable: true
+      evidence_refs:
+  Inference:
+    fields:
+      inference_id:
+      observer_id:
+      premise_refs:
+      derived_proposition_id:
+      confidence:
+      inference_type:
+      caused_by_event_id:
+      provenance:
+  pipeline:
+    - accepted WorldEvent
+    - determine emitted/perceivable information
+    - determine candidate observers
+    - evaluate physical/sensory/channel access
+    - evaluate observer fictional attention when required
+    - create Observation
+    - derive Knowledge acquisition if warranted
+    - derive Belief revision if warranted
+    - retain ambiguity when observation does not establish proposition
+  example:
+    source_event:
+      fact: "Eva recognizes receiver"
+    aria_observation:
+      sees: "Eva pauses for 0.8 seconds"
+      does_not_automatically_know: "Eva recognizes receiver"
+    aria_possible_inference:
+      proposition: "Eva may recognize receiver"
+      confidence: 0.42
+    audience_disclosure:
+      possible_probability: 0.78
+  invariants:
+    - no knowledge teleportation
+    - perception access is state-dependent
+    - observation is not identical to interpretation
+    - interpretation is not identical to truth
+    - testimony knowledge is distinct from belief in testimony
+# =====================================================================
+# 22. STATE OWNERSHIP / EFFECT DERIVATION
+# =====================================================================
+state_ownership_model:
+  purpose: >
+    Prevent creative cognition from directly setting downstream state that
+    should arise from causes.
+  ownership_registry:
+    objective_physical:
+      mutation_mode: EXPLICIT_EVENT_MUTATION
+      examples:
+        - location
+        - ownership
+        - injury
+        - door state
+        - device state
+    intentional:
+      mutation_mode: GOVERNED_EVENT_OR_INTENT_ENGINE
+    knowledge:
+      mutation_mode: INFORMATION_PATH_DERIVED
+    belief:
+      mutation_mode: BELIEF_REVISION_DERIVED
+    psychological_affective:
+      mutation_mode: PSYCHOLOGICAL_ENGINE_DERIVED
+    relational_social:
+      mutation_mode: RELATIONSHIP_ENGINE_DERIVED
+    affordance:
+      mutation_mode: DERIVED_ONLY
+    perceptual_access:
+      mutation_mode: DERIVED_ONLY
+    world_signal:
+      mutation_mode: DERIVED_ONLY
+    narrative_opportunity:
+      mutation_mode: DERIVED_ONLY
+    exact_graph:
+      mutation_mode: PROJECTION_ONLY
+    semantic_graph:
+      mutation_mode: PROJECTION_ONLY
+  event_resolution_pipeline:
+    - Proposal
+    - EventCompiler
+    - DraftWorldEvent
+    - validate primary explicit effects
+    - PerceptionEffectDeriver
+    - EpistemicEffectDeriver
+    - BeliefRevisionDeriver
+    - RelationshipEffectDeriver
+    - PsychologicalEffectDeriver
+    - CapabilityEffectDeriver
+    - fully materialize resolved mutations
+    - WorldRule validation
+    - postcondition simulation
+    - produce FullyResolvedWorldEvent
+    - canonical acceptance
+    - deterministic reducer
+  key_invariant: >
+    The reducer never asks domain engines what should happen. All domain-derived
+    effects are fully resolved before canonical commit.
+# =====================================================================
+# 23. ACTION SCHEMA / CAPABILITY / AFFORDANCE
+# =====================================================================
+capability_and_affordance_model:
+  ActionSchema:
+    fields:
+      action_type:
+      roles:
+      preconditions:
+        type: list[PredicateExpression]
+      effect_templates:
+        type: list[MutationTemplate]
+      capability_requirements:
+        type: list[CapabilityRef]
+      world_rule_tags:
+        type: list[string]
+  CapabilityState:
+    fields:
+      entity_id:
+      capability_id:
+      enabled:
+      constraints:
+      valid_at:
+      establishing_event_id:
+  Affordance:
+    classification: derived_rebuildable
+    fields:
+      affordance_id:
+      actor_id:
+      action_schema_id:
+      bindings:
+      coordinate:
+      source_state_revision:
+      feasible:
+      satisfied_preconditions:
+      blocking_preconditions:
+      predicted_primary_effects:
+      enabled_by:
+      blocked_by:
+      feasibility_score:
+      derivation_hash:
+      expires_when:
+  derivation_pipeline:
+    - select applicable ActionSchema
+    - bind actor
+    - bind local candidate entities
+    - check current capabilities
+    - evaluate exact preconditions
+    - check hard world rules
+    - instantiate executable affordance
+    - index by actor/goal/location
+  canonical: false
+  story_search:
+    formula: >
+      Intent x Affordances x Conflict x Rules -> bounded candidate event space
+# =====================================================================
+# 24. WORLD RULE MODEL
+# =====================================================================
+world_rule_model:
+  WorldRule:
+    fields:
+      rule_id:
+      version:
+      category:
+        enum:
+          - physics
+          - technology
+          - epistemic
+          - biology
+          - social
+          - character
+          - canon
+          - causality
+      severity:
+        enum:
+          - hard
+          - soft
+      applies_to_event_types:
+        type: list[string]
+      predicate:
+        nullable: true
+      validator_ref:
+        nullable: true
+      validator_version:
+        nullable: true
+      violation_code:
+      explanation:
+      active_from:
+        nullable: true
+      active_until:
+        nullable: true
+  hard_rule_result:
+    action: reject_event
+  soft_rule_result:
+    action: requires_justification
+    requires:
+      - evidence_refs
+      - causal_support
+  replay_rule:
+    statement: >
+      Accepted events pin applicable rule-set/version identity required for
+      deterministic historical replay.
+  examples:
+    causality:
+      rule: NO_FTL_INFORMATION
+    epistemic:
+      rule: CANNOT_KNOW_UNOBSERVED_FACT_WITHOUT_INFORMATION_PATH
+    physical:
+      rule: LOCKED_DOOR_BLOCKS_TRAVERSAL
+    character_soft:
+      rule: ARIA_AVOIDS_DIRECT_EMOTIONAL_DISCLOSURE
+# =====================================================================
+# 25. TYPED CAUSALITY
+# =====================================================================
+causal_model:
+  purpose: >
+    Separate temporal adjacency, semantic association and actual causal
+    relationships.
+  CausalRelation:
+    fields:
+      relation_id:
+      source_ref:
+      target_ref:
+      relation_type:
+        enum:
+          - CAUSES
+          - ENABLES
+          - MOTIVATES
+          - TRIGGERS
+          - PREVENTS
+          - BLOCKS
+          - NECESSARY_FOR
+          - SUFFICIENT_FOR
+          - CONTRIBUTES_TO
+          - EVIDENCE_FOR
+          - INFORMATION_SOURCE_FOR
+          - EXPLAINS
+          - CORRELATED_WITH
+      valid_at:
+      evidence_refs:
+      authority:
+      provenance:
+  rules:
+    - CORRELATED_WITH never implies CAUSES
+    - MOTIVATES is intentional causality, not physical causality
+    - ENABLES means makes possible but does not guarantee event
+    - NECESSARY_FOR and SUFFICIENT_FOR require explicit validated semantics
+    - causal traversal must preserve relation type
+  uses:
+    - explain_fact
+    - retcon blast radius
+    - branch comparison
+    - causal credit
+    - story consequence analysis
+    - production dependency analysis
+  future_counterfactual_query:
+    pattern: >
+      If event X had not occurred, would outcome Y still occur under otherwise
+      equivalent world state?
+# =====================================================================
+# 26. WORLD EVENT MODEL
+# =====================================================================
+event_model:
+  core_rule: WorldEvent is the sole normal canonical mutation mechanism.
+  lifecycle:
+    - proposed
+    - compiling
+    - effects_resolved
+    - validating
+    - rejected
+    - accepted
+    - canonical_committed
+  DraftWorldEvent:
+    fields:
+      proposal_id:
+      event_type:
+      universe_id:
+      continuity_id:
+      branch_id:
+      actors:
+      target_entities:
+      coordinate:
+      primary_preconditions:
+      primary_effects:
+      intended_semantic_consequences:
+      causal_refs:
+      motivation_refs:
+      evidence_refs:
+      authority:
+      idempotency_key:
+      provenance:
+  FullyResolvedWorldEvent:
+    fields:
+      event_id:
+      event_schema_version:
+      event_type:
+      universe_id:
+      continuity_id:
+      branch_id:
+      actors:
+      target_entities:
+      coordinate:
+      temporal_extent:
+        type: EventTemporalExtent
+      preconditions:
+        type: list[PredicateExpression]
+      mutations:
+        type: list[StateMutation]
+      derived_effect_lineage:
+        type: list[DerivedEffectReceipt]
+      postconditions:
+        type: list[PredicateExpression]
+      causal_relations:
+        type: list[CausalRelation]
+      motivation_refs:
+      evidence_refs:
+      authority:
+      valid_time:
+      recorded_at:
+      sequence:
+      rule_set_version:
+      reducer_version:
+      idempotency_key:
+      provenance:
+      resulting_state_digest:
+  EventTemporalExtent:
+    fields:
+      instantaneous:
+        type: bool
+      start_instant:
+      end_instant:
+        nullable: true
+      duration_ticks:
+        nullable: true
+  StateMutation:
+    operations:
+      - set
+      - unset
+      - add
+      - remove
+      - increment
+      - decrement
+    fields:
+      op:
+      address:
+      value:
+        nullable: true
+      source_effect_deriver:
+        nullable: true
+  DerivedEffectReceipt:
+    fields:
+      deriver_id:
+      deriver_version:
+      source_event_draft_digest:
+      generated_mutation_refs:
+      evidence_refs:
+      deterministic:
+      digest:
+  acceptance_pipeline:
+    - validate schema
+    - validate authority
+    - validate expected base revision
+    - resolve primary preconditions
+    - run effect-derivation pipeline
+    - materialize all mutations
+    - apply hard world rules
+    - evaluate soft-rule justifications
+    - simulate mutations atomically
+    - assert postconditions
+    - validate global invariants
+    - assign canonical sequence
+    - append event
+    - emit world outbox atomically
+    - reduce/materialize new state
+    - emit derived projection work
+    - emit signal-detection work
+  retroactive_event:
+    rule: >
+      Backdated accepted events never rewrite existing event identity.
+      They invalidate/rebuild all affected derived state after their valid-time
+      insertion point.
+  idempotency:
+    same_key_same_digest:
+      result: return_prior_commit
+    same_key_different_digest:
+      result: reject_collision
+# =====================================================================
+# 27. WORLD PROCESS / CONCURRENT REALITY
+# =====================================================================
+world_process_model:
+  purpose: >
+    Represent reality that persists or evolves over intervals rather than
+    pretending every fictional phenomenon is an instantaneous sequential event.
+  examples:
+    - walking
+    - decoding
+    - battery_discharge
+    - reactor_heating
+    - storm_motion
+    - signal_propagation
+    - orbital_motion
+    - biological_progression
+  WorldProcess:
+    fields:
+      process_id:
+      process_type:
+      participants:
+      target_entities:
+      start_event_id:
+      started_at:
+      planned_end_at:
+        nullable: true
+      state:
+        enum:
+          - scheduled
+          - active
+          - paused
+          - interrupted
+          - completed
+          - cancelled
+      interruptible:
+        type: bool
+      tick_policy:
+        enum:
+          - event_driven
+          - discrete_tick
+          - analytical
+          - scheduled_boundary
+      transition_function_ref:
+      transition_function_version:
+      conflict_keys:
+      world_rule_refs:
+      provenance:
+  scheduler_semantics:
+    - processes never bypass canonical events
+    - scheduler may derive future proposed events
+    - process boundary effects become accepted WorldEvents before mutation
+    - overlapping processes may coexist when conflict keys allow
+    - conflicting simultaneous effects require deterministic arbitration
+    - fictional simultaneity does not imply same transaction commit
+  ordering:
+    primary: valid_time.universe_tick
+    secondary: valid_time.subtick
+    tertiary: canonical_commit_sequence_for_equal_semantic_order_when_required
+  canonical_commit:
+    concurrency_strategy: serialized_or_conflict_detected
+  forbidden:
+    - last_write_wins
+    - hidden continuous mutation outside event ledger
+# =====================================================================
+# 28. WORLD COORDINATE
+# =====================================================================
+coordinate_model:
+  name: WorldCoordinate
+  purpose: >
+    Universal lookup key separating fictional time, story location, playback
+    position, branch, transaction-time view and observer perspective.
+  groups:
+    universe:
+      id:
+        type: UniverseId
+      continuity:
+        id:
+      canon_revision:
+        id:
+      branch:
+        id:
+        hypothetical:
+    valid_time:
+      universe_time:
+        nullable: true
+      universe_tick:
+        required: true
+      subtick:
+        default: 0
+    narrative:
+      series:
+        id:
+        nullable: true
+      season:
+        id:
+        number:
+        nullable: true
+      episode:
+        id:
+        number:
+        nullable: true
+      storyline:
+        id:
+        nullable: true
+      act:
+        id:
+        nullable: true
+      sequence:
+        id:
+        nullable: true
+      scene:
+        id:
+        index:
+        nullable: true
+      beat:
+        id:
+        nullable: true
+      shot:
+        id:
+        index_in_scene:
+        nullable: true
+    playback:
+      frame_rate:
+        numerator:
+        denominator:
+      episode_frame:
+        nullable: true
+      episode_timecode:
+        nullable: true
+      shot_frame:
+        nullable: true
+    state_anchor:
+      snapshot_id:
+        nullable: true
+      snapshot_event_sequence:
+        nullable: true
+      through_event_sequence:
+        nullable: true
+      state_revision:
+        required: true
+    transaction_time:
+      as_of_recorded_at:
+        required: true
+      commit_sequence:
+        required: true
+    perspective:
+      plane:
+        enum:
+          - objective
+          - character_knowledge
+          - character_belief
+          - audience_disclosure
+      observer_entity_id:
+        nullable: true
+      include:
+        objective_truth:
+        audience_disclosure:
+        character_knowledge:
+        character_beliefs:
+    integrity:
+      coordinate_version:
+        required: true
+      immutable:
+        value: true
+      digest:
+        algorithm: sha256
+        value:
+  comparison_rules:
+    - different universe/continuity pairs are not directly ordered
+    - valid time is independent of playback order
+    - branch ordering follows ancestry/base coordinate
+    - state revisions are ordered only within compatible continuity/canon context
+    - transaction-time queries may reconstruct earlier accepted understanding
+# =====================================================================
+# 29. SNAPSHOT MODEL
+# =====================================================================
+snapshot_model:
+  WorldSnapshot:
+    classification:
+      canonical: false
+      rebuildable: true
+      immutable: true
+      content_addressed: true
+    fields:
+      snapshot_id:
+      coordinate:
+      through_event_id:
+      through_commit_sequence:
+      reducer_version:
+      rule_set_version:
+      state_cells:
+      active_entity_ids:
+      active_relationship_ids:
+      active_process_ids:
+      state_hash:
+      created_at:
+  trigger_policy:
+    candidates:
+      - scene_boundary
+      - sequence_boundary
+      - episode_boundary
+      - every_N_events
+      - high_value_checkpoint
+      - process_checkpoint
+  recovery:
+    - discard invalid snapshot
+    - locate nearest earlier verified snapshot
+    - replay canonical event suffix
+    - verify digest
+    - rematerialize
+  retroactive_event:
+    - identify nearest unaffected prior snapshot
+    - invalidate subsequent snapshots
+    - replay forward
+    - regenerate exact projections
+    - compare checkpoint digests
+# =====================================================================
+# 30. REDUCER SEMANTICS
+# =====================================================================
+reducer_semantics:
+  contract: >
+    Pure deterministic transition from immutable state plus FullyResolvedWorldEvent
+    to immutable next state.
+  function:
+    conceptual: >
+      reduce(snapshot, resolved_event, pinned_rule_set) -> next_snapshot
+  required_steps:
+    - validate resolved event schema
+    - validate pinned base revision
+    - assert event preconditions
+    - verify event has fully materialized mutations
+    - verify applicable rules already resolved
+    - copy immutable state into isolated candidate transition buffer
+    - apply all mutations atomically
+    - assert postconditions
+    - validate global invariants
+    - compute state digest
+    - freeze next state
+  atomicity:
+    all_or_nothing: true
+  forbidden:
+    - LLM calls
+    - model inference
+    - semantic memory search
+    - provider graph query
+    - network calls
+    - production-quality judgment
+    - ambient wall clock
+    - stochastic mutation
+    - invention of missing effects
+  global_invariants:
+    - exclusive object ownership uniqueness
+    - mutually exclusive physical location uniqueness
+    - destroyed/dead entities cannot perform forbidden physical actions
+    - relationship participants resolve
+    - knowledge acquisition has information path
+    - entity identity is immutable
+    - state references resolve
+    - branch IDs remain isolated
+    - process transitions obey scheduler rules
+    - no exact state derives solely from semantic projection
+# =====================================================================
+# 31. EXACT STATE GRAPH
+# =====================================================================
+exact_state_graph:
+  name: WorldStateGraph
+  purpose:
+    - exact operational relationship reasoning
+    - dependency traversal
+    - conflict discovery
+    - knowledge asymmetry discovery
+    - causal path traversal
+    - blast-radius analysis
+    - affordance indexing
+  authority:
+    source: canonical records + resolved exact state
+    graph_itself_is_canonical: false
+  graph_model:
+    preferred_abstraction: labeled_property_graph_or_equivalent
+    hypergraph_required:
+      value: false
+      rationale: >
+        N-ary/provenance-rich relationships are represented through reified
+        relationship/event/opportunity nodes, preserving hyperedge semantics
+        without requiring native hypergraph storage.
+  representative_nodes:
+    - WorldEntity
+    - Character
+    - Location
+    - Prop
+    - Relationship
+    - Proposition
+    - Goal
+    - Intent
+    - WorldEvent
+    - WorldRule
+    - WorldProcess
+    - NarrativeOpportunity
+  representative_edges:
+    - LOCATED_AT
+    - OWNS
+    - HOLDS
+    - WEARS
+    - HAS_CONDITION
+    - KNOWS
+    - BELIEVES
+    - HAS_GOAL
+    - INTENDS
+    - TRUSTS
+    - DEPENDS_ON
+    - OWES
+    - CAN_PERFORM
+    - REQUIRES
+    - BLOCKS
+    - ENABLES
+    - CAUSES
+    - MOTIVATED_BY
+    - PARTICIPATES_IN
+    - OBSERVED
+    - INFORMATION_SOURCE_FOR
+  reification_rule: >
+    Relations carrying substantial provenance, multiple participants, temporal
+    identity, causal identity or lifecycle semantics are represented as nodes.
+  provider:
+    status: UNKNOWN
+  provider_selection_requires:
+    - path-query benchmark
+    - blast-radius benchmark
+    - temporal query benchmark
+    - projection rebuild benchmark
+    - operational durability benchmark
+    - backup/restore benchmark
+    - cost benchmark
+  fallback:
+    rule: >
+      Exact queries must remain possible through canonical reducer/index fallback
+      even if graph projection is unavailable.
+# =====================================================================
+# 32. SEMANTIC GRAPH
+# =====================================================================
+semantic_graph:
+  purpose:
+    - associative discovery
+    - thematic connection discovery
+    - emotionally significant history discovery
+    - bounded contextual hydration
+    - long-range semantic recurrence
+    - production-experience pattern discovery
+  authoritative: false
+  preferred_integration:
+    owner: l9_graphiti_memory_projection_path
+  example_relationships:
+    - related_to
+    - emotionally_significant_to
+    - associated_with
+    - similar_to
+    - foreshadows
+    - contradicts
+    - supports
+    - thematically_connected_to
+    - historically_connected_to
+  governing_rule: >
+    Semantic discovery nominates relevance. Exact World Model APIs verify
+    operational claims before those claims may influence canonical decisions.
+  loss_behavior:
+    semantic_projection_lost:
+      exact_world_state_affected: false
+      recovery: replay_from_canonical_memory_records
+# =====================================================================
+# 33. NARRATIVE OPPORTUNITY
+# =====================================================================
+narrative_opportunity_model:
+  purpose: >
+    Reify high-value convergence discovered across multiple graph/state
+    relationships: the operational equivalent of a narrative hyperedge.
+  classification:
+    canonical: false
+    derived: true
+    rebuildable: true
+  NarrativeOpportunity:
+    fields:
+      opportunity_id:
+      opportunity_type:
+      participant_refs:
+        type: list[EntityRef]
+      intent_refs:
+        type: list[IntentRef]
+      conflict_refs:
+        type: list[Ref]
+      promise_refs:
+        type: list[AdjacentNarrativePromiseRef]
+      prop_refs:
+        type: list[EntityRef]
+      proposition_refs:
+        type: list[PropositionRef]
+      affordance_refs:
+        type: list[AffordanceRef]
+      scores:
+        dramatic_potential:
+          range: [0.0, 1.0]
+        emotional_potential:
+          range: [0.0, 1.0]
+        thematic_relevance:
+          range: [0.0, 1.0]
+        causal_support:
+          range: [0.0, 1.0]
+        future_option_value:
+          range: [0.0, 1.0]
+      discovered_at:
+        type: WorldCoordinate
+      discovered_by_operator:
+      derivation_evidence:
+        type: list[EvidenceRef]
+      source_state_revision:
+      expires_when:
+        type: list[PredicateExpression]
+  example_convergence:
+    - aria wants signal origin
+    - eva possesses relevant information
+    - aria distrusts eva
+    - receiver connects to Marcus
+    - prior promise involves Eva's honesty
+    - current affordance permits trust-test interaction
+  resulting_opportunity:
+    conceptual: >
+      Use receiver as a trust-test and nonverbal information-transfer vehicle.
+  graph_representation:
+    node: NarrativeOpportunity
+    semantics: reified_hyperedge
+# =====================================================================
+# 34. WORLD SIGNAL
+# =====================================================================
+world_signal_model:
+  role: >
+    First-class nervous-system output representing meaningful changes,
+    constraints, risks or opportunities detected in World State.
+  classification:
+    canonical: false
+    derived: true
+    rebuildable: true
+  WorldSignal:
+    fields:
+      signal_id:
+      signal_type:
+        examples:
+          - NARRATIVE.GOAL_BLOCKED
+          - NARRATIVE.PROMISE_PAYOFF_READY
+          - NARRATIVE.OPPORTUNITY_CONVERGENCE
+          - EPISTEMIC.KNOWLEDGE_ASYMMETRY
+          - EPISTEMIC.INFORMATION_PATH_BROKEN
+          - CHARACTER.FALSE_BELIEF_ACTIVE
+          - RELATIONSHIP.TRUST_COLLAPSE
+          - WORLD.CONSTRAINT_CHANGED
+          - WORLD.PROCESS_INTERRUPTED
+          - WORLD.RULE_THREAT
+          - QUALITY.EXPECTED_STATE_RISK
+      signal_version:
+      source_detector_id:
+      observed_at:
+        type: WorldCoordinate
+      scope_ref:
+        note: >
+          CognitiveScope itself belongs to the Polycognitive Runtime; World Model
+          may expose a compatible world-scope descriptor without owning executive
+          cognitive authority.
+      subject_refs:
+        type: list[Ref]
+      metrics:
+        severity:
+          range: [0.0, 1.0]
+        salience_hint:
+          range: [0.0, 1.0]
+        urgency:
+          range: [0.0, 1.0]
+        novelty:
+          range: [0.0, 1.0]
+        confidence:
+          range: [0.0, 1.0]
+        estimated_downstream_impact:
+          range: [0.0, 1.0]
+        dramatic_potential:
+          range: [0.0, 1.0]
+          nullable: true
+      payload:
+        type: map
+      evidence_refs:
+        type: list[EvidenceRef]
+      causal_parent_signal_ids:
+        type: list[SignalId]
+      deduplication_key:
+        nullable: true
+      lifecycle:
+        enum:
+          - active
+          - consumed
+          - superseded
+          - expired
+      expires_at:
+        nullable: true
+      expires_on_event_types:
+        type: list[string]
+      suggested_operator_tags:
+        type: list[string]
+      source_state_revision:
+  important_boundary:
+    world_model:
+      owns:
+        - signal detection
+        - signal derivation
+        - signal evidence
+        - signal lifecycle
+    polycognitive_runtime:
+      owns:
+        - attention allocation
+        - cognitive activation
+        - reasoning-depth changes
+        - operator scheduling
+        - signal consumption strategy
+  invariant: >
+    A WorldSignal may cause cognition to occur but cannot directly mutate
+    canonical World State.
+# =====================================================================
+# 35. WORLD SIGNAL DETECTORS
+# =====================================================================
+world_signal_detectors:
+  StateDetector:
+    contract:
+      detector_id:
+      detector_version:
+      subscribed_event_types:
+      subscribed_state_paths:
+      required_exact_views:
+      deterministic:
+      output_signal_types:
+      stop_conditions:
+  detector_categories:
+    deterministic:
+      examples:
+        - goal became blocked
+        - ownership changed
+        - rule became violated
+        - process interrupted
+        - information path broken
+    graph_analytic:
+      examples:
+        - knowledge asymmetry
+        - multi-thread convergence
+        - high-centrality prop intersects unresolved conflict
+    statistical:
+      examples:
+        - state pattern historically associated with production risk
+    judgment_assisted:
+      examples:
+        - thematic significance appears high
+        - narrative opportunity appears unusually rich
+  rebuild:
+    rule: >
+      Signals must be recomputable from exact state, referenced adjacent inputs
+      and deterministic/versioned detector configuration.
+# =====================================================================
+# 36. WORLD INTELLIGENCE LAYER
+# =====================================================================
+world_intelligence_layer:
+  purpose: >
+    Expose structured analyses of World State without becoming the global
+    executive controller of Quantum cognition.
+  owns:
+    - state detectors
+    - exact query operators
+    - graph-analysis operators
+    - signal derivation
+    - NarrativeOpportunity mining
+    - typed WorldRationale support
+  does_not_own:
+    - global CognitiveExecutive
+    - cognitive workspace
+    - cross-domain cognitive cascades
+    - reasoning-depth allocation
+    - global operator utility learning
+    - execution orchestration
+  operator_contract:
+    fields:
+      operator_id:
+      operator_version:
+      purpose:
+      applies_when:
+      required_exact_views:
+      optional_memory_views:
+      query_plan:
+      output_schema:
+      confidence_or_determinism:
+      stop_conditions:
+      authority_requirement:
+      intended_consumers:
+  initial_operators:
+    - story.blocked_intents
+    - story.information_holders
+    - story.emotional_cost_of_resolution
+    - story.false_belief_blockers
+    - story.physical_constraint_pressure
+    - story.unresolved_promise_intersections
+    - story.high_impact_affordances
+    - story.audience_character_information_split
+    - story.narrative_connector_props
+    - story.latent_conflicts
+    - story.story_pressure
+    - world.explain_causality
+    - world.find_dependency_blast_radius
+    - world.find_information_paths
+  typed_query_API_preference:
+    rule: >
+      Agents call semantic typed operations rather than raw Cypher/SQL/provider
+      query languages.
+# =====================================================================
+# 37. WORLD RATIONALE
+# =====================================================================
+world_rationale_model:
+  WorldRationale:
+    fields:
+      supported_by_intents:
+      enabled_by_affordances:
+      exploits_conflicts:
+      promise_refs:
+      belief_dependencies:
+      causal_support_refs:
+      expected_state_changes:
+      evidence_refs:
+      explanation:
+  usage:
+    - major event proposals
+    - branch simulation
+    - causal grounding checks
+    - story-quality evidence
+    - debugging
+  invariant: >
+    WorldRationale supports a proposal but does not establish truth.
+# =====================================================================
+# 38. WORLD QUERY API
+# =====================================================================
+query_API:
+  rule: >
+    Public consumers use typed semantic operations. Raw provider query languages
+    are adapter implementation details.
+  exact:
+    state_at:
+      input:
+        - WorldCoordinate
+        - requested_planes
+      output:
+        - ResolvedStateView
+    explain_fact:
+      input:
+        - StateAddress
+        - WorldCoordinate
+      output:
+        - establishing_event
+        - causal_lineage
+        - authority
+        - provenance
+        - dependency_refs
+    history_of:
+      input:
+        - entity_or_state_address
+        - temporal_range
+    compare_perspectives:
+      input:
+        - proposition_or_state
+        - observer_refs
+        - WorldCoordinate
+    dependencies_of:
+      input:
+        - fact_or_event_ref
+    validate_preconditions:
+      input:
+        - event_proposal
+        - WorldCoordinate
+    query_affordances:
+      input:
+        - actor_id
+        - WorldCoordinate
+        - optional_goal_filter
+    explain_causality:
+      input:
+        - target_ref
+        - WorldCoordinate
+    find_information_paths:
+      input:
+        - proposition_ref
+        - observer_ref
+        - WorldCoordinate
+  intelligence:
+    find_latent_conflicts:
+    find_knowledge_asymmetries:
+    story_pressure:
+    find_blocked_intents:
+    find_false_belief_blockers:
+    find_high_impact_affordances:
+    find_narrative_opportunities:
+    find_connector_props:
+    find_open_causal_dependencies:
+  simulation:
+    fork_state:
+    apply_hypothetical_event:
+    simulate:
+    compare_branches:
+    discard_branch:
+    propose_commit:
+  result_envelope:
+    fields:
+      coordinate:
+      state_revision:
+      evidence_refs:
+      authority_refs:
+      freshness:
+      degraded_sources:
+      determinism_class:
+      projection_lag:
+      digest:
+# =====================================================================
+# 39. CONTEXT COMPILER
+# =====================================================================
+context_compiler:
+  purpose: >
+    Compile the smallest complete, exact and role-appropriate representation of
+    fictional reality required by a cognitive/production operation.
+  pipeline:
+    - validate target WorldCoordinate
+    - locate nearest verified snapshot
+    - replay canonical events to target
+    - resolve exact state
+    - resolve applicable canon
+    - resolve applicable world rules
+    - resolve asset references
+    - compile mandatory exact views
+    - hydrate bounded durable memory where allowed
+    - resolve relevant adjacent references
+    - prune irrelevant information to contract budget
+    - record omissions/degraded sources
+    - freeze immutable WorldContextPackage
+    - compute digest
+  mandatory_before_critical_execution: true
+  fail_closed:
+    - missing mandatory exact state
+    - stale mandatory exact view
+    - unresolved critical entity reference
+    - unresolved applicable hard rule
+    - coordinate mismatch
+  WorldContextPackage:
+    fields:
+      context_id:
+      role:
+      coordinate:
+      state_revision:
+      exact_views:
+      memory_views:
+      adjacent_views:
+      perspective:
+      authority_scope:
+      evidence_refs:
+      freshness:
+      omissions:
+      degraded_sources:
+      token_count:
+      digest:
+  context_contracts:
+    narrative:
+      required_exact:
+        - active_goals
+        - knowledge
+        - beliefs
+        - relationships
+        - rules
+        - affordances
+        - causal_dependencies
+      adjacent:
+        - narrative_promises
+        - creator_constraints
+    character:
+      required_exact:
+        - psychology
+        - goals
+        - beliefs
+        - knowledge
+        - relationships
+        - capabilities
+        - local_environment
+    epistemic:
+      required_exact:
+        - objective_truth
+        - knowledge
+        - beliefs
+        - perception_paths
+        - audience_disclosure
+    director:
+      required_exact:
+        - physical_state
+        - psychology
+        - goals
+        - knowledge
+        - relationships
+        - location
+        - assets
+        - cinematic_adjacent_state
+        - rules
+    renderer:
+      required_exact:
+        - asset_refs
+        - physical_state
+        - props
+        - location
+        - lighting
+        - visible_invariants
+      memory: []
+    sound:
+      required_exact:
+        - physical_events
+        - materials
+        - geometry
+        - atmosphere
+        - active_emitters
+        - observer/listener_position
+      memory: []
+    qc:
+      required_exact:
+        - expected_visible_state
+        - rules
+        - epistemic_state
+        - causal_requirements
+      memory:
+        - prior_failure_patterns
+# =====================================================================
+# 40. BRANCHING AND SIMULATION
+# =====================================================================
+simulation_and_branching:
+  Branch:
+    fields:
+      branch_id:
+      universe_id:
+      continuity_id:
+      parent_branch_id:
+      fork_coordinate:
+      base_snapshot_id:
+      purpose:
+      status:
+        enum:
+          - hypothetical
+          - candidate
+          - selected
+          - abandoned
+          - promoted
+      event_ids:
+      created_by:
+      scorecard:
+        nullable: true
+      created_at:
+  storage:
+    copy_on_write: true
+  canonical:
+    value: false
+  branch_resolution:
+    formula: >
+      BranchState =
+      Reduce(
+        canonical_base_snapshot_at_fork,
+        branch_event_overlay
+      )
+  promotion:
+    steps:
+      - select candidate branch
+      - load current canonical base
+      - detect stale assumptions
+      - rebase if allowed
+      - revalidate all selected events
+      - reapply current rule set policy as required
+      - append accepted canonical events
+      - reduce canonical state
+      - emit projections
+      - mark branch promoted
+  forbidden:
+    - copy branch snapshot over canonical state
+    - mutate canonical entities during simulation
+    - bypass current authority/rule validation during promotion
+# =====================================================================
+# 41. VERIFICATION ORACLE
+# =====================================================================
+verification_oracle:
+  purpose: >
+    Compare expected World Model truth against what generated media/artifacts
+    visibly or audibly depict.
+  oracle_definition: >
+    Authoritative expected-reference truth, not an omniscient generative model.
+  pattern:
+    - resolve expected visible/audible state
+    - compile expected invariants
+    - observe generated artifact
+    - compare expected versus observed
+    - emit typed mismatch evidence
+  result:
+    enum:
+      - pass
+      - fail
+      - indeterminate
+  mismatch_example:
+    expected:
+      aria_left_shoulder: damaged
+      receiver_hand: right
+      lighting: amber_emergency
+    observed:
+      aria_left_shoulder: intact
+      receiver_hand: left
+      lighting: blue
+    result:
+      status: fail
+      violations:
+        - CHARACTER.DAMAGE_STATE_MISMATCH
+        - PROP.HANDEDNESS_DRIFT
+        - ENVIRONMENT.LIGHTING_STATE_MISMATCH
+  prevention_pipeline:
+    - exact World State
+    - compile required visible truth
+    - bind critical constraints to enforcement
+    - verify enforcement strength
+    - reject weak/unbound critical render plans
+    - render
+    - oracle QC
+  state_effect:
+    observation_is_evidence_not_mutation: true
+# =====================================================================
+# 42. WORLD-TO-PRODUCTION INVARIANT COMPILATION
+# =====================================================================
+visual_and_audible_invariants:
+  purpose: >
+    Convert world truth that must survive rendering into explicit production
+    constraints.
+  enforcement_strength:
+    5:
+      name: DETERMINISTIC
+    4:
+      name: STRUCTURALLY_ANCHORED
+    3:
+      name: REFERENCE_CONDITIONED
+    2:
+      name: PROMPT_CONDITIONED
+    1:
+      name: IMPLIED
+    0:
+      name: UNCONTROLLED
+  rule:
+    critical_visible_invariant_minimum_strength: 3
+  example:
+    fact:
+      address: qchar_aria.physical.left_shoulder.condition
+      value: damaged
+    production_binding:
+      type: canonical_character_variant
+      asset_ref: aria@damage_07
+      enforcement_strength: 4
+  pre_render_validation:
+    reject_if:
+      - critical invariant has no binding
+      - critical invariant enforcement below required strength
+      - asset reference unavailable without approved fallback
+# =====================================================================
+# 43. ACOUSTIC WORLD DERIVATION
+# =====================================================================
+acoustic_derivation:
+  purpose: >
+    Provide exact physical acoustic context to Sound Cognition/Production.
+  source_state:
+    - physical event
+    - source material
+    - contact material
+    - impact force
+    - gait/motion
+    - room geometry
+    - room materials
+    - atmosphere
+    - listener position
+    - active emitters
+    - device/system states
+  AcousticContext:
+    fields:
+      source_material:
+      contact_material:
+      impact_class:
+      room_geometry:
+      room_materials:
+      atmosphere:
+      listener_distance:
+      listener_orientation:
+      active_emitters:
+      world_coordinate:
+      state_revision:
+  invariant:
+    example: >
+      If ventilation_fan_04.powered == false, the fan may not contribute to
+      expected ambience after that state transition.
+# =====================================================================
+# 44. L9 MEMORY INTEGRATION
+# =====================================================================
+memory_integration:
+  boundary:
+    world_model:
+      owns:
+        - exact state
+        - canonical events
+        - rules
+        - reduction
+        - exact dependencies
+        - exact graph
+        - state reconstruction
+    l9_memory:
+      owns:
+        - governed memory persistence
+        - historical semantic retrieval
+        - associative projections
+        - memory lineage
+        - bounded hydration
+  namespace_rules:
+    fictional:
+      pattern: quantum.animation/world/<universe_id>/<continuity_id>
+    production_experience:
+      pattern: quantum.animation/production-experience/<scope>
+    requirements:
+      - fictional truth and production experience never share authority
+      - continuity isolation explicit
+      - sensitive creator/human data projected only under separate policy
+  write_path:
+    - canonical WorldEvent committed
+    - World Model outbox record committed atomically
+    - L9MemoryBridge receives projection work
+    - MemorySDK.write
+    - MemoryService / canonical RecordStore commit
+    - memory provider outbox
+    - Graphiti/Zep projection
+  read_path:
+    - exact state resolves first
+    - bounded MemorySDK hydration may enrich context
+    - operational claims are verified against exact state
+    - degraded semantic provider never falsifies exact state
+  current_sdk_surface:
+    - write
+    - search
+    - hydrate
+    - get
+    - phase_lock
+    - lineage
+  python_package: l9_graphite_memory
+# =====================================================================
+# 45. PRODUCTION EXPERIENCE PLANE
+# =====================================================================
+production_experience:
+  fictional_truth: false
+  purpose: >
+    Capture what Quantum learns about manufacturing reality so future production
+    choices fail less often.
+  objects:
+    ProductionAttempt:
+      fields:
+        attempt_id:
+        renderer_id:
+        renderer_version:
+        strategy_id:
+        shot_features:
+        invariant_types:
+        cost:
+        latency_ms:
+        qc_scores:
+        passed:
+        violations:
+        repair_action:
+        resulting_outcome:
+    QCObservation:
+      fields:
+        observation_id:
+        artifact_ref:
+        violation_codes:
+        severity:
+        evidence_refs:
+        expected_world_state_ref:
+    FailureSignature:
+      fields:
+        signature_id:
+        feature_pattern:
+        renderer_pattern:
+        strategy_pattern:
+        violation_pattern:
+        support_count:
+        estimated_probability:
+    ReliabilityAggregate:
+      fields:
+        aggregate_id:
+        conditional_features:
+        attempts:
+        passes:
+        failures:
+        calibrated_failure_rate:
+        confidence_interval:
+    CandidateProductionPolicy:
+      fields:
+        policy_id:
+        trigger_features:
+        recommended_strategy:
+        expected_quality:
+        expected_failure_probability:
+        expected_cost:
+        evidence_refs:
+  learning_pipeline:
+    - capture every attempt
+    - normalize features
+    - aggregate outcomes
+    - discover failure patterns
+    - nominate candidate production policy
+    - historical backtest
+    - calibration validation
+    - shadow mode
+    - bounded canary
+    - explicit external promotion gate
+  invariant: >
+    Production experience may recommend manufacturing strategy but cannot rewrite
+    fictional canon, authority, creator intent or governance.
+  note:
+    cognitive_operator_learning_owner: polycognitive_runtime
+    statement: >
+      Learning which reasoning operator is useful under which WorldSignals is
+      deliberately outside this World Model specification.
+# =====================================================================
+# 46. CONSISTENCY MODEL
+# =====================================================================
+consistency_model:
+  canonical:
+    mode: strong
+    boundary: event acceptance / canonical sequence assignment
+  snapshots:
+    mode: derived_revision_tagged
+  exact_graph:
+    mode: eventually_consistent_projection
+    requirement_for_exact_consumers: >
+      Matching revision or reducer-backed exact fallback.
+  semantic_graph:
+    mode: eventually_consistent
+    correctness_required: false
+  WorldSignals:
+    mode: rebuildable_revision_tagged
+  NarrativeOpportunities:
+    mode: rebuildable_revision_tagged
+  memory_projection:
+    mode: eventual
+    canonical_truth_dependency: false
+# =====================================================================
+# 47. CONCURRENCY MODEL
+# =====================================================================
+concurrency_model:
+  canonical_write_strategy:
+    - optimistic expected revision
+    - entity/state conflict detection
+    - serialized semantic commit
+  conflict_behavior:
+    allowed:
+      - reject
+      - rebase
+      - revalidate
+    forbidden:
+      - blind overwrite
+      - last-write-wins
+  branches:
+    isolation: copy_on_write
+  cognitive_consumers:
+    read_mode: immutable_snapshot_revision
+    output_requirement:
+      - based_on_world_revision
+  stale_proposal:
+    behavior:
+      - detect
+      - identify changed dependencies
+      - revalidate or rebase
+      - never silently commit
+# =====================================================================
+# 48. IDEMPOTENCY
+# =====================================================================
+idempotency:
+  canonical_event:
+    key: idempotency_key
+    same_key_same_digest:
+      result: return_existing_receipt
+    same_key_different_digest:
+      result: reject
+  memory_projection:
+    key:
+      - world_event_id
+      - projection_schema_version
+  snapshot:
+    dedupe_by: content_digest
+  exact_projection:
+    key:
+      - world_revision
+      - projection_schema_version
+  signal:
+    dedupe_by:
+      - detector_id
+      - source_state_revision
+      - deduplication_key
+# =====================================================================
+# 49. TRANSACTION BOUNDARIES
+# =====================================================================
+transaction_boundaries:
+  canonical_atomic_boundary:
+    includes:
+      - append FullyResolvedWorldEvent
+      - assign canonical sequence
+      - acceptance receipt
+      - world outbox record
+  synchronous_materialization:
+    allowed_if_transactionally_safe:
+      - reducer next state
+      - checkpoint state metadata
+  explicitly_outside_atomic_boundary:
+    - exact graph provider write
+    - Graphiti/Zep projection
+    - semantic search
+    - renderer execution
+    - quality model inference
+    - production experience aggregation
+  rule: >
+    Failure of any asynchronous projection may not roll back an already accepted
+    canonical WorldEvent.
+# =====================================================================
+# 50. OUTBOX / PROJECTION
+# =====================================================================
+outbox_and_projection:
+  world_outbox:
+    atomic_with_canonical_event: true
+  fields:
+    - outbox_event_id
+    - source_event_id
+    - projection_type
+    - projection_version
+    - payload_digest
+    - attempts
+    - status
+    - next_attempt_at
+    - last_error
+    - receipt_ref
+  projection_targets:
+    - exact_state_graph
+    - L9_memory
+    - semantic_graph
+    - dependency_index
+    - signal_detection_queue
+    - verification_views
+  replay:
+    all_derived_projections_rebuildable: true
+# =====================================================================
+# 51. FAILURE MODES
+# =====================================================================
+failure_modes:
+  canonical_store_unavailable:
+    writes: fail_closed
+    reads: serve_verified_state_if_possible
+  snapshot_corruption:
+    behavior:
+      - discard snapshot
+      - replay canonical events
+  exact_graph_failure:
+    behavior:
+      - disable graph-dependent optimization
+      - use reducer/index exact fallback
+  memory_failure:
+    behavior:
+      - exact state continues
+      - optional semantic hydration degrades
+  semantic_provider_failure:
+    behavior:
+      - queue retry
+      - no effect on exact truth
+  effect_deriver_failure:
+    behavior:
+      - reject event before canonical commit
+  rule_engine_failure:
+    behavior:
+      - reject dependent event
+  signal_detector_failure:
+    behavior:
+      - record degraded signal coverage
+      - exact truth continues
+  oracle_unavailable:
+    behavior:
+      - block promotion where oracle certification is mandatory
+  process_scheduler_failure:
+    behavior:
+      - stop scheduling new process-derived events
+      - preserve canonical ledger
+      - recover from deterministic schedule state
+# =====================================================================
+# 52. DEGRADED MODES
+# =====================================================================
+degraded_modes:
+  EXACT_ONLY:
+    semantic_memory: disabled
+    semantic_graph: disabled
+    exact_state: available
+  READ_ONLY:
+    writes: forbidden
+    historical_verified_reads: allowed
+  PROJECTION_BACKLOG:
+    canonical_progress: allowed
+    projection_lag: visible
+    exact_consumers: reducer_fallback
+  CONTEXT_REDUCED:
+    optional_memory: removable
+    mandatory_exact_views: never_dropped
+  SIGNAL_DEGRADED:
+    signal_generation_partial: true
+    exact_state: unaffected
+    cognitive_runtime_must_receive_degradation_marker: true
+# =====================================================================
+# 53. RECOVERY
+# =====================================================================
+recovery:
+  ordered_recovery:
+    - verify entity/proposition/canon registries
+    - verify event ledger sequence and digests
+    - verify accepted rule-set versions
+    - rebuild snapshots
+    - verify snapshot/full-replay equality
+    - rebuild process scheduler state
+    - rebuild exact graph
+    - replay world memory outbox
+    - rebuild semantic memory projections
+    - recompute affordances
+    - recompute PerceptualAccess indexes
+    - recompute WorldSignals
+    - recompute NarrativeOpportunities
+    - verify projection checkpoints
+  reopen_write_gate:
+    requires:
+      - canonical ledger integrity
+      - reducer determinism
+      - checkpoint digest match
+      - rule registry availability
+      - authority service availability
+# =====================================================================
+# 54. OBSERVABILITY
+# =====================================================================
+observability:
+  metrics:
+    canonical:
+      - event_commit_latency
+      - event_rejection_rate
+      - rule_rejection_rate
+      - effect_derivation_latency
+      - reducer_latency
+    reconstruction:
+      - replay_events_per_query
+      - snapshot_hit_rate
+      - state_at_latency
+      - snapshot_rebuild_count
+    exact_graph:
+      - exact_query_latency
+      - projection_lag
+      - reducer_fallback_rate
+    epistemic:
+      - information_path_validation_rate
+      - prevented_knowledge_leak_count
+      - stale_knowledge_detection_count
+    context:
+      - context_compile_latency
+      - context_tokens
+      - context_miss_rate
+      - stale_context_rejection_rate
+    intelligence:
+      - signal_count_by_type
+      - signal_dedup_rate
+      - signal_rebuild_time
+      - narrative_opportunity_count
+      - opportunity_expiration_rate
+    production_prevention:
+      - pre_render_prevention_rate
+      - world_compliance_failure_rate
+      - critical_invariant_coverage
+    memory:
+      - memory_projection_lag
+      - world_outbox_backlog
+      - outbox_dead_count
+    simulation:
+      - branch_count
+      - branch_promotion_rate
+      - stale_branch_revalidation_rate
+  audit:
+    requirement: >
+      Every canonical mutation and authority decision is receipt-bearing and
+      addressable by event ID, coordinate and commit sequence.
+# =====================================================================
+# 55. SECURITY
+# =====================================================================
+security:
+  principles:
+    - least privilege
+    - explicit authority
+    - no agent direct datastore mutation
+    - generated content cannot bypass event validation
+    - no secret material in model-visible state
+    - tool capability does not imply authority
+  protected_boundaries:
+    - event proposal
+    - event validation
+    - event commit
+    - branch promotion
+    - WorldQueryAPI
+    - simulation
+    - memory bridge
+    - projection replay
+  agent_database_access:
+    direct_access: forbidden
+    required_surface: typed_API
+# =====================================================================
+# 56. PRIVACY
+# =====================================================================
+privacy:
+  fictional_state:
+    classification: normally_non_personal
+  potentially_sensitive:
+    - creator feedback
+    - human review comments
+    - personal creator profile data
+    - business/product evaluation data
+  projection_policy:
+    - allowlist fields
+    - redact humans where unnecessary
+    - never project credentials
+    - never project secrets
+    - preserve deletion/supersession requirements from memory layer
+# =====================================================================
+# 57. PERFORMANCE
+# =====================================================================
+performance:
+  objectives:
+    - bounded context size independent of total fictional history
+    - snapshot-assisted state reconstruction
+    - indexed entity/state/event lookup
+    - incremental exact graph projection
+    - asynchronous semantic projection
+    - incremental signal recomputation
+    - incremental NarrativeOpportunity recomputation
+    - dependency-aware staleness invalidation
+  initial_reference_targets:
+    state_at_p95_ms:
+      target: 250
+    context_compile_p95_ms:
+      target: 1000
+      excludes: model_inference
+    exact_graph_query_p95_ms:
+      target: 250
+    world_signal_incremental_p95_ms:
+      target: 250
+    projection_lag_p95_s:
+      target: 60
+      condition: nominal_load
+  benchmark_rule:
+    must_record:
+      - dataset size
+      - event count
+      - entity count
+      - active relationship count
+      - provider
+      - hardware
+      - cache state
+      - query type
+# =====================================================================
+# 58. SCALABILITY
+# =====================================================================
+scalability:
+  partition_keys:
+    - universe_id
+    - continuity_id
+  optional_secondary_partition:
+    - episode_id
+    - storyline_id
+    - entity_locality
+    - production_scope
+  locality:
+    context_requests:
+      - relevant entities
+      - requested planes
+      - required temporal window
+  history:
+    storage_pattern:
+      - append_only_events
+      - snapshots
+  graph:
+    exact_and_semantic_scale_independently: true
+  world_processes:
+    schedule_partitioning:
+      - universe_id
+      - continuity_id
+      - temporal_bucket
+# =====================================================================
+# 59. STORAGE ABSTRACTIONS
+# =====================================================================
+storage_abstractions:
+  ports:
+    - EntityStorePort
+    - PropositionStorePort
+    - CanonicalEventStorePort
+    - RuleStorePort
+    - BranchStorePort
+    - SnapshotStorePort
+    - WorldProcessStorePort
+    - ExactGraphProjectionPort
+    - OutboxStorePort
+    - ExperienceStorePort
+    - CausalIndexPort
+    - PerceptionIndexPort
+    - SignalStorePort
+    - NarrativeOpportunityStorePort
+  provider_rule: >
+    World Model core must not depend on Neo4j, Cypher, SQL, Graphiti or any
+    provider-specific API.
+  unresolved_provider_decisions:
+    canonical_store:
+      status: UNKNOWN
+    exact_graph:
+      status: UNKNOWN
+  evidence_required:
+    - durability
+    - append throughput
+    - bi-temporal query workload
+    - replay cost
+    - snapshot cost
+    - graph traversal workload
+    - backup/restore
+    - operational complexity
+    - cost
+# =====================================================================
+# 60. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  write:
+    - propose_event
+    - compile_event
+    - validate_event
+    - commit_event
+    - promote_branch
+    - start_world_process
+    - interrupt_world_process
+  read:
+    - state_at
+    - explain_state
+    - history_of
+    - compare_perspectives
+    - dependencies_of
+    - query_affordances
+    - explain_causality
+    - find_information_paths
+  context:
+    - compile_context
+  simulation:
+    - fork
+    - simulate
+    - compare
+    - extend
+    - discard
+  intelligence:
+    - run_world_operator
+    - signals_at
+    - opportunities_at
+    - recompute_signals
+    - recompute_opportunities
+  perception:
+    - perceptual_access
+    - observations_for
+    - information_path
+  oracle:
+    - expected_state
+    - expected_visible_state
+    - record_observation
+    - compare
+  memory:
+    - project_event_memory
+    - hydrate_history
+    - lineage
+# =====================================================================
+# 61. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  identity:
+    - world_entity
+    - entity_ref
+  state:
+    - state_address
+    - state_cell
+    - resolved_state_view
+  epistemic:
+    - proposition
+    - knowledge
+    - belief
+    - perception_channel
+    - perceptual_access
+    - observation
+    - information_path
+    - inference
+  character:
+    - psychological_state
+    - intent
+  relationship:
+    - relationship
+    - relationship_participant
+  capability:
+    - capability_state
+    - action_schema
+    - affordance
+  rules:
+    - world_rule
+    - predicate_expression
+    - rule_result
+  causality:
+    - causal_relation
+  events:
+    - draft_world_event
+    - fully_resolved_world_event
+    - event_temporal_extent
+    - state_mutation
+    - derived_effect_receipt
+  time:
+    - world_coordinate
+  reconstruction:
+    - world_snapshot
+  processes:
+    - world_process
+  simulation:
+    - branch
+  context:
+    - context_contract
+    - world_context_package
+  intelligence:
+    - world_signal
+    - world_signal_detector_spec
+    - narrative_opportunity
+    - world_rationale
+    - query_operator_result
+  verification:
+    - verification_observation
+    - expected_visible_state
+  experience:
+    - production_attempt
+    - qc_observation
+    - failure_signature
+    - reliability_aggregate
+    - candidate_production_policy
+# =====================================================================
+# 62. PACKAGE / MODULE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/world_model/
+  modules:
+    contracts:
+      - common
+      - identifiers
+      - authority
+      - provenance
+    entities:
+      - registry
+      - lifecycle
+    state:
+      - address
+      - cells
+      - resolver
+      - reducer
+      - ownership
+    events:
+      - proposal
+      - compiler
+      - effect_derivation
+      - validation
+      - commit
+    temporal:
+      - coordinates
+      - ordering
+      - transaction_time
+    processes:
+      - contracts
+      - scheduler
+      - concurrency
+    rules:
+      - contracts
+      - registry
+      - engine
+    causality:
+      - contracts
+      - lineage
+      - dependency_index
+    capabilities:
+      - state
+      - action_schema
+      - affordance_engine
+    epistemic:
+      - propositions
+      - knowledge
+      - belief
+      - inference
+    perception:
+      - channels
+      - access
+      - observations
+      - information_flow
+    psychology:
+      - state
+      - derivation
+    relationships:
+      - contracts
+      - state
+      - derivation
+    snapshots:
+      - builder
+      - verifier
+      - invalidation
+    graph:
+      - exact_projection
+      - query_adapter
+    queries:
+      - exact
+      - intelligence
+      - perspective
+    context:
+      - contracts
+      - compiler
+      - pruning
+    intelligence:
+      - detectors
+      - world_signals
+      - narrative_opportunities
+      - operators
+      - rationale
+    simulation:
+      - branches
+      - fork
+      - apply
+      - compare
+      - promotion
+    oracle:
+      - expected_state
+      - compare
+      - observations
+    experience:
+      - production_attempts
+      - reliability
+      - candidate_policy
+    projections:
+      - outbox
+      - exact_graph
+      - memory
+    integrations:
+      l9_memory:
+        - bridge
+        - projection
+    ports:
+      - stores
+      - graph
+      - scheduler
+      - experience
+    adapters:
+      provider_specific: true
+  physical_repo:
+    status: UNKNOWN
+  evidence_needed:
+    - current Quantum Animation repository tree
+    - ownership registry
+    - runtime entrypoints
+# =====================================================================
+# 63. CLI / TOOL SURFACES
+# =====================================================================
+CLI_or_tool_surfaces:
+  candidate:
+    - world state-at
+    - world explain
+    - world history
+    - world perspectives
+    - world information-path
+    - world affordances
+    - world validate-event
+    - world compile-event
+    - world branch simulate
+    - world branch compare
+    - world branch promote
+    - world process list
+    - world process inspect
+    - world snapshot verify
+    - world projection replay
+    - world context compile
+    - world signals
+    - world opportunities
+    - world oracle compare
+    - world causal-path
+    - world dependency-blast-radius
+  law: >
+    CLI must call typed APIs and cannot bypass event, authority, reducer or
+    branch-promotion gates.
+# =====================================================================
+# 64. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    identifiers:
+      - stable_id_validation
+      - rename_does_not_change_id
+      - canonical_serialization
+      - digest_reproducibility
+    state:
+      - address_normalization
+      - state_cell_validation
+      - state_ownership_registry
+      - reducer_purity
+    events:
+      - event_schema
+      - effect_derivation
+      - explicit_mutation_requirement
+      - postcondition_validation
+    rules:
+      - hard_rule_rejects
+      - soft_rule_requires_justification
+      - pinned_rule_replay
+    epistemic:
+      - knowledge_vs_belief
+      - volatile_knowledge_staleness
+      - testimony_does_not_imply_belief
+    perception:
+      - visual_access
+      - auditory_access
+      - blocked_channel
+      - ambiguous_observation
+      - information_path_validation
+    relationships:
+      - directional_trust
+      - relationship_effect_derivation
+    psychology:
+      - causal_psychological_update
+      - arbitrary_direct_psychology_mutation_rejected
+    affordances:
+      - exact_precondition_binding
+      - impossible_action_removed
+      - derived_affordance_expiration
+    causality:
+      - typed_causal_relation
+      - correlation_not_cause
+      - dependency_traversal
+    coordinates:
+      - valid_vs_playback_independence
+      - transaction_time_reconstruction
+      - branch_comparison
+    snapshots:
+      - snapshot_digest
+      - rebuild
+    processes:
+      - interval_process_start
+      - interrupt
+      - deterministic_schedule
+    signals:
+      - signal_dedup
+      - signal_expiration
+      - signal_revision_binding
+    opportunities:
+      - reified_convergence
+      - opportunity_expiration
+    context:
+      - mandatory_view_validation
+      - pruning
+      - digest
+# =====================================================================
+# 65. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - same_event_sequence_same_state_digest
+  - snapshot_suffix_replay_equals_full_replay
+  - duplicate_idempotent_event_has_no_extra_mutation
+  - branch_never_changes_canonical_digest
+  - exact_graph_loss_does_not_change_exact_state
+  - semantic_graph_loss_does_not_change_exact_state
+  - signal_rebuild_from_same_revision_is_equivalent
+  - narrative_opportunity_rebuild_is_equivalent
+  - no_knowledge_without_information_path
+  - no_direct_derived_state_mutation
+  - no_hidden_process_mutation
+  - canonical_event_replay_independent_of_wall_clock
+# =====================================================================
+# 66. NEGATIVE TESTS
+# =====================================================================
+negative_tests:
+  - direct_snapshot_mutation_rejected
+  - direct_exact_graph_mutation_rejected
+  - semantic_memory_cannot_satisfy_exact_state
+  - knowledge_leak_rejected
+  - belief_assigned_without_cause_rejected
+  - relationship_state_direct_override_rejected
+  - psychology_state_direct_override_rejected
+  - double_prop_ownership_rejected
+  - rule_violation_rejected
+  - destroyed_entity_action_rejected
+  - branch_snapshot_promotion_rejected
+  - stale_branch_commit_rejected
+  - weak_critical_visual_binding_rejected
+  - missing_exact_context_rejected
+  - signal_directly_mutating_world_rejected
+  - opportunity_directly_mutating_world_rejected
+  - learning_self_promotion_rejected
+  - Graphiti_claim_used_as_exact_truth_rejected
+  - last_write_wins_conflict_rejected
+  - process_hidden_state_mutation_rejected
+# =====================================================================
+# 67. INTEGRATION TESTS
+# =====================================================================
+integration_tests:
+  - event_compiler_plus_effect_derivers_plus_reducer
+  - event_plus_snapshot
+  - event_plus_exact_graph
+  - event_plus_perception_plus_knowledge
+  - event_plus_relationship_derivation
+  - event_plus_psychology_derivation
+  - world_process_plus_scheduler_plus_events
+  - event_plus_signal_detection
+  - signal_plus_narrative_opportunity_mining
+  - world_outbox_to_current_MemorySDK
+  - memory_outage_retry_without_world_rollback
+  - context_exact_plus_bounded_memory
+  - oracle_expected_vs_observed
+  - retroactive_event_plus_snapshot_invalidation
+  - branch_simulation_plus_promotion
+  - graph_projection_rebuild
+# =====================================================================
+# 68. END-TO-END TESTS
+# =====================================================================
+end_to_end_tests:
+  persistent_world:
+    sequence:
+      - create universe
+      - create entities
+      - establish canon
+      - append events
+      - reconstruct past state
+      - reconstruct current state
+      - compile role contexts
+      - query exact graph
+      - hydrate relevant memory
+      - fork hypothetical branches
+      - promote selected branch
+      - verify exact state
+      - rebuild projections
+  epistemic_story:
+    sequence:
+      - establish objective truth
+      - create character without knowledge
+      - generate observable event
+      - validate perception path
+      - create ambiguous observation
+      - derive partial belief
+      - later reveal stronger evidence
+      - derive knowledge/belief revision
+      - verify audience and character perspectives differ safely
+  narrative_convergence:
+    sequence:
+      - establish active intent
+      - establish knowledge asymmetry
+      - establish fragile relationship
+      - establish relevant prop
+      - provide adjacent open promise reference
+      - derive WorldSignals
+      - mine NarrativeOpportunity
+      - verify evidence graph
+      - consume opportunity without canonical mutation
+  concurrent_reality:
+    sequence:
+      - start walking process
+      - start decoding process
+      - start reactor heating process
+      - schedule overlapping effects
+      - interrupt one process
+      - verify deterministic event ordering
+      - reconstruct exact state at intermediate ticks
+  retroactive_canon:
+    sequence:
+      - create historical state
+      - build snapshots
+      - insert authorized backdated canonical event
+      - invalidate affected snapshots
+      - replay
+      - rebuild exact graph
+      - verify previous transaction-time view
+      - verify new transaction-time view
+  pre_render_prevention:
+    sequence:
+      - resolve exact expected state
+      - compile critical visible invariant
+      - create weak/unbound render plan
+      - reject before generation
+      - bind deterministic/reference enforcement
+      - accept plan
+      - compare rendered observation
+# =====================================================================
+# 69. MIGRATION
+# =====================================================================
+migration:
+  from_prompt_history:
+    steps:
+      - inventory existing canon
+      - identify persistent entities
+      - assign stable IDs
+      - extract propositions
+      - extract historical candidate events
+      - collect evidence/provenance
+      - classify authority
+      - human_or_governed_authority_review_where_required
+      - construct genesis canonical events
+      - reconstruct initial state
+      - validate sample historical scenes
+      - build initial snapshots
+      - project exact graph
+      - project memory history
+    rule: >
+      Semantic memory may nominate historical evidence but cannot directly seed
+      objective truth without governed acceptance.
+  from_mutable_state_store:
+    requirement: >
+      Existing mutable values must be converted into genesis/provenance-bearing
+      events before event-sourcing becomes authoritative.
+# =====================================================================
+# 70. ROLLOUT
+# =====================================================================
+rollout:
+  sequence:
+    - stage: SHADOW
+      behavior:
+        - build exact state without controlling agents
+        - compare with existing pipeline
+    - stage: READ_ONLY_EXACT
+      behavior:
+        - expose state queries
+        - no canonical autonomous writes
+    - stage: CONTEXT_SHADOW
+      behavior:
+        - compile contexts in parallel with legacy prompts
+        - compare drift/coverage
+    - stage: EVENT_GATED
+      behavior:
+        - selected event families require World Model commit
+    - stage: PERCEPTION_EPISTEMIC_GATED
+      behavior:
+        - knowledge changes require information paths
+    - stage: PRE_RENDER_ENFORCEMENT
+      behavior:
+        - critical visible invariants enforced before generation
+    - stage: BRANCH_SIMULATION
+      behavior:
+        - narrative candidate futures simulated against exact state
+    - stage: SIGNAL_CONSUMPTION
+      behavior:
+        - WorldSignals consumed by external Polycognitive Runtime
+    - stage: NARRATIVE_OPPORTUNITY_CONSUMPTION
+      behavior:
+        - derived convergence available to narrative cognition
+    - stage: EXPERIENCE_CAPTURE
+      behavior:
+        - production reliability learning active
+    - stage: AUTONOMOUS_CONSUMPTION
+      behavior:
+        - approved autonomous subsystems depend on World Model exact state
+  rollback:
+    principle: >
+      Disable consumers/projections while preserving canonical append-only ledger.
+# =====================================================================
+# 71. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: QG-01
+    check: all declared schemas/contracts validate
+  - id: QG-02
+    check: full replay equals snapshot-assisted replay
+  - id: QG-03
+    check: event-only canonical mutation enforced
+  - id: QG-04
+    check: branch isolation proven
+  - id: QG-05
+    check: exact queries work with semantic systems disabled
+  - id: QG-06
+    check: mandatory context views and freshness enforced
+  - id: QG-07
+    check: critical production invariant coverage enforced before render
+  - id: QG-08
+    check: exact/semantic projections rebuild from canonical sources
+  - id: QG-09
+    check: learned experience cannot self-promote policy/authority
+  - id: QG-10
+    check: knowledge cannot appear without valid information path
+  - id: QG-11
+    check: derived state ownership gates prevent arbitrary psychological/relationship/epistemic mutation
+  - id: QG-12
+    check: WorldSignal deterministic/rebuildable classes replay correctly
+  - id: QG-13
+    check: NarrativeOpportunity derivation is evidence-backed and non-canonical
+  - id: QG-14
+    check: concurrent WorldProcess execution remains deterministic and ledger-backed
+  - id: QG-15
+    check: typed causal relationships preserve cause/enable/motivate distinctions
+  - id: QG-16
+    check: stale revision proposals cannot silently commit
+# =====================================================================
+# 72. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  canonical_state:
+    - schemas validate
+    - event-only mutation proven
+    - deterministic clean replay proven
+    - snapshot/full replay digest equal
+    - retroactive event reconstruction proven
+  identity:
+    - persistent entity identity survives mutable state changes
+    - rename does not alter identity
+  epistemic:
+    - knowledge/belief separation proven
+    - perception/information path proven
+    - knowledge leak negative tests pass
+    - stale knowledge behavior proven
+  causality:
+    - typed causal lineage available
+    - explain_fact returns causal/evidence lineage
+    - dependency blast-radius works
+  rules:
+    - hard/soft rules versioned
+    - replay pins rule versions
+    - invalid events prevented
+  branching:
+    - branch canonical digest unchanged until promotion
+    - promotion appends events only
+  graph:
+    - exact graph rebuild digest/index verification passes
+    - exact state works without exact graph provider
+    - semantic projections can be lost/rebuilt without state impact
+  context:
+    - every production/cognitive role has ContextContract
+    - missing mandatory exact context fails closed
+    - bounded context independent of total history demonstrated
+  intelligence:
+    - WorldSignal lifecycle implemented
+    - WorldSignal rebuild proven
+    - NarrativeOpportunity derivation proven
+    - signals/opportunities cannot mutate canon
+  world_processes:
+    - overlapping processes supported
+    - interruption semantics supported
+    - no hidden interval mutation
+  oracle:
+    - expected/observed mismatch typed
+    - critical state binding prevention works
+  learning:
+    - production experience captured
+    - recommendations evidence-backed
+    - learning cannot alter canon/authority
+  integration:
+    - L9 memory projection does not affect exact-state authority
+    - memory outage does not roll back canon
+  release:
+    requirement: >
+      QG-01 through QG-16 pass and all blocking provider/repository placement
+      decisions for the enabled rollout scope are resolved.
+# =====================================================================
+# 73. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: Q-OD-01
+    decision: Quantum Animation physical repository placement
+    status: UNKNOWN
+    evidence_needed:
+      - current repository tree
+      - ownership registry
+      - runtime entrypoints
+  - id: Q-OD-02
+    decision: canonical event/state store provider
+    status: UNKNOWN
+    evidence_needed:
+      - durability benchmark
+      - append throughput benchmark
+      - bi-temporal query benchmark
+      - replay benchmark
+      - backup/restore benchmark
+  - id: Q-OD-03
+    decision: exact graph provider
+    status: UNKNOWN
+    evidence_needed:
+      - causal path benchmark
+      - dependency blast-radius benchmark
+      - knowledge-asymmetry benchmark
+      - temporal graph benchmark
+      - projection rebuild benchmark
+      - operational cost benchmark
+  - id: Q-OD-04
+    decision: world-process scheduler implementation
+    status: UNKNOWN
+    evidence_needed:
+      - deterministic scheduling benchmark
+      - recovery semantics
+      - interval process workload
+  - id: Q-OD-05
+    decision: exact event-effect derivation implementation split
+    status: UNKNOWN
+    options:
+      - deterministic library only
+      - governed model-assisted proposal then deterministic resolution
+      - hybrid by effect type
+    invariant: >
+      FullyResolvedWorldEvent must contain explicit mutations before reducer commit.
+  - id: Q-OD-06
+    decision: NarrativeOpportunity storage strategy
+    status: UNKNOWN
+    options:
+      - ephemeral query-only
+      - short-lived derived store
+      - exact-graph materialized node
+    invariant: non_canonical_rebuildable
+# =====================================================================
+# 74. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: semantic graph becomes truth
+    control:
+      - separate API
+      - semantic-off exact-state tests
+      - authority rank separation
+  - risk: World Model becomes giant mutable JSON
+    control:
+      - StateAddress
+      - immutable events
+      - reducer
+      - state ownership registry
+  - risk: state explosion
+    control:
+      - typed planes
+      - snapshots
+      - bounded contexts
+      - derived-view rebuildability
+  - risk: psychology false precision
+    control:
+      - provenance
+      - causal derivation
+      - values treated as control representations
+  - risk: direct character-state manipulation by story agents
+    control:
+      - effect derivation
+      - state ownership
+      - direct-mutation negative tests
+  - risk: knowledge leakage
+    control:
+      - perception engine
+      - information path
+      - epistemic validation
+  - risk: causal graph conflates association with causality
+    control:
+      - typed causal relations
+      - provider-independent causal contract
+  - risk: retcon blast radius
+    control:
+      - typed causal/dependency indexes
+      - transaction-time reconstruction
+      - deterministic invalidation
+  - risk: branch leakage
+    control:
+      - branch namespace
+      - copy-on-write
+      - canonical digest tests
+  - risk: signal explosion
+    control:
+      - deduplication key
+      - signal lifecycle
+      - detector scope
+      - external salience management
+  - risk: narrative opportunity over-generation
+    control:
+      - minimum evidence
+      - confidence
+      - expiry
+      - derived/non-canonical classification
+  - risk: hidden continuous process mutation
+    control:
+      - process lifecycle
+      - scheduled WorldEvents
+      - ledger-backed effects
+  - risk: learning overfit
+    control:
+      - historical backtest
+      - validation
+      - shadow
+      - canary
+      - explicit promotion gate
+  - risk: World Model absorbs Polycognitive Runtime
+    control:
+      - ownership boundary
+      - no CognitiveWorkspace persistence as truth
+      - no global ReasoningPolicy ownership
+  - risk: provider lock-in
+    control:
+      - typed ports
+      - adapter boundary
+      - provider benchmark before commitment
+# =====================================================================
+# 75. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  - id: QW1
+    name: foundation_authority_and_ownership_lock
+    depends_on: []
+    targets:
+      - architecture ownership
+      - canonical vs derived split
+      - identifier model
+      - authority model
+      - provenance model
+    exit:
+      - ownership accepted
+      - authority tests pass
+  - id: QW2
+    name: entity_state_proposition_and_coordinate_contracts
+    depends_on:
+      - QW1
+    targets:
+      - WorldEntity
+      - StateAddress
+      - StateCell
+      - Proposition
+      - WorldCoordinate
+    exit:
+      - golden fixtures validate
+      - coordinate integrity passes
+  - id: QW3
+    name: canonical_event_reducer_snapshot_core
+    depends_on:
+      - QW2
+    targets:
+      - DraftWorldEvent
+      - FullyResolvedWorldEvent
+      - StateMutation
+      - StateReducer
+      - WorldSnapshot
+      - canonical ports
+    exit:
+      - replay deterministic
+      - snapshot/full replay equivalent
+  - id: QW4
+    name: rules_authority_and_state_ownership
+    depends_on:
+      - QW3
+    targets:
+      - WorldRule
+      - StateOwnershipRegistry
+      - EventCompiler
+      - EffectDerivationPipeline
+    exit:
+      - direct derived-state mutation rejected
+      - hard/soft rules pass
+  - id: QW5
+    name: epistemic_perception_and_relationship_state
+    depends_on:
+      - QW4
+    targets:
+      - Knowledge
+      - Belief
+      - PerceptionChannel
+      - PerceptualAccess
+      - Observation
+      - InformationPath
+      - Inference
+      - RelationshipStateEngine
+      - PsychologicalStateEngine
+    exit:
+      - knowledge leak impossible
+      - perception-to-knowledge path proven
+      - causal psychology/relationship changes proven
+  - id: QW6
+    name: capabilities_affordances_causality_and_exact_graph
+    depends_on:
+      - QW5
+    targets:
+      - ActionSchema
+      - CapabilityState
+      - AffordanceEngine
+      - CausalRelation
+      - dependency index
+      - exact graph
+      - exact queries
+    exit:
+      - affordance tests pass
+      - causal/path queries pass
+      - exact state works without semantic memory
+  - id: QW7
+    name: context_compiler_and_world_intelligence
+    depends_on:
+      - QW6
+    targets:
+      - ContextContract
+      - WorldContextPackage
+      - WorldSignal
+      - WorldSignalDetector
+      - NarrativeOpportunity
+      - WorldRationale
+      - intelligence operators
+    exit:
+      - bounded contexts enforced
+      - signal rebuild deterministic where declared
+      - opportunities evidence-backed/non-canonical
+  - id: QW8
+    name: concurrent_world_processes
+    depends_on:
+      - QW4
+      - QW6
+    targets:
+      - WorldProcess
+      - scheduler
+      - interruption
+      - concurrency
+    exit:
+      - overlapping processes deterministic
+      - no hidden mutations
+  - id: QW9
+    name: simulation_branching_and_promotion
+    depends_on:
+      - QW6
+      - QW7
+    targets:
+      - Branch
+      - fork/apply
+      - compare
+      - promotion
+    exit:
+      - branch isolation proven
+      - promotion appends events only
+  - id: QW10
+    name: l9_memory_oracle_and_experience
+    depends_on:
+      - QW3
+      - QW7
+    targets:
+      - L9MemoryBridge
+      - world outbox
+      - VerificationOracle
+      - production-experience capture
+    exit:
+      - memory retry/replay proven
+      - exact state independent of semantic provider
+      - oracle mismatch typed
+  - id: QW11
+    name: migration_recovery_validation_and_rollout
+    depends_on:
+      - QW8
+      - QW9
+      - QW10
+    targets:
+      - migration
+      - recovery runbooks
+      - property tests
+      - e2e
+      - degraded modes
+      - performance benchmark
+    exit:
+      - definition_of_done passes
+      - rollout gates accepted
+# =====================================================================
+# 76. DEPENDENCY GRAPH
+# =====================================================================
+dependency_graph:
+  QW1: []
+  QW2:
+    - QW1
+  QW3:
+    - QW2
+  QW4:
+    - QW3
+  QW5:
+    - QW4
+  QW6:
+    - QW5
+  QW7:
+    - QW6
+  QW8:
+    - QW4
+    - QW6
+  QW9:
+    - QW6
+    - QW7
+  QW10:
+    - QW3
+    - QW7
+  QW11:
+    - QW8
+    - QW9
+    - QW10
+# =====================================================================
+# 77. ACCEPTANCE CRITERIA
+# =====================================================================
+acceptance_criteria:
+  exact_reality:
+    - exact state reconstructs at arbitrary WorldCoordinate
+    - objective state explains event/authority/provenance
+    - past transaction-time understanding can be reconstructed
+    - retroactive canon changes rebuild deterministically
+  persistent_entities:
+    - characters/locations/props retain stable identity across productions
+    - mutable state never pollutes persistent identity
+  perspectives:
+    - objective state, knowledge, belief and audience disclosure may disagree safely
+    - knowledge requires valid information path
+    - false belief does not corrupt objective truth
+  behavior:
+    - intentions and affordances bound possible action space
+    - impossible actions are mechanically filtered
+    - soft-character deviations require justification rather than becoming impossible
+  graph:
+    - exact graph exposes high-value world relationships
+    - complex n-ary relations are reifiable without native hypergraph requirement
+    - semantic graph assists discovery without becoming truth
+  intelligence:
+    - WorldSignals are first-class, evidence-backed and revision-tagged
+    - NarrativeOpportunities represent multi-thread convergence as derived objects
+    - signals/opportunities do not mutate canon
+    - higher cognitive activation remains outside World Model ownership
+  concurrency:
+    - overlapping fictional processes are supported
+    - interval effects remain event-ledger-backed
+    - simultaneous/conflicting transitions resolve deterministically
+  contexts:
+    - agents receive bounded exact role contexts
+    - missing critical exact views fail closed
+  production_prevention:
+    - world invariants compile into production constraints
+    - critical weak bindings are rejected before rendering
+    - Oracle compares expected truth to observed media
+  memory:
+    - exact state works without Graphiti/Zep
+    - L9 semantic history remains associative rather than authoritative
+  learning:
+    - production experience improves recommendations
+    - learning cannot self-authorize policy
+    - cognitive operator learning is delegated to Polycognitive Runtime
+  operational:
+    - provider projection loss is recoverable
+    - branch isolation proven
+    - idempotent commit proven
+    - recovery from canonical ledger demonstrated
+# =====================================================================
+# 78. FINAL ARCHITECTURAL LAW
+# =====================================================================
+final_architectural_law:
+  ownership_rule: >
+    World Model owns truth.
+    Polycognitive Runtime owns active cognition.
+    Autonomous QC owns acceptance.
+    Production Model owns manufacturing strategy.
+    Production Engine owns execution.
+    Durable Memory owns historical/associative recall.
+  mutation_rule: >
+    Cognition may observe, reason, propose, simulate and request.
+    Only governed canonical event acceptance may change fictional reality.
+  persistence_rule: >
+    Films end. Persistent worlds do not.
+  key_concept: >
+    Quantum does not repeatedly regenerate fictional context from prompts.
+    It operates a persistent simulated universe and renders selected,
+    validated state transitions from that universe into film.
+
+This is the version I would call architecturally complete enough to freeze as 01. The uploaded file already had the right spine—especially event-only mutation, deterministic replay, branch isolation, exact-vs-semantic graph separation, and the explicit declaration that Cognitive Workspace and the other major models are adjacent rather than World Model-owned. 01_quantum_animation_world_model_build_spec.yaml
+
+The most consequential additions in this revision are state ownership + effect derivation, perception/information paths, typed causality, concurrent WorldProcess semantics, first-class WorldSignal, and NarrativeOpportunity as the reified mega-hyperedge. Those close the largest remaining holes without contaminating the World Model with the Cognitive Executive.
+
+The logical next artifact is now 02_quantum_polycognitive_runtime_build_spec.yaml; that spec can cleanly consume the WorldSignal, NarrativeOpportunity, Context Compiler, Branch Simulator and exact World APIs defined here without being allowed to mutate truth directly.
