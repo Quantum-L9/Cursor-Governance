@@ -128,6 +128,11 @@ autonomy-validate:
 agents-env:
 	python3 environment/agents/tools/validate_agents.py
 
+## Validate PEER_RUNTIME_BINDINGS.yaml against peer-runtime-bindings.schema.json
+## (topology SSOT schema gate; full cross-plane rules are peer-execution-validate).
+agents-runtime-bindings-validate:
+	python3 -B environment/agents/tools/validate_executable_peers.py --schema-only
+
 ## Reconcile the Cursor IDE profile (extensions + .vscode settings). Usage: make ide-profile WS=/path/to/repo
 ide-profile:
 	bash ops/scripts/install_ide_profile.sh "$(WS)"
@@ -300,25 +305,26 @@ program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
 
 AGENTS_TOOLS := environment/agents/tools
-.PHONY: peer-execution-validate peer-execution-probe peer-execution-conformance
+.PHONY: peer-execution-validate peer-execution-probe peer-execution-conformance agents-runtime-bindings-validate
 
-# Executable Peer Contract v1 — structural cross-registry gate (E1-E15):
-# agent_registry.yaml execution bindings <-> program-execution adapters +
-# registry <-> canonical autonomy provider. validate_executable_peers.py.
+# Executable Peer Contract v2 — structural cross-registry gate (E1-E15):
+# PEER_RUNTIME_BINDINGS.yaml <-> agent_registry identity <-> program-execution
+# adapters <-> canonical autonomy provider. validate_executable_peers.py.
 peer-execution-validate:
 	python3 -B $(AGENTS_TOOLS)/validate_executable_peers.py
 
-# Binding-level readiness probe. Emits per-(agent,surface,adapter) receipts
-# under $$HOME/.l9/programs/_peer-readiness/ and fails if any enabled agent
-# has no READY binding. Runtime/session-scoped availability gate.
+# Binding-level readiness probe. Emits per-(agent_ref,surface,adapter) receipts
+# under $$L9_RUNTIME_ROOT/agents/readiness/ (default ~/.l9/agents/readiness/)
+# and fails if any execution.required peer has no READY binding.
 peer-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B \
 		$(PE_ROOT)/scripts/probe_executable_peers.py
 
-# Full executable-peer conformance: compose the identity, adapter, program,
-# and readiness gates (Executable Peer Contract v1, section 14).
+# Full executable-peer conformance: compose the identity, bindings schema,
+# adapter, program, and readiness gates (Executable Peer Contract v2).
 peer-execution-conformance:
 	$(MAKE) agents-env
+	$(MAKE) agents-runtime-bindings-validate
 	$(MAKE) program-execution-adapters
 	$(MAKE) program-execution-conformance
 	$(MAKE) peer-execution-validate

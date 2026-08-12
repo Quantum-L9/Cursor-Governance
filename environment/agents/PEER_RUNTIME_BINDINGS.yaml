@@ -1,0 +1,100 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: environment/agents/PEER_RUNTIME_BINDINGS.yaml
+#   layer: registry
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-08-12
+#
+# PEER RUNTIME BINDINGS — sole topology SSOT for which canonical subsystems
+# must be connected for each agent peer (Executable Peer Contract v2).
+# Identity remains in agent_registry.yaml (no execution: blocks there).
+# Cross-validated by validate_executable_peers.py (rules E1-E15).
+# readiness_required switches stay false until a later PR lands the satisfier.
+
+schema: l9.peer-runtime-bindings.v1
+schema_version: 1.0.0
+peers:
+  cursor:
+    agent_ref: cursor
+    execution:
+      required: true
+      bindings:
+        - surface: cursor-ide
+          adapter_id: cursor-foreground
+        - surface: cursor-ide
+          adapter_id: cursor-background
+    autonomy:
+      required: true
+      provider_id: root-autonomy-control-plane
+    subagents:
+      enabled: true
+      roles_manifest: environment/agents/cursor-subagents/CURSOR_SUBAGENT_ROLES.yaml
+      deployment:
+        readiness_required: false
+    results:
+      readiness_required: false
+    generated_data:
+      required: true
+      capture_readiness_required: false
+
+  claude-code:
+    agent_ref: claude-code
+    execution:
+      required: true
+      bindings:
+        - surface: claude-cli
+          adapter_id: claude-code-direct
+        - surface: claude-cli
+          adapter_id: claude-code-bounded-autonomy
+    autonomy:
+      required: true
+      provider_id: root-autonomy-control-plane
+    subagents:
+      enabled: false
+    results:
+      readiness_required: false
+    generated_data:
+      required: true
+      capture_readiness_required: false
+
+  codex:
+    agent_ref: codex
+    execution:
+      required: false
+      bindings: []
+    subagents:
+      enabled: false
+    results:
+      readiness_required: false
+    generated_data:
+      required: false
+      capture_readiness_required: false
+
+  gemini:
+    agent_ref: gemini
+    execution:
+      required: false
+      bindings: []
+    subagents:
+      enabled: false
+    results:
+      readiness_required: false
+    generated_data:
+      required: false
+      capture_readiness_required: false
+
+  manus:
+    agent_ref: manus
+    execution:
+      required: false
+      bindings: []
+    subagents:
+      enabled: false
+    results:
+      readiness_required: false
+    generated_data:
+      required: false
+      capture_readiness_required: false

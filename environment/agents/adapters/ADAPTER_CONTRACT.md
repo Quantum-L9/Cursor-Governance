@@ -5,8 +5,8 @@ path: environment/agents/adapters/ADAPTER_CONTRACT.md
 layer: contract
 owner: governance-control-plane
 status: active
-version: 1.0.0
-updated: 2026-07-31
+version: 1.1.0
+updated: 2026-08-12
 /L9_META -->
 
 # Adapter contract (from Claude Code gold standard)
@@ -67,10 +67,10 @@ Values come only from `agent_registry.yaml`. Adapters never invent a second
 ## Executable-peer carriers (Program Execution / autonomy / readiness)
 
 An agent declared **executable** carries three capabilities beyond the memory
-contract (Executable Peer Contract v1). They are bindings, not copied files:
+contract (Executable Peer Contract v2). They are bindings, not copied files:
 
-1. **Program Execution** — the agent's `execution.bindings` in
-   `agent_registry.yaml` map each surface to a registered `worker_host`
+1. **Program Execution** — the peer's `execution.bindings` in
+   `PEER_RUNTIME_BINDINGS.yaml` map each surface to a registered `worker_host`
    Program Execution adapter. The bound adapter's descriptor carries
    `identity.agent_ref` back to the agent key (the foreign key that replaces
    the old hardcoded adapter→agent map). The surface adapter answers *"how does
@@ -83,22 +83,26 @@ contract (Executable Peer Contract v1). They are bindings, not copied files:
    `owns_program_state: false`). Copying an `autonomy/` implementation into an
    adapter is forbidden.
 3. **Execution readiness** — a fresh, machine-generated readiness receipt per
-   `(agent_id, surface, adapter_id)` binding, produced by
-   `probe_executable_peers.py` under `$HOME/.l9/programs/_peer-readiness/`.
-   Readiness is never statically asserted in `agent_registry.yaml`.
+   `(agent_ref, surface, adapter_id)` binding, produced by
+   `probe_executable_peers.py` under `$L9_RUNTIME_ROOT/agents/readiness/`
+   (default `~/.l9/agents/readiness/`). Readiness is never statically asserted
+   in `agent_registry.yaml` or `PEER_RUNTIME_BINDINGS.yaml`.
 
-`execution.enabled: true` is a strong assertion: at least one surface is backed
-by a sealed, non-dormant worker adapter. Set `enabled: false` with
-`bindings: []` for a peer whose worker adapter is still dormant. See
-`environment/agents/PEER_EXECUTION.md` for the full contract and coverage
-matrix.
+`execution.required: true` (in `PEER_RUNTIME_BINDINGS.yaml`) is a strong
+assertion: at least one surface is backed by a sealed, non-dormant worker
+adapter. Set `required: false` with `bindings: []` for a peer whose worker
+adapter is still dormant. `agent_registry.yaml` is identity-only — do not put
+`execution:` blocks there. See `environment/agents/PEER_EXECUTION.md` for the
+full contract and coverage matrix.
 
 ## Validators
 
 `tools/validate_agents.py` enforces the memory-carrier contract for every
 **active** agent whose `adapter` is not `cursor` or `claude-code`
 (`make agents-env`). `tools/validate_executable_peers.py` enforces the
-cross-registry Executable Peer Contract (rules E1-E15), and
+cross-registry Executable Peer Contract (rules E1-E15) against
+`PEER_RUNTIME_BINDINGS.yaml`, and
 `environment/program-execution/scripts/probe_executable_peers.py` proves every
-enabled peer has a READY binding (`make peer-execution-conformance` runs the
-whole chain).
+`execution.required` peer has a READY binding
+(`make peer-execution-conformance` runs the whole chain).
+Schema-only gate: `make agents-runtime-bindings-validate`.
