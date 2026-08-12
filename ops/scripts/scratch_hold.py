@@ -226,9 +226,7 @@ def _collect_legacy_files(candidate: Path) -> list[dict[str, str]]:
             rel = str(path.relative_to(candidate)).replace("\\", "/")
         except ValueError:
             continue
-        if not (
-            rel.startswith("WIP/") or rel.startswith("reports/") or rel.startswith("ops/")
-        ):
+        if not (rel.startswith("WIP/") or rel.startswith("reports/") or rel.startswith("ops/")):
             continue
         entries.append({"relpath": rel, "src": str(path)})
     return entries
@@ -248,9 +246,7 @@ def _import_file_entries(ws: Path, candidate: Path, entries: list[dict[str, str]
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
         moved_meta.append({"relpath": rel, "held_at": f"tree/{rel}"})
-    _write_manifest(
-        hold_dir, _new_manifest(hold_id, ws, moved_meta, f"legacy_tmp:{candidate}")
-    )
+    _write_manifest(hold_dir, _new_manifest(hold_id, ws, moved_meta, f"legacy_tmp:{candidate}"))
     print(f"imported legacy hold: {candidate} -> {hold_id}")
     _mark_imported(candidate)
     return True
