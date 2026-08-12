@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Guarded BIDIRECTIONAL auto-sync for the ~/.cursor-governance SSOT clone.
 #
+# NOTE (sessionStart): Cursor sessionStart does NOT use this script's pull-half.
+# Tip activation on session start is `governance_activate_fresh.sh` (foreground
+# ff-or-swap). Keep this file for manual/`make` sync and for its push-half
+# (backup_to_github.sh), which the activator may call pre-swap. Do not reintroduce
+# dual pull strategies on sessionStart.
+#
 # Replaces the unsafe `git fetch && git reset --hard origin/main` pattern.
 #
 # Bootstrap (fresh machine):

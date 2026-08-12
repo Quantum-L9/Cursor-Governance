@@ -35,15 +35,38 @@ echo "  Workspace:       $WORKSPACE"
 echo ""
 
 echo "=== Repo symlinks ==="
-if [ ! -L "$WORKSPACE/.cursor-commands" ]; then
+WS_REAL=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE'))")
+GC_REAL=$(python3 -c "import os; print(os.path.realpath('$GC'))")
+if [ "$WS_REAL" = "$GC_REAL" ]; then
+  # SSOT must not self-alias — .cursor-commands is not required (and must be absent).
+  if [ -e "$WORKSPACE/.cursor-commands" ] || [ -L "$WORKSPACE/.cursor-commands" ]; then
+    fail "SSOT self-alias present at $WORKSPACE/.cursor-commands (remove; SSOT must not link to itself)"
+  else
+    pass "SSOT workspace — .cursor-commands self-alias absent"
+  fi
+elif [ ! -L "$WORKSPACE/.cursor-commands" ]; then
   fail ".cursor-commands missing or not a symlink ($WORKSPACE/.cursor-commands)"
 else
   rt=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE/.cursor-commands'))")
-  re=$(python3 -c "import os; print(os.path.realpath('$GC'))")
+  re="$GC_REAL"
   if [ "$rt" = "$re" ]; then
     pass ".cursor-commands -> $re"
   else
-    fail ".cursor-commands points to $rt (expected $re)"
+    fail ".cursor-commands points to $rt (expected $re / SSOT)"
+  fi
+fi
+
+# Machine Cursor plans — workspace convenience symlink (not governance SSOT).
+mkdir -p "$HOME/.cursor/plans" 2>/dev/null || true
+if [ ! -L "$WORKSPACE/.cursor/plans" ]; then
+  fail ".cursor/plans missing or not a symlink (expected -> \$HOME/.cursor/plans)"
+else
+  rt=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE/.cursor/plans'))")
+  re=$(python3 -c "import os; print(os.path.realpath('$HOME/.cursor/plans'))")
+  if [ "$rt" = "$re" ]; then
+    pass ".cursor/plans -> $re"
+  else
+    fail ".cursor/plans points to $rt (expected $re)"
   fi
 fi
 
@@ -107,6 +130,45 @@ else
     fail "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED — review before they linger (see git -C \"$GC\" log origin/$SSOT_BRANCH_EXPECTED..HEAD)"
   else
     pass "SSOT has no unpushed commits ahead of origin/$SSOT_BRANCH_EXPECTED (last fetched)"
+  fi
+
+  # Tip freshness: HEAD must equal origin/main. Refresh fetch when activate receipt is stale (>900s).
+  RECEIPT="$HOME/.cursor/governance-activate.last"
+  NEED_FETCH=1
+  if [ -f "$RECEIPT" ]; then
+    RECEIPT_AGE="$(python3 -c "
+import json, time
+from pathlib import Path
+p = Path('$RECEIPT')
+try:
+    data = json.loads(p.read_text())
+    ts = float(data.get('ts') or data.get('timestamp') or p.stat().st_mtime)
+except Exception:
+    ts = p.stat().st_mtime
+print(int(time.time() - ts))
+" 2>/dev/null || echo 99999)"
+    if [ "${RECEIPT_AGE:-99999}" -le 900 ]; then
+      NEED_FETCH=0
+    fi
+  fi
+  if [ "$NEED_FETCH" -eq 1 ]; then
+    git -C "$GC" fetch --quiet origin "$SSOT_BRANCH_EXPECTED" 2>/dev/null || true
+  fi
+  HEAD_SHA="$(git -C "$GC" rev-parse HEAD 2>/dev/null || echo "")"
+  ORIGIN_SHA="$(git -C "$GC" rev-parse "origin/$SSOT_BRANCH_EXPECTED" 2>/dev/null || echo "")"
+  if [ -n "$HEAD_SHA" ] && [ -n "$ORIGIN_SHA" ] && [ "$HEAD_SHA" = "$ORIGIN_SHA" ]; then
+    pass "SSOT HEAD == origin/$SSOT_BRANCH_EXPECTED (${HEAD_SHA:0:7})"
+  elif [ -z "$ORIGIN_SHA" ]; then
+    fail "SSOT missing origin/$SSOT_BRANCH_EXPECTED ref — fetch failed or offline (HEAD=${HEAD_SHA:0:7})"
+  else
+    fail "SSOT HEAD ${HEAD_SHA:0:7} != origin/$SSOT_BRANCH_EXPECTED ${ORIGIN_SHA:0:7} — run governance_activate_fresh.sh"
+  fi
+
+  # SSOT must not carry a self-alias even when the checked workspace is a consumer.
+  if [ -e "$GC/.cursor-commands" ] || [ -L "$GC/.cursor-commands" ]; then
+    fail "SSOT has .cursor-commands self-alias at $GC/.cursor-commands (remove)"
+  else
+    pass "SSOT has no .cursor-commands self-alias"
   fi
 fi
 

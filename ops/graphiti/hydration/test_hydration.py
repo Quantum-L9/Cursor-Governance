@@ -83,8 +83,14 @@ def test_compile_packet_fail_open(monkeypatch, tmp_path):
     )
     assert packet["agent_id"] == "cursor"
     assert packet["next_action_contract"]["next_action"]
+    assert "hydrate_stats" in packet
+    assert packet["hydrate_stats"]["facts_returned"] == 0
+    assert packet["hydrate_stats"]["search_queries_used"] >= 1
     ctx = comp.format_additional_context(packet)
     assert "next=" in ctx
+    assert "facts_returned=" in ctx
+    assert "memory-bank" not in ctx
+    assert "hydrate_stats" in ctx
 
 
 def test_compile_packet_with_pickup(monkeypatch, tmp_path):
@@ -113,7 +119,14 @@ def test_compile_packet_with_pickup(monkeypatch, tmp_path):
     )
     assert packet["active_objective"] == "Ship hydrate pipeline"
     assert "Run unit tests" in packet["next_action_contract"]["next_action"]
-    assert "next=" in comp.format_additional_context(packet)
+    assert packet["hydrate_stats"]["facts_returned"] == 1
+    assert packet["hydrate_stats"]["pickup_parsed"] is True
+    ctx = comp.format_additional_context(packet)
+    assert "next=" in ctx
+    assert "facts_returned=1" in ctx
+    assert "pickup_parsed=yes" in ctx
+    assert "memory-bank" not in ctx
+    assert '"hydrate_stats"' in ctx
 
 
 def test_extract_pickup_pipe_line():

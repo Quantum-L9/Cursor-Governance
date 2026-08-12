@@ -191,13 +191,32 @@ remove_repo_duplicate "$HOME/.cursor/skills" "~/.cursor/skills (pre-4.0.0 symlin
 remove_repo_duplicate "$HOME/.cursor/commands" "~/.cursor/commands (pre-4.0.0 symlink)"
 remove_repo_duplicate "$HOME/.cursor/rules" "~/.cursor/rules (pre-4.0.0 symlink)"
 
-link_or_update "$WORKSPACE_DIR/.cursor-commands" "$GLOBAL_COMMANDS" ".cursor-commands"
+# C10 — never create a self-alias when wiring the SSOT clone itself
+# (realpath(workspace)==realpath(GLOBAL_COMMANDS)). Self-links nest forever in the IDE.
+WS_REAL="$(path_realpath "$WORKSPACE_DIR")"
+GC_REAL="$(path_realpath "$GLOBAL_COMMANDS")"
+if [ "$WS_REAL" = "$GC_REAL" ]; then
+  if [ -L "$WORKSPACE_DIR/.cursor-commands" ] || [ -e "$WORKSPACE_DIR/.cursor-commands" ]; then
+    rm -f "$WORKSPACE_DIR/.cursor-commands"
+    echo "REMOVED: .cursor-commands self-alias (SSOT must not link to itself)"
+  else
+    echo "OK: .cursor-commands absent on SSOT (no self-alias)"
+  fi
+else
+  link_or_update "$WORKSPACE_DIR/.cursor-commands" "$GLOBAL_COMMANDS" ".cursor-commands"
+fi
 mkdir -p "$WORKSPACE_DIR/.cursor"
 # Repository-owned overlay: remove only a legacy global-rules symlink; preserve a
 # real local directory and its contents (rules/84-cursor-governance-wiring.mdc).
 ensure_repo_rules_overlay "$WORKSPACE_DIR/.cursor/rules" "$GLOBAL_COMMANDS/rules"
 
 setup_local_governance_dir
+
+# Convenience: expose Cursor machine plans under the workspace .cursor tree so
+# agents/users can open ~/.cursor/plans from the IDE file tree. Not governance
+# SSOT — local machine state only (.cursor/ is gitignored in this clone).
+mkdir -p "$HOME/.cursor/plans"
+link_or_update "$WORKSPACE_DIR/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
 
 remove_repo_duplicate "$WORKSPACE_DIR/.cursor/commands" ".cursor/commands"
 remove_repo_duplicate "$WORKSPACE_DIR/.cursor/skills" ".cursor/skills"
@@ -220,6 +239,8 @@ install_session_end_governance_hook() {
 
   local bootstrap_src="$GLOBAL_COMMANDS/ops/hooks/session_start_bootstrap.sh"
   local bootstrap_dst="$HOME/.cursor/hooks/session-start-bootstrap.sh"
+  local activate_src="$GLOBAL_COMMANDS/ops/scripts/governance_activate_fresh.sh"
+  local activate_dst="$HOME/.cursor/hooks/governance-activate-fresh.sh"
   # Ensure the hooks dir exists first — on a fresh clone/new machine ~/.cursor/hooks
   # does not exist yet, and `set -e` would otherwise abort the whole wiring here.
   mkdir -p "$HOME/.cursor/hooks" "$HOME/.cursor/graphiti-state"
@@ -227,6 +248,13 @@ install_session_end_governance_hook() {
     cp -f "$bootstrap_src" "$bootstrap_dst"
     chmod +x "$bootstrap_dst"
     echo "INSTALLED: ~/.cursor/hooks/session-start-bootstrap.sh (real file)"
+  fi
+  # Chicken-egg sidecar: sessionStart can activate tip SSOT even when the live
+  # clone is missing/invalid by falling back to this always-installed copy.
+  if [ -f "$activate_src" ]; then
+    cp -f "$activate_src" "$activate_dst"
+    chmod +x "$activate_dst"
+    echo "INSTALLED: ~/.cursor/hooks/governance-activate-fresh.sh (real file)"
   fi
 
   if [ ! -f "$hook_src" ]; then
@@ -343,7 +371,7 @@ if hooks_json.exists():
 hooks = data.setdefault("hooks", {})
 ss = hooks.setdefault("sessionStart", [])
 ss = [e for e in ss if e.get("command") != "./hooks/session-start-memory-orchestrator.sh"]
-bootstrap_entry = {"command": bootstrap_cmd, "timeout": 30}
+bootstrap_entry = {"command": bootstrap_cmd, "timeout": 60}
 # Match by substring, not exact equality: collapses stray env-var-prefixed
 # variants too (e.g. "GOVERNANCE_SYNC_PUSH=0 ./hooks/session-start-bootstrap.sh"),
 # which otherwise survive every reconcile as a second sessionStart entry and

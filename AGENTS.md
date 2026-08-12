@@ -514,3 +514,35 @@ Claude Code gold-standard pack lives at
 HTTPS Graphiti (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
 see ADR-0006 + ADR-0007.
 
+
+<!-- GOVERNANCE_ACTIVATE_FRESH_SESSIONSTART_V1 -->
+## SessionStart tip activation (2026-08-12) — supersedes §2.1 step 1 and related bullets
+
+Authoritative corrections (do not treat older §2.1 / §2.2 bullets above as SSOT
+where they conflict):
+
+1. `sessionStart` timeout is **60s** (not 30s).
+2. Step 1 is foreground `governance_activate_fresh.sh` **before** resolving the
+   SSOT — tip authority is GitHub `origin/main` (ff-only when safe, else shallow
+   clone + atomic swap). Prefers
+   `$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh`, then the
+   `~/.cursor/hooks/governance-activate-fresh.sh` sidecar; chicken-egg minimal
+   clone if both are missing. Parses the STATUS line
+   (`action` / `sha` / `remote_sha` / `detail`).
+   `governance_sync.sh` remains available for manual / on-demand bidirectional
+   reconcile; it is **not** the sessionStart tip-activation step.
+3. Auto-wire targets: consumer `.cursor-commands`, `.cursor/plans` →
+   `~/.cursor/plans`, and the `l9-governance` plugin when missing. SSOT must
+   **not** self-alias `.cursor-commands`.
+4. `check_governance_wiring.sh` reports PASS/FAIL including tip freshness
+   (`HEAD == origin/main`).
+5. Memory orchestrator emits Graphiti hydrate packet stats
+   (`hydrate_stats`: facts_returned, pickup_parsed, …) with
+   `inject "session start"`.
+6. Combined `additional_context` is sectioned markdown (Governance / Runtime /
+   Graphiti hydrate / Code-graph) via COMBINED env to Python; exit 0 always.
+7. On-demand repair set includes:
+   `bash "$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh"`.
+8. Running symlink setup from inside `~/.cursor-governance` must **not** create
+   a `.cursor-commands` self-alias (setup removes it). Prefer wiring consumers,
+   not the SSOT clone.

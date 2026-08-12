@@ -460,3 +460,17 @@ reaches green + mergeable. Older open PRs: remediate and merge **bottom-up** by
 allows ordinary `gh pr merge` when a valid L4 release receipt authorizes the
 stack (or `L9_MERGE_AUTHORIZED=<reason>`). Force-push, hard-reset, and
 admin-merge remain forbidden.
+
+<!-- GOVERNANCE_ACTIVATE_FRESH_SESSIONSTART_V1 -->
+## 5.1 SessionStart tip activation + symlink notes (2026-08-12) — supersedes §2 / §5 rows
+
+Authoritative corrections (do not treat older table rows above as SSOT where
+they conflict):
+
+| Item | Value |
+|------|-------|
+| `.cursor-commands` | Consumers only — **never** on the SSOT clone itself |
+| `.cursor/plans` | Convenience link to `~/.cursor/plans` (not governance SSOT) |
+| Activate (session start) | `governance_activate_fresh.sh` — foreground tip authority (ff-or-swap); STATUS line + receipt |
+| Manual sync | `governance_sync.sh` — guarded ff-only pull + optional push-half (not used for sessionStart pull) |
+| Post-hook state | sessionStart `additional_context` — sectioned L9 session state (Governance / Runtime / Graphiti hydrate stats / Code-graph); no memory-bank |

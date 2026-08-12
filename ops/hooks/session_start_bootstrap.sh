@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # sessionStart bootstrap — works before repo symlinks exist.
-# Resolves GlobalCommands from $HOME/.cursor-governance (GitHub main clone only).
-# Dropbox is never consulted. Auto-wires governance, Graphiti health, memory prefetch.
-# Also publishes GOVERNANCE_BACKUP_SKIP to the rest of the hook chain when a
-# .governance-build-lock marker exists in the governance clone.
+# Foreground-activates GitHub-tip governance (governance_activate_fresh.sh), then
+# wires runtime probes + Graphiti hydrate into a sectioned L9 session state report.
+# Resume SSOT is Graphiti only (no memory-bank). Exit 0 always.
 # Installed as a REAL file at ~/.cursor/hooks/session-start-bootstrap.sh (not a symlink).
 set -uo pipefail
 
 REPO="${CURSOR_PROJECT_DIR:-}"
-PARTS=()
 
 # Prefer native Claude Code (~/.local/bin) over a stale npm-global binary so
 # marketplace schema stays compatible with plugin reconcile.
@@ -16,10 +14,8 @@ if [ -x "$HOME/.local/bin/claude" ]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# Slow reconcilers (git sync, plugin install, extension install) are backgrounded and
-# silenced during a real sessionStart so they can never stall or fail a session. A manual
-# run (`make start`) sets L9_BOOTSTRAP_SYNC=1 to run them in the foreground with output on
-# stderr, so stdout stays a clean JSON payload either way.
+# Slow reconcilers (plugins, IDE, cold venv) are backgrounded during sessionStart.
+# Manual `make start` sets L9_BOOTSTRAP_SYNC=1 to run them in the foreground.
 BOOTSTRAP_SYNC="${L9_BOOTSTRAP_SYNC:-0}"
 run_reconciler() {
   if [ "$BOOTSTRAP_SYNC" = "1" ]; then
@@ -29,28 +25,74 @@ run_reconciler() {
   fi
 }
 
-# Auto-sync the ~/.cursor-governance SSOT clone (guarded: ff-only, never destroys local
-# edits, single-flight). Replaces the unsafe reset --hard pattern.
-SYNC="$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
-[ -x "$SYNC" ] && run_reconciler "$SYNC"
+GOVERNANCE_REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+GOVERNANCE_BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
 
-# Keep Claude Code plugins in sync with Cursor-Governance desired state.
-# --quiet: fail-open, no `claude update`, fast no-op when stamp matches. --workspace
-# is required here because sessionStart's cwd is the hooks dir, not the open
-# workspace -- CURSOR_PROJECT_DIR ($REPO) is the only reliable source for the path
-# that class-gated project-scope installs (environment/plugins/) need to target.
-PLUGIN_SETUP="$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"
-if [ -x "$PLUGIN_SETUP" ]; then
-  if [ -n "$REPO" ]; then
-    run_reconciler bash "$PLUGIN_SETUP" --quiet --workspace "$REPO"
-  else
-    run_reconciler bash "$PLUGIN_SETUP" --quiet
+# ── Chicken-egg: ensure activator exists, then run foreground BEFORE resolve ──
+chicken_egg_minimal_clone() {
+  local root="$HOME/.cursor-governance"
+  if [ -d "$root/skills" ] && [ -f "$root/CANONICAL_LAW.md" ]; then
+    return 0
   fi
+  if [ -e "$root" ] && [ ! -d "$root/.git" ]; then
+    return 1
+  fi
+  if [ ! -d "$root/.git" ]; then
+    git clone --depth 1 -b "$GOVERNANCE_BRANCH" "$GOVERNANCE_REMOTE" "$root" >/dev/null 2>&1 || return 1
+  fi
+  return 0
+}
+
+resolve_activator() {
+  local a1="$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh"
+  local a2="$HOME/.cursor/hooks/governance-activate-fresh.sh"
+  if [ -x "$a1" ]; then
+    echo "$a1"
+    return 0
+  fi
+  if [ -x "$a2" ]; then
+    echo "$a2"
+    return 0
+  fi
+  if chicken_egg_minimal_clone && [ -x "$a1" ]; then
+    echo "$a1"
+    return 0
+  fi
+  if [ -f "$a2" ]; then
+    chmod +x "$a2" 2>/dev/null || true
+    [ -x "$a2" ] && echo "$a2" && return 0
+  fi
+  return 1
+}
+
+ACTIVATE_ACTION="degraded"
+ACTIVATE_SHA="unknown"
+ACTIVATE_REMOTE_SHA="unknown"
+ACTIVATE_DETAIL="activator_missing"
+
+ACTIVATE_BIN="$(resolve_activator || true)"
+if [ -n "${ACTIVATE_BIN:-}" ] && [ -x "$ACTIVATE_BIN" ]; then
+  ACTIVATE_OUT="$(
+    CURSOR_PROJECT_DIR="$REPO" \
+    GOVERNANCE_GITHUB_REMOTE="$GOVERNANCE_REMOTE" \
+    GOVERNANCE_GITHUB_BRANCH="$GOVERNANCE_BRANCH" \
+    bash "$ACTIVATE_BIN" 2>/dev/null || true
+  )"
+  STATUS_LINE="$(printf '%s\n' "$ACTIVATE_OUT" | grep '^STATUS ' | tail -n 1 || true)"
+  if [ -n "$STATUS_LINE" ]; then
+    ACTIVATE_ACTION="$(echo "$STATUS_LINE" | sed -n 's/.*action=\([^ ]*\).*/\1/p')"
+    ACTIVATE_SHA="$(echo "$STATUS_LINE" | sed -n 's/.*sha=\([^ ]*\).*/\1/p')"
+    ACTIVATE_REMOTE_SHA="$(echo "$STATUS_LINE" | sed -n 's/.*remote_sha=\([^ ]*\).*/\1/p')"
+    ACTIVATE_DETAIL="$(echo "$STATUS_LINE" | sed -n 's/.*detail=\(.*\)$/\1/p')"
+  else
+    ACTIVATE_DETAIL="no_status_line"
+  fi
+else
+  chicken_egg_minimal_clone || true
+  ACTIVATE_DETAIL="activator_unavailable"
 fi
 
 resolve_global_commands() {
-  # SSOT: $HOME/.cursor-governance only — GitHub clone of Quantum-L9/Cursor-Governance.
-  # Dropbox / cloud-storage trees are never used (CANONICAL_LAW / resolve_governance_paths).
   GLOBAL_COMMANDS=""
   local root="$HOME/.cursor-governance"
   if [ -d "$root/skills" ] && [ -f "$root/CANONICAL_LAW.md" ]; then
@@ -60,9 +102,32 @@ resolve_global_commands() {
   return 1
 }
 
-emit_json() {
-  local combined="$1"
-  python3 - <<PY
+short_sha() {
+  local s="${1:-unknown}"
+  if [ "${#s}" -ge 7 ] && [ "$s" != "unknown" ]; then
+    echo "${s:0:7}"
+  else
+    echo "$s"
+  fi
+}
+
+if ! resolve_global_commands; then
+  COMBINED="$(cat <<EOF
+## L9 session state
+### Governance
+- tip: unknown action=${ACTIVATE_ACTION} detail=${ACTIVATE_DETAIL}
+- ssot: ~/.cursor-governance (missing)
+- remote: origin/${GOVERNANCE_BRANCH} @ $(short_sha "$ACTIVATE_REMOTE_SHA") (unknown)
+- wiring: FAIL | clone Cursor-Governance to \$HOME/.cursor-governance
+### Runtime
+- graphiti health: unavailable (no SSOT)
+### Graphiti hydrate
+- Graphiti disabled — no resume memory
+### Code-graph
+- skipped
+EOF
+)"
+  COMBINED="$COMBINED" python3 - <<'PY'
 import json, os
 print(json.dumps({
     "env": {
@@ -70,123 +135,132 @@ print(json.dumps({
         "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
         "GOVERNANCE_BACKUP_SKIP": os.environ.get("GOVERNANCE_BACKUP_SKIP", "0"),
     },
-    "additional_context": """${combined}""",
+    "additional_context": os.environ.get("COMBINED", ""),
 }))
 PY
-}
-
-if ! resolve_global_commands; then
-  emit_json "session bootstrap: governance root not found — clone Cursor-Governance to \$HOME/.cursor-governance"
   exit 0
 fi
 
 GC="$GLOBAL_COMMANDS"
 
-# Build-in-progress kill switch. While the marker file exists, every sessionEnd in
-# every window skips its governance backup, so a long build is never snapshotted
-# half-written. backup_gate.sh returns exit 10 for this, which leaves the debounce
-# stamp untouched — the first sessionEnd after the marker is removed still backs up.
-#   touch "$GC/.governance-build-lock"   # arm
-#   rm    "$GC/.governance-build-lock"   # disarm
+# Self-heal installed bootstrap + activator sidecar from tip SSOT
+if [ -f "$GC/ops/hooks/session_start_bootstrap.sh" ]; then
+  cp -f "$GC/ops/hooks/session_start_bootstrap.sh" "$HOME/.cursor/hooks/session-start-bootstrap.sh" 2>/dev/null || true
+  chmod +x "$HOME/.cursor/hooks/session-start-bootstrap.sh" 2>/dev/null || true
+fi
+if [ -f "$GC/ops/scripts/governance_activate_fresh.sh" ]; then
+  mkdir -p "$HOME/.cursor/hooks" 2>/dev/null || true
+  cp -f "$GC/ops/scripts/governance_activate_fresh.sh" "$HOME/.cursor/hooks/governance-activate-fresh.sh" 2>/dev/null || true
+  chmod +x "$HOME/.cursor/hooks/governance-activate-fresh.sh" 2>/dev/null || true
+fi
+
+# Build-in-progress kill switch
 if [ -e "$GC/.governance-build-lock" ]; then
   export GOVERNANCE_BACKUP_SKIP=1
-  PARTS+=("backup: SKIPPED — .governance-build-lock present")
+  BACKUP_NOTE="SKIPPED — .governance-build-lock present"
+else
+  BACKUP_NOTE="armed"
 fi
 
 SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 
-# Recreate/refresh the pinned .venv from uv.lock and put it first on PATH for the
-# rest of this hook chain. `--locked` fails loudly if pyproject.toml drifts from uv.lock.
-# --extra dev keeps ruff/pytest in the SAME locked venv as runtime deps.
-#
-# Fast path vs. background path: when .venv already exists, a verify-only sync
-# against a warm cache is sub-second, so it's safe to run synchronously and keep
-# PATH correct for the rest of this hook chain. When .venv does NOT exist yet, the
-# first build can take minutes on a cold uv cache (48 locked packages incl. the
-# langgraph stack) — that must never block this hook's 30s budget, so it goes
-# through the same `run_reconciler` backgrounding every other slow reconciler
-# above uses. The next session start hits the fast path once the background sync
-# finishes; `make venv` remains the way to force it in the foreground and wait.
-# `--no-build` refuses source builds (no setup.py/PEP517 script execution) so a
-# compromised or unexpected sdist cannot run installer code during sessionStart.
+# Background plugins only (activate already ran foreground)
+PLUGIN_SETUP="$GC/ops/scripts/setup_claude_code_plugins.sh"
+if [ -x "$PLUGIN_SETUP" ]; then
+  if [ -n "$REPO" ]; then
+    run_reconciler bash "$PLUGIN_SETUP" --quiet --workspace "$REPO"
+  else
+    run_reconciler bash "$PLUGIN_SETUP" --quiet
+  fi
+fi
+
+# venv: sync warm path sync; cold build backgrounded
+VENV_NOTE="absent"
 if command -v uv >/dev/null 2>&1 && [[ -f "$GC/uv.lock" ]]; then
   if [[ -x "$GC/.venv/bin/python3" ]]; then
     if ( cd "$GC" && uv sync --locked --extra dev --no-build >/dev/null 2>&1 ); then
       export PATH="$GC/.venv/bin:$PATH"
-      PARTS+=("venv: locked (uv.lock)")
+      VENV_NOTE="locked (uv.lock)"
     else
-      PARTS+=("venv: uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev")
+      VENV_NOTE="uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev"
     fi
   else
     run_reconciler bash -c "cd \"$GC\" && uv sync --locked --extra dev --no-build"
-    PARTS+=("venv: not yet built — background sync started; run 'make venv' in $GC for foreground + wait")
+    VENV_NOTE="not yet built — background sync started; run 'make venv' in $GC for foreground + wait"
   fi
 fi
 
-# Reconcile the Cursor IDE profile (extensions machine-wide, .vscode/settings.json
-# managed-key merge in the loaded workspace). Backgrounded + --quiet: extension
-# installs are slow and must never block or fail a session start.
+# IDE profile backgrounded
+IDE_NOTE="skipped"
 IDE_SETUP="$GC/ops/scripts/install_ide_profile.sh"
 if [ -x "$IDE_SETUP" ] && [ -n "$REPO" ]; then
   run_reconciler bash "$IDE_SETUP" --quiet "$REPO"
   if [ -f "$REPO/.vscode/.l9-ide-desired-hash" ]; then
-    PARTS+=("ide-profile: applied ($(basename "$REPO"))")
+    IDE_NOTE="applied ($(basename "$REPO"))"
   else
-    PARTS+=("ide-profile: reconciling (first run)")
+    IDE_NOTE="reconciling (first run)"
   fi
 fi
 
+# Auto-wire consumer (includes .cursor/plans); never require SSOT self-alias
 needs_wire=0
 if [ -n "$REPO" ]; then
-  # Governance loads as a Cursor local plugin (rules/84-cursor-governance-wiring.mdc
-  # v3.0.0), not as ~/.cursor/{rules,skills,commands} whole-directory symlinks.
-  for check in "$REPO/.cursor-commands" "$HOME/.cursor/plugins/local/l9-governance"; do
-    if [ ! -L "$check" ]; then
-      needs_wire=1
-      break
-    fi
-  done
+  WS_REAL="$(python3 -c "import os; print(os.path.realpath('$REPO'))" 2>/dev/null || echo "")"
+  GC_REAL="$(python3 -c "import os; print(os.path.realpath('$GC'))" 2>/dev/null || echo "")"
+  if [ -n "$WS_REAL" ] && [ "$WS_REAL" = "$GC_REAL" ]; then
+    # SSOT workspace: heal plans + plugin only; remove self-alias if present
+    rm -f "$REPO/.cursor-commands" 2>/dev/null || true
+    for check in "$HOME/.cursor/plugins/local/l9-governance" "$REPO/.cursor/plans"; do
+      if [ ! -L "$check" ]; then
+        needs_wire=1
+        break
+      fi
+    done
+  else
+    for check in "$REPO/.cursor-commands" "$HOME/.cursor/plugins/local/l9-governance" "$REPO/.cursor/plans"; do
+      if [ ! -L "$check" ]; then
+        needs_wire=1
+        break
+      fi
+    done
+  fi
 fi
 
+WIRE_NOTE="symlinks OK"
 if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ] && [ -f "$SETUP" ]; then
   if (cd "$REPO" && bash "$SETUP" >/dev/null 2>&1); then
-    PARTS+=("governance: auto-wired symlinks")
+    WIRE_NOTE="auto-wired symlinks"
   else
-    PARTS+=("governance: auto-wire failed — run: bash \"$SETUP\"")
+    WIRE_NOTE="auto-wire failed — run: bash \"$SETUP\""
   fi
-else
-  PARTS+=("governance: symlinks OK")
 fi
 
-# Status line for Claude Code plugins (install itself already backgrounded above)
 PLUGIN_STAMP="$HOME/.claude/plugins/.l9-plugin-desired-hash"
 if command -v claude >/dev/null 2>&1; then
   if [ -f "$PLUGIN_STAMP" ]; then
-    PARTS+=("claude-plugins: desired-state stamped")
+    PLUGIN_NOTE="desired-state stamped"
   else
-    PARTS+=("claude-plugins: reconciling (background)")
+    PLUGIN_NOTE="reconciling (background)"
   fi
 else
-  PARTS+=("claude-plugins: claude CLI not on PATH")
+  PLUGIN_NOTE="claude CLI not on PATH"
 fi
 
-# Graphiti env (defaults → machine → secrets → keychain). Resume SSOT is Graphiti
-# inject/PICKUP — memory-bank is deprecated and not scaffolded or excerpted here.
+# Graphiti env + tunnel + health (no memory-bank)
 # shellcheck source=/dev/null
 [ -f "$GC/ops/hooks/graphiti_common.sh" ] && source "$GC/ops/hooks/graphiti_common.sh"
 graphiti_load_env 2>/dev/null || true
 
-# Ensure Graphiti SSH tunnel before health check (defaults + keychain + .env.local C1_SSH)
+TUNNEL_NOTE="skipped"
 ENSURE_TUNNEL="$GC/ops/hooks/ensure_graphiti_tunnel.sh"
 if [ -f "$ENSURE_TUNNEL" ]; then
-  TUNNEL_STATUS="$(bash "$ENSURE_TUNNEL" 2>/dev/null || echo "tunnel: ensure failed")"
-  PARTS+=("$TUNNEL_STATUS")
+  TUNNEL_NOTE="$(bash "$ENSURE_TUNNEL" 2>/dev/null || echo "tunnel: ensure failed")"
 fi
 
+GRAPHITI_HEALTH="disabled or CLI missing"
 if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
-  # Prefer locked venv python (PATH may already include it after uv sync above).
   if [ -x "$GC/.venv/bin/python3" ]; then
     GPY="$GC/.venv/bin/python3"
   else
@@ -196,36 +270,111 @@ if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
   HEALTH_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('healthy',False))" 2>/dev/null || echo False)"
   LIVENESS_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('liveness_ok', False))" 2>/dev/null || echo False)"
   if [ "$HEALTH_OK" = "True" ]; then
-    PARTS+=("graphiti: healthy")
+    GRAPHITI_HEALTH="healthy"
   elif [ "$LIVENESS_OK" = "True" ]; then
-    PARTS+=("graphiti: tunnel up (MCP tools degraded — check VPS / graphiti-mcp-token)")
+    GRAPHITI_HEALTH="tunnel up (MCP tools degraded — check VPS / graphiti-mcp-token)"
   else
     REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('degraded') or d.get('liveness_error') or d.get('reason') or 'unreachable')" 2>/dev/null || echo unreachable)"
-    PARTS+=("graphiti: ${REASON}")
+    GRAPHITI_HEALTH="$REASON"
   fi
-else
-  PARTS+=("graphiti: disabled or CLI missing")
 fi
 
+WIRING_CHECK="skipped"
 if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   if bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" >/dev/null 2>&1; then
-    PARTS+=("wiring: PASS")
+    WIRING_CHECK="PASS"
   else
-    PARTS+=("wiring: FAIL — run bash \"$GC/ops/scripts/wire_governance_workspace.sh\" \"$REPO\"")
+    WIRING_CHECK="FAIL — run bash \"$GC/ops/scripts/wire_governance_workspace.sh\" \"$REPO\""
   fi
 fi
 
-# Delegate prefetch / code-graph context to full orchestrator (SSOT clone path)
-ORCH_CTX=""
-if [ -f "$ORCH" ]; then
-  ORCH_OUT="$(bash "$ORCH" 2>/dev/null || echo '{}')"
-  ORCH_CTX="$(echo "$ORCH_OUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('additional_context',''))" 2>/dev/null || true)"
-  [ -n "$ORCH_CTX" ] && PARTS+=("$ORCH_CTX")
+# Self-link status on SSOT
+SELF_LINK="absent"
+if [ -L "$GC/.cursor-commands" ]; then
+  SELF_LINK="PRESENT (should remove)"
+elif [ -e "$GC/.cursor-commands" ]; then
+  SELF_LINK="PRESENT (non-symlink)"
 fi
 
-COMBINED="$(printf '%s | ' "${PARTS[@]}")"
-COMBINED="${COMBINED% | }"
-emit_json "$COMBINED"
+CC_TARGET="n/a"
+if [ -n "$REPO" ] && [ -L "$REPO/.cursor-commands" ]; then
+  CC_TARGET="$(python3 -c "import os; print(os.path.realpath('$REPO/.cursor-commands'))" 2>/dev/null || echo "?")"
+elif [ -n "$REPO" ]; then
+  WS_REAL="$(python3 -c "import os; print(os.path.realpath('$REPO'))" 2>/dev/null || echo "")"
+  GC_REAL="$(python3 -c "import os; print(os.path.realpath('$GC'))" 2>/dev/null || echo "")"
+  if [ "$WS_REAL" = "$GC_REAL" ]; then
+    CC_TARGET="(SSOT — no self-alias)"
+  else
+    CC_TARGET="missing"
+  fi
+fi
+
+REMOTE_MATCH="unknown"
+if [ -n "$ACTIVATE_SHA" ] && [ -n "$ACTIVATE_REMOTE_SHA" ] \
+  && [ "$ACTIVATE_SHA" != "unknown" ] && [ "$ACTIVATE_REMOTE_SHA" != "unknown" ]; then
+  if [ "$ACTIVATE_SHA" = "$ACTIVATE_REMOTE_SHA" ]; then
+    REMOTE_MATCH="match"
+  else
+    REMOTE_MATCH="behind_or_diverged"
+  fi
+fi
+
+# Orchestrator: hydrate + code-graph as structured fields
+HYDRATE_MD="Graphiti disabled — no resume memory"
+CODEGRAPH_MD="skipped"
+if [ -f "$ORCH" ]; then
+  ORCH_OUT="$(bash "$ORCH" 2>/dev/null || echo '{}')"
+  eval "$(echo "$ORCH_OUT" | python3 -c '
+import sys, json, shlex
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+hm = d.get("hydrate_markdown") or d.get("additional_context") or "Graphiti disabled — no resume memory"
+cm = d.get("codegraph_markdown") or "skipped"
+print("HYDRATE_MD=" + shlex.quote(str(hm)))
+print("CODEGRAPH_MD=" + shlex.quote(str(cm)))
+' 2>/dev/null || true)"
+fi
+
+GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
+REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
+
+COMBINED="$(cat <<EOF
+## L9 session state
+### Governance
+- tip: ${GOV_HEAD} action=${ACTIVATE_ACTION} detail=${ACTIVATE_DETAIL}
+- ssot: ~/.cursor-governance
+- remote: origin/${GOVERNANCE_BRANCH} @ ${REMOTE_HEAD} (${REMOTE_MATCH})
+- wiring: ${WIRING_CHECK} | .cursor-commands → ${CC_TARGET}
+- self-link: ${SELF_LINK}
+- wire: ${WIRE_NOTE}
+- backup: ${BACKUP_NOTE}
+### Runtime
+- venv: ${VENV_NOTE}
+- ide-profile: ${IDE_NOTE}
+- claude-plugins: ${PLUGIN_NOTE}
+- tunnel: ${TUNNEL_NOTE}
+- graphiti health: ${GRAPHITI_HEALTH}
+### Graphiti hydrate
+${HYDRATE_MD}
+### Code-graph
+${CODEGRAPH_MD}
+EOF
+)"
+
+COMBINED="$COMBINED" python3 - <<'PY'
+import json, os
+print(json.dumps({
+    "env": {
+        "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
+        "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
+        "GOVERNANCE_BACKUP_SKIP": os.environ.get("GOVERNANCE_BACKUP_SKIP", "0"),
+    },
+    "additional_context": os.environ.get("COMBINED", ""),
+}))
+PY
+
 exit 0
 
 l9_session_runtime_probe() {
