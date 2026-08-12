@@ -28,7 +28,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | `/autonomy` | Bounded autonomy — parallel Tasks + background PR poll (packet) |
 | `/ynp` | Highest-leverage next action |
 | `/rules` | Load governance rules / project state |
-| `/plan` | Deep execution plan (pre/final validation, doc/root surface impact, milestones, checkpoints, checklist) |
+| `/plan` | Deep PE+autonomy executable `.plan.md` via `l9-plan` (legacy GMP markdown kept; default = program-execution pipeline) |
 | `/analyze` | Explore structure, flows, hotspots |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |
