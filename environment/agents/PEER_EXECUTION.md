@@ -81,8 +81,9 @@ non-dormant `worker_host` adapter with a resolvable `agent_ref`. It never means
 "we intend to support this." Every active registry agent MUST appear in the
 bindings file, even when capabilities are explicitly disabled.
 
-`*.readiness_required` switches stay `false` until a later PR lands the
-implementation that can satisfy them (activation law).
+`*.readiness_required` switches stay `false` until the PR that lands their
+satisfier flips them (activation law). Cursor `subagents.deployment` is
+activated by Patch B (`environment/agents/deployment/`).
 
 ## agent_ref foreign key (execution plane)
 

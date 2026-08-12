@@ -424,3 +424,14 @@ if [ -x "$SCRIPT_DIR/install_ide_profile.sh" ]; then
 else
   echo "HINT: install_ide_profile.sh missing — skip IDE profile"
 fi
+
+# Cursor native subagent deployment: materialize governed roles into ~/.cursor/agents.
+# Desired-state reconciliation only — not the authoritative readiness evaluator.
+echo ""
+if [ -f "$GOV_ROOT/environment/agents/deployment/reconcile.py" ]; then
+  python3 "$GOV_ROOT/environment/agents/deployment/reconcile.py" \
+    --surface cursor --workspace "$WORKSPACE_DIR" --repo-root "$GOV_ROOT" \
+    || echo "WARN: Cursor subagent deployment reconcile failed (non-blocking)"
+else
+  echo "HINT: deployment/reconcile.py missing — skip Cursor subagent deployment"
+fi
