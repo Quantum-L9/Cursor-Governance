@@ -182,7 +182,9 @@ def reconcile_cursor(
     validation = validate_lib.validate_deployment(
         expected=expected,
         global_dir=global_dir,
-        project_dir=project_dir if project_dir.is_dir() or project_dir.exists() else project_dir,
+        # Only probe project shadows when the project agents dir exists; otherwise
+        # pass None so validate skips project-path checks (identical-branch bug).
+        project_dir=project_dir if project_dir.is_dir() else None,
         collisions=collisions,
     )
 
