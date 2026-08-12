@@ -4,7 +4,7 @@
     "sessionStart": [
       {
         "command": "./hooks/session-start-bootstrap.sh",
-        "timeout": 30
+        "timeout": 60
       }
     ],
     "workspaceOpen": [

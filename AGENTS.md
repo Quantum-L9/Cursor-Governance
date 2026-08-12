@@ -79,32 +79,37 @@ Enforcement: `ops/autonomy/local_execution_gate.py` (Claude PreToolUse + Cursor
 
 `ops/hooks/session_start_bootstrap.sh` is installed as a real file at
 `~/.cursor/hooks/session-start-bootstrap.sh` and registered in
-`~/.cursor/hooks.json` under `sessionStart` (30s timeout). It runs on every
+`~/.cursor/hooks.json` under `sessionStart` (**60s** timeout). It runs on every
 Cursor session start with no manual step:
 
-1. Backgrounds `governance_sync.sh` — **bidirectional** reconcile of this clone
-   against `origin/main`: fast-forward-only pull (never destroys local edits,
-   never hard-resets), then a push via `backup_to_github.sh` so local work is
-   backed up at session start too, not only on a clean session end. Set
-   `GOVERNANCE_SYNC_PUSH=0` to make it pull-only.
+1. Foreground `governance_activate_fresh.sh` **before** resolving the SSOT —
+   tip authority is GitHub `origin/main` (ff-only when safe, else shallow
+   clone + atomic swap). Prefers
+   `$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh`, then
+   the `~/.cursor/hooks/governance-activate-fresh.sh` sidecar; chicken-egg
+   minimal clone if both are missing. Parses the STATUS line
+   (`action` / `sha` / `remote_sha` / `detail`).
 2. Backgrounds `setup_claude_code_plugins.sh --quiet --workspace "$REPO"` —
    reconciles the declared Claude Code plugin set: a core set every governed
    workspace inherits (user-scope, `~/.claude/`), plus class-gated addons
    (project-scope, `<repo>/.claude/settings.json`) per `environment/plugins/`
    classification — see `environment/plugins/README.md`
-3. Auto-wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}`
-   symlinks in the active workspace if any are missing
+3. Auto-wires consumer `.cursor-commands`, `.cursor/plans` → `~/.cursor/plans`,
+   and the `l9-governance` plugin when missing. SSOT must **not** self-alias
+   `.cursor-commands`.
 4. Backgrounds `install_ide_profile.sh --quiet` — reconciles the IDE profile
    declared in `environment/ide/` (extensions machine-wide, managed-key merge
    into the workspace's `.vscode/settings.json`)
-5. Loads Graphiti env, scaffolds `memory-bank/` in the active workspace
+5. Loads Graphiti env (no memory-bank scaffold/excerpt — resume SSOT is Graphiti)
 6. Ensures the Graphiti SSH tunnel, then runs a health check
-7. Reads a `memory-bank/activeContext.md` excerpt (T0 resume context)
-8. Runs `check_governance_wiring.sh` and reports PASS/FAIL
-9. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
-   code-graph health (PlasticOS repos) + Graphiti `inject "session start"`
-   prefetch
-10. Emits one combined `additional_context` JSON blob back to Cursor
+7. Runs `check_governance_wiring.sh` and reports PASS/FAIL (including tip
+   freshness: HEAD == `origin/main`)
+8. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
+   code-graph health (PlasticOS repos) + Graphiti hydrate packet
+   (`hydrate_stats`: facts_returned, pickup_parsed, …) + `inject "session start"`
+9. Emits one combined `additional_context` JSON blob — sectioned markdown
+   (Governance / Runtime / Graphiti hydrate / Code-graph) via COMBINED env to
+   Python; exit 0 always
 
 ### 2.2 Manual / on-demand commands
 
@@ -143,6 +148,7 @@ pr:
 Run these directly if you need to re-check or repair only one piece mid-session:
 
 ```bash
+bash "$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh"
 bash "$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"      # run from inside the consumer workspace, not from ~/.cursor-governance itself
@@ -154,12 +160,12 @@ python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 
 **Caution:** `setup_workspace_symlinks.sh` and `validate_governance_symlinks.sh`
 resolve the workspace as `$(pwd)` — always `cd` into the consumer repo first.
-Running them from inside `~/.cursor-governance` self-wires the SSOT clone as
-if it were a consumer (harmless, but pointless; `.cursor-commands` and
-`.cursor/` are gitignored here for exactly this reason). `setup_claude_code_plugins.sh`
-defaults to `$(pwd)` the same way but also accepts an explicit `--workspace <path>`
-(used by `setup_workspace_symlinks.sh` and the sessionStart hook internally) —
-pass it directly if you're not `cd`'d into the target repo.
+Running them from inside `~/.cursor-governance` must **not** create a
+`.cursor-commands` self-alias (setup removes it). Prefer wiring consumers, not
+the SSOT clone. `setup_claude_code_plugins.sh` defaults to `$(pwd)` the same way
+but also accepts an explicit `--workspace <path>` (used by
+`setup_workspace_symlinks.sh` and the sessionStart hook internally) — pass it
+directly if you're not `cd`'d into the target repo.
 
 ### 2.3 Toolchain pins (local `make pr` / pre-commit)
 

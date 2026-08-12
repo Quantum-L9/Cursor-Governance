@@ -113,7 +113,8 @@ SessionStart hook, `.mcp.json`) plus the account-level environment — never by
 
 | Workspace path | Target | Purpose |
 |----------------|--------|---------|
-| `.cursor-commands` | `~/.cursor-governance/` | Sole global entry |
+| `.cursor-commands` | `~/.cursor-governance/` | Sole global entry (consumers only — **never** on the SSOT clone itself) |
+| `.cursor/plans` | `~/.cursor/plans` | Machine Cursor plans convenience link (not governance SSOT) |
 | `.cursor/governance/CANONICAL_LAW.md` | `~/.cursor-governance/CANONICAL_LAW.md` | Law file only |
 | `.cursor/governance/` | **local directory** | Not a symlink to governance root |
 
@@ -163,8 +164,10 @@ plugins.
 | Remote (origin) | `https://github.com/Quantum-L9/Cursor-Governance.git` |
 | Branch | `main` |
 | Git root | `~/.cursor-governance` |
-| Pull (session start) | `governance_sync.sh` — guarded ff-only |
+| Activate (session start) | `governance_activate_fresh.sh` — foreground tip authority (ff-or-swap); STATUS line + receipt |
+| Manual sync | `governance_sync.sh` — guarded ff-only pull + optional push-half (not used for sessionStart pull) |
 | Push (session end) | `backup_to_github.sh` — commits + rebases + pushes |
+| Post-hook state | sessionStart `additional_context` — sectioned L9 session state (Governance / Runtime / Graphiti hydrate stats / Code-graph); no memory-bank |
 | Law file | Clone root: `CANONICAL_LAW.md` |
 
 **Manual:**

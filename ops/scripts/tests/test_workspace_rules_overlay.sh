@@ -118,6 +118,40 @@ after="$(sha256sum "$ws/.cursor/rules/local-rule.mdc" | awk '{print $1}')"
 [ "$before" = "$after" ]
 assert_real_dir "$ws/.cursor/rules"
 [ -L "$ws/.cursor-commands" ]
-pass "full setup preserves local rules and wires .cursor-commands"
+[ -L "$ws/.cursor/plans" ]
+plans_rt="$(python3 -c "import os; print(os.path.realpath('$ws/.cursor/plans'))")"
+plans_want="$(python3 -c "import os; print(os.path.realpath('$fixture_home/.cursor/plans'))")"
+[ "$plans_rt" = "$plans_want" ]
+pass "full setup preserves local rules and wires .cursor-commands + .cursor/plans"
+
+# T9: SSOT setup removes self-alias (do not create .cursor-commands → self).
+fixture_home9="$TMP_ROOT/t9-home"
+gov9="$fixture_home9/.cursor-governance"
+mkdir -p "$gov9/ops/scripts/lib" "$gov9/ops/hooks" "$gov9/skills" "$gov9/commands" "$gov9/rules"
+cp "$OPS_DIR/setup_workspace_symlinks.sh" "$gov9/ops/scripts/"
+cp "$OPS_DIR/resolve_governance_paths.sh" "$gov9/ops/scripts/"
+cp "$OPS_DIR/lib/path_contracts.sh" "$gov9/ops/scripts/lib/"
+cp "$OPS_DIR/lib/rules_overlay.sh" "$gov9/ops/scripts/lib/"
+printf '%s\n' '# law' > "$gov9/CANONICAL_LAW.md"
+printf '%s\n' '{"version":1,"hooks":{}}' > "$gov9/ops/hooks/hooks.json.template"
+# Minimal activator so install_session_end copy is optional
+printf '%s\n' '#!/usr/bin/env bash' > "$gov9/ops/scripts/governance_activate_fresh.sh"
+chmod +x "$gov9/ops/scripts/governance_activate_fresh.sh"
+cat > "$gov9/ops/scripts/validate_governance_symlinks.sh" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$gov9/ops/scripts/validate_governance_symlinks.sh"
+# Pre-seed a bad self-alias
+ln -sfn "$gov9" "$gov9/.cursor-commands"
+(
+  export HOME="$fixture_home9"
+  export GRAPHITI_MEMORY_ENABLED=0
+  cd "$gov9"
+  bash "$gov9/ops/scripts/setup_workspace_symlinks.sh" >/dev/null
+)
+[ ! -e "$gov9/.cursor-commands" ]
+[ -L "$gov9/.cursor/plans" ]
+pass "SSOT setup removes .cursor-commands self-alias and wires .cursor/plans"
 
 echo "RESULT: PASS ($PASS cases)"

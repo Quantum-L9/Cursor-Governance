@@ -190,6 +190,7 @@ def compile_session_packet(
     degraded = False
     degrade_reason = ""
     facts: list[dict[str, Any]] = []
+    search_queries_used = 0
     if not group_id or resolved.get("readonly"):
         degraded = True
         degrade_reason = str(
@@ -197,32 +198,61 @@ def compile_session_packet(
         )
     else:
         try:
+            search_queries_used += 1
             facts = _search_facts(group_id, "PICKUP|objective= next= agent=", limit=8)
             if not facts:
+                search_queries_used += 1
                 facts = _search_facts(group_id, "PICKUP next_action session resume", limit=8)
             if not facts:
+                search_queries_used += 1
                 facts = _search_facts(group_id, "session start pickup", limit=6)
         except Exception as exc:  # noqa: BLE001
             degraded = True
             degrade_reason = f"search failed: {exc}"[:500]
 
-    pickup = (
-        _extract_pickup(facts)
-        if facts
-        else {
-            "active_objective": "No PICKUP found — start fresh or search when Graphiti is online",
-            "next_action": "Proceed from user request; hydrate when memory is available",
-            "context_slice": "",
-        }
-    )
+    pickup_parsed = False
+    pickup = {
+        "active_objective": "No PICKUP found — start fresh or search when Graphiti is online",
+        "next_action": "Proceed from user request; hydrate when memory is available",
+        "context_slice": "",
+    }
+    if facts:
+        pickup = _extract_pickup(facts)
+        # Structured extraction succeeded when we got more than the generic fallbacks
+        # or when a PICKUP/objective/next signal was present in raw facts.
+        raw_joined = " ".join(_fact_text(f) for f in facts[:3]).upper()
+        pickup_parsed = (
+            "PICKUP" in raw_joined
+            or "OBJECTIVE=" in raw_joined
+            or "NEXT=" in raw_joined
+            or "ACTIVE_OBJECTIVE" in raw_joined
+            or bool(pickup.get("context_slice"))
+        )
     if not facts and not degraded:
         degraded = True
         degrade_reason = degrade_reason or "hydration degraded: empty PICKUP search"
 
+    budget = _hydration_budget()
     context_parts = [pickup.get("context_slice") or ""]
     for fact in facts[:5]:
         context_parts.append(_fact_text(fact)[:400])
-    context_slice = "\n---\n".join(p for p in context_parts if p)[: _hydration_budget()]
+    context_slice = "\n---\n".join(p for p in context_parts if p)[:budget]
+
+    fact_previews: list[dict[str, str]] = []
+    for fact in facts[:3]:
+        text = _fact_text(fact)[:120]
+        uuid = str(fact.get("uuid") or fact.get("id") or "")[:64]
+        fact_previews.append({"uuid": uuid, "text_head": text})
+
+    hydrate_stats = {
+        "facts_returned": len(facts),
+        "pickup_parsed": pickup_parsed,
+        "context_chars": len(context_slice),
+        "search_queries_used": max(1, search_queries_used) if group_id else search_queries_used,
+        "budget_chars": budget,
+        "degraded": degraded,
+        "degrade_reason": degrade_reason,
+    }
 
     packet = {
         "packet_id": packet_id,
@@ -242,6 +272,8 @@ def compile_session_packet(
         "degrade_reason": degrade_reason,
         "conversation_id": conversation_id,
         "fact_count": len(facts),
+        "hydrate_stats": hydrate_stats,
+        "fact_previews": fact_previews,
     }
     return packet
 
@@ -250,7 +282,10 @@ def format_additional_context(packet: dict[str, Any]) -> str:
     """Markdown + compact JSON for Cursor additional_context."""
     budget = _hydration_budget()
     next_action = (packet.get("next_action_contract") or {}).get("next_action") or ""
+    stats = packet.get("hydrate_stats") or {}
+    pickup_yes = "yes" if stats.get("pickup_parsed") else "no"
     lines = [
+        "### Graphiti hydrate",
         f"graphiti hydrate: group_id={packet.get('group_id')} "
         f"agent_id={packet.get('agent_id')} packet={packet.get('packet_id')}"
         + (" DEGRADED" if packet.get("degraded") else ""),
@@ -259,6 +294,20 @@ def format_additional_context(packet: dict[str, Any]) -> str:
         lines.append(f"hydration degraded: {packet['degrade_reason']}")
     lines.append(f"objective: {packet.get('active_objective', '')}")
     lines.append(f"next={next_action}")
+    lines.append(
+        "stats: "
+        f"facts_returned={stats.get('facts_returned', packet.get('fact_count', 0))} | "
+        f"pickup_parsed={pickup_yes} | "
+        f"context_chars={stats.get('context_chars', 0)} | "
+        f"search_queries_used={stats.get('search_queries_used', 0)} | "
+        f"budget_chars={stats.get('budget_chars', budget)}"
+    )
+    previews = packet.get("fact_previews") or []
+    if previews:
+        lines.append("facts_preview:")
+        for prev in previews[:3]:
+            head = str(prev.get("text_head") or "").replace("\n", " ")[:120]
+            lines.append(f"- {head}")
     slice_text = (packet.get("context_slice") or "")[: max(200, budget - 400)]
     if slice_text:
         lines.append("facts:")
@@ -270,6 +319,7 @@ def format_additional_context(packet: dict[str, Any]) -> str:
         "active_objective": packet.get("active_objective"),
         "next_action_contract": packet.get("next_action_contract"),
         "degraded": packet.get("degraded", False),
+        "hydrate_stats": stats,
     }
     fence = "```json\n" + json.dumps(compact, ensure_ascii=False) + "\n```"
     text = "\n".join(lines) + "\n" + fence
