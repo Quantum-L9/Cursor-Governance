@@ -235,3 +235,18 @@ fi
 
 echo "RESULT: FAIL — run /wire governance"
 exit 1
+
+if [ -f "$WORKSPACE/environment/agents/PEER_RUNTIME_BINDINGS.yaml" ] || [ -f "$GC/environment/agents/PEER_RUNTIME_BINDINGS.yaml" ]; then
+  pass "peer runtime bindings present"
+else
+  echo "  WARN: PEER_RUNTIME_BINDINGS.yaml absent in workspace/SSOT"
+fi
+if [ -f "$WORKSPACE/environment/agents/deployment/reconcile.py" ] || [ -f "$GC/environment/agents/deployment/reconcile.py" ]; then
+  pass "deployment reconciler present"
+fi
+if [ -f "$WORKSPACE/environment/agents/results/gateway.py" ] || [ -f "$GC/environment/agents/results/gateway.py" ]; then
+  pass "result gateway present"
+fi
+if [ -f "$WORKSPACE/environment/agents/generated-data/ingress/ingest.py" ] || [ -f "$GC/environment/agents/generated-data/ingress/ingest.py" ]; then
+  pass "generated-data ingress present"
+fi
