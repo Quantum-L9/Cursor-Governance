@@ -89,11 +89,30 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
+    """Persist a close receipt with an allowlisted field set only."""
     path_r = _receipt_path(project_dir, session_id)
     os.makedirs(os.path.dirname(path_r), exist_ok=True)
+    # Allowlist only — never persist exception text or secret-adjacent strings
+    # (CodeQL clear-text-storage).
+    safe = {
+        "status": payload.get("status"),
+        "session_id": payload.get("session_id"),
+        "head_hash": payload.get("head_hash"),
+        "group_id": payload.get("group_id"),
+        "agent_id": payload.get("agent_id"),
+        "phase_a": payload.get("phase_a"),
+        "phase_b": payload.get("phase_b"),
+        "enqueue_ok": payload.get("enqueue_ok"),
+        "enqueue": payload.get("enqueue"),
+        "enqueue_error": payload.get("enqueue_error"),
+        "write_count": payload.get("write_count"),
+        "closed_at": payload.get("closed_at"),
+        "reason": payload.get("reason"),
+        "packet_id": payload.get("packet_id"),
+    }
     # path_r is commonpath-bounded under project_dir/.l9/memory/closes
     with open(path_r, "w", encoding="utf-8") as handle:  # NOSONAR python:S2083
-        handle.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+        handle.write(json.dumps(safe, indent=2, ensure_ascii=False) + "\n")
 
 
 def _git_signal(project_dir: Path) -> str:
@@ -166,6 +185,15 @@ def _phase_b_enabled() -> bool:
     return os.environ.get("MEMORY_PHASE_B", "1").strip() not in ("0", "false", "False")
 
 
+def _strip_code_fence(text: str) -> str:
+    if not text.startswith("```"):
+        return text
+    cleaned = text.strip("`")
+    if cleaned.startswith("json"):
+        cleaned = cleaned[4:].strip()
+    return cleaned
+
+
 def _distill_signal_packet(
     *,
     session_id: str,
@@ -177,7 +205,7 @@ def _distill_signal_packet(
 
     Uses the Sonar-reviewed fixed-host OpenAI helper
     (``ops.graphiti.hydration.openai_fixed_host``) — never builds a URL from
-    caller input. Key: env or ephemeral SM ``l9/OPENAI_API_KEY``.
+    caller input. Key: env or ephemeral SM resolve (opaque skip codes only).
     """
     if not _phase_b_enabled():
         return None, "MEMORY_PHASE_B=0"
@@ -191,7 +219,7 @@ def _distill_signal_packet(
 
     key, key_reason = resolve_openai_api_key()
     if not key:
-        return None, key_reason or "OPENAI_API_KEY absent"
+        return None, key_reason or "openai_key_absent"
 
     budget_tokens = int(os.environ.get("MEMORY_DISTILL_TOKEN_BUDGET", "300"))
     rules = _load_rules()
@@ -223,14 +251,9 @@ def _distill_signal_packet(
             max_tokens=budget_tokens,
             timeout=max(1.0, timeout),
         )
-        text = message_content(resp)
-        if text.startswith("```"):
-            text = text.strip("`")
-            if text.startswith("json"):
-                text = text[4:].strip()
-        data = json.loads(text)
+        data = json.loads(_strip_code_fence(message_content(resp)))
         if not isinstance(data, dict):
-            return None, "distill returned non-object JSON"
+            return None, "distill_non_object_json"
         packet_id = hashlib.sha256(f"{session_id}:{time.time()}".encode()).hexdigest()[:16]
         return {
             "packet_id": packet_id,
@@ -240,14 +263,13 @@ def _distill_signal_packet(
             "do_not_promote": data.get("do_not_promote") or rules.get("do_not_promote") or [],
         }, ""
     except OpenAIFixedHostError as exc:
-        detail = str(exc)
-        if "openai_http_401" in detail or "openai_http_403" in detail:
-            return None, f"OPENAI_API_KEY rejected — Phase B skipped ({detail})"
-        if detail == "openai_timeout":
-            return None, "Phase B distill timed out — keeping Phase A"
-        return None, f"Phase B distill failed ({detail}) — keeping Phase A"
+        # Opaque codes only — never interpolate exception text (may be secret-adjacent).
+        code = exc.args[0] if exc.args else "phase_b_transport"
+        if code in {"openai_http_401", "openai_http_403", "openai_timeout"}:
+            return None, f"phase_b_{code}"
+        return None, "phase_b_transport"
     except (KeyError, json.JSONDecodeError, IndexError, OSError, TypeError) as exc:
-        return None, f"Phase B distill failed ({type(exc).__name__}) — keeping Phase A"
+        return None, f"phase_b_{type(exc).__name__}"
 
 
 def close_session(
@@ -543,9 +565,10 @@ def close_session(
             }
     except Exception as exc:  # noqa: BLE001
         report["enqueue_ok"] = False
-        report["enqueue_error"] = f"{type(exc).__name__}: {exc}"
-        report["warnings"].append(f"ERROR: distill enqueue failed: {exc}")
-        print(f"ERROR: distill enqueue failed: {exc}", file=sys.stderr)
+        code = f"enqueue_{type(exc).__name__}"
+        report["enqueue_error"] = code
+        report["warnings"].append(f"ERROR: distill enqueue failed: {code}")
+        print(f"ERROR: distill enqueue failed: {code}", file=sys.stderr)
 
     receipt = {
         "status": "closed",

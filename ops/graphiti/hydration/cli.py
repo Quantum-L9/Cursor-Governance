@@ -24,6 +24,36 @@ def _cmd_compile(args: argparse.Namespace) -> int:
     return 0
 
 
+def _public_close_report(report: dict) -> dict:
+    """Stdout-safe close report — codes/counts only (no warning text / secrets)."""
+    receipt = report.get("receipt") or {}
+    return {
+        "status": report.get("status"),
+        "session_id": report.get("session_id"),
+        "reason": report.get("reason"),
+        "phase_a": report.get("phase_a"),
+        "phase_b": report.get("phase_b"),
+        "enqueue_ok": report.get("enqueue_ok"),
+        "enqueue": report.get("enqueue"),
+        "enqueue_error": report.get("enqueue_error"),
+        "signal_packet_id": report.get("signal_packet_id"),
+        "group_id": report.get("group_id"),
+        "writes": report.get("writes"),
+        "warning_count": len(report.get("warnings") or []),
+        "elapsed_s": report.get("elapsed_s"),
+        "receipt": {
+            "status": receipt.get("status"),
+            "session_id": receipt.get("session_id"),
+            "agent_id": receipt.get("agent_id"),
+            "group_id": receipt.get("group_id"),
+            "phase_a": receipt.get("phase_a"),
+            "phase_b": receipt.get("phase_b"),
+            "enqueue_ok": receipt.get("enqueue_ok"),
+            "packet_id": receipt.get("packet_id"),
+        },
+    }
+
+
 def _cmd_close(args: argparse.Namespace) -> int:
     from ops.graphiti.hydration.close_session import close_session
 
@@ -36,7 +66,7 @@ def _cmd_close(args: argparse.Namespace) -> int:
         is_background_agent=args.background,
         dry_run=args.dry_run,
     )
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+    print(json.dumps(_public_close_report(report), indent=2, ensure_ascii=False))
     if report.get("status") == "failed":
         return 1
     if report.get("enqueue_ok") is False:

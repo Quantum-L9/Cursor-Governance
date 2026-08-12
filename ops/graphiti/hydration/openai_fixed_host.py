@@ -27,6 +27,21 @@ class OpenAIFixedHostError(RuntimeError):
     """Transport or protocol failure talking to the fixed OpenAI host."""
 
 
+def _require_fixed_openai_url(url: str) -> str:
+    """Refuse anything other than the module-literal HTTPS OpenAI URL (CWE-939)."""
+    if url != _OPENAI_URL:
+        raise OpenAIFixedHostError(f"refusing non-fixed OpenAI URL: {url[:120]}")
+    return url
+
+
+def _urlopen_fixed(
+    req: urllib.request.Request, *, timeout: float, context: ssl.SSLContext
+):
+    """urlopen only after fixed-host check (Bandit B310 / Semgrep CWE-939)."""
+    _require_fixed_openai_url(req.full_url)
+    return urllib.request.urlopen(req, timeout=timeout, context=context)  # noqa: S310
+
+
 def chat_completions(
     *,
     api_key: str,
@@ -68,9 +83,12 @@ def chat_completions(
         headers=headers,
         method="POST",
     )
+    # Explicit TLS 1.2+ floor (Sonar python:S4423); default context already
+    # verifies certificates against the system trust store.
     context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     try:
-        with urllib.request.urlopen(
+        with _urlopen_fixed(
             req,
             timeout=max(1.0, float(timeout)),
             context=context,

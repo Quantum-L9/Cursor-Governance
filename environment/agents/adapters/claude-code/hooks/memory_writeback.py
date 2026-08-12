@@ -50,14 +50,16 @@ def main() -> int:
             dry_run=False,
         )
         status = report.get("status")
+        warn_n = len(report.get("warnings") or [])
         print(
-            f"memory-writeback: status={status} writes={len(report.get('writes') or [])}",
+            f"memory-writeback: status={status} writes={len(report.get('writes') or [])} "
+            f"warnings={warn_n}",
             file=sys.stderr,
         )
-        for warn in report.get("warnings") or []:
-            print(f"memory-writeback: {warn}", file=sys.stderr)
+        # Do not echo warning text — may carry secret-adjacent skip reasons
+        # (CodeQL clear-text-logging).
     except Exception as exc:  # fail-open
-        print(f"memory-writeback: skipped ({exc})", file=sys.stderr)
+        print(f"memory-writeback: skipped ({type(exc).__name__})", file=sys.stderr)
     return 0
 
 

@@ -192,7 +192,7 @@ def test_phase_a_without_api_key(monkeypatch, tmp_path):
     assert report["phase_a"] is True
     assert report["phase_b"] is False
     assert any(w.get("kind") == "pickup_context" for w in writes)
-    assert any("OPENAI_API_KEY" in w for w in report["warnings"])
+    assert any("openai_key" in w for w in report["warnings"])
 
 
 def test_phase_b_success_with_mocked_transport(monkeypatch, tmp_path):

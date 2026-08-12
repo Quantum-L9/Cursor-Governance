@@ -2,4 +2,7 @@
 
 from __future__ import annotations
 
-__all__ = ["enqueue_job", "process_pending", "job_content_hash"]
+from ops.graphiti.distill_queue.enqueue import enqueue_job, job_content_hash
+from ops.graphiti.distill_queue.worker import process_pending
+
+__all__ = ["enqueue_job", "job_content_hash", "process_pending"]

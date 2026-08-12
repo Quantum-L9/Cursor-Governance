@@ -106,7 +106,7 @@ REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "${CLOSE_ARGS[@]}" 2>/dev/null)"
 CLOSE_RC=$?
 
-if [ -n "$REPORT" ]; then
+if [[ -n "$REPORT" ]]; then
   echo "$REPORT" | python3 -c '
 import sys, json
 try:
@@ -144,11 +144,11 @@ for w in d.get("warnings") or []:
     level = "ERROR" if str(w).startswith("ERROR:") else "WARN"
     print("%s: %s" % (level, w), file=sys.stderr)
 ' 2>&1 || echo "INFO: session close finished" >&2
-elif [ "$CLOSE_RC" -ne 0 ] && [ "$CLOSE_RC" -ne 2 ]; then
+elif [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]]; then
   echo "WARN: session close failed — Phase A may be missing; use /end-session force-retry" >&2
 fi
 # Fail-loud on enqueue (cli exit 2); keep Graphiti availability fail-open otherwise.
-if [ "${CLOSE_RC:-0}" = "2" ]; then
+if [[ "${CLOSE_RC:-0}" == "2" ]]; then
   exit 2
 fi
 exit 0
