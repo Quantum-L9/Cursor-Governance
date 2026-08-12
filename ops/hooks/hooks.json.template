@@ -66,8 +66,14 @@
     ],
     "subagentStart": [
       {
-        "command": "./hooks/graphiti-gate-subagent.sh",
-        "timeout": 10
+        "command": "./hooks/lifecycle-subagent-start.sh",
+        "timeout": 15
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": "./hooks/lifecycle-subagent-stop.sh",
+        "timeout": 15
       }
     ]
   }
