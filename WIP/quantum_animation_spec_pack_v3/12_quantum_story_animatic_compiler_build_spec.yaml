@@ -1,0 +1,2043 @@
+metadata:
+  spec_id: quantum.animation.story_animatic_compiler.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Story and Animatic Compiler
+  depends_on:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: REALITY_CAUSALITY_AND_WORLD_COORDINATE_DEPENDENCY
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: NARRATIVE_CHARACTER_EPISTEMIC_CINEMATIC_COGNITION_DEPENDENCY
+    - file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: CREATOR_MODEL_STORY_CONTRACT_ENDING_INTENT_DEPENDENCY
+    - file: 04_quantum_audience_product_intelligence_build_spec.yaml
+      relationship: EXPERIENCE_TRAJECTORY_AND_PRODUCT_PROMISE_DEPENDENCY
+    - file: 06_quantum_production_model_build_spec.yaml
+      relationship: DOWNSTREAM_PRODUCTION_INTENT_DEPENDENCY
+    - file: 07_quantum_autonomous_qc_build_spec.yaml
+      relationship: STORY_SCENE_SHOT_ANIMATIC_QC_DEPENDENCY
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: STORY_LINEAGE_AND_INVALIDATION_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: IR_AND_REFERENCE_DEPENDENCY
+    - file: 11_quantum_project_compiler_pipeline_build_spec.yaml
+      relationship: PROJECT_COMPILATION_INPUT_DEPENDENCY
+  architectural_identity:
+    concise: >
+      Compiler that discovers and selects a causally valid story from persistent
+      reality, then transforms the selected story into scenes, shots, timing,
+      sound/performance intent, and a QC-approved animatic.
+    extended: >
+      Quantum Story and Animatic Compiler bridges persistent World reality and
+      creative intent to cinematic production. It consumes StoryCompilerInput,
+      CreatorModel, StoryContract, AudienceModel, ProductMarketModel and current
+      World state; derives or retrieves NarrativeOpportunities; uses
+      polycognitive narrative, character, epistemic and cinematic reasoning to
+      propose and simulate event sequences; validates causal and psychological
+      consistency; commits selected events through World Model where appropriate;
+      compiles those events into StoryPlan, SequenceSpec, SceneSpec and ShotSpec;
+      assigns WorldCoordinates and expected visible/audible state; produces a
+      timed audiovisual animatic; and locks the approved cinematic plan before
+      expensive final production.
+  owner_questions:
+    - "What happens?"
+    - "Why does it happen?"
+    - "Why now?"
+    - "What does each character know, want, fear and choose?"
+    - "What does the audience know at each moment?"
+    - "Which event is causally implied by current reality?"
+    - "How should the selected event be shown?"
+    - "What information does each shot communicate?"
+    - "What emotional function does each scene serve?"
+    - "What is the timing and rhythm?"
+    - "What must be visible or audible for continuity?"
+    - "Is the animatic good enough to justify expensive production?"
+  key_equation: |
+    persistent reality
+       + CreatorModel
+       + StoryContract
+       + AudienceModel
+       ↓
+    NarrativeOpportunity
+       ↓
+    event proposals
+       ↓
+    simulation / QC / selection
+       ↓
+    StoryPlan
+       ↓
+    SequenceSpec
+       ↓
+    SceneSpec
+       ↓
+    ShotSpec
+       ↓
+    AnimaticTimeline
+       ↓
+    animatic.lock
+  hard_boundary: >
+    This compiler selects and expresses events from World reality. It does not
+    manufacture final media or own canonical World truth independently of the
+    World Model.
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Turn persistent fictional reality into a causally coherent, psychologically
+    grounded, audience-aware and cinematically executable story before expensive
+    final production.
+  secondary: >
+    Catch story, continuity, pacing, information-flow and cinematic mistakes at
+    the cheapest high-leverage representation: the animatic.
+  success_definition: >
+    The compiler can autonomously take a developed world and characters,
+    discover a strong short-form story, select a valid event chain, produce
+    scene/shot specifications with precise World coordinates and expected state,
+    assemble a timed animatic, submit it to QC, repair weak sections, and lock a
+    production-ready plan without human intervention.
+  strategic_value: >
+    The animatic becomes the first rendered proof that the selected story works,
+    while remaining cheap enough to revise aggressively.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  SA-001:
+    name: STORY_EMERGES_FROM_REALITY
+    statement: >
+      Story proposals should exploit current character intentions, conflicts,
+      knowledge asymmetries, affordances, promises, rules and World state rather
+      than generating arbitrary event sequences.
+  SA-002:
+    name: CAUSALITY_BEFORE_SPECTACLE
+    statement: >
+      Dramatic events must have valid preconditions and causal support.
+  SA-003:
+    name: CHARACTER_INTEGRITY
+    statement: >
+      Character actions arise from psychological state, belief, knowledge,
+      intention, relationship and circumstance.
+  SA-004:
+    name: INFORMATION_FLOW_IS_EXPLICIT
+    statement: >
+      Character knowledge and audience knowledge are tracked separately.
+  SA-005:
+    name: NARRATIVE_OPPORTUNITY_IS_DERIVED
+    statement: >
+      NarrativeOpportunity is rebuildable intelligence, not canonical World truth.
+  SA-006:
+    name: EVENT_PROPOSALS_DO_NOT_COMMIT_REALITY
+    statement: >
+      Candidate events remain hypothetical until selected and committed.
+  SA-007:
+    name: BRANCHING_IS_BOUNDED
+    statement: >
+      Alternative event paths are explored according to reasoning budget.
+  SA-008:
+    name: ENDING_PULLS_WITHOUT_FORCING
+    statement: >
+      EndingIntent guides story search but cannot justify violating established
+      causality or character truth.
+  SA-009:
+    name: AUDIENCE_STATE_IS_PART_OF_STORY_DESIGN
+    statement: >
+      What the audience believes, suspects, knows and feels is an explicit
+      trajectory.
+  SA-010:
+    name: SCENES_HAVE_FUNCTION
+    statement: >
+      Every scene declares what changes and why it exists.
+  SA-011:
+    name: SHOTS_HAVE_FUNCTION
+    statement: >
+      Every shot declares information, emotional and cinematic purpose.
+  SA-012:
+    name: WORLDCORDINATE_IS_REQUIRED
+    statement: >
+      Each shot is anchored to an exact point in fictional reality.
+  SA-013:
+    name: EXPECTED_STATE_IS_COMPILED
+    statement: >
+      ShotSpec includes World-derived visible and audible state used later by
+      production and QC.
+  SA-014:
+    name: ANIMATIC_IS_TIMED_STORYBOARD_PLUS_PERFORMANCE_SKELETON
+    statement: >
+      Animatic contains shot composition, timing, edit order, temporary dialogue,
+      sound/music intent, camera and performance direction—not merely static boards.
+  SA-015:
+    name: CHEAP_REPRESENTATION_FIRST
+    statement: >
+      Story and edit problems should be solved in low-cost representations before
+      final rendering.
+  SA-016:
+    name: LOCK_AFTER_QC
+    statement: >
+      Animatic becomes a stable production dependency only after passing
+      Autonomous QC.
+  SA-017:
+    name: LOCAL_REVISION
+    statement: >
+      Scene or shot changes invalidate the minimum downstream animatic scope.
+  SA-018:
+    name: REVEAL_FAIRNESS
+    statement: >
+      Surprise should arise from controlled information asymmetry, not withheld
+      causal truth.
+  SA-019:
+    name: VIEWER_AND_CHARACTER_KNOWLEDGE_DIFFER
+    statement: >
+      The compiler supports events revealed to the audience but not the
+      protagonist and vice versa.
+  SA-020:
+    name: STORY_DENSITY_MATCHES_RUNTIME
+    statement: >
+      Narrative complexity must fit the available duration.
+  SA-021:
+    name: SILENCE_IS_VALID
+    statement: >
+      Not every narrative change requires dialogue.
+  SA-022:
+    name: SHOT_COUNT_IS_DERIVED
+    statement: >
+      Shot count follows pacing, information and cinematic function rather than a
+      fixed aesthetic quota.
+  SA-023:
+    name: WORLD_COMMIT_IS_CONTROLLED
+    statement: >
+      Story event selection commits new WorldEvents only through World Model
+      validation/reducer semantics.
+  SA-024:
+    name: PHYSICAL_AND_PSYCHOLOGICAL_CAUSALITY_BOTH_MATTER
+    statement: >
+      A physically possible event can still be narratively invalid if character
+      motivation is false.
+  SA-025:
+    name: CINEMATIC_STATE_DOES_NOT_REWRITE_WORLD_STATE
+    statement: >
+      Camera, framing and edit choices determine observation of reality, not reality itself.
+  SA-026:
+    name: STORY_QC_PRECEDES_FINAL_PRODUCTION
+    statement: >
+      A final-quality rendering pipeline should never be the first place the
+      system discovers that the story is weak.
+  SA-027:
+    name: NARRATIVE_OPPORTUNITY_DENSITY_COMPOUNDS_WITH_CANON
+    statement: >
+      Larger persistent universes should create more candidate causal
+      intersections rather than merely more continuity burden.
+  SA-028:
+    name: STORY_PLAN_IS_MEDIUM_AWARE_BUT_REALITY_AGNOSTIC
+    statement: >
+      Film-specific expression is compiled from medium-independent World events.
+  SA-029:
+    name: SELECTED_STORY_IS_EXPLAINABLE
+    statement: >
+      Quantum should explain why this event sequence was chosen over alternatives.
+  SA-030:
+    name: ANIMATIC_IS_PRODUCTION_GATE
+    statement: >
+      Expensive production does not begin until animatic.lock exists except for
+      explicitly authorized probes/assets.
+# =====================================================================
+# 3. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  this_spec_owns:
+    - StoryPlan
+    - StoryBeat
+    - NarrativeArcPlan
+    - StoryCandidate
+    - StoryBranch
+    - SequenceSpec
+    - SceneSpec
+    - SceneStateDelta
+    - ShotSpec
+    - ShotPurpose
+    - AudienceInformationState
+    - AnimaticTimeline
+    - AnimaticShot
+    - AnimaticAudioIntent
+    - StorySelectionDecision
+    - story compiler passes
+    - scene compiler
+    - shot compiler
+    - animatic compiler
+    - animatic lock lifecycle
+  delegated:
+    NarrativeOpportunity:
+      derived_by: 01_world_intelligence
+      reasoned_over_by: 02_narrative_cognition
+    WorldEvent:
+      owner: 01
+    CognitiveInvocation:
+      owner: 02
+    CreatorModel:
+      owner: 03
+    AudienceModel:
+      owner: 04
+    ProductionIntent:
+      owner: 06
+    story_QC:
+      owner: 07
+    final media:
+      owner_execution: 08
+  this_spec_does_not_own:
+    - canonical character psychology independent of World
+    - final World reducer semantics
+    - final visual asset identity
+    - provider/tool selection
+    - final render execution
+    - final QC authority
+# =====================================================================
+# 4. STORY COMPILER INPUT
+# =====================================================================
+story_input:
+  consumes:
+    - StoryCompilerInputPackage
+    - CreatorModel
+    - StoryContract
+    - AudienceModel
+    - ProductMarketModel
+    - WorldSnapshot
+    - NarrativeOpportunity set
+    - applicable WorldRules
+    - persistent entity state
+  optional:
+    - creator-provided story seed
+    - required scene
+    - required ending event
+    - required character pairing
+    - existing franchise continuity constraints
+# =====================================================================
+# 5. STORY PLAN
+# =====================================================================
+story_plan:
+  StoryPlan:
+    fields:
+      story_plan_id:
+      project_id:
+      version:
+      starting_WorldCoordinate:
+      starting_WorldSnapshot_ref:
+      protagonist_refs:
+      major_character_refs:
+      premise_activation:
+      inciting_change:
+      central_goal:
+      central_conflict:
+      thematic_question:
+      emotional_throughline:
+      audience_promise:
+      NarrativeArcPlan_ref:
+      sequence_refs:
+      scene_refs:
+      ending_plan:
+      reveal_plan:
+      audience_trajectory_ref:
+      selected_branch_ref:
+      rejected_branch_refs:
+      expected_final_World_delta:
+      StoryContract_ref:
+      CreatorModel_ref:
+      source_opportunity_refs:
+      confidence:
+      rationale_ref:
+      digest:
+# =====================================================================
+# 6. NARRATIVE ARC PLAN
+# =====================================================================
+narrative_arc:
+  NarrativeArcPlan:
+    fields:
+      arc_id:
+      phases:
+        type: list[ArcPhase]
+      pressure_curve:
+      information_curve:
+      emotional_curve:
+      relationship_curve:
+      mystery_curve:
+      spectacle_curve:
+      required_turns:
+      optional_turns:
+  ArcPhase:
+    fields:
+      phase_id:
+      function:
+      approximate_runtime_fraction:
+      entry_state:
+      exit_state:
+      required_change:
+# =====================================================================
+# 7. STORY BEAT
+# =====================================================================
+story_beat:
+  StoryBeat:
+    fields:
+      beat_id:
+      order:
+      beat_type:
+        enum:
+          - SETUP
+          - DISTURBANCE
+          - DECISION
+          - ESCALATION
+          - REVERSAL
+          - DISCOVERY
+          - REVEAL
+          - SACRIFICE
+          - CONFRONTATION
+          - CLIMAX
+          - RESOLUTION
+          - AFTERMATH
+          - OTHER
+      acting_entity_refs:
+      active_intentions:
+      blocking_conditions:
+      relevant_beliefs:
+      relevant_knowledge:
+      relationship_pressure:
+      physical_constraints:
+      affordances:
+      source_opportunity_refs:
+      proposed_event_ref:
+        nullable: true
+      expected_state_change:
+      audience_effect:
+      thematic_function:
+      confidence:
+# =====================================================================
+# 8. NARRATIVE OPPORTUNITY CONSUMPTION
+# =====================================================================
+narrative_opportunity_use:
+  inputs:
+    - active desires
+    - blocked goals
+    - unresolved conflicts
+    - knowledge asymmetries
+    - false beliefs
+    - physical constraints
+    - promises
+    - debts
+    - secrets
+    - props
+    - locations
+    - affordances
+    - causal history
+  query_examples:
+    - "Which active desire is currently blocked?"
+    - "Which character has information that could satisfy that desire?"
+    - "What relationship makes obtaining that information emotionally costly?"
+    - "Which false belief is preventing the obvious solution?"
+    - "What physical constraint makes the emotionally easiest choice impossible?"
+    - "Which unresolved promise can intersect the current goal?"
+    - "Which available affordance would create the largest downstream relationship change?"
+    - "Which event reveals information to the audience but not Aria?"
+    - "Which minor prop connects the most unresolved narrative threads?"
+    - "What unresolved configuration has the highest dramatic potential right now?"
+  result:
+    ranked_NarrativeOpportunities
+# =====================================================================
+# 9. STORY CANDIDATE
+# =====================================================================
+story_candidate:
+  StoryCandidate:
+    fields:
+      candidate_id:
+      source_opportunity_refs:
+      proposed_event_sequence:
+      expected_World_state_trajectory:
+      expected_character_trajectory:
+      expected_relationship_trajectory:
+      expected_audience_trajectory:
+      ending_alignment:
+      theme_alignment:
+      causal_validity:
+      character_validity:
+      audience_effect:
+      product_strength:
+      runtime_fit:
+      risk:
+      uncertainty:
+      reasoning_cost:
+      scorecard:
+      confidence:
+# =====================================================================
+# 10. BRANCH PORTFOLIO
+# =====================================================================
+story_branching:
+  StoryBranch:
+    fields:
+      branch_id:
+      parent_coordinate:
+      proposed_event_refs:
+      simulated_state_refs:
+      outcome_summary:
+      scorecard:
+      fatal_violations:
+      uncertainty:
+      terminal_or_partial:
+  BranchPortfolio:
+    fields:
+      portfolio_id:
+      branches:
+      reasoning_budget:
+      branch_generation_policy:
+      pruning_policy:
+      selected_branch_ref:
+        nullable: true
+  use:
+    - major story turns
+    - endings
+    - reveal strategy
+    - irreversible character decisions
+  bounded:
+    true
+# =====================================================================
+# 11. EVENT PROPOSAL FLOW
+# =====================================================================
+event_proposal_flow:
+  flow: |
+    WORLD STATE
+         ↓
+    INTENTIONS
+         ↓
+    AFFORDANCES
+         ↓
+    NARRATIVE OPPORTUNITIES
+         ↓
+    narrative cognition
+         ↓
+    EVENT PROPOSALS
+         ↓
+    PRECONDITION CHECK
+         ↓
+    WORLD RULES
+       ┌──┴───┐
+      FAIL   PASS
+              ↓
+          SIMULATE
+              ↓
+     narrative/character/
+      epistemic/audience QC
+              ↓
+        SELECT EVENT
+              ↓
+         WORLD COMMIT
+              ↓
+           REDUCER
+              ↓
+        NEW WORLD STATE
+# =====================================================================
+# 12. STORY SELECTION DECISION
+# =====================================================================
+story_selection:
+  StorySelectionDecision:
+    object_class: DECISION
+    fields:
+      selected_story_candidate_ref:
+      alternatives_considered:
+      decision_frame_ref:
+      branch_portfolio_ref:
+      creator_alignment:
+      audience_alignment:
+      causal_alignment:
+      ending_alignment:
+      uncertainty:
+      confidence:
+      rationale:
+      cognitive_trace_refs:
+  authority:
+    delegated_by:
+      CreatorModel_and_StoryContract
+# =====================================================================
+# 13. WORLD EVENT COMMIT INTEGRATION
+# =====================================================================
+world_commit:
+  before_commit:
+    required:
+      - preconditions_pass
+      - WorldRules_pass
+      - character motivation valid
+      - knowledge state valid
+      - selected story decision exists
+  commit:
+    owner: WorldModel
+  result:
+    - canonical WorldEvent
+    - new WorldSnapshot
+    - new WorldCoordinate
+  compiler:
+    consumes_committed_result: true
+  rule: >
+    Story compiler never treats an uncommitted hypothetical event as canonical reality.
+# =====================================================================
+# 14. SEQUENCE SPEC
+# =====================================================================
+sequence_spec:
+  SequenceSpec:
+    object_class: SPECIFICATION
+    fields:
+      sequence_id:
+      order:
+      story_function:
+      thematic_function:
+      start_WorldCoordinate:
+      end_WorldCoordinate:
+      scene_refs:
+      runtime_target:
+      pacing_profile:
+      pressure_change:
+      audience_information_change:
+      emotional_change:
+      relationship_change:
+      entry_conditions:
+      exit_conditions:
+      QC_contract_ref:
+      digest:
+# =====================================================================
+# 15. SCENE SPEC
+# =====================================================================
+scene_spec:
+  SceneSpec:
+    object_class: SPECIFICATION
+    fields:
+      scene_id:
+      sequence_ref:
+      order:
+      WorldCoordinate_start:
+      WorldCoordinate_end:
+      location_ref:
+      character_refs:
+      prop_refs:
+      scene_objective:
+      protagonist_goal:
+      opposing_force:
+      conflict:
+      turning_point:
+      outcome:
+      active_intentions:
+      knowledge_state_refs:
+      belief_state_refs:
+      relationship_state_refs:
+      physical_state_refs:
+      audience_information_start:
+      audience_information_end:
+      emotional_state_start:
+      emotional_state_end:
+      thematic_function:
+      narrative_function:
+      product_function:
+        nullable: true
+      entry_state:
+      exit_state:
+      scene_state_delta_ref:
+      dialogue_intent:
+      silence_intent:
+      sound_intent:
+      music_intent:
+      shot_refs:
+      runtime_target:
+      source_story_beat_refs:
+      World_event_refs:
+      QC_contract_ref:
+      provenance:
+      digest:
+# =====================================================================
+# 16. SCENE STATE DELTA
+# =====================================================================
+scene_state_delta:
+  SceneStateDelta:
+    fields:
+      scene_ref:
+      World_state_changes:
+      relationship_changes:
+      knowledge_changes:
+      belief_changes:
+      intention_changes:
+      psychological_changes:
+      audience_knowledge_changes:
+      unresolved_questions_added:
+      unresolved_questions_resolved:
+      promise_changes:
+      prop_state_changes:
+  rule: >
+    This object summarizes expected scene consequence; canonical World changes
+    still originate through World events/reducer.
+# =====================================================================
+# 17. AUDIENCE INFORMATION STATE
+# =====================================================================
+audience_information:
+  AudienceInformationState:
+    fields:
+      coordinate_ref:
+      known_facts:
+      suspected_facts:
+      false_inferences:
+      open_questions:
+      confidence_distribution:
+      attention_targets:
+      memory_targets:
+  distinction:
+    separate_from_character_knowledge: true
+  importance:
+    - mystery
+    - surprise
+    - dramatic irony
+    - reveal timing
+    - rewatch value
+# =====================================================================
+# 18. SHOT PURPOSE
+# =====================================================================
+shot_purpose:
+  ShotPurpose:
+    fields:
+      primary_function:
+        enum:
+          - ESTABLISH
+          - REVEAL_INFORMATION
+          - CHARACTER_PERFORMANCE
+          - RELATIONSHIP
+          - ACTION
+          - REACTION
+          - ORIENTATION
+          - TRANSITION
+          - SUSPENSE
+          - SPECTACLE
+          - DETAIL
+          - CALLBACK
+          - PAYOFF
+          - MISDIRECTION
+          - ATMOSPHERE
+          - OTHER
+      information_goal:
+      emotional_goal:
+      character_goal:
+      cinematic_goal:
+      audience_attention_target:
+      must_be_understood:
+      may_remain_ambiguous:
+# =====================================================================
+# 19. SHOT SPEC
+# =====================================================================
+shot_spec:
+  ShotSpec:
+    object_class: SPECIFICATION
+    fields:
+      shot_id:
+      scene_ref:
+      shot_number:
+      duration_target:
+      WorldCoordinate:
+      WorldSnapshot_ref:
+      purpose:
+        type: ShotPurpose
+      visible_entities:
+      audible_entities:
+      offscreen_entities:
+      expected_visible_state:
+        type: WorldDerivedVisibleState
+      expected_audible_state:
+        type: WorldDerivedAudibleState
+      character_performance:
+        type: list[CharacterPerformanceIntent]
+      dialogue:
+        type: list[DialogueBeat]
+      camera:
+        type: CameraIntent
+      composition:
+        type: CompositionIntent
+      blocking:
+        type: BlockingIntent
+      motion:
+        type: MotionIntent
+      lighting:
+        type: LightingIntent
+      sound:
+        type: SoundIntent
+      music:
+        type: MusicIntent
+      edit:
+        type: EditIntent
+      information:
+        audience_knows_before:
+        audience_should_know_after:
+        characters_know_before:
+        characters_know_after:
+      continuity:
+        source_refs:
+        prior_shot_refs:
+        next_shot_refs:
+        continuity_constraints:
+      production_hints:
+        complexity_features:
+        critical_invariants:
+        optional_interpretation:
+      source_scene_ref:
+      source_World_event_refs:
+      StoryContract_ref:
+      CreatorModel_ref:
+      QC_contract_ref:
+      digest:
+# =====================================================================
+# 20. WORLD-DERIVED VISIBLE STATE
+# =====================================================================
+expected_visible_state:
+  WorldDerivedVisibleState:
+    fields:
+      coordinate_ref:
+      entity_states:
+      prop_states:
+      location_state:
+      environmental_state:
+      lighting_state:
+      damage_state:
+      wardrobe_state:
+      spatial_relations:
+      handedness:
+      text_or_symbol_state:
+      effect_state:
+      hidden_or_occluded_state:
+      source_fact_refs:
+      source_snapshot_ref:
+  generated_by:
+    WorldProjectionCompiler
+  rebuildable: true
+# =====================================================================
+# 21. WORLD-DERIVED AUDIBLE STATE
+# =====================================================================
+expected_audible_state:
+  WorldDerivedAudibleState:
+    fields:
+      coordinate_ref:
+      active_sound_sources:
+      environmental_ambience:
+      surface_materials:
+      mechanical_sources:
+      atmospheric_conditions:
+      spatial_geometry_hints:
+      character_action_sounds:
+      prop_interaction_sounds:
+      silence_conditions:
+      masking_conditions:
+      source_fact_refs:
+      source_snapshot_ref:
+  derived_sound_designer_inputs:
+    - footstep_character
+    - reverberation
+    - mechanical_resonance
+    - ambient_noise
+# =====================================================================
+# 22. CHARACTER PERFORMANCE INTENT
+# =====================================================================
+character_performance:
+  CharacterPerformanceIntent:
+    fields:
+      character_ref:
+      external_action:
+      internal_objective:
+      emotional_state:
+      subtext:
+      relationship_target:
+      physical_condition:
+      restraint_level:
+      energy:
+      gaze_target:
+      posture:
+      micro_expression:
+        nullable: true
+      reaction_trigger:
+        nullable: true
+      forbidden_performance:
+        nullable: true
+      source_psychological_state_refs:
+      source_relationship_refs:
+# =====================================================================
+# 23. DIALOGUE BEAT
+# =====================================================================
+dialogue_beat:
+  DialogueBeat:
+    fields:
+      speaker_ref:
+      listener_refs:
+      text:
+        nullable: true
+      semantic_intent:
+      subtext:
+      information_disclosed:
+      information_concealed:
+      lie_or_truth:
+      emotional_action:
+      start_offset:
+        nullable: true
+      duration_target:
+        nullable: true
+      interruptibility:
+      overlap_allowed:
+      silence_after:
+        nullable: true
+# =====================================================================
+# 24. CAMERA INTENT
+# =====================================================================
+camera_intent:
+  CameraIntent:
+    fields:
+      framing:
+      shot_size:
+      angle:
+      lens_character:
+      camera_height:
+      movement:
+      movement_motivation:
+      target:
+      reveal_behavior:
+      stability:
+      subject_priority:
+      exactness:
+        enum:
+          - FLEXIBLE
+          - GUIDED
+          - STRONG
+          - EXACT
+      forbidden:
+        nullable: true
+# =====================================================================
+# 25. COMPOSITION INTENT
+# =====================================================================
+composition_intent:
+  CompositionIntent:
+    fields:
+      visual_hierarchy:
+      subject_positions:
+      negative_space:
+      depth_layers:
+      eyeline:
+      balance:
+      scale_relationship:
+      important_prop_visibility:
+      audience_attention_path:
+# =====================================================================
+# 26. BLOCKING INTENT
+# =====================================================================
+blocking_intent:
+  BlockingIntent:
+    fields:
+      character_positions:
+      entrances:
+      exits:
+      movement_paths:
+      interaction_points:
+      prop_contacts:
+      physical_constraints:
+      spatial_relationships:
+# =====================================================================
+# 27. MOTION INTENT
+# =====================================================================
+motion_intent:
+  MotionIntent:
+    fields:
+      character_motion:
+      environment_motion:
+      prop_motion:
+      camera_motion:
+      motion_energy:
+      motion_complexity:
+      key_action_moments:
+      must_remain_readable:
+# =====================================================================
+# 28. LIGHTING INTENT
+# =====================================================================
+lighting_intent:
+  LightingIntent:
+    fields:
+      World_derived_lighting_state:
+      cinematic_emphasis:
+      contrast:
+      color_temperature:
+      source_direction:
+      practical_sources:
+      intentional_deviation:
+        nullable: true
+  rule: >
+    Cinematic lighting may stylize World lighting but cannot contradict hard
+    visible World state unless explicitly authorized.
+# =====================================================================
+# 29. SOUND INTENT
+# =====================================================================
+sound_intent:
+  SoundIntent:
+    fields:
+      World_audible_state_ref:
+      foreground_events:
+      Foley_priorities:
+      ambience_priority:
+      designed_sound:
+      spatial_emphasis:
+      silence:
+      subjective_sound:
+        nullable: true
+      transition_behavior:
+# =====================================================================
+# 30. MUSIC INTENT
+# =====================================================================
+music_intent:
+  MusicIntent:
+    fields:
+      cue_required:
+      emotional_function:
+      start_condition:
+      end_condition:
+      intensity:
+      motif_refs:
+      hit_points:
+      silence_priority:
+      diegetic:
+        nullable: true
+# =====================================================================
+# 31. EDIT INTENT
+# =====================================================================
+edit_intent:
+  EditIntent:
+    fields:
+      incoming_transition:
+      outgoing_transition:
+      cut_motivation:
+      hold_priority:
+      reaction_priority:
+      pacing_role:
+      match_requirements:
+      hard_cut_point:
+        nullable: true
+# =====================================================================
+# 32. STORY COMPILER PASSES
+# =====================================================================
+story_compiler_pipeline:
+  passes:
+    S01_ContextAssembly:
+      output:
+        - StoryDecisionContext
+    S02_NarrativeOpportunityRetrieval:
+      output:
+        - ranked opportunity set
+    S03_StoryCandidateGeneration:
+      output:
+        - StoryCandidate set
+    S04_CausalPreconditionValidation:
+      output:
+        - viable story candidates
+    S05_CharacterIntegrityValidation:
+      output:
+        - psychologically viable candidates
+    S06_EpistemicValidation:
+      output:
+        - knowledge-valid candidates
+    S07_AudienceTrajectorySimulation:
+      output:
+        - audience scorecards
+    S08_EndingAndThemeEvaluation:
+      output:
+        - ending-compatible candidates
+    S09_BranchSimulation:
+      conditional:
+        - high consequence
+        - high uncertainty
+    S10_StorySelection:
+      output:
+        - StorySelectionDecision
+    S11_WorldCommit:
+      output:
+        - committed World events
+        - new snapshots
+    S12_StoryPlanCompilation:
+      output:
+        - StoryPlan
+    S13_SequenceCompilation:
+      output:
+        - SequenceSpecs
+    S14_SceneCompilation:
+      output:
+        - SceneSpecs
+    S15_ShotPlanning:
+      output:
+        - ShotSpecs
+    S16_WorldProjection:
+      output:
+        - expected visible/audible state
+    S17_AnimaticGeneration:
+      output:
+        - AnimaticTimeline
+    S18_AnimaticQC:
+      output:
+        - QCRun
+    S19_AnimaticRepair:
+      conditional:
+        - FAIL
+        - UNCERTAIN
+    S20_AnimaticLock:
+      output:
+        - animatic.lock
+# =====================================================================
+# 33. SCENE COMPILER
+# =====================================================================
+scene_compiler:
+  inputs:
+    - StoryPlan
+    - World events
+    - AudienceInformationState
+    - CreatorModel
+  judgment_tasks:
+    - scene boundary selection
+    - conflict concentration
+    - entry/exit state
+    - dialogue necessity
+    - reveal timing
+    - emotional turn
+  hard_checks:
+    - scene changes something
+    - no impossible knowledge
+    - no causality break
+    - runtime contribution justified
+# =====================================================================
+# 34. SHOT COMPILER
+# =====================================================================
+shot_compiler:
+  inputs:
+    - SceneSpec
+    - WorldCoordinate sequence
+    - Cinematic cognition
+    - Audience information goals
+  judgment_tasks:
+    - coverage
+    - shot size
+    - camera movement
+    - blocking
+    - reaction timing
+    - visual reveal
+    - information emphasis
+    - shot duration
+  optimization:
+    goal: >
+      Convey required story/emotion with minimal unnecessary shot complexity.
+  anti_pattern:
+    - coverage_for_coverage_sake
+    - random_camera_motion
+    - generic_establishing_shot
+    - redundant_reverse_angles
+# =====================================================================
+# 35. SHOT COUNT
+# =====================================================================
+shot_count_policy:
+  derived_from:
+    - runtime
+    - scene complexity
+    - information density
+    - performance needs
+    - action readability
+    - pacing
+    - style
+  MVP_target:
+    typical:
+      - 10
+      - 15
+  not_hardcoded:
+    true
+# =====================================================================
+# 36. ANIMATIC TIMELINE
+# =====================================================================
+animatic:
+  AnimaticTimeline:
+    object_class: SPECIFICATION
+    fields:
+      animatic_id:
+      project_id:
+      version:
+      runtime:
+      frame_rate:
+      aspect_ratio:
+      shot_entries:
+        type: list[AnimaticShot]
+      dialogue_track:
+      temp_voice_track:
+      temp_music_track:
+      temp_sound_track:
+      scene_markers:
+      sequence_markers:
+      source_StoryPlan_ref:
+      source_ShotSpec_refs:
+      source_World_revision:
+      CreatorModel_ref:
+      QC_contract_ref:
+      certificate_ref:
+        nullable: true
+      digest:
+# =====================================================================
+# 37. ANIMATIC SHOT
+# =====================================================================
+animatic_shot:
+  AnimaticShot:
+    fields:
+      shot_ref:
+      timeline_in:
+      timeline_out:
+      duration:
+      board_artifact_refs:
+      temp_motion_ref:
+        nullable: true
+      temp_dialogue_ref:
+        nullable: true
+      temp_sound_ref:
+        nullable: true
+      camera_visualization:
+      blocking_visualization:
+      subtitle_or_dialogue_display:
+        nullable: true
+      transition:
+      notes:
+# =====================================================================
+# 38. ANIMATIC GENERATION STRATEGY
+# =====================================================================
+animatic_generation:
+  priority:
+    - semantic clarity
+    - timing
+    - performance intention
+    - edit rhythm
+  not_priority:
+    - final visual fidelity
+  possible_assets:
+    - storyboard images
+    - generated keyframes
+    - crude motion
+    - temp voices
+    - temp SFX
+    - temp score
+    - text overlays
+  production_cost:
+    intentionally_low_relative_to_final: true
+  deterministic_timeline:
+    preferred: true
+# =====================================================================
+# 39. ANIMATIC QC
+# =====================================================================
+animatic_QC:
+  delegated_to:
+    07_quantum_autonomous_qc_build_spec.yaml
+  required_evaluations:
+    - story comprehension
+    - scene function
+    - causal integrity
+    - character motivation
+    - information flow
+    - reveal timing
+    - audience trajectory
+    - emotional progression
+    - pacing
+    - shot clarity
+    - camera motivation
+    - dialogue necessity
+    - product promise
+    - ending setup
+  viewer_modes:
+    - ColdViewer
+    - InformedCritic
+  RewatchCritic:
+    required_when:
+      - twist
+      - reveal
+      - mindfuck
+      - reframe
+  hard_pass_before_final_production:
+    true
+# =====================================================================
+# 40. ANIMATIC REPAIR
+# =====================================================================
+animatic_repair:
+  failure_classes:
+    shot_local:
+      examples:
+        - confusing framing
+        - bad duration
+        - weak reaction
+      repair_scope:
+        - ShotSpec
+        - AnimaticShot
+    scene_local:
+      examples:
+        - scene objective unclear
+        - weak turn
+        - dialogue overload
+      repair_scope:
+        - SceneSpec
+        - contained ShotSpecs
+    sequence:
+      examples:
+        - escalation weak
+        - reveal too early
+      repair_scope:
+        - multiple scenes
+    story:
+      examples:
+        - causal failure
+        - ending cheat
+        - protagonist motivation false
+      repair_scope:
+        - StoryPlan
+        - affected World event proposals
+  rule: >
+    Repair scope is the smallest level capable of correcting the root cause.
+# =====================================================================
+# 41. ANIMATIC LOCK
+# =====================================================================
+animatic_lock:
+  artifact:
+    AnimaticLock
+  prerequisites:
+    - AnimaticTimeline exists
+    - all required story/scene/shot QC pass
+    - animatic QC PASS
+    - source refs resolved
+    - no critical unresolved ambiguity
+  locks:
+    - story event sequence
+    - scene order
+    - primary edit structure
+    - shot purposes
+    - shot order
+    - approximate timing
+    - essential dialogue
+    - required visible/audible state
+  may_remain_flexible:
+    - exact final performance nuance
+    - minor camera variation
+    - final lighting treatment
+    - incidental sound detail
+  downstream:
+    enables:
+      - ProductionIntent finalization
+      - production strategy planning
+      - final asset/render execution
+# =====================================================================
+# 42. LOCK REOPEN
+# =====================================================================
+lock_reopen:
+  triggers:
+    - creator revision
+    - episode-level QC failure
+    - World canonical change
+    - proven story contradiction
+    - production impossibility that cannot preserve semantics
+  algorithm:
+    - identify affected story/scene/shot scope
+    - reopen minimum scope
+    - supersede affected IR versions
+    - re-run required compiler passes
+    - re-QC
+    - issue new lock
+  accepted_final_media:
+    impact:
+      computed_via_spec_09: true
+# =====================================================================
+# 43. CAUSAL VALIDATION
+# =====================================================================
+causal_validation:
+  checks:
+    - event preconditions
+    - required enabling causes
+    - preventing conditions
+    - temporal order
+    - physical possibility
+    - character motivation
+    - available knowledge
+    - available affordances
+  typed_relations:
+    examples:
+      - CAUSES
+      - ENABLES
+      - MOTIVATES
+      - PREVENTS
+      - NECESSARY_FOR
+      - CONTRIBUTES_TO
+      - TRIGGERS
+      - REVEALS
+      - CONCEALS
+  failure:
+    code: NARRATIVE.CAUSALITY_FAILURE
+# =====================================================================
+# 44. CHARACTER VALIDATION
+# =====================================================================
+character_validation:
+  inputs:
+    - psychological state
+    - desires
+    - beliefs
+    - knowledge
+    - relationship state
+    - physical condition
+    - history
+  question:
+    >
+    Given what this character currently wants, believes, knows and feels, is this
+    action plausible under current pressure?
+  surprise:
+    allowed_when:
+      - latent trait
+      - extreme pressure
+      - new information
+      - relationship trigger
+      - deliberate transformation
+  inconsistency:
+    not_allowed_without_causal_support: true
+# =====================================================================
+# 45. EPISTEMIC VALIDATION
+# =====================================================================
+epistemic_validation:
+  must_prove:
+    event_to_knowledge_flow: |
+      event
+        ↓
+      perceptual access
+        ↓
+      observation
+        ↓
+      attention
+        ↓
+      interpretation
+        ↓
+      knowledge / belief update
+  invalid:
+    - character acts on inaccessible information
+    - audience sees hidden information unintentionally
+    - reveal depends on impossible ignorance
+  violation:
+    WORLD.IMPOSSIBLE_CHARACTER_KNOWLEDGE
+# =====================================================================
+# 46. AUDIENCE TRAJECTORY
+# =====================================================================
+audience_trajectory:
+  AudienceTrajectory:
+    fields:
+      timeline_points:
+        type: list[AudienceTrajectoryPoint]
+  AudienceTrajectoryPoint:
+    fields:
+      story_coordinate:
+      comprehension:
+      curiosity:
+      suspicion:
+      tension:
+      emotional_state:
+      open_questions:
+      known_facts:
+      false_beliefs:
+      expected_next_event:
+      memory_targets:
+  use:
+    - reveal timing
+    - pacing
+    - ColdViewer QC
+    - ending fairness
+# =====================================================================
+# 47. RUNTIME BUDGET
+# =====================================================================
+runtime_budget:
+  StoryRuntimeBudget:
+    fields:
+      total_seconds:
+      opening_seconds:
+      setup_seconds:
+      escalation_seconds:
+      climax_seconds:
+      ending_seconds:
+      dialogue_budget:
+      silence_budget:
+      exposition_budget:
+  compiler:
+    may_rebalance: true
+  hard_rule: >
+    Story complexity exceeding runtime capacity requires simplification rather
+    than compressing everything into unintelligibility.
+# =====================================================================
+# 48. NARRATIVE DENSITY
+# =====================================================================
+narrative_density:
+  dimensions:
+    - major_characters
+    - causal_threads
+    - mysteries
+    - locations
+    - timeline_jumps
+    - relationship_turns
+    - concepts_to_explain
+  MVP:
+    target:
+      major_characters: 1_to_2
+      primary_locations: 1_to_2
+      major_reveal_threads: 1
+      main_causal_thread: 1
+  future:
+    roadmap: 90
+# =====================================================================
+# 49. ANIMATIC AS CHEAP SIMULATION
+# =====================================================================
+animatic_as_simulation:
+  purpose:
+    - test story
+    - test runtime
+    - test audience understanding
+    - test edit
+    - test dialogue
+    - test sound rhythm
+    - test reveal
+  relation_to_branch_simulation:
+    >
+    Narrative branch simulation predicts possibilities symbolically; animatic
+    simulation tests the selected cinematic expression temporally.
+# =====================================================================
+# 50. PROVENANCE
+# =====================================================================
+provenance:
+  required_paths:
+    StoryPlan:
+      - CreatorModel
+      - StoryContract
+      - source NarrativeOpportunities
+      - selected WorldSnapshot
+      - StorySelectionDecision
+    SceneSpec:
+      - StoryPlan
+      - WorldEvents
+      - WorldCoordinates
+    ShotSpec:
+      - SceneSpec
+      - WorldSnapshot
+      - Cinematic decision
+      - expected state projections
+    Animatic:
+      - ShotSpecs
+      - temp artifacts
+      - timeline decisions
+  emits_to:
+    09_quantum_project_provenance_dependency_graph_build_spec.yaml
+# =====================================================================
+# 51. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  story:
+    - discover_story_opportunities
+    - generate_story_candidates
+    - simulate_story_branches
+    - select_story
+    - compile_story_plan
+  World:
+    - validate_event_preconditions
+    - simulate_event
+    - commit_selected_event
+    - derive_World_package
+  sequence:
+    - compile_sequences
+  scene:
+    - compile_scene
+    - validate_scene
+  shot:
+    - compile_shots
+    - compile_shot
+    - derive_expected_visible_state
+    - derive_expected_audible_state
+  animatic:
+    - generate_animatic
+    - assemble_animatic_timeline
+    - submit_animatic_QC
+    - repair_animatic
+    - lock_animatic
+  lifecycle:
+    - reopen_story_scope
+    - supersede_story_IR
+# =====================================================================
+# 52. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/story_animatic/
+  modules:
+    story:
+      - contracts
+      - opportunity_retrieval
+      - candidate_generation
+      - branching
+      - selection
+      - runtime_budget
+    causal:
+      - validation
+      - preconditions
+    character:
+      - integrity
+    epistemic:
+      - information_flow
+      - audience_state
+    world:
+      - commit_adapter
+      - projection
+      - visible_state
+      - audible_state
+    sequence:
+      - compiler
+    scene:
+      - contracts
+      - compiler
+      - state_delta
+    shot:
+      - contracts
+      - purpose
+      - compiler
+      - camera
+      - blocking
+      - performance
+      - sound
+      - edit
+    animatic:
+      - contracts
+      - storyboard
+      - temp_audio
+      - timeline
+      - generator
+      - repair
+      - lock
+    QC:
+      - submission
+      - repair_mapping
+    provenance:
+      - emitter
+    integrations:
+      world_model:
+      polycognitive_runtime:
+      creative_intelligence:
+      audience_product:
+      autonomous_qc:
+      production_model:
+      canonical_IR:
+      provenance_graph:
+# =====================================================================
+# 53. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  - StoryPlan
+  - NarrativeArcPlan
+  - ArcPhase
+  - StoryBeat
+  - StoryCandidate
+  - StoryBranch
+  - StorySelectionDecision
+  - SequenceSpec
+  - SceneSpec
+  - SceneStateDelta
+  - AudienceInformationState
+  - AudienceTrajectory
+  - AudienceTrajectoryPoint
+  - ShotPurpose
+  - ShotSpec
+  - WorldDerivedVisibleState
+  - WorldDerivedAudibleState
+  - CharacterPerformanceIntent
+  - DialogueBeat
+  - CameraIntent
+  - CompositionIntent
+  - BlockingIntent
+  - MotionIntent
+  - LightingIntent
+  - SoundIntent
+  - MusicIntent
+  - EditIntent
+  - AnimaticTimeline
+  - AnimaticShot
+  - StoryRuntimeBudget
+  - AnimaticLock
+# =====================================================================
+# 54. MVP REQUIRED SUBSET
+# =====================================================================
+mvp_required_subset:
+  story:
+    runtime: 60_seconds
+    major_characters: 1_to_2
+    major_locations: 1_to_2
+    major_NarrativeOpportunity: 1
+    main_reveal: 1
+    major_relationship_change: 1
+    major_physical_constraint: 1
+    major_knowledge_asymmetry: 1
+  shot:
+    target_count: 10_to_15
+  required_state:
+    - physical state
+    - psychological state
+    - desire/intention
+    - belief
+    - knowledge
+    - relationship
+    - prop state
+    - location
+    - audience information state
+  required_QC:
+    - causal
+    - character
+    - epistemic
+    - ColdViewer
+    - creator fidelity
+    - pacing
+    - animatic
+  required_artifacts:
+    - StoryPlan
+    - SceneSpecs
+    - ShotSpecs
+    - AnimaticTimeline
+    - animatic.lock
+  deferred:
+    - full season arc planning
+    - large ensemble plot
+    - multiple parallel timelines
+    - complex flashback topology
+    - hundreds_of_character opportunity search
+    - learned story policy
+# =====================================================================
+# 55. TESTS
+# =====================================================================
+tests:
+  unit:
+    - StoryCandidate_validation
+    - WorldCoordinate_required
+    - SceneSpec_state_delta
+    - ShotPurpose_required
+    - audience_information_update
+    - expected_visible_state_projection
+    - expected_audible_state_projection
+  property:
+    - selected_event_never_commits_without_World_validation
+    - character_never_uses_unknown_information
+    - ShotSpec_never_changes_World_truth
+    - every_scene_changes_state_or_has_explicit_nonchange_function
+    - every_shot_has_purpose
+    - animatic_never_locks_without_QC_PASS
+    - intentional_ambiguity_not_forced_clear
+    - reveal_never_requires_impossible_character_ignorance
+  negative:
+    - arbitrary_spectacle_without_causal_support_rejected
+    - plot_forces_character_identity_violation_rejected
+    - hidden_twist_cheat_rejected
+    - shot_without_WorldCoordinate_rejected
+    - final_production_without_animatic_lock_rejected
+    - camera_choice_mutates_World_state_rejected
+  integration:
+    - StoryCompilerInput_to_NarrativeOpportunity
+    - NarrativeOpportunity_to_StoryCandidate
+    - StorySelection_to_WorldEvent
+    - WorldEvent_to_SceneSpec
+    - SceneSpec_to_ShotSpec
+    - ShotSpec_to_Animatic
+    - Animatic_to_AutonomousQC
+    - AnimaticLock_to_ProductionIntent
+  end_to_end:
+    sixty_second_story:
+      requirements:
+        - 10_to_15_shots
+        - one knowledge asymmetry
+        - one physical constraint
+        - one emotional turn
+        - one reveal
+      success:
+        - story causally valid
+        - ColdViewer comprehends required facts
+        - reveal remains surprising
+        - animatic PASS
+        - no human clarification required
+# =====================================================================
+# 56. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: SA-G01
+    check: story generation consumes persistent World state
+  - id: SA-G02
+    check: NarrativeOpportunity derivation supported
+  - id: SA-G03
+    check: event proposals validated before World commit
+  - id: SA-G04
+    check: psychological causality checked
+  - id: SA-G05
+    check: epistemic information flow checked
+  - id: SA-G06
+    check: AudienceInformationState separate from character knowledge
+  - id: SA-G07
+    check: StoryPlan retains source opportunity and decision lineage
+  - id: SA-G08
+    check: SceneSpec declares entry/exit state and function
+  - id: SA-G09
+    check: every ShotSpec has WorldCoordinate
+  - id: SA-G10
+    check: expected visible state derived from World
+  - id: SA-G11
+    check: expected audible state derived from World
+  - id: SA-G12
+    check: every shot has explicit purpose
+  - id: SA-G13
+    check: animatic includes timing and audio/performance skeleton
+  - id: SA-G14
+    check: animatic receives hierarchical QC
+  - id: SA-G15
+    check: final production blocked without animatic.lock
+  - id: SA-G16
+    check: animatic repair supports minimum scope invalidation
+  - id: SA-G17
+    check: selected story explainable
+  - id: SA-G18
+    check: 60-second MVP can compile end-to-end autonomously
+# =====================================================================
+# 57. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  narrative:
+    - NarrativeOpportunity consumption
+    - event proposal
+    - branch simulation
+    - story selection
+    - World commit
+    - StoryPlan
+  structure:
+    - SequenceSpec
+    - SceneSpec
+    - SceneStateDelta
+    - runtime budgeting
+  epistemic:
+    - character knowledge validation
+    - audience information trajectory
+    - reveal planning
+  cinematic:
+    - ShotPurpose
+    - ShotSpec
+    - WorldCoordinate
+    - camera
+    - blocking
+    - performance
+    - sound
+    - edit
+  World projection:
+    - expected visible state
+    - expected audible state
+  animatic:
+    - storyboard/keyframes
+    - temporary timing
+    - temp dialogue
+    - temp sound/music
+    - deterministic timeline
+    - QC
+    - repair
+    - animatic.lock
+  autonomy:
+    - story can emerge from characters/world without creator-written screenplay
+    - compiler can select story
+    - compiler can generate animatic
+    - QC can force targeted repair
+    - no human review required for ordinary MVP flow
+  release:
+    requirement: SA-G01_through_SA-G18_pass
+# =====================================================================
+# 58. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: SA-OD-01
+    decision: exact StoryCandidate scoring function
+    status: CALIBRATION_REQUIRED
+  - id: SA-OD-02
+    decision: branch count by reasoning tier
+    status: BENCHMARK_REQUIRED
+  - id: SA-OD-03
+    decision: WorldEvent commitment granularity during story compilation
+    status: OPEN
+  - id: SA-OD-04
+    decision: animatic visual representation format
+    status: OPEN
+    options:
+      - static_storyboards
+      - generated_keyframes
+      - limited_motion_video
+      - hybrid
+  - id: SA-OD-05
+    decision: temporary voice generation strategy
+    status: SELF_MODEL_DRIVEN
+  - id: SA-OD-06
+    decision: audience trajectory numeric scales
+    status: CALIBRATION_REQUIRED
+  - id: SA-OD-07
+    decision: shot duration policy
+    status: LEARNABLE_LATER
+# =====================================================================
+# 59. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: narrative cognition invents disconnected events
+    control:
+      - NarrativeOpportunity
+      - World preconditions
+      - causal validation
+  - risk: character becomes plot puppet
+    control:
+      - psychological state
+      - motivation validation
+  - risk: twist cheats
+    control:
+      - epistemic flow
+      - RewatchCritic
+      - audience state
+  - risk: story too dense for runtime
+    control:
+      - StoryRuntimeBudget
+      - density checks
+  - risk: animatic treated as static storyboard
+    control:
+      - timing
+      - temp dialogue
+      - sound/music
+      - camera/motion
+  - risk: shot planning ignores World continuity
+    control:
+      - WorldCoordinate
+      - expected state projection
+  - risk: final production starts before story works
+    control:
+      - animatic lock gate
+  - risk: cinematic choices mutate canon
+    control:
+      - World/Cinematic authority separation
+  - risk: excessive branching wastes inference
+    control:
+      - reasoning budget
+      - bounded BranchPortfolio
+  - risk: local shot polish hides weak story
+    control:
+      - hierarchical story/scene/animatic QC
+  - risk: story generation ignores creator ending
+    control:
+      - EndingIntent
+      - StoryContract
+      - creator fidelity QC
+# =====================================================================
+# 60. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    Story is selected from the possibilities latent in current reality.
+  law_02: >
+    NarrativeOpportunity tells Quantum where reality is dramatically loaded.
+  law_03: >
+    Event proposals remain hypothetical until World Model commits them.
+  law_04: >
+    Physical causality and psychological causality are equally important.
+  law_05: >
+    Character action must be consistent with desire, belief, knowledge,
+    relationship and pressure.
+  law_06: >
+    Audience knowledge is a separate modeled state.
+  law_07: >
+    Surprise is engineered through information flow, not cheating.
+  law_08: >
+    A StoryPlan explains what happens and why.
+  law_09: >
+    A SceneSpec explains what changes.
+  law_10: >
+    A ShotSpec explains what the audience should see, hear, understand and feel.
+  law_11: >
+    Every shot exists at a precise WorldCoordinate.
+  law_12: >
+    Expected visible and audible state are compiled from World reality before rendering.
+  law_13: >
+    Cinematic expression observes reality; it does not own reality.
+  law_14: >
+    Animatic is a timed audiovisual simulation, not merely a storyboard.
+  law_15: >
+    Story, pacing and edit defects should be repaired before expensive final production.
+  law_16: >
+    Final production begins from animatic.lock.
+  law_17: >
+    Local story/shot defects should produce local revisions whenever causally possible.
+  law_18: >
+    The selected story must be explainable through World state, NarrativeOpportunity,
+    character logic, CreatorModel, AudienceModel and branch evaluation.
+  law_19: >
+    The richer the persistent universe becomes, the more story should be
+    discoverable from accumulated causal state.
+  law_20: >
+    The end state is a system that can inspect a living fictional universe,
+    discover where it is dramatically charged, choose what should happen next,
+    and compile that reality into a production-ready cinematic plan.
+
+Turn 2 closes the central creation pathway:
+
+creative.yaml
+     ↓
+11 Project Compiler
+     ↓
+quantum.studio.yaml
+     ↓
+CreatorModel + AudienceModel + ProductModel
++ CharacterSeeds + WorldGenesisPlan
++ StoryContract + QualitySemantics
+     ↓
+World genesis
+     ↓
+persistent reality
+     ↓
+NarrativeOpportunity
+     ↓
+12 Story / Animatic Compiler
+     ↓
+StoryPlan
+     ↓
+SequenceSpec
+     ↓
+SceneSpec
+     ↓
+ShotSpec + WorldCoordinate
+     ↓
+expected visible/audible state
+     ↓
+AnimaticTimeline
+     ↓
+Autonomous QC
+     ↓
+animatic.lock
+     ↓
+06 ProductionModel
+
+The distinction between 11 and 12 is intentionally sharp:
+
+11:
+"What project did the creator ask Quantum to make?"
+12:
+"Given that project and this persistent reality,
+what actually happens—and how should the audience experience it?"
+
+And 12 is where the secret-sauce loop finally becomes mechanically explicit:
+
+persistent World
+      ↓
+"What unresolved configuration has the
+highest dramatic potential right now?"
+      ↓
+NarrativeOpportunity
+      ↓
+event proposals
+      ↓
+causal + psychological + epistemic validation
+      ↓
+simulation
+      ↓
+selection
+      ↓
+World commit
+      ↓
+cinematic compilation
+
+That is the point where canon becomes computation rather than documentation.

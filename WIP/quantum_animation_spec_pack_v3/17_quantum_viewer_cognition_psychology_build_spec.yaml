@@ -1,0 +1,2385 @@
+metadata:
+  spec_id: quantum.animation.viewer_cognition_psychology.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Viewer Cognition and Psychology
+  depends_on:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: AUDIENCE_DISCLOSURE_AND_INFORMATION_TRUTH_DEPENDENCY
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: VIEWER_COGNITION_EXECUTION_DEPENDENCY
+    - file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: CREATOR_INTENT_AND_EXPERIENCE_TARGET_DEPENDENCY
+    - file: 04_quantum_audience_product_intelligence_build_spec.yaml
+      relationship: AUDIENCE_MODEL_VIEWER_STATE_AND_SIMULATION_DEPENDENCY
+    - file: 07_quantum_autonomous_qc_build_spec.yaml
+      relationship: VIEWER_QUALITY_CERTIFICATION_DEPENDENCY
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: VIEWER_REASONING_LINEAGE_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: CANONICAL_OBJECT_AND_IR_DEPENDENCY
+    - file: 12_quantum_story_animatic_compiler_build_spec.yaml
+      relationship: AUDIENCE_TRAJECTORY_AND_CINEMATIC_STIMULUS_DEPENDENCY
+architectural_identity:
+  concise: >
+    Model the psychological mechanisms through which a cinematic experience
+    changes an intended viewer's attention, understanding, curiosity, attachment,
+    anticipation, inference, suspense, memory, trust and desire for continuation.
+  extended: >
+    Quantum Viewer Cognition and Psychology is the applied psychodynamic layer
+    between the AudienceModel's predicted viewer state and the cinematic
+    decisions that intentionally transform that state over time. It consumes
+    AudienceModel, ViewerArchetype, base ViewerState sequences, World audience
+    disclosure, CreatorModel, story and audiovisual evidence and derives
+    structured psychodynamic projections such as AttentionState,
+    ContinuationPressure, SuspenseState, OpenLoopPortfolio, OhShitMoment,
+    FamiliarityDifferentiationEnvelope and CognitiveAfterlife. It does not
+    replace Audience/Product Intelligence's ownership of AudienceModel or
+    ViewerState simulation and does not own fictional truth or QC acceptance.
+ownership:
+  system: VIEWER_COGNITION_PSYCHOLOGY
+  owner_questions:
+    primary:
+      - "Through which psychological mechanisms is the viewer's state changing?"
+      - "What should happen inside the viewer next?"
+    secondary:
+      - "What currently has the viewer's attention?"
+      - "What does the viewer understand?"
+      - "What does the viewer infer without being told?"
+      - "Who or what does the viewer care about?"
+      - "What is pulling cognition forward?"
+      - "What unresolved questions are active?"
+      - "What does the viewer anticipate?"
+      - "How much suspense exists and why?"
+      - "Where is the viewer participating in discovery?"
+      - "Where is familiarity providing cognitive access?"
+      - "Where is novelty generating identity?"
+      - "What would produce an OhShitMoment?"
+      - "What will the viewer remember after playback?"
+      - "What will continue occupying cognition after the screen goes dark?"
+      - "What would make the viewer want another person to experience this?"
+  owns:
+    - ViewerPsychodynamicsProjection
+    - ViewerExperienceProgram
+    - ViewerEffectContract
+    - AttentionState
+    - CuriosityState
+    - IdentificationState
+    - AnticipationState
+    - CognitiveParticipationState
+    - SignificanceInferenceState
+    - FluencyState
+    - TrustState
+    - SocialTransmissionState
+    - ContinuationPressure
+    - SuspenseState
+    - OpenLoop
+    - OpenLoopPortfolio
+    - OhShitMoment
+    - FamiliarityDifferentiationEnvelope
+    - MemoryResiduePlan
+    - CognitiveAfterlife
+    - CompulsiveContinuation
+    - psychodynamic viewer signals
+    - viewer cognition operators
+  explicitly_does_not_own:
+    AudienceModel:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    ViewerArchetype:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    base_ViewerState:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    AudienceSimulator:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    ProductMarketModel:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    audience_disclosure_truth:
+      owner: 01_quantum_animation_world_model_build_spec.yaml
+    CreatorModel:
+      owner: 03_quantum_creative_intelligence_build_spec.yaml
+    story_and_shot_semantics:
+      owner: 12_quantum_story_animatic_compiler_build_spec.yaml
+    formal_artifact_acceptance:
+      owner: 07_quantum_autonomous_qc_build_spec.yaml
+    ProofOfFilm:
+      owner: 18_quantum_marketability_proof_of_film_build_spec.yaml
+    commercial_buyer_access:
+      owner: future_spec_19_plus
+  hard_boundary: >
+    This specification may analyze, predict, recommend and compile desired
+    psychodynamic effects. It may not silently mutate CreatorModel, AudienceModel,
+    ProductMarketModel, World state, story canon, certified media or QC results.
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Make viewer psychology an explicit design surface rather than an accidental
+    by-product of story and images.
+  creative_goal: >
+    Enable Quantum to make films that do not merely display events but
+    intentionally cause understanding, curiosity, attachment, suspense,
+    realization, thought, emotion, memory and continuation desire.
+  thought_provoking_goal: >
+    Support sophisticated work that rewards active cognition, inference,
+    interpretation, recontextualization, reflection and rewatching while
+    distinguishing productive ambiguity from accidental confusion.
+  marketability_goal: >
+    Provide the psychological substrate that downstream ProofOfFilm and
+    commercial experience systems can use to make unusual creative work
+    cognitively accessible without homogenizing it.
+  fundamental_statement: >
+    The audiovisual artifact is stimulus. The intended creative effect occurs
+    inside the viewer.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  VC-001:
+    name: VIEWER_RESPONSE_IS_TEMPORAL
+    statement: >
+      Viewer response is not one score. Understanding, emotion, curiosity,
+      suspicion, attachment and anticipation change continuously during playback.
+  VC-002:
+    name: VIEWER_RESPONSE_IS_PROBABILISTIC
+    statement: >
+      Viewer cognition is predicted, not known with certainty. Every modeled
+      viewer effect exposes confidence and may differ across archetypes.
+  VC-003:
+    name: ATTENTION_PRECEDES_VALUE
+    statement: >
+      Before a viewer can value, understand, love or remember something, the
+      experience must first win enough attention against competing stimuli.
+  VC-004:
+    name: MEANINGFUL_INCOMPLETENESS_PULLS_FORWARD
+    statement: >
+      Curiosity is strongest when information is incomplete but sufficiently
+      meaningful that the viewer can represent the missing piece.
+  VC-005:
+    name: HUMAN_FAMILIARITY_ENABLES_RADICAL_ORIGINALITY
+    statement: >
+      Familiar human desires, fears, emotions, relationships, dilemmas and
+      narrative grammars can provide cognitive access to radically unfamiliar
+      worlds, concepts, aesthetics and metaphysics.
+  VC-006:
+    name: IDENTIFICATION_IS_NOT_SIMILARITY
+    statement: >
+      A viewer need not resemble a character to identify with recognizable
+      desire, vulnerability, pressure, contradiction or emotional stakes.
+  VC-007:
+    name: ANTICIPATION_CREATES_FORWARD_PULL
+    statement: >
+      Expected future emotional, causal or cognitive reward may motivate
+      continuation more strongly than reward already consumed.
+  VC-008:
+    name: VIEWER_PARTICIPATION_INCREASES_OWNERSHIP
+    statement: >
+      A realization the viewer partially infers may create more cognitive and
+      emotional ownership than an equivalent fact stated explicitly.
+  VC-009:
+    name: FLUENCY_IS_NOT_SIMPLICITY
+    statement: >
+      Fluency means the viewer has sufficient structure to build a useful mental
+      model. It does not require simple themes, simple worlds or explicit exposition.
+  VC-010:
+    name: SUSPENSE_IS_NOT_CONFUSION
+    statement: >
+      Suspense normally requires understood stakes plus incomplete causal
+      knowledge, credible possible consequences and momentum or imminence.
+  VC-011:
+    name: SURPRISE_REQUIRES_PRIOR_MODEL
+    statement: >
+      A viewer can only experience meaningful surprise when the experience first
+      establishes an expectation, hypothesis or assumed model that can change.
+  VC-012:
+    name: RECONTEXTUALIZATION_SHOULD_BE_FAIR
+    statement: >
+      A realization may radically alter meaning while remaining retrospectively
+      consistent with previously available evidence.
+  VC-013:
+    name: MULTIPLE_OSMS_ARE_VALID
+    statement: >
+      A strong work may contain multiple OhShitMoments. Count is not a quality
+      target; each moment must create meaningful new comprehension or consequence.
+  VC-014:
+    name: OPEN_LOOPS_REQUIRE_PORTFOLIO_CONTROL
+    statement: >
+      Too few open loops create weak forward pull. Too many create cognitive
+      overload. Quantum should actively manage which loops open, intensify,
+      partially pay off, close or remain unresolved.
+  VC-015:
+    name: PARTIAL_PAYOFF_EARNS_TRUST
+    statement: >
+      Some meaningful questions should receive satisfying partial or complete
+      answers so the viewer learns that attention will be rewarded.
+  VC-016:
+    name: MEMORY_IS_SELECTIVE
+    statement: >
+      The system should deliberately decide what image, line, character,
+      contradiction, emotion, question or idea should remain after details fade.
+  VC-017:
+    name: COGNITIVE_AFTERLIFE_COUNTS
+    statement: >
+      The intended experience can continue after playback through unresolved
+      interpretation, memory, conversation, anticipation and rewatch impulse.
+  VC-018:
+    name: SOCIAL_TRANSMISSION_IS_A_VIEWER_EFFECT
+    statement: >
+      Strong work can cause a viewer to want another person to undergo the same
+      experience, making internal retelling and sharing first-class outcomes.
+  VC-019:
+    name: TRUST_IS_TEMPORAL
+    statement: >
+      Viewers form an implicit model of whether the work is coherent, fair,
+      rewarding and worth continued attention. Betraying that model reduces
+      future willingness to invest cognition.
+  VC-020:
+    name: MANIPULATION_AWARENESS_DESTROYS_EFFECT
+    statement: >
+      When the viewer perceives arbitrary withholding, fake stakes or emotional
+      coercion, continuation desire may become frustration rather than engagement.
+  VC-021:
+    name: QUALITY_EQUALS_INTENT_FIDELITY
+    statement: >
+      Viewer psychology serves project intent. It may not transform deliberate
+      subtlety, limited animation, slowness, ambiguity or difficulty into generic
+      high-stimulation content merely because a broad prior predicts higher engagement.
+  VC-022:
+    name: VIEWER_MODEL_IS_NOT_HUMAN_TRUTH
+    statement: >
+      Synthetic viewer projections remain predictions requiring calibration and
+      must never be described as exact access to human consciousness.
+# =====================================================================
+# 3. RELATIONSHIP TO SPEC 04
+# =====================================================================
+audience_product_relationship:
+  spec_04_owns:
+    - who_the_audience_is
+    - intended_experience
+    - audience_segments
+    - ViewerArchetypes
+    - genre_and_media_literacy
+    - information_tolerance
+    - pacing_complexity
+    - viewing_context
+    - accessibility
+    - base_ViewerState
+    - AudienceSimulator
+    - ProductMarketModel
+  spec_17_owns:
+    - applied_psychological_mechanisms
+    - derived_psychodynamic_state
+    - open_loop_mechanics
+    - suspense_mechanics
+    - continuation_pressure
+    - OSM_semantics
+    - familiarity_differentiation_mechanics
+    - memory_residue
+    - CognitiveAfterlife
+    - ViewerEffectContracts
+    - ViewerExperiencePrograms
+  conceptual_split: |
+    04:
+      WHO is watching?
+      WHAT should they experience?
+      HOW are they likely to interpret playback?
+    17:
+      THROUGH WHAT PSYCHOLOGICAL MECHANISMS
+      should that experience be created,
+      sustained, transformed and remembered?
+  invariant: >
+    Spec 17 extends ViewerState analytically. It does not create a competing
+    authoritative AudienceModel or base viewer simulator.
+# =====================================================================
+# 4. VIEWER PSYCHODYNAMICS PROJECTION
+# =====================================================================
+viewer_psychodynamics_projection:
+  ViewerPsychodynamicsProjection:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: DERIVED_MODEL
+    fields:
+      projection_id:
+      project_id:
+      artifact_ref:
+      audience_model_ref:
+      archetype_ref:
+      viewer_state_sequence_refs:
+      creator_model_ref:
+      product_market_model_ref:
+        nullable: true
+      audience_disclosure_revision_ref:
+      story_or_timeline_ref:
+      playback_range:
+      frames:
+        type: list[ViewerPsychodynamicFrame]
+      open_loop_portfolio_ref:
+      memory_residue_projection_ref:
+      cognitive_afterlife_projection_ref:
+      overall_confidence:
+      model_versions:
+      provenance_ref:
+      digest:
+  ViewerPsychodynamicFrame:
+    fields:
+      playback_coordinate:
+      source_viewer_state_ref:
+      attention_state:
+      curiosity_state:
+      identification_state:
+      anticipation_state:
+      cognitive_participation_state:
+      significance_inference_state:
+      fluency_state:
+      suspense_state:
+      continuation_pressure:
+      trust_state:
+      memory_state:
+      social_transmission_state:
+      active_open_loop_refs:
+      active_OSM_context:
+        nullable: true
+      confusion:
+      frustration:
+      manipulation_awareness_risk:
+      uncertainty:
+      evidence_refs:
+  canonical_world_truth:
+    value: false
+  classification:
+    predicted_viewer_psychodynamics: true
+# =====================================================================
+# 5. VIEWER STIMULUS MODEL
+# =====================================================================
+viewer_stimulus:
+  definition: >
+    A ViewerStimulus is a temporally localized element of audiovisual
+    presentation capable of changing predicted viewer state.
+  ViewerStimulus:
+    fields:
+      stimulus_id:
+      artifact_ref:
+      playback_coordinate:
+      duration:
+      stimulus_types:
+        type: list[StimulusType]
+      source_semantic_refs:
+      audience_disclosure_refs:
+      intended_effect_contract_ref:
+        nullable: true
+      salience:
+      novelty:
+      information_density:
+      emotional_intensity:
+      audiovisual_prominence:
+      evidence_refs:
+  StimulusType:
+    enum:
+      - VISUAL_REVEAL
+      - CHARACTER_EXPRESSION
+      - CHARACTER_ACTION
+      - DIALOGUE_LINE
+      - SILENCE
+      - SOUND_EVENT
+      - MUSIC_CHANGE
+      - EDIT_CUT
+      - CAMERA_REVEAL
+      - SCALE_REVEAL
+      - WORLD_DISCOVERY
+      - INFORMATION_DISCLOSURE
+      - CONTRADICTION
+      - PAYOFF
+      - THREAT
+      - CONSEQUENCE
+      - QUESTION
+      - SYMBOL
+      - TITLE
+      - ABSENCE
+      - OTHER
+  invariant: >
+    ViewerStimulus describes presentation. It does not mutate World truth.
+# =====================================================================
+# 6. VIEWER STATE TRANSITION HYPOTHESIS
+# =====================================================================
+viewer_transition:
+  ViewerStateTransitionHypothesis:
+    fields:
+      transition_id:
+      archetype_ref:
+      source_state_ref:
+      stimulus_refs:
+      expected_state_deltas:
+      intended_state_deltas:
+      unintended_state_deltas:
+      causal_mechanism_refs:
+      evidence_refs:
+      confidence:
+      disagreement_refs:
+      playback_scope:
+  purpose:
+    - explain_why_viewer_state_should_change
+    - compare_intended_vs_predicted_effect
+    - support_cinematic_reasoning
+    - support_QC_root_cause
+# =====================================================================
+# 7. ATTENTION
+# =====================================================================
+attention:
+  principle: >
+    Before someone can love something, the experience must interrupt or outcompete
+    competing stimuli strongly enough to earn voluntary cognitive processing.
+  AttentionState:
+    fields:
+      capture:
+      sustained_attention:
+      attentional_stability:
+      competing_stimulus_pressure:
+      orientation_cost:
+      information_overload:
+      habituation:
+      novelty_response:
+      predicted_drop_risk:
+      active_attention_targets:
+      confidence:
+  attention_mechanisms:
+    - novelty
+    - significance
+    - motion
+    - human_face_or_character
+    - unresolved_cause
+    - contrast
+    - silence
+    - visual_scale
+    - emotional_vulnerability
+    - pattern_break
+    - high_value_question
+    - expected_payoff
+  anti_pattern:
+    stimulation_without_meaning:
+      risk: >
+        High sensory intensity may capture attention briefly while reducing trust,
+        comprehension, memory or project identity.
+# =====================================================================
+# 8. CURIOSITY
+# =====================================================================
+curiosity:
+  principle: >
+    Incomplete but meaningful information pulls cognition forward.
+  CuriosityState:
+    fields:
+      active_question_refs:
+      information_gap_clarity:
+      expected_answer_value:
+      answer_reachability:
+      novelty:
+      personal_relevance:
+      epistemic_tension:
+      confusion_component:
+      curiosity_score:
+      confidence:
+  useful_curiosity_requires:
+    - representable_gap
+    - plausible_future_resolution
+    - sufficient_context
+    - perceived_value_of_resolution
+  anti_patterns:
+    random_mystery:
+      description: >
+        Information withheld without meaningful causal or emotional structure.
+    unknowable_noise:
+      description: >
+        Viewer cannot construct a useful question from available information.
+# =====================================================================
+# 9. IDENTIFICATION / ATTACHMENT
+# =====================================================================
+identification:
+  IdentificationState:
+    fields:
+      empathy_target_refs:
+      attachment_target_refs:
+      desire_understanding:
+      vulnerability_understanding:
+      emotional_legibility:
+      self_projection:
+      moral_alignment:
+        nullable: true
+      fascination:
+      concern:
+      relationship_interest:
+      attachment_score:
+      confidence:
+  principle: >
+    Identification may arise through desire, vulnerability, contradiction,
+    admiration, fascination or emotional recognition rather than demographic similarity.
+  mechanisms:
+    - understandable_desire
+    - vulnerability
+    - competence
+    - contradiction
+    - humor
+    - loneliness
+    - injustice
+    - aspiration
+    - sacrifice
+    - intimacy
+    - fear
+    - curiosity_about_character
+# =====================================================================
+# 10. ANTICIPATION
+# =====================================================================
+anticipation:
+  AnticipationState:
+    fields:
+      anticipated_event_refs:
+      anticipated_emotion:
+      expected_payoff_refs:
+      expected_payoff_value:
+      expected_payoff_probability:
+      temporal_distance:
+      uncertainty:
+      desire_for_resolution:
+      anticipation_score:
+      confidence:
+  principle: >
+    Expected future value can motivate continuation before the payoff occurs.
+# =====================================================================
+# 11. COGNITIVE PARTICIPATION
+# =====================================================================
+cognitive_participation:
+  CognitiveParticipationState:
+    fields:
+      active_inference_refs:
+      clue_integration_load:
+      hypothesis_generation:
+      hypothesis_revision:
+      interpretation_space:
+      viewer_contribution_fraction:
+      reward_on_discovery:
+      overwork_risk:
+      participation_score:
+      confidence:
+  modes:
+    - infer_causal_connection
+    - predict_action
+    - infer_relationship
+    - infer_hidden_truth
+    - interpret_symbol
+    - resolve_visual_information
+    - detect_pattern
+    - recontextualize_prior_scene
+    - infer_emotional_subtext
+  principle: >
+    Quantum should respect viewer intelligence by allowing meaningful inference
+    while retaining sufficient evidence for fair comprehension.
+# =====================================================================
+# 12. SIGNIFICANCE INFERENCE
+# =====================================================================
+significance_inference:
+  SignificanceInferenceState:
+    fields:
+      perceived_importance:
+      perceived_intentionality:
+      perceived_effort:
+      perceived_scarcity:
+      perceived_contextual_weight:
+      perceived_authority:
+      expected_value_prior:
+      expectation_inflation_risk:
+      confidence:
+  principle: >
+    Presentation context affects the prior probability a viewer assigns to
+    something being worth attention.
+  boundary: >
+    Significance inference may be legitimately influenced by real effort,
+    quality, scarcity and context but must not depend on fabricated endorsement
+    or false provenance.
+# =====================================================================
+# 13. FLUENCY
+# =====================================================================
+fluency:
+  FluencyState:
+    fields:
+      world_model_clarity:
+      protagonist_model_clarity:
+      causal_model_clarity:
+      genre_or_form_model_clarity:
+      current_goal_clarity:
+      information_processing_load:
+      unfamiliarity_load:
+      ambiguity:
+      fluency_score:
+      confidence:
+  principle: >
+    Fluency means the viewer possesses enough structure to continue thinking
+    productively about the work.
+  distinction:
+    high_fluency_high_originality:
+      desired: true
+    high_fluency_low_originality:
+      risk: genericity
+    low_fluency_high_originality:
+      risk: inaccessible_originality
+    low_fluency_low_originality:
+      risk: incoherence
+# =====================================================================
+# 14. TRUST
+# =====================================================================
+trust:
+  TrustState:
+    fields:
+      causal_fairness:
+      payoff_reliability:
+      information_fairness:
+      tonal_consistency:
+      character_consistency:
+      competence_signal:
+      project_truthfulness:
+      manipulation_awareness:
+      trust_score:
+      confidence:
+  trust_builders:
+    - earned_payoff
+    - causal_consistency
+    - fair_reveal
+    - intentional_detail
+    - truthful_project_promise
+    - coherent_character_behavior
+    - controlled_surprise
+  trust_destroyers:
+    - arbitrary_retcon
+    - false_stakes
+    - cheap_cliffhanger
+    - unexplained_rule_change
+    - incoherent_character_action
+    - misleading_promise
+    - obvious_emotional_manipulation
+# =====================================================================
+# 15. SUSPENSE
+# =====================================================================
+suspense:
+  definition: >
+    Suspense is forward emotional pressure created by understood stakes,
+    credible possible outcomes, incomplete causal certainty and meaningful
+    momentum or imminence.
+  conceptual_formula: >
+    Suspense =
+      f(
+        stakes_understood,
+        outcome_uncertainty,
+        consequence_value,
+        imminence,
+        vulnerability,
+        causal_momentum,
+        information_asymmetry
+      )
+      -
+      f(
+        confusion,
+        outcome_indifference,
+        impossibility_of_prediction
+      )
+  SuspenseState:
+    fields:
+      anticipated_outcomes:
+        type: list[AnticipatedOutcome]
+      stakes_understood:
+      uncertainty:
+      imminence:
+      vulnerability:
+      causal_momentum:
+      viewer_information_advantage:
+      character_information_advantage:
+      temporal_pressure:
+      escape_routes_perceived:
+      suspense_score:
+      confidence:
+  AnticipatedOutcome:
+    fields:
+      description:
+      probability:
+      desirability:
+      feared_or_desired:
+      affected_entity_refs:
+      consequence_magnitude:
+  anti_patterns:
+    confusion_as_suspense:
+      forbidden: true
+    random_threat:
+      risk: low_meaning
+    zero_stakes_mystery:
+      risk: low_emotional_pressure
+# =====================================================================
+# 16. CONTINUATION PRESSURE
+# =====================================================================
+continuation_pressure:
+  definition: >
+    The internally generated pressure to continue because meaningful emotional,
+    causal, character, world and cognitive processes remain unresolved.
+  ContinuationPressure:
+    fields:
+      playback_coordinate:
+      unanswered_question_pressure:
+      character_fate_pressure:
+      causal_momentum:
+      impending_consequence:
+      emotional_incompletion:
+      mystery_pressure:
+      world_discovery_pressure:
+      anticipated_payoff_value:
+      relationship_resolution_pressure:
+      philosophical_resolution_pressure:
+      attachment_pressure:
+      frustration_penalty:
+      confusion_penalty:
+      manipulation_awareness_penalty:
+      total:
+      confidence:
+  conceptual_formula: >
+    ContinuationPressure =
+      curiosity_pressure
+      + character_concern
+      + causal_momentum
+      + anticipated_payoff
+      + world_discovery_desire
+      + emotional_incompletion
+      + unresolved_meaning
+      + relationship_pressure
+      -
+      confusion
+      -
+      frustration
+      -
+      manipulation_awareness
+  important_rule: >
+    High continuation pressure produced by low-quality manipulation is not
+    equivalent to earned continuation pressure.
+# =====================================================================
+# 17. OPEN LOOP
+# =====================================================================
+open_loop_model:
+  OpenLoop:
+    fields:
+      loop_id:
+      project_id:
+      archetype_ref:
+      loop_type:
+        enum:
+          - CAUSAL
+          - EMOTIONAL
+          - EPISTEMIC
+          - CHARACTER
+          - RELATIONSHIP
+          - WORLD
+          - PHILOSOPHICAL
+          - THEMATIC
+          - ANTICIPATED_PAYOFF
+      question:
+      opened_at:
+      source_ref:
+      viewer_awareness:
+      pressure:
+      expected_payoff_value:
+      answerability:
+      current_hypotheses:
+      partial_payoff_refs:
+      closed_at:
+        nullable: true
+      intentionally_left_open:
+      expiration_condition:
+        nullable: true
+      evidence_refs:
+      confidence:
+  OpenLoopPortfolio:
+    fields:
+      portfolio_id:
+      artifact_ref:
+      archetype_ref:
+      active_loop_refs:
+      recently_closed_loop_refs:
+      intentionally_unresolved_loop_refs:
+      total_pressure:
+      cognitive_load:
+      loop_redundancy:
+      thematic_coherence:
+      payoff_trust:
+      confusion_risk:
+      confidence:
+  portfolio_rules:
+    - high_pressure_loops_require_sufficient_context
+    - redundant_loops_should_merge_or_differentiate
+    - some_loops_should_pay_off
+    - terminal_loops_should_have_high_expected_payoff
+    - number_of_loops_must_fit_viewer_processing_capacity
+# =====================================================================
+# 18. PARTIAL SATISFACTION
+# =====================================================================
+partial_satisfaction:
+  definition: >
+    Deliver enough meaningful payoff to validate viewer investment while
+    preserving or opening a larger unresolved question.
+  PartialPayoff:
+    fields:
+      payoff_id:
+      loop_ref:
+      answered_component:
+      unanswered_component:
+      satisfaction:
+      trust_delta:
+      continuation_pressure_delta:
+      opens_larger_loop_ref:
+        nullable: true
+      playback_coordinate:
+      evidence_refs:
+  canonical_pattern: |
+    OPEN LOOP
+       ↓
+    INVESTMENT
+       ↓
+    PARTIAL PAYOFF
+       ↓
+    TRUST INCREASES
+       ↓
+    LARGER LOOP OPENS
+       ↓
+    CONTINUATION PRESSURE INCREASES
+# =====================================================================
+# 19. OH SHIT MOMENT
+# =====================================================================
+oh_shit_moment:
+  canonical_name: OhShitMoment
+  canonical_abbreviation: OSM
+  definition: >
+    A moment in which the viewer rapidly comprehends consequential new
+    information that materially changes the meaning, scale, emotion or expected
+    trajectory of what they have been watching.
+  OhShitMoment:
+    fields:
+      osm_id:
+      project_id:
+      archetype_ref:
+      osm_type:
+        enum:
+          - DISCOVERY
+          - REVEAL
+          - RECONTEXTUALIZATION
+          - CHARACTER
+          - RELATIONSHIP
+          - WORLD
+          - CONSEQUENCE
+          - SCALE_EXPANSION
+          - EMOTIONAL
+          - VISUAL
+          - PHILOSOPHICAL
+          - CAUSAL
+      setup_refs:
+      clue_refs:
+      prior_viewer_model:
+      trigger_ref:
+      realization:
+      consequence_understood:
+      immediate_inference:
+      playback_coordinate:
+      comprehension_latency_ms:
+      surprise:
+      fairness:
+      emotional_impact:
+      cognitive_impact:
+      recontextualization_strength:
+      worldview_shift_delta:
+      continuation_pressure_delta:
+      memory_residue:
+      social_transmission_value:
+      spoiler_cost:
+      trust_delta:
+      opens_loop_refs:
+      closes_loop_refs:
+      evidence_refs:
+      confidence:
+  validity_requirements:
+    - new_information_or_new_inference
+    - rapid_comprehensibility_unless_delayed_realization_is_intentional
+    - meaningful_consequence
+    - causal_or_semantic_grounding
+    - setup_fairness
+    - creator_intent_compatibility
+  multiple_OSMs:
+    allowed: true
+  count_target:
+    hardcoded: false
+  quality_rule: >
+    A second or third OSM should normally deepen, enlarge or revalue the viewer's
+    model rather than merely repeat the same kind of surprise.
+# =====================================================================
+# 20. OSM SEQUENCE
+# =====================================================================
+osm_sequence:
+  OhShitMomentSequence:
+    fields:
+      sequence_id:
+      osm_refs:
+      escalation_pattern:
+      cumulative_recontextualization:
+      cumulative_spoiler_cost:
+      cumulative_memory_residue:
+      cumulative_continuation_pressure_delta:
+      redundancy_score:
+      recovery_space:
+      terminal_OSM_ref:
+        nullable: true
+  desired_patterns:
+    - progressive_revaluation
+    - scale_expansion
+    - character_then_world
+    - premise_then_consequence
+    - emotional_then_philosophical
+    - mystery_then_recontextualization
+  anti_patterns:
+    - random_twists
+    - repeated_fakeouts
+    - shock_without_consequence
+    - spoilers_exhausting_full_project_value
+# =====================================================================
+# 21. FAMILIARITY / DIFFERENTIATION
+# =====================================================================
+familiarity_differentiation:
+  principle: >
+    Familiarity provides cognitive purchase. Differentiation provides identity.
+  FamiliarityDifferentiationDimension:
+    fields:
+      dimension:
+      familiarity:
+      differentiation:
+      cognitive_access_requirement:
+      originality_requirement:
+      evidence_refs:
+      confidence:
+  FamiliarityDifferentiationEnvelope:
+    fields:
+      envelope_id:
+      project_id:
+      narrative_grammar:
+        type: FamiliarityDifferentiationDimension
+      emotional_grammar:
+        type: FamiliarityDifferentiationDimension
+      character_psychology:
+        type: FamiliarityDifferentiationDimension
+      relationship_grammar:
+        type: FamiliarityDifferentiationDimension
+      world:
+        type: FamiliarityDifferentiationDimension
+      core_concept:
+        type: FamiliarityDifferentiationDimension
+      visual_identity:
+        type: FamiliarityDifferentiationDimension
+      sound_identity:
+        type: FamiliarityDifferentiationDimension
+      philosophical_model:
+        type: FamiliarityDifferentiationDimension
+      narrative_structure:
+        type: FamiliarityDifferentiationDimension
+      overall_cognitive_access:
+      overall_identity_strength:
+      genericity_risk:
+      inaccessible_originality_risk:
+      source_product_model_ref:
+      source_creator_model_ref:
+      evidence_refs:
+      confidence:
+  desired_reaction: >
+    I understand how something like this can work, but I have not seen this.
+  anti_patterns:
+    generic_content_soup:
+      definition: high_familiarity_low_identity
+    inaccessible_originality:
+      definition: high_differentiation_low_cognitive_purchase
+# =====================================================================
+# 22. COGNITIVE PARTICIPATION / DISCOVERY REWARD
+# =====================================================================
+discovery_reward:
+  ViewerDiscovery:
+    fields:
+      discovery_id:
+      archetype_ref:
+      proposition_or_meaning:
+      evidence_available_before_discovery:
+      viewer_inference_required:
+      stated_explicitly:
+      discovery_time:
+      confidence_of_discovery:
+      emotional_reward:
+      cognitive_reward:
+      rewatch_value:
+  principle: >
+    The experience should distinguish facts Quantum tells the viewer from
+    meanings the viewer earns by integrating evidence.
+# =====================================================================
+# 23. MEMORY SALIENCE
+# =====================================================================
+memory:
+  MemoryResidueTarget:
+    fields:
+      residue_id:
+      residue_type:
+        enum:
+          - IMAGE
+          - LINE
+          - CHARACTER
+          - EMOTION
+          - QUESTION
+          - CONTRADICTION
+          - CONCEPT
+          - SYMBOL
+          - SOUND
+          - MUSIC
+          - WORLD_DETAIL
+          - PHILOSOPHICAL_TENSION
+      target_ref:
+      desired_salience:
+      desired_persistence:
+      desired_association_refs:
+      intended_recall_context:
+      evidence_refs:
+  MemoryResiduePlan:
+    fields:
+      plan_id:
+      project_id:
+      iconic_image_targets:
+      iconic_line_targets:
+      character_memory_targets:
+      emotional_aftertaste:
+      unresolved_question_targets:
+      conceptual_paradox_targets:
+      sonic_memory_targets:
+      desired_10m_recall:
+      desired_2h_recall:
+      desired_24h_recall:
+      desired_long_term_recall:
+      social_retellability_targets:
+      confidence:
+  principle: >
+    Quantum should not attempt to make every moment memorable. It should decide
+    which few things deserve disproportionate memory salience.
+# =====================================================================
+# 24. COGNITIVE AFTERLIFE
+# =====================================================================
+cognitive_afterlife:
+  definition: >
+    Predicted cognitive-emotional activity caused by the work after playback ends.
+  CognitiveAfterlife:
+    fields:
+      afterlife_id:
+      artifact_ref:
+      archetype_ref:
+      immediate_residue:
+      predicted_10m_recall:
+      predicted_2h_recall:
+      predicted_24h_recall:
+      unresolved_conceptual_questions:
+      unresolved_emotional_threads:
+      character_preoccupations:
+      philosophical_residue:
+      interpretation_activity:
+      rewatch_impulse:
+      discussion_impulse:
+      internal_forwarding_impulse:
+      creative_inspiration_impulse:
+      next_action_impulse:
+      confidence:
+  desired_for_thought_provoking_work:
+    - interpretation_continues
+    - conceptual_tension_survives
+    - viewer_reconstructs_prior_meaning
+    - viewer_wants_discussion
+    - viewer_may_rewatch
+    - ambiguity_remains_productive
+  anti_pattern:
+    unresolved_because_incoherent:
+      acceptable: false
+# =====================================================================
+# 25. SOCIAL TRANSMISSION
+# =====================================================================
+social_transmission:
+  SocialTransmissionState:
+    fields:
+      retellability:
+      conversation_value:
+      forwarding_impulse:
+      recommendation_impulse:
+      identity_signaling_value:
+      surprise_sharing_value:
+      emotional_sharing_value:
+      conceptual_sharing_value:
+      embarrassment_risk:
+      transmission_score:
+      confidence:
+  principle: >
+    Private fascination becomes commercially more powerful when it naturally
+    turns into internal advocacy or social transmission.
+# =====================================================================
+# 26. COMPACT VIEWER STATE PROGRAM
+# =====================================================================
+viewer_experience_program:
+  ViewerExperienceProgram:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: SPECIFICATION
+    fields:
+      program_id:
+      project_id:
+      artifact_scope:
+      target_archetype_refs:
+      source_audience_model_ref:
+      source_creator_model_ref:
+      source_story_or_timeline_ref:
+      initial_state_targets:
+      temporal_effect_targets:
+        type: list[ViewerEffectCheckpoint]
+      terminal_state_targets:
+      open_loop_plan_ref:
+      OSM_sequence_ref:
+        nullable: true
+      familiarity_differentiation_ref:
+      memory_residue_plan_ref:
+      cognitive_afterlife_target_ref:
+      hard_psychological_constraints:
+      soft_psychological_objectives:
+      uncertainty:
+      provenance_ref:
+      digest:
+  ViewerEffectCheckpoint:
+    fields:
+      playback_coordinate:
+      desired_attention:
+      desired_comprehension:
+      desired_curiosity:
+      desired_attachment:
+      desired_suspense:
+      desired_anticipation:
+      desired_cognitive_participation:
+      desired_continuation_pressure:
+      desired_trust:
+      desired_confusion_range:
+      desired_emotional_state:
+      active_loop_targets:
+      memory_encoding_targets:
+      significance_targets:
+      notes:
+# =====================================================================
+# 27. VIEWER EFFECT CONTRACT
+# =====================================================================
+viewer_effect_contract:
+  ViewerEffectContract:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: SPECIFICATION
+    purpose: >
+      Declare the intended viewer effect of a scene, beat, shot or timed
+      audiovisual unit without redefining its story or World semantics.
+    fields:
+      contract_id:
+      semantic_scope_ref:
+      playback_scope:
+      target_archetype_refs:
+      entry_state_expectations:
+      desired_state_deltas:
+      exit_state_targets:
+      information_to_disclose:
+      information_to_withhold:
+      inference_to_encourage:
+      inference_to_prevent:
+      emotional_target:
+      attention_target:
+      suspense_target:
+      loop_operations:
+      OSM_ref:
+        nullable: true
+      memory_target_refs:
+      trust_constraints:
+      creator_intent_ref:
+      evidence_refs:
+      digest:
+  future_integration:
+    target_spec: 12_quantum_story_animatic_compiler_build_spec.yaml
+    proposal: >
+      SceneSpec and ShotSpec may optionally reference ViewerEffectContract so
+      cinematic decisions can compile against explicit viewer-state intent.
+# =====================================================================
+# 28. COMPELLING CONTINUATION
+# =====================================================================
+compulsive_continuation:
+  canonical_term: CompulsiveContinuation
+  definition: >
+    Strong internally generated desire to continue because meaningful emotional,
+    causal and cognitive loops remain open and the viewer expects worthwhile payoff.
+  conceptual_formula: >
+    CompulsiveContinuation =
+      curiosity_pressure
+      + emotional_investment
+      + anticipated_payoff
+      + causal_momentum
+      + unresolved_meaning
+      + character_concern
+      + world_discovery_desire
+      -
+      frustration
+      -
+      confusion
+      -
+      manipulation_awareness
+  permitted_sources:
+    - attachment
+    - curiosity
+    - anticipation
+    - meaningful_stakes
+    - causal_momentum
+    - world_discovery
+    - unresolved_meaning
+    - expected_payoff
+  prohibited_optimization_shortcuts:
+    - fake_cliffhanger
+    - meaningless_shock
+    - random_withholding
+    - sensory_spam
+    - deceptive_project_promise
+    - arbitrary_threat
+    - deliberate_incoherence
+# =====================================================================
+# 29. PSYCHOLOGICAL TRAJECTORY GRAMMAR
+# =====================================================================
+trajectory_grammar:
+  canonical_pattern:
+    - INTERRUPT
+    - ORIENT
+    - INTRIGUE
+    - ATTACH
+    - DESTABILIZE
+    - ESCALATE
+    - OhShitMoment
+    - PARTIAL_SATISFACTION
+    - BIGGER_OPEN_LOOP
+    - CUT
+    - COGNITIVE_AFTERLIFE
+  rigid_template:
+    value: false
+  interpretation: >
+    These are viewer-state operations, not mandatory screenplay beats.
+  allowed:
+    - overlap
+    - repeat
+    - reorder_when_intent_requires
+    - omit_when_not_applicable
+    - nest
+    - reorient_after_OSM
+    - use_multiple_OSMs
+  example_variant:
+    - INTERRUPT
+    - ORIENT
+    - INTRIGUE
+    - OhShitMoment
+    - REORIENT
+    - ATTACH
+    - ESCALATE
+    - PARTIAL_PAYOFF
+    - OhShitMoment
+    - BIGGER_OPEN_LOOP
+    - OhShitMoment
+    - CUT
+# =====================================================================
+# 30. VIEWER COGNITION DOMAIN
+# =====================================================================
+viewer_cognition_domain:
+  package: quantum.cognition.viewer
+  amendment_required:
+    target: 02_quantum_polycognitive_runtime_build_spec.yaml
+    action: >
+      Add VIEWER to CognitiveDomain and register viewer cognition operators as
+      specialized faculties under the same Polycognitive Runtime.
+  operators:
+    - viewer.attention_capture
+    - viewer.attention_sustain
+    - viewer.orientation
+    - viewer.curiosity
+    - viewer.identification
+    - viewer.character_attachment
+    - viewer.anticipation
+    - viewer.cognitive_participation
+    - viewer.significance_inference
+    - viewer.fluency
+    - viewer.suspense
+    - viewer.continuation_pressure
+    - viewer.open_loop_portfolio
+    - viewer.partial_payoff
+    - viewer.oh_shit_moment
+    - viewer.osm_sequence
+    - viewer.familiarity_differentiation
+    - viewer.trust
+    - viewer.memory_residue
+    - viewer.cognitive_afterlife
+    - viewer.social_transmission
+    - viewer.compulsive_continuation
+    - viewer.psychodynamic_trajectory
+  authority:
+    proposal_only: true
+# =====================================================================
+# 31. OPERATOR CONTRACT
+# =====================================================================
+viewer_operator_contract:
+  ViewerReasoningOperator:
+    fields:
+      operator_id:
+      operator_version:
+      purpose:
+      applies_when:
+      required_AudienceModel_views:
+      required_ViewerState_views:
+      required_World_audience_disclosure_views:
+      required_story_views:
+      optional_ProductMarketModel_views:
+      required_creator_views:
+      output_schema:
+      confidence_requirement:
+      side_effect_free:
+        default: true
+      may_request_cognitive_domains:
+      stop_conditions:
+      resource_profile:
+      tags:
+  hard_rule: >
+    Viewer cognition never directly changes an artifact or World state. It
+    returns evidence, projections, proposals or ViewerEffectContracts for the
+    owning compiler/runtime to evaluate.
+# =====================================================================
+# 32. VIEWER SIGNALS
+# =====================================================================
+viewer_signals:
+  owner: viewer_cognition_psychology
+  classification:
+    canonical_world_truth: false
+    derived: true
+    rebuildable_where_inputs_reproducible: true
+  signal_types:
+    - VIEWER.ATTENTION_CAPTURE_WEAK
+    - VIEWER.ATTENTION_DROP_RISK
+    - VIEWER.ORIENTATION_INSUFFICIENT
+    - VIEWER.CURIOSITY_WEAK
+    - VIEWER.CONFUSION_EXCEEDS_TARGET
+    - VIEWER.ATTACHMENT_WEAK
+    - VIEWER.SUSPENSE_WEAK
+    - VIEWER.SUSPENSE_IS_CONFUSION
+    - VIEWER.CONTINUATION_PRESSURE_LOW
+    - VIEWER.OPEN_LOOP_OVERLOAD
+    - VIEWER.OPEN_LOOP_UNDERLOAD
+    - VIEWER.PAYOFF_TRUST_LOW
+    - VIEWER.OSM_NOT_COMPREHENDED
+    - VIEWER.OSM_UNFAIR
+    - VIEWER.OSM_REDUNDANT
+    - VIEWER.SPOILER_COST_HIGH
+    - VIEWER.FAMILIARITY_TOO_HIGH
+    - VIEWER.COGNITIVE_ACCESS_TOO_LOW
+    - VIEWER.MEMORY_RESIDUE_WEAK
+    - VIEWER.COGNITIVE_AFTERLIFE_WEAK
+    - VIEWER.SOCIAL_TRANSMISSION_LOW
+    - VIEWER.MANIPULATION_AWARENESS_RISK
+    - VIEWER.TRUST_COLLAPSE
+    - VIEWER.PSYCHODYNAMIC_TARGET_MISALIGNMENT
+  consumed_by:
+    - PolycognitiveRuntime
+    - AutonomousQC
+    - StoryAnimaticCompiler
+    - ProofOfFilmCompiler
+# =====================================================================
+# 33. COLD / INFORMED / REWATCH INTEGRATION
+# =====================================================================
+viewer_modes:
+  source_of_mode_definitions:
+    spec: 04_quantum_audience_product_intelligence_build_spec.yaml
+  ColdViewer:
+    psychodynamic_focus:
+      - actual_comprehension
+      - curiosity
+      - suspense
+      - attachment
+      - OSM_comprehension
+      - confusion
+      - continuation_pressure
+      - memory_residue
+    forbidden_context:
+      - hidden_intent
+      - future_reveal_truth
+      - creator_explanation
+  InformedCritic:
+    psychodynamic_focus:
+      - intended_vs_predicted_state
+      - clue_plan
+      - creator_intent
+      - open_loop_strategy
+      - thematic_design
+      - payoff_intent
+  RewatchCritic:
+    psychodynamic_focus:
+      - retrospective_fairness
+      - recontextualization
+      - clue_visibility
+      - OSM_fairness
+      - reinterpretation_value
+      - CognitiveAfterlife
+  rule: >
+    This specification adds psychodynamic analysis to existing modes; it does
+    not redefine their context firewalls or formal QC ownership.
+# =====================================================================
+# 34. STORY / ANIMATIC INTEGRATION
+# =====================================================================
+story_animatic_integration:
+  consumes:
+    - 12.AudienceTrajectory
+    - StoryPlan
+    - SequenceSpec
+    - SceneSpec
+    - ShotSpec
+    - AnimaticTimeline
+    - AudienceInformationState
+    - reveal_timing
+    - edit_timing
+    - dialogue
+    - sound_music_intent
+  returns:
+    - ViewerExperienceProgram
+    - ViewerEffectContracts
+    - ViewerPsychodynamicsProjection
+    - psychodynamic_signals
+    - repair_recommendations
+  important_distinction:
+    AudienceTrajectory:
+      owner: 12_story_animatic
+      purpose: authored_story_design_target
+    ViewerPsychodynamicsProjection:
+      owner: 17_viewer_cognition
+      purpose: predicted_mechanistic_effect
+# =====================================================================
+# 35. WORLD MODEL INTEGRATION
+# =====================================================================
+world_integration:
+  consumes:
+    - audience_disclosure_plane
+    - reveal_events
+    - causal_truth
+    - character_knowledge
+    - character_belief
+    - audience_character_information_asymmetry
+  hard_distinctions:
+    audience_has_seen_fact:
+      owner: WorldModel
+    viewer_understood_fact:
+      owner_prediction: AudienceProductIntelligence
+    viewer_psychological_effect_of_fact:
+      owner_prediction: ViewerCognitionPsychology
+  invariant: >
+    A predicted viewer realization cannot create World audience disclosure that
+    did not actually occur.
+# =====================================================================
+# 36. CREATOR MODEL INTEGRATION
+# =====================================================================
+creator_integration:
+  consumes:
+    - CreatorModel
+    - ThemeModel
+    - RevealIntent
+    - EndingIntent
+    - QualitySemantics
+    - creative locks
+  hard_rule: >
+    Generic engagement optimization never outranks explicit creator intent.
+  example:
+    project_intent: deliberate_slow_burn
+    allowed:
+      - suspense
+      - curiosity
+      - visual_attention
+      - subtext
+      - unanswered_questions
+    forbidden:
+      - insert_explosion_because_attention_model_prefers_it
+# =====================================================================
+# 37. PRODUCT MODEL INTEGRATION
+# =====================================================================
+product_integration:
+  consumes:
+    - ProductMarketModel
+    - HookModel
+    - FirstMinutePromise
+    - ProductIdentityModel
+    - distinctiveness
+    - memorability
+  uses:
+    - psychodynamic_target_weighting
+    - familiarity_differentiation
+    - marketability_input
+    - executive_viewer_prediction
+  cannot:
+    - rewrite_ProductMarketModel
+    - create_new_product_authority
+# =====================================================================
+# 38. AUTONOMOUS QC INTEGRATION
+# =====================================================================
+qc_integration:
+  formal_acceptance_owner:
+    spec: 07_quantum_autonomous_qc_build_spec.yaml
+  provides_to_QC:
+    - ViewerPsychodynamicsProjection
+    - ViewerExperienceProgram
+    - ViewerEffectContract
+    - OpenLoopPortfolio
+    - OhShitMomentSequence
+    - FamiliarityDifferentiationEnvelope
+    - MemoryResiduePlan
+    - CognitiveAfterlife
+    - psychodynamic_signals
+  QC_violation_candidates:
+    - VIEWER.ATTENTION_TARGET_MISSED
+    - VIEWER.COMPREHENSION_TARGET_MISSED
+    - VIEWER.CURIOSITY_TARGET_MISSED
+    - VIEWER.ATTACHMENT_TARGET_MISSED
+    - VIEWER.CONTINUATION_PRESSURE_TARGET_MISSED
+    - VIEWER.OSM_FAILED
+    - VIEWER.OSM_UNFAIR
+    - VIEWER.OPEN_LOOP_OVERLOAD
+    - VIEWER.MEMORY_RESIDUE_FAILED
+    - VIEWER.COGNITIVE_AFTERLIFE_FAILED
+    - VIEWER.TRUST_FAILURE
+# =====================================================================
+# 39. CONFIDENCE / UNCERTAINTY
+# =====================================================================
+uncertainty:
+  required_on:
+    - ViewerPsychodynamicsProjection
+    - OSM prediction
+    - ContinuationPressure
+    - FamiliarityDifferentiationEnvelope
+    - CognitiveAfterlife
+    - SocialTransmissionState
+  sources:
+    - archetype_divergence
+    - critic_disagreement
+    - limited_calibration_data
+    - ambiguous_media
+    - unfamiliar_style
+    - novel_culture_or_market
+    - unavailable_real_viewer_data
+  rule: >
+    High uncertainty may increase reasoning depth or request additional viewer
+    simulation; it may not be silently converted into confidence.
+# =====================================================================
+# 40. CALIBRATION
+# =====================================================================
+calibration:
+  purpose: >
+    Measure whether predicted psychodynamic responses correspond to observed
+    human behavior when real evidence becomes available.
+  sources:
+    - creator_observation
+    - controlled_test_audience
+    - completion_behavior
+    - rewatch_behavior
+    - recall_testing
+    - audience_feedback
+    - internal_forwarding_behavior
+    - downstream_action_behavior
+  PsychodynamicObservation:
+    extends:
+      - 10.EvidenceObject
+    fields:
+      observation_id:
+      artifact_ref:
+      viewer_profile:
+      playback_scope:
+      observed_attention:
+      observed_comprehension:
+      observed_curiosity:
+      observed_attachment:
+      observed_suspense:
+      observed_continuation_desire:
+      observed_memory:
+      observed_discussion_or_forwarding:
+      methodology:
+      evidence_refs:
+      confidence:
+  learning_rule: >
+    Calibration adjusts prediction quality. It does not redefine creator intent
+    or convert one audience's response into universal human law.
+# =====================================================================
+# 41. LEARNING
+# =====================================================================
+learning:
+  learnable:
+    - psychodynamic_prediction_calibration
+    - OSM_comprehension_priors
+    - open_loop_capacity_priors
+    - suspense_response_priors
+    - memory_salience_priors
+    - archetype_specific_familiarity_priors
+    - continuation_pressure_calibration
+    - cognitive_afterlife_calibration
+  not_learnable_without_authority:
+    - CreatorModel_preferences
+    - StudioCreativeConstitution
+    - project_theme
+    - project_ending
+    - creator_locked_reveal
+  governance:
+    - versioned
+    - segmented
+    - confidence_weighted
+    - offline_evaluation
+    - shadow_mode_where_applicable
+    - no_self_promotion
+# =====================================================================
+# 42. PSYCHOLOGICAL LOAD
+# =====================================================================
+psychological_load:
+  ViewerCognitiveLoad:
+    fields:
+      simultaneous_open_loops:
+      new_entities_rate:
+      new_concepts_rate:
+      inference_load:
+      subtitle_load:
+      dialogue_load:
+      visual_search_load:
+      timeline_complexity:
+      uncertainty_load:
+      emotional_load:
+      total_estimated_load:
+      archetype_capacity_margin:
+      confidence:
+  rule: >
+    High cognitive demand may be intentional. Failure occurs when demand exceeds
+    the target audience's intended processing envelope without creative justification.
+# =====================================================================
+# 43. VIEWER PROCESSING WINDOW
+# =====================================================================
+processing_window:
+  principle: >
+    Viewers require time to encode, infer, react and reorient after sufficiently
+    consequential information.
+  ProcessingWindow:
+    fields:
+      stimulus_ref:
+      minimum_processing_duration_estimate:
+      emotional_recovery_duration_estimate:
+      inference_completion_duration_estimate:
+      next_stimulus_interference_risk:
+      archetype_ref:
+      confidence:
+  use:
+    - post_OSM_pause
+    - reveal_timing
+    - dialogue_spacing
+    - edit_rhythm
+    - memory_encoding
+# =====================================================================
+# 44. PSYCHOLOGICAL CONTRAST
+# =====================================================================
+psychological_contrast:
+  principle: >
+    Continuous maximum intensity reduces modulation, memory discrimination and
+    perceived escalation.
+  ContrastPlan:
+    fields:
+      tension_valleys:
+      silence_regions:
+      humor_relief:
+      intimacy_regions:
+      awe_regions:
+      acceleration_regions:
+      stillness_regions:
+      intended_peak_refs:
+  anti_pattern:
+    all_peak_all_the_time:
+      result:
+        - habituation
+        - reduced_OSM_impact
+        - reduced_memory_contrast
+        - emotional_fatigue
+# =====================================================================
+# 45. THOUGHT-PROVOKING MODE
+# =====================================================================
+thought_provoking_mode:
+  purpose: >
+    Support works whose value includes sustained cognition after viewing.
+  dimensions:
+    - philosophical_question
+    - moral_ambiguity
+    - conceptual_paradox
+    - recontextualization
+    - interpretation_space
+    - conversational_value
+    - rewatch_value
+    - deliberate_incompleteness
+  constraints:
+    - incompleteness_must_be_meaningful
+    - contradiction_must_be_intentional_or_repaired
+    - ambiguity_must_not_hide_missing_causality
+    - intellectual_effect_must_remain_creator_aligned
+# =====================================================================
+# 46. PSYCHODYNAMIC SCORING
+# =====================================================================
+psychodynamic_scoring:
+  rule: >
+    No single scalar represents viewer quality.
+  scorecards:
+    AttentionScorecard:
+    CuriosityScorecard:
+    AttachmentScorecard:
+    SuspenseScorecard:
+    ContinuationScorecard:
+    OSMScorecard:
+    MemoryResidueScorecard:
+    CognitiveAfterlifeScorecard:
+    TrustScorecard:
+    SocialTransmissionScorecard:
+  aggregation:
+    allowed_for:
+      - ranking_candidates
+      - diagnostics
+      - trend_analysis
+    forbidden_for:
+      - averaging_away_hard_creator_constraint
+      - averaging_away_critical_confusion
+      - claiming_exact_human_truth
+# =====================================================================
+# 47. EXPERIENCE TRACE
+# =====================================================================
+experience_trace:
+  ViewerExperienceTrace:
+    extends:
+      - 10.ExperienceObject
+    fields:
+      trace_id:
+      project_id:
+      artifact_ref:
+      archetype_ref:
+      viewer_state_sequence_refs:
+      psychodynamic_projection_ref:
+      major_stimulus_refs:
+      OSM_refs:
+      open_loop_history:
+      predicted_terminal_state:
+      observed_evidence_refs:
+      divergence:
+      confidence:
+  purpose:
+    - calibration
+    - debugging
+    - ProofOfFilm_learning
+    - narrative_learning
+    - audience_learning
+# =====================================================================
+# 48. PROVENANCE
+# =====================================================================
+provenance:
+  required_paths:
+    ViewerPsychodynamicsProjection:
+      - AudienceModel
+      - ViewerArchetype
+      - ViewerState_sequence
+      - CreatorModel
+      - audience_disclosure_revision
+      - artifact
+      - model_versions
+    ViewerExperienceProgram:
+      - CreatorModel
+      - AudienceModel
+      - story_or_timeline
+      - psychodynamic_objectives
+    OhShitMoment:
+      - setup
+      - clues
+      - trigger
+      - viewer_prior_model
+      - expected_realization
+    CognitiveAfterlife:
+      - MemoryResiduePlan
+      - terminal_ViewerState
+      - unresolved_OpenLoops
+      - artifact
+  emits_to:
+    09_quantum_project_provenance_dependency_graph_build_spec.yaml
+# =====================================================================
+# 49. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  analyze:
+    - analyze_viewer_psychodynamics
+    - analyze_attention
+    - analyze_curiosity
+    - analyze_identification
+    - analyze_anticipation
+    - analyze_cognitive_participation
+    - analyze_fluency
+    - analyze_suspense
+    - analyze_continuation_pressure
+    - analyze_trust
+    - analyze_social_transmission
+  loops:
+    - derive_open_loops
+    - score_open_loop_portfolio
+    - propose_partial_payoff
+    - identify_terminal_loops
+  OSM:
+    - detect_OSM_candidate
+    - evaluate_OSM
+    - compare_OSM_candidates
+    - evaluate_OSM_sequence
+  memory:
+    - compile_memory_residue_plan
+    - predict_CognitiveAfterlife
+  program:
+    - compile_ViewerExperienceProgram
+    - compile_ViewerEffectContract
+    - compare_intended_vs_predicted_effect
+  calibration:
+    - record_psychodynamic_observation
+    - evaluate_prediction_error
+# =====================================================================
+# 50. STORAGE
+# =====================================================================
+storage:
+  authoritative:
+    none:
+      reason: >
+        Viewer psychodynamics are derived models and evidence, not fictional truth.
+  stores:
+    - ViewerExperienceProgram
+    - ViewerEffectContract
+    - ViewerPsychodynamicsProjection
+    - OpenLoopPortfolio
+    - OhShitMoment
+    - MemoryResiduePlan
+    - CognitiveAfterlife
+    - ViewerExperienceTrace
+    - PsychodynamicObservation
+  lifecycle:
+    immutable_versions: true
+    supersession: true
+    provenance_required: true
+# =====================================================================
+# 51. PERFORMANCE
+# =====================================================================
+performance:
+  principle: >
+    Viewer analysis should operate incrementally over changed playback scope
+    rather than resimulating entire films after every local edit.
+  incremental_invalidation:
+    inputs:
+      - changed_shot
+      - changed_scene
+      - changed_dialogue
+      - changed_music
+      - changed_reveal
+      - changed_open_loop
+    preserve:
+      - unaffected_prior_projection_frames
+      - unaffected_archetype_runs
+  minimum_blast_radius:
+    required: true
+# =====================================================================
+# 52. OBSERVABILITY
+# =====================================================================
+observability:
+  attention:
+    - capture_latency
+    - predicted_drop_points
+    - attention_curve_area
+  comprehension:
+    - orientation_time
+    - confusion_duration
+    - false_inference_rate
+  emotion:
+    - attachment_curve
+    - suspense_curve
+    - emotional_peak_distribution
+  continuation:
+    - continuation_pressure_curve
+    - terminal_continuation_pressure
+    - open_loop_pressure
+  OSM:
+    - OSM_count
+    - OSM_comprehension_latency
+    - OSM_surprise
+    - OSM_fairness
+    - OSM_continuation_delta
+    - OSM_memory_residue
+    - OSM_redundancy
+  memory:
+    - predicted_10m_recall
+    - predicted_2h_recall
+    - predicted_24h_recall
+  afterlife:
+    - predicted_rewatch_impulse
+    - predicted_discussion_impulse
+    - predicted_forwarding_impulse
+  calibration:
+    - prediction_error_by_archetype
+    - confidence_calibration
+    - synthetic_vs_observed_divergence
+# =====================================================================
+# 53. FAILURE MODES
+# =====================================================================
+failure_modes:
+  ATTENTION_NOT_CAPTURED:
+    repair_candidates:
+      - stronger_initial_question
+      - clearer_significance
+      - stronger_character_entry
+      - stronger_visual_identity
+      - better_contrast
+  ORIENTATION_FAILURE:
+    repair_candidates:
+      - add_context
+      - reduce_initial_information_density
+      - strengthen_character_goal
+      - clarify_visual_geography
+  CURIOSITY_COLLAPSE:
+    repair_candidates:
+      - open_meaningful_gap
+      - increase_expected_payoff
+      - remove_excess_explanation
+  ATTACHMENT_FAILURE:
+    repair_candidates:
+      - strengthen_desire
+      - vulnerability
+      - contradiction
+      - reaction
+      - relational_context
+  SUSPENSE_AS_CONFUSION:
+    repair_candidates:
+      - clarify_stakes
+      - clarify_possible_outcomes
+      - preserve_uncertain_process
+  OSM_FAILURE:
+    repair_candidates:
+      - improve_setup
+      - improve_trigger_clarity
+      - improve_consequence
+      - reduce_prior_spoiler
+      - add_processing_time
+  OPEN_LOOP_OVERLOAD:
+    repair_candidates:
+      - merge_loops
+      - close_low_value_loop
+      - defer_new_question
+      - clarify_priority
+  MEMORY_RESIDUE_FAILURE:
+    repair_candidates:
+      - stronger_iconic_image
+      - stronger_conceptual_anchor
+      - increase_contrast
+      - reduce_competing_memorable_elements
+# =====================================================================
+# 54. DEGRADED MODES
+# =====================================================================
+degraded_modes:
+  AUDIENCE_SIMULATOR_UNAVAILABLE:
+    behavior:
+      - use_last_valid_prediction_if_compatible
+      - mark_projection_degraded
+      - forbid_high_confidence_claim
+  MULTIMODAL_VIEWER_ANALYZER_UNAVAILABLE:
+    behavior:
+      - use_story_timeline_semantic_analysis
+      - mark_visual_effect_uncertain
+  CALIBRATION_STORE_UNAVAILABLE:
+    behavior:
+      - predictions_continue
+      - calibration_updates_pause
+  PRODUCT_MODEL_UNAVAILABLE:
+    behavior:
+      - creator_and_audience_psychology_continue
+      - marketability_downstream_marked_incomplete
+# =====================================================================
+# 55. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    attention:
+      - attention_capture_distinct_from_sustained_attention
+      - high_stimulation_not_automatically_high_quality
+    curiosity:
+      - meaningful_gap_distinct_from_confusion
+      - curiosity_requires_expected_resolution_value
+    identification:
+      - demographic_similarity_not_required
+    suspense:
+      - known_stakes_plus_uncertainty_can_produce_suspense
+      - total_ignorance_does_not_score_as_suspense
+    continuation:
+      - continuation_pressure_contains_multiple_sources
+      - confusion_penalizes_continuation_quality
+    loops:
+      - loops_can_open_partial_payoff_close
+      - active_loop_portfolio_tracks_cognitive_load
+    OSM:
+      - multiple_OSMs_supported
+      - OSM_requires_consequence
+      - OSM_fairness_scored
+      - OSM_can_open_larger_loop
+    familiarity:
+      - familiarity_and_originality_separate
+      - high_novelty_low_fluency_detected
+    memory:
+      - MemoryResiduePlan_can_target_specific_image
+      - CognitiveAfterlife_extends_beyond_playback
+# =====================================================================
+# 56. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - ViewerPsychodynamicsProjection_never_becomes_World_truth
+  - base_ViewerState_remains_owned_by_spec_04
+  - viewer_operator_cannot_mutate_CreatorModel
+  - viewer_operator_cannot_mutate_WorldModel
+  - high_attention_cannot_compensate_for_creator_lock_violation
+  - high_suspense_cannot_compensate_for_accidental_confusion
+  - multiple_OSMs_do_not_require_fixed_count
+  - deliberate_slow_burn_can_pass_with_nonstandard_attention_curve
+  - deliberate_ambiguity_can_pass_when_creator_supported_and_cognitively_productive
+  - surprise_without_prior_model_scores_low_as_OSM
+  - viewer_prediction_confidence_never_implies_human_ground_truth
+  - artifact_local_edit_invalidates_minimum_psychodynamic_scope
+# =====================================================================
+# 57. SCENARIO TESTS
+# =====================================================================
+scenario_tests:
+  radical_originality:
+    given:
+      - highly_novel_world
+      - unfamiliar_metaphysics
+      - emotionally_familiar_character_need
+    expect:
+      - cognitive_access_preserved
+      - differentiation_high
+      - fluency_above_minimum
+      - no_genericization_required
+  twist:
+    given:
+      - hidden_truth
+      - fair_clues
+      - audience_false_model
+    expect:
+      - OSM
+      - high_recontextualization
+      - RewatchCritic_fairness
+      - earlier_scenes_gain_new_meaning
+  cheap_twist:
+    given:
+      - no_prior_clues
+      - arbitrary_new_fact
+    expect:
+      - low_fairness
+      - trust_penalty
+      - QC_violation_candidate
+  thought_provoking:
+    given:
+      - conceptual_paradox
+      - partially_unresolved_ending
+    expect:
+      - confusion_below_threshold
+      - CognitiveAfterlife_high
+      - discussion_impulse_high
+# =====================================================================
+# 58. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: VC-G01
+    check: spec 04 retains AudienceModel authority
+  - id: VC-G02
+    check: spec 04 retains base ViewerState and AudienceSimulator ownership
+  - id: VC-G03
+    check: ViewerPsychodynamicsProjection is derived and noncanonical
+  - id: VC-G04
+    check: Attention modeled independently from quality
+  - id: VC-G05
+    check: Curiosity modeled independently from confusion
+  - id: VC-G06
+    check: Identification does not require demographic similarity
+  - id: VC-G07
+    check: Suspense requires meaningful anticipated outcomes
+  - id: VC-G08
+    check: ContinuationPressure is multi-source
+  - id: VC-G09
+    check: OpenLoop lifecycle and portfolio exist
+  - id: VC-G10
+    check: partial payoff can increase trust
+  - id: VC-G11
+    check: OhShitMoment is canonical terminology
+  - id: VC-G12
+    check: multiple OhShitMoments supported
+  - id: VC-G13
+    check: OSM fairness and comprehension latency represented
+  - id: VC-G14
+    check: FamiliarityDifferentiationEnvelope exists
+  - id: VC-G15
+    check: MemoryResiduePlan exists
+  - id: VC-G16
+    check: CognitiveAfterlife exists
+  - id: VC-G17
+    check: ViewerEffectContract can attach to cinematic scope
+  - id: VC-G18
+    check: quantum.cognition.viewer operators defined
+  - id: VC-G19
+    check: psychodynamic signals flow through Polycognitive Runtime
+  - id: VC-G20
+    check: formal acceptance remains owned by AutonomousQC
+  - id: VC-G21
+    check: predictions expose uncertainty
+  - id: VC-G22
+    check: calibration cannot alter creator authority
+  - id: VC-G23
+    check: incremental invalidation supported
+  - id: VC-G24
+    check: thought-provoking ambiguity distinguished from incoherence
+# =====================================================================
+# 59. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  VCW1:
+    name: ownership_and_core_psychodynamic_schemas
+    targets:
+      - ViewerPsychodynamicsProjection
+      - AttentionState
+      - CuriosityState
+      - IdentificationState
+      - ContinuationPressure
+    exit:
+      - VC-G01
+      - VC-G02
+      - VC-G03
+  VCW2:
+    name: loops_suspense_and_OSM
+    depends_on:
+      - VCW1
+    targets:
+      - SuspenseState
+      - OpenLoop
+      - OpenLoopPortfolio
+      - PartialPayoff
+      - OhShitMoment
+      - OhShitMomentSequence
+  VCW3:
+    name: familiarity_memory_afterlife
+    depends_on:
+      - VCW1
+    targets:
+      - FamiliarityDifferentiationEnvelope
+      - MemoryResiduePlan
+      - CognitiveAfterlife
+      - SocialTransmissionState
+  VCW4:
+    name: viewer_experience_program
+    depends_on:
+      - VCW2
+      - VCW3
+    targets:
+      - ViewerExperienceProgram
+      - ViewerEffectContract
+      - psychodynamic_trajectory
+  VCW5:
+    name: cognition_and_signals
+    depends_on:
+      - VCW4
+    targets:
+      - quantum.cognition.viewer
+      - ViewerSignals
+      - Polycognitive integration
+  VCW6:
+    name: QC_calibration_learning
+    depends_on:
+      - VCW5
+    targets:
+      - QC integration
+      - ViewerExperienceTrace
+      - PsychodynamicObservation
+      - calibration
+# =====================================================================
+# 60. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: VC-OD-01
+    decision: exact numeric scaling for psychodynamic dimensions
+    status: CALIBRATION_REQUIRED
+  - id: VC-OD-02
+    decision: viewer psychodynamic model implementation family
+    status: OPEN
+    options:
+      - language_model
+      - multimodal_model
+      - hybrid
+      - learned_temporal_model
+  - id: VC-OD-03
+    decision: initial OSM benchmark corpus
+    status: TO_BUILD
+  - id: VC-OD-04
+    decision: open_loop_capacity priors by audience profile
+    status: CALIBRATION_REQUIRED
+  - id: VC-OD-05
+    decision: long-term memory recall measurement strategy
+    status: FUTURE_EVIDENCE_REQUIRED
+  - id: VC-OD-06
+    decision: CognitiveAfterlife calibration method
+    status: FUTURE_EVIDENCE_REQUIRED
+  - id: VC-OD-07
+    decision: exact ViewerEffectContract integration fields in ShotSpec
+    status: PATCH_SPEC_12_LATER
+# =====================================================================
+# 61. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: viewer psychology becomes manipulation engine
+    control:
+      - creator fidelity
+      - truthful project promise
+      - DesireQuality
+      - manipulation awareness penalty
+      - QC
+  - risk: psychology model becomes pseudo-scientific certainty
+    control:
+      - probabilistic language
+      - calibration
+      - confidence
+      - archetype diversity
+  - risk: attention optimization destroys slow-burn work
+    control:
+      - creator intent precedence
+      - alternate attention mechanisms
+      - no universal intensity target
+  - risk: cognitive participation becomes confusion
+    control:
+      - fluency
+      - clue sufficiency
+      - ColdViewer
+      - processing windows
+  - risk: excessive OSMs produce twist fatigue
+    control:
+      - OSMSequence
+      - redundancy scoring
+      - contrast
+      - cumulative spoiler cost
+  - risk: familiarity optimization homogenizes work
+    control:
+      - differentiation floor
+      - CreatorModel
+      - ProductMarketModel identity
+      - anti_genericity
+  - risk: synthetic viewer becomes self-confirming loop
+    control:
+      - AutonomousQC separation
+      - calibration
+      - external evidence
+      - uncertainty
+# =====================================================================
+# 62. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  ownership:
+    - no conflict with AudienceProductIntelligence
+    - no conflict with WorldModel
+    - no conflict with AutonomousQC
+  mechanisms:
+    - AttentionState
+    - CuriosityState
+    - IdentificationState
+    - AnticipationState
+    - CognitiveParticipationState
+    - SignificanceInferenceState
+    - FluencyState
+    - TrustState
+    - SuspenseState
+    - ContinuationPressure
+  narrative_psychology:
+    - OpenLoop
+    - OpenLoopPortfolio
+    - PartialPayoff
+    - OhShitMoment
+    - OhShitMomentSequence
+  originality_access:
+    - FamiliarityDifferentiationEnvelope
+  memory:
+    - MemoryResiduePlan
+    - CognitiveAfterlife
+    - SocialTransmissionState
+  integration:
+    - ViewerExperienceProgram
+    - ViewerEffectContract
+    - quantum.cognition.viewer
+    - ViewerSignals
+    - story_animatic_integration
+    - QC_integration
+  learning:
+    - ViewerExperienceTrace
+    - calibration
+    - real_observation_support
+  release:
+    requirement: VC-G01_through_VC-G24_pass
+# =====================================================================
+# 63. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    Viewer psychology is an explicit design surface.
+  law_02: >
+    The screen is stimulus; the viewer's cognitive-emotional state is the
+    intended effect surface.
+  law_03: >
+    Attention must be earned before value can be experienced.
+  law_04: >
+    Curiosity comes from meaningful incompleteness, not arbitrary confusion.
+  law_05: >
+    Human familiarity gives cognitive access to radical originality.
+  law_06: >
+    Identification comes from recognizable internal stakes, not demographic sameness.
+  law_07: >
+    Anticipated future value creates forward pull.
+  law_08: >
+    Viewers should be permitted to participate in important discoveries.
+  law_09: >
+    Fluency is sufficient structure for productive cognition, not simplification.
+  law_10: >
+    Suspense is understood stakes plus consequential uncertainty, not ignorance.
+  law_11: >
+    Open loops are a managed portfolio.
+  law_12: >
+    Partial satisfaction earns trust before larger loops demand more attention.
+  law_13: >
+    OhShitMoment is the canonical Quantum term.
+  law_14: >
+    A great work may contain multiple OhShitMoments.
+  law_15: >
+    An OhShitMoment should change the viewer's model, not merely startle them.
+  law_16: >
+    Familiarity provides cognitive purchase; differentiation provides identity.
+  law_17: >
+    Memory residue is designed rather than left entirely to chance.
+  law_18: >
+    The cinematic experience may continue cognitively after playback ends.
+  law_19: >
+    Social transmission begins when the viewer wants another mind to experience
+    what just happened in theirs.
+  law_20: >
+    Trust compounds when the work repeatedly rewards attention fairly.
+  law_21: >
+    Viewer prediction is probabilistic and must remain calibrated against evidence.
+  law_22: >
+    Psychology serves creative intent; it does not replace creative authority.
+  law_23: >
+    Thought-provoking work should leave productive unresolved meaning, not accidental incoherence.
+  law_24: >
+    The long-term objective is not merely to show the viewer something.
+    It is to deliberately change what the viewer knows, suspects, feels, expects,
+    remembers and wants next.

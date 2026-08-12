@@ -1,0 +1,204 @@
+schema_id: canonical.schema.execution_packet.v1
+schema_name: Canonical Execution Packet Schema
+schema_class: canonical_execution_contract_schema
+schema_family: l9_execution_architecture
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.execution_packet.v1.yaml
+purpose:
+  primary: 'Define the canonical handoff object that carries an approved execution unit from plan/spec/coding-contract authority
+    into bounded implementation.
+
+    '
+  output_level: schema_not_instance
+  intended_use:
+  - execution_handoff
+  - bounded_agent_execution
+  - resumable_work_units
+  - implementation_receipts
+  not_for:
+  - transport_authority
+  - architecture_definition
+  - unbounded_task_execution
+ontology:
+  parent_type: execution_contract_schema
+  specialized_type: execution_packet_schema
+  instance_type_generated_by_this_schema: execution_packet
+  upstream_schema: canonical.schema.execution_contract.v1
+required_sections:
+  identity:
+    required: true
+    fields:
+      packet_id:
+        type: string
+        required: true
+      contract_ref:
+        type: ref
+        required: true
+        must_reference: canonical.schema.execution_contract.v1
+      plan_ref:
+        type: ref
+        required: false
+      spec_ref:
+        type: ref
+        required: false
+      created_at:
+        type: datetime
+        required: true
+  authority:
+    required: true
+    fields:
+      authorized_by:
+        type: string
+        required: true
+      write_mode:
+        enum:
+        - dry_run
+        - explicit_write
+        required: true
+      authority_scope:
+        type: list
+        required: true
+      prohibited_actions:
+        type: list
+        required: true
+      execution_contract_ref:
+        type: ref
+        required: true
+      mutation_authorization_ref:
+        type: ref
+        required: false
+  execution_unit:
+    required: true
+    fields:
+      objective:
+        type: string
+        required: true
+      todo_ids:
+        type: list_string
+        required: true
+      file_scope:
+        type: list
+        required: true
+      command_scope:
+        type: list
+        required: true
+      network_scope:
+        type: list
+        required: false
+      secret_scope:
+        type: list
+        required: false
+  preconditions:
+    required: true
+    fields:
+      baseline_verified:
+        type: boolean
+        required: true
+      capability_preflight_passed:
+        type: boolean
+        required: true
+      dependency_topology_valid:
+        type: boolean
+        required: true
+      blockers:
+        type: list
+        required: true
+  execution_state:
+    required: true
+    fields:
+      state:
+        enum:
+        - ready
+        - executing
+        - blocked
+        - failed
+        - completed
+        - superseded
+        required: true
+      current_step:
+        type: string_or_null
+        required: false
+      completed_steps:
+        type: list_string
+        required: true
+      receipts:
+        type: list
+        required: true
+  evidence:
+    required: true
+    fields:
+      evidence_refs:
+        type: list_string
+        required: true
+      validation_ref:
+        type: ref
+        required: false
+      rollback_ref:
+        type: ref
+        required: false
+  completion:
+    required: true
+    fields:
+      result:
+        enum:
+        - complete
+        - partial
+        - blocked
+        - failed
+        required: true
+      next_action:
+        type: string
+        required: true
+      convergence_ref:
+        type: ref
+        required: false
+validation_rules:
+- id: EXEC-PACKET-001
+  severity: blocker
+  rule: Execution packet must reference an authoritative execution contract.
+- id: EXEC-PACKET-002
+  severity: blocker
+  rule: write_mode explicit_write requires baseline and capability preflight to pass.
+- id: EXEC-PACKET-003
+  severity: blocker
+  rule: Execution must remain within declared file, command, network, and secret scopes.
+- id: EXEC-PACKET-004
+  severity: blocker
+  rule: Blockers must be empty before state can be ready.
+- id: EXEC-PACKET-005
+  severity: blocker
+  rule: Completed execution requires evidence and validation references where applicable.
+derivation_targets:
+  can_generate:
+  - execution_packet
+  - agent_execution_handoff
+  - resumable_execution_state
+  - execution_receipt
+anti_drift_rules:
+- Do not use execution packets as transport packets.
+- Do not expand authority beyond the referenced coding contract.
+- Do not mutate packet authority during execution.
+- Do not mark completed without receipts.
+- Do not derive packet authority directly from a coding contract when an execution contract exists.
+- Mutation-capable packets must reference active mutation authorization.
+minimum_viable_instance_requirements:
+  required:
+  - identity
+  - authority
+  - execution_unit
+  - preconditions
+  - execution_state
+  - evidence
+  - completion
+schema_dependency_direction:
+  depends_on:
+  - canonical.schema.execution_contract.v1
+  - canonical.schema.capability_preflight.v1
+  - canonical.schema.dependency_topology.v1
+  - canonical.schema.rollback_contract.v1
+  - canonical.schema.validation_evidence.v1
+  - canonical.schema.convergence_contract.v1
+  - canonical.schema.mutation_authorization.v1
+  cycle_policy: schema_dependency_graph_must_be_acyclic

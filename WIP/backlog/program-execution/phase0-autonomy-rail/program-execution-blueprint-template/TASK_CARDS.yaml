@@ -1,0 +1,132 @@
+schema: program-execution-blueprint.task-cards.v2
+schema_version: 2.0.0
+tasks:
+- id: TASK-001
+  title: Refresh and lock current state
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: program_control
+  objective: Produce current evidence and resolve the authority lock.
+  autonomy_action_id: pes.phase0_and_authority_lock
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids:
+  - EVID-001
+  actions:
+  - refresh_current_state
+  - resolve_blocking_decisions
+  - approve_authority_registry
+  outputs:
+  - id: OUT-001
+    type: evidence
+    location: CURRENT_STATE_DELTA.yaml
+    required: true
+  acceptance:
+  - id: AC-001
+    statement: Current-state evidence is fresh and authority conflicts are absent.
+    required_evidence_types:
+    - inspection
+  validation:
+  - id: VAL-001
+    method: inspection
+    command_or_inspection: Inspect registers, Phase 0 completeness, and source revisions.
+    environment: planning
+    expected_result: PASS
+  - id: VAL-001B
+    method: command
+    command_or_inspection: make uv-lock-check || uv lock --check (or N/A with reason)
+    environment: local
+    expected_result: PASS
+  negative_cases:
+  - stale evidence
+  - duplicate authority
+  rollback:
+    strategy: discard_unaccepted_planning_changes
+    trigger: authority_lock_failure
+    validation: Blueprint remains at prior accepted revision.
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: program_definition
+  authorization_ceiling:
+    inspect: true
+    local_write: false
+    commit: false
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-000
+  - GATE-001
+- id: TASK-002
+  title: REPLACE_WITH_BOUNDED_EXECUTION_TASK
+  definition_status: draft
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: REPLACE_WITH_ONE_OUTCOME
+  autonomy_action_id: REPLACE_WITH_AUTONOMY_ACTION_OR_LEASE_CLASS
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids:
+  - DEC-001
+  blocking_unknown_ids:
+  - UNK-001
+  input_evidence_ids:
+  - EVID-001
+  actions:
+  - REPLACE_WITH_EXACT_ACTION
+  outputs:
+  - id: OUT-002
+    type: artifact
+    location: REPLACE_WITH_DURABLE_OUTPUT
+    required: true
+  acceptance:
+  - id: AC-002
+    statement: REPLACE_WITH_OBSERVABLE_RESULT
+    required_evidence_types:
+    - test_result
+  validation:
+  - id: VAL-002
+    method: command
+    command_or_inspection: REPLACE_WITH_COMMAND
+    environment: local
+    expected_result: PASS
+  - id: VAL-002B
+    method: command
+    command_or_inspection: make pr (alias make pr-check); record PASS before push/PR
+    environment: local
+    expected_result: PASS
+  negative_cases:
+  - REPLACE_WITH_FAILURE_CASE
+  rollback:
+    strategy: REPLACE_WITH_EXACT_RECOVERY
+    trigger: validation_failure_or_cutover_abort
+    validation: REPLACE_WITH_POST_ROLLBACK_CHECK
+  risk:
+    tier: T2
+    reversibility: reversible
+    blast_radius: single_target
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: false
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+  - GATE-003

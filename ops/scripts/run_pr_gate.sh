@@ -13,6 +13,22 @@ PR_MYPY_STRICT="${PR_MYPY_STRICT:-0}"
 cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
 
+# Never-lose: restore open/legacy holds around the gate; fail closed if still open.
+_scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
+_scratch_hold_restore() {
+  if [[ -f "$_scratch_hold_cli" ]]; then
+    python3 "$_scratch_hold_cli" --workspace "$WS" restore --all || true
+  fi
+}
+_scratch_hold_status() {
+  if [[ -f "$_scratch_hold_cli" ]]; then
+    python3 "$_scratch_hold_cli" --workspace "$WS" status
+  fi
+}
+
+_scratch_hold_restore
+
+
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 
 status_before="$(mktemp)"
@@ -142,6 +158,12 @@ if [[ "$PR_MYPY_STRICT" = "1" ]]; then
   uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
 else
   echo "mypy: advisory on PR gate (set PR_MYPY_STRICT=1 to fail; full check is make lint / nightly)"
+fi
+
+_scratch_hold_restore
+if ! _scratch_hold_status; then
+  echo "FAIL: open scratch hold(s) after gate — restore before shipping"
+  exit 1
 fi
 
 echo "RESULT: PASS — local PR gate clean (changed files only)"

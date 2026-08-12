@@ -27,9 +27,10 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
   second pass:** its optional `governance_monitor` import (line 59) now points at an archived
   module (`execution-governance/_archived/monitoring/governance-monitor.py`) — already
   soft-fails via `try/except ImportError` so it's not broken, but the fallback message is stale.
-- [ ] **`ops/scripts/verify-startup-files.sh`** — checks deleted `startup/*` files
-- [ ] **`ops/scripts/README_STARTUP_VERIFICATION.md`** — documents deleted startup verification flow
-- [ ] **`ops/scripts/deploy_cursorrules_global.sh`** — deploys deleted `.cursorrules` template
+- [x] **`ops/scripts/verify-startup-files.sh`** — **already purged** with `ops/scripts/_archived`
+  (2026-08-06). Close as stale; see DELETE LIST A9 / B9.
+- [x] **`ops/scripts/README_STARTUP_VERIFICATION.md`** — **already purged** (same).
+- [x] **`ops/scripts/deploy_cursorrules_global.sh`** — **already purged** (same).
 - [ ] **`intelligence/reasoning/reasoning-snapshot-generator.py`** — **KEEP, needs fix** (per
   explicit decision 2026-07-19, not archived like its `intelligence/learning/*` siblings).
   Writes signatures to `foundation/security/_archived/signatures/` — an already-archived
@@ -59,14 +60,17 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
 - [x] **`execution-governance/README.md`** — **archived** (2026-07-19) to
   `execution-governance/_archived/README.md` along with the rest of `execution-governance/`
   (all 5 `.py` implementations were confirmed Suite-6 legacy — see CHANGELOG `[Unreleased]`).
+  **On DELETE LIST (2026-08-12) as A1** — whole tree is archive-only; awaiting delete PR.
 - [ ] **`README.md`** (GlobalCommands root) — startup/templates references
-- [ ] **`C_GOV_FILES/`** duplicates — `session-startup-protocol.md`, `setup-new-workspace.md`, `setup-new-workspace.py`, `cursor-native-reasoning.md`
+- [x] **`C_GOV_FILES/`** duplicates — **path already deleted** (2026-07-05). Remaining work is
+  doc scrub only — see DELETE LIST A8.
 - [ ] **`workflows/Dags-Harvest/DAG-Harvest-5.md`** — startup references (verify)
 - [ ] **`commands/dora-commands/do-README.md`** — points at the now-archived
   `commands/_archived/do-templates/` (2026-07-19); still describes the `/do-*` scaffold
   commands (`do-init.md`, `do-status.md`, etc.) which were left untouched — verify whether
   those slash commands are still wired to anything before deciding their fate.
-- [ ] **`ops/scripts/_archived/migrate_to_project_rules.py`** — archived; low priority
+- [x] **`ops/scripts/_archived/migrate_to_project_rules.py`** — archive tree purged 2026-08-06;
+  see DELETE LIST A9 (doc scrub only).
 - [ ] **`intelligence/reasoning/cursor-native-reasoning.md`** — verify overlap with `l9-structured-reasoning` before edit/delete
 - [ ] **`integrity/hash-verifier.py`** — investigated 2026-07-19, confirmed **ACTIVE, keep**:
   `manifest-lock.json` is a live present artifact, `system-check.sh` calls it, and git history
@@ -181,6 +185,83 @@ broken at runtime (not just a lint nit) — traced to two nonexistent packages:
 | `templates/.cursorrules` | `.cursor/rules/*.mdc` + `AGENTS.md` |
 | `templates/python-header-template*.py` | `l9-skill-compiler` `meta-standard.md` (lean frontmatter) |
 | `tests/test_imports.py` | `l9-wire-skill-into-repo` validation |
+
+---
+
+## Spring-clean DELETE LIST (2026-08-12) — list only; do not delete yet
+
+Audit of orphaned / archived residue vs live SSOT. **Nothing on this list has been
+deleted in this pass.** Before any delete PR: re-grep live callers
+(`ops/`, `.github/`, `Makefile`, hooks, non-archived `skills/` / `rules/` /
+`environment/`), confirm CHANGELOG/TODO archival rationale, and keep
+`ALLOW-ROOT-DELETION` / CODEOWNERS rules if a root-protected path is touched.
+
+**Not on this list (KEEP — live SSOT):**
+`environment/program-execution/`, `environment/agents/adapters/claude-code/`,
+root `autonomy/`, `ops/autonomy/`, `ops/hooks/`, `ops/scripts/` (active set),
+`ops/graphiti/`, `integrity/`, `kernels/`, `skills/` (live packs),
+`skills/_archived/` **directory convention** (retirement landing zone — keep the
+folder even if individual packs are later purged), `learning/` (non-`_archived`),
+`schemas/`, `releases/`, `governance/`, `ORG_INVARIANTS.yaml`, `end-session.yaml`.
+
+### Tier A — safest delete candidates (100% archive shells / already gone)
+
+| # | Path | Status | Notes |
+|---|------|--------|-------|
+| A1 | **`execution-governance/`** | EXISTS (7 files, only `_archived/`) | Suite-6 api/dashboard/monitor/validator (2026-07-19). No live callers. Soft-fail import note in `ops/scripts/operational-oversight.py` — scrub message when deleting. **Added 2026-08-12.** |
+| A2 | **`telemetry/`** | EXISTS (2 files, only `_archived/`) | `calibration_dashboard.py`, `telemetry-collector.py` (2026-07-19). |
+| A3 | **`environment/_archived/`** | EXISTS (2 files) | `env-manager.py`, `env_loader.py` (2026-07-19). |
+| A4 | **`workflows/_archived/`** | EXISTS (1 file) | Orphan `wire_dag.py` duplicate (2026-07-19). |
+| A5 | **`intelligence/_archived/`** | EXISTS (9 files) | learning/workspace/context-memory Suite-6 (2026-07-19). |
+| A6 | **`learning/failures/_archived/`** | EXISTS (1 file) | Noise MD. |
+| A7 | **`foundation/`** | EXISTS (~351 files, all under `_archived/`) | logic/agents + `security/_archived/signatures/` (~333 JSON sigs). **Signatures may be provenance ledger** — prefer cold-export or keep sigs; do not bulk-delete without owner call. |
+| A8 | **`C_GOV_FILES/`** | ABSENT (deleted 2026-07-05) | Scrub README/TODO/pyproject excludes that still teach the path. |
+| A9 | **`ops/scripts/_archived/`** | ABSENT (purged 2026-08-06) | Scrub AGENTS/CANONICAL_LAW/CODEOWNERS that still teach the path; do not recreate. |
+| A10 | **`memory-bank/`** | ABSENT (retired 2026-08-11) | Policy already WARNs if residual; keep absent. |
+| A11 | **`start-session.yaml`** | ABSENT (deleted 2026-07-19) | Docs/reports only. |
+| A12 | **`environment/claude-code`** | ABSENT (symlink extinguished 2026-08-12) | Sole home: `environment/agents/adapters/claude-code/`. |
+
+### Tier B — orphan / pending retirement (not under `_archived/`, verify then delete)
+
+| # | Path | Status | Notes |
+|---|------|--------|-------|
+| B1 | **`profiles/`** | EXISTS (~12 files) | README DEPRECATED; `session-startup-protocol.md` confirmed dead. Content migrated into skills/rules. Update `AUTONOMY_MANIFEST.yaml` `sources` that still cite `profiles/*` before delete. |
+| B2 | **`key components/`** | EXISTS (~9 files) | Stub agent docs; almost no live refs. |
+| B3 | **`pipeline/`** | EXISTS (3 markdown files) | Doc-only; no hooks/Makefile. |
+| B4 | **`security/`** (repo root docs) | EXISTS (2 files) | Mostly cited from deprecated profiles; not `foundation/security`. |
+| B5 | **`commands/_archived/`** | EXISTS (17 files) | Skipped by commands manifest generator; candidates for hard-delete after retention window. |
+| B6 | **`commands/dora-commands/`** | EXISTS (7 files) | AUTONOMY_MANIFEST: unwired legacy DORA; points at archived do-templates. Verify slash commands unused, then delete or archive. |
+| B7 | **`ops/feedback_loop_config.yaml`** | EXISTS | Dangling `feedback_collector.script` path; no live consumers. |
+| B8 | **`ops/scripts/session_init.sh`**, **`show_context.sh`**, **`process_context.sh`**, **`tenx_status.sh`** | EXISTS | Not referenced from `ops/hooks/` / Makefile / `.github/`. Pre-Graphiti / LaunchAgent-era. |
+| B9 | **`ops/scripts/verify-startup-files.sh`**, **`deploy_cursorrules_global.sh`**, **`README_STARTUP_VERIFICATION.md`** | ABSENT | Already purged with `ops/scripts/_archived` — close the open TODO bullets above as done/stale. |
+| B10 | **`Activation Command.md`** | EXISTS | One-line pointer; unused by hooks. |
+| B11 | **`ops/graphiti/memory-bank-template/`** (non-`RETIRED.md` stubs) | check | Policy: archival only; keep `RETIRED.md` or fold into `MEMORY_BANK_POLICY.md`. |
+
+### Tier C — judgment required (do not bulk-delete)
+
+| # | Path | Notes |
+|---|------|-------|
+| C1 | **`skills/_archived/*` pack contents** | Individual packs may purge after retention; **keep** `_archived/` landing zone + `skills/_archived/README.md`. |
+| C2 | **`foundation/security/_archived/signatures/`** | Immutable provenance carve-out in migration reports; may need cold storage, not git wipe. Blocks careless whole-`foundation/` delete (A7). |
+| C3 | **`intelligence/context-memory/`** (non-archived) | CANONICAL_LAW still lists `graphiti_sink.py` / related; CHANGELOG: sink kept, never wired. Decide keep-lean vs archive. |
+| C4 | **`intelligence/reasoning/*`** | Explicit KEEP for `reasoning-snapshot-generator.py` (2026-07-19); `cursor-native-reasoning.md` overlap with `l9-structured-reasoning` TBD. |
+| C5 | **`current_work/`**, **`reports/`**, **`WIP/`** | Scratch / evidence / harvest — cleanup by human policy, not “orphan code”. |
+| C6 | **`commands/emma-repo-commands/`** | Manifest omit from GlobalCommands; still has `wire_emma.md` — owner call. |
+
+### Suggested delete PR sequence (when authorized)
+
+1. **Doc scrub first:** A8–A11 path teaching + close stale Tier-B9 TODO bullets (no tree delete).
+2. **Empty archive shells:** A1 `execution-governance/`, A2 `telemetry/`, A3–A6 (skip A7 until signatures decision).
+3. **Orphan live paths:** B1 `profiles/` (after AUTONOMY_MANIFEST), then B2–B4, B6–B8, B10.
+4. **Archive retention purge:** B5 / C1 only with explicit retention decision.
+5. **Never in spring-clean:** `environment/program-execution/`, Claude adapter pack, `ops/autonomy/`, root `autonomy/`.
+
+### Audit method (2026-08-12)
+
+- Top-level + `_archived/` inventory; existence counts via `find`.
+- Live-ref spot checks with ripgrep excluding `reports/`, `_archived/`, CHANGELOG/TODO.
+- Cross-check CHANGELOG 2026-07-19 Suite-6 archive + 2026-08-06 `ops/scripts/_archived` purge.
+- Confirmed: no Makefile / `.github/` / `ops/hooks` dependencies on Tier A shells.
 
 ## Publish note
 

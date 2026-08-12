@@ -17,6 +17,34 @@ fi
 
 cd "$WS"
 
+# Never-lose restore + soft dirty WARN (WIP/reports/.l9 scratch do not force cleanup).
+_scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
+_scratch_hold_restore() {
+  if [[ -f "$_scratch_hold_cli" ]]; then
+    python3 "$_scratch_hold_cli" --workspace "$WS" restore --all || true
+  fi
+}
+_scratch_hold_status() {
+  if [[ -f "$_scratch_hold_cli" ]]; then
+    python3 "$_scratch_hold_cli" --workspace "$WS" status
+  fi
+}
+_meaningful_dirty() {
+  # Paths that should still WARN — exclude sacred/scratch prefixes.
+  git status --porcelain | while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    path="${line:3}"
+    path="${path#\"}"
+    path="${path%\"}"
+    case "$path" in
+      WIP|WIP/*|reports/*|current_work/*|C_GOV_FILES/*|.l9/*|.l9) ;;
+      *) printf '%s\n' "$line" ;;
+    esac
+  done
+}
+
+_scratch_hold_restore
+
 if ! command -v gh >/dev/null 2>&1; then
   echo "FAIL: gh CLI required to open a PR (https://cli.github.com/)"
   exit 1
@@ -43,9 +71,12 @@ if [[ "${ahead:-0}" -eq 0 ]]; then
   exit 1
 fi
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "WARN: working tree is dirty — PR will only include committed changes on '$branch'"
-  git status --short
+meaningful="$(_meaningful_dirty || true)"
+if [[ -n "$meaningful" ]]; then
+  echo "WARN: working tree has non-scratch dirty paths — PR will only include committed changes on '$branch'"
+  printf '%s\n' "$meaningful"
+elif [[ -n "$(git status --porcelain)" ]]; then
+  echo "OK: dirty tree is only WIP/reports/.l9 scratch — no cleanup needed for make pr"
 fi
 
 # L4 local autonomy — no mid-execution push; require release receipt.
@@ -201,4 +232,10 @@ EOF
 else
   echo "PR_REMEDIATE=0 — skipped remediation handoff marker (PR still open/subscribed)"
   echo "RESULT: PASS — PR open + subscribed"
+fi
+
+_scratch_hold_restore
+if ! _scratch_hold_status; then
+  echo "FAIL: open scratch hold(s) after open-pr — restore before finishing"
+  exit 1
 fi

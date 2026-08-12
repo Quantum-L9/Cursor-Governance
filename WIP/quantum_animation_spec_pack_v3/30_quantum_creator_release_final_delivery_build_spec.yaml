@@ -1,0 +1,3239 @@
+metadata:
+  spec_id: quantum.animation.creator_release_final_delivery.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Creator Release and Final Delivery Authority
+  depends_on:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: FINAL_REVIEW_REASONING_AND_REPAIR_ROUTING_DEPENDENCY
+    - file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: CREATOR_INTENT_AND_CREATIVE_CONSTITUTION_DEPENDENCY
+    - file: 05_quantum_self_model_build_spec.yaml
+      relationship: DELIVERY_CAPABILITY_AND_EXPORT_DEPENDENCY
+    - file: 06_quantum_production_model_build_spec.yaml
+      relationship: FINAL_MANUFACTURING_STRATEGY_DEPENDENCY
+    - file: 07_quantum_autonomous_qc_build_spec.yaml
+      relationship: INTERNAL_MASTER_QC_AND_REPAIR_DEPENDENCY
+    - file: 08_quantum_production_engine_build_spec.yaml
+      relationship: MASTER_MANUFACTURING_AND_DELIVERY_PACKAGE_DEPENDENCY
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: RELEASE_AND_DELIVERY_LINEAGE_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: RELEASE_LOCK_AND_DELIVERY_ARTIFACT_DEPENDENCY
+    - file: 13_quantum_asset_identity_library_build_spec.yaml
+      relationship: FINAL_IDENTITY_CONTINUITY_DEPENDENCY
+    - file: 14_quantum_rendering_production_intelligence_build_spec.yaml
+      relationship: FINAL_MEDIA_REALIZATION_DEPENDENCY
+    - file: 23_quantum_commercial_offer_conversion_build_spec.yaml
+      relationship: CONTRACTUAL_DELIVERY_AND_ACCEPTANCE_DEPENDENCY
+    - file: 24_quantum_executable_agreement_legal_runtime_build_spec.yaml
+      relationship: EXECUTED_DELIVERY_OBLIGATION_DEPENDENCY
+    - file: 25_quantum_payment_work_authorization_build_spec.yaml
+      relationship: FINAL_PAYMENT_AND_RIGHTS_TRIGGER_DEPENDENCY
+    - file: 27_quantum_client_relationship_reputation_build_spec.yaml
+      relationship: REPUTATION_AND_DELIVERY_OUTCOME_DEPENDENCY
+    - file: 28_quantum_production_portal_client_experience_build_spec.yaml
+      relationship: CLIENT_DELIVERY_EXPERIENCE_DEPENDENCY
+architectural_identity:
+  concise: >
+    Preserve the creator's nondelegable final authority over every external
+    Quantum master and transform only creator-approved immutable media into the
+    final contractual delivery package.
+  extended: >
+    Quantum Creator Release and Final Delivery Authority is the final gate
+    between autonomous internal production and the outside world. The complete
+    studio may autonomously write, design, direct, render, edit, score, mix,
+    evaluate, reject, repair, rerender and assemble internal master candidates.
+    It may autonomously decide when a candidate has achieved sufficiently high
+    predicted creator acceptance to merit human review. It may not externally
+    deliver, publish, license, distribute or represent any Quantum-branded final
+    master as released until the creator explicitly approves the exact immutable
+    master revision. Approval produces a CreatorReleaseLock bound to exact content
+    hashes, source artifact revisions, QC certificates, project locks and delivery
+    specifications. Any change to the released master invalidates that lock and
+    requires a new creator release. Once valid release exists, FinalDeliveryRuntime
+    packages the exact approved media, technical deliverables, accessibility
+    artifacts, legal records, payment/delivery state and provenance according to
+    the executed agreement and transfers them through controlled delivery channels.
+  constitutional_identity: >
+    Quantum may be fully autonomous in production.
+    Quantum is not autonomous over the creator's name.
+  creator_boundary: >
+    If the creator's name, studio or reputation is attached to the final work,
+    the creator personally decides whether the exact final master is exceptional
+    enough to leave Quantum.
+ownership:
+  system: CREATOR_RELEASE_FINAL_DELIVERY
+  owner_question:
+    primary: >
+      Has the creator explicitly approved this exact immutable Quantum master for
+      external delivery, and if so, what exact artifacts may now leave the studio?
+  secondary_questions:
+    - "Has autonomous final QC passed?"
+    - "Is this master candidate internally complete?"
+    - "Is it likely to meet the creator's personal release standard?"
+    - "Has the system minimized avoidable review burden?"
+    - "What exactly should the creator watch/listen to?"
+    - "What changed since the prior creator review?"
+    - "Which remaining risks matter?"
+    - "Did the creator approve this exact revision?"
+    - "What hash was approved?"
+    - "What happens if one frame changes afterward?"
+    - "What if only captions change?"
+    - "What if the mix changes?"
+    - "What if a legal slate changes?"
+    - "What if a delivery transcode changes but semantic master does not?"
+    - "Which changes require rerelease?"
+    - "Which derived delivery files may be generated from an approved master?"
+    - "How are rejects routed back into autonomous repair?"
+    - "Can the creator give freeform feedback?"
+    - "How is creator feedback compiled into typed repair instructions?"
+    - "Can the system learn the creator's taste from release decisions?"
+    - "Can learned taste ever replace creator release?"
+    - "Does contractual acceptance override creator rejection?"
+    - "Does payment pressure override creator rejection?"
+    - "Does schedule pressure override creator rejection?"
+    - "Can an unreleased master be exposed in the ProductionPortal?"
+    - "When is final delivery considered complete?"
+    - "What gets archived?"
+  owns:
+    - CreatorReleaseAuthority
+    - CreatorReleasePolicy
+    - CreatorReleaseStandard
+    - CreatorReleaseCandidate
+    - InternalMasterCandidate
+    - FinalMasterCandidate
+    - CreatorReviewReadiness
+    - CreatorReviewPackage
+    - CreatorReviewSession
+    - CreatorReviewDecision
+    - CreatorApproval
+    - CreatorRejection
+    - CreatorReleaseFeedback
+    - CreatorFeedbackCompiler
+    - CreatorReleaseRepairRequest
+    - CreatorReleaseRepairLoop
+    - CreatorTasteObservation
+    - CreatorAcceptancePrediction
+    - CreatorReleaseLock
+    - CreatorReleaseCertificate
+    - CreatorReleaseRevision
+    - ReleaseInvalidation
+    - DeliveryAuthorization
+    - FinalDeliverySpecification
+    - FinalDeliveryPackage
+    - FinalDeliveryArtifact
+    - DeliveryManifest
+    - DeliveryTransfer
+    - DeliveryReceipt
+    - ClientDeliveryCompletion
+    - DeliveryArchive
+    - ReleaseAuditTrail
+    - CreatorReleaseQCContract
+    - DeliveryQCContract
+    - creator release / final delivery events
+  explicitly_does_not_own:
+    creator_intent:
+      owner: 03_quantum_creative_intelligence_build_spec.yaml
+    autonomous_quality_evaluation:
+      owner: 07_quantum_autonomous_qc_build_spec.yaml
+    production_execution:
+      owner: 08_quantum_production_engine_build_spec.yaml
+    commercial_scope:
+      owner: 23_quantum_commercial_offer_conversion_build_spec.yaml
+    legal_acceptance_definition:
+      owner: 24_quantum_executable_agreement_legal_runtime_build_spec.yaml
+    payment_truth:
+      owner: 25_quantum_payment_work_authorization_build_spec.yaml
+    client_relationship:
+      owner: 27_quantum_client_relationship_reputation_build_spec.yaml
+    portal_projection:
+      owner: 28_quantum_production_portal_client_experience_build_spec.yaml
+    client_contractual_acceptance:
+      source:
+        - spec_23
+        - spec_24
+    creator_personal_taste:
+      owner:
+        source_authority: CREATOR
+        modeled_projection: spec_30
+  hard_boundary: >
+    Autonomous systems may propose release. Only the creator may authorize
+    external Quantum-branded final release under the default studio constitution.
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Make it extraordinarily unlikely that the creator ever sees mediocre work,
+    while preserving the creator's absolute final say over what leaves Quantum.
+  autonomy_goal: >
+    The autonomous studio should perform enough internal QC and repair that
+    creator review is rare, high-level and focused on the strongest master candidate.
+  creator_experience_goal: >
+    Watch.
+    Feel.
+    Judge.
+    Speak.
+    Receive the better version.
+  quality_goal: >
+    Never knowingly ship work below the Creator Release Standard merely because
+    minimum contract requirements have technically been satisfied.
+  reputation_goal: >
+    Protect the statement:
+    "If the Quantum name is on it, it passed the creator."
+  operational_goal: >
+    Once the creator approves the exact master, external delivery should be
+    mechanical, deterministic and low-friction.
+# =====================================================================
+# 2. NONDELEGABLE CREATOR AUTHORITY
+# =====================================================================
+authority:
+  CreatorReleaseAuthority:
+    extends:
+      - 10.PolicyObject
+    fields:
+      authority_id:
+      creator_ref:
+      applies_to:
+        - external_delivery
+        - public_release
+        - final_master
+        - client_final_master
+        - festival_submission
+        - marketing_master
+        - distribution_master
+      delegation_allowed:
+        value: false
+      autonomous_bypass_allowed:
+        value: false
+      minimum_release_standard:
+        value: EXCEPTIONAL
+      exact_artifact_binding_required:
+        value: true
+      creator_identity_verification_policy:
+      signature_or_release_action_policy:
+      version:
+      provenance_ref:
+      digest:
+  constitutional:
+    immutable_by_learning: true
+# =====================================================================
+# 3. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  CRL-001:
+    name: CREATOR_RELEASE_IS_NONDELEGABLE
+    statement: >
+      No AI system, employee, buyer, critic or production subsystem may substitute
+      for the creator's final release decision under default Quantum policy.
+  CRL-002:
+    name: AUTONOMY_STOPS_AT_THE_DOOR
+    statement: >
+      Quantum may autonomously produce everything up to the external-release boundary.
+  CRL-003:
+    name: CREATOR_REVIEWS_MASTER_NOT_PIPELINE
+    statement: >
+      The creator should not be required to approve ordinary intermediate production stages.
+  CRL-004:
+    name: INTERNAL_APPROVAL_IS_AUTONOMOUS
+    statement: >
+      Story, asset, shot, sequence, sound and edit approval gates remain autonomous
+      unless creator intervention is explicitly requested.
+  CRL-005:
+    name: HUMAN_GATE_COUNT_DEFAULTS_TO_ONE
+    statement: >
+      The normal production path contains one mandatory human creative gate:
+      final CreatorRelease.
+  CRL-006:
+    name: CREATOR_SEES_STRONG_CANDIDATES
+    statement: >
+      The system should not routinely ask the creator to evaluate known-bad or
+      low-confidence work.
+  CRL-007:
+    name: AUTONOMOUS_QC_BEFORE_CREATOR
+    statement: >
+      Internal master candidates must clear AutonomousQC before CreatorReviewReady.
+  CRL-008:
+    name: HIGH_ACCEPTANCE_PROBABILITY
+    statement: >
+      Creator review should be triggered when the system predicts a high
+      probability that the creator may approve the candidate.
+  CRL-009:
+    name: PREDICTION_DOES_NOT_REPLACE_CREATOR
+    statement: >
+      CreatorAcceptancePrediction is an efficiency tool, never release authority.
+  CRL-010:
+    name: CREATOR_STANDARD_CAN_EXCEED_CONTRACT
+    statement: >
+      Quantum's internal release standard may be substantially higher than the
+      minimum contractual acceptance threshold.
+  CRL-011:
+    name: CONTRACT_MINIMUM_IS_NOT_QUANTUM_MAXIMUM
+    statement: >
+      Contract compliance does not force Quantum to release work the creator
+      considers unworthy of the studio name.
+  CRL-012:
+    name: PAYMENT_DOES_NOT_LOWER_QUALITY
+    statement: >
+      Received money cannot lower CreatorReleaseStandard.
+  CRL-013:
+    name: DEADLINE_DOES_NOT_LOWER_QUALITY
+    statement: >
+      Schedule pressure cannot autonomously bypass CreatorRelease.
+  CRL-014:
+    name: CLIENT_PRESSURE_DOES_NOT_LOWER_QUALITY
+    statement: >
+      Client urgency cannot convert an unapproved master into a Quantum final.
+  CRL-015:
+    name: CREATOR_APPROVES_EXACT_BYTES_OR_SEMANTIC_MASTER
+    statement: >
+      Release approval binds an exact canonical master identity and explicitly
+      permitted deterministic derivatives.
+  CRL-016:
+    name: MUTATED_MASTER_INVALIDATES_RELEASE
+    statement: >
+      Any semantically material change to released master content invalidates the
+      existing CreatorReleaseLock.
+  CRL-017:
+    name: ONE_FRAME_COUNTS
+    statement: >
+      A changed picture frame is a new picture master.
+  CRL-018:
+    name: MIX_CHANGE_COUNTS
+    statement: >
+      Material mix or music changes require release reevaluation.
+  CRL-019:
+    name: DIALOGUE_CHANGE_COUNTS
+    statement: >
+      Any changed spoken content requires release reevaluation.
+  CRL-020:
+    name: EDIT_CHANGE_COUNTS
+    statement: >
+      Cut timing or shot-order changes require release reevaluation.
+  CRL-021:
+    name: COLOR_CHANGE_CAN_COUNT
+    statement: >
+      Material grade changes require release reevaluation.
+  CRL-022:
+    name: IDENTITY_DRIFT_AFTER_RELEASE_IS_FORBIDDEN
+    statement: >
+      Derived exports cannot regenerate content through stochastic models.
+  CRL-023:
+    name: DETERMINISTIC_TRANSCODES_CAN_DERIVE
+    statement: >
+      Technical encodes from an approved canonical master may be generated
+      without full creative rereview if they pass deterministic equivalence policy.
+  CRL-024:
+    name: CAPTION_OR_SUBTITLE_CHANGES_ARE_SEPARATE
+    statement: >
+      Accessibility/localization artifacts may have their own release scope and
+      cannot silently alter the approved audiovisual master.
+  CRL-025:
+    name: LEGAL_SLATE_CHANGES_ARE_SEPARATE
+    statement: >
+      Noncreative legal metadata may be handled under an explicitly scoped
+      derivative policy.
+  CRL-026:
+    name: RELEASE_SCOPE_IS_EXPLICIT
+    statement: >
+      CreatorReleaseLock states exactly which artifacts and derivative classes it authorizes.
+  CRL-027:
+    name: CREATOR_REJECTION_IS_NOT_FAILURE_OF_CREATOR
+    statement: >
+      Rejection is a high-authority quality signal directing the autonomous repair system.
+  CRL-028:
+    name: REJECTION_PRESERVES_PRIOR_WORK
+    statement: >
+      Creator rejection invalidates release eligibility, not the historical
+      production record.
+  CRL-029:
+    name: REPAIR_STARTS_SMALL
+    statement: >
+      Creator feedback should enter the same smallest-blast-radius repair logic
+      used by AutonomousQC.
+  CRL-030:
+    name: FREEFORM_FEEDBACK_IS_ALLOWED
+    statement: >
+      The creator may communicate naturally rather than filling structured forms.
+  CRL-031:
+    name: FREEFORM_FEEDBACK_COMPILES_TO_TYPED_REPAIR
+    statement: >
+      CreatorFeedbackCompiler converts natural feedback into explicit scoped
+      repair requirements while preserving original language as source evidence.
+  CRL-032:
+    name: CREATOR_WORDS_HAVE_HIGHEST_CREATIVE_PROVENANCE
+    statement: >
+      Creator release feedback is tagged CREATOR_EXPLICIT or CREATOR_IMPLIED,
+      never demoted to model suggestion.
+  CRL-033:
+    name: DO_NOT_OVERINTERPRET_FEEDBACK
+    statement: >
+      The compiler may infer likely repair intent but preserves ambiguity and
+      confidence rather than inventing creative instructions.
+  CRL-034:
+    name: FEEDBACK_CAN_REFERENCE_FEELING
+    statement: >
+      "I don't feel anything here" is a valid creator signal even when it is not
+      a deterministic defect code.
+  CRL-035:
+    name: FEELING_GETS_DIAGNOSED
+    statement: >
+      The system may use specialist cognition to determine whether weak emotional
+      effect originates in performance, writing, edit, music, framing or another cause.
+  CRL-036:
+    name: CREATOR_CAN_REJECT_WITHOUT_JUSTIFICATION
+    statement: >
+      The creator is not required to prove mathematically why work is not ready.
+  CRL-037:
+    name: SYSTEM_SHOULD_LEARN_FROM_REJECTIONS
+    statement: >
+      Repeated creator judgments become evidence for CreatorTasteModel and future
+      review-readiness prediction.
+  CRL-038:
+    name: LEARNING_CANNOT_REMOVE_RELEASE_GATE
+    statement: >
+      Even perfect historical prediction does not authorize autonomous final release.
+  CRL-039:
+    name: CREATOR_TASTE_IS_CONTEXTUAL
+    statement: >
+      Preference learned from preschool comedy may not transfer literally to
+      adult science fiction.
+  CRL-040:
+    name: INTENT_FIDELITY_OVERRIDES_GENERIC_PREMIUM
+    statement: >
+      Release evaluation asks whether the work exceptionally realizes the intended
+      style, not whether it looks generically expensive.
+  CRL-041:
+    name: DELIBERATE_CRUDE_STYLE_CAN_BE_EXCEPTIONAL
+    statement: >
+      Intentional simplicity, distortion or roughness can satisfy the creator if
+      it perfectly serves the project.
+  CRL-042:
+    name: CREATOR_RELEASE_PROTECTS_ORIGINALITY
+    statement: >
+      A technically polished but derivative final master may still be rejected.
+  CRL-043:
+    name: CREATOR_RELEASE_PROTECTS_INTELLIGENCE
+    statement: >
+      Visual spectacle cannot compensate for storytelling that violates the
+      creator's intended intelligence or meaning.
+  CRL-044:
+    name: CREATOR_RELEASE_PROTECTS_CHARACTER_TRUTH
+    statement: >
+      A character acting falsely relative to established identity is grounds for rejection.
+  CRL-045:
+    name: CREATOR_RELEASE_PROTECTS_PERFORMANCE
+    statement: >
+      Technically valid animation with emotionally false performance is not exceptional.
+  CRL-046:
+    name: CREATOR_RELEASE_PROTECTS_SOUND
+    statement: >
+      Picture quality cannot compensate for weak final sound or music realization.
+  CRL-047:
+    name: RELEASE_IS_HOLISTIC
+    statement: >
+      The creator judges the experienced work as a film, not only an aggregate of validators.
+  CRL-048:
+    name: QC_EVIDENCE_SUPPORTS_NOT_CONSTRAINS_CREATOR
+    statement: >
+      Creator review may include useful QC evidence, but the creator is not bound
+      by critic scores.
+  CRL-049:
+    name: NO_DASHBOARD_OVERLOAD
+    statement: >
+      CreatorReviewPackage should foreground the master itself rather than force
+      the creator to inspect dozens of system metrics.
+  CRL-050:
+    name: WATCH_FIRST
+    statement: >
+      The preferred creator flow begins with uninterrupted viewing before
+      exposing detailed analytical commentary.
+  CRL-051:
+    name: FEEL_BEFORE_METRICS
+    statement: >
+      The creator should be able to experience the work as an audience member
+      before seeing potentially biasing QC analysis.
+  CRL-052:
+    name: ANALYSIS_ON_DEMAND
+    statement: >
+      Detailed evidence, known compromises and changes are available after the viewing.
+  CRL-053:
+    name: REVIEW_PACKAGE_EXPLAINS_WHAT_CHANGED
+    statement: >
+      After a rejection cycle, the creator can see a concise delta from the prior candidate.
+  CRL-054:
+    name: NO_SILENT_CHANGES
+    statement: >
+      Every new creator review candidate links to all changed semantic and media components.
+  CRL-055:
+    name: CREATOR_APPROVAL_IS_AFFIRMATIVE
+    statement: >
+      Silence, inactivity or failure to respond cannot be interpreted as approval.
+  CRL-056:
+    name: CREATOR_APPROVAL_CANNOT_EXPIRE_INTO_APPROVAL
+    statement: >
+      No deemed-approval mechanism exists for CreatorRelease.
+  CRL-057:
+    name: CREATOR_IDENTITY_MUST_BE_AUTHENTICATED
+    statement: >
+      Release action must be attributable to the creator through an appropriate
+      secure authentication mechanism.
+  CRL-058:
+    name: RELEASE_ACTION_IS_NONAMBIGUOUS
+    statement: >
+      Clicking playback, commenting or opening the review page cannot create a release lock.
+  CRL-059:
+    name: APPROVE_BUTTON_HAS_EXACT_SCOPE
+    statement: >
+      The UI must state exactly which master revision is being approved.
+  CRL-060:
+    name: CREATOR_CAN_WITHDRAW_BEFORE_EXTERNAL_DELIVERY
+    statement: >
+      Policy may allow a release to be revoked before irreversible external
+      delivery begins.
+  CRL-061:
+    name: HISTORY_REMAINS
+    statement: >
+      Revoking a release creates a new event; it does not erase the original approval.
+  CRL-062:
+    name: POST_DELIVERY_REVOCATION_DOES_NOT_REWRITE_REALITY
+    statement: >
+      Once a master has validly left Quantum, historical delivery remains true.
+  CRL-063:
+    name: DELIVERY_REQUIRES_RELEASE
+    statement: >
+      FinalDeliveryRuntime cannot produce an external DeliveryAuthorization
+      without CreatorReleaseLock.
+  CRL-064:
+    name: PORTAL_CANNOT_BYPASS_RELEASE
+    statement: >
+      ProductionPortal cannot expose unreleased final media as a final deliverable.
+  CRL-065:
+    name: CLIENT_ACCEPTANCE_IS_SEPARATE
+    statement: >
+      Creator release and contractual client acceptance are different states.
+  CRL-066:
+    name: CREATOR_RELEASE_CAN_PRECEDE_CLIENT_ACCEPTANCE
+    statement: >
+      Quantum may approve and deliver a master that the client subsequently
+      reviews under contractual acceptance terms.
+  CRL-067:
+    name: CLIENT_ACCEPTANCE_CANNOT_RETROACTIVELY_CREATE_CREATOR_RELEASE
+    statement: >
+      A client liking an unreleased master does not authorize its release.
+  CRL-068:
+    name: CONTRACTUAL_CURE_AFTER_DELIVERY_MAY_REQUIRE_NEW_RELEASE
+    statement: >
+      Any cure that changes the master must pass CreatorRelease again.
+  CRL-069:
+    name: FINAL_PAYMENT_IS_SEPARATE
+    statement: >
+      Payment state may govern transfer or download rights but does not determine
+      whether the creator considers the master releasable.
+  CRL-070:
+    name: DELIVERY_PACKAGE_IS_DETERMINISTIC
+    statement: >
+      Once release is valid, packaging/export should be mechanical and reproducible.
+  CRL-071:
+    name: DELIVER_ONLY_CONTRACTED_ARTIFACTS
+    statement: >
+      FinalDeliveryPackage includes only items required or authorized by the agreement.
+  CRL-072:
+    name: INTERNAL_PROMPTS_ARE_NOT_FINAL_DELIVERABLES
+    statement: >
+      Internal reasoning, prompts and provider artifacts remain Quantum property
+      absent explicit contractual inclusion.
+  CRL-073:
+    name: SOURCE_FILES_ARE_POLICY_CONTROLLED
+    statement: >
+      Editable/source production assets transfer only if the executed agreement requires them.
+  CRL-074:
+    name: DELIVERY_FILES_HAVE_HASHES
+    statement: >
+      Every material delivered artifact has an immutable digest.
+  CRL-075:
+    name: DELIVERY_MANIFEST_IS_COMPLETE
+    statement: >
+      The client receives or can retrieve an exact list of contractual deliverables.
+  CRL-076:
+    name: DELIVERY_IS_AUDITABLE
+    statement: >
+      Quantum can prove what exact files were delivered, when and under which release lock.
+  CRL-077:
+    name: DELIVERY_CAN_BE_REPRODUCED
+    statement: >
+      Contractually retained deliverables remain reproducible according to retention policy.
+  CRL-078:
+    name: DELIVERY_CHANNEL_IS_NOT_TRUTH
+    statement: >
+      Cloud storage, transfer service or physical media is an adapter, not the
+      source of final-delivery semantics.
+  CRL-079:
+    name: RELEASE_REPUTATION_EVENT
+    statement: >
+      CreatorReleaseLock becomes high-value evidence for Quantum's quality consistency model.
+  CRL-080:
+    name: DELIVERED_EARLY_ONLY_IF_CREATOR_APPROVED
+    statement: >
+      Reputation receives early-delivery credit only when the creator approved
+      that master and contractual scope remained intact.
+  CRL-081:
+    name: CREATOR_REVIEW_TIME_IS_SCARCE
+    statement: >
+      The system should minimize creator review frequency and cognitive overhead.
+  CRL-082:
+    name: CREATOR_REVIEW_IS_NOT_PROJECT_MANAGEMENT
+    statement: >
+      The creator should not be asked to debug job queues, providers or technical failures.
+  CRL-083:
+    name: CREATOR_SPEAKS_IN_CREATIVE_LANGUAGE
+    statement: >
+      The creator may say "that moment dies" rather than specify a shot UUID.
+  CRL-084:
+    name: SYSTEM_MAPS_FEEDBACK_TO_IMPLEMENTATION
+    statement: >
+      Quantum owns translating high-level creator judgment into precise repair actions.
+  CRL-085:
+    name: CREATOR_CAN_ALWAYS_WATCH_AGAIN
+    statement: >
+      Review UX supports uninterrupted replay and comparison across candidate revisions.
+  CRL-086:
+    name: REJECTED_MASTERS_REMAIN_INTERNAL
+    statement: >
+      Rejected final-master candidates are retained for history/learning but
+      cannot be externally represented as final Quantum work.
+  CRL-087:
+    name: APPROVED_MASTER_IS_CANONICAL_RELEASE_REFERENCE
+    statement: >
+      All delivery derivatives trace back to the released canonical master.
+  CRL-088:
+    name: STOCHASTIC_REEXPORT_IS_FORBIDDEN
+    statement: >
+      Final delivery generation cannot re-run generative models to recreate
+      frames, voices or music from prompts.
+  CRL-089:
+    name: DELIVERY_VARIANT_EQUIVALENCE_IS_TESTED
+    statement: >
+      Derived encodes must pass technical and semantic-equivalence checks.
+  CRL-090:
+    name: FINAL_RELEASE_IS_A_REPUTATIONAL SIGNATURE
+    statement: >
+      CreatorReleaseLock means the creator is willing to attach Quantum's
+      reputation to the exact approved work.
+# =====================================================================
+# 4. CREATOR RELEASE POLICY
+# =====================================================================
+policy:
+  CreatorReleasePolicy:
+    extends:
+      - 10.PolicyObject
+    fields:
+      policy_id:
+      CreatorReleaseAuthority_ref:
+      release_required_for:
+      review_readiness_policy:
+      creator_authentication_policy:
+      approval_action_policy:
+      rejection_policy:
+      feedback_compilation_policy:
+      repair_policy:
+      release_invalidation_policy:
+      derived_artifact_policy:
+      localization_release_policy:
+      accessibility_release_policy:
+      marketing_asset_release_policy:
+      emergency_policy:
+      version:
+      provenance_ref:
+  default:
+    release_required_for_all_external_QAS_final_media: true
+    delegation: false
+    bypass: false
+# =====================================================================
+# 5. CREATOR RELEASE STANDARD
+# =====================================================================
+standard:
+  CreatorReleaseStandard:
+    fields:
+      standard_id:
+      minimum_class:
+        enum:
+          - UNACCEPTABLE
+          - FUNCTIONAL
+          - GOOD
+          - EXCELLENT
+          - EXCEPTIONAL
+      default:
+        value: EXCEPTIONAL
+      dimensions:
+        - intent_fidelity
+        - originality
+        - story_intelligence
+        - character_truth
+        - emotional_effect
+        - performance_truth
+        - visual_identity
+        - cinematic_execution
+        - continuity
+        - world_coherence
+        - edit
+        - dialogue
+        - sound
+        - music
+        - finishing
+        - memorability
+        - ending_consequence
+        - rewatch_value
+        - project_specific_intent_dimensions
+      hard_creator_anti_goals:
+      creator_locked_requirements:
+      version:
+      provenance_ref:
+  aggregate_score:
+    cannot_override_hard_failure: true
+# =====================================================================
+# 6. INTERNAL MASTER CANDIDATE
+# =====================================================================
+candidate:
+  InternalMasterCandidate:
+    extends:
+      - 10.CanonicalObject
+    object_class:
+      value: CERTIFIED_ARTIFACT
+    fields:
+      candidate_id:
+      project_id:
+      picture_master_ref:
+      audio_master_ref:
+      combined_master_ref:
+      subtitle_caption_refs:
+      language_variant_refs:
+      source_TimelineIR_ref:
+      ProductionManifest_ref:
+      project_lock_refs:
+      QC_certificate_refs:
+      provenance_graph_ref:
+      technical_validation_refs:
+      candidate_revision:
+      created_at:
+      digest:
+  external_release_eligible:
+    default: false
+# =====================================================================
+# 7. FINAL MASTER CANDIDATE
+# =====================================================================
+final_candidate:
+  FinalMasterCandidate:
+    fields:
+      candidate_ref:
+      autonomous_final_QC_pass:
+      creator_acceptance_prediction_ref:
+      CreatorReviewReadiness_ref:
+      known_nonblocking_risks:
+      known_blocking_risks:
+      comparison_to_prior_candidate_ref:
+        nullable: true
+      release_eligible_for_creator_review:
+      generated_at:
+# =====================================================================
+# 8. AUTONOMOUS FINAL QC
+# =====================================================================
+autonomous_final_QC:
+  owner:
+    spec: 07
+  required_before_creator:
+    - hard_constraint_validation
+    - story_continuity_QC
+    - character_identity_QC
+    - performance_QC
+    - visual_continuity_QC
+    - edit_QC
+    - sound_QC
+    - music_QC
+    - subtitle_caption_QC_where_applicable
+    - technical_master_QC
+    - regression_QC
+    - provenance_completeness
+    - contractual_delivery_spec_QC
+  outcome:
+    - PASS_TO_CREATOR
+    - REPAIR_AUTONOMOUSLY
+  rule: >
+    Failed autonomous final QC does not consume creator review attention.
+# =====================================================================
+# 9. CREATOR ACCEPTANCE PREDICTION
+# =====================================================================
+prediction:
+  CreatorAcceptancePrediction:
+    extends:
+      - 10.ProjectionObject
+    fields:
+      prediction_id:
+      project_ref:
+      master_candidate_ref:
+      creator_taste_model_version:
+      project_creative_intent_ref:
+      similarity_to_prior_approved_patterns:
+      similarity_to_prior_rejected_patterns:
+      known_creator_sensitive_dimensions:
+      predicted_acceptance_probability:
+      uncertainty:
+      evidence_refs:
+      generated_at:
+  use:
+    - review_readiness
+    - autonomous_repair_priority
+  not_authority:
+    true
+# =====================================================================
+# 10. CREATOR REVIEW READINESS
+# =====================================================================
+readiness:
+  CreatorReviewReadiness:
+    fields:
+      readiness_id:
+      candidate_ref:
+      autonomous_QC_pass:
+      no_known_critical_violations:
+      creator_acceptance_probability:
+      open_risks:
+      unresolved_assumptions:
+      changed_since_last_review:
+      quality_evidence:
+      status:
+        enum:
+          - NOT_READY
+          - READY
+          - HIGH_CONFIDENCE_READY
+      evaluated_at:
+  default_review_trigger:
+    preferred:
+      - HIGH_CONFIDENCE_READY
+# =====================================================================
+# 11. CREATOR REVIEW PACKAGE
+# =====================================================================
+review_package:
+  CreatorReviewPackage:
+    fields:
+      package_id:
+      project_ref:
+      candidate_ref:
+      exact_candidate_digest:
+      uninterrupted_master_ref:
+      runtime:
+      review_surface_ref:
+      prior_candidate_ref:
+        nullable: true
+      delta_summary_ref:
+        nullable: true
+      known_material_risks:
+      autonomous_QC_summary:
+      optional_detailed_QC_refs:
+      creator_locked_intent_summary:
+      review_actions:
+      generated_at:
+      provenance_ref:
+  default_first_screen:
+    - WATCH_FILM
+  hidden_until_after_first_view_by_default:
+    - critic_scores
+    - automated_acceptance_prediction
+    - detailed_violation_history
+    - provider_info
+# =====================================================================
+# 12. CREATOR REVIEW UX
+# =====================================================================
+review_UX:
+  canonical: |
+    MASTER CANDIDATE READY
+    [ WATCH ]
+         ↓
+    uninterrupted playback
+         ↓
+    end
+         ↓
+    creator reaction
+    [ APPROVE RELEASE ]
+    [ TALK / GIVE FEEDBACK ]
+    [ WATCH AGAIN ]
+    [ COMPARE PRIOR VERSION ]
+    [ VIEW CHANGES ]
+    [ VIEW QC DETAILS ]
+  no_form_required:
+    true
+  no_project_management_dashboard_required:
+    true
+# =====================================================================
+# 13. CREATOR REVIEW SESSION
+# =====================================================================
+review_session:
+  CreatorReviewSession:
+    fields:
+      session_id:
+      creator_ref:
+      candidate_ref:
+      candidate_digest:
+      authenticated_at:
+      playback_started_at:
+      playback_completed_at:
+        nullable: true
+      replay_count:
+      prior_version_comparison:
+      feedback_refs:
+      decision_ref:
+        nullable: true
+      created_at:
+      provenance_ref:
+# =====================================================================
+# 14. CREATOR REVIEW DECISION
+# =====================================================================
+decision:
+  CreatorReviewDecision:
+    fields:
+      decision_id:
+      creator_ref:
+      candidate_ref:
+      exact_candidate_digest:
+      decision:
+        enum:
+          - APPROVE
+          - REJECT
+          - NO_DECISION
+      decided_at:
+      authentication_evidence_ref:
+      feedback_ref:
+        nullable: true
+      provenance_ref:
+  silence:
+    value: NO_DECISION
+# =====================================================================
+# 15. CREATOR APPROVAL
+# =====================================================================
+approval:
+  CreatorApproval:
+    extends:
+      - 10.CertificateArtifact
+    fields:
+      approval_id:
+      creator_ref:
+      project_ref:
+      candidate_ref:
+      candidate_digest:
+      CreatorReviewDecision_ref:
+      approval_scope:
+      approved_at:
+      authentication_evidence_ref:
+      source_review_session_ref:
+      provenance_ref:
+  effect:
+    eligible_for_CreatorReleaseLock: true
+# =====================================================================
+# 16. CREATOR REJECTION
+# =====================================================================
+rejection:
+  CreatorRejection:
+    extends:
+      - 10.EvidenceObject
+    fields:
+      rejection_id:
+      creator_ref:
+      project_ref:
+      candidate_ref:
+      candidate_digest:
+      CreatorReviewDecision_ref:
+      feedback_ref:
+        nullable: true
+      rejected_at:
+      severity:
+        enum:
+          - LOCAL
+          - MULTI_SHOT
+          - SCENE
+          - SEQUENCE
+          - SYSTEMIC
+          - HOLISTIC
+          - UNSPECIFIED
+      release_state:
+        value: REJECTED
+      provenance_ref:
+  effect:
+    - candidate_not_releasable
+    - repair_analysis_required
+# =====================================================================
+# 17. CREATOR RELEASE FEEDBACK
+# =====================================================================
+feedback:
+  CreatorReleaseFeedback:
+    extends:
+      - 10.SourceArtifact
+    fields:
+      feedback_id:
+      creator_ref:
+      project_ref:
+      candidate_ref:
+      modality:
+        enum:
+          - SPEECH
+          - TEXT
+          - ANNOTATION
+          - TIME_CODED_NOTE
+          - MIXED
+      raw_creator_expression:
+      normalized_transcript_ref:
+        nullable: true
+      timecoded_refs:
+      explicit_requests:
+      implied_preferences:
+      emotional_reaction:
+      approval_or_rejection_context:
+      created_at:
+      provenance:
+        value: CREATOR_EXPLICIT
+# =====================================================================
+# 18. FEEDBACK COMPILER
+# =====================================================================
+feedback_compiler:
+  CreatorFeedbackCompiler:
+    input:
+      - CreatorReleaseFeedback
+      - CreativeIntent
+      - current_MasterCandidate
+      - QC_evidence
+      - WorldModel
+      - project_locks
+    output:
+      - CreatorReleaseRepairRequest
+      - ambiguity_set
+      - evidence_map
+  compiler_rules:
+    - preserve_raw_feedback
+    - do_not_erase_emotional_language
+    - separate_explicit_from_inferred
+    - preserve_confidence
+    - protect_existing_creator_locks
+    - map_to_smallest_likely_owning_stage
+# =====================================================================
+# 19. CREATOR RELEASE REPAIR REQUEST
+# =====================================================================
+repair_request:
+  CreatorReleaseRepairRequest:
+    fields:
+      repair_request_id:
+      project_ref:
+      source_creator_feedback_ref:
+      source_rejection_ref:
+      candidate_ref:
+      repair_objective:
+      affected_scope:
+      likely_owner:
+      causal_hypotheses:
+      constraints:
+      preserved_elements:
+      forbidden_changes:
+      target_experience:
+      confidence:
+      candidate_repairs:
+      provenance_ref:
+# =====================================================================
+# 20. CREATOR REPAIR ESCALATION
+# =====================================================================
+repair_escalation:
+  order:
+    - select_existing_alternate_take
+    - rerender_same_shot_spec
+    - adjust_performance_constraints
+    - adjust_local_edit
+    - adjust_sound_or_music
+    - redesign_shot
+    - add_local_coverage
+    - rewrite_local_dialogue_if_unlocked
+    - rewrite_scene_if_unlocked
+    - change_sequence_structure_if_unlocked
+    - alter_story_beat_if_unlocked
+    - request_creator_specific_clarification_only_if_no_safe_best_effort_exists
+  creator_locks:
+    protected: true
+  whole_project_rebuild:
+    last_resort: true
+# =====================================================================
+# 21. CREATOR RELEASE REPAIR LOOP
+# =====================================================================
+repair_loop:
+  flow: |
+    Creator rejects
+        ↓
+    preserve raw feedback
+        ↓
+    compile typed repair request
+        ↓
+    root-cause analysis
+        ↓
+    smallest-blast-radius repair
+        ↓
+    autonomous QC
+        ↓
+    creator acceptance prediction
+        ↓
+    HIGH_CONFIDENCE_READY
+        ↓
+    new CreatorReviewPackage
+        ↓
+    creator watches better version
+  maximum_iterations:
+    hardcoded: false
+  stopping:
+    creator_approval_required: true
+# =====================================================================
+# 22. CREATOR TASTE OBSERVATION
+# =====================================================================
+taste:
+  CreatorTasteObservation:
+    extends:
+      - 10.EvidenceObject
+    fields:
+      observation_id:
+      creator_ref:
+      project_ref:
+      candidate_ref:
+      decision:
+      feedback_features:
+      context:
+        - genre
+        - audience
+        - style
+        - project_mode
+      approved_elements:
+      rejected_elements:
+      confidence:
+      created_at:
+  purpose:
+    - improve_acceptance_prediction
+    - improve_autonomous_final_QC
+    - reduce_creator_review_cycles
+  cannot:
+    - authorize_release
+# =====================================================================
+# 23. CREATOR TASTE MODEL
+# =====================================================================
+taste_model:
+  CreatorTasteModel:
+    extends:
+      - 10.ProjectionObject
+    fields:
+      model_id:
+      creator_ref:
+      general_preferences:
+      context_specific_preferences:
+      hard_dislikes:
+      project_mode_differences:
+      emotional_response_patterns:
+      performance_preferences:
+      visual_preferences:
+      edit_preferences:
+      sound_preferences:
+      originality_preferences:
+      evidence_count:
+      confidence:
+      version:
+      updated_at:
+  relationship_to_CreatorModel:
+    subordinate: true
+  cannot_override:
+    - explicit_current_project_intent
+    - creator_constitution
+    - current_creator_feedback
+# =====================================================================
+# 24. RELEASE LOCK
+# =====================================================================
+release_lock:
+  CreatorReleaseLock:
+    extends:
+      - 10.LockArtifact
+    lock_type:
+      value: creator_release
+    fields:
+      release_lock_id:
+      project_id:
+      creator_ref:
+      CreatorApproval_ref:
+      canonical_master_ref:
+      canonical_master_digest:
+      picture_digest:
+      audio_digest:
+      timeline_digest:
+      subtitle_caption_digest_refs:
+      language_variant_digest_refs:
+      project_lock_refs:
+      QC_certificate_refs:
+      delivery_spec_ref:
+      permitted_derivative_classes:
+      prohibited_changes:
+      locked_at:
+      release_revision:
+      state:
+        enum:
+          - ACTIVE
+          - REVOKED_BEFORE_DELIVERY
+          - INVALIDATED_BY_CHANGE
+          - SUPERSEDED
+      provenance_ref:
+      digest:
+  external_delivery_required:
+    true
+# =====================================================================
+# 25. RELEASE CERTIFICATE
+# =====================================================================
+release_certificate:
+  CreatorReleaseCertificate:
+    extends:
+      - 10.CertificateArtifact
+    fields:
+      certificate_id:
+      CreatorReleaseLock_ref:
+      candidate_ref:
+      creator_approval_ref:
+      AutonomousFinalQC_ref:
+      project_lock_consistency:
+      provenance_completeness:
+      delivery_spec_compatibility:
+      issued_at:
+      digest:
+  semantic_statement: >
+    The exact referenced master cleared Quantum's autonomous quality system and
+    was personally approved for release by the creator.
+# =====================================================================
+# 26. RELEASE REVISION
+# =====================================================================
+revision:
+  CreatorReleaseRevision:
+    fields:
+      project_ref:
+      release_revision:
+      release_lock_ref:
+      prior_release_lock_ref:
+        nullable: true
+      reason:
+        enum:
+          - INITIAL_RELEASE
+          - CLIENT_CURE
+          - LOCALIZATION
+          - ACCESSIBILITY_UPDATE
+          - TECHNICAL_FIX
+          - CREATIVE_CHANGE
+          - LEGAL_METADATA_UPDATE
+          - OTHER
+      requires_new_creator_review:
+      semantic_change:
+      created_at:
+# =====================================================================
+# 27. RELEASE INVALIDATION
+# =====================================================================
+invalidation:
+  ReleaseInvalidation:
+    fields:
+      invalidation_id:
+      CreatorReleaseLock_ref:
+      changed_artifact_ref:
+      changed_digest:
+      change_class:
+      materiality:
+      derivative_policy_result:
+      invalidated_at:
+      new_release_required:
+      provenance_ref:
+  automatic:
+    if_semantic_master_digest_changes: true
+# =====================================================================
+# 28. CHANGE CLASSIFICATION
+# =====================================================================
+change_classification:
+  MasterChangeClass:
+    enum:
+      - PICTURE_SEMANTIC
+      - AUDIO_SEMANTIC
+      - EDIT_SEMANTIC
+      - DIALOGUE_SEMANTIC
+      - MUSIC_SEMANTIC
+      - GRADE_MATERIAL
+      - SUBTITLE_ONLY
+      - CAPTION_ONLY
+      - METADATA_ONLY
+      - CONTAINER_ONLY
+      - CODEC_ONLY
+      - LEGAL_SLATE_ONLY
+      - ACCESSIBILITY_ONLY
+      - LOCALIZATION_MASTER
+      - UNKNOWN
+  default_require_new_creator_review:
+    - PICTURE_SEMANTIC
+    - AUDIO_SEMANTIC
+    - EDIT_SEMANTIC
+    - DIALOGUE_SEMANTIC
+    - MUSIC_SEMANTIC
+    - GRADE_MATERIAL
+    - UNKNOWN
+# =====================================================================
+# 29. DETERMINISTIC DERIVATIVE POLICY
+# =====================================================================
+derivatives:
+  PermittedDeliveryDerivativePolicy:
+    fields:
+      policy_id:
+      source_Master_digest:
+      allowed_operations:
+        - deterministic_transcode
+        - deterministic_resize
+        - deterministic_container_change
+        - approved_audio_channel_layout_conversion
+        - approved_caption_mux
+        - approved_metadata_packaging
+      prohibited_operations:
+        - generative_frame_recreation
+        - generative_voice_recreation
+        - generative_music_recreation
+        - AI_reedit
+        - stochastic_color_regrade
+      equivalence_tests:
+      technical_QC:
+      version:
+  principle: >
+    Exporting the released film is permitted.
+    Recreating the released film is not.
+# =====================================================================
+# 30. CREATOR RELEASE AUTHENTICATION
+# =====================================================================
+creator_auth:
+  CreatorReleaseAuthentication:
+    fields:
+      creator_ref:
+      session_ref:
+      authentication_strength:
+      device_ref:
+      second_factor_ref:
+        nullable: true
+      authenticated_at:
+      expires_at:
+      policy_ref:
+  high_value_action:
+    release_approval: true
+  shared_client_Key:
+    sufficient_for_creator_release: false
+# =====================================================================
+# 31. AFFIRMATIVE RELEASE ACTION
+# =====================================================================
+release_action:
+  CreatorReleaseAction:
+    fields:
+      action_id:
+      creator_ref:
+      candidate_ref:
+      candidate_digest:
+      displayed_scope:
+      explicit_statement:
+      affirmative_action:
+      authenticated_session_ref:
+      occurred_at:
+  example_semantics: >
+    "Approve this exact master for external Quantum release."
+  hidden_or_ambiguous_action:
+    prohibited: true
+# =====================================================================
+# 32. REVOKE BEFORE DELIVERY
+# =====================================================================
+revocation:
+  CreatorReleaseRevocation:
+    fields:
+      revocation_id:
+      release_lock_ref:
+      creator_ref:
+      reason:
+      revoked_at:
+      external_delivery_started:
+      delivery_transfer_refs:
+      effect:
+  if_no_external_delivery:
+    may_block_delivery: true
+  if_external_delivery_already_complete:
+    historical_delivery_remains_true: true
+# =====================================================================
+# 33. DELIVERY AUTHORIZATION
+# =====================================================================
+delivery_authorization:
+  DeliveryAuthorization:
+    extends:
+      - 10.CertificateArtifact
+    fields:
+      authorization_id:
+      CreatorReleaseLock_ref:
+      ExecutedAgreement_ref:
+      FinalDeliverySpecification_ref:
+      payment_or_transfer_condition_state:
+      legal_delivery_state:
+      client_access_state:
+      required_deliverables_resolved:
+      creator_release_valid:
+      authorized_at:
+      scope:
+      provenance_ref:
+  PASS_requires:
+    - active_CreatorReleaseLock
+    - exact_master_digest_match
+    - valid_executed_agreement
+    - delivery_conditions_satisfied
+    - no_delivery_blocking_legal_state
+# =====================================================================
+# 34. FINAL DELIVERY SPECIFICATION
+# =====================================================================
+delivery_spec:
+  FinalDeliverySpecification:
+    fields:
+      specification_id:
+      project_ref:
+      agreement_ref:
+      master_formats:
+      resolutions:
+      frame_rates:
+      aspect_ratios:
+      audio_formats:
+      channel_layouts:
+      loudness_targets:
+      subtitle_languages:
+      caption_requirements:
+      accessibility_requirements:
+      metadata_requirements:
+      poster_or_key_art_requirements:
+      trailer_requirements:
+      source_file_requirements:
+      package_structure:
+      checksum_requirements:
+      encryption_or_transfer_requirements:
+      client_delivery_method:
+      retention_policy:
+      version:
+      provenance_ref:
+  source:
+    - executed_agreement
+    - technical_delivery_policy
+# =====================================================================
+# 35. FINAL DELIVERY ARTIFACT
+# =====================================================================
+delivery_artifact:
+  FinalDeliveryArtifact:
+    extends:
+      - 10.CertifiedArtifact
+    fields:
+      artifact_id:
+      project_ref:
+      artifact_class:
+        enum:
+          - CANONICAL_MASTER
+          - VIDEO_ENCODE
+          - AUDIO_MASTER
+          - M_E_STEM
+          - MUSIC_STEM
+          - DIALOGUE_STEM
+          - CAPTION_FILE
+          - SUBTITLE_FILE
+          - POSTER
+          - KEY_ART
+          - TRAILER
+          - TECHNICAL_METADATA
+          - SOURCE_FILE
+          - AGREEMENT_COPY
+          - PAYMENT_RECEIPT
+          - PROVENANCE_SUMMARY
+          - CUSTOM
+      source_release_lock_ref:
+      source_master_ref:
+      deterministic_derivation_ref:
+        nullable: true
+      technical_QC_ref:
+      digest:
+      size:
+      format:
+      confidentiality:
+      transfer_policy:
+      provenance_ref:
+# =====================================================================
+# 36. FINAL DELIVERY PACKAGE
+# =====================================================================
+delivery_package:
+  FinalDeliveryPackage:
+    extends:
+      - 10.CanonicalObject
+    object_class:
+      value: CERTIFIED_ARTIFACT
+    fields:
+      package_id:
+      project_ref:
+      agreement_ref:
+      CreatorReleaseLock_ref:
+      DeliveryAuthorization_ref:
+      DeliveryManifest_ref:
+      artifact_refs:
+      agreement_record_ref:
+      payment_record_refs:
+      creator_release_certificate_ref:
+      client_acceptance_instructions_ref:
+        nullable: true
+      generated_at:
+      digest:
+      provenance_ref:
+# =====================================================================
+# 37. DELIVERY MANIFEST
+# =====================================================================
+delivery_manifest:
+  DeliveryManifest:
+    fields:
+      manifest_id:
+      package_ref:
+      artifact_entries:
+        type: list[DeliveryManifestEntry]
+      contractual_requirement_mapping:
+      optional_bonus_items:
+      missing_items:
+      checksum_algorithm:
+      generated_at:
+      digest:
+  DeliveryManifestEntry:
+    fields:
+      artifact_ref:
+      filename:
+      relative_path:
+      digest:
+      bytes:
+      contract_requirement_ref:
+        nullable: true
+      required:
+      derived_from_release_master:
+      QC_certificate_ref:
+# =====================================================================
+# 38. DELIVERY PACKAGE COMPILER
+# =====================================================================
+delivery_compiler:
+  FinalDeliveryCompiler:
+    pipeline:
+      FD01_ResolveCreatorRelease:
+        output:
+          - active_CreatorReleaseLock
+      FD02_ResolveAgreementDeliveryRequirements:
+        output:
+          - FinalDeliverySpecification
+      FD03_ResolvePaymentAndRightsConditions:
+        inputs:
+          - spec_25
+          - MachineContractIR
+      FD04_GeneratePermittedDerivatives:
+        output:
+          - FinalDeliveryArtifact list
+      FD05_TechnicalQC:
+        output:
+          - delivery_artifact_certificates
+      FD06_CompileManifest:
+        output:
+          - DeliveryManifest
+      FD07_DeliveryConsistencyQC:
+        output:
+          - QCRun
+      FD08_IssueDeliveryAuthorization:
+        output:
+          - DeliveryAuthorization
+      FD09_CompileFinalDeliveryPackage:
+        output:
+          - FinalDeliveryPackage
+      FD10_Transfer:
+        output:
+          - DeliveryTransfer
+      FD11_VerifyReceipt:
+        output:
+          - DeliveryReceipt
+      FD12_ClientDeliveryCompletion:
+        output:
+          - ClientDeliveryCompletion
+# =====================================================================
+# 39. DELIVERY TRANSFER
+# =====================================================================
+transfer:
+  DeliveryTransfer:
+    fields:
+      transfer_id:
+      package_ref:
+      client_account_ref:
+      delivery_method:
+        enum:
+          - SECURE_DOWNLOAD
+          - MANAGED_FILE_TRANSFER
+          - CLIENT_STORAGE_PUSH
+          - PHYSICAL_MEDIA
+          - API_DELIVERY
+          - CUSTOM
+      adapter_ref:
+      initiated_at:
+      completed_at:
+        nullable: true
+      transferred_artifact_refs:
+      transport_security:
+      errors:
+      retry_state:
+      provenance_ref:
+# =====================================================================
+# 40. DELIVERY ADAPTER
+# =====================================================================
+delivery_adapter:
+  capability_id: delivery.secure_transfer
+  FinalDeliveryAdapter:
+    interfaces:
+      - prepare_destination()
+      - upload_artifact()
+      - verify_remote_checksum()
+      - generate_secure_access()
+      - confirm_transfer()
+      - revoke_temporary_access()
+      - retrieve_delivery_receipt()
+      - health()
+  provider_semantics_may_not_escape_adapter:
+    true
+# =====================================================================
+# 41. DELIVERY RECEIPT
+# =====================================================================
+receipt:
+  DeliveryReceipt:
+    extends:
+      - 10.ExecutionReceipt
+    fields:
+      receipt_id:
+      DeliveryTransfer_ref:
+      package_ref:
+      recipient_ref:
+      artifact_digests_received:
+      remote_checksum_results:
+      completed_at:
+      access_or_transfer_evidence:
+      provenance_ref:
+  meaning: >
+    Delivery bytes reached the agreed destination.
+    This does not necessarily equal contractual client acceptance.
+# =====================================================================
+# 42. CLIENT DELIVERY COMPLETION
+# =====================================================================
+completion:
+  ClientDeliveryCompletion:
+    fields:
+      completion_id:
+      project_ref:
+      package_ref:
+      DeliveryReceipt_ref:
+      contractual_delivery_date:
+      actual_delivery_at:
+      days_early_or_late:
+      creator_release_ref:
+      client_acceptance_state:
+      final_payment_state:
+      rights_transfer_state:
+      completed_at:
+      reputation_evidence_ref:
+      provenance_ref:
+# =====================================================================
+# 43. CLIENT ACCEPTANCE SEPARATION
+# =====================================================================
+client_acceptance:
+  CreatorRelease:
+    question: >
+      Is Quantum willing to put its name on this exact master?
+  ContractualClientAcceptance:
+    question: >
+      Does the delivered work satisfy the agreed contractual acceptance process?
+  DeliveryReceipt:
+    question: >
+      Did the client receive the exact delivery package?
+  PaymentCompletion:
+    question: >
+      Have the required funds cleared?
+  hard_rule: >
+    These are separate states and none should be collapsed into one "done" boolean.
+# =====================================================================
+# 44. DONE STATES
+# =====================================================================
+done_states:
+  commercial_activation_done:
+    requires:
+      - DepositCleared
+      - PRODUCTION.AUTONOMOUSLY_STARTED
+  production_done_internal:
+    requires:
+      - FinalMasterCandidate
+      - AutonomousFinalQC_PASS
+  creator_release_done:
+    requires:
+      - CreatorReleaseLock
+  delivery_done:
+    requires:
+      - DeliveryReceipt
+  contractual_acceptance_done:
+    requires:
+      - AcceptancePolicy_satisfied
+  financial_done:
+    requires:
+      - PaidInFull_or_other_contractually_complete_state
+  project_closed:
+    may_require:
+      - creator_release_done
+      - delivery_done
+      - contractual_acceptance_done
+      - financial_done
+# =====================================================================
+# 45. CREATOR REVIEW CHANGE SUMMARY
+# =====================================================================
+delta:
+  CreatorReviewDelta:
+    fields:
+      delta_id:
+      prior_candidate_ref:
+      current_candidate_ref:
+      changed_shots:
+      changed_scenes:
+      changed_dialogue:
+      changed_edit:
+      changed_music:
+      changed_sound:
+      changed_grade:
+      unchanged_creator_locked_elements:
+      feedback_items_resolved:
+      feedback_items_partially_resolved:
+      regression_QC:
+      generated_at:
+  purpose: >
+    Tell the creator what changed without making them remember production history.
+# =====================================================================
+# 46. REVIEW COMPARISON
+# =====================================================================
+comparison:
+  CreatorCandidateComparison:
+    fields:
+      comparison_id:
+      candidate_A_ref:
+      candidate_B_ref:
+      synchronized_playback_supported:
+      shot_diff_refs:
+      audio_diff_refs:
+      timing_diff_refs:
+      semantic_change_refs:
+      creator_feedback_mapping:
+      generated_at:
+# =====================================================================
+# 47. REVIEW COMMENTARY
+# =====================================================================
+commentary_policy:
+  before_first_watch:
+    system_commentary:
+      minimal: true
+  after_first_watch:
+    available:
+      - changes
+      - known_risks
+      - QC
+      - intent_mapping
+      - why_system_believes_ready
+  reason: >
+    Let the creator experience the film before priming the judgment.
+# =====================================================================
+# 48. EXCEPTIONAL RELEASE MODEL
+# =====================================================================
+exceptional:
+  ExceptionalReleaseModel:
+    extends:
+      - 10.ProjectionObject
+    fields:
+      project_ref:
+      master_ref:
+      intent_fidelity:
+      originality:
+      story_intelligence:
+      emotional_truth:
+      character_integrity:
+      performance_truth:
+      cinematic_execution:
+      visual_identity:
+      sound_music:
+      ending_strength:
+      rewatch_value:
+      defect_absence:
+      creator_taste_alignment:
+      overall_exceptional_probability:
+      uncertainty:
+      evidence_refs:
+  cannot_release:
+    by_itself: true
+# =====================================================================
+# 49. CREATOR REVIEW BUDGET
+# =====================================================================
+review_budget:
+  CreatorAttentionBudget:
+    fields:
+      project_ref:
+      reviews_requested:
+      total_review_minutes:
+      rejected_review_candidates:
+      creator_feedback_minutes:
+      acceptance_rate:
+      predicted_avoidable_reviews:
+      target_review_efficiency:
+  objective: >
+    Minimize creator time while never removing creator authority.
+# =====================================================================
+# 50. REVIEW REQUEST POLICY
+# =====================================================================
+review_request:
+  CreatorReviewRequestPolicy:
+    fields:
+      minimum_AutonomousQC_state:
+      minimum_acceptance_prediction:
+      maximum_known_material_risk:
+      minimum_regression_QC:
+      review_cadence:
+      urgent_review_policy:
+      version:
+  low_confidence_candidate:
+    action:
+      - continue_autonomous_repair
+# =====================================================================
+# 51. RELEASE FOR EPISODIC WORK
+# =====================================================================
+episodic:
+  modes:
+    per_episode_release:
+      creator_releases_each_episode_master: true
+    batch_release:
+      creator_releases_batch_of_exact_episode_masters: true
+    season_master_release:
+      optional_if_final_season_package: true
+  default:
+    project_policy_required: true
+  invariant: >
+    No episode exits Quantum without applicable CreatorReleaseLock.
+# =====================================================================
+# 52. FEATURE FILM RELEASE
+# =====================================================================
+feature:
+  default:
+    release_scope:
+      - full_feature_canonical_master
+  derivative_outputs:
+    - theatrical_encode
+    - streaming_encode
+    - review_encode
+    - accessibility_outputs
+  semantic_master:
+    one_primary_release_identity: true
+# =====================================================================
+# 53. TRAILER / MARKETING RELEASE
+# =====================================================================
+marketing:
+  MarketingReleasePolicy:
+    fields:
+      marketing_asset_class:
+      creator_release_required:
+      source_master_requirement:
+      spoiler_policy:
+      external_use_scope:
+      version:
+  default:
+    major_trailer:
+      creator_release_required: true
+    key_art:
+      creator_release_required: true
+    minor_technical_thumbnail:
+      policy_dependent: true
+# =====================================================================
+# 54. LOCALIZATION RELEASE
+# =====================================================================
+localization:
+  LocalizationReleasePolicy:
+    fields:
+      language:
+      dialogue_changes:
+      voice_performance:
+      subtitle_only:
+      culturally_adapted_edit:
+      creator_release_requirement:
+      linguistic_QC:
+      cultural_QC:
+      source_master_ref:
+  default:
+    subtitle_only:
+      may_use_scoped_release_process: true
+    dubbed_dialogue:
+      creator_release_or_explicit_delegated_localization_policy_required: true
+    culturally_reedited_master:
+      full_creator_release_required: true
+# =====================================================================
+# 55. ACCESSIBILITY RELEASE
+# =====================================================================
+accessibility:
+  AccessibilityArtifactRelease:
+    fields:
+      artifact_type:
+        enum:
+          - CLOSED_CAPTIONS
+          - SDH
+          - AUDIO_DESCRIPTION
+          - ACCESSIBLE_SCRIPT
+      source_master_ref:
+      semantic_change_risk:
+      QC_ref:
+      creator_review_requirement:
+      policy_ref:
+  principle: >
+    Accessibility should be excellent and faithful, but does not necessarily
+    require replaying the entire master if the audiovisual work itself is unchanged.
+# =====================================================================
+# 56. TECHNICAL MASTER QC
+# =====================================================================
+technical_QC:
+  required_checks:
+    - frame_integrity
+    - resolution
+    - frame_rate
+    - duration
+    - audio_sync
+    - audio_channel_layout
+    - loudness
+    - black_frames
+    - corruption
+    - dropped_frames
+    - subtitle_sync
+    - caption_completeness
+    - codec
+    - container
+    - checksum
+    - color_space
+    - HDR_metadata_if_applicable
+    - language_track_mapping
+    - naming
+    - package_structure
+  deterministic:
+    preferred: true
+# =====================================================================
+# 57. DELIVERY CONSISTENCY QC
+# =====================================================================
+delivery_QC:
+  DeliveryQCContract:
+    dimensions:
+      RELEASE:
+        question: >
+          Does every delivered creative artifact derive from an active
+          CreatorReleaseLock?
+      CONTRACT:
+        question: >
+          Does the package contain every required contractual deliverable?
+      INTEGRITY:
+        question: >
+          Do all digests verify?
+      TECHNICAL:
+        question: >
+          Do files meet technical delivery specification?
+      EQUIVALENCE:
+        question: >
+          Are derived masters semantically equivalent to approved source master?
+      ACCESSIBILITY:
+        question: >
+          Are required accessibility artifacts complete?
+      LEGAL:
+        question: >
+          Are required executed legal records included or accessible?
+      PAYMENT:
+        question: >
+          Are transfer restrictions consistent with payment state?
+      SECURITY:
+        question: >
+          Is the destination correct and authorized?
+      PROVENANCE:
+        question: >
+          Can each delivery artifact be traced to its approved source?
+# =====================================================================
+# 58. CREATOR RELEASE QC CONTRACT
+# =====================================================================
+release_QC:
+  CreatorReleaseQCContract:
+    formal_owner:
+      autonomous_checks: spec_07
+      final_authority: creator
+    dimensions:
+      - intent_fidelity
+      - originality
+      - character_integrity
+      - story_logic
+      - emotional_effect
+      - performance
+      - continuity
+      - cinematography
+      - edit
+      - sound
+      - music
+      - finishing
+      - world_coherence
+      - reveal_payoff
+      - ending_consequence
+      - technical_integrity
+    output:
+      autonomous:
+        - READY_OR_REPAIR
+      creator:
+        - APPROVE_OR_REJECT
+# =====================================================================
+# 59. RELEASE HARD FAILURES
+# =====================================================================
+hard_failures:
+  - code: RELEASE.NO_CREATOR_APPROVAL
+    severity: CRITICAL
+  - code: RELEASE.MASTER_DIGEST_MISMATCH
+    severity: CRITICAL
+  - code: RELEASE.CREATOR_APPROVAL_AMBIGUOUS
+    severity: CRITICAL
+  - code: RELEASE.CREATOR_IDENTITY_UNVERIFIED
+    severity: CRITICAL
+  - code: RELEASE.MASTER_CHANGED_AFTER_APPROVAL
+    severity: CRITICAL
+  - code: RELEASE.AUTONOMOUS_BYPASS_ATTEMPT
+    severity: CRITICAL
+  - code: RELEASE.EXTERNAL_DELIVERY_BEFORE_LOCK
+    severity: CRITICAL
+  - code: DELIVERY.UNRELEASED_ARTIFACT
+    severity: CRITICAL
+  - code: DELIVERY.MISSING_CONTRACTUAL_ARTIFACT
+    severity: CRITICAL
+  - code: DELIVERY.DIGEST_FAILURE
+    severity: CRITICAL
+  - code: DELIVERY.WRONG_DESTINATION
+    severity: CRITICAL
+  - code: DELIVERY.STOCHASTIC_REGENERATION
+    severity: CRITICAL
+  - code: DELIVERY.DERIVATIVE_EQUIVALENCE_FAILURE
+    severity: CRITICAL
+# =====================================================================
+# 60. CREATOR REJECTION RCA
+# =====================================================================
+RCA:
+  CreatorRejectionRootCause:
+    fields:
+      rejection_ref:
+      observed_creator_effect:
+      likely_root_causes:
+      confidence:
+      affected_artifacts:
+      owning_stages:
+      possible_repairs:
+      blast_radius:
+      creator_lock_conflicts:
+      evidence_refs:
+  principle: >
+    Creator rejection enters root-cause analysis rather than automatically
+    regenerating the entire film.
+# =====================================================================
+# 61. CREATOR FEEDBACK AUTHORITY
+# =====================================================================
+feedback_authority:
+  priority_order:
+    1: CURRENT_EXPLICIT_CREATOR_FEEDBACK
+    2: CURRENT_CREATOR_LOCKS
+    3: CREATIVE_YAML
+    4: STUDIO_CREATIVE_CONSTITUTION
+    5: CREATOR_TASTE_MODEL
+    6: AUTONOMOUS_QC_PREFERENCES
+    7: GENERIC_QUALITY_HEURISTICS
+  invariant: >
+    Learned taste never outranks current explicit creator intent.
+# =====================================================================
+# 62. CREATOR FEEDBACK EXAMPLES
+# =====================================================================
+feedback_examples:
+  input_1:
+    creator: >
+      "The ending is technically gorgeous but it feels emotionally dead."
+    compiler_may_infer:
+      - ending_emotional_payoff_failure
+      - possible_performance_issue
+      - possible_music_issue
+      - possible_edit_issue
+      - possible_setup_payoff_issue
+    compiler_may_not_infer:
+      - rewrite_entire_story_without_RCA
+  input_2:
+    creator: >
+      "Her eyes are wrong. That's not her."
+    interpretation:
+      - character_identity_critical
+      - likely_visual_identity_or_performance_issue
+      - local_scope_first
+  input_3:
+    creator: >
+      "I know exactly what you're doing with the music here. Stop telling me how to feel."
+    interpretation:
+      - over_scoring
+      - reduce_explicit_emotional_signaling
+      - preserve_scene_meaning
+  input_4:
+    creator: >
+      "Fuck yes. Ship it."
+    release_action:
+      cannot_rely_only_on_language: true
+    required:
+      - explicit_secure_APPROVE_RELEASE_action
+# =====================================================================
+# 63. SECURE APPROVAL UX
+# =====================================================================
+secure_approval:
+  desired_flow: |
+    creator watches
+        ↓
+    creator says "ship it"
+        ↓
+    system interprets positive intent
+        ↓
+    explicit approval surface appears:
+    APPROVE MASTER REVISION 12
+    Runtime: 01:47:31:08
+    Digest: qas:...
+    External Quantum Release: YES
+    [ APPROVE RELEASE ]
+        ↓
+    authenticated release action
+        ↓
+    CreatorReleaseLock
+  reason: >
+    Natural conversation can express intent; the irreversible release action must
+    still be unambiguous and cryptographically attributable.
+# =====================================================================
+# 64. DELIVERY ACCESS CONDITIONS
+# =====================================================================
+delivery_conditions:
+  possible:
+    - release_only
+    - release_plus_final_payment
+    - release_plus_contractual_milestone
+    - release_plus_technical_delivery_clearance
+  exact:
+    source:
+      - ExecutableAgreement
+      - MachineContractIR
+  creator_release:
+    always_required_under_default_QAS_policy: true
+# =====================================================================
+# 65. PAYMENT AND RELEASE
+# =====================================================================
+payment:
+  final_payment_pending:
+    may_block:
+      - download
+      - rights_transfer
+      - source_file_transfer
+    may_not:
+      - force_creator_approval
+  paid_in_full:
+    may_trigger:
+      - rights_transfer_state
+      - final_download_enablement
+    may_not:
+      - create_release_lock
+# =====================================================================
+# 66. PORTAL INTEGRATION
+# =====================================================================
+portal:
+  source:
+    spec: 28
+  before_creator_release:
+    client_state:
+      - FINALING
+      - CREATOR_REVIEW
+  after_creator_release:
+    event:
+      - PORTAL.CREATOR_RELEASE_PUBLISHED
+  client_visible_semantics: >
+    "The master has cleared Quantum's final release standard."
+  may_not_expose:
+    - creator_private_notes
+    - creator_rejected_master
+    - creator_rejection_count_by_default
+# =====================================================================
+# 67. REPUTATION INTEGRATION
+# =====================================================================
+reputation:
+  source:
+    spec: 27
+  CreatorReleaseLock:
+    produces:
+      - high_confidence_quality_evidence
+  delivery:
+    produces:
+      - delivery_reliability_evidence
+      - ahead_of_schedule_evidence
+      - CommitmentCredibility_evidence
+  creator_rejection:
+    public_reputation_effect:
+      default: NONE
+  principle: >
+    Internal rejection is quality control, not reputational failure.
+# =====================================================================
+# 68. INTERNAL TARGET VS CONTRACT DATE
+# =====================================================================
+schedule:
+  internal_target:
+    owner: ProductionModel
+  contractual_date:
+    owner:
+      - spec_23
+      - spec_24
+  creator_release:
+    should_target_before_internal_delivery_target: true
+  buffer:
+    used_for:
+      - creator_review
+      - repair
+      - technical_delivery
+      - unexpected_final_QC
+  principle: >
+    Do not schedule the creator's first viewing five minutes before the contract deadline.
+# =====================================================================
+# 69. RELEASE BUFFER
+# =====================================================================
+release_buffer:
+  CreatorReleaseScheduleBuffer:
+    fields:
+      project_ref:
+      contractual_delivery:
+      internal_target:
+      first_creator_review_target:
+      expected_review_cycles:
+      repair_contingency:
+      technical_delivery_buffer:
+      current_slack:
+      schedule_risk:
+      generated_at:
+  production_strategy:
+    should_reserve_creator_review_slack: true
+# =====================================================================
+# 70. FINAL DELIVERY EXPERIENCE
+# =====================================================================
+experience:
+  canonical: |
+    autonomous production completes
+        ↓
+    AutonomousFinalQC
+        ↓
+    CreatorReviewReady
+        ↓
+    creator watches
+        ↓
+    APPROVE RELEASE
+        ↓
+    CreatorReleaseLock
+        ↓
+    portal:
+      "The master has cleared Quantum's final release standard."
+        ↓
+    deterministic final package compilation
+        ↓
+    secure transfer
+        ↓
+    checksum verification
+        ↓
+    DELIVERY COMPLETE
+        ↓
+    client acceptance / final payment as agreement requires
+        ↓
+    project archive
+        ↓
+    reputation update
+# =====================================================================
+# 71. CLIENT DELIVERY UX
+# =====================================================================
+client_delivery_UX:
+  desired:
+    - significant
+    - concise
+    - cinematic
+    - unambiguous
+  Avatar:
+    may_say: >
+      "The master has cleared Quantum's final release standard.
+       Your delivery is ready."
+  primary_actions:
+    - VIEW_MASTER
+    - DOWNLOAD_OR_RECEIVE_DELIVERY
+    - VIEW_DELIVERY_MANIFEST
+  secondary:
+    - AGREEMENT
+    - RECEIPTS
+    - ACCEPTANCE_ACTION_IF_REQUIRED
+# =====================================================================
+# 72. DELIVERY ARCHIVE
+# =====================================================================
+archive:
+  DeliveryArchive:
+    fields:
+      archive_id:
+      project_ref:
+      CreatorReleaseLock_ref:
+      FinalDeliveryPackage_ref:
+      DeliveryManifest_ref:
+      DeliveryReceipt_ref:
+      agreement_ref:
+      acceptance_record_ref:
+        nullable: true
+      payment_completion_ref:
+        nullable: true
+      rights_transfer_ref:
+        nullable: true
+      retained_master_ref:
+      retained_delivery_artifacts:
+      retention_policy_ref:
+      archived_at:
+      provenance_ref:
+  rejected_candidates:
+    retained_separately_internal: true
+# =====================================================================
+# 73. DELIVERY RETENTION
+# =====================================================================
+retention:
+  canonical_master:
+    retained: true
+  CreatorReleaseLock:
+    retained: permanently_or_policy_maximum
+  delivery_manifest:
+    retained: true
+  delivery_receipt:
+    retained: true
+  source_assets:
+    retention:
+      policy_driven: true
+  client_access:
+    policy_driven: true
+# =====================================================================
+# 74. DELIVERY REPRODUCIBILITY
+# =====================================================================
+reproducibility:
+  ReproducibleDeliveryTest:
+    fields:
+      test_id:
+      archive_ref:
+      source_release_lock_ref:
+      reconstructed_artifact_digests:
+      original_manifest_digests:
+      all_match:
+      missing_artifacts:
+      tested_at:
+  periodic:
+    policy_driven: true
+# =====================================================================
+# 75. PROVENANCE
+# =====================================================================
+provenance:
+  required_paths:
+    - creative_yaml_to_project_locks
+    - project_locks_to_master_candidate
+    - master_candidate_to_QC
+    - QC_to_CreatorReviewReadiness
+    - CreatorReviewPackage_to_exact_candidate_digest
+    - creator_feedback_to_repair_request
+    - repair_request_to_new_candidate
+    - CreatorApproval_to_CreatorReleaseLock
+    - CreatorReleaseLock_to_MasterArtifact
+    - CreatorReleaseLock_to_delivery_derivatives
+    - delivery_artifact_to_delivery_manifest
+    - DeliveryManifest_to_DeliveryTransfer
+    - DeliveryTransfer_to_DeliveryReceipt
+    - DeliveryReceipt_to_ClientDeliveryCompletion
+    - delivery_completion_to_ReputationEvidence
+  emits_to:
+    - 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+# =====================================================================
+# 76. EVENTS
+# =====================================================================
+events:
+  family: CREATOR_RELEASE_AND_DELIVERY
+  event_types:
+    CREATOR_REVIEW.CANDIDATE_READY:
+      fields:
+        - candidate_ref
+        - review_package_ref
+    CREATOR_REVIEW.STARTED:
+      fields:
+        - session_ref
+    CREATOR_REVIEW.FEEDBACK_RECEIVED:
+      fields:
+        - feedback_ref
+    CREATOR_REVIEW.REJECTED:
+      fields:
+        - rejection_ref
+    CREATOR_REVIEW.APPROVED:
+      fields:
+        - approval_ref
+    CREATOR_RELEASE.LOCKED:
+      fields:
+        - CreatorReleaseLock_ref
+    CREATOR_RELEASE.INVALIDATED:
+      fields:
+        - ReleaseInvalidation_ref
+    CREATOR_RELEASE.REVOKED:
+      fields:
+        - revocation_ref
+    DELIVERY.AUTHORIZED:
+      fields:
+        - DeliveryAuthorization_ref
+    DELIVERY.PACKAGE_READY:
+      fields:
+        - FinalDeliveryPackage_ref
+    DELIVERY.TRANSFER_STARTED:
+      fields:
+        - DeliveryTransfer_ref
+    DELIVERY.TRANSFER_COMPLETED:
+      fields:
+        - DeliveryReceipt_ref
+    DELIVERY.PROJECT_COMPLETED:
+      fields:
+        - ClientDeliveryCompletion_ref
+# =====================================================================
+# 77. SIGNALS
+# =====================================================================
+signals:
+  - CREATOR_REVIEW.READY
+  - CREATOR_REVIEW.REJECTION
+  - CREATOR_REVIEW.FEEDBACK_AMBIGUOUS
+  - CREATOR_RELEASE.APPROVED
+  - CREATOR_RELEASE.INVALIDATED
+  - DELIVERY.PACKAGE_MISMATCH
+  - DELIVERY.TECHNICAL_FAILURE
+  - DELIVERY.DESTINATION_FAILURE
+  - DELIVERY.COMPLETE
+  - REPUTATION.EARLY_DELIVERY_ELIGIBLE
+# =====================================================================
+# 78. RELEASE STATE MACHINE
+# =====================================================================
+state_machine:
+  states:
+    - PRODUCTION_ACTIVE
+    - INTERNAL_MASTER_CANDIDATE
+    - AUTONOMOUS_FINAL_QC
+    - AUTONOMOUS_REPAIR
+    - CREATOR_REVIEW_READY
+    - CREATOR_REVIEWING
+    - CREATOR_REJECTED
+    - CREATOR_APPROVED
+    - CREATOR_RELEASE_LOCKED
+    - DELIVERY_COMPILING
+    - DELIVERY_QC
+    - DELIVERY_AUTHORIZED
+    - DELIVERY_TRANSFERRING
+    - DELIVERED
+    - CLIENT_ACCEPTANCE_PENDING
+    - CONTRACT_COMPLETE
+    - ARCHIVED
+  transitions:
+    PRODUCTION_ACTIVE_to_INTERNAL_MASTER_CANDIDATE:
+      requires:
+        - ProductionEngine_master_candidate
+    INTERNAL_MASTER_CANDIDATE_to_AUTONOMOUS_FINAL_QC:
+      automatic: true
+    AUTONOMOUS_FINAL_QC_to_AUTONOMOUS_REPAIR:
+      if:
+        - QC_FAIL
+    AUTONOMOUS_REPAIR_to_INTERNAL_MASTER_CANDIDATE:
+      automatic_after_repair: true
+    AUTONOMOUS_FINAL_QC_to_CREATOR_REVIEW_READY:
+      requires:
+        - QC_PASS
+        - CreatorReviewReadiness_READY_or_HIGH_CONFIDENCE_READY
+    CREATOR_REVIEW_READY_to_CREATOR_REVIEWING:
+      event:
+        - creator_starts_review
+    CREATOR_REVIEWING_to_CREATOR_REJECTED:
+      event:
+        - explicit_reject
+    CREATOR_REJECTED_to_AUTONOMOUS_REPAIR:
+      automatic: true
+    CREATOR_REVIEWING_to_CREATOR_APPROVED:
+      event:
+        - explicit_authenticated_approval
+    CREATOR_APPROVED_to_CREATOR_RELEASE_LOCKED:
+      requires:
+        - CreatorReleaseLock
+    CREATOR_RELEASE_LOCKED_to_DELIVERY_COMPILING:
+      automatic_if_delivery_conditions_allow: true
+    DELIVERY_COMPILING_to_DELIVERY_QC:
+      automatic: true
+    DELIVERY_QC_to_DELIVERY_AUTHORIZED:
+      requires:
+        - DeliveryAuthorization
+    DELIVERY_AUTHORIZED_to_DELIVERY_TRANSFERRING:
+      automatic: true
+    DELIVERY_TRANSFERRING_to_DELIVERED:
+      requires:
+        - DeliveryReceipt
+# =====================================================================
+# 79. FAIL-CLOSED
+# =====================================================================
+fail_closed:
+  creator_auth_unavailable:
+    - no_release
+  creator_did_not_decide:
+    - no_release
+  master_digest_changed:
+    - invalidate_release
+    - no_delivery
+  delivery_QC_failed:
+    - no_transfer
+  destination_uncertain:
+    - no_transfer
+  agreement_delivery_requirements_uncertain:
+    - no_transfer
+  payment_condition_uncertain:
+    - apply_contract_policy
+    - no_guess
+  release_service_restart:
+    - restore_state_from_immutable_objects
+    - never_assume_approval
+# =====================================================================
+# 80. SECURITY
+# =====================================================================
+security:
+  CreatorReleaseLock:
+    high_value_action: true
+  requirements:
+    - authenticated_creator_session
+    - exact_candidate_digest_displayed
+    - explicit_affirmative_action
+    - immutable_audit
+    - anti_replay
+    - authorization_scope
+  approval_secret:
+    cannot_be_client_QuantumKey: true
+  delivery:
+    - destination_verification
+    - role_based_access
+    - short_lived_transfer_credentials
+    - checksum_verification
+  internal_candidates:
+    restricted: true
+# =====================================================================
+# 81. CREATOR PRIVACY
+# =====================================================================
+creator_privacy:
+  release_decision:
+    may_be_private: true
+  client_need_not_see:
+    - creator_rejection_history
+    - creator_private_comments
+    - creator_emotional_reaction
+    - CreatorTasteModel
+  client_may_see:
+    - final_release_state
+    - approved_creator_release_statement
+# =====================================================================
+# 82. CREATOR TASTE LEARNING
+# =====================================================================
+learning:
+  learnable:
+    - rejection_patterns
+    - approval_patterns
+    - contextual_preferences
+    - common_final_QC_blind_spots
+    - preferred_performance_intensity
+    - preferred_edit_density
+    - preferred_music_restraint
+    - visual_finish_sensitivity
+    - originality_sensitivity
+  goal:
+    - fewer_creator_review_cycles
+    - higher_first_review_acceptance
+    - better_autonomous_work
+  forbidden_learning_outcome:
+    - autonomous_creator_release
+# =====================================================================
+# 83. CREATOR REVIEW METRICS
+# =====================================================================
+observability:
+  review:
+    - master_candidates_generated
+    - candidates_autonomously_rejected_before_creator
+    - creator_reviews_requested
+    - first_review_acceptance_rate
+    - creator_rejection_rate
+    - average_creator_review_cycles
+    - creator_review_minutes
+    - repair_time_after_creator_feedback
+  quality:
+    - creator_release_exceptional_rate
+    - repeated_final_defect_classes
+    - regressions_after_creator_feedback
+  delivery:
+    - release_to_delivery_latency
+    - delivery_QC_failure_rate
+    - checksum_failure_rate
+    - delivery_before_contract_date
+  reputation:
+    - creator_release_to_repeat_purchase
+    - early_delivery_evidence
+# =====================================================================
+# 84. REVIEW EFFICIENCY TARGETS
+# =====================================================================
+review_efficiency:
+  aspirational:
+    normal_project:
+      creator_mandatory_gate_count: 1
+    final_review_candidates:
+      preferred: 1
+    repeated_rejection:
+      acceptable_when_needed: true
+  principle: >
+    One review is a design target, not a reason to show the creator mediocre work.
+# =====================================================================
+# 85. CREATOR OVERRIDE
+# =====================================================================
+override:
+  creator_may:
+    - approve_despite_noncritical_autonomous_preference_disagreement
+    - reject_despite_all_QC_passes
+    - request_specific_change
+    - revoke_pre_delivery_release
+    - demand_new_candidate
+  creator_may_not_through_release_action:
+    - rewrite_executed_contract_unilaterally
+    - bypass applicable_law
+    - alter_client_payment_truth
+  principle: >
+    Creator release authority is absolute over creative release, not over unrelated
+    legal or financial facts.
+# =====================================================================
+# 86. DELIVERY FAILURE MODES
+# =====================================================================
+failure_modes:
+  CREATOR_REJECTS:
+    behavior:
+      - compile_feedback
+      - repair
+      - regenerate_candidate
+      - QC
+      - re-review
+  CREATOR_UNAVAILABLE:
+    behavior:
+      - no_release
+      - preserve_schedule_risk
+      - never_deem_approved
+  APPROVED_MASTER_CORRUPTED:
+    behavior:
+      - reconstruct_from_canonical_artifact
+      - verify_digest
+      - no_stochastic_regeneration
+  TECHNICAL_TRANSCODE_FAIL:
+    behavior:
+      - retry_deterministically
+      - source_release_remains_valid
+  CLIENT_DESTINATION_FAIL:
+    behavior:
+      - preserve_package
+      - retry_or_use_approved_alternate
+      - do_not_recompile_creative_master
+  CHECKSUM_MISMATCH:
+    behavior:
+      - fail_delivery
+      - retransmit
+  CLIENT_REQUESTS_CHANGE_AFTER_RELEASE:
+    behavior:
+      - route_revision_or_cure_policy
+      - any_master_change_requires_new_release_as_policy dictates
+  CONTRACT_DATE_APPROACHES_WITHOUT_APPROVAL:
+    behavior:
+      - do_not_bypass_creator
+      - surface_material_schedule_risk
+      - continue_best_effort_repair
+# =====================================================================
+# 87. CONCURRENCY
+# =====================================================================
+concurrency:
+  creator_review_and_internal_work:
+    allowed:
+      on_unrelated_future_derivatives: policy_dependent
+  reviewed_candidate:
+    frozen_during_review: true
+  new_internal_candidate:
+    may_be_generated:
+      while_creator_reviews: false_by_default_for_same_master
+  reason: >
+    Creator should know the exact immutable thing being judged.
+  delivery_after_release:
+    parallel_derivative_generation:
+      allowed: true
+  release_invalidation:
+    atomic: true
+# =====================================================================
+# 88. IDEMPOTENCY
+# =====================================================================
+idempotency:
+  CreatorApproval:
+    same_creator_same_candidate_digest:
+      one_logical_approval: true
+  CreatorReleaseLock:
+    same_approval:
+      one_logical_lock: true
+  DeliveryAuthorization:
+    same_release_and_delivery_spec:
+      one_logical_authorization: true
+  DeliveryTransfer:
+    retry_safe:
+      required: true
+  delivery_receipt:
+    exact_package:
+      deduplicate: true
+# =====================================================================
+# 89. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - autonomous_QC_never_emits_CreatorReleaseLock
+  - creator_acceptance_prediction_never_emits_CreatorReleaseLock
+  - client_acceptance_never_emits_CreatorReleaseLock
+  - payment_clear_never_emits_CreatorReleaseLock
+  - approaching_deadline_never_emits_CreatorReleaseLock
+  - creator_silence_never_counts_as_approval
+  - creator_positive_comment_never_counts_as_release_without_affirmative_action
+  - CreatorReleaseLock_always_binds_exact_master_digest
+  - changed_picture_frame_invalidates_prior_release
+  - changed_dialogue_invalidates_prior_release
+  - material_mix_change_invalidates_prior_release
+  - deterministic_codec_transcode_can_preserve_release_under_policy
+  - stochastic_regeneration_never_preserves_release
+  - creator_rejection_never_erases_production_history
+  - CreatorTasteModel_never_overrides_current_creator_feedback
+  - CreatorTasteModel_never_authorizes_release
+  - unreleased_master_never_delivered_as_final
+  - portal_never_marks_final_before_release
+  - client_urgency_never_bypasses_release
+  - contract_minimum_never_forces_creator_approval
+  - final_payment_never_forces_creator_approval
+  - delivery_artifact_always_traces_to_release_lock
+  - delivery_provider_never_becomes_delivery_semantic_owner
+  - rejected_master_never_becomes_reputation_quality_evidence_as_release
+  - early_delivery_credit_never_exists_without_creator_release
+# =====================================================================
+# 90. SCENARIO TESTS
+# =====================================================================
+scenario_tests:
+  perfect_first_candidate:
+    sequence:
+      - autonomous_master_QC_pass
+      - high_creator_acceptance_prediction
+      - creator_watches
+      - creator_explicitly_approves
+      - CreatorReleaseLock
+      - delivery_compiles
+      - delivery_QC
+      - transfer
+    creator_review_count:
+      expected: 1
+  creator_rejects_eyes:
+    feedback:
+      "Her eyes are wrong. That's not her."
+    expect:
+      - local_character_identity_RCA
+      - affected_shots_only
+      - rerender
+      - regression_QC
+      - new_candidate
+      - creator_review_again
+  creator_rejects_emotion:
+    feedback:
+      "I don't feel anything."
+    expect:
+      - holistic_emotional_RCA
+      - performance_edit_music_story_hypotheses
+      - smallest_effective_repair
+      - no_blind_full_regeneration
+  creator_says_ship_it_in_voice:
+    expect:
+      - positive_intent_detected
+      - explicit_ApproveRelease_surface
+      - no_release_until_action
+  one_frame_changes_after_approval:
+    expect:
+      - prior_release_invalidated
+      - new_creator_release_required
+  same_master_transcoded_to_client_codec:
+    expect:
+      - deterministic_equivalence_QC
+      - no_full_creator_rereview_if_policy_allows
+  subtitles_corrected:
+    expect:
+      - subtitle_scope_QC
+      - master_picture_audio_release_stays_valid
+      - subtitle_release_policy_applies
+  client_accepts_unreleased_preview:
+    expect:
+      - no_creator_release
+      - no_final_delivery
+  deadline_tomorrow_creator_rejects:
+    expect:
+      - repair
+      - schedule_risk_disclosure
+      - no_bypass
+  master_released_10_days_early:
+    if:
+      - contractual_scope_satisfied
+      - creator_approved
+      - delivery_complete
+    expect:
+      - valid_EarlyDeliveryEvidence
+      - reputation_positive
+# =====================================================================
+# 91. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: CRL-G01
+    check: CreatorReleaseAuthority is explicit
+  - id: CRL-G02
+    check: CreatorReleaseAuthority delegation is false
+  - id: CRL-G03
+    check: autonomous bypass is false
+  - id: CRL-G04
+    check: default quality floor is EXCEPTIONAL
+  - id: CRL-G05
+    check: ordinary production does not require creator intermediate approvals
+  - id: CRL-G06
+    check: AutonomousFinalQC occurs before creator review
+  - id: CRL-G07
+    check: CreatorAcceptancePrediction exists but has no release authority
+  - id: CRL-G08
+    check: CreatorReviewReadiness filters low-confidence candidates
+  - id: CRL-G09
+    check: CreatorReviewPackage foregrounds uninterrupted master
+  - id: CRL-G10
+    check: detailed QC is secondary by default
+  - id: CRL-G11
+    check: creator feedback may be freeform speech
+  - id: CRL-G12
+    check: raw creator feedback preserved
+  - id: CRL-G13
+    check: CreatorFeedbackCompiler emits typed repair request
+  - id: CRL-G14
+    check: creator explicit feedback outranks learned taste
+  - id: CRL-G15
+    check: rejection starts smallest-blast-radius repair
+  - id: CRL-G16
+    check: creator may reject despite all QC passes
+  - id: CRL-G17
+    check: creator may approve exact candidate through explicit action
+  - id: CRL-G18
+    check: creator silence never counts as approval
+  - id: CRL-G19
+    check: creator authentication required
+  - id: CRL-G20
+    check: CreatorReleaseLock binds exact master digest
+  - id: CRL-G21
+    check: changed master invalidates release
+  - id: CRL-G22
+    check: deterministic derivatives have explicit policy
+  - id: CRL-G23
+    check: stochastic regeneration forbidden after release
+  - id: CRL-G24
+    check: subtitle/caption derivative scope separated
+  - id: CRL-G25
+    check: CreatorReleaseCertificate exists
+  - id: CRL-G26
+    check: DeliveryAuthorization requires active release lock
+  - id: CRL-G27
+    check: delivery spec derives from executed agreement
+  - id: CRL-G28
+    check: every delivery artifact has digest
+  - id: CRL-G29
+    check: DeliveryManifest maps artifacts to contractual requirements
+  - id: CRL-G30
+    check: delivery transfer verifies remote checksum where available
+  - id: CRL-G31
+    check: DeliveryReceipt distinct from client acceptance
+  - id: CRL-G32
+    check: creator release distinct from client acceptance
+  - id: CRL-G33
+    check: creator release distinct from payment completion
+  - id: CRL-G34
+    check: creator release distinct from internal production completion
+  - id: CRL-G35
+    check: portal cannot publish final master before release
+  - id: CRL-G36
+    check: final delivery may occur mechanically after creator release
+  - id: CRL-G37
+    check: release repair loop returns new exact candidate
+  - id: CRL-G38
+    check: CreatorTasteModel learns but cannot self-release
+  - id: CRL-G39
+    check: review metrics minimize creator burden
+  - id: CRL-G40
+    check: contract pressure cannot bypass creator
+  - id: CRL-G41
+    check: payment pressure cannot bypass creator
+  - id: CRL-G42
+    check: schedule pressure cannot bypass creator
+  - id: CRL-G43
+    check: early-delivery reputation credit requires creator release
+  - id: CRL-G44
+    check: archived package remains reproducible under policy
+  - id: CRL-G45
+    check: no Quantum-branded external master exists without CreatorReleaseLock
+# =====================================================================
+# 92. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  CRLW1:
+    name: release_authority
+    targets:
+      - CreatorReleaseAuthority
+      - CreatorReleasePolicy
+      - CreatorReleaseStandard
+  CRLW2:
+    name: master_candidate
+    depends_on:
+      - CRLW1
+    targets:
+      - InternalMasterCandidate
+      - FinalMasterCandidate
+      - AutonomousFinalQC
+  CRLW3:
+    name: review_readiness
+    depends_on:
+      - CRLW2
+    targets:
+      - CreatorAcceptancePrediction
+      - CreatorReviewReadiness
+      - CreatorReviewPackage
+  CRLW4:
+    name: creator_review
+    depends_on:
+      - CRLW3
+    targets:
+      - CreatorReviewSession
+      - CreatorReviewDecision
+      - CreatorApproval
+      - CreatorRejection
+  CRLW5:
+    name: feedback_repair
+    depends_on:
+      - CRLW4
+    targets:
+      - CreatorReleaseFeedback
+      - CreatorFeedbackCompiler
+      - CreatorReleaseRepairRequest
+      - repair_loop
+  CRLW6:
+    name: release_lock
+    depends_on:
+      - CRLW4
+    targets:
+      - CreatorReleaseLock
+      - CreatorReleaseCertificate
+      - release_invalidation
+  CRLW7:
+    name: taste_learning
+    depends_on:
+      - CRLW5
+    targets:
+      - CreatorTasteObservation
+      - CreatorTasteModel
+      - acceptance_prediction_calibration
+  CRLW8:
+    name: delivery_spec
+    depends_on:
+      - CRLW6
+      - LEGAL24_READY
+    targets:
+      - FinalDeliverySpecification
+      - derivative_policy
+      - DeliveryAuthorization
+  CRLW9:
+    name: delivery_compiler
+    depends_on:
+      - CRLW8
+    targets:
+      - FinalDeliveryArtifact
+      - DeliveryManifest
+      - FinalDeliveryPackage
+  CRLW10:
+    name: secure_transfer
+    depends_on:
+      - CRLW9
+    targets:
+      - FinalDeliveryAdapter
+      - DeliveryTransfer
+      - DeliveryReceipt
+  CRLW11:
+    name: completion_archive
+    depends_on:
+      - CRLW10
+    targets:
+      - ClientDeliveryCompletion
+      - DeliveryArchive
+      - reputation_handoff
+      - portal_archive
+  CRLW12:
+    name: conformance
+    depends_on:
+      - CRLW11
+    targets:
+      - property_tests
+      - adversarial_tests
+      - reproducibility_tests
+      - security_tests
+# =====================================================================
+# 93. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: CRL-OD-01
+    decision: creator authentication mechanism for release
+    status: SECURITY_DESIGN
+  - id: CRL-OD-02
+    decision: exact creator review surface
+    status: EXPERIENCE_DESIGN
+  - id: CRL-OD-03
+    decision: initial CreatorAcceptancePrediction threshold
+    status: CALIBRATION_REQUIRED
+  - id: CRL-OD-04
+    decision: technical derivative classes that preserve release
+    status: DELIVERY_POLICY
+  - id: CRL-OD-05
+    decision: subtitle-only release workflow
+    status: CREATOR_POLICY
+  - id: CRL-OD-06
+    decision: dubbing/localization release workflow
+    status: CREATOR_POLICY
+  - id: CRL-OD-07
+    decision: episodic per-episode vs batch creator release
+    status: PROJECT_TYPE_POLICY
+  - id: CRL-OD-08
+    decision: creator release revocation policy before transfer starts
+    status: CREATOR_POLICY
+  - id: CRL-OD-09
+    decision: final delivery providers/adapters
+    status: REFERENCE_IMPLEMENTATION
+  - id: CRL-OD-10
+    decision: canonical archival master formats
+    status: TECHNICAL_DELIVERY_POLICY
+  - id: CRL-OD-11
+    decision: source file retention period
+    status: BUSINESS_AND_STORAGE_POLICY
+  - id: CRL-OD-12
+    decision: CreatorTasteModel representation
+    status: LEARNING_RESEARCH
+# =====================================================================
+# 94. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: autonomous_system_releases_without_creator
+    control:
+      - nondelegable_CreatorReleaseAuthority
+      - DeliveryAuthorization_gate
+  - risk: creator_review_overload
+    control:
+      - autonomous_QC
+      - high_acceptance_readiness_threshold
+  - risk: creator_is_primed_by_metrics
+    control:
+      - watch_first
+      - metrics_after_view
+  - risk: freeform_feedback_is_misinterpreted
+    control:
+      - preserve_raw_expression
+      - provenance
+      - confidence
+      - smallest_blast_radius
+  - risk: positive_spoken_comment_accidentally_releases
+    control:
+      - explicit_release_action
+  - risk: approved_master_changes_after_release
+    control:
+      - digest_binding
+      - automatic_invalidation
+  - risk: transcode_regenerates_art
+    control:
+      - deterministic_derivative_policy
+  - risk: client_acceptance_bypasses_creator
+    control:
+      - separate_state_models
+  - risk: deadline_causes_quality_compromise
+    control:
+      - release_buffer
+      - no_bypass
+  - risk: payment_pressure_causes_release
+    control:
+      - independent_authority
+  - risk: creator_rejection_becomes_full_project_regeneration
+    control:
+      - RCA
+      - local_repair
+  - risk: taste_model_overfits_one_genre
+    control:
+      - contextual_taste_model
+  - risk: delivery_service_corrupts_file
+    control:
+      - checksum
+      - DeliveryReceipt
+  - risk: wrong_files_delivered
+    control:
+      - DeliveryManifest
+      - contract_mapping
+  - risk: client_receives_internal_asset
+    control:
+      - delivery_scope_QC
+# =====================================================================
+# 95. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  authority:
+    - nondelegable_CreatorReleaseAuthority
+    - CreatorReleasePolicy
+    - CreatorReleaseStandard
+  internal_master:
+    - InternalMasterCandidate
+    - AutonomousFinalQC
+    - FinalMasterCandidate
+  creator_review:
+    - CreatorReviewReadiness
+    - CreatorReviewPackage
+    - watch_first_UX
+    - CreatorReviewSession
+    - explicit_approval
+    - explicit_rejection
+  feedback:
+    - freeform_creator_feedback
+    - typed_feedback_compiler
+    - smallest_blast_radius_repair
+    - new_review_candidate
+  learning:
+    - CreatorTasteObservation
+    - CreatorTasteModel
+    - CreatorAcceptancePrediction
+  release:
+    - CreatorApproval
+    - CreatorReleaseLock
+    - CreatorReleaseCertificate
+    - release_invalidation
+    - deterministic_derivative_policy
+  delivery:
+    - FinalDeliverySpecification
+    - DeliveryAuthorization
+    - FinalDeliveryArtifact
+    - DeliveryManifest
+    - FinalDeliveryPackage
+    - DeliveryTransfer
+    - DeliveryReceipt
+  completion:
+    - ClientDeliveryCompletion
+    - DeliveryArchive
+    - ReputationEvidence
+  hard_invariant:
+    - no_external_Quantum_master_without_CreatorReleaseLock
+  release:
+    requirement: CRL-G01_through_CRL-G45_pass
+# =====================================================================
+# 96. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    Quantum may be autonomous all the way to the final door.
+  law_02: >
+    The creator owns the key to that door.
+  law_03: >
+    The normal Quantum production process has one mandatory human creative gate:
+    final release.
+  law_04: >
+    The creator reviews finished experiences, not production bureaucracy.
+  law_05: >
+    Autonomous QC should eliminate bad candidates before the creator ever sees them.
+  law_06: >
+    CreatorAcceptancePrediction reduces review burden; it never replaces creator judgment.
+  law_07: >
+    Contract compliance is a floor, not Quantum's quality ceiling.
+  law_08: >
+    Money cannot purchase a lower CreatorReleaseStandard.
+  law_09: >
+    Deadlines cannot vote to release a bad film.
+  law_10: >
+    Clients cannot vote to release a bad film.
+  law_11: >
+    The creator may reject work even when every automated critic says PASS.
+  law_12: >
+    The creator may reject because a moment feels wrong.
+  law_13: >
+    Quantum's job is to understand why and return with a better version.
+  law_14: >
+    Creator feedback may be human, emotional and imprecise.
+  law_15: >
+    The system converts that feedback into precision.
+  law_16: >
+    Creator explicit intent outranks learned creator taste.
+  law_17: >
+    Creator taste learning exists to make the autonomous studio better, not to
+    make the creator unnecessary.
+  law_18: >
+    Silence is never release.
+  law_19: >
+    Viewing is never release.
+  law_20: >
+    Saying "ship it" is strong intent but still resolves through an explicit
+    secure release action.
+  law_21: >
+    Creator approval binds the exact master being watched.
+  law_22: >
+    Change the master and you changed what was approved.
+  law_23: >
+    One changed frame can create a new master.
+  law_24: >
+    Material sound, dialogue, edit, music or grade changes create a new release question.
+  law_25: >
+    Deterministic technical exports may derive from an approved master.
+  law_26: >
+    Generative recreation may not.
+  law_27: >
+    Final delivery is manufacturing, not creativity.
+  law_28: >
+    Delivery begins only after CreatorReleaseLock.
+  law_29: >
+    Every delivered creative artifact traces to a creator-approved master.
+  law_30: >
+    Every delivered artifact has a digest.
+  law_31: >
+    DeliveryReceipt means the package arrived.
+  law_32: >
+    Client acceptance means the contract's acceptance process passed.
+  law_33: >
+    Paid in full means the payment obligations are satisfied.
+  law_34: >
+    Creator release means Quantum is willing to put its name on the work.
+  law_35: >
+    Those are four different truths.
+  law_36: >
+    Internal rejected masters are evidence that the quality system worked.
+  law_37: >
+    Rejected masters stay internal.
+  law_38: >
+    A creator rejection starts diagnosis, not panic.
+  law_39: >
+    Repair begins at the smallest plausible blast radius.
+  law_40: >
+    The creator should normally watch once, feel the work, and approve.
+  law_41: >
+    If not, Quantum listens, repairs and returns.
+  law_42: >
+    Creator time is scarce.
+  law_43: >
+    Creator authority is not.
+  law_44: >
+    Delivering early is valuable only after exceptional work has cleared the
+    creator's release standard.
+  law_45: >
+    No Quantum-branded master leaves Quantum without an active CreatorReleaseLock.
+  law_46: >
+    The release lock is the creator's reputational signature.
+  law_47: >
+    If the creator's name is on it, it must be exceptional.

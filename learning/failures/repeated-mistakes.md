@@ -456,3 +456,11 @@ Before ANY execution task:
 **Prevention:** Prefetch with `{"session_id":"$CLAUDE_CODE_SESSION_ID"}` on stdin, then acquire with `CLAUDE_PROJECT_DIR` set to the same governed project root the gate uses (match it via `$CLAUDE_PROJECT_DIR`, never a hardcoded path), or run the CLI from that project root so the state root matches; re-acquire before each governed write (locks carry a short TTL).
 **Rule:** A lock only counts if its session_id and state root match the gate's | verify with memory_lock.py status under the real project dir
 **Date Added:** 2026-08-05
+
+### **48. Parking sacred WIP under /tmp for make pr (incomplete restore)**
+**Mistake:** Moved `WIP/` (or other work) to `/tmp/cg-*-hold*` / `*untracked-hold*` so `git status` looked clean for `make pr`, then failed to restore — backlog vanished from the worktree.
+**Impact:** Sacred tracked WIP temporarily missing; hung copies; emergency `mv` recovery from `/tmp`.
+**Prevention:** WIP is unparkable. Never relocate WIP for cleanliness. Soft dirty WARN ignores WIP/reports/.l9. Use `ops/scripts/scratch_hold.py` for **non-WIP** only; `make pr` / sessionStart restore-all and fail-closed on open holds.
+**Rule:** Never park WIP to /tmp or scratch-hold | restore-all at make pr start/end | vault is non-WIP only
+**Date Added:** 2026-08-12
+

@@ -39,13 +39,33 @@ if not new_lines:
     print("OK: no new dirtiness")
     raise SystemExit(0)
 
+# Sacred / scratch prefixes: never FAIL the PR gate for these dirtiness lines.
+SCRATCH_PREFIXES = (
+    "WIP/",
+    "WIP",
+    "current_work/",
+    "C_GOV_FILES/",
+    "reports/",
+    ".l9/",
+    ".l9/scratch-hold/",
+)
+
+def _is_scratch_path(path: str) -> bool:
+    p = path.replace("\\", "/").lstrip("./")
+    if p in {"WIP", ".l9"}:
+        return True
+    return any(p == pref.rstrip("/") or p.startswith(pref) for pref in SCRATCH_PREFIXES)
+
 non_generated: list[str] = []
 generated: list[str] = []
+scratch: list[str] = []
 for line in new_lines:
     path = line[3:].strip()
     if " -> " in path:
         path = path.split(" -> ", 1)[1]
-    if is_generated_path(path):
+    if _is_scratch_path(path):
+        scratch.append(path)
+    elif is_generated_path(path):
         generated.append(path)
     else:
         non_generated.append(path)
@@ -55,8 +75,15 @@ if non_generated:
     for path in non_generated:
         print(f"  {path}")
     raise SystemExit(1)
-print("GENERATED_NEW_DIRTY:")
-for path in generated:
-    print(f"  {path}")
+if scratch:
+    print("SCRATCH_NEW_DIRTY (allowed):")
+    for path in scratch:
+        print(f"  {path}")
+if generated:
+    print("GENERATED_NEW_DIRTY:")
+    for path in generated:
+        print(f"  {path}")
+elif not scratch:
+    print("OK: no new dirtiness")
 raise SystemExit(0)
 PY
