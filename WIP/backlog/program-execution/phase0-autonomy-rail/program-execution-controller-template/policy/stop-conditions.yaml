@@ -1,0 +1,59 @@
+schema: program-execution-controller.stop-policy.v2
+schema_version: 2.0.0
+# Taxonomy: business_logic | hard_safety | environmental_clearable
+# Environmental stops must be cleared in Phase 0 before long autonomy.
+stop_taxonomy:
+  business_logic:
+  - unresolved_required_decision
+  - unresolved_blocking_unknown
+  hard_safety:
+  - blueprint_contract_or_digest_mismatch
+  - unresolved_authority_conflict
+  - source_contract_widens_blueprint_ceiling
+  - lease_conflict_or_expiry
+  - ledger_integrity_failure
+  - worker_receipt_binding_failure
+  - worker_changed_files_disagree_with_observed_state
+  - recovery_evidence_cannot_be_preserved
+  - required_approval_missing_expired_or_scope_mismatched
+  - writable_scope_missing_or_unsafe
+  - secrets_or_org_invariant_violation
+  environmental_clearable:
+  - advisory_ci_noise
+  - phase0_incomplete
+  - local_pr_gate_skipped
+  - lock_or_pin_misalignment
+  - non_business_stop_uncleared
+  - repository_dirty_or_head_changed
+  - task_crosses_multiple_targets_without_decomposition
+  - validation_obligation_missing
+stop_when:
+- blueprint_contract_or_digest_mismatch
+- unresolved_required_decision
+- unresolved_blocking_unknown
+- unresolved_authority_conflict
+- repository_dirty_or_head_changed
+- task_crosses_multiple_targets_without_decomposition
+- writable_scope_missing_or_unsafe
+- source_contract_widens_blueprint_ceiling
+- validation_obligation_missing
+- lease_conflict_or_expiry
+- required_approval_missing_expired_or_scope_mismatched
+- ledger_integrity_failure
+- worker_receipt_binding_failure
+- worker_changed_files_disagree_with_observed_state
+- recovery_evidence_cannot_be_preserved
+- phase0_incomplete
+- local_pr_gate_skipped
+- lock_or_pin_misalignment
+- advisory_ci_noise
+- non_business_stop_uncleared
+- secrets_or_org_invariant_violation
+phase0_clearance_required_for:
+- advisory_ci_noise
+- non_business_stop_uncleared
+- lock_or_pin_misalignment
+admission_denied_when:
+- program_deploying_and_phase0_incomplete
+- push_or_pr_without_local_make_pr_receipt
+- push_or_pr_when_adapter_absent

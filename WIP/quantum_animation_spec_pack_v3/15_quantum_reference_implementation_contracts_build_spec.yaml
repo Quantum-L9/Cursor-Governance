@@ -1,0 +1,1483 @@
+metadata:
+  spec_id: quantum.animation.reference_implementation_contracts.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Reference Implementation Contracts
+  depends_on:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: WORLD_STORAGE_AND_QUERY_ADAPTER_DEPENDENCY
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: MODEL_AND_REASONING_ADAPTER_DEPENDENCY
+    - file: 05_quantum_self_model_build_spec.yaml
+      relationship: IMPLEMENTATION_REGISTRY_AND_CAPABILITY_EVIDENCE_DEPENDENCY
+    - file: 06_quantum_production_model_build_spec.yaml
+      relationship: STRATEGY_TO_IMPLEMENTATION_BINDING_DEPENDENCY
+    - file: 07_quantum_autonomous_qc_build_spec.yaml
+      relationship: CRITIC_AND_VALIDATOR_IMPLEMENTATION_DEPENDENCY
+    - file: 08_quantum_production_engine_build_spec.yaml
+      relationship: EXECUTION_ADAPTER_DEPENDENCY
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: IMPLEMENTATION_LINEAGE_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: CANONICAL_CONTRACT_DEPENDENCY
+    - file: 14_quantum_mvp_runtime_profile_build_spec.yaml
+      relationship: MVP_REQUIRED_CAPABILITY_SET
+  architectural_identity:
+    concise: >
+      Provider-independent contracts that let real reasoning models, media models,
+      stores, queues, graph systems, deterministic tools, and critics plug into
+      Quantum without owning studio semantics.
+    extended: >
+      Reference Implementation Contracts define normalized ports, adapters,
+      capability descriptors, request/response envelopes, health state,
+      authentication boundaries, conformance tests, cost/latency reporting,
+      version pinning, error normalization, reproducibility semantics, and
+      provider-specific extension rules for all implementation categories needed
+      by the MVP. This layer answers how concrete technologies satisfy abstract
+      capabilities without allowing any vendor, SDK, graph database, model API,
+      workflow engine, or media tool to become the architecture.
+  owner_question:
+    primary: "How does a concrete tool or model prove it can satisfy a Quantum capability?"
+  secondary_questions:
+    - "What contract must a video model implement?"
+    - "How does a graph backend expose exact World queries?"
+    - "How does SelfModel know current implementation capability?"
+    - "How are provider-specific options namespaced?"
+    - "How are cost and latency normalized?"
+    - "How does ProductionModel bind abstract strategy to real implementation?"
+    - "How do retries know whether an error is transient?"
+    - "How do we replace one provider without changing semantic IR?"
+    - "How are model/version regressions detected?"
+    - "Which implementation is permitted for this project privacy policy?"
+    - "What exact implementation generated this artifact?"
+  hard_boundary: >
+    Concrete implementations satisfy capabilities. They do not own creative,
+    World, cognitive, production-strategy, or quality semantics.
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Create a stable anti-corruption layer between Quantum's durable architecture
+    and rapidly changing AI/media infrastructure.
+  success_definition: >
+    The studio can add, remove, upgrade, benchmark, quarantine, or replace a
+    reasoning model, video generator, TTS model, graph store, media processor,
+    queue, or storage backend without rewriting the canonical semantic contracts.
+  strategic_value: >
+    Preserve architectural durability while allowing aggressive exploitation of
+    rapidly improving external capabilities.
+  core_rule: >
+    Provider churn is expected; semantic architecture must remain stable.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  RI-001:
+    name: CAPABILITY_BEFORE_PROVIDER
+    statement: >
+      Quantum requests capabilities, not brand names.
+  RI-002:
+    name: ADAPTER_ANTI_CORRUPTION_LAYER
+    statement: >
+      Provider-specific request/response semantics terminate at adapters.
+  RI-003:
+    name: NORMALIZED_CONTRACTS
+    statement: >
+      All implementations of a capability expose a common normalized interface.
+  RI-004:
+    name: EXTENSIONS_ARE_NAMESPACED
+    statement: >
+      Provider-specific features may be exposed without polluting canonical
+      request schemas.
+  RI-005:
+    name: EXACT_IMPLEMENTATION_VERSIONING
+    statement: >
+      Every invocation pins implementation, model/tool version, adapter version,
+      and significant configuration.
+  RI-006:
+    name: SELF_MODEL_OWNS_CAPABILITY_TRUTH
+    statement: >
+      Adapter declarations are evidence; SelfModel determines current capability truth.
+  RI-007:
+    name: PRODUCTION_MODEL_OWNS_BINDING_STRATEGY
+    statement: >
+      Adapter existence does not imply it should be used.
+  RI-008:
+    name: ENGINE_OWNS_INVOCATION
+    statement: >
+      ProductionEngine executes concrete provider/tool calls.
+  RI-009:
+    name: QC_OWNS_ACCEPTANCE
+    statement: >
+      Provider-declared success does not imply artifact quality.
+  RI-010:
+    name: HEALTH_IS_DYNAMIC
+    statement: >
+      Availability, latency, quality and failure modes may change over time.
+  RI-011:
+    name: ERRORS_ARE_NORMALIZED
+    statement: >
+      Provider-specific failures map to stable Quantum error classes.
+  RI-012:
+    name: OBSERVABILITY_REQUIRED
+    statement: >
+      Each invocation produces cost, latency, request identity, output identity,
+      and failure evidence.
+  RI-013:
+    name: CONFORMANCE_BEFORE_PRODUCTION
+    statement: >
+      New adapters must pass capability-specific conformance suites.
+  RI-014:
+    name: REPRODUCIBILITY_DECLARED
+    statement: >
+      Implementations explicitly declare whether exact replay is supported.
+  RI-015:
+    name: IDEMPOTENCY_DECLARED
+    statement: >
+      Adapters identify provider-level idempotency support and retry safety.
+  RI-016:
+    name: CANCELLATION_DECLARED
+    statement: >
+      Long-running implementations expose cancellation capability where available.
+  RI-017:
+    name: PRIVACY_PROPERTIES_EXPLICIT
+    statement: >
+      Data retention/training, residency, and confidentiality properties are
+      represented as implementation metadata.
+  RI-018:
+    name: MODEL_OUTPUT_NEVER_BYPASSES_CANONICAL_IR
+    statement: >
+      Raw provider output must be normalized before crossing subsystem boundaries.
+  RI-019:
+    name: GRAPH_BACKEND_NOT_WORLD_MODEL
+    statement: >
+      Neo4j, Graphiti, relational stores, or other graph systems are implementations,
+      never owners of World semantics.
+  RI-020:
+    name: MEMORY_BACKEND_NOT_AUTHORITY
+    statement: >
+      Semantic memory systems assist retrieval/projection but cannot override
+      canonical state.
+  RI-021:
+    name: DETERMINISTIC_TOOLS_PREFERRED_FOR_EXACT_OPERATIONS
+    statement: >
+      Timeline assembly, hashing, text rendering, schema validation and similar
+      exact tasks should use deterministic implementations.
+  RI-022:
+    name: IMPLEMENTATION_DIVERSITY_SUPPORTED
+    statement: >
+      Different shots or cognitive tasks may use different implementations.
+  RI-023:
+    name: QUARANTINE_SUPPORTED
+    statement: >
+      Degraded implementations can be removed from eligibility without deletion.
+  RI-024:
+    name: SHADOW_BENCHMARKING_SUPPORTED
+    statement: >
+      New implementations may be evaluated alongside production without
+      controlling production output.
+  RI-025:
+    name: NO_VENDOR_LOCK_IN_BY_SCHEMA
+    statement: >
+      Canonical contracts cannot require provider-specific concepts unless they
+      are generalized into durable capabilities.
+  RI-026:
+    name: IMPLEMENTATION_SELECTION_IS_EVIDENCE_DRIVEN
+    statement: >
+      Historical pass rate, cost, latency and failure modes should influence
+      eligibility through SelfModel/ProductionModel.
+  RI-027:
+    name: CAPABILITY_LIMITS_ARE_MACHINE_READABLE
+    statement: >
+      Duration, resolution, reference count, context windows, audio length,
+      modality support and similar constraints are normalized.
+  RI-028:
+    name: SECRET_BOUNDARY_IS_EXPLICIT
+    statement: >
+      Credentials never enter semantic IR, provenance payloads, or model prompts.
+  RI-029:
+    name: REFERENCE_IMPLEMENTATION_IS_NOT_CANONICAL_VENDOR
+    statement: >
+      MVP may choose concrete providers, but the spec remains provider-neutral.
+  RI-030:
+    name: REPLACEMENT_COST_MUST_BE LOW
+    statement: >
+      Switching implementation should be adapter/configuration work, not semantic
+      architecture work.
+# =====================================================================
+# 3. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  this_spec_owns:
+    - CapabilityImplementationSpec
+    - ImplementationDescriptor
+    - ImplementationRef
+    - AdapterSpec
+    - CapabilityRequest
+    - CapabilityResponse
+    - ImplementationHealth
+    - ImplementationLimit
+    - ImplementationPolicyMetadata
+    - NormalizedProviderError
+    - ImplementationConformanceSuite
+    - ImplementationBenchmarkResult
+    - secret access port contracts
+    - provider-specific extension namespace
+    - implementation registry contract
+  this_spec_does_not_own:
+    - capability truth
+    - provider selection strategy
+    - execution scheduling
+    - creative decisions
+    - World semantics
+    - QC acceptance
+    - ProductionStrategy
+    - artifact lineage authority
+  adjacent_owners:
+    capability_truth:
+      owner: 05
+    strategy:
+      owner: 06
+    invocation:
+      owner: 08
+    acceptance:
+      owner: 07
+    provenance:
+      owner: 09
+# =====================================================================
+# 4. IMPLEMENTATION CATEGORIES
+# =====================================================================
+implementation_categories:
+  reasoning:
+    - general_reasoning_model
+    - multimodal_reasoning_model
+    - structured_generation_model
+  memory_and_graph:
+    - World_graph_store
+    - provenance_graph_store
+    - semantic_memory
+    - vector_index
+  media_generation:
+    - image_generation
+    - video_generation
+    - voice_generation
+    - music_generation
+    - sound_effect_generation
+    - lip_sync
+    - image_editing
+    - video_editing_or_transformation
+  deterministic_media:
+    - transcoding
+    - compositing
+    - subtitle_rendering
+    - image_processing
+    - timeline_assembly
+    - audio_mixing
+    - loudness_normalization
+    - frame_extraction
+    - hashing
+  infrastructure:
+    - object_storage
+    - structured_store
+    - queue
+    - workflow_runtime
+    - secret_store
+    - cache
+  QC:
+    - multimodal_visual_critic
+    - temporal_video_critic
+    - audio_critic
+    - deterministic_media_validator
+# =====================================================================
+# 5. IMPLEMENTATION REF
+# =====================================================================
+implementation_ref:
+  ImplementationRef:
+    fields:
+      implementation_id:
+      capability_id:
+      provider_id:
+      implementation_family:
+      implementation_version:
+      adapter_id:
+      adapter_version:
+      deployment_ref:
+        nullable: true
+  exact:
+    required_for_execution_receipt: true
+# =====================================================================
+# 6. IMPLEMENTATION DESCRIPTOR
+# =====================================================================
+implementation_descriptor:
+  ImplementationDescriptor:
+    fields:
+      implementation_ref:
+      display_name:
+      category:
+      supported_capabilities:
+      modalities_in:
+      modalities_out:
+      limits:
+        type: list[ImplementationLimit]
+      reproducibility:
+        type: ReproducibilityProfile
+      idempotency:
+        type: IdempotencyProfile
+      async_execution:
+        type: AsyncExecutionProfile
+      privacy:
+        type: ImplementationPolicyMetadata
+      cost_model:
+        type: CostModelDescriptor
+      declared_quality:
+        nullable: true
+      extension_schema_ref:
+        nullable: true
+      lifecycle:
+        enum:
+          - DISCOVERED
+          - TESTING
+          - SHADOW
+          - ACTIVE
+          - DEGRADED
+          - QUARANTINED
+          - RETIRED
+      registered_at:
+      last_updated_at:
+# =====================================================================
+# 7. CAPABILITY REQUEST
+# =====================================================================
+capability_request:
+  CapabilityRequest:
+    fields:
+      request_id:
+      capability_id:
+      task_type:
+      semantic_input_refs:
+      artifact_input_refs:
+      normalized_parameters:
+        type: map
+      hard_requirements:
+        type: map
+      soft_preferences:
+        type: map
+      provider_extensions:
+        type: map[string, map]
+      quality_tier:
+      privacy_policy_ref:
+        nullable: true
+      timeout:
+        nullable: true
+      idempotency_key:
+        nullable: true
+      trace_context:
+      created_at:
+  rule: >
+    Semantic inputs are canonical refs; adapter resolves/serializes provider payload.
+# =====================================================================
+# 8. CAPABILITY RESPONSE
+# =====================================================================
+capability_response:
+  CapabilityResponse:
+    fields:
+      request_id:
+      implementation_ref:
+      status:
+        enum:
+          - SUCCESS
+          - ACCEPTED_ASYNC
+          - FAILURE
+      provider_request_id:
+        nullable: true
+      normalized_outputs:
+        type: list[NormalizedOutput]
+      usage:
+        type: ImplementationUsage
+      normalized_error:
+        nullable: true
+      provider_metadata:
+        type: map
+      started_at:
+      completed_at:
+        nullable: true
+  NormalizedOutput:
+    fields:
+      output_type:
+      temporary_blob_ref:
+        nullable: true
+      structured_payload:
+        nullable: true
+      provider_output_ref:
+        nullable: true
+      digest:
+        nullable: true
+# =====================================================================
+# 9. IMPLEMENTATION LIMIT
+# =====================================================================
+implementation_limit:
+  ImplementationLimit:
+    fields:
+      limit_type:
+        enum:
+          - MAX_DURATION
+          - MAX_RESOLUTION
+          - MAX_CONTEXT
+          - MAX_INPUT_IMAGES
+          - MAX_AUDIO_DURATION
+          - MAX_VIDEO_DURATION
+          - MAX_CONCURRENCY
+          - RATE_LIMIT
+          - MAX_FILE_SIZE
+          - SUPPORTED_FORMAT
+          - SUPPORTED_LANGUAGE
+          - REGION
+          - CUSTOM
+      value:
+      unit:
+        nullable: true
+      hard:
+      source:
+      last_verified_at:
+# =====================================================================
+# 10. HEALTH
+# =====================================================================
+implementation_health:
+  ImplementationHealth:
+    fields:
+      implementation_ref:
+      availability:
+        enum:
+          - HEALTHY
+          - DEGRADED
+          - UNAVAILABLE
+          - UNKNOWN
+      observed_success_rate:
+      timeout_rate:
+      error_rate:
+      median_latency:
+      p95_latency:
+      recent_cost:
+      quota_state:
+      quality_regression_signal:
+        nullable: true
+      confidence:
+      observed_at:
+      expires_at:
+  owner:
+    SelfModel
+# =====================================================================
+# 11. NORMALIZED ERROR TAXONOMY
+# =====================================================================
+normalized_errors:
+  NormalizedProviderError:
+    fields:
+      error_code:
+      category:
+      retryable:
+      provider_code:
+        nullable: true
+      message:
+      evidence_ref:
+        nullable: true
+  categories:
+    - AUTHENTICATION
+    - AUTHORIZATION
+    - INVALID_REQUEST
+    - UNSUPPORTED_FEATURE
+    - CONTENT_POLICY_REJECTION
+    - RATE_LIMIT
+    - QUOTA
+    - TIMEOUT
+    - NETWORK
+    - PROVIDER_FAILURE
+    - PROVIDER_DEGRADED
+    - INVALID_OUTPUT
+    - OUTPUT_MISSING
+    - CANCELLED
+    - UNKNOWN
+# =====================================================================
+# 12. REPRODUCIBILITY PROFILE
+# =====================================================================
+reproducibility:
+  ReproducibilityProfile:
+    fields:
+      deterministic:
+      seed_supported:
+      seed_replay_strength:
+        enum:
+          - EXACT
+          - APPROXIMATE
+          - NONE
+          - UNKNOWN
+      version_pin_supported:
+      environment_pin_required:
+      notes:
+  rule: >
+    Generative nondeterminism must be declared, not assumed away.
+# =====================================================================
+# 13. IDEMPOTENCY PROFILE
+# =====================================================================
+idempotency_profile:
+  IdempotencyProfile:
+    fields:
+      provider_idempotency_supported:
+      key_format:
+        nullable: true
+      duplicate_submission_safe:
+      duplicate_fetch_safe:
+      retry_same_request_safe:
+# =====================================================================
+# 14. ASYNC EXECUTION PROFILE
+# =====================================================================
+async_execution:
+  AsyncExecutionProfile:
+    fields:
+      supported:
+      polling_supported:
+      webhook_supported:
+      streaming_supported:
+      cancellation_supported:
+      status_lookup_supported:
+      durable_provider_request_id:
+# =====================================================================
+# 15. PRIVACY / DATA POLICY METADATA
+# =====================================================================
+implementation_policy:
+  ImplementationPolicyMetadata:
+    fields:
+      data_retention:
+      training_use:
+        enum:
+          - NEVER
+          - OPT_OUT
+          - POSSIBLE
+          - UNKNOWN
+      residency_regions:
+      enterprise_privacy_available:
+      confidential_content_allowed:
+      terms_version:
+      verified_at:
+  note: >
+    This is implementation eligibility metadata, not legal authority.
+# =====================================================================
+# 16. COST MODEL
+# =====================================================================
+cost_model:
+  CostModelDescriptor:
+    fields:
+      pricing_unit:
+      fixed_cost:
+        nullable: true
+      variable_cost_formula:
+        nullable: true
+      dimensions:
+        examples:
+          - duration
+          - resolution
+          - tokens
+          - images
+          - compute_time
+      currency:
+      effective_at:
+      confidence:
+# =====================================================================
+# 17. ADAPTER BASE CONTRACT
+# =====================================================================
+adapter_contract:
+  QuantumImplementationAdapter:
+    interface:
+      - descriptor()
+      - validate_request()
+      - estimate()
+      - health()
+      - invoke()
+      - poll()
+      - cancel()
+      - fetch_outputs()
+      - normalize_error()
+      - usage()
+      - capabilities()
+    optional:
+      - stream()
+      - webhook_handler()
+      - warmup()
+      - provider_side_delete()
+    requirements:
+      - stateless_or_reconstructable
+      - no semantic authority
+      - exact adapter version
+      - structured logs
+      - secret isolation
+# =====================================================================
+# 18. REASONING MODEL CONTRACT
+# =====================================================================
+reasoning_model_adapter:
+  capability_ids:
+    - reasoning.text
+    - reasoning.structured
+    - reasoning.multimodal
+    - reasoning.long_context
+  request:
+    includes:
+      - instruction_package
+      - CanonicalRefs
+      - schema_constraint
+      - reasoning_budget_hint
+      - multimodal_refs
+      - context_firewall_policy
+  response:
+    includes:
+      - structured_result
+      - confidence_if_supported
+      - usage
+      - model_version
+  requirements:
+    - schema-constrained generation supported_or_adapter_repair
+    - context firewall enforceable
+    - provenance of context package
+    - no hidden provider output used as canonical truth
+  forbidden:
+    - returning provider prose directly as committed World state
+# =====================================================================
+# 19. GRAPH STORE CONTRACT
+# =====================================================================
+graph_store_adapter:
+  supported_roles:
+    - World graph backend
+    - provenance projection backend
+  interface:
+    - upsert_node()
+    - append_edge()
+    - get_node()
+    - neighbors()
+    - traverse()
+    - query()
+    - snapshot_query()
+    - batch_write()
+    - transaction()
+    - health()
+  required_semantics:
+    - typed nodes
+    - typed edges
+    - exact IDs
+    - version fields
+    - transactional_or_compensated_write
+    - bounded traversal
+    - indexed lookup
+  optional:
+    - Cypher
+    - Gremlin
+    - native graph query language
+  rule: >
+    Query language is implementation detail; logical graph contract is canonical.
+# =====================================================================
+# 20. SEMANTIC MEMORY CONTRACT
+# =====================================================================
+semantic_memory_adapter:
+  purpose:
+    - associative retrieval
+    - long-term experience retrieval
+    - context projection
+    - semantic search
+  interface:
+    - index()
+    - search()
+    - retrieve()
+    - delete_projection()
+    - rebuild_projection()
+  result:
+    fields:
+      source_ref:
+      score:
+      snippet_or_projection:
+      freshness:
+      evidence_refs:
+  cannot:
+    - mutate World truth
+    - create QualityCertificate
+    - override exact graph query
+  l9_graphiti_memory:
+    suitable_as:
+      - semantic memory implementation
+      - contextual projection implementation
+      - graph-assisted retrieval implementation
+    not_suitable_as:
+      - sole World authority
+      - sole provenance authority
+# =====================================================================
+# 21. IMAGE GENERATION CONTRACT
+# =====================================================================
+image_generation_adapter:
+  capability_id:
+    media.image.generate
+  normalized_request:
+    - prompt_semantics_ref
+    - reference_image_refs
+    - mask_refs
+    - identity_refs
+    - style_refs
+    - width
+    - height
+    - seed
+    - hard_constraints
+  normalized_output:
+    - image_blob_ref
+    - metadata
+    - seed_if_available
+    - provider_request_id
+  conformance:
+    must_test:
+      - reference adherence
+      - identity adherence
+      - dimensions
+      - deterministic metadata capture
+# =====================================================================
+# 22. VIDEO GENERATION CONTRACT
+# =====================================================================
+video_generation_adapter:
+  capability_ids:
+    - media.video.text_to_video
+    - media.video.image_to_video
+    - media.video.reference_conditioned
+    - media.video.video_to_video
+  normalized_request:
+    - semantic_prompt_ref
+    - first_frame_ref
+    - last_frame_ref
+    - identity_refs
+    - reference_video_refs
+    - pose_or_motion_refs
+    - duration
+    - resolution
+    - frame_rate
+    - camera_intent
+    - motion_intent
+    - seed
+    - hard_invariants
+  output:
+    - candidate_video_ref
+    - metadata
+    - provider_request_id
+    - generation_receipt_data
+  hard_rule: >
+    Provider promise of identity/physics consistency never replaces QC.
+# =====================================================================
+# 23. VOICE CONTRACT
+# =====================================================================
+voice_generation_adapter:
+  capability_id:
+    media.voice.generate
+  normalized_request:
+    - character_voice_identity_ref
+    - text
+    - semantic_intent
+    - emotional_state
+    - subtext
+    - duration_target
+    - pronunciation_rules
+    - language
+  normalized_output:
+    - audio_ref
+    - timing_metadata
+    - phoneme_or_alignment_data_if_available
+  conformance:
+    must_test:
+      - voice identity
+      - pronunciation
+      - timing
+      - emotional control
+      - long-term repeatability
+# =====================================================================
+# 24. MUSIC CONTRACT
+# =====================================================================
+music_generation_adapter:
+  capability_id:
+    media.music.generate
+  normalized_request:
+    - music_intent_ref
+    - duration
+    - motif_refs
+    - cue_points
+    - intensity_curve
+    - style_constraints
+    - stem_requirement
+  output:
+    - full_mix_ref
+    - optional_stem_refs
+    - timing_metadata
+# =====================================================================
+# 25. SOUND EFFECT CONTRACT
+# =====================================================================
+sound_generation_adapter:
+  capability_ids:
+    - media.sound.generate
+    - media.sound.retrieve
+  normalized_request:
+    - sound_intent_ref
+    - World_audible_state_ref
+    - action
+    - material
+    - environment
+    - duration
+    - spatial_characteristics
+  output:
+    - sound_ref
+    - source_type
+    - metadata
+# =====================================================================
+# 26. LIP SYNC CONTRACT
+# =====================================================================
+lip_sync_adapter:
+  capability_id:
+    media.lipsync
+  inputs:
+    - face_video_or_image_ref
+    - accepted_voice_audio_ref
+    - character_identity_ref
+    - timing
+  output:
+    - synchronized_video_ref
+    - timing_report
+# =====================================================================
+# 27. DETERMINISTIC MEDIA TOOL CONTRACT
+# =====================================================================
+deterministic_media_adapter:
+  capability_ids:
+    - media.transcode
+    - media.composite
+    - media.timeline
+    - media.audio_mix
+    - media.subtitle_render
+    - media.frame_extract
+    - media.hash
+    - media.normalize
+  requirements:
+    - exact command/configuration receipt
+    - deterministic output where underlying tool supports it
+    - version pin
+    - exit code normalization
+    - output integrity check
+  preferred_role:
+    >
+    Use deterministic media tools for all operations whose desired result is
+    exact rather than aesthetic.
+# =====================================================================
+# 28. OBJECT STORAGE CONTRACT
+# =====================================================================
+object_storage_adapter:
+  interface:
+    - put()
+    - multipart_put()
+    - get()
+    - head()
+    - signed_read()
+    - signed_write()
+    - delete_temporary()
+    - verify_digest()
+  requirements:
+    - immutable accepted blobs
+    - large media
+    - content digest
+    - resumable upload
+    - access control
+# =====================================================================
+# 29. STRUCTURED STORE CONTRACT
+# =====================================================================
+structured_store_adapter:
+  interface:
+    - create()
+    - get()
+    - update_with_revision()
+    - append_event()
+    - query()
+    - transaction()
+  requirements:
+    - optimistic_or_transactional_concurrency
+    - durable state
+    - indexed exact refs
+    - version history where needed
+# =====================================================================
+# 30. QUEUE CONTRACT
+# =====================================================================
+queue_adapter:
+  interface:
+    - enqueue()
+    - lease()
+    - ack()
+    - nack()
+    - extend_lease()
+    - dead_letter()
+    - inspect_depth()
+  requirements:
+    - durable messages
+    - visibility timeout_or_lease
+    - at_least_once acceptable
+    - idempotent consumer design
+# =====================================================================
+# 31. WORKFLOW RUNTIME CONTRACT
+# =====================================================================
+workflow_runtime_adapter:
+  interface:
+    - start_workflow()
+    - signal_workflow()
+    - query_workflow()
+    - cancel_workflow()
+    - resume_or_reconstruct()
+    - register_activity()
+  required_semantics:
+    - durable workflow state_or_reconstruction
+    - retries
+    - timers
+    - async waits
+    - idempotent activities
+  note: >
+    Workflow runtime may simplify ProductionEngine implementation but cannot own
+    ProductionManifest semantics.
+# =====================================================================
+# 32. SECRET STORE CONTRACT
+# =====================================================================
+secret_store_adapter:
+  interface:
+    - resolve_secret(secret_ref)
+    - rotate_secret()
+    - audit_access()
+  forbidden:
+    - exposing raw secrets to semantic IR
+    - logging raw secrets
+    - storing credentials in provenance
+# =====================================================================
+# 33. QC CRITIC ADAPTER
+# =====================================================================
+QC_critic_adapter:
+  capability_ids:
+    - qc.visual
+    - qc.temporal_video
+    - qc.audio
+    - qc.multimodal
+    - qc.viewer_simulation
+  normalized_request:
+    - QCContract_ref
+    - target_artifact_ref
+    - allowed_context_refs
+    - forbidden_context_policy
+    - output_schema
+  output:
+    - CriticResult
+  requirement:
+    context_firewall_enforced: true
+# =====================================================================
+# 34. IMPLEMENTATION REGISTRY
+# =====================================================================
+implementation_registry:
+  ImplementationRegistry:
+    functions:
+      - register()
+      - get()
+      - list_by_capability()
+      - set_lifecycle()
+      - quarantine()
+      - resolve_adapter()
+      - get_conformance_status()
+  lifecycle:
+    DISCOVERED:
+      production_eligible: false
+    TESTING:
+      production_eligible: false
+    SHADOW:
+      production_eligible: false_by_default
+    ACTIVE:
+      production_eligible: true
+    DEGRADED:
+      production_eligible: conditional
+    QUARANTINED:
+      production_eligible: false
+    RETIRED:
+      production_eligible: false
+# =====================================================================
+# 35. CAPABILITY DISCOVERY
+# =====================================================================
+capability_discovery:
+  MVP:
+    manually_registered_implementations_allowed: true
+  future:
+    automated_discovery:
+      roadmap: true
+  discovery_result:
+    advisory_only: true
+  promotion:
+    requires:
+      - conformance
+      - SelfModel observation
+      - authorized registry lifecycle transition
+# =====================================================================
+# 36. CONFORMANCE SUITE
+# =====================================================================
+conformance:
+  ImplementationConformanceSuite:
+    fields:
+      suite_id:
+      capability_id:
+      version:
+      test_cases:
+      minimum_pass_policy:
+      artifact_fixture_refs:
+  ImplementationConformanceResult:
+    fields:
+      implementation_ref:
+      suite_ref:
+      results:
+      overall:
+        enum:
+          - PASS
+          - CONDITIONAL
+          - FAIL
+      evidence_refs:
+      executed_at:
+  mandatory_before_ACTIVE:
+    true
+# =====================================================================
+# 37. BENCHMARKING
+# =====================================================================
+benchmarking:
+  ImplementationBenchmarkResult:
+    fields:
+      implementation_ref:
+      benchmark_id:
+      task_slice:
+      quality_metrics:
+      latency_metrics:
+      cost_metrics:
+      failure_metrics:
+      sample_count:
+      confidence:
+      evidence_refs:
+      executed_at:
+  consumers:
+    - SelfModel
+    - ProductionModel
+  benchmark_not_authority:
+    true
+# =====================================================================
+# 38. IMPLEMENTATION BINDING
+# =====================================================================
+implementation_binding:
+  ImplementationBinding:
+    fields:
+      binding_id:
+      capability_requirement_ref:
+      selected_implementation_ref:
+      evidence_refs:
+      SelfModel_snapshot_ref:
+      ProductionStrategy_ref:
+      constraints_satisfied:
+      risk:
+      confidence:
+  owner:
+    ProductionModel
+  engine_consumes:
+    true
+# =====================================================================
+# 39. FALLBACK BINDING
+# =====================================================================
+fallback_binding:
+  FallbackImplementationBinding:
+    fields:
+      fallback_binding_id:
+      primary_binding_ref:
+      fallback_implementation_ref:
+      trigger_conditions:
+      semantic_equivalence_class:
+      quality_delta_expected:
+      cost_delta_expected:
+      confidence:
+  must_be_preapproved:
+    true
+# =====================================================================
+# 40. VERSION REGRESSION
+# =====================================================================
+version_regression:
+  triggers:
+    - quality decline
+    - latency increase
+    - failure increase
+    - API behavior change
+    - identity consistency regression
+    - changed provider policy
+  response:
+    - SelfModel signal
+    - mark DEGRADED
+    - shadow benchmark previous/new version
+    - ProductionModel rebind if necessary
+  auto_upgrade:
+    default: false
+  hard_rule: >
+    "Latest model" is never a sufficient production selection policy.
+# =====================================================================
+# 41. PROVIDER EXTENSIONS
+# =====================================================================
+provider_extensions:
+  structure:
+    provider_extensions:
+      "<provider_namespace>":
+        arbitrary_versioned_schema: true
+  rules:
+    - canonical normalized field must be used when equivalent exists
+    - extension cannot override hard canonical semantic meaning
+    - extension schema version recorded
+    - adapter owns translation
+# =====================================================================
+# 42. SECURITY
+# =====================================================================
+security:
+  secrets:
+    - externalized
+    - scoped
+    - audited
+    - rotated
+  provider_callbacks:
+    - authenticated
+    - replay_protected
+  untrusted_outputs:
+    - content_type_validate
+    - size_validate
+    - malware_or_executable_guard_where_relevant
+  network:
+    outbound_provider_allowlisting:
+      optional_MVP: true
+# =====================================================================
+# 43. OBSERVABILITY
+# =====================================================================
+observability:
+  per_invocation:
+    - implementation_ref
+    - task_type
+    - request_digest
+    - latency
+    - cost
+    - provider_request_id
+    - normalized_error
+    - retry_count
+    - artifact_refs
+  aggregate:
+    - success_rate
+    - QC_pass_rate
+    - cost_per_certified_output
+    - latency_per_certified_output
+    - failure_mode_distribution
+    - repair_rate
+    - capability_regression
+  important:
+    raw_provider_success_rate_not_enough: true
+# =====================================================================
+# 44. MVP IMPLEMENTATION SET
+# =====================================================================
+mvp_required_implementations:
+  minimum:
+    reasoning:
+      - structured reasoning implementation
+      - multimodal critic-capable implementation
+    graph_or_state:
+      - exact structured World store
+      - graph query capability
+      - provenance projection store
+    media:
+      - image generator
+      - video generator
+      - voice generator
+      - music generator
+      - sound generator_or_library
+      - lip sync_if_dialogue_visible
+    deterministic:
+      - media processing
+      - timeline assembly
+      - compositing
+      - audio mixing
+    infrastructure:
+      - object store
+      - structured store
+      - durable queue_or_workflow runtime
+      - secret store
+  optional:
+    - semantic memory / Graphiti projection
+  not_required:
+    - multiple providers per category
+    - automated provider marketplace
+    - multi-region runtime
+# =====================================================================
+# 45. MVP BINDING CONFIG
+# =====================================================================
+mvp_binding_config:
+  ReferenceImplementationSet:
+    fields:
+      profile_version:
+      reasoning_impl_ref:
+      multimodal_impl_ref:
+      World_store_ref:
+      provenance_store_ref:
+      semantic_memory_ref:
+        nullable: true
+      image_impl_ref:
+      video_impl_ref:
+      voice_impl_ref:
+      music_impl_ref:
+      sound_impl_ref:
+      lipsync_impl_ref:
+        nullable: true
+      deterministic_media_impl_ref:
+      object_storage_ref:
+      structured_store_ref:
+      queue_or_workflow_ref:
+      secret_store_ref:
+      QC_impl_refs:
+      created_at:
+      digest:
+  note: >
+    This runtime config chooses real technologies without changing semantic specs.
+# =====================================================================
+# 46. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/implementations/
+  modules:
+    contracts:
+      - descriptor
+      - capability_request
+      - capability_response
+      - limits
+      - health
+      - errors
+      - cost
+      - reproducibility
+      - idempotency
+    registry:
+      - service
+      - lifecycle
+      - conformance
+    reasoning:
+      - adapter_base
+    graph:
+      - adapter_base
+    memory:
+      - adapter_base
+    media:
+      image:
+        - adapter_base
+      video:
+        - adapter_base
+      voice:
+        - adapter_base
+      music:
+        - adapter_base
+      sound:
+        - adapter_base
+      lipsync:
+        - adapter_base
+    deterministic:
+      - media_adapter_base
+    infrastructure:
+      - object_store
+      - structured_store
+      - queue
+      - workflow
+      - secret_store
+    QC:
+      - critic_adapter_base
+    benchmarking:
+      - conformance
+      - benchmark
+    bindings:
+      - implementation_binding
+      - fallback_binding
+    observability:
+      - receipts
+      - metrics
+# =====================================================================
+# 47. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  - ImplementationRef
+  - ImplementationDescriptor
+  - CapabilityRequest
+  - CapabilityResponse
+  - NormalizedOutput
+  - ImplementationLimit
+  - ImplementationHealth
+  - NormalizedProviderError
+  - ReproducibilityProfile
+  - IdempotencyProfile
+  - AsyncExecutionProfile
+  - ImplementationPolicyMetadata
+  - CostModelDescriptor
+  - ImplementationConformanceSuite
+  - ImplementationConformanceResult
+  - ImplementationBenchmarkResult
+  - ImplementationBinding
+  - FallbackImplementationBinding
+  - ReferenceImplementationSet
+# =====================================================================
+# 48. TESTS
+# =====================================================================
+tests:
+  unit:
+    - normalized_request_validation
+    - error_normalization
+    - limit_validation
+    - provider_extension_namespace
+    - implementation_ref_exactness
+  property:
+    - provider_specific_fields_never_leak_into_canonical_IR
+    - provider_success_never_implies_QC_PASS
+    - secrets_never_enter_execution_receipt
+    - exact_implementation_version_always_recorded
+    - graph_backend_never_owns_World_semantics
+    - memory_backend_never_overrides_exact_truth
+  negative:
+    - raw_provider_response_used_as_WorldEvent_rejected
+    - latest_model_auto_upgrade_without_validation_rejected
+    - provider_credentials_in_manifest_rejected
+    - untested_adapter_marked_ACTIVE_rejected
+    - unapproved_fallback_binding_rejected
+  integration:
+    - SelfModel_to_implementation_health
+    - ProductionModel_to_ImplementationBinding
+    - ProductionEngine_to_adapter
+    - adapter_to_ExecutionReceipt
+    - artifact_to_QC
+    - benchmark_to_SelfModel
+  end_to_end:
+    implementation_swap:
+      sequence:
+        - video_impl_A ACTIVE
+        - A degrades
+        - SelfModel detects
+        - ProductionModel selects approved B
+        - ProductionEngine executes B
+        - semantic ShotSpec unchanged
+      success:
+        semantic_recompile_required: false
+# =====================================================================
+# 49. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: RI-G01
+    check: capability abstractions provider independent
+  - id: RI-G02
+    check: all concrete implementations versioned
+  - id: RI-G03
+    check: provider extensions namespaced
+  - id: RI-G04
+    check: SelfModel owns capability truth
+  - id: RI-G05
+    check: ProductionModel owns implementation binding decision
+  - id: RI-G06
+    check: ProductionEngine owns invocation
+  - id: RI-G07
+    check: AutonomousQC owns acceptance
+  - id: RI-G08
+    check: conformance suite required before production eligibility
+  - id: RI-G09
+    check: normalized error taxonomy implemented
+  - id: RI-G10
+    check: cost/latency/usage emitted
+  - id: RI-G11
+    check: reproducibility/idempotency declared
+  - id: RI-G12
+    check: secrets isolated
+  - id: RI-G13
+    check: graph/memory implementations cannot become source authority
+  - id: RI-G14
+    check: MVP has one implementation for every mandatory capability
+  - id: RI-G15
+    check: implementation swap does not require semantic architecture changes
+# =====================================================================
+# 50. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  contracts:
+    - common adapter interface
+    - capability request/response
+    - normalized errors
+    - health
+    - limits
+    - cost
+    - privacy
+    - reproducibility
+    - idempotency
+  adapters:
+    - reasoning
+    - graph
+    - optional memory
+    - image
+    - video
+    - voice
+    - music
+    - sound
+    - lip sync
+    - deterministic media
+    - storage
+    - structured store
+    - queue/workflow
+    - secrets
+    - QC critic
+  governance:
+    - registry
+    - lifecycle
+    - conformance
+    - quarantine
+    - shadow benchmarking
+  integration:
+    - SelfModel evidence
+    - ProductionModel binding
+    - ProductionEngine invocation
+    - QC evaluation
+    - provenance
+  MVP:
+    - ReferenceImplementationSet resolvable
+    - complete 60-second short can run without provider-specific semantics leaking upward
+  release:
+    requirement: RI-G01_through_RI-G15_pass
+# =====================================================================
+# 51. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    Quantum owns capabilities; vendors merely implement them.
+  law_02: >
+    Adapters terminate provider semantics.
+  law_03: >
+    SelfModel decides what an implementation can actually do.
+  law_04: >
+    ProductionModel decides whether an implementation should be used.
+  law_05: >
+    ProductionEngine performs the invocation.
+  law_06: >
+    AutonomousQC decides whether the result is acceptable.
+  law_07: >
+    Every invocation identifies exact implementation and version.
+  law_08: >
+    Provider success never equals creative or technical acceptance.
+  law_09: >
+    New implementations must prove conformance before controlling production.
+  law_10: >
+    Provider-specific options may enrich execution but cannot redefine canonical IR.
+  law_11: >
+    Graph databases implement graph storage; they do not become the World Model.
+  law_12: >
+    Semantic memory implements retrieval; it does not become truth.
+  law_13: >
+    Exact operations use deterministic tools whenever practical.
+  law_14: >
+    Implementations may degrade, improve, disappear, or be replaced while the
+    project semantics remain stable.
+  law_15: >
+    Quantum should be able to replace almost every external model in the stack
+    without changing what the film means.
+
+⸻
+

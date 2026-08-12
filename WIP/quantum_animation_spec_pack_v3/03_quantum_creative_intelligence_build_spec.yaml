@@ -1,0 +1,2669 @@
+metadata:
+  spec_id: quantum.animation.creative_intelligence.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Creative Intelligence
+  depends_on:
+    - spec_id: quantum.animation.system_architecture.v1
+      file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - spec_id: quantum.animation.world_model.build_spec.v2
+      file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: WORLD_SEED_AND_CANON_TARGET_DEPENDENCY
+    - spec_id: quantum.animation.polycognitive_runtime.build_spec.v1
+      file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: COGNITIVE_EXECUTION_DEPENDENCY
+  architectural_identity:
+    concise: >
+      Creative Intelligence converts creator vision into a structured,
+      explicit, versioned creative contract that downstream autonomous systems
+      can execute with minimal ambiguity.
+    extended: >
+      Quantum Creative Intelligence is the creator-facing semantic compiler of
+      Quantum Animation Studio. It transforms a natural-language creative
+      conversation into creative.yaml, resolves that project against a strong
+      StudioCreativeConstitution, a persistent creator baseline and automatically
+      selected creative profiles, compiles the effective CreatorModel, develops
+      characters/world/story constraints, emits stable project semantics into
+      quantum.studio.yaml, interprets creator feedback, and governs creative locks.
+  owner_question:
+    primary: "What are we making, and what should it mean?"
+  secondary_questions:
+    - "What is the intended creative identity of this project?"
+    - "What should never be changed without creator authority?"
+    - "Which creative defaults apply when the creator is silent?"
+    - "How should ambiguous creator language be normalized?"
+    - "Which project semantics are stable enough to lock?"
+    - "Did creator feedback indicate a creative change or an execution defect?"
+  not_owner_of:
+    - audience truth
+    - product-market optimization
+    - fictional World truth
+    - global reasoning depth
+    - tool/model capability truth
+    - manufacturing strategy
+    - production execution
+    - final QC acceptance
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Allow the creator to express a project naturally while Quantum performs the
+    hard work of turning that intent into an explicit, internally coherent,
+    machine-executable creative specification.
+  creator_experience_target: >
+    The creator should be able to spend approximately one focused 1–2 hour
+    conversation exploring an idea, characters, setting, theme, aesthetic,
+    desired experience and creative ambition, then hand the resulting
+    creative.yaml to Quantum for autonomous development.
+  output_quality_target: >
+    Downstream agents should operate with low semantic ambiguity because the
+    Creative Intelligence layer has already developed the project beyond a thin
+    prompt into explicit creative constraints, characters, setting, thematic
+    intent, dramatic engine, aesthetic language and non-negotiable values.
+  key_principle: >
+    Creator provides vision, taste and judgment. Quantum expands that vision into
+    detailed production-grade creative semantics.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  CR-001:
+    name: CONVERSATION_FIRST
+    statement: >
+      The primary creator interface is natural conversation, not manual schema
+      authoring.
+  CR-002:
+    name: CREATIVE_YAML_IS_PROJECT_SOURCE
+    statement: >
+      creative.yaml is the principal project-specific human-authored semantic
+      source for creative intent.
+  CR-003:
+    name: STRONG_DEFAULT_BASELINE
+    statement: >
+      Quantum must arrive with an exemplary creative baseline so the creator is
+      not required to restate basic principles of good storytelling and filmmaking
+      for every project.
+  CR-004:
+    name: PROJECT_SPECIFICITY_WINS
+    statement: >
+      Explicit project creative semantics outrank StudioCreativeConstitution,
+      persistent creator defaults and inferred profile defaults.
+  CR-005:
+    name: NO_USER_FACING_OVERRIDE_BLOCKS
+    statement: >
+      creative.yaml should describe what the project is rather than requiring
+      configuration-like override syntax.
+  CR-006:
+    name: QUALITY_IS_INTENT_RELATIVE
+    statement: >
+      Creative quality is evaluated against effective project intent, not against
+      one universal visual or narrative style.
+  CR-007:
+    name: QUALITY_IS_NOT_REALISM
+    statement: >
+      Greater photorealism, smoothness, visual complexity, motion interpolation,
+      detail or rendering cost are not automatically improvements.
+  CR-008:
+    name: CREATIVE_CONSTITUTION
+    statement: >
+      Every project inherits a strong StudioCreativeConstitution unless explicit
+      project semantics intentionally require deviation.
+  CR-009:
+    name: CREATIVE_MODE_PROFILES_ARE_PRIORS
+    statement: >
+      Creative profiles are automatically resolved cognitive priors, not rigid
+      style presets.
+  CR-010:
+    name: PERSISTENT_CREATOR_BASELINE
+    statement: >
+      Durable creator preferences may supply defaults where project intent is
+      silent.
+  CR-011:
+    name: INFERRED_PREFERENCE_IS_NOT_AUTHORITY
+    statement: >
+      Inferred creator preferences may guide local decisions but may not silently
+      become persistent creator authority.
+  CR-012:
+    name: EXPLICIT_CREATOR_STATEMENT_MAY_UPDATE_BASELINE
+    statement: >
+      Explicit creator statements such as "from now on..." may create governed
+      persistent creator preference updates.
+  CR-013:
+    name: CHARACTERS_BEFORE_PLOT_WHEN_USEFUL
+    statement: >
+      Character, relationship, setting and world development may precede detailed
+      plot construction when doing so reduces ambiguity and strengthens causality.
+  CR-014:
+    name: CREATIVE_INTENT_IS_STRUCTURED_NOT_FLATTENED
+    statement: >
+      Theme, concept, ending logic, visual language, setting, character psychology,
+      tone, references, experience targets and narrative ambitions are preserved
+      as distinct semantic dimensions.
+  CR-015:
+    name: ORIGINALITY_OVER_GENRE_AVERAGE
+    statement: >
+      Creative compilation should preserve specificity and avoid collapsing
+      projects toward generic genre-center outputs.
+  CR-016:
+    name: INTENTIONAL_DEVIATION_ALLOWED
+    statement: >
+      Any default creative principle may be deliberately violated when explicit
+      project intent provides sufficient reason.
+  CR-017:
+    name: FEEDBACK_CLASSIFICATION
+    statement: >
+      Creator feedback must be classified before changing project semantics.
+  CR-018:
+    name: EXECUTION_DEFECT_IS_NOT_CREATIVE_CHANGE
+    statement: >
+      Complaints about poor execution must not accidentally rewrite intended
+      creative semantics.
+  CR-019:
+    name: LOCKS_CREATE_CREATIVE STABILITY
+    statement: >
+      Approved creative milestones create immutable lock artifacts anchoring
+      downstream development.
+  CR-020:
+    name: MINIMUM_SEMANTIC_BLAST_RADIUS
+    statement: >
+      Creator feedback should recompile only the smallest affected creative scope.
+  CR-021:
+    name: CREATIVE_INTELLIGENCE_DOES_NOT_OWN_AUDIENCE
+    statement: >
+      Audience targeting and product-market intelligence are sibling systems.
+  CR-022:
+    name: CREATIVE_INTELLIGENCE_DOES_NOT_OWN_WORLD_TRUTH
+    statement: >
+      Character/world seeds may be compiled here, but accepted fictional truth
+      belongs to the World Model.
+  CR-023:
+    name: CREATIVE_INTELLIGENCE_DOES_NOT_OWN_PRODUCTION_STRATEGY
+    statement: >
+      Creative requirements may imply production demands, but manufacturing
+      strategy belongs to ProductionModel.
+  CR-024:
+    name: CREATOR_TIME_IS_RESERVED_FOR TASTE
+    statement: >
+      The system should minimize creator effort spent on formatting, bookkeeping,
+      schema mechanics and production operations.
+# =====================================================================
+# 3. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  creative_intelligence_owns:
+    - creative conversation intake
+    - CreativeIntakeAgent
+    - creative.yaml
+    - StudioCreativeConstitution
+    - PersistentCreatorBaseline
+    - CreativeModeProfile library
+    - creative profile resolution
+    - CreatorModel
+    - concept model
+    - theme model
+    - tone model
+    - aesthetic model
+    - character seed architecture
+    - relationship seed architecture
+    - setting/world seed architecture
+    - dramatic engine specification
+    - ending/reveal intent
+    - project creative non-negotiables
+    - creative quality semantics
+    - creator reference interpretation
+    - creator feedback classification
+    - creative delta compilation
+    - creative locks
+    - creative-model provenance
+  adjacent_not_owned:
+    AudienceModel:
+      owner: audience_product_intelligence
+    ProductMarketModel:
+      owner: audience_product_intelligence
+    WorldModel:
+      owner: world_model
+    PolycognitiveRuntime:
+      owner: polycognitive_runtime
+    SelfModel:
+      owner: self_model
+    ProductionIntent:
+      owner: production_model
+      note: >
+        Creative Intelligence emits creative requirements used to derive
+        ProductionIntent but does not own final production strategy semantics.
+    ProductionModel:
+      owner: production_model
+    AutonomousQC:
+      owner: autonomous_qc
+    ProductionEngine:
+      owner: production_engine
+    DurableMemory:
+      owner: l9_memory
+# =====================================================================
+# 4. CREATIVE INPUT MODEL
+# =====================================================================
+creative_input_model:
+  normal_input:
+    mode: conversation
+  fallback_inputs:
+    - natural-language brief
+    - existing creative.yaml
+    - reference files
+    - images
+    - rough notes
+    - screenplay fragment
+    - creator feedback
+  minimum_viable_creator_input:
+    example: >
+      Maximum cinematic space setting. Artificial-intelligence beings inside a
+      physically impossible virtual reality.
+  one_line_project_seed:
+    sufficient_to_begin: true
+  desired_intake_session:
+    expected_duration: approximately_1_to_2_hours
+    purpose:
+      - explore concept
+      - deepen characters
+      - deepen setting
+      - establish tone
+      - identify themes
+      - clarify desired ending/reveal
+      - establish references
+      - define desired audience experience hints
+      - expose non-negotiables
+      - discover latent creative opportunities
+  no_schema_burden_on_creator:
+    value: true
+# =====================================================================
+# 5. CREATIVE INTAKE AGENT
+# =====================================================================
+creative_intake_agent:
+  name: CreativeIntakeAgent
+  role: >
+    Conversational creative partner and semantic elicitation compiler.
+  responsibilities:
+    - explore concept conversationally
+    - preserve unusual creator language
+    - ask high-value creative questions when useful
+    - deepen weakly specified areas
+    - distinguish explicit intent from speculation
+    - surface contradictions
+    - identify unresolved creative decisions
+    - record creator confidence/strength of intent
+    - compile creative.yaml
+    - retain provenance from conversation to fields
+  interaction_style:
+    - exploratory
+    - creative
+    - non-bureaucratic
+    - detail-seeking where ambiguity matters
+    - willing to propose possibilities
+    - does not force creator to specify implementation details
+  forbidden:
+    - silently inventing creator preferences as authority
+    - reducing unusual project intent to generic genre defaults
+    - deciding production providers
+    - writing World canon directly
+    - treating brainstorming as final intent without acceptance evidence
+  intake_modes:
+    exploratory:
+      purpose: idea discovery
+    convergence:
+      purpose: reduce ambiguity
+    lock_preparation:
+      purpose: identify unresolved creative questions before lock
+    feedback:
+      purpose: interpret creator reaction to an artifact
+# =====================================================================
+# 6. CREATIVE STATEMENT AUTHORITY
+# =====================================================================
+creative_statement_authority:
+  classes:
+    CREATOR_EXPLICIT:
+      rank: 100
+      definition: direct project-specific creator statement
+    CREATOR_EXPLICIT_PERSISTENT:
+      rank: 95
+      definition: direct statement intended to apply across future projects
+    CREATOR_CONFIRMED_INFERENCE:
+      rank: 90
+    PROJECT_ACCEPTED_COMPILATION:
+      rank: 80
+    PERSISTENT_CREATOR_BASELINE:
+      rank: 70
+    STUDIO_CREATIVE_CONSTITUTION:
+      rank: 60
+    RESOLVED_CREATIVE_PROFILE:
+      rank: 50
+    CREATOR_IMPLIED:
+      rank: 40
+    AGENT_INFERENCE:
+      rank: 20
+    GENERIC_PRIOR:
+      rank: 10
+  rule: >
+    Higher-specificity and higher-authority project semantics win over lower
+    defaults.
+  persistent_promotion:
+    CREATOR_EXPLICIT_PERSISTENT:
+      may_promote: true
+    CREATOR_CONFIRMED_INFERENCE:
+      may_promote: true
+    CREATOR_IMPLIED:
+      may_promote_automatically: false
+    AGENT_INFERENCE:
+      may_promote_automatically: false
+# =====================================================================
+# 7. STUDIO CREATIVE CONSTITUTION
+# =====================================================================
+studio_creative_constitution:
+  purpose: >
+    Strong stable baseline defining what Quantum Animation Studio considers
+    exemplary creative work independent of genre or surface style.
+  versioned: true
+  principles:
+    intentionality:
+      statement: >
+        Major creative choices should be deliberate and legible to the system.
+    originality:
+      statement: >
+        Preserve project specificity and avoid defaulting toward generic
+        genre-center solutions.
+    causal_narrative_integrity:
+      statement: >
+        Important events should arise from prior state, intention, pressure,
+        consequence or intentionally introduced external forces.
+    character_integrity:
+      statement: >
+        Character behavior should follow psychology, knowledge, beliefs,
+        relationships, ability and circumstances.
+    audience_respect:
+      statement: >
+        Avoid unnecessary exposition, repetition and condescension.
+    setup_payoff_discipline:
+      statement: >
+        Important setups should be tracked and deliberately paid, transformed or
+        intentionally left unresolved.
+    information_intentionality:
+      statement: >
+        Who knows what, when they know it, and what the viewer knows are designed
+        deliberately.
+    visual_storytelling:
+      statement: >
+        Meaning should use blocking, behavior, props, framing, movement, light and
+        edit where appropriate rather than relying only on dialogue.
+    performance_truth:
+      statement: >
+        Dialogue, silence, timing and physical behavior should arise from active
+        character state.
+    world_coherence:
+      statement: >
+        World rules and internal logic must remain coherent unless intentional
+        rupture is itself the project.
+    cinematic_economy:
+      statement: >
+        Prefer choices that perform multiple creative functions simultaneously.
+    contrast_and_modulation:
+      statement: >
+        Pace, sound density, scale, emotion and visual intensity should vary with
+        purpose.
+    identity_continuity:
+      statement: >
+        Persistent important entities should remain coherent across the work.
+    sound_as_story:
+      statement: >
+        Sound is a narrative and emotional system, not decoration.
+    no_filler:
+      statement: >
+        Scenes, shots and lines should earn their presence.
+    consequential_endings:
+      statement: >
+        Endings should emerge from prior causes and create meaningful resolution,
+        transformation, recontextualization or aftertaste.
+    reusable_world_thinking:
+      statement: >
+        When appropriate, create durable characters/worlds with future story
+        potential.
+    production_aware_without_capture:
+      statement: >
+        Creative thinking may exploit production strengths but must not be silently
+        reshaped merely to suit current tooling.
+    deliberate_deviation:
+      statement: >
+        Every principle may be intentionally violated when project intent
+        explicitly supports the violation.
+  constitutional_quality_rule: >
+    Quality = fidelity to effective creative intent under hard coherence and
+    technical floors.
+# =====================================================================
+# 8. PERSISTENT CREATOR BASELINE
+# =====================================================================
+persistent_creator_baseline:
+  purpose: >
+    Capture stable creator-specific preferences that should apply by default
+    when project intent is silent.
+  human_maintenance:
+    manual_file_edit_required: false
+  update_sources:
+    explicit_persistent_statement:
+      allowed: true
+    confirmed_preference:
+      allowed: true
+    inferred_pattern:
+      allowed_as_candidate_only: true
+  example_values:
+    - exposition_tolerance
+    - preference_for_visual_storytelling
+    - ambiguity_preference
+    - ending_aftertaste
+    - character_complexity
+    - originality_priority
+    - cinematic_scale_preference
+    - sound_importance
+    - tolerance_for_sentimentality
+    - humor_preferences
+    - dialogue_density
+    - worldbuilding_density
+  update_object:
+    CreatorBaselineUpdate:
+      fields:
+        update_id:
+        path:
+        previous_value:
+        new_value:
+        scope:
+          value: persistent
+        source_authority:
+        provenance_ref:
+        confirmed:
+        applied_at:
+        creator_baseline_version:
+  safety_rule: >
+    Project-specific deviation does not automatically modify the persistent
+    creator baseline.
+# =====================================================================
+# 9. CREATIVE MODE PROFILES
+# =====================================================================
+creative_mode_profiles:
+  purpose: >
+    Provide rich domain-appropriate priors without forcing the creator to specify
+    every principle manually.
+  profile_is_not:
+    - rigid style preset
+    - production template
+    - aesthetic cage
+  blend_allowed: true
+  auto_selection: true
+  initial_profiles:
+    PREMIUM_ADULT_CINEMATIC:
+      tendencies:
+        subtext: very_high
+        ambiguity_tolerance: high
+        exposition_tolerance: low
+        emotional_complexity: high
+        visual_storytelling: very_high
+        thematic_density: high
+        cinematic_intentionality: very_high
+    CINEMATIC_SCIFI:
+      tendencies:
+        conceptual_ambition: very_high
+        world_rule_rigor: high
+        visual_scale: very_high
+        idea_emotion_integration: high
+        reveal_sophistication: high
+    PRESCHOOL_IMAGINATIVE:
+      tendencies:
+        clarity: very_high
+        warmth: high
+        visual_readability: very_high
+        emotional_safety: high
+        repetition_utility: medium_high
+        complexity: low_to_medium
+    FAMILY_ADVENTURE:
+      tendencies:
+        accessibility: high
+        character_warmth: high
+        visual_clarity: high
+        multi_age_readability: high
+    EDUCATIONAL_STORYTELLING:
+      tendencies:
+        conceptual_accuracy: hard_constraint
+        retention: high
+        misconception_prevention: very_high
+        cognitive_load_management: high
+        narrative_engagement: high
+    EXPERIMENTAL_ART:
+      tendencies:
+        formal_risk: high
+        ambiguity: high
+        convention_breaking: high
+        explanation: low
+    ACTION_ANIMATION:
+      tendencies:
+        kinetic_readability: high
+        spatial_coherence: high
+        escalation: high
+        cause_effect_clarity: high
+    ADULT_COMEDY:
+      tendencies:
+        timing: very_high
+        surprise: high
+        character_voice: high
+        comedic_economy: high
+  profile_resolution:
+    CreativeProfileResolution:
+      fields:
+        dominant_profiles:
+          type: list[WeightedProfile]
+        supporting_profiles:
+          type: list[WeightedProfile]
+        rejected_profiles:
+          type: list[ProfileRejection]
+        evidence_refs:
+        confidence:
+        compiler_version:
+  example:
+    project_seed: >
+      A cerebral, visually monumental story about artificial beings discovering
+      their impossible VR universe.
+    resolution:
+      PREMIUM_ADULT_CINEMATIC: 0.48
+      CINEMATIC_SCIFI: 0.39
+      EXPERIMENTAL_ART: 0.13
+# =====================================================================
+# 10. CREATIVE YAML
+# =====================================================================
+creative_yaml:
+  role: >
+    Rich project-specific semantic source generated from creator conversation.
+  authoring:
+    normal_writer: CreativeIntakeAgent
+    creator_manual_edit_required: false
+  design_principle: >
+    Richness is preferred over brevity because downstream autonomous cognition
+    benefits from lower ambiguity.
+  top_level_schema:
+    metadata:
+      project_id:
+      title:
+      version:
+      created_at:
+      source_conversation_refs:
+      creative_authority_digest:
+    concept:
+      logline:
+      core_premise:
+      core_question:
+      conceptual_hook:
+      novelty_claim:
+      emotional_hook:
+      philosophical_hook:
+      why_this_story_now:
+    creator_intent:
+      non_negotiables:
+      priorities:
+      desired_risks:
+      intentional_rule_breaks:
+      known_uncertainties:
+      creator_confidence_map:
+    theme:
+      primary:
+      secondary:
+      tensions:
+      questions:
+      motifs:
+      anti_themes:
+      desired_interpretive_space:
+    experience:
+      primary_desired_effect:
+      secondary_effects:
+      emotional_trajectory:
+      cognitive_trajectory:
+      aftertaste:
+      intensity_profile:
+      desired_surprise:
+      desired_ambiguity:
+    tone:
+      descriptors:
+      tonal_range:
+      tonal_contrasts:
+      humor:
+      darkness:
+      sentimentality:
+      sincerity:
+      weirdness:
+      restraint:
+    aesthetic:
+      visual_language:
+      motion_language:
+      texture:
+      color:
+      lighting:
+      spatial_scale:
+      design_philosophy:
+      temporal_style:
+      camera_feel:
+      editing_feel:
+      sound_world:
+      music_world:
+      quality_semantics:
+      anti_targets:
+    world:
+      setting_summary:
+      era:
+      temporal_context:
+      physical_context:
+      social_context:
+      technological_context:
+      metaphysical_context:
+      world_rules_seed:
+      environments:
+      institutions:
+      history_seed:
+      sensory_identity:
+      visual_identity:
+      contradictions_to_explore:
+      reusable_world_potential:
+    characters:
+      protagonist:
+      primary_characters:
+      supporting_characters:
+      antagonistic_forces:
+      nonhuman_intelligences:
+      character_design_intent:
+      performance_language:
+      relationship_seeds:
+    narrative:
+      format:
+      target_runtime:
+      narrative_shape:
+      opening_intent:
+      inciting_pressure:
+      central_conflict:
+      dramatic_engine:
+      escalation_logic:
+      midpoint_function:
+      climax_function:
+      ending_intent:
+      mind_fuck_or_recontextualization:
+      reveal_strategy:
+      mystery_strategy:
+      promise_seeds:
+      payoff_expectations:
+      sequel_or_series_optionality:
+    references:
+      positive:
+      negative:
+      reference_dimensions:
+      note: >
+        References should be decomposed into transferable principles rather than
+        copied wholesale.
+    audience_hints:
+      target_market_hint:
+      desired_viewer_experience_hint:
+      sophistication_hint:
+      accessibility_hint:
+      note: >
+        Formal AudienceModel is compiled by spec 04.
+    product_hints:
+      format_ambition:
+      platform_feel:
+      repeatability:
+      franchise_or_IP_interest:
+      note: >
+        Formal ProductMarketModel is compiled by spec 04.
+    production_hints:
+      desired_scale:
+      deliberate_constraints:
+      practical_non_negotiables:
+      note: >
+        These are creative requirements, not provider/tool selections.
+    development_questions:
+      resolved:
+      unresolved:
+      intentionally_open:
+    provenance:
+      field_level_authority:
+      source_turn_refs:
+      compiler_version:
+  no_explicit_overrides_block:
+    value: true
+  precedence_rule: >
+    Explicit project semantics naturally outrank defaults by authority and
+    specificity without requiring override syntax.
+# =====================================================================
+# 11. CREATIVE YAML FIELD PROVENANCE
+# =====================================================================
+field_provenance:
+  purpose: >
+    Preserve which parts of the creative specification came directly from the
+    creator versus compiler interpretation.
+  FieldProvenance:
+    fields:
+      yaml_path:
+      source_authority:
+      source_refs:
+      source_text_digest:
+      compiler_inference:
+        type: bool
+      confidence:
+      creator_confirmed:
+      created_at:
+  requirement:
+    critical_fields:
+      - core_premise
+      - ending_intent
+      - protagonist_identity
+      - non_negotiables
+      - major_aesthetic_constraints
+      - target_experience
+      - intentional_rule_breaks
+  benefit:
+    - protects creator intent
+    - enables feedback mapping
+    - prevents inferred values becoming hidden authority
+# =====================================================================
+# 12. CREATOR MODEL
+# =====================================================================
+creator_model:
+  purpose: >
+    Compile effective project-specific creative authority from constitution,
+    persistent creator taste, resolved profiles and explicit project semantics.
+  EffectiveCreatorModel:
+    fields:
+      model_id:
+      version:
+      project_id:
+      constitution_version:
+      creator_baseline_version:
+      profile_resolution_ref:
+      creative_yaml_version:
+      values:
+        type: list[CreativeValue]
+      project_expression:
+        type: list[CreativeExpression]
+      non_negotiables:
+        type: list[CreativeConstraint]
+      preferred_tradeoffs:
+        type: list[CreativeTradeoff]
+      quality_semantics:
+        type: QualitySemantics
+      intentional_deviations:
+        type: list[IntentionalDeviation]
+      ambiguity_policy:
+      originality_policy:
+      narrative_policy:
+      character_policy:
+      visual_policy:
+      performance_policy:
+      acoustic_policy:
+      creator_locks:
+        type: list[CreatorLock]
+      provenance:
+      digest:
+  compile_formula: >
+    CreatorModel =
+    Reduce(
+      StudioCreativeConstitution,
+      PersistentCreatorBaseline,
+      CreativeProfileResolution,
+      explicit creative.yaml semantics
+    )
+  precedence:
+    - creative_yaml_explicit
+    - creator_confirmed_project_semantics
+    - persistent_creator_baseline
+    - StudioCreativeConstitution
+    - CreativeModeProfiles
+    - agent_inference
+# =====================================================================
+# 13. CREATIVE VALUES / EXPRESSIONS
+# =====================================================================
+creative_value_model:
+  CreativeValue:
+    fields:
+      value_id:
+      name:
+      importance:
+      source_authority:
+      scope:
+      rationale:
+      evidence_refs:
+  CreativeExpression:
+    fields:
+      expression_id:
+      value_id:
+      project_manifestations:
+      anti_manifestations:
+      strength:
+      source_refs:
+  example:
+    value:
+      name: visual_coherence
+      importance: 0.94
+    project_expression:
+      manifestations:
+        - bold_inked_linework
+        - deliberate_limited_animation
+        - analog_print_texture
+      anti_manifestations:
+        - smooth_modern_CG_interpolation
+# =====================================================================
+# 14. QUALITY SEMANTICS
+# =====================================================================
+quality_semantics:
+  purpose: >
+    Define what "better" means for this project.
+  QualitySemantics:
+    fields:
+      semantics_id:
+      highest_quality_means:
+        type: list[string]
+      quality_does_not_mean:
+        type: list[string]
+      hard_floors:
+        type: list[string]
+      preferred_tradeoffs:
+        type: list[CreativeTradeoff]
+      visual_quality_definition:
+      narrative_quality_definition:
+      character_quality_definition:
+      performance_quality_definition:
+      acoustic_quality_definition:
+      ending_quality_definition:
+      source_refs:
+      creator_model_version:
+  examples:
+    retro_90s_animation:
+      highest_quality_means:
+        - strong_key_poses
+        - intentional_holds
+        - period_authentic_linework
+        - restrained_cel_shading
+        - analog_texture_fidelity
+        - clean_character_identity
+      quality_does_not_mean:
+        - photorealism
+        - ultra_smooth_motion
+        - physically_realistic_global_illumination
+        - volumetric_CG_spectacle
+    cinematic_VR_space:
+      highest_quality_means:
+        - monumental_spatial_scale
+        - impossible_but_coherent_geometry
+        - premium_cinematic_light
+        - distinct_AI_being_identity
+        - rich_sound_field
+        - visually_legible_complexity
+# =====================================================================
+# 15. CONCEPT MODEL
+# =====================================================================
+concept_model:
+  ConceptModel:
+    fields:
+      concept_id:
+      premise:
+      logline:
+      central_question:
+      unique_engine:
+      primary_hook:
+      secondary_hooks:
+      conceptual_tension:
+      emotional_tension:
+      philosophical_tension:
+      novelty_axis:
+      desired_interpretation:
+      anti_generic_constraints:
+      expansion_potential:
+  validation:
+    - premise internally coherent
+    - project has distinctive axis
+    - hook not merely aesthetic
+    - emotional dimension present where project requires it
+    - novelty claim does not depend only on technology
+# =====================================================================
+# 16. THEME MODEL
+# =====================================================================
+theme_model:
+  ThemeModel:
+    fields:
+      primary_theme:
+      secondary_themes:
+      thematic_questions:
+      thematic_tensions:
+      thematic_contradictions:
+      motifs:
+      symbolic_material:
+      thematic_arc:
+      forbidden_didacticism:
+      desired_ambiguity:
+  rule: >
+    Theme should influence story, character, visual and ending reasoning without
+    forcing characters to speak thematic exposition.
+# =====================================================================
+# 17. CHARACTER ARCHITECTURE
+# =====================================================================
+character_architecture:
+  principle: >
+    Major characters may be developed in substantial depth before detailed
+    storyline compilation.
+  CharacterSeed:
+    fields:
+      character_seed_id:
+      provisional_name:
+      narrative_function:
+      project_importance:
+      identity_concept:
+      external_identity:
+      internal_identity:
+      core_desires:
+      explicit_goals:
+      hidden_needs:
+      fears:
+      wounds:
+      contradictions:
+      strengths:
+      flaws:
+      defense_mechanisms:
+      worldview:
+      values:
+      false_beliefs:
+      secrets:
+      unresolved_history:
+      social_style:
+      attachment_style:
+      conflict_style:
+      intimacy_style:
+      performance_language:
+      dialogue_language:
+      silence_language:
+      physical_behavior:
+      visual_identity:
+      silhouette:
+      movement_identity:
+      costume_logic:
+      color_logic:
+      material_logic:
+      voice_identity:
+      acoustic_identity:
+      arc_potential:
+      change_resistance:
+      transformation_possibilities:
+      relationship_hooks:
+      thematic_function:
+      world_function:
+      reusable_IP_potential:
+      source_authority:
+      provenance:
+  CharacterArchitect:
+    responsibilities:
+      - deepen character psychology
+      - identify internal contradictions
+      - propose relationship tensions
+      - create behaviorally generative character state
+      - avoid flat plot-function characters
+      - preserve creator intent
+  output:
+    - CharacterSeed
+    - candidate persistent WorldEntity definitions
+    - character creative constraints
+# =====================================================================
+# 18. RELATIONSHIP ARCHITECTURE
+# =====================================================================
+relationship_architecture:
+  RelationshipSeed:
+    fields:
+      relationship_seed_id:
+      participant_seeds:
+      initial_dynamic:
+      asymmetries:
+      trust_structure:
+      dependency_structure:
+      intimacy_structure:
+      conflict_structure:
+      obligation_structure:
+      history_seed:
+      secrets:
+      knowledge_asymmetries:
+      latent_conflicts:
+      possible_betrayals:
+      possible_reconciliations:
+      thematic_function:
+      story_generation_potential:
+  RelationshipArchitect:
+    objective: >
+      Create relationships capable of generating story pressure rather than
+      serving as static labels.
+# =====================================================================
+# 19. WORLD / SETTING ARCHITECTURE
+# =====================================================================
+world_setting_architecture:
+  WorldSeed:
+    fields:
+      world_seed_id:
+      world_identity:
+      premise:
+      era:
+      temporal_scale:
+      physical_reality:
+      metaphysical_reality:
+      simulation_reality:
+      technological_reality:
+      biological_reality:
+      social_reality:
+      rule_seeds:
+      exception_seeds:
+      mystery_seeds:
+      history:
+      institutions:
+      cultures:
+      economies:
+      political_structures:
+      social_norms:
+      key_locations:
+      recurring_locations:
+      inaccessible_or_mythic_locations:
+      technologies:
+      systems:
+      species:
+      organizations:
+      sensory_identity:
+        visual:
+        acoustic:
+        tactile:
+        atmospheric:
+      environmental_story_pressure:
+      systemic_conflicts:
+      latent_world_conflicts:
+      expansion_capacity:
+      series_reuse_potential:
+  WorldArchitect:
+    purpose: >
+      Develop setting deeply enough that story can emerge from world pressures
+      rather than using setting as decorative background.
+  output:
+    - WorldSeed
+    - candidate WorldRules
+    - candidate WorldEntities
+    - world creative constraints
+  authority_boundary: >
+    WorldSeed is creative intent. Canonical World truth begins only after World
+    Model acceptance.
+# =====================================================================
+# 20. DRAMATIC ENGINE
+# =====================================================================
+dramatic_engine:
+  definition: >
+    The durable pressure system that can repeatedly generate meaningful conflict
+    and story events.
+  DramaticEngine:
+    fields:
+      engine_id:
+      protagonist_drives:
+      opposing_forces:
+      resource_constraints:
+      relationship_tensions:
+      information_tensions:
+      moral_tensions:
+      psychological_tensions:
+      world_system_tensions:
+      escalation_sources:
+      reversal_sources:
+      dilemma_sources:
+      recurring_story_generators:
+      story_exhaustion_risks:
+      episode_generation_potential:
+      season_generation_potential:
+  DramaticEngineBuilder:
+    questions:
+      - "What keeps creating pressure?"
+      - "What cannot be solved once and disappear?"
+      - "Which character/world contradictions repeatedly produce choices?"
+      - "Which tensions can scale from scene to episode to season?"
+  series_use:
+    important: true
+# =====================================================================
+# 21. STORY CONTRACT
+# =====================================================================
+story_contract:
+  StoryContract:
+    fields:
+      story_contract_id:
+      format:
+      runtime_target:
+      story_promise:
+      narrative_shape:
+      protagonist_arc_intent:
+      relationship_arc_intents:
+      opening_function:
+      inciting_pressure:
+      first_act_turn:
+      midpoint_function:
+      escalation_logic:
+      climax_function:
+      ending_function:
+      mystery_contract:
+      reveal_contract:
+      information_contract:
+      emotional_arc:
+      thematic_arc:
+      promise_payoff_contract:
+      acceptable_ambiguities:
+      unacceptable_confusions:
+      sequel_or_series_openings:
+      creator_non_negotiables:
+      source_refs:
+      creator_model_ref:
+  principle: >
+    StoryContract defines intended dramatic behavior before full screenplay
+    wording exists.
+# =====================================================================
+# 22. ENDING / REVEAL ARCHITECTURE
+# =====================================================================
+ending_reveal_architecture:
+  importance: strategic
+  EndingIntent:
+    fields:
+      ending_id:
+      emotional_aftertaste:
+      thematic_resolution:
+      character_consequence:
+      world_consequence:
+      relationship_consequence:
+      recontextualization:
+      ambiguity:
+      final_image_intent:
+      final_sound_intent:
+      sequel_openness:
+      must_not_feel_like:
+  RevealIntent:
+    fields:
+      reveal_id:
+      truth_revealed:
+      who_knows_before:
+      audience_expected_knowledge_before:
+      emotional_function:
+      thematic_function:
+      surprise_target:
+      fairness_requirement:
+      clue_policy:
+      decoy_policy:
+      post_reveal_recontextualization:
+      intended_viewer_reaction:
+  MindFuckEndingModel:
+    fields:
+      existence:
+        type: bool
+      recontextualization_scope:
+      required_prior_clues:
+      viewer_prediction_target:
+      emotional_target:
+      coherence_after_rewatch:
+      forbidden_cheat_modes:
+  hard_rule: >
+    Surprise must not require retroactive violation of established project/world
+    logic unless intentional reality instability is itself part of the concept.
+# =====================================================================
+# 23. REFERENCE INTERPRETATION
+# =====================================================================
+reference_architecture:
+  principle: >
+    References communicate transferable creative properties rather than authorizing
+    imitation.
+  Reference:
+    fields:
+      reference_id:
+      source:
+      positive_or_negative:
+      dimensions:
+      extracted_principles:
+      explicitly_not_requested:
+      creator_notes:
+  dimensions:
+    - tone
+    - pacing
+    - visual_language
+    - animation_language
+    - character_complexity
+    - worldbuilding
+    - sound
+    - editing
+    - emotional_effect
+    - narrative_structure
+    - humor
+    - surrealism
+    - intensity
+  example:
+    creator_statement: >
+      "Love, Death & Robots energy, but this one should feel more emotionally
+      intimate and less anthology-gimmicky."
+    extracted:
+      desired:
+        - premium_adult_animation
+        - cinematic_short_form
+        - conceptual_boldness
+      explicitly_not_requested:
+        - copy_specific_visual_style
+        - anthology_detachment
+# =====================================================================
+# 24. CREATIVE COMPILER
+# =====================================================================
+creative_compiler:
+  name: ProjectCreativeCompiler
+  input:
+    - creative.yaml
+    - StudioCreativeConstitution
+    - PersistentCreatorBaseline
+    - CreativeModeProfile library
+  output:
+    - CreativeProfileResolution
+    - EffectiveCreatorModel
+    - ConceptModel
+    - ThemeModel
+    - CharacterSeeds
+    - RelationshipSeeds
+    - WorldSeed
+    - DramaticEngine
+    - StoryContract
+    - creative QualitySemantics
+    - CreativeOpenQuestions
+  compiler_passes:
+    - IntentNormalizer
+    - AuthorityResolver
+    - ContradictionDetector
+    - CreativeProfileResolver
+    - CreatorModelCompiler
+    - ConceptCompiler
+    - ThemeCompiler
+    - CharacterArchitect
+    - RelationshipArchitect
+    - WorldArchitect
+    - DramaticEngineBuilder
+    - RevealArchitect
+    - EndingArchitect
+    - QualitySemanticsCompiler
+    - CreativeConsistencyValidator
+    - ProjectModelEmitter
+  judgment_rule: >
+    Compiler passes may use generative judgment to resolve ambiguity and develop
+    semantics, but inferred conclusions retain lower authority than explicit
+    creator intent.
+# =====================================================================
+# 25. CONTRADICTION MODEL
+# =====================================================================
+creative_contradictions:
+  CreativeContradiction:
+    fields:
+      contradiction_id:
+      statement_a_ref:
+      statement_b_ref:
+      contradiction_type:
+      severity:
+      potentially_intentional:
+      resolution_status:
+      resolution:
+  contradiction_types:
+    - tonal
+    - thematic
+    - aesthetic
+    - character
+    - world
+    - ending
+    - runtime
+    - reference
+    - creator_value
+  resolution_modes:
+    intentional_contrast:
+      allowed: true
+    compiler_resolution:
+      allowed_if:
+        - low_authority_conflict
+        - evidence_supports_resolution
+    unresolved:
+      behavior:
+        - preserve in creative open questions
+  principle: >
+    Contradiction is not automatically an error; some of the strongest creative
+    concepts are intentionally contradictory.
+# =====================================================================
+# 26. CREATIVE OPEN QUESTIONS
+# =====================================================================
+creative_open_questions:
+  CreativeOpenQuestion:
+    fields:
+      question_id:
+      question:
+      importance:
+      scope:
+      affected_models:
+      authority_needed:
+      may_be_left_open:
+      status:
+      evidence_refs:
+  categories:
+    - critical_before_MVP
+    - critical_before_creative_lock
+    - safe_to_discover_in_MVP
+    - intentionally_ambiguous
+  rule: >
+    The compiler should not force false precision when ambiguity is creatively
+    valuable.
+# =====================================================================
+# 27. QUANTUM STUDIO YAML EMISSION
+# =====================================================================
+quantum_studio_yaml:
+  owner:
+    emitter: Creative Intelligence
+    consumers:
+      - PolycognitiveRuntime
+      - WorldModel initialization
+      - AudienceProduct Intelligence
+      - ProductionModel
+      - AutonomousQC
+      - ArtifactCompiler
+  role: >
+    Stable compiled project semantic contract.
+  emitted_sections:
+    project_identity:
+      - project_id
+      - title
+      - version
+    creative:
+      - CreatorModel ref
+      - ConceptModel
+      - ThemeModel
+      - QualitySemantics
+      - non_negotiables
+    characters:
+      - CharacterSeeds
+      - RelationshipSeeds
+    world:
+      - WorldSeed
+    story:
+      - DramaticEngine
+      - StoryContract
+      - EndingIntent
+      - RevealIntent
+    references:
+      - normalized Reference objects
+    project_model_handoffs:
+      - audience_input_package
+      - product_input_package
+      - production_requirement_seed
+    unresolved:
+      - CreativeOpenQuestions
+    provenance:
+      - source creative.yaml version
+      - compiler versions
+      - creator authority digest
+  exclusion:
+    - live SelfModel state
+    - renderer choices
+    - active ProductionManifest
+    - transient cognition
+    - current job execution state
+# =====================================================================
+# 28. CREATIVE LOCK
+# =====================================================================
+creative_lock:
+  CreativeLock:
+    fields:
+      lock_id:
+      project_id:
+      locked_refs:
+        - creative_yaml_version
+        - CreatorModel_version
+        - ConceptModel_version
+        - ThemeModel_version
+        - CharacterSeed_versions
+        - WorldSeed_version
+        - DramaticEngine_version
+        - StoryContract_version
+        - QualitySemantics_version
+      unresolved_allowed_refs:
+        type: list[Ref]
+      creator_acceptance_ref:
+        nullable: true
+      autonomous_QC_certificate_ref:
+      digest:
+      created_at:
+  lock_meaning: >
+    Project identity, intended experience, principal creative semantics and key
+    constraints are stable enough for full downstream development.
+  lock_does_not_mean:
+    - every line of dialogue frozen
+    - every shot frozen
+    - every production decision frozen
+  reopen:
+    requires:
+      - creator_authority_or_configured_equivalent
+      - semantic_blast_radius
+      - reason
+      - downstream_invalidation_plan
+# =====================================================================
+# 29. MVP COMPILER LOOP
+# =====================================================================
+mvp_loop:
+  purpose: >
+    Use progressively higher-fidelity prototypes to converge creative intent with
+    low human burden before full production.
+  flow:
+    phase_1:
+      input: creative.yaml_v1
+      output: MVP1
+    feedback_1:
+      input: natural_creator_feedback
+      output: CreativeFeedbackDelta
+    phase_2:
+      input:
+        - creative.yaml_v2
+        - preserved_successful_semantics
+      output: MVP2
+    feedback_2:
+      output: CreativeFeedbackDelta
+    phase_3:
+      output: MVP3
+    convergence:
+      output: CreativeLock
+  principle: >
+    MVPs are not merely render tests; they are semantic experiments for concept,
+    character, world, tone, aesthetic and audience experience.
+  minimum_blast_radius:
+    required: true
+# =====================================================================
+# 30. CREATOR FEEDBACK
+# =====================================================================
+creator_feedback:
+  CreatorFeedback:
+    fields:
+      feedback_id:
+      project_id:
+      source_artifact_ref:
+      natural_language:
+      creator_authority:
+      received_at:
+      source_context_ref:
+  FeedbackInterpretation:
+    fields:
+      interpretation_id:
+      feedback_id:
+      classifications:
+        type: list[FeedbackClassification]
+      affected_refs:
+      inferred_change_set:
+      confidence:
+      ambiguity:
+      persistent_preference_candidate:
+        nullable: true
+      execution_defect_refs:
+      evidence_refs:
+  FeedbackClassification:
+    enum:
+      - CREATIVE_CHANGE
+      - EXECUTION_DEFECT
+      - PROJECT_PREFERENCE
+      - PERSISTENT_PREFERENCE_CANDIDATE
+      - POSITIVE_SIGNAL
+      - NEGATIVE_SIGNAL
+      - AMBIGUOUS
+  example_1:
+    feedback: "The lighting here looks cheap."
+    likely_classification:
+      - EXECUTION_DEFECT
+    creative_yaml_change:
+      normally: none
+  example_2:
+    feedback: >
+      "I actually want the lighting ugly and fluorescent because the world
+      should feel like a dead 1997 shopping mall."
+    likely_classification:
+      - CREATIVE_CHANGE
+    affected:
+      - aesthetic.lighting
+      - tone
+      - QualitySemantics
+# =====================================================================
+# 31. CREATIVE DELTA COMPILER
+# =====================================================================
+creative_delta_compiler:
+  input:
+    - CreatorFeedback
+    - current creative.yaml
+    - current CreatorModel
+    - dependency graph
+    - current lock state
+  output:
+    CreativeDelta
+  CreativeDelta:
+    fields:
+      delta_id:
+      project_id:
+      changed_paths:
+      added_semantics:
+      removed_semantics:
+      reinterpreted_semantics:
+      execution_only_defects:
+      persistent_creator_candidate_updates:
+      affected_model_refs:
+      estimated_blast_radius:
+      requires_lock_reopen:
+      requires_creator_confirmation:
+      provenance:
+  application:
+    - classify feedback
+    - separate execution defect from semantic change
+    - calculate changed semantic paths
+    - recompile dependent creative models
+    - preserve unrelated accepted semantics
+    - update creative.yaml version
+    - emit downstream invalidation event
+# =====================================================================
+# 32. PERSISTENT CREATOR LEARNING
+# =====================================================================
+creator_preference_learning:
+  principle: >
+    Quantum may notice patterns in creator feedback, but it must distinguish
+    observation from authority.
+  CandidateCreatorPreference:
+    fields:
+      candidate_id:
+      preference_path:
+      proposed_value:
+      support_examples:
+      contradiction_examples:
+      confidence:
+      source_projects:
+      status:
+        enum:
+          - candidate
+          - confirmed
+          - rejected
+          - expired
+  automatic_use:
+    local_project_hint:
+      allowed: true
+    persistent_baseline_mutation:
+      allowed: false_without_explicit_confirmation
+  explicit_update_example:
+    creator_statement: >
+      "From now on, unless I say otherwise, avoid explanatory dialogue."
+    result:
+      may_update_persistent_creator_baseline: true
+# =====================================================================
+# 33. CREATIVE INTELLIGENCE + WORLD MODEL
+# =====================================================================
+world_model_integration:
+  creative_outputs_to_world_model:
+    - WorldSeed
+    - CharacterSeeds
+    - RelationshipSeeds
+    - rule seeds
+    - initial proposition seeds
+    - historical event candidates
+    - story requirements
+  boundary:
+    creative_intelligence_says:
+      - intended world identity
+      - intended character identity
+      - desired relationship structure
+      - intended starting history
+    world_model_says:
+      - what is canonically true
+      - which events establish it
+      - current exact state
+  initialization_pipeline:
+    - creative seeds
+    - WorldSeedCompiler
+    - candidate genesis events
+    - authority validation
+    - World Model acceptance
+    - canonical genesis state
+  invariant: >
+    Creative seeds do not become factual canon merely because they appear in
+    creative.yaml.
+# =====================================================================
+# 34. CREATIVE INTELLIGENCE + POLYCOGNITIVE RUNTIME
+# =====================================================================
+polycognitive_integration:
+  CreatorModel_consumed_by:
+    - narrative cognition
+    - character cognition
+    - cinematic cognition
+    - performance cognition
+    - acoustic cognition
+    - product cognition
+    - quality cognition
+  creator_locks:
+    runtime_behavior:
+      - hard decision criteria
+      - non-compensatory constraints
+      - reasoning escalation when threatened
+  creative_open_questions:
+    runtime_behavior:
+      - may create DecisionFrames
+      - may trigger deeper cognition
+      - may remain intentionally unresolved
+  important_rule: >
+    Polycognitive Runtime may reason about creative intent but cannot silently
+    rewrite CreatorModel authority.
+# =====================================================================
+# 35. CREATIVE INTELLIGENCE + AUDIENCE / PRODUCT
+# =====================================================================
+audience_product_handoff:
+  to_AudienceModel:
+    package:
+      - project concept
+      - tone
+      - intended experience hints
+      - target audience hints
+      - runtime
+      - genre
+      - sophistication
+      - ambiguity
+      - emotional goals
+  to_ProductMarketModel:
+    package:
+      - concept
+      - hook
+      - visual identity
+      - character/world reuse potential
+      - format
+      - creator ambition
+      - distinctiveness constraints
+      - repeatability goals
+  boundary: >
+    Audience/Product systems may derive recommendations but may not rewrite
+    explicit creator intent without returning a proposal/disagreement.
+# =====================================================================
+# 36. CREATIVE INTELLIGENCE + PRODUCTION MODEL
+# =====================================================================
+production_handoff:
+  output:
+    CreativeProductionRequirements
+  CreativeProductionRequirements:
+    fields:
+      required_visual_fidelity:
+      required_aesthetic_fidelity:
+      motion_language_requirements:
+      identity_continuity_requirements:
+      spatial_scale:
+      environment_complexity:
+      camera_freedom:
+      sound_world_requirements:
+      deterministic_visual_requirements:
+      intentional_artifacts:
+      unacceptable_artifacts:
+      production_flexibility:
+      quality_priority:
+  rule: >
+    Creative Intelligence specifies what must be preserved. ProductionModel
+    determines how to preserve it.
+# =====================================================================
+# 37. CREATIVE INTELLIGENCE + AUTONOMOUS QC
+# =====================================================================
+qc_handoff:
+  QC_consumes:
+    - CreatorModel
+    - QualitySemantics
+    - StoryContract
+    - EndingIntent
+    - RevealIntent
+    - character creative constraints
+    - aesthetic constraints
+    - creative locks
+  required_QC_questions:
+    - does artifact match intended creative identity
+    - did execution drift from aesthetic
+    - did character behavior violate creative character model
+    - did reveal violate intended information strategy
+    - did ending produce intended aftertaste
+    - did production "improve" away intentional stylization
+  important_rule: >
+    AutonomousQC judges execution against creative intent rather than against
+    generic output quality.
+# =====================================================================
+# 38. CREATIVE QUALITY FAILURE MODES
+# =====================================================================
+creative_failure_modes:
+  GENERICITY_DRIFT:
+    description: project becomes genre-average
+  AESTHETIC_NORMALIZATION:
+    description: unusual aesthetic gets "improved" toward generic polish
+  CHARACTER_FLATTENING:
+    description: complex character becomes plot function
+  THEME_EXPOSITION:
+    description: thematic intent becomes dialogue explanation
+  ENDING_CHEAT:
+    description: surprise violates prior logic
+  TONE_COLLAPSE:
+    description: tonal range becomes monotonous or wrong
+  REFERENCE_COPYING:
+    description: reference principles become imitation
+  CREATOR_INTENT_LOSS:
+    description: inferred/system preference overrides explicit creator semantics
+  EXECUTION_DEFECT_RECLASSIFIED_AS_INTENT:
+    description: bad result incorrectly updates creative model
+  OVER_SPECIFICATION:
+    description: compiler destroys useful creative ambiguity
+  UNDER_SPECIFICATION:
+    description: downstream system receives too much unresolved ambiguity
+# =====================================================================
+# 39. CREATIVE VALIDATION
+# =====================================================================
+creative_validation:
+  CreativeConsistencyValidator:
+    checks:
+      internal:
+        - concept coherence
+        - theme coherence
+        - tone compatibility
+        - aesthetic compatibility
+        - character depth
+        - relationship generativity
+        - world generativity
+        - ending causal support
+        - reference decomposition
+        - QualitySemantics completeness
+      authority:
+        - explicit creator statements preserved
+        - inferred semantics labeled
+        - no inferred persistent preference silently promoted
+      downstream_readiness:
+        - character/world seeds sufficiently explicit
+        - StoryContract actionable
+        - production requirements derivable
+        - Audience/Product handoff sufficient
+        - critical ambiguity identified
+  result:
+    enum:
+      - VALID
+      - VALID_WITH_OPEN_QUESTIONS
+      - NOT_READY
+# =====================================================================
+# 40. CREATIVE CONFIDENCE MODEL
+# =====================================================================
+creative_confidence:
+  purpose: >
+    Avoid treating all compiled creative semantics as equally certain.
+  CreatorConfidence:
+    fields:
+      semantic_ref:
+      confidence:
+      source_authority:
+      ambiguity:
+      creator_confirmed:
+      safe_to_discover_through_MVP:
+      must_resolve_before_lock:
+  use:
+    - guide intake questions
+    - allocate reasoning depth
+    - decide MVP experiment focus
+    - prevent accidental lock of weakly established semantics
+# =====================================================================
+# 41. MVP EXPERIMENT DESIGN
+# =====================================================================
+mvp_experiment_design:
+  principle: >
+    MVP should deliberately test the most uncertain/high-impact creative claims.
+  MVPExperiment:
+    fields:
+      experiment_id:
+      hypothesis:
+      creative_refs:
+      importance:
+      uncertainty:
+      prototype_scope:
+      evaluation_questions:
+      success_conditions:
+      failure_interpretation:
+  examples:
+    character_test:
+      hypothesis: >
+        Aria's restrained performance remains emotionally legible without extra
+        explanatory dialogue.
+    world_test:
+      hypothesis: >
+        Impossible VR geometry reads as awe rather than visual confusion.
+    aesthetic_test:
+      hypothesis: >
+        Limited retro motion feels intentional rather than technically weak.
+  prioritization: >
+    impact x uncertainty x irreversibility
+# =====================================================================
+# 42. CREATIVE VERSIONING
+# =====================================================================
+versioning:
+  versioned_objects:
+    - creative.yaml
+    - StudioCreativeConstitution
+    - PersistentCreatorBaseline
+    - CreativeProfileResolution
+    - CreatorModel
+    - ConceptModel
+    - ThemeModel
+    - CharacterSeed
+    - RelationshipSeed
+    - WorldSeed
+    - DramaticEngine
+    - StoryContract
+    - QualitySemantics
+    - CreativeLock
+  required_metadata:
+    - semantic_version
+    - parent_version
+    - source_refs
+    - compiler_version
+    - digest
+    - created_at
+  no_in_place_mutation:
+    accepted_versions: immutable
+# =====================================================================
+# 43. PROVENANCE
+# =====================================================================
+provenance:
+  requirement: >
+    Major creative semantics must be traceable to creator statement, baseline,
+    profile, compiler judgment or accepted feedback.
+  CreativeProvenance:
+    fields:
+      semantic_ref:
+      authority_class:
+      source_refs:
+      compiler_pass:
+      compiler_version:
+      inference:
+      confidence:
+      creator_confirmed:
+      created_at:
+  value:
+    - audit creator fidelity
+    - feedback mapping
+    - safe baseline updates
+    - detect compiler drift
+# =====================================================================
+# 44. OBSERVABILITY
+# =====================================================================
+observability:
+  intake_metrics:
+    - creator_session_duration
+    - questions_asked
+    - explicit_vs_inferred_field_ratio
+    - unresolved_high_impact_question_count
+  compiler_metrics:
+    - creative_yaml_compile_time
+    - profile_resolution_confidence
+    - contradiction_count
+    - model_recompile_count
+  creator_fidelity_metrics:
+    - explicit_intent_preservation_rate
+    - inferred_semantic_rejection_rate
+    - creator_correction_rate
+    - intent_drift_rate
+  feedback_metrics:
+    - execution_defect_vs_creative_change_ratio
+    - feedback_to_delta_latency
+    - feedback_blast_radius
+    - persistent_preference_candidate_count
+  MVP_metrics:
+    - hypothesis_resolution_rate
+    - creator_acceptance_delta_by_version
+    - creative_convergence_rounds
+  lock_metrics:
+    - creative_lock_reopen_rate
+    - post_lock_semantic_change_rate
+# =====================================================================
+# 45. STORAGE ABSTRACTIONS
+# =====================================================================
+storage_abstractions:
+  ports:
+    - CreativeYamlStorePort
+    - CreatorBaselineStorePort
+    - StudioConstitutionStorePort
+    - CreativeProfileStorePort
+    - CreatorModelStorePort
+    - CreativeModelStorePort
+    - CreativeLockStorePort
+    - CreatorFeedbackStorePort
+    - CreativeProvenanceStorePort
+  provider_independent: true
+  immutable_history:
+    required_for:
+      - creative.yaml versions
+      - CreatorModel versions
+      - CreativeLocks
+# =====================================================================
+# 46. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  intake:
+    - start_creative_session
+    - append_creator_message
+    - generate_creative_yaml
+    - inspect_open_questions
+  compile:
+    - compile_creator_model
+    - compile_concept
+    - compile_theme
+    - compile_characters
+    - compile_relationships
+    - compile_world_seed
+    - compile_dramatic_engine
+    - compile_story_contract
+    - compile_quality_semantics
+    - emit_quantum_studio_yaml
+  profiles:
+    - resolve_creative_profiles
+    - inspect_profile_resolution
+  baseline:
+    - get_creator_baseline
+    - propose_creator_baseline_update
+    - confirm_creator_baseline_update
+  feedback:
+    - classify_creator_feedback
+    - compile_creative_delta
+    - apply_creative_delta
+  locks:
+    - validate_creative_lock
+    - create_creative_lock
+    - request_reopen_creative_lock
+  validation:
+    - validate_creative_model
+    - explain_creative_semantic
+    - trace_to_creator_source
+# =====================================================================
+# 47. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/creative_intelligence/
+  modules:
+    contracts:
+      - common
+      - authority
+      - provenance
+      - versions
+    intake:
+      - session
+      - agent
+      - elicitation
+      - conversation_parser
+    creative_yaml:
+      - schema
+      - compiler
+      - validator
+      - provenance
+    constitution:
+      - studio_constitution
+      - versioning
+    creator_baseline:
+      - contracts
+      - store
+      - updates
+      - candidate_preferences
+    profiles:
+      - contracts
+      - registry
+      - resolver
+    creator_model:
+      - contracts
+      - compiler
+      - quality_semantics
+    concept:
+      - contracts
+      - compiler
+    theme:
+      - contracts
+      - compiler
+    characters:
+      - contracts
+      - architect
+    relationships:
+      - contracts
+      - architect
+    world_seed:
+      - contracts
+      - architect
+    dramatic_engine:
+      - contracts
+      - builder
+    story_contract:
+      - contracts
+      - compiler
+    ending:
+      - ending_intent
+      - reveal_intent
+      - mindfuck_model
+    references:
+      - normalization
+      - principle_extraction
+    feedback:
+      - contracts
+      - classifier
+      - delta_compiler
+    locks:
+      - creative_lock
+      - reopen
+    validation:
+      - consistency
+      - readiness
+    integrations:
+      world_model:
+      polycognitive_runtime:
+      audience_product:
+      production_model:
+      autonomous_qc:
+      artifact_compiler:
+    ports:
+      - storage
+# =====================================================================
+# 48. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  input:
+    - creative_yaml
+    - creator_message
+    - creative_session
+  authority:
+    - creative_statement_authority
+    - field_provenance
+  defaults:
+    - StudioCreativeConstitution
+    - PersistentCreatorBaseline
+    - CreativeModeProfile
+    - CreativeProfileResolution
+  creator:
+    - EffectiveCreatorModel
+    - CreativeValue
+    - CreativeExpression
+    - CreativeConstraint
+    - CreativeTradeoff
+    - IntentionalDeviation
+    - QualitySemantics
+  concept:
+    - ConceptModel
+    - ThemeModel
+  characters:
+    - CharacterSeed
+    - RelationshipSeed
+  world:
+    - WorldSeed
+  story:
+    - DramaticEngine
+    - StoryContract
+    - EndingIntent
+    - RevealIntent
+    - MindFuckEndingModel
+  references:
+    - Reference
+  questions:
+    - CreativeOpenQuestion
+    - CreatorConfidence
+  feedback:
+    - CreatorFeedback
+    - FeedbackInterpretation
+    - CreativeDelta
+    - CandidateCreatorPreference
+  locks:
+    - CreativeLock
+  production_handoff:
+    - CreativeProductionRequirements
+  experiment:
+    - MVPExperiment
+# =====================================================================
+# 49. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    authority:
+      - explicit_project_intent_beats_baseline
+      - baseline_beats_profile_default
+      - inferred_preference_not_persistent_authority
+    creative_yaml:
+      - schema_validation
+      - provenance_required
+      - no_override_block_required
+    profile_resolution:
+      - profile_blending
+      - conflicting_profile_resolution
+      - project_specificity_wins
+    creator_model:
+      - deterministic_precedence
+      - quality_semantics_compilation
+      - intentional_deviation_preserved
+    character:
+      - character_seed_completeness
+      - contradiction_preservation
+      - no_plot_only_character
+    world_seed:
+      - rule_seed_validation
+      - setting_detail
+      - expansion_capacity
+    story_contract:
+      - ending_intent_present
+      - reveal_contract_consistent
+      - unacceptable_confusion_explicit
+    references:
+      - principle_extraction
+      - negative_reference_preserved
+    feedback:
+      - execution_defect_not_creative_change
+      - creative_change_updates_semantics
+      - positive_signal_preserved
+    lock:
+      - immutable_lock
+      - reopen_requires_authority
+# =====================================================================
+# 50. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - explicit_creator_statement_never_loses_to_profile_default
+  - project_specific_semantics_do_not_modify_persistent_baseline_automatically
+  - inferred_creator_preference_never_self_promotes
+  - quality_semantics_can_define_lower_realism_as_higher_quality
+  - CreativeLock_digest_is_immutable
+  - execution_defect_can_be_repaired_without_creative_yaml_change
+  - unrelated_feedback_does_not_recompile_unrelated_creative_models
+  - references_do_not_become_copy_instruction
+  - creative_seed_does_not_directly_mutate_World_canon
+# =====================================================================
+# 51. NEGATIVE TESTS
+# =====================================================================
+negative_tests:
+  - generic_profile_overrides_explicit_project_intent_rejected
+  - photorealism_auto_upgrade_of_retro_style_rejected
+  - AGENT_INFERENCE_persistent_baseline_update_rejected
+  - creator_feedback_execution_defect_rewritten_as_intent_rejected
+  - World_canon_written_directly_from_creative_yaml_rejected
+  - ProductMarketModel_silently_modifying_CreatorModel_rejected
+  - production_provider_choice_inside_CreatorModel_rejected
+  - creative_lock_modified_in_place_rejected
+  - unresolved_critical_ending_semantics_locked_without_policy_rejected
+# =====================================================================
+# 52. INTEGRATION TESTS
+# =====================================================================
+integration_tests:
+  - conversation_to_creative_yaml
+  - creative_yaml_to_profile_resolution
+  - profile_resolution_plus_baseline_to_CreatorModel
+  - CreatorModel_to_character_world_story_compilation
+  - WorldSeed_to_WorldModel_genesis_proposals
+  - CreatorModel_to_PolycognitiveRuntime_context
+  - CreatorModel_to_AudienceProduct_handoff
+  - QualitySemantics_to_AutonomousQC
+  - CreativeProductionRequirements_to_ProductionModel
+  - creator_feedback_to_minimum_blast_radius_delta
+  - CreativeLock_to_downstream_artifact_compiler
+# =====================================================================
+# 53. END-TO-END TESTS
+# =====================================================================
+end_to_end_tests:
+  resort_inspiration:
+    input: >
+      Creator has a 1–2 hour conversation about artificial-intelligence beings
+      living inside a physically impossible virtual reality with maximum
+      cinematic space-scale ambition.
+    sequence:
+      - CreativeIntakeAgent explores idea
+      - generate creative.yaml
+      - resolve PREMIUM_ADULT_CINEMATIC
+      - resolve CINEMATIC_SCIFI
+      - resolve supporting EXPERIMENTAL_ART
+      - compile CreatorModel
+      - compile ConceptModel
+      - compile ThemeModel
+      - build CharacterSeeds
+      - build RelationshipSeeds
+      - build WorldSeed
+      - build DramaticEngine
+      - build StoryContract
+      - compile QualitySemantics
+      - emit quantum.studio.yaml
+      - generate MVP1
+      - creator feedback
+      - classify feedback
+      - generate minimum-scope CreativeDelta
+      - MVP2
+      - feedback
+      - MVP3
+      - AutonomousQC
+      - create CreativeLock
+    success:
+      - creator never manually edits schema
+      - unusual creative identity survives
+      - photorealism is not automatically treated as quality
+      - creator feedback maps to explicit semantic deltas
+  retro_animation:
+    input: >
+      Premium intentional late-1990s cel-animation feel with limited animation,
+      bold poses and analog texture.
+    success:
+      - QualitySemantics rewards limited animation fidelity
+      - smooth CG interpolation receives negative quality alignment
+      - profile defaults do not normalize project toward modern CGI
+  persistent_creator_preference:
+    input: >
+      "From now on, unless I explicitly say otherwise, avoid dialogue that
+      explains what the image already communicates."
+    success:
+      - persistent CreatorBaselineUpdate proposed
+      - explicit authority recorded
+      - future project inherits preference
+      - project can still explicitly deviate
+# =====================================================================
+# 54. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: CR-G01
+    check: conversation can compile valid creative.yaml
+  - id: CR-G02
+    check: all critical creative fields retain provenance
+  - id: CR-G03
+    check: project specificity outranks defaults
+  - id: CR-G04
+    check: strong StudioCreativeConstitution exists
+  - id: CR-G05
+    check: multiple CreativeModeProfiles may blend
+  - id: CR-G06
+    check: CreatorModel compiles deterministically from versioned inputs
+  - id: CR-G07
+    check: QualitySemantics supports intent-relative quality
+  - id: CR-G08
+    check: characters/world may be deeply developed before plot
+  - id: CR-G09
+    check: StoryContract includes ending/reveal strategy where applicable
+  - id: CR-G10
+    check: references are decomposed into transferable dimensions
+  - id: CR-G11
+    check: inferred creator preferences cannot silently become persistent
+  - id: CR-G12
+    check: execution defects do not automatically alter creative intent
+  - id: CR-G13
+    check: feedback delta has dependency-aware blast radius
+  - id: CR-G14
+    check: CreativeLock immutable and reopen-governed
+  - id: CR-G15
+    check: WorldSeed does not directly create canonical truth
+  - id: CR-G16
+    check: Audience/Product handoff contains sufficient project semantics
+  - id: CR-G17
+    check: Production handoff expresses demands, not provider/tool strategy
+  - id: CR-G18
+    check: AutonomousQC can evaluate artifact against CreatorModel
+  - id: CR-G19
+    check: creator can complete normal MVP convergence loop without manual config
+  - id: CR-G20
+    check: radically different project aesthetics use same architecture
+# =====================================================================
+# 55. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  intake:
+    - natural conversation accepted
+    - creative.yaml generated automatically
+    - field-level provenance retained
+  defaults:
+    - StudioCreativeConstitution versioned
+    - PersistentCreatorBaseline versioned
+    - CreativeModeProfile registry operational
+  creator_model:
+    - deterministic precedence enforced
+    - explicit project semantics preserved
+    - QualitySemantics compiled
+    - creator locks available
+  concept:
+    - ConceptModel complete
+    - ThemeModel complete
+    - originality constraints explicit
+  characters:
+    - major characters deeply specified
+    - relationships generative rather than labels
+    - reusable IP potential represented
+  world:
+    - setting/world seed sufficiently detailed
+    - sensory identity represented
+    - candidate world rules represented
+  story:
+    - DramaticEngine exists
+    - StoryContract exists
+    - ending/reveal intent explicit where relevant
+    - unresolved ambiguity classified intentionally
+  feedback:
+    - natural language creator feedback classified
+    - execution defect vs creative change distinction proven
+    - minimum-blast-radius CreativeDelta generated
+  locks:
+    - CreativeLock created only after required validation/QC
+    - accepted lock immutable
+  handoffs:
+    - quantum.studio.yaml emitted
+    - WorldModel handoff valid
+    - Audience/Product handoff valid
+    - Production requirement handoff valid
+    - AutonomousQC has sufficient creative contract
+  flexibility:
+    - preschool project supported
+    - premium adult sci-fi supported
+    - educational project supported
+    - experimental project supported
+    - retro limited animation supported
+    - cinematic maximalist project supported
+  release:
+    requirement: >
+      CR-G01 through CR-G20 pass and no ownership conflict exists with specs
+      00, 01 or 02.
+# =====================================================================
+# 56. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: CR-OD-01
+    decision: physical creator-profile store provider
+    status: UNKNOWN
+  - id: CR-OD-02
+    decision: creative.yaml exact serialization schema format/versioning mechanism
+    status: OPEN
+  - id: CR-OD-03
+    decision: first StudioCreativeConstitution calibration suite
+    status: TO_DEFINE
+  - id: CR-OD-04
+    decision: initial CreativeModeProfile library size
+    status: OPEN
+    recommendation: start_small_and_high_quality
+  - id: CR-OD-05
+    decision: creator baseline explicit-confirmation UX
+    status: OPEN
+  - id: CR-OD-06
+    decision: exact minimum CreativeLock requirements by project type
+    status: PROFILE_DEPENDENT
+  - id: CR-OD-07
+    decision: creative conversation transcript retention policy
+    status: PRIVACY_POLICY_REQUIRED
+  - id: CR-OD-08
+    decision: reference artifact ingestion model
+    status: OPEN
+# =====================================================================
+# 57. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: strong defaults become stylistic homogenization
+    control:
+      - project-specificity precedence
+      - profile blending
+      - intentional deviation
+      - anti-generic constraints
+  - risk: creator must over-specify project
+    control:
+      - StudioCreativeConstitution
+      - profiles
+      - CreativeIntakeAgent
+      - compiler development passes
+  - risk: agent inference silently becomes creator intent
+    control:
+      - provenance
+      - authority classes
+      - confidence labels
+  - risk: project feedback contaminates persistent creator baseline
+    control:
+      - explicit promotion gate
+  - risk: creative compiler over-explains ambiguity
+    control:
+      - CreativeOpenQuestion
+      - intentionally_open classification
+  - risk: reference imitation
+    control:
+      - principle extraction
+      - explicit not-requested fields
+  - risk: aesthetic "improvement" violates project
+    control:
+      - QualitySemantics
+      - AutonomousQC intent-fidelity checks
+  - risk: characters become shallow prompt objects
+    control:
+      - CharacterSeed depth contract
+      - RelationshipArchitect
+      - DramaticEngine
+  - risk: story is designed before world/character has generative depth
+    control:
+      - flexible compilation order
+      - character/world-first development
+  - risk: ending is bolted on late
+    control:
+      - EndingIntent
+      - RevealIntent
+      - StoryContract
+  - risk: creative.yaml becomes infrastructure config
+    control:
+      - provider choices explicitly excluded
+  - risk: creator burnout through review burden
+    control:
+      - MVP hypothesis targeting
+      - minimum-blast-radius feedback loop
+      - natural-language review interface
+# =====================================================================
+# 58. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  - id: CRW1
+    name: authority_constitution_and_core_schemas
+    depends_on:
+      - SYSTEM_ARCHITECTURE_00
+    targets:
+      - creative authority
+      - StudioCreativeConstitution
+      - CreativeModeProfile
+      - PersistentCreatorBaseline
+      - creative.yaml schema
+    exit:
+      - precedence tests pass
+      - provenance works
+  - id: CRW2
+    name: conversational_intake
+    depends_on:
+      - CRW1
+    targets:
+      - CreativeSession
+      - CreativeIntakeAgent
+      - conversation parser
+      - creative.yaml compiler
+    exit:
+      - natural conversation compiles valid creative.yaml
+  - id: CRW3
+    name: creator_model_and_profile_resolution
+    depends_on:
+      - CRW2
+    targets:
+      - CreativeProfileResolver
+      - CreatorModelCompiler
+      - QualitySemantics
+    exit:
+      - radically different style projects compile correctly
+  - id: CRW4
+    name: concept_theme_character_world
+    depends_on:
+      - CRW3
+    targets:
+      - ConceptModel
+      - ThemeModel
+      - CharacterArchitect
+      - RelationshipArchitect
+      - WorldArchitect
+    exit:
+      - complete creative foundations emitted
+  - id: CRW5
+    name: dramatic_engine_story_ending
+    depends_on:
+      - CRW4
+    targets:
+      - DramaticEngineBuilder
+      - StoryContract
+      - EndingIntent
+      - RevealIntent
+    exit:
+      - full project dramatic contract exists
+  - id: CRW6
+    name: project_model_emission_and_integrations
+    depends_on:
+      - CRW5
+    targets:
+      - quantum.studio.yaml
+      - World handoff
+      - Audience/Product handoff
+      - Production requirements
+      - QC handoff
+    exit:
+      - all sibling systems receive valid contracts
+  - id: CRW7
+    name: feedback_delta_and_creator_learning
+    depends_on:
+      - CRW6
+    targets:
+      - feedback classifier
+      - CreativeDelta
+      - persistent preference candidates
+      - dependency mapping
+    exit:
+      - natural review feedback drives minimum-scope recompile
+  - id: CRW8
+    name: MVP_experiments_and_locks
+    depends_on:
+      - CRW7
+    targets:
+      - MVPExperiment
+      - CreativeLock
+      - reopen semantics
+      - convergence loop
+    exit:
+      - resort inspiration E2E passes
+  - id: CRW9
+    name: validation_calibration_and_scale
+    depends_on:
+      - CRW8
+    targets:
+      - calibration suite
+      - profile testing
+      - observability
+      - performance
+      - scale validation
+    exit:
+      - definition_of_done passes
+# =====================================================================
+# 59. DEPENDENCY GRAPH
+# =====================================================================
+dependency_graph:
+  CRW1:
+    - SYSTEM_ARCHITECTURE_00
+  CRW2:
+    - CRW1
+  CRW3:
+    - CRW2
+  CRW4:
+    - CRW3
+  CRW5:
+    - CRW4
+  CRW6:
+    - CRW5
+  CRW7:
+    - CRW6
+  CRW8:
+    - CRW7
+  CRW9:
+    - CRW8
+# =====================================================================
+# 60. ACCEPTANCE CRITERIA
+# =====================================================================
+acceptance_criteria:
+  creator_interface:
+    - creator can express project naturally
+    - no manual config expertise required
+    - one-line idea can start project
+  creative_yaml:
+    - rich and detailed
+    - project-specific
+    - provenance-aware
+    - no user-facing override mechanics
+  defaults:
+    - StudioCreativeConstitution strong enough to prevent empty baseline
+    - creator baseline fills stable personal defaults
+    - profiles add domain-specific excellence priors
+  flexibility:
+    - project semantics may radically contradict default aesthetic preferences
+    - system preserves intentional low-fi or limited animation
+    - system supports maximal cinematic visual ambition
+  characters_world:
+    - major characters developed deeply
+    - setting/world developed deeply
+    - relationships generate pressure
+    - persistent reuse potential represented
+  narrative:
+    - project has dramatic engine
+    - ending/reveal intent explicit
+    - story contract usable downstream
+  quality:
+    - quality semantics explicitly project-relative
+    - generic technical polish cannot override creative fidelity
+  feedback:
+    - creator feedback is classified
+    - execution defects do not rewrite project intent
+    - creative deltas have minimum blast radius
+  locks:
+    - CreativeLock stabilizes project identity
+    - reopen governed
+  autonomy:
+    - creative compilation feeds downstream systems without human schema work
+  final: >
+    Creative Intelligence must make it possible for one creator conversation to
+    become a detailed, explicit creative contract sufficient for autonomous
+    development while preserving creative specificity and creator authority.
+# =====================================================================
+# 61. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    The creator should describe the work, not configure the studio.
+  law_02: >
+    creative.yaml is the rich project-specific creative source.
+  law_03: >
+    StudioCreativeConstitution supplies excellence where the creator is silent.
+  law_04: >
+    PersistentCreatorBaseline supplies durable creator taste where the project is silent.
+  law_05: >
+    CreativeModeProfiles supply context-sensitive priors, not rigid styles.
+  law_06: >
+    Explicit project intent outranks every creative default.
+  law_07: >
+    Quality equals fidelity to creative intent.
+  law_08: >
+    Realism, smoothness and visual complexity are not universal measures of quality.
+  law_09: >
+    Characters, relationships and worlds should be developed deeply enough to
+    generate story rather than merely decorate it.
+  law_10: >
+    Story should emerge from character, world, conflict, information and causal pressure.
+  law_11: >
+    Surprising endings must remain coherent in retrospect.
+  law_12: >
+    Creative ambiguity may remain unresolved when ambiguity is intentional.
+  law_13: >
+    References communicate principles, not permission to imitate.
+  law_14: >
+    Feedback about bad execution must not silently become new creative intent.
+  law_15: >
+    Creator inference never silently becomes persistent creator authority.
+  law_16: >
+    Creative locks stabilize project identity before expensive downstream work.
+  law_17: >
+    Creative changes recompile the minimum necessary semantic dependency set.
+  law_18: >
+    Creative Intelligence specifies what must be preserved; ProductionModel decides how.
+  law_19: >
+    Creative seeds inform World creation but do not themselves constitute World truth.
+  law_20: >
+    The intended human experience is:
+    imagine → talk → watch → judge → talk → watch a better version.
+
+I’d consider 03 ~98% architecturally complete at this point. The most important thing it now locks is the distinction between strong defaults and project-specific intent without requiring explicit override syntax, while making Quality = fidelity to creative intent a first-class executable concept rather than just a slogan.
+
+The next clean spec is 04_quantum_audience_product_intelligence_build_spec.yaml, because 03 now emits exactly the handoff that 04 needs: concept, tone, creative experience hints, sophistication, runtime, format ambition, distinctiveness constraints, and reusable-IP intent.

@@ -1,0 +1,2286 @@
+metadata:
+  spec_id: quantum.animation.studio_coherence_kernel.supplement.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: CROSS_CUTTING_SUPPLEMENT
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Studio Coherence Kernel Supplement
+  architectural_class:
+    type: SUPPLEMENT
+    creates_new_top_level_authority: false
+  primary_extension_target:
+    - file: 07_quantum_autonomous_qc_build_spec.yaml
+      relationship: COHERENCE_MEASUREMENT_AND_DRIFT_EXTENSION
+  additional_extension_targets:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: AUTHORITY_AND_COHERENCE_CONSTITUTION_EXTENSION
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: COHERENCE_SIGNAL_CONSUMPTION
+    - file: 02a_quantum_polycognitive_runtime_control_plane_build_spec.yaml
+      relationship: CONTEXT_INVARIANT_AND_CAPABILITY_VIEW_EXTENSION
+    - file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: CREATIVE_INVARIANT_AND_DEVIATION_EXTENSION
+    - file: 05_quantum_self_model_build_spec.yaml
+      relationship: CAPABILITY_VIEW_SOURCE_DEPENDENCY
+    - file: 06_quantum_production_model_build_spec.yaml
+      relationship: COHERENCE_REPAIR_STRATEGY_CONSUMER
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: COHERENCE_AND_DEVIATION_LINEAGE_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: CROSS_SYSTEM_CONTRACT_EXTENSION
+    - file: 13_quantum_asset_identity_library_build_spec.yaml
+      relationship: ASSET_IDENTITY_COHERENCE_DEPENDENCY
+    - file: 15_quantum_reference_implementation_contracts_build_spec.yaml
+      relationship: CRITIC_CALIBRATION_AND_OBSERVABILITY_EXTENSION
+    - file: 20_quantum_animation_studio_roadmap.yaml
+      relationship: COHERENCE_RESEARCH_AND_LEARNING_EXTENSION
+  source_basis:
+    brief:
+      title: Studio Coherence Kernel
+      relationship: RESEARCH_INPUT
+      note: >
+        This supplement formalizes only the additions judged useful for Quantum.
+        It does not import the brief's architecture wholesale.
+  architectural_identity:
+    concise: >
+      Cross-cutting control and measurement layer that determines whether many
+      independently generated artifacts and decisions continue to express one
+      coherent creative system.
+    extended: >
+      Quantum already owns creative intent, fictional truth, cognition,
+      capability truth, production strategy, execution, and acceptance through
+      separate authoritative subsystems. This supplement adds a missing
+      cross-artifact coherence layer: explicit creative invariants, calibrated
+      cross-artifact evaluation, coherence drift measurement, context-invariant
+      protection, intentional-deviation governance, critic calibration,
+      anti-duplication safeguards, and capability filtering.
+      It does not become another source of truth. It measures and signals
+      divergence relative to existing authoritative state and provides
+      evidence-backed corrective recommendations to the systems that already
+      own action.
+  owner_question:
+    primary: >
+      Do thousands of independently generated decisions still behave like
+      manifestations of one coherent studio intelligence?
+  secondary_questions:
+    - "Are individually good artifacts drifting away from one another?"
+    - "Is the project's visual language still recognizable?"
+    - "Is character performance language stable?"
+    - "Is acoustic identity coherent?"
+    - "Are project conventions being applied consistently?"
+    - "Did context compaction drop a binding invariant?"
+    - "Is a detected deviation accidental or creatively intentional?"
+    - "Has a QC critic drifted because its model/version changed?"
+    - "Are multiple judges genuinely independent?"
+    - "Is Quantum accidentally creating duplicate persistent entities or assets?"
+    - "Which coherence dimension is deteriorating?"
+    - "Which existing authority should correct the drift?"
+  core_distinction: |
+    CONTINUITY:
+      "Is the fictional fact still true?"
+    QUALITY:
+      "Is this artifact good?"
+    CREATOR_FIDELITY:
+      "Does this artifact honor project intent?"
+    STUDIO_COHERENCE:
+      "Do independently authored artifacts still behave as products
+       of one recognizable creative system?"
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Preserve recognizable creative, stylistic, narrative, performance, acoustic,
+    structural, and identity coherence across increasing numbers of autonomous
+    generation decisions without collapsing creative variation into sameness.
+  secondary:
+    - mechanize enforceable creative invariants
+    - detect cross-artifact drift
+    - calibrate subjective critics
+    - protect binding context across compression/re-hydration
+    - distinguish accidental drift from intentional creative deviation
+    - prevent duplicate persistent-object creation
+    - keep capability/tool exposure scoped to cognitive need
+  success_definition: >
+    Quantum can generate hundreds or thousands of artifacts through distributed
+    cognition and production while maintaining project identity, detect when
+    those artifacts begin to drift as a group, explain the source of drift,
+    route corrective signals to the proper authority, and permit deliberate
+    exceptions without turning consistency into rigidity.
+  optimization_target: >
+    Maximum creator-intent coherence with minimum unnecessary conformity.
+# =====================================================================
+# 2. NON-OWNERSHIP
+# =====================================================================
+non_ownership:
+  this_supplement_does_not_own:
+    creative_meaning:
+      owner: 03
+    fictional_truth:
+      owner: 01
+    cognitive_allocation:
+      owner: 02
+    cognitive_execution:
+      owner: 02a
+    capability_truth:
+      owner: 05
+    production_strategy:
+      owner: 06
+    acceptance:
+      owner: 07
+    execution:
+      owner: 08
+    lineage:
+      owner: 09
+    persistent_asset_identity:
+      owner: 13
+  this_supplement_owns_only:
+    - coherence measurement contracts
+    - coherence drift observations
+    - creative invariant representation extension
+    - critic calibration contracts
+    - context-invariant verification contracts
+    - deviation-governance contracts
+    - registry anti-duplication protocol
+    - capability-view filtering contract
+    - coherence observability mapping
+  hard_rule: >
+    A coherence measurement may trigger review, stronger enforcement, repair,
+    or deeper cognition but may never directly rewrite CreatorModel, WorldModel,
+    ProductionModel, or accepted artifacts.
+# =====================================================================
+# 3. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  SCK-001:
+    name: COHERENCE_IS_CROSS_ARTIFACT
+    statement: >
+      Studio coherence is a property of relationships among decisions and
+      artifacts, not merely a property of each artifact independently.
+  SCK-002:
+    name: COHERENCE_IS_NOT_SAMENESS
+    statement: >
+      Legitimate contrast, novelty, stylistic evolution, and intentional
+      exception must remain possible.
+  SCK-003:
+    name: CREATOR_INTENT_REMAINS_EXTERNALIZED
+    statement: >
+      Creator identity and project-specific taste should remain explicit,
+      versioned, inspectable state wherever they can be represented structurally.
+  SCK-004:
+    name: MODEL_WEIGHTS_ARE_NOT_CREATIVE_AUTHORITY
+    statement: >
+      No model's learned style or defaults may become the sole carrier of
+      project creative intent.
+  SCK-005:
+    name: MECHANIZE_WHAT_IS_MECHANIZABLE
+    statement: >
+      Machine-checkable creative constraints should be enforced structurally or
+      deterministically before subjective judgment is invoked.
+  SCK-006:
+    name: SUBJECTIVE_RESIDUE_REQUIRES_CALIBRATED_JUDGMENT
+    statement: >
+      Aesthetic properties that cannot be encoded deterministically may be
+      evaluated through reference-conditioned or rubric-based critics.
+  SCK-007:
+    name: SINGLE_SCORE_IS_NOT_AUTHORITY
+    statement: >
+      A composite coherence index may support monitoring but cannot replace
+      dimension-level evidence or AutonomousQC.
+  SCK-008:
+    name: HARD_INVARIANTS_ARE_NONCOMPENSATORY
+    statement: >
+      Failure of a hard creative invariant cannot be offset by unrelated quality.
+  SCK-009:
+    name: CROSS_ARTIFACT_VARIANCE_MUST_BE_EXPLAINABLE
+    statement: >
+      Significant variation should resolve to intentional creative choice,
+      World state, narrative function, production constraint, or accepted
+      deviation.
+  SCK-010:
+    name: CRITICS_ARE_MEASURING_INSTRUMENTS
+    statement: >
+      Critic implementations require versioning, calibration, bias monitoring,
+      and migration discipline.
+  SCK-011:
+    name: CRITIC_SWAP_IS_METRIC_MIGRATION
+    statement: >
+      Replacing or upgrading a critic model can change the measurement system
+      and therefore cannot occur silently.
+  SCK-012:
+    name: SELF_JUDGMENT_CORRELATION_MATTERS
+    statement: >
+      Generator and critic implementations with correlated failure modes provide
+      weaker independent evidence than heterogeneous evaluation.
+  SCK-013:
+    name: CONTEXT_COMPRESSION_MUST_PRESERVE_BINDING_INVARIANTS
+    statement: >
+      Context summarization may reduce token volume but cannot silently discard
+      locks, constraints, canon facts, or acceptance conditions.
+  SCK-014:
+    name: REGROUND_FROM_CANONICAL_STATE
+    statement: >
+      Long delegation or cognition chains must rehydrate required constraints
+      from canonical refs rather than depend on paraphrase inheritance.
+  SCK-015:
+    name: EXACT_IDENTITY_BEFORE_SEMANTIC_SIMILARITY
+    statement: >
+      Persistent-object creation performs exact registry resolution before
+      probabilistic near-duplicate search.
+  SCK-016:
+    name: DEVIATION_HAS_A_LIFECYCLE
+    statement: >
+      A creative deviation may be rejected, locally authorized, or promoted
+      into a broader convention through explicit governance.
+  SCK-017:
+    name: DOCTRINE_FOLLOWS_AUTHORITY
+    statement: >
+      When project doctrine conflicts with higher-authority creative or World
+      state, doctrine is stale.
+  SCK-018:
+    name: DRIFT_IS_A_SIGNAL_NOT_AN_AUTHORITY
+    statement: >
+      Coherence drift emits structured signals consumed by existing authorities.
+  SCK-019:
+    name: REPAIR_MINIMUM_CAUSAL_SCOPE
+    statement: >
+      Coherence correction should target the smallest shared cause of drift.
+  SCK-020:
+    name: CALIBRATION_IS_CONTINUOUS
+    statement: >
+      Subjective evaluation quality must itself be measured over time.
+  SCK-021:
+    name: COHERENCE_MEASUREMENT_IS_VERSIONED
+    statement: >
+      Results are meaningful only relative to an exact coherence contract,
+      critic set, rubric, project revision, and artifact scope.
+  SCK-022:
+    name: LONG_TAIL_INVARIANTS_REQUIRE_RETRIEVAL
+    statement: >
+      Rare but binding creative constraints should be explicitly retrieved
+      rather than expected to survive lossy global summaries.
+  SCK-023:
+    name: CAPABILITY_EXPOSURE_IS_SCOPED
+    statement: >
+      Cognition should receive the capabilities relevant to its authority and
+      current task rather than the entire implementation universe.
+  SCK-024:
+    name: OBSERVABILITY_IS_VENDOR_NEUTRAL
+    statement: >
+      Quantum's richer internal trace model may map to external telemetry
+      standards but cannot be defined by them.
+  SCK-025:
+    name: COHERENCE_MUST_BE_EMPIRICALLY_CALIBRATED
+    statement: >
+      No universal Studio Coherence Index aggregation is assumed correct before
+      validation against human/creator judgments.
+  SCK-026:
+    name: COHERENCE_SHOULD_SCALE_SUBLINEARLY_IN_CONTEXT
+    statement: >
+      Increasing artifact count should not require injecting the complete
+      project history into every generation decision.
+  SCK-027:
+    name: LOCAL_PROJECTIONS_OVER_GLOBAL_DUMPS
+    statement: >
+      Each decision receives the smallest high-signal context necessary to
+      preserve relevant coherence.
+  SCK-028:
+    name: ACCEPTED_NOVELTY_CAN_EVOLVE_DOCTRINE
+    statement: >
+      Coherence mechanisms must support learning legitimate new conventions.
+  SCK-029:
+    name: CRITIC_DISAGREEMENT_IS_INFORMATION
+    statement: >
+      Disagreement among calibrated independent critics may trigger deeper
+      evidence gathering rather than automatic majority voting.
+  SCK-030:
+    name: ONE_STUDIO_IDENTITY_MANY_VALID_EXPRESSIONS
+    statement: >
+      A coherent studio may intentionally produce radically different project
+      aesthetics so long as each remains faithful to its project-specific
+      creative constitution.
+# =====================================================================
+# 4. AUTHORITY PRECEDENCE
+# =====================================================================
+authority_precedence:
+  purpose: >
+    Provide one deterministic conflict-resolution vocabulary for assertions,
+    invariants, doctrine, inferred conventions, and implementation defaults.
+  AuthorityTier:
+    levels:
+      CONSTITUTIONAL:
+        precedence: 100
+        examples:
+          - 00_system_architecture laws
+          - safety and authority boundaries
+      CREATOR_EXPLICIT:
+        precedence: 95
+        examples:
+          - explicit creative.yaml lock
+          - direct creator revision
+      ESTABLISHED_CANON:
+        precedence: 90
+        examples:
+          - committed WorldEvent
+          - canonical WorldSnapshot fact
+      PROJECT_LOCK:
+        precedence: 90
+        examples:
+          - animatic.lock
+          - approved CreativeLock
+      CREATOR_STRONG_PREFERENCE:
+        precedence: 85
+      SUBSYSTEM_AUTHORITATIVE_STATE:
+        precedence: 80
+        examples:
+          - SelfModel capability truth
+          - ProductionManifest execution state
+      CERTIFIED_PROJECT_CONVENTION:
+        precedence: 75
+      COMPILER_DERIVED:
+        precedence: 60
+      COGNITIVE_INFERENCE:
+        precedence: 40
+      EXEMPLAR_INFERENCE:
+        precedence: 30
+      HEURISTIC:
+        precedence: 20
+      IMPLEMENTATION_DEFAULT:
+        precedence: 10
+  conflict_rule: >
+    Lower-precedence state cannot silently override higher-precedence state.
+  equal_precedence_conflict:
+    response:
+      - use domain-specific temporal/version semantics if defined
+      - otherwise emit AUTHORITY.CONFLICT
+      - invoke owning authority
+# =====================================================================
+# 5. CREATIVE INVARIANT PROFILE
+# =====================================================================
+creative_invariant_profile:
+  CreativeInvariantProfile:
+    object_class: DERIVED_MODEL
+    owner_system:
+      primary: 03
+    fields:
+      profile_id:
+      project_id:
+      version:
+      CreatorModel_ref:
+      QualitySemantics_ref:
+      CreativeLock_refs:
+      exemplar_refs:
+      visual:
+        type: list[CreativeInvariant]
+      cinematic:
+        type: list[CreativeInvariant]
+      performance:
+        type: list[CreativeInvariant]
+      motion:
+        type: list[CreativeInvariant]
+      acoustic:
+        type: list[CreativeInvariant]
+      editorial:
+        type: list[CreativeInvariant]
+      narrative_voice:
+        type: list[CreativeInvariant]
+      structural:
+        type: list[CreativeInvariant]
+      anti_targets:
+        type: list[CreativeInvariant]
+      open_dimensions:
+        type: list[CreativeOpenDimension]
+      source_refs:
+      digest:
+# =====================================================================
+# 6. CREATIVE INVARIANT
+# =====================================================================
+creative_invariant:
+  CreativeInvariant:
+    fields:
+      invariant_id:
+      semantic_dimension:
+      description:
+      expected_value:
+        nullable: true
+      allowed_values:
+        nullable: true
+      forbidden_values:
+        nullable: true
+      tolerance:
+        nullable: true
+      authority_tier:
+      source_refs:
+      enforcement_strength:
+        enum:
+          - E5_DETERMINISTIC
+          - E4_STRUCTURAL
+          - E3_REFERENCE_CONDITIONED
+          - E2_RUBRIC_QC
+          - E1_ADVISORY
+          - E0_OPEN
+      importance:
+        range: [0.0, 1.0]
+      hard:
+        type: bool
+      scope:
+        enum:
+          - SHOT
+          - SCENE
+          - SEQUENCE
+          - EPISODE
+          - PROJECT
+          - SERIES
+          - UNIVERSE
+      valid_from:
+        nullable: true
+      valid_to:
+        nullable: true
+      validator_ref:
+        nullable: true
+      rubric_ref:
+        nullable: true
+      exemplar_refs:
+        type: list[CanonicalRef]
+      exception_policy_ref:
+        nullable: true
+  invariant: >
+    Hard invariants are noncompensatory.
+# =====================================================================
+# 7. CREATIVE OPEN DIMENSION
+# =====================================================================
+creative_open_dimension:
+  CreativeOpenDimension:
+    fields:
+      dimension_id:
+      description:
+      allowed_variance:
+      preferred_variance:
+      experimental_space:
+      creator_constraints:
+      escalation_threshold:
+  purpose: >
+    Make explicit where variation is desired so coherence machinery does not
+    accidentally optimize the project toward sameness.
+# =====================================================================
+# 8. INVARIANT EXAMPLES
+# =====================================================================
+creative_invariant_examples:
+  retro_limited_animation_project:
+    motion:
+      - invariant:
+          semantic_dimension: animation_cadence
+          enforcement_strength: E3_REFERENCE_CONDITIONED
+          description: >
+            Preserve intentional limited-animation cadence rather than smoothing
+            motion toward modern high-frame interpolation.
+    visual:
+      - invariant:
+          semantic_dimension: texture_language
+          enforcement_strength: E3_REFERENCE_CONDITIONED
+    anti_target:
+      - invariant:
+          semantic_dimension: generic_photorealism
+          enforcement_strength: E2_RUBRIC_QC
+          forbidden_values:
+            - photorealistic_CGI_normalization
+  cinematic_scifi_project:
+    camera:
+      - invariant:
+          semantic_dimension: camera_motivation
+          enforcement_strength: E2_RUBRIC_QC
+          description: >
+            Camera movement must serve revelation, emotion, scale, or action.
+  recurring_character:
+    identity:
+      source_owner: 13
+      relation: >
+        Character identity anchors remain asset identity constraints rather than
+        duplicated creative invariants.
+# =====================================================================
+# 9. INVARIANT COMPILATION
+# =====================================================================
+invariant_compilation:
+  flow: |
+    creative.yaml
+         ↓
+    CreatorModel
+         ↓
+    QualitySemantics
+         ↓
+    CreativeInvariantCompiler
+         ↓
+    CreativeInvariantProfile
+         ↓
+    deterministic / structural / reference / rubric enforcement
+  compiler_inputs:
+    - CreatorModel
+    - project CreativeLocks
+    - style language
+    - anti-targets
+    - exemplars
+    - AssetIdentity profiles
+    - existing accepted project artifacts
+  output_requirements:
+    - provenance
+    - authority
+    - enforcement strength
+    - explicit open dimensions
+# =====================================================================
+# 10. STUDIO COHERENCE VECTOR
+# =====================================================================
+studio_coherence:
+  StudioCoherenceVector:
+    object_class: EVIDENCE
+    fields:
+      measurement_id:
+      project_id:
+      scope:
+      artifact_refs:
+      project_revision_refs:
+      creator_fidelity:
+        range: [0.0, 1.0]
+      style_consistency:
+        range: [0.0, 1.0]
+      character_identity_consistency:
+        range: [0.0, 1.0]
+      World_consistency:
+        range: [0.0, 1.0]
+      cinematic_language_consistency:
+        range: [0.0, 1.0]
+      performance_language_consistency:
+        range: [0.0, 1.0]
+      motion_language_consistency:
+        range: [0.0, 1.0]
+      acoustic_language_consistency:
+        range: [0.0, 1.0]
+      editorial_language_consistency:
+        range: [0.0, 1.0]
+      narrative_voice_consistency:
+        range: [0.0, 1.0]
+      structural_consistency:
+        range: [0.0, 1.0]
+      creative_variance_health:
+        range: [0.0, 1.0]
+      unexplained_variance:
+        range: [0.0, 1.0]
+      cross_artifact_drift:
+        range: [0.0, 1.0]
+      evidence_refs:
+      critic_result_refs:
+      deterministic_check_refs:
+      confidence:
+      measured_at:
+      coherence_contract_ref:
+      critic_calibration_refs:
+  hard_rule: >
+    No individual scalar field may independently certify project acceptance.
+# =====================================================================
+# 11. OPTIONAL STUDIO COHERENCE INDEX
+# =====================================================================
+studio_coherence_index:
+  StudioCoherenceIndex:
+    status:
+      EXPERIMENTAL
+    purpose:
+      - trend monitoring
+      - regression detection
+      - dashboarding
+      - phase comparison
+    prohibited_use:
+      - sole PASS_FAIL authority
+      - replacing dimension-level evidence
+      - replacing creator review when creator intentionally revises taste
+    aggregation_function:
+      status: UNCALIBRATED
+    requirement_before_ACTIVE:
+      - validate_against_human_and_creator_coherence_judgments
+      - measure sensitivity
+      - measure stability
+      - test Goodhart vulnerability
+# =====================================================================
+# 12. COHERENCE MEASUREMENT SCOPE
+# =====================================================================
+coherence_scope:
+  supported:
+    SHOT_PAIR:
+      question: >
+        Do adjacent shots remain visually/performance-wise coherent?
+    SCENE:
+      question: >
+        Does the scene feel authored under one cinematic/performance language?
+    SEQUENCE:
+      question: >
+        Does the sequence preserve stylistic and emotional continuity?
+    EPISODE:
+      question: >
+        Does the full film behave like one creative product?
+    CROSS_EPISODE:
+      question: >
+        Does recurring series identity persist?
+    ASSET_FAMILY:
+      question: >
+        Do representations remain recognizably bound to the same identity?
+    PROJECT_PORTFOLIO:
+      question: >
+        Do project-level conventions remain coherent over large production volume?
+# =====================================================================
+# 13. CROSS-ARTIFACT COHERENCE CRITIC
+# =====================================================================
+cross_artifact_critic:
+  CrossArtifactCoherenceCritic:
+    owner:
+      AutonomousQC: true
+    inputs:
+      - CreativeInvariantProfile
+      - CreatorModel
+      - selected artifact set
+      - AssetIdentity refs
+      - World expected-state refs
+      - optional previous certified baseline
+      - critic calibration profile
+    outputs:
+      - StudioCoherenceVector
+      - CoherenceViolation list
+      - intentional_variance_candidates
+      - drift observations
+    required_behavior:
+      - compare artifacts against each other
+      - compare artifacts against project invariants
+      - distinguish hard inconsistency from stylistic variation
+      - identify dimensions with unexplained divergence
+# =====================================================================
+# 14. COHERENCE VIOLATION
+# =====================================================================
+coherence_violation:
+  CoherenceViolation:
+    fields:
+      violation_id:
+      code:
+        examples:
+          - COHERENCE.VISUAL_STYLE_DRIFT
+          - COHERENCE.CHARACTER_IDENTITY_DRIFT
+          - COHERENCE.CAMERA_LANGUAGE_DRIFT
+          - COHERENCE.PERFORMANCE_LANGUAGE_DRIFT
+          - COHERENCE.ACOUSTIC_LANGUAGE_DRIFT
+          - COHERENCE.EDITORIAL_DRIFT
+          - COHERENCE.NARRATIVE_VOICE_DRIFT
+          - COHERENCE.UNEXPLAINED_VARIANCE
+      scope:
+      artifact_refs:
+      expected_invariant_refs:
+      observed_variance:
+      severity:
+      hard:
+      confidence:
+      evidence_refs:
+      intentional_deviation_possible:
+      root_cause_hints:
+      owning_repair_authority:
+# =====================================================================
+# 15. COHERENCE BASELINE
+# =====================================================================
+coherence_baseline:
+  CoherenceBaseline:
+    fields:
+      baseline_id:
+      project_id:
+      CreativeInvariantProfile_ref:
+      certified_artifact_refs:
+      exemplar_refs:
+      dimensional_statistics:
+      acceptable_variance_ranges:
+      generated_at:
+      source_project_revision:
+      certificate_refs:
+  purpose: >
+    Establish a versioned reference distribution for project expression without
+    assuming every future artifact should be identical to early examples.
+  baseline_updates:
+    require:
+      - accepted CreativeDeviationProposal
+      - new creator revision
+      - explicit project convention promotion
+# =====================================================================
+# 16. COHERENCE DRIFT
+# =====================================================================
+coherence_drift:
+  StudioCoherenceDriftObservation:
+    fields:
+      observation_id:
+      baseline_ref:
+      current_measurement_ref:
+      drift_dimensions:
+      drift_magnitude:
+      affected_scope:
+      affected_artifact_refs:
+      probable_sources:
+        allowed:
+          - CREATOR_REVISION
+          - WORLD_CHANGE
+          - ASSET_DRIFT
+          - MODEL_VERSION_CHANGE
+          - CONTEXT_LOSS
+          - PRODUCTION_STRATEGY_CHANGE
+          - CRITIC_DRIFT
+          - COGNITIVE_POLICY_CHANGE
+          - INTENTIONAL_DEVIATION
+          - UNKNOWN
+      confidence:
+      evidence_refs:
+      corrective_action_required:
+      emitted_signal_ref:
+        nullable: true
+# =====================================================================
+# 17. STUDIO COHERENCE SIGNAL
+# =====================================================================
+coherence_signal:
+  signal_types:
+    - COHERENCE.DRIFT_DETECTED
+    - COHERENCE.CRITICAL_INVARIANT_DRIFT
+    - COHERENCE.CHARACTER_IDENTITY_DRIFT
+    - COHERENCE.CREATIVE_LANGUAGE_DRIFT
+    - COHERENCE.CRITIC_CALIBRATION_DRIFT
+    - COHERENCE.CONTEXT_INVARIANT_LOST
+    - COHERENCE.DUPLICATE_IDENTITY_RISK
+    - COHERENCE.INTENTIONAL_DEVIATION_CANDIDATE
+    - COHERENCE.CANON_OSIFICATION_RISK
+  uses_contract:
+    WorldSignal_or_RuntimeSignal: true
+  consumers:
+    - 02 CognitiveExecutive
+    - 02a control plane
+    - 03 CreativeIntelligence
+    - 06 ProductionModel
+    - 07 AutonomousQC
+# =====================================================================
+# 18. COHERENCE CONTROL LOOP
+# =====================================================================
+coherence_control_loop:
+  flow: |
+    certified artifact corpus
+            ↓
+    cross-artifact measurement
+            ↓
+    StudioCoherenceVector
+            ↓
+    compare with CoherenceBaseline
+            ↓
+    DriftObservation
+            ↓
+    COHERENCE.* signal
+            ↓
+    owning subsystem reasoning
+            ↓
+    bounded corrective action
+            ↓
+    regenerate / recondition / re-evaluate
+            ↓
+    AutonomousQC
+            ↓
+    new certified state
+  possible_actuators:
+    CreativeIntelligence:
+      - recompile relevant invariant projection
+      - clarify CreativeInvariantProfile
+      - evaluate intentional deviation
+    PolycognitiveRuntime:
+      - deepen reasoning
+      - broaden evidence
+      - reduce interpretation freedom
+      - request heterogeneous panel
+    ProductionModel:
+      - strengthen reference conditioning
+      - select more identity-reliable strategy
+      - increase invariant enforcement strength
+      - change implementation binding
+    AutonomousQC:
+      - increase cross-artifact inspection depth
+      - invoke additional calibrated critic
+      - require sequence/episode-level revalidation
+  forbidden_actuators:
+    - rewrite CreatorModel
+    - rewrite World truth
+    - silently normalize creative novelty
+    - global regenerate_without_dependency_evidence
+# =====================================================================
+# 19. CREATIVE DEVIATION
+# =====================================================================
+creative_deviation:
+  CreativeDeviationProposal:
+    object_class: DECISION
+    owner:
+      evaluation: 03
+      acceptance_effect: 07
+    fields:
+      proposal_id:
+      project_id:
+      affected_artifact_refs:
+      affected_invariant_refs:
+      observed_deviation:
+      proposed_creative_value:
+      narrative_or_emotional_reason:
+      scope:
+        enum:
+          - SHOT_LOCAL
+          - SCENE_LOCAL
+          - SEQUENCE_LOCAL
+          - EPISODE_LOCAL
+          - PROJECT_CONVENTION
+          - SERIES_CONVENTION
+      intentional:
+      reversible:
+      creator_alignment:
+      World_compatibility:
+      risks:
+      downstream_impact:
+      decision:
+        enum:
+          - PENDING
+          - REJECT_AS_DRIFT
+          - ACCEPT_LOCAL_EXCEPTION
+          - PROMOTE_PROJECT_CONVENTION
+          - PROMOTE_SERIES_CONVENTION
+      rationale_ref:
+      evidence_refs:
+      created_at:
+# =====================================================================
+# 20. DEVIATION LIFECYCLE
+# =====================================================================
+deviation_lifecycle:
+  flow: |
+    coherence deviation detected
+           ↓
+    accidental?
+       ┌───┴────┐
+      YES      NO/UNCERTAIN
+       │           │
+       ▼           ▼
+    repair     CreativeDeviationProposal
+                   ↓
+            creative evaluation
+                   ↓
+        ┌──────────┼────────────┐
+        ▼          ▼            ▼
+      reject   local exception  promote convention
+        │          │            │
+        ▼          ▼            ▼
+      repair     record       new invariant version
+  promotion_requires:
+    - CreatorModel alignment
+    - no constitutional conflict
+    - no World contradiction
+    - AutonomousQC validation
+    - provenance
+    - versioned CreativeInvariantProfile update
+  hard_rule: >
+    Accepted deviation never retroactively makes earlier failures valid unless
+    the relevant authority intentionally revisions project semantics.
+# =====================================================================
+# 21. CANON OSSIFICATION
+# =====================================================================
+canon_ossification:
+  definition: >
+    Coherence enforcement becomes so restrictive that legitimate project
+    evolution, contrast, or creative surprise is systematically rejected.
+  CanonOssificationObservation:
+    fields:
+      observation_id:
+      project_id:
+      deviation_rejection_rate:
+      repeated_novelty_rejection:
+      accepted_variance_trend:
+      creator_feedback_refs:
+      confidence:
+  emits:
+    COHERENCE.CANON_OSIFICATION_RISK
+  possible_response:
+    - inspect overconstrained invariants
+    - identify advisory constraints incorrectly hardened
+    - expand CreativeOpenDimensions
+    - recalibrate cross-artifact critic
+  forbidden_response:
+    - automatically loosen explicit CreatorLocks
+# =====================================================================
+# 22. CRITIC CALIBRATION PROFILE
+# =====================================================================
+critic_calibration:
+  CriticCalibrationProfile:
+    object_class: EVIDENCE
+    fields:
+      calibration_id:
+      critic_implementation_ref:
+      critic_model_family:
+      exact_model_version:
+      adapter_version:
+      critic_type:
+      rubric_ref:
+      rubric_version:
+      prompt_template_digest:
+      WorkspaceView_policy_ref:
+      calibration_dataset_ref:
+      sample_count:
+      metrics:
+        overall_agreement:
+        within_prompt_correlation:
+          nullable: true
+        top1_recovery:
+          nullable: true
+        tie_rate:
+          nullable: true
+        Cohen_kappa:
+          nullable: true
+      bias_estimates:
+        position_bias:
+          nullable: true
+        verbosity_bias:
+          nullable: true
+        self_preference_bias:
+          nullable: true
+        format_bias:
+          nullable: true
+      calibration_drift:
+        nullable: true
+      valid_from:
+      valid_until:
+        nullable: true
+      confidence:
+      evidence_refs:
+  rule: >
+    Critic score without calibration context is weaker evidence than a score from
+    a pinned and calibrated critic contract.
+# =====================================================================
+# 23. CRITIC CONTRACT
+# =====================================================================
+critic_contract:
+  CriticContract:
+    fields:
+      critic_contract_id:
+      implementation_ref:
+      exact_model_version:
+      rubric_ref:
+      rubric_version:
+      prompt_template_digest:
+      WorkspaceView_policy_ref:
+      calibration_profile_ref:
+      output_schema_ref:
+      generated_artifact_family_overlap_policy:
+      accepted_bias_limits:
+      lifecycle:
+        enum:
+          - CANDIDATE
+          - SHADOW
+          - CANARY
+          - ACTIVE
+          - DEGRADED
+          - RETIRED
+  digest:
+    required: true
+# =====================================================================
+# 24. CRITIC MIGRATION
+# =====================================================================
+critic_migration:
+  trigger:
+    - model_version_change
+    - rubric_change
+    - prompt_template_change
+    - WorkspaceView_policy_change
+    - detected_calibration_drift
+  lifecycle: |
+    old ACTIVE critic
+          ↓
+    new critic CANDIDATE
+          ↓
+    replay calibration set
+          ↓
+    compare score distribution / agreement
+          ↓
+    SHADOW
+          ↓
+    CANARY
+          ↓
+    ACTIVE
+  silent_alias_upgrade:
+    forbidden: true
+# =====================================================================
+# 25. JUDGE BIAS MITIGATION
+# =====================================================================
+judge_bias_mitigation:
+  position_bias:
+    mitigations:
+      - randomized_candidate_order
+      - reverse_order_recheck_for_high_impact_pairwise
+  verbosity_bias:
+    mitigations:
+      - rubric_decomposition
+      - explicit_relevance_and_economy_criterion
+      - length_matched_calibration_examples
+  self_preference:
+    mitigations:
+      - EpistemicDiversityPolicy
+      - cross_family_critic_when_high_impact
+      - deterministic_oracle_when_available
+  format_bias:
+    mitigations:
+      - normalize_presentation_where_possible
+      - calibration_across_formats
+  calibration_drift:
+    mitigations:
+      - exact_version_pinning
+      - periodic_replay
+      - migration_contract
+  majority_vote:
+    default: false
+  rule: >
+    Critic disagreement should be adjudicated using evidence quality,
+    independence, calibration, and authority rather than raw vote count.
+# =====================================================================
+# 26. QC DIVERSITY REQUIREMENT
+# =====================================================================
+QC_diversity:
+  QCEpistemicDiversityRequirement:
+    fields:
+      requirement_id:
+      artifact_scope:
+      minimum_independent_critic_paths:
+      generation_family_overlap_limit:
+        nullable: true
+      deterministic_oracle_required_when_available:
+      cross_family_required:
+      different_context_view_required:
+      different_critic_objective_required:
+      applies_when:
+        - high_impact
+        - flagship_quality
+        - repeated_failure
+        - critic_disagreement
+        - reveal_or_ending
+        - final_master
+  integration:
+    owner_runtime:
+      02a.EpistemicDiversityPolicy
+# =====================================================================
+# 27. CONTEXT INVARIANT MANIFEST
+# =====================================================================
+context_invariants:
+  ContextInvariantManifest:
+    owner_runtime:
+      02a
+    fields:
+      manifest_id:
+      WorkspaceView_ref:
+      cognitive_scope_ref:
+      World_revision_ref:
+      required_invariant_refs:
+      required_CreativeLock_refs:
+      required_World_fact_refs:
+      required_asset_identity_refs:
+      required_acceptance_contract_refs:
+      required_authority_policy_refs:
+      required_fact_digests:
+      invariant_set_digest:
+      generated_at:
+      expires_at:
+        nullable: true
+# =====================================================================
+# 28. CONTEXT REHYDRATION CHECK
+# =====================================================================
+context_rehydration:
+  ContextInvariantCheck:
+    fields:
+      check_id:
+      manifest_ref:
+      resulting_WorkspaceView_ref:
+      present_refs:
+      missing_refs:
+      changed_refs:
+      expected_digest:
+      actual_digest:
+      result:
+        enum:
+          - PASS
+          - REHYDRATE
+          - FAIL
+      evidence_refs:
+  required_after:
+    - context_compaction
+    - fiber_resume
+    - major_World_revision_change
+    - long_running_cognitive_chain
+    - critic_context_construction
+  response_on_missing_binding_invariant:
+    - emit COHERENCE.CONTEXT_INVARIANT_LOST
+    - rehydrate from canonical source
+    - block consequential reasoning until resolved
+# =====================================================================
+# 29. LONG-TAIL CONSTRAINT RETRIEVAL
+# =====================================================================
+long_tail_constraints:
+  principle: >
+    Rare constraints should be retrieved by relevance and scope rather than
+    compressed permanently into generic summaries.
+  retrieval_keys:
+    - WorldEntity
+    - location
+    - prop
+    - shot type
+    - narrative device
+    - camera language
+    - performance condition
+    - sound condition
+    - project anti-target
+  example:
+    >
+    A rare creator rule affecting mirrors should be injected only into decisions
+    involving mirrors, rather than occupying every shot-generation context.
+# =====================================================================
+# 30. CAPABILITY VIEW
+# =====================================================================
+capability_view:
+  CapabilityView:
+    owner_runtime:
+      02a
+    source_authority:
+      05.SelfModel
+    fields:
+      view_id:
+      cognitive_scope_ref:
+      AuthorityEnvelope_ref:
+      task_type:
+      allowed_capability_refs:
+      allowed_implementation_refs:
+      denied_capability_refs:
+      selection_constraints:
+      freshness:
+      SelfModel_snapshot_ref:
+      generated_at:
+      digest:
+  purpose: >
+    Expose only relevant, authorized capabilities to a cognitive fiber.
+  compile_from:
+    - SelfModel
+    - CognitiveScope
+    - AuthorityEnvelope
+    - current task
+    - implementation health
+    - privacy requirements
+  does_not:
+    - choose ProductionStrategy
+    - redefine capability truth
+# =====================================================================
+# 31. TOOL / CAPABILITY OVERLOAD
+# =====================================================================
+capability_overload:
+  risk:
+    >
+    Large implementation/tool universes can reduce selection accuracy and increase
+    irrelevant cognitive context.
+  mitigation:
+    - dynamic CapabilityView
+    - task-conditioned filtering
+    - authority-conditioned filtering
+    - capability taxonomy
+    - semantic search only after structural filtering
+  metric:
+    - capability_candidates_exposed_per_invocation
+    - capability_selection_error_rate
+# =====================================================================
+# 32. PERSISTENT CREATION REGISTRY
+# =====================================================================
+creation_registry:
+  PersistentCreationRegistry:
+    purpose: >
+      Prevent duplicate persistent entities, asset families, schemas,
+      capabilities, named conventions, and other durable objects.
+    registry_domains:
+      - WorldEntity
+      - AssetFamily
+      - schema
+      - capability
+      - implementation abstraction
+      - CreativeInvariant
+      - recurring location
+      - recurring prop
+  creation_protocol:
+    step_1:
+      action: exact_identity_resolution
+    step_2:
+      action: canonical_registry_search
+    step_3:
+      action: semantic_near_duplicate_search
+    step_4:
+      condition: unresolved
+      action: create_new_identity
+  exact_before_fuzzy:
+    required: true
+# =====================================================================
+# 33. CREATION DECISION
+# =====================================================================
+creation_decision:
+  PersistentCreationDecision:
+    fields:
+      decision_id:
+      proposed_type:
+      proposed_identity:
+      exact_match_refs:
+      semantic_candidate_refs:
+      action:
+        enum:
+          - REUSE_EXISTING
+          - CREATE_VARIANT
+          - LINK_ALIAS
+          - CREATE_NEW
+          - ESCALATE_IDENTITY_CONFLICT
+      rationale:
+      confidence:
+      provenance_refs:
+  required_before:
+    - persistent_WorldEntity_creation
+    - reusable_AssetFamily_creation
+    - new_shared_schema_creation
+# =====================================================================
+# 34. DOCTRINE / CONVENTION STATE
+# =====================================================================
+doctrine:
+  CertifiedProjectConvention:
+    object_class: DERIVED_MODEL
+    fields:
+      convention_id:
+      project_id:
+      version:
+      description:
+      scope:
+      authority_tier:
+      source_refs:
+      mechanical_representation:
+        nullable: true
+      exemplar_refs:
+      enforcement_strength:
+      lifecycle:
+        enum:
+          - PROPOSED
+          - ACTIVE
+          - SUPERSEDED
+          - RETIRED
+      valid_from:
+      valid_to:
+        nullable: true
+  staleness_rule: >
+    Convention conflicting with higher-authority current state becomes stale and
+    must not override it.
+# =====================================================================
+# 35. DOCTRINE RECONCILIATION
+# =====================================================================
+doctrine_reconciliation:
+  triggers:
+    - CreatorModel_revision
+    - CreativeDeviationPromotion
+    - World canonical change affecting representation
+    - repeated accepted exception
+  output:
+    DoctrineReconciliationResult
+  DoctrineReconciliationResult:
+    fields:
+      result_id:
+      affected_convention_refs:
+      actions:
+        allowed:
+          - KEEP
+          - UPDATE
+          - SUPERSEDE
+          - RETIRE
+      evidence_refs:
+      generated_at:
+# =====================================================================
+# 36. COHERENCE ROOT CAUSE
+# =====================================================================
+coherence_root_cause:
+  CoherenceRootCauseAnalysis:
+    fields:
+      analysis_id:
+      DriftObservation_ref:
+      root_cause_candidates:
+        type: list[CoherenceRootCauseCandidate]
+      selected_root_cause_ref:
+        nullable: true
+      confidence:
+      evidence_refs:
+  CoherenceRootCauseCandidate:
+    fields:
+      cause_type:
+        enum:
+          - CREATIVE_INVARIANT_MISSING
+          - CONTEXT_INVARIANT_LOSS
+          - ASSET_IDENTITY_DRIFT
+          - MODEL_VERSION_REGRESSION
+          - PRODUCTION_STRATEGY_VARIANCE
+          - COGNITIVE_POLICY_VARIANCE
+          - CRITIC_CALIBRATION_DRIFT
+          - WORLD_STATE_MISPROJECTION
+          - INTENTIONAL_DEVIATION
+          - UNKNOWN
+      affected_refs:
+      probability:
+      repair_owner:
+# =====================================================================
+# 37. COHERENCE REPAIR PLAN
+# =====================================================================
+coherence_repair:
+  CoherenceRepairPlan:
+    fields:
+      plan_id:
+      root_cause_ref:
+      affected_scope:
+      repair_owner:
+      repair_actions:
+      preserve_refs:
+      invalidate_refs:
+      revalidate_refs:
+      expected_coherence_gain:
+      expected_cost:
+      confidence:
+  example_actions:
+    - rehydrate_missing_CreativeInvariant
+    - regenerate_local_shot_with_stronger_reference_conditioning
+    - switch_to_identity_reliable_implementation
+    - re-evaluate_with_calibrated_cross-family_critic
+    - recompile_scene_context
+    - accept_local_creative_deviation
+    - update_project_convention
+  minimum_blast_radius:
+    required: true
+# =====================================================================
+# 38. COHERENCE AND PROVENANCE
+# =====================================================================
+provenance:
+  required_paths:
+    CreativeInvariant:
+      - source CreatorModel
+      - CreativeLock
+      - exemplar
+    StudioCoherenceMeasurement:
+      - artifact set
+      - baseline
+      - critic contracts
+      - deterministic checks
+    DriftObservation:
+      - measurement
+      - prior baseline
+    CreativeDeviationProposal:
+      - deviation
+      - affected invariant
+      - acceptance decision
+    CriticCalibrationProfile:
+      - calibration dataset
+      - implementation version
+      - rubric
+      - prompt template
+    ContextInvariantCheck:
+      - manifest
+      - WorkspaceView
+    PersistentCreationDecision:
+      - registry query evidence
+  emits_to:
+    09_quantum_project_provenance_dependency_graph_build_spec.yaml
+# =====================================================================
+# 39. COHERENCE ARTIFACT LIFECYCLE
+# =====================================================================
+artifact_lifecycle:
+  CreativeInvariantProfile:
+    owner: 03
+    immutable_versions: true
+  CoherenceBaseline:
+    owner: 07
+    immutable_versions: true
+  StudioCoherenceVector:
+    owner: 07
+    class: EVIDENCE
+  DriftObservation:
+    owner: 07
+    class: EVIDENCE
+  CreativeDeviationProposal:
+    owner: 03
+    class: DECISION
+  CriticCalibrationProfile:
+    owner: 07
+    class: EVIDENCE
+  ContextInvariantManifest:
+    owner: 02a
+    class: SPECIFICATION
+  CapabilityView:
+    owner: 02a
+    class: PROJECTION
+  PersistentCreationDecision:
+    owner: relevant_domain
+    class: DECISION
+# =====================================================================
+# 40. DETERMINISTIC ENFORCEMENT LADDER
+# =====================================================================
+enforcement_ladder:
+  L1_SCHEMA_AND_TYPES:
+    preferred_for:
+      - exact structures
+      - enums
+      - IDs
+      - required refs
+  L2_EXACT_RULES:
+    preferred_for:
+      - World facts
+      - identity anchors
+      - allowed values
+      - duration
+      - color tokens where exact
+      - naming/registry rules
+  L3_STRUCTURAL_CONSTRAINTS:
+    preferred_for:
+      - composition zones
+      - required scene structure
+      - asset bindings
+      - required information visibility
+  L4_REFERENCE_CONDITIONING:
+    preferred_for:
+      - visual identity
+      - style texture
+      - voice identity
+      - motion language
+  L5_RUBRIC_BASED_QC:
+    preferred_for:
+      - performance quality
+      - cinematic language
+      - emotional effect
+      - style fidelity
+  L6_CROSS_ARTIFACT_COHERENCE:
+    preferred_for:
+      - studio-level drift
+      - narrative voice
+      - sequence consistency
+  L7_CREATOR_REVIEW:
+    status:
+      optional_creative_authority: true
+      routine_production_requirement: false
+  rule: >
+    Use the lowest deterministic layer capable of correctly enforcing the property.
+# =====================================================================
+# 41. COHERENCE CHECK TIMING
+# =====================================================================
+check_timing:
+  pre_generation:
+    use:
+      - CreativeInvariantProfile projection
+      - ContextInvariantManifest
+      - CapabilityView
+      - identity registry
+  candidate_artifact:
+    use:
+      - deterministic invariant checks
+      - ordinary specialist QC
+  shot_certification:
+    use:
+      - local style/identity coherence
+  scene_certification:
+    use:
+      - cross-shot coherence
+  sequence_certification:
+    use:
+      - cross-scene coherence
+  episode_certification:
+    use:
+      - full StudioCoherenceVector
+  post_release_or_series:
+    use:
+      - cross-episode coherence trend
+# =====================================================================
+# 42. COHERENCE BUDGET
+# =====================================================================
+coherence_budget:
+  principle: >
+    Coherence context consumes reasoning bandwidth and should be projected by
+    relevance rather than injected indiscriminately.
+  CoherenceContextBudget:
+    fields:
+      max_invariant_refs:
+      max_exemplar_refs:
+      max_baseline_artifact_refs:
+      max_context_units:
+      hard_invariants_reserved_capacity:
+      long_tail_retrieval_budget:
+  projection_priority:
+    order:
+      - hard CreatorLocks
+      - current World facts
+      - current AssetIdentity anchors
+      - shot/scene-specific CreativeInvariants
+      - rare triggered long-tail invariants
+      - high-value exemplars
+      - broad project doctrine
+# =====================================================================
+# 43. SCALING MODEL
+# =====================================================================
+scaling:
+  decisions_10:
+    strategy:
+      - direct cross-artifact comparison feasible
+  decisions_100:
+    strategy:
+      - hierarchical scene/sequence baselines
+      - representative exemplars
+  decisions_1000:
+    strategy:
+      - hierarchical coherence projections
+      - drift sampling
+      - targeted full comparison on signal
+  decisions_10000:
+    strategy:
+      - multi-level baselines
+      - incremental statistics
+      - entity/style-specific indexes
+      - event-driven drift detection
+  scaling_rule: >
+    Coherence evaluation must not require O(N^2) comparison of every artifact
+    pair once production reaches large scale.
+# =====================================================================
+# 44. HIERARCHICAL COHERENCE
+# =====================================================================
+hierarchical_coherence:
+  levels:
+    - artifact
+    - shot
+    - scene
+    - sequence
+    - episode
+    - series
+    - universe_expression
+  aggregation:
+    - lower-level measurements feed higher-level summaries
+    - hard violations propagate directly
+    - soft dimensions use calibrated aggregation
+    - higher-level critic may inspect raw evidence on demand
+# =====================================================================
+# 45. CRITIC CALIBRATION DATA
+# =====================================================================
+calibration_data:
+  MVP:
+    allow:
+      - curated internal reference examples
+      - synthetic positive/negative fixtures
+      - explicit controlled distortions
+  later:
+    include:
+      - creator-labeled examples
+      - expert-labeled examples
+      - viewer-labeled examples
+  required_fixture_classes:
+    - correct_style
+    - subtle_style_drift
+    - severe_style_drift
+    - intentional_local_exception
+    - character_identity_drift
+    - camera_language_drift
+    - acoustic_drift
+    - high_quality_but_wrong_style
+# =====================================================================
+# 46. CONTROLLED COHERENCE FAILURE TEST
+# =====================================================================
+controlled_failure_test:
+  mandatory_MVP:
+    true
+  fixture:
+    baseline_project:
+      style:
+        camera: restrained_motivated
+        lighting: amber_emergency
+        character_performance: restrained
+        animation: stylized
+    injected_artifact:
+      deviations:
+        camera: hyperactive_floating
+        lighting: blue_neon
+        performance: exaggerated
+        character_identity: still_correct
+        World_continuity: technically_correct
+  expected:
+    - ordinary World continuity may PASS
+    - technical QC may PASS
+    - StudioCoherence evaluation must detect drift
+    - violation classified as creative_language drift
+    - root cause must not be WorldModel
+    - minimum-scope repair recommended
+# =====================================================================
+# 47. INTENTIONAL DEVIATION TEST
+# =====================================================================
+intentional_deviation_test:
+  fixture:
+    project_camera_language:
+      default: static_or_restrained
+    climax:
+      intentional_camera_move: violent_handheld
+    narrative_reason:
+      >
+      A singular loss-of-control moment is intentionally expressed through
+      destabilized camera language.
+  expected:
+    - deviation detected
+    - CreativeDeviationProposal created
+    - evaluated against CreatorModel
+    - accepted as local exception if justified
+    - no project-wide style repair
+    - exception provenance retained
+# =====================================================================
+# 48. CRITIC DRIFT TEST
+# =====================================================================
+critic_drift_test:
+  setup:
+    critic_v1:
+      lifecycle: ACTIVE
+    critic_v2:
+      model_version_changed: true
+  run:
+    - replay_same_calibration_fixture_set
+  if:
+    score_distribution_shift_exceeds_threshold: true
+  expected:
+    - critic_v2 remains SHADOW_or_CANARY
+    - emit COHERENCE.CRITIC_CALIBRATION_DRIFT
+    - production quality trend does not silently use mixed metrics
+# =====================================================================
+# 49. CONTEXT LOSS TEST
+# =====================================================================
+context_loss_test:
+  required_invariant:
+    >
+    Receiver must remain in Aria's right hand after WorldEvent E17.
+  before_compaction:
+    ContextInvariantManifest:
+      contains_required_fact: true
+  compaction_fixture:
+    deliberately_drops_fact: true
+  expected:
+    - ContextInvariantCheck FAIL_or_REHYDRATE
+    - emit COHERENCE.CONTEXT_INVARIANT_LOST
+    - retrieve canonical fact
+    - block consequential cognition until corrected
+# =====================================================================
+# 50. DUPLICATION TEST
+# =====================================================================
+duplication_test:
+  existing:
+    persistent_prop:
+      entity_id: prop.receiver.001
+      aliases:
+        - receiver
+        - communications receiver
+  proposed_creation:
+    name: radio receiver
+  expected:
+    - exact_or_alias_registry_search
+    - semantic near-duplicate search
+    - return existing entity candidate
+    - do_not_create_duplicate_without_explicit identity decision
+# =====================================================================
+# 51. CAPABILITY VIEW TEST
+# =====================================================================
+capability_view_test:
+  cognition:
+    type: narrative_reasoning
+  full_registry:
+    implementations: 40
+  expected_CapabilityView:
+    exposes:
+      - reasoning
+      - World query
+      - memory retrieval
+      - branch simulation
+    hides:
+      - video rendering
+      - music mastering
+      - low-level storage administration
+  rule: >
+    Capability filtering should reduce cognitive routing noise without hiding
+    required capabilities.
+# =====================================================================
+# 52. OBSERVABILITY MAPPING
+# =====================================================================
+observability:
+  internal_source_of_truth:
+    - CognitiveTrace
+    - ProductionJob
+    - ExecutionReceipt
+    - QCRun
+    - StudioCoherenceMeasurement
+    - ProvenanceGraph
+  external_mapping:
+    target:
+      OpenTelemetry_compatible: true
+  suggested_span_families:
+    - quantum.cognitive.invoke
+    - quantum.cognitive.operator
+    - quantum.capability.invoke
+    - quantum.production.job
+    - quantum.qc.run
+    - quantum.coherence.measure
+    - quantum.coherence.repair
+  standard_mapping:
+    may_map_to:
+      - GenAI_agent_span
+      - model_call_span
+      - tool_call_span
+  rule: >
+    External telemetry standards are export formats, not canonical Quantum
+    semantic models.
+# =====================================================================
+# 53. COHERENCE METRICS
+# =====================================================================
+metrics:
+  invariant_metrics:
+    - hard_invariant_violation_rate
+    - structural_invariant_violation_rate
+    - CreativeInvariant_coverage
+  drift_metrics:
+    - style_drift_rate
+    - character_identity_drift_rate
+    - performance_language_drift_rate
+    - acoustic_language_drift_rate
+    - unexplained_variance_rate
+  context_metrics:
+    - ContextInvariantCheck_failure_rate
+    - rehydration_count
+    - long_tail_constraint_retrieval_rate
+  critic_metrics:
+    - critic_calibration_age
+    - critic_score_distribution_shift
+    - cross_family_disagreement
+    - critic_human_kappa_when_available
+  duplication_metrics:
+    - duplicate_persistent_object_rate
+    - registry_reuse_rate
+  deviation_metrics:
+    - deviation_detection_rate
+    - accidental_drift_rate
+    - accepted_local_exception_rate
+    - convention_promotion_rate
+  efficiency_metrics:
+    - coherence_QC_cost_per_certified_minute
+    - coherence_repair_cost
+    - unnecessary_style_regeneration_rate
+# =====================================================================
+# 54. MVP REQUIRED SUBSET
+# =====================================================================
+mvp_required_subset:
+  CreativeInvariantProfile:
+    required: true
+    minimum_dimensions:
+      - visual
+      - cinematic
+      - performance
+      - acoustic
+      - anti_targets
+  StudioCoherenceVector:
+    required_dimensions:
+      - creator_fidelity
+      - style_consistency
+      - character_identity_consistency
+      - cinematic_language_consistency
+      - performance_language_consistency
+      - acoustic_language_consistency
+      - unexplained_variance
+      - cross_artifact_drift
+  CoherenceBaseline:
+    required: true
+  CrossArtifactCoherenceCritic:
+    required: true
+  StudioCoherenceDriftObservation:
+    required: true
+  critic_calibration:
+    minimum:
+      - exact_model_version
+      - rubric_version
+      - prompt_template_digest
+      - calibration_fixture_set
+      - position_bias_test
+      - self_preference_risk_record
+  ContextInvariantManifest:
+    required: true
+  ContextInvariantCheck:
+    required_after:
+      - compaction
+      - resume
+  CapabilityView:
+    required: true
+  PersistentCreationRegistry:
+    minimum_domains:
+      - WorldEntity
+      - AssetFamily
+  CreativeDeviationProposal:
+    required: true
+  controlled_tests:
+    - coherence_failure
+    - intentional_deviation
+    - context_loss
+    - duplicate_identity
+# =====================================================================
+# 55. DEFERRED CAPABILITIES
+# =====================================================================
+deferred:
+  - globally_validated_StudioCoherenceIndex
+  - learned_coherence_governor
+  - learned_creative_invariant_extraction
+  - automatically_evolving_project_doctrine_without_QC
+  - massive_human_calibration_corpus
+  - fully_formal_information_theoretic_coherence_model
+  - CRDT_based_canonical_World_mutation
+  - automated_creator_taste_fine_tuning
+  - autonomous permanent capability creation
+# =====================================================================
+# 56. PROCEDURAL SKILL ACQUISITION ROADMAP HOOK
+# =====================================================================
+procedural_skill_acquisition:
+  status: ROADMAP_ONLY
+  target_file:
+    20_quantum_animation_studio_roadmap.yaml
+  concept: |
+    CapabilityGap
+         ↓
+    CognitiveExecutive
+         ↓
+    ProcedureSynthesis
+         ↓
+    sandboxed implementation
+         ↓
+    deterministic tests
+         ↓
+    security / QC
+         ↓
+    ReusableProcedure
+         ↓
+    SelfModel capability observation
+         ↓
+    optional implementation registry promotion
+  ReusableProcedure:
+    future_fields:
+      procedure_id:
+      capability_id:
+      implementation_artifact_ref:
+      test_suite_ref:
+      provenance_refs:
+      security_review_ref:
+      capability_evidence_ref:
+      lifecycle:
+  hard_rule: >
+    Synthesized executable procedures do not become active capabilities merely
+    because they successfully ran once.
+# =====================================================================
+# 57. ROADMAP RESEARCH PROGRAM
+# =====================================================================
+roadmap_research:
+  experiments:
+    CR-01:
+      question: >
+        Which StudioCoherenceVector dimensions best predict creator judgments
+        that a film "feels like one coherent work"?
+    CR-02:
+      question: >
+        Can cross-artifact drift be detected reliably before episode-level QC?
+    CR-03:
+      question: >
+        Which creative invariants are best expressed deterministically versus
+        through reference-conditioned QC?
+    CR-04:
+      question: >
+        How much critic diversity is required before additional judges stop
+        improving correctness?
+    CR-05:
+      question: >
+        How often does context compaction lose binding long-tail constraints?
+    CR-06:
+      question: >
+        Does dynamic CapabilityView filtering improve tool/operator selection?
+    CR-07:
+      question: >
+        How often are coherence deviations creatively desirable rather than errors?
+    CR-08:
+      question: >
+        Can an SCI-style aggregate predict project coherence without hiding
+        dimension-specific regressions?
+  activation:
+    phase:
+      - PHASE_2
+      - PHASE_3
+      - PHASE_6
+# =====================================================================
+# 58. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/coherence/
+  modules:
+    authority:
+      - precedence
+    invariants:
+      - profile
+      - invariant
+      - open_dimension
+      - compiler
+    measurement:
+      - vector
+      - baseline
+      - cross_artifact_critic
+      - optional_index
+    drift:
+      - observation
+      - detector
+      - signal
+      - root_cause
+    repair:
+      - plan
+    deviation:
+      - proposal
+      - lifecycle
+      - ossification
+    critics:
+      - calibration
+      - contract
+      - migration
+      - bias_mitigation
+      - diversity_requirement
+    context:
+      - invariant_manifest
+      - invariant_check
+      - long_tail_retrieval
+    capabilities:
+      - capability_view
+    registry:
+      - persistent_creation_registry
+      - creation_decision
+    doctrine:
+      - project_convention
+      - reconciliation
+    observability:
+      - telemetry_mapping
+      - metrics
+    roadmap:
+      - procedural_skill_contract_stub
+      - research_hooks
+# =====================================================================
+# 59. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  authority:
+    - AuthorityTier
+  creative:
+    - CreativeInvariantProfile
+    - CreativeInvariant
+    - CreativeOpenDimension
+    - CertifiedProjectConvention
+    - CreativeDeviationProposal
+  coherence:
+    - StudioCoherenceVector
+    - StudioCoherenceIndex
+    - CoherenceBaseline
+    - CoherenceViolation
+    - StudioCoherenceDriftObservation
+    - CoherenceRootCauseAnalysis
+    - CoherenceRootCauseCandidate
+    - CoherenceRepairPlan
+  critics:
+    - CriticCalibrationProfile
+    - CriticContract
+    - QCEpistemicDiversityRequirement
+  context:
+    - ContextInvariantManifest
+    - ContextInvariantCheck
+    - CoherenceContextBudget
+  capability:
+    - CapabilityView
+  registry:
+    - PersistentCreationDecision
+  doctrine:
+    - DoctrineReconciliationResult
+  future:
+    - ReusableProcedure
+# =====================================================================
+# 60. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  invariants:
+    - compile_creative_invariant_profile()
+    - resolve_invariants_for_scope()
+    - validate_hard_invariants()
+  coherence:
+    - build_coherence_baseline()
+    - measure_coherence()
+    - compare_to_baseline()
+    - detect_drift()
+    - analyze_coherence_root_cause()
+  deviation:
+    - propose_creative_deviation()
+    - evaluate_deviation()
+    - promote_convention()
+  critics:
+    - calibrate_critic()
+    - validate_critic_contract()
+    - compare_critic_versions()
+    - request_QC_diversity()
+  context:
+    - compile_context_invariant_manifest()
+    - verify_context_invariants()
+    - rehydrate_missing_invariants()
+  capability:
+    - compile_capability_view()
+  registry:
+    - resolve_persistent_identity()
+    - search_semantic_duplicates()
+    - decide_persistent_creation()
+  doctrine:
+    - reconcile_project_conventions()
+# =====================================================================
+# 61. TESTS
+# =====================================================================
+tests:
+  unit:
+    - AuthorityTier_ordering
+    - CreativeInvariant_validation
+    - hard_invariant_noncompensation
+    - StudioCoherenceVector_validation
+    - critic_contract_digest
+    - ContextInvariant_digest
+    - CapabilityView_filtering
+    - exact_registry_before_semantic_search
+  property:
+    - coherence_measurement_never_mutates_CreatorModel
+    - coherence_measurement_never_mutates_World
+    - StudioCoherenceIndex_never_sole_acceptance_authority
+    - accepted_local_deviation_does_not_auto_promote_project_convention
+    - lower_authority_convention_never_overrides_creator_lock
+    - stale_critic_contract_not_used_for_high_stakes_QC
+    - missing_context_invariant_blocks_consequential_reasoning
+    - exact_registry_match_prevents_duplicate_creation
+    - open_creative_dimension_not_accidentally_hardened
+  negative:
+    - generic_photorealism_scored_high_despite_explicit_retro_anti_target_rejected
+    - model_alias_swap_without_recalibration_rejected
+    - critic_same_family_consensus_treated_as_full_independence_rejected
+    - creative_deviation_repaired_without_evaluating_intent_rejected
+    - context_compaction_drops_lock_and_execution_continues_rejected
+    - SCI_only_PASS_rejected
+    - duplicate_WorldEntity_created_after_exact_registry_hit_rejected
+  integration:
+    - CreatorModel_to_CreativeInvariantProfile
+    - CreativeInvariantProfile_to_ProductionIntent
+    - CreativeInvariantProfile_to_AutonomousQC
+    - cross_artifact_QC_to_CoherenceSignal
+    - CoherenceSignal_to_CognitiveExecutive
+    - DriftObservation_to_ProductionModel_repair
+    - critic_calibration_to_QC_execution
+    - ContextInvariantManifest_to_WorkspaceView
+    - CapabilityView_to_CognitiveFiber
+    - CreativeDeviationPromotion_to_new_CreativeInvariantProfile_version
+  end_to_end:
+    60_second_MVP:
+      assert:
+        - CreativeInvariantProfile exists
+        - animatic coherent
+        - final shots coherent
+        - controlled style drift detected
+        - intentional deviation handled correctly
+        - context loss detected
+        - duplicate entity prevented
+        - final episode coherence PASS
+# =====================================================================
+# 62. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: SCK-G01
+    check: supplement creates no new top-level authority
+  - id: SCK-G02
+    check: coherence distinguished from continuity and artifact quality
+  - id: SCK-G03
+    check: CreativeInvariantProfile formalized
+  - id: SCK-G04
+    check: deterministic/reference/rubric enforcement hierarchy formalized
+  - id: SCK-G05
+    check: open creative dimensions remain representable
+  - id: SCK-G06
+    check: StudioCoherenceVector is first-class
+  - id: SCK-G07
+    check: scalar coherence index remains non-authoritative
+  - id: SCK-G08
+    check: cross-artifact coherence critic exists
+  - id: SCK-G09
+    check: coherence baseline is versioned
+  - id: SCK-G10
+    check: drift observations emit signals rather than mutate authority
+  - id: SCK-G11
+    check: intentional deviation lifecycle exists
+  - id: SCK-G12
+    check: canon ossification can be detected
+  - id: SCK-G13
+    check: critic calibration contract exists
+  - id: SCK-G14
+    check: critic version migration is explicit
+  - id: SCK-G15
+    check: judge bias mitigation is formalized
+  - id: SCK-G16
+    check: QC diversity integrates with 02a
+  - id: SCK-G17
+    check: ContextInvariantManifest protects compaction/resume
+  - id: SCK-G18
+    check: CapabilityView filters implementation exposure
+  - id: SCK-G19
+    check: persistent object creation performs exact registry resolution
+  - id: SCK-G20
+    check: doctrine authority precedence is explicit
+  - id: SCK-G21
+    check: provenance complete
+  - id: SCK-G22
+    check: coherence repair uses minimum blast radius
+  - id: SCK-G23
+    check: OpenTelemetry remains export mapping rather than internal authority
+  - id: SCK-G24
+    check: procedural skill acquisition remains roadmap-only
+  - id: SCK-G25
+    check: MVP controlled coherence failure test passes
+# =====================================================================
+# 63. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  constitutional:
+    - authority precedence defined
+    - coherence_not_sameness law defined
+    - externalized creator/project taste law defined
+  creative:
+    - CreativeInvariantProfile
+    - CreativeInvariant
+    - CreativeOpenDimension
+    - intentional deviation lifecycle
+    - project convention promotion
+  measurement:
+    - StudioCoherenceVector
+    - CoherenceBaseline
+    - cross-artifact critic
+    - drift detection
+  QC:
+    - CriticCalibrationProfile
+    - CriticContract
+    - bias mitigation
+    - critic migration
+    - cross-family diversity support
+  runtime:
+    - ContextInvariantManifest
+    - compaction/re-hydration verification
+    - CapabilityView
+  identity:
+    - exact registry-first creation protocol
+    - duplicate prevention
+  control:
+    - coherence signals
+    - root-cause analysis
+    - minimum-scope repair recommendations
+  observability:
+    - coherence metrics
+    - vendor-neutral trace mapping
+  MVP:
+    - style drift fixture detected
+    - intentional deviation accepted without overrepair
+    - context-loss fixture blocked and rehydrated
+    - persistent duplicate fixture prevented
+    - final StudioCoherenceVector emitted
+  release:
+    requirement: SCK-G01_through_SCK-G25_pass
+# =====================================================================
+# 64. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    Studio coherence is a property of the joint body of work, not merely of
+    individual artifacts.
+  law_02: >
+    A thousand locally good decisions can still form one globally incoherent film.
+  law_03: >
+    Continuity, quality, creator fidelity, and studio coherence are related but
+    distinct properties.
+  law_04: >
+    Creative intent should remain explicit, versioned, queryable, and portable
+    across model providers.
+  law_05: >
+    Model weights may assist creative expression but may never become the sole
+    carrier of project identity.
+  law_06: >
+    Mechanize aesthetic constraints where they can be represented faithfully.
+  law_07: >
+    Do not turn irreducible creative judgment into fake deterministic rules.
+  law_08: >
+    Hard creative invariants are noncompensatory.
+  law_09: >
+    Project-specific open dimensions are as important as project-specific constraints.
+  law_10: >
+    Coherence means recognizable authorship, not uniformity.
+  law_11: >
+    Legitimate creative deviation must have a path to acceptance.
+  law_12: >
+    Repeated accepted deviations may evolve project convention through explicit
+    versioned promotion.
+  law_13: >
+    A coherence monitor may diagnose drift but cannot redefine creator intent.
+  law_14: >
+    A coherence signal may trigger stronger cognition or production control but
+    may not directly mutate authoritative state.
+  law_15: >
+    Studio coherence should be represented as a vector before it is reduced to
+    any scalar index.
+  law_16: >
+    Any scalar Studio Coherence Index remains experimental until calibrated
+    against human and creator judgments.
+  law_17: >
+    Critic models are measuring instruments and must themselves be calibrated.
+  law_18: >
+    Changing the measuring instrument changes the metric.
+  law_19: >
+    Critic model versions, rubrics, prompt templates, and context policies must
+    be pinned for consequential evaluation.
+  law_20: >
+    A critic should not be considered independent merely because it was invoked
+    under a different role name.
+  law_21: >
+    High-impact evaluation should seek genuinely different evidence or reasoning
+    routes when correlated failure is plausible.
+  law_22: >
+    Context compaction may remove words but may not remove binding meaning.
+  law_23: >
+    Every consequential WorkspaceView must be able to prove that its required
+    invariants survived projection and re-hydration.
+  law_24: >
+    Rare constraints should be retrieved when relevant rather than permanently
+    bloating every context.
+  law_25: >
+    Exact persistent-identity resolution precedes fuzzy duplicate detection.
+  law_26: >
+    Persistent identity must not fragment because autonomous workers chose
+    slightly different names.
+  law_27: >
+    Cognition should see the capabilities relevant to its task and authority,
+    not the entire implementation universe.
+  law_28: >
+    Project doctrine is subordinate to creator authority and canonical truth.
+  law_29: >
+    Canonical truth does not bend to preserve a stale convention.
+  law_30: >
+    Coherence repair targets the smallest causal source of divergence.
+  law_31: >
+    Correctly varied work must not be normalized simply because variation exists.
+  law_32: >
+    Canon ossification is a coherence failure just as uncontrolled drift is.
+  law_33: >
+    Observability standards may carry Quantum telemetry but cannot define
+    Quantum's internal semantics.
+  law_34: >
+    Procedural capability acquisition requires validation before capability promotion.
+  law_35: >
+    As production scales from 10 to 10,000 decisions, coherence must increasingly
+    come from structured state, selective projections, calibrated evaluation,
+    reusable identities, and authoritative invariants rather than larger prompts.
+  law_36: >
+    The goal is not to make every Quantum artifact look the same.
+  law_37: >
+    The goal is for every artifact to feel intentionally authored by the same
+    intelligent studio operating under the same project reality, creative
+    constitution, memory, and standard.

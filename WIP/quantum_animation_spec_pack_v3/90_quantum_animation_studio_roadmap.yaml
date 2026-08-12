@@ -1,0 +1,2457 @@
+metadata:
+  spec_id: quantum.animation.studio.roadmap.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: ACTIVE_ROADMAP
+  mode: STRATEGIC_EXECUTION_ROADMAP
+  title: Quantum Animation Studio Roadmap
+  scope:
+    core_architecture:
+      - 00_quantum_animation_system_architecture.yaml
+      - 01_quantum_animation_world_model_build_spec.yaml
+      - 02_quantum_polycognitive_runtime_build_spec.yaml
+      - 03_quantum_creative_intelligence_build_spec.yaml
+      - 04_quantum_audience_product_intelligence_build_spec.yaml
+      - 05_quantum_self_model_build_spec.yaml
+      - 06_quantum_production_model_build_spec.yaml
+      - 07_quantum_autonomous_qc_build_spec.yaml
+      - 08_quantum_production_engine_build_spec.yaml
+    execution_connective_tissue:
+      - 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      - 10_quantum_canonical_artifact_ir_build_spec.yaml
+      - 11_quantum_project_compiler_pipeline_build_spec.yaml
+      - 12_quantum_story_animatic_compiler_build_spec.yaml
+      - 13_quantum_asset_identity_library_build_spec.yaml
+      - 14_quantum_mvp_runtime_profile_build_spec.yaml
+      - 15_quantum_reference_implementation_contracts_build_spec.yaml
+      - 16_quantum_end_to_end_mvp_acceptance_spec.yaml
+  architectural_identity:
+    concise: >
+      Execution roadmap for evolving Quantum Animation Studio from a 60-second
+      autonomous cinematic proof into a persistent polycognitive narrative
+      intelligence capable of manufacturing long-form films, recurring series,
+      large fictional universes, and eventually multiple media forms from common
+      canonical reality.
+    long_term_identity: >
+      A polycognitive narrative intelligence that maintains a persistent
+      simulated reality and selectively renders events from that reality into media.
+    foundational_thesis: >
+      Canon is computation. Fictional reality, beings, history, relationships,
+      intentions, knowledge, production experience, and narrative opportunity
+      should become computationally addressable rather than fragmented across
+      human-maintained documents and organizational memory.
+  roadmap_question:
+    primary: >
+      What should Quantum build next, and what evidence must exist before the
+      architecture earns the right to become more complex?
+# =====================================================================
+# 1. ROADMAP PHILOSOPHY
+# =====================================================================
+roadmap_philosophy:
+  principle_01:
+    name: PROOF_BEFORE_SCALE
+    statement: >
+      No major scaling phase begins until the prior phase proves its core
+      architectural thesis empirically.
+  principle_02:
+    name: EXPERIENCE_BEFORE_GENERALIZATION
+    statement: >
+      Production scars should determine future abstractions.
+  principle_03:
+    name: NO_SPECULATION_DRIVEN_TOP_LEVEL_SUBSYSTEMS
+    statement: >
+      New top-level architecture requires evidence that responsibility cannot be
+      cleanly owned by an existing subsystem.
+  principle_04:
+    name: SCALE_ONE_AXIS_AT_A_TIME
+    statement: >
+      Runtime length, cast size, World complexity, visual quality, narrative
+      complexity, and media breadth should not all expand simultaneously.
+  principle_05:
+    name: PRESERVE_CLOSED_LOOP
+    statement: >
+      Every phase must preserve creative compilation, World truth, cognition,
+      production planning, execution, independent QC, repair, provenance, and
+      experience capture.
+  principle_06:
+    name: AUTONOMY_IS_A_HARD_CONSTRAINT
+    statement: >
+      Ordinary production may not quietly accumulate hidden human labor as
+      project complexity increases.
+  principle_07:
+    name: QUALITY_EQUALS_CREATIVE_INTENT_FIDELITY
+    statement: >
+      Scaling production cannot redefine quality as realism, technical polish,
+      or provider capability.
+  principle_08:
+    name: CANON_COMPOUNDS
+    statement: >
+      Persistent fictional worlds should become more useful as history grows,
+      not merely harder to manage.
+  principle_09:
+    name: EXPERIENCE_COMPOUNDS
+    statement: >
+      Every production should leave evidence that improves later cognition,
+      production, QC, and implementation selection.
+  principle_10:
+    name: PROVIDERS_ARE_REPLACEABLE
+    statement: >
+      Roadmap milestones are architectural/capability milestones, not vendor milestones.
+  principle_11:
+    name: MINIMUM_BLAST_RADIUS_ALWAYS
+    statement: >
+      Increasing scale must not weaken artifact isolation or surgical repair.
+  principle_12:
+    name: LOGICAL_ARCHITECTURE_BEFORE_DISTRIBUTED_INFRASTRUCTURE
+    statement: >
+      Physical distribution follows measured bottlenecks.
+  principle_13:
+    name: ROADMAP_IS_EVIDENCE_DRIVEN
+    statement: >
+      Phase transitions depend on acceptance evidence, not dates alone.
+  principle_14:
+    name: DEFERRED_DOES_NOT_MEAN_FORGOTTEN
+    statement: >
+      High-potential capabilities remain explicitly tracked without entering MVP scope.
+  principle_15:
+    name: ANIMATION_FIRST_NOT_ANIMATION_ONLY
+    statement: >
+      Animation is the first expression surface of a potentially broader
+      Autonomous Narrative Runtime, but other media remain deferred until the
+      animation loop is mature.
+# =====================================================================
+# 2. NORTH STAR
+# =====================================================================
+north_star:
+  system: QuantumAnimationAgent
+  identity: >
+    One persistent intelligence with multiple specialized cognitive processes
+    operating over a common simulated reality.
+  target_operating_loop: |
+    PERSISTENT REALITY
+         ↓
+    WORLD SIGNALS
+         ↓
+    ATTENTION / SALIENCE
+         ↓
+    COGNITIVE EXECUTIVE
+         ↓
+    SPECIALIZED COGNITION
+         ↓
+    NARRATIVE OPPORTUNITY
+         ↓
+    EVENT PROPOSALS
+         ↓
+    COUNTERFACTUAL SIMULATION
+         ↓
+    ARBITRATION / QC
+         ↓
+    WORLD EVENT COMMIT
+         ↓
+    NEW REALITY
+         ↓
+    CINEMATIC COMPILATION
+         ↓
+    PRODUCTION INTENT
+         ↓
+    SELF MODEL
+         ↓
+    PRODUCTION MODEL
+         ↓
+    PRODUCTION ENGINE
+         ↓
+    CANDIDATE MEDIA
+         ↓
+    AUTONOMOUS QC
+       ┌───┴────┐
+      FAIL     PASS
+       │         │
+       ▼         ▼
+    REPAIR      LOCK
+       │
+       └────────→ QC
+    ALL EXECUTION
+         ↓
+    PROVENANCE + EXPERIENCE
+         ↓
+    BETTER FUTURE COGNITION / PRODUCTION / QC
+# =====================================================================
+# 3. ROADMAP PHASES
+# =====================================================================
+phases:
+  # -------------------------------------------------------------------
+  # PHASE 0
+  # -------------------------------------------------------------------
+  PHASE_0:
+    name: Architecture Freeze and Build Readiness
+    objective: >
+      Convert the 00–16 architecture pack into one buildable, internally
+      consistent implementation baseline.
+    status:
+      architectural_design: substantially_complete
+      implementation: not_started_or_unproven
+    primary_work:
+      - cross-spec ownership audit
+      - schema normalization
+      - CanonicalRef normalization
+      - WorldSignal normalization
+      - authority hierarchy validation
+      - common identifier/version conventions
+      - dependency graph validation
+      - MVP feature flag mapping
+      - reference implementation selection
+      - build order extraction
+    must_resolve:
+      - exact canonical serialization strategy
+      - core structured store
+      - World graph/state backend
+      - provenance projection backend
+      - workflow/queue runtime
+      - artifact storage
+      - first reasoning implementation
+      - first multimodal QC implementation
+      - first image/video/voice/music/sound implementations
+      - deterministic media processing stack
+    explicitly_not_building:
+      - multi-region infrastructure
+      - season planner
+      - hundreds-of-character universe
+      - learned cognitive policy
+      - book compiler
+      - game runtime
+    exit_gate:
+      - specs 00_to_16 have no unresolved ownership conflict
+      - MVPReadinessCheck can theoretically resolve every required capability
+      - implementation order is acyclic
+      - all mandatory schemas have implementation owner
+  # -------------------------------------------------------------------
+  # PHASE 1
+  # -------------------------------------------------------------------
+  PHASE_1:
+    name: 60-Second Autonomous Studio Proof
+    runtime_target:
+      seconds: 60
+    governing_specs:
+      - 14_quantum_mvp_runtime_profile_build_spec.yaml
+      - 16_quantum_end_to_end_mvp_acceptance_spec.yaml
+    objective: >
+      Prove that the smallest complete Quantum studio can autonomously create,
+      critique, repair, finish, certify, and learn from one short film.
+    required_proof:
+      - creative.yaml_to_quantum.studio.yaml
+      - World genesis
+      - persistent characters
+      - reusable identity assets
+      - NarrativeOpportunity
+      - polycognitive story selection
+      - World event commit
+      - StoryPlan
+      - SceneSpecs
+      - 10_to_15 ShotSpecs
+      - WorldCoordinate per shot
+      - World-derived expected visible state
+      - World-derived expected audible state
+      - animatic
+      - animatic QC
+      - animatic.lock
+      - ProductionIntent
+      - SelfModel
+      - ProductionModel
+      - ProductionEngine
+      - multiple takes
+      - autonomous shot QC
+      - controlled continuity failure
+      - root cause
+      - surgical repair
+      - deterministic edit
+      - dialogue
+      - music
+      - Foley/SFX
+      - ambience
+      - final master
+      - master certificate
+      - master.lock
+      - complete provenance
+      - experience persisted
+    critical_test:
+      name: WRONG_REALITY_RENDERED
+      expected: |
+        World:
+          Aria.left_shoulder = damaged
+          receiver.hand = right
+          emergency_lights = amber
+        Render:
+          Aria.left_shoulder = intact
+          receiver.hand = left
+          emergency_lights = blue
+        Required:
+          FAIL
+          → root cause
+          → minimum repair
+          → new candidate
+          → PASS
+    exit_gate:
+      all_16_release_gates_pass: true
+    after_exit:
+      produce:
+        - Phase1EvidenceReport
+        - failure_taxonomy_v1
+        - actual_cost_baseline
+        - actual_latency_baseline
+        - QC_error_dataset_v1
+        - production_experience_dataset_v1
+  # -------------------------------------------------------------------
+  # PHASE 2
+  # -------------------------------------------------------------------
+  PHASE_2:
+    name: 3-Minute Narrative Continuity Proof
+    runtime_target:
+      minutes: 3
+    objective: >
+      Prove that the architecture maintains coherent psychological, causal,
+      epistemic, visual, acoustic, and production state across substantially
+      longer temporal structure.
+    scale_changes:
+      shots:
+        target: 30_to_50
+      scenes:
+        target: 5_to_10
+      characters:
+        major: 2_to_3
+      locations:
+        target: 2_to_3
+      narrative_threads:
+        primary: 1
+        secondary: 1_to_2
+    new_required_capabilities:
+      WorldModel:
+        - richer psychological state
+        - promise/obligation state
+        - longer causal chains
+        - richer relationship evolution
+        - scheduled short-duration WorldProcesses
+      story:
+        - setup_payoff_across_multiple_scenes
+        - callbacks
+        - more sophisticated reveal timing
+        - stronger audience memory targets
+      cognition:
+        - cognitive cascades
+        - explicit salience competition
+        - dynamic reasoning escalation
+        - disagreement handling
+      assets:
+        - more state variants
+        - stronger identity reference enrichment
+        - recurring environment reuse
+      QC:
+        - sequence-level QC
+        - callback/payoff verification
+        - longitudinal identity checks
+    key_experiment:
+      question: >
+        Can Quantum preserve meaningful character and narrative state over
+        30–50 shots without context drift?
+    success_metrics:
+      - no hard continuity violations in final
+      - setup/payoff traceable through provenance
+      - recurring asset reuse materially improves consistency
+      - repair remains local
+      - average unnecessary invalidation remains low
+    exit_gate:
+      - 3_minute_master_certified
+      - no_mandatory_human_production_intervention
+      - state_continuity_proven
+      - scene_level_QC_proven
+  # -------------------------------------------------------------------
+  # PHASE 3
+  # -------------------------------------------------------------------
+  PHASE_3:
+    name: 6-Minute Polycognitive Intelligence Proof
+    runtime_target:
+      minutes: 6
+    objective: >
+      Move beyond basic autonomy and demonstrate that differentiated reasoning
+      depth, operator selection, NarrativeOpportunity search, and branch
+      simulation materially improve narrative and production decisions.
+    scale_changes:
+      shots:
+        target: 60_to_100
+      major_characters:
+        target: 3_to_5
+      locations:
+        target: 3_to_5
+      narrative_threads:
+        target: 2_to_3
+    new_required_capabilities:
+      cognition:
+        - learned_or_evidence_weighted OperatorSelectionPolicy
+        - reasoning depth calibration
+        - branch portfolio pruning
+        - cognitive cascade policies
+        - cross-module disagreement analytics
+      World:
+        - richer Affordance derivation
+        - richer NarrativeOpportunity ranking
+        - typed causal counterfactual queries
+        - larger unresolved-thread set
+      story:
+        - multi-stage escalation
+        - subplots
+        - character-specific arcs
+        - stronger dramatic irony
+      production:
+        - strategy experience influencing planning
+        - cost_per_certified_artifact optimization
+        - more sophisticated fallback portfolios
+      QC:
+        - stronger hierarchical evaluation
+        - failure-pattern retrieval
+        - calibrated critic ensembles
+    required_experiment:
+      compare:
+        A:
+          reasoning_policy: fixed
+        B:
+          reasoning_policy: adaptive
+      measure:
+        - QC pass rate
+        - story quality
+        - inference cost
+        - repair frequency
+        - decision latency
+    core_question: >
+      Does Quantum actually benefit from thinking harder when consequences
+      justify thinking harder?
+    exit_gate:
+      - adaptive_reasoning_outperforms_or_matches_fixed_at_lower_cost
+      - 6_minute_master_certified
+      - cognitive traces produce useful OperatorExperience
+  # -------------------------------------------------------------------
+  # PHASE 4
+  # -------------------------------------------------------------------
+  PHASE_4:
+    name: 12-Minute Episode Manufacturing Proof
+    runtime_target:
+      minutes: 12
+    objective: >
+      Demonstrate that Quantum can operate as a genuine autonomous production
+      studio over hundreds of shots.
+    scale_changes:
+      shots:
+        target: 120_to_220
+      major_characters:
+        target: 4_to_8
+      locations:
+        target: 5_to_10
+      runtime_concurrency:
+        high: true
+    new_required_capabilities:
+      World:
+        - concurrent WorldProcesses
+        - scheduled events
+        - interruptions
+        - simultaneous effects
+        - richer temporal addressing
+      production:
+        - critical-path planning
+        - robust backpressure
+        - large-scale provider quotas
+        - richer asset build/reuse decisions
+        - hierarchical manifests
+      engine:
+        - hundreds_to_thousands_of_jobs
+        - strong checkpoint/restart
+        - resource-aware scheduling
+        - robust provider reconciliation
+      QC:
+        - shot
+        - scene
+        - sequence
+        - episode
+        - master
+      provenance:
+        - large dependency graph
+        - efficient blast-radius analysis
+    flagship_test:
+      scenario: >
+        One late canonical change should invalidate only the smallest affected
+        dependency closure across a 150+ shot episode.
+    exit_gate:
+      - certified_12_minute_episode
+      - hundreds_of_shots
+      - no_global_rebuild_on_local_failure
+      - accepted_work_survives_restarts
+      - cost_and_latency_observable_end_to_end
+  # -------------------------------------------------------------------
+  # PHASE 5
+  # -------------------------------------------------------------------
+  PHASE_5:
+    name: 24-Minute Full Episode / Long-Form Proof
+    runtime_target:
+      minutes: 12_to_24
+    objective: >
+      Achieve the original studio product target with sufficient intelligence,
+      production robustness, and final quality for genuine release experimentation.
+    focus:
+      - narrative depth
+      - long-range emotional progression
+      - high quality visual identity
+      - mature sound design
+      - sophisticated editing
+      - provider diversity
+      - production economics
+      - robust final mastering
+    new_required_capabilities:
+      World:
+        - long-range unresolved causal links
+        - durable promises/debts
+        - richer social dynamics
+        - parallel active processes
+      audience:
+        - more sophisticated expectation modeling
+        - genre literacy
+        - attention/comprehension stress testing
+      production:
+        - experience-driven strategy selection
+        - model ensemble planning
+        - asset amortization logic
+      QC:
+        - longitudinal pacing
+        - emotional curve
+        - thematic coherence
+        - rewatch evaluation
+    exit_gate:
+      - release_quality_12_to_24_minute_episode
+      - no_hidden_human_production_department
+      - repeatable_pipeline
+  # -------------------------------------------------------------------
+  # PHASE 6
+  # -------------------------------------------------------------------
+  PHASE_6:
+    name: Persistent Series and Recurring Character Proof
+    objective: >
+      Prove that persistent canon, entities, assets, and production experience
+      create compounding advantage across multiple episodes.
+    target:
+      episodes:
+        min: 3
+        preferred: 5
+    core_hypothesis: >
+      Episode N should be easier to produce and more internally coherent because
+      episodes 1..N-1 created reusable reality, character history, certified
+      assets, production experience, and NarrativeOpportunity substrate.
+    required_capabilities:
+      persistent_entities:
+        - memories
+        - injuries
+        - promises
+        - evolving beliefs
+        - evolving relationships
+        - reputation
+        - history
+      asset_library:
+        - cross_episode identity
+        - wardrobe/state variants
+        - recurring locations
+        - music motifs
+        - acoustic signatures
+      World:
+        - episode boundaries
+        - long-term chronology
+        - unresolved story threads
+        - canon reconstruction
+      NarrativeOpportunity:
+        - cross_episode opportunity discovery
+        - callbacks
+        - old promises
+        - forgotten props
+        - unresolved causal links
+      production:
+        - cross_episode strategy experience
+        - persistent reuse economics
+    critical_metrics:
+      identity:
+        episode_to_episode_consistency: increase
+      production:
+        cost_per_certified_minute: decrease_or_quality_adjusted_improve
+      narrative:
+        reusable_canon_value: increase
+      assets:
+        reuse_ratio: increase
+    exit_gate:
+      - minimum_3_episode_arc_certified
+      - recurring_characters_reliably_persistent
+      - canon_compounds_instead_of_degrading
+      - reuse_produces_measurable_leverage
+  # -------------------------------------------------------------------
+  # PHASE 7
+  # -------------------------------------------------------------------
+  PHASE_7:
+    name: Large-Universe Intelligence
+    objective: >
+      Scale the persistent fictional universe to hundreds of meaningful entities
+      while preserving computational accessibility.
+    target:
+      persistent_entities:
+        range: 100_to_500_plus
+    archetypal_use_case: >
+      A large creature/character universe with species, abilities, factions,
+      locations, rivalries, historical encounters, artifacts, reputations,
+      relationships, and evolving canon.
+    core_problem: >
+      Traditional franchise organization becomes expensive as canon grows.
+      Quantum should convert scale into richer computational opportunity rather
+      than documentation burden.
+    required_capabilities:
+      World:
+        - large entity graph
+        - faction membership
+        - reputation
+        - richer social graph
+        - region/location hierarchy
+        - species/type systems
+        - high-volume historical events
+      NarrativeOpportunity:
+        - large-scale candidate discovery
+        - density scoring
+        - graph convergence search
+        - opportunity clustering
+        - novelty penalties
+        - overused-character penalties
+      cognition:
+        - selective attention over huge worlds
+        - salience-driven subgraph projection
+        - bounded retrieval
+        - hierarchical reasoning scopes
+      memory:
+        - semantic projection
+        - associative retrieval
+        - exact graph + semantic memory hybrid
+      provenance:
+        - cross-episode and cross-project lineage at scale
+    required_queries:
+      examples:
+        - "Which minor character now has enough unresolved causal links to support a protagonist episode?"
+        - "Which forgotten prop connects the most active story threads?"
+        - "Which two unrelated entities share a hidden historical dependency?"
+        - "Which false belief is closest to becoming unsustainable?"
+        - "Which location has the highest density of unresolved promises?"
+        - "Which unresolved configuration has the highest dramatic potential now?"
+    exit_gate:
+      - hundreds_of_entities_queryable
+      - narrative_opportunity_search_useful_at_scale
+      - no_requirement_for_human_canon_bible_maintenance
+  # -------------------------------------------------------------------
+  # PHASE 8
+  # -------------------------------------------------------------------
+  PHASE_8:
+    name: Learned Institutional Intelligence
+    objective: >
+      Turn accumulated production/cognition/QC evidence into systematically
+      improving autonomous behavior.
+    prerequisite:
+      sufficient_corpus: true
+    experience_planes:
+      cognitive:
+        source:
+          - CognitiveTrace
+          - OperatorExperience
+        learns:
+          - which operators help
+          - when deep reasoning pays
+          - which cognitive cascades work
+      capability:
+        source:
+          - ExecutionReceipt
+          - QC-linked observations
+        learns:
+          - conditional model/tool capability
+          - version regressions
+          - task-specific reliability
+      production:
+        source:
+          - ProductionStrategyExperience
+        learns:
+          - strategy success probability
+          - repair success
+          - cost_per_certified_artifact
+          - expected retries
+      QC:
+        source:
+          - QCExperienceRecord
+        learns:
+          - critic calibration
+          - false positives
+          - false negatives
+          - failure signatures
+      audience:
+        source:
+          future_real_viewer_evidence: true
+        learns:
+          - prediction calibration
+          - comprehension
+          - emotional response
+          - surprise
+    capability_targets:
+      learned_reasoning:
+        - OperatorSelectionPolicy
+        - ReasoningBudgetPolicy
+        - branch_count_policy
+      learned_production:
+        - strategy_ranker
+        - implementation_ranker
+        - repair_policy
+      learned_QC:
+        - critic_weighting
+        - threshold_calibration
+        - evidence_requirements
+    policy_governance:
+      all_learned_policies:
+        lifecycle:
+          - CANDIDATE
+          - SHADOW
+          - CANARY
+          - ACTIVE
+          - ROLLED_BACK
+          - RETIRED
+    hard_rule: >
+      Learning may improve judgment but cannot silently alter CreatorModel,
+      World rules, or authority boundaries.
+    exit_gate:
+      - learned_policies_show_measurable_gain
+      - rollback_proven
+      - provenance_of_training_evidence_complete
+  # -------------------------------------------------------------------
+  # PHASE 9
+  # -------------------------------------------------------------------
+  PHASE_9:
+    name: Season-Scale Autonomous Studio
+    objective: >
+      Manufacture a coherent multi-episode season using persistent canon,
+      recurring characters, large-scale asset reuse, institutional intelligence,
+      and concurrent episode production.
+    target:
+      episodes:
+        range: 6_to_12
+    requirements:
+      World:
+        - season chronology
+        - parallel episode state
+        - long-term character arcs
+        - unresolved opportunity queue
+        - persistent consequences
+      story:
+        - season arc
+        - episode arcs
+        - setup/payoff graph
+        - thematic progression
+      production:
+        - multi-episode scheduling
+        - shared asset dependencies
+        - shared provider capacity
+        - prioritized release order
+      engine:
+        - concurrent episodes
+        - hierarchical checkpoints
+        - cross-episode dependency safety
+      QC:
+        - episode QC
+        - season continuity QC
+        - arc QC
+    flagship_query: >
+      What unresolved configuration from the previous five episodes now creates
+      the strongest possible episode premise without violating canon?
+    exit_gate:
+      - full_season_certified
+      - recurring_entity_consistency
+      - season_causal_coherence
+      - autonomous_multi_episode_operation
+  # -------------------------------------------------------------------
+  # PHASE 10
+  # -------------------------------------------------------------------
+  PHASE_10:
+    name: Feature Film Runtime
+    objective: >
+      Extend the same architecture to feature-scale narrative and production.
+    target_runtime:
+      minutes:
+        min: 70
+        max: 120
+    requirements:
+      narrative:
+        - act_scale_structure
+        - many setup_payoff chains
+        - long-term audience memory
+        - richer secondary character arcs
+      production:
+        - thousands_of_shots_possible
+        - large asset catalogs
+        - long-running production planning
+        - high reliability checkpointing
+      QC:
+        - act-level QC
+        - full-feature ColdViewer
+        - rewatch analysis
+        - thematic coherence
+    architecture_change:
+      expected:
+        core_authority_model: false
+    exit_gate:
+      - feature_length_master_certified
+      - same_core_architecture_used
+# =====================================================================
+# 4. MULTI-MEDIUM ROADMAP
+# =====================================================================
+multi_medium:
+  activation_rule: >
+    Do not begin implementation until persistent World/character/story machinery
+    has demonstrated strong leverage across animation episodes.
+  shared_canonical_core:
+    remains_common:
+      - WorldEntity
+      - WorldEvent
+      - WorldSnapshot
+      - WorldRule
+      - Belief
+      - Knowledge
+      - Intent
+      - Relationship
+      - Affordance
+      - NarrativeOpportunity
+      - StoryCoordinate
+      - Branch
+      - CreatorModel
+      - AudienceModel
+      - provenance
+  expression_layers:
+    FILM:
+      status: ACTIVE_PRIMARY
+      owns:
+        - camera
+        - framing
+        - performance blocking
+        - audiovisual timing
+        - edit
+        - sound/music realization
+    BOOK:
+      status: ROADMAP
+      proposed_components:
+        - BookCompiler
+        - ProseModel
+        - ChapterCompiler
+        - PointOfViewPlanner
+        - InteriorStateExpression
+        - LiteraryVoiceModel
+        - ProseQC
+      medium_specific_questions:
+        - whose POV
+        - narrative distance
+        - interiority
+        - prose density
+        - chapter architecture
+        - literary voice
+        - description compression
+      invariant: >
+        BookCompiler observes canonical reality; it does not create an alternate
+        version of the same character's truth.
+    COMIC:
+      status: ROADMAP
+      proposed_components:
+        - PanelCompiler
+        - PageLayoutPlanner
+        - SpeechBubbleCompiler
+        - ComicQC
+    AUDIO_DRAMA:
+      status: ROADMAP
+      proposed_components:
+        - AcousticNarrativeCompiler
+        - VoicePerformancePlanner
+        - SpatialAudioDirector
+    GAME:
+      status: LONG_TERM_ROADMAP
+      proposed_components:
+        - InteractiveNarrativeCompiler
+        - PlayerAffordanceModel
+        - DynamicWorldRuntime
+        - GameStateBridge
+    INTERACTIVE_STORY:
+      status: LONG_TERM_ROADMAP
+  strategic_principle: >
+    IP lives above rendering format.
+# =====================================================================
+# 5. WORLD MODEL EVOLUTION
+# =====================================================================
+WorldModel_roadmap:
+  MVP:
+    required:
+      - entities
+      - events
+      - snapshots
+      - rules
+      - beliefs
+      - knowledge
+      - intentions
+      - relationships
+      - affordances
+      - coordinates
+      - NarrativeOpportunity
+  intermediate:
+    WorldProcess:
+      purpose:
+        - continuous action
+        - durations
+        - scheduled completion
+        - interruptions
+        - simultaneous effects
+    causal_semantics:
+      expand:
+        - ENABLES
+        - MOTIVATES
+        - PREVENTS
+        - NECESSARY_FOR
+        - CONTRIBUTES_TO
+        - TRIGGERS
+        - REVEALS
+        - CONCEALS
+    psychological_state:
+      expand:
+        - emotional momentum
+        - stress
+        - trust
+        - shame
+        - attachment
+        - grief
+        - cognitive dissonance
+        - fatigue
+        - confidence
+    epistemic:
+      expand:
+        - observation uncertainty
+        - attention limits
+        - memory degradation
+        - misinterpretation
+        - rumor
+        - deception
+    relationships:
+      expand:
+        - history
+        - obligation
+        - power
+        - dependency
+        - attraction
+        - resentment
+        - reputation
+  advanced:
+    counterfactual_engine:
+      questions:
+        - "What would likely happen if event X did not occur?"
+        - "Which outcome depends causally on this decision?"
+        - "Which hidden cause is necessary for the current reality?"
+    alternative_world_branches:
+      use:
+        - story search
+        - ending evaluation
+        - counterfactual causality
+    reality_reconstruction:
+      target: >
+        Reconstruct exact or bounded fictional state at arbitrary WorldCoordinate.
+    parallel_timelines:
+      status: LONG_TERM
+# =====================================================================
+# 6. NARRATIVE OPPORTUNITY ROADMAP
+# =====================================================================
+NarrativeOpportunity_roadmap:
+  identity: >
+    Reified derived convergence object where narratively significant World
+    structures intersect.
+  MVP:
+    include:
+      - desire
+      - blocker
+      - relationship_or_internal_cost
+      - affordance
+      - knowledge asymmetry
+      - false belief
+      - meaningful prop
+  future_features:
+    convergence_dimensions:
+      - promises
+      - secrets
+      - debts
+      - rivalries
+      - locations
+      - institutions
+      - factions
+      - reputation
+      - historical events
+      - audience knowledge
+      - object histories
+    ranking:
+      dimensions:
+        - dramatic_potential
+        - emotional_stakes
+        - causal_density
+        - novelty
+        - thematic_alignment
+        - relationship_change
+        - audience_surprise
+        - runtime_fit
+        - opportunity_expiration
+        - unresolved_thread_reuse
+    clustering:
+      purpose: >
+        Avoid presenting hundreds of near-duplicate opportunities in large worlds.
+    novelty_control:
+      - penalize_repeated_structure
+      - penalize_overused_entities
+      - reward_dormant_canon_reactivation
+    long_range:
+      example: >
+        Which unresolved promise from three episodes ago can naturally collide
+        with the current character goal?
+  desired_outcome: >
+    Increasing canon increases the density and quality of discoverable stories.
+# =====================================================================
+# 7. POLYCOGNITIVE RUNTIME EVOLUTION
+# =====================================================================
+polycognitive_roadmap:
+  MVP:
+    - signals
+    - modules
+    - executive
+    - workspace
+    - budgets
+    - proposals
+    - arbitration
+    - traces
+  intermediate:
+    cognitive_cascades:
+      example: |
+        GOAL_BLOCKED
+            ↓
+        narrative.operator.blocker_analysis
+            ↓
+        RELATIONSHIP_COST_FOUND
+            ↓
+        character.operator.relationship_pressure
+            ↓
+        KNOWLEDGE_ASYMMETRY_FOUND
+            ↓
+        epistemic.operator.reveal_analysis
+            ↓
+        high dramatic convergence
+            ↓
+        narrative branch simulation
+    attention_competition:
+      purpose:
+        - choose which simultaneous WorldSignals deserve cognition
+    reasoning_budget_allocator:
+      input:
+        - salience
+        - uncertainty
+        - irreversibility
+        - downstream impact
+        - cost
+      output:
+        - reasoning tier
+        - operator count
+        - branch count
+  learned:
+    OperatorSelectionPolicy:
+      learns: >
+        Which reasoning operators tend to be useful under which WorldSignal
+        patterns and decision contexts?
+    reasoning_depth_policy:
+      learns: >
+        When does additional reasoning produce enough improvement to justify
+        additional inference?
+    cascade_policy:
+      learns:
+        - productive operator sequences
+        - dead-end sequences
+        - redundant reasoning
+  long_term_identity: >
+    A genuine polycognitive system rather than an orchestrated collection of prompts.
+# =====================================================================
+# 8. SELF MODEL EVOLUTION
+# =====================================================================
+self_model_roadmap:
+  MVP:
+    - manually registered capabilities
+    - live availability
+    - cost
+    - latency
+    - quality
+    - limits
+    - failure evidence
+  next:
+    - scheduled capability probes
+    - task-conditioned benchmarks
+    - automatic version regression detection
+    - confidence decay
+    - capability change signals
+  advanced:
+    - automatic implementation discovery
+    - synthetic benchmark generation
+    - targeted testing where uncertainty is highest
+    - conditional capability graphs
+  examples:
+    - >
+      Renderer X is strong at environmental motion but weak on hand-object
+      interaction with two visible characters.
+    - >
+      Voice model Y is high quality for calm dialogue but inconsistent at
+      emotional shouting.
+  hard_rule: >
+    SelfModel remains descriptive, not strategic.
+# =====================================================================
+# 9. PRODUCTION MODEL EVOLUTION
+# =====================================================================
+production_model_roadmap:
+  MVP:
+    - deterministic and agentic strategy generation
+    - SelfModel binding
+    - fallback
+    - repair
+    - multi-take
+  next:
+    - explicit expected_cost_per_certified_artifact
+    - strategy success probability
+    - learned shot complexity features
+    - strategy portfolio optimization
+  advanced:
+    strategy_experience_features:
+      - character_count
+      - hand_object_interaction
+      - camera_motion
+      - identity_sensitivity
+      - lighting_complexity
+      - dialogue_visibility
+      - environment_motion
+      - duration
+      - compositing_complexity
+    learned_policy:
+      question: >
+        Given ProductionIntent, current SelfModel and historical strategy
+        evidence, which manufacturing plan has the highest expected utility?
+  optimization:
+    not:
+      - cheapest_provider_request
+    instead:
+      - cost_per_certified_output
+      - expected_repair_cost
+      - quality_adjusted_latency
+      - identity_reliability
+# =====================================================================
+# 10. AUTONOMOUS QC EVOLUTION
+# =====================================================================
+QC_roadmap:
+  MVP:
+    - deterministic World checks
+    - multimodal specialists
+    - ColdViewer
+    - InformedCritic
+    - RewatchCritic
+    - certificates
+    - repair recommendation
+  next:
+    - critic disagreement modeling
+    - confidence calibration
+    - false-positive tracking
+    - false-negative discovery
+    - specialized recurring-character critic
+    - temporal continuity critic
+  advanced:
+    - learned critic weighting
+    - failure signature retrieval
+    - adaptive inspection depth
+    - uncertainty-triggered additional evidence
+    - adversarial QC fixtures
+  nonnegotiable:
+    QC_independent_of_generation: true
+# =====================================================================
+# 11. PRODUCTION ENGINE EVOLUTION
+# =====================================================================
+production_engine_roadmap:
+  MVP:
+    - local_or_small_worker_runtime
+    - durable jobs
+    - artifacts
+    - retries
+    - QC gates
+    - repair
+    - timeline
+    - master
+  scale_3_to_6_min:
+    - stronger concurrency
+    - more sophisticated provider quotas
+    - better critical-path scheduling
+  scale_12_to_24_min:
+    - hierarchical DAGs
+    - sequence-level checkpoints
+    - thousands_of_jobs
+    - richer backpressure
+    - resilient async provider reconciliation
+  season:
+    - cross-episode shared resource planning
+    - shared asset build queues
+    - episode prioritization
+  future:
+    - multi-region workers if justified
+    - specialized GPU pools if justified
+    - production workload prediction
+  rule: >
+    Distributed infrastructure follows real load measurements.
+# =====================================================================
+# 12. ASSET IDENTITY EVOLUTION
+# =====================================================================
+asset_identity_roadmap:
+  MVP:
+    - 1_to_2 characters
+    - canonical visual pack
+    - canonical voice pack
+    - state variants
+    - one environment
+    - one prop
+  series:
+    - richer expression library
+    - costume history
+    - injury/state history
+    - recurring environments
+    - motion identity
+    - music motifs
+    - acoustic signatures
+  universe_scale:
+    - hundreds_of_character asset families
+    - hierarchy/species templates
+    - bulk variant generation
+    - asset inheritance
+    - population-scale querying
+  institutional_learning:
+    - which reference assets improve which renderers
+    - which identity anchors predict consistency
+    - which accepted shots should enrich the library
+  goal: >
+    Every persistent entity becomes increasingly cheap and reliable to render.
+# =====================================================================
+# 13. PROVENANCE / DEPENDENCY EVOLUTION
+# =====================================================================
+provenance_roadmap:
+  MVP:
+    - creative_to_master
+    - surgical invalidation
+    - repair lineage
+  next:
+    - cross-episode lineage
+    - reusable asset lineage
+    - richer explanation paths
+    - dependency materiality learning
+  advanced:
+    - project-wide causal production analytics
+    - cross-project reusable evidence
+    - provenance-backed institutional learning queries
+  high_value_queries:
+    - "Which accepted artifacts depend materially on this character design?"
+    - "Which strategies failed most often for this shot structure?"
+    - "Which repairs worked after this exact failure pattern?"
+    - "Which canonical change would invalidate the fewest downstream artifacts?"
+  long_term:
+    role: >
+      Studio-wide semantic nervous system for lineage and impact, while remaining
+      a projection rather than domain authority.
+# =====================================================================
+# 14. EXPERIENCE CORPUS
+# =====================================================================
+experience_corpus:
+  strategic_identity: >
+    Persistent evidence of what Quantum tried, under what conditions, what
+    happened, what failed, what repaired it, and what ultimately passed.
+  logical_partitions:
+    cognition:
+      owner: 02
+    capabilities:
+      owner: 05
+    production:
+      owner: 06
+    QC:
+      owner: 07
+    audience:
+      owner: 04
+  common_features:
+    - source evidence
+    - conditions
+    - decision or strategy
+    - result
+    - QC outcome
+    - cost
+    - latency
+    - confidence
+  future_queries:
+    - "Which cinematic plans are systematically difficult?"
+    - "Which renderers fail on which structures?"
+    - "Which repair strategies are reliable?"
+    - "Which cognitive operators contribute to successful endings?"
+    - "Which asset representations reduce identity drift?"
+    - "Which production plans minimize cost per certified minute?"
+  hard_rule: >
+    The corpus is structured evidence, not an untyped memory dump.
+# =====================================================================
+# 15. AUDIENCE / PRODUCT INTELLIGENCE ROADMAP
+# =====================================================================
+audience_product_roadmap:
+  MVP:
+    - one-line audience target normalization
+    - desired audience experience
+    - genre literacy
+    - pacing/complexity model
+    - synthetic ColdViewer evaluation
+  next:
+    - segment-specific viewer models
+    - expectation tracking
+    - confusion prediction
+    - emotional-trajectory prediction
+  future_with_real_release_data:
+    - real viewer comprehension observations
+    - completion/retention evidence where available
+    - surprise calibration
+    - emotional response studies
+    - synthetic-vs-real audience model calibration
+  product_focus:
+    includes:
+      - distinctiveness
+      - memorability
+      - release-quality impression
+      - franchise potential
+      - product promise
+    excludes:
+      - CRM
+      - advertising automation
+      - back-office GTM
+# =====================================================================
+# 16. CREATOR MODEL ROADMAP
+# =====================================================================
+creator_model_roadmap:
+  baseline:
+    persistent: true
+  project_specialization:
+    required: true
+  future:
+    - learn stable creator preferences only from explicit creator feedback
+    - distinguish persistent creator preferences from project-specific choices
+    - preserve contradictory project experimentation
+  hard_rule:
+    >
+    Historical creator preferences may suggest; current explicit project intent wins.
+  intended_workflow: |
+    creator inspiration
+        ↓
+    1–2 hour creative conversation
+        ↓
+    creative.yaml
+        ↓
+    autonomous MVP
+        ↓
+    creator feedback
+        ↓
+    revised creative source / locks
+        ↓
+    MVP2
+        ↓
+    feedback
+        ↓
+    MVP3
+        ↓
+    lock
+        ↓
+    full production
+# =====================================================================
+# 17. PROJECT COMPILER ROADMAP
+# =====================================================================
+project_compiler_roadmap:
+  MVP:
+    - rich creative.yaml
+    - quantum.studio.yaml
+  next:
+    - conversational compiler directly from creator session
+    - automated contradiction extraction
+    - richer field-level provenance
+    - project diff and impact previews
+  future:
+    - franchise project compiler
+    - season creative source
+    - universe creation compiler
+    - medium-independent canonical creative package
+# =====================================================================
+# 18. STORY COMPILER ROADMAP
+# =====================================================================
+story_compiler_roadmap:
+  MVP:
+    - single causal thread
+    - one NarrativeOpportunity
+    - one reveal
+  next:
+    - multiple opportunities
+    - subplot selection
+    - scene replacement search
+    - stronger setup/payoff graphs
+  advanced:
+    - parallel arcs
+    - large ensemble
+    - recurring serialized plot
+    - season-level opportunity planning
+    - long-horizon unresolved thread management
+  long_term:
+    principle: >
+      Quantum should increasingly discover stories from accumulated reality
+      rather than invent disconnected plots from blank prompts.
+# =====================================================================
+# 19. DISTRIBUTION OF TRUTH
+# =====================================================================
+truth_and_authority_roadmap:
+  permanent_authorities:
+    CreatorModel:
+      question: "What are we trying to make?"
+    WorldModel:
+      question: "What is true?"
+    AudienceModel:
+      question: "What should happen to the viewer?"
+    SelfModel:
+      question: "What can Quantum do now?"
+    ProductionModel:
+      question: "How should Quantum manufacture this now?"
+    AutonomousQC:
+      question: "Is it good enough?"
+    ProductionEngine:
+      question: "What is actually executing?"
+  runtime_decision_owner:
+    PolycognitiveRuntime:
+      question: "What deserves thought, and how deeply?"
+  projection:
+    ProjectProvenanceGraph:
+      question: "How is everything connected?"
+  hard_rule: >
+    Future roadmap work may deepen authorities but should not duplicate them.
+# =====================================================================
+# 20. SIMPLIFICATION ROADMAP
+# =====================================================================
+simplification:
+  actively_monitor:
+    duplicate_classes:
+      action:
+        merge_or_alias_if_semantics_same
+    excessive_agents:
+      action:
+        absorb_into_cognitive_modules
+    duplicated_memory:
+      action:
+        canonicalize_owner_and_projection
+    repeated_metadata:
+      action:
+        move_to_CanonicalObject
+    domain_overlap:
+      action:
+        resolve_in_00_constitution
+  anti_patterns:
+    - one_agent_per_task
+    - one_microservice_per_class
+    - one_database_per_spec
+    - LLM_for_exact_validation
+    - graph_for_everything
+    - semantic_memory_as_truth
+    - provider_specific_core_schema
+  principle: >
+    Increase capability without proportional increase in top-level concepts.
+# =====================================================================
+# 21. RESEARCH / EXPERIMENT BACKLOG
+# =====================================================================
+research_backlog:
+  high_priority:
+    R01:
+      question: >
+        How accurately can multimodal QC detect expected-vs-observed physical
+        continuity mismatches?
+    R02:
+      question: >
+        Which World state dimensions produce the most downstream continuity value?
+    R03:
+      question: >
+        Does NarrativeOpportunity-driven story discovery outperform direct story
+        generation in coherence and originality?
+    R04:
+      question: >
+        Which character identity anchors most strongly predict cross-shot consistency?
+    R05:
+      question: >
+        How much does animatic QC reduce expensive final-render repair?
+    R06:
+      question: >
+        Does adaptive reasoning materially outperform fixed reasoning depth?
+    R07:
+      question: >
+        Which composite production strategies outperform single-pass generation
+        for difficult shot structures?
+    R08:
+      question: >
+        What is the actual cost per certified minute?
+    R09:
+      question: >
+        How reliably can synthetic ColdViewer models predict real viewer confusion?
+    R10:
+      question: >
+        What percentage of later episodes can reuse certified persistent assets?
+  medium_priority:
+    - hypergraph_vs_reified_property_graph
+    - Graphiti_projection_value
+    - long_term_memory_decay
+    - psychological_state_complexity
+    - world_process_scheduler
+    - cross-medium canon representation
+  experiment_rule: >
+    Research results may modify policies and implementation choices but require
+    explicit evidence before changing architectural authority.
+# =====================================================================
+# 22. BUILD ORDER
+# =====================================================================
+implementation_build_order:
+  WAVE_0:
+    name: Common foundations
+    includes:
+      - canonical IDs
+      - CanonicalObject
+      - CanonicalRef
+      - schemas
+      - event contracts
+      - provenance emission
+      - configuration
+  WAVE_1:
+    name: World core
+    includes:
+      - WorldEntity
+      - WorldEvent
+      - WorldSnapshot
+      - reducer
+      - WorldCoordinate
+      - basic graph/query
+      - knowledge/belief/intent
+      - NarrativeOpportunity minimum
+  WAVE_2:
+    name: Cognitive core
+    includes:
+      - CognitiveExecutive
+      - CognitiveModule
+      - CognitiveWorkspace
+      - WorldSignal
+      - ReasoningBudget
+      - CognitiveTrace
+  WAVE_3:
+    name: Creative/project compilation
+    includes:
+      - creative.yaml
+      - ProjectCompiler
+      - CreatorModel
+      - AudienceModel
+      - StoryContract
+      - quantum.studio.yaml
+  WAVE_4:
+    name: Story/animatic
+    includes:
+      - StoryPlan
+      - SceneSpec
+      - ShotSpec
+      - expected state projections
+      - AnimaticTimeline
+  WAVE_5:
+    name: Asset identity
+    includes:
+      - AssetFamily
+      - identity profile
+      - visual pack
+      - voice pack
+      - variant resolution
+  WAVE_6:
+    name: QC minimum
+    includes:
+      - deterministic continuity checks
+      - multimodal critic
+      - certificates
+      - repair recommendation
+  WAVE_7:
+    name: Self + production model
+    includes:
+      - SelfModel
+      - implementation registry
+      - ProductionIntent
+      - ProductionStrategy
+      - fallback
+      - multi-take
+  WAVE_8:
+    name: Production engine
+    includes:
+      - manifest
+      - DAG
+      - jobs
+      - workers
+      - provider adapters
+      - artifacts
+      - retries
+      - recovery
+  WAVE_9:
+    name: Media completion
+    includes:
+      - video
+      - voice
+      - sound
+      - music
+      - lip sync
+      - compositing
+      - timeline
+      - mastering
+  WAVE_10:
+    name: E2E MVP proof
+    includes:
+      - controlled failure
+      - surgical repair
+      - master QC
+      - experience persistence
+      - provenance validation
+# =====================================================================
+# 23. DEPENDENCY GRAPH FOR BUILD
+# =====================================================================
+build_dependency_graph:
+  WAVE_0: []
+  WAVE_1:
+    - WAVE_0
+  WAVE_2:
+    - WAVE_0
+    - WAVE_1
+  WAVE_3:
+    - WAVE_0
+    - WAVE_2
+  WAVE_4:
+    - WAVE_1
+    - WAVE_2
+    - WAVE_3
+  WAVE_5:
+    - WAVE_1
+    - WAVE_3
+  WAVE_6:
+    - WAVE_0
+    - WAVE_1
+  WAVE_7:
+    - WAVE_2
+    - WAVE_3
+    - WAVE_6
+  WAVE_8:
+    - WAVE_0
+    - WAVE_7
+  WAVE_9:
+    - WAVE_5
+    - WAVE_8
+  WAVE_10:
+    - WAVE_1
+    - WAVE_2
+    - WAVE_3
+    - WAVE_4
+    - WAVE_5
+    - WAVE_6
+    - WAVE_7
+    - WAVE_8
+    - WAVE_9
+# =====================================================================
+# 24. EXPERIENCE FLYWHEEL
+# =====================================================================
+experience_flywheel:
+  flow: |
+    PROJECT
+      ↓
+    COGNITIVE DECISIONS
+      ↓
+    PRODUCTION STRATEGIES
+      ↓
+    EXECUTION
+      ↓
+    QC
+      ↓
+    FAILURE / SUCCESS
+      ↓
+    REPAIR
+      ↓
+    CERTIFIED RESULT
+      ↓
+    EXPERIENCE CORPUS
+      ├──→ SelfModel
+      ├──→ ProductionModel
+      ├──→ Cognitive Policy
+      ├──→ QC Calibration
+      └──→ Audience Calibration
+             ↓
+        BETTER NEXT PROJECT
+  institutional_experience_thesis: >
+    After producing 100 shorts, Quantum should possess evidence about which
+    cinematic plans are hard, which implementations fail on which structures,
+    which repair strategies work, which cognitive operators are useful, and how
+    to manufacture the 101st production with fewer mistakes than the first.
+# =====================================================================
+# 25. CANON FLYWHEEL
+# =====================================================================
+canon_flywheel:
+  flow: |
+    EPISODE
+       ↓
+    CANONICAL WORLD EVENTS
+       ↓
+    PERSISTENT CHARACTER HISTORY
+       ↓
+    NEW RELATIONSHIPS / BELIEFS / PROMISES / CONSEQUENCES
+       ↓
+    DENSER WORLD GRAPH
+       ↓
+    MORE NARRATIVE OPPORTUNITIES
+       ↓
+    NEW STORIES
+       ↓
+    EPISODE
+  inversion_of_traditional_problem:
+    traditional:
+      more_canon:
+        - more_documents
+        - more_continuity_cost
+        - more_human_coordination
+    Quantum:
+      more_canon:
+        - denser_queryable_state
+        - more_story_substrate
+        - more_reusable_assets
+        - more_historical_evidence
+  strategic_goal: >
+    Canon growth should increase creative leverage faster than maintenance burden.
+# =====================================================================
+# 26. PERSISTENT FICTIONAL BEINGS ROADMAP
+# =====================================================================
+persistent_fictional_beings:
+  definition: >
+    A persistent fictional being is a WorldEntity whose identity, psychology,
+    beliefs, knowledge, memories, intentions, relationships, history, physical
+    state, and certified media identity persist across narrative works.
+  current_components:
+    - WorldEntity
+    - psychological state
+    - Belief
+    - Knowledge
+    - Intent
+    - Relationship
+    - WorldEvent history
+    - memory projection
+    - AssetFamily
+    - CanonicalVisualPack
+    - CanonicalVoicePack
+    - variants
+  future_components:
+    - reputation
+    - social identity
+    - personal history summaries
+    - long-term emotional memory
+    - relationship trajectories
+    - recurring motifs
+    - cross-medium expression profiles
+  target_query:
+    >
+    Reconstruct this being accurately at any meaningful coordinate in their life.
+  long_term_value: >
+    Persistent fictional beings become reusable IP primitives rather than
+    disposable characters generated per production.
+# =====================================================================
+# 27. LARGE UNIVERSE / CREATURE ECOSYSTEM ROADMAP
+# =====================================================================
+large_universe:
+  concept_class:
+    examples:
+      - hundreds_of_creatures
+      - recurring heroes
+      - factions
+      - regions
+      - artifacts
+      - abilities
+      - rivalries
+  architecture_required:
+    entity_taxonomy:
+      - species
+      - subtype
+      - evolutionary_or_transformational_state
+      - abilities
+      - weaknesses
+      - environment affinity
+    social:
+      - alliances
+      - rivalries
+      - companion relationships
+      - reputation
+      - factions
+    geography:
+      - regions
+      - habitats
+      - territorial state
+    history:
+      - encounters
+      - competitions
+      - losses
+      - discoveries
+      - transformations
+    narrative:
+      - unresolved goals
+      - promises
+      - secrets
+      - artifacts
+      - dormant opportunities
+  computational_advantage: >
+    Hundreds of entities become viable because continuity and opportunity
+    discovery are graph/state problems rather than human-memory problems.
+  activation:
+    only_after:
+      - series persistence proven
+      - NarrativeOpportunity search proven
+      - graph query performance proven
+# =====================================================================
+# 28. MULTI-PROJECT / IP PORTFOLIO ROADMAP
+# =====================================================================
+portfolio:
+  future:
+    multiple_universes: true
+  isolation:
+    default:
+      separate_World_canons: true
+  shared_possible:
+    - creator baseline
+    - audience archetypes
+    - SelfModel
+    - production experience
+    - QC experience
+    - implementation registry
+  not_shared_by_default:
+    - World truth
+    - character canon
+    - project creative locks
+  cross_universe:
+    only_explicit: true
+# =====================================================================
+# 29. AUTONOMY MATURITY MODEL
+# =====================================================================
+autonomy_maturity:
+  A0:
+    name: Assisted Generation
+    human:
+      - story
+      - shot selection
+      - QC
+      - editing
+    target_status: reject_as_end_state
+  A1:
+    name: Automated Pipeline
+    system:
+      - executes fixed workflow
+    missing:
+      - judgment
+      - stateful repair
+  A2:
+    name: Autonomous Production
+    system:
+      - chooses production actions
+      - QC
+      - repair
+    target:
+      MVP: true
+  A3:
+    name: Polycognitive Studio
+    system:
+      - chooses what deserves reasoning
+      - coordinates specialized cognition
+      - adapts reasoning depth
+    target:
+      phases:
+        - PHASE_3
+        - PHASE_4
+  A4:
+    name: Learning Studio
+    system:
+      - improves policies from experience
+    target:
+      PHASE_8
+  A5:
+    name: Persistent Narrative Intelligence
+    system:
+      - maintains large universes
+      - discovers stories
+      - persists characters
+      - autonomously produces media
+    target:
+      PHASE_9_plus
+  A6:
+    name: Multi-Medium Narrative Intelligence
+    system:
+      - expresses common canon through multiple media
+    target:
+      long_term
+# =====================================================================
+# 30. QUALITY MATURITY MODEL
+# =====================================================================
+quality_maturity:
+  Q0:
+    name: Technically Valid
+    checks:
+      - file works
+  Q1:
+    name: Continuity Correct
+    checks:
+      - World state
+      - identity
+      - sync
+  Q2:
+    name: Creatively Faithful
+    checks:
+      - CreatorModel
+      - style
+      - performance
+  Q3:
+    name: Narratively Effective
+    checks:
+      - comprehension
+      - pacing
+      - emotional trajectory
+      - payoff
+  Q4:
+    name: Product Compelling
+    checks:
+      - distinctiveness
+      - memorability
+      - audience fit
+  Q5:
+    name: Exemplary
+    checks:
+      - unusually strong execution
+      - coherent whole
+      - high rewatch value
+      - intentionality
+  roadmap:
+    PHASE_1:
+      target: Q2_to_Q3
+    PHASE_2:
+      target: Q3
+    PHASE_4:
+      target: Q3_to_Q4
+    PHASE_5_plus:
+      target: Q4_to_Q5
+# =====================================================================
+# 31. SCALING DIMENSIONS
+# =====================================================================
+scaling_dimensions:
+  duration:
+    sequence:
+      - 60_seconds
+      - 3_minutes
+      - 6_minutes
+      - 12_minutes
+      - 12_to_24_minutes
+      - season
+      - feature
+  cast:
+    sequence:
+      - 1_to_2
+      - 3_to_5
+      - 5_to_10
+      - dozens
+      - hundreds
+  narrative_complexity:
+    sequence:
+      - single_thread
+      - subplot
+      - multiple_arcs
+      - serialized_arcs
+      - season_graph
+  World_complexity:
+    sequence:
+      - simple_event_state
+      - richer_psychology
+      - concurrent_processes
+      - factions
+      - large_universe
+  learning:
+    sequence:
+      - capture_evidence
+      - retrieve_experience
+      - shadow_policy
+      - learned_policy
+      - continuous_calibration
+  production:
+    sequence:
+      - small_worker_pool
+      - parallel_shots
+      - hundreds_of_jobs
+      - multi_episode
+      - feature_scale
+  rule: >
+    Avoid jumping multiple scaling dimensions simultaneously unless evidence
+    shows the architecture is already stable on each.
+# =====================================================================
+# 32. ROADMAP DECISION FRAMEWORK
+# =====================================================================
+roadmap_decision_framework:
+  candidate_feature_score:
+    dimensions:
+      unlocks_next_acceptance_gate:
+        weight: 0.25
+      removes_observed_failure:
+        weight: 0.20
+      architecture_leverage:
+        weight: 0.15
+      reuse_across_future_phases:
+        weight: 0.15
+      autonomy_gain:
+        weight: 0.10
+      quality_gain:
+        weight: 0.10
+      implementation_cost_inverse:
+        weight: 0.05
+  deprioritize_if:
+    - speculative_without_current_failure
+    - duplicates_existing_owner
+    - vendor_specific
+    - broad_platform_generalization
+    - back_office
+    - does_not_help_next_gate
+# =====================================================================
+# 33. ROADMAP SIGNALS
+# =====================================================================
+roadmap_signals:
+  promote_capability_when:
+    FAILURE_FREQUENT:
+      condition:
+        repeated_same_failure_class: true
+    REPAIR_EXPENSIVE:
+      condition:
+        repeated_high_repair_cost: true
+    MANUAL_DEBUG_REQUIRED:
+      condition:
+        architecture_gap_exposed: true
+    STATE_INSUFFICIENT:
+      condition:
+        repeated_unexplainable_continuity_issue: true
+    REASONING_INSUFFICIENT:
+      condition:
+        shallow_policy_repeatedly_fails_high_impact_decisions: true
+    QC_UNCERTAIN:
+      condition:
+        critic_confidence_persistently_low: true
+    PROVIDER_LIMITATION:
+      condition:
+        repeated_capability_gap: true
+    SCALE_BOTTLENECK:
+      condition:
+        measured_runtime_or_storage_limit: true
+  do_not_promote_because:
+    - intellectually_interesting
+    - theoretically_general
+    - fashionable
+    - available_vendor_feature
+# =====================================================================
+# 34. RISKS
+# =====================================================================
+risks:
+  - risk: architectural overbuilding
+    control:
+      - phase gates
+      - scope firewall
+      - observed-failure requirement
+  - risk: mediocre creative output despite excellent systems
+    control:
+      - CreatorModel
+      - narrative QC
+      - AudienceModel
+      - real release feedback later
+  - risk: self-referential machine evaluation
+    control:
+      - independent critics
+      - context firewalls
+      - deterministic checks
+      - future real audience calibration
+  - risk: graph complexity grows without useful queries
+    control:
+      - query-driven schema evolution
+  - risk: persistent canon becomes enormous context burden
+    control:
+      - projections
+      - scopes
+      - salience
+      - semantic retrieval
+      - exact subgraph queries
+  - risk: learned policies drift creative identity
+    control:
+      - CreatorModel authority
+      - policy shadow/canary
+      - rollback
+  - risk: provider churn destabilizes production
+    control:
+      - implementation adapters
+      - SelfModel
+      - fallback strategies
+  - risk: larger runtime causes global repair
+    control:
+      - provenance
+      - dependency materiality
+      - immutable artifacts
+      - shot/layer isolation
+  - risk: one giant WorldModel becomes universal database
+    control:
+      - strict authority boundaries
+      - projections
+      - separate production/execution state
+  - risk: multi-medium expansion fractures canon
+    control:
+      - common World authority
+      - medium-specific expression only
+# =====================================================================
+# 35. PERMANENT NON-GOALS
+# =====================================================================
+permanent_non_goals:
+  - human production routing as standard operating model
+  - provider-specific core architecture
+  - one-agent-per-function swarm
+  - using semantic memory as canonical truth
+  - optimizing all projects toward photorealism
+  - allowing audience optimization to erase creator identity
+  - manually maintained continuity bible as authoritative source
+  - destructive artifact mutation
+  - accepting provider success as QC success
+  - requiring global regeneration for local errors
+# =====================================================================
+# 36. OUT-OF-SCOPE COMPANY FUNCTIONS
+# =====================================================================
+company_scope_boundary:
+  QuantumAnimationStudio_focus:
+    - creative intelligence
+    - narrative intelligence
+    - autonomous production
+    - quality
+    - reusable IP
+    - media output
+  excluded_from_this_roadmap:
+    - payroll
+    - HR
+    - accounting
+    - CRM
+    - legal back office
+    - general corporate operations
+    - sales automation
+    - marketing operations
+  product_market_intelligence:
+    included_only_as:
+      - input_to_product_design
+      - audience/product quality evaluation
+# =====================================================================
+# 37. PHASE PROMOTION POLICY
+# =====================================================================
+phase_promotion:
+  required:
+    prior_acceptance_gate:
+      pass: true
+    evidence_bundle:
+      complete: true
+    unresolved_critical_ownership_conflicts:
+      count: 0
+    mandatory_human_interventions:
+      acceptable:
+        - creator_input
+        - creator_review
+      production_execution:
+        target: 0
+    provenance:
+      complete_for_phase: true
+    repair:
+      local_repair_still_working: true
+  architecture_revision:
+    permitted:
+      - simplify
+      - deepen existing responsibility
+      - split only when evidence demands
+    prohibited:
+      - speculative_top_level_expansion_without_evidence
+# =====================================================================
+# 38. ROADMAP ARTIFACTS
+# =====================================================================
+roadmap_artifacts:
+  after_each_phase:
+    required:
+      - PhaseEvidenceReport
+      - FailureTaxonomy
+      - CapabilityEvidenceSnapshot
+      - ProductionExperienceSnapshot
+      - QCExperienceSnapshot
+      - CognitiveExperienceSnapshot
+      - CostLatencyReport
+      - ProvenanceIntegrityReport
+      - ArchitectureDeltaProposal
+      - NextRuntimeProfile
+  architecture_delta:
+    must_classify_each_change:
+      enum:
+        - KEEP
+        - SIMPLIFY
+        - REMOVE
+        - DEEPEN
+        - SPLIT
+        - ADD
+# =====================================================================
+# 39. LONG-TERM STRATEGIC ASSETS
+# =====================================================================
+strategic_assets:
+  asset_01:
+    name: Persistent Canon
+    description: >
+      Machine-readable universes containing exact fictional history and reality.
+  asset_02:
+    name: Persistent Fictional Beings
+    description: >
+      Reusable entities with identity, history, psychology, relationships and
+      certified media representations.
+  asset_03:
+    name: Narrative Opportunity Corpus
+    description: >
+      Derived evidence about which World configurations become dramatically productive.
+  asset_04:
+    name: Production Experience Corpus
+    description: >
+      Evidence about how to manufacture difficult cinematic structures reliably.
+  asset_05:
+    name: Capability Experience
+    description: >
+      Conditional evidence about what concrete implementations actually do well.
+  asset_06:
+    name: QC Experience
+    description: >
+      Failure patterns, critic calibration, repair outcomes and acceptance evidence.
+  asset_07:
+    name: Cognitive Experience
+    description: >
+      Evidence about which kinds of thinking are useful under which conditions.
+  asset_08:
+    name: Certified Asset Library
+    description: >
+      Reusable characters, environments, props, voices, motion signatures and motifs.
+  strategic_thesis: >
+    These assets compound even when external foundation models commoditize.
+# =====================================================================
+# 40. DEFENSIBILITY
+# =====================================================================
+defensibility:
+  weak_moats:
+    - access_to_one_video_model
+    - prompt_templates
+    - provider_wrappers
+  stronger_moats:
+    - persistent_worlds
+    - persistent_characters
+    - creator_models
+    - certified_asset_libraries
+    - production_experience
+    - repair_experience
+    - cognitive_policy_experience
+    - audience_calibration
+    - provenance-linked corpus
+  strongest_candidate: >
+    The accumulated machine-readable relationship between fictional reality,
+    creative intent, production strategy, execution evidence, quality outcomes,
+    repair history, and audience response.
+# =====================================================================
+# 41. LONG-TERM OPTIONALITY
+# =====================================================================
+optionality:
+  after_animation_maturity:
+    possible_products:
+      - autonomous_short_film_studio
+      - autonomous_series_studio
+      - feature_film_runtime
+      - persistent_character_franchises
+      - large_creature_universes
+      - BookCompiler
+      - ComicCompiler
+      - AudioDramaCompiler
+      - InteractiveNarrativeRuntime
+      - game_narrative_world_runtime
+  rule: >
+    Preserve architectural option value now; implement only after animation
+    creates empirical justification.
+# =====================================================================
+# 42. CONVERGENCE TARGET
+# =====================================================================
+convergence:
+  architecture_goal: >
+    Increase intelligence, universe scale, production reliability, and media
+    breadth without increasing the number of top-level authorities unless a
+    genuinely new durable responsibility appears.
+  expected_stable_core:
+    - CreatorModel
+    - WorldModel
+    - PolycognitiveRuntime
+    - AudienceProductIntelligence
+    - SelfModel
+    - ProductionModel
+    - AutonomousQC
+    - ProductionEngine
+    - CanonicalIR
+    - ProvenanceProjection
+  likely_future_growth:
+    mostly_inside_existing_authorities: true
+# =====================================================================
+# 43. IMMEDIATE EXECUTION ORDER
+# =====================================================================
+immediate_next_actions:
+  priority_1:
+    action: >
+      Perform full 00–16 cross-spec convergence and normalize shared contracts.
+  priority_2:
+    action: >
+      Freeze MVP profile and reference implementation set.
+  priority_3:
+    action: >
+      Implement WAVE_0 common contracts.
+  priority_4:
+    action: >
+      Implement minimal World reducer/query/NarrativeOpportunity substrate.
+  priority_5:
+    action: >
+      Implement cognitive runtime minimum.
+  priority_6:
+    action: >
+      Implement creative.yaml -> quantum.studio.yaml compilation.
+  priority_7:
+    action: >
+      Implement story -> ShotSpec -> animatic.lock path.
+  priority_8:
+    action: >
+      Implement character identity bootstrap.
+  priority_9:
+    action: >
+      Implement minimum AutonomousQC.
+  priority_10:
+    action: >
+      Implement SelfModel + ProductionModel bindings.
+  priority_11:
+    action: >
+      Implement ProductionEngine and media adapters.
+  priority_12:
+    action: >
+      Execute 16_quantum_end_to_end_mvp_acceptance_spec.yaml without bypasses.
+# =====================================================================
+# 44. FINAL ROADMAP LAWS
+# =====================================================================
+final_roadmap_laws:
+  law_01: >
+    Build the smallest complete studio first.
+  law_02: >
+    The first proof is a 60-second certified short, not a platform demo.
+  law_03: >
+    Scale 60 seconds → 3 minutes → 6 minutes → 12 minutes → 12–24 minutes.
+  law_04: >
+    Each phase must earn the next through evidence.
+  law_05: >
+    Persistent characters and worlds must become more valuable over time.
+  law_06: >
+    More canon should create more NarrativeOpportunity, not merely more burden.
+  law_07: >
+    More productions should create better production intelligence.
+  law_08: >
+    More failures should make future failures less likely.
+  law_09: >
+    Quantum should think harder only when consequences justify thinking harder.
+  law_10: >
+    Learned reasoning depth must eventually be evidence-driven.
+  law_11: >
+    A large fictional universe is a computational graph/state system, not a
+    human-maintained franchise bible.
+  law_12: >
+    Persistent fictional beings are reusable IP primitives.
+  law_13: >
+    The World remains canonical regardless of medium.
+  law_14: >
+    Film, books, comics, games, and other future media are expression layers over
+    shared canon.
+  law_15: >
+    Animation remains the only active medium until the animation runtime proves
+    persistent-world leverage.
+  law_16: >
+    Experience corpora must remain typed and provenance-linked.
+  law_17: >
+    External models are replaceable; institutional intelligence compounds.
+  law_18: >
+    Production economics should optimize cost per certified artifact, not raw
+    inference cost.
+  law_19: >
+    Correct accepted work must survive unrelated failures at every scale.
+  law_20: >
+    Do not solve scale before scale is measured.
+  law_21: >
+    Do not create a new agent when a cognitive module, compiler pass, policy, or
+    deterministic service is sufficient.
+  law_22: >
+    Do not create a new authority for a responsibility that already has an owner.
+  law_23: >
+    Canon becomes computation.
+  law_24: >
+    The long-term objective is not an AI animation pipeline.
+  law_25: >
+    The long-term objective is a persistent narrative intelligence capable of
+    maintaining living fictional universes, discovering dramatically charged
+    possibilities inside them, reasoning about what should happen, and
+    autonomously expressing selected reality through media.
+
+I used 20_ rather than 90_ as requested. The roadmap now deliberately separates what must be built for the first film from everything we’ve identified as valuable but not justified yet.
+
+Its main progression is:
+
+architecture convergence
+      ↓
+60 sec — prove complete autonomy
+      ↓
+3 min — prove continuity
+      ↓
+6 min — prove polycognitive leverage
+      ↓
+12 min — prove hundreds-of-shot manufacturing
+      ↓
+12–24 min — prove real episode production
+      ↓
+multi-episode series — prove persistent IP leverage
+      ↓
+hundreds of entities — prove computational universe leverage
+      ↓
+learned institutional intelligence
+      ↓
+season
+      ↓
+feature film
+      ↓
+multi-medium narrative runtime
+
+And I think the two compounding flywheels in 20 are now the clearest statement of where this gets strategically interesting:
+
+CANON FLYWHEEL
+more episodes
+→ more canonical history
+→ richer persistent beings
+→ denser relationships / promises / conflicts
+→ more NarrativeOpportunities
+→ stronger future stories
+
+and:
+
+EXPERIENCE FLYWHEEL
+more productions
+→ more execution evidence
+→ better SelfModel
+→ better production strategies
+→ better QC
+→ better cognitive policies
+→ fewer mistakes / better output
+→ more productions
+
+Those two flywheels together are the architecture’s compounding engine.

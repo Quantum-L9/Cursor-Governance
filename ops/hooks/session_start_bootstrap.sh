@@ -143,6 +143,11 @@ fi
 
 GC="$GLOBAL_COMMANDS"
 
+# Never-lose: restore open/.tmp legacy holds into the active workspace.
+if [[ -n "${REPO:-}" && -f "$GC/ops/scripts/scratch_hold.py" ]]; then
+  python3 "$GC/ops/scripts/scratch_hold.py" --workspace "$REPO" restore --all >/dev/null 2>&1 || true
+fi
+
 # Self-heal installed bootstrap + activator sidecar from tip SSOT
 if [ -f "$GC/ops/hooks/session_start_bootstrap.sh" ]; then
   cp -f "$GC/ops/hooks/session_start_bootstrap.sh" "$HOME/.cursor/hooks/session-start-bootstrap.sh" 2>/dev/null || true
