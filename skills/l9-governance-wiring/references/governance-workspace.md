@@ -16,4 +16,4 @@ bash .cursor-commands/ops/scripts/wire_governance_workspace.sh "$(pwd)"
 
 Aliases: `/wire governance`, `/wire governance-workspace`, `/wire .cursor-commands`
 
-Ensures `.cursor-commands` → Dropbox GlobalCommands SSOT and sessionEnd backup hook active.
+Ensures `.cursor-commands` → `$HOME/.cursor-governance` SSOT and sessionEnd backup hook active.

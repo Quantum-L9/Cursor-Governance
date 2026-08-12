@@ -24,6 +24,12 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: legacy-doctrine-residue
+        name: No active Dropbox SSOT or L9_MEMORY_HTTP side-door teaching
+        entry: python3 ops/scripts/validate_legacy_doctrine_residue.py
+        language: system
+        pass_filenames: false
+
       # Commit-time heal. make pr SKIPs this hook and runs sync in run_pr_gate
       # with WARN+continue so digest churn never blocks the PR gate.
       - id: sync-generated-artifacts

@@ -130,7 +130,7 @@ if not _L9_ROOT:
     for candidate in [
         Path.home() / "Projects" / "L9",
         Path.home() / "Projects" / "l9",
-        Path(__file__).resolve().parents[3],  # Dropbox/.../ops/scripts → L9
+        Path(__file__).resolve().parents[2],  # .../ops/scripts → repo root
     ]:
         if (candidate / "memory" / "__init__.py").exists():
             _L9_ROOT = str(candidate)
@@ -159,7 +159,9 @@ REPORTS_DIR_RELATIVE = "reports"
 README_DIR_RELATIVE = "readme"
 
 # State file for tracking processed files (content-hash based)
-GLOBAL_COMMANDS = HOME / "Dropbox" / "Cursor Governance" / "GlobalCommands"
+GLOBAL_COMMANDS = Path(
+    os.environ.get("L9_GOVERNANCE_DIR", str(HOME / ".cursor-governance"))
+).expanduser()
 STATE_FILE = GLOBAL_COMMANDS / "ops" / "logs" / "distiller_state.json"
 
 

@@ -6,7 +6,7 @@ description: "Push GlobalCommands (.cursor-commands) to cryptoxdog/Cursor-Govern
 
 # /governance-backup — GitHub SSOT Backup
 
-Dropbox `GlobalCommands/` is the **live SSOT**. This command commits and pushes it to [cryptoxdog/Cursor-Governance](https://github.com/cryptoxdog/Cursor-Governance).
+`$HOME/.cursor-governance` (GitHub clone) is the **live SSOT**. This command commits and pushes it to [Quantum-L9/Cursor-Governance](https://github.com/Quantum-L9/Cursor-Governance).
 
 ## When to run
 
@@ -48,7 +48,7 @@ export GOVERNANCE_BACKUP_SKIP=1
 
 - `git` and network access
 - `gh auth login` (or SSH/credential helper configured for GitHub)
-- Dropbox SSOT at `$HOME/Dropbox/cursor governance/GlobalCommands/`
+- Governance SSOT at `$HOME/.cursor-governance/`
 
 ## Setup (once per machine)
 

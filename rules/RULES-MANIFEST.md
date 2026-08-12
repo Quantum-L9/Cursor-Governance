@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-12T03:59:33Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-12T15:05:46Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -64,7 +64,7 @@ Generated: `2026-08-12T03:59:33Z`. Source: `rules/*.mdc`.
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | always | 35 | `b6b565182a82` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 110 | `3d0a8c303d9d` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 64 | `b15272f75d3d` |
-| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 778 | `7a7ff8fa50b4` |
+| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 778 | `d61dd32823aa` |
 | `93-c1-server-protection.mdc` | `l9.rule.93.c1.server.protection` | global | git | always | 82 | `e0d5aa093de5` |
 | `94-deployment-prohibition.mdc` | `l9.rule.94.deployment.prohibition` | global | deployment | always | 19 | `3f41555552fd` |
 | `95-agent-pattern-activation.mdc` | `l9.rule.95.agent.pattern.activation` | global | memory | always | 109 | `1faa1aae1604` |

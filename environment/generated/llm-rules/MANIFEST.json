@@ -420,9 +420,9 @@
       "alias": null,
       "class": "always",
       "output": "92-learned-lessons.md",
-      "output_sha256": "5f99fbd699925609152a38ec0b896a33d8a417743da7f16742966b76e3c084bc",
+      "output_sha256": "a9d3f60ba5ee2df1bece1210b3cee93d7b89562addd2352e0fd7377afc4160b8",
       "source": "rules/92-learned-lessons.mdc",
-      "source_sha256": "7a7ff8fa50b46f45625805713846755929c6afba244848f431fac80a456c221d",
+      "source_sha256": "d61dd32823aa676d36ecef5d74607149875db9ccbcd54cdb976e65c769ef6096",
       "stem": "92-learned-lessons"
     },
     {
@@ -596,5 +596,5 @@
     "skipped_agent_requested": 4,
     "source_mdc": 65
   },
-  "tree_sha256": "3c6a88dbc16ff02ec0fe06e46b842fdf48e9ada908955aae400884082248c81c"
+  "tree_sha256": "f2c070c16b2ab265bd883f0cd5db498167f78f71707638ba687350f303badbd6"
 }

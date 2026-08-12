@@ -1,6 +1,6 @@
 ---
 name: l9-governance-symlinks
-description: Wire and verify a repo's Cursor governance symlinks against the Dropbox governance SSOT. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.
+description: Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.
 disable-model-invocation: true
 ---
 
@@ -14,10 +14,13 @@ Run canonical `setup_workspace_symlinks.sh` in the workspace, then run `validate
 - Wires repo-level links in the current workspace: `.cursor-commands`, `.cursor/commands`, `.cursor/rules`, `.cursor/governance`.
 - Validates every link resolves to the canonical Single Source of Truth and reports `RESULT: PASS` or `RESULT: FAIL`.
 
-The canonical scripts live under the governance SSOT, resolved exactly like the scripts do (first match wins):
+The canonical scripts live under the governance SSOT:
 
-1. `$HOME/.cursor-governance/ops/scripts`
-2. `$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts`
+```text
+$HOME/.cursor-governance/ops/scripts
+```
+
+Dropbox paths are retired and must not be probed.
 
 ## Workflow
 
@@ -32,14 +35,8 @@ The canonical scripts live under the governance SSOT, resolved exactly like the 
 Always invoke the canonical copies from the governance SSOT (never a stale per-repo copy):
 
 ```bash
-GOV_SCRIPTS=""
-for p in "$HOME/Dropbox/cursor governance" "$HOME/Dropbox/Cursor Governance"; do
-  if [ -d "$p/GlobalCommands/ops/scripts" ]; then
-    GOV_SCRIPTS="$p/GlobalCommands/ops/scripts"
-    break
-  fi
-done
-[ -n "$GOV_SCRIPTS" ] || { echo "ERROR: governance SSOT not found under \$HOME/Dropbox"; exit 1; }
+GOV_SCRIPTS="$HOME/.cursor-governance/ops/scripts"
+[ -d "$GOV_SCRIPTS" ] || { echo "ERROR: governance SSOT not found at \$HOME/.cursor-governance"; exit 1; }
 echo "Canonical scripts: $GOV_SCRIPTS"
 ```
 
@@ -71,7 +68,7 @@ RESULT: PASS — governance symlinks aligned
 
 Confirm exit code is `0`. If you see `RESULT: FAIL`, read the `FAIL:` lines, then re-run Step 2 from the correct workspace root and validate again. Common failures:
 
-- `missing: .../GlobalCommands/...` or `CANONICAL_LAW.md` — the Dropbox SSOT is not present/synced; do not patch links, fix the SSOT first.
+- `missing: .../CANONICAL_LAW.md` — the GitHub clone at `$HOME/.cursor-governance` is not present/synced; do not patch links, fix the SSOT first.
 - `not a symlink` / `expected X got Y` — a stale file or wrong target; re-running Step 2 repairs it.
 - `missing .../skills/<l9-skill>/SKILL.md` — a required L9 skill is absent from the SSOT.
 

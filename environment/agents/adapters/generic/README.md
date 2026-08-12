@@ -36,21 +36,22 @@ Copy and fill:
 
 | From generic | Required in named adapter |
 |---|---|
-| `environment.env.example` | Identity lines matching registry; `L9_MEMORY_HTTP_URL=https://memory.quantumaipartners.com` |
-| `mcp.template.json` | Replace `${AGENT_ID}` with the real agent_id |
+| `environment.env.example` | Identity lines matching registry; `GRAPHITI_MCP_URL` + `GRAPHITI_MCP_TOKEN` |
+| `mcp.template.json` | Server name `graphiti-memory`; replace identity headers with the real agent_id |
 | `bootstrap.template.md` | Fill `{{AGENT_ID}}` / `{{ROLE}}` → rename to `session_bootstrap.md` |
 | README | Setup + role limits |
 
 ## 4. Wire the surface
 
 ```bash
-L9_MEMORY_HTTP_URL=https://memory.quantumaipartners.com
-L9_MEMORY_CLIENT_TOKEN=<its own token>
+GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
+GRAPHITI_MCP_TOKEN=<its own Graphiti bearer>
 USER_ID=<agent_id>_agent
 L9_MEMORY_AGENT_ID=<agent_id>
 L9_MEMORY_SOURCE=<agent_id>
 ```
 
-Point its MCP client at `/mcp` with Bearer auth. Inject the bootstrap into
-its system-prompt/instructions carrier. Allowlist
+Point its MCP client at the Graphiti HTTPS front door with Bearer auth
+(`graphiti-memory`). Do **not** use retired `L9_MEMORY_HTTP_*` / `l9-shared-memory`.
+Inject the bootstrap into its system-prompt/instructions carrier. Allowlist
 `memory.quantumaipartners.com` (`docs/network-allowlist.md`).

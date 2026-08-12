@@ -110,7 +110,7 @@ Rely on the installed Cursor hook `ops/hooks/graphiti-session-end.sh` (wired via
 
 ### 4. GOVERNANCE GITHUB BACKUP (mandatory)
 
-Push Dropbox SSOT (everything under `@.cursor-commands/`) to the governance repo:
+Push the GitHub-backed governance SSOT (everything under `@.cursor-commands/` → `$HOME/.cursor-governance`) to the governance repo:
 
 ```bash
 bash .cursor-commands/ops/scripts/backup_to_github.sh "chore(governance): end-session $(date +%Y-%m-%d)"

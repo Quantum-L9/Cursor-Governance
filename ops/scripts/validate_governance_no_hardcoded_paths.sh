@@ -60,5 +60,5 @@ if [ $FAIL -eq 0 ]; then
   exit 0
 fi
 
-echo "RESULT: FAIL — resolve via resolve_governance_paths.sh (~/.cursor-governance, Dropbox fallback); see CANONICAL_LAW §9"
+echo "RESULT: FAIL — resolve via resolve_governance_paths.sh (~/.cursor-governance only; Dropbox is not a fallback); see CANONICAL_LAW"
 exit 1

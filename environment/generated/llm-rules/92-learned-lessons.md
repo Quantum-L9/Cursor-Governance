@@ -23,7 +23,7 @@ These are **hard-won lessons** from repeated mistakes. Violating these wastes ho
 $HOME/.cursor-governance
 ```
 
-**Rule:** The governance SSOT is `$HOME/.cursor-governance` (the GitHub clone); legacy Dropbox is fallback only. Always use `$HOME`, never hardcoded `/Users/<name>/...` paths. Period. No exceptions.
+**Rule:** The governance SSOT is `$HOME/.cursor-governance` (the GitHub clone) only. Dropbox governance fallback is retired and forbidden. Always use `$HOME`, never hardcoded `/Users/<name>/...` paths. Period. No exceptions.
 
 ### Use $HOME, Never Hardcoded Paths
 

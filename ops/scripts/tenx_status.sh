@@ -1,41 +1,15 @@
 #!/usr/bin/env bash
 # 10X Governance Health Diagnostic
-# Version: 2.0.0
-# Updated: Use Dropbox GlobalCommands as single source of truth
-
-# Log file for fallback notifications
-FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
-
-# Use Dropbox GlobalCommands as single source of truth
-# Set DISABLE_FALLBACK=1 to fail if Dropbox not found (no fallback to Library)
-DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
+# Version: 2.1.0
+# SSOT: $HOME/.cursor-governance only (Dropbox / Library fallbacks retired)
 
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/.cursor-governance" ]; then
+if [ -d "$HOME/.cursor-governance" ] && [ -f "$HOME/.cursor-governance/CANONICAL_LAW.md" ]; then
     ROOT="$HOME/.cursor-governance"
-    USING_SYNCED_SOURCE=true
-elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
-    ROOT="$HOME/Dropbox/Cursor Governance/GlobalCommands"
-    USING_SYNCED_SOURCE=true
-elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
-    if [ "$DISABLE_FALLBACK" = "1" ]; then
-        echo "❌ ERROR: SSOT/Dropbox GlobalCommands not found and fallback disabled!"
-        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or restore the SSOT clone"
-        exit 1
-    fi
-    ROOT="$HOME/Library/Application Support/Cursor/GlobalCommands"
-    USING_SYNCED_SOURCE=false
-    
-    # Log fallback usage
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)" >> "$FALLBACK_LOG"
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Script: $0" >> "$FALLBACK_LOG"
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Path: $ROOT" >> "$FALLBACK_LOG"
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   User: $USER" >> "$FALLBACK_LOG"
-    echo "---" >> "$FALLBACK_LOG"
-    
-    echo "⚠️  WARNING: Using Library fallback (logged to $FALLBACK_LOG)"
 else
-    echo "❌ GlobalCommands directory not found!"
+    echo "❌ ERROR: governance SSOT not found at \$HOME/.cursor-governance"
+    echo "   Fix: git clone https://github.com/Quantum-L9/Cursor-Governance.git \"\$HOME/.cursor-governance\""
+    echo "   Dropbox and Library paths are not fallbacks."
     exit 1
 fi
 
