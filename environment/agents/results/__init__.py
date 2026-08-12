@@ -1,0 +1,1 @@
+"""Canonical Result Gateway."""

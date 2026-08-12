@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.result-acceptance-receipt.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "assignment_id",
+    "status",
+    "receipt_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.result-acceptance-receipt.v1"
+    },
+    "assignment_id": {
+      "type": "string"
+    },
+    "campaign_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "action_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "parent_agent_id": {
+      "type": "string"
+    },
+    "lease_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "base_sha": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "surface": {
+      "type": "string"
+    },
+    "result_adapter": {
+      "type": "string"
+    },
+    "result_id": {
+      "type": "string"
+    },
+    "result_digest": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ACCEPTED",
+        "REJECTED"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "receipt_digest": {
+      "type": "string"
+    },
+    "observed_at": {
+      "type": "string"
+    }
+  }
+}

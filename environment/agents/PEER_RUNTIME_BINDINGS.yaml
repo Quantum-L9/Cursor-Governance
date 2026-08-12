@@ -36,10 +36,10 @@ peers:
       deployment:
         readiness_required: true
     results:
-      readiness_required: false
+      readiness_required: true
     generated_data:
       required: true
-      capture_readiness_required: false
+      capture_readiness_required: true
 
   claude-code:
     agent_ref: claude-code
