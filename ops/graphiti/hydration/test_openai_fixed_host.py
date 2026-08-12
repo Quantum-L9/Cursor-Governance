@@ -96,6 +96,15 @@ def test_absent_key():
         )
 
 
+def test_urlopen_fixed_refuses_file_scheme():
+    import ssl
+    import urllib.request
+
+    req = urllib.request.Request("file:///etc/passwd")
+    with pytest.raises(ofh.OpenAIFixedHostError, match="refusing non-fixed"):
+        ofh._urlopen_fixed(req, timeout=1.0, context=ssl.create_default_context())
+
+
 def test_resolve_key_from_env(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env")
     key, reason = ok.resolve_openai_api_key()
