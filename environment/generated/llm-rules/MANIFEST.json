@@ -314,7 +314,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/84-cursor-governance-wiring.mdc",
-      "source_sha256": "ebf45d7841f368370114f831983f70e46462688856a606e1e70904a6c48a7f43",
+      "source_sha256": "4a015b7b40f4a1978f794df7cc2d2737b875c0562fd7d6c7def52d4b0ce8a316",
       "stem": "84-cursor-governance-wiring"
     },
     {
@@ -377,7 +377,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/88-bounded-session-autonomy.mdc",
-      "source_sha256": "d6d9f3ceb747c2afe9652d2fac6915afe183f91fb7b289b530d01fd438db59d9",
+      "source_sha256": "a99f7b00c3b29f04b05dcdc8e25964f1f1b6e634e97a2d26c11be7ac88fd5548",
       "stem": "88-bounded-session-autonomy"
     },
     {
