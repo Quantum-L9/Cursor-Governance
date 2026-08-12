@@ -202,7 +202,9 @@ def sync_skill_overrides(root: Path, wrote: list[str]) -> None:
         for entry in (manifest.get("tiers", {}) or {}).get("explicit_only", [])
         if isinstance(entry, dict) and entry.get("skill")
     ]
-    settings_path = root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+    settings_path = (
+        root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+    )
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
     desired = {name: "user-invocable-only" for name in sorted(explicit)}
     if settings.get("skillOverrides") == desired:
@@ -444,7 +446,14 @@ def validate_after_sync(root: Path) -> list[str]:
         ],
         [sys.executable, str(SCRIPTS / "validate_commands_manifest.py"), "--root", str(root)],
     ]
-    activation = root / "environment" / "agents" / "adapters" / "claude-code" / "validate_skill_activation.py"
+    activation = (
+        root
+        / "environment"
+        / "agents"
+        / "adapters"
+        / "claude-code"
+        / "validate_skill_activation.py"
+    )
     if activation.is_file():
         # Skip embedded pytest fixtures in activation validator during sync — too heavy;
         # structural checks only via a light path: registry --check + overrides already covered.

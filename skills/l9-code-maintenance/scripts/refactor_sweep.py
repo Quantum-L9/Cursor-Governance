@@ -88,7 +88,9 @@ def _classify_layer(path: str) -> str:
         return "bootstrap"
     if path.startswith("environment/program-execution/"):
         return "program-execution"
-    if path.startswith("autonomy/") or path.startswith("environment/agents/adapters/claude-code/autonomy/"):
+    if path.startswith("autonomy/") or path.startswith(
+        "environment/agents/adapters/claude-code/autonomy/"
+    ):
         return "autonomy"
     if path.startswith("skills/") or path.startswith("commands/") or path.startswith("rules/"):
         return "governance"

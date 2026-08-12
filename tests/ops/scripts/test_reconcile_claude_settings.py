@@ -48,7 +48,9 @@ def test_reconcile_workspace_and_check(tmp_path: Path) -> None:
         "env": {"L9_GOVERNANCE_SURFACE": "claude-code", "L9_AUTONOMY_ENABLED": "true"},
         "skillOverrides": {},
     }
-    tmpl_path = root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+    tmpl_path = (
+        root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+    )
     tmpl_path.write_text(json.dumps(tmpl, indent=2) + "\n", encoding="utf-8")
 
     ws = tmp_path / "consumer"
