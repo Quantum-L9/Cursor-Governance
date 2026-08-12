@@ -20,8 +20,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-TEMPLATE_REL = Path("environment/claude-code/settings.template.json")
-HOOKS_SRC_REL = Path("environment/claude-code/hooks")
+TEMPLATE_REL = Path("environment/agents/adapters/claude-code/settings.template.json")
+HOOKS_SRC_REL = Path("environment/agents/adapters/claude-code/hooks")
 SESSION_START_NAME = "session_start_claude_governance.sh"
 
 # Keys taken wholly from the template when reconciling managed settings.

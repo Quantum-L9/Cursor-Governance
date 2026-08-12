@@ -8,7 +8,7 @@ Covered artifacts:
   * rules/RULES-MANIFEST.{json,yaml,md}
   * environment/generated/llm-rules/** (projected .md peers)
   * ops/generated/skill-registry.json
-  * environment/claude-code/settings.template.json skillOverrides
+  * environment/agents/adapters/claude-code/settings.template.json skillOverrides
   * skills/AUTONOMY_MANIFEST.yaml (orphan skills → explicit_only)
   * commands/COMMANDS_MANIFEST.yaml
   * environment/program-execution/core/MANIFEST.yaml
@@ -33,7 +33,7 @@ GENERATED_PATH_PREFIXES = (
     "rules/RULES-MANIFEST.",
     "environment/generated/llm-rules/",
     "ops/generated/skill-registry.json",
-    "environment/claude-code/settings.template.json",
+    "environment/agents/adapters/claude-code/settings.template.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/core/MANIFEST.yaml",
@@ -202,7 +202,9 @@ def sync_skill_overrides(root: Path, wrote: list[str]) -> None:
         for entry in (manifest.get("tiers", {}) or {}).get("explicit_only", [])
         if isinstance(entry, dict) and entry.get("skill")
     ]
-    settings_path = root / "environment" / "claude-code" / "settings.template.json"
+    settings_path = (
+        root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+    )
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
     desired = {name: "user-invocable-only" for name in sorted(explicit)}
     if settings.get("skillOverrides") == desired:
@@ -398,7 +400,7 @@ def sync(
                 "skills/",
                 "ops/generated/skill-registry.json",
                 "ops/skill_routing/",
-                "environment/claude-code/settings.template.json",
+                "environment/agents/adapters/claude-code/settings.template.json",
                 "environment/skill-adapters/",
             ),
         )
@@ -444,7 +446,14 @@ def validate_after_sync(root: Path) -> list[str]:
         ],
         [sys.executable, str(SCRIPTS / "validate_commands_manifest.py"), "--root", str(root)],
     ]
-    activation = root / "environment" / "claude-code" / "validate_skill_activation.py"
+    activation = (
+        root
+        / "environment"
+        / "agents"
+        / "adapters"
+        / "claude-code"
+        / "validate_skill_activation.py"
+    )
     if activation.is_file():
         # Skip embedded pytest fixtures in activation validator during sync — too heavy;
         # structural checks only via a light path: registry --check + overrides already covered.

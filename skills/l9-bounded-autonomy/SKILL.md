@@ -49,7 +49,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 - Mid-execution `git push` / `gh pr create` / `make pr` before L4 `release_authorized`.
 - Main and poll both pushing the same PR branch.
 - Silent waiver of commit/push outside the packet.
-- Rewrite `environment/claude-code/autonomy/*.py` or settings allow/deny as part of this skill’s job.
+- Rewrite `environment/agents/adapters/claude-code/autonomy/*.py` or settings allow/deny as part of this skill’s job.
 
 ## Authority Order
 

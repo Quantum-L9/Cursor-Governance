@@ -23,8 +23,8 @@ Claude Code Web/Mobile sandboxes cannot use the SSH tunnel to `127.0.0.1:8100`.
 3. Writer attribution remains distinct via `USER_ID` / `L9_MEMORY_AGENT_ID` /
    `L9_MEMORY_SOURCE` — do not revive `L9_MEMORY_CLIENT_TOKEN` for lifecycle.
 4. Claude Code gold-standard pack lives at
-   `environment/agents/adapters/claude-code/` (symlink may remain at
-   `environment/claude-code` until extinguishment).
+   `environment/agents/adapters/claude-code/` (transitional symlink at
+   `environment/claude-code` extinguished 2026-08-12).
 
 ## Consequences
 

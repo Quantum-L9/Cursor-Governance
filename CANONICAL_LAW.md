@@ -32,6 +32,7 @@ status: active
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
 | **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
+| **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/plan` + `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
 
 **Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.  
 **Never** expose the governance root under `.cursor/governance/` — that path holds only the law file + README.
@@ -47,7 +48,7 @@ CLI) will consume the same root via their own conventions.
 | Adapter | Entry point | Status |
 |---------|-------------|--------|
 | Cursor | `.cursor-commands/` → clone root; `l9-governance` local plugin | Active (**primary coding surface**) |
-| Claude Code (CLI · Web · Mobile) | `environment/claude-code/` — committed `.claude/` + account environment | Active (**dependent adapter**) |
+| Claude Code (CLI · Web · Mobile) | `environment/agents/adapters/claude-code/` — committed `.claude/` + account environment | Active (**dependent adapter**) |
 | Manus | `environment/agents/adapters/manus/` — connector + env + session bootstrap, identity from `environment/agents/agent_registry.yaml` | Active |
 | Codex / OpenAI | `environment/agents/adapters/codex/` — AGENTS.md block + env, identity from `environment/agents/agent_registry.yaml` | Planned |
 | Gemini CLI | `environment/agents/adapters/gemini/` — settings template + env, identity from `environment/agents/agent_registry.yaml` | Planned |
@@ -77,7 +78,7 @@ are **not** owners of shared capability.
 
 | Anti-pattern | Why |
 |---|---|
-| Shared scorer / router / autonomy brain lives under `environment/claude-code/` and Cursor imports it | Inverts ownership — Claude adapter owns Cursor’s brain |
+| Shared scorer / router / autonomy brain lives under `environment/claude-code/` or `environment/agents/adapters/claude-code/` and Cursor imports it | Inverts ownership — Claude adapter owns Cursor’s brain |
 | “Claude implemented it; wrap Cursor to reuse Claude” | Dependent adapter dictating the SSOT |
 | Duplicating the same brain in each adapter folder | Drift and dual maintenance |
 | Treating “peer of `environment/ide/`” as equal ownership of cross-surface logic | Peer = surface parity, not capability ownership |
@@ -88,7 +89,7 @@ are **not** owners of shared capability.
 |---|---|---|
 | Shared capability | Cursor-primary / adapter-neutral governance | `ops/hooks/*`, `ops/scripts/*`, `rules/*`, `skills/*`, shared libs under `ops/` |
 | Cursor binding | Cursor adapter paths | `~/.cursor/hooks.json`, `l9-governance` plugin, `.cursor-commands` |
-| Other LLM/IDE binding | Thin wrapper only | `environment/claude-code/hooks/*` imports shared ops; does not own the scorer |
+| Other LLM/IDE binding | Thin wrapper only | `environment/agents/adapters/claude-code/hooks/*` imports shared ops; does not own the scorer |
 
 **Skill routing ownership:** shared scoring lives in `ops/skill_routing/`;
 registry at `ops/generated/skill-registry.json`. Claude and Cursor hooks are
@@ -99,7 +100,7 @@ governed by `environment/agents/agent_registry.yaml` — peer of
 `ops/graphiti/group_registry.yaml` (WHAT repo memory is about). Validate with
 `make agents-env`. See `environment/agents/README.md`.
 
-The Claude Code adapter is defined in `environment/claude-code/` (surface peer of
+The Claude Code adapter is defined in `environment/agents/adapters/claude-code/` (surface peer of
 `environment/ide/` for activation templates — **not** capability owner). It
 reuses `environment/ide/policy.json` unchanged; formatter ownership reaches a
 Claude Code session through the `agentdocs` `CLAUDE.md` block, not a second
@@ -257,7 +258,7 @@ auth: `L9_MERGE_AUTHORIZED=<reason>`.
 - Leaving deprecated skill packs under live `skills/<name>/` (must live under `skills/_archived/`)
 - Using `cursor_memory_client.py` — deprecated, use Graphiti
 - "Fire and hope" command execution — issuing a write/execute command with no prior read-only diagnosis (see §11)
-- Implementing shared cross-surface capability under a dependent adapter (e.g. `environment/claude-code/`) and wrapping Cursor to import it — violates §2.1; causes adapter spaghetti
+- Implementing shared cross-surface capability under a dependent adapter (e.g. `environment/claude-code/` or `environment/agents/adapters/claude-code/`) and wrapping Cursor to import it — violates §2.1; causes adapter spaghetti
 
 ---
 

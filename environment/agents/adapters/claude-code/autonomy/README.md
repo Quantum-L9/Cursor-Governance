@@ -75,12 +75,12 @@ resolved by `action_id`.
 ## Validate
 
 ```bash
-python3 environment/claude-code/autonomy/validate_autonomy.py
+python3 environment/agents/adapters/claude-code/autonomy/validate_autonomy.py
 
 # Example campaign
-python3 environment/claude-code/autonomy/cli.py init \
-  environment/claude-code/autonomy/examples/pr-convergence-campaign.json
-python3 environment/claude-code/autonomy/cli.py plan example-pr-convergence
+python3 environment/agents/adapters/claude-code/autonomy/cli.py init \
+  environment/agents/adapters/claude-code/autonomy/examples/pr-convergence-campaign.json
+python3 environment/agents/adapters/claude-code/autonomy/cli.py plan example-pr-convergence
 ```
 
 The validator parses all JSON contracts, compiles all Python modules, checks the

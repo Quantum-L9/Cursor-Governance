@@ -15,7 +15,7 @@ Registry identity: `agents.manus` in `../../agent_registry.yaml`
 (`agent_id=manus`, `user_id=manus_agent`, role `researcher-builder`, **active**).
 
 Contract: `../ADAPTER_CONTRACT.md` (same three carriers as Claude Code).
-Claude Code itself remains at `environment/claude-code/` — this adapter does
+Claude Code itself remains at `environment/agents/adapters/claude-code/` — this adapter does
 not replace it.
 
 | Need | Claude Code carrier | Manus carrier |

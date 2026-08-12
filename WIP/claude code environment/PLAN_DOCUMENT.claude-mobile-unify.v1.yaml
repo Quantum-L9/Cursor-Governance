@@ -4,7 +4,7 @@ metadata:
   plan_id: PLAN-CLAUDE-MOBILE-ADAPTER-UNIFY-001
   name: Claude Code Mobile Adapter Unification
   overview: >
-    Unify environment/claude-code under environment/agents/adapters/claude-code,
+    Unify Claude Code pack under environment/agents/adapters/claude-code,
     realign Web/Mobile to Anthropic cloud triad + HTTPS Graphiti reachability,
     and revise WIP variables/script into a cache-safe autonomy-ready cloud pack.
   status: executable
@@ -153,7 +153,7 @@ execution_envelope:
   filesystem:
     write_allow:
       - WIP/claude code environment/**
-      - environment/claude-code/**
+      - environment/agents/adapters/claude-code/**
       - environment/agents/adapters/claude-code/**
       - environment/agents/adapters/ADAPTER_CONTRACT.md
       - environment/agents/agent_registry.yaml
@@ -176,7 +176,7 @@ execution_envelope:
       - autonomy/**
       - "**/memory_client.py"
     delete_allow:
-      - environment/claude-code  # only as move source after git mv
+      - environment/agents/adapters/claude-code  # only as move source after git mv
   external:
     allow:
       - c1_graphiti_env_rotate
@@ -256,7 +256,7 @@ out_of_scope:
 follow_on_milestone:
   name: extinguish_transitional_symlink
   description: >
-    Remove environment/claude-code symlink after zero hardcoded path refs in CI.
+    DONE 2026-08-12: transitional environment/claude-code symlink extinguished; sole home agents/adapters/claude-code.
 unknowns:
   - id: U1
     detail: Whether Anthropic .mcp.json HTTP egress uses session allowlist

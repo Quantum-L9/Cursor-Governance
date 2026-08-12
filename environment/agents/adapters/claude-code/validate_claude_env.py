@@ -8,7 +8,8 @@ Checks that are cheap, deterministic, and never fabricate a live fact:
 * no real secret is committed (only ``REPLACE_WITH_*`` / ``${...}`` placeholders),
 * the MCP template carries no literal bearer token.
 
-Run: ``python3 environment/claude-code/validate_claude_env.py`` (or ``make claude-env``).
+Run: ``python3 environment/agents/adapters/claude-code/validate_claude_env.py``
+(or ``make claude-env``).
 Exit 0 on PASS, 1 on FAIL. Stdlib only, so it runs on a fresh sandbox.
 """
 

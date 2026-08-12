@@ -121,7 +121,7 @@
           ]
         }
       },
-      "rationale": "Root autonomy/ (W7 control plane) and environment/agents/adapters/claude-code/autonomy/ (Claude Code bounded-concurrency runtime) share the top-level package name, so this suite runs with PYTHONPATH=environment/agents/adapters/claude-code to bind the correct package. '-o addopts=' clears root pytest settings so the root active-suite ignores cannot reintroduce package shadowing here. CI profile keeps xdist and the 300s timeout with no root coverage arguments. Transitional symlink environment/claude-code/autonomy is also ignored by repo-root to avoid double collection."
+      "rationale": "Root autonomy/ (W7 control plane) and environment/agents/adapters/claude-code/autonomy/ (Claude Code bounded-concurrency runtime) share the top-level package name, so this suite runs with PYTHONPATH=environment/agents/adapters/claude-code to bind the correct package. '-o addopts=' clears root pytest settings so the root active-suite ignores cannot reintroduce package shadowing here. CI profile keeps xdist and the 300s timeout with no root coverage arguments. Transitional symlink environment/agents/adapters/claude-code/autonomy is also ignored by repo-root to avoid double collection."
     },
     {
       "id": "subagent-generated-data-wave3",

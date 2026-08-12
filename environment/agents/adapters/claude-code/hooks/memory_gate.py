@@ -90,7 +90,7 @@ def main() -> int:
             _deny(
                 f"Memory not prefetched this session. Governed write '{rule['id']}' requires the "
                 "SessionStart Graphiti prefetch (front door). Start a fresh session, or run "
-                "environment/claude-code/hooks/memory_prefetch.py, then retry."
+                "environment/agents/adapters/claude-code/hooks/memory_prefetch.py, then retry."
             )
 
         if "phase_lock" in requires:
@@ -98,7 +98,7 @@ def main() -> int:
                 _deny(
                     f"No conflict-checked phase-lock held. Governed write '{rule['id']}' "
                     f"requires a verified Graphiti lock on one of {namespaces}. Acquire: "
-                    "python3 environment/claude-code/hooks/memory_lock.py acquire "
+                    "python3 environment/agents/adapters/claude-code/hooks/memory_lock.py acquire "
                     f'--namespace {namespaces[0]} --task "<what you are changing>".'
                 )
         return 0

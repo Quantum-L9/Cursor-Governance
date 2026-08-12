@@ -11,7 +11,7 @@ updated: 2026-07-31
 
 # Network allowlist — multi-agent cloud surfaces
 
-Peer of `environment/claude-code/web/network-policy.md`. Apply the same hosts
+Peer of `environment/agents/adapters/claude-code/web/network-policy.md`. Apply the same hosts
 on Manus / Codex cloud / Gemini / any Custom-network sandbox that must reach
 shared memory and GitHub.
 

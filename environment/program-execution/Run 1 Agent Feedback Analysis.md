@@ -27,7 +27,7 @@ Run 1 proved packs + campaign law can merge through W10, but agents invented col
 
 **Out:**
 - Re-running full constellation W0–W10 in this plan (execution is a later GMP/campaign).
-- Rewriting Claude Code Python scheduler (`environment/claude-code/autonomy/`).
+- Rewriting Claude Code Python scheduler (`environment/agents/adapters/claude-code/autonomy/`).
 - Restoring discarded `l9-coding-control-plane` skill under `~/.cursor/skills` as the durable home (prefer controller-local / `L9CP_HOME`).
 - Dumping `WIP/` packs wholesale into git.
 - Auto-merge / deploy / VPS without HITL (human merge remains).

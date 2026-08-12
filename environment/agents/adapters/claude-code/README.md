@@ -118,7 +118,7 @@ second place to drift.
 
 ```bash
 # From inside the CONSUMER repo (not from ~/.cursor-governance):
-GOV="$HOME/.cursor-governance/environment/claude-code"
+GOV="$HOME/.cursor-governance/environment/agents/adapters/claude-code"
 
 mkdir -p .claude/hooks
 cp "$GOV/settings.template.json"                  .claude/settings.json
@@ -138,7 +138,7 @@ session inherits it.
 Validate before you commit:
 
 ```bash
-make claude-env        # or: python3 environment/claude-code/validate_claude_env.py
+make claude-env        # or: python3 environment/agents/adapters/claude-code/validate_claude_env.py
 ```
 
 ---

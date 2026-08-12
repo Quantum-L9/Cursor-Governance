@@ -101,7 +101,7 @@ agents:
 
   claude-code:
     agent_id: claude-code
-    user_id: claude_code_agent       # matches environment/claude-code/web/environment.env.example
+    user_id: claude_code_agent       # matches environment/agents/adapters/claude-code/web/environment.env.example
     source: claude-code
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE

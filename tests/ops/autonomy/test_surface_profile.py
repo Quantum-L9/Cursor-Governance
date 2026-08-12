@@ -41,7 +41,15 @@ def test_session_start_emits_profile(tmp_path: Path) -> None:
     home = tmp_path / "home"
     home.mkdir()
     (home / ".cursor-governance").symlink_to(ROOT)
-    script = ROOT / "environment" / "claude-code" / "hooks" / "session_start_claude_governance.sh"
+    script = (
+        ROOT
+        / "environment"
+        / "agents"
+        / "adapters"
+        / "claude-code"
+        / "hooks"
+        / "session_start_claude_governance.sh"
+    )
     proc = subprocess.run(
         ["bash", str(script)],
         cwd=tmp_path,

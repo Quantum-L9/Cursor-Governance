@@ -7,7 +7,7 @@
 ## Existing adapter model (CANONICAL_LAW §2)
 - IDE-agnostic governance; adapters registered per surface:
   - Cursor: `.cursor-commands/` symlink (Active)
-  - Claude Code: `environment/claude-code/` (Active)
+  - Claude Code: `environment/agents/adapters/claude-code/` (Active)
   - Windsurf / VS Code: TBD (Planned)
   - CLI direct: Active
 - Rule: no second activation path per agent; policy.json single authority; formatter ownership via agentdocs CLAUDE.md block.

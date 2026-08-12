@@ -15,4 +15,4 @@ Activate with `/autonomy` or when the user explicitly starts a bounded autonomy 
 4. Never autonomous merge — report merge-gate eligibility; wait for explicit human approval.
 5. Skill composition: one primary (`l9-bounded-autonomy`) + ≤2 supporting; do not auto-invoke explicit-only skills.
 6. Campaign authority is a **campaign authorization packet** (not an “envelope”).
-7. Deep contracts: `skills/l9-bounded-autonomy/` and Claude runtime under `environment/claude-code/autonomy/` (do not rewrite the Python scheduler from Cursor).
+7. Deep contracts: `skills/l9-bounded-autonomy/` and Claude runtime under `environment/agents/adapters/claude-code/autonomy/` (do not rewrite the Python scheduler from Cursor).

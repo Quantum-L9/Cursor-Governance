@@ -52,7 +52,7 @@ Do **not** wait for the user to restate the archive law.
 |---------|-------------------------|
 | Governance SSOT | Top-level `skills/<name>/SKILL.md` (not under `_archived/`) |
 | `skills/AUTONOMY_MANIFEST.yaml` | Any `tiers.auto_invoke` or `tiers.explicit_only` row |
-| Skill registry | `environment/claude-code/generated/skill-registry.json` (or current generated path) |
+| Skill registry | `environment/agents/adapters/claude-code/generated/skill-registry.json` (or current generated path) |
 | Adapter symlinks | `~/.claude/skills/<name>`, `<workspace>/.claude/skills/<name>` |
 | Docs indexes | README / `AGENTS.md` / `.claude/README.md` skill tables |
 | Subagent preload | `skills:` frontmatter lists |

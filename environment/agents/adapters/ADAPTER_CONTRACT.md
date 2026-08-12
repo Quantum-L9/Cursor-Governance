@@ -13,8 +13,7 @@ updated: 2026-08-12
 
 Every surface under `environment/agents/adapters/<name>/` must provide the
 **same carriers** as the Claude Code gold-standard adapter at
-`environment/agents/adapters/claude-code/` (transitional symlink may exist at
-`environment/claude-code`). Claude Code is the thicker adapter (hooks, memory
+`environment/agents/adapters/claude-code/`. Claude Code is the thicker adapter (hooks, memory
 bridge, owned scheduler); thinner adapters catch up via this contract.
 
 | Need | Claude Code carrier | Required in each agents adapter |

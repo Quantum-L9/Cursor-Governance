@@ -32,7 +32,7 @@ Any hit on these paths during a sweep or migrate dry-run forces **GMP REQUIRED**
 ## Autonomy packages (do not casually move)
 
 - `autonomy/` (root Python package — import path locked)
-- `environment/claude-code/autonomy/`
+- `environment/agents/adapters/claude-code/autonomy/`
 
 ## Executor legacy protected set (PlasticOS-oriented)
 

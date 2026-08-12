@@ -228,7 +228,7 @@ def repo_python_modules(root: Path, files: list[Path]) -> set[str]:
             continue
         # Every directory on the path to a .py file is an importable first-party
         # package candidate — covers nested packages and modules reached through a
-        # runtime sys.path root (e.g. environment/claude-code/memory, tools.validation).
+        # runtime sys.path root (e.g. environment/agents/adapters/claude-code/memory, tools.validation).
         for part in rel.parts[:-1]:
             names.add(part.replace("-", "_"))
     return names

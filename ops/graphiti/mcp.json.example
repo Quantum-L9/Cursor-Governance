@@ -2,7 +2,7 @@
   "_comment": [
     "AUTHORITATIVE Graphiti MCP shape (Cursor + Claude adapters).",
     "Front door: graphiti-memory @ 127.0.0.1:8100 via SSH tunnel + GRAPHITI_MCP_TOKEN.",
-    "Claude Code copies the same block from environment/claude-code/mcp.template.json.",
+    "Claude Code copies the same block from environment/agents/adapters/claude-code/mcp.template.json.",
     "Retired: l9-shared-memory @ https://memory.quantumaipartners.com (HTTP side door)."
   ],
   "mcpServers": {

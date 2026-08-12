@@ -32,7 +32,15 @@ def main() -> int:
     block = session_start_block(ROOT)
     step("profile doctrine", "Autonomy Velocity Doctrine" in block and "l9-pr-remediation" in block)
 
-    script = ROOT / "environment" / "claude-code" / "hooks" / "session_start_claude_governance.sh"
+    script = (
+        ROOT
+        / "environment"
+        / "agents"
+        / "adapters"
+        / "claude-code"
+        / "hooks"
+        / "session_start_claude_governance.sh"
+    )
     with tempfile.TemporaryDirectory(prefix="l9-autonomy-dry-") as td:
         home = Path(td) / "home"
         home.mkdir()
