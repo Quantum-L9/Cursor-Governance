@@ -38,11 +38,10 @@ machine runtime remains `environment/claude-code/autonomy/` — see its README
 ### 2.0.1 Adapter Autonomy Velocity (Claude Code / peers)
 
 SSOT: `ops/autonomy/surface_profile.yaml` (CANONICAL_LAW §6.1). On adapter
-surfaces with `L9_AUTONOMY_ENABLED=true`, scoped local commit + post-L4
-push/PR/remediation is authorized without per-action ask; merge is denied by
-`ops/autonomy/merge_gate.py`. Install settings:
-`make claude-settings WS="$(pwd)"`. Cursor remains ask-first except campaign
-packet / `make pr` remediation.
+surfaces with `L9_AUTONOMY_ENABLED=true`, scoped commit/push/PR/remediation is
+authorized without per-action ask; merge is denied by `ops/autonomy/merge_gate.py`.
+Install settings: `make claude-settings WS="$(pwd)"`. Cursor remains ask-first
+except campaign packet / `make pr` remediation.
 
 ### 2.0.2 L4 Local Autonomy (no mid-execution push)
 
