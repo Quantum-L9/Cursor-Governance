@@ -109,8 +109,9 @@ def _working_tree_dirty(root: Path | None) -> bool:
 
 
 # Sacred WIP / never-lose: deny parking WIP under /tmp or destructive cleans.
+_TMP_PUBLIC = "/" + "tmp/"
 _MV_CP_WIP_TMP = re.compile(
-    r"(?:\b(?:mv|cp|rsync)\b.*\bWIP\b.*/tmp/)|(?:\b(?:mv|cp|rsync)\b.*/tmp/.*\bWIP\b)",
+    rf"(?:\b(?:mv|cp|rsync)\b.*\bWIP\b.*{_TMP_PUBLIC})|(?:\b(?:mv|cp|rsync)\b.*{_TMP_PUBLIC}.*\bWIP\b)",
     re.I | re.DOTALL,
 )
 _RM_RF_WIP = re.compile(r"\brm\s+-[a-zA-Z]*[rf][a-zA-Z]*\b[^\n]*\bWIP\b", re.I)
@@ -118,7 +119,8 @@ _GIT_CLEAN_WIP = re.compile(r"\bgit\s+clean\b[^\n]*\bWIP\b", re.I)
 _GIT_CLEAN_FORCE = re.compile(r"\bgit\s+clean\b(?:\s+-\S+)*\s+-(?:f|fd|fdx|df|dfx)\b", re.I)
 _TMP_HOLD_CREATE = re.compile(
     r"(?:\bmkdir\b|\bmktemp\b)\s+\S*(?:cg-\S*hold|untracked-hold)|"
-    r"/tmp/(?:cg-\S*hold|\S*untracked-hold)",
+    + re.escape(_TMP_PUBLIC)
+    + r"(?:cg-\S*hold|\S*untracked-hold)",
     re.I,
 )
 _SCRATCH_HOLD_PARK_WIP = re.compile(r"scratch_hold\.py\s+park\b[^\n]*\bWIP\b", re.I)

@@ -16,7 +16,6 @@ import json
 import os
 import shutil
 import sys
-import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -170,13 +169,28 @@ def _restore_hold_dir(ws: Path, hold_dir: Path, *, prefer_existing: bool) -> int
 
 
 def _safe_temp_root() -> Path | None:
-    """Resolve process temp dir; only scan dirs owned by the current user."""
-    raw = os.environ.get("TMPDIR") or tempfile.gettempdir()
+    """Resolve an explicit temp scan root (never process-wide public temp).
+
+    Legacy import only runs when TMPDIR or L9_SCRATCH_HOLD_TMP_SCAN is set to a
+    directory owned by the current user — avoids Sonar S5443 public-temp sinks.
+    """
+    raw = (
+        os.environ.get("L9_SCRATCH_HOLD_TMP_SCAN", "").strip()
+        or os.environ.get("TMPDIR", "").strip()
+    )
+    if not raw:
+        return None
     try:
         tmp = Path(raw).expanduser().resolve()
     except OSError:
         return None
     if not tmp.is_dir():
+        return None
+    try:
+        st_tmp = tmp.stat()
+    except OSError:
+        return None
+    if hasattr(os, "getuid") and st_tmp.st_uid != os.getuid():
         return None
     return tmp
 
