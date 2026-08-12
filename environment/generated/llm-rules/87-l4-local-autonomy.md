@@ -37,6 +37,7 @@ make pr
 
 - Claude PreToolUse: `local_execution_gate_wrap.py` → `ops/autonomy/local_execution_gate.py`
 - Cursor `beforeShellExecution`: `ops/hooks/l4-local-execution-gate-shell.sh`
+- Shared-worktree isolation (same gate): see `rules/88-shared-worktree-isolation.mdc`
 - `make pr` / `open_pr_after_gate.sh` fail-closed without release receipt
 
 ## MUST NOT
