@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-12T16:40:35Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-12T17:03:53Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -21,7 +21,7 @@ Generated: `2026-08-12T16:40:35Z`. Source: `rules/*.mdc`.
 | `00-global.mdc` | `l9.rule.00.global` | global | security | always | 279 | `617dac45e91d` |
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
-| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `760117869bfd` |
+| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `f9346853fcea` |
 | `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 62 | `c32f8bbc9533` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
