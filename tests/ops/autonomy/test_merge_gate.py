@@ -8,32 +8,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 GATE = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "merge_gate.py"
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
 from l4_local import authorize_release, begin, record_kernels  # noqa: E402
-
-
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
-
-
-@pytest.fixture
-def stacked_repo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git(repo, "init")
-    _git(repo, "config", "user.email", "test@example.com")
-    _git(repo, "config", "user.name", "test")
-    (repo / "README.md").write_text("x\n", encoding="utf-8")
-    _git(repo, "add", "README.md")
-    _git(repo, "commit", "-m", "init")
-    _git(repo, "branch", "-M", "main")
-    _git(repo, "checkout", "-b", "feat/l4-stack")
-    return repo
 
 
 def _run(event: dict, env: dict | None = None) -> tuple[int, str, str]:

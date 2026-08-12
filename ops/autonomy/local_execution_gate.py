@@ -26,7 +26,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from l4_local import release_allows_remote, workspace_root  # noqa: E402
+from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
 
 REMOTE_BASH_PATTERNS = (
     re.compile(r"\bgit\s+push\b", re.I),
@@ -42,20 +42,6 @@ DENY_MCP_TOOLS = {
     "create_pull_request",
     "push_files",
 }
-
-
-def _workspace_from_event(event: dict[str, Any]) -> Path:
-    tool_input = event.get("tool_input") or {}
-    if isinstance(tool_input, dict):
-        for key in ("cwd", "working_directory", "workspace"):
-            val = tool_input.get(key)
-            if val:
-                return Path(str(val)).expanduser().resolve()
-    for key in ("cwd", "working_directory", "workspace"):
-        val = event.get(key)
-        if val:
-            return Path(str(val)).expanduser().resolve()
-    return workspace_root()
 
 
 def command_is_remote_mutation(command: str) -> bool:
@@ -111,7 +97,7 @@ def main_claude() -> int:
     tool_input = event.get("tool_input") or {}
     if not isinstance(tool_input, dict):
         tool_input = {}
-    reason = evaluate(tool_name, tool_input, root=_workspace_from_event(event))
+    reason = evaluate(tool_name, tool_input, root=workspace_from_event(event))
     if reason:
         return _deny_claude(reason)
     return 0
@@ -127,7 +113,7 @@ def main_cursor_shell() -> int:
     command = str(event.get("command") or event.get("full_command") or "")
     if not command_is_remote_mutation(command):
         return _emit_cursor("allow")
-    root = _workspace_from_event(event)
+    root = workspace_from_event(event)
     allowed, reason = release_allows_remote(root)
     if allowed:
         return _emit_cursor("allow")

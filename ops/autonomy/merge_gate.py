@@ -23,7 +23,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from l4_local import release_allows_remote, workspace_root  # noqa: E402
+from l4_local import release_allows_remote, workspace_from_event, workspace_root  # noqa: E402
 
 DENY_TOOL_NAMES = {
     "mcp__github__merge_pull_request",
@@ -54,20 +54,6 @@ def _deny(reason: str) -> int:
         )
     )
     return 0
-
-
-def _workspace_from_event(event: dict[str, Any]) -> Path:
-    tool_input = event.get("tool_input") or {}
-    if isinstance(tool_input, dict):
-        for key in ("cwd", "working_directory", "workspace"):
-            val = tool_input.get(key)
-            if val:
-                return Path(str(val)).expanduser().resolve()
-    for key in ("cwd", "working_directory", "workspace"):
-        val = event.get(key)
-        if val:
-            return Path(str(val)).expanduser().resolve()
-    return workspace_root()
 
 
 def _l4_program_merge_authorized(root: Path) -> bool:
@@ -131,7 +117,7 @@ def main() -> int:
     tool_input = event.get("tool_input") or {}
     if not isinstance(tool_input, dict):
         tool_input = {}
-    root = _workspace_from_event(event)
+    root = workspace_from_event(event)
     reason = evaluate(tool_name, tool_input, root=root)
     if reason:
         return _deny(reason)
