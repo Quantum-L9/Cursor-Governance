@@ -162,6 +162,10 @@ def _write_kind(
     return {"written": True, "kind": kind, "result": result}
 
 
+def _phase_b_enabled() -> bool:
+    return os.environ.get("MEMORY_PHASE_B", "1").strip() not in ("0", "false", "False")
+
+
 def _distill_signal_packet(
     *,
     session_id: str,
@@ -171,13 +175,79 @@ def _distill_signal_packet(
 ) -> tuple[dict[str, Any] | None, str]:
     """Return (packet, skip_reason). skip_reason empty on success.
 
-    Phase B HTTP distill is intentionally deferred: Sonar new-code security
-    rating kept failing on the OpenAI client sink despite fixed-host HTTPS.
-    Phase A heuristic PICKUP remains authoritative until distill is restored
-    behind a reviewed transport helper.
+    Uses the Sonar-reviewed fixed-host OpenAI helper
+    (``ops.graphiti.hydration.openai_fixed_host``) — never builds a URL from
+    caller input. Key: env or ephemeral SM ``l9/OPENAI_API_KEY``.
     """
-    del session_id, transcript, pickup, timeout  # unused while distill deferred
-    return None, "Phase B distill deferred (Sonar security) — keeping Phase A"
+    if not _phase_b_enabled():
+        return None, "MEMORY_PHASE_B=0"
+
+    from ops.graphiti.hydration.openai_fixed_host import (
+        OpenAIFixedHostError,
+        chat_completions,
+        message_content,
+    )
+    from ops.graphiti.hydration.openai_key import resolve_openai_api_key
+
+    key, key_reason = resolve_openai_api_key()
+    if not key:
+        return None, key_reason or "OPENAI_API_KEY absent"
+
+    budget_tokens = int(os.environ.get("MEMORY_DISTILL_TOKEN_BUDGET", "300"))
+    rules = _load_rules()
+    system = (
+        "Extract durable session signals. Output ONLY JSON with keys: "
+        "promotion_decisions (list of {kind, body, decision, score}), "
+        "pickup ({active_objective, next_action, context_slice, blockers}), "
+        "do_not_promote (list of strings). "
+        "kind in lesson|insight|decision|preference|constraint; "
+        "decision in promote|defer|reject. "
+        "Promote only durable facts; never dump the transcript. "
+        f"Max promote items: {rules.get('max_promotions_per_close', 5)}."
+    )
+    user = json.dumps(
+        {
+            "session_id": session_id,
+            "heuristic_pickup": pickup,
+            "transcript_excerpt": transcript[:8000],
+        },
+        ensure_ascii=False,
+    )
+    try:
+        resp = chat_completions(
+            api_key=key,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            max_tokens=budget_tokens,
+            timeout=max(1.0, timeout),
+        )
+        text = message_content(resp)
+        if text.startswith("```"):
+            text = text.strip("`")
+            if text.startswith("json"):
+                text = text[4:].strip()
+        data = json.loads(text)
+        if not isinstance(data, dict):
+            return None, "distill returned non-object JSON"
+        packet_id = hashlib.sha256(f"{session_id}:{time.time()}".encode()).hexdigest()[:16]
+        return {
+            "packet_id": packet_id,
+            "session_id": session_id,
+            "promotion_decisions": data.get("promotion_decisions") or [],
+            "pickup": data.get("pickup") or pickup,
+            "do_not_promote": data.get("do_not_promote") or rules.get("do_not_promote") or [],
+        }, ""
+    except OpenAIFixedHostError as exc:
+        detail = str(exc)
+        if "openai_http_401" in detail or "openai_http_403" in detail:
+            return None, f"OPENAI_API_KEY rejected — Phase B skipped ({detail})"
+        if detail == "openai_timeout":
+            return None, "Phase B distill timed out — keeping Phase A"
+        return None, f"Phase B distill failed ({detail}) — keeping Phase A"
+    except (KeyError, json.JSONDecodeError, IndexError, OSError, TypeError) as exc:
+        return None, f"Phase B distill failed ({type(exc).__name__}) — keeping Phase A"
 
 
 def close_session(
@@ -202,6 +272,7 @@ def close_session(
         "reason": reason,
         "phase_a": False,
         "phase_b": False,
+        "enqueue_ok": None,
         "writes": [],
         "warnings": [],
     }
@@ -327,12 +398,12 @@ def close_session(
     rules = _load_rules()
     phase_b_budget = min(PHASE_B_BUDGET, max(0.0, remaining - 1.0))
     skip_b = False
-    if phase_b_budget < 3.0:
+    if not _phase_b_enabled():
+        skip_b = True
+        report["warnings"].append("Phase B skipped: MEMORY_PHASE_B=0")
+    elif phase_b_budget < 3.0:
         skip_b = True
         report["warnings"].append("Phase B skipped: insufficient time budget")
-    elif not os.environ.get("OPENAI_API_KEY", "").strip():
-        skip_b = True
-        report["warnings"].append("Phase B skipped: OPENAI_API_KEY absent")
     elif is_background_agent and not transcript:
         skip_b = True
         report["warnings"].append("Phase B skipped: background agent, no transcript")
@@ -430,6 +501,52 @@ def close_session(
             report["status"] = "phase_a_b"
             report["promoted"] = promoted
 
+    # --- S3 distill enqueue (redacted excerpt; fail-loud when enabled+configured) ---
+    enqueue_result: dict[str, Any] | None = None
+    try:
+        from ops.graphiti.distill_queue.enqueue import (
+            bucket_configured,
+            enqueue_enabled,
+            enqueue_job,
+        )
+
+        if not enqueue_enabled():
+            if os.environ.get("MEMORY_DISTILL_ENQUEUE", "1").strip() in (
+                "0",
+                "false",
+                "False",
+            ):
+                report["enqueue_ok"] = None
+                report["warnings"].append("distill enqueue skipped: MEMORY_DISTILL_ENQUEUE=0")
+            elif not bucket_configured():
+                report["enqueue_ok"] = None
+                report["warnings"].append("distill enqueue skipped: MEMORY_DISTILL_S3_BUCKET unset")
+        elif not (transcript or "").strip():
+            report["enqueue_ok"] = None
+            report["warnings"].append("distill enqueue skipped: empty transcript excerpt")
+        else:
+            enqueue_result = enqueue_job(
+                session_id=session_id,
+                group_id=group_id,
+                agent_id=identity["agent_id"],
+                transcript_excerpt=transcript,
+                heuristic_pickup=pickup,
+                reason=reason,
+                project_name=project.name,
+                dry_run=dry_run,
+            )
+            report["enqueue_ok"] = True
+            report["enqueue"] = {
+                "key": enqueue_result.get("key"),
+                "content_hash": enqueue_result.get("content_hash"),
+                "dry_run": bool(enqueue_result.get("dry_run")),
+            }
+    except Exception as exc:  # noqa: BLE001
+        report["enqueue_ok"] = False
+        report["enqueue_error"] = f"{type(exc).__name__}: {exc}"
+        report["warnings"].append(f"ERROR: distill enqueue failed: {exc}")
+        print(f"ERROR: distill enqueue failed: {exc}", file=sys.stderr)
+
     receipt = {
         "status": "closed",
         "session_id": session_id,
@@ -438,11 +555,16 @@ def close_session(
         "agent_id": identity["agent_id"],
         "phase_a": report["phase_a"],
         "phase_b": report["phase_b"],
+        "enqueue_ok": report.get("enqueue_ok"),
+        "enqueue": report.get("enqueue"),
+        "enqueue_error": report.get("enqueue_error"),
         "write_count": len([w for w in report["writes"] if w.get("written") or w.get("dry_run")]),
         "closed_at": datetime.now(UTC).isoformat(),
         "reason": reason,
         "packet_id": report.get("signal_packet_id"),
     }
+    if report.get("enqueue_ok") is False:
+        receipt["status"] = "closed_enqueue_failed"
     if not dry_run:
         try:
             write_receipt(project, session_id, receipt)

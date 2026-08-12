@@ -303,9 +303,13 @@ The `intelligence/` directory is a **permanent, active signal corpus**. All data
 **Active mining scripts (do not archive):**
 - `ops/scripts/export_chats.sh`
 - `ops/scripts/parse_chat_exports.py`
-- `ops/scripts/transcript_distiller.py`
-- `ops/scripts/run_distiller.sh`
+- `ops/scripts/transcript_distiller.py` — thin wrapper → Graphiti S3 queue worker
+  (`ops/graphiti/distill_queue/`); C1 `save_memory` / Dropbox LaunchAgent retired
+- `ops/scripts/run_distiller.sh` — local operator entry to the same worker; batch
+  schedule is GHA `.github/workflows/memory-distill.yml` (not Mac 5am cron)
 - `ops/scripts/install_export_job.sh`
+- `ops/graphiti/hydration/openai_fixed_host.py` — Sonar-clean Phase B / worker transport
+- `ops/graphiti/distill_queue/` — SessionEnd enqueue + GHA worker (redacted excerpts only)
 
 ---
 

@@ -37,7 +37,11 @@ def _cmd_close(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
     )
     print(json.dumps(report, indent=2, ensure_ascii=False))
-    return 0 if report.get("status") != "failed" else 1
+    if report.get("status") == "failed":
+        return 1
+    if report.get("enqueue_ok") is False:
+        return 2
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

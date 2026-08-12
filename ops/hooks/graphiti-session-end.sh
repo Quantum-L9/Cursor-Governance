@@ -100,9 +100,13 @@ CLOSE_ARGS=(
 # Ensure cwd for any incidental resolve matches the project (close passes --project-dir)
 cd "$REPO" || true
 
-if REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+# Capture stdout even when close exits 2 (enqueue fail-loud after Phase A success).
+REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "$PY" -m ops.graphiti.hydration.cli close \
-    "${CLOSE_ARGS[@]}" 2>/dev/null)"; then
+    "${CLOSE_ARGS[@]}" 2>/dev/null)"
+CLOSE_RC=$?
+
+if [ -n "$REPORT" ]; then
   echo "$REPORT" | python3 -c '
 import sys, json
 try:
@@ -121,10 +125,30 @@ print(
 )
 if status == "idempotent_skip":
     print("INFO: close receipt already present — skipped duplicate writes", file=sys.stderr)
+if d.get("phase_b"):
+    print(
+        "INFO: Phase B distill completed packet=%s"
+        % (d.get("signal_packet_id") or ""),
+        file=sys.stderr,
+    )
+if d.get("enqueue_ok") is False:
+    print(
+        "ERROR: distill S3 enqueue failed — %s"
+        % (d.get("enqueue_error") or "unknown"),
+        file=sys.stderr,
+    )
+if d.get("enqueue_ok") is True:
+    enq = d.get("enqueue") or {}
+    print("INFO: distill job enqueued key=%s" % (enq.get("key") or ""), file=sys.stderr)
 for w in d.get("warnings") or []:
-    print("WARN: %s" % w, file=sys.stderr)
+    level = "ERROR" if str(w).startswith("ERROR:") else "WARN"
+    print("%s: %s" % (level, w), file=sys.stderr)
 ' 2>&1 || echo "INFO: session close finished" >&2
-else
+elif [ "$CLOSE_RC" -ne 0 ] && [ "$CLOSE_RC" -ne 2 ]; then
   echo "WARN: session close failed — Phase A may be missing; use /end-session force-retry" >&2
+fi
+# Fail-loud on enqueue (cli exit 2); keep Graphiti availability fail-open otherwise.
+if [ "${CLOSE_RC:-0}" = "2" ]; then
+  exit 2
 fi
 exit 0
