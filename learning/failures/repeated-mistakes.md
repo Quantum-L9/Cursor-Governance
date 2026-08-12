@@ -39,11 +39,11 @@ startup_required: true
 **Verify:** `test -f "$HOME/.cursor-governance/CANONICAL_LAW.md"` and `.cursor-commands` → that clone
 **MCP-ID:** `lesson-003-dropbox-not-library`
 
-### **4. VPS MEMORY ONLY** 🚨 ULTRA
-**Rule:** Use `cursor_memory_client.py` for ALL memory operations
-**Client:** `python3 agents/cursor/cursor_memory_client.py [search|write|stats]`
-**Also:** Check Neo4j graphs for repo data (not just postgres)
-**Wrong:** `docker exec l9-postgres psql` — LOCAL dev only
+### **4. GRAPHITI MEMORY ONLY** 🚨 ULTRA
+**Historical:** Earlier guidance used `cursor_memory_client.py` / retired `L9_MEMORY_HTTP_*` side doors.
+**Current doctrine:** Episodic memory SSOT is Graphiti via `ops/graphiti/graphiti_memory_client.py` (ADR-0006). No second HTTP memory plane.
+**Client:** `python3 ops/graphiti/graphiti_memory_client.py` (inject / health / write with phase-lock)
+**Wrong:** `L9_MEMORY_HTTP_URL`, `l9-shared-memory`, `agents/cursor/cursor_memory_client.py`, `docker exec l9-postgres psql` for memory claims
 **MCP-ID:** `lesson-004-vps-memory`
 
 ---
@@ -217,7 +217,7 @@ Before ANY execution task:
 | 1 | NO OVERSTEP | 🚨 ULTRA | If tool fails → FIX or ASK, don't bypass |
 | 2 | VPS READ-ONLY | 🚨 ULTRA | ASK → WAIT → EXECUTE for VPS changes |
 | 3 | GOVERNANCE SSOT CLONE ONLY | 🚨 ULTRA | `$HOME/.cursor-governance` only; Dropbox forbidden |
-| 4 | VPS MEMORY ONLY | 🚨 ULTRA | cursor_memory_client.py + Neo4j graphs |
+| 4 | GRAPHITI MEMORY ONLY | 🚨 ULTRA | graphiti_memory_client.py only (ADR-0006) |
 | 5 | ASK QUESTIONS FIRST | 🔴 CRITICAL | 5 min questions saves 4 hrs rework |
 | 6 | RUN COMMANDS | 🔴 CRITICAL | Execute proactively, show results |
 | 7 | NO PLACEHOLDERS | 🔴 CRITICAL | Notify gap + ASK how to fill |

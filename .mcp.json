@@ -1,23 +1,18 @@
 {
   "_comment": [
-    "Shared HTTP memory MCP block for Claude Code (CLI · Web · Mobile). Copy to the",
-    "consumer repo as .mcp.json (git-tracked) OR register user-scope via:",
-    "  claude mcp add-json --scope user l9-shared-memory '<the server object below>'",
-    "This file holds ONLY ${...} env-references — never a bearer token. Claude Code",
-    "expands L9_MEMORY_HTTP_URL / L9_MEMORY_CLIENT_TOKEN at runtime from the account",
-    "environment (web/environment.env.example).",
-    "Default URL is the production HTTPS control plane. Allowlist",
-    "memory.quantumaipartners.com in web/network-policy.md when using Custom network access.",
-    "IDENTITY: group_id (repo namespace) is shared across agents; writing identity is not.",
-    "Claude Code uses its own bearer → principal (agent_id=claude-code). See",
-    "web/environment.env.example (USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE)."
+    "AUTHORITATIVE memory MCP for Claude Code — Cursor Graphiti front door only.",
+    "Same store/lifecycle as ops/graphiti/graphiti_memory_client.py (CANONICAL_LAW §8 / ADR-0006).",
+    "URL and token come from env: GRAPHITI_MCP_URL + GRAPHITI_MCP_TOKEN.",
+    "Cloud/Mobile: https://memory.quantumaipartners.com/graphiti/mcp (Caddy → C1 :8100).",
+    "CLI host: http://127.0.0.1:8100/mcp via SSH tunnel (set GRAPHITI_MCP_URL locally).",
+    "FORBIDDEN: retired HTTP l9-shared-memory side door and L9_MEMORY_HTTP_* lifecycle env.",
+    "Do not register claude mcp add-json l9-shared-memory; adapters must not reintroduce a second plane."
   ],
   "mcpServers": {
-    "l9-shared-memory": {
-      "type": "http",
-      "url": "${L9_MEMORY_HTTP_URL:-https://memory.quantumaipartners.com}/mcp",
+    "graphiti-memory": {
+      "url": "${GRAPHITI_MCP_URL}",
       "headers": {
-        "Authorization": "Bearer ${L9_MEMORY_CLIENT_TOKEN}"
+        "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
       },
       "timeout": 120000,
       "alwaysLoad": true

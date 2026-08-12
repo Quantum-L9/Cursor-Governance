@@ -24,6 +24,13 @@ ACTIVE_ROOTS = (
     "learning/failures",
 )
 
+# Root / top-level active contracts not covered by ACTIVE_ROOTS directories.
+ACTIVE_FILES = (
+    ".mcp.json",
+    ".env.template",
+    ".env.example",
+)
+
 SKIP_DIR_PARTS = {
     "_archived",
     "archived",
@@ -47,6 +54,8 @@ DROPBOX_LIVE = re.compile(
     r"(?i)("
     r"Dropbox/Cursor Governance|"
     r"Dropbox/cursor governance|"
+    r"Dropbox governance SSOT|"
+    r"against the Dropbox|"
     r"legacy Dropbox is fallback|"
     r"Use Dropbox GlobalCommands as single source of truth|"
     r"points at Dropbox|"
@@ -60,9 +69,11 @@ HTTP_LIVE = re.compile(
     r"(?i)("
     r"L9_MEMORY_HTTP_URL\s*=|"
     r"L9_MEMORY_CLIENT_TOKEN\s*=|"
+    r"L9_MEMORY_HTTP_TOKEN\s*=|"
     r'["\']l9-shared-memory["\']\s*:|'
     r"\[mcp_servers\.l9-shared-memory\]|"
-    r'"name"\s*:\s*"l9-shared-memory"'
+    r'"name"\s*:\s*"l9-shared-memory"|'
+    r"claude mcp add-json[^\n]*l9-shared-memory"
     r")"
 )
 
@@ -132,8 +143,9 @@ def _iter_active_files() -> list[Path]:
         for path in base.rglob("*"):
             if path.is_file() and not _skip_path(path.relative_to(ROOT)):
                 out.append(path)
-    # agent_registry + analysis notes that teach contracts
+    # agent_registry + analysis notes + root active contracts
     for extra in (
+        *(ROOT / rel for rel in ACTIVE_FILES),
         ROOT / "environment/agents/agent_registry.yaml",
         ROOT / "environment/agents/analysis_notes.md",
         ROOT / "environment/agents/HANDOFF.md",
