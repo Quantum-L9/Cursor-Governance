@@ -56,6 +56,10 @@
       {
         "command": "./hooks/graphiti-gate-shell.sh",
         "timeout": 10
+      },
+      {
+        "command": "./hooks/l4-local-execution-gate-shell.sh",
+        "timeout": 10
       }
     ],
     "beforeMCPExecution": [

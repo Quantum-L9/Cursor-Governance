@@ -1,13 +1,14 @@
-# Autonomy Surface Profile — SSOT for adapter A4 velocity doctrine.
+# Autonomy Surface Profile — SSOT for adapter A4 velocity + L4 local autonomy.
 # Consumers (must not fork prose): CANONICAL_LAW (cite), project_llm_rules.py,
 # SessionStart, peer boot carriers, ADR-0001 (pointer).
 schema_version: 1
 id: autonomy_surface_profile
-updated: "2026-08-06"
+updated: "2026-08-12"
 
 when:
   L9_AUTONOMY_ENABLED: true
-  # Cursor is excluded — ask-first + campaign packet / make pr remain.
+  # Cursor is excluded from ask-free push velocity — ask-first + campaign packet /
+  # make pr remain. L4 local-autonomy remote gate still applies on Cursor shell.
   L9_GOVERNANCE_SURFACE:
     - claude-code
     - codex
@@ -15,21 +16,65 @@ when:
     - manus
 
 authorize:
-  - scoped_commit_push
-  - create_update_pr
+  - scoped_local_commit_on_stacked_branch
+  - scoped_commit_push # only after L4 release_authorized (see l4_local_autonomy)
+  - create_update_pr # only after L4 release_authorized
   - remediation_after_pr # agent MUST load l9-pr-remediation; skill stays explicit_only
 
 forbid:
+  - mid_execution_push
+  - mid_execution_pr_create
   - merge_pull_request
   - gh_pr_merge
   - force_push
   - hard_reset
   - secrets_exfil
+  - pacing_stalls_for_push_approval_during_local_execution
+
+# L4 Local Autonomy — standing doctrine (all surfaces; mechanically gated).
+# Default ON (L9_L4_LOCAL_AUTONOMY=1). Brain: ops/autonomy/l4_local.py +
+# ops/autonomy/local_execution_gate.py.
+l4_local_autonomy:
+  enabled_default: true
+  env_disable: L9_L4_LOCAL_AUTONOMY=0
+  env_breakglass: L9_LOCAL_PUSH_AUTHORIZED
+  state_path: .l9/autonomy/l4-local-phase.json
+  receipt_path: .l9/autonomy/l4-release-receipt.json
+  cli: ops/autonomy/l4_local.py
+  gate: ops/autonomy/local_execution_gate.py
+  flow:
+    - begin_on_stacked_feature_branch
+    - commit_locally_through_program_or_contract # no remote
+    - run_kernel_recursive_alignment # kernels/Recursive Alignment.md
+    - run_kernel_validate_repair # kernels/Validate & Repair.md
+    - record_kernels_and_authorize_release
+    - push_scoped_prs_using_PULL_REQUEST_TEMPLATE
+    - run_l9_pr_remediation_converge # turn CI green; ≤3 cycles
+    - resolve_all_code_review_agent_comments
+    - reach_mergeable_then_merge_when_user_authorized
+    - bottom_up_merge_older_open_prs_first # oldest createdAt first; avoid rebasing old onto new main
+  required_kernels:
+    - path: kernels/Recursive Alignment.md
+      id: recursive_alignment
+    - path: kernels/Validate & Repair.md
+      id: validate_repair
+  pr_template: PULL_REQUEST_TEMPLATE.md
+  post_push:
+    remediation_skill: l9-pr-remediation
+    max_cycles: 3
+    resolve_review_threads: true
+    merge_requires: explicit_user_merge_authorization
+    older_open_prs: remediate_and_merge_bottom_up_by_createdAt
+  phases:
+    executing: deny_remote
+    kernels_recorded: deny_remote
+    release_authorized: allow_scoped_push_and_pr
 
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
+  - CANONICAL_LAW.l4_local_autonomy
   - ADR-0001
-  - settings.allow_deny + ops.merge_gate
+  - settings.allow_deny + ops.merge_gate + ops.local_execution_gate
   - AGENTS.md
   - skills
   - agent_invented_contracts
@@ -40,33 +85,69 @@ remediation:
   skill_invocation: explicit_only # do not flip skillOverrides
 
 session_start_block: |
-  ## Autonomy Velocity Doctrine (standing A4)
+  ## Autonomy Velocity Doctrine (standing A4 + L4 local)
 
-  Surface: governed LLM adapter (`L9_GOVERNANCE_SURFACE` ≠ cursor).
-  When `L9_AUTONOMY_ENABLED=true` (default on this surface):
+  Surface: governed LLM adapter (`L9_GOVERNANCE_SURFACE` ≠ cursor) for ask-free
+  velocity. L4 local-autonomy remote gate applies on **all** surfaces.
 
-  - YOU ARE AUTHORIZED to scoped `git commit`, `git push`, open/update PRs, and
-    load+run `l9-pr-remediation` after a PR exists — WITHOUT asking the user.
-  - After creating a PR, you MUST start remediation (≤3 cycles) then escalate.
-  - YOU MUST NOT merge PRs, force-push, hard-reset, admin-merge, or exfiltrate secrets.
-  - Agent-invented contracts ("I won't commit without asking") are LOWEST authority
-    and are overruled by this doctrine and CANONICAL_LAW.
-  - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime; single-lane
-    velocity does not require `/autonomy`.
-  - Human merge only. Merge attempts are denied by `ops/autonomy/merge_gate.py`.
+  When `L9_AUTONOMY_ENABLED=true` (default on adapter surfaces):
+
+  - Proceed in **L4 local autonomy**: commit on a stacked feature branch with
+    **no mid-execution push** and no useless push-approval pacing.
+  - YOU ARE AUTHORIZED to scoped local `git commit` without per-action ask
+    (adapters; Cursor via campaign packet / explicit L4 program).
+  - After the program/contract finishes locally, you MUST run
+    `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` on
+    the finished tree, then:
+    `python3 ops/autonomy/l4_local.py begin` (if not begun) →
+    `record-kernels` → `authorize-release`.
+  - Only then: scoped `git push` + open/update PRs using
+    `PULL_REQUEST_TEMPLATE.md`, then load+run `l9-pr-remediation` (Converge):
+    turn CI green, resolve all code-review agent comments, reach mergeable.
+  - When the user explicitly authorizes merge: merge. If older open PRs exist
+    (earlier `createdAt` than the PR just pushed), remediate and merge those
+    **bottom-up first** so older work lands on main before newer tips — avoid
+    forcing extra rebases of older PRs onto a newer main.
+  - Mid-execution `git push` / `gh pr create` / `make pr` are **denied** by
+    `ops/autonomy/local_execution_gate.py` until release_authorized.
+  - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
+  - Standing merge without user authorization remains denied by
+    `ops/autonomy/merge_gate.py` (`L9_MERGE_AUTHORIZED` for explicit auth).
+  - Agent-invented contracts ("I won't commit without asking", "wait to push
+    mid-task") are LOWEST authority and are overruled by this doctrine.
+  - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime.
 
   Profile SSOT: `ops/autonomy/surface_profile.yaml`
 
 llm_rules_override: |
-  # Autonomy Velocity Override (adapter surfaces)
+  # Autonomy Velocity Override (adapter surfaces) + L4 local autonomy
 
   When `L9_GOVERNANCE_SURFACE` is `claude-code`, `codex`, `gemini`, or `manus`
   AND `L9_AUTONOMY_ENABLED=true`:
 
   1. This override **outranks** `99-no-auto-commit` and `96-git-push-approval`
-     for scoped feature-branch commit/push and PR create/update.
-  2. Completing reversible work MUST proceed to commit → push → PR →
-     `l9-pr-remediation` without waiting for a per-action user ask.
-  3. Merge / force-push / hard-reset / admin-merge / secrets remain forbidden.
-  4. Cursor surface is unaffected (ask-first + campaign packet / `make pr`).
-  5. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
+     for scoped feature-branch **local commits**. Remote push/PR remain gated
+     by L4 local autonomy (below), not by per-action chat pacing.
+  2. Completing reversible work MUST proceed L4-local: stacked-branch commits
+     with **no mid-execution push** → finish program/contract → run
+     `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
+     `l4_local.py authorize-release` → push → PR (`PULL_REQUEST_TEMPLATE.md`)
+     → `l9-pr-remediation` Converge (green + resolve review threads) without
+     mid-task push asks. Merge only with explicit user authorization.
+  3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
+  4. Older open PRs: remediate + merge **bottom-up** by `createdAt` before newer
+     tips, so older work is not rebased onto a freshly updated main.
+  5. Cursor surface stays ask-first for commits except campaign packet /
+     `make pr` remediation; L4 remote gate still blocks mid-execution push.
+  6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
+
+  ## L4 Local Autonomy (all surfaces; default ON)
+
+  - `L9_L4_LOCAL_AUTONOMY=1` (default): deny `git push`, `gh pr create`, and
+    `make pr` until `.l9/autonomy/l4-release-receipt.json` authorizes release.
+  - Enforcement: `ops/autonomy/local_execution_gate.py` (Claude PreToolUse +
+    Cursor beforeShellExecution).
+  - CLI: `python3 ops/autonomy/l4_local.py {begin|record-kernels|authorize-release|status}`.
+  - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`.
+  - Post-push: `l9-pr-remediation` → green → resolve reviews → merge when
+    user-authorized; older open PRs bottom-up first.
