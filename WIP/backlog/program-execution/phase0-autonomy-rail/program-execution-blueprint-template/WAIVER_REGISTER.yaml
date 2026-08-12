@@ -1,0 +1,37 @@
+schema: program-execution-blueprint.waiver-register.v2
+schema_version: 2.0.0
+policy:
+  implicit_waivers_forbidden: true
+  expired_waiver_non_passing: true
+  cosmetic_ci_disable_requires_phase0: true
+waivers:
+- id: WAIVER-001
+  scope:
+  - GATE-001
+  owner: '{{PROGRAM_OWNER}}'
+  reason: REPLACE_WITH_EXCEPTION_REASON
+  compensating_controls:
+  - REPLACE_WITH_CONTROL
+  evidence_ids: []
+  issued_at: '{{DATE}}'
+  expires_at: '{{DATE}}'
+  status: draft
+  waiver_kind: gate_obligation
+- id: WAIVER-002
+  scope:
+  - GATE-000
+  owner: '{{PROGRAM_OWNER}}'
+  reason: Program-window demotion of non-true-blocking CI (e.g. meta-header / advisory_ci_meta_header) per LL-001; listed in Phase 0 blocking_inventory.advisory_or_disabled.
+  compensating_controls:
+  - Phase 0 inventory lists the check as advisory_or_disabled
+  - True-blocking secrets authority and org-invariant gates remain fail-closed
+  - Waiver expires at program closeout or expires_at
+  evidence_ids:
+  - EVID-002
+  issued_at: '{{DATE}}'
+  expires_at: '{{DATE}}'
+  status: draft
+  waiver_kind: program_ci_advisory
+  program_window:
+    starts_at: '{{DATE}}'
+    ends_at: '{{DATE}}'

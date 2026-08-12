@@ -1,0 +1,3350 @@
+metadata:
+  spec_id: quantum.animation.production_model.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Production Model
+  depends_on:
+    - spec_id: quantum.animation.system_architecture.v1
+      file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - spec_id: quantum.animation.world_model.build_spec.v2
+      file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: WORLD_REQUIREMENT_DEPENDENCY
+    - spec_id: quantum.animation.polycognitive_runtime.build_spec.v1
+      file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: PRODUCTION_COGNITION_DEPENDENCY
+    - spec_id: quantum.animation.creative_intelligence.build_spec.v1
+      file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: CREATIVE_REQUIREMENT_DEPENDENCY
+    - spec_id: quantum.animation.audience_product_intelligence.build_spec.v1
+      file: 04_quantum_audience_product_intelligence_build_spec.yaml
+      relationship: RECEPTION_AND_PRODUCT_REQUIREMENT_DEPENDENCY
+    - spec_id: quantum.animation.self_model.build_spec.v1
+      file: 05_quantum_self_model_build_spec.yaml
+      relationship: CAPABILITY_TRUTH_DEPENDENCY
+  architectural_identity:
+    concise: >
+      Production Model converts stable film requirements into the best current
+      manufacturing strategy Quantum can execute.
+    extended: >
+      Quantum Production Model is the strategy layer between creative intent and
+      production execution. It compiles relatively stable ProductionIntent from
+      creator, audience, product, World and artifact requirements; combines that
+      intent with the live SelfModel, production experience, available assets,
+      current constraints and quality thresholds; evaluates alternative
+      manufacturing strategies; chooses or proposes production plans; binds
+      critical World and creative invariants to enforceable production
+      mechanisms; estimates quality, risk, cost and latency; generates fallback
+      and repair policies; and emits a versioned ProductionModel consumed by the
+      Production Engine.
+  owner_questions:
+    primary:
+      - "What does this film demand from production?"
+      - "How should Quantum satisfy those demands right now?"
+    secondary:
+      - "Which requirements are hard versus negotiable?"
+      - "What quality tier is required?"
+      - "Which capabilities are suitable for this shot or asset?"
+      - "Which manufacturing strategy minimizes expected failure and repair?"
+      - "Which invariants must be structurally enforced?"
+      - "What should be deterministic versus generative?"
+      - "How many takes should be generated?"
+      - "Where is expensive redundancy justified?"
+      - "Which production choices can vary shot by shot?"
+      - "What happens if a provider or model degrades?"
+      - "What is the lowest-cost strategy that still satisfies creative intent?"
+      - "Which strategy preserves accepted work under revision?"
+  not_owner_of:
+    - creator intent
+    - AudienceModel
+    - ProductMarketModel
+    - fictional truth
+    - global cognitive scheduling
+    - capability truth
+    - production job execution
+    - final artifact acceptance
+    - provider infrastructure administration
+# =====================================================================
+# 1. CORE ARCHITECTURAL EQUATION
+# =====================================================================
+core_equation:
+  ProductionIntent:
+    definition: "What the film demands."
+    characteristics:
+      - semantic
+      - relatively_stable
+      - project_specific
+      - creator_intent_anchored
+      - provider_independent
+  ProductionModel:
+    definition: "How Quantum should satisfy those demands right now."
+    characteristics:
+      - strategic
+      - capability_conditioned
+      - evidence_bearing
+      - dynamic
+      - provider_replaceable
+      - versioned
+  ProductionManifest:
+    definition: "What is actually executing."
+    characteristics:
+      - operational
+      - job_specific
+      - mutable_execution_state
+      - owned_by_execution_layer
+  formula: |
+    CreatorModel
+        +
+    AudienceModel
+        +
+    ProductMarketModel
+        +
+    World / Character / Shot requirements
+        +
+    Artifact requirements
+        ↓
+    ProductionIntent
+        +
+    SelfModel(t)
+        +
+    ProductionExperience
+        +
+    AvailableAssets(t)
+        +
+    OperationalConstraints(t)
+        ↓
+    ProductionModel(t)
+        ↓
+    ProductionManifest
+        ↓
+    ProductionEngine
+# =====================================================================
+# 2. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Manufacture the intended film using the best available current strategy
+    without allowing tool limitations, provider habits or cost optimization to
+    silently redefine the film.
+  success_definition: >
+    Each production unit has explicit quality requirements, hard invariants,
+    manufacturing strategy, suitable capabilities, fallback plans, expected
+    failure probabilities, quality/cost estimates and repair semantics before
+    expensive execution begins.
+  strategic_goal: >
+    Quantum should progressively learn how to manufacture difficult cinematic
+    structures reliably, preserving creative fidelity while lowering failures,
+    retries, cost and turnaround.
+  central_law: >
+    Production strategy adapts to capability reality. Creative intent does not
+    adapt merely because a preferred tool is weak.
+# =====================================================================
+# 3. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  PM-001:
+    name: INTENT_AND_STRATEGY_SEPARATION
+    statement: >
+      ProductionIntent and ProductionModel are distinct versioned contracts.
+  PM-002:
+    name: FILM_DEMANDS_ARE_PROVIDER_INDEPENDENT
+    statement: >
+      ProductionIntent describes required outcome characteristics without
+      embedding vendor/model choices.
+  PM-003:
+    name: STRATEGY_IS_DYNAMIC
+    statement: >
+      ProductionModel may change when SelfModel capability truth, cost,
+      availability, reliability or production experience changes.
+  PM-004:
+    name: STRATEGY_CHANGE_NEED_NOT_CHANGE_CREATIVITY
+    statement: >
+      A new renderer/tool strategy may be adopted without recompiling CreatorModel
+      when semantic output requirements remain unchanged.
+  PM-005:
+    name: CREATIVE_FIDELITY_FIRST
+    statement: >
+      Strategy selection optimizes subject to creative, World and quality
+      constraints rather than treating cost as the universal objective.
+  PM-006:
+    name: WORLD_INVARIANTS_BECOME_PRODUCTION_CONSTRAINTS
+    statement: >
+      Critical World facts required to appear on screen or in sound are compiled
+      into explicit enforceable production bindings.
+  PM-007:
+    name: PREVENT_FAILURE_BEFORE_RENDER
+    statement: >
+      Known weak production strategies should be rejected before expensive
+      generation whenever capability evidence is strong enough.
+  PM-008:
+    name: HETEROGENEOUS_MANUFACTURING
+    statement: >
+      Different shots, assets or layers may use different providers, models,
+      deterministic tools or composite strategies.
+  PM-009:
+    name: NO_SINGLE_BEST_RENDERER
+    statement: >
+      Production selection is task-conditioned and may vary at shot level.
+  PM-010:
+    name: DETERMINISTIC_WHERE_HIGH_LEVERAGE
+    statement: >
+      Deterministic tools should be preferred for exact operations where
+      generative uncertainty adds no creative value.
+  PM-011:
+    name: GENERATIVE_WHERE_CREATIVE_VALUE
+    statement: >
+      Generative systems should be used where they contribute meaningful
+      performance, motion, texture, variation or creative expression.
+  PM-012:
+    name: COMPOSITE_STRATEGIES_ARE_FIRST_CLASS
+    statement: >
+      A production solution may combine multiple models and deterministic stages
+      rather than forcing one end-to-end generator.
+  PM-013:
+    name: MULTIPLE_TAKES_WHEN_VALUE_JUSTIFIES
+    statement: >
+      Candidate generation breadth is a strategic variable driven by uncertainty,
+      failure risk and quality upside.
+  PM-014:
+    name: QUALITY_TIER_IS_EXPLICIT
+    statement: >
+      Prototype, preview, standard, premium and flagship requirements imply
+      different strategy thresholds.
+  PM-015:
+    name: ACCEPTED_WORK_SHOULD_SURVIVE
+    statement: >
+      Strategy design must support minimum-blast-radius repair and avoid
+      unnecessarily coupling unrelated shots.
+  PM-016:
+    name: SHOT_ISOLATION
+    statement: >
+      A failed shot should be repairable independently whenever semantic
+      dependencies permit.
+  PM-017:
+    name: PRODUCTION EXPERIENCE_INFORMS_NOT_OWNS
+    statement: >
+      Historical production evidence informs strategy but cannot override
+      current creative requirements.
+  PM-018:
+    name: SELF_MODEL_IS_CAPABILITY_TRUTH
+    statement: >
+      ProductionModel must consume SelfModel rather than maintaining competing
+      capability estimates.
+  PM-019:
+    name: QC_IS_ACCEPTANCE_AUTHORITY
+    statement: >
+      ProductionModel predicts quality and risk; AutonomousQC certifies output.
+  PM-020:
+    name: MANIFEST_IS_NOT_MODEL
+    statement: >
+      Runtime job state must not pollute ProductionModel semantic strategy.
+  PM-021:
+    name: STRATEGY_IS_EXPLAINABLE
+    statement: >
+      Production choices retain evidence, alternatives and expected tradeoffs.
+  PM-022:
+    name: FALLBACKS_ARE_PRECOMPUTED
+    statement: >
+      Critical units should have fallback paths before the primary route fails.
+  PM-023:
+    name: PRODUCTION_RISK_IS_CONDITIONAL
+    statement: >
+      Failure probability depends on shot structure, constraints, assets and
+      capability state.
+  PM-024:
+    name: COST_IS_CONSTRAINT_NOT_CREATIVE_VALUE
+    statement: >
+      Cost matters, but cheaper execution is not inherently better if it reduces
+      fidelity below project thresholds.
+  PM-025:
+    name: LATENCY_IS_CONTEXTUAL
+    statement: >
+      Preview/MVP work and final production may optimize latency differently.
+  PM-026:
+    name: PRODUCTION_MODEL_LEARNS_STRATEGY
+    statement: >
+      Quantum may learn which manufacturing strategies succeed under which
+      production conditions.
+  PM-027:
+    name: LEARNING_CANNOT_SELF_PROMOTE
+    statement: >
+      Learned strategy policies must pass governed evaluation before becoming active.
+  PM-028:
+    name: CAPABILITY_DEGRADATION_REPLANS_UNCOMMITTED_WORK
+    statement: >
+      SelfModel degradation should trigger strategy re-evaluation for affected
+      future work without invalidating already accepted artifacts.
+  PM-029:
+    name: PRODUCTION_CONSTRAINTS_ARE_TYPED
+    statement: >
+      Requirements such as character identity, handedness, lighting, readable
+      text, frame accuracy or audio sync are represented as typed constraints.
+  PM-030:
+    name: UNCERTAINTY_DRIVES_REDUNDANCY
+    statement: >
+      More uncertainty may justify extra takes, extra critics, higher enforcement
+      strength or alternative strategies.
+  PM-031:
+    name: STRATEGY_MAY_BE_LAYERED
+    statement: >
+      Background, character, prop, effects and typography may be manufactured
+      through independent specialized strategies.
+  PM-032:
+    name: ARTIFACT_LINEAGE_REQUIRED
+    statement: >
+      Strategy planning must preserve lineage from creative/World requirements to
+      generated artifacts and QC outcomes.
+# =====================================================================
+# 4. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  production_model_owns:
+    - ProductionIntent
+    - ProductionModel
+    - ProductionRequirement
+    - ProductionConstraint
+    - ProductionQualityTier
+    - ProductionStrategy
+    - ShotProductionStrategy
+    - AssetProductionStrategy
+    - AudioProductionStrategy
+    - LayerProductionStrategy
+    - CompositeProductionStrategy
+    - CapabilityRequirement compilation
+    - strategy candidate generation
+    - strategy evaluation
+    - strategy selection policy
+    - production risk estimation
+    - strategy cost estimation
+    - strategy latency estimation
+    - take-count strategy
+    - fallback planning
+    - repair strategy planning
+    - invariant enforcement strategy
+    - production feasibility assessment
+    - strategy revision
+    - production-learning policy
+    - ProductionModel signals
+  adjacent_not_owned:
+    CreatorModel:
+      owner: creative_intelligence
+    AudienceModel:
+      owner: audience_product_intelligence
+    ProductMarketModel:
+      owner: audience_product_intelligence
+    WorldTruth:
+      owner: world_model
+    SelfModel:
+      owner: self_model
+    CognitiveExecutive:
+      owner: polycognitive_runtime
+    AutonomousQC:
+      owner: autonomous_qc
+    ProductionManifest:
+      owner: production_engine
+      note: >
+        ProductionModel defines manifest semantics/input plan requirements but
+        live job execution state belongs to ProductionEngine.
+    RenderJob:
+      owner: production_engine
+    final_artifact_acceptance:
+      owner: autonomous_qc
+  hard_boundary: >
+    ProductionModel may choose how to realize semantics. It may not redefine the
+    semantics it is asked to realize.
+# =====================================================================
+# 5. PRODUCTION INTENT
+# =====================================================================
+production_intent:
+  purpose: >
+    Normalize project-level creative, audience, product, World and technical
+    requirements into stable provider-independent manufacturing demands.
+  ProductionIntent:
+    fields:
+      production_intent_id:
+      project_id:
+      version:
+      source_refs:
+        creator_model_ref:
+        audience_model_ref:
+        product_market_model_ref:
+        world_requirement_refs:
+        artifact_contract_refs:
+      quality_tier:
+        type: ProductionQualityTier
+      global_requirements:
+        type: list[ProductionRequirement]
+      visual_requirements:
+        type: list[ProductionRequirement]
+      character_requirements:
+        type: list[ProductionRequirement]
+      world_requirements:
+        type: list[ProductionRequirement]
+      motion_requirements:
+        type: list[ProductionRequirement]
+      cinematic_requirements:
+        type: list[ProductionRequirement]
+      performance_requirements:
+        type: list[ProductionRequirement]
+      acoustic_requirements:
+        type: list[ProductionRequirement]
+      music_requirements:
+        type: list[ProductionRequirement]
+      editorial_requirements:
+        type: list[ProductionRequirement]
+      finishing_requirements:
+        type: list[ProductionRequirement]
+      accessibility_requirements:
+        type: list[ProductionRequirement]
+      product_requirements:
+        type: list[ProductionRequirement]
+      intentional_artifacts:
+        type: list[IntentionalArtifact]
+      unacceptable_artifacts:
+        type: list[UnacceptableArtifact]
+      quality_priorities:
+        type: list[ProductionPriority]
+      flexibility:
+        type: ProductionFlexibility
+      production_independence_requirements:
+        type: list[string]
+      digest:
+  characteristics:
+    stable_under_provider_change: true
+  example:
+    requirement: >
+      Aria must remain instantly recognizable across the episode.
+    not_requirement: >
+      Use Provider X character-reference mode.
+# =====================================================================
+# 6. PRODUCTION REQUIREMENT
+# =====================================================================
+production_requirement_model:
+  ProductionRequirement:
+    fields:
+      requirement_id:
+      category:
+        enum:
+          - creative
+          - visual
+          - character
+          - world
+          - cinematic
+          - performance
+          - acoustic
+          - music
+          - editorial
+          - finishing
+          - accessibility
+          - product
+          - technical
+      description:
+      importance:
+        range: [0.0, 1.0]
+      hard:
+        type: bool
+      quality_floor:
+        nullable: true
+      measurement_contract_ref:
+        nullable: true
+      applies_to_scope:
+        type: Ref
+      source_authority:
+      source_refs:
+      negotiability:
+        enum:
+          - non_negotiable
+          - tightly_constrained
+          - flexible
+          - implementation_free
+      downstream_enforcement_required:
+        type: bool
+      failure_code:
+  rule: >
+    Hard requirements cannot be averaged away by strong performance elsewhere.
+# =====================================================================
+# 7. PRODUCTION QUALITY TIER
+# =====================================================================
+quality_tiers:
+  ProductionQualityTier:
+    enum:
+      - prototype
+      - preview
+      - standard
+      - premium
+      - flagship
+  semantics:
+    prototype:
+      objective:
+        - test concept
+        - test blocking
+        - test narrative
+      lower_visual_fidelity_allowed: true
+      continuity_floor_remains: true
+    preview:
+      objective:
+        - strong animatic
+        - production proof
+      polished_final_required: false
+    standard:
+      objective:
+        - release-acceptable
+    premium:
+      objective:
+        - streaming-grade premium visual/audio result
+    flagship:
+      objective:
+        - highest project-supported cinematic expression
+      redundancy_budget: high
+      critical_failure_tolerance: very_low
+  project_intent:
+    may_redefine_surface_expression: true
+  example:
+    retro_project:
+      flagship:
+        does_not_mean: photorealistic
+        means: >
+          maximum fidelity to deliberate late-1990s limited-animation aesthetic.
+# =====================================================================
+# 8. PRODUCTION FLEXIBILITY
+# =====================================================================
+production_flexibility:
+  ProductionFlexibility:
+    fields:
+      provider_freedom:
+      model_freedom:
+      layer_separation_allowed:
+      compositing_allowed:
+      shot_specific_strategy_allowed:
+      asset_specific_strategy_allowed:
+      deterministic_replacement_allowed:
+      style_interpretation_freedom:
+      motion_interpretation_freedom:
+      camera_interpretation_freedom:
+      sound_interpretation_freedom:
+  rule: >
+    Greater implementation freedom allows ProductionModel to optimize more
+    aggressively without creative recompile.
+# =====================================================================
+# 9. PRODUCTION CONSTRAINT
+# =====================================================================
+production_constraint:
+  ProductionConstraint:
+    fields:
+      constraint_id:
+      constraint_type:
+        enum:
+          - identity
+          - physical_state
+          - world_state
+          - handedness
+          - prop
+          - wardrobe
+          - spatial
+          - lighting
+          - temporal
+          - text_accuracy
+          - camera
+          - motion
+          - performance
+          - lip_sync
+          - acoustic
+          - duration
+          - resolution
+          - frame_rate
+          - color
+          - accessibility
+          - creator_lock
+          - product_identity
+      scope_ref:
+      expected_value:
+      tolerance:
+        nullable: true
+      criticality:
+        enum:
+          - low
+          - medium
+          - high
+          - critical
+      source_refs:
+      enforcement_strength_required:
+        range: [0, 5]
+      QC_validator_refs:
+      hard:
+        type: bool
+  source_examples:
+    - World expected-visible-state
+    - CreatorModel
+    - StoryContract
+    - AudienceModel
+    - ProductMarketModel
+# =====================================================================
+# 10. INVARIANT BINDING
+# =====================================================================
+invariant_binding:
+  purpose: >
+    Map semantic facts that must survive production into concrete enforcement
+    methods.
+  ProductionInvariantBinding:
+    fields:
+      binding_id:
+      constraint_id:
+      enforcement_method:
+        enum:
+          - deterministic
+          - structural_anchor
+          - asset_variant
+          - reference_conditioning
+          - pose_conditioning
+          - mask
+          - geometry_lock
+          - compositing
+          - prompt_conditioning
+          - postprocess_validation
+          - audio_lock
+          - timeline_lock
+          - manual_not_allowed
+      enforcement_strength:
+        range: [0, 5]
+      implementation_requirements:
+        type: list[CapabilityRequirement]
+      fallback_methods:
+        type: list[string]
+      expected_failure_probability:
+      source_self_model_revision:
+  strength_semantics:
+    5:
+      name: DETERMINISTIC
+    4:
+      name: STRUCTURALLY_ANCHORED
+    3:
+      name: REFERENCE_CONDITIONED
+    2:
+      name: PROMPT_CONDITIONED
+    1:
+      name: IMPLIED
+    0:
+      name: UNCONTROLLED
+  pre_execution_rule: >
+    Critical invariant bindings below minimum enforcement strength are rejected
+    before expensive production.
+# =====================================================================
+# 11. PRODUCTION UNIT MODEL
+# =====================================================================
+production_unit_model:
+  ProductionUnit:
+    fields:
+      production_unit_id:
+      unit_type:
+        enum:
+          - project
+          - sequence
+          - scene
+          - shot
+          - frame_range
+          - character_asset
+          - environment_asset
+          - prop_asset
+          - effect_asset
+          - dialogue_line
+          - voice_track
+          - music_cue
+          - sound_event
+          - ambience
+          - composite
+          - edit_segment
+          - subtitle
+          - master
+      semantic_ref:
+      scope_ref:
+      upstream_refs:
+      downstream_refs:
+      quality_tier:
+      requirements:
+      constraints:
+      available_asset_refs:
+      criticality:
+      replaceability:
+        enum:
+          - isolated
+          - locally_coupled
+          - globally_coupled
+      blast_radius_keys:
+  principle: >
+    Strategy planning occurs over explicit production units rather than treating
+    the entire episode as one generation task.
+# =====================================================================
+# 12. SHOT PRODUCTION SPEC
+# =====================================================================
+shot_production_spec:
+  ShotProductionRequirements:
+    fields:
+      shot_id:
+      duration:
+      frame_rate:
+      resolution:
+      aspect_ratio:
+      World_coordinate:
+      expected_visible_state_ref:
+      character_refs:
+      prop_refs:
+      environment_refs:
+      camera_requirements:
+      composition_requirements:
+      motion_requirements:
+      performance_requirements:
+      continuity_requirements:
+      lighting_requirements:
+      effect_requirements:
+      text_requirements:
+      audio_requirements:
+      dialogue_requirements:
+      critical_constraints:
+      soft_constraints:
+      quality_tier:
+      uncertainty_profile:
+      risk_features:
+      dependency_refs:
+# =====================================================================
+# 13. ASSET PRODUCTION SPEC
+# =====================================================================
+asset_production_spec:
+  AssetProductionRequirements:
+    fields:
+      asset_id:
+      asset_type:
+      persistent_entity_ref:
+        nullable: true
+      required_variants:
+      identity_anchors:
+      visual_language:
+      topology_or_geometry_requirements:
+      material_requirements:
+      rig_or_pose_requirements:
+      expression_requirements:
+      costume_variants:
+      damage_variants:
+      lighting_variants:
+      reuse_horizon:
+      deterministic_requirements:
+      generative_flexibility:
+      quality_tier:
+      constraints:
+# =====================================================================
+# 14. AUDIO PRODUCTION SPEC
+# =====================================================================
+audio_production_spec:
+  AudioProductionRequirements:
+    fields:
+      audio_unit_id:
+      category:
+        enum:
+          - dialogue
+          - Foley
+          - ambience
+          - sound_design
+          - music
+          - spatial_mix
+          - master_mix
+      source_world_state_refs:
+      listener_position_ref:
+        nullable: true
+      timing_requirements:
+      identity_requirements:
+      emotion_requirements:
+      environmental_requirements:
+      frequency_or_dynamic_requirements:
+      spatial_requirements:
+      synchronization_requirements:
+      quality_tier:
+      hard_constraints:
+      creative_flexibility:
+# =====================================================================
+# 15. STRATEGY MODEL
+# =====================================================================
+production_strategy:
+  ProductionStrategy:
+    fields:
+      strategy_id:
+      production_unit_id:
+      strategy_version:
+      strategy_type:
+        enum:
+          - single_model
+          - deterministic
+          - hybrid
+          - layered
+          - composite_pipeline
+          - multi_take
+          - multi_provider_ensemble
+          - reference_driven
+          - asset_driven
+          - keyframe_driven
+          - simulation_driven
+      stage_graph:
+        type: ProductionStageGraph
+      implementation_candidates:
+        type: list[ImplementationCandidate]
+      selected_implementations:
+        type: list[SelectedImplementation]
+      capability_requirements:
+        type: list[CapabilityRequirement]
+      invariant_bindings:
+        type: list[ProductionInvariantBinding]
+      take_policy:
+        type: TakeGenerationPolicy
+      QC_policy_ref:
+      fallback_plan_ref:
+      repair_plan_ref:
+      expected_quality:
+        type: map
+      expected_success_probability:
+      expected_catastrophic_failure_probability:
+      expected_cost:
+      expected_latency:
+      expected_attempt_count:
+      blast_radius:
+      reversibility:
+      evidence_refs:
+      self_model_revision:
+      experience_refs:
+      strategy_confidence:
+      rationale:
+      state:
+        enum:
+          - candidate
+          - approved
+          - deprecated
+          - invalidated
+  immutable_after_approval:
+    strategy_semantics: true
+# =====================================================================
+# 16. PRODUCTION STAGE GRAPH
+# =====================================================================
+stage_graph:
+  ProductionStageGraph:
+    fields:
+      nodes:
+        type: list[ProductionStage]
+      edges:
+        type: list[ProductionStageDependency]
+      graph_digest:
+  ProductionStage:
+    fields:
+      stage_id:
+      stage_type:
+      inputs:
+      outputs:
+      capability_requirements:
+      implementation_binding:
+        nullable: true
+      deterministic:
+      retry_boundary:
+      cacheable:
+      idempotent:
+      QC_gate_after:
+        nullable: true
+  ProductionStageDependency:
+    fields:
+      source_stage_id:
+      target_stage_id:
+      dependency_type:
+        enum:
+          - hard
+          - data
+          - semantic
+          - optional
+# =====================================================================
+# 17. STRATEGY CANDIDATE GENERATION
+# =====================================================================
+strategy_candidate_generation:
+  ProductionStrategyGenerator:
+    inputs:
+      - ProductionIntent
+      - ProductionUnit
+      - SelfModel
+      - ProductionExperience
+      - available assets
+      - constraints
+    generates:
+      - direct strategies
+      - composite strategies
+      - deterministic alternatives
+      - multi-take strategies
+      - layered strategies
+      - fallback variants
+    pruning:
+      reject_if:
+        - hard capability requirement unsatisfied
+        - critical invariant cannot reach minimum enforcement
+        - known catastrophic failure risk above threshold
+        - quality floor impossible
+        - cost exceeds hard budget
+        - unsupported format/limit
+  diversity:
+    principle: >
+      Candidate strategies should differ meaningfully rather than producing
+      trivial provider permutations.
+# =====================================================================
+# 18. IMPLEMENTATION CANDIDATE
+# =====================================================================
+implementation_candidate:
+  ImplementationCandidate:
+    fields:
+      implementation_id:
+      capability_refs:
+      suitability_ref:
+      expected_quality:
+      expected_success:
+      expected_cost:
+      expected_latency:
+      failure_mode_refs:
+      degradation_refs:
+      evidence_confidence:
+      route_class:
+        enum:
+          - primary
+          - alternate
+          - experimental
+          - forbidden
+# =====================================================================
+# 19. PRODUCTION STRATEGY SCORECARD
+# =====================================================================
+strategy_scorecard:
+  StrategyScorecard:
+    dimensions:
+      creator_fidelity:
+      World_constraint_satisfaction:
+      identity_consistency:
+      visual_quality:
+      motion_quality:
+      cinematic_quality:
+      performance_quality:
+      acoustic_quality:
+      audience_fit:
+      product_identity:
+      production_reliability:
+      cost_efficiency:
+      latency_efficiency:
+      repairability:
+      determinism:
+      future_reuse_value:
+    hard_failures:
+      - creator_lock_violation
+      - World_hard_constraint_unsatisfied
+      - minimum_quality_floor_unsatisfied
+      - unsupported_capability
+      - catastrophic_failure_risk_above_limit
+  selection_rule: >
+    Hard failures are non-compensatory. Remaining strategies are compared by
+    project-weighted expected utility.
+# =====================================================================
+# 20. EXPECTED UTILITY
+# =====================================================================
+expected_utility:
+  conceptual_formula: >
+    ExpectedProductionUtility =
+      creator_fidelity_value
+      + expected_quality_value
+      + audience_product_value
+      + reliability_value
+      + reuse_value
+      + repairability_value
+      - expected_generation_cost
+      - expected_retry_cost
+      - expected_repair_cost
+      - expected_latency_cost
+      - expected_failure_cost
+  constraints:
+    optimize_only_after_hard_requirements_pass: true
+  no_universal_weighting:
+    value: true
+  weights_source:
+    - ProductionIntent
+    - quality tier
+    - project priorities
+# =====================================================================
+# 21. TAKE GENERATION POLICY
+# =====================================================================
+take_policy:
+  TakeGenerationPolicy:
+    fields:
+      policy_id:
+      minimum_takes:
+      maximum_takes:
+      initial_take_count:
+      adaptive_generation:
+        type: bool
+      diversity_dimensions:
+        type: list[string]
+      stop_conditions:
+        - acceptable_take_found
+        - marginal_expected_gain_below_cost
+        - maximum_takes_reached
+        - budget_exhausted
+      escalation_conditions:
+        - critical_QC_failure
+        - high_variance
+        - close_take_scores
+        - poor_capability_confidence
+      selection_mode:
+        enum:
+          - deterministic_best
+          - critic_ranked
+          - ensemble_ranked
+          - branch_like_selection
+  principle: >
+    "Generate multiple takes and select the best" is a strategic quality-control
+    tool, not a fixed universal constant.
+# =====================================================================
+# 22. TAKE PORTFOLIO
+# =====================================================================
+take_portfolio:
+  TakeCandidate:
+    fields:
+      take_id:
+      strategy_id:
+      implementation_id:
+      generation_seed:
+        nullable: true
+      artifact_ref:
+      QC_summary:
+      quality_scores:
+      constraint_violations:
+      cost:
+      latency:
+      accepted:
+      rejection_reason:
+        nullable: true
+  TakePortfolio:
+    fields:
+      portfolio_id:
+      production_unit_id:
+      strategy_id:
+      candidates:
+      selected_take_id:
+        nullable: true
+      confidence_gap:
+      total_cost:
+      total_latency:
+# =====================================================================
+# 23. LAYERED MANUFACTURING
+# =====================================================================
+layered_production:
+  principle: >
+    A shot may be decomposed into layers when separate production strategies
+    increase reliability or quality.
+  LayerProductionStrategy:
+    fields:
+      layer_id:
+      semantic_role:
+      source_refs:
+      examples:
+        - environment
+        - character_A
+        - character_B
+        - prop
+        - effects
+        - interface_text
+        - atmosphere
+      independent_generation:
+      deterministic_compositing:
+      interaction_constraints:
+      occlusion_requirements:
+      lighting_match_requirements:
+      motion_match_requirements:
+  use_when:
+    - critical prop exactness
+    - readable text
+    - difficult hand-object interaction
+    - separate character identity requirements
+    - stylized VFX
+    - background reuse
+  risk:
+    - compositing_mismatch
+    - lighting_mismatch
+    - interaction_artifact
+  requirement:
+    strategy_must_score_integration_risk: true
+# =====================================================================
+# 24. COMPOSITE PRODUCTION STRATEGY
+# =====================================================================
+composite_strategy:
+  CompositeProductionStrategy:
+    fields:
+      composite_strategy_id:
+      target_unit_ref:
+      component_stages:
+      dependency_graph:
+      combined_reliability_model:
+      correlated_failure_refs:
+      combined_cost_model:
+      combined_latency_model:
+      invariant_coverage:
+      QC_gates:
+      fallback_paths:
+  example:
+    requirement:
+      >
+      Two-character closeup where Aria must hold receiver in right hand.
+    strategy:
+      - generate canonical keyframe
+      - enforce hand/prop pose
+      - generate motion from conditioned keyframe
+      - composite receiver layer if needed
+      - run handedness oracle
+      - select best take
+  expected_result:
+    reliability_gt_single_generation: true
+# =====================================================================
+# 25. DETERMINISTIC VS GENERATIVE SPLIT
+# =====================================================================
+deterministic_generative_policy:
+  deterministic_preferred_for:
+    - exact typography
+    - subtitles
+    - compositing
+    - color transform
+    - timecode
+    - exact overlays
+    - asset placement where creative variance not desired
+    - audio timing
+    - timeline assembly
+    - transcode
+    - mask operations
+    - exact frame extraction
+  generative_preferred_for:
+    - expressive performance
+    - organic motion
+    - visual ideation
+    - stylized environment creation
+    - voice performance
+    - music
+    - sound design
+    - texture generation
+  hybrid_preferred_for:
+    - character consistency
+    - hand-object interaction
+    - difficult camera motion
+    - readable interface inside generative imagery
+    - recurring prop continuity
+  principle: >
+    Generative uncertainty should be spent where it adds creative value.
+# =====================================================================
+# 26. RISK MODEL
+# =====================================================================
+production_risk:
+  ProductionRisk:
+    fields:
+      risk_id:
+      production_unit_id:
+      strategy_id:
+      risk_type:
+        enum:
+          - identity
+          - continuity
+          - hand_object
+          - anatomy
+          - text
+          - camera
+          - motion
+          - environment
+          - lighting
+          - performance
+          - audio
+          - lip_sync
+          - provider
+          - cost
+          - latency
+          - integration
+          - blast_radius
+          - quality
+      probability:
+      severity:
+      confidence:
+      trigger_features:
+      known_failure_mode_refs:
+      mitigation_refs:
+      fallback_refs:
+  aggregate:
+    catastrophic_risk_separate: true
+# =====================================================================
+# 27. PRODUCTION FEASIBILITY
+# =====================================================================
+production_feasibility:
+  ProductionFeasibilityAssessment:
+    fields:
+      unit_ref:
+      feasible:
+        enum:
+          - yes
+          - conditional
+          - no
+          - unknown
+      feasible_strategies:
+      blocked_requirements:
+      weak_requirements:
+      highest_risk_constraints:
+      estimated_best_quality:
+      estimated_minimum_cost:
+      estimated_expected_cost:
+      estimated_latency:
+      confidence:
+  behavior:
+    no_feasible_strategy:
+      - emit PRODUCTION.FEASIBILITY_BLOCKED
+      - request deeper production cognition
+      - search composite strategies
+      - search constraint-preserving alternatives
+      - never silently weaken creative requirement
+# =====================================================================
+# 28. FALLBACK PLAN
+# =====================================================================
+fallback_model:
+  FallbackPlan:
+    fields:
+      fallback_plan_id:
+      primary_strategy_id:
+      trigger_conditions:
+      fallback_tiers:
+        type: list[FallbackTier]
+      preserves_requirements:
+      relaxed_requirements:
+        type: list[string]
+      requires_creative_authority:
+        type: bool
+  FallbackTier:
+    fields:
+      tier:
+      strategy_id:
+      expected_quality:
+      expected_reliability:
+      expected_cost:
+      activation_condition:
+  rule: >
+    Fallbacks that alter creative semantics require upstream authority; technical
+    substitutions that preserve semantics do not.
+# =====================================================================
+# 29. REPAIR STRATEGY
+# =====================================================================
+repair_strategy:
+  RepairStrategy:
+    fields:
+      repair_strategy_id:
+      violation_codes:
+      likely_root_cause_types:
+      affected_scope:
+      preferred_repairs:
+        type: list[RepairAction]
+      escalation_path:
+      expected_success_probability:
+      expected_cost:
+      expected_blast_radius:
+      evidence_refs:
+  RepairAction:
+    fields:
+      action_type:
+        enum:
+          - regenerate_same_strategy
+          - regenerate_new_seed
+          - increase_take_count
+          - change_implementation
+          - change_conditioning
+          - increase_enforcement_strength
+          - split_layer
+          - deterministic_fix
+          - partial_regeneration
+          - composite_patch
+          - reanimate
+          - revoice
+          - remix
+          - reedit
+          - strategy_recompile
+      target_scope:
+      expected_effect:
+      invalidates_refs:
+      preserves_refs:
+  principle: >
+    Repair planning should target root cause and minimize blast radius.
+# =====================================================================
+# 30. ROOT CAUSE / STRATEGY FEEDBACK
+# =====================================================================
+production_root_cause:
+  consumes:
+    - AutonomousQC violations
+    - ProductionEngine execution receipts
+    - SelfModel failure attribution
+    - artifact lineage
+  ProductionFailureDiagnosis:
+    fields:
+      diagnosis_id:
+      production_unit_ref:
+      violation_refs:
+      probable_causes:
+      strategy_responsibility:
+      implementation_responsibility:
+      input_responsibility:
+      confidence:
+      evidence_refs:
+  update_targets:
+    SelfModel:
+      implementation capability evidence
+    ProductionModel:
+      strategy effectiveness evidence
+  important_distinction: >
+    "Renderer failed" and "strategy was poor" are not the same learning signal.
+# =====================================================================
+# 31. PRODUCTION EXPERIENCE
+# =====================================================================
+production_experience:
+  ProductionStrategyExperience:
+    fields:
+      experience_id:
+      strategy_signature:
+      production_unit_features:
+      ProductionIntent_features:
+      SelfModel_revision:
+      strategy_id:
+      strategy_structure:
+      attempts:
+      selected_take_count:
+      quality_outcome:
+      QC_violations:
+      accepted:
+      first_pass_success:
+      repair_count:
+      repair_types:
+      final_cost:
+      final_latency:
+      strategy_regret:
+        nullable: true
+      evidence_refs:
+      created_at:
+  purpose: >
+    Learn which manufacturing strategies work for which production structures.
+  strategy_signature:
+    includes:
+      - capability composition
+      - conditioning
+      - layer structure
+      - take policy
+      - invariant binding strategy
+# =====================================================================
+# 32. STRATEGY SUCCESS PATTERNS
+# =====================================================================
+strategy_learning:
+  StrategySuccessPattern:
+    fields:
+      pattern_id:
+      condition_predicate:
+      strategy_signature:
+      expected_success:
+      expected_quality:
+      expected_cost:
+      sample_count:
+      confidence:
+  StrategyFailurePattern:
+    fields:
+      pattern_id:
+      condition_predicate:
+      strategy_signature:
+      failure_codes:
+      failure_probability:
+      repair_cost:
+      confidence:
+  examples:
+    success:
+      condition: >
+        two-character closeup + critical hand-object interaction
+      strategy:
+        >
+        conditioned keyframe + pose lock + video generation + deterministic prop composite
+    failure:
+      strategy: >
+        pure text-to-video single pass
+      violation:
+        handedness_drift_probability: high
+# =====================================================================
+# 33. PRODUCTION POLICY LEARNING
+# =====================================================================
+production_policy_learning:
+  learned_policies:
+    - StrategySelectionPolicy
+    - TakeCountPolicy
+    - FallbackSelectionPolicy
+    - RepairPolicy
+    - EnforcementStrengthPolicy
+  policy_lifecycle:
+    - baseline
+    - candidate
+    - offline_evaluated
+    - holdout
+    - shadow
+    - bounded_canary
+    - promoted
+    - rolled_back
+  hard_rule: >
+    Learned production policy cannot weaken hard ProductionIntent or World
+    constraints.
+# =====================================================================
+# 34. STRATEGY SELECTION POLICY
+# =====================================================================
+strategy_selection_policy:
+  StrategySelectionContext:
+    fields:
+      production_unit_ref:
+      ProductionIntent_ref:
+      SelfModel_revision:
+      candidate_strategy_refs:
+      quality_tier:
+      budget_context:
+      schedule_context:
+      production_experience_refs:
+  StrategySelectionDecision:
+    fields:
+      selected_strategy_id:
+      rejected_strategy_ids:
+      rationale:
+      hard_constraint_checks:
+      expected_utility:
+      confidence:
+      policy_version:
+  initial_strategy:
+    recommended:
+      - deterministic hard filters
+      - weighted evidence-based scoring
+      - learned ranking later
+# =====================================================================
+# 35. ADAPTIVE TAKE COUNT
+# =====================================================================
+adaptive_take_count:
+  inputs:
+    - task uncertainty
+    - SelfModel quality variance
+    - historical take-selection gain
+    - quality tier
+    - unit criticality
+    - regeneration cost
+    - expected marginal gain
+  conceptual_rule: >
+    Continue generating takes while expected quality gain from another take
+    exceeds expected cost and schedule penalty.
+  example:
+    routine_background:
+      initial_takes: 1
+    dialogue_closeup:
+      initial_takes: 3
+    flagship_climax:
+      initial_takes: 6
+    high_variance_critical_shot:
+      may_expand_to: 10_or_policy
+# =====================================================================
+# 36. PREPRODUCTION TESTS / PROBES
+# =====================================================================
+production_probe_model:
+  purpose: >
+    Spend small amounts of compute to resolve high-impact production uncertainty
+    before committing the full sequence.
+  ProductionProbe:
+    fields:
+      probe_id:
+      hypothesis:
+      target_strategy_ref:
+      target_requirement_refs:
+      sample_scope:
+      expected_information_gain:
+      maximum_cost:
+      success_conditions:
+      failure_implication:
+  examples:
+    identity_probe:
+      >
+      Can current renderer maintain Aria's face under 120-degree camera rotation?
+    style_probe:
+      >
+      Does renderer preserve deliberate limited-animation linework under motion?
+    crowd_probe:
+      >
+      Can this strategy maintain coherent AI-being crowd scale?
+  executive_integration:
+    high_uncertainty:
+      may_trigger_deeper_production_cognition: true
+# =====================================================================
+# 37. PROJECT PRODUCTION MODEL
+# =====================================================================
+production_model_contract:
+  ProductionModel:
+    fields:
+      production_model_id:
+      project_id:
+      version:
+      source_production_intent_ref:
+      source_self_model_revision:
+      source_world_revision:
+      source_experience_cutoff:
+      global_strategy:
+        type: ProjectProductionStrategy
+      production_unit_strategies:
+        type: list[ProductionStrategy]
+      capability_requirements:
+        type: list[CapabilityRequirement]
+      approved_invariant_bindings:
+        type: list[ProductionInvariantBinding]
+      fallback_plans:
+        type: list[FallbackPlan]
+      repair_strategies:
+        type: list[RepairStrategy]
+      production_risks:
+        type: list[ProductionRisk]
+      feasibility_assessments:
+        type: list[ProductionFeasibilityAssessment]
+      quality_policy:
+        type: ProductionQualityPolicy
+      take_policy_defaults:
+        type: TakeGenerationPolicy
+      strategy_policy_version:
+      operational_assumptions:
+        type: list[ProductionAssumption]
+      invalidation_keys:
+        type: list[string]
+      confidence:
+      provenance:
+      digest:
+  dynamic:
+    value: true
+  immutable_versions:
+    value: true
+# =====================================================================
+# 38. PROJECT PRODUCTION STRATEGY
+# =====================================================================
+project_strategy:
+  ProjectProductionStrategy:
+    fields:
+      architecture_style:
+        enum:
+          - homogeneous
+          - heterogeneous
+          - hybrid
+          - layered
+      asset_reuse_strategy:
+      character_consistency_strategy:
+      environment_strategy:
+      animation_strategy:
+      audio_strategy:
+      editing_strategy:
+      mastering_strategy:
+      default_quality_tier:
+      default_take_policy:
+      global_redundancy_policy:
+      provider_diversification:
+      deterministic_enforcement_policy:
+      fallback_policy:
+      estimated_episode_cost:
+        nullable: true
+      estimated_episode_latency:
+        nullable: true
+# =====================================================================
+# 39. PRODUCTION QUALITY POLICY
+# =====================================================================
+quality_policy:
+  ProductionQualityPolicy:
+    fields:
+      policy_id:
+      ProductionIntent_ref:
+      hard_requirements:
+      quality_thresholds:
+      critical_constraint_min_enforcement:
+      minimum_take_QC:
+      required_specialist_critics:
+      premium_unit_classes:
+      lower_fidelity_allowed_unit_classes:
+      acceptance_delegated_to:
+        value: AutonomousQC
+      strategy_rejection_thresholds:
+        maximum_expected_catastrophic_failure:
+        maximum_expected_hard_constraint_failure:
+# =====================================================================
+# 40. PRODUCTION ASSUMPTION
+# =====================================================================
+production_assumptions:
+  ProductionAssumption:
+    fields:
+      assumption_id:
+      statement:
+      confidence:
+      source_refs:
+      dependency_refs:
+      validation_required:
+      expires_at:
+        nullable: true
+  examples:
+    - "Provider B remains available during sequence render."
+    - "Canonical character reference remains compatible with renderer C."
+  invalidation:
+    material_change:
+      trigger_production_model_recompile: true
+# =====================================================================
+# 41. PRODUCTION MODEL COMPILER
+# =====================================================================
+production_model_compiler:
+  name: ProductionModelCompiler
+  inputs:
+    - ProductionIntent
+    - SelfModelSnapshot
+    - World production constraints
+    - ProductionExperience
+    - approved assets
+    - artifact specifications
+    - budget/schedule constraints
+  compiler_passes:
+    - ProductionIntentNormalizer
+    - ProductionUnitExtractor
+    - ConstraintCompiler
+    - WorldInvariantBinder
+    - CapabilityRequirementCompiler
+    - CandidateStrategyGenerator
+    - DeterministicOpportunityDetector
+    - CompositeStrategyGenerator
+    - RiskEstimator
+    - StrategyCostEstimator
+    - StrategyLatencyEstimator
+    - TakePolicyCompiler
+    - FallbackPlanner
+    - RepairStrategyCompiler
+    - FeasibilityEvaluator
+    - StrategySelector
+    - ProductionModelValidator
+    - ProductionModelEmitter
+  output:
+    - ProductionModel
+  judgment:
+    allowed: true
+  hard_constraint_bypass:
+    allowed: false
+# =====================================================================
+# 42. PRODUCTION COGNITION
+# =====================================================================
+production_cognition:
+  owner:
+    module: quantum.cognition.production
+    runtime: PolycognitiveRuntime
+  ProductionModel_role:
+    exposes:
+      - typed production operators
+      - production facts
+      - strategy candidates
+      - strategy experience
+  operators:
+    - production.strategy_options
+    - production.failure_risk
+    - production.constraint_enforcement
+    - production.renderer_suitability
+    - production.layering_opportunity
+    - production.deterministic_opportunity
+    - production.take_count
+    - production.fallback_strategy
+    - production.repair_strategy
+    - production.cost_quality_tradeoff
+    - production.probe_design
+    - production.minimum_blast_radius
+    - production.production_feasibility
+  boundary: >
+    Production cognition may reason strategically, but production policy/data
+    ownership remains in ProductionModel and active cognition remains in
+    Polycognitive Runtime.
+# =====================================================================
+# 43. PRODUCTION SIGNALS
+# =====================================================================
+production_signals:
+  owner: ProductionModel
+  signal_types:
+    feasibility:
+      - PRODUCTION.FEASIBILITY_BLOCKED
+      - PRODUCTION.FEASIBILITY_LOW_CONFIDENCE
+    risk:
+      - PRODUCTION.HIGH_FAILURE_RISK
+      - PRODUCTION.CATASTROPHIC_RISK
+      - PRODUCTION.CONSTRAINT_ENFORCEMENT_WEAK
+    opportunity:
+      - PRODUCTION.DETERMINISTIC_FIX_AVAILABLE
+      - PRODUCTION.COMPOSITE_STRATEGY_OPPORTUNITY
+      - PRODUCTION.LAYERING_OPPORTUNITY
+      - PRODUCTION.COST_QUALITY_OPTIMIZATION_AVAILABLE
+    capability:
+      - PRODUCTION.STRATEGY_INVALIDATED_BY_SELF_MODEL
+      - PRODUCTION.FALLBACK_ACTIVATED
+    learning:
+      - PRODUCTION.FAILURE_PATTERN_DISCOVERED
+      - PRODUCTION.SUCCESS_PATTERN_DISCOVERED
+  consumed_by:
+    - PolycognitiveRuntime
+# =====================================================================
+# 44. WORLD MODEL INTEGRATION
+# =====================================================================
+world_model_integration:
+  consumes:
+    - expected_visible_state
+    - physical constraints
+    - WorldCoordinate
+    - character asset refs
+    - location refs
+    - prop refs
+    - environment state
+    - acoustic state
+    - World rules
+  compile_to:
+    - ProductionConstraint
+    - ProductionInvariantBinding
+  example:
+    World:
+      - aria.left_shoulder = damaged
+      - receiver.owner = aria
+      - receiver.hand = right
+      - emergency_lights = amber
+    ProductionModel:
+      creates:
+        - damage_variant_required
+        - receiver_right_hand_constraint
+        - amber_lighting_constraint
+  hard_rule: >
+    ProductionModel cannot redefine World truth to match what a renderer produces.
+# =====================================================================
+# 45. CREATIVE INTELLIGENCE INTEGRATION
+# =====================================================================
+creative_integration:
+  consumes:
+    - CreatorModel
+    - QualitySemantics
+    - CreativeProductionRequirements
+    - aesthetic constraints
+    - creator locks
+    - intentional artifacts
+    - unacceptable artifacts
+  example:
+    project:
+      visual_style: intentional_1990s_limited_animation
+    production_behavior:
+      - prioritize line consistency
+      - preserve key-pose character
+      - avoid excessive interpolation
+      - avoid generic photoreal rendering
+  rule: >
+    A production strategy that is technically impressive but creatively
+    misaligned is invalid.
+# =====================================================================
+# 46. AUDIENCE / PRODUCT INTEGRATION
+# =====================================================================
+audience_product_integration:
+  consumes:
+    audience:
+      - visual readability
+      - subtitle requirements
+      - speech intelligibility
+      - sensory intensity
+      - viewing context
+    product:
+      - perceived premium-quality requirement
+      - recurring character consistency
+      - visual identity strength
+      - production sustainability
+      - global accessibility
+  use:
+    - ProductionIntent
+  authority:
+    below_explicit_creator_intent: true
+# =====================================================================
+# 47. SELF MODEL INTEGRATION
+# =====================================================================
+self_model_integration:
+  consumes:
+    - SelfModelSnapshot
+    - CapabilityState
+    - CapabilitySuitability
+    - CapabilityLimits
+    - FailureModes
+    - SuccessPatterns
+    - Availability
+    - CostModel
+    - LatencyModel
+    - ThroughputModel
+    - CompositeCapability
+  material_change:
+    behavior:
+      - identify affected strategies
+      - mark future strategy refs invalid
+      - preserve already accepted artifacts
+      - compile alternate strategy
+      - emit production signal
+  no_duplicate_capability_truth:
+    value: true
+# =====================================================================
+# 48. AUTONOMOUS QC INTEGRATION
+# =====================================================================
+qc_integration:
+  ProductionModel_to_QC:
+    provides:
+      - expected constraints
+      - expected quality tier
+      - critical invariants
+      - strategy risk
+      - selected strategy
+      - expected failure modes
+      - take portfolio
+  QC_to_ProductionModel:
+    provides:
+      - violation codes
+      - quality dimensions
+      - pass/fail/uncertain
+      - root cause
+      - repair recommendation evidence
+  outcomes:
+    - strategy experience update
+    - repair strategy selection
+    - SelfModel capability evidence handoff
+# =====================================================================
+# 49. PRODUCTION ENGINE INTEGRATION
+# =====================================================================
+production_engine_integration:
+  future_spec: 08_quantum_production_engine_build_spec.yaml
+  ProductionModel_emits:
+    - approved ProductionStrategy
+    - execution DAG template
+    - selected implementation bindings
+    - fallback plans
+    - retry ceilings
+    - take policies
+    - QC checkpoints
+    - artifact requirements
+    - dependency/isolation keys
+  ProductionEngine_owns:
+    - actual queue state
+    - worker assignment
+    - current attempts
+    - retry execution
+    - artifact materialization
+    - manifest runtime state
+  rule: >
+    Engine executes strategy. Engine does not invent new creative strategy
+    outside authorized production policy.
+# =====================================================================
+# 50. PRODUCTION MANIFEST CONTRACT
+# =====================================================================
+production_manifest_contract:
+  ProductionManifest:
+    fields:
+      manifest_id:
+      project_id:
+      production_model_ref:
+      production_units:
+      jobs:
+      dependency_graph:
+      implementation_assignments:
+      active_fallbacks:
+      attempt_state:
+      artifact_refs:
+      QC_state:
+      lock_state:
+      execution_revision:
+      created_at:
+      updated_at:
+  owner: ProductionEngine
+  important_boundary: >
+    ProductionManifest is live execution state and may change frequently without
+    changing ProductionModel.
+# =====================================================================
+# 51. STRATEGY INVALIDATION
+# =====================================================================
+strategy_invalidation:
+  triggers:
+    - SelfModel capability degradation
+    - ProductionIntent change
+    - World requirement change
+    - asset invalidation
+    - quality tier change
+    - provider incompatibility
+    - strategy failure evidence
+    - lock reopen
+  invalidation_algorithm:
+    - identify changed dependency
+    - find strategies depending on it
+    - classify committed/accepted/uncommitted
+    - preserve accepted artifacts
+    - stop unsafe queued work
+    - recompute uncommitted affected strategy
+    - revalidate fallback plans
+    - emit new ProductionModel revision if material
+  hard_rule: >
+    Strategy invalidation does not automatically invalidate artifacts already
+    accepted by AutonomousQC unless their semantic source changed.
+# =====================================================================
+# 52. MINIMUM BLAST RADIUS
+# =====================================================================
+minimum_blast_radius:
+  principle: >
+    Production planning must make independently repairable artifacts and jobs
+    the default.
+  blast_radius_levels:
+    - layer
+    - frame_range
+    - shot
+    - scene
+    - sequence
+    - episode
+  preferred:
+    lowest_semantically_valid_level: true
+  example:
+    failure:
+      shot_217_hand_drift
+    expected_repair:
+      scope: shot_217_or_prop_layer
+    should_not_touch:
+      - shots_001_to_216
+      - shots_218_plus
+      - unrelated_audio
+  design_implications:
+    - immutable accepted takes
+    - content-addressed artifacts
+    - shot-scoped jobs
+    - explicit dependencies
+    - deterministic assembly
+# =====================================================================
+# 53. ASSET REUSE STRATEGY
+# =====================================================================
+asset_reuse:
+  importance: high
+  AssetReuseStrategy:
+    fields:
+      persistent_entity_ref:
+      canonical_asset_family_ref:
+      reusable_variants:
+      approved_provider_representations:
+      reusable_conditioning_refs:
+      reuse_constraints:
+      drift_detection_required:
+      regeneration_policy:
+  goals:
+    - character identity reuse
+    - location reuse
+    - prop reuse
+    - production cost reduction
+    - series continuity
+  rule: >
+    Reusing a character should reuse stable identity and validated production
+    anchors rather than relying on a text description alone.
+# =====================================================================
+# 54. CHARACTER CONSISTENCY STRATEGY
+# =====================================================================
+character_consistency:
+  CharacterConsistencyStrategy:
+    fields:
+      character_ref:
+      identity_anchors:
+      asset_refs:
+      reference_conditioning:
+      pose_constraints:
+      costume_variant_ref:
+      damage_variant_ref:
+      voice_identity_ref:
+      expected_identity_score:
+      fallback_strategy:
+      QC_checks:
+  possible_methods:
+    - asset-driven rendering
+    - image-reference conditioning
+    - model-specific identity conditioning
+    - layered compositing
+    - deterministic accessory replacement
+    - post-generation face/identity correction where allowed
+  selection:
+    SelfModel_conditioned: true
+# =====================================================================
+# 55. ENVIRONMENT STRATEGY
+# =====================================================================
+environment_strategy:
+  EnvironmentProductionStrategy:
+    fields:
+      location_ref:
+      geometry_requirements:
+      continuity_requirements:
+      scale_requirements:
+      lighting_requirements:
+      reusable_environment_asset_refs:
+      strategy:
+      camera_compatibility:
+      atmospheric_strategy:
+      expected_consistency:
+  options:
+    - generative_per_shot
+    - reusable_3D_or_scene_asset
+    - panoramic_reference
+    - hybrid_environment
+    - deterministic_background_composite
+# =====================================================================
+# 56. CAMERA / MOTION STRATEGY
+# =====================================================================
+camera_motion_strategy:
+  CameraMotionProductionStrategy:
+    fields:
+      shot_ref:
+      required_camera_path:
+      path_precision:
+      motion_complexity:
+      subject_motion_complexity:
+      camera_subject_interaction:
+      strategy_type:
+      control_capability_requirements:
+      expected_path_adherence:
+      fallback:
+  hard_case:
+    high_camera_motion_plus_identity_constraints:
+      likely_requires:
+        - stronger_reference/control
+        - composite strategy
+        - higher_take_count
+        - production probe
+# =====================================================================
+# 57. DIALOGUE / PERFORMANCE STRATEGY
+# =====================================================================
+performance_production:
+  DialoguePerformanceStrategy:
+    fields:
+      character_ref:
+      line_ref:
+      voice_identity_ref:
+      emotional_target:
+      timing_target:
+      performance_direction:
+      lip_sync_required:
+      generated_audio_strategy:
+      facial_performance_strategy:
+      integration_strategy:
+      retry_policy:
+      QC_policy:
+  possible_sequence:
+    - generate/select voice performance
+    - lock dialogue timing
+    - generate facial performance
+    - lip-sync validation
+    - composite/mix
+# =====================================================================
+# 58. SOUND / MUSIC PRODUCTION STRATEGY
+# =====================================================================
+sound_music_strategy:
+  SoundProductionStrategy:
+    fields:
+      World_acoustic_context_ref:
+      sound_event_refs:
+      ambience_strategy:
+      Foley_strategy:
+      spatialization_strategy:
+      synchronization_strategy:
+      generation_vs_library_policy:
+      deterministic_mix_requirements:
+      QC_requirements:
+  MusicProductionStrategy:
+    fields:
+      cue_ref:
+      emotional_function:
+      structure:
+      hit_points:
+      duration:
+      motif_refs:
+      generation_strategy:
+      stem_requirements:
+      revision_strategy:
+      mix_requirements:
+  principle: >
+    ProductionModel chooses manufacture strategy while Acoustic Cognition
+    determines creative sound intention.
+# =====================================================================
+# 59. EDITORIAL STRATEGY
+# =====================================================================
+editorial_strategy:
+  EditorialProductionStrategy:
+    fields:
+      timeline_ref:
+      frame_rate:
+      edit_decision_refs:
+      deterministic_timeline_required:
+      shot_handle_policy:
+      transition_policy:
+      dialogue_sync:
+      music_sync:
+      subtitle_policy:
+      conform_policy:
+  deterministic:
+    preferred: true
+  key_law: >
+    Once shot selection/edit decisions are approved, timeline assembly should be
+    deterministic and reproducible.
+# =====================================================================
+# 60. FINISHING STRATEGY
+# =====================================================================
+finishing_strategy:
+  FinishingProductionStrategy:
+    fields:
+      color_pipeline:
+      grain_texture:
+      sharpening:
+      denoise:
+      stabilization:
+      frame_interpolation:
+      upscale:
+      subtitle_render:
+      audio_mastering:
+      loudness_target:
+      delivery_formats:
+  creative_guard:
+    >
+    Finishing may not "clean up" deliberate texture, frame cadence, noise,
+    chromatic artifacts or other intentional aesthetic features.
+# =====================================================================
+# 61. BUDGET / COST CONSTRAINT
+# =====================================================================
+cost_constraints:
+  ProductionBudgetContext:
+    fields:
+      hard_budget:
+        nullable: true
+      target_budget:
+        nullable: true
+      reserve_fraction:
+      quality_priority:
+      experimentation_budget:
+      shadow_probe_budget:
+      currency_or_compute_unit:
+  behavior:
+    hard_budget:
+      must_not_exceed_without_authority: true
+    target_budget:
+      may_exceed_when:
+        - expected_quality_gain_high
+        - catastrophic_failure_prevention
+        - flagship_unit
+  important_rule: >
+    Budget optimizes manufacturing strategy, not creative meaning.
+# =====================================================================
+# 62. SCHEDULE / LATENCY CONSTRAINT
+# =====================================================================
+schedule_constraints:
+  ProductionScheduleContext:
+    fields:
+      target_completion:
+        nullable: true
+      hard_deadline:
+        nullable: true
+      priority_class:
+      parallelism_budget:
+      expected_provider_capacity:
+      critical_path_constraints:
+  optimization:
+    - parallel independent jobs
+    - early long-lead asset generation
+    - reserve premium models for critical path only
+    - avoid blocking entire episode on isolated slow unit
+# =====================================================================
+# 63. PRODUCTION PRIORITY
+# =====================================================================
+production_priority:
+  ProductionPriority:
+    fields:
+      priority_id:
+      dimension:
+      weight:
+      hard_floor:
+        nullable: true
+      source_ref:
+  common_dimensions:
+    - creator_fidelity
+    - continuity
+    - character_identity
+    - visual_quality
+    - motion_quality
+    - audience_experience
+    - product_identity
+    - sound_quality
+    - cost
+    - latency
+    - repairability
+# =====================================================================
+# 64. QUALITY-COST FRONTIER
+# =====================================================================
+quality_cost_frontier:
+  purpose: >
+    Expose meaningful strategy tradeoffs rather than returning one opaque route.
+  FrontierPoint:
+    fields:
+      strategy_id:
+      expected_quality:
+      expected_failure_probability:
+      expected_cost:
+      expected_latency:
+      repairability:
+      confidence:
+  use:
+    - PolycognitiveRuntime strategic decisions
+    - quality-tier planning
+    - budget-constrained planning
+  rule: >
+    Only strategies satisfying hard creative/World constraints appear on the
+    feasible frontier.
+# =====================================================================
+# 65. PRODUCTION MODEL API
+# =====================================================================
+API_boundaries:
+  intent:
+    - compile_production_intent
+    - validate_production_intent
+    - explain_requirement
+  strategy:
+    - generate_strategy_candidates
+    - evaluate_strategy
+    - select_strategy
+    - compare_strategies
+    - explain_strategy
+    - quality_cost_frontier
+  capability:
+    - compile_capability_requirements
+    - estimate_feasibility
+  constraints:
+    - compile_constraints
+    - bind_invariants
+    - validate_enforcement_strength
+  takes:
+    - compile_take_policy
+    - recommend_additional_take
+  fallback:
+    - compile_fallback_plan
+    - activate_fallback_recommendation
+  repair:
+    - diagnose_strategy_failure
+    - recommend_repair
+    - estimate_repair_blast_radius
+  probes:
+    - design_production_probe
+    - evaluate_probe
+  model:
+    - compile_production_model
+    - get_production_model
+    - recompile_affected_strategies
+  learning:
+    - record_strategy_experience
+    - discover_failure_pattern
+    - discover_success_pattern
+    - evaluate_policy_candidate
+# =====================================================================
+# 66. STORAGE ABSTRACTIONS
+# =====================================================================
+storage_abstractions:
+  ports:
+    - ProductionIntentStorePort
+    - ProductionModelStorePort
+    - ProductionStrategyStorePort
+    - ProductionExperienceStorePort
+    - ProductionRiskStorePort
+    - ProductionPolicyStorePort
+    - ProductionProbeStorePort
+    - RepairStrategyStorePort
+    - FallbackPlanStorePort
+  provider_independent: true
+  immutable:
+    - ProductionIntent versions
+    - ProductionModel versions
+    - approved ProductionStrategy
+    - production experience records
+# =====================================================================
+# 67. VERSIONING
+# =====================================================================
+versioning:
+  versioned_objects:
+    - ProductionIntent
+    - ProductionRequirement
+    - ProductionModel
+    - ProductionStrategy
+    - ProductionInvariantBinding
+    - TakeGenerationPolicy
+    - FallbackPlan
+    - RepairStrategy
+    - strategy selection policy
+  ProductionModel_recompile_triggers:
+    - ProductionIntent changes
+    - SelfModel material change
+    - World requirement change
+    - asset availability change
+    - strategy failure evidence
+    - cost/latency threshold crossing
+    - production policy update
+  no_in_place_mutation:
+    approved_versions: true
+# =====================================================================
+# 68. STALENESS
+# =====================================================================
+staleness_model:
+  strategy_dependencies:
+    - ProductionIntent version
+    - SelfModel revision
+    - World revision
+    - asset refs
+    - strategy policy version
+    - production experience cutoff
+  stale_strategy:
+    behavior:
+      - prevent new execution
+      - inspect changed dependencies
+      - revalidate if unaffected
+      - recompile if material
+  accepted_artifact:
+    default_behavior:
+      remain_accepted_if_semantics_unchanged: true
+# =====================================================================
+# 69. CONSISTENCY
+# =====================================================================
+consistency_model:
+  ProductionIntent:
+    mode: immutable_versioned
+  ProductionModel:
+    mode: immutable_versioned
+  ProductionStrategy:
+    mode: immutable_once_approved
+  ProductionExperience:
+    mode: append_only
+  live_capability:
+    source: SelfModel
+  ProductionManifest:
+    mode: external_live_state
+# =====================================================================
+# 70. CONCURRENCY
+# =====================================================================
+concurrency_model:
+  strategy_compilation:
+    parallel_by:
+      - independent shot
+      - independent asset
+      - independent sequence
+  model_publish:
+    strategy:
+      - compile against pinned dependencies
+      - atomic publish ProductionModel revision
+  conflicting_strategy_updates:
+    behavior:
+      - preserve candidates
+      - no last-write-wins for approved strategy
+  episode_scale:
+    requirement: >
+      Hundreds of shots may compile strategies concurrently.
+# =====================================================================
+# 71. PROVENANCE
+# =====================================================================
+provenance:
+  ProductionProvenance:
+    fields:
+      semantic_ref:
+      source_requirement_refs:
+      SelfModel_revision:
+      production_experience_refs:
+      strategy_policy_version:
+      compiler_version:
+      evidence_refs:
+      created_at:
+  must_answer:
+    - why_this_strategy
+    - what_alternatives_were_rejected
+    - which creative/World requirements drove the choice
+    - what SelfModel evidence supported the choice
+    - which failure risks were expected
+    - which fallback was available
+# =====================================================================
+# 72. OBSERVABILITY
+# =====================================================================
+observability:
+  intent_metrics:
+    - requirement_count
+    - hard_requirement_count
+    - critical_constraint_count
+  feasibility_metrics:
+    - infeasible_unit_count
+    - low_confidence_unit_count
+    - pre_execution_strategy_rejection_count
+  strategy_metrics:
+    - strategy_type_distribution
+    - composite_strategy_rate
+    - deterministic_stage_rate
+    - heterogeneous_provider_rate
+    - expected_failure_rate
+    - strategy_confidence
+  take_metrics:
+    - average_takes_per_unit
+    - selected_take_rank
+    - marginal_take_gain
+    - wasted_take_rate
+  quality_metrics:
+    - first_pass_QC_rate
+    - hard_constraint_violation_rate
+    - character_identity_failure_rate
+    - hand_object_failure_rate
+    - production_model_predicted_vs_observed_quality
+  repair_metrics:
+    - repair_count
+    - repair_success_rate
+    - average_repair_blast_radius
+    - strategy_change_repair_rate
+  economics:
+    - expected_vs_actual_cost
+    - expected_vs_actual_latency
+    - cost_per_accepted_shot
+    - cost_per_finished_minute
+  learning:
+    - discovered_failure_patterns
+    - discovered_success_patterns
+    - learned_policy_regret
+    - first_attempt_failure_reduction
+# =====================================================================
+# 73. FAILURE MODES
+# =====================================================================
+failure_modes:
+  NO_FEASIBLE_STRATEGY:
+    behavior:
+      - block execution
+      - emit feasibility signal
+      - request deeper production cognition
+  SELF_MODEL_UNAVAILABLE:
+    behavior:
+      - use last verified SelfModel only within freshness policy
+      - block risky final strategy if capability state too stale
+  WORLD_CONSTRAINT_UNAVAILABLE:
+    behavior:
+      - fail closed for affected visual/audio unit
+  PRODUCTION_EXPERIENCE_UNAVAILABLE:
+    behavior:
+      - use baseline strategy policy
+      - no loss of core correctness
+  STRATEGY_COMPILER_FAILURE:
+    behavior:
+      - unit remains unplanned
+      - no execution
+  STRATEGY_POLICY_FAILURE:
+    behavior:
+      - rollback baseline deterministic policy
+  PROVIDER_DEGRADATION:
+    behavior:
+      - invalidate affected uncommitted strategies
+      - activate fallback/recompile
+  FALLBACK_EXHAUSTED:
+    behavior:
+      - escalate production cognition
+      - possibly request creative authority only if semantics cannot be preserved
+  COST_OVERRUN:
+    behavior:
+      - compare feasible lower-cost strategies
+      - preserve hard quality requirements
+# =====================================================================
+# 74. DEGRADED MODES
+# =====================================================================
+degraded_modes:
+  BASELINE_STRATEGY:
+    condition: learned strategy policy unavailable
+    behavior:
+      - deterministic hard filters
+      - heuristic strategy ranking
+  NO_PRODUCTION_EXPERIENCE:
+    condition: experience store unavailable
+    behavior:
+      - rely on SelfModel + static strategy library
+  LIMITED_PROVIDER_SET:
+    condition: provider outage
+    behavior:
+      - compile feasible alternatives
+      - mark quality/cost implications
+  PROTOTYPE_ONLY:
+    condition: no strategy satisfies final quality floor
+    behavior:
+      - allow preview/MVP execution only
+      - prohibit final lock
+# =====================================================================
+# 75. RECOVERY
+# =====================================================================
+recovery:
+  order:
+    - restore latest valid ProductionIntent
+    - restore strategy policy versions
+    - restore ProductionExperience cutoff
+    - retrieve current SelfModel revision
+    - revalidate approved strategies
+    - invalidate materially stale future strategies
+    - preserve accepted artifact refs
+    - rebuild missing ProductionModel revision
+    - reconcile ProductionManifest with ProductionEngine
+  invariant: >
+    Recovery must never duplicate accepted artifacts or destroy accepted work.
+# =====================================================================
+# 76. SECURITY / AUTHORITY
+# =====================================================================
+security:
+  principles:
+    - strategy planning has no direct provider credentials
+    - execution authority remains ProductionEngine
+    - no ProductionIntent relaxation without authority
+    - no direct World truth mutation
+    - no direct SelfModel mutation
+  model_visible_secrets:
+    forbidden: true
+  production_cognition:
+    proposal_authority_only: true
+# =====================================================================
+# 77. PERFORMANCE
+# =====================================================================
+performance:
+  objectives:
+    - strategy compilation before execution bottleneck
+    - parallel shot strategy planning
+    - reuse cached suitability estimates
+    - incremental recompile after SelfModel changes
+    - bounded strategy candidate set
+  initial_targets:
+    shot_strategy_compile_p95_ms:
+      target: 1500
+      excludes: model_based_cognition
+    constraint_binding_p95_ms:
+      target: 250
+    feasibility_query_p95_ms:
+      target: 500
+    strategy_invalidation_detection_p95_ms:
+      target: 500
+  large_episode:
+    target_shots: 250_plus
+    strategy_parallelism_required: true
+# =====================================================================
+# 78. SCALABILITY
+# =====================================================================
+scalability:
+  dimensions:
+    - hundreds_of_shots_per_episode
+    - thousands_of_assets
+    - multiple_strategy_candidates_per_unit
+    - many_provider_implementations
+    - large_production_experience_store
+  partitioning:
+    - project_id
+    - episode_id
+    - production_unit_id
+  caching:
+    keys:
+      - requirement_signature
+      - SelfModel_revision
+      - strategy_policy_version
+      - quality_tier
+  strategy_reuse:
+    allowed_for_similar_units: true
+    requires_revalidation: true
+# =====================================================================
+# 79. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/production_model/
+  modules:
+    contracts:
+      - common
+      - provenance
+      - versions
+      - priorities
+    intent:
+      - requirements
+      - quality_tiers
+      - compiler
+      - validator
+    units:
+      - production_unit
+      - shot
+      - asset
+      - audio
+    constraints:
+      - production_constraint
+      - invariant_binding
+      - enforcement
+    capabilities:
+      - requirement_compiler
+      - self_model_adapter
+    strategies:
+      - contracts
+      - generator
+      - evaluator
+      - selection
+      - scorecard
+    composites:
+      - stage_graph
+      - layered
+      - hybrid
+      - deterministic_opportunities
+    takes:
+      - policy
+      - portfolio
+      - adaptive_count
+    risk:
+      - estimator
+      - feasibility
+      - catastrophic
+    fallback:
+      - planner
+      - activation
+    repair:
+      - root_cause
+      - strategy
+      - blast_radius
+    probes:
+      - design
+      - evaluation
+    project:
+      - production_model
+      - project_strategy
+      - compiler
+    experience:
+      - strategy_experience
+      - success_patterns
+      - failure_patterns
+    learning:
+      - strategy_policy
+      - take_policy
+      - governance
+    signals:
+      - production_signals
+    integrations:
+      creative_intelligence:
+      audience_product:
+      world_model:
+      self_model:
+      polycognitive_runtime:
+      autonomous_qc:
+      production_engine:
+    ports:
+      - storage
+# =====================================================================
+# 80. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  intent:
+    - ProductionIntent
+    - ProductionRequirement
+    - ProductionPriority
+    - ProductionFlexibility
+    - IntentionalArtifact
+    - UnacceptableArtifact
+    - ProductionQualityTier
+  units:
+    - ProductionUnit
+    - ShotProductionRequirements
+    - AssetProductionRequirements
+    - AudioProductionRequirements
+  constraints:
+    - ProductionConstraint
+    - ProductionInvariantBinding
+  strategies:
+    - ProductionStrategy
+    - ProductionStageGraph
+    - ProductionStage
+    - ProductionStageDependency
+    - ImplementationCandidate
+    - SelectedImplementation
+    - StrategyScorecard
+    - ProjectProductionStrategy
+  takes:
+    - TakeGenerationPolicy
+    - TakeCandidate
+    - TakePortfolio
+  composites:
+    - LayerProductionStrategy
+    - CompositeProductionStrategy
+  risk:
+    - ProductionRisk
+    - ProductionFeasibilityAssessment
+  fallback:
+    - FallbackPlan
+    - FallbackTier
+  repair:
+    - RepairStrategy
+    - RepairAction
+    - ProductionFailureDiagnosis
+  probes:
+    - ProductionProbe
+  experience:
+    - ProductionStrategyExperience
+    - StrategySuccessPattern
+    - StrategyFailurePattern
+  model:
+    - ProductionModel
+    - ProductionAssumption
+    - ProductionQualityPolicy
+  planning:
+    - ProductionBudgetContext
+    - ProductionScheduleContext
+    - FrontierPoint
+  manifest_interface:
+    - ProductionManifest
+# =====================================================================
+# 81. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    intent:
+      - provider_independent_requirement
+      - hard_vs_soft_requirement
+      - quality_tier_semantics
+      - retro_flagship_does_not_imply_photorealism
+    constraints:
+      - World_fact_to_constraint
+      - critical_binding_strength
+      - creator_lock_constraint
+    strategies:
+      - infeasible_strategy_pruned
+      - composite_strategy_created
+      - deterministic_alternative_detected
+      - scorecard_hard_failure
+    takes:
+      - adaptive_take_count
+      - marginal_gain_stop
+    risk:
+      - task_conditioned_failure
+      - catastrophic_risk_threshold
+    fallback:
+      - technical_fallback_preserves_intent
+      - semantic_fallback_requires_authority
+    repair:
+      - minimum_blast_radius
+      - root_cause_mapping
+    SelfModel:
+      - degraded_implementation_invalidates_strategy
+      - unrelated_capability_change_does_not_invalidate
+    learning:
+      - strategy_experience_recorded
+      - hard_requirement_cannot_be_learned_away
+# =====================================================================
+# 82. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - provider_change_without_semantic_change_does_not_change_ProductionIntent
+  - ProductionModel_recompile_does_not_modify_CreatorModel
+  - World_constraint_never_weakened_to_match_renderer
+  - critical_constraint_below_required_enforcement_never_executes
+  - accepted_unrelated_shot_survives_other_shot_failure
+  - same_ProductionIntent_same_SelfModel_same_policy_same_strategy_digest_or_declared_nondeterminism
+  - ProductionManifest_state_change_does_not_mutate_ProductionModel
+  - no_infeasible_strategy_can_be_selected
+  - learned_strategy_policy_cannot_ignore_hard_requirement
+  - deterministic_operation_preferred_when_equivalent_and_lower_risk
+  - capability_degradation_invalidates_only_dependent_uncommitted_strategies
+# =====================================================================
+# 83. NEGATIVE TESTS
+# =====================================================================
+negative_tests:
+  - provider_choice_embedded_in_ProductionIntent_rejected
+  - renderer_weakness_causes_creative_style_change_rejected
+  - hand_constraint_dropped_to_improve_pass_rate_rejected
+  - ProductionModel_direct_SelfModel_mutation_rejected
+  - ProductionModel_direct_World_mutation_rejected
+  - ProductionModel_executes_provider_call_rejected
+  - ProductionManifest_used_as_creative_authority_rejected
+  - generic_photorealism_quality_rule_rejected
+  - learned_policy_self_promotion_rejected
+  - fallback_that_changes_story_without_authority_rejected
+  - accepted_shots_invalidated_by_unrelated_provider_degradation_rejected
+# =====================================================================
+# 84. INTEGRATION TESTS
+# =====================================================================
+integration_tests:
+  - CreatorModel_to_ProductionIntent
+  - AudienceModel_to_ProductionIntent
+  - ProductMarketModel_to_ProductionIntent
+  - World_expected_state_to_constraints
+  - ProductionIntent_plus_SelfModel_to_strategy_candidates
+  - SelfModel_failure_surface_to_risk_estimator
+  - strategy_to_AutonomousQC_expectations
+  - ProductionModel_to_ProductionEngine_manifest
+  - QC_failure_to_repair_strategy
+  - ProductionEngine_attempt_to_strategy_experience
+  - SelfModel_degradation_to_strategy_recompile
+  - accepted_artifact_preservation_after_recompile
+# =====================================================================
+# 85. END-TO-END TESTS
+# =====================================================================
+end_to_end_tests:
+  shot_217_failure_isolation:
+    initial:
+      episode_shot_count: 260
+      bad_shot: shot_217
+    sequence:
+      - compile ProductionIntent
+      - compile shot-level ProductionStrategies
+      - execute all eligible jobs
+      - AutonomousQC fails shot_217 for handedness
+      - root cause identifies generative hand-object weakness
+      - repair strategy chooses stronger conditioning + deterministic prop layer
+      - invalidate shot_217 only
+      - regenerate affected shot/layer
+      - re-QC shot_217
+      - reuse all other accepted shots
+      - deterministic timeline reconforms
+    success:
+      - no unrelated render regenerated
+      - World truth unchanged
+      - creator intent unchanged
+  provider_degradation:
+    sequence:
+      - ProductionModel planned renderer_A for 60 shots
+      - 20 accepted
+      - 40 pending
+      - SelfModel emits CAPABILITY_DEGRADED
+      - dependency analysis identifies 40 pending strategies
+      - accepted 20 preserved
+      - alternate strategies compiled for pending 40
+      - ProductionModel v_next published
+      - ProductionEngine continues
+    success:
+      - zero accepted work lost
+      - no human rerouting
+  retro_limited_animation:
+    project:
+      quality_tier: flagship
+      style: deliberate_1990s_limited_animation
+    sequence:
+      - ProductionIntent encodes linework/frame cadence/texture
+      - candidate photoreal strategy scores high technical realism
+      - strategy fails creator fidelity
+      - limited-animation hybrid strategy selected
+      - finishing preserves intentional texture
+    success:
+      - flagship does not become photorealism
+  cinematic_AI_VR:
+    requirements:
+      - monumental impossible geometry
+      - premium cinematic lighting
+      - recurring AI character identity
+      - complex spatial sound
+    sequence:
+      - project-level heterogeneous strategy selected
+      - environment shots use renderer optimized for scale
+      - character closeups use identity-strong renderer
+      - impossible UI/text uses deterministic composite
+      - acoustic strategy derives World geometry
+      - multiple takes generated for climax
+      - AutonomousQC selects/certifies best outputs
+    success:
+      - no single-renderer architecture
+      - creative ambition preserved
+  production_learning:
+    sequence:
+      - produce 100 shorts
+      - collect strategy experiences
+      - discover failure patterns
+      - learn stronger hand-object strategy
+      - shadow new StrategySelectionPolicy
+      - holdout evaluation
+      - bounded canary
+      - promote
+      - produce short_101
+    expected:
+      - lower first-attempt failure rate
+      - lower repair cost
+      - same_or_higher_creator_fidelity
+# =====================================================================
+# 86. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: PM-G01
+    check: ProductionIntent and ProductionModel are separate contracts
+  - id: PM-G02
+    check: ProductionIntent is provider independent
+  - id: PM-G03
+    check: QualitySemantics preserved through production requirements
+  - id: PM-G04
+    check: World critical facts compile into enforceable constraints
+  - id: PM-G05
+    check: critical weak bindings fail before render
+  - id: PM-G06
+    check: SelfModel is sole capability truth source
+  - id: PM-G07
+    check: task-conditioned strategy selection supported
+  - id: PM-G08
+    check: heterogeneous shot strategies supported
+  - id: PM-G09
+    check: deterministic/generative hybrid strategies supported
+  - id: PM-G10
+    check: adaptive take generation supported
+  - id: PM-G11
+    check: fallback plans precomputed for critical units
+  - id: PM-G12
+    check: repair strategy minimizes blast radius
+  - id: PM-G13
+    check: accepted work survives unrelated strategy invalidation
+  - id: PM-G14
+    check: ProductionManifest remains execution-only state
+  - id: PM-G15
+    check: capability degradation replans only affected uncommitted work
+  - id: PM-G16
+    check: ProductionExperience influences strategy learning
+  - id: PM-G17
+    check: learned strategy policy cannot weaken hard requirements
+  - id: PM-G18
+    check: ProductionModel produces evidence-backed rationale
+  - id: PM-G19
+    check: ProductionEngine can execute emitted strategy contract
+  - id: PM-G20
+    check: AutonomousQC remains acceptance authority
+# =====================================================================
+# 87. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  ProductionIntent:
+    - provider independent
+    - compiled from creator/audience/product/World requirements
+    - quality tier explicit
+    - hard and soft requirements distinct
+    - flexibility explicit
+  constraints:
+    - World facts compile into ProductionConstraints
+    - creator locks compile into ProductionConstraints
+    - invariant bindings have enforcement strength
+    - critical weak bindings rejected
+  capabilities:
+    - SelfModel used directly
+    - no duplicate capability truth
+    - implementation suitability task-conditioned
+  strategies:
+    - multiple candidate strategies generated
+    - single-model and composite supported
+    - layered strategies supported
+    - deterministic methods supported
+    - heterogeneous provider strategies supported
+    - scorecards preserve hard constraints
+  takes:
+    - multiple-take generation supported
+    - adaptive take count supported
+    - take portfolio supports QC selection
+  risk:
+    - failure risk estimated
+    - catastrophic risk separately modeled
+    - feasibility explicit
+  fallback:
+    - critical units have fallback planning
+    - fallbacks preserve intent or escalate authority
+  repair:
+    - typed repair strategies exist
+    - minimum blast radius explicit
+    - root cause feeds correct learning plane
+  learning:
+    - strategy experience captured
+    - success/failure patterns learned
+    - strategy selection policy governable
+    - no self-promotion
+  integration:
+    - World Model
+    - Creative Intelligence
+    - Audience/Product Intelligence
+    - SelfModel
+    - Polycognitive Runtime
+    - AutonomousQC
+    - ProductionEngine
+  scale:
+    - 250_plus shot episode strategy planning supported
+    - shot-level parallel strategy compilation
+    - provider degradation does not require episode-wide reset
+  autonomy:
+    - model/tool selection requires no human routing
+    - strategy changes automatically under capability degradation
+    - infeasible requirements trigger autonomous alternative search
+    - accepted unrelated work remains preserved
+  release:
+    requirement: >
+      PM-G01 through PM-G20 pass and no ownership conflict exists with specs
+      00 through 05.
+# =====================================================================
+# 88. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: PM-OD-01
+    decision: exact ProductionIntent schema granularity
+    status: ITERATIVE
+  - id: PM-OD-02
+    decision: initial strategy template library
+    status: TO_DEFINE
+    recommendation:
+      - direct_generation
+      - reference_conditioned
+      - keyframe_conditioned
+      - layered_composite
+      - deterministic_overlay
+      - multi_take
+  - id: PM-OD-03
+    decision: initial StrategySelectionPolicy weights
+    status: CALIBRATION_REQUIRED
+  - id: PM-OD-04
+    decision: take-count policy priors
+    status: CALIBRATION_REQUIRED
+  - id: PM-OD-05
+    decision: cost/quality utility scaling
+    status: PROJECT_AND_TIER_DEPENDENT
+  - id: PM-OD-06
+    decision: production-probe budget policy
+    status: OPEN
+  - id: PM-OD-07
+    decision: strategy experience store provider
+    status: UNKNOWN
+  - id: PM-OD-08
+    decision: exact role split for live ProductionManifest mutation
+    status: >
+      Finalized in 08; architectural owner remains ProductionEngine.
+  - id: PM-OD-09
+    decision: correlated composite failure estimator
+    status: BENCHMARK_REQUIRED
+  - id: PM-OD-10
+    decision: per-tier minimum enforcement strengths
+    status: CALIBRATION_REQUIRED
+# =====================================================================
+# 89. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: ProductionModel silently becomes creative director
+    control:
+      - ProductionIntent boundary
+      - CreatorModel precedence
+  - risk: one renderer becomes universal default
+    control:
+      - task-conditioned SelfModel
+      - heterogeneous strategies
+  - risk: production complexity explodes
+    control:
+      - strategy templates
+      - candidate pruning
+      - use composite strategies only where expected value supports them
+  - risk: deterministic tools over-constrain creative work
+    control:
+      - deterministic/generative policy based on semantic role
+  - risk: generative tools used for exact operations
+    control:
+      - deterministic opportunity detection
+  - risk: multiple takes waste compute
+    control:
+      - adaptive marginal-value stopping
+  - risk: low-cost strategy degrades creative fidelity
+    control:
+      - hard creative floors
+      - expected utility after constraints
+  - risk: fallback silently changes film
+    control:
+      - semantic-change authority gate
+  - risk: strategy learning overfits one renderer generation
+    control:
+      - condition on implementation versions
+      - holdout
+      - shadow/canary
+  - risk: production failures invalidate entire timeline
+    control:
+      - shot isolation
+      - dependency graph
+      - deterministic assembly
+  - risk: SelfModel degradation destroys accepted work
+    control:
+      - future-strategy invalidation only by default
+  - risk: QC and ProductionModel duplicate authority
+    control:
+      - prediction vs acceptance boundary
+  - risk: strategy score hides catastrophic constraint violation
+    control:
+      - hard non-compensatory failures
+  - risk: finishing removes intentional aesthetic artifacts
+    control:
+      - intentional artifact contract
+      - CreatorModel QC
+# =====================================================================
+# 90. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  - id: PMW1
+    name: intent_requirements_and_authority
+    depends_on:
+      - SYSTEM_ARCHITECTURE_00
+      - CREATIVE_INTELLIGENCE_03_MINIMUM
+      - AUDIENCE_PRODUCT_04_MINIMUM
+    targets:
+      - ProductionIntent
+      - requirements
+      - quality tier
+      - flexibility
+    exit:
+      - provider-independent intent compiles
+  - id: PMW2
+    name: production_units_and_constraints
+    depends_on:
+      - PMW1
+      - WORLD_MODEL_01_MINIMUM
+    targets:
+      - ProductionUnit
+      - ShotProductionRequirements
+      - AssetProductionRequirements
+      - ProductionConstraint
+      - WorldInvariantBinder
+    exit:
+      - exact World requirements become enforceable constraints
+  - id: PMW3
+    name: capability_requirements_and_feasibility
+    depends_on:
+      - PMW2
+      - SELF_MODEL_05_MINIMUM
+    targets:
+      - CapabilityRequirementCompiler
+      - ProductionFeasibilityAssessment
+      - SelfModel adapter
+    exit:
+      - feasibility uses live capability truth
+  - id: PMW4
+    name: strategy_generation_and_selection
+    depends_on:
+      - PMW3
+    targets:
+      - ProductionStrategy
+      - stage graphs
+      - candidate generation
+      - deterministic opportunities
+      - composites
+      - scorecards
+    exit:
+      - multiple valid strategy forms selectable
+  - id: PMW5
+    name: takes_risk_fallback_and_repair
+    depends_on:
+      - PMW4
+    targets:
+      - take policies
+      - ProductionRisk
+      - fallback
+      - repair
+      - blast-radius analysis
+    exit:
+      - failures repair minimum scope
+  - id: PMW6
+    name: project_production_model
+    depends_on:
+      - PMW5
+    targets:
+      - ProductionModel
+      - ProjectProductionStrategy
+      - ProductionQualityPolicy
+      - strategy invalidation
+    exit:
+      - complete project model emitted
+  - id: PMW7
+    name: cognition_QC_and_engine_handoffs
+    depends_on:
+      - PMW6
+      - POLYCOGNITIVE_RUNTIME_02_MINIMUM
+    targets:
+      - production cognitive operators
+      - production signals
+      - AutonomousQC handoff
+      - ProductionEngine handoff
+    exit:
+      - production strategy participates in full autonomy loop
+  - id: PMW8
+    name: production_experience_and_learning
+    depends_on:
+      - PMW7
+    targets:
+      - strategy experience
+      - success/failure patterns
+      - candidate learned policies
+    exit:
+      - strategy learning evidence available
+  - id: PMW9
+    name: calibration_recovery_and_scale
+    depends_on:
+      - PMW8
+    targets:
+      - policy governance
+      - recovery
+      - observability
+      - performance
+      - 250-shot scale
+    exit:
+      - definition_of_done passes
+# =====================================================================
+# 91. DEPENDENCY GRAPH
+# =====================================================================
+dependency_graph:
+  PMW1:
+    - SYSTEM_ARCHITECTURE_00
+    - CREATIVE_INTELLIGENCE_03_MINIMUM
+    - AUDIENCE_PRODUCT_04_MINIMUM
+  PMW2:
+    - PMW1
+    - WORLD_MODEL_01_MINIMUM
+  PMW3:
+    - PMW2
+    - SELF_MODEL_05_MINIMUM
+  PMW4:
+    - PMW3
+  PMW5:
+    - PMW4
+  PMW6:
+    - PMW5
+  PMW7:
+    - PMW6
+    - POLYCOGNITIVE_RUNTIME_02_MINIMUM
+  PMW8:
+    - PMW7
+  PMW9:
+    - PMW8
+# =====================================================================
+# 92. ACCEPTANCE CRITERIA
+# =====================================================================
+acceptance_criteria:
+  intent:
+    - film demands modeled independently of implementation
+    - creative quality semantics preserved
+    - audience/product requirements included where relevant
+    - hard World facts included
+  strategy:
+    - live SelfModel determines capability feasibility
+    - multiple strategies generated
+    - strategy may vary by shot
+    - deterministic/generative composition supported
+    - evidence-backed selection
+  prevention:
+    - known weak strategy rejected before render
+    - critical invariants require explicit enforcement
+    - unsupported quality tier blocks final production
+  quality:
+    - flagship means maximum intent fidelity, not generic realism
+    - selected strategy meets project quality floors
+    - AutonomousQC remains acceptance owner
+  economics:
+    - cost and latency modeled
+    - expected retry/repair cost included
+    - lower cost cannot compensate for hard creative failure
+  repair:
+    - individual failed shots/layers repair independently
+    - strategy root cause distinct from implementation root cause
+    - accepted unrelated artifacts survive
+  resilience:
+    - provider degradation causes autonomous strategy replan
+    - fallbacks exist for critical work
+    - no human tool routing required
+  learning:
+    - strategy experience accumulates
+    - successful repair strategies become evidence
+    - learned policy governed
+    - 101st production can outperform first using institutional experience
+  final: >
+    ProductionModel must allow Quantum to dynamically manufacture a stable
+    creative vision using changing capabilities without either binding the film
+    to one provider or silently changing the film to match current tool weakness.
+# =====================================================================
+# 93. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    ProductionIntent is what the film demands.
+  law_02: >
+    ProductionModel is how Quantum should satisfy those demands now.
+  law_03: >
+    ProductionManifest is what is actually executing.
+  law_04: >
+    ProductionIntent is provider independent.
+  law_05: >
+    ProductionModel is capability dependent and therefore dynamic.
+  law_06: >
+    Tool weakness does not redefine creative intent.
+  law_07: >
+    There is no single best renderer; there is a best strategy for the current
+    production structure and constraints.
+  law_08: >
+    Different shots may use radically different manufacturing strategies while
+    belonging to the same film.
+  law_09: >
+    World truth that must survive rendering becomes explicit production constraint.
+  law_10: >
+    Critical constraints require sufficiently strong enforcement before render.
+  law_11: >
+    Deterministic tools should perform exact work whenever generative uncertainty
+    adds no creative value.
+  law_12: >
+    Composite pipelines are first-class production strategies.
+  law_13: >
+    Multiple takes are a quality strategy whose breadth should adapt to uncertainty.
+  law_14: >
+    Expensive redundancy belongs where expected quality/risk value justifies it.
+  law_15: >
+    Production planning should make shot-level repair the default.
+  law_16: >
+    A failed shot should not destroy accepted neighboring shots.
+  law_17: >
+    Fallbacks should preserve semantics before requesting semantic compromise.
+  law_18: >
+    SelfModel supplies capability truth; ProductionModel chooses manufacturing strategy.
+  law_19: >
+    AutonomousQC determines whether the manufactured result is acceptable.
+  law_20: >
+    ProductionEngine executes the approved strategy and does not invent project meaning.
+  law_21: >
+    Production learning studies strategies, while SelfModel studies implementation capability.
+  law_22: >
+    Every major production strategy should be explainable through requirements,
+    capability evidence, risk, alternatives and expected tradeoffs.
+  law_23: >
+    Strategy should automatically recompile when the capability landscape changes,
+    while preserving already accepted work whenever semantics remain valid.
+  law_24: >
+    Quality-tier semantics are project-relative: flagship retro animation and
+    flagship cinematic science fiction may require completely different production
+    strategies.
+  law_25: >
+    The end state is a production intelligence that can look at any approved shot,
+    understand what must survive, understand what Quantum can currently do, and
+    choose the highest-value manufacturing path with no human production routing.
+
+This makes the core architecture especially clean:
+
+ProductionIntent
+"What must the finished film preserve?"
+        │
+        │ relatively stable
+        ▼
+SelfModel(t)
+"What can Quantum actually do now?"
+        │
+        ▼
+ProductionExperience
+"What manufacturing strategies have worked before?"
+        │
+        ▼
+ProductionModel(t)
+"How should we make THIS requirement NOW?"
+        │
+        ▼
+ProductionManifest
+"What jobs are actually running?"
+        │
+        ▼
+ProductionEngine
+
+The highest-leverage consequence is that production strategy can change radically without changing the film. If a renderer becomes bad at hands tomorrow, Quantum does not rewrite the scene to hide Aria’s hand. It can instead move from:
+
+single-pass video generation
+
+to:
+
+canonical keyframe
+    +
+pose/hand constraint
+    +
+conditioned motion generation
+    +
+deterministic receiver composite
+    +
+multiple takes
+    +
+handedness QC
+
+while ProductionIntent remains exactly the same.
+
+That separation is what makes the studio resilient to the extremely fast-moving model ecosystem—and it directly supports the principle that shot 217 can be repaired without touching the other 250 shots.

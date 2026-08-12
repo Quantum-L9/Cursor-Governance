@@ -1,0 +1,2572 @@
+metadata:
+  spec_id: quantum.animation.curated_project_experience.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Curated Project Experience
+  depends_on:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: WORLD_AND_CHARACTER_TRUTH_DEPENDENCY
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: CURATION_REASONING_AND_QUESTION_ROUTING_DEPENDENCY
+    - file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: CREATOR_MODEL_THEME_AND_CREATIVE_VISION_DEPENDENCY
+    - file: 04_quantum_audience_product_intelligence_build_spec.yaml
+      relationship: AUDIENCE_PRODUCT_AND_EXPANSION_INTELLIGENCE_DEPENDENCY
+    - file: 05_quantum_self_model_build_spec.yaml
+      relationship: CURRENT_EXECUTION_CAPABILITY_EVIDENCE_DEPENDENCY
+    - file: 06_quantum_production_model_build_spec.yaml
+      relationship: EXECUTION_STRATEGY_AND_DELIVERY_CONFIDENCE_DEPENDENCY
+    - file: 07_quantum_autonomous_qc_build_spec.yaml
+      relationship: CURATED_EXPERIENCE_CERTIFICATION_DEPENDENCY
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: CLAIM_AND_MODULE_LINEAGE_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: EXPERIENCE_MODULE_AND_SNAPSHOT_CONTRACT_DEPENDENCY
+    - file: 13_quantum_asset_identity_library_build_spec.yaml
+      relationship: CHARACTER_WORLD_AND_VISUAL_ASSET_DEPENDENCY
+    - file: 17_quantum_viewer_cognition_psychology_build_spec.yaml
+      relationship: VIEWER_STATE_AND_PROGRESSIVE_DISCLOSURE_DEPENDENCY
+    - file: 18_quantum_marketability_proof_of_film_build_spec.yaml
+      relationship: PROOF_TERMINAL_STATE_AND_MARKETABILITY_DEPENDENCY
+    - file: 20_quantum_key_access_security_build_spec.yaml
+      relationship: PROTECTED_ACCESS_SCOPE_DEPENDENCY
+    - file: 21_quantum_cross_device_presentation_runtime_build_spec.yaml
+      relationship: PRESENTATION_SURFACE_DEPENDENCY
+architectural_identity:
+  concise: >
+    Continue the desire created by ProofOfFilm through a progressively disclosed,
+    interactive, evidence-backed project experience that deepens conviction
+    without resetting the viewer into document-reading mode.
+  extended: >
+    Quantum Curated Project Experience owns the buyer-facing project exploration
+    that begins immediately after a certified ProofOfFilm. It presents Characters,
+    World, Theme, Creative Vision, Audience and Marketability, Expansion
+    Opportunity, Merchandise Concepts, Profitability Scenarios and Execution
+    Confidence in an intentional sequence designed to preserve curiosity while
+    increasing understanding and commercial conviction. It does not expose the
+    project as a folder of files. It compiles canonical project models,
+    audiovisual assets, ProductMarketModel evidence, Marketability evidence,
+    current capability truth and provenance into a cinematic interactive
+    experience. The basic Hook is deliberately not a standalone module: if the
+    ProofOfFilm failed to make the core proposition obvious, the ProofOfFilm must
+    be repaired. The CuratedProjectExperience ends at a governed handoff to
+    `TheOpportunity`, whose actual commercial offer is owned by spec 23.
+ownership:
+  system: CURATED_PROJECT_EXPERIENCE
+  owner_question:
+    primary: >
+      After ProofOfFilm has created desire, what should the buyer discover next,
+      in what order, so desire becomes understanding and conviction?
+  secondary_questions:
+    - "What should the viewer see immediately after the film cuts?"
+    - "Which characters deserve deeper exploration?"
+    - "Which world information increases value without becoming exposition?"
+    - "How should Theme be communicated?"
+    - "What is the creative vision?"
+    - "What does Audience/Product Intelligence imply for the buyer?"
+    - "How should Marketability evidence be presented without pretending certainty?"
+    - "What expansion surfaces exist?"
+    - "Which merchandise concepts demonstrate optionality?"
+    - "Which profitability scenarios are useful?"
+    - "How do we prove Quantum can execute?"
+    - "What should remain hidden?"
+    - "What should be rendered interactively rather than downloaded?"
+    - "How should a producer's path differ from a financier's path?"
+    - "What happens when the buyer asks a question?"
+    - "Which canonical source answers that question?"
+    - "How do we prevent the curator from inventing project facts?"
+    - "When has the viewer earned the commercial offer?"
+    - "How do we preserve the viewer-state momentum created by ProofOfFilm?"
+  owns:
+    - CuratedProjectExperience
+    - CuratedProjectExperienceIR
+    - CuratedExperienceSnapshot
+    - ExperienceSequencePlan
+    - ExperienceModule
+    - ExperienceModuleIR
+    - ExperienceModuleState
+    - ExplorationState
+    - ProgressiveDisclosurePolicy
+    - CuratedNavigationPolicy
+    - CharacterExperience
+    - WorldExperience
+    - ThemeExperience
+    - CreativeVisionExperience
+    - AudienceMarketabilityExperience
+    - ExpansionOpportunityExperience
+    - MerchandiseConceptExperience
+    - ProfitabilityScenarioExperience
+    - ExecutionConfidenceExperience
+    - OpportunityPrelude
+    - ProjectQuestion
+    - CuratedAnswer
+    - CuratorAction
+    - CuratorRuntimePort
+    - ExperienceClaim
+    - ExperienceEvidenceBinding
+    - BuyerRolePresentationProfile
+    - ExperienceRelease
+    - curated_project_experience.lock
+    - CuratedExperienceQCContract
+  explicitly_does_not_own:
+    HookModel:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    AudienceModel:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    ProductMarketModel:
+      owner: 04_quantum_audience_product_intelligence_build_spec.yaml
+    Marketability:
+      owner: 18_quantum_marketability_proof_of_film_build_spec.yaml
+    ViewerPsychodynamics:
+      owner: 17_quantum_viewer_cognition_psychology_build_spec.yaml
+    CreatorModel:
+      owner: 03_quantum_creative_intelligence_build_spec.yaml
+    World_truth:
+      owner: 01_quantum_animation_world_model_build_spec.yaml
+    current_capability_truth:
+      owner: 05_quantum_self_model_build_spec.yaml
+    production_strategy:
+      owner: 06_quantum_production_model_build_spec.yaml
+    StudioAvatar_identity:
+      owner: 26_quantum_studio_avatar_identity_build_spec.yaml
+    CommercialOffer:
+      owner: 23_quantum_commercial_offer_conversion_build_spec.yaml
+    ExecutableAgreement:
+      owner: 24_quantum_executable_agreement_legal_runtime_build_spec.yaml
+    protected_access:
+      owner: 20_quantum_key_access_security_build_spec.yaml
+  hard_boundary: >
+    CuratedProjectExperience presents and explains existing authoritative project
+    state. It may sequence, visualize, summarize and answer from those authorities;
+    it may not invent new creative canon, capability claims, market evidence or
+    commercial terms.
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Convert ProofOfFilm continuation desire into project understanding,
+    confidence, perceived upside and readiness to inspect the commercial opportunity.
+  experience_goal: >
+    Make deeper exploration feel like entering the project rather than opening a
+    data room.
+  information_goal: >
+    Reveal information in the order most likely to preserve curiosity and
+    increase conviction.
+  interaction_goal: >
+    Let the recipient ask natural questions and receive concise, evidence-backed
+    answers without browsing internal project files.
+  commercial_boundary_goal: >
+    End with enough conviction that `The Opportunity` feels like the natural next
+    act rather than a sales interruption.
+  canonical_statement: >
+    Every layer earns the next layer.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  CP-001:
+    name: CONTINUE_THE_VIEWER_STATE
+    statement: >
+      CuratedProjectExperience begins from the terminal cognitive-emotional state
+      created by ProofOfFilm rather than resetting the viewer to neutral.
+  CP-002:
+    name: PROGRESSIVE_DISCLOSURE
+    statement: >
+      The buyer should receive deeper information only as it becomes useful or
+      requested.
+  CP-003:
+    name: EVERY_LAYER_EARNS_THE_NEXT_LAYER
+    statement: >
+      Each module should justify the viewer's next investment of time and attention.
+  CP-004:
+    name: HOOK_EXPLAINER_IS_A_FAILURE SIGNAL
+    statement: >
+      The CuratedProjectExperience does not include a basic Hook explainer by
+      default. If the buyer still requires one, ProofOfFilm requires repair.
+  CP-005:
+    name: CHARACTERS_BEFORE_SPREADSHEETS
+    statement: >
+      Human emotional and world understanding should deepen before commercial
+      scenario analysis.
+  CP-006:
+    name: PROJECT_NOT_FOLDER
+    statement: >
+      The experience is not a directory of PDFs, spreadsheets and media assets.
+  CP-007:
+    name: RENDER_INFORMATION
+    statement: >
+      Important project information should normally be rendered as an intentional
+      interactive or cinematic experience rather than presented as raw files.
+  CP-008:
+    name: SOURCE_FILES_REMAIN_BEHIND_THE_EXPERIENCE
+    statement: >
+      Canonical documents and structured models remain authoritative backstage
+      while the buyer receives a curated representation.
+  CP-009:
+    name: CURATION_DOES_NOT_CREATE_TRUTH
+    statement: >
+      Presentation order, summaries and visualization may not alter source authority.
+  CP-010:
+    name: ANSWERS_REQUIRE_EVIDENCE
+    statement: >
+      The curator may only state consequential project, capability, market or
+      financial claims that resolve to an authorized source.
+  CP-011:
+    name: NO_HALLUCINATED_CONFIDENCE
+    statement: >
+      Unknown, uncertain or hypothetical information remains visibly uncertain.
+  CP-012:
+    name: PROJECT_SPECIFICITY_FIRST
+    statement: >
+      Generic corporate information should never dominate the project.
+  CP-013:
+    name: CHARACTERS_ARE_IP
+    statement: >
+      Character exploration should communicate durable identity, relationships,
+      contradictions and future story potential rather than merely summarize plot roles.
+  CP-014:
+    name: WORLD_IS_A_STORY_ENGINE
+    statement: >
+      World presentation should demonstrate how the setting generates future
+      conflict, possibility and identity rather than function as encyclopedic lore.
+  CP-015:
+    name: THEME_IS_EXPERIENCED_NOT_LECTURED
+    statement: >
+      Theme should be expressed through tension, contradiction, imagery,
+      character and concise framing rather than an academic essay.
+  CP-016:
+    name: CREATIVE_VISION_IS_DISTINCT_FROM_THEME
+    statement: >
+      Theme describes meaning; Creative Vision describes the intended artistic
+      and cinematic realization.
+  CP-017:
+    name: MARKETABILITY_EVIDENCE_IS_NOT_MARKETING HYPE
+    statement: >
+      Audience and product evidence should be presented as reasoned evidence with
+      uncertainty rather than unsupported certainty.
+  CP-018:
+    name: MERCHANDISE_IS_OPTIONALITY_PROOF
+    statement: >
+      Merchandise concepts exist to demonstrate possible IP surface area, not to
+      imply guaranteed licensing revenue.
+  CP-019:
+    name: PROFITABILITY_IS_SCENARIO_BASED
+    statement: >
+      Financial upside visualizations use explicit assumptions and scenarios,
+      never disguised forecasts.
+  CP-020:
+    name: EXECUTION_CONFIDENCE_IS_EVIDENCE_BACKED
+    statement: >
+      Quantum should demonstrate that it can execute through current capability,
+      production strategy and empirical studio evidence rather than mere claims.
+  CP-021:
+    name: ROLE_CHANGES_SEQUENCE_NOT_TRUTH
+    statement: >
+      Producer, financier, director or other buyer roles may receive different
+      presentation ordering but the underlying project truth remains identical.
+  CP-022:
+    name: BUYER_CAN_DEVIATE_FROM_CURATED_PATH
+    statement: >
+      The recipient may ask to jump directly to a valid module or question
+      without destroying experience state.
+  CP-023:
+    name: CURATOR_IS_NOT_A SALESPERSON
+    statement: >
+      The curator explains, reveals and guides. It does not beg, pressure or
+      fabricate urgency.
+  CP-024:
+    name: CURATOR_IDENTITY_IS_SEPARATE
+    statement: >
+      The persistent Quantum Studio Avatar will implement the human-facing
+      embodiment later. This specification defines the curation behavior it must serve.
+  CP-025:
+    name: EXPERIENCE_IS_VERSIONED
+    statement: >
+      The exact project experience shown to a buyer must be reproducible from
+      pinned source revisions.
+  CP-026:
+    name: LIVE_DATA_MUST_DECLARE_VERSION
+    statement: >
+      Current capability or production evidence may refresh only through a new
+      explicit experience snapshot.
+  CP-027:
+    name: COMMERCIAL_TERMS_DO_NOT_LEAK_EARLY
+    statement: >
+      The project experience may prepare the buyer for an opportunity but does
+      not expose terms before spec 23 authorizes them.
+  CP-028:
+    name: PROTECTED_CONTENT_STAYS_PROTECTED
+    statement: >
+      Curated exploration inherits Quantum Key access policies and does not
+      introduce downloadable raw archives.
+  CP-029:
+    name: EXPERIENCE_SHOULD_BE_MEMORABLE
+    statement: >
+      Each major module should contribute a distinct cognitive object rather than
+      repeat the same information in different words.
+  CP-030:
+    name: LESS_CAN_BE_MORE
+    statement: >
+      The system should omit weak or redundant material rather than filling every
+      possible module with content.
+  CP-031:
+    name: THE_OPPORTUNITY_IS_A TRANSITION
+    statement: >
+      `The Opportunity` is the closing doorway into the actual commercial offer,
+      not the owner of price, rights or legal terms.
+  CP-032:
+    name: THE_EXPERIENCE_SHOULD_FEEL_ALIVE
+    statement: >
+      The recipient should experience a responsive project intelligence, not a
+      static slideshow.
+# =====================================================================
+# 3. CANONICAL EXPERIENCE FLOW
+# =====================================================================
+canonical_flow:
+  default: |
+    ProofOfFilm
+        ↓
+    Enter Project
+        ↓
+    Characters
+        ↓
+    World
+        ↓
+    Theme
+        ↓
+    Creative Vision
+        ↓
+    Audience + Marketability
+        ↓
+    Expansion Opportunity
+        ↓
+    Merchandise Concepts
+        ↓
+    Profitability Scenarios
+        ↓
+    Execution Confidence
+        ↓
+    The Opportunity
+        ↓
+    spec 23 Commercial Offer
+  basic_Hook_module:
+    default: ABSENT
+  reason: >
+    The Hook should already be understood because it was demonstrated by ProofOfFilm.
+# =====================================================================
+# 4. EXPERIENCE ENTRY
+# =====================================================================
+entry:
+  ProofExperienceHandoff:
+    consumes:
+      - 18.ProofExperienceEntry
+      - 18.ProofOfFilmLock
+      - terminal_viewer_state
+      - unresolved_terminal_loop_refs
+      - memory_residue_refs
+  CuratedExperienceEntryState:
+    fields:
+      experience_id:
+      ProofOfFilm_ref:
+      target_viewer_ref:
+      viewer_terminal_state_ref:
+      active_open_loop_refs:
+      project_identity_understood:
+      attachment_target_refs:
+      remembered_anchor_refs:
+      continuation_pressure:
+      next_action_target:
+      presentation_session_ref:
+      access_scope_ref:
+  principle: >
+    The project experience should answer some of the questions the Proof opened
+    while deliberately preserving higher-value curiosity.
+# =====================================================================
+# 5. CURATED PROJECT EXPERIENCE IR
+# =====================================================================
+experience_IR:
+  CuratedProjectExperienceIR:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: SPECIFICATION
+    fields:
+      experience_id:
+      project_id:
+      version:
+      target_role_profile_ref:
+      source_snapshot_ref:
+      ProofOfFilmLock_ref:
+      entry_state_ref:
+      sequence_plan_ref:
+      module_refs:
+      navigation_policy_ref:
+      progressive_disclosure_policy_ref:
+      curator_runtime_contract_ref:
+      access_policy_ref:
+      presentation_quality_contract_ref:
+      opportunity_handoff_ref:
+      QC_contract_ref:
+      provenance_ref:
+      digest:
+# =====================================================================
+# 6. SOURCE SNAPSHOT
+# =====================================================================
+source_snapshot:
+  CuratedExperienceSnapshot:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: DERIVED_MODEL
+    fields:
+      snapshot_id:
+      project_id:
+      created_at:
+      creative_yaml_ref:
+      quantum_studio_yaml_ref:
+      CreatorModel_ref:
+      ThemeModel_ref:
+      ProductMarketModel_ref:
+      AudienceModel_ref:
+      MarketabilityEvidence_ref:
+      ProofOfFilmLock_ref:
+      World_revision_ref:
+      CharacterBible_refs:
+      Relationship_refs:
+      asset_library_revision_ref:
+      ProductionIntent_ref:
+      ProductionModel_revision_ref:
+      SelfModel_revision_ref:
+      provenance_graph_revision_ref:
+      commercial_state_ref:
+        nullable: true
+      source_digests:
+      compiler_version:
+      digest:
+  principle: >
+    Every buyer-visible claim can be reconstructed from an exact source snapshot.
+  dynamic_refresh:
+    requires_new_snapshot: true
+# =====================================================================
+# 7. EXPERIENCE CLAIM
+# =====================================================================
+claims:
+  ExperienceClaimClass:
+    enum:
+      - CREATIVE_FACT
+      - CHARACTER_FACT
+      - WORLD_FACT
+      - THEME_INTERPRETATION
+      - CREATIVE_VISION
+      - AUDIENCE_PREDICTION
+      - MARKETABILITY_EVIDENCE
+      - PRODUCT_OPPORTUNITY
+      - EXPANSION_HYPOTHESIS
+      - MERCHANDISE_CONCEPT
+      - FINANCIAL_SCENARIO
+      - EXECUTION_CAPABILITY
+      - PRODUCTION_PLAN
+      - STUDIO_EVIDENCE
+  ExperienceClaim:
+    fields:
+      claim_id:
+      claim_class:
+      statement:
+      source_refs:
+      evidence_refs:
+      authority_owner:
+      confidence:
+      hypothetical:
+      scenario_based:
+      buyer_visible_qualification:
+      snapshot_ref:
+      provenance_ref:
+  hard_rule: >
+    Every consequential buyer-visible assertion must resolve to at least one
+    authoritative source or explicit hypothetical/scenario classification.
+# =====================================================================
+# 8. EXPERIENCE MODULE
+# =====================================================================
+module:
+  ExperienceModuleIR:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: SPECIFICATION
+    fields:
+      module_id:
+      module_type:
+      title:
+      purpose:
+      source_claim_refs:
+      source_artifact_refs:
+      target_viewer_effect:
+      entry_requirement:
+      reveal_policy:
+      content_blocks:
+      interactive_elements:
+      optional_question_topics:
+      memory_anchor:
+      maximum_information_density:
+      expected_duration:
+      next_module_options:
+      skip_allowed:
+      revisit_allowed:
+      access_scope:
+      provenance_ref:
+      digest:
+# =====================================================================
+# 9. MODULE TYPES
+# =====================================================================
+module_types:
+  enum:
+    - CHARACTERS
+    - WORLD
+    - THEME
+    - CREATIVE_VISION
+    - AUDIENCE_MARKETABILITY
+    - EXPANSION_OPPORTUNITY
+    - MERCHANDISE_CONCEPTS
+    - PROFITABILITY_SCENARIOS
+    - EXECUTION_CONFIDENCE
+    - OPPORTUNITY_PRELUDE
+  explicitly_not_default:
+    - BASIC_HOOK_EXPLANATION
+# =====================================================================
+# 10. EXPERIENCE SEQUENCE PLAN
+# =====================================================================
+sequence_plan:
+  ExperienceSequencePlan:
+    fields:
+      plan_id:
+      experience_ref:
+      default_module_order:
+      role_specific_order_overrides:
+      conditional_modules:
+      minimum_required_modules:
+      maximum_recommended_duration:
+      module_entry_conditions:
+      cross_module_open_loops:
+      memory_anchor_plan:
+      opportunity_readiness_condition:
+      provenance_ref:
+  default_order:
+    - CHARACTERS
+    - WORLD
+    - THEME
+    - CREATIVE_VISION
+    - AUDIENCE_MARKETABILITY
+    - EXPANSION_OPPORTUNITY
+    - MERCHANDISE_CONCEPTS
+    - PROFITABILITY_SCENARIOS
+    - EXECUTION_CONFIDENCE
+    - OPPORTUNITY_PRELUDE
+# =====================================================================
+# 11. ROLE-SPECIFIC PRESENTATION
+# =====================================================================
+role_profiles:
+  BuyerRolePresentationProfile:
+    fields:
+      profile_id:
+      role:
+        enum:
+          - PRODUCER
+          - STUDIO_EXECUTIVE
+          - STREAMING_EXECUTIVE
+          - FINANCIER
+          - DISTRIBUTOR
+          - DIRECTOR
+          - ACTOR_OR_TALENT
+          - BUSINESS_AFFAIRS
+          - GENERAL_EXECUTIVE
+      preferred_depth:
+      priority_modules:
+      de_emphasized_modules:
+      default_order_override:
+      expected_questions:
+      information_density:
+      commercial_sophistication:
+      creative_sophistication:
+      confidence:
+  default_examples:
+    PRODUCER:
+      preferred_order:
+        - CHARACTERS
+        - WORLD
+        - THEME
+        - CREATIVE_VISION
+        - EXECUTION_CONFIDENCE
+        - AUDIENCE_MARKETABILITY
+        - EXPANSION_OPPORTUNITY
+    FINANCIER:
+      preferred_order:
+        - CHARACTERS
+        - AUDIENCE_MARKETABILITY
+        - EXECUTION_CONFIDENCE
+        - PROFITABILITY_SCENARIOS
+        - EXPANSION_OPPORTUNITY
+    DIRECTOR:
+      preferred_order:
+        - CHARACTERS
+        - WORLD
+        - THEME
+        - CREATIVE_VISION
+  invariant: >
+    Presentation order may adapt. Canonical facts do not.
+# =====================================================================
+# 12. PROGRESSIVE DISCLOSURE POLICY
+# =====================================================================
+progressive_disclosure:
+  ProgressiveDisclosurePolicy:
+    fields:
+      policy_id:
+      minimum_initial_information:
+      module_unlock_conditions:
+      buyer_question_override:
+      sensitive_information_policy:
+      commercial_information_boundary:
+      raw_file_policy:
+      spoiler_policy:
+      cognitive_load_policy:
+      maximum_depth_without_request:
+      version:
+  canonical_rule: >
+    Show enough to earn the next question, not everything Quantum knows.
+# =====================================================================
+# 13. EXPLORATION STATE
+# =====================================================================
+exploration:
+  ExplorationState:
+    extends:
+      - 10.ExperienceObject
+    fields:
+      exploration_state_id:
+      experience_ref:
+      session_ref:
+      current_module_ref:
+      visited_module_refs:
+      completed_module_refs:
+      skipped_module_refs:
+      active_question_refs:
+      answered_question_refs:
+      current_open_loop_refs:
+      viewer_interest_signals:
+      information_depth:
+      opportunity_readiness:
+      started_at:
+      updated_at:
+  authoritative_for:
+    presentation_progress_only: true
+  not_authoritative_for:
+    - creative_truth
+    - market_truth
+    - commercial_terms
+# =====================================================================
+# 14. NAVIGATION POLICY
+# =====================================================================
+navigation:
+  CuratedNavigationPolicy:
+    fields:
+      policy_id:
+      default_linear:
+      allow_module_jump:
+      allow_back:
+      allow_search:
+      allow_natural_language_question:
+      allow_raw_file_tree:
+      opportunity_access_condition:
+      deep_document_access_policy:
+  default:
+    default_linear: true
+    allow_module_jump: true
+    allow_back: true
+    allow_search: false
+    allow_natural_language_question: true
+    allow_raw_file_tree: false
+# =====================================================================
+# 15. CHARACTER EXPERIENCE
+# =====================================================================
+characters:
+  CharacterExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Turn ProofOfFilm attachment into deeper understanding of reusable
+      character identity, contradiction, relationships and future story potential.
+    source:
+      - CharacterBibleIR
+      - RelationshipIR
+      - CharacterAssetIdentity
+      - WorldModel_character_state
+      - CreatorModel
+    may_present:
+      - identity
+      - desire
+      - need
+      - fear
+      - contradiction
+      - capability
+      - vulnerability
+      - relationship_dynamics
+      - visual_identity
+      - movement_identity
+      - voice_identity
+      - iconic_behavior
+      - unresolved_story_engine
+      - long_arc_potential
+    should_avoid:
+      - full_character_database_dump
+      - unnecessary_backstory
+      - protected_spoilers
+      - plot_synopsis_disguised_as_character_profile
+    interactive_examples:
+      - character_portrait
+      - short_motion_moment
+      - voice_excerpt
+      - relationship_map
+      - contradiction_reveal
+      - future_story_engine
+    viewer_target: >
+      I want to spend more time with these characters.
+# =====================================================================
+# 16. WORLD EXPERIENCE
+# =====================================================================
+world:
+  WorldExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Demonstrate why the setting is visually, narratively and commercially
+      fertile rather than merely explain geography or lore.
+    source:
+      - WorldModel
+      - WorldBibleIR
+      - LocationAssets
+      - WorldRules
+      - NarrativeOpportunity
+      - ProductMarketModel.WorldExpandabilityModel
+    may_present:
+      - governing_rules
+      - locations
+      - visual_identity
+      - social_systems
+      - physical_constraints
+      - world_conflicts
+      - affordances
+      - mysteries
+      - expansion_surface
+      - repeatable_story_pressure
+    should_avoid:
+      - encyclopedia_dump
+      - hidden_truth_spoiler
+      - unsupported_world_extension
+    interactive_examples:
+      - cinematic_world_map
+      - impossible_geometry_view
+      - location_transition
+      - rule_demonstration
+      - world_pressure_graph
+      - selected_environment_gallery
+    viewer_target: >
+      I want to explore this place.
+# =====================================================================
+# 17. THEME EXPERIENCE
+# =====================================================================
+theme:
+  ThemeExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Reveal the deeper question, contradiction or meaning that gives the project
+      intellectual and emotional weight.
+    source:
+      - ThemeModel
+      - CreatorModel
+      - StoryContract
+      - character_contradictions
+      - world_systems
+      - reveal_intent
+    preferred_forms:
+      - concise_statement
+      - image_pair
+      - contradiction
+      - character_choice
+      - visual_motif
+      - question
+      - short curator framing
+    forbidden_default:
+      - academic_essay
+      - exhaustive_theme_explanation
+      - explain_every_symbol
+    viewer_target: >
+      This is about something.
+# =====================================================================
+# 18. CREATIVE VISION EXPERIENCE
+# =====================================================================
+creative_vision:
+  CreativeVisionExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Show what the finished work should feel like aesthetically, cinematically,
+      emotionally and sonically.
+    source:
+      - CreatorModel
+      - QualitySemantics
+      - visual_language
+      - sound_language
+      - CharacterAssets
+      - LocationAssets
+      - ProofOfFilm
+      - CreativeModeProfile
+    dimensions:
+      - visual_language
+      - animation_language
+      - cinematography
+      - performance
+      - edit_rhythm
+      - color
+      - lighting
+      - sound
+      - music
+      - movement
+      - scale
+      - emotional_texture
+    hard_rule: >
+      Creative Vision cannot drift toward generic premium appearance if project
+      intent deliberately requires another quality language.
+# =====================================================================
+# 19. AUDIENCE + MARKETABILITY EXPERIENCE
+# =====================================================================
+audience_marketability:
+  AudienceMarketabilityExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Explain who the intended audience is, what experience the project is
+      designed to produce and why the current project presentation exhibits
+      commercial strength.
+    source:
+      - AudienceModel
+      - ProductMarketModel
+      - MarketabilityEvidence
+      - ProofOutcome
+      - ProductIdentityModel
+      - HookModel
+      - FamiliarityDifferentiationEnvelope
+    presentation_dimensions:
+      audience:
+        - WHO
+        - desired_experience
+        - genre_media_literacy
+        - viewing_context
+      product:
+        - concept_legibility
+        - distinctiveness
+        - identity
+        - audience_breadth
+        - repeatability
+        - format_fit
+        - global_accessibility
+      proof_marketability:
+        - AttentionCapture
+        - Comprehension
+        - EmotionalValue
+        - ContinuationPressure
+        - Distinctiveness
+        - Trust
+        - SocialTransmission
+        - ExecutionCredibility
+    rule: >
+      Internal model detail should be transformed into executive-usable evidence
+      rather than dumping raw scoring internals.
+    uncertainty:
+      visible_where_material: true
+# =====================================================================
+# 20. NO BASIC HOOK MODULE
+# =====================================================================
+hook_boundary:
+  HookModel:
+    owner: spec_04
+  ProofOfFilm:
+    owner: spec_18
+  standalone_BasicHookModule:
+    default: FORBIDDEN
+  diagnostic:
+    if_required:
+      signal: CURATED.PROOF_HOOK_FAILURE
+  expected_repair_owner:
+    spec: 18_quantum_marketability_proof_of_film_build_spec.yaml
+  principle: >
+    The buyer should already know why the premise is interesting before entering
+    project exploration.
+# =====================================================================
+# 21. EXPANSION OPPORTUNITY
+# =====================================================================
+expansion:
+  ExpansionOpportunityExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Demonstrate how the project's characters, world and identity may support
+      additional value without pretending every project must become a franchise.
+    source:
+      - ProductMarketModel
+      - WorldExpandabilityModel
+      - CharacterIPPotential
+      - StoryContract
+      - CharacterBibleIR
+      - WorldModel
+    possible_surfaces:
+      - additional_seasons
+      - sequels
+      - specials
+      - spin_offs
+      - publishing
+      - games
+      - merchandise
+      - licensed_experiences
+      - digital_experiences
+      - collectibles
+    self_contained_project:
+      may_intentionally_have_low_expansion: true
+    hard_rule: >
+      Franchise optionality is not a universal creative quality metric.
+# =====================================================================
+# 22. MERCHANDISE CONCEPT EXPERIENCE
+# =====================================================================
+merchandise:
+  MerchandiseConceptExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Surprise the buyer with concrete visual examples of optional commercial IP
+      surfaces the project could support.
+    MerchandiseConcept:
+      fields:
+        concept_id:
+        category:
+          enum:
+            - COLLECTIBLE
+            - TOY
+            - APPAREL
+            - ACCESSORY
+            - BOOK
+            - GAME
+            - PREMIUM_OBJECT
+            - EXPERIENCE
+            - OTHER
+        source_character_or_world_refs:
+        concept_art_ref:
+        mockup_ref:
+        project_identity_fit:
+        manufacturability_assumption:
+        target_audience_fit:
+        hypothetical:
+          value: true
+        provenance_ref:
+    visual_label:
+      required: CONCEPT
+    does_not_claim:
+      - licensed_product_exists
+      - manufacturer_attached
+      - retailer_committed
+      - revenue_guaranteed
+    viewer_target: >
+      This property has more surface area than I initially realized.
+# =====================================================================
+# 23. PROFITABILITY SCENARIO EXPERIENCE
+# =====================================================================
+profitability:
+  ProfitabilityScenarioExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Make potential economics legible through transparent scenario analysis.
+  ProfitabilityScenario:
+    fields:
+      scenario_id:
+      scenario_class:
+        enum:
+          - CONSERVATIVE
+          - BASE
+          - UPSIDE
+          - CUSTOM
+      scope:
+      revenue_assumptions:
+      cost_assumptions:
+      timing_assumptions:
+      rights_assumptions:
+      distribution_assumptions:
+      merchandising_assumptions:
+      uncertainty:
+      derived_outputs:
+      source_refs:
+      evidence_refs:
+      generated_at:
+      disclaimer_class:
+        value: SCENARIO_NOT_FORECAST
+  mandatory_label:
+    canonical: SCENARIO, NOT FORECAST
+  forbidden:
+    - guaranteed_ROI
+    - guaranteed_revenue
+    - fabricated_comparable
+    - hidden_assumption
+    - unsupported_market_size
+  principle: >
+    Financial modeling should help a sophisticated buyer reason, not imitate certainty.
+# =====================================================================
+# 24. EXECUTION CONFIDENCE EXPERIENCE
+# =====================================================================
+execution_confidence:
+  ExecutionConfidenceExperience:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Demonstrate that Quantum is not merely generating an attractive concept but
+      possesses a coherent autonomous path to finished delivery.
+    source:
+      - SelfModel
+      - ProductionIntent
+      - ProductionModel
+      - ProofOfFilm_production_receipts
+      - AutonomousQC
+      - provenance
+      - prior_Quantum_delivery_evidence_when_available
+    dimensions:
+      - current_capability
+      - production_strategy
+      - quality_control
+      - continuity_control
+      - provenance
+      - repairability
+      - schedule_planning
+      - budget_control
+      - autonomous_execution
+      - delivery_reliability_when_evidence_exists
+    may_present:
+      - high_level_production_pipeline
+      - certified_Proof_evidence
+      - QC_process
+      - repair_architecture
+      - schedule_confidence
+      - production_scalability
+      - provenance_examples
+    should_hide:
+      - raw_provider_secrets
+      - unnecessary_internal_infrastructure
+      - sensitive_vendor_credentials
+    hard_rule: >
+      Current capability claims resolve to SelfModel evidence rather than studio bravado.
+# =====================================================================
+# 25. OPPORTUNITY PRELUDE
+# =====================================================================
+opportunity:
+  OpportunityPrelude:
+    extends:
+      - ExperienceModuleIR
+    purpose: >
+      Transition from project conviction into commercial decision without owning
+      the actual commercial terms.
+    may_present:
+      - product_scope_summary
+      - project_format
+      - high_level_available_transaction_type
+      - "The Opportunity" transition
+    may_not_present_without_spec_23:
+      - binding_price
+      - binding_payment_terms
+      - binding_rights
+      - binding_expiration
+      - reservation_terms
+      - executable_offer
+    canonical_terminal_action:
+      label: REVEAL THE OPPORTUNITY
+      owner_of_result: spec_23
+  principle: >
+    The experience earns the commercial ask; it does not smuggle the ask into
+    earlier creative modules.
+# =====================================================================
+# 26. MODULE VALUE DENSITY
+# =====================================================================
+module_value:
+  ModuleValueDensity:
+    fields:
+      module_ref:
+      new_understanding:
+      emotional_value:
+      project_identity_value:
+      commercial_conviction_value:
+      memory_value:
+      redundancy:
+      information_load:
+      time_cost:
+      value_per_minute:
+  rule: >
+    Low-value modules should be shortened, merged or omitted.
+# =====================================================================
+# 27. EXPERIENCE DURATION
+# =====================================================================
+duration:
+  hard_total_duration:
+    fixed: false
+  principle: >
+    The CuratedProjectExperience is exploratory and may vary by recipient, but
+    the default curated path should remain concise enough to preserve momentum.
+  target:
+    default_guided_path:
+      status: CALIBRATION_REQUIRED
+  deep_dive:
+    may_be_longer_when_user_driven: true
+# =====================================================================
+# 28. CURATOR RUNTIME PORT
+# =====================================================================
+curator:
+  CuratorRuntimePort:
+    definition: >
+      Behavioral interface used by the future Quantum Studio Avatar or another
+      authorized presentation embodiment to navigate the experience.
+    interfaces:
+      - introduce_module()
+      - summarize_module()
+      - answer_question()
+      - show_artifact()
+      - show_visualization()
+      - compare_concepts()
+      - explain_evidence()
+      - disclose_uncertainty()
+      - navigate_to_module()
+      - return_to_path()
+      - transition_to_OpportunityPrelude()
+  identity:
+    owner: spec_26
+  content_authority:
+    owner: spec_22_and_source_domains
+  hard_rule: >
+    The future Avatar may personalize delivery style but cannot invent source facts.
+# =====================================================================
+# 29. PROJECT QUESTION
+# =====================================================================
+questions:
+  ProjectQuestion:
+    fields:
+      question_id:
+      experience_ref:
+      session_ref:
+      natural_language:
+      inferred_domain:
+        enum:
+          - CHARACTER
+          - WORLD
+          - THEME
+          - CREATIVE_VISION
+          - AUDIENCE
+          - MARKETABILITY
+          - EXPANSION
+          - MERCHANDISE
+          - FINANCIAL_SCENARIO
+          - EXECUTION
+          - COMMERCIAL
+          - UNKNOWN
+      sensitivity:
+      requested_depth:
+      created_at:
+# =====================================================================
+# 30. QUESTION ROUTING
+# =====================================================================
+question_routing:
+  routes:
+    CHARACTER:
+      sources:
+        - CharacterBibleIR
+        - RelationshipIR
+        - WorldModel
+    WORLD:
+      sources:
+        - WorldModel
+        - WorldBibleIR
+    THEME:
+      sources:
+        - ThemeModel
+        - CreatorModel
+    CREATIVE_VISION:
+      sources:
+        - CreatorModel
+        - QualitySemantics
+    AUDIENCE:
+      sources:
+        - AudienceModel
+    MARKETABILITY:
+      sources:
+        - ProductMarketModel
+        - MarketabilityEvidence
+    EXPANSION:
+      sources:
+        - ProductMarketModel
+        - WorldExpandabilityModel
+        - CharacterIPPotential
+    MERCHANDISE:
+      sources:
+        - MerchandiseConcepts
+    FINANCIAL_SCENARIO:
+      sources:
+        - ProfitabilityScenario
+    EXECUTION:
+      sources:
+        - SelfModel
+        - ProductionModel
+        - AutonomousQC
+        - production_evidence
+    COMMERCIAL:
+      behavior:
+        - route_to_spec_23_if_authorized
+    UNKNOWN:
+      behavior:
+        - acknowledge_unknown
+        - do_not_invent
+# =====================================================================
+# 31. CURATED ANSWER
+# =====================================================================
+answers:
+  CuratedAnswer:
+    extends:
+      - 10.EvidenceObject
+    fields:
+      answer_id:
+      question_ref:
+      answer_text:
+      answer_type:
+        enum:
+          - FACT
+          - SUMMARY
+          - INTERPRETATION
+          - PREDICTION
+          - SCENARIO
+          - UNKNOWN
+      source_refs:
+      evidence_refs:
+      authority_refs:
+      uncertainty:
+      qualification:
+        nullable: true
+      access_scope:
+      generated_at:
+      model_version:
+      provenance_ref:
+  hard_rule: >
+    `UNKNOWN` is preferable to a confident unsupported answer.
+# =====================================================================
+# 32. CURATOR ACTION
+# =====================================================================
+curator_action:
+  CuratorAction:
+    fields:
+      action_id:
+      experience_ref:
+      action_type:
+        enum:
+          - SPEAK
+          - SHOW_MODULE
+          - SHOW_ARTIFACT
+          - SHOW_VISUALIZATION
+          - ANSWER
+          - ASK_OPTIONAL_QUESTION
+          - TRANSITION
+          - PAUSE
+          - HANDOFF_TO_OPPORTUNITY
+      source_refs:
+      target_viewer_effect:
+      module_ref:
+        nullable: true
+      generated_at:
+      provenance_ref:
+# =====================================================================
+# 33. RAW FILE POLICY
+# =====================================================================
+raw_files:
+  default:
+    project_file_browser:
+      enabled: false
+    raw_downloads:
+      enabled: false
+  experience_should_render:
+    - character_information
+    - world_information
+    - theme
+    - product_evidence
+    - financial_scenarios
+    - creative_visuals
+  future_exceptions:
+    - legal_documents
+    - contract_records
+    - specifically_authorized_diligence_artifacts
+  owners_of_exceptions:
+    - spec_24
+    - future_data_room_policy
+  principle: >
+    The buyer should experience a product, not somebody's cloud drive.
+# =====================================================================
+# 34. VISUALIZATION
+# =====================================================================
+visualization:
+  CuratedVisualization:
+    fields:
+      visualization_id:
+      module_ref:
+      visualization_type:
+      source_refs:
+      interactive:
+      buyer_visible_assumptions:
+      accessibility_representation:
+      rendered_artifact_ref:
+      provenance_ref:
+  examples:
+    - relationship_graph
+    - world_map
+    - character_arc_visual
+    - marketability_radar
+    - expansion_surface_map
+    - scenario_matrix
+    - production_pipeline
+    - schedule_confidence
+# =====================================================================
+# 35. MARKETABILITY PRESENTATION
+# =====================================================================
+marketability_presentation:
+  internal_metric:
+    source: spec_18.Marketability
+  buyer_view:
+    default:
+      raw_internal_score_exposure: false
+  preferred:
+    - component_strengths
+    - project_specific_reasoning
+    - viewer_experience_evidence
+    - distinctiveness
+    - audience_fit
+    - execution_evidence
+  principle: >
+    The buyer should understand why Quantum believes the project is compelling,
+    not be asked to trust an unexplained proprietary score.
+# =====================================================================
+# 36. PROFITABILITY MATRIX
+# =====================================================================
+profitability_matrix:
+  ProfitabilityMatrix:
+    fields:
+      matrix_id:
+      scenario_refs:
+      rows:
+      columns:
+      assumptions_panel:
+      sensitivity_controls:
+      source_refs:
+      generated_at:
+      snapshot_ref:
+  default_columns:
+    - CONSERVATIVE
+    - BASE
+    - UPSIDE
+  interactive:
+    permitted: true
+  editing:
+    buyer_may_modify_assumptions:
+      optional: true
+      creates_local_scenario_only: true
+      does_not_modify_Quantum_model: true
+# =====================================================================
+# 37. MERCHANDISE MOCKUP
+# =====================================================================
+merch_mockup:
+  MerchandiseMockup:
+    fields:
+      mockup_id:
+      MerchandiseConcept_ref:
+      source_asset_refs:
+      image_artifact_ref:
+      hypothetical_label:
+      style_fidelity:
+      product_identity_fit:
+      provenance_ref:
+  label:
+    default: CONCEPT
+  QC:
+    must_not:
+      - imply_existing_supplier
+      - imply_existing_license
+      - create_third_party_trademark_conflict_without_review
+# =====================================================================
+# 38. EXPERIENCE MEMORY ANCHORS
+# =====================================================================
+memory:
+  module_memory:
+    principle: >
+      Each major section should preferably leave one differentiated idea.
+  examples:
+    CHARACTERS:
+      target: "I want to follow them."
+    WORLD:
+      target: "I want to go there."
+    THEME:
+      target: "This is actually about something."
+    CREATIVE_VISION:
+      target: "I can see the finished work."
+    AUDIENCE_MARKETABILITY:
+      target: "I understand why people could want this."
+    EXPANSION:
+      target: "This could be bigger than one title."
+    EXECUTION:
+      target: "They can actually make this."
+    OPPORTUNITY:
+      target: "I want to see the terms."
+# =====================================================================
+# 39. EXPERIENCE OPEN LOOPS
+# =====================================================================
+open_loops:
+  principle: >
+    Curated exploration should satisfy ProofOfFilm questions selectively while
+    retaining commercial curiosity until The Opportunity.
+  allowed:
+    - answer_character_question
+    - answer_world_question
+    - open_expansion_question
+    - answer_execution_question
+    - preserve_story_spoiler
+  forbidden:
+    - resolve_full_movie
+    - expose_ending_without_creator_policy
+    - reveal_every_project_secret
+# =====================================================================
+# 40. EXPERIENCE SNAPSHOT VERSIONING
+# =====================================================================
+snapshot_versioning:
+  rule: >
+    A specific target buyer's released experience pins an exact
+    CuratedExperienceSnapshot.
+  source_change:
+    may_trigger:
+      - snapshot_stale
+      - module_recompile
+      - QC
+      - new_experience_version
+  unchanged_sources:
+    preserve_modules: true
+  minimum_blast_radius:
+    required: true
+# =====================================================================
+# 41. EXPERIENCE RELEASE
+# =====================================================================
+release:
+  CuratedExperienceRelease:
+    fields:
+      release_id:
+      experience_ref:
+      snapshot_ref:
+      module_digest_map:
+      QC_certificate_refs:
+      ProofOfFilmLock_ref:
+      access_policy_ref:
+      released_at:
+      released_for_target_ref:
+      outcome:
+        enum:
+          - RELEASED
+          - BLOCKED
+          - SUPERSEDED
+  requirements:
+    - certified_ProofOfFilm
+    - valid_source_snapshot
+    - all_buyer_visible_claims_resolvable
+    - no_critical_QC_failure
+    - access_scope_valid
+    - OpportunityPrelude_boundary_valid
+# =====================================================================
+# 42. CURATED EXPERIENCE LOCK
+# =====================================================================
+experience_lock:
+  CuratedProjectExperienceLock:
+    extends:
+      - 10.LockArtifact
+    lock_type:
+      value: curated_project_experience
+    fields:
+      experience_ref:
+      release_ref:
+      snapshot_digest:
+      module_digests:
+      ProofOfFilmLock_ref:
+      QC_certificate_refs:
+      target_profile_ref:
+      created_at:
+      invalidation_conditions:
+  purpose: >
+    Make the exact project experience presented to a target reproducible and auditable.
+# =====================================================================
+# 43. COMMERCIAL HANDOFF
+# =====================================================================
+commercial_handoff:
+  target:
+    spec: 23_quantum_commercial_offer_conversion_build_spec.yaml
+  OpportunityHandoff:
+    fields:
+      handoff_id:
+      experience_ref:
+      experience_lock_ref:
+      target_ref:
+      viewer_exploration_state_ref:
+      opportunity_readiness:
+      product_scope_summary:
+      commercial_access_allowed:
+      created_at:
+      provenance_ref:
+  action:
+    canonical: REVEAL_THE_OPPORTUNITY
+  important:
+    invoking_action_does_not_itself_start_timer: >
+      Spec 23 determines the exact OfferReveal event and timing semantics.
+# =====================================================================
+# 44. OPPORTUNITY READINESS
+# =====================================================================
+opportunity_readiness:
+  OpportunityReadiness:
+    fields:
+      project_identity_understood:
+      character_or_project_attachment:
+      audience_understanding:
+      product_understanding:
+      execution_confidence:
+      commercial_upside_understood:
+      unresolved_major_confusion:
+      buyer_explicit_request:
+      overall_readiness:
+      confidence:
+  policy:
+    buyer_may_request_offer_early: true
+  rule: >
+    Quantum does not force the buyer through every module when the buyer is
+    already ready to proceed.
+# =====================================================================
+# 45. STUDIO AVATAR BOUNDARY
+# =====================================================================
+avatar_boundary:
+  future_owner:
+    spec: 26_quantum_studio_avatar_identity_build_spec.yaml
+  spec_22_supplies:
+    - CuratorRuntimePort
+    - CuratedAnswer
+    - CuratorAction
+    - module_content
+    - module_sequence
+    - evidence
+    - access_scope
+  spec_26_supplies:
+    - face
+    - body
+    - voice
+    - movement
+    - personality
+    - persistent_identity
+    - relationship_style
+    - embodiment
+  invariant: >
+    Avatar personality can change how truth is delivered, never what truth is.
+# =====================================================================
+# 46. QUESTION POLICY
+# =====================================================================
+question_policy:
+  answer_when:
+    - source_authority_available
+    - access_scope_allows
+    - answer_does_not_violate_spoiler_policy
+  qualify_when:
+    - predictive
+    - uncertain
+    - scenario_based
+    - current_capability_may_change
+  decline_or_redirect_when:
+    - source_unknown
+    - protected_information
+    - outside_current_access_scope
+    - asks_for_binding_commercial_term_before_spec_23
+  canonical_unknown_behavior: >
+    Quantum does not have sufficient evidence to state that as fact.
+# =====================================================================
+# 47. PRODUCT / AUDIENCE AUTHORITY
+# =====================================================================
+audience_product_boundary:
+  source_owner:
+    spec: 04_quantum_audience_product_intelligence_build_spec.yaml
+  CuratedProjectExperience_may:
+    - summarize
+    - visualize
+    - explain
+    - compare
+    - qualify
+  may_not:
+    - modify_ProductMarketModel
+    - invent_audience_evidence
+    - convert_recommendation_to_creator_authority
+  existing_architectural_rule_preserved: >
+    ProductMarketModel evaluates the entertainment product; this experience only
+    presents that intelligence.
+# =====================================================================
+# 48. SELF MODEL BOUNDARY
+# =====================================================================
+self_model_boundary:
+  source_owner:
+    spec: 05_quantum_self_model_build_spec.yaml
+  current_capability_claim:
+    must_pin:
+      - SelfModel_revision
+      - observed_evidence
+  if_capability_changes:
+    action:
+      - mark_snapshot_stale_where_material
+      - rebuild_ExecutionConfidenceExperience
+      - re-QC
+  rule: >
+    CuratedExperience cannot preserve a favorable stale capability claim merely
+    because it sells better.
+# =====================================================================
+# 49. PRODUCTION MODEL BOUNDARY
+# =====================================================================
+production_boundary:
+  source_owner:
+    spec: 06_quantum_production_model_build_spec.yaml
+  may_present:
+    - high_level_strategy
+    - feasibility
+    - delivery_model
+    - schedule_confidence
+    - production_risk_control
+  may_not:
+    - expose_sensitive_provider_credentials
+    - turn implementation choice into stable project semantics
+  principle: >
+    Buyer needs confidence in delivery, not an unnecessary tour of every internal tool.
+# =====================================================================
+# 50. PROTECTED ACCESS
+# =====================================================================
+access:
+  owner:
+    spec: 20_quantum_key_access_security_build_spec.yaml
+  required_scope:
+    CURATED_PROJECT
+  module_access:
+    checked_server_side: true
+  raw_artifacts:
+    default_denied: true
+  forwarded_module_URL:
+    without_authorized_session:
+      result: DENY
+# =====================================================================
+# 51. CROSS-DEVICE INTEGRATION
+# =====================================================================
+presentation:
+  owner:
+    spec: 21_quantum_cross_device_presentation_runtime_build_spec.yaml
+  experience_supports:
+    - phone
+    - tablet
+    - desktop
+    - large_display
+  module_rendering:
+    responsive: true
+  controller:
+    may_use_source_phone: true
+  state:
+    ExplorationState_survives_surface_handoff: true
+# =====================================================================
+# 52. QC
+# =====================================================================
+QC:
+  formal_owner:
+    spec: 07_quantum_autonomous_qc_build_spec.yaml
+  CuratedExperienceQCContract:
+    dimensions:
+      SOURCE_INTEGRITY:
+        question: >
+          Can every consequential claim be resolved to its source?
+      PROGRESSIVE_DISCLOSURE:
+        question: >
+          Does the sequence preserve attention rather than dumping information?
+      REDUNDANCY:
+        question: >
+          Is each module adding distinct value?
+      CHARACTER:
+        question: >
+          Does character exploration deepen attachment and IP identity?
+      WORLD:
+        question: >
+          Does world exploration demonstrate story-generating potential?
+      THEME:
+        question: >
+          Does Theme add meaning without overexplaining?
+      CREATIVE_VISION:
+        question: >
+          Does the viewer understand what the finished work should feel like?
+      MARKETABILITY:
+        question: >
+          Are product and viewer claims accurate to source evidence?
+      EXPANSION:
+        question: >
+          Are optionalities plausible and properly qualified?
+      MERCHANDISE:
+        question: >
+          Are concepts clearly hypothetical and project-specific?
+      PROFITABILITY:
+        question: >
+          Are assumptions explicit and scenarios nonmisleading?
+      EXECUTION:
+        question: >
+          Are capability and delivery claims backed by current evidence?
+      EXPERIENCE:
+        question: >
+          Does exploration feel premium, responsive and coherent?
+      COMMERCIAL_BOUNDARY:
+        question: >
+          Does spec 22 stop before owning binding offer terms?
+# =====================================================================
+# 53. QC HARD FAILURES
+# =====================================================================
+hard_failures:
+  - code: CURATED.UNSUPPORTED_PROJECT_CLAIM
+    severity: CRITICAL
+  - code: CURATED.UNSUPPORTED_CAPABILITY_CLAIM
+    severity: CRITICAL
+  - code: CURATED.MISLEADING_FINANCIAL_FORECAST
+    severity: CRITICAL
+  - code: CURATED.FALSE_MERCHANDISE_STATUS
+    severity: MAJOR
+  - code: CURATED.PRODUCT_MODEL_MISREPRESENTED
+    severity: MAJOR
+  - code: CURATED.PROTECTED_SPOILER_EXPOSED
+    severity: CRITICAL
+  - code: CURATED.COMMERCIAL_TERM_LEAK
+    severity: MAJOR
+  - code: CURATED.RAW_FILE_EXPOSURE
+    severity: MAJOR
+  - code: CURATED.HOOK_REQUIRES_BASIC_REEXPLANATION
+    severity: MAJOR
+    owner_stage: spec_18
+  - code: CURATED.EXCESSIVE_REDUNDANCY
+    severity: MAJOR
+# =====================================================================
+# 54. REPAIR
+# =====================================================================
+repair:
+  order:
+    - remove_redundant_content
+    - shorten_module
+    - improve_visualization
+    - clarify_claim_qualification
+    - replace_unsupported_claim
+    - reorder_module
+    - hide_low_value_module
+    - regenerate_mockup
+    - recompute_scenario
+    - refresh_source_snapshot
+    - route_upstream_if_source_model_inadequate
+  upstream_routing:
+    Hook_failure:
+      owner: spec_18
+    Product_evidence_problem:
+      owner: spec_04
+    Capability_evidence_problem:
+      owner: spec_05
+    Creative_semantic_problem:
+      owner: spec_03
+    World_fact_problem:
+      owner: spec_01
+# =====================================================================
+# 55. EXPERIENCE EVENTS
+# =====================================================================
+events:
+  family: CURATED_EXPERIENCE
+  event_types:
+    CURATED.ENTERED:
+      fields:
+        - experience_ref
+        - session_ref
+    CURATED.MODULE_ENTERED:
+      fields:
+        - module_ref
+    CURATED.MODULE_COMPLETED:
+      fields:
+        - module_ref
+    CURATED.MODULE_SKIPPED:
+      fields:
+        - module_ref
+    CURATED.QUESTION_ASKED:
+      fields:
+        - question_ref
+        - domain
+    CURATED.QUESTION_ANSWERED:
+      fields:
+        - answer_ref
+    CURATED.OPPORTUNITY_READY:
+      fields:
+        - experience_ref
+    CURATED.OPPORTUNITY_REQUESTED:
+      fields:
+        - handoff_ref
+    CURATED.COMPLETED:
+      fields:
+        - experience_ref
+# =====================================================================
+# 56. SIGNALS
+# =====================================================================
+signals:
+  - CURATED.PROOF_HOOK_FAILURE
+  - CURATED.CHARACTER_INTEREST_HIGH
+  - CURATED.WORLD_INTEREST_HIGH
+  - CURATED.MARKETABILITY_QUESTION
+  - CURATED.EXPANSION_INTEREST
+  - CURATED.EXECUTION_CONFIDENCE_LOW
+  - CURATED.UNSUPPORTED_QUESTION
+  - CURATED.REDUNDANCY_HIGH
+  - CURATED.INFORMATION_OVERLOAD
+  - CURATED.OPPORTUNITY_READINESS_HIGH
+  - CURATED.SNAPSHOT_STALE
+# =====================================================================
+# 57. LEARNING
+# =====================================================================
+learning:
+  observations:
+    - module_entry
+    - module_completion
+    - module_skip
+    - question_domain
+    - time_per_module
+    - opportunity_request
+    - eventual_commercial_outcome
+  learnable:
+    - module_order_by_role
+    - ideal_information_density
+    - high_value_character_content
+    - high_value_world_content
+    - expansion_interest
+    - scenario_interest
+    - execution_confidence_questions
+    - opportunity_readiness_prediction
+  limits:
+    - no_private_psychological_profile_without_policy
+    - no_creator_authority_modification
+    - no_product_truth_modification
+  future_policy_owner:
+    - 29_quantum_opportunity_acquisition_learning_build_spec.yaml
+# =====================================================================
+# 58. OBSERVABILITY
+# =====================================================================
+observability:
+  overall:
+    - CuratedExperience_entry_rate
+    - completion_rate
+    - median_guided_path_duration
+    - opportunity_request_rate
+  modules:
+    - entry_rate_by_module
+    - completion_rate_by_module
+    - skip_rate
+    - dwell_time
+    - return_rate
+  questions:
+    - question_rate
+    - question_domains
+    - unsupported_question_rate
+    - answer_confidence
+  opportunity:
+    - opportunity_readiness
+    - early_offer_request_rate
+    - final_offer_request_rate
+  presentation:
+    - phone_vs_large_screen
+    - surface_handoff_rate
+  quality:
+    - claim_integrity_failure
+    - stale_snapshot_rate
+    - scenario_qualification_failure
+# =====================================================================
+# 59. FAILURE MODES
+# =====================================================================
+failure_modes:
+  SOURCE_SNAPSHOT_STALE:
+    behavior:
+      - identify_materially_affected_modules
+      - invalidate_minimum_scope
+      - rebuild
+      - re-QC
+  MODULE_SOURCE_UNAVAILABLE:
+    behavior:
+      - hide_module_or_mark_unavailable
+      - never_invent
+  CURATOR_QUESTION_UNKNOWN:
+    behavior:
+      - state_uncertainty
+      - do_not_hallucinate
+  CAPABILITY_CHANGED:
+    behavior:
+      - rebuild_ExecutionConfidence
+  FINANCIAL_ASSUMPTION_INVALIDATED:
+    behavior:
+      - invalidate_scenarios
+      - rebuild
+  PROTECTED_ASSET_UNAVAILABLE:
+    behavior:
+      - degrade_visualization
+      - preserve_source_truth
+  PRESENTATION_SURFACE_FAILS:
+    delegate:
+      - spec_21
+  ACCESS_SESSION_FAILS:
+    delegate:
+      - spec_20
+  OFFER_NOT_AVAILABLE:
+    behavior:
+      - OpportunityPrelude_may_not_fabricate_offer
+# =====================================================================
+# 60. DEGRADED MODES
+# =====================================================================
+degraded_modes:
+  NO_INTERACTIVE_VISUALIZATION:
+    behavior:
+      - render_static_evidence_backed_module
+  NO_STUDIO_AVATAR:
+    behavior:
+      - use_neutral_curator_runtime
+      - do_not_change_content
+  NO_MERCHANDISE_MOCKUPS:
+    behavior:
+      - omit_module_if_low_value
+  NO_PROFITABILITY_SCENARIOS:
+    behavior:
+      - omit_module
+      - do_not_block_core_project_experience_unless_policy_requires
+  NO_CURRENT_EXECUTION_CONFIDENCE:
+    behavior:
+      - state_unknown
+      - block_unsupported_execution_claim
+# =====================================================================
+# 61. CONCURRENCY
+# =====================================================================
+concurrency:
+  module_preparation:
+    parallelizable: true
+  active_experience:
+    one_primary_ExplorationState_per_session: true
+  source_refresh:
+    may_compile_new_snapshot_concurrently: true
+  locked_experience:
+    remains_immutable_while_new_version_builds: true
+  questions:
+    multiple_parallel:
+      allowed: true
+  answer_commit:
+    ordered_in_session_trace: true
+# =====================================================================
+# 62. IDEMPOTENCY
+# =====================================================================
+idempotency:
+  compile_snapshot:
+    same_sources_same_versions:
+      same_digest_expected: true
+  module_compile:
+    same_snapshot_same_policy:
+      same_semantic_digest_expected: true
+  question_answer:
+    exact_replay:
+      not_guaranteed_if_judgment_model_changes
+    source_provenance_required: true
+  OpportunityHandoff:
+    same_experience_same_request:
+      idempotent: true
+# =====================================================================
+# 63. PROVENANCE
+# =====================================================================
+provenance:
+  required_paths:
+    CuratedExperienceSnapshot:
+      - all_source_model_revisions
+    CharacterExperience:
+      - CharacterBibleIR
+      - RelationshipIR
+      - asset_refs
+    WorldExperience:
+      - WorldModel_revision
+      - WorldBibleIR
+    ThemeExperience:
+      - ThemeModel
+      - CreatorModel
+    AudienceMarketability:
+      - AudienceModel
+      - ProductMarketModel
+      - MarketabilityEvidence
+    MerchandiseConcept:
+      - project_asset
+      - project_identity
+      - generation_receipt
+    ProfitabilityScenario:
+      - assumptions
+      - evidence
+      - formulas
+    ExecutionConfidence:
+      - SelfModel_revision
+      - ProductionModel_revision
+      - QC_evidence
+    CuratedAnswer:
+      - question
+      - authoritative_source
+      - evidence
+    OpportunityHandoff:
+      - locked_experience
+      - ExplorationState
+  emits_to:
+    - 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+# =====================================================================
+# 64. PRIVACY
+# =====================================================================
+privacy:
+  recipient_adaptation:
+    may_use:
+      - target_professional_role
+      - prior_authorized_professional_preferences
+      - current_session_interactions
+    may_not_use_by_default:
+      - private_family_data
+      - private_location
+      - unrelated_personal_history
+  questions:
+    stored:
+      only_as_business_experience_evidence_under_policy: true
+  principle: >
+    Tailoring should feel intelligent, not surveillant.
+# =====================================================================
+# 65. SECURITY
+# =====================================================================
+security:
+  protected_scope:
+    required: CURATED_PROJECT
+  source:
+    spec_20: true
+  surfaces:
+    spec_21: true
+  raw_source_files:
+    not_exposed_by_default: true
+  screenshots:
+    absolute_prevention_claimed: false
+  display_watermark:
+    optional: true
+  authorization:
+    server_side_per_module: true
+# =====================================================================
+# 66. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  compile:
+    - create_CuratedExperienceSnapshot
+    - compile_CuratedProjectExperienceIR
+    - compile_ExperienceSequencePlan
+    - compile_module
+    - compile_role_profile
+    - compile_navigation_policy
+  explore:
+    - enter_experience
+    - enter_module
+    - skip_module
+    - return_to_module
+    - request_next_module
+  questions:
+    - ask_project_question
+    - route_question
+    - answer_question
+    - explain_source
+    - disclose_uncertainty
+  visualization:
+    - render_character_experience
+    - render_world_experience
+    - render_marketability_evidence
+    - render_expansion_map
+    - render_merchandise_concepts
+    - render_profitability_matrix
+    - render_execution_confidence
+  opportunity:
+    - evaluate_opportunity_readiness
+    - request_OpportunityHandoff
+  lifecycle:
+    - submit_QC
+    - release_experience
+    - lock_experience
+    - supersede_experience
+# =====================================================================
+# 67. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    flow:
+      - ProofOfFilm_precedes_Characters
+      - Hook_module_absent_by_default
+      - OpportunityPrelude_is_last_default_module
+    source:
+      - every_claim_requires_source
+      - scenario_marked_scenario
+      - merchandise_marked_concept
+    characters:
+      - reusable_identity_not_plot_summary
+    world:
+      - world_expansion_does_not_invent_canon
+    theme:
+      - ThemeModel_not_rewritten
+    execution:
+      - current_capability_claim_requires_SelfModel
+    questions:
+      - unknown_question_returns_unknown_not_hallucination
+    commercial:
+      - OpportunityPrelude_contains_no_binding_price_without_spec_23
+# =====================================================================
+# 68. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - CuratedProjectExperience_never_mutates_CreatorModel
+  - CuratedProjectExperience_never_mutates_WorldModel
+  - CuratedProjectExperience_never_mutates_ProductMarketModel
+  - CuratedProjectExperience_never_mutates_SelfModel
+  - HookModel_remains_owned_by_spec_04
+  - Marketability_remains_owned_by_spec_18
+  - commercial_terms_remain_owned_by_spec_23
+  - role_specific_order_never_changes_project_truth
+  - hypothetical_merchandise_never_becomes_existing_product
+  - financial_scenario_never_becomes_guaranteed_forecast
+  - stale_SelfModel_claim_invalidates_ExecutionConfidence_only_where_material
+  - module_recompile_preserves_unaffected_locked_modules
+  - protected_module_URL_never_bypasses_spec_20
+  - source_display_change_never_changes_ExplorationState
+  - raw_file_tree_not_required
+  - buyer_question_cannot_expand_access_scope
+  - low_franchise_optionality_does_not_reduce_creative_quality
+# =====================================================================
+# 69. SCENARIO TESTS
+# =====================================================================
+scenario_tests:
+  producer:
+    after_Proof:
+      - Characters
+      - World
+      - Theme
+      - Vision
+      - Execution
+      - Marketability
+    expect:
+      - opportunity_readiness_increases
+  financier:
+    after_Proof:
+      - Characters
+      - Marketability
+      - Execution
+      - Profitability
+      - Expansion
+    invariant:
+      project_truth_same_as_producer: true
+  executive_asks_price_immediately:
+    response:
+      - handoff_to_spec_23_if_offer_authorized
+      - do_not_invent_price
+  executive_asks_how_Quantum_can_deliver:
+    route:
+      - SelfModel
+      - ProductionModel
+      - QC
+    expect:
+      - evidence_backed_answer
+  executive_asks_for_ending:
+    if_spoiler_policy_blocks:
+      - decline_or_deflect_without_falsehood
+  merchandise_surprise:
+    expect:
+      - premium_concept_mockups
+      - CONCEPT_label
+      - no_revenue_guarantee
+  project_has_no_merchandise_value:
+    expect:
+      - omit_or_deemphasize_module
+      - do_not_force_generic_merch
+# =====================================================================
+# 70. ADVERSARIAL TESTS
+# =====================================================================
+adversarial_tests:
+  prompt_curator_to_invent_sequel:
+    result:
+      - distinguish_hypothetical_from_canon
+  ask_for_unsupported_revenue:
+    result:
+      - refuse_to_state_as_fact
+      - offer_scenario_if_valid
+  ask_for_provider_secret:
+    result:
+      - deny
+  ask_for_unreleased_offer:
+    result:
+      - no_binding_term
+  stale_execution_claim:
+    condition:
+      - cited_capability_degraded_after_snapshot
+    result:
+      - new_snapshot_required_before_current_claim
+  raw_asset_URL_guess:
+    result:
+      - denied_by_spec_20
+# =====================================================================
+# 71. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: CP-G01
+    check: CuratedProjectExperience begins from Proof terminal state
+  - id: CP-G02
+    check: Characters module exists
+  - id: CP-G03
+    check: World module exists
+  - id: CP-G04
+    check: Theme module exists
+  - id: CP-G05
+    check: CreativeVision module exists
+  - id: CP-G06
+    check: AudienceMarketability module exists
+  - id: CP-G07
+    check: ExpansionOpportunity module exists
+  - id: CP-G08
+    check: MerchandiseConcept module exists
+  - id: CP-G09
+    check: ProfitabilityScenario module exists
+  - id: CP-G10
+    check: ExecutionConfidence module exists
+  - id: CP-G11
+    check: OpportunityPrelude exists
+  - id: CP-G12
+    check: basic Hook module absent by default
+  - id: CP-G13
+    check: Hook failure routes to spec 18
+  - id: CP-G14
+    check: source snapshot pins exact revisions
+  - id: CP-G15
+    check: each buyer-visible claim has provenance
+  - id: CP-G16
+    check: unknown answers remain unknown
+  - id: CP-G17
+    check: role-based reordering does not change truth
+  - id: CP-G18
+    check: progressive disclosure is explicit
+  - id: CP-G19
+    check: raw project file tree disabled by default
+  - id: CP-G20
+    check: merchandise is explicitly conceptual
+  - id: CP-G21
+    check: profitability is explicitly scenario-based
+  - id: CP-G22
+    check: execution confidence pins SelfModel evidence
+  - id: CP-G23
+    check: ProductMarketModel remains owned by spec 04
+  - id: CP-G24
+    check: Marketability remains owned by spec 18
+  - id: CP-G25
+    check: World truth remains owned by spec 01
+  - id: CP-G26
+    check: Avatar identity remains owned by spec 26
+  - id: CP-G27
+    check: CommercialOffer remains owned by spec 23
+  - id: CP-G28
+    check: protected access remains owned by spec 20
+  - id: CP-G29
+    check: cross-device rendering remains owned by spec 21
+  - id: CP-G30
+    check: CuratedAnswer supports evidence and uncertainty
+  - id: CP-G31
+    check: CuratedProjectExperience lock is reproducible
+  - id: CP-G32
+    check: source changes invalidate minimum affected module scope
+  - id: CP-G33
+    check: OpportunityHandoff carries no unauthorized binding term
+  - id: CP-G34
+    check: buyer may request commercial opportunity early
+  - id: CP-G35
+    check: project-specific modules may be omitted when low-value
+  - id: CP-G36
+    check: viewer-state momentum from Proof is preserved
+# =====================================================================
+# 72. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  CPW1:
+    name: experience_core
+    targets:
+      - CuratedExperienceSnapshot
+      - CuratedProjectExperienceIR
+      - ExperienceModuleIR
+      - ExplorationState
+      - navigation
+  CPW2:
+    name: creative_modules
+    depends_on:
+      - CPW1
+    targets:
+      - CharacterExperience
+      - WorldExperience
+      - ThemeExperience
+      - CreativeVisionExperience
+  CPW3:
+    name: product_modules
+    depends_on:
+      - CPW1
+    targets:
+      - AudienceMarketabilityExperience
+      - ExpansionOpportunityExperience
+  CPW4:
+    name: commercial_surface_modules
+    depends_on:
+      - CPW3
+    targets:
+      - MerchandiseConceptExperience
+      - ProfitabilityScenarioExperience
+      - ExecutionConfidenceExperience
+  CPW5:
+    name: curator_runtime
+    depends_on:
+      - CPW2
+      - CPW3
+      - CPW4
+    targets:
+      - CuratorRuntimePort
+      - ProjectQuestion
+      - CuratedAnswer
+      - QuestionRouting
+  CPW6:
+    name: presentation_and_security
+    depends_on:
+      - CPW5
+      - QKEY20_READY
+      - PRESENTATION21_READY
+    targets:
+      - protected_module_access
+      - cross_device_state
+      - responsive_modules
+  CPW7:
+    name: commercial_handoff
+    depends_on:
+      - CPW6
+    targets:
+      - OpportunityPrelude
+      - OpportunityReadiness
+      - OpportunityHandoff
+  CPW8:
+    name: QC_lock_and_learning
+    depends_on:
+      - CPW7
+    targets:
+      - CuratedExperienceQC
+      - release
+      - lock
+      - telemetry
+      - learning
+# =====================================================================
+# 73. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: CP-OD-01
+    decision: default guided experience total duration
+    status: CALIBRATION_REQUIRED
+  - id: CP-OD-02
+    decision: exact interactive presentation technology
+    status: REFERENCE_IMPLEMENTATION_DECISION
+  - id: CP-OD-03
+    decision: first character visualization set
+    status: DESIGN_DECISION
+  - id: CP-OD-04
+    decision: world visualization grammar
+    status: DESIGN_DECISION
+  - id: CP-OD-05
+    decision: marketability evidence visual representation
+    status: EXPERIENCE_RESEARCH_REQUIRED
+  - id: CP-OD-06
+    decision: merchandise mockup categories by project
+    status: PROJECT_DRIVEN
+  - id: CP-OD-07
+    decision: financial scenario model schema
+    status: COORDINATE_WITH_SPEC_23_AND_BUSINESS_POLICY
+  - id: CP-OD-08
+    decision: buyer-editable scenario assumptions
+    status: PRODUCT_DECISION
+  - id: CP-OD-09
+    decision: CuratorRuntime exact interaction model before StudioAvatar
+    status: COORDINATE_WITH_SPEC_26
+  - id: CP-OD-10
+    decision: deep-diligence data-room boundary
+    status: FUTURE_SPEC_OR_SPEC_24_EXTENSION
+# =====================================================================
+# 74. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: experience becomes glorified pitch deck
+    control:
+      - cinematic_modules
+      - interactive_assets
+      - progressive_disclosure
+  - risk: too much information destroys Proof momentum
+    control:
+      - module_value_density
+      - progressive_disclosure
+      - optional_depth
+  - risk: Hook gets explained twice
+    control:
+      - no_Hook_module
+      - route_failure_to_spec_18
+  - risk: curator hallucinates project fact
+    control:
+      - ExperienceClaim
+      - CuratedAnswer
+      - provenance
+  - risk: product intelligence becomes fake market certainty
+    control:
+      - confidence
+      - evidence
+      - source_ownership
+  - risk: merchandise looks like existing licensed product
+    control:
+      - CONCEPT_label
+      - hypothetical_flag
+  - risk: profitability numbers look guaranteed
+    control:
+      - SCENARIO_NOT_FORECAST
+      - assumptions_panel
+  - risk: stale SelfModel creates false execution confidence
+    control:
+      - snapshot_version
+      - invalidation
+  - risk: executive wants price early
+    control:
+      - direct_handoff_to_spec_23
+  - risk: role personalization changes facts
+    control:
+      - sequence_only_adaptation
+  - risk: raw file browsing destroys product feel
+    control:
+      - rendered_experience
+      - no_file_tree
+  - risk: CuratedExperience becomes commercial authority
+    control:
+      - OpportunityPrelude_boundary
+# =====================================================================
+# 75. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  experience_core:
+    - CuratedExperienceSnapshot
+    - CuratedProjectExperienceIR
+    - ExperienceSequencePlan
+    - ExperienceModuleIR
+    - ExplorationState
+    - ProgressiveDisclosurePolicy
+    - CuratedNavigationPolicy
+  creative:
+    - CharacterExperience
+    - WorldExperience
+    - ThemeExperience
+    - CreativeVisionExperience
+  product:
+    - AudienceMarketabilityExperience
+    - ExpansionOpportunityExperience
+  optionality:
+    - MerchandiseConceptExperience
+    - ProfitabilityScenarioExperience
+  execution:
+    - ExecutionConfidenceExperience
+  interaction:
+    - CuratorRuntimePort
+    - ProjectQuestion
+    - QuestionRouting
+    - CuratedAnswer
+  commercial_boundary:
+    - OpportunityPrelude
+    - OpportunityReadiness
+    - OpportunityHandoff
+  governance:
+    - ExperienceClaim
+    - provenance
+    - security
+    - QC
+    - release
+    - curated_project_experience.lock
+  release:
+    requirement: CP-G01_through_CP-G36_pass
+# =====================================================================
+# 76. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    ProofOfFilm creates desire; CuratedProjectExperience converts desire into understanding.
+  law_02: >
+    The project experience starts where ProofOfFilm leaves the viewer emotionally and cognitively.
+  law_03: >
+    Every layer must earn the next layer.
+  law_04: >
+    The CuratedProjectExperience is not a file repository.
+  law_05: >
+    Canonical source artifacts live backstage; the buyer experiences intentional representations.
+  law_06: >
+    Characters come before spreadsheets because people buy into experiences
+    before they reason about downstream economics.
+  law_07: >
+    Character presentation should demonstrate reusable identity, not merely summarize plot.
+  law_08: >
+    World presentation should demonstrate a story engine, not an encyclopedia.
+  law_09: >
+    Theme should deepen meaning without explaining the movie to death.
+  law_10: >
+    Creative Vision tells the buyer what the finished work should feel like.
+  law_11: >
+    The basic Hook has no default module because ProofOfFilm should already have demonstrated it.
+  law_12: >
+    If the Hook must be explained after ProofOfFilm, repair ProofOfFilm.
+  law_13: >
+    Audience/Product Intelligence remains the authority for audience and product models.
+  law_14: >
+    Marketability remains the authority of ProofOfFilm spec 18 and is presented here as evidence.
+  law_15: >
+    Merchandise mockups demonstrate optionality and are explicitly conceptual.
+  law_16: >
+    Profitability matrices are scenarios, never guaranteed forecasts.
+  law_17: >
+    Execution confidence must come from current SelfModel and ProductionModel evidence.
+  law_18: >
+    Buyer-role adaptation changes sequence and depth, not truth.
+  law_19: >
+    A curator answer is only as strong as its source evidence.
+  law_20: >
+    Unknown is a valid answer. Fabrication is not.
+  law_21: >
+    The future Quantum Studio Avatar will embody the curator; it will not own the facts.
+  law_22: >
+    The buyer may leave the curated path whenever a higher-value question deserves attention.
+  law_23: >
+    Low-value modules should be omitted rather than filled with generic material.
+  law_24: >
+    Every buyer-visible experience pins exact source revisions.
+  law_25: >
+    A material source change invalidates only the minimum affected experience scope.
+  law_26: >
+    Protected project content remains behind Quantum Key access even when rendered on a large screen.
+  law_27: >
+    Curated exploration should satisfy some curiosity while increasing higher-order conviction.
+  law_28: >
+    The project experience ends not with "Contact us" but with a deliberate doorway:
+    The Opportunity.
+  law_29: >
+    Binding commercial terms begin only after control passes to spec 23.
+  law_30: >
+    The desired terminal state is:
+    "I know what this is. I understand why it matters. I believe they can deliver it.
+    Show me the deal."

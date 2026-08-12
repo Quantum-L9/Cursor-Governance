@@ -1,0 +1,3515 @@
+metadata:
+  spec_id: quantum.animation.self_model.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Self Model
+  depends_on:
+    - spec_id: quantum.animation.system_architecture.v1
+      file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - spec_id: quantum.animation.polycognitive_runtime.build_spec.v1
+      file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: COGNITIVE_CAPABILITY_CONSUMER
+    - spec_id: quantum.animation.world_model.build_spec.v2
+      file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: EXPERIENCE_EVIDENCE_REFERENCE_DEPENDENCY
+    - spec_id: quantum.animation.audience_product_intelligence.build_spec.v1
+      file: 04_quantum_audience_product_intelligence_build_spec.yaml
+      relationship: QUALITY_REQUIREMENT_CONTEXT_ONLY
+  architectural_identity:
+    concise: >
+      Quantum's continuously updated machine-maintained model of what Quantum
+      can actually do right now.
+    extended: >
+      Self Model is the introspective operational model of Quantum Animation
+      Agent. It discovers available models, tools, providers and deterministic
+      capabilities; distinguishes declared capability from empirically observed
+      capability; tracks live availability, cost, latency, limits, reliability,
+      quality, calibration and known failure modes; models conditional
+      suitability across task structures; emits capability-change signals; and
+      provides the authoritative machine-readable basis for cognitive routing
+      and production strategy selection.
+  owner_question:
+    primary: "What can Quantum reliably do right now?"
+  secondary_questions:
+    - "Which capabilities currently exist?"
+    - "Which implementation can perform this semantic capability?"
+    - "How well does each implementation perform under these conditions?"
+    - "What does this provider claim to support?"
+    - "What has Quantum actually observed?"
+    - "Which capabilities are degraded or unavailable?"
+    - "What failure modes are likely for this task?"
+    - "How expensive and slow is this implementation?"
+    - "How confident is Quantum in its own estimate?"
+    - "Has a model/tool update materially changed expected behavior?"
+  human_authoring:
+    capability_truth_allowed: false
+    manual_capability_scores_allowed: false
+    manual_provider_quality_claims_allowed: false
+  not_owner_of:
+    - fictional World truth
+    - creator intent
+    - audience intent
+    - product-market strategy
+    - cognitive operator semantics
+    - reasoning depth policy
+    - production strategy
+    - production execution
+    - final QC acceptance
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Make Quantum aware of its own changing operational abilities so every other
+    autonomous subsystem can reason from current observed reality rather than
+    stale assumptions about models and tools.
+  success_definition: >
+    New capabilities become discoverable without architectural rewrites,
+    degraded capabilities are automatically down-weighted or removed from
+    routing, observed reliability dominates unsupported provider marketing
+    claims, and all important routing decisions can explain what Quantum
+    believed about its own abilities at decision time.
+  autonomy_leverage: >
+    The system should not depend on a human remembering which model is best at
+    faces, hands, lip sync, image conditioning, dialogue, graph traversal,
+    semantic retrieval, camera motion, sound synthesis or any future capability.
+  operational_goal: >
+    Every cognitively or production-relevant capability available to Quantum
+    should be discoverable, observable, calibrated and selectable through
+    machine-readable contracts.
+  core_principle: >
+    Quantum knows not merely which tools exist, but where each one succeeds,
+    where each one fails, how certain that knowledge is, and whether that remains
+    true now.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  SM-001:
+    name: MACHINE_MAINTAINED_ONLY
+    statement: >
+      SelfModel truth is derived from machine-observable evidence and cannot be
+      authored as project configuration by humans.
+  SM-002:
+    name: DECLARED_IS_NOT_OBSERVED
+    statement: >
+      Provider-declared capability and empirically observed capability are
+      distinct data classes.
+  SM-003:
+    name: OBSERVED_EVIDENCE_DOMINATES
+    statement: >
+      Where sufficient calibrated evidence exists, observed capability should
+      dominate provider-declared capability for routing.
+  SM-004:
+    name: CAPABILITY_IS_CONDITIONAL
+    statement: >
+      A model is not simply "good at video" or "bad at hands." Reliability must
+      be conditioned on task structure and relevant features.
+  SM-005:
+    name: CAPABILITY_IS_TIME_VARIANT
+    statement: >
+      Availability, latency, price, quality and reliability may change over time.
+  SM-006:
+    name: CURRENT_STATE_AND_HISTORICAL_EXPERIENCE_DIFFER
+    statement: >
+      Historical capability observations inform current belief but do not
+      guarantee current operational state.
+  SM-007:
+    name: SELF_CONFIDENCE_IS_CALIBRATED
+    statement: >
+      SelfModel must represent uncertainty in its own estimates rather than
+      emitting unjustified point estimates.
+  SM-008:
+    name: NO_SINGLE_GLOBAL_QUALITY_SCORE
+    statement: >
+      Capability quality is multidimensional and task-dependent.
+  SM-009:
+    name: CAPABILITY_DISCOVERY_IS_CONTINUOUS
+    statement: >
+      New models, adapters, deterministic tools and provider features should be
+      automatically discoverable where machine-readable discovery is possible.
+  SM-010:
+    name: UNUSED_CAPABILITY_MUST_NOT_BECOME_INVISIBLE
+    statement: >
+      Capabilities should remain discoverable and periodically reconsidered even
+      if current policy does not select them often.
+  SM-011:
+    name: UTILIZATION_DOES_NOT_MEAN_FORCED_USE
+    statement: >
+      Every capability should be considered when relevant, not artificially used.
+  SM-012:
+    name: SELF_MODEL_IS_NOT_ROUTER
+    statement: >
+      SelfModel provides capability truth. Polycognitive Runtime and
+      ProductionModel use that truth to choose implementations.
+  SM-013:
+    name: EXECUTION_OUTCOMES_UPDATE_SELF_KNOWLEDGE
+    statement: >
+      Real production, cognitive execution and QC outcomes provide capability evidence.
+  SM-014:
+    name: FAILURE_MODE_IS_FIRST_CLASS
+    statement: >
+      Known conditional failure modes must be modeled explicitly rather than
+      hidden inside aggregate reliability.
+  SM-015:
+    name: DEGRADATION_IS_SIGNALLED
+    statement: >
+      Material capability changes emit typed signals consumed by dependent systems.
+  SM-016:
+    name: MODEL_UPDATE_IS_NEW EVIDENCE REGIME
+    statement: >
+      Provider/model version changes require separate capability identity or
+      controlled evidence transfer.
+  SM-017:
+    name: EVIDENCE_DECAYS_WHEN CONDITIONS CHANGE
+    statement: >
+      Old observations may be down-weighted when provider/model/runtime conditions
+      materially change.
+  SM-018:
+    name: BENCHMARK_AND_PRODUCTION_EVIDENCE_DIFFER
+    statement: >
+      Synthetic benchmark performance and actual production performance are both
+      useful but retain separate provenance and weights.
+  SM-019:
+    name: ROUTING_MUST_BE_EXPLAINABLE
+    statement: >
+      Consumers must be able to explain why a capability was considered suitable,
+      unsuitable or unavailable.
+  SM-020:
+    name: SELF_MODEL_IS_PROVIDER_AGNOSTIC
+    statement: >
+      Capability semantics belong to Quantum, not to any vendor-specific model taxonomy.
+  SM-021:
+    name: CAPABILITY_ONTOLOGY_IS_VERSIONED
+    statement: >
+      Semantic capabilities and task-feature taxonomies require stable identifiers
+      and versioned definitions.
+  SM-022:
+    name: FAILURE_DOES_NOT_EQUAL GLOBAL INCOMPETENCE
+    statement: >
+      A failed attempt should update the relevant conditional capability surface,
+      not arbitrarily reduce all unrelated capability estimates.
+  SM-023:
+    name: SUCCESS_DOES_NOT EQUAL UNIVERSAL COMPETENCE
+    statement: >
+      Successful outcomes update only supported conditional capability claims.
+  SM-024:
+    name: LIVE_AVAILABILITY_IS NOT QUALITY
+    statement: >
+      A highly capable model may be temporarily unavailable, and an available
+      model may be unsuitable.
+  SM-025:
+    name: TOOL_ACCESS_DOES_NOT_IMPLY AUTHORITY
+    statement: >
+      Discovery of a tool or model does not grant any cognitive or production
+      subsystem permission to use it outside existing authority contracts.
+  SM-026:
+    name: SELF_MODEL_LEARNING_IS_GOVERNED
+    statement: >
+      Calibration and estimation models may learn automatically, but their
+      schema, evidence and deployment policies remain governed.
+  SM-027:
+    name: UNKNOWN_IS VALID
+    statement: >
+      Insufficient evidence should produce unknown/low-confidence capability,
+      not fabricated certainty.
+  SM-028:
+    name: FAILURE_PREVENTION_BEATS POSTHOC LEARNING
+    statement: >
+      Strong known incompatibilities should prevent wasteful execution before
+      failure whenever confidence is sufficient.
+# =====================================================================
+# 3. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  self_model_owns:
+    - CapabilityOntology
+    - capability discovery
+    - capability identity
+    - ImplementationIdentity
+    - ProviderIdentity
+    - declared capability manifests
+    - observed capability state
+    - current implementation availability
+    - current service/provider health
+    - quality observations
+    - reliability estimation
+    - capability calibration
+    - cost observations
+    - latency observations
+    - throughput observations
+    - context/input/output limits
+    - known failure modes
+    - known successful conditions
+    - suitability estimation
+    - capability degradation detection
+    - capability version change detection
+    - capability confidence
+    - SelfModel revision
+    - capability-change signals
+    - evidence lineage
+    - benchmark result ingestion
+    - production execution evidence ingestion
+    - cognitive execution evidence ingestion
+  adjacent_not_owned:
+    CapabilityRouter:
+      owner: polycognitive_runtime
+      uses: SelfModel
+    cognitive operator semantics:
+      owner: polycognitive_runtime
+    ReasoningPolicy:
+      owner: polycognitive_runtime
+    ProductionStrategy:
+      owner: production_model
+    ProductionManifest:
+      owner: production_model_or_production_engine
+    job execution:
+      owner: production_engine
+    artifact acceptance:
+      owner: autonomous_qc
+    production experience semantic strategy:
+      owner: production_model
+    fictional capability:
+      owner: world_model
+      note: >
+        A fictional character's capabilities are World Model state and entirely
+        separate from Quantum's machine capabilities.
+  hard_boundary: >
+    SelfModel reports machine capability truth. It does not choose creative
+    meaning or independently authorize execution.
+# =====================================================================
+# 4. CONCEPTUAL SELF MODEL EQUATION
+# =====================================================================
+conceptual_equation:
+  formula: >
+    SelfModel(t) =
+    Reduce(
+      discovered implementations,
+      declared capability manifests,
+      live health observations,
+      benchmark observations,
+      production outcomes,
+      cognitive execution outcomes,
+      QC observations,
+      latency/cost telemetry,
+      failure signatures,
+      calibration history,
+      version/change events
+    )
+  routing_view: >
+    Suitability(capability, task, t) =
+    f(
+      semantic compatibility,
+      observed conditional quality,
+      calibrated failure probability,
+      availability,
+      limits,
+      latency,
+      cost,
+      current degradation,
+      evidence confidence
+    )
+  important_distinction: >
+    SelfModel computes capability belief. Routing systems optimize over that belief.
+# =====================================================================
+# 5. CAPABILITY ONTOLOGY
+# =====================================================================
+capability_ontology:
+  purpose: >
+    Provide stable provider-independent semantic names for what Quantum may be
+    able to do.
+  CapabilityDefinition:
+    fields:
+      capability_id:
+      version:
+      namespace:
+      name:
+      description:
+      capability_class:
+        enum:
+          - cognition
+          - language
+          - retrieval
+          - graph
+          - simulation
+          - image
+          - video
+          - animation
+          - voice
+          - music
+          - sound
+          - compositing
+          - editing
+          - deterministic_media
+          - analysis
+          - multimodal
+          - storage
+          - workflow
+          - infrastructure
+      input_modalities:
+        type: list[string]
+      output_modalities:
+        type: list[string]
+      task_feature_schema_ref:
+      parent_capabilities:
+        type: list[CapabilityRef]
+      related_capabilities:
+        type: list[CapabilityRef]
+      compatibility_tags:
+        type: list[string]
+      critical_measurement_dimensions:
+        type: list[string]
+      created_at:
+  initial_capabilities:
+    cognition:
+      - cognition.general_reasoning
+      - cognition.deep_reasoning
+      - cognition.multimodal_reasoning
+      - cognition.structured_output
+      - cognition.tool_use
+      - cognition.long_context
+    retrieval:
+      - retrieval.semantic
+      - retrieval.exact
+      - graph.path_query
+      - graph.semantic_projection
+    image:
+      - image.text_to_image
+      - image.image_conditioning
+      - image.reference_identity
+      - image.inpainting
+      - image.outpainting
+      - image.style_control
+      - image.pose_control
+      - image.depth_control
+      - image.segmentation_control
+      - image.transparent_generation
+    video:
+      - video.text_to_video
+      - video.image_to_video
+      - video.video_to_video
+      - video.reference_identity
+      - video.camera_control
+      - video.motion_control
+      - video.pose_control
+      - video.first_last_frame_conditioning
+      - video.character_consistency
+      - video.object_consistency
+      - video.lip_sync
+      - video.face_performance
+      - video.multi_character_scene
+      - video.long_duration
+    voice:
+      - voice.text_to_speech
+      - voice.voice_identity
+      - voice.emotion_control
+      - voice.performance_direction
+      - voice.multilingual
+      - voice.dialogue_timing
+    music:
+      - music.text_to_music
+      - music.reference_conditioning
+      - music.stem_generation
+      - music.duration_control
+      - music.hit_point_control
+    sound:
+      - sound.effect_generation
+      - sound.ambience_generation
+      - sound.foley_generation
+      - sound.spatial_audio
+    deterministic_media:
+      - media.compositing
+      - media.color_processing
+      - media.timeline_assembly
+      - media.audio_mix
+      - media.subtitle_render
+      - media.text_render
+      - media.transcode
+      - media.frame_interpolation
+      - media.masking
+      - media.tracking
+  provider_independent:
+    value: true
+# =====================================================================
+# 6. PROVIDER IDENTITY
+# =====================================================================
+provider_model:
+  ProviderIdentity:
+    fields:
+      provider_id:
+      provider_type:
+      canonical_name:
+      adapter_id:
+      adapter_version:
+      service_regions:
+      discovery_method:
+      active:
+      first_seen_at:
+      last_seen_at:
+  provider_types:
+    - hosted_API
+    - local_model
+    - local_deterministic_tool
+    - cloud_service
+    - internal_service
+    - workflow_engine
+    - database
+    - memory_service
+  rule: >
+    Provider identity is separate from model/implementation identity.
+# =====================================================================
+# 7. IMPLEMENTATION IDENTITY
+# =====================================================================
+implementation_model:
+  ImplementationIdentity:
+    fields:
+      implementation_id:
+      provider_id:
+      implementation_type:
+        enum:
+          - model
+          - service
+          - deterministic_tool
+          - composite_pipeline
+          - adapter
+          - internal_algorithm
+      family:
+      version:
+      build_digest:
+        nullable: true
+      deployment_variant:
+        nullable: true
+      region:
+        nullable: true
+      hardware_profile:
+        nullable: true
+      first_seen_at:
+      last_seen_at:
+      lifecycle_state:
+        enum:
+          - discovered
+          - probing
+          - active
+          - degraded
+          - unavailable
+          - retired
+          - quarantined
+  identity_rule: >
+    Materially behavior-changing model/provider versions must produce a new
+    implementation version or evidence regime.
+# =====================================================================
+# 8. CAPABILITY MANIFEST
+# =====================================================================
+capability_manifest:
+  definition: >
+    Machine-readable declaration of what an implementation claims to support.
+  DeclaredCapabilityManifest:
+    fields:
+      manifest_id:
+      implementation_id:
+      source:
+        enum:
+          - provider_API
+          - adapter_introspection
+          - model_metadata
+          - binary_introspection
+          - internal_registration
+      declared_capabilities:
+        type: list[DeclaredCapability]
+      limits:
+        type: CapabilityLimits
+      published_cost_model:
+        nullable: true
+      published_latency_expectation:
+        nullable: true
+      retrieved_at:
+      source_digest:
+      confidence:
+  DeclaredCapability:
+    fields:
+      capability_id:
+      supported:
+      constraints:
+      modalities:
+      options:
+      source_ref:
+  rule: >
+    DeclaredCapabilityManifest is evidence, not observed truth.
+# =====================================================================
+# 9. CAPABILITY DISCOVERY
+# =====================================================================
+capability_discovery:
+  purpose: >
+    Detect new, changed and removed Quantum-accessible capabilities without
+    requiring hand-updated architecture files.
+  CapabilityDiscoveryService:
+    discovery_sources:
+      - configured provider adapters
+      - provider capability endpoints
+      - installed deterministic tools
+      - registered internal services
+      - local model registry
+      - plugin/adapter registry
+      - infrastructure inventory
+    protocol:
+      - discover_providers()
+      - discover_implementations(provider)
+      - fetch_declared_manifest(implementation)
+      - detect_version_change()
+      - emit_discovery_events()
+  discovery_events:
+    - SELF.IMPLEMENTATION_DISCOVERED
+    - SELF.IMPLEMENTATION_CHANGED
+    - SELF.IMPLEMENTATION_REMOVED
+    - SELF.CAPABILITY_DECLARED
+    - SELF.CAPABILITY_REMOVED
+  new_capability_flow: |
+    provider/tool appears
+         ↓
+    discovery adapter
+         ↓
+    ImplementationIdentity
+         ↓
+    DeclaredCapabilityManifest
+         ↓
+    probe requirement
+         ↓
+    SelfModel evidence
+         ↓
+    capability becomes route-eligible when confidence policy permits
+# =====================================================================
+# 10. PROBING / CAPABILITY VERIFICATION
+# =====================================================================
+capability_probing:
+  purpose: >
+    Confirm whether newly discovered capabilities actually operate and establish
+    initial observed evidence.
+  CapabilityProbe:
+    fields:
+      probe_id:
+      capability_id:
+      implementation_id:
+      probe_suite_id:
+      task_features:
+      expected_behavior:
+      quality_dimensions:
+      safety_constraints:
+      cost_budget:
+      timeout:
+      created_at:
+  CapabilityProbeResult:
+    fields:
+      result_id:
+      probe_id:
+      executed:
+      success:
+      observations:
+      QC_refs:
+      latency_ms:
+      cost:
+      error_refs:
+      evidence_digest:
+      created_at:
+  lifecycle:
+    - discovered
+    - basic_connectivity_probe
+    - schema_probe
+    - semantic_capability_probe
+    - benchmark_probe
+    - calibration
+    - active
+  rule: >
+    Provider declaration alone need not make a newly discovered capability
+    eligible for consequential production.
+# =====================================================================
+# 11. TASK FEATURE MODEL
+# =====================================================================
+task_feature_model:
+  purpose: >
+    Condition capability estimates on actual task structure rather than using
+    coarse global averages.
+  TaskFeatureVector:
+    fields:
+      task_id:
+      semantic_task_type:
+      modality_features:
+        input_modalities:
+        output_modalities:
+      visual:
+        nullable: true
+        fields:
+          character_count:
+          identity_persistence_required:
+          face_prominence:
+          hand_visibility:
+          hand_object_interaction:
+          object_count:
+          readable_text_required:
+          camera_motion_complexity:
+          body_motion_complexity:
+          occlusion:
+          fine_geometry:
+          reflective_surfaces:
+          transparent_surfaces:
+          low_light:
+          high_motion:
+          long_duration:
+          exact_composition_required:
+          stylization_strength:
+          photorealism_requirement:
+          deterministic_constraint_count:
+      audio:
+        nullable: true
+        fields:
+          speaker_count:
+          voice_identity_requirement:
+          emotional_range:
+          lip_sync_requirement:
+          multilingual:
+          music_structure_complexity:
+          sync_point_count:
+          ambience_complexity:
+      cognition:
+        nullable: true
+        fields:
+          reasoning_depth:
+          structured_output_complexity:
+          tool_count:
+          context_size:
+          multimodal_input:
+          graph_reasoning_required:
+          exactness_requirement:
+      production:
+        nullable: true
+        fields:
+          expected_duration:
+          quality_tier:
+          retry_cost:
+          downstream_blast_radius:
+          latency_sensitivity:
+          budget_sensitivity:
+      project_style_features:
+        type: map
+      world_constraint_features:
+        type: map
+  evolution:
+    schema_versioned: true
+  importance: >
+    This is what makes "video reliability" become "video reliability for a
+    two-character closeup with hand-object interaction and identity continuity."
+# =====================================================================
+# 12. OBSERVATION MODEL
+# =====================================================================
+observation_model:
+  CapabilityObservation:
+    fields:
+      observation_id:
+      implementation_id:
+      implementation_version:
+      capability_id:
+      task_feature_vector_ref:
+      source_type:
+        enum:
+          - probe
+          - benchmark
+          - cognitive_execution
+          - production_attempt
+          - QC_evaluation
+          - runtime_health
+          - manual_system_test
+          - external_verified_measurement
+      execution_ref:
+        nullable: true
+      artifact_ref:
+        nullable: true
+      outcome:
+        operational_success:
+          type: bool
+        quality_dimensions:
+          type: map[string, float]
+        hard_violation_codes:
+          type: list[string]
+        soft_violation_codes:
+          type: list[string]
+      latency_ms:
+        nullable: true
+      cost:
+        nullable: true
+      throughput:
+        nullable: true
+      availability_at_observation:
+      evidence_refs:
+      QC_certificate_refs:
+      environment:
+        type: ObservationEnvironment
+      observed_at:
+  ObservationEnvironment:
+    fields:
+      region:
+      infrastructure_ref:
+      adapter_version:
+      dependency_versions:
+      runtime_configuration_digest:
+  invariant: >
+    Capability observations are immutable evidence records.
+# =====================================================================
+# 13. QUALITY DIMENSIONS
+# =====================================================================
+quality_dimension_model:
+  principle: >
+    SelfModel never compresses all performance into one universal quality number.
+  common_dimensions:
+    visual:
+      - identity_consistency
+      - temporal_consistency
+      - anatomy_integrity
+      - hand_integrity
+      - object_integrity
+      - hand_object_consistency
+      - face_consistency
+      - lip_sync
+      - motion_coherence
+      - camera_adherence
+      - composition_adherence
+      - readable_text_accuracy
+      - style_fidelity
+      - lighting_adherence
+      - geometry_consistency
+      - reference_adherence
+    audio:
+      - voice_identity
+      - speech_intelligibility
+      - emotion_adherence
+      - dialogue_timing
+      - synchronization
+      - music_structure
+      - acoustic_quality
+      - spatial_consistency
+    cognition:
+      - factual_accuracy
+      - schema_adherence
+      - exactness
+      - reasoning_success
+      - tool_use_success
+      - hallucination_rate
+      - context_retention
+      - latency
+      - cost
+    deterministic_tools:
+      - operation_success
+      - precision
+      - reproducibility
+      - throughput
+  extensible: true
+# =====================================================================
+# 14. CAPABILITY STATE
+# =====================================================================
+capability_state:
+  CapabilityState:
+    fields:
+      capability_state_id:
+      implementation_id:
+      capability_id:
+      status:
+        enum:
+          - unknown
+          - probing
+          - available
+          - available_low_confidence
+          - degraded
+          - unavailable
+          - quarantined
+          - retired
+      declared_support:
+        type: bool
+      observed_support:
+        enum:
+          - unknown
+          - supported
+          - unsupported
+          - conditional
+      current_availability:
+        range: [0.0, 1.0]
+      observed_reliability:
+        type: ConditionalReliabilityModel
+      quality_surface:
+        type: ConditionalQualityModel
+      failure_surface:
+        type: ConditionalFailureModel
+      latency_model:
+        type: LatencyModel
+      cost_model:
+        type: CostModel
+      throughput_model:
+        type: ThroughputModel
+      limits:
+        type: CapabilityLimits
+      evidence_count:
+      effective_evidence_weight:
+      calibration:
+        type: CalibrationState
+      suitability_tags:
+        type: list[string]
+      unsuitability_tags:
+        type: list[string]
+      known_failure_mode_refs:
+        type: list[FailureModeRef]
+      current_degradation_refs:
+        type: list[DegradationEventRef]
+      first_observed_at:
+      last_observed_at:
+      last_verified_at:
+      self_model_revision:
+      digest:
+  rule: >
+    CapabilityState is the principal machine-readable SelfModel object used by consumers.
+# =====================================================================
+# 15. CONDITIONAL RELIABILITY
+# =====================================================================
+reliability_model:
+  ConditionalReliabilityModel:
+    fields:
+      baseline_success_probability:
+      calibrated_probability:
+      confidence_interval:
+      conditional_slices:
+        type: list[ReliabilitySlice]
+      model_version:
+      evidence_window:
+      effective_sample_size:
+  ReliabilitySlice:
+    fields:
+      slice_id:
+      feature_predicate:
+      success_probability:
+      confidence_interval:
+      sample_count:
+      weighted_sample_count:
+      last_updated_at:
+  example:
+    implementation: video_renderer_A
+    capability: video.character_consistency
+    slices:
+      single_character_medium_shot:
+        success_probability: 0.94
+      two_character_closeup:
+        success_probability: 0.86
+      visible_hand_object_interaction:
+        success_probability: 0.64
+      two_character_hand_object_interaction:
+        success_probability: 0.53
+  benefit: >
+    Routing can reason about actual shot structure rather than renderer reputation.
+# =====================================================================
+# 16. CONDITIONAL QUALITY MODEL
+# =====================================================================
+conditional_quality:
+  ConditionalQualityModel:
+    fields:
+      dimensions:
+        type: list[ConditionalQualityDimension]
+      model_version:
+      confidence:
+      evidence_window:
+  ConditionalQualityDimension:
+    fields:
+      quality_dimension:
+      baseline_distribution:
+      conditional_slices:
+      confidence:
+  example:
+    dimension: identity_consistency
+    estimated_quality:
+      medium_closeup_single_character: 0.96
+      long_duration_multi_character: 0.72
+# =====================================================================
+# 17. FAILURE SURFACE
+# =====================================================================
+failure_surface:
+  ConditionalFailureModel:
+    fields:
+      known_failure_modes:
+      failure_probability_model:
+      correlated_failure_groups:
+      catastrophic_failure_probability:
+      model_version:
+  FailureMode:
+    fields:
+      failure_mode_id:
+      capability_id:
+      implementation_id:
+        nullable: true
+      code:
+      description:
+      trigger_feature_predicate:
+      probability:
+      confidence:
+      severity:
+        enum:
+          - low
+          - medium
+          - high
+          - critical
+      detectability:
+        enum:
+          - pre_execution
+          - during_execution
+          - post_execution
+          - difficult_to_detect
+      likely_violation_codes:
+        type: list[string]
+      mitigation_refs:
+        type: list[string]
+      evidence_refs:
+      first_observed_at:
+      last_observed_at:
+  example:
+    code: VIDEO.HAND_OBJECT_HANDEDNESS_DRIFT
+    trigger_feature_predicate:
+      hand_object_interaction: true
+      exact_handedness_required: true
+    probability: 0.28
+    confidence: 0.84
+# =====================================================================
+# 18. SUCCESS PATTERN MODEL
+# =====================================================================
+success_pattern_model:
+  SuccessPattern:
+    fields:
+      success_pattern_id:
+      implementation_id:
+      capability_id:
+      feature_predicate:
+      observed_success_probability:
+      quality_profile:
+      sample_count:
+      confidence:
+      evidence_refs:
+  purpose: >
+    SelfModel should understand where an implementation is particularly strong,
+    not merely where it fails.
+# =====================================================================
+# 19. CAPABILITY LIMITS
+# =====================================================================
+capability_limits:
+  CapabilityLimits:
+    fields:
+      maximum_input_size:
+        nullable: true
+      maximum_output_size:
+        nullable: true
+      maximum_context_tokens:
+        nullable: true
+      maximum_duration_seconds:
+        nullable: true
+      maximum_resolution:
+        nullable: true
+      supported_aspect_ratios:
+        type: list[string]
+      supported_frame_rates:
+        type: list[string]
+      maximum_reference_images:
+        nullable: true
+      maximum_character_references:
+        nullable: true
+      concurrency_limit:
+        nullable: true
+      rate_limit:
+        nullable: true
+      region_limits:
+        type: list[string]
+      modality_constraints:
+        type: map
+      provider_constraints:
+        type: map
+      measured_or_declared:
+        enum:
+          - declared
+          - observed
+          - mixed
+      last_verified_at:
+# =====================================================================
+# 20. AVAILABILITY MODEL
+# =====================================================================
+availability_model:
+  ImplementationAvailability:
+    fields:
+      implementation_id:
+      status:
+        enum:
+          - healthy
+          - partially_degraded
+          - degraded
+          - unavailable
+          - rate_limited
+          - maintenance
+          - unknown
+      availability_probability:
+      health_score:
+      capacity_remaining:
+        nullable: true
+      rate_limit_state:
+        nullable: true
+      observed_latency_pressure:
+        nullable: true
+      region_health:
+        type: map
+      failure_rate_window:
+      health_evidence_refs:
+      observed_at:
+      expires_at:
+  availability_sources:
+    - active health checks
+    - provider health endpoint
+    - invocation telemetry
+    - timeout rate
+    - error rate
+    - queue latency
+    - rate-limit responses
+  rule: >
+    Availability is live operational evidence and should decay rapidly when stale.
+# =====================================================================
+# 21. DEGRADATION MODEL
+# =====================================================================
+degradation_model:
+  CapabilityDegradation:
+    fields:
+      degradation_id:
+      implementation_id:
+      affected_capability_ids:
+      degradation_type:
+        enum:
+          - availability
+          - quality
+          - latency
+          - cost
+          - throughput
+          - schema
+          - reliability
+          - provider_behavior_change
+      previous_state_ref:
+      current_state_ref:
+      severity:
+      confidence:
+      detected_at:
+      evidence_refs:
+      expected_recovery:
+        nullable: true
+      status:
+        enum:
+          - active
+          - recovering
+          - resolved
+  triggers:
+    - rolling_failure_rate_shift
+    - quality_score_shift
+    - latency_distribution_shift
+    - capability probe failure
+    - provider version change
+    - cost change
+    - adapter breakage
+  signal_output:
+    - SELF.CAPABILITY_DEGRADED
+    - SELF.CAPABILITY_RECOVERING
+    - SELF.CAPABILITY_RECOVERED
+# =====================================================================
+# 22. CHANGEPOINT DETECTION
+# =====================================================================
+change_detection:
+  purpose: >
+    Detect when historical capability evidence no longer describes current behavior.
+  CapabilityChangeDetector:
+    monitors:
+      - success probability
+      - quality dimensions
+      - latency
+      - cost
+      - schema behavior
+      - output characteristics
+    methods:
+      - rolling_window_thresholds
+      - distribution_shift_detection
+      - explicit_version_change
+      - benchmark_regression
+      - QC_regression
+  on_change:
+    - create degradation/change event
+    - reduce confidence in transferred historical evidence
+    - schedule targeted probes
+    - emit SelfModel signal
+    - increment SelfModel revision
+  hard_rule: >
+    A major model version change cannot inherit full confidence from the previous
+    version without verification.
+# =====================================================================
+# 23. EVIDENCE WEIGHTING
+# =====================================================================
+evidence_weighting:
+  EvidenceWeightPolicy:
+    dimensions:
+      source_reliability:
+      recency:
+      task_similarity:
+      environment_similarity:
+      production_realism:
+      sample_independence:
+      QC_strength:
+      model_version_match:
+  baseline_source_weights:
+    provider_declaration:
+      relative_weight: low
+    synthetic_probe:
+      relative_weight: medium
+    benchmark:
+      relative_weight: medium_high
+    real_cognitive_execution:
+      relative_weight: high
+    real_production_attempt:
+      relative_weight: high
+    AutonomousQC_certified_outcome:
+      relative_weight: very_high
+  important_rule: >
+    One highly specific production observation may be more informative for an
+    unusual task slice than many unrelated benchmark observations.
+# =====================================================================
+# 24. EVIDENCE DECAY
+# =====================================================================
+evidence_decay:
+  purpose: >
+    Keep current SelfModel responsive to changing implementations and provider behavior.
+  factors:
+    - observation_age
+    - implementation_version_change
+    - adapter_version_change
+    - provider_behavior_change
+    - infrastructure_change
+    - task_feature_distance
+  policies:
+    stable_deterministic_tool:
+      decay_rate: very_low
+    hosted_generative_model:
+      decay_rate: moderate
+    live_availability:
+      decay_rate: very_high
+  exception:
+    immutable_historical_evidence:
+      retained: true
+      current_weight_may_decay: true
+# =====================================================================
+# 25. CALIBRATION
+# =====================================================================
+calibration:
+  principle: >
+    If SelfModel predicts 90% success for a class of tasks, approximately 90% of
+    comparable tasks should succeed under the defined success criterion.
+  CalibrationState:
+    fields:
+      calibration_id:
+      capability_id:
+      implementation_id:
+      calibration_method:
+      sample_count:
+      expected_vs_observed_bins:
+        type: list[CalibrationBin]
+      calibration_error:
+      Brier_score:
+        nullable: true
+      overconfidence_rate:
+      underconfidence_rate:
+      confidence:
+      last_calibrated_at:
+  CalibrationBin:
+    fields:
+      predicted_range:
+      average_prediction:
+      observed_rate:
+      sample_count:
+  routing_use:
+    calibrated_probability_preferred: true
+  failure:
+    severe_overconfidence:
+      action:
+        - reduce route confidence
+        - schedule recalibration
+        - emit SELF.CALIBRATION_DEGRADED
+# =====================================================================
+# 26. COST MODEL
+# =====================================================================
+cost_model:
+  CostModel:
+    fields:
+      currency_or_compute_unit:
+      cost_type:
+        enum:
+          - per_request
+          - per_token
+          - per_second
+          - per_frame
+          - per_image
+          - per_minute
+          - per_GPU_second
+          - fixed_internal
+          - composite
+      distribution:
+      conditional_slices:
+      provider_published_cost:
+        nullable: true
+      observed_cost:
+        nullable: true
+      confidence:
+      last_updated_at:
+  rule: >
+    Cost is factual operational state, not a production strategy decision.
+# =====================================================================
+# 27. LATENCY MODEL
+# =====================================================================
+latency_model:
+  LatencyModel:
+    fields:
+      distribution:
+      p50_ms:
+      p90_ms:
+      p95_ms:
+      p99_ms:
+      conditional_slices:
+      queue_delay_component:
+      execution_component:
+      provider_network_component:
+      confidence:
+      observed_at:
+  use:
+    - cognitive routing
+    - production planning
+    - deadline risk
+# =====================================================================
+# 28. THROUGHPUT MODEL
+# =====================================================================
+throughput_model:
+  ThroughputModel:
+    fields:
+      sustained_units_per_minute:
+      burst_units_per_minute:
+      concurrency_limit:
+      saturation_behavior:
+      queue_growth_model:
+      confidence:
+      observed_at:
+  use:
+    - production capacity estimation
+    - orchestration planning
+# =====================================================================
+# 29. CAPABILITY SUITABILITY
+# =====================================================================
+suitability_model:
+  CapabilitySuitability:
+    fields:
+      suitability_id:
+      implementation_id:
+      capability_id:
+      task_feature_vector_ref:
+      semantic_compatibility:
+        range: [0.0, 1.0]
+      expected_quality:
+        type: map
+      expected_operational_success:
+        range: [0.0, 1.0]
+      catastrophic_failure_probability:
+        range: [0.0, 1.0]
+      expected_cost:
+      expected_latency:
+      current_availability:
+      known_failure_mode_refs:
+      known_success_pattern_refs:
+      evidence_confidence:
+      suitability_class:
+        enum:
+          - preferred
+          - suitable
+          - conditionally_suitable
+          - experimental
+          - unsuitable
+          - unavailable
+      rationale:
+      SelfModel_revision:
+  important_rule: >
+    SelfModel may expose suitability but final route selection remains with the
+    consuming subsystem.
+# =====================================================================
+# 30. SUITABILITY TAGS
+# =====================================================================
+suitability_tags:
+  positive_examples:
+    - excellent_single_character_identity
+    - strong_camera_motion
+    - reliable_dialogue_closeup
+    - deterministic_text
+    - cheap_high_volume
+    - low_latency_reasoning
+    - strong_graph_path_query
+    - high_quality_voice_identity
+  negative_examples:
+    - poor_visible_hands
+    - weak_multi_character_consistency
+    - unreliable_long_duration
+    - high_latency
+    - expensive
+    - weak_structured_output
+    - poor_non_photoreal_style_control
+    - unstable_API
+  rule: >
+    Tags summarize evidence for retrieval; numeric/conditional models remain authoritative.
+# =====================================================================
+# 31. CAPABILITY GRAPH
+# =====================================================================
+capability_graph:
+  purpose: >
+    Represent relationships among semantic capabilities, implementations,
+    dependencies, composites and substitutable alternatives.
+  nodes:
+    - CapabilityDefinition
+    - ImplementationIdentity
+    - ProviderIdentity
+    - FailureMode
+    - SuccessPattern
+    - BenchmarkSuite
+    - DeterministicTool
+  edges:
+    - IMPLEMENTS
+    - DECLARES
+    - REQUIRES
+    - DEPENDS_ON
+    - SUBSTITUTABLE_WITH
+    - COMPLEMENTS
+    - COMPOSES_WITH
+    - FAILS_ON
+    - STRONG_ON
+    - SUPERSEDES
+    - VERSION_OF
+  canonical:
+    SelfModel_semantic_state: true
+  provider:
+    implementation: UNKNOWN
+  use:
+    - capability discovery
+    - route candidate enumeration
+    - composite strategy discovery
+# =====================================================================
+# 32. COMPOSITE CAPABILITIES
+# =====================================================================
+composite_capability_model:
+  principle: >
+    Quantum may possess a useful capability through a pipeline of weaker
+    capabilities even when no single model implements the capability directly.
+  CompositeCapability:
+    fields:
+      composite_capability_id:
+      target_capability_id:
+      component_implementation_refs:
+      composition_graph:
+      expected_quality:
+      expected_reliability:
+      expected_cost:
+      expected_latency:
+      known_failure_modes:
+      evidence_refs:
+  example:
+    target:
+      exact_character_handedness_video
+    composition:
+      - canonical_keyframe_generator
+      - pose_conditioning
+      - video_renderer
+      - deterministic_prop_compositor
+      - oracle_QC
+  importance: >
+    SelfModel should represent what Quantum as a system can do, not only what
+    individual providers can do.
+# =====================================================================
+# 33. DETERMINISTIC CAPABILITY MODEL
+# =====================================================================
+deterministic_capabilities:
+  importance: >
+    SelfModel includes deterministic media/software capabilities alongside
+    generative models.
+  examples:
+    - exact_text_rendering
+    - compositing
+    - masking
+    - timeline_edit
+    - audio_mix
+    - resampling
+    - transcoding
+    - color_transform
+    - subtitle_render
+    - frame_extraction
+    - graph_query
+  reliability_semantics:
+    expected:
+      deterministic_operations: approximately_1_when_preconditions_met
+  advantage:
+    - stable
+    - cheap
+    - reproducible
+    - high-confidence constraint enforcement
+  production_implication: >
+    ProductionModel may prefer deterministic methods for semantically invisible
+    operations or critical invariants.
+# =====================================================================
+# 34. SELF MODEL SNAPSHOT
+# =====================================================================
+self_model_snapshot:
+  SelfModelSnapshot:
+    fields:
+      self_model_revision:
+      previous_revision:
+      created_at:
+      provider_refs:
+      implementation_refs:
+      capability_state_refs:
+      active_degradation_refs:
+      capability_graph_digest:
+      observation_cutoff:
+      evidence_policy_version:
+      calibration_policy_version:
+      digest:
+  immutable: true
+  purpose:
+    - reproducible routing
+    - decision explanation
+    - historical reconstruction
+# =====================================================================
+# 35. SELF MODEL REVISION
+# =====================================================================
+self_model_revision:
+  revision_triggers:
+    - new implementation discovered
+    - implementation removed
+    - capability manifest changed
+    - new observed evidence materially changes estimate
+    - availability state changes
+    - degradation detected
+    - recovery detected
+    - price/latency materially changes
+    - calibration model updated
+    - implementation version changed
+    - failure mode discovered
+  revision_semantics:
+    monotonically_ordered: true
+  required_consumer_behavior:
+    consequential_route:
+      pin_revision: true
+# =====================================================================
+# 36. SELF SIGNALS
+# =====================================================================
+self_signals:
+  owner: SelfModel
+  signal_types:
+    discovery:
+      - SELF.IMPLEMENTATION_DISCOVERED
+      - SELF.CAPABILITY_DISCOVERED
+      - SELF.CAPABILITY_VERIFIED
+    availability:
+      - SELF.CAPABILITY_UNAVAILABLE
+      - SELF.CAPABILITY_DEGRADED
+      - SELF.CAPABILITY_RECOVERING
+      - SELF.CAPABILITY_RECOVERED
+    quality:
+      - SELF.QUALITY_REGRESSION
+      - SELF.QUALITY_IMPROVEMENT
+    calibration:
+      - SELF.CALIBRATION_DEGRADED
+      - SELF.CALIBRATION_IMPROVED
+    version:
+      - SELF.MODEL_VERSION_CHANGED
+      - SELF.ADAPTER_VERSION_CHANGED
+    economics:
+      - SELF.COST_CHANGED
+      - SELF.LATENCY_CHANGED
+      - SELF.CAPACITY_CHANGED
+    learning:
+      - SELF.FAILURE_MODE_DISCOVERED
+      - SELF.SUCCESS_PATTERN_DISCOVERED
+  SelfSignal:
+    fields:
+      signal_id:
+      signal_type:
+      SelfModel_revision:
+      subject_refs:
+      capability_refs:
+      severity:
+      salience_hint:
+      urgency:
+      confidence:
+      downstream_impact:
+      previous_state_ref:
+        nullable: true
+      current_state_ref:
+        nullable: true
+      evidence_refs:
+      deduplication_key:
+      created_at:
+      expires_at:
+        nullable: true
+  consumer:
+    primary: PolycognitiveRuntime
+# =====================================================================
+# 37. COGNITIVE ROUTING INTEGRATION
+# =====================================================================
+polycognitive_integration:
+  spec: 02_quantum_polycognitive_runtime_build_spec.yaml
+  runtime_consumes:
+    - SelfModelSnapshot
+    - CapabilityState
+    - CapabilitySuitability
+    - SelfSignals
+    - CapabilityLimits
+    - FailureModes
+    - cost/latency models
+  used_by:
+    - CapabilityRouter
+    - ExecutionOrchestrator
+    - ReasoningPolicy
+    - operator implementation selection
+    - degraded-mode handling
+  example:
+    invocation:
+      operator: narrative.deep_branch_reasoning
+      requirements:
+        - structured_output
+        - large_context
+        - deep_reasoning
+    SelfModel:
+      candidate_A:
+        quality: 0.94
+        latency: high
+        cost: high
+      candidate_B:
+        quality: 0.86
+        latency: low
+        cost: low
+    runtime_decision:
+      routine_decision: candidate_B
+      strategic_ending: candidate_A
+  boundary: >
+    SelfModel supplies facts; CognitiveExecutive and CapabilityRouter decide
+    which implementation best fits current reasoning needs.
+# =====================================================================
+# 38. PRODUCTION MODEL INTEGRATION
+# =====================================================================
+production_model_integration:
+  future_spec: 06_quantum_production_model_build_spec.yaml
+  consumes_from_self_model:
+    - available rendering capabilities
+    - observed renderer reliability
+    - task-conditioned failure surfaces
+    - cost
+    - latency
+    - throughput
+    - deterministic alternatives
+    - composite capabilities
+    - current degradation
+  conceptual_flow: |
+    ProductionIntent
+         +
+    Shot / Asset / World requirements
+         +
+    SelfModel(t)
+         ↓
+    ProductionModel(t)
+  example:
+    shot_requirement:
+      - character_identity_critical
+      - receiver_in_right_hand
+      - two_characters
+      - closeup
+    renderer_A:
+      hand_object_reliability: 0.58
+    renderer_B:
+      hand_object_reliability: 0.84
+    composite_pipeline:
+      reliability: 0.96
+    ProductionModel:
+      chooses: composite_pipeline
+  boundary: >
+    SelfModel does not decide that the composite pipeline should be used.
+    It supplies evidence supporting that production decision.
+# =====================================================================
+# 39. PRODUCTION ENGINE EVIDENCE INGESTION
+# =====================================================================
+production_engine_integration:
+  future_spec: 08_quantum_production_engine_build_spec.yaml
+  receives_evidence_from:
+    - render attempts
+    - job failures
+    - provider errors
+    - latency
+    - cost
+    - actual configuration
+    - output artifacts
+    - repair attempts
+  required_execution_receipt:
+    SelfModelExecutionReceipt:
+      fields:
+        execution_id:
+        implementation_id:
+        capability_ids:
+        task_feature_vector_ref:
+        configuration_digest:
+        started_at:
+        completed_at:
+        operational_status:
+        latency_ms:
+        cost:
+        artifact_refs:
+        error_refs:
+  QC_link:
+    artifact_quality_added_later: true
+# =====================================================================
+# 40. AUTONOMOUS QC EVIDENCE
+# =====================================================================
+qc_integration:
+  future_spec: 07_quantum_autonomous_qc_build_spec.yaml
+  QC_evidence:
+    primary_use:
+      - quality measurement
+      - failure mode detection
+      - calibration
+  CapabilityQCObservation:
+    fields:
+      observation_id:
+      execution_ref:
+      implementation_id:
+      capability_refs:
+      task_feature_vector_ref:
+      violation_codes:
+      quality_dimension_scores:
+      pass:
+      confidence:
+      critic_refs:
+      expected_vs_observed_refs:
+      created_at:
+  important_rule: >
+    A provider request succeeding technically is not equivalent to the capability
+    succeeding semantically.
+# =====================================================================
+# 41. COGNITIVE EXECUTION EVIDENCE
+# =====================================================================
+cognitive_execution_evidence:
+  sources:
+    - CognitiveInvocation
+    - CognitiveResult
+    - CognitiveTrace
+    - downstream decision outcome
+    - structured output validation
+  examples:
+    - model generated invalid schema
+    - reasoning implementation missed exact constraint
+    - deep reasoning implementation reduced uncertainty
+    - small model succeeded on routine operator
+  boundary: >
+    Cognitive operator utility belongs to Polycognitive Runtime; implementation
+    capability quality belongs to SelfModel.
+  distinction_example:
+    SelfModel:
+      learns:
+        model_X is reliable at structured JSON extraction
+    PolycognitiveRuntime:
+      learns:
+        operator epistemic.knowledge_asymmetry is valuable under certain signals
+# =====================================================================
+# 42. BENCHMARK ARCHITECTURE
+# =====================================================================
+benchmark_architecture:
+  purpose: >
+    Produce controlled evidence independent of live production workload.
+  CapabilityBenchmarkSuite:
+    fields:
+      suite_id:
+      version:
+      capability_ids:
+      task_distribution:
+      quality_dimensions:
+      hard_checks:
+      sample_count:
+      environment_requirements:
+      calibration_role:
+  benchmark_types:
+    smoke:
+      purpose: basic operation
+    regression:
+      purpose: detect behavioral change
+    calibration:
+      purpose: probability calibration
+    stress:
+      purpose: high-complexity limits
+    adversarial:
+      purpose: known difficult structures
+    style:
+      purpose: project/aesthetic capability variation
+  initial_video_stress_examples:
+    - visible_hands
+    - hand_object_interaction
+    - two_character_closeup
+    - identity_under_camera_rotation
+    - readable_text
+    - reflection
+    - occlusion
+    - long_duration
+    - costume_continuity
+  rule: >
+    Benchmarks should represent production-relevant feature distributions rather
+    than vanity metrics.
+# =====================================================================
+# 43. CAPABILITY REGRESSION TESTING
+# =====================================================================
+regression_testing:
+  trigger:
+    - implementation version change
+    - provider behavior change
+    - adapter change
+    - unexpected quality regression
+  process:
+    - identify affected capabilities
+    - run targeted benchmark subset
+    - compare against previous accepted baseline
+    - estimate significant deltas
+    - update confidence
+    - emit regression/improvement signals
+  outcomes:
+    - no_material_change
+    - improved
+    - degraded
+    - incompatible
+    - insufficient_evidence
+# =====================================================================
+# 44. EXPLORATION / UNDERUSED CAPABILITIES
+# =====================================================================
+capability_exploration:
+  problem: >
+    A capability that current routing policy rarely selects may stop collecting
+    evidence and become permanently invisible even if it improves.
+  solution:
+    governed_exploration: true
+  mechanisms:
+    - scheduled capability probes
+    - low-risk shadow production trials
+    - benchmark refresh
+    - new-version exploration
+    - policy-requested capability comparison
+  ExplorationCandidate:
+    fields:
+      implementation_id:
+      capability_id:
+      reason:
+      evidence_staleness:
+      potential_value:
+      exploration_cost:
+      risk:
+      approved_for_shadow:
+  invariant: >
+    Exploration never bypasses production/QC authority.
+# =====================================================================
+# 45. QUARANTINE
+# =====================================================================
+quarantine_model:
+  purpose: >
+    Prevent repeatedly harmful or unstable implementations from remaining
+    eligible merely because they are technically online.
+  QuarantineState:
+    fields:
+      quarantine_id:
+      implementation_id:
+      affected_capabilities:
+      reason:
+      evidence_refs:
+      entered_at:
+      reevaluation_after:
+      exit_conditions:
+  trigger_examples:
+    - critical schema corruption
+    - repeated silent content corruption
+    - severe calibration failure
+    - critical production violation cluster
+    - provider behavior incompatibility
+  routing:
+    quarantined_capability:
+      default_eligible: false
+# =====================================================================
+# 46. SELF MODEL QUERY API
+# =====================================================================
+query_API:
+  exact:
+    get_self_model:
+      input:
+        - revision_or_latest
+      output:
+        - SelfModelSnapshot
+    capability_state:
+      input:
+        - capability_id
+        - optional_implementation_id
+    implementation_state:
+      input:
+        - implementation_id
+    provider_state:
+      input:
+        - provider_id
+    capability_limits:
+      input:
+        - implementation_id
+        - capability_id
+    known_failure_modes:
+      input:
+        - implementation_id
+        - capability_id
+        - optional_task_features
+    explain_capability:
+      input:
+        - implementation_id
+        - capability_id
+        - optional_task_features
+    history_of_capability:
+      input:
+        - implementation_id
+        - capability_id
+  predictive:
+    estimate_suitability:
+      input:
+        - capability_requirement
+        - TaskFeatureVector
+        - constraints
+      output:
+        - ranked CapabilitySuitability
+    predict_failure:
+      input:
+        - implementation_id
+        - capability_id
+        - TaskFeatureVector
+    predict_quality:
+      input:
+        - implementation_id
+        - capability_id
+        - TaskFeatureVector
+    predict_cost:
+    predict_latency:
+  discovery:
+    list_capabilities:
+    list_implementations:
+    list_new_capabilities:
+    list_degraded_capabilities:
+    list_underexplored_capabilities:
+  evidence:
+    explain_estimate:
+      output:
+        - evidence_refs
+        - weighting
+        - confidence
+        - relevant failure modes
+        - relevant success patterns
+# =====================================================================
+# 47. CAPABILITY REQUIREMENT CONTRACT
+# =====================================================================
+capability_requirement:
+  CapabilityRequirement:
+    fields:
+      requirement_id:
+      capability_id:
+      required:
+        type: bool
+      minimum_operational_success:
+        nullable: true
+      minimum_quality_dimensions:
+        type: map
+      maximum_failure_probabilities:
+        type: map
+      maximum_latency:
+        nullable: true
+      maximum_cost:
+        nullable: true
+      hard_limits:
+        type: map
+      preferred_features:
+        type: map
+      task_feature_vector_ref:
+  owner:
+    producers:
+      - PolycognitiveRuntime
+      - ProductionModel
+  SelfModel_response:
+    - CapabilitySuitability
+# =====================================================================
+# 48. SELF MODEL INTERNAL REDUCER
+# =====================================================================
+self_model_reducer:
+  purpose: >
+    Deterministically construct current SelfModel state from evidence and active
+    estimation/calibration policies.
+  inputs:
+    - capability discovery events
+    - manifests
+    - observations
+    - availability observations
+    - degradation events
+    - calibration models
+    - evidence policy versions
+  outputs:
+    - SelfModelSnapshot
+  deterministic_given:
+    - same evidence ledger
+    - same policy versions
+    - same observation cutoff
+  forbidden:
+    - human quality assignment
+    - unversioned policy inference
+    - hidden provider assumptions
+# =====================================================================
+# 49. SELF MODEL EVENT LEDGER
+# =====================================================================
+self_model_event_ledger:
+  principle: >
+    Historical SelfModel changes should be reconstructable so Quantum can explain
+    what it believed about its own capabilities at any decision time.
+  SelfModelEvent:
+    event_types:
+      - IMPLEMENTATION_DISCOVERED
+      - IMPLEMENTATION_REMOVED
+      - CAPABILITY_DECLARED
+      - CAPABILITY_OBSERVED
+      - AVAILABILITY_CHANGED
+      - COST_CHANGED
+      - LATENCY_CHANGED
+      - FAILURE_MODE_DISCOVERED
+      - SUCCESS_PATTERN_DISCOVERED
+      - CALIBRATION_UPDATED
+      - DEGRADATION_STARTED
+      - DEGRADATION_ENDED
+      - IMPLEMENTATION_VERSION_CHANGED
+      - QUARANTINE_STARTED
+      - QUARANTINE_ENDED
+    fields:
+      event_id:
+      event_type:
+      subject_refs:
+      evidence_refs:
+      recorded_at:
+      sequence:
+      policy_versions:
+      digest:
+  benefit:
+    - reproducibility
+    - auditability
+    - routing postmortem
+    - learning
+# =====================================================================
+# 50. SELF MODEL VS PRODUCTION EXPERIENCE
+# =====================================================================
+self_vs_production_experience:
+  distinction:
+    SelfModel:
+      asks: >
+        How capable is implementation X at task structure Y right now?
+    ProductionExperience:
+      asks: >
+        Which manufacturing strategy works best for film requirement Z?
+  example:
+    SelfModel:
+      fact: >
+        Renderer A has 0.62 hand-object consistency under this feature slice.
+    ProductionModel:
+      experience: >
+        Pose conditioning + layered prop composite reduces this failure class.
+  result:
+    ProductionModel:
+      may_select: composite_strategy
+  rule: >
+    SelfModel models tool/system capability. ProductionModel models manufacturing
+    policy using those capabilities.
+# =====================================================================
+# 51. SELF MODEL VS OPERATOR EXPERIENCE
+# =====================================================================
+self_vs_cognitive_experience:
+  distinction:
+    SelfModel:
+      learns:
+        - reasoning model A schema reliability
+        - reasoning model A latency
+        - reasoning model A exactness
+        - graph tool path-query performance
+    PolycognitiveRuntime:
+      learns:
+        - when narrative.promise_intersection is useful
+        - when reasoning depth should escalate
+        - which cognitive domain combination improves a decision
+  rule: >
+    Implementation competence and reasoning-strategy utility are different learning problems.
+# =====================================================================
+# 52. NO-HUMAN-AUTHORING ENFORCEMENT
+# =====================================================================
+human_authoring_enforcement:
+  forbidden_ingress:
+    - creative.yaml
+    - quantum.studio.yaml
+    - creator profile
+    - project configuration
+    - manual dashboard edits
+  capability_claim_from_human:
+    classification: non_authoritative_observation_request
+  example:
+    human_statement:
+      >
+      Renderer X seems great at hands.
+    allowed_system_effect:
+      - create capability probe request
+    forbidden_system_effect:
+      - set hand_reliability = 0.95
+  administrator_configuration:
+    allowed:
+      - provider credentials
+      - provider endpoint
+      - adapter enabling
+      - budget/usage policy
+      - infrastructure access
+    not_allowed:
+      - semantic capability truth
+# =====================================================================
+# 53. PROVIDER CONFIG VS SELF TRUTH
+# =====================================================================
+configuration_boundary:
+  configuration:
+    examples:
+      - API endpoint
+      - credential reference
+      - region
+      - enabled provider
+      - quota
+    owner:
+      infrastructure_configuration
+  self_truth:
+    examples:
+      - provider available
+      - model supports reference image
+      - actual quality
+      - actual reliability
+      - actual latency
+    owner:
+      SelfModel
+  key_law: >
+    Being configured does not mean being capable.
+# =====================================================================
+# 54. FAILURE ATTRIBUTION
+# =====================================================================
+failure_attribution:
+  purpose: >
+    Prevent SelfModel from blaming the wrong implementation when failure arises
+    elsewhere in a composite production/cognitive chain.
+  FailureAttribution:
+    fields:
+      attribution_id:
+      failed_artifact_or_decision_ref:
+      candidate_causes:
+        type: list[FailureCauseProbability]
+      selected_primary_cause:
+        nullable: true
+      uncertainty:
+      evidence_refs:
+  cause_categories:
+    - implementation_capability
+    - input_quality
+    - invalid_world_constraint
+    - bad_production_strategy
+    - bad_cognitive_decision
+    - adapter_failure
+    - provider_outage
+    - deterministic_pipeline_bug
+    - QC_false_positive
+    - unknown
+  update_rule: >
+    Capability reliability should only be updated proportional to attributed
+    responsibility and attribution confidence.
+# =====================================================================
+# 55. CORRELATED FAILURE
+# =====================================================================
+correlated_failure_model:
+  purpose: >
+    Avoid treating failures as independent when implementations share model
+    families, providers or pipeline dependencies.
+  CorrelatedFailureGroup:
+    fields:
+      group_id:
+      member_implementation_refs:
+      shared_dependency_refs:
+      correlation_type:
+      estimated_correlation:
+      evidence_refs:
+  examples:
+    - same_underlying_model_different_endpoint
+    - same_provider_region
+    - same_reference_encoder
+    - same_composite_pipeline_dependency
+  use:
+    - fallback planning
+    - route diversification
+    - reliability estimation
+# =====================================================================
+# 56. COMPOSITE SYSTEM SELF-KNOWLEDGE
+# =====================================================================
+system_capability_model:
+  SystemCapabilityState:
+    purpose: >
+      Represent what Quantum as a whole can achieve through compositions.
+    fields:
+      system_capability_id:
+      target_capability_id:
+      known_strategies:
+        type: list[CompositeCapabilityRef]
+      best_observed_quality:
+      best_observed_reliability:
+      cheapest_known_strategy:
+      fastest_known_strategy:
+      highest_confidence_strategy:
+      current_availability:
+      SelfModel_revision:
+  examples:
+    - exact_visible_text_in_animation
+    - recurring_character_identity
+    - dialogue_closeup_with_lip_sync
+    - deterministic_subtitle_burnin
+    - multi_pass_continuity_repair
+# =====================================================================
+# 57. QUALITY-TIER CONDITIONAL SELF MODEL
+# =====================================================================
+quality_tier_model:
+  purpose: >
+    Capability may differ depending on required quality tier.
+  QualityTier:
+    - prototype
+    - preview
+    - standard
+    - premium
+    - flagship
+  example:
+    renderer_A:
+      prototype_suitability: preferred
+      flagship_hand_object_closeup: unsuitable
+  benefit: >
+    The same tool may remain valuable for cheap branch visualization while being
+    inappropriate for final production.
+# =====================================================================
+# 58. REASONING-TIER CONDITIONAL SELF MODEL
+# =====================================================================
+reasoning_tier_model:
+  use:
+    PolycognitiveRuntime
+  tiers:
+    - reflex
+    - routine
+    - deliberative
+    - strategic
+  example:
+    small_reasoning_model:
+      routine:
+        expected_success: 0.94
+      strategic:
+        expected_success: 0.61
+    deep_reasoning_model:
+      routine:
+        expected_success: 0.97
+      strategic:
+        expected_success: 0.93
+  implication: >
+    SelfModel supports reasoning-depth-aware implementation routing without
+    deciding which depth is required.
+# =====================================================================
+# 59. SELF MODEL LEARNING PIPELINE
+# =====================================================================
+learning_pipeline:
+  flow:
+    - ingest immutable observation
+    - validate provenance
+    - attribute outcome
+    - extract TaskFeatureVector
+    - map affected capabilities
+    - update conditional aggregates
+    - update failure/success patterns
+    - recalibrate estimates where threshold reached
+    - detect changepoints
+    - build candidate new SelfModelSnapshot
+    - validate calibration/regression
+    - promote new SelfModel revision
+    - emit material change signals
+  automatic:
+    evidence_ingestion: true
+    aggregate_update: true
+    signal_generation: true
+  governed:
+    estimation_policy_change: true
+    feature_schema_change: true
+    calibration_model_change: true
+# =====================================================================
+# 60. SELF MODEL POLICY GOVERNANCE
+# =====================================================================
+policy_governance:
+  governed_policies:
+    - evidence_weight_policy
+    - evidence_decay_policy
+    - reliability_estimator
+    - quality_estimator
+    - calibration_policy
+    - changepoint_policy
+    - failure_attribution_policy
+    - exploration_policy
+  lifecycle:
+    - candidate
+    - offline_evaluated
+    - holdout_evaluated
+    - shadow
+    - canary
+    - accepted
+    - rolled_back
+  hard_rule: >
+    Estimation-policy updates may alter SelfModel beliefs but may not be silently
+    deployed without validation because all downstream routing depends on them.
+# =====================================================================
+# 61. ANTI-SELF-DECEPTION
+# =====================================================================
+anti_self_deception:
+  threats:
+    - evaluating capability only using easy tasks
+    - trusting provider declarations
+    - circular QC evidence
+    - overfitting recent successful samples
+    - undercounting silent failures
+    - blaming production strategy failures on model capability
+    - failing to retest unused capabilities
+    - carrying confidence across major version changes
+  controls:
+    - randomized benchmark sampling
+    - adversarial suites
+    - real-production evidence
+    - independent hard validators
+    - multiple critic evidence where appropriate
+    - failure attribution
+    - calibration
+    - version isolation
+    - shadow exploration
+    - holdout test sets
+# =====================================================================
+# 62. SELF MODEL DATA RETENTION
+# =====================================================================
+data_retention:
+  retain_long_term:
+    - immutable capability observations
+    - benchmark history
+    - historical SelfModel revisions
+    - major degradation events
+    - failure modes
+    - success patterns
+    - calibration history
+  compactable:
+    - high-volume raw telemetry after aggregates verified
+  high_frequency_health:
+    retention:
+      detailed: short_to_medium
+      aggregates: long_term
+  principle: >
+    SelfModel should retain enough history to explain capability evolution and
+    detect recurring degradation.
+# =====================================================================
+# 63. DURABLE MEMORY INTEGRATION
+# =====================================================================
+memory_integration:
+  l9_memory:
+    role:
+      - semantic retrieval of historical capability incidents
+      - failure/success narrative recall
+      - provider-change history
+      - production/cognitive experience discovery
+  exact_self_truth:
+    owner: SelfModel exact stores
+  rule: >
+    Semantic memory may retrieve historical capability evidence but cannot set
+    current CapabilityState directly.
+# =====================================================================
+# 64. STALENESS
+# =====================================================================
+staleness_model:
+  highly_time_sensitive:
+    - availability
+    - rate limits
+    - provider health
+    - queue latency
+    - active degradation
+  medium_time_sensitive:
+    - price
+    - latency distribution
+    - throughput
+    - hosted generative quality
+  slowly_changing:
+    - deterministic-tool reliability
+    - semantic capability definitions
+  query_result:
+    required:
+      - observed_at
+      - freshness
+      - confidence
+  routing_rule: >
+    Consequential routing must reject materially stale live operational state
+    where freshness is required.
+# =====================================================================
+# 65. SELF MODEL CACHE
+# =====================================================================
+cache_model:
+  cacheable:
+    - historical capability state
+    - stable deterministic capabilities
+    - benchmark aggregates
+  short_TTL:
+    - live availability
+    - rate limit
+    - queue load
+  cache_key:
+    - SelfModel_revision
+    - capability_id
+    - implementation_id
+    - TaskFeatureVector_digest
+# =====================================================================
+# 66. CONSISTENCY MODEL
+# =====================================================================
+consistency:
+  observation_ledger:
+    mode: append_only_strong
+  SelfModel_revision:
+    mode: immutable_versioned
+  live_health:
+    mode: eventually_consistent_short_TTL
+  capability_graph:
+    mode: rebuildable_projection
+  semantic_memory:
+    mode: eventual
+  rule: >
+    Consumers pin a SelfModel revision for consequential decisions but may query
+    live availability immediately before execution.
+# =====================================================================
+# 67. CONCURRENCY
+# =====================================================================
+concurrency_model:
+  evidence_ingestion:
+    parallel: true
+  snapshot_generation:
+    strategy:
+      - optimistic base revision
+      - atomic revision publish
+  conflicting_observations:
+    behavior:
+      - retain both
+      - update distributions
+      - do not last-write-win
+  live_health:
+    newer_observation_supersedes_for_current_state:
+      only_if_same_health_dimension: true
+# =====================================================================
+# 68. FAILURE MODES OF SELF MODEL
+# =====================================================================
+self_model_failure_modes:
+  STORE_UNAVAILABLE:
+    effect:
+      - freeze last verified SelfModel snapshot
+      - mark freshness degradation
+  DISCOVERY_FAILURE:
+    effect:
+      - existing capability state continues
+      - new capability discovery unavailable
+  TELEMETRY_LOSS:
+    effect:
+      - confidence decays
+      - live state may become unknown
+  CALIBRATION_FAILURE:
+    effect:
+      - use last accepted calibration model
+      - disable new calibration promotion
+  ESTIMATOR_CORRUPTION:
+    effect:
+      - rollback previous estimator
+      - rebuild SelfModel revision
+  PROVIDER_MANIFEST_CONFLICT:
+    effect:
+      - retain declared discrepancy
+      - observed evidence preferred
+  HEALTH_SIGNAL_STALE:
+    effect:
+      - availability becomes unknown/low confidence
+  FAILURE_ATTRIBUTION_UNKNOWN:
+    effect:
+      - partial/no capability penalty rather than arbitrary blame
+# =====================================================================
+# 69. DEGRADED MODES
+# =====================================================================
+degraded_modes:
+  LAST_VERIFIED_SNAPSHOT:
+    use_when: SelfModel updater unavailable
+    limitation: freshness declines
+  DECLARED_PLUS_PROBE:
+    use_when: insufficient production evidence for new capability
+    limitation: route only low-risk/experimental tasks
+  NO_LIVE_HEALTH:
+    use_when: health telemetry unavailable
+    behavior:
+      - runtime probes before consequential use
+  NO_LEARNED_ESTIMATOR:
+    use_when: learned reliability model unavailable
+    behavior:
+      - deterministic conditional aggregates
+      - conservative confidence intervals
+# =====================================================================
+# 70. RECOVERY
+# =====================================================================
+recovery:
+  ordered_steps:
+    - restore CapabilityOntology
+    - restore provider/implementation registry
+    - verify observation ledger
+    - restore last accepted estimator/calibration policies
+    - reconstruct SelfModelSnapshot
+    - reconnect live health monitors
+    - compare live discovered implementations
+    - detect missed version changes
+    - run targeted probes
+    - publish recovered SelfModel revision
+    - emit material change signals
+  invariant: >
+    Recovery may change current capability belief but never rewrites historical
+    observations.
+# =====================================================================
+# 71. IDEMPOTENCY
+# =====================================================================
+idempotency:
+  observations:
+    key:
+      - source_execution_ref
+      - observation_type
+      - capability_id
+      - evaluator_version
+  provider_manifest:
+    key:
+      - implementation_id
+      - manifest_digest
+  benchmark_result:
+    key:
+      - suite_id
+      - suite_version
+      - implementation_id
+      - sample_id
+      - configuration_digest
+  SelfModel_revision:
+    same_evidence_cutoff_same_policy:
+      deterministic_digest_expected: true
+# =====================================================================
+# 72. OBSERVABILITY
+# =====================================================================
+observability:
+  discovery_metrics:
+    - providers_discovered
+    - implementations_discovered
+    - capabilities_discovered
+    - unverified_capabilities
+    - capability_probe_success_rate
+  reliability_metrics:
+    - observations_per_capability
+    - effective_sample_size
+    - calibration_error
+    - confidence_distribution
+  availability_metrics:
+    - capability_availability
+    - provider_error_rate
+    - provider_degradation_duration
+    - recovery_time
+  learning_metrics:
+    - new_failure_modes
+    - new_success_patterns
+    - regression_detection_count
+    - improvement_detection_count
+  routing_support_metrics:
+    - unsuitable_pre_execution_prevention_count
+    - capability_unknown_rate
+    - experimental_route_rate
+    - route_estimate_error
+  economic_metrics:
+    - cost_estimation_error
+    - latency_estimation_error
+    - throughput_estimation_error
+  institutional_metrics:
+    - capability_prediction_accuracy_over_time
+    - first_attempt_failure_reduction_due_to_SelfModel
+    - wasted_attempts_prevented
+    - newly_discovered_capability_utilization
+# =====================================================================
+# 73. SECURITY
+# =====================================================================
+security:
+  principles:
+    - provider credentials isolated from SelfModel semantic state
+    - adapters least privilege
+    - capability discovery cannot grant authority
+    - execution evidence cannot inject arbitrary capability schemas
+    - signed/validated internal adapter manifests preferred
+  untrusted_provider_manifest:
+    behavior:
+      - treat as low-authority declaration
+      - validate schema
+      - probe behavior
+  human_input:
+    cannot_modify_capability_truth: true
+# =====================================================================
+# 74. PRIVACY
+# =====================================================================
+privacy:
+  avoid_storing:
+    - creator personal information
+    - unnecessary production content payloads
+    - secrets
+    - credentials
+  task_feature_vectors:
+    should_prefer:
+      - abstract structural features
+      - content-independent descriptors
+  artifacts:
+    store_refs_not_content_where_possible: true
+# =====================================================================
+# 75. PERFORMANCE
+# =====================================================================
+performance:
+  objectives:
+    - low-latency current capability query
+    - incremental evidence updates
+    - conditional estimation caching
+    - asynchronous heavy recalibration
+    - immediate degradation signal path
+  initial_targets:
+    capability_state_query_p95_ms:
+      target: 100
+    suitability_query_p95_ms:
+      target: 250
+    live_health_query_p95_ms:
+      target: 100
+    degradation_detection_seconds:
+      target: 60
+      condition: sufficient traffic_or_active_probe
+    new_capability_discovery_minutes:
+      target: 10
+      condition: discoverable_provider_or_registry
+  recalibration:
+    may_be_asynchronous: true
+# =====================================================================
+# 76. SCALABILITY
+# =====================================================================
+scalability:
+  expected_dimensions:
+    - hundreds_of_capabilities
+    - hundreds_to_thousands_of_implementation_versions
+    - millions_of_observations
+    - large_task_feature_space
+    - high_frequency_live_health
+  partition_keys:
+    - provider_id
+    - implementation_id
+    - capability_id
+    - time_window
+  aggregate_strategy:
+    - conditional materialized aggregates
+    - feature-bucket indexes
+    - approximate models for high-dimensional task space
+  requirement: >
+    Suitability queries must not scan the raw observation ledger.
+# =====================================================================
+# 77. STORAGE ABSTRACTIONS
+# =====================================================================
+storage_abstractions:
+  ports:
+    - CapabilityOntologyStorePort
+    - ProviderRegistryPort
+    - ImplementationRegistryPort
+    - ManifestStorePort
+    - CapabilityObservationStorePort
+    - CapabilityStateStorePort
+    - SelfModelRevisionStorePort
+    - FailureModeStorePort
+    - SuccessPatternStorePort
+    - BenchmarkStorePort
+    - HealthObservationStorePort
+    - CalibrationStorePort
+    - CapabilityGraphPort
+    - SelfSignalStorePort
+  provider_independent: true
+  implementation_provider:
+    status: UNKNOWN
+# =====================================================================
+# 78. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  discovery:
+    - discover
+    - refresh_provider
+    - refresh_implementation
+    - inspect_manifest
+    - probe_capability
+  observation:
+    - record_observation
+    - record_health
+    - record_QC_observation
+    - record_benchmark_result
+  query:
+    - get_self_model
+    - capability_state
+    - implementation_state
+    - provider_state
+    - estimate_suitability
+    - predict_quality
+    - predict_failure
+    - predict_cost
+    - predict_latency
+    - explain_capability
+    - known_failure_modes
+    - known_success_patterns
+  learning:
+    - rebuild_capability_state
+    - calibrate
+    - detect_regression
+    - detect_degradation
+    - evaluate_estimator_candidate
+  exploration:
+    - list_underexplored
+    - schedule_probe
+    - schedule_shadow_test
+  administrative:
+    - quarantine
+    - unquarantine
+    - rollback_estimation_policy
+  forbidden:
+    - manually_set_reliability
+    - manually_set_quality
+    - manually_set_capability_truth
+# =====================================================================
+# 79. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/self_model/
+  modules:
+    contracts:
+      - common
+      - identifiers
+      - evidence
+      - revisions
+    ontology:
+      - capability
+      - task_features
+      - quality_dimensions
+    providers:
+      - provider_identity
+      - implementation_identity
+      - manifests
+      - discovery
+    probing:
+      - probes
+      - suites
+      - execution
+    observations:
+      - capability
+      - health
+      - QC
+      - benchmarks
+    state:
+      - capability_state
+      - self_snapshot
+      - reducer
+    reliability:
+      - aggregates
+      - conditional_model
+      - success_patterns
+    quality:
+      - conditional_quality
+    failures:
+      - failure_modes
+      - attribution
+      - correlation
+      - quarantine
+    availability:
+      - health
+      - degradation
+      - changepoint
+    economics:
+      - cost
+      - latency
+      - throughput
+    calibration:
+      - bins
+      - calibrator
+      - validation
+    suitability:
+      - estimator
+      - explanations
+    composites:
+      - capability_graph
+      - composite_capability
+      - system_capability
+    exploration:
+      - underused
+      - shadow
+      - refresh
+    signals:
+      - self_signals
+    learning:
+      - evidence_weights
+      - decay
+      - policy_governance
+    integrations:
+      polycognitive_runtime:
+      production_model:
+      production_engine:
+      autonomous_qc:
+      l9_memory:
+    ports:
+      - stores
+      - graph
+# =====================================================================
+# 80. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  ontology:
+    - CapabilityDefinition
+    - CapabilityRef
+    - TaskFeatureVector
+    - CapabilityRequirement
+    - QualityDimension
+  provider:
+    - ProviderIdentity
+    - ImplementationIdentity
+    - DeclaredCapabilityManifest
+    - DeclaredCapability
+    - CapabilityLimits
+  observations:
+    - CapabilityObservation
+    - ObservationEnvironment
+    - CapabilityProbe
+    - CapabilityProbeResult
+    - SelfModelExecutionReceipt
+    - CapabilityQCObservation
+  state:
+    - CapabilityState
+    - SelfModelSnapshot
+    - SelfModelEvent
+    - SystemCapabilityState
+  reliability:
+    - ConditionalReliabilityModel
+    - ReliabilitySlice
+    - ConditionalQualityModel
+    - ConditionalQualityDimension
+    - ConditionalFailureModel
+  failure:
+    - FailureMode
+    - FailureAttribution
+    - CorrelatedFailureGroup
+    - QuarantineState
+  success:
+    - SuccessPattern
+  operational:
+    - ImplementationAvailability
+    - CapabilityDegradation
+    - CostModel
+    - LatencyModel
+    - ThroughputModel
+  calibration:
+    - CalibrationState
+    - CalibrationBin
+  suitability:
+    - CapabilitySuitability
+  composition:
+    - CompositeCapability
+  exploration:
+    - ExplorationCandidate
+  signals:
+    - SelfSignal
+# =====================================================================
+# 81. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    discovery:
+      - provider_discovery
+      - implementation_version_detection
+      - capability_manifest_parse
+    authority:
+      - human_cannot_set_capability_truth
+      - provider_manifest_not_observed_truth
+    evidence:
+      - immutable_observation
+      - evidence_weighting
+      - recency_decay
+      - task_similarity_weighting
+    reliability:
+      - conditional_slice_updates
+      - confidence_interval
+      - unrelated_failure_does_not_affect_unrelated_slice
+    calibration:
+      - calibration_bin_accuracy
+      - overconfidence_detection
+    failure:
+      - failure_mode_match
+      - failure_attribution
+      - quarantine_trigger
+    availability:
+      - degradation_detection
+      - stale_health_becomes_unknown
+      - recovery_signal
+    suitability:
+      - task_conditioned_estimate
+      - unavailable_implementation_rejected
+      - critical_failure_mode_penalty
+    composites:
+      - composite_capability_estimation
+      - deterministic_component_integration
+    signals:
+      - deduplication
+      - material_change_only
+# =====================================================================
+# 82. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - human_input_never_changes_capability_state_directly
+  - declared_capability_never_equals_verified_capability_automatically
+  - same_observation_ledger_same_policy_same_SelfModel_digest
+  - unrelated_task_failure_does_not_degrade_unrelated_capability_slice
+  - capability_version_change_reduces_inherited_confidence
+  - stale_live_health_never_remains_high_confidence_forever
+  - quarantined_implementation_not_route_eligible_by_default
+  - semantic_memory_loss_does_not_change_exact_SelfModel_state
+  - same_evidence_never_double_counts_through_idempotency
+  - SelfModel_never_selects_creative_or_production_strategy
+  - observed_capability_can_override_declared_capability
+  - unknown_evidence_remains_unknown_not_fabricated
+# =====================================================================
+# 83. NEGATIVE TESTS
+# =====================================================================
+negative_tests:
+  - creative_yaml_sets_renderer_quality_rejected
+  - administrator_dashboard_sets_reliability_rejected
+  - provider_claim_used_as_high_confidence_without_probe_rejected
+  - old_model_version_evidence_full_transfer_rejected
+  - successful_easy_task_updates_hard_task_slice_rejected
+  - failed_composite_strategy_blames_single_model_without_attribution_rejected
+  - current_availability_inferred_from_old_benchmark_rejected
+  - one_global_renderer_score_rejected
+  - SelfModel_direct_ProductionModel_mutation_rejected
+  - SelfModel_direct_cognitive_route_commit_rejected
+  - tool_discovery_grants_authority_rejected
+  - learned_estimator_self_promotion_rejected
+# =====================================================================
+# 84. INTEGRATION TESTS
+# =====================================================================
+integration_tests:
+  - provider_discovery_to_manifest_to_probe
+  - probe_to_CapabilityObservation_to_CapabilityState
+  - production_attempt_to_QC_to_SelfModel_update
+  - cognitive_execution_to_SelfModel_capability_update
+  - degradation_to_SelfSignal_to_PolycognitiveRuntime
+  - SelfModel_to_CapabilityRouter
+  - SelfModel_to_ProductionModel
+  - new_model_version_to_regression_suite
+  - failure_attribution_to_conditional_reliability_update
+  - capability_exploration_to_shadow_test
+  - SelfModel_snapshot_to_historical_route_explanation
+# =====================================================================
+# 85. END-TO-END TESTS
+# =====================================================================
+end_to_end_tests:
+  automatic_new_renderer_discovery:
+    sequence:
+      - new provider implementation becomes available
+      - discovery detects implementation
+      - declared manifest ingested
+      - basic probe executes
+      - capability-specific benchmark executes
+      - initial CapabilityState created
+      - confidence below premium threshold
+      - capability becomes eligible for experimental/prototype tasks
+      - production evidence accumulates
+      - AutonomousQC observations ingested
+      - calibration improves
+      - capability becomes premium-route eligible
+      - SELF.CAPABILITY_VERIFIED emitted
+    success:
+      - no architecture change
+      - no human capability score
+      - capability eventually utilized when relevant
+  renderer_degradation:
+    initial:
+      renderer_A:
+        hand_object_success: 0.91
+    sequence:
+      - provider silently changes implementation behavior
+      - production failures increase
+      - QC detects handedness drift
+      - SelfModel changepoint detector fires
+      - capability slice decreases to degraded
+      - SELF.CAPABILITY_DEGRADED emitted
+      - ProductionModel replans uncommitted affected shots
+      - accepted prior shots preserved
+      - provider later recovers
+      - targeted probes pass
+      - SELF.CAPABILITY_RECOVERED emitted
+    success:
+      - no human intervention
+      - no creative semantic change
+  model_specialization:
+    implementations:
+      renderer_A:
+        strengths:
+          - camera_motion
+          - environment_scale
+        weaknesses:
+          - hand_object_interaction
+      renderer_B:
+        strengths:
+          - closeup_identity
+          - hand_object_interaction
+        weaknesses:
+          - long_camera_motion
+    sequence:
+      - observations accumulate
+      - conditional capability surfaces diverge
+      - SelfModel captures both strengths
+      - ProductionModel uses A for monumental environment shot
+      - ProductionModel uses B for receiver closeup
+    success:
+      - no single "best renderer" assumption
+  cognitive_model_routing:
+    implementations:
+      reasoning_fast:
+        routine_reliability: 0.96
+        strategic_reliability: 0.68
+        cost: low
+      reasoning_deep:
+        routine_reliability: 0.98
+        strategic_reliability: 0.95
+        cost: high
+    sequence:
+      - SelfModel observes conditional cognition capability
+      - Polycognitive Runtime selects fast model for routine cognition
+      - Runtime selects deep model for ending decision
+    success:
+      - SelfModel reports competence
+      - Runtime decides reasoning allocation
+# =====================================================================
+# 86. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: SM-G01
+    check: capability truth cannot be human-authored
+  - id: SM-G02
+    check: declared capability and observed capability are separate
+  - id: SM-G03
+    check: capability ontology is provider independent
+  - id: SM-G04
+    check: capability estimates are task-conditioned
+  - id: SM-G05
+    check: live availability and semantic quality are separate
+  - id: SM-G06
+    check: SelfModel represents confidence/calibration
+  - id: SM-G07
+    check: failure modes are first-class
+  - id: SM-G08
+    check: model/provider version changes trigger evidence revalidation
+  - id: SM-G09
+    check: old evidence decays appropriately
+  - id: SM-G10
+    check: real production and QC evidence update capability estimates
+  - id: SM-G11
+    check: failure attribution prevents inappropriate global penalties
+  - id: SM-G12
+    check: new capabilities automatically enter discovery/probe flow
+  - id: SM-G13
+    check: unused capabilities remain discoverable through exploration
+  - id: SM-G14
+    check: degraded capability emits typed SelfSignal
+  - id: SM-G15
+    check: Polycognitive Runtime can route cognition from SelfModel evidence
+  - id: SM-G16
+    check: ProductionModel can route manufacturing from SelfModel evidence
+  - id: SM-G17
+    check: SelfModel itself does not make route/creative decisions
+  - id: SM-G18
+    check: composite system capabilities are representable
+  - id: SM-G19
+    check: historical SelfModel revision reconstructs decision-time belief
+  - id: SM-G20
+    check: estimation policies cannot self-promote
+# =====================================================================
+# 87. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  discovery:
+    - providers discoverable
+    - implementations discoverable
+    - model/tool version changes detectable
+    - declared manifests machine-ingestible
+  ontology:
+    - provider-independent CapabilityOntology exists
+    - TaskFeatureVector exists
+    - quality dimensions extensible
+  observed_capability:
+    - immutable CapabilityObservation exists
+    - production evidence ingested
+    - cognitive execution evidence ingested
+    - AutonomousQC evidence ingested
+  reliability:
+    - conditional reliability modeled
+    - confidence intervals modeled
+    - evidence recency/task similarity accounted for
+  quality:
+    - multidimensional quality modeled
+    - task-conditioned quality modeled
+    - provider global quality score avoided
+  failure:
+    - FailureMode modeled
+    - failure attribution modeled
+    - correlated failures modeled
+    - quarantine supported
+  operational:
+    - current availability modeled
+    - degradation/recovery modeled
+    - cost modeled
+    - latency modeled
+    - throughput modeled
+    - limits modeled
+  calibration:
+    - predictions calibrated
+    - overconfidence detectable
+    - calibration versioned
+  routing_support:
+    - CapabilitySuitability generated
+    - explanations include evidence
+    - consumers pin SelfModel revision
+    - live health can be refreshed immediately before execution
+  composites:
+    - deterministic + generative composite capabilities represented
+    - system-level capability represented
+  autonomy:
+    - newly added capability can become usable without manual architecture changes
+    - capability degradation reroutes downstream systems automatically
+    - SelfModel never requires human quality scoring
+  learning:
+    - capability observations continuously improve estimates
+    - underexplored capabilities periodically reevaluated
+    - estimator policies governed
+    - historical capability evolution retained
+  release:
+    requirement: >
+      SM-G01 through SM-G20 pass and no ownership conflict exists with specs
+      00 through 04.
+# =====================================================================
+# 88. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: SM-OD-01
+    decision: exact SelfModel observation/event store provider
+    status: UNKNOWN
+  - id: SM-OD-02
+    decision: initial CapabilityOntology breadth
+    status: OPEN
+    recommendation: >
+      Start with capabilities immediately required by MVP and design ontology
+      for extension.
+  - id: SM-OD-03
+    decision: reliability estimator family
+    status: BENCHMARK_REQUIRED
+    possible_start:
+      - Bayesian conditional aggregates
+      - calibrated logistic model
+      - hierarchical Bayesian model
+  - id: SM-OD-04
+    decision: high-dimensional TaskFeatureVector model
+    status: ITERATIVE
+  - id: SM-OD-05
+    decision: live health poll cadence by provider
+    status: PROVIDER_SPECIFIC
+  - id: SM-OD-06
+    decision: exploration budget
+    status: POLICY_REQUIRED
+  - id: SM-OD-07
+    decision: exact quarantine thresholds
+    status: CALIBRATION_REQUIRED
+  - id: SM-OD-08
+    decision: capability graph provider
+    status: UNKNOWN
+  - id: SM-OD-09
+    decision: composite capability automatic discovery method
+    status: FUTURE
+  - id: SM-OD-10
+    decision: production-level benchmark corpus
+    status: TO_DEFINE
+# =====================================================================
+# 89. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: SelfModel trusts provider marketing
+    control:
+      - declared vs observed separation
+      - probes
+      - calibrated evidence
+  - risk: SelfModel becomes stale
+    control:
+      - evidence decay
+      - active health
+      - changepoint detection
+      - periodic probes
+  - risk: new tools are never considered
+    control:
+      - capability discovery
+      - exploration
+      - underused capability detection
+  - risk: every tool is force-used
+    control:
+      - suitability rather than utilization quota
+  - risk: one global renderer leaderboard
+    control:
+      - conditional task features
+      - multidimensional quality
+  - risk: model failure incorrectly contaminates unrelated capability
+    control:
+      - feature slices
+      - failure attribution
+  - risk: model update silently invalidates evidence
+    control:
+      - implementation version identity
+      - confidence reset/transfer policy
+      - regression suite
+  - risk: recent noisy failures overcorrect SelfModel
+    control:
+      - calibrated evidence weighting
+      - confidence intervals
+      - changepoint significance
+  - risk: old success masks live degradation
+    control:
+      - live availability
+      - recency
+      - health windows
+  - risk: internal QC circularly validates model quality
+    control:
+      - hard validators
+      - multiple evidence sources
+      - benchmark holdouts
+      - later external evidence where relevant
+  - risk: SelfModel starts making strategic decisions
+    control:
+      - read-only consumer contract
+      - capability truth vs routing boundary
+  - risk: capability discovery grants unauthorized tool use
+    control:
+      - authority remains in runtime/production systems
+  - risk: human modifies capability score
+    control:
+      - no human-authoring API
+      - configuration/truth separation
+  - risk: provider outage creates system-wide stall
+    control:
+      - alternative capability graph
+      - composite capabilities
+      - degraded routing
+  - risk: composite capability estimation double-counts correlated dependencies
+    control:
+      - CorrelatedFailureGroup
+# =====================================================================
+# 90. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  - id: SMW1
+    name: ontology_identity_and_authority
+    depends_on:
+      - SYSTEM_ARCHITECTURE_00
+    targets:
+      - CapabilityOntology
+      - ProviderIdentity
+      - ImplementationIdentity
+      - no-human-authoring boundary
+    exit:
+      - semantic identities stable
+      - human mutation negative tests pass
+  - id: SMW2
+    name: discovery_manifests_and_probes
+    depends_on:
+      - SMW1
+    targets:
+      - CapabilityDiscoveryService
+      - DeclaredCapabilityManifest
+      - probes
+      - basic implementation lifecycle
+    exit:
+      - new implementation automatically discovered and tested
+  - id: SMW3
+    name: evidence_observations_and_task_features
+    depends_on:
+      - SMW2
+    targets:
+      - TaskFeatureVector
+      - CapabilityObservation
+      - evidence weighting
+      - observation ledger
+    exit:
+      - immutable evidence flows from real execution
+  - id: SMW4
+    name: conditional_reliability_quality_and_failure
+    depends_on:
+      - SMW3
+    targets:
+      - ConditionalReliabilityModel
+      - ConditionalQualityModel
+      - FailureMode
+      - SuccessPattern
+      - failure attribution
+    exit:
+      - task-conditioned performance estimable
+  - id: SMW5
+    name: live_operational_state
+    depends_on:
+      - SMW2
+      - SMW4
+    targets:
+      - availability
+      - latency
+      - cost
+      - throughput
+      - degradation
+      - changepoint detection
+    exit:
+      - live capability changes detected
+  - id: SMW6
+    name: calibration_and_suitability
+    depends_on:
+      - SMW4
+      - SMW5
+    targets:
+      - CalibrationState
+      - CapabilitySuitability
+      - explainability
+      - SelfModelSnapshot
+    exit:
+      - calibrated suitability query available
+  - id: SMW7
+    name: cognitive_and_production_integration
+    depends_on:
+      - SMW6
+      - POLYCOGNITIVE_RUNTIME_02_MINIMUM
+    targets:
+      - CapabilityRouter integration
+      - ProductionModel handoff contract
+      - SelfSignals
+    exit:
+      - cognition and production consume same SelfModel truth
+  - id: SMW8
+    name: capability_graph_composites_and_exploration
+    depends_on:
+      - SMW6
+    targets:
+      - CapabilityGraph
+      - CompositeCapability
+      - SystemCapabilityState
+      - exploration
+      - quarantine
+    exit:
+      - underused/new capability paths discoverable
+  - id: SMW9
+    name: learning_governance_recovery_and_scale
+    depends_on:
+      - SMW7
+      - SMW8
+    targets:
+      - estimator governance
+      - recovery
+      - observability
+      - scale
+      - regression suites
+    exit:
+      - definition_of_done passes
+# =====================================================================
+# 91. DEPENDENCY GRAPH
+# =====================================================================
+dependency_graph:
+  SMW1:
+    - SYSTEM_ARCHITECTURE_00
+  SMW2:
+    - SMW1
+  SMW3:
+    - SMW2
+  SMW4:
+    - SMW3
+  SMW5:
+    - SMW2
+    - SMW4
+  SMW6:
+    - SMW4
+    - SMW5
+  SMW7:
+    - SMW6
+    - POLYCOGNITIVE_RUNTIME_02_MINIMUM
+  SMW8:
+    - SMW6
+  SMW9:
+    - SMW7
+    - SMW8
+# =====================================================================
+# 92. ACCEPTANCE CRITERIA
+# =====================================================================
+acceptance_criteria:
+  machine_maintenance:
+    - no human-authored semantic capability truth
+    - SelfModel updates from machine evidence
+    - current model reconstructable historically
+  capability_discovery:
+    - new tools/models discovered automatically where adapters permit
+    - new versions detected
+    - declared manifests parsed
+    - verification probes executed
+  observed_truth:
+    - declared and observed capability separated
+    - observed capability dominates when sufficient evidence exists
+    - uncertainty remains explicit
+  conditionality:
+    - capability quality depends on TaskFeatureVector
+    - failure modes condition on task structure
+    - quality is multidimensional
+  live_operation:
+    - availability modeled separately from quality
+    - degradation/recovery detected
+    - signals emitted
+    - stale live state downgraded
+  calibration:
+    - predicted reliability calibrated
+    - overconfidence measurable
+    - evidence/version change lowers confidence where appropriate
+  system_awareness:
+    - deterministic tools modeled
+    - generative models modeled
+    - composite system capabilities modeled
+    - implementation alternatives discoverable
+  integration:
+    - Polycognitive Runtime routes cognitive implementations using SelfModel
+    - ProductionModel routes manufacturing strategies using SelfModel
+    - ProductionEngine and QC feed evidence back into SelfModel
+  explainability:
+    - suitability estimate explains evidence, failure risks and confidence
+    - historical route can reconstruct decision-time SelfModel revision
+  learning:
+    - real outcomes improve capability estimates
+    - unused capabilities remain eligible for reevaluation
+    - estimator policy changes governed
+  final: >
+    Quantum must maintain a continuously calibrated, machine-authored
+    understanding of its own changing capabilities sufficient for other
+    autonomous systems to make intelligent routing decisions without human
+    tool expertise.
+# =====================================================================
+# 93. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    SelfModel is authored by evidence, never by human opinion.
+  law_02: >
+    What a provider claims and what Quantum has observed are different facts.
+  law_03: >
+    Observed capability dominates declared capability when sufficiently calibrated.
+  law_04: >
+    Capability is conditional on task structure.
+  law_05: >
+    There is no universal "best model."
+  law_06: >
+    There is no single universal quality score for an implementation.
+  law_07: >
+    Availability, quality, reliability, latency, cost and throughput are
+    independent operational dimensions.
+  law_08: >
+    Old evidence does not remain eternally authoritative when implementations change.
+  law_09: >
+    Unknown capability remains unknown until evidence supports stronger belief.
+  law_10: >
+    New capabilities should become discoverable without architecture rewrites.
+  law_11: >
+    Every relevant capability should be considered; not every capability should
+    be artificially used.
+  law_12: >
+    Failure modes are first-class parts of Quantum's self-knowledge.
+  law_13: >
+    Failure evidence updates the smallest relevant capability surface.
+  law_14: >
+    Quantum as a whole may possess capabilities through composed pipelines that
+    no single provider possesses.
+  law_15: >
+    Deterministic tools are first-class capabilities alongside generative models.
+  law_16: >
+    SelfModel supplies capability truth; consuming systems choose strategies.
+  law_17: >
+    SelfModel revisions must be reconstructable so decisions can be explained
+    using what Quantum believed at the time.
+  law_18: >
+    Material degradation must propagate immediately through typed signals.
+  law_19: >
+    Capability estimates must be calibrated against real outcomes.
+  law_20: >
+    The end state is a Quantum Animation Agent that continuously discovers,
+    measures and understands its own tools well enough to exploit new capability
+    automatically, avoid known weakness proactively, and become operationally
+    smarter as the ecosystem around it changes.
+
+05 now closes an important autonomy loop:
+
+tools/models/providers
+        ↓
+discovery
+        ↓
+declared capabilities
+        ↓
+probes + benchmarks
+        ↓
+real cognitive / production execution
+        ↓
+Autonomous QC
+        ↓
+CapabilityObservation
+        ↓
+conditional reliability / quality / failures
+        ↓
+SelfModel(t)
+        ↓
+┌───────────────────────┬────────────────────────┐
+▼                       ▼                        ▼
+02 Cognitive routing    06 ProductionModel      degradation signals
+
+And the boundary is deliberately strict:
+
+SelfModel
+    = what Quantum CAN do
+Polycognitive Runtime
+    = which cognition SHOULD execute
+ProductionModel
+    = how the film SHOULD be manufactured
+ProductionEngine
+    = actually DO it
+
+The particularly high-leverage part is the conditional capability surface. Quantum will not learn a crude fact such as:
+
+Renderer A = 82% good
+
+It can learn something much more useful:
+
+Renderer A
+    monumental environment shot         → .96
+    single-character medium shot        → .93
+    two-character closeup                → .84
+    visible hand/object interaction      → .61
+    two-character hand/object closeup    → .51
+
+That is what eventually allows 06 to make genuinely intelligent manufacturing decisions rather than simply ranking providers.
+
+I’d consider 05 about 98% architecturally complete. The remaining uncertainty is largely empirical—what the initial capability ontology and task-feature vectors should contain, which reliability estimator works best once production data exists, and how aggressively Quantum should explore newly discovered capabilities.

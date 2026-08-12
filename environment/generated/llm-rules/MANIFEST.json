@@ -33,9 +33,9 @@
       "alias": null,
       "class": "always",
       "output": "02-slash-commands.md",
-      "output_sha256": "dc2f1107305467e99d29cb3d53faad1fdb4b281e7c7de7bdd81f327f149fc3fa",
+      "output_sha256": "303c458298f20704de754fb945ddb52f78cd7a4f1b17cdba34669e43d1ebab77",
       "source": "rules/02-slash-commands.mdc",
-      "source_sha256": "760117869bfd45ad00082f2039d167c1ab7c42e7fee44dac7ae317d73ca4ebe7",
+      "source_sha256": "f9346853fceaceda39291f61f6952d4b32301ea8e6aac184cfdfd1f8f0d8aeb4",
       "stem": "02-slash-commands"
     },
     {
@@ -429,9 +429,9 @@
       "alias": null,
       "class": "always",
       "output": "92-learned-lessons.md",
-      "output_sha256": "2e823acfda5ee425eb1cffd8fdd370dd721cbda65c9028ea7d921e09e31a087d",
+      "output_sha256": "eb244ec1f3f8b9a740de8b7c6f5cedb07db74fece3a0a8fdbe76bf4978c7b5f2",
       "source": "rules/92-learned-lessons.mdc",
-      "source_sha256": "f7a407576c935850821973f7dc98ff1cd973c44beecd746e45d0e3ee35f3e55d",
+      "source_sha256": "92d1d51420aa34fa0f447c8acf04602fbaaf917571a090c94cdf7f8cf15275d9",
       "stem": "92-learned-lessons"
     },
     {
@@ -591,9 +591,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "4a373384b9440dce335e61b67ca4c5dfa47883ca9db6a108e7bc6477a30ea0a8",
+      "output_sha256": "1a6dcef21b2d4f883535779dd1e7cedf5c07c06ec1a054d74073388eb2f93707",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "4ec7197399e340e6462962a1becf9a87f84c27d2d51bc3af04ab20006a91200e",
+      "source_sha256": "311cff8856b681319a38f6efbc4159bc8dc68ab508f2e16f1947e0db80e45636",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -605,5 +605,5 @@
     "skipped_agent_requested": 4,
     "source_mdc": 66
   },
-  "tree_sha256": "b68074d6436487569ed2649ab79107e88f942da73c718ad27930838ffc16236a"
+  "tree_sha256": "48358bacf88269f2753a3c4c084c5eda89c6fe89252265712e739718de2cf245"
 }

@@ -1,0 +1,2729 @@
+metadata:
+  spec_id: quantum.animation.audience_product_intelligence.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Audience and Product Intelligence
+  depends_on:
+    - spec_id: quantum.animation.system_architecture.v1
+      file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_DEPENDENCY
+    - spec_id: quantum.animation.creative_intelligence.build_spec.v1
+      file: 03_quantum_creative_intelligence_build_spec.yaml
+      relationship: PROJECT_INTENT_DEPENDENCY
+    - spec_id: quantum.animation.polycognitive_runtime.build_spec.v1
+      file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: COGNITIVE_EXECUTION_DEPENDENCY
+    - spec_id: quantum.animation.world_model.build_spec.v2
+      file: 01_quantum_animation_world_model_build_spec.yaml
+      relationship: VIEWER_INFORMATION_STATE_DEPENDENCY
+  architectural_identity:
+    concise: >
+      Audience and Product Intelligence models who the work is for, what
+      experience it should create, and whether the resulting entertainment
+      product is sufficiently compelling, distinctive, legible and expandable.
+    extended: >
+      Quantum Audience and Product Intelligence transforms creative project
+      semantics into two related but distinct models. AudienceModel predicts
+      how intended viewers are likely to perceive, infer, feel, remember and
+      respond over time. ProductMarketModel evaluates the entertainment product
+      itself: premise legibility, hook strength, differentiation, accessibility,
+      repeatability, durable identity, platform fit and IP optionality.
+      Neither model owns creative intent. Both provide evidence-bearing
+      recommendations to the Polycognitive Runtime and Autonomous QC.
+  owner_questions:
+    AudienceModel:
+      - "Who is this for?"
+      - "What should happen to them while they watch?"
+      - "What should they understand, infer, feel and remember?"
+    ProductMarketModel:
+      - "Is this a compelling entertainment product?"
+      - "Is its promise immediately understandable?"
+      - "Is it distinctive enough to matter?"
+      - "Can it earn and retain attention?"
+      - "Can it sustain a series, season or durable IP when appropriate?"
+  not_owner_of:
+    - creator intent
+    - creator values
+    - fictional truth
+    - canonical World state
+    - production execution
+    - tool/model capability truth
+    - final creative authority
+    - marketing campaign operations
+    - distribution sales execution
+    - back-office commercialization
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Help Quantum design work that is not merely internally interesting to its
+    creator, but compelling to intended viewers and strong enough as a product
+    to compete for attention in a real entertainment market.
+  central_principle: >
+    Audience intelligence and product intelligence inform creative decisions
+    without homogenizing creative intent.
+  success_definition: >
+    A project should have a clearly modeled intended viewer, intended experience,
+    expected information-processing behavior and market-facing proposition before
+    expensive full production begins.
+  business_relevance: >
+    Product intelligence may evaluate whether the project would feel distinctive,
+    premium, repeatable and immediately legible to sophisticated entertainment
+    buyers and platforms, while remaining scoped to the product itself rather
+    than sales or marketing operations.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  AP-001:
+    name: TARGET_MARKET_IS_NOT_AUDIENCE_MODEL
+    statement: >
+      Demographic or market targeting alone is insufficient. AudienceModel must
+      also represent the experience the project intends to create.
+  AP-002:
+    name: EXPERIENCE_IS_FIRST_CLASS
+    statement: >
+      "Entertained", "cheered up", "blown away", "frightened", "haunted",
+      "educated" and "comforted" are materially different design targets even
+      for the same audience population.
+  AP-003:
+    name: AUDIENCE_IS_PROBABILISTIC
+    statement: >
+      Audience behavior is represented as distributions, archetypes and
+      confidence-weighted expectations rather than demographic stereotypes.
+  AP-004:
+    name: VIEWER_KNOWLEDGE_IS_TEMPORAL
+    statement: >
+      Audience understanding, belief, suspicion, surprise and emotional state
+      evolve over playback time.
+  AP-005:
+    name: AUDIENCE_MODEL_IS_NOT_CREATIVE_AUTHORITY
+    statement: >
+      Audience predictions inform choices but do not override explicit CreatorModel
+      intent.
+  AP-006:
+    name: PRODUCT_MODEL_IS_NOT_MARKETING_AUTOMATION
+    statement: >
+      ProductMarketModel evaluates the entertainment product itself rather than
+      advertising, sales funnels, campaigns or CRM operations.
+  AP-007:
+    name: DISTINCTIVENESS_OVER_GENERIC_OPTIMIZATION
+    statement: >
+      Product intelligence should protect and sharpen project identity rather
+      than optimize toward generic median preference.
+  AP-008:
+    name: PRODUCT_ADVICE_MUST_PRESERVE_CREATIVE_IDENTITY
+    statement: >
+      When product intelligence identifies a weakness, it should first search
+      for solutions that preserve project-specific creative intent.
+  AP-009:
+    name: ONE_LINE_SEED_CAN_BE_SUFFICIENT
+    statement: >
+      A short target statement may seed model compilation when paired with
+      project context and studio defaults.
+  AP-010:
+    name: AUDIENCE_LITERACY_MATTERS
+    statement: >
+      Genre familiarity, media literacy and inference expectations materially
+      affect acceptable exposition, ambiguity and reveal design.
+  AP-011:
+    name: EXPERIENCE_TRAJECTORY_MATTERS
+    statement: >
+      The intended experience is not a single scalar. Curiosity, tension,
+      amusement, awe and reflection may intentionally rise and fall throughout
+      the work.
+  AP-012:
+    name: VIEWER_ARCHETYPES_NOT_SINGLE_AVERAGE
+    statement: >
+      High-value evaluation should use multiple synthetic audience archetypes
+      rather than one average viewer simulation.
+  AP-013:
+    name: INFORMATION_AND_EMOTION_INTERACT
+    statement: >
+      What the viewer knows, suspects or misunderstands influences emotional
+      response and must be modeled jointly.
+  AP-014:
+    name: PRODUCT_LEGIBILITY_IS_DISTINCT_FROM_SIMPLICITY
+    statement: >
+      A complex project can have a clear product proposition even when its story
+      remains sophisticated or ambiguous.
+  AP-015:
+    name: FIRST_MINUTE_PROMISE
+    statement: >
+      For short-form and premium streaming entertainment, the opening should
+      establish enough identity and promise that viewers understand why the
+      project deserves attention, unless deliberate withholding is itself part
+      of the design.
+  AP-016:
+    name: GLOBAL_ACCESSIBILITY_IS_NOT_CULTURAL_FLATTENING
+    statement: >
+      Global accessibility should identify unnecessary barriers without removing
+      culturally specific identity or specificity.
+  AP-017:
+    name: PRODUCT_REPEATABILITY_IS_OPTION_VALUE
+    statement: >
+      Reusable characters, worlds and dramatic engines may increase product
+      optionality without requiring every project to become franchise-oriented.
+  AP-018:
+    name: MARKET_INTELLIGENCE_IS_EVIDENCE_BEARING
+    statement: >
+      Product recommendations should retain evidence, assumptions and confidence.
+  AP-019:
+    name: COLD_VIEW_AND_REWATCH_DIFFER
+    statement: >
+      A project may need to work differently on first viewing and after its
+      reveals are known.
+  AP-020:
+    name: QUALITY_EQUALS_INTENT_FIDELITY
+    statement: >
+      Audience/Product Intelligence evaluates whether intended experience and
+      product promise are delivered, not whether the project conforms to a
+      generic aesthetic standard.
+  AP-021:
+    name: MODEL_UNCERTAINTY_MUST_BE_VISIBLE
+    statement: >
+      Audience and product predictions are probabilistic and must expose uncertainty.
+  AP-022:
+    name: AUDIENCE_MODEL_MAY_LEARN
+    statement: >
+      Model calibration may improve from real creator feedback, QC outcomes,
+      controlled testing and later external evidence where available, subject
+      to governance.
+  AP-023:
+    name: MARKET_SIGNAL_DOES_NOT_EQUAL_TRUTH
+    statement: >
+      Trend evidence or platform preference is not creative truth and never
+      directly mutates CreatorModel.
+  AP-024:
+    name: PRODUCT_STRENGTH_IS_MULTI_DIMENSIONAL
+    statement: >
+      Hook, legibility, identity, emotional proposition, accessibility,
+      repeatability and execution feasibility are distinct dimensions.
+# =====================================================================
+# 3. OWNERSHIP BOUNDARIES
+# =====================================================================
+ownership_boundaries:
+  audience_product_intelligence_owns:
+    audience:
+      - AudienceModel
+      - AudienceProfileLibrary
+      - audience normalization
+      - viewer archetype resolution
+      - genre/media literacy modeling
+      - experience target compilation
+      - emotional trajectory modeling
+      - information tolerance modeling
+      - viewer interpretation modeling
+      - viewer state simulation
+      - audience-fit analysis
+    product:
+      - ProductMarketModel
+      - product profile library
+      - concept legibility analysis
+      - hook analysis
+      - distinctiveness analysis
+      - product identity analysis
+      - repeatability analysis
+      - global accessibility analysis
+      - first-minute promise analysis
+      - IP optionality analysis
+      - format/platform fit analysis
+      - product risk analysis
+  adjacent_not_owned:
+    CreatorModel:
+      owner: creative_intelligence
+    creative.yaml:
+      owner: creative_intelligence
+    WorldModel:
+      owner: world_model
+    PolycognitiveRuntime:
+      owner: polycognitive_runtime
+    SelfModel:
+      owner: self_model
+    ProductionModel:
+      owner: production_model
+    AutonomousQC:
+      owner: autonomous_qc
+    DistributionStrategy:
+      owner: OUT_OF_SCOPE_OR_FUTURE_BUSINESS_SYSTEM
+  hard_boundary: >
+    Neither AudienceModel nor ProductMarketModel may directly mutate
+    CreatorModel, WorldModel or ProductionModel.
+# =====================================================================
+# 4. INPUT CONTRACT
+# =====================================================================
+input_contract:
+  primary_project_sources:
+    - quantum.studio.yaml
+    - CreatorModel
+    - ConceptModel
+    - ThemeModel
+    - StoryContract
+    - QualitySemantics
+    - CharacterSeeds
+    - WorldSeed
+    - audience_hints
+    - product_hints
+  optional_creator_seed:
+    examples:
+      - "Adults who love ambitious sci-fi; blow them away."
+      - "Preschool children and parents; make it comforting and delightful."
+      - "Middle-school students; teach orbital mechanics without feeling like school."
+  minimum_target_input:
+    one_line_sufficient: true
+  inference:
+    allowed: true
+    authority: predictive_not_creative
+  unresolved_input:
+    behavior:
+      - retain confidence
+      - use project priors
+      - emit OpenAudienceQuestion or OpenProductQuestion where material
+# =====================================================================
+# 5. AUDIENCE MODEL COMPILER PIPELINE
+# =====================================================================
+audience_compiler:
+  pipeline:
+    - AudienceNormalizer
+    - AudienceSegmentResolver
+    - AudienceArchetypeResolver
+    - GenreLiteracyModel
+    - MediaLiteracyModel
+    - AccessibilityProfileCompiler
+    - ExperienceTargetCompiler
+    - EmotionalTrajectoryCompiler
+    - CognitiveTrajectoryCompiler
+    - InformationToleranceCompiler
+    - PacingComplexityCompiler
+    - ViewingContextCompiler
+    - ViewerSimulationProfileCompiler
+    - AudienceModelValidator
+  output:
+    AudienceModel
+  principle: >
+    A single target line expands into a rich model through project context,
+    profile priors and probabilistic assumptions.
+# =====================================================================
+# 6. AUDIENCE NORMALIZER
+# =====================================================================
+audience_normalizer:
+  AudienceSeed:
+    fields:
+      target_description:
+      explicit_age_or_stage:
+        nullable: true
+      geography_or_cultural_scope:
+        nullable: true
+      genre_affinity:
+        type: list[string]
+      sophistication_hint:
+        nullable: true
+      accessibility_hint:
+        nullable: true
+      desired_experience_hint:
+        nullable: true
+      viewing_context_hint:
+        nullable: true
+      source_refs:
+      confidence:
+  normalization:
+    examples:
+      input: >
+        Adults who love ambitious science fiction.
+      normalized:
+        age_band: adult
+        genre_affinity:
+          - science_fiction
+        likely_genre_literacy: high
+        likely_complexity_tolerance: medium_high
+      input: >
+        Little kids like Gabby's Dollhouse.
+      normalized:
+        developmental_stage: preschool
+        likely_co_viewing: parent_or_caregiver_possible
+        clarity_requirement: high
+        emotional_safety_requirement: high
+# =====================================================================
+# 7. AUDIENCE SEGMENTS
+# =====================================================================
+audience_segments:
+  AudienceSegment:
+    fields:
+      segment_id:
+      label:
+      description:
+      probability_weight:
+      age_or_development_stage:
+      geography:
+      language_context:
+      cultural_context:
+      genre_affinity:
+      platform_behavior:
+      attention_context:
+      accessibility_needs:
+      evidence_refs:
+      confidence:
+  rule: >
+    Target audience may contain multiple weighted segments.
+  example:
+    primary:
+      label: sophisticated_adult_scifi
+      weight: 0.65
+    secondary:
+      label: premium_animation_curious_adult
+      weight: 0.20
+    tertiary:
+      label: broader_streaming_scifi_viewer
+      weight: 0.15
+# =====================================================================
+# 8. AUDIENCE ARCHETYPES
+# =====================================================================
+audience_archetypes:
+  purpose: >
+    Model meaningful viewer-response variation without collapsing everyone
+    into one average prediction.
+  ViewerArchetype:
+    fields:
+      archetype_id:
+      name:
+      description:
+      segment_refs:
+      genre_literacy:
+      inference_aggressiveness:
+      ambiguity_tolerance:
+      exposition_tolerance:
+      emotional_sensitivity:
+      attention_patience:
+      surprise_sensitivity:
+      pacing_preference:
+      novelty_seeking:
+      rewatch_orientation:
+      probability_weight:
+      calibration_confidence:
+  baseline_archetypes:
+    PrimaryTargetViewer:
+      role: highest-weight intended viewer
+    GenreExpert:
+      tendencies:
+        genre_pattern_recognition: high
+        twist_prediction_risk: high
+        exposition_tolerance: low
+    CasualViewer:
+      tendencies:
+        genre_literacy: medium_low
+        clarity_requirement: higher
+    SkepticalViewer:
+      tendencies:
+        coherence_scrutiny: high
+        emotional_buy_in_threshold: high
+    EmotionFirstViewer:
+      tendencies:
+        character_connection_priority: high
+        conceptual_tolerance_if_emotionally_grounded: high
+    RewatchViewer:
+      tendencies:
+        clue_retrospection: high
+        contradiction_detection: high
+  project_specific_archetypes:
+    allowed: true
+# =====================================================================
+# 9. GENRE / MEDIA LITERACY
+# =====================================================================
+literacy_models:
+  GenreLiteracyProfile:
+    fields:
+      genre:
+      familiarity_distribution:
+      trope_recognition:
+      cliché_sensitivity:
+      expected_worldbuilding_speed:
+      expected_exposition_need:
+      expected_twist_prediction_skill:
+  MediaLiteracyProfile:
+    fields:
+      visual_inference:
+      nonlinear_tolerance:
+      montage_comprehension:
+      symbolic_inference:
+      unreliable_narrator_tolerance:
+      silent_scene_tolerance:
+      ambiguous_ending_tolerance:
+  use:
+    - reveal design
+    - exposition level
+    - pacing
+    - clue subtlety
+    - audience prediction
+# =====================================================================
+# 10. AUDIENCE EXPERIENCE MODEL
+# =====================================================================
+audience_experience_model:
+  purpose: >
+    Represent what the project intends to cause in the viewer.
+  AudienceExperienceTarget:
+    fields:
+      target_id:
+      primary_outcomes:
+        type: list[WeightedExperience]
+      secondary_outcomes:
+        type: list[WeightedExperience]
+      forbidden_or_undesired_outcomes:
+        type: list[WeightedExperience]
+      desired_aftertaste:
+      desired_memory_effect:
+      desired_discussion_effect:
+      desired_rewatch_effect:
+      intensity_ceiling:
+      intensity_floor:
+      source_refs:
+  experience_dimensions:
+    - entertainment
+    - delight
+    - comfort
+    - amusement
+    - joy
+    - warmth
+    - fear
+    - dread
+    - tension
+    - awe
+    - wonder
+    - curiosity
+    - surprise
+    - fascination
+    - empathy
+    - sadness
+    - grief
+    - catharsis
+    - inspiration
+    - motivation
+    - reflection
+    - existential_unease
+    - intellectual_stimulation
+    - understanding
+    - retention
+  examples:
+    blown_away_scifi:
+      primary:
+        awe: 0.95
+        wonder: 0.90
+        intellectual_stimulation: 0.88
+      secondary:
+        emotional_connection: 0.78
+        existential_unease: 0.75
+      aftertaste:
+        contemplative_duration_target: long
+    comforting_preschool:
+      primary:
+        delight: 0.92
+        comfort: 0.90
+        warmth: 0.88
+      avoid:
+        sustained_fear: high
+        unresolved_distress: high
+# =====================================================================
+# 11. EXPERIENCE TRAJECTORY
+# =====================================================================
+experience_trajectory:
+  ExperienceTrajectory:
+    fields:
+      trajectory_id:
+      playback_axis:
+      checkpoints:
+        type: list[ExperienceCheckpoint]
+      desired_variance:
+      modulation_policy:
+      source_refs:
+  ExperienceCheckpoint:
+    fields:
+      playback_fraction:
+      target_experiences:
+      intended_viewer_questions:
+      intended_information_state:
+      intended_uncertainty:
+      intended_arousal:
+      intended_valence:
+      intended_surprise_probability:
+      intended_empathy_state:
+  example:
+    opening:
+      curiosity: 0.80
+      awe: 0.45
+    first_third:
+      immersion: 0.85
+      attachment: 0.65
+    midpoint:
+      uncertainty: 0.80
+      tension: 0.75
+    climax:
+      awe: 0.98
+      emotional_intensity: 0.88
+    ending:
+      wonder: 0.85
+      contemplative_aftertaste: 0.95
+# =====================================================================
+# 12. COGNITIVE TRAJECTORY
+# =====================================================================
+cognitive_trajectory:
+  ViewerCognitiveTarget:
+    fields:
+      checkpoint:
+      should_know:
+      may_suspect:
+      should_not_yet_know:
+      should_question:
+      likely_false_hypotheses:
+      acceptable_confusions:
+      unacceptable_confusions:
+      intended_recontextualizations:
+  use:
+    - mystery
+    - reveal
+    - twist
+    - exposition
+    - cold-viewer QC
+    - rewatch QC
+  integration:
+    WorldModel_audience_disclosure_plane:
+      relationship: exact_observed_information_reference
+# =====================================================================
+# 13. INFORMATION TOLERANCE
+# =====================================================================
+information_tolerance:
+  InformationToleranceProfile:
+    fields:
+      exposition_tolerance:
+      implicit_inference_expectation:
+      clue_subtlety_preference:
+      unresolved_question_tolerance:
+      jargon_tolerance:
+      worldbuilding_density_tolerance:
+      nonlinear_tolerance:
+      memory_load_tolerance:
+      causal_gap_tolerance:
+      ambiguity_tolerance:
+  rule: >
+    Low exposition tolerance does not imply low complexity tolerance.
+# =====================================================================
+# 14. PACING / COMPLEXITY MODEL
+# =====================================================================
+pacing_complexity:
+  PacingComplexityProfile:
+    fields:
+      preferred_scene_density:
+      preferred_information_rate:
+      preferred_cut_rate_range:
+        nullable: true
+      silence_tolerance:
+      slow_burn_tolerance:
+      action_density:
+      concept_density:
+      emotional_processing_time:
+      complexity_target:
+      complexity_ceiling:
+      recovery_interval_need:
+  important_rule: >
+    Pacing is not equivalent to cut speed.
+  examples:
+    - slow visual scene may be cognitively dense
+    - rapid action may be narratively simple
+# =====================================================================
+# 15. VIEWING CONTEXT
+# =====================================================================
+viewing_context:
+  ViewingContextModel:
+    fields:
+      expected_device_classes:
+      likely_screen_size:
+      likely_audio_conditions:
+      likely_distraction_level:
+      binge_context:
+      standalone_context:
+      theatrical_context:
+      family_co_viewing:
+      educational_context:
+      subtitle_dependency:
+      repeat_view_probability:
+  use:
+    - dialogue intelligibility
+    - visual detail assumptions
+    - subtitle-safe composition
+    - pacing
+    - first-minute promise
+    - sound design robustness
+# =====================================================================
+# 16. AUDIENCE MODEL
+# =====================================================================
+audience_model:
+  AudienceModel:
+    fields:
+      audience_model_id:
+      project_id:
+      version:
+      source_creator_model_ref:
+      source_quantum_studio_yaml_ref:
+      segments:
+        type: list[AudienceSegment]
+      archetypes:
+        type: list[ViewerArchetype]
+      primary_target_ref:
+      genre_literacy:
+      media_literacy:
+      desired_experience:
+        type: AudienceExperienceTarget
+      emotional_trajectory:
+        type: ExperienceTrajectory
+      cognitive_trajectory:
+        type: ViewerCognitiveTargetSequence
+      information_tolerance:
+        type: InformationToleranceProfile
+      pacing_complexity:
+        type: PacingComplexityProfile
+      viewing_context:
+        type: ViewingContextModel
+      accessibility_profile:
+        type: AudienceAccessibilityProfile
+      audience_risks:
+        type: list[AudienceRisk]
+      open_questions:
+        type: list[OpenAudienceQuestion]
+      assumptions:
+        type: list[AudienceAssumption]
+      confidence:
+      calibration_state:
+      provenance:
+      digest:
+  invariant: >
+    AudienceModel predicts intended viewer response; it does not define
+    what the creator is allowed to make.
+# =====================================================================
+# 17. ACCESSIBILITY PROFILE
+# =====================================================================
+audience_accessibility:
+  AudienceAccessibilityProfile:
+    fields:
+      language_complexity:
+      subtitle_readability:
+      visual_readability:
+      sensory_intensity_constraints:
+      developmental_constraints:
+      educational_accessibility:
+      cultural_context_dependency:
+      color_dependency_risk:
+      audio_only_information_risk:
+      visual_only_information_risk:
+  note: >
+    Accessibility constraints may become hard product or QC constraints where
+    explicitly required by project intent.
+# =====================================================================
+# 18. AUDIENCE RISK
+# =====================================================================
+audience_risk:
+  AudienceRisk:
+    fields:
+      risk_id:
+      risk_type:
+      description:
+      affected_archetypes:
+      severity:
+      probability:
+      playback_scope:
+      evidence_refs:
+      confidence:
+      recommendation_refs:
+  risk_types:
+    - confusion
+    - boredom
+    - emotional_detachment
+    - tonal_mismatch
+    - reveal_too_early
+    - reveal_too_late
+    - excessive_exposition
+    - insufficient_context
+    - pacing_fatigue
+    - sensory_overload
+    - emotional_overload
+    - emotional_underload
+    - predictability
+    - insufficient_payoff
+    - accidental_comedy
+    - accessibility_failure
+# =====================================================================
+# 19. SYNTHETIC VIEWER STATE
+# =====================================================================
+viewer_state_model:
+  purpose: >
+    Simulate how different audience archetypes evolve during playback.
+  ViewerState:
+    fields:
+      viewer_state_id:
+      archetype_id:
+      playback_coordinate:
+      known_information_refs:
+      inferred_information_refs:
+      active_hypotheses:
+      predictions:
+      unresolved_questions:
+      emotional_state:
+      engagement:
+      confusion:
+      curiosity:
+      surprise_readiness:
+      empathy_targets:
+      trust_in_story:
+      perceived_stakes:
+      perceived_quality:
+      attention_targets:
+      memory_salience:
+        type: list[ViewerMemoryActivation]
+  canonical_world_truth:
+    value: false
+  classification:
+    predicted_audience_state: true
+# =====================================================================
+# 20. AUDIENCE SIMULATOR
+# =====================================================================
+audience_simulator:
+  AudienceSimulator:
+    protocol:
+      - initialize(archetype, artifact_context)
+      - observe(playback_segment)
+      - update_viewer_state
+      - predict_next_expectations
+      - evaluate_experience_target
+      - compare_archetypes
+      - summarize_failure_modes
+  inputs:
+    - media artifact
+    - screenplay/animatic metadata
+    - AudienceModel
+    - World audience-disclosure state
+    - CreatorModel
+    - optional prior viewer state
+  outputs:
+    - ViewerState sequence
+    - target-experience alignment
+    - audience risks
+    - surprise prediction
+    - clue comprehension
+    - confusion classification
+    - attention drop predictions
+  note: >
+    Simulator prediction must expose calibration confidence and is not treated
+    as ground-truth human response.
+# =====================================================================
+# 21. COLD / INFORMED / REWATCH MODES
+# =====================================================================
+viewer_modes:
+  ColdViewer:
+    knowledge:
+      allowed:
+        - media artifact
+        - externally obvious format context
+      forbidden:
+        - hidden story intent
+        - future reveals
+        - screenplay annotations
+        - CreatorModel explanations
+    purpose:
+      - comprehension
+      - emotional response
+      - surprise
+      - hook
+      - accidental confusion
+  InformedCritic:
+    knowledge:
+      allowed:
+        - CreatorModel
+        - StoryContract
+        - World Model
+        - AudienceModel
+    purpose:
+      - evaluate intended vs delivered experience
+      - detect missed setup/payoff
+      - diagnose information strategy
+  RewatchCritic:
+    knowledge:
+      allowed:
+        - full story outcome
+        - reveal truth
+        - all prior clues
+    purpose:
+      - retrospective coherence
+      - clue fairness
+      - twist recontextualization
+      - contradiction detection
+  ownership:
+    formal_QC_execution: AutonomousQC
+    model_definitions: AudienceProductIntelligence
+# =====================================================================
+# 22. PRODUCT INTELLIGENCE
+# =====================================================================
+product_intelligence:
+  definition: >
+    Structured evaluation of the entertainment product's proposition,
+    differentiation, accessibility, identity, repeatability and strategic option
+    value.
+  not:
+    - ad optimization
+    - social campaign generation
+    - sales outreach
+    - business development automation
+    - contract negotiation
+  relationship_to_creativity: >
+    Product intelligence asks whether the project communicates and sustains its
+    creative promise effectively in a competitive attention environment.
+# =====================================================================
+# 23. PRODUCT PROFILE LIBRARY
+# =====================================================================
+product_profiles:
+  purpose: >
+    Provide priors appropriate to product form and ambition.
+  profiles:
+    PREMIUM_STREAMING_SHORT:
+      dimensions:
+        first_minute_identity: very_high
+        visual_identity: very_high
+        hook_legibility: high
+        conceptual_distinctiveness: very_high
+        emotional_payoff: high
+        rewatch_value: high
+    PREMIUM_ADULT_SERIES:
+      dimensions:
+        recurring_character_value: very_high
+        episode_engine_repeatability: very_high
+        world_expandability: high
+        season_arc_optionality: high
+        identity_strength: very_high
+    PRESCHOOL_SERIES:
+      dimensions:
+        character_recognition: very_high
+        repeatability: very_high
+        emotional_safety: hard_constraint
+        episode_pattern_clarity: high
+        merchandising_optionality:
+          note: product_value_only_if_project_relevant
+    EDUCATIONAL_SERIES:
+      dimensions:
+        learning_value: hard_constraint
+        retention: very_high
+        repeatability: high
+        curriculum_modularity: medium_high
+    FEATURE_FILM:
+      dimensions:
+        premise_strength: very_high
+        emotional_arc: very_high
+        sustained_identity: very_high
+        feature_scale_payoff: high
+    EXPERIMENTAL_SHORT:
+      dimensions:
+        distinctiveness: extreme
+        conventional_accessibility: optional
+        identity_strength: extreme
+  blend_allowed: true
+# =====================================================================
+# 24. PRODUCT MARKET MODEL
+# =====================================================================
+product_market_model:
+  ProductMarketModel:
+    fields:
+      product_model_id:
+      project_id:
+      version:
+      source_creator_model_ref:
+      source_audience_model_ref:
+      source_story_contract_ref:
+      resolved_product_profiles:
+        type: list[WeightedProfile]
+      format:
+      runtime:
+      product_positioning:
+      concept_legibility:
+        type: ProductDimensionScore
+      hook_strength:
+        type: ProductDimensionScore
+      distinctiveness:
+        type: ProductDimensionScore
+      emotional_proposition:
+        type: ProductDimensionScore
+      identity_strength:
+        type: ProductDimensionScore
+      first_minute_promise:
+        type: ProductDimensionScore
+      audience_breadth:
+        type: ProductDimensionScore
+      global_accessibility:
+        type: ProductDimensionScore
+      repeatability:
+        type: ProductDimensionScore
+      world_expandability:
+        type: ProductDimensionScore
+      recurring_character_IP_potential:
+        type: ProductDimensionScore
+      franchise_optionality:
+        type: ProductDimensionScore
+      format_fit:
+        type: ProductDimensionScore
+      platform_fit:
+        type: ProductDimensionScore
+      production_sustainability:
+        type: ProductDimensionScore
+      memorability:
+        type: ProductDimensionScore
+      product_risks:
+        type: list[ProductRisk]
+      recommendations:
+        type: list[ProductRecommendation]
+      open_questions:
+        type: list[OpenProductQuestion]
+      confidence:
+      provenance:
+      digest:
+  hard_boundary: >
+    ProductMarketModel cannot edit CreatorModel. Recommendations flow through
+    cognitive proposal/arbitration.
+# =====================================================================
+# 25. PRODUCT DIMENSION SCORE
+# =====================================================================
+product_dimension:
+  ProductDimensionScore:
+    fields:
+      dimension:
+      score:
+        range: [0.0, 1.0]
+      confidence:
+      evidence_refs:
+      rationale:
+      weaknesses:
+      strengths:
+      benchmark_context:
+        nullable: true
+  rule: >
+    Product score is not a universal "goodness" score and must be interpreted
+    relative to project type and CreatorModel.
+# =====================================================================
+# 26. CONCEPT LEGIBILITY
+# =====================================================================
+concept_legibility:
+  question: >
+    Can an intended viewer or sophisticated buyer understand what is compelling
+    about this project quickly enough to become interested?
+  evaluates:
+    - premise clarity
+    - protagonist clarity
+    - central dramatic engine
+    - novelty axis
+    - emotional proposition
+    - genre/form signal
+    - identity
+  legibility_does_not_require:
+    - explaining twist
+    - explaining entire world
+    - reducing thematic complexity
+  failure_examples:
+    - concept requires five minutes of explanation before appeal is visible
+    - visual spectacle is present but dramatic proposition is unclear
+    - premise sounds derivative because unique engine is hidden
+# =====================================================================
+# 27. HOOK STRENGTH
+# =====================================================================
+hook_strength:
+  HookModel:
+    dimensions:
+      conceptual_hook:
+      character_hook:
+      emotional_hook:
+      visual_hook:
+      world_hook:
+      mystery_hook:
+      conflict_hook:
+  hook_quality:
+    preferred:
+      - integrated_with_story
+      - sustainable
+      - specific
+      - quickly_perceptible
+    weak:
+      - disconnected_gimmick
+      - misleading_promise
+      - spectacle_without_consequence
+# =====================================================================
+# 28. FIRST-MINUTE PROMISE
+# =====================================================================
+first_minute_promise:
+  purpose: >
+    Determine whether the opening demonstrates enough of the project's unique
+    promise to justify continued attention.
+  FirstMinutePromise:
+    fields:
+      core_promise:
+      promise_visible_by:
+      creator_intended_withholding:
+      visual_identity_visible:
+      dramatic_question_present:
+      protagonist_connection_present:
+      product_identity_strength:
+      confidence:
+  exception:
+    deliberate_slow_reveal:
+      allowed: true
+      requires:
+        - CreatorModel support
+        - alternative attention mechanism
+# =====================================================================
+# 29. DISTINCTIVENESS
+# =====================================================================
+distinctiveness:
+  evaluates:
+    - conceptual novelty
+    - character identity
+    - world identity
+    - visual language
+    - sound identity
+    - narrative engine
+    - emotional proposition
+    - format expression
+  anti_genericity:
+    purpose: >
+      Detect when project-specific identity has been normalized toward genre
+      defaults.
+  risk:
+    name: PRODUCT.GENERICITY_DRIFT
+# =====================================================================
+# 30. PRODUCT IDENTITY
+# =====================================================================
+product_identity:
+  ProductIdentityModel:
+    fields:
+      one_sentence_identity:
+      one_image_identity:
+      one_scene_identity:
+      audio_identity:
+      recurring_character_identity:
+      world_identity:
+      signature_patterns:
+      non_substitutable_features:
+  high_leverage_question: >
+    Could someone see one frame or short sequence and immediately understand
+    that this belongs to this project rather than generic animated content?
+# =====================================================================
+# 31. AUDIENCE BREADTH
+# =====================================================================
+audience_breadth:
+  purpose: >
+    Estimate how widely the project's core proposition may travel without
+    requiring the project to target everyone.
+  factors:
+    - emotional universality
+    - concept accessibility
+    - genre familiarity
+    - cultural context dependency
+    - language dependency
+    - developmental appropriateness
+    - visual storytelling strength
+    - required background knowledge
+  important_rule: >
+    Narrow target with intense appeal may be stronger than broad weak appeal.
+# =====================================================================
+# 32. GLOBAL ACCESSIBILITY
+# =====================================================================
+global_accessibility:
+  evaluates:
+    - dependence on untranslatable wordplay
+    - culture-specific assumptions
+    - subtitle density
+    - visual storytelling
+    - universal emotional anchors
+    - contextual readability
+    - symbolic dependency
+    - legal/content restrictions where relevant
+  preserve:
+    - cultural specificity
+    - local identity
+    - unusual language
+    - intentional opacity
+  recommendation_style: >
+    Identify barriers and alternatives rather than flattening culture.
+# =====================================================================
+# 33. REPEATABILITY
+# =====================================================================
+repeatability:
+  question: >
+    Can the core dramatic engine produce multiple high-quality stories without
+    repeating the same episode?
+  inputs:
+    - DramaticEngine
+    - WorldSeed
+    - CharacterSeeds
+    - relationship tensions
+    - unresolved World opportunities
+  dimensions:
+    - episode_engine_depth
+    - character_arc_capacity
+    - world_problem_capacity
+    - relationship_variability
+    - mystery_capacity
+    - format_repeatability
+    - tonal_range
+  failure:
+    premise_exhaustion:
+      description: >
+        Concept is compelling once but lacks renewable dramatic pressure.
+# =====================================================================
+# 34. WORLD EXPANDABILITY / IP OPTIONALITY
+# =====================================================================
+IP_optionality:
+  WorldExpandabilityModel:
+    evaluates:
+      - persistent_world_depth
+      - unused_locations
+      - institutions
+      - history
+      - unresolved conflicts
+      - parallel storylines
+      - flashback potential
+      - spin_off_potential
+  CharacterIPPotential:
+    evaluates:
+      - identity strength
+      - recognizable silhouette
+      - voice identity
+      - behavioral distinctiveness
+      - relationship network
+      - internal contradiction
+      - future arc potential
+      - standalone story capacity
+  rule: >
+    High IP optionality is valuable when consistent with project ambition but is
+    not mandatory for self-contained art.
+# =====================================================================
+# 35. FORMAT / PLATFORM FIT
+# =====================================================================
+format_fit:
+  FormatFitModel:
+    fields:
+      format:
+      runtime:
+      structural_fit:
+      pacing_fit:
+      audience_fit:
+      production_fit:
+      repeatability_fit:
+      cliffhanger_requirement:
+        nullable: true
+      episodic_engine_requirement:
+        nullable: true
+  PlatformFitModel:
+    purpose: >
+      Model product characteristics associated with premium entertainment
+      contexts without automating sales or platform strategy.
+    evaluates:
+      - perceived_premium_quality
+      - bingeability
+      - episodic identity
+      - thumbnail/frame identity
+      - international legibility
+      - runtime fit
+      - audience clarity
+      - production sustainability
+    note: >
+      Platform-specific live policies are an external evidence source and are
+      not hard-coded as timeless truth.
+# =====================================================================
+# 36. ENTERTAINMENT BUYER LENS
+# =====================================================================
+buyer_lens:
+  purpose: >
+    Simulate the high-level product questions a sophisticated entertainment
+    executive might ask.
+  ExecutiveViewerArchetype:
+    questions:
+      - "What is it?"
+      - "Why this?"
+      - "Why now?"
+      - "Who watches?"
+      - "What is the emotional promise?"
+      - "What makes it visually or narratively non-substitutable?"
+      - "Does the first minute demonstrate the promise?"
+      - "Can this sustain multiple episodes?"
+      - "Are there durable characters?"
+      - "Is the production quality repeatable?"
+      - "Can I imagine audiences talking about it?"
+      - "Is there a single image or moment I remember after the pitch?"
+  authority:
+    advisory: true
+  important_rule: >
+    Buyer-lens simulation is not allowed to convert the system into generic
+    pitch-deck optimization.
+# =====================================================================
+# 37. PRODUCT RISKS
+# =====================================================================
+product_risk:
+  ProductRisk:
+    fields:
+      risk_id:
+      risk_type:
+      description:
+      severity:
+      probability:
+      affected_dimension:
+      evidence_refs:
+      creator_conflict_risk:
+      recommendation_refs:
+      confidence:
+  risk_types:
+    - weak_hook
+    - unclear_premise
+    - generic_identity
+    - weak_emotional_proposition
+    - first_minute_promise_failure
+    - limited_repeatability
+    - premise_exhaustion
+    - fragile_global_accessibility
+    - character_IP_weakness
+    - production_unsustainability
+    - format_mismatch
+    - audience_too_diffuse
+    - audience_too_narrow_for_ambition
+    - perceived_derivativeness
+    - excessive_complexity_before_hook
+    - product_creator_conflict
+# =====================================================================
+# 38. PRODUCT RECOMMENDATION
+# =====================================================================
+product_recommendation:
+  ProductRecommendation:
+    fields:
+      recommendation_id:
+      target_dimension:
+      recommendation:
+      expected_benefit:
+      creator_intent_risk:
+      audience_effect:
+      product_effect:
+      required_creative_change:
+      alternatives:
+      evidence_refs:
+      confidence:
+  preferred_behavior:
+    - first seek zero-intent-change solution
+    - then low-intent-impact solution
+    - only then propose meaningful creative change
+  example:
+    finding: >
+      Core impossible-VR promise is not visible until minute four.
+    preferred_recommendation:
+      >
+      Introduce an earlier small impossible-spatial event while preserving the
+      slow-burn reveal structure.
+    disallowed_silent_action:
+      >
+      Replace opening with generic action spectacle.
+# =====================================================================
+# 39. CREATOR / PRODUCT CONFLICT
+# =====================================================================
+creator_product_conflict:
+  ProductCreativeDisagreement:
+    fields:
+      disagreement_id:
+      creator_intent_ref:
+      product_recommendation_ref:
+      conflict_description:
+      severity:
+      possible_reconciliations:
+      unresolved:
+      evidence_refs:
+  policy:
+    explicit_creator_intent_wins: true
+  runtime_behavior:
+    - create CognitiveDisagreement
+    - search alternatives
+    - preserve creator lock
+    - escalate strategic reasoning if high product impact
+  example:
+    creator:
+      >
+      Opening should feel slow, lonely and mysterious.
+    product:
+      >
+      Current opening does not expose unique project identity quickly enough.
+    reconciliation:
+      >
+      Preserve slow pacing but reveal impossible star geometry in the first
+      forty seconds.
+# =====================================================================
+# 40. AUDIENCE / PRODUCT COGNITIVE MODULES
+# =====================================================================
+cognitive_modules:
+  audience_cognition:
+    package: quantum.cognition.audience
+    operators:
+      - audience.predict_comprehension
+      - audience.predict_emotional_state
+      - audience.predict_attention
+      - audience.predict_surprise
+      - audience.predict_twist_detection
+      - audience.predict_confusion
+      - audience.predict_rewatch_response
+      - audience.experience_alignment
+      - audience.archetype_divergence
+      - audience.accessibility_risk
+  product_cognition:
+    package: quantum.cognition.product
+    operators:
+      - product.concept_legibility
+      - product.hook_strength
+      - product.distinctiveness
+      - product.identity_strength
+      - product.first_minute_promise
+      - product.audience_breadth
+      - product.global_accessibility
+      - product.repeatability
+      - product.world_expandability
+      - product.character_IP_optionality
+      - product.format_fit
+      - product.platform_fit
+      - product.production_sustainability
+  authority:
+    proposal_only: true
+# =====================================================================
+# 41. AUDIENCE SIGNALS
+# =====================================================================
+audience_signals:
+  owner: audience_product_intelligence
+  signal_types:
+    - AUDIENCE.COMPREHENSION_RISK
+    - AUDIENCE.EXPOSITION_OVERLOAD
+    - AUDIENCE.EMOTIONAL_DETACHMENT_RISK
+    - AUDIENCE.ATTENTION_DROP_RISK
+    - AUDIENCE.REVEAL_TOO_EARLY
+    - AUDIENCE.REVEAL_TOO_LATE
+    - AUDIENCE.SURPRISE_COLLAPSE
+    - AUDIENCE.AMBIGUITY_TOO_HIGH
+    - AUDIENCE.AMBIGUITY_TOO_LOW
+    - AUDIENCE.EXPERIENCE_TARGET_MISALIGNMENT
+    - AUDIENCE.ARCHETYPE_DIVERGENCE
+    - AUDIENCE.ACCESSIBILITY_RISK
+  envelope:
+    source_system: audience_product_intelligence
+    consumed_by: PolycognitiveRuntime
+# =====================================================================
+# 42. PRODUCT SIGNALS
+# =====================================================================
+product_signals:
+  signal_types:
+    - PRODUCT.WEAK_HOOK
+    - PRODUCT.CONCEPT_LEGIBILITY_RISK
+    - PRODUCT.GENERICITY_DRIFT
+    - PRODUCT.IDENTITY_WEAK
+    - PRODUCT.FIRST_MINUTE_PROMISE_RISK
+    - PRODUCT.REPEATABILITY_RISK
+    - PRODUCT.FORMAT_MISMATCH
+    - PRODUCT.GLOBAL_ACCESSIBILITY_RISK
+    - PRODUCT.CHARACTER_IP_OPPORTUNITY
+    - PRODUCT.WORLD_EXPANSION_OPPORTUNITY
+    - PRODUCT.PRODUCTION_SUSTAINABILITY_RISK
+    - PRODUCT.CREATOR_CONFLICT
+  lifecycle:
+    derived: true
+    canonical_world_truth: false
+# =====================================================================
+# 43. AUDIENCE / WORLD MODEL INTEGRATION
+# =====================================================================
+world_model_integration:
+  consumes:
+    - audience_disclosure_plane
+    - WorldCoordinate
+    - knowledge asymmetries
+    - reveal events
+    - perception-relevant events
+    - narrative opportunities
+    - story state
+  distinction:
+    character_knowledge:
+      owner: WorldModel
+    audience_disclosure:
+      owner: WorldModel
+    predicted_viewer_interpretation:
+      owner: AudienceProductIntelligence
+  example:
+    WorldModel:
+      states:
+        - audience has seen Eva hesitate
+        - audience has not been shown signal origin
+    AudienceModel:
+      predicts:
+        - GenreExpert suspects Eva recognizes receiver: 0.72
+        - CasualViewer suspects it: 0.31
+  invariant: >
+    Audience interpretation never becomes fictional World truth.
+# =====================================================================
+# 44. CREATIVE INTELLIGENCE INTEGRATION
+# =====================================================================
+creative_integration:
+  consumes:
+    - CreatorModel
+    - ConceptModel
+    - ThemeModel
+    - StoryContract
+    - QualitySemantics
+    - creative.yaml audience hints
+    - creative.yaml product hints
+  returns:
+    - AudienceModel
+    - ProductMarketModel
+    - AudienceRisk
+    - ProductRisk
+    - recommendations
+    - disagreements
+  cannot:
+    - rewrite creative.yaml
+    - update PersistentCreatorBaseline
+    - alter CreatorLock
+# =====================================================================
+# 45. POLYCOGNITIVE RUNTIME INTEGRATION
+# =====================================================================
+polycognitive_integration:
+  runtime_consumes:
+    - AudienceModel
+    - ProductMarketModel
+    - audience signals
+    - product signals
+    - viewer simulation outputs
+  uses:
+    - DecisionFrame criteria
+    - branch scorecards
+    - reasoning escalation
+    - cognitive cascades
+    - arbitration
+  example_cascade:
+    signal:
+      PRODUCT.FIRST_MINUTE_PROMISE_RISK
+    Executive:
+      activate:
+        - product.first_minute_promise
+        - audience.predict_attention
+        - cinematic.observation_strategy
+        - narrative.structural_progression
+    possible_result:
+      >
+      Preserve slow pacing but visually introduce impossible geometry earlier.
+# =====================================================================
+# 46. AUTONOMOUS QC INTEGRATION
+# =====================================================================
+qc_integration:
+  provides:
+    - AudienceModel
+    - viewer archetypes
+    - desired experience trajectory
+    - ProductMarketModel
+    - product quality dimensions
+    - risk thresholds
+  QC_modes:
+    cold_viewer:
+      source: AudienceModel
+    informed_critic:
+      source:
+        - AudienceModel
+        - CreatorModel
+    rewatch_critic:
+      source:
+        - AudienceModel
+        - World reveal truth
+    product_critic:
+      source: ProductMarketModel
+  key_QC_questions:
+    - did intended audience understand enough
+    - did they infer what they were supposed to infer
+    - was confusion intentional or accidental
+    - did emotional trajectory approximate target
+    - did reveal timing work
+    - did product promise become perceptible
+    - did project retain distinctive identity
+# =====================================================================
+# 47. PRODUCTION MODEL INTEGRATION
+# =====================================================================
+production_model_integration:
+  contributes_to_ProductionIntent:
+    audience_requirements:
+      - visual_readability
+      - subtitle_safe_composition
+      - dialogue_intelligibility
+      - sensory_intensity_limits
+      - pacing requirements
+      - target perceived quality
+    product_requirements:
+      - premium identity
+      - repeatable visual language
+      - recurring character consistency
+      - first-minute visual promise
+      - global accessibility
+      - production sustainability
+  boundary: >
+    Audience/Product Intelligence specifies reception/product requirements.
+    ProductionModel determines manufacturing strategy.
+# =====================================================================
+# 48. AUDIENCE / PRODUCT BASELINES
+# =====================================================================
+baseline_models:
+  purpose: >
+    Provide exemplary defaults when project input is sparse.
+  AudienceConstitution:
+    principles:
+      - respect viewer intelligence
+      - avoid accidental confusion
+      - avoid unnecessary exposition
+      - emotional claims require buildup
+      - reveals should be fair relative to intended surprise
+      - pacing should support processing
+      - audience state is heterogeneous
+      - accessibility should be considered intentionally
+  ProductConstitution:
+    principles:
+      - strong project identity
+      - clear entertainment promise
+      - meaningful differentiation
+      - memorable characters/world when appropriate
+      - sustainable quality
+      - hook integrated with story
+      - avoid generic market mimicry
+      - protect creator distinction
+  project_specificity:
+    precedence: highest
+# =====================================================================
+# 49. AUDIENCE PROFILE LIBRARY
+# =====================================================================
+audience_profile_library:
+  initial_profiles:
+    SOPHISTICATED_ADULT_SCIFI:
+      genre_literacy: high
+      exposition_tolerance: low
+      ambiguity_tolerance: high
+      concept_density_tolerance: high
+      visual_inference_expectation: high
+    PREMIUM_ADULT_ANIMATION:
+      animation_literacy: high
+      visual_quality_expectation: high
+      novelty_expectation: high
+    PRESCHOOL:
+      developmental_clarity: very_high
+      emotional_safety: very_high
+      language_complexity: low
+      repetition_value: high
+    FAMILY:
+      multi_age_readability: high
+      warmth: high
+      broad_emotional_access: high
+    EDUCATIONAL_MIDDLE_GRADE:
+      clarity: high
+      cognitive_load_control: high
+      learning_retention: high
+      entertainment_requirement: high
+    EXPERIMENTAL_ART_AUDIENCE:
+      ambiguity_tolerance: very_high
+      convention_breaking_tolerance: high
+      novelty_seeking: very_high
+  selection:
+    automatic: true
+    weighted_blending: true
+# =====================================================================
+# 50. PRODUCT PROFILE RESOLUTION
+# =====================================================================
+product_profile_resolution:
+  ProductProfileResolution:
+    fields:
+      project_id:
+      selected_profiles:
+        type: list[WeightedProfile]
+      evidence_refs:
+      confidence:
+      source_format:
+      source_creator_ambition:
+      compiler_version:
+  example:
+    project:
+      format: short
+      ambition: premium_streaming
+      reusable_world_interest: high
+    profiles:
+      PREMIUM_STREAMING_SHORT: 0.62
+      PREMIUM_ADULT_SERIES: 0.25
+      EXPERIMENTAL_SHORT: 0.13
+# =====================================================================
+# 51. PRODUCT MARKET EVIDENCE
+# =====================================================================
+market_evidence:
+  optional_external_evidence:
+    examples:
+      - platform format norms
+      - audience behavior studies
+      - current content-market data
+      - genre performance patterns
+      - competitive product analysis
+  owner:
+    model: ProductMarketIntelligence
+  freshness:
+    required_for_external_claims: true
+  hard_rule: >
+    External market evidence informs predictions but does not silently become
+    CreatorModel authority.
+  evidence_types:
+    - stable_principle
+    - current_market_signal
+    - historical_pattern
+    - uncertain_trend
+  uncertainty:
+    mandatory: true
+# =====================================================================
+# 52. PRODUCT COMPARABLE ANALYSIS
+# =====================================================================
+comparable_analysis:
+  purpose: >
+    Understand competitive/product context through abstract dimensions rather
+    than imitation.
+  ComparableProduct:
+    fields:
+      comparable_id:
+      title_ref:
+      comparable_dimensions:
+      audience_overlap:
+      product_overlap:
+      identity_overlap:
+      differences:
+      lessons:
+      anti_copy_constraints:
+      evidence_refs:
+  use:
+    - positioning
+    - distinctiveness
+    - format fit
+    - expectation calibration
+  forbidden:
+    - copying story
+    - copying characters
+    - copying visual identity
+    - treating market leader as required template
+# =====================================================================
+# 53. PRODUCT STRATEGY WITHOUT BACK OFFICE
+# =====================================================================
+product_scope_boundary:
+  included:
+    - product proposition
+    - creative-market fit
+    - format design
+    - viewer appeal
+    - recurring IP value
+    - platform quality expectations
+    - competitive distinctiveness
+    - product sustainability
+  explicitly_excluded:
+    - ad buying
+    - social media management
+    - sales operations
+    - lead generation
+    - contract workflow
+    - finance
+    - HR
+    - CRM
+    - campaign execution
+    - distribution logistics
+# =====================================================================
+# 54. AUDIENCE FEEDBACK LEARNING
+# =====================================================================
+audience_learning:
+  sources:
+    - creator review observations
+    - AutonomousQC viewer simulations
+    - real test audience data if later available
+    - external performance data if governed and available
+    - rewatch behavior evidence if available
+  AudienceObservation:
+    fields:
+      observation_id:
+      project_id:
+      viewer_profile:
+      artifact_ref:
+      playback_scope:
+      observed_comprehension:
+      observed_emotion:
+      observed_engagement:
+      observed_surprise:
+      observed_confusion:
+      evidence_refs:
+      source_type:
+  calibration:
+    objective: >
+      Improve prediction quality without converting one project's response into
+      universal audience law.
+  policy:
+    segmented: true
+    confidence_weighted: true
+    versioned: true
+# =====================================================================
+# 55. PRODUCT LEARNING
+# =====================================================================
+product_learning:
+  sources:
+    - creator acceptance
+    - QC outcomes
+    - audience-model outcomes
+    - project completion
+    - external product evidence when available
+  ProductOutcome:
+    fields:
+      outcome_id:
+      project_id:
+      model_version:
+      predicted_dimensions:
+      observed_dimensions:
+      divergence:
+      evidence_refs:
+  learnable:
+    - calibration
+    - profile priors
+    - risk priors
+    - format expectations
+  not_learnable_without_authority:
+    - CreatorModel preferences
+    - StudioCreativeConstitution
+# =====================================================================
+# 56. OPEN QUESTIONS
+# =====================================================================
+open_question_models:
+  OpenAudienceQuestion:
+    fields:
+      question_id:
+      question:
+      importance:
+      uncertainty:
+      affected_dimensions:
+      safe_to_test_in_MVP:
+      status:
+  OpenProductQuestion:
+    fields:
+      question_id:
+      question:
+      importance:
+      uncertainty:
+      affected_dimensions:
+      safe_to_test_in_MVP:
+      status:
+  examples:
+    - "Will the protagonist remain emotionally legible without explanatory dialogue?"
+    - "Does impossible geometry read as wonder or confusion?"
+    - "Is the premise distinctive enough in the first 60 seconds?"
+# =====================================================================
+# 57. MVP INTEGRATION
+# =====================================================================
+mvp_integration:
+  purpose: >
+    Use prototypes to validate high-impact audience/product assumptions before
+    full production.
+  MVPProductAudienceExperiment:
+    fields:
+      experiment_id:
+      hypothesis:
+      audience_refs:
+      product_dimension_refs:
+      artifact_scope:
+      expected_outcome:
+      failure_interpretation:
+      confidence_target:
+  examples:
+    awe_test:
+      hypothesis: >
+        Monumental impossible-space sequence produces awe rather than spatial
+        confusion.
+    hook_test:
+      hypothesis: >
+        Project identity is legible within the first 45 seconds without explicit
+        exposition.
+    character_test:
+      hypothesis: >
+        Aria remains emotionally compelling to a ColdViewer despite restrained
+        performance.
+# =====================================================================
+# 58. AUDIENCE / PRODUCT VERSIONING
+# =====================================================================
+versioning:
+  immutable_versions:
+    - AudienceModel
+    - AudienceSegment
+    - ViewerArchetype
+    - AudienceExperienceTarget
+    - ExperienceTrajectory
+    - ProductMarketModel
+    - ProductProfileResolution
+  required_metadata:
+    - version
+    - parent_version
+    - source_refs
+    - compiler_version
+    - created_at
+    - digest
+  model_recompile_triggers:
+    - CreatorModel material change
+    - target audience change
+    - desired experience change
+    - format/runtime change
+    - product ambition change
+    - major story contract change
+    - material world/character identity change
+# =====================================================================
+# 59. STALENESS / DEPENDENCIES
+# =====================================================================
+staleness_model:
+  dependency_examples:
+    ending_change:
+      may_invalidate:
+        - audience_aftertaste_model
+        - rewatch_model
+        - product_memorability
+    protagonist_change:
+      may_invalidate:
+        - audience_empathy_profile
+        - product_character_IP_potential
+    renderer_change:
+      normally_does_not_invalidate:
+        - AudienceModel
+        - ProductMarketModel
+      may_affect:
+        - perceived_quality_execution_analysis
+  principle: >
+    Product/Audience semantic models should not be recompiled for irrelevant
+    production changes.
+# =====================================================================
+# 60. PROVENANCE
+# =====================================================================
+provenance:
+  AudienceProductProvenance:
+    fields:
+      semantic_ref:
+      source_refs:
+      source_type:
+        enum:
+          - creator_hint
+          - CreatorModel
+          - project_inference
+          - profile_prior
+          - external_evidence
+          - calibrated_experience
+      confidence:
+      model_version:
+      created_at:
+  requirement: >
+    Strong product recommendations must identify whether they arise from project
+    intent, prior models or external evidence.
+# =====================================================================
+# 61. OBSERVABILITY
+# =====================================================================
+observability:
+  audience_metrics:
+    - audience_model_confidence
+    - archetype_count
+    - archetype_divergence
+    - predicted_confusion_rate
+    - predicted_attention_drop_rate
+    - experience_target_alignment
+    - reveal_prediction_accuracy
+    - surprise_prediction_accuracy
+  product_metrics:
+    - concept_legibility
+    - hook_strength
+    - distinctiveness
+    - identity_strength
+    - first_minute_promise
+    - audience_breadth
+    - repeatability
+    - world_expandability
+    - character_IP_optionality
+    - format_fit
+    - production_sustainability
+  calibration_metrics:
+    - audience_prediction_error
+    - product_prediction_error
+    - overconfidence_rate
+    - underconfidence_rate
+  creator_conflict_metrics:
+    - product_creator_disagreement_count
+    - product_recommendation_acceptance_rate
+    - creator_lock_violation_attempts
+# =====================================================================
+# 62. STORAGE ABSTRACTIONS
+# =====================================================================
+storage_abstractions:
+  ports:
+    - AudienceModelStorePort
+    - AudienceProfileStorePort
+    - ViewerSimulationStorePort
+    - ProductMarketModelStorePort
+    - ProductProfileStorePort
+    - AudienceProductEvidenceStorePort
+    - AudienceProductObservationStorePort
+  provider_independent: true
+  persistent:
+    - model versions
+    - provenance
+    - calibration observations
+  rebuildable:
+    - temporary viewer simulations
+    - derived audience/product signals
+# =====================================================================
+# 63. API BOUNDARIES
+# =====================================================================
+API_boundaries:
+  audience:
+    - compile_audience_model
+    - resolve_audience_segments
+    - resolve_viewer_archetypes
+    - compile_experience_target
+    - compile_experience_trajectory
+    - simulate_viewer
+    - compare_archetypes
+    - predict_comprehension
+    - predict_emotional_response
+    - predict_surprise
+    - predict_attention
+    - explain_audience_prediction
+  product:
+    - compile_product_market_model
+    - resolve_product_profiles
+    - evaluate_concept_legibility
+    - evaluate_hook
+    - evaluate_distinctiveness
+    - evaluate_identity
+    - evaluate_first_minute_promise
+    - evaluate_repeatability
+    - evaluate_IP_optionality
+    - evaluate_format_fit
+    - evaluate_global_accessibility
+    - explain_product_recommendation
+  learning:
+    - record_audience_observation
+    - record_product_outcome
+    - calibrate_audience_model
+    - calibrate_product_model
+  signals:
+    - emit_audience_signals
+    - emit_product_signals
+# =====================================================================
+# 64. PACKAGE LAYOUT
+# =====================================================================
+packages_or_modules_to_create:
+  package_root: quantum/audience_product_intelligence/
+  modules:
+    contracts:
+      - common
+      - provenance
+      - scores
+      - versions
+    audience:
+      normalizer:
+      segments:
+      profiles:
+      archetypes:
+      literacy:
+      experience:
+      trajectory:
+      information:
+      pacing:
+      accessibility:
+      viewing_context:
+      risks:
+      model:
+    viewer_simulation:
+      - state
+      - simulator
+      - cold_viewer
+      - informed_critic
+      - rewatch_critic
+    product:
+      profiles:
+      model:
+      concept_legibility:
+      hooks:
+      distinctiveness:
+      identity:
+      first_minute:
+      breadth:
+      global_accessibility:
+      repeatability:
+      IP_optionality:
+      format_fit:
+      platform_fit:
+      sustainability:
+      recommendations:
+      risks:
+      buyer_lens:
+    evidence:
+      - external
+      - comparables
+      - assumptions
+    signals:
+      - audience
+      - product
+    learning:
+      - audience_observations
+      - product_outcomes
+      - calibration
+    integration:
+      creative_intelligence:
+      world_model:
+      polycognitive_runtime:
+      autonomous_qc:
+      production_model:
+    ports:
+      - storage
+# =====================================================================
+# 65. SCHEMAS TO CREATE
+# =====================================================================
+schemas_to_create:
+  audience:
+    - AudienceSeed
+    - AudienceSegment
+    - ViewerArchetype
+    - GenreLiteracyProfile
+    - MediaLiteracyProfile
+    - AudienceExperienceTarget
+    - WeightedExperience
+    - ExperienceTrajectory
+    - ExperienceCheckpoint
+    - ViewerCognitiveTarget
+    - InformationToleranceProfile
+    - PacingComplexityProfile
+    - ViewingContextModel
+    - AudienceAccessibilityProfile
+    - AudienceRisk
+    - AudienceModel
+  viewer:
+    - ViewerState
+    - ViewerMemoryActivation
+    - ViewerPrediction
+  product:
+    - ProductProfileResolution
+    - ProductMarketModel
+    - ProductDimensionScore
+    - HookModel
+    - FirstMinutePromise
+    - ProductIdentityModel
+    - WorldExpandabilityModel
+    - CharacterIPPotential
+    - FormatFitModel
+    - PlatformFitModel
+    - ProductRisk
+    - ProductRecommendation
+    - ProductCreativeDisagreement
+  questions:
+    - OpenAudienceQuestion
+    - OpenProductQuestion
+  evidence:
+    - AudienceProductProvenance
+    - ComparableProduct
+  learning:
+    - AudienceObservation
+    - ProductOutcome
+  experimentation:
+    - MVPProductAudienceExperiment
+# =====================================================================
+# 66. UNIT TESTS
+# =====================================================================
+tests:
+  unit:
+    audience_normalization:
+      - one_line_target_expands
+      - demographic_only_input_marks_experience_uncertain
+    archetypes:
+      - multiple_archetypes_generated
+      - weights_normalize
+      - no_single_average_viewer_required
+    experience:
+      - entertained_vs_blown_away_distinct
+      - emotional_trajectory_versioned
+    literacy:
+      - high_genre_literacy_reduces_exposition_prior
+      - literacy_not_equal_intelligence
+    viewer_state:
+      - knowledge_vs_inference_separated
+      - surprise_changes_after_reveal
+    product:
+      - hook_and_legibility_separate
+      - distinctiveness_not_equal_complexity
+      - narrow_high_affinity_audience_can_score_high
+    creator_boundary:
+      - recommendation_cannot_mutate_CreatorModel
+      - explicit_creator_lock_wins
+    profiles:
+      - product_profile_blending
+      - audience_profile_blending
+# =====================================================================
+# 67. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - same_creator_project_inputs_same_baseline_AudienceModel_digest
+  - explicit_creator_intent_never_overridden_by_product_score
+  - AudienceModel_prediction_never_becomes_World_truth
+  - ProductMarketModel_does_not_modify_creative_yaml
+  - one_audience_segment_can_have_multiple_experience_targets
+  - same_target_market_with_different_desired_experience_yields_different_AudienceModels
+  - same_project_with_different_product_format_yields_different_ProductMarketModels
+  - narrow_target_does_not_automatically_equal_low_product_quality
+  - project_specificity_beats_generic_audience_profile
+  - product_recommendation_preserves_evidence_and_confidence
+# =====================================================================
+# 68. NEGATIVE TESTS
+# =====================================================================
+negative_tests:
+  - demographic_stereotype_encoded_as_hard_truth_rejected
+  - ProductMarketModel_direct_CreatorModel_write_rejected
+  - AudienceModel_direct_World_state_write_rejected
+  - generic_fast_pacing_recommendation_for_young_audience_without_evidence_rejected
+  - market_trend_used_as_timeless_creative_rule_rejected
+  - product_score_used_as_single_quality_score_rejected
+  - platform_fit_silently_overriding_creator_lock_rejected
+  - buyer_lens_rewriting_project_into_generic_pitch_rejected
+  - external_comparable_copy_instruction_rejected
+  - viewing_prediction_without_confidence_rejected
+# =====================================================================
+# 69. INTEGRATION TESTS
+# =====================================================================
+integration_tests:
+  - quantum_studio_yaml_to_AudienceModel
+  - quantum_studio_yaml_to_ProductMarketModel
+  - AudienceModel_to_PolycognitiveRuntime
+  - ProductMarketModel_to_ProductCognition
+  - World_audience_disclosure_to_viewer_state_simulation
+  - CreatorModel_plus_ProductRisk_to_CognitiveDisagreement
+  - AudienceModel_to_ColdViewer_QC
+  - AudienceModel_to_RewatchCritic
+  - ProductMarketModel_to_ProductCritic
+  - AudienceProduct_requirements_to_ProductionIntent
+  - MVP_artifact_to_audience_product_experiment
+  - creator_feedback_to_model_recalibration_without_creator_authority_change
+# =====================================================================
+# 70. END-TO-END TESTS
+# =====================================================================
+end_to_end_tests:
+  cinematic_AI_VR_project:
+    project_seed: >
+      Maximum cinematic space setting. Artificial-intelligence beings inside a
+      physically impossible virtual reality.
+    creator_experience_target: >
+      Adults who love ambitious sci-fi; blow them away and leave them thinking
+      about it for two days.
+    sequence:
+      - consume CreatorModel
+      - normalize audience seed
+      - resolve sophisticated adult sci-fi profile
+      - generate PrimaryTargetViewer
+      - generate GenreExpert
+      - generate CasualViewer
+      - generate EmotionFirstViewer
+      - compile desired awe/wonder/intellectual stimulation trajectory
+      - compile information tolerance
+      - compile ProductMarketModel
+      - score concept legibility
+      - score distinctiveness
+      - score first-minute promise
+      - score world expandability
+      - score AI character IP potential
+      - emit audience/product signals
+      - feed runtime DecisionFrames
+      - test MVP
+      - compare ColdViewer and RewatchCritic
+      - produce model revisions
+    success:
+      - project remains creatively unusual
+      - audience model does not flatten ambiguity
+      - product model identifies unique promise
+      - first-minute recommendations preserve slow/cinematic intent where required
+  preschool_project:
+    input:
+      audience: preschool children with parent co-viewing
+      experience: comfort, delight, imagination
+    success:
+      - emotional safety becomes high priority
+      - ambiguity tolerance lowers
+      - character readability increases
+      - product repeatability evaluates recurring patterns
+      - system does not inherit adult-scifi priors
+  educational_project:
+    input:
+      target: middle-school learners
+      experience:
+        - fascinated
+        - confident
+        - entertained
+      learning_goal: orbital mechanics
+    success:
+      - AudienceModel models cognitive load
+      - ProductMarketModel models repeatable educational entertainment value
+      - learning accuracy remains hard project constraint
+      - entertainment target remains first-class
+# =====================================================================
+# 71. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: AP-G01
+    check: AudienceModel includes both target audience and desired experience
+  - id: AP-G02
+    check: one-line target seed can compile rich model
+  - id: AP-G03
+    check: viewer archetypes are probabilistic and heterogeneous
+  - id: AP-G04
+    check: viewer knowledge/inference state is temporal
+  - id: AP-G05
+    check: AudienceModel cannot mutate World truth
+  - id: AP-G06
+    check: ProductMarketModel cannot mutate CreatorModel
+  - id: AP-G07
+    check: explicit CreatorModel lock outranks product recommendation
+  - id: AP-G08
+    check: ProductMarketModel evaluates product rather than back-office marketing
+  - id: AP-G09
+    check: concept legibility separated from story simplicity
+  - id: AP-G10
+    check: distinctiveness protected against generic optimization
+  - id: AP-G11
+    check: first-minute promise evaluated relative to CreatorModel
+  - id: AP-G12
+    check: repeatability/IP optionality evaluated without forcing franchise design
+  - id: AP-G13
+    check: global accessibility does not require cultural flattening
+  - id: AP-G14
+    check: ColdViewer/InformedCritic/RewatchCritic model definitions available
+  - id: AP-G15
+    check: viewer simulation exposes uncertainty/calibration
+  - id: AP-G16
+    check: audience/product signals integrate with Polycognitive Runtime
+  - id: AP-G17
+    check: Audience/Product outputs usable by AutonomousQC
+  - id: AP-G18
+    check: ProductionIntent receives audience/product requirements without provider choices
+  - id: AP-G19
+    check: audience/product model versions invalidate incrementally
+  - id: AP-G20
+    check: model calibration cannot modify creator authority
+# =====================================================================
+# 72. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  audience:
+    - AudienceModel supports multi-segment audiences
+    - multiple ViewerArchetypes available
+    - target experience is first-class
+    - emotional trajectory represented
+    - cognitive/information trajectory represented
+    - ambiguity/exposition/inference tolerance represented
+    - viewing context represented
+    - accessibility represented
+    - audience risks typed
+    - confidence represented
+  product:
+    - ProductMarketModel exists
+    - concept legibility modeled
+    - hook strength modeled
+    - distinctiveness modeled
+    - product identity modeled
+    - first-minute promise modeled
+    - audience breadth modeled
+    - global accessibility modeled
+    - repeatability modeled
+    - World/character IP optionality modeled
+    - format/platform fit modeled
+    - production sustainability represented
+  authority:
+    - CreatorModel remains higher creative authority
+    - product recommendations are advisory
+    - AudienceModel predictions never become World truth
+  cognition:
+    - audience cognition operators available
+    - product cognition operators available
+    - audience/product signals available
+  QC:
+    - ColdViewer available
+    - InformedCritic available
+    - RewatchCritic available
+    - product critic inputs available
+  learning:
+    - audience observations capture calibration evidence
+    - product outcomes capture prediction divergence
+    - models are versioned
+    - no automatic creator-authority changes
+  flexibility:
+    - sophisticated adult sci-fi works
+    - preschool works
+    - educational works
+    - experimental work works
+    - self-contained art may intentionally score low on franchise optionality without being penalized as low creative quality
+  release:
+    requirement: >
+      AP-G01 through AP-G20 pass and no ownership conflict exists with specs
+      00, 01, 02 or 03.
+# =====================================================================
+# 73. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: AP-OD-01
+    decision: initial AudienceProfileLibrary size
+    status: OPEN
+    recommendation: small_high_quality_profiles
+  - id: AP-OD-02
+    decision: synthetic viewer implementation strategy
+    status: OPEN
+    options:
+      - language-model simulation
+      - multimodal model
+      - hybrid deterministic/model-based
+  - id: AP-OD-03
+    decision: audience-calibration dataset strategy
+    status: FUTURE_EVIDENCE_REQUIRED
+  - id: AP-OD-04
+    decision: external live market evidence provider
+    status: OPTIONAL
+  - id: AP-OD-05
+    decision: ProductMarketModel benchmark/comparable corpus
+    status: TO_DEFINE
+  - id: AP-OD-06
+    decision: buyer-lens calibration method
+    status: TO_DEFINE
+  - id: AP-OD-07
+    decision: exact platform-fit modeling scope
+    status: OPEN
+  - id: AP-OD-08
+    decision: intended target-market business input ownership
+    status: >
+      Audience/Product Intelligence consumes it, but a future business strategy
+      subsystem may become authoritative for commercial targeting.
+# =====================================================================
+# 74. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: demographic stereotyping
+    control:
+      - probabilistic segments
+      - archetypes
+      - uncertainty
+      - no hard demographic taste rules
+  - risk: audience optimization makes work generic
+    control:
+      - CreatorModel precedence
+      - distinctiveness dimension
+      - anti-genericity checks
+  - risk: product intelligence becomes marketing department
+    control:
+      - explicit scope boundary
+  - risk: platform simulation dominates creativity
+    control:
+      - advisory authority
+      - creator lock
+      - ProductCreativeDisagreement
+  - risk: model overconfidence about viewer response
+    control:
+      - confidence
+      - calibration
+      - archetype divergence
+      - external observations where available
+  - risk: target market alone defines AudienceModel
+    control:
+      - mandatory experience target
+      - emotional/cognitive trajectory
+  - risk: first-minute optimization destroys slow-burn work
+    control:
+      - alternative attention mechanisms
+      - CreatorModel check
+  - risk: franchise scoring penalizes standalone art
+    control:
+      - optional applicability
+      - project-type-aware scoring
+  - risk: global accessibility removes specificity
+    control:
+      - barrier analysis rather than flattening
+  - risk: synthetic viewers become circular self-evaluation
+    control:
+      - AutonomousQC separation
+      - calibration
+      - creator feedback
+      - eventual real evidence
+  - risk: product recommendation interpreted as automatic change
+    control:
+      - proposal-only semantics
+      - Polycognitive arbitration
+# =====================================================================
+# 75. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  - id: APW1
+    name: audience_product_authority_and_core_schemas
+    depends_on:
+      - SYSTEM_ARCHITECTURE_00
+      - CREATIVE_INTELLIGENCE_03_MINIMUM
+    targets:
+      - ownership
+      - AudienceSeed
+      - AudienceModel
+      - ProductMarketModel
+      - provenance
+    exit:
+      - authority boundary tests pass
+  - id: APW2
+    name: audience_normalization_profiles_and_archetypes
+    depends_on:
+      - APW1
+    targets:
+      - AudienceNormalizer
+      - AudienceProfileLibrary
+      - AudienceSegmentResolver
+      - ViewerArchetypeResolver
+    exit:
+      - one-line target compiles rich audience structure
+  - id: APW3
+    name: viewer_experience_and_information_model
+    depends_on:
+      - APW2
+    targets:
+      - AudienceExperienceTarget
+      - ExperienceTrajectory
+      - ViewerCognitiveTarget
+      - InformationToleranceProfile
+      - PacingComplexityProfile
+    exit:
+      - entertained/comforted/blown-away generate materially different models
+  - id: APW4
+    name: viewer_simulation
+    depends_on:
+      - APW3
+      - WORLD_MODEL_AUDIENCE_DISCLOSURE
+    targets:
+      - ViewerState
+      - AudienceSimulator
+      - ColdViewer
+      - InformedCritic
+      - RewatchCritic
+    exit:
+      - viewer interpretation evolves over playback
+  - id: APW5
+    name: product_intelligence_core
+    depends_on:
+      - APW1
+    targets:
+      - product profiles
+      - concept legibility
+      - hook
+      - distinctiveness
+      - identity
+      - first-minute promise
+    exit:
+      - core product dimensions produce evidence-backed scores
+  - id: APW6
+    name: repeatability_accessibility_and_IP
+    depends_on:
+      - APW5
+    targets:
+      - audience breadth
+      - global accessibility
+      - repeatability
+      - World expandability
+      - character IP optionality
+      - format/platform fit
+    exit:
+      - standalone and series products handled correctly
+  - id: APW7
+    name: cognition_signals_and_QC_integration
+    depends_on:
+      - APW4
+      - APW6
+    targets:
+      - audience cognition
+      - product cognition
+      - signals
+      - Polycognitive Runtime integration
+      - AutonomousQC integration
+    exit:
+      - audience/product findings participate in decisions without gaining authority
+  - id: APW8
+    name: MVP_experimentation_and_calibration
+    depends_on:
+      - APW7
+    targets:
+      - MVP experiments
+      - audience observations
+      - product outcomes
+      - calibration
+    exit:
+      - feedback improves predictions without modifying creator authority
+  - id: APW9
+    name: validation_scale_and_market_evidence
+    depends_on:
+      - APW8
+    targets:
+      - calibration suite
+      - optional external evidence
+      - observability
+      - scale
+    exit:
+      - definition_of_done passes
+# =====================================================================
+# 76. DEPENDENCY GRAPH
+# =====================================================================
+dependency_graph:
+  APW1:
+    - SYSTEM_ARCHITECTURE_00
+    - CREATIVE_INTELLIGENCE_03_MINIMUM
+  APW2:
+    - APW1
+  APW3:
+    - APW2
+  APW4:
+    - APW3
+    - WORLD_MODEL_AUDIENCE_DISCLOSURE
+  APW5:
+    - APW1
+  APW6:
+    - APW5
+  APW7:
+    - APW4
+    - APW6
+  APW8:
+    - APW7
+  APW9:
+    - APW8
+# =====================================================================
+# 77. ACCEPTANCE CRITERIA
+# =====================================================================
+acceptance_criteria:
+  audience_model:
+    - target population is explicit
+    - desired experience is explicit
+    - multiple audience archetypes supported
+    - viewer state changes over playback
+    - knowledge, inference, suspicion and emotion separated
+    - audience uncertainty represented
+    - first-watch and rewatch behavior may differ
+  product_model:
+    - product proposition explicit
+    - hook and premise legibility separate
+    - distinctiveness protected
+    - first-minute promise modeled
+    - audience breadth modeled
+    - global accessibility modeled
+    - repeatability modeled
+    - IP optionality modeled
+    - format/platform fit modeled
+    - product recommendations evidence-backed
+  creator_boundary:
+    - explicit project creative intent remains higher authority
+    - product recommendations cannot silently rewrite project
+    - slow-burn, niche or experimental projects can intentionally violate common product priors
+  QC:
+    - viewer archetypes usable by AutonomousQC
+    - ColdViewer can evaluate without hidden intent
+    - RewatchCritic can evaluate reveal fairness
+    - product critic can evaluate product promise
+  integration:
+    - AudienceModel feeds Polycognitive Runtime
+    - ProductMarketModel feeds Polycognitive Runtime
+    - World audience-disclosure state feeds viewer simulation
+    - ProductionIntent receives reception requirements
+  learning:
+    - prediction error measurable
+    - calibration versioned
+    - external evidence optional
+    - creator authority unchanged by learning
+  final: >
+    The subsystem must enable Quantum to design not just what is creatively
+    interesting, but what intended viewers are likely to experience and what
+    makes the resulting entertainment product compelling, distinctive and
+    sustainable.
+# =====================================================================
+# 78. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    Target market is not the AudienceModel.
+  law_02: >
+    AudienceModel equals WHO + EXPERIENCE + INTERPRETATION + VIEWING CONTEXT.
+  law_03: >
+    "Entertained", "comforted", "educated", "frightened" and "blown away" are
+    different design targets.
+  law_04: >
+    Viewer response is probabilistic, heterogeneous and temporal.
+  law_05: >
+    Audience interpretation never becomes fictional World truth.
+  law_06: >
+    ProductMarketModel evaluates the entertainment product, not marketing operations.
+  law_07: >
+    Concept legibility does not require narrative simplicity.
+  law_08: >
+    Product intelligence should sharpen identity, not erase it.
+  law_09: >
+    Explicit creator intent outranks audience or product optimization.
+  law_10: >
+    First-minute promise matters, but the form of that promise must respect
+    creative intent.
+  law_11: >
+    Distinctiveness is a product asset.
+  law_12: >
+    Narrow intense appeal may be more valuable than broad weak appeal.
+  law_13: >
+    Global accessibility means removing unnecessary barriers, not cultural specificity.
+  law_14: >
+    Repeatability measures whether the dramatic engine can continue producing
+    value without repetition.
+  law_15: >
+    Persistent characters and worlds create product option value.
+  law_16: >
+    Franchise optionality is valuable when relevant, never mandatory.
+  law_17: >
+    ColdViewer, InformedCritic and RewatchCritic represent fundamentally
+    different evaluative perspectives.
+  law_18: >
+    Audience/Product Intelligence proposes and predicts; it does not own creative authority.
+  law_19: >
+    Audience and product models should improve through calibrated evidence
+    rather than becoming increasingly confident from their own predictions.
+  law_20: >
+    Quantum should make work that is simultaneously faithful to creator intent,
+    compelling to intended viewers, and strong enough as an entertainment
+    product to deserve attention.
+
+This gives 04 a clean internal split:
+
+AUDIENCE INTELLIGENCE
+WHO watches?
+        +
+WHAT should happen to them?
+        +
+HOW are they likely to interpret it?
+        +
+HOW does that evolve over playback?
+PRODUCT INTELLIGENCE
+What is the product promise?
+Is it legible?
+Is it distinctive?
+Does it earn attention?
+Can it sustain more stories?
+Does it have durable identity?
+
+And the authority chain stays intact:
+
+CreatorModel
+     │
+     │ highest creative authority
+     ▼
+AudienceModel + ProductMarketModel
+     │
+     │ predictions / recommendations
+     ▼
+Polycognitive Runtime
+     │
+     ▼
+proposal / disagreement / branch
+     │
+     ▼
+Autonomous QC
+
+I’d consider 04 about 98% architecturally complete. The main future uncertainty is not conceptual architecture; it is calibration—how good synthetic viewer models become, what real-world audience evidence you eventually choose to ingest, and how much live market evidence you want the ProductMarketModel to use.

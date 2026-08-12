@@ -1,0 +1,37 @@
+schema: program-execution-controller.definition.v2
+schema_version: 2.0.0
+controller:
+  id: '{{CONTROLLER_ID}}'
+  name: '{{CONTROLLER_NAME}}'
+  owner: '{{CONTROLLER_OWNER}}'
+  version: 2.0.0
+  created_at: '{{DATE}}'
+  definition_status: template
+  artifact_type: program_execution_controller
+  contracts:
+    controller: program-execution-controller.v2
+    blueprint: program-execution-blueprint.v2
+    pair: program-execution-system.v2
+  autonomy_profile: bounded_local_execution
+  # Override to program_deploy_max_autonomy only when PHASE0_USER_CONFIG selects it
+  # and completeness.phase0_complete is true (see policy/autonomy.yaml).
+  host_mode: host_neutral
+  state:
+    database: runtime/state.sqlite
+    program_lock: runtime/program-lock.json
+    ledger: ledger/events.jsonl
+    handoff_receipts: receipts/handoffs
+  invariants:
+  - imported_program_intent_is_immutable
+  - controller_may_narrow_never_widen
+  - one_active_writer_per_repository
+  - one_task_one_target_one_exact_state
+  - worker_output_is_not_authority
+  - verification_is_independent
+  - remote_actions_are_denied_by_default
+  - stale_state_cannot_advance
+  - recovery_preserves_evidence
+  - final_program_verdict_requires_program_owner_acceptance
+  - phase0_required_before_deploy_autonomy
+  - local_make_pr_required_before_push_or_pr
+  - autonomous_merge_forbidden

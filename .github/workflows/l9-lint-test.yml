@@ -115,8 +115,11 @@ jobs:
         # to verify Part A of this fix (unresolved <<<<<<<// =======/>>>>>>> markers).
         run: |
           set -euo pipefail
+          # Scratch/reference trees are git-tracked but must not trip this
+          # scan on mixed PRs (paths-ignore only skips WIP-only events).
           if git grep -n -I -E '^(<<<<<<<|=======$|>>>>>>>)' -- . \
-              ':!**/_archived/**' ':!**/_archive/**' ':!**/archive/**' ':!**/archived/**'; then
+              ':!**/_archived/**' ':!**/_archive/**' ':!**/archive/**' ':!**/archived/**' \
+              ':!**/WIP/**' ':!**/current_work/**' ':!**/C_GOV_FILES/**' ':!**/reports/**'; then
             echo "::error::Conflict markers found in tracked files (see above)."
             exit 1
           fi

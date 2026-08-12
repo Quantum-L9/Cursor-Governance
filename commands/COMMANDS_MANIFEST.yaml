@@ -107,6 +107,9 @@ commands:
 - slash: /issues
   file: commands/issues.md
   enabled: true
+- slash: /l9-plan
+  file: commands/l9-plan.md
+  enabled: true
 - slash: /lcto
   file: commands/lcto.md
   enabled: true
@@ -118,9 +121,6 @@ commands:
   enabled: true
 - slash: /migrate
   file: commands/migrate.md
-  enabled: true
-- slash: /l9-plan
-  file: commands/l9-plan.md
   enabled: true
 - slash: /pr
   file: commands/pr.md
