@@ -25,32 +25,24 @@ def _cmd_compile(args: argparse.Namespace) -> int:
 
 
 def _public_close_report(report: dict) -> dict:
-    """Stdout-safe close report — codes/counts only (no warning text / secrets)."""
-    receipt = report.get("receipt") or {}
+    """Stdout-safe close report — ints/bools only (breaks secret taint to logs)."""
+    enqueue_ok = report.get("enqueue_ok")
+    status = report.get("status")
+    allowed = {
+        "closed",
+        "idempotent_skip",
+        "skipped",
+        "failed",
+        "closed_enqueue_failed",
+    }
     return {
-        "status": report.get("status"),
-        "session_id": report.get("session_id"),
-        "reason": report.get("reason"),
-        "phase_a": report.get("phase_a"),
-        "phase_b": report.get("phase_b"),
-        "enqueue_ok": report.get("enqueue_ok"),
-        "enqueue": report.get("enqueue"),
-        "enqueue_error": report.get("enqueue_error"),
-        "signal_packet_id": report.get("signal_packet_id"),
-        "group_id": report.get("group_id"),
-        "writes": report.get("writes"),
+        "status": status if status in allowed else "other",
+        "phase_a": bool(report.get("phase_a") is True),
+        "phase_b": bool(report.get("phase_b") is True),
+        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
+        "enqueue_error_present": bool(report.get("enqueue_error")),
+        "write_count": len(report.get("writes") or []),
         "warning_count": len(report.get("warnings") or []),
-        "elapsed_s": report.get("elapsed_s"),
-        "receipt": {
-            "status": receipt.get("status"),
-            "session_id": receipt.get("session_id"),
-            "agent_id": receipt.get("agent_id"),
-            "group_id": receipt.get("group_id"),
-            "phase_a": receipt.get("phase_a"),
-            "phase_b": receipt.get("phase_b"),
-            "enqueue_ok": receipt.get("enqueue_ok"),
-            "packet_id": receipt.get("packet_id"),
-        },
     }
 
 
