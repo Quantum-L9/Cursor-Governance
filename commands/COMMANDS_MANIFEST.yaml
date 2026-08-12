@@ -119,8 +119,8 @@ commands:
 - slash: /migrate
   file: commands/migrate.md
   enabled: true
-- slash: /plan
-  file: commands/plan.md
+- slash: /l9-plan
+  file: commands/l9-plan.md
   enabled: true
 - slash: /pr
   file: commands/pr.md

@@ -1,11 +1,11 @@
 ---
-name: plan
+name: l9-plan
 version: "2.0.0"
 description: "Create deep PE+autonomy executable plan before action (Cursor .plan.md via first-class template)"
 auto_chain: ynp
 ---
 
-# /plan — Execution Planning
+# /l9-plan — Execution Planning
 
 ## WHAT IT DOES
 
@@ -25,7 +25,9 @@ Create a structured plan before implementation. Delegates template authority to 
 7. Project Cursor `.plan.md` via `render_plan_pe_autonomy.py` (must include PE+autonomy execute path)
 8. Auto-chain to `/ynp`
 
-Planning-only — do not edit product files, commit, or push from `/plan`.
+Planning-only — do not edit product files, commit, or push from `/l9-plan`.
+
+`/plan` is **retired** — use `/l9-plan` (this file) or invoke skill `l9-plan`.
 
 ---
 

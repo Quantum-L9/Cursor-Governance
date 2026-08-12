@@ -1,0 +1,35 @@
+schema: l9.execution-contracts.manifest.v1
+schema_version: 1.0.0
+family: l9_execution_architecture
+status: active
+updated: '2026-08-12'
+purpose: >
+  First-class execution contract artifacts owned by Cursor-Governance
+  (Cursor-primary). Schemas may also live under WIP until promoted; templates
+  that agents fill are registered here once they are repo SSOT.
+artifacts:
+  - artifact_id: canonical.template.executable_plan.v1
+    artifact_filename: canonical.template.executable_plan.v1.plan.md
+    path: templates/canonical.template.executable_plan.v1.plan.md
+    kind: executable_plan_template
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    pairs_with:
+      - canonical.schema.plan_document.v1
+    consumed_by:
+      - skills/l9-plan
+      - commands/l9-plan.md
+      - environment/program-execution
+    execute_via:
+      - environment/program-execution
+      - commands/autonomy.md
+      - skills/l9-bounded-autonomy
+    not_for:
+      - repository_specific_plan_instances
+      - free_form_mutation_without_program_lease
+projections:
+  - path: skills/l9-plan/references/executable-plan.pe-autonomy.template.md
+    relation: symlink_to_ssot
+  - path: .cursor/plans/_TEMPLATE.plan.md
+    relation: local_mirror_not_git_ssot
