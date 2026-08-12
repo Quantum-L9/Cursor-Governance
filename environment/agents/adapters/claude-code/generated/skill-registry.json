@@ -719,7 +719,7 @@
     },
     {
       "composition_role": "general",
-      "description": "close agent session \u2014 save pickup context, extract learnings, redis handoff, governance backup. use when ending a work session, creating handoff for next window, or confirming Graphiti sessionEnd summary wiring.",
+      "description": "force-retry session close \u2014 manual PICKUP/learnings when auto sessionEnd failed or offline. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
@@ -763,7 +763,7 @@
     },
     {
       "composition_role": "general",
-      "description": "Wire and verify a repo's Cursor governance symlinks against the Dropbox governance SSOT. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
+      "description": "Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-governance-symlinks",
@@ -1039,5 +1039,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "85366cd090b7c9d6de94aae1a033e575e5d244f627d23832ffd37a9b4c806393",
-  "source_skill_corpus_sha256": "b0453ed0d255a80350561028738365197783f490dc728fb0ae8f88baf8510b0b"
+  "source_skill_corpus_sha256": "90da68c0b50638903403c61316890c8cc9ca6cbb059d56f7bcecfc42ee51f65d"
 }

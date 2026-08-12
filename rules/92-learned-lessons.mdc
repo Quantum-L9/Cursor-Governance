@@ -314,27 +314,27 @@ If user says any of these:
 
 ## 🔴 CRITICAL: Memory Client Architecture
 
-### cursor_memory_client.py is a NETWORK CLIENT ONLY
+### Graphiti is the only episodic memory plane (ADR-0006)
 
-- **NO local-only fallback mode** — requires server to be running
-- **MCP server** = primary connection
-- **HTTP API** = fallback if MCP fails
-- If BOTH are down → ALL operations FAIL
+- **Canonical client:** `ops/graphiti/graphiti_memory_client.py` + `graphiti-memory` MCP
+- **NO second plane:** retired `L9_MEMORY_HTTP_*` / `l9-shared-memory` / `cursor_memory_client.py` lifecycle use
+- **NO local-only fallback mode** — Graphiti must be reachable (tunnel `:8100` or cloud `/graphiti/mcp`)
+- If Graphiti is down → memory operations FAIL (do not invent a side door)
 
-**When you see 404 errors:**
-- ❌ Does NOT mean "works locally"
-- ✅ Means the endpoint FAILED
+**When you see 404 / connection errors:**
+- ❌ Does NOT mean "works locally" or "use HTTP memory instead"
+- ✅ Means the Graphiti endpoint FAILED
 - ✅ The operation did NOT succeed
 
 **Never say:**
 - ❌ "commands still work for local operations"
-- ❌ "the client still runs locally"
+- ❌ "fall back to L9_MEMORY_HTTP_URL"
 
 **Always say:**
-- ✅ "memory server unavailable, operation failed"
-- ✅ "will retry when server is up"
+- ✅ "Graphiti unavailable, operation failed"
+- ✅ "will retry when Graphiti/tunnel is up"
 
-**Lesson:** 2026-01-19 — Incorrectly claimed memory operations "still work for local operations" after seeing 404. User corrected: there IS no local mode.
+**Historical:** 2026-01-19 — Incorrectly claimed memory operations "still work for local operations" after seeing 404. There is no local mode.
 
 ---
 

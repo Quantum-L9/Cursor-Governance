@@ -31,11 +31,15 @@ class LegacyDoctrineResidueTests(unittest.TestCase):
             mod.DROPBOX_LIVE.search("at $HOME/Dropbox/Cursor Governance/GlobalCommands")
         )
         self.assertTrue(mod.DROPBOX_LIVE.search("legacy Dropbox is fallback only"))
+        self.assertTrue(mod.DROPBOX_LIVE.search("against the Dropbox governance SSOT"))
 
     def test_http_live_matches_assignments_not_forbid_lists(self) -> None:
         mod = _load_mod()
         self.assertTrue(mod.HTTP_LIVE.search("L9_MEMORY_HTTP_URL=https://example.com"))
         self.assertTrue(mod.HTTP_LIVE.search('"l9-shared-memory": {'))
+        self.assertTrue(
+            mod.HTTP_LIVE.search("claude mcp add-json --scope user l9-shared-memory '{}'")
+        )
         self.assertFalse(mod.HTTP_LIVE.search("Forbidden: L9_MEMORY_HTTP_URL"))
 
     def test_main_passes_on_clean_fixture_tree(self) -> None:

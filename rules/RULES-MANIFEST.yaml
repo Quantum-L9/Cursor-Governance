@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-12T15:05:46Z'
+generated_utc: '2026-08-12T15:22:05Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:03645cbb4e9d49c90582ce69f0ff3f21ee79636fc1862d0ff2345e3dea23728b
+source_tree_digest: sha256:f2c3d0a42123863144efb5f2da219efecdd136cb053a067efd6e006c814138be
 summary:
   total_mdc_files: 64
   always_apply_true: 43
@@ -1128,7 +1128,7 @@ rules:
   first_heading: Learned Lessons — Critical Prevention Rules
   has_yaml_frontmatter: true
   line_count: 778
-  content_digest: sha256:d61dd32823aa676d36ecef5d74607149875db9ccbcd54cdb976e65c769ef6096
+  content_digest: sha256:d8436ca0e53a5cc52e9ae58e06e3161724350827f9e5a4d710debd7ad6d6c868
   authority: compatibility
   context_cost: high
   deprecated: false
