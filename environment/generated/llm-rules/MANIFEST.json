@@ -357,9 +357,9 @@
       "alias": null,
       "class": "always",
       "output": "87-l4-local-autonomy.md",
-      "output_sha256": "97dda1f29de3fc7b8f37f9d26df531d211c1ae85dd7ab158548812ef1cd455c5",
+      "output_sha256": "e2b6262a05f6f0dc0fedbfca44a9bb33b81a254035418cd36a5d585e67894879",
       "source": "rules/87-l4-local-autonomy.mdc",
-      "source_sha256": "991f1089bcd354731063a6491d1bd5d9541372098f15f7e57773c63ae4ab9c9e",
+      "source_sha256": "7c709b33b6d71a82c6a916bb63be0836a23c3d2071fc290a247c86a9295df6a4",
       "stem": "87-l4-local-autonomy"
     },
     {
@@ -392,6 +392,15 @@
     {
       "alias": null,
       "class": "always",
+      "output": "88-shared-worktree-isolation.md",
+      "output_sha256": "c23c9a76da415059d7ef6086c1efa87ce78191e06df022fe71cb2a515fb847d2",
+      "source": "rules/88-shared-worktree-isolation.mdc",
+      "source_sha256": "65e2a9c8fa6c7bfa669d14689d08cd0bae0d07ed6d550bb606aa973b941c97da",
+      "stem": "88-shared-worktree-isolation"
+    },
+    {
+      "alias": null,
+      "class": "always",
       "output": "89-constellation-gate-workspace-session.md",
       "output_sha256": "28277ccec3ce3441e71b79143b1b5c9f6fa555d1879220f36a17419c2c9a7587",
       "source": "rules/89-constellation-gate-workspace-session.mdc",
@@ -420,9 +429,9 @@
       "alias": null,
       "class": "always",
       "output": "92-learned-lessons.md",
-      "output_sha256": "5dd57eda76d4600ce0e5000360624b7b9a2cd6c5d14fe34dc48ad2b63c72a23a",
+      "output_sha256": "2e823acfda5ee425eb1cffd8fdd370dd721cbda65c9028ea7d921e09e31a087d",
       "source": "rules/92-learned-lessons.mdc",
-      "source_sha256": "d8436ca0e53a5cc52e9ae58e06e3161724350827f9e5a4d710debd7ad6d6c868",
+      "source_sha256": "f7a407576c935850821973f7dc98ff1cd973c44beecd746e45d0e3ee35f3e55d",
       "stem": "92-learned-lessons"
     },
     {
@@ -582,9 +591,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "2fc16daa8c59cea0e47c26edcf7e77dae683ff387c804c4e00f77856377af975",
+      "output_sha256": "4a373384b9440dce335e61b67ca4c5dfa47883ca9db6a108e7bc6477a30ea0a8",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "6843f97be15dd6f1277dd1d55adf0d4ac9581de7f484ee1eb428814c1adb8002",
+      "source_sha256": "4ec7197399e340e6462962a1becf9a87f84c27d2d51bc3af04ab20006a91200e",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -592,9 +601,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 60,
+    "projected": 61,
     "skipped_agent_requested": 4,
-    "source_mdc": 65
+    "source_mdc": 66
   },
-  "tree_sha256": "41d14afc7e2335e33067c4288cbe2c8235dc355218dee29784375afa483fc0c8"
+  "tree_sha256": "b68074d6436487569ed2649ab79107e88f942da73c718ad27930838ffc16236a"
 }

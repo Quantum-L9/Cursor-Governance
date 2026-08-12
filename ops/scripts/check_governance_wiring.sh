@@ -172,6 +172,22 @@ print(int(time.time() - ts))
   fi
 fi
 
+# Dev checkout vs machine SSOT: slash commands resolve via .cursor-commands → SSOT.
+# Warn when a non-SSOT Cursor-Governance workspace has drifted command files.
+echo ""
+echo "=== slash-command clone drift (workspace vs SSOT) ==="
+WS_REAL="$(cd "$WORKSPACE" && pwd -P 2>/dev/null || echo "$WORKSPACE")"
+GC_REAL="$(cd "$GC" && pwd -P 2>/dev/null || echo "$GC")"
+if [ "$WS_REAL" != "$GC_REAL" ] && [ -f "$WORKSPACE/commands/plan.md" ] && [ -f "$GC/commands/plan.md" ]; then
+  if cmp -s "$WORKSPACE/commands/plan.md" "$GC/commands/plan.md"; then
+    pass "commands/plan.md matches SSOT (slash /plan will see this content)"
+  else
+    warn "commands/plan.md differs from SSOT — /plan loads .cursor-commands → $GC until merge+activate (or intentional SSOT sync)"
+  fi
+else
+  pass "slash-command drift check skipped (same clone or plan.md absent)"
+fi
+
 echo ""
 echo "=== sessionEnd governance backup hook ==="
 if [ ! -f "$HOOK_SRC" ]; then

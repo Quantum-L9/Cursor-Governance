@@ -164,6 +164,14 @@ startup_required: true
 **Incident:** 2026-02-02 — Tried to add noqa comments to bypass ADR-0019 print() violation instead of fixing test file to use proper logging
 **MCP-ID:** `lesson-023-no-noqa-bypass`
 
+### **24. SHARED WORKTREE — NO SCOOP / NO REVERT / NO BRANCH THRASH** 🔴 CRITICAL
+**Rule:** Parallel agents must not share one mutating worktree. Never pipe `git diff --name-only` into `git add`. Never `git revert` commits that may contain foreign dirty paths. Never `git checkout`/`switch`/`reset` on a shared dirty primary clone.
+**Wrong:** On the primary Cursor-Governance checkout while another chat has dirty `commands/plan.md`, stage all dirty files for a "style" commit, then `git revert` that commit; or keep switching branches mid-flight.
+**Right:** `git worktree add` per parallel contract; stage explicit pathspecs you authored; drop out-of-scope staged files with `git restore --staged` instead of reverting a mixed commit.
+**Verify:** `rules/88-shared-worktree-isolation.mdc`; gate `ops/autonomy/worktree_isolation_gate.py`
+**Incident:** 2026-08-12 — parallel agent scoops+reverts `commands/plan.md` v2.0.0 → v1.2.0; branch thrash wipes untracked fixes
+**MCP-ID:** `lesson-024-shared-worktree-isolation`
+
 ---
 
 ## 🟡 TIER 3: HIGH (4 lessons)
