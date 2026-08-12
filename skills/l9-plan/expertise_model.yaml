@@ -10,18 +10,20 @@ expertise_model:
     - Plan quality is proven by executable validators against a machine-readable plan object, not LLM judgment of prose.
     - Ask clarifying questions before inventing scope, paths, or success criteria.
     - Fail closed: missing mandatory gates means the plan is not ready.
-    - Markdown is a human projection; PLAN_DOCUMENT JSON/YAML is authoritative.
+    - Dual artifact: PLAN_DOCUMENT JSON is the depth-gate machine artifact; default deliverable is the PE+autonomy Cursor .plan.md from canonical.template.executable_plan.v1.
+    - Execute path is @environment/program-execution then subordinate @autonomy — never free-form mutate from plan markdown alone.
   invariants:
-    - No readiness claim without validate_plan_document PASS.
+    - No readiness claim without validate_plan_document PASS and PE+autonomy .plan.md projection.
     - No omitted mandatory planning gate for efficiency.
     - No TODO without files or an explicit blocker.
     - No empty scope.out.
     - No converged status while mandatory validation is pending, failed, or unknown.
-    - No code edits in plan mode unless the user explicitly chains to an execution skill.
+    - No code edits in plan mode unless the user explicitly chains to PE+autonomy or l9-gmp-protocol.
   authority_hierarchy:
     - current user instruction and platform safety
-    - verified repo ground truth, AGENTS.md, ADRs, invariants
-    - GMP Phase 0 lock shape when execution will follow
+    - verified repo ground truth, AGENTS.md, ADRs, invariants, PEER_EXECUTION.md
+    - executable plan template + PE/autonomy execute path
+    - GMP Phase 0 lock shape when GMP execution will follow
     - l9-plan contracts and validators
     - model inference labeled Unknown when material
   activation_signals:
@@ -37,17 +39,20 @@ expertise_model:
   adapters:
     - plan-document schema and semantic gate validator
     - depth classifier that only escalates obligations
-    - GMP Phase 0 handoff emitter
-    - markdown projection renderer
+    - PE+autonomy Cursor .plan.md projector (render_plan_pe_autonomy.py)
+    - first-class executable plan template SSOT symlink
+    - GMP Phase 0 handoff emitter (optional)
+    - legacy markdown projection renderer (non-default)
   failure_modes:
     - shallow heading-complete plans prevented by semantic gates and fail_shallow fixtures
     - LLM-only quality judgment prevented by mandatory validate_plan_document
     - depth-skipping efficiency bias prevented by planning doctrine and escalate-only router
     - ungrounded TODOs prevented by G_TODO_GROUND and G_PLACEHOLDER
     - fake convergence prevented by G_CONVERGENCE against validation status
+    - legacy GMP-only markdown treated as ready prevented by PE+autonomy default workflow
   leverage_points:
-    - one PLAN_DOCUMENT schema replaces prose ritual as the SSOT
+    - one PLAN_DOCUMENT schema + one PE executable .plan.md replaces prose ritual
     - one validator turns completeness into a fail-closed proof
-    - one GMP handoff removes re-planning at Phase 0
+    - one PE Controller handoff under Program lease beats free-form Build
     - one stress-test block catches wrong plans before implementation
     - escalate-only depth classification adds rigor without skipping mandatory gates

@@ -96,6 +96,20 @@ def main() -> int:
     else:
         errors.append(f"PE autonomy render failed\n{pe.stderr}")
 
+    # Local Cursor mirror: optional, but fail-closed when present and drifted.
+    sync = run([sys.executable, "scripts/sync_cursor_plan_template.py", ".", "--check"])
+    if sync.returncode not in {0, 1}:
+        errors.append(
+            f"sync_cursor_plan_template.py --check errored ({sync.returncode}): "
+            f"{sync.stdout}\n{sync.stderr}"
+        )
+    elif sync.returncode == 1:
+        errors.append(
+            "Cursor _TEMPLATE.plan.md drifted from SSOT — run "
+            "python3 scripts/sync_cursor_plan_template.py .\n"
+            f"{sync.stderr}"
+        )
+
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)

@@ -12,6 +12,20 @@ These are **hard-won lessons** from repeated mistakes. Violating these wastes ho
 
 ---
 
+## 🚨 ULTRA-CRITICAL: Shared Worktree Isolation
+
+Parallel agents on one mutating clone will scoop and destroy each other's dirty files.
+
+- **NEVER** `git diff --name-only | … git add` or `git add -A` / `git add .` on a shared clone
+- **NEVER** `git revert` a commit that may include another session's paths
+- **NEVER** `git checkout` / `git switch` / `git reset` thrash on the primary shared clone
+- **ALWAYS** use `git worktree add` (or a separate clone) for parallel mutation
+- **ALWAYS** stage explicit pathspecs you authored this session
+- Gate: `ops/autonomy/worktree_isolation_gate.py` · Rule: `88-shared-worktree-isolation.mdc`
+- Incident: 2026-08-12 — `commands/plan.md` v2.0.0 scooped then reverted to v1.2.0
+
+---
+
 ## 🚨 ULTRA-CRITICAL: Path Rules
 
 ### GlobalCommands Location — SSOT IS `$HOME/.cursor-governance`

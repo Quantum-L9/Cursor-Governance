@@ -28,10 +28,17 @@ AND `L9_AUTONOMY_ENABLED=true`:
 
 - `L9_L4_LOCAL_AUTONOMY=1` (default): deny `git push`, `gh pr create`, and
   `make pr` until `.l9/autonomy/l4-release-receipt.json` authorizes release.
-- Enforcement: `ops/autonomy/local_execution_gate.py` (Claude PreToolUse +
-  Cursor beforeShellExecution).
+- Shared-worktree isolation (default ON): deny `git revert`, `git reset`,
+  branch `checkout`/`switch`, broad `git add -A/--all/./-u`, and
+  `git diff --name-only | … git add` scoop loops that destroy parallel
+  agents' dirty files (2026-08-12 plan.md + branch-thrash incident).
+- Enforcement: `ops/autonomy/local_execution_gate.py` +
+  `worktree_isolation_gate.py` (Claude PreToolUse + Cursor beforeShellExecution).
 - CLI: `python3 ops/autonomy/l4_local.py {begin|record-kernels|authorize-release|status}`.
-- Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`.
+- Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`;
+  isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
+  `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
+  `L9_WORKTREE_ISOLATION=0`.
 - Post-push: `l9-pr-remediation` → green → resolve reviews → merge (program/
   plan Build launch is the auth); older open PRs bottom-up first.
 
