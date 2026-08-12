@@ -117,7 +117,8 @@ _RM_RF_WIP = re.compile(r"\brm\s+-[a-zA-Z]*[rf][a-zA-Z]*\b[^\n]*\bWIP\b", re.I)
 _GIT_CLEAN_WIP = re.compile(r"\bgit\s+clean\b[^\n]*\bWIP\b", re.I)
 _GIT_CLEAN_FORCE = re.compile(r"\bgit\s+clean\b(?:\s+-\S+)*\s+-(?:f|fd|fdx|df|dfx)\b", re.I)
 _TMP_HOLD_CREATE = re.compile(
-    r"(?:\bmkdir\b|\bmktemp\b)\s+\S*(?:cg-\S*hold|untracked-hold)|/tmp/(?:cg-\S*hold|\S*untracked-hold)",
+    r"(?:\bmkdir\b|\bmktemp\b)\s+\S*(?:cg-\S*hold|untracked-hold)|"
+    r"/tmp/(?:cg-\S*hold|\S*untracked-hold)",
     re.I,
 )
 _SCRATCH_HOLD_PARK_WIP = re.compile(r"scratch_hold\.py\s+park\b[^\n]*\bWIP\b", re.I)
@@ -125,9 +126,19 @@ _SCRATCH_HOLD_PARK_WIP = re.compile(r"scratch_hold\.py\s+park\b[^\n]*\bWIP\b", r
 
 def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
     if _REVERT.search(command) and not _authorized("L9_GIT_REVERT_AUTHORIZED"):
-        return ('shared-worktree isolation: git revert denied (destroyed in-flight commands/plan.md on 2026-08-12). Set L9_GIT_REVERT_AUTHORIZED=<reason> only after confirming the target commit has no foreign/out-of-scope paths, or use a dedicated git worktree per parallel agent.')
+        return (
+            "shared-worktree isolation: git "
+            "revert denied (destroyed in-flight commands/plan.md on 2026-08-12). "
+            "Set L9_GIT_REVERT_AUTHORIZED=<reason> only after confirming the "
+            "target commit has no foreign/out-of-scope paths, or use a "
+            "dedicated git worktree per parallel agent."
+        )
     if dirty and _RESET.search(command) and not _authorized("L9_GIT_RESET_AUTHORIZED"):
-        return ('shared-worktree isolation: git reset denied while the worktree is dirty (wipes parallel agents dirty/untracked work). Use a git worktree, or set L9_GIT_RESET_AUTHORIZED=<reason>.')
+        return (
+            "shared-worktree isolation: git reset denied while the worktree is "
+            "dirty (wipes parallel agents dirty/untracked work). Use a git "
+            "worktree, or set L9_GIT_RESET_AUTHORIZED=<reason>."
+        )
     if dirty and _is_branch_switch(command) and not _authorized("L9_GIT_SWITCH_AUTHORIZED"):
         return (
             "shared-worktree isolation: branch checkout/switch denied while the "
