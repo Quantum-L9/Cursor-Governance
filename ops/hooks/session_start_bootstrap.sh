@@ -125,6 +125,8 @@ if ! resolve_global_commands; then
 - Graphiti disabled — no resume memory
 ### Code-graph
 - skipped
+### Plan audit
+- plan audit: skipped (no SSOT)
 EOF
 )"
   COMBINED="$COMBINED" python3 - <<'PY'
@@ -345,6 +347,43 @@ fi
 GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
+# Plan audit: fail-open, budget-capped; never fail sessionStart.
+PLAN_AUDIT_MD="plan audit: skipped"
+AUDIT_PY="$GC/skills/l9-plan-audit/scripts/audit_plans.py"
+# Prefer SSOT; fall back to open workspace when developing ahead of tip sync.
+if [ ! -f "$AUDIT_PY" ]; then
+  _ws_audit="${CURSOR_PROJECT_DIR:-$PWD}/skills/l9-plan-audit/scripts/audit_plans.py"
+  if [ -f "$_ws_audit" ]; then
+    AUDIT_PY="$_ws_audit"
+  fi
+fi
+if [ -f "$AUDIT_PY" ]; then
+  if command -v timeout >/dev/null 2>&1; then
+    PLAN_AUDIT_MD="$(
+      timeout 2 python3 "$AUDIT_PY" \
+        --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
+        --window-days 7 \
+        --format markdown \
+        --budget-chars 1200 \
+        --limit 5 \
+        --deadline-seconds 1.5 \
+        2>/dev/null || echo "plan audit: unavailable"
+    )"
+  else
+    PLAN_AUDIT_MD="$(
+      python3 "$AUDIT_PY" \
+        --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
+        --window-days 7 \
+        --format markdown \
+        --budget-chars 1200 \
+        --limit 5 \
+        --deadline-seconds 1.5 \
+        2>/dev/null || echo "plan audit: unavailable"
+    )"
+  fi
+  [ -n "$PLAN_AUDIT_MD" ] || PLAN_AUDIT_MD="plan audit: unavailable"
+fi
+
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
@@ -365,6 +404,8 @@ COMBINED="$(cat <<EOF
 ${HYDRATE_MD}
 ### Code-graph
 ${CODEGRAPH_MD}
+### Plan audit
+${PLAN_AUDIT_MD}
 EOF
 )"
 

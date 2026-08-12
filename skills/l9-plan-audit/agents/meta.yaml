@@ -1,0 +1,4 @@
+interface:
+  display_name: "L9 Plan Audit"
+  short_description: "Audit unbuilt/stale Cursor plans for sessionStart and /plan-audit"
+  brand_color: "#0F766E"
