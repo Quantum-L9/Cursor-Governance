@@ -15,7 +15,7 @@ Use this to onboard a surface that has no dedicated adapter yet (Windsurf,
 VS Code Copilot, open-source CLIs, custom bots). Follow
 `../ADAPTER_CONTRACT.md` — the same three carriers as Claude Code.
 
-Claude Code stays at `environment/claude-code/`; do not relocate it here.
+Claude Code stays at `environment/agents/adapters/claude-code/`; do not relocate it here.
 
 ## 1. Register the agent (identity first)
 

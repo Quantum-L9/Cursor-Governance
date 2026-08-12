@@ -36,7 +36,7 @@ repos:
         name: Sync generated manifests, registries, and overrides
         entry: python3 ops/scripts/sync_generated_artifacts.py --force
         language: system
-        files: ^(rules/|skills/|commands/|environment/claude-code/|environment/program-execution/)
+        files: ^(rules/|skills/|commands/|environment/agents/adapters/claude-code/|environment/program-execution/)
         pass_filenames: false
 
   - repo: https://github.com/astral-sh/ruff-pre-commit

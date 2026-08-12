@@ -514,6 +514,17 @@ Claude Code gold-standard pack lives at
 HTTPS Graphiti (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
 see ADR-0006 + ADR-0007.
 
+<!-- CLAUDE_CODE_SYMLINK_EXTINGUISHED_V1 -->
+## Claude Code symlink extinguished (2026-08-12) — supersedes §2.0 autonomy path + placement symlink note
+
+Authoritative corrections:
+
+1. Sole pack home is `environment/agents/adapters/claude-code/` (including
+   `autonomy/`). Do not teach `environment/claude-code/` as a live path.
+2. The transitional symlink `environment/claude-code` is **removed**.
+3. Older bullets naming `environment/claude-code/autonomy/` as the machine
+   runtime are historical; use the adapters path.
+
 
 <!-- GOVERNANCE_ACTIVATE_FRESH_SESSIONSTART_V1 -->
 ## SessionStart tip activation (2026-08-12) — supersedes §2.1 step 1 and related bullets

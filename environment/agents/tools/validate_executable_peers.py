@@ -305,7 +305,6 @@ def _check_no_copied_autonomy_and_carriers(model: ExecutablePeerModel, errors: l
     # Owned Claude scheduler is not a forbidden copy of root autonomy/.
     _E14_AUTONOMY_ALLOW = {
         Path("environment/agents/adapters/claude-code/autonomy"),
-        Path("environment/claude-code/autonomy"),  # transitional symlink target pre/post move
     }
     for adir in _adapter_dirs(model):
         for offender in adir.rglob("autonomy"):

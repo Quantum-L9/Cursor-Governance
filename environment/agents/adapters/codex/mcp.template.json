@@ -8,7 +8,7 @@
     "status": "active",
     "version": "1.0.0",
     "updated": "2026-07-31",
-    "note": "HTTP MCP block for Codex (cloud settings or CLI). Env-refs only — never hardcode tokens. Peer of environment/claude-code/mcp.template.json."
+    "note": "HTTP MCP block for Codex (cloud settings or CLI). Env-refs only — never hardcode tokens. Peer of environment/agents/adapters/claude-code/mcp.template.json."
   },
   "mcpServers": {
     "graphiti-memory": {

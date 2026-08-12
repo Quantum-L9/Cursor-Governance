@@ -85,9 +85,9 @@ if ! git status --porcelain | diff -q "$status_before" - >/dev/null; then
 fi
 
 echo "--- skill-activation ---"
-if [[ -f "$WS/environment/claude-code/validate_skill_activation.py" ]]; then
-  if grep -Eq '^(skills/|ops/skill_routing/|ops/generated/skill-registry\.json|environment/claude-code/)' "$changed_file"; then
-    python3 "$WS/environment/claude-code/validate_skill_activation.py"
+if [[ -f "$WS/environment/agents/adapters/claude-code/validate_skill_activation.py" ]]; then
+  if grep -Eq '^(skills/|ops/skill_routing/|ops/generated/skill-registry\.json|environment/agents/adapters/claude-code/)' "$changed_file"; then
+    python3 "$WS/environment/agents/adapters/claude-code/validate_skill_activation.py"
   else
     echo "OK: skip skill-activation (skills/routing unchanged)"
   fi

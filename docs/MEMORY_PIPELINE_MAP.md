@@ -10,7 +10,7 @@ Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, rules `03-graphiti-memory` + `87
 | Graphiti (VPS MCP) | Sole agent episodic SSOT |
 | `ops/graphiti/graphiti_memory_client.py` | Cursor-primary front door |
 | `ops/graphiti/hydration/` | sessionStart compile + sessionEnd close |
-| Claude `environment/claude-code/memory/` | Thin adapter only (no second brain) |
+| Claude `environment/agents/adapters/claude-code/memory/` | Thin adapter only (no second brain) |
 | `memory-bank/` | **RETIRED** — do not scaffold/read/write; delete residual trees |
 | `.l9/pr/` | `make pr` remediation handoff JSON (not memory) |
 | PE Graphiti projection | Observability only — never write authority |
@@ -40,7 +40,7 @@ Entry points:
 | Surface | Start | Close |
 |---------|-------|-------|
 | Cursor | `ops/hooks/session_start_memory_orchestrator.sh` | `ops/hooks/graphiti-session-end.sh` |
-| Claude | `environment/claude-code/hooks/memory_prefetch.py` | `environment/claude-code/hooks/memory_writeback.py` |
+| Claude | `environment/agents/adapters/claude-code/hooks/memory_prefetch.py` | `environment/agents/adapters/claude-code/hooks/memory_writeback.py` |
 | CLI | `python -m ops.graphiti.hydration.cli compile` | `… cli close` |
 
 ## Identity

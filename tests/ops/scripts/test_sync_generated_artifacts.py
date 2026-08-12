@@ -56,7 +56,7 @@ def test_orphan_heal_and_overrides(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    settings_dir = tmp_path / "environment" / "claude-code"
+    settings_dir = tmp_path / "environment" / "agents" / "adapters" / "claude-code"
     settings_dir.mkdir(parents=True)
     settings_path = settings_dir / "settings.template.json"
     settings_path.write_text(json.dumps({"skillOverrides": {}}, indent=2) + "\n", encoding="utf-8")

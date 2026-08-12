@@ -34,7 +34,7 @@ PROTECTED_EXACT = {
 PROTECTED_PREFIXES = (
     "environment/program-execution/core/shared/",
     "autonomy/",
-    "environment/claude-code/autonomy/",
+    "environment/agents/adapters/claude-code/autonomy/",
 )
 
 NON_MECHANICAL_MARKERS = (
@@ -88,7 +88,7 @@ def _classify_layer(path: str) -> str:
         return "bootstrap"
     if path.startswith("environment/program-execution/"):
         return "program-execution"
-    if path.startswith("autonomy/") or path.startswith("environment/claude-code/autonomy/"):
+    if path.startswith("autonomy/") or path.startswith("environment/agents/adapters/claude-code/autonomy/"):
         return "autonomy"
     if path.startswith("skills/") or path.startswith("commands/") or path.startswith("rules/"):
         return "governance"

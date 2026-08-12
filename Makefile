@@ -94,13 +94,13 @@ claude-skills: claude-skill-registry
 
 ## Read-only registry/frontmatter/hook/routing drift validation.
 claude-skills-check:
-	python3 environment/claude-code/validate_skill_activation.py
+	python3 environment/agents/adapters/claude-code/validate_skill_activation.py
 
 ## Behavioral router + reconciliation fixture tests.
 claude-skills-test:
-	python3 environment/claude-code/tests/test_skill_router.py
-	python3 environment/claude-code/tests/test_skill_reconciliation.py
-	python3 environment/claude-code/tests/test_cursor_skill_router.py
+	python3 environment/agents/adapters/claude-code/tests/test_skill_router.py
+	python3 environment/agents/adapters/claude-code/tests/test_skill_reconciliation.py
+	python3 environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py
 
 .PHONY: claude-settings claude-settings-check
 
@@ -119,11 +119,11 @@ claude-settings-check:
 ## Heals the settings triad first (idempotent), then runs structural validation.
 claude-env:
 	$(MAKE) claude-settings
-	python3 environment/claude-code/validate_claude_env.py
+	python3 environment/agents/adapters/claude-code/validate_claude_env.py
 
 ## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
 autonomy-validate:
-	python3 environment/claude-code/autonomy/validate_autonomy.py
+	python3 environment/agents/adapters/claude-code/autonomy/validate_autonomy.py
 
 
 ## L4 local autonomy (stacked local commits → kernels → authorize → push/PR).
@@ -224,7 +224,7 @@ uv-lock-check:
 	@if [ -f uv.lock ]; then uv lock --check; else echo "OK: no uv.lock present, skipping"; fi
 
 ## Pytest suite. make pr runs this only when Python files changed.
-## Splits root autonomy/ from environment/claude-code/autonomy/ (same package name).
+## Splits root autonomy/ from environment/agents/adapters/claude-code/autonomy/ (same package name).
 test: venv
 	bash ops/scripts/run_pytest_suites.sh --tb=short -q
 

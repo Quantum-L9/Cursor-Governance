@@ -14,7 +14,7 @@
 # Contract: FAIL-OPEN. A hook must never block a session. Every failure degrades
 # to a smaller context blob; the script always exits 0.
 #
-# Spec: environment/claude-code/hooks/SESSION_START_SPEC.md
+# Spec: environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md
 # Profile SSOT: ops/autonomy/surface_profile.yaml
 # ---------------------------------------------------------------------------
 set -uo pipefail
@@ -90,7 +90,7 @@ if GOV=$(resolve_governance_dir); then
   fi
 
   # --- Bounded-autonomy campaign context (fail-open; read-only probe) ------
-  AUTONOMY_BOOTSTRAP="$GOV/environment/claude-code/autonomy/bootstrap.py"
+  AUTONOMY_BOOTSTRAP="$GOV/environment/agents/adapters/claude-code/autonomy/bootstrap.py"
   if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v "$PY" >/dev/null 2>&1; then
     AUTONOMY_CONTEXT=$("$PY" "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null || true)
     [ -n "$AUTONOMY_CONTEXT" ] && LINES+=("--- bounded autonomy ---" "$AUTONOMY_CONTEXT")
@@ -101,8 +101,6 @@ if GOV=$(resolve_governance_dir); then
   # Skill-router readiness hint
   if [ -f "$GOV/ops/generated/skill-registry.json" ]; then
     LINES+=("skill-router: ops/generated/skill-registry.json ready (UserPromptSubmit)")
-  elif [ -f "$GOV/environment/claude-code/generated/skill-registry.json" ]; then
-    LINES+=("skill-router: legacy environment/claude-code/generated/skill-registry.json present")
   fi
 else
   LINES+=("governance SSOT: NOT FOUND — web/setup.sh must clone GitHub main to \$HOME/.cursor-governance")

@@ -77,7 +77,7 @@ fi
 
 # 3.5) Install Claude Code triad into this workspace when the repo has not
 #      committed it. Never overwrite files the repo already has.
-CC_ENV="$GOV_DIR/environment/claude-code"
+CC_ENV="$GOV_DIR/environment/agents/adapters/claude-code"
 if [ -d "$CC_ENV" ]; then
   log "Activating Claude Code environment in $(pwd)"
   mkdir -p .claude/hooks

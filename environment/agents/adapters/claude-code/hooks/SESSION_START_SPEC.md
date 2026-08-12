@@ -11,8 +11,8 @@
 2. Resolve governance only at `$HOME/.cursor-governance` (ignore other `L9_GOVERNANCE_DIR`).
 3. Emit Claude SessionStart JSON envelope with `additionalContext`.
 4. **Mobile-safe** — committed consumer copy must not require `~/.cursor`.
-5. **No new brains** under `environment/claude-code/` — call `ops/autonomy/*` and
-   `environment/claude-code/autonomy/bootstrap.py` only.
+5. **No new brains** under `environment/agents/adapters/claude-code/` — call `ops/autonomy/*` and
+   `environment/agents/adapters/claude-code/autonomy/bootstrap.py` only.
 6. Reconcile (`reconcile_claude_settings`) is **install-time**, not SessionStart-critical.
 
 ## Must emit when governance found

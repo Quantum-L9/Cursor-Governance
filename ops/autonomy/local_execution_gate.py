@@ -2,7 +2,7 @@
 """Deny mid-execution git push / PR create until L4 release is authorized.
 
 Claude Code PreToolUse adapter:
-  environment/claude-code/hooks/local_execution_gate_wrap.py
+  environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
 
 Cursor beforeShellExecution adapter:
   ops/hooks/l4-local-execution-gate-shell.sh

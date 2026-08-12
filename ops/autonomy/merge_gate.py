@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deny merge / force / admin-destructive git operations (Autonomy Surface Profile).
 
-Claude Code PreToolUse adapter: environment/claude-code/hooks/merge_gate_wrap.py
+Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches:

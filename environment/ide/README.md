@@ -4,7 +4,7 @@ Declarative desired state for the **editor** in every governed workspace: which
 extensions are installed machine-wide, and which `.vscode/settings.json` keys the
 profile owns. Reconciled by `ops/scripts/install_ide_profile.sh`.
 
-> **Peer adapter:** `environment/claude-code/` is the Claude Code environment
+> **Peer adapter:** `environment/agents/adapters/claude-code/` is the Claude Code environment
 > (CLI · Web · Mobile). It renders the **same** `policy.json` through a different
 > target — see `render.claude.json` there. For Claude Code, formatter ownership is
 > carried by the `agentdocs` `CLAUDE.md` block (git-tracked, survives a clone),

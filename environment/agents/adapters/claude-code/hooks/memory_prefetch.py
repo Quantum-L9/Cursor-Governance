@@ -86,7 +86,7 @@ def main() -> int:
             "Rule 03-graphiti-memory; skill l9-graphiti-memory; CANONICAL_LAW §8.",
             compiled.get("additional_context") or "",
             "Governed writes require a conflict-checked phase-lock via the same front door: "
-            "python3 environment/claude-code/hooks/memory_lock.py acquire "
+            "python3 environment/agents/adapters/claude-code/hooks/memory_lock.py acquire "
             f'--namespace {namespaces[0]} --task "<change>".',
         ]
         _emit("\n".join(lines))

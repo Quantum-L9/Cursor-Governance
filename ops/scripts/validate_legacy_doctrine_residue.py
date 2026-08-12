@@ -20,7 +20,7 @@ ACTIVE_ROOTS = (
     "environment/agents/adapters",
     "environment/agents/tools",
     "environment/generated/llm-rules",
-    "environment/claude-code",
+    "environment/agents/adapters/claude-code",
     "learning/failures",
 )
 

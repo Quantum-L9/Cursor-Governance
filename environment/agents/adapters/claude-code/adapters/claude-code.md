@@ -1,6 +1,6 @@
 <!-- L9_META
 schema: 1
-parent: environment/claude-code
+parent: environment/agents/adapters/claude-code
 layer: adapter
 role: claude-code
 version: 1.0.0

@@ -37,7 +37,7 @@ def test_merge_preserves_plugins() -> None:
 
 def test_reconcile_workspace_and_check(tmp_path: Path) -> None:
     root = tmp_path / "gov"
-    hooks = root / "environment" / "claude-code" / "hooks"
+    hooks = root / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
     hooks.mkdir(parents=True)
     (hooks / "session_start_claude_governance.sh").write_text("#!/bin/bash\n", encoding="utf-8")
     (hooks / "merge_gate_wrap.py").write_text("# wrap\n", encoding="utf-8")
@@ -48,7 +48,7 @@ def test_reconcile_workspace_and_check(tmp_path: Path) -> None:
         "env": {"L9_GOVERNANCE_SURFACE": "claude-code", "L9_AUTONOMY_ENABLED": "true"},
         "skillOverrides": {},
     }
-    tmpl_path = root / "environment" / "claude-code" / "settings.template.json"
+    tmpl_path = root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
     tmpl_path.write_text(json.dumps(tmpl, indent=2) + "\n", encoding="utf-8")
 
     ws = tmp_path / "consumer"

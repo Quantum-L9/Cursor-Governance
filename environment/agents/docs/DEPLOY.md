@@ -11,7 +11,7 @@ updated: 2026-07-31
 
 # Deploy checklist — multi-agent memory (Option A live)
 
-Claude Code stays at `environment/claude-code/`. This checklist wires every
+Claude Code stays at `environment/agents/adapters/claude-code/`. This checklist wires every
 **other** registry agent onto the same control plane.
 
 ## Already live (operator ground truth)
@@ -64,7 +64,7 @@ ssh -i ~/.ssh/Hetzner-C1-nopass root@46.62.243.82 \
 
 | Agent | Adapter README | Paste |
 |---|---|---|
-| Claude Code | `environment/claude-code/web/` (unchanged path) | env + `setup.sh` |
+| Claude Code | `environment/agents/adapters/claude-code/web/` (unchanged path) | env + `setup.sh` |
 | Manus | `adapters/manus/README.md` | env + connector + bootstrap |
 | Codex | `adapters/codex/README.md` | env + config.toml / MCP + AGENTS block |
 | Gemini | `adapters/gemini/README.md` | env + settings merge + GEMINI block |

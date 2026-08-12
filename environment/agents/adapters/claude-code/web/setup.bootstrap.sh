@@ -27,15 +27,8 @@ else
   git clone --depth 1 --branch "$GOV_BRANCH" "$GOV_REMOTE" "$GOV_DIR"
 fi
 
-# Prefer moved pack; transitional symlink keeps environment/claude-code working.
-SETUP=""
-for cand in \
-  "$GOV_DIR/environment/agents/adapters/claude-code/web/setup.sh" \
-  "$GOV_DIR/environment/claude-code/web/setup.sh"
- do
-  if [ -f "$cand" ]; then SETUP="$cand"; break; fi
-done
-if [ -z "$SETUP" ]; then
+SETUP="$GOV_DIR/environment/agents/adapters/claude-code/web/setup.sh"
+if [ ! -f "$SETUP" ]; then
   echo "L9 setup: missing web/setup.sh in governance clone" >&2
   exit 1
 fi
