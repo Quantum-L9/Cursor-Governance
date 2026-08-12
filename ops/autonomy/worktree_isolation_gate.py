@@ -107,9 +107,7 @@ def _working_tree_dirty(root: Path | None) -> bool:
     return bool(proc.stdout.strip())
 
 
-def command_violates_worktree_isolation(
-    command: str, *, root: Path | None = None
-) -> str | None:
+def command_violates_worktree_isolation(command: str, *, root: Path | None = None) -> str | None:
     """Return deny reason if command is a known foreign-work destroyer."""
     if isolation_disabled() or not command.strip():
         return None
@@ -124,22 +122,14 @@ def command_violates_worktree_isolation(
 
     dirty = _working_tree_dirty(root)
 
-    if (
-        dirty
-        and _RESET.search(command)
-        and not _authorized("L9_GIT_RESET_AUTHORIZED")
-    ):
+    if dirty and _RESET.search(command) and not _authorized("L9_GIT_RESET_AUTHORIZED"):
         return (
             "shared-worktree isolation: git reset denied while the worktree is "
             "dirty (wipes parallel agents' dirty/untracked work). Use a git "
             "worktree, or set L9_GIT_RESET_AUTHORIZED=<reason>."
         )
 
-    if (
-        dirty
-        and _is_branch_switch(command)
-        and not _authorized("L9_GIT_SWITCH_AUTHORIZED")
-    ):
+    if dirty and _is_branch_switch(command) and not _authorized("L9_GIT_SWITCH_AUTHORIZED"):
         return (
             "shared-worktree isolation: git checkout/switch denied while the "
             "worktree is dirty (2026-08-12 thrash wiped in-flight files). "

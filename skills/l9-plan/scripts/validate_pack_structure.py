@@ -72,31 +72,53 @@ def _skill_version(skill: str) -> tuple[int, ...] | None:
     return None
 
 
-def _doctrine_errors(root: Path, skill: str) -> list[str]:
-    errors: list[str] = []
+def _forbidden_phrase_errors(skill: str) -> list[str]:
     lowered = skill.lower()
-    for phrase in FORBIDDEN_PHRASES:
-        if phrase in lowered:
-            errors.append(f"forbidden doctrine phrase in {SKILL_MD}: {phrase}")
-    doctrine = root / "references/planning-doctrine.md"
-    if doctrine.is_file():
-        text = doctrine.read_text(encoding="utf-8").lower()
-        if "fake optimization" not in text and "less rework" not in text:
-            errors.append("planning-doctrine.md missing anti-rework doctrine")
-        if "program-execution" not in text and "@environment/program-execution" not in text:
-            errors.append("planning-doctrine.md missing PE execute-path doctrine")
-    if "validate_plan_document.py" not in skill:
-        errors.append(f"{SKILL_MD} Validation must reference validate_plan_document.py")
-    if "plan-workflow-pe-autonomy.md" not in skill:
-        errors.append(f"{SKILL_MD} must default plan mode to plan-workflow-pe-autonomy.md")
-    if "executable-plan.pe-autonomy.template.md" not in skill:
-        errors.append(f"{SKILL_MD} must reference executable-plan.pe-autonomy.template.md")
-    if "render_plan_pe_autonomy.py" not in skill:
-        errors.append(f"{SKILL_MD} must reference render_plan_pe_autonomy.py")
+    return [
+        f"forbidden doctrine phrase in {SKILL_MD}: {phrase}"
+        for phrase in FORBIDDEN_PHRASES
+        if phrase in lowered
+    ]
+
+
+def _pe_marker_errors(skill: str) -> list[str]:
+    required = (
+        (
+            "validate_plan_document.py",
+            f"{SKILL_MD} Validation must reference validate_plan_document.py",
+        ),
+        (
+            "plan-workflow-pe-autonomy.md",
+            f"{SKILL_MD} must default plan mode to plan-workflow-pe-autonomy.md",
+        ),
+        (
+            "executable-plan.pe-autonomy.template.md",
+            f"{SKILL_MD} must reference executable-plan.pe-autonomy.template.md",
+        ),
+        ("render_plan_pe_autonomy.py", f"{SKILL_MD} must reference render_plan_pe_autonomy.py"),
+    )
+    errors = [msg for needle, msg in required if needle not in skill]
     version = _skill_version(skill)
     if version is None or version < (4, 0, 0):
         errors.append(f"{SKILL_MD} version must be >= 4.0.0 (PE+autonomy default)")
     return errors
+
+
+def _doctrine_file_errors(root: Path) -> list[str]:
+    doctrine = root / "references/planning-doctrine.md"
+    if not doctrine.is_file():
+        return []
+    text = doctrine.read_text(encoding="utf-8").lower()
+    errors: list[str] = []
+    if "fake optimization" not in text and "less rework" not in text:
+        errors.append("planning-doctrine.md missing anti-rework doctrine")
+    if "program-execution" not in text and "@environment/program-execution" not in text:
+        errors.append("planning-doctrine.md missing PE execute-path doctrine")
+    return errors
+
+
+def _doctrine_errors(root: Path, skill: str) -> list[str]:
+    return _forbidden_phrase_errors(skill) + _doctrine_file_errors(root) + _pe_marker_errors(skill)
 
 
 def _ssot_errors(root: Path) -> list[str]:
