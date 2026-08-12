@@ -109,11 +109,8 @@ else
   LINES+=("remote: https://github.com/Quantum-L9/Cursor-Governance (branch main)")
 fi
 
-ACTIVE="$WORKSPACE/memory-bank/activeContext.md"
-if [ -f "$ACTIVE" ]; then
-  EXCERPT=$(head -c 1200 "$ACTIVE" 2>/dev/null || true)
-  [ -n "$EXCERPT" ] && LINES+=("--- resume context (memory-bank/activeContext.md) ---" "$EXCERPT")
-fi
+# memory-bank/ retired — resume from Graphiti inject/PICKUP only (no T0 excerpt)
+LINES+=("shared memory: Cursor Graphiti front door only; memory-bank retired")
 
 if [ -n "${L9_MEMORY_HTTP_URL:-}" ]; then
   LINES+=("shared memory: L9_MEMORY_HTTP_URL set — l9-shared-memory MCP expected (see mcp.template.json)")

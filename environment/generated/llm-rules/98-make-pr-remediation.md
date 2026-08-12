@@ -5,7 +5,7 @@ description: After make pr opens a PR, spawn l9-pr-remediation poll worker
 # make pr → subscribe + PR remediation (agent contract)
 
 When `make pr` / `make PR` / any capitalization of `pr` finishes with an
-`L9_AGENT_REQUIRED` block (or `memory-bank/pr-remediation-handoff.json` was
+`L9_AGENT_REQUIRED` block (or `.l9/pr/pr-remediation-handoff.json` was
 just written):
 
 1. **Immediately** spawn a background Task:

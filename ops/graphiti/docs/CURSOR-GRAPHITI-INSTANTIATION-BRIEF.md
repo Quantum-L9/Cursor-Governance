@@ -1,7 +1,7 @@
 # Graphiti Instantiation in Cursor — Requirements Brief
 
-**Purpose:** Checklist of everything required for Graphiti memory to load in Cursor (tunnel → health → prefetch → memory-bank).  
-**Authority:** `ops/graphiti/DEPLOY.md`, `03-graphiti-memory.mdc`, `CANONICAL_LAW.md`  
+**Purpose:** Checklist of everything required for Graphiti memory to load in Cursor (tunnel → health → prefetch / PICKUP).
+**Authority:** `ops/graphiti/DEPLOY.md`, `03-graphiti-memory.mdc`, `CANONICAL_LAW.md`
 **Updated:** 2026-06-24
 
 ---
@@ -72,20 +72,20 @@ bash .cursor-commands/ops/scripts/init_graphiti_machine_env.sh
 | 5.3 | **Tunnel ensure** | Bootstrap calls `ensure_graphiti_tunnel.sh` before health |
 | 5.4 | **Memory orchestrator** | Bootstrap delegates to `session_start_memory_orchestrator.sh` |
 | 5.5 | **sessionEnd** | `graphiti-session-end.sh` + `governance-backup.sh` registered |
-| 5.6 | **sessionStart orchestrator** | `session-start-memory-orchestrator.sh` in hooks (prefetch + memory-bank excerpt) |
+| 5.6 | **sessionStart orchestrator** | `session-start-memory-orchestrator.sh` in hooks (Graphiti prefetch / hydration) |
 
 Registered automatically by `setup_workspace_symlinks.sh` or `install_cursor_hooks_bootstrap.sh`.
 
 ---
 
-## 6. Repo memory-bank (T0 resume — required)
+## 6. Resume SSOT (Graphiti only — memory-bank RETIRED)
 
 | # | Requirement | Detail |
 |---|-------------|--------|
-| 6.1 | **`memory-bank/` directory** | Repo root — scaffolded by wire script or bootstrap |
-| 6.2 | **`activeContext.md`** | T0 SSOT — read on sessionStart, written on sessionEnd |
-| 6.3 | **Template source** | `ops/graphiti/memory-bank-template/` |
-| 6.4 | **Git policy** | PlasticOS: tracked; other repos: local unless `group_registry.yaml` says otherwise |
+| 6.1 | **Graphiti inject / PICKUP** | Sole resume path — see `docs/MEMORY_PIPELINE_MAP.md` |
+| 6.2 | **`memory-bank/`** | RETIRED — do not scaffold; wiring WARNs if present |
+| 6.3 | **PR handoffs** | `.l9/pr/pr-remediation-handoff.json` from `make pr` |
+| 6.4 | **Template** | `ops/graphiti/memory-bank-template/RETIRED.md` archival only |
 
 ---
 
@@ -126,7 +126,7 @@ bash .cursor-commands/ops/scripts/check_governance_wiring.sh "$(pwd)"
 bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ```
 
-**Healthy instantiation:** `health` → `liveness_ok: true` and `tools.reachable: true`.  
+**Healthy instantiation:** `health` → `liveness_ok: true` and `tools.reachable: true`.
 **Degraded (tunnel only):** `liveness_ok: true` but MCP 404 — fix VPS MCP route or URL trailing slash.
 
 ---
@@ -164,7 +164,7 @@ bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
 python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 ```
 
-Reload Cursor — new chats trigger `sessionStart` bootstrap (wire → tunnel → health → prefetch → memory-bank).
+Reload Cursor — new chats trigger `sessionStart` bootstrap (wire → tunnel → health → Graphiti prefetch / PICKUP).
 
 ---
 

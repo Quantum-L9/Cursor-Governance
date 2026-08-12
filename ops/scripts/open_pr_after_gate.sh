@@ -88,7 +88,7 @@ else
   echo "WARN: could not subscribe to PR #$pr_number (continuing)"
 fi
 
-handoff_dir="$WS/memory-bank"
+handoff_dir="$WS/.l9/pr"
 mkdir -p "$handoff_dir"
 handoff_path="$handoff_dir/pr-remediation-handoff.json"
 packet_id="make-pr-${pr_number}-$(date -u +%Y%m%dT%H%M%SZ)"

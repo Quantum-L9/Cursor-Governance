@@ -211,9 +211,9 @@ else
 fi
 
 if [ -d "$WORKSPACE/memory-bank" ]; then
-  pass "memory-bank/ directory present"
+  echo "  WARN: memory-bank/ still present — deprecated; remove after Graphiti migrate (do not scaffold)"
 else
-  echo "  WARN: memory-bank/ missing — run setup_workspace_symlinks.sh"
+  pass "memory-bank/ absent (retired)"
 fi
 
 # IDE profile is a convenience layer, never a gate — warn only, never fail.

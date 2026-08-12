@@ -445,3 +445,20 @@ Enforcement is mechanical and fail-closed on every pull request via
 edits files. Removing or weakening the gate is itself a protected-path change
 (`ORG_INVARIANTS.yaml` `protected_paths`). Every change stays traceable to its
 originating commit/agent and is reversible with `git revert`.
+
+<!-- MEMORY_BANK_RETIRED_APPEND_V1 -->
+## memory-bank/ retired (2026-08-11) — supersedes §2.1 steps 5/7 and §6 handoff path
+
+Authoritative corrections (do not treat older bullets above as SSOT):
+
+1. SessionStart does **not** scaffold `memory-bank/` and does **not** excerpt
+   `memory-bank/activeContext.md`. Resume SSOT is Graphiti (`inject` / PICKUP /
+   hydration). See `ops/graphiti/MEMORY_BANK_POLICY.md` and
+   `docs/MEMORY_PIPELINE_MAP.md`.
+2. After `make pr` opens a PR, the remediation handoff path is
+   `.l9/pr/pr-remediation-handoff.json` (written by
+   `ops/scripts/open_pr_after_gate.sh`), **not**
+   `memory-bank/pr-remediation-handoff.json`. Rule `98-make-pr-remediation`
+   matches this path.
+3. Residual `memory-bank/` trees are archival residue; wiring checks WARN if
+   present and PASS when absent. Agents must not recreate them.
