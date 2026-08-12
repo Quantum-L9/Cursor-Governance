@@ -23,6 +23,8 @@
 - [ ] **Workspace wiring intact** — [§8](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md#8) wiring requirements satisfied
 - [ ] **TRACEABILITY_MAP.yaml updated** — if this PR resolves an open unknown, mark as RESOLVED
 - [ ] **Kernel ref discipline** — thin callers use `@v1`, never `@main` or bare SHA
+- [ ] **L4 local autonomy** — stacked-branch local commits only during execution; no mid-execution push ([§6.2](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md#62-l4-local-autonomy-no-mid-execution-push))
+- [ ] **Post-exec kernels** — ran `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md`; `l4_local.py authorize-release` before this PR
 
 ---
 

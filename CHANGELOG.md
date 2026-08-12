@@ -8,6 +8,16 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Added
+- **L4 Local Autonomy (no mid-execution push):** standing doctrine in
+  `ops/autonomy/surface_profile.yaml` (`l4_local_autonomy`), CANONICAL_LAW §6.2,
+  AGENTS.md §2.0.2, rule `87-l4-local-autonomy.mdc`. Flow: stacked-branch local
+  commits → finish program/contract → `kernels/Recursive Alignment.md` +
+  `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release`
+  → scoped PR via `PULL_REQUEST_TEMPLATE.md`. Mechanical deny of mid-exec
+  `git push` / `gh pr create` / `make pr` via `ops/autonomy/local_execution_gate.py`
+  (Claude PreToolUse + Cursor `beforeShellExecution`) and
+  `open_pr_after_gate.sh`. Make targets: `l4-status`, `l4-begin`,
+  `l4-record-kernels`, `l4-authorize`.
 - **Autonomy Surface Parity:** `ops/autonomy/surface_profile.yaml` (standing A4
   doctrine SSOT), `ops/scripts/reconcile_claude_settings.py` + `make claude-settings`,
   `ops/autonomy/merge_gate.py` PreToolUse enforcement, SessionStart Profile inject,

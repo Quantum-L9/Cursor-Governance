@@ -222,6 +222,30 @@ Cursor remains ask-first except campaign packet / `make pr` remediation.
 Deploy settings via `ops/scripts/reconcile_claude_settings.py` (`make claude-settings`).
 Do not fork Profile prose into SessionStart/README/ADR — cite the Profile.
 
+## 6.2 L4 Local Autonomy (no mid-execution push)
+
+SSOT fragment: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
+(`l4_local_autonomy`). Mechanical gate:
+[`ops/autonomy/local_execution_gate.py`](ops/autonomy/local_execution_gate.py).
+Phase CLI: [`ops/autonomy/l4_local.py`](ops/autonomy/l4_local.py).
+
+Standing doctrine for program/contract execution (default **ON**;
+`L9_L4_LOCAL_AUTONOMY=1`):
+
+| Phase | Allowed | Denied |
+|--------|---------|--------|
+| Local execution on stacked feature branch | Local commits | `git push`, `gh pr create`, mid-exec remote |
+| Post-finish kernels | Run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` | Claiming release without both kernels |
+| `release_authorized` (receipt) | Scoped push + PR using `PULL_REQUEST_TEMPLATE.md` | Mid-exec remote / force-push / secrets |
+| Post-push | `l9-pr-remediation` Converge; resolve review threads; merge when user-authorized | Standing merge without user auth; force-push |
+
+Agents MUST NOT stall for push-approval pacing mid-execution. Finish locally →
+kernels → `authorize-release` → push scoped PRs → remediate to green → resolve
+reviews → merge when user authorizes. Older open PRs: remediate and merge
+**bottom-up** by `createdAt` before newer tips. Breakglass:
+`L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`. Explicit merge
+auth: `L9_MERGE_AUTHORIZED=<reason>`.
+
 ---
 
 ## 7. Anti-Patterns

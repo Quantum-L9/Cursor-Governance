@@ -14,11 +14,14 @@ AND `L9_AUTONOMY_ENABLED=true`:
    with **no mid-execution push** → finish program/contract → run
    `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
    `l4_local.py authorize-release` → push → PR (`PULL_REQUEST_TEMPLATE.md`)
-   → `l9-pr-remediation` without waiting for mid-task push asks.
-3. Merge / force-push / hard-reset / admin-merge / secrets remain forbidden.
-4. Cursor surface stays ask-first for commits except campaign packet /
+   → `l9-pr-remediation` Converge (green + resolve review threads) without
+   mid-task push asks. Merge only with explicit user authorization.
+3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
+4. Older open PRs: remediate + merge **bottom-up** by `createdAt` before newer
+   tips, so older work is not rebased onto a freshly updated main.
+5. Cursor surface stays ask-first for commits except campaign packet /
    `make pr` remediation; L4 remote gate still blocks mid-execution push.
-5. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
+6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
 ## L4 Local Autonomy (all surfaces; default ON)
 
@@ -28,5 +31,7 @@ AND `L9_AUTONOMY_ENABLED=true`:
   Cursor beforeShellExecution).
 - CLI: `python3 ops/autonomy/l4_local.py {begin|record-kernels|authorize-release|status}`.
 - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`.
+- Post-push: `l9-pr-remediation` → green → resolve reviews → merge when
+  user-authorized; older open PRs bottom-up first.
 
 <!-- generated-from: ops/autonomy/surface_profile.yaml; do-not-edit -->

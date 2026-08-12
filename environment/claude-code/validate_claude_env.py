@@ -45,6 +45,7 @@ REQUIRED_FILES: tuple[str, ...] = (
     "hooks/session_start_claude_governance.sh",
     "hooks/SESSION_START_SPEC.md",
     "hooks/merge_gate_wrap.py",
+    "hooks/local_execution_gate_wrap.py",
     "web/README.md",
     "web/network-policy.md",
     "web/environment.env.example",
