@@ -3,6 +3,9 @@
 Prefer process env ``OPENAI_API_KEY`` when already set (tests, GHA secrets).
 Otherwise resolve AWS Secrets Manager ``l9/OPENAI_API_KEY`` once into memory
 and return it — do not write to ``~/.cursor/graphiti.env``.
+
+Skip reasons are opaque codes only (never interpolate SM errors or secret
+ids into strings that may be logged — CodeQL clear-text-logging).
 """
 
 from __future__ import annotations
@@ -31,12 +34,12 @@ def resolve_openai_api_key(
         return existing, ""
 
     if os.environ.get("MEMORY_PHASE_B_RESOLVE_SM", "1").strip() in ("0", "false", "False"):
-        return None, "OPENAI_API_KEY absent (SM resolve disabled)"
+        return None, "openai_key_sm_disabled"
 
     try:
         from ops.secrets.resolve_secret import fetch_secret_string
     except ImportError:
-        return None, "OPENAI_API_KEY absent (resolve_secret unavailable)"
+        return None, "openai_key_resolver_unavailable"
 
     aws_region = (
         (region or "").strip()
@@ -49,10 +52,10 @@ def resolve_openai_api_key(
         kwargs["runner"] = runner
     value, err = fetch_secret_string(_SECRET_ID, aws_region, **kwargs)
     if err is not None:
-        return None, f"OPENAI_API_KEY absent (SM {_SECRET_ID}: {err})"
+        return None, "openai_key_sm_error"
     key = (value or "").strip()
     if not key:
-        return None, f"OPENAI_API_KEY absent (SM {_SECRET_ID} empty)"
+        return None, "openai_key_sm_empty"
     # Ephemeral for this process only — not persisted to disk.
     os.environ["OPENAI_API_KEY"] = key
     return key, ""

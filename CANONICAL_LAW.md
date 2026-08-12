@@ -303,10 +303,8 @@ The `intelligence/` directory is a **permanent, active signal corpus**. All data
 **Active mining scripts (do not archive):**
 - `ops/scripts/export_chats.sh`
 - `ops/scripts/parse_chat_exports.py`
-- `ops/scripts/transcript_distiller.py` — thin wrapper → Graphiti S3 queue worker
-  (`ops/graphiti/distill_queue/`); C1 `save_memory` / Dropbox LaunchAgent retired
-- `ops/scripts/run_distiller.sh` — local operator entry to the same worker; batch
-  schedule is GHA `.github/workflows/memory-distill.yml` (not Mac 5am cron)
+- `ops/scripts/transcript_distiller.py`
+- `ops/scripts/run_distiller.sh`
 - `ops/scripts/install_export_job.sh`
 - `ops/graphiti/hydration/openai_fixed_host.py` — Sonar-clean Phase B / worker transport
 - `ops/graphiti/distill_queue/` — SessionEnd enqueue + GHA worker (redacted excerpts only)
@@ -493,3 +491,18 @@ table cell above as SSOT where it conflicts):
    via PE+autonomy (`references/plan-workflow-pe-autonomy.md`).
 3. `.cursor/plans/_TEMPLATE.plan.md` stays a local mirror only (sync via
    `skills/l9-plan/scripts/sync_cursor_plan_template.py`).
+
+<!-- SESSIONEND_PHASE_B_DISTILL_V1 -->
+## 9.1 SessionEnd Phase B distill queue (2026-08-12) — supersedes §9 mining-script notes
+
+Authoritative corrections (do not treat older §9 bullets above as SSOT where
+they conflict):
+
+1. `ops/scripts/transcript_distiller.py` is a thin wrapper → Graphiti S3 queue
+   worker (`ops/graphiti/distill_queue/`); C1 `save_memory` / Dropbox LaunchAgent
+   retired.
+2. `ops/scripts/run_distiller.sh` is the local operator entry to the same worker;
+   batch schedule is GHA `.github/workflows/memory-distill.yml` (not Mac 5am cron).
+3. Active additive paths under §9: `ops/graphiti/hydration/openai_fixed_host.py`
+   (Sonar-clean Phase B / worker transport) and `ops/graphiti/distill_queue/`
+   (SessionEnd enqueue + GHA worker; redacted excerpts only).

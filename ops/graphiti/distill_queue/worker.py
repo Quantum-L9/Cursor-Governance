@@ -36,9 +36,11 @@ AWS_CALL_TIMEOUT = 60
 DONE_PREFIX_DEFAULT = "distill-queue/done/"
 
 
-def _err(msg: str) -> None:
-    print(f"::error::{msg}", file=sys.stderr)
-    print(f"ERROR: {msg}", file=sys.stderr)
+def _err(code: str) -> None:
+    """Log an opaque error code only — never exception text or secret-adjacent strings."""
+    safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in code)[:120]
+    print(f"::error::distill_worker_{safe}", file=sys.stderr)
+    print(f"ERROR: distill_worker_{safe}", file=sys.stderr)
 
 
 def _aws_region() -> str:
@@ -200,7 +202,7 @@ def distill_job(job: dict[str, Any], *, timeout: float = 45.0) -> dict[str, Any]
         raise RuntimeError(f"unsupported schema_version: {job.get('schema_version')}")
     key, reason = resolve_openai_api_key()
     if not key:
-        raise RuntimeError(reason or "OPENAI_API_KEY absent")
+        raise RuntimeError(reason or "openai_key_absent")
     excerpt = str(job.get("transcript_excerpt") or "")[:12000]
     pickup = job.get("heuristic_pickup") or {}
     session_id = str(job.get("session_id") or "")
@@ -253,25 +255,15 @@ def distill_job(job: dict[str, Any], *, timeout: float = 45.0) -> dict[str, Any]
     }
 
 
-def ingest_to_graphiti(
+def _pickup_payload(
     job: dict[str, Any],
     packet: dict[str, Any],
     *,
-    dry_run: bool = False,
-) -> list[dict[str, Any]]:
-    """Write PICKUP + promoted atomics via Graphiti client (no C1)."""
-    import graphiti_memory_client as gmc
-
+    agent_id: str,
+    user_id: str,
+    group_id: str,
+) -> dict[str, Any]:
     from ops.graphiti.hydration.identity import stamp_source_description
-
-    writes: list[dict[str, Any]] = []
-    group_id = str(job["group_id"])
-    agent_id = str(job.get("agent_id") or "gha-distill")
-    user_id = os.environ.get("USER_ID", "gha_distill_agent")
-    gmc.load_env()
-    # Prefer public HTTPS for GHA when tunnel unavailable
-    if not os.environ.get("GRAPHITI_MCP_URL", "").strip():
-        os.environ["GRAPHITI_MCP_URL"] = "https://memory.quantumaipartners.com/graphiti/mcp"
 
     rich = packet.get("pickup") or {}
     objective = str(rich.get("active_objective") or "Resume from distill queue")
@@ -299,7 +291,7 @@ def ingest_to_graphiti(
             ensure_ascii=False,
         )
     )
-    payload = {
+    payload: dict[str, Any] = {
         "name": f"pickup-{job.get('session_id')}-{packet.get('packet_id')}",
         "episode_body": pickup_body,
         "source": "text",
@@ -322,16 +314,13 @@ def ingest_to_graphiti(
         payload = ep.to_mcp_payload()
     except Exception:  # noqa: BLE001
         pass
+    return payload
 
-    if dry_run:
-        writes.append({"written": False, "dry_run": True, "kind": "pickup_context"})
-    else:
-        gmc.call_tool("add_memory", payload)
-        writes.append({"written": True, "kind": "pickup_context"})
 
-    promoted = 0
+def _eligible_promotions(packet: dict[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
     for item in packet.get("promotion_decisions") or []:
-        if promoted >= 5:
+        if len(out) >= limit:
             break
         if not isinstance(item, dict) or item.get("decision") != "promote":
             continue
@@ -339,14 +328,46 @@ def ingest_to_graphiti(
         if kind not in {"lesson", "insight", "decision"}:
             continue
         body = str(item.get("body") or "").strip()
-        if not body:
+        if not body or float(item.get("score") or 0) < 0.65:
             continue
-        score = float(item.get("score") or 0)
-        if score < 0.65:
-            continue
+        out.append({"kind": kind, "body": body})
+    return out
+
+
+def ingest_to_graphiti(
+    job: dict[str, Any],
+    packet: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> list[dict[str, Any]]:
+    """Write PICKUP + promoted atomics via Graphiti client (no C1)."""
+    import graphiti_memory_client as gmc
+
+    from ops.graphiti.hydration.identity import stamp_source_description
+
+    writes: list[dict[str, Any]] = []
+    group_id = str(job["group_id"])
+    agent_id = str(job.get("agent_id") or "gha-distill")
+    user_id = os.environ.get("USER_ID", "gha_distill_agent")
+    gmc.load_env()
+    # Prefer public HTTPS for GHA when tunnel unavailable
+    if not os.environ.get("GRAPHITI_MCP_URL", "").strip():
+        os.environ["GRAPHITI_MCP_URL"] = "https://memory.quantumaipartners.com/graphiti/mcp"
+
+    payload = _pickup_payload(
+        job, packet, agent_id=agent_id, user_id=user_id, group_id=group_id
+    )
+    if dry_run:
+        writes.append({"written": False, "dry_run": True, "kind": "pickup_context"})
+    else:
+        gmc.call_tool("add_memory", payload)
+        writes.append({"written": True, "kind": "pickup_context"})
+
+    for idx, item in enumerate(_eligible_promotions(packet)):
+        kind = item["kind"]
         promo_payload = {
-            "name": f"{kind}-{packet.get('packet_id')}-{promoted}",
-            "episode_body": body,
+            "name": f"{kind}-{packet.get('packet_id')}-{idx}",
+            "episode_body": item["body"],
             "source": "text",
             "source_description": stamp_source_description(agent_id, kind),
             "group_id": group_id,
@@ -356,7 +377,6 @@ def ingest_to_graphiti(
         else:
             gmc.call_tool("add_memory", promo_payload)
             writes.append({"written": True, "kind": kind})
-        promoted += 1
     return writes
 
 
@@ -405,9 +425,9 @@ def process_pending(
                 )
             except Exception as exc:  # noqa: BLE001
                 report["failed"] += 1
-                msg = f"{key}: {type(exc).__name__}: {exc}"
-                report["errors"].append(msg[:500])
-                _err(msg[:500])
+                code = f"job_{type(exc).__name__}"
+                report["errors"].append(code)
+                _err(code)
 
     report["finished_at"] = datetime.now(UTC).isoformat()
     if report["failed"]:
@@ -417,6 +437,19 @@ def process_pending(
     return report
 
 
+def _public_report(report: dict[str, Any]) -> dict[str, Any]:
+    """Stdout-safe subset — no exception text or secret-adjacent fields."""
+    return {
+        "status": report.get("status"),
+        "processed": report.get("processed"),
+        "failed": report.get("failed"),
+        "skipped": report.get("skipped"),
+        "jobs": report.get("jobs"),
+        "error_codes": list(report.get("errors") or []),
+        "finished_at": report.get("finished_at"),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Process S3 distill queue → Graphiti")
     parser.add_argument("--max-jobs", type=int, default=20)
@@ -424,30 +457,26 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     # Fail-loud on missing mandatory config
-    missing = []
     if not os.environ.get("MEMORY_DISTILL_S3_BUCKET", "").strip():
-        missing.append("MEMORY_DISTILL_S3_BUCKET")
-    if missing:
-        for m in missing:
-            _err(f"missing required env: {m}")
+        _err("missing_MEMORY_DISTILL_S3_BUCKET")
         return 1
 
     key, key_reason = resolve_openai_api_key()
     if not key:
-        _err(key_reason or "OPENAI_API_KEY unavailable")
+        _err(key_reason or "openai_key_absent")
         return 1
 
     if not os.environ.get("GRAPHITI_MCP_TOKEN", "").strip() and not args.dry_run:
         # Token may be optional on some deployments; warn loudly but continue if URL set.
-        print("WARN: GRAPHITI_MCP_TOKEN unset — Graphiti may reject writes", file=sys.stderr)
+        print("WARN: graphiti_token_unset", file=sys.stderr)
 
     try:
         report = process_pending(max_jobs=args.max_jobs, dry_run=args.dry_run)
     except Exception as exc:  # noqa: BLE001
-        _err(str(exc))
+        _err(f"main_{type(exc).__name__}")
         return 1
 
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+    print(json.dumps(_public_report(report), indent=2, ensure_ascii=False))
     if report.get("status") == "failed":
         return 1
     return 0

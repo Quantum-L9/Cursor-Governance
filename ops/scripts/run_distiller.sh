@@ -29,7 +29,7 @@ mkdir -p "$LOG_DIR"
 } >> "$LOG_FILE"
 
 PY="${GOV_ROOT}/.venv/bin/python3"
-[ -x "$PY" ] || PY="python3"
+[[ -x "$PY" ]] || PY="python3"
 
 cd "$GOV_ROOT"
 set +e
@@ -38,13 +38,13 @@ PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
 EXIT_CODE=$?
 set -e
 
-if [ "$EXIT_CODE" -eq 0 ]; then
+if [[ "$EXIT_CODE" -eq 0 ]]; then
   echo "[$(date)] Distiller completed successfully" >> "$LOG_FILE"
 else
   echo "[$(date)] Distiller failed with exit code $EXIT_CODE" >> "$LOG_FILE"
 fi
 
-if [ -f "$LOG_FILE" ] && [ "$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)" -gt 2097152 ]; then
+if [[ -f "$LOG_FILE" ]] && [[ "$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)" -gt 2097152 ]]; then
   tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
   echo "[$(date)] Log rotated" >> "$LOG_FILE"
 fi
