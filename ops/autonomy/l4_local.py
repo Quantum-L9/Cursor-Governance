@@ -40,19 +40,42 @@ def _utc_now() -> str:
 
 def workspace_root(explicit: str | None = None) -> Path:
     if explicit:
-        return Path(explicit).expanduser().resolve()
-    env = os.environ.get("L9_L4_WORKSPACE") or os.environ.get("WS")
-    if env:
-        return Path(env).expanduser().resolve()
-    return Path.cwd().resolve()
+        candidate = Path(explicit).expanduser()
+    else:
+        env = os.environ.get("L9_L4_WORKSPACE") or os.environ.get("WS")
+        candidate = Path(env).expanduser() if env else Path.cwd()
+    return _validated_git_root(candidate)
+
+
+def _validated_git_root(candidate: Path) -> Path:
+    """Resolve a workspace only when it is an existing git work tree."""
+    root = candidate.resolve()
+    if not root.is_dir():
+        raise RuntimeError(f"L4 workspace is not a directory: {root}")
+    git_meta = root / ".git"
+    if not git_meta.exists():
+        raise RuntimeError(f"L4 workspace is not a git work tree: {root}")
+    return root
 
 
 def state_path(root: Path) -> Path:
-    return root / STATE_REL
+    return _autonomy_state_file(root, STATE_REL)
 
 
 def receipt_path(root: Path) -> Path:
-    return root / RECEIPT_REL
+    return _autonomy_state_file(root, RECEIPT_REL)
+
+
+def _autonomy_state_file(root: Path, rel: Path) -> Path:
+    """Build a state/receipt path under <root>/.l9/autonomy only (no user path concat)."""
+    base = _validated_git_root(root)
+    if rel != STATE_REL and rel != RECEIPT_REL:
+        raise RuntimeError(f"refusing non-allowlisted L4 state relative path: {rel}")
+    target = (base / rel).resolve()
+    allow_prefix = (base / ".l9" / "autonomy").resolve()
+    if target != allow_prefix and not str(target).startswith(str(allow_prefix) + os.sep):
+        raise RuntimeError(f"L4 state path escapes autonomy dir: {target}")
+    return target
 
 
 def _git(root: Path, *args: str) -> str:
@@ -83,8 +106,11 @@ def load_json(path: Path) -> dict[str, Any] | None:
 
 
 def write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # path must already be allowlisted via _autonomy_state_file
+    parent = path.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(data, indent=2, sort_keys=True) + "\n"
+    path.write_text(payload, encoding="utf-8")
 
 
 def load_phase(root: Path) -> dict[str, Any] | None:
@@ -221,34 +247,29 @@ def pr_open_for_branch(root: Path, branch: str | None = None) -> bool:
     return proc.stdout.strip().upper() == "OPEN"
 
 
-def release_allows_remote(root: Path) -> tuple[bool, str]:
-    """Return (allowed, reason) for git push / gh pr create."""
-    if os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip() in {"0", "false", "False", "no"}:
-        return True, "L9_L4_LOCAL_AUTONOMY disabled"
-    if os.environ.get("L9_LOCAL_PUSH_AUTHORIZED", "").strip():
-        return True, "L9_LOCAL_PUSH_AUTHORIZED breakglass"
-
-    receipt = load_receipt(root)
-    state = load_phase(root)
-    branch = current_branch(root)
-
-    if receipt and receipt.get("phase") == PHASE_RELEASE:
-        if receipt.get("stacked_branch") and receipt["stacked_branch"] != branch:
-            return False, (
-                f"L4 receipt is for branch {receipt['stacked_branch']!r}, "
-                f"current is {branch!r} — begin a new L4 phase or switch branch"
-            )
-        if state and state.get("phase") == PHASE_RELEASE and state.get("stacked_branch") == branch:
-            return True, "L4 release_authorized"
-        if receipt.get("head_sha") == current_head(root):
-            return True, "L4 receipt matches HEAD"
-        if pr_open_for_branch(root, branch):
-            return True, "L4 remediation push on open PR"
+def _allow_from_receipt(
+    root: Path, receipt: dict[str, Any], state: dict[str, Any] | None, branch: str
+) -> tuple[bool, str] | None:
+    if receipt.get("phase") != PHASE_RELEASE:
+        return None
+    if receipt.get("stacked_branch") and receipt["stacked_branch"] != branch:
         return False, (
-            "L4 receipt stale (HEAD moved after authorize without open PR). "
-            "Re-run kernels + authorize-release, or open PR from authorized tip first."
+            f"L4 receipt is for branch {receipt['stacked_branch']!r}, "
+            f"current is {branch!r} — begin a new L4 phase or switch branch"
         )
+    if state and state.get("phase") == PHASE_RELEASE and state.get("stacked_branch") == branch:
+        return True, "L4 release_authorized"
+    if receipt.get("head_sha") == current_head(root):
+        return True, "L4 receipt matches HEAD"
+    if pr_open_for_branch(root, branch):
+        return True, "L4 remediation push on open PR"
+    return False, (
+        "L4 receipt stale (HEAD moved after authorize without open PR). "
+        "Re-run kernels + authorize-release, or open PR from authorized tip first."
+    )
 
+
+def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
     if state is None:
         return False, (
             "L4 local autonomy: mid-execution remote denied. "
@@ -258,7 +279,6 @@ def release_allows_remote(root: Path) -> tuple[bool, str]:
             "python3 ops/autonomy/l4_local.py record-kernels && "
             "python3 ops/autonomy/l4_local.py authorize-release"
         )
-
     phase = state.get("phase")
     if phase == PHASE_RELEASE:
         return True, "L4 release_authorized (phase)"
@@ -271,6 +291,23 @@ def release_allows_remote(root: Path) -> tuple[bool, str]:
         f"L4 phase={phase}: no mid-execution push/PR. Finish locally, run "
         "Recursive Alignment + Validate & Repair, then authorize-release."
     )
+
+
+def release_allows_remote(root: Path) -> tuple[bool, str]:
+    """Return (allowed, reason) for git push / gh pr create."""
+    if os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip() in {"0", "false", "False", "no"}:
+        return True, "L9_L4_LOCAL_AUTONOMY disabled"
+    if os.environ.get("L9_LOCAL_PUSH_AUTHORIZED", "").strip():
+        return True, "L9_LOCAL_PUSH_AUTHORIZED breakglass"
+
+    receipt = load_receipt(root)
+    state = load_phase(root)
+    branch = current_branch(root)
+    if receipt:
+        decided = _allow_from_receipt(root, receipt, state, branch)
+        if decided is not None:
+            return decided
+    return _allow_from_phase(state)
 
 
 def status_dict(root: Path) -> dict[str, Any]:

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import runpy
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,9 +14,11 @@ def main() -> int:
     if not GATE.is_file():
         print("local_execution_gate_wrap: ops gate missing; skip", file=sys.stderr)
         return 0
-    sys.argv = [str(GATE), "claude"]
-    runpy.run_path(str(GATE), run_name="__main__")
-    return 0
+    completed = subprocess.run(
+        [sys.executable, str(GATE), "claude"],
+        check=False,
+    )
+    return int(completed.returncode)
 
 
 if __name__ == "__main__":

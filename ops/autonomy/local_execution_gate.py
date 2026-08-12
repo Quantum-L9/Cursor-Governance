@@ -103,7 +103,7 @@ def _emit_cursor(permission: str, message: str | None = None) -> int:
 def main_claude() -> int:
     try:
         event = json.load(sys.stdin)
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError:
         return 0
     if not isinstance(event, dict):
         return 0
@@ -120,7 +120,7 @@ def main_claude() -> int:
 def main_cursor_shell() -> int:
     try:
         event = json.load(sys.stdin)
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError:
         return _emit_cursor("allow")
     if not isinstance(event, dict):
         return _emit_cursor("allow")
