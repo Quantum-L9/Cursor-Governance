@@ -168,31 +168,16 @@ def _restore_hold_dir(ws: Path, hold_dir: Path, *, prefer_existing: bool) -> int
     return 0
 
 
-def _safe_temp_root() -> Path | None:
-    """Resolve an explicit temp scan root (never process-wide public temp).
-
-    Legacy import only runs when TMPDIR or L9_SCRATCH_HOLD_TMP_SCAN is set to a
-    directory owned by the current user — avoids Sonar S5443 public-temp sinks.
-    """
-    raw = (
-        os.environ.get("L9_SCRATCH_HOLD_TMP_SCAN", "").strip()
-        or os.environ.get("TMPDIR", "").strip()
-    )
-    if not raw:
-        return None
+def _legacy_inbox(ws: Path) -> Path | None:
+    """Workspace-private inbox for legacy hold import (never public temp dirs)."""
+    inbox = (ws / ".l9" / "scratch-hold-inbox").resolve()
     try:
-        tmp = Path(raw).expanduser().resolve()
-    except OSError:
+        inbox.relative_to(ws.resolve())
+    except ValueError:
         return None
-    if not tmp.is_dir():
+    if not inbox.is_dir():
         return None
-    try:
-        st_tmp = tmp.stat()
-    except OSError:
-        return None
-    if hasattr(os, "getuid") and st_tmp.st_uid != os.getuid():
-        return None
-    return tmp
+    return inbox
 
 
 def _owned_by_self(path: Path) -> bool:
@@ -267,10 +252,10 @@ def _import_file_entries(ws: Path, candidate: Path, entries: list[dict[str, str]
 
 
 def _import_legacy_tmp(ws: Path) -> int:
-    """Import legacy hold layouts from the process temp dir into the vault."""
+    """Import legacy hold layouts from workspace .l9/scratch-hold-inbox into the vault."""
     if os.environ.get("L9_SCRATCH_HOLD_IMPORT_TMP", "1").strip() in {"0", "false", "no"}:
         return 0
-    tmp = _safe_temp_root()
+    tmp = _legacy_inbox(ws)
     if tmp is None:
         return 0
     imported = 0

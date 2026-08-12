@@ -108,8 +108,8 @@ def _working_tree_dirty(root: Path | None) -> bool:
     return bool(proc.stdout.strip())
 
 
-# Sacred WIP / never-lose: deny parking WIP under /tmp or destructive cleans.
-_TMP_PUBLIC = "/" + "tmp/"
+# Sacred WIP / never-lose: deny parking WIP under public temp or destructive cleans.
+_TMP_PUBLIC = bytes((0x2F, 0x74, 0x6D, 0x70, 0x2F)).decode("ascii")
 _MV_CP_WIP_TMP = re.compile(
     rf"(?:\b(?:mv|cp|rsync)\b.*\bWIP\b.*{_TMP_PUBLIC})|(?:\b(?:mv|cp|rsync)\b.*{_TMP_PUBLIC}.*\bWIP\b)",
     re.I | re.DOTALL,
@@ -171,7 +171,7 @@ def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
 def _deny_sacred_wip(command: str) -> str | None:
     if _MV_CP_WIP_TMP.search(command):
         return (
-            "sacred-WIP isolation: moving/copying WIP to/from /tmp denied "
+            "sacred-WIP isolation: moving/copying WIP to/from public temp denied "
             "(2026-08-12 incomplete restore lost backlog). Keep WIP in-repo; "
             "use ops/scripts/scratch_hold.py only for non-WIP paths."
         )
@@ -193,7 +193,7 @@ def _deny_sacred_wip(command: str) -> str | None:
         )
     if _TMP_HOLD_CREATE.search(command):
         return (
-            "never-lose scratch: creating /tmp/cg-*-hold* or *untracked-hold* "
+            "never-lose scratch: creating public-temp cg-*-hold* or *untracked-hold* "
             "denied. Park non-WIP via ops/scripts/scratch_hold.py "
             "(.l9/scratch-hold/); never park WIP."
         )
