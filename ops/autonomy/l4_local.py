@@ -58,24 +58,22 @@ def _validated_git_root(candidate: Path) -> Path:
     return root
 
 
+STATE_FILENAME = "l4-local-phase.json"
+RECEIPT_FILENAME = "l4-release-receipt.json"
+
+
+def _autonomy_dir(root: Path) -> Path:
+    """Return <git-root>/.l9/autonomy after validating the work tree."""
+    base = _validated_git_root(root)
+    return base.joinpath(".l9", "autonomy")
+
+
 def state_path(root: Path) -> Path:
-    return _autonomy_state_file(root, STATE_REL)
+    return _autonomy_dir(root).joinpath(STATE_FILENAME)
 
 
 def receipt_path(root: Path) -> Path:
-    return _autonomy_state_file(root, RECEIPT_REL)
-
-
-def _autonomy_state_file(root: Path, rel: Path) -> Path:
-    """Build a state/receipt path under <root>/.l9/autonomy only (no user path concat)."""
-    base = _validated_git_root(root)
-    if rel != STATE_REL and rel != RECEIPT_REL:
-        raise RuntimeError(f"refusing non-allowlisted L4 state relative path: {rel}")
-    target = (base / rel).resolve()
-    allow_prefix = (base / ".l9" / "autonomy").resolve()
-    if target != allow_prefix and not str(target).startswith(str(allow_prefix) + os.sep):
-        raise RuntimeError(f"L4 state path escapes autonomy dir: {target}")
-    return target
+    return _autonomy_dir(root).joinpath(RECEIPT_FILENAME)
 
 
 def _git(root: Path, *args: str) -> str:
@@ -105,12 +103,14 @@ def load_json(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def write_json(path: Path, data: dict[str, Any]) -> None:
-    # path must already be allowlisted via _autonomy_state_file
-    parent = path.parent
-    parent.mkdir(parents=True, exist_ok=True)
+def write_autonomy_json(root: Path, filename: str, data: dict[str, Any]) -> None:
+    """Write JSON under .l9/autonomy using an allowlisted filename only."""
+    if filename not in {STATE_FILENAME, RECEIPT_FILENAME}:
+        raise RuntimeError(f"refusing non-allowlisted L4 filename: {filename}")
+    directory = _autonomy_dir(root)
+    directory.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(data, indent=2, sort_keys=True) + "\n"
-    path.write_text(payload, encoding="utf-8")
+    directory.joinpath(filename).write_text(payload, encoding="utf-8")
 
 
 def load_phase(root: Path) -> dict[str, Any] | None:
@@ -145,7 +145,7 @@ def begin(
         },
         "head_sha_at_begin": current_head(root),
     }
-    write_json(state_path(root), state)
+    write_autonomy_json(root, STATE_FILENAME, state)
     rp = receipt_path(root)
     if rp.is_file():
         rp.unlink()
@@ -187,7 +187,7 @@ def record_kernels(
     else:
         state["phase"] = PHASE_EXECUTING
         state["blockers"] = ["kernel_gate_failed"]
-    write_json(state_path(root), state)
+    write_autonomy_json(root, STATE_FILENAME, state)
     return state
 
 
@@ -215,7 +215,7 @@ def authorize_release(root: Path) -> dict[str, Any]:
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
     state["head_sha"] = head
-    write_json(state_path(root), state)
+    write_autonomy_json(root, STATE_FILENAME, state)
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "phase": PHASE_RELEASE,
@@ -228,7 +228,7 @@ def authorize_release(root: Path) -> dict[str, Any]:
         "pr_template": "PULL_REQUEST_TEMPLATE.md",
         "doctrine": "l4_local_autonomy",
     }
-    write_json(receipt_path(root), receipt)
+    write_autonomy_json(root, RECEIPT_FILENAME, receipt)
     return receipt
 
 
