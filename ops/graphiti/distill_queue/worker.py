@@ -36,11 +36,26 @@ AWS_CALL_TIMEOUT = 60
 DONE_PREFIX_DEFAULT = "distill-queue/done/"
 
 
-def _err(code: str) -> None:
-    """Log an opaque error code only — never exception text or secret-adjacent strings."""
-    safe = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in code)[:120]
-    print(f"::error::distill_worker_{safe}", file=sys.stderr)
-    print(f"ERROR: distill_worker_{safe}", file=sys.stderr)
+_ERR_TOKENS = frozenset(
+    {
+        "missing_bucket",
+        "openai_key",
+        "runtime",
+        "value",
+        "os",
+        "timeout",
+        "job",
+        "main",
+        "failed",
+    }
+)
+
+
+def _err(kind: str) -> None:
+    """Log a closed-set token only. Callers must pass untainted literals/kinds."""
+    token = kind if kind in _ERR_TOKENS else "failed"
+    print(f"::error::distill_worker_{token}", file=sys.stderr)
+    print(f"ERROR: distill_worker_{token}", file=sys.stderr)
 
 
 def _aws_region() -> str:
@@ -354,9 +369,7 @@ def ingest_to_graphiti(
     if not os.environ.get("GRAPHITI_MCP_URL", "").strip():
         os.environ["GRAPHITI_MCP_URL"] = "https://memory.quantumaipartners.com/graphiti/mcp"
 
-    payload = _pickup_payload(
-        job, packet, agent_id=agent_id, user_id=user_id, group_id=group_id
-    )
+    payload = _pickup_payload(job, packet, agent_id=agent_id, user_id=user_id, group_id=group_id)
     if dry_run:
         writes.append({"written": False, "dry_run": True, "kind": "pickup_context"})
     else:
@@ -423,11 +436,10 @@ def process_pending(
                         "packet_id": packet.get("packet_id"),
                     }
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 report["failed"] += 1
-                code = f"job_{type(exc).__name__}"
-                report["errors"].append(code)
-                _err(code)
+                report["errors"].append("job")
+                _err("job")
 
     report["finished_at"] = datetime.now(UTC).isoformat()
     if report["failed"]:
@@ -438,15 +450,14 @@ def process_pending(
 
 
 def _public_report(report: dict[str, Any]) -> dict[str, Any]:
-    """Stdout-safe subset — no exception text or secret-adjacent fields."""
+    """Stdout-safe subset — ints/bools/counts only (breaks secret taint)."""
     return {
-        "status": report.get("status"),
-        "processed": report.get("processed"),
-        "failed": report.get("failed"),
-        "skipped": report.get("skipped"),
-        "jobs": report.get("jobs"),
-        "error_codes": list(report.get("errors") or []),
-        "finished_at": report.get("finished_at"),
+        "status": "ok" if report.get("status") == "ok" else "other",
+        "processed": int(report.get("processed") or 0),
+        "failed": int(report.get("failed") or 0),
+        "skipped": int(report.get("skipped") or 0),
+        "job_count": len(report.get("jobs") or []),
+        "error_count": len(report.get("errors") or []),
     }
 
 
@@ -458,12 +469,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # Fail-loud on missing mandatory config
     if not os.environ.get("MEMORY_DISTILL_S3_BUCKET", "").strip():
-        _err("missing_MEMORY_DISTILL_S3_BUCKET")
+        _err("missing_bucket")
         return 1
 
-    key, key_reason = resolve_openai_api_key()
+    key, _key_reason = resolve_openai_api_key()
     if not key:
-        _err(key_reason or "openai_key_absent")
+        _err("openai_key")
         return 1
 
     if not os.environ.get("GRAPHITI_MCP_TOKEN", "").strip() and not args.dry_run:
@@ -472,8 +483,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         report = process_pending(max_jobs=args.max_jobs, dry_run=args.dry_run)
-    except Exception as exc:  # noqa: BLE001
-        _err(f"main_{type(exc).__name__}")
+    except Exception:  # noqa: BLE001
+        _err("main")
         return 1
 
     print(json.dumps(_public_report(report), indent=2, ensure_ascii=False))
