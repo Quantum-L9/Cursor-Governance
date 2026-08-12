@@ -475,3 +475,17 @@ they conflict):
 | Activate (session start) | `governance_activate_fresh.sh` — foreground tip authority (ff-or-swap); STATUS line + receipt |
 | Manual sync | `governance_sync.sh` — guarded ff-only pull + optional push-half (not used for sessionStart pull) |
 | Post-hook state | sessionStart `additional_context` — sectioned L9 session state (Governance / Runtime / Graphiti hydrate stats / Code-graph); no memory-bank |
+
+<!-- L9_PLAN_SLASH_RETIRE_V1 -->
+## Executable plan slash command (2026-08-12) — supersedes §1 table `/plan` wording
+
+Authoritative correction (do not treat the older **Executable plan template**
+table cell above as SSOT where it conflicts):
+
+1. Slash `/plan` is **retired**. Use `/l9-plan` (command `commands/l9-plan.md`)
+   and skill `l9-plan` v4+.
+2. Default projection remains
+   `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
+   via PE+autonomy (`references/plan-workflow-pe-autonomy.md`).
+3. `.cursor/plans/_TEMPLATE.plan.md` stays a local mirror only (sync via
+   `skills/l9-plan/scripts/sync_cursor_plan_template.py`).

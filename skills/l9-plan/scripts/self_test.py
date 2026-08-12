@@ -72,14 +72,43 @@ def main() -> int:
                 f"expected {needle} in failure output for {rel}\n{proc.stdout}\n{proc.stderr}"
             )
 
-    # Helpers smoke
+    # Helpers smoke (legacy + default PE/autonomy projector)
     for cmd in (
         [sys.executable, "scripts/render_plan_markdown.py", "fixtures/plan_pass.json"],
+        [sys.executable, "scripts/render_plan_pe_autonomy.py", "fixtures/plan_pass.json"],
         [sys.executable, "scripts/emit_gmp_phase0.py", "fixtures/plan_pass.json"],
     ):
         proc = run(cmd)
         if proc.returncode != 0:
             errors.append(f"helper failed: {' '.join(cmd)}\n{proc.stderr}")
+
+    pe = run([sys.executable, "scripts/render_plan_pe_autonomy.py", "fixtures/plan_pass.json"])
+    if pe.returncode == 0:
+        out = pe.stdout
+        for needle in (
+            "environment/program-execution",
+            "@autonomy",
+            "isProject: false",
+            "Execute via @environment/program-execution",
+        ):
+            if needle not in out:
+                errors.append(f"render_plan_pe_autonomy.py missing required marker: {needle}")
+    else:
+        errors.append(f"PE autonomy render failed\n{pe.stderr}")
+
+    # Local Cursor mirror: optional, but fail-closed when present and drifted.
+    sync = run([sys.executable, "scripts/sync_cursor_plan_template.py", ".", "--check"])
+    if sync.returncode not in {0, 1}:
+        errors.append(
+            f"sync_cursor_plan_template.py --check errored ({sync.returncode}): "
+            f"{sync.stdout}\n{sync.stderr}"
+        )
+    elif sync.returncode == 1:
+        errors.append(
+            "Cursor _TEMPLATE.plan.md drifted from SSOT — run "
+            "python3 scripts/sync_cursor_plan_template.py .\n"
+            f"{sync.stderr}"
+        )
 
     if errors:
         for e in errors:

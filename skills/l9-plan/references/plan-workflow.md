@@ -3,8 +3,8 @@ l9_schema: 1
 parent: l9-plan
 tags: [plan, todo, validation, projection]
 status: active
-version: 3.0.0
-updated: 2026-08-07
+version: 4.0.0
+updated: 2026-08-12
 /L9_META -->
 
 # Plan Workflow — Markdown Projection

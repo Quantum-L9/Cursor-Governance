@@ -51,7 +51,7 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 ```
 ~/.cursor-governance/            (this repo)
 ├── skills/            # l9-* agent skills (SKILL.md per skill)
-├── commands/          # Slash commands (/gmp, /plan, /end-session, ...)
+├── commands/          # Slash commands (/gmp, /l9-plan, /end-session, ...)
 ├── rules/             # Global .mdc rules, symlinked as @.cursor-commands/rules
 ├── workflows/         # DAG definitions + executors
 ├── ops/
@@ -64,7 +64,9 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 │   └── logs/          # Runtime logs
 ├── intelligence/      # Active signal corpus — chat exports, distillation, mining
 ├── environment/       # Runtime environment adapters (IDE-neutral policy + per-target renderers)
+│   ├── contracts/     # First-class execution contracts/templates (executable plan SSOT)
 │   ├── ide/           # Editor profile: policy.json + render.cursor.json (Cursor/VS Code)
+│   ├── program-execution/  # Program Execution System (Blueprint/Controller/adapters)
 │   └── claude-code/   # Claude Code environment (CLI · Web · Mobile) — committed .claude/ + account env
 ├── profiles/          # DEPRECATED — content ported into skills/ + rules/; pending retirement
 ├── learning/          # Curated lessons, repeated-mistakes, quick-fixes
@@ -105,6 +107,8 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 
 ### Skills
 - [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
+- [`skills/l9-plan/SKILL.md`](skills/l9-plan/SKILL.md) — execution planning → PE+autonomy `.plan.md`
+- [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md) — **first-class** executable plan template SSOT
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)
 - [`skills/_archived/`](skills/_archived/) — retired skill packs (not discoverable; do not activate)
 - [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring

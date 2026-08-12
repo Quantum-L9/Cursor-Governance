@@ -23,8 +23,9 @@ skill_intelligence_report:
   authority_model:
     order:
       - current user instruction and platform safety
-      - verified repo ground truth, AGENTS.md, ADRs, invariants
-      - GMP Phase 0 lock shape when execution will follow
+      - verified repo ground truth, AGENTS.md, ADRs, invariants, PEER_EXECUTION.md
+      - executable plan template + PE/autonomy execute path
+      - GMP Phase 0 lock shape when GMP execution will follow
       - l9-plan contracts and validators
       - model inference labeled Unknown when material
     conflict_rule: higher authority wins; inference never overrides verified evidence or validator FAIL
@@ -33,13 +34,16 @@ skill_intelligence_report:
       judgment: inventing scope causes rework
       action: STOP and ask; record unknowns; do not emit a ready plan
     - condition: plan markdown looks complete but JSON is missing
-      judgment: prose-only plans are not authoritative
+      judgment: prose-only plans are not depth-gated
       action: emit PLAN_DOCUMENT and run validate_plan_document before readiness
+    - condition: JSON validates but PE+autonomy .plan.md is missing
+      judgment: default deliverable is the executable Cursor projection
+      action: run render_plan_pe_autonomy.py (or fill SSOT template); retain Execute via PE+autonomy
     - condition: risk is high or irreversible
       judgment: rollback and stress-test are mandatory, not optional depth
       action: escalate obligations; never drop baseline gates
     - condition: a TODO has no file path
-      judgment: ungrounded work cannot lock in GMP Phase 0
+      judgment: ungrounded work cannot lock in GMP Phase 0 or PE Task Cards
       action: require files or an explicit blocker; fail closed otherwise
     - condition: token pressure tempts skipping stress-test or critical path
       judgment: skipped planning depth creates expensive rework
@@ -53,20 +57,24 @@ skill_intelligence_report:
     - Plan quality is proven by executable validators against a machine-readable plan object, not LLM judgment of prose.
     - Ask clarifying questions before inventing scope, paths, or success criteria.
     - Fail closed: missing mandatory gates means the plan is not ready.
-    - Markdown is a human projection; PLAN_DOCUMENT JSON/YAML is authoritative.
+    - Dual artifact: PLAN_DOCUMENT JSON for depth gates; PE+autonomy Cursor .plan.md is the default deliverable.
+    - Execute via @environment/program-execution then subordinate @autonomy under a Program lease.
   invariants:
-    - No readiness claim without validate_plan_document PASS.
+    - No readiness claim without validate_plan_document PASS and PE+autonomy .plan.md.
     - No omitted mandatory planning gate for efficiency.
     - No TODO without files or an explicit blocker.
     - No empty scope.out.
     - No converged status while mandatory validation is pending, failed, or unknown.
-    - No code edits in plan mode unless the user explicitly chains to an execution skill.
+    - No code edits in plan mode unless the user explicitly chains to PE+autonomy or l9-gmp-protocol.
   adapter_map:
-    core_default: machine-validated PLAN_DOCUMENT emission
+    core_default: machine-validated PLAN_DOCUMENT + PE+autonomy .plan.md projection
     adapters:
       - name: schema_validator
         load_when: [every plan delivery]
         changes: [readiness, fail-closed gates]
+      - name: pe_autonomy_projector
+        load_when: [every plan-mode delivery]
+        changes: [Cursor .plan.md, execute pipeline]
       - name: depth_escalation
         load_when: [guarded or irreversible risk, conflicting evidence]
         changes: [extra stress questions, mandatory rollback detail]
@@ -84,10 +92,12 @@ skill_intelligence_report:
       prevention: G_TODO_GROUND and G_PLACEHOLDER
     - name: fake_convergence
       prevention: G_CONVERGENCE against validation status
+    - name: legacy_gmp_markdown_as_default
+      prevention: plan-workflow-pe-autonomy default + pack structure asserts
   leverage_points:
-    - one PLAN_DOCUMENT schema replaces prose ritual as the SSOT
+    - one PLAN_DOCUMENT schema + one PE executable .plan.md replaces prose ritual
     - one validator turns completeness into a fail-closed proof
-    - one GMP handoff removes re-planning at Phase 0
+    - one PE Controller handoff under Program lease beats free-form Build
     - one stress-test block catches wrong plans before implementation
     - escalate-only depth classification adds rigor without skipping mandatory gates
   evidence_hierarchy:
