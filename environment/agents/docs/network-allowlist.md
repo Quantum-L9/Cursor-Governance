@@ -19,7 +19,7 @@ shared memory and GitHub.
 
 | Host | Why |
 |---|---|
-| `memory.quantumaipartners.com` | L9 memory HTTP MCP (`L9_MEMORY_HTTP_URL`) |
+| `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp) |
 | `github.com`, `*.githubusercontent.com` | clone governance + consumer repos |
 | `api.github.com` | `gh` / GitHub API |
 | `pypi.org`, `files.pythonhosted.org` | Python toolchains when the surface installs packages |
@@ -28,7 +28,7 @@ shared memory and GitHub.
 ## Production memory
 
 ```text
-https://memory.quantumaipartners.com
+https://memory.quantumaipartners.com/graphiti/mcp
 ```
 
 TLS terminates at Caddy on C1 → `l9-memory-server` (loopback on the host).

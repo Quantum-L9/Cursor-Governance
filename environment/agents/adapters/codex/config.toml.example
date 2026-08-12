@@ -5,9 +5,9 @@
 #   updated: 2026-07-31
 #
 # Merge into ~/.codex/config.toml (CLI) or paste equivalent MCP settings into
-# the Codex cloud environment. Expand L9_MEMORY_CLIENT_TOKEN from the account
+# the Codex cloud environment. Expand GRAPHITI_MCP_TOKEN from the account
 # env — never commit a real bearer here.
 
 [mcp_servers.l9-shared-memory]
-url = "https://memory.quantumaipartners.com/mcp"
-http_headers = { "Authorization" = "Bearer ${L9_MEMORY_CLIENT_TOKEN}", "X-L9-User-Id" = "codex_agent", "X-L9-Agent-Id" = "codex", "X-L9-Source" = "codex" }
+url = "https://memory.quantumaipartners.com/graphiti/mcp"
+http_headers = { "Authorization" = "Bearer ${GRAPHITI_MCP_TOKEN}", "X-L9-User-Id" = "codex_agent", "X-L9-Agent-Id" = "codex", "X-L9-Source" = "codex" }

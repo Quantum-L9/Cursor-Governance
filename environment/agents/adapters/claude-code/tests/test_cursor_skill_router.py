@@ -11,7 +11,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+_HERE = Path(__file__).resolve().parent
+
+
+def _repo_root(start: Path) -> Path:
+    for parent in [start, *start.parents]:
+        if (parent / "CANONICAL_LAW.md").is_file() or (parent / ".git").exists():
+            return parent
+    raise RuntimeError(f"repo root not found from {start}")
+
+
+ROOT = _repo_root(_HERE)
 HOOK = ROOT / "ops" / "hooks" / "before_submit_skill_router.py"
 
 

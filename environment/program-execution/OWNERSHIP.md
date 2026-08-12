@@ -4,7 +4,7 @@
 |---|---|
 | Program Lock, task state, Program leases, canonical receipts | `core/` |
 | Local mediated agent actions and subordinate leases | root `autonomy/` |
-| Claude Code internal worker lanes | `environment/claude-code/autonomy/` |
+| Claude Code internal worker lanes | `environment/agents/adapters/claude-code/autonomy/` |
 | Agent and memory identity | `environment/agents/agent_registry.yaml` |
 | Graphiti transport | `ops/graphiti/` |
 | Generated-data processing and delivery | `environment/agents/generated-data/` |

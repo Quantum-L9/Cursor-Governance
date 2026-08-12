@@ -10,8 +10,9 @@ from adapters.common.subprocess_runner import run_argv
 class ClaudeBoundedAutonomyBridge:
     def __init__(self, repository_root: str | Path) -> None:
         self.root = Path(repository_root).resolve()
-        self.cli = self.root / "environment/claude-code/autonomy/cli.py"
-        self.validator = self.root / "environment/claude-code/autonomy/validate_autonomy.py"
+        autonomy = self.root / "environment/agents/adapters/claude-code/autonomy"
+        self.cli = autonomy / "cli.py"
+        self.validator = autonomy / "validate_autonomy.py"
 
     def probe(self) -> dict[str, Any]:
         missing = [str(path) for path in (self.cli, self.validator) if not path.is_file()]

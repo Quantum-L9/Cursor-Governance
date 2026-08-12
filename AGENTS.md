@@ -504,3 +504,13 @@ bullets above as requiring a second ask):
    `L9_MERGE_AUTHORIZED` (or a valid L4 release receipt for ordinary
    `gh pr merge` via `ops/autonomy/merge_gate.py`). Force-push / admin-merge /
    hard-reset remain forbidden.
+
+<!-- CLAUDE_CODE_ADAPTER_PLACEMENT_V1 -->
+## Claude Code adapter placement (2026-08-12)
+
+Claude Code gold-standard pack lives at
+`environment/agents/adapters/claude-code/`. A transitional symlink may exist at
+`environment/claude-code` until extinguishment. Cloud Web/Mobile memory uses
+HTTPS Graphiti (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
+see ADR-0006 + ADR-0007.
+

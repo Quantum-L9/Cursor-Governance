@@ -6,7 +6,7 @@ sources:
 - path: autonomy/
   use: mediated local-agent enforcement provider
   mutation: none
-- path: environment/claude-code/autonomy/
+- path: environment/agents/adapters/claude-code/autonomy/
   use: bounded Claude campaign execution
   mutation: none
 - path: environment/agents/agent_registry.yaml

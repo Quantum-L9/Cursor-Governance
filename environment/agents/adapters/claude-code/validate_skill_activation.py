@@ -12,7 +12,11 @@ from pathlib import Path
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
+ROOT = HERE
+for _parent in HERE.parents:
+    if (_parent / "CANONICAL_LAW.md").is_file() or (_parent / ".git").exists():
+        ROOT = _parent
+        break
 REGISTRY_PATH = ROOT / "ops" / "generated" / "skill-registry.json"
 MANIFEST_PATH = ROOT / "skills" / "AUTONOMY_MANIFEST.yaml"
 SETTINGS_PATH = HERE / "settings.template.json"
@@ -70,6 +74,8 @@ def check_ownership_guard(failures: list[str]) -> None:
     forbidden_markers = (
         "environment/claude-code/hooks/user_prompt_skill_router",
         "environment/claude-code/hooks/",
+        "environment/agents/adapters/claude-code/hooks/user_prompt_skill_router",
+        "environment/agents/adapters/claude-code/hooks/",
     )
     for marker in forbidden_markers:
         if marker in cursor_src:

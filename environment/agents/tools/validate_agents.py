@@ -23,8 +23,8 @@ Checks:
   A1  every active agent's adapter directory exists (adapters/<adapter>/)
       unless adapter is cursor/claude-code (pre-existing activation paths)
   A2  adapter env examples agree with the registry (USER_ID,
-      L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE) and L9_MEMORY_HTTP_URL matches
-      memory.production_url when that field is set
+      L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE) and GRAPHITI_MCP_URL matches
+      production_url+mcp_path (or explicit full URL) when set
   A3  adapter contract (ADAPTER_CONTRACT.md): README.md, env example,
       MCP carrier file, bootstrap/instructions file present
   A4  MCP carriers must not default to loopback (127.0.0.1 / localhost)
@@ -174,15 +174,30 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
                 "A2",
                 f"{envf.name}: {var}='{m.group(1).strip()}' != registry '{agent.get(fld)}'",
             )
-    url_m = re.search(r"^L9_MEMORY_HTTP_URL=(.+)$", text, re.M)
+    url_m = re.search(r"^GRAPHITI_MCP_URL=(.+)$", text, re.M)
+    tok_m = re.search(r"^GRAPHITI_MCP_TOKEN=(.+)$", text, re.M)
     if not url_m:
-        err("A2", f"{envf.name}: missing L9_MEMORY_HTTP_URL")
-    elif production_url and url_m.group(1).strip() != production_url:
-        err(
-            "A2",
-            f"{envf.name}: L9_MEMORY_HTTP_URL='{url_m.group(1).strip()}' "
-            f"!= memory.production_url '{production_url}'",
-        )
+        err("A2", f"{envf.name}: missing GRAPHITI_MCP_URL")
+    elif production_url:
+        got = url_m.group(1).strip()
+        expected_full = production_url.rstrip("/") + "/graphiti/mcp"
+        if got not in (production_url, expected_full) and not got.endswith("/graphiti/mcp"):
+            err(
+                "A2",
+                f"{envf.name}: GRAPHITI_MCP_URL='{got}' "
+                f"expected '{expected_full}' (cloud Graphiti path)",
+            )
+    if not tok_m:
+        err("A2", f"{envf.name}: missing GRAPHITI_MCP_TOKEN")
+    elif (
+        "REPLACE" not in tok_m.group(1) and "${" not in tok_m.group(1) and "<" not in tok_m.group(1)
+    ):
+        # allow placeholders only in committed examples
+        val = tok_m.group(1).strip()
+        if val and not val.startswith("REPLACE") and "YOUR_" not in val and not val.startswith("<"):
+            # still OK if clearly placeholder-like; warn only for hex-looking secrets
+            if len(val) >= 32 and all(c.isalnum() or c in "-_" for c in val):
+                err("A2", f"{envf.name}: GRAPHITI_MCP_TOKEN must be REPLACE_WITH_* placeholder")
 
 
 def _check_mcp_no_loopback_default(key: str, adir: Path) -> None:
@@ -198,7 +213,7 @@ def _check_mcp_no_loopback_default(key: str, adir: Path) -> None:
             err(
                 "A4",
                 f"agents.{key}: {name} must not default to loopback "
-                "(use https://memory.quantumaipartners.com)",
+                "(use https://memory.quantumaipartners.com/graphiti/mcp via GRAPHITI_MCP_URL)",
             )
 
 

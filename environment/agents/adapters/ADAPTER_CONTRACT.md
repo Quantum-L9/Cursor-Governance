@@ -12,9 +12,10 @@ updated: 2026-08-12
 # Adapter contract (from Claude Code gold standard)
 
 Every surface under `environment/agents/adapters/<name>/` must provide the
-**same three carriers** that `environment/claude-code/` already ships. Claude
-Code itself stays at `environment/claude-code/` (preexisting peer of
-`environment/ide/`); this contract is how the thinner adapters catch up.
+**same carriers** as the Claude Code gold-standard adapter at
+`environment/agents/adapters/claude-code/` (transitional symlink may exist at
+`environment/claude-code`). Claude Code is the thicker adapter (hooks, memory
+bridge, owned scheduler); thinner adapters catch up via this contract.
 
 | Need | Claude Code carrier | Required in each agents adapter |
 |---|---|---|
@@ -36,27 +37,28 @@ Shared SSOT: [`ops/autonomy/surface_profile.yaml`](../../../ops/autonomy/surface
 
 ## Memory endpoint (binding)
 
-Production control plane (non-secret):
+Cloud Graphiti reachability (same Neo4j store as Cursor's SSH tunnel `:8100`):
 
 ```text
-https://memory.quantumaipartners.com
+https://memory.quantumaipartners.com/graphiti/mcp
 ```
 
-MCP path: `/mcp`. Auth: `Authorization: Bearer ${L9_MEMORY_CLIENT_TOKEN}`.
-Each agent uses **its own** token (`L9_MEMORY_TOKEN__<AGENT>` issued into
-`~/.config/l9-memory/agent_tokens.local.json`, rendered into server
-`auth_tokens.json`). Never share tokens across agents. Never commit tokens.
+Auth: `Authorization: Bearer ${GRAPHITI_MCP_TOKEN}` (shared Graphiti plane token).
+Writer attribution is **not** the bearer: set distinct `USER_ID` /
+`L9_MEMORY_AGENT_ID` / `L9_MEMORY_SOURCE` from `agent_registry.yaml`.
+Forbidden: `L9_MEMORY_HTTP_URL`, `L9_MEMORY_CLIENT_TOKEN`, `memory_client`
+lifecycle side door (ADR-0006).
 
 Env examples MUST set:
 
 ```bash
-L9_MEMORY_HTTP_URL=https://memory.quantumaipartners.com
-L9_MEMORY_CLIENT_TOKEN=REPLACE_WITH_MEMORY_CLIENT_BEARER_TOKEN
+GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
+GRAPHITI_MCP_TOKEN=REPLACE_WITH_GRAPHITI_MCP_BEARER_TOKEN
 ```
 
 (or an obvious `REPLACE` / `<angle>` placeholder for the token). Loopback
-URLs are local-only and **must not** be the default in any adapter MCP
-carrier or env example.
+URLs are CLI-host-only and **must not** be the default in cloud adapter MCP
+carriers or env examples.
 
 ## Identity (binding)
 
@@ -77,11 +79,13 @@ contract (Executable Peer Contract v2). They are bindings, not copied files:
    this agent enter L9?"*; the program adapter
    (`environment/program-execution/adapters/<x>/`) answers *"how does the
    Controller execute a task on this host?"*.
-2. **Canonical autonomy** — the peer resolves `autonomy/` through the single
+2. **Canonical autonomy** — the peer resolves root `autonomy/` through the single
    `root-autonomy-control-plane` provider
    (`environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml`,
-   `owns_program_state: false`). Copying an `autonomy/` implementation into an
-   adapter is forbidden.
+   `owns_program_state: false`). Copying root `autonomy/` into an adapter is
+   forbidden. **E14 exemption:** `adapters/claude-code/autonomy/` is the owned
+   Claude bounded-concurrency scheduler (bridged by program-execution); it is
+   not a forbidden copy of root `autonomy/`.
 3. **Execution readiness** — a fresh, machine-generated readiness receipt per
    `(agent_ref, surface, adapter_id)` binding, produced by
    `probe_executable_peers.py` under `$L9_RUNTIME_ROOT/agents/readiness/`
@@ -98,8 +102,9 @@ full contract and coverage matrix.
 ## Validators
 
 `tools/validate_agents.py` enforces the memory-carrier contract for every
-**active** agent whose `adapter` is not `cursor` or `claude-code`
-(`make agents-env`). `tools/validate_executable_peers.py` enforces the
+**active** thin agent adapter (`make agents-env`). `claude-code` is a thicker
+adapter under `adapters/claude-code/` and is validated by `make claude-env`
+plus executable-peer rules (E14 exemption for its owned scheduler). `tools/validate_executable_peers.py` enforces the
 cross-registry Executable Peer Contract (rules E1-E15) against
 `PEER_RUNTIME_BINDINGS.yaml`, and
 `environment/program-execution/scripts/probe_executable_peers.py` proves every

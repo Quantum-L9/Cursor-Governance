@@ -12,9 +12,9 @@
   },
   "name": "l9-shared-memory",
   "transport": "http",
-  "url": "https://memory.quantumaipartners.com/mcp",
+  "url": "https://memory.quantumaipartners.com/graphiti/mcp",
   "headers": {
-    "Authorization": "Bearer ${L9_MEMORY_CLIENT_TOKEN}",
+    "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}",
     "X-L9-User-Id": "manus_agent",
     "X-L9-Agent-Id": "manus",
     "X-L9-Source": "manus"

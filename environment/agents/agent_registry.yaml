@@ -109,7 +109,7 @@ agents:
     role: implementer
     surfaces: [claude-cli, claude-web, claude-mobile]
     assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]
-    adapter: claude-code             # existing environment/claude-code/, identities now rendered from here
+    adapter: claude-code             # environment/agents/adapters/claude-code/, identities now rendered from here
     status: active
 
   manus:
@@ -156,10 +156,13 @@ agents:
 # with http_auth_required=true. See docs/MEMORY_TOPOLOGY.md + docs/DEPLOY.md.
 # ---------------------------------------------------------------------------
 memory:
-  url_env: L9_MEMORY_HTTP_URL
+  # Cloud Graphiti reachability (same Neo4j store as Cursor tunnel :8100).
+  # Not the retired L9 HTTP tool plane — see ADR-0006 + MEMORY_TOPOLOGY.
+  url_env: GRAPHITI_MCP_URL
   production_url: https://memory.quantumaipartners.com
-  mcp_path: /mcp
+  mcp_path: /graphiti/mcp
   auth_scheme: bearer
+  token_env: GRAPHITI_MCP_TOKEN
   identity_env:
     user_id: USER_ID
     agent_id: L9_MEMORY_AGENT_ID

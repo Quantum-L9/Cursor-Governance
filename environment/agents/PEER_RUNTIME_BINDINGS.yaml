@@ -50,6 +50,10 @@ peers:
           adapter_id: claude-code-direct
         - surface: claude-cli
           adapter_id: claude-code-bounded-autonomy
+        - surface: claude-web
+          adapter_id: claude-code-direct
+        - surface: claude-mobile
+          adapter_id: claude-code-direct
     autonomy:
       required: true
       provider_id: root-autonomy-control-plane

@@ -7,7 +7,7 @@ providers:
     protocol: 1.0.0
     path: autonomy/
   claude_bounded_autonomy:
-    path: environment/claude-code/autonomy/
+    path: environment/agents/adapters/claude-code/autonomy/
     state_root: .l9/autonomy/claude-code/
   agent_identity:
     path: environment/agents/agent_registry.yaml
