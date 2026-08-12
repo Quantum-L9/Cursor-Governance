@@ -935,7 +935,7 @@
     },
     {
       "path": "scripts/probe_executable_peers.py",
-      "sha256": "87c7712fad9ba798b4c5794534a0bbf06487a9e3d40fd4fc75c6b8b972b544f9"
+      "sha256": "52bf93ef15cad67c8a8b68a83e231849103da50672ff78db1c11a510a2816d71"
     },
     {
       "path": "scripts/probe_execution_adapters.py",
