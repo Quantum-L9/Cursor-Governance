@@ -272,6 +272,8 @@ do_swap() {
     # Best-effort: leave staging for manual recovery; do not delete last bak.
     return 1
   fi
+  # Clone may have recorded an insteadOf-rewritten URL — force canonical remote.
+  git -C "$CLONE" remote set-url origin "$REMOTE" 2>/dev/null || true
   LOCAL_SHA="$(local_head)"
   prune_baks
   return 0
@@ -303,6 +305,7 @@ bootstrap_missing() {
     DETAIL="bootstrap_mv_failed"
     return 1
   }
+  git -C "$CLONE" remote set-url origin "$REMOTE" 2>/dev/null || true
   return 0
 }
 

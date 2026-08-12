@@ -12,6 +12,17 @@ trap 'rm -rf "$TMP"' EXIT
 PASS=0
 pass() { PASS=$((PASS + 1)); echo "PASS T$PASS: $1"; }
 fail() { echo "FAIL: $1"; exit 1; }
+# Capture the operator home before fixtures override HOME / GIT_CONFIG_GLOBAL.
+REAL_HOME="${HOME}"
+REAL_GITCONFIG="${REAL_HOME}/.gitconfig"
+assert_no_global_pollution() {
+  # Must not use `git config --global` here: with GIT_CONFIG_GLOBAL set, --global
+  # reads the fixture file and false-positives.
+  [ -f "$REAL_GITCONFIG" ] || return 0
+  if git config --file "$REAL_GITCONFIG" --get-regexp '^url\..*gov-activate.*\.insteadof$' >/dev/null 2>&1; then
+    fail "real ${REAL_GITCONFIG} polluted with gov-activate insteadOf"
+  fi
+}
 
 make_bare_with_commit() {
   local bare="$1" work="$2" msg="${3:-init}"
@@ -58,15 +69,13 @@ OUT="$(
 )"
 [[ "$OUT" == STATUS* ]] || fail "T1 no STATUS: $OUT"
 # expected_remote_ok rejects file:// bare paths — override by using a github-shaped remote
-# Re-run with a remote URL that passes the host check via git config instead.
-# For fixtures, point REMOTE to a path but patch: use file remote only after relaxing —
-# The script requires github.com/Quantum-L9/Cursor-Governance. For tests we set
-# GOVERNANCE_GITHUB_REMOTE to a fake github URL and use insteadOf.
-git config --global "url.$BARE1.insteadof" "https://github.com/Quantum-L9/Cursor-Governance.git" 2>/dev/null || true
-# Use a dedicated HOME so global config is local to fixture
+# For fixtures we set GOVERNANCE_GITHUB_REMOTE to the canonical github URL and map it
+# to the bare via GIT_CONFIG_GLOBAL only (never real ~/.gitconfig / --global).
 export GIT_CONFIG_GLOBAL="$HOME1/gitconfig"
+: >"$GIT_CONFIG_GLOBAL"
 git config --file "$GIT_CONFIG_GLOBAL" "url.$BARE1.insteadof" "https://github.com/Quantum-L9/Cursor-Governance.git"
 REMOTE_URL="https://github.com/Quantum-L9/Cursor-Governance.git"
+assert_no_global_pollution
 
 OUT="$(
   HOME="$HOME1" \
@@ -204,4 +213,5 @@ pass "activate at tip / failed paths leave live intact"
 [ -f "$OPS_DIR/setup_workspace_symlinks.sh" ]
 pass "activator + setup scripts present"
 
+assert_no_global_pollution
 echo "RESULT: PASS ($PASS cases)"
