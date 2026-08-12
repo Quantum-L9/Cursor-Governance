@@ -32,7 +32,7 @@ status: active
 | Ops scripts | `ops/scripts/` | `.cursor-commands/ops/scripts/` |
 | Intelligence | `intelligence/` | Active signal corpus (never archive) |
 | **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
-| **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/plan` + `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
+| **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/l9-plan` + skill `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
 
 **Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.  
 **Never** expose the governance root under `.cursor/governance/` — that path holds only the law file + README.

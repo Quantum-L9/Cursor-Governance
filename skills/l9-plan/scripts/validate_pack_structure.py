@@ -18,6 +18,8 @@ REQUIRED = [
     "references/plan-quality-gates.md",
     "references/plan-router.yaml",
     "references/plan-workflow.md",
+    "references/plan-workflow-pe-autonomy.md",
+    "references/executable-plan.pe-autonomy.template.md",
     "references/spec-workflow.md",
     "references/engineering-ticket-template.md",
     "references/plan-stress-test.md",
@@ -32,6 +34,7 @@ REQUIRED = [
     "scripts/validate_exemplary_skill.py",
     "scripts/route_plan.py",
     "scripts/render_plan_markdown.py",
+    "scripts/render_plan_pe_autonomy.py",
     "scripts/emit_gmp_phase0.py",
     "scripts/self_test.py",
     "fixtures/plan_pass.json",
@@ -70,6 +73,43 @@ def _doctrine_errors(root: Path, skill: str) -> list[str]:
             errors.append("planning-doctrine.md missing anti-rework doctrine")
     if "validate_plan_document.py" not in skill:
         errors.append(f"{SKILL_MD} Validation must reference validate_plan_document.py")
+    if "plan-workflow-pe-autonomy.md" not in skill:
+        errors.append(f"{SKILL_MD} must default plan mode to plan-workflow-pe-autonomy.md")
+    if "executable-plan.pe-autonomy.template.md" not in skill:
+        errors.append(f"{SKILL_MD} must reference executable-plan.pe-autonomy.template.md")
+    if "render_plan_pe_autonomy.py" not in skill:
+        errors.append(f"{SKILL_MD} must reference render_plan_pe_autonomy.py")
+    return errors
+
+
+def _ssot_errors(root: Path) -> list[str]:
+    """Require first-class executable plan template SSOT in the governance repo."""
+    repo_root = root.resolve().parents[1] if root.name == "l9-plan" else root.resolve()
+    # When invoked as `python3 scripts/validate_pack_structure.py .` from skill root:
+    if (root / SKILL_MD).is_file():
+        repo_root = root.resolve().parents[1]
+    ssot = (
+        repo_root
+        / "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
+    )
+    manifest = repo_root / "environment/contracts/execution/MANIFEST.yaml"
+    errors: list[str] = []
+    if not ssot.is_file():
+        errors.append(f"missing first-class plan template SSOT: {ssot}")
+    if not manifest.is_file():
+        errors.append(f"missing execution contracts MANIFEST: {manifest}")
+    link = root / "references/executable-plan.pe-autonomy.template.md"
+    if link.is_symlink():
+        try:
+            if not link.resolve().is_file():
+                errors.append("executable-plan.pe-autonomy.template.md symlink is dangling")
+        except OSError as exc:
+            errors.append(f"executable-plan.pe-autonomy.template.md symlink unreadable: {exc}")
+    elif link.is_file():
+        errors.append(
+            "executable-plan.pe-autonomy.template.md must be a symlink to "
+            "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
+        )
     return errors
 
 
@@ -77,7 +117,7 @@ def main() -> int:
     root = safe_cli_path(sys.argv[1] if len(sys.argv) > 1 else ".")
     skill_path = root / SKILL_MD
     skill = skill_path.read_text(encoding="utf-8") if skill_path.is_file() else ""
-    errors = _missing_required(root) + _doctrine_errors(root, skill)
+    errors = _missing_required(root) + _doctrine_errors(root, skill) + _ssot_errors(root)
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)
