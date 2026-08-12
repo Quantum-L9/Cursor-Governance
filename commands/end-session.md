@@ -62,7 +62,7 @@ CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
   --kind pickup_context --agent-id cursor
 ```
 
-Do **not** write `memory-bank/` (deprecated).
+Do **not** write `memory-bank/` (retired — Graphiti PICKUP only).
 
 ### Phase 2 — LESSONS & ERRORS (optional — only if something non-obvious happened)
 

@@ -44,7 +44,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | `/inspect` | External code gate before import |
 | `/index` | Export repo indexes |
 | `/readme` | README DAG pipeline |
-| `/end-session` | Session handoff + memory-bank write |
+| `/end-session` | Session handoff + Graphiti PICKUP (memory-bank retired) |
 | `/e2e-blockers` | E2E / local-proof blockers + brief |
 | `/mem` | Memory operations |
 | `/violation` | Report governance violation |
