@@ -75,21 +75,15 @@ class ExecutablePeerModel:
         self.agents_root = repo_root / "environment/agents"
         self.pe_root = repo_root / "environment/program-execution"
         self.bindings_path = self.agents_root / "PEER_RUNTIME_BINDINGS.yaml"
-        self.schema_path = (
-            self.agents_root / "schemas" / "peer-runtime-bindings.schema.json"
-        )
+        self.schema_path = self.agents_root / "schemas" / "peer-runtime-bindings.schema.json"
         if not self.bindings_path.is_file():
-            raise FileNotFoundError(
-                f"PEER_RUNTIME_BINDINGS.yaml missing at {self.bindings_path}"
-            )
+            raise FileNotFoundError(f"PEER_RUNTIME_BINDINGS.yaml missing at {self.bindings_path}")
         registry = _load_yaml(self.agents_root / "agent_registry.yaml")
         self.agents: dict[str, Any] = registry.get("agents") or {}
         self.bindings_doc = _load_yaml(self.bindings_path)
         self.peers: dict[str, Any] = self.bindings_doc.get("peers") or {}
         if not self.schema_path.is_file():
-            raise FileNotFoundError(
-                f"peer-runtime-bindings schema missing at {self.schema_path}"
-            )
+            raise FileNotFoundError(f"peer-runtime-bindings schema missing at {self.schema_path}")
         self.bindings_validator = Draft202012Validator(
             json.loads(self.schema_path.read_text(encoding="utf-8"))
         )
@@ -159,9 +153,7 @@ def _check_registry_coverage(model: ExecutablePeerModel, errors: list[str]) -> N
         if agent.get("status", "active") != "active":
             continue
         if key not in model.peers:
-            errors.append(
-                f"[E3] active registry agent '{key}' omitted from PEER_RUNTIME_BINDINGS"
-            )
+            errors.append(f"[E3] active registry agent '{key}' omitted from PEER_RUNTIME_BINDINGS")
 
 
 def _check_agent_refs(model: ExecutablePeerModel, errors: list[str]) -> None:
@@ -173,9 +165,7 @@ def _check_agent_refs(model: ExecutablePeerModel, errors: list[str]) -> None:
         if agent_ref not in model.agents:
             errors.append(f"[E4] {key}: unknown agent_ref '{agent_ref}'")
         if agent_ref != key:
-            errors.append(
-                f"[E5] {key}: agent_ref '{agent_ref}' does not match peer key"
-            )
+            errors.append(f"[E5] {key}: agent_ref '{agent_ref}' does not match peer key")
 
 
 def _check_execution_shape(model: ExecutablePeerModel, errors: list[str]) -> None:
@@ -231,9 +221,7 @@ def _check_bindings(model: ExecutablePeerModel, errors: list[str]) -> None:
             errors.append(f"[E10] {key}: descriptor '{adapter_id}' fails spec schema")
         identity = descriptor.get("identity") or {}
         if identity.get("binding") != "agent_registry":
-            errors.append(
-                f"[E10] {key}: '{adapter_id}' identity.binding is not agent_registry"
-            )
+            errors.append(f"[E10] {key}: '{adapter_id}' identity.binding is not agent_registry")
         if identity.get("agent_ref") != agent_ref:
             errors.append(
                 f"[E11] {key}: descriptor '{adapter_id}' agent_ref "
@@ -287,7 +275,9 @@ def _check_autonomy(model: ExecutablePeerModel, errors: list[str]) -> None:
             errors.append("[E13] root autonomy PROVIDER.yaml is missing")
             return
         if provider.get("owns_program_state") is not False:
-            errors.append("[E13] root autonomy PROVIDER.yaml must declare owns_program_state: false")
+            errors.append(
+                "[E13] root autonomy PROVIDER.yaml must declare owns_program_state: false"
+            )
         canonical = provider.get("canonical_path")
         if not canonical or not (model.repo_root / str(canonical)).is_dir():
             errors.append("[E13] canonical autonomy path does not resolve inside governance root")
@@ -310,9 +300,7 @@ def _adapter_dirs(model: ExecutablePeerModel) -> list[Path]:
     return dirs
 
 
-def _check_no_copied_autonomy_and_carriers(
-    model: ExecutablePeerModel, errors: list[str]
-) -> None:
+def _check_no_copied_autonomy_and_carriers(model: ExecutablePeerModel, errors: list[str]) -> None:
     """E14."""
     for adir in _adapter_dirs(model):
         for offender in adir.rglob("autonomy"):
@@ -344,9 +332,7 @@ def _check_no_copied_autonomy_and_carriers(
             errors.append(f"[E14] {key}: missing roles manifest at {manifest}")
 
 
-def _check_duplicates_and_identity_plane(
-    model: ExecutablePeerModel, errors: list[str]
-) -> None:
+def _check_duplicates_and_identity_plane(model: ExecutablePeerModel, errors: list[str]) -> None:
     """E15 — duplicate bindings; agent_registry must not carry execution:."""
     for key, peer in model.peers.items():
         if not isinstance(peer, dict):
@@ -430,8 +416,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             peers = ", ".join(report["executable_peers"]) or "(none required)"
             sys.stderr.write(
-                f"PASS — executable-peer topology coherent; "
-                f"execution.required peers: {peers}\n"
+                f"PASS — executable-peer topology coherent; execution.required peers: {peers}\n"
             )
     else:
         sys.stderr.write(f"FAIL — {len(report['errors'])} violation(s):\n")

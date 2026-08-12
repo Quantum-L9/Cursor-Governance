@@ -43,8 +43,7 @@ def _required_peers(repo_root: Path) -> dict[str, Any]:
     bindings_path = repo_root / "environment/agents/PEER_RUNTIME_BINDINGS.yaml"
     if not bindings_path.is_file():
         raise FileNotFoundError(
-            f"PEER_RUNTIME_BINDINGS.yaml missing at {bindings_path} "
-            "(probe refuses vacuous PASS)"
+            f"PEER_RUNTIME_BINDINGS.yaml missing at {bindings_path} (probe refuses vacuous PASS)"
         )
     doc = yaml.safe_load(bindings_path.read_text(encoding="utf-8"))
     if not isinstance(doc, dict):
@@ -121,9 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     runtime = (
-        args.runtime.expanduser().resolve()
-        if args.runtime is not None
-        else _resolve_runtime_root()
+        args.runtime.expanduser().resolve() if args.runtime is not None else _resolve_runtime_root()
     )
     report = probe(_subsystem_root(), _repo_root(), runtime)
     if args.json:
