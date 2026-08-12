@@ -79,6 +79,7 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 - **[references/plan-workflow-pe-autonomy.md](references/plan-workflow-pe-autonomy.md)** — **default** plan-mode projection + execute pipeline
 - **[`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](../../environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md)** — **first-class** Cursor `.plan.md` fill-in SSOT (`MANIFEST.yaml`)
 - [references/executable-plan.pe-autonomy.template.md](references/executable-plan.pe-autonomy.template.md) — symlink projection of the SSOT (do not fork)
+- [scripts/sync_cursor_plan_template.py](scripts/sync_cursor_plan_template.py) — write/check local `.cursor/plans/_TEMPLATE.plan.md` mirror (gitignored)
 - [references/plan-workflow.md](references/plan-workflow.md) — **legacy** GMP-section markdown projection (kept)
 - [references/spec-workflow.md](references/spec-workflow.md) — specification mode
 - [references/engineering-ticket-template.md](references/engineering-ticket-template.md) — ticket mode

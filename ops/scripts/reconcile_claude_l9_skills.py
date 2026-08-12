@@ -79,6 +79,22 @@ def same_link(path: Path, source: Path) -> bool:
         return False
 
 
+def link_outside_ssot(path: Path, ssot_root: Path) -> bool:
+    """True when path is a symlink whose resolve target escapes the SSOT root.
+
+    Prevents adapters from pinning l9-* skills into random git worktrees
+    (e.g. ~/.claude/skills/l9-plan → …/worktrees/fix-*/skills/l9-plan).
+    """
+    if not path.is_symlink():
+        return False
+    try:
+        target = path.resolve(strict=False)
+        root = ssot_root.resolve(strict=False)
+        return os.path.commonpath([str(root), str(target)]) != str(root)
+    except (OSError, ValueError):
+        return True
+
+
 def same_copy(path: Path, source: Path) -> bool:
     marker = path / ".l9-source.json"
     if not path.is_dir() or not marker.is_file():
@@ -160,6 +176,21 @@ def reconcile_scope(
             result.current.append(name)
             continue
         if destination.exists() or destination.is_symlink():
+            # Fail-closed: l9-* symlink into a non-SSOT worktree is always drift.
+            if (
+                mode == "symlink"
+                and name.startswith("l9-")
+                and destination.is_symlink()
+                and link_outside_ssot(destination, root)
+            ):
+                if check:
+                    result.drift.append(f"symlink-outside-ssot:{name}")
+                else:
+                    remove_managed(destination)
+                    install_entry(source, destination, mode)
+                    result.replaced_duplicates.append(name)
+                    result.created.append(name)
+                continue
             if replace_l9_duplicates and mode == "symlink" and is_l9_duplicate(name, destination):
                 if check:
                     result.drift.append(f"l9-duplicate:{name}")
@@ -167,6 +198,15 @@ def reconcile_scope(
                     remove_managed(destination)
                     install_entry(source, destination, mode)
                     result.replaced_duplicates.append(name)
+                    result.created.append(name)
+                continue
+            # Wrong-target symlink to a path still under SSOT (or stale managed).
+            if mode == "symlink" and name.startswith("l9-") and destination.is_symlink():
+                if check:
+                    result.drift.append(f"wrong-ssot-target:{name}")
+                else:
+                    remove_managed(destination)
+                    install_entry(source, destination, mode)
                     result.created.append(name)
                 continue
             if name in previous:
