@@ -1,0 +1,157 @@
+schema_id: canonical.schema.validation_evidence.v1
+schema_name: Canonical Validation Evidence Schema
+schema_class: canonical_evidence_contract_schema
+schema_family: l9_execution_architecture
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.validation_evidence.v1.yaml
+purpose:
+  primary: 'Define canonical machine-readable evidence for validation claims produced during plan execution, coding-contract
+    execution, and convergence.
+
+    '
+  output_level: schema_not_instance
+  intended_use:
+  - validation_receipts
+  - property_evidence
+  - quality_gate_evidence
+  - machine_summary_support
+  not_for:
+  - assurance_verdicts
+  - policy_decisions
+  - undocumented_claims
+ontology:
+  parent_type: evidence_contract_schema
+  specialized_type: validation_evidence_schema
+  instance_type_generated_by_this_schema: validation_evidence
+required_sections:
+  identity:
+    required: true
+    fields:
+      evidence_id:
+        type: string
+        required: true
+      generated_at:
+        type: datetime
+        required: true
+      source_ref:
+        type: ref
+        required: true
+      evidence_kind:
+        enum:
+        - command_receipt
+        - property_evidence
+        - structural_evidence
+        - runtime_behavior_evidence
+        - quality_gate_evidence
+        - repository_state_evidence
+        - human_confirmation
+        required: true
+  claim:
+    required: true
+    fields:
+      claim_id:
+        type: string
+        required: true
+      claim:
+        type: string
+        required: true
+      status:
+        enum:
+        - passed
+        - failed
+        - not_run
+        - blocked
+        - skipped
+        - unknown
+        required: true
+  proof:
+    required: true
+    fields:
+      method:
+        type: string
+        required: true
+      command:
+        type: string_or_null
+        required: false
+      expected_positive:
+        type: string_or_null
+        required: false
+      expected_negative:
+        type: string_or_null
+        required: false
+      actual_observation:
+        type: string_or_null
+        required: false
+      captured_output_ref:
+        type: ref
+        required: false
+      artifact_refs:
+        type: list_string
+        required: true
+  integrity:
+    required: true
+    fields:
+      schemaVersion:
+        type: string
+        required: true
+      contentHash:
+        type: sha256
+        required: true
+      previousHash:
+        type: sha256_or_null
+        required: false
+      canonical_serialization:
+        type: boolean
+        required: true
+  scope:
+    required: true
+    fields:
+      file_scope:
+        type: list
+        required: false
+      runtime_scope:
+        type: list
+        required: false
+      limitation_notes:
+        type: list
+        required: true
+validation_rules:
+- id: VAL-EVID-001
+  severity: blocker
+  rule: passed and failed statuses require actual observations or captured output.
+- id: VAL-EVID-002
+  severity: blocker
+  rule: not_run, blocked, skipped, and unknown require a reason or limitation note.
+- id: VAL-EVID-003
+  severity: blocker
+  rule: Evidence must not claim assurance or policy verdicts.
+- id: VAL-EVID-004
+  severity: major
+  rule: Evidence scope must match the claim scope.
+- id: VAL-EVID-005
+  severity: blocker
+  rule: contentHash must represent canonical serialized evidence excluding self-hash.
+derivation_targets:
+  can_generate:
+  - validation_evidence
+  - validation_results
+  - validation_not_run_record
+  - property_evidence_record
+  - quality_gate_receipt
+anti_drift_rules:
+- Do not convert command success into broader behavioral proof without matching evidence.
+- Do not close unknowns without receipts.
+- Do not use evidence records as assurance verdicts.
+- Do not omit limitations.
+minimum_viable_instance_requirements:
+  required:
+  - identity
+  - claim
+  - proof
+  - integrity
+  - scope
+schema_dependency_direction:
+  depends_on: []
+  cycle_policy: schema_dependency_graph_must_be_acyclic

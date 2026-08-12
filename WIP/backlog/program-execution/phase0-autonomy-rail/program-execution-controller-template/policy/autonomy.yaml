@@ -1,0 +1,40 @@
+schema: program-execution-controller.autonomy-policy.v2
+schema_version: 2.0.0
+# Default template profile — narrow local execution until Phase 0 selects deploy profile.
+profile: bounded_local_execution
+profiles:
+  bounded_local_execution:
+    description: Conservative default; single-lane local verification.
+    max_parallel_workers: 1
+    max_mutation_lanes: 1
+    autonomy_default: narrowed
+  program_deploy_max_autonomy:
+    description: >-
+      Selected only when PHASE0_USER_CONFIG.program_deploying is true and
+      phase0_complete. Maximum autonomy within Blueprint ceiling; autonomous_merge
+      remains false. Parallelism may rise to 4 workers / 2 mutation lanes across
+      dependency-independent repos while keeping one writer per repository.
+    max_parallel_workers: 4
+    max_mutation_lanes: 2
+    autonomy_default: maximum_within_ceiling
+    requires_phase0_complete: true
+    autonomous_merge: false
+permissions:
+  inspect_local_sources: allowed
+  create_controller_state: allowed
+  create_worktree: allowed
+  modify_declared_paths: allowed_by_rendered_contract
+  run_declared_validation: allowed
+  create_local_commit: approval_and_ceiling_required
+  push: denied_without_adapter_and_exact_approval
+  pull_request: denied_without_adapter_and_exact_approval
+  merge: denied
+  publish_or_release: denied
+  deploy_or_migrate: denied
+  destructive_action: exact_approval_and_recovery_evidence_required
+  external_message: denied
+laws:
+- phase0_selects_deploy_profile_never_silent_default
+- autonomous_merge_always_false_in_this_pack
+- push_pr_require_adapter_present_and_phase0_preauthorization
+- remediation_is_exception_after_local_make_pr_pass

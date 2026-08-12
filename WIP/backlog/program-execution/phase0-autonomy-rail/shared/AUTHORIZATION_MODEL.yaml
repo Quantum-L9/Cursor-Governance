@@ -1,0 +1,20 @@
+schema: program-execution-system.authorization-model.v2
+schema_version: 2.0.0
+actions: [inspect, local_write, commit, push, pull_request, merge, publish_or_release, deploy_or_migrate, destructive_change, external_message]
+effective_permission_intersection:
+- applicable_safety_legal_security_and_organizational_rules
+- exact_action_approval_when_required
+- blueprint_authorization_ceiling
+- controller_policy
+- source_contract_request
+- rendered_contract_exact_state_binding
+laws:
+- lower_layer_may_narrow_never_widen
+- connector_or_credential_availability_is_not_authorization
+- approval_is_bound_to_program_digest_target_repository_base_sha_action_and_expiry
+- remote_mutation_is_denied_by_universal_core_without_adapter_and_exact_approval
+- irreversible_action_requires_named_authority_and_rollback_or_explicit_non_reversibility_acceptance
+- phase0_incomplete_blocks_deploy_autonomy_and_mutating_waves
+- autonomous_merge_is_forbidden_in_universal_core
+- local_make_pr_is_required_before_push_or_pr_admission
+- campaign_authorization_packet_fields_must_align_with_program_lock_scope

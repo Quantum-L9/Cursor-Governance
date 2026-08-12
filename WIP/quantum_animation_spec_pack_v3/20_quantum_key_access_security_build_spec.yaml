@@ -1,0 +1,2619 @@
+metadata:
+  spec_id: quantum.animation.quantum_key_access_security.build_spec.v1
+  version: "1.0.0"
+  date: "2026-08-11"
+  status: READY_FOR_ACCEPTANCE
+  mode: SPECIFICATION_ONLY
+  implementation: FORBIDDEN_UNTIL_ACCEPTANCE
+  title: Quantum Key Access and Security
+  numbering_migration:
+    required: true
+    conflict:
+      current_file: 20_quantum_animation_studio_roadmap.yaml
+    migration:
+      rename_to: 90_quantum_animation_studio_roadmap.yaml
+    rule: >
+      This specification may occupy number 20 only after the existing roadmap
+      is moved to number 90 without changing its semantic identity.
+  depends_on:
+    - file: 00_quantum_animation_system_architecture.yaml
+      relationship: CONSTITUTIONAL_SECURITY_AND_PRIVACY_DEPENDENCY
+    - file: 02_quantum_polycognitive_runtime_build_spec.yaml
+      relationship: SECURITY_EVENT_AND_AUTOMATION_DEPENDENCY
+    - file: 05_quantum_self_model_build_spec.yaml
+      relationship: LIVE_ACCESS_CAPABILITY_AND_PROVIDER_HEALTH_DEPENDENCY
+    - file: 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+      relationship: ACCESS_LINEAGE_AND_AUDIT_DEPENDENCY
+    - file: 10_quantum_canonical_artifact_ir_build_spec.yaml
+      relationship: CANONICAL_CREDENTIAL_AND_SESSION_OBJECT_DEPENDENCY
+    - file: 15_quantum_reference_implementation_contracts_build_spec.yaml
+      relationship: SECRET_STORAGE_OBJECT_STORAGE_AND_ADAPTER_DEPENDENCY
+    - file: 18_quantum_marketability_proof_of_film_build_spec.yaml
+      relationship: PROTECTED_PROOF_CONTENT_DEPENDENCY
+    - file: 19_quantum_executive_attention_experience_build_spec.yaml
+      relationship: PHYSICAL_KEY_PRESENTATION_AND_DELIVERY_DEPENDENCY
+architectural_identity:
+  concise: >
+    Make possession of a buyer-specific physical Quantum Key the normal
+    cryptographically verifiable condition for entering a private project
+    experience, with zero password typing and no transferable project link.
+  extended: >
+    Quantum Key Access and Security defines the secure physical bearer credential,
+    provisioning, verification, lifecycle, session issuance, access revocation,
+    replay resistance, protected-resource authorization and security telemetry
+    for private Quantum project experiences. A Quantum Key is a target-specific
+    physical artifact containing or embedding a cryptographic credential.
+    The visible QR identifies a project-specific public doorway but does not grant
+    protected access by itself. Normal access is established by cryptographically
+    verifiable physical interaction and results in a short-lived browser session.
+    The system is intentionally browser-native and provider-independent.
+    Particular NFC chips, readers, browsers, cloud security products or credential
+    vendors are reference implementations behind normalized contracts, not
+    architectural authorities.
+ownership:
+  system: QUANTUM_KEY_ACCESS_SECURITY
+  owner_question:
+    primary: >
+      Does this request prove current possession of an authorized physical
+      Quantum Key, and what protected access should that possession grant?
+  secondary_questions:
+    - "Is this a genuine Quantum Key?"
+    - "Which project experience does it unlock?"
+    - "Which target opportunity was it issued for?"
+    - "Is the credential active?"
+    - "Is this authentication fresh?"
+    - "Has this proof been replayed?"
+    - "Has the Key been revoked or replaced?"
+    - "What browser session may be issued?"
+    - "What protected resources may that session access?"
+    - "When should the session expire?"
+    - "What happens when a copied QR is used without the Key?"
+    - "What happens if a protected URL is forwarded?"
+    - "How is a lost Key revoked?"
+    - "How is a replacement issued?"
+    - "When has the package's message been received?"
+    - "What telemetry may be collected without becoming invasive?"
+  owns:
+    - QuantumKey
+    - QuantumKeyCredential
+    - QuantumKeyRecord
+    - KeyBinding
+    - KeyLifecycleState
+    - PublicProjectLocator
+    - SecurePhysicalCredentialContract
+    - CredentialProvisioningProfile
+    - CredentialProvisioningReceipt
+    - CredentialVerificationRequest
+    - CredentialVerificationResult
+    - PhysicalPossessionAssertion
+    - ReplayState
+    - AuthenticationPolicy
+    - AuthenticationSession
+    - ProtectedAccessGrant
+    - ProtectedResourceGrant
+    - AccessGateway
+    - KeyActivation
+    - KeyRevocation
+    - KeyReplacement
+    - KeySecurityEvent
+    - session_watermark_seed
+    - access audit log
+    - SecurePhysicalCredentialAdapter contract
+  explicitly_does_not_own:
+    physical_box_and_card_design:
+      owner: 19_quantum_executive_attention_experience_build_spec.yaml
+    cross_device_pairing:
+      owner: 21_quantum_cross_device_presentation_runtime_build_spec.yaml
+    CuratedProjectExperience:
+      owner: 22_quantum_curated_project_experience_build_spec.yaml
+    CommercialOffer:
+      owner: 23_quantum_commercial_offer_conversion_build_spec.yaml
+    LegalReviewGrant:
+      owner: 24_quantum_executable_agreement_legal_runtime_build_spec.yaml
+    PaymentAuthorization:
+      owner: 25_quantum_payment_work_authorization_build_spec.yaml
+    StudioAvatar:
+      owner: 26_quantum_studio_avatar_identity_build_spec.yaml
+    ProductionPortal:
+      owner: 28_quantum_production_portal_client_experience_build_spec.yaml
+    target_selection:
+      owner: 29_quantum_opportunity_acquisition_learning_build_spec.yaml
+  hard_boundary: >
+    Physical possession grants access according to configured capability policy.
+    It does not establish corporate contract-signing authority, payment authority,
+    legal identity or the right to alter the project.
+# =====================================================================
+# 1. MISSION
+# =====================================================================
+mission:
+  primary: >
+    Make the Quantum Key a real physical access credential whose security
+    properties justify the exclusivity implied by the experience.
+  user_experience_goal: >
+    Present physical Key, receive ACCESS GRANTED, enter private project.
+    No password. No 16-character code. No account setup. No software installation.
+  distribution_goal: >
+    Normal protected project access travels with the physical Key rather than a
+    reusable emailed link.
+  security_goal: >
+    Prevent casual forwarding, copied-QR access, replay, anonymous URL
+    redistribution and raw-project downloading while accepting the irreducible
+    risk that a determined human may externally record a displayed experience.
+  enterprise_goal: >
+    Build the secure experience on standard browser and HTTPS infrastructure
+    so the extraordinary presentation does not depend on extraordinary client IT.
+# =====================================================================
+# 2. FOUNDATIONAL PRINCIPLES
+# =====================================================================
+foundational_principles:
+  QK-001:
+    name: PHYSICAL_POSSESSION_IS_PRIMARY
+    statement: >
+      Normal protected entry requires cryptographic evidence produced by the
+      physical Quantum Key.
+  QK-002:
+    name: QR_IS_PUBLIC_LOCATOR
+    statement: >
+      The engraved QR may identify the specific project/key doorway but must not
+      itself contain sufficient authorization to reveal protected content.
+  QK-003:
+    name: ZERO_SECRET_TYPING
+    statement: >
+      Normal authentication may not require manually entering a printed password,
+      PIN or long token.
+  QK-004:
+    name: CRYPTOGRAPHY_NOT_PRINTED_SECRETS
+    statement: >
+      The durable authentication secret belongs in protected credential material,
+      not visibly engraved on the card.
+  QK-005:
+    name: RESONANCE_SERIAL_IS_NOT_SECURITY
+    statement: >
+      The visible ResonanceSerial may identify or personalize the artifact but
+      is never treated as an authentication secret.
+  QK-006:
+    name: ONE_KEY_ONE_TARGET_EXPERIENCE
+    statement: >
+      Each cold-target experience normally receives its own credential identity.
+  QK-007:
+    name: PHYSICAL_HANDOFF_MAY_TRANSFER_VIEWING_ACCESS
+    statement: >
+      An authorized holder may physically hand the Key to another colleague and
+      thereby transfer possession-based viewing access when policy allows.
+  QK-008:
+    name: LINK_FORWARDING_DOES_NOT_TRANSFER_ACCESS
+    statement: >
+      Forwarding a protected URL does not carry the physical possession assertion
+      required to establish a new authorized session.
+  QK-009:
+    name: DYNAMIC_AUTHENTICATION_PREFERRED
+    statement: >
+      Physical credential implementations should support freshness or dynamic
+      verification so captured authentication data cannot be reused indefinitely.
+  QK-010:
+    name: REPLAY_FAILS_CLOSED
+    statement: >
+      Replayed, stale or previously consumed physical authentication material is
+      rejected when the credential technology supports such detection.
+  QK-011:
+    name: KEY_CONTAINS_NO_PROJECT_ARCHIVE
+    statement: >
+      The Quantum Key is an authentication object, not a storage device for the
+      screenplay, movie, budget or pitch package.
+  QK-012:
+    name: ROOT_SECRET_NEVER_LEAVES_SECURITY_BOUNDARY
+    statement: >
+      Master credential material is not exposed to model prompts, provenance
+      graphs, engravers, couriers or presentation-layer code.
+  QK-013:
+    name: PER_KEY_SECRET_ISOLATION
+    statement: >
+      Compromise of one Quantum Key should not automatically compromise all
+      issued Keys.
+  QK-014:
+    name: BROWSER_FIRST
+    statement: >
+      Protected project presentation should terminate in a normal secure browser session.
+  QK-015:
+    name: NO_APPLICATION_INSTALL_REQUIRED
+    statement: >
+      Normal project viewing cannot require installation of a Quantum app,
+      browser extension or executable.
+  QK-016:
+    name: NO_USB
+    statement: >
+      Unknown removable storage is excluded from the normal buyer-access design.
+  QK-017:
+    name: SECURITY_IS_PROVIDER_INDEPENDENT
+    statement: >
+      The architecture requests secure physical credential capabilities rather
+      than embedding one NFC chip, browser or cloud provider.
+  QK-018:
+    name: ACCESS_IS_CAPABILITY_SCOPED
+    statement: >
+      Successful physical authentication grants only the protected actions
+      specified by the current access policy.
+  QK-019:
+    name: VIEWING_AUTHORITY_IS_NOT_SIGNING_AUTHORITY
+    statement: >
+      Physical possession can authorize project viewing but cannot by itself
+      prove authority to bind an organization to a contract.
+  QK-020:
+    name: SESSION_IS_EPHEMERAL
+    statement: >
+      Physical possession creates temporary digital authority, not a permanent
+      bearer URL.
+  QK-021:
+    name: REVOCATION_MUST_BE_IMMEDIATE
+    statement: >
+      A lost, stolen, superseded or compromised Key can be disabled centrally.
+  QK-022:
+    name: REPLACEMENT_CREATES_NEW_SECURITY_IDENTITY
+    statement: >
+      Replacement normally creates a new credential rather than reactivating
+      potentially compromised credential material.
+  QK-023:
+    name: KEY_ACTIVATION_IS_MESSAGE_RECEIVED
+    statement: >
+      First successful protected authentication proves the physical object has
+      reached someone capable of using it.
+  QK-024:
+    name: ACTIVATION_DOES_NOT_START_OFFER_CLOCK
+    statement: >
+      Commercial timing begins later at explicit OfferReveal, not at Key activation.
+  QK-025:
+    name: ACCESS_GRANTED_MATTERS
+    statement: >
+      Successful authentication should create an explicit transition into the
+      private experience.
+  QK-026:
+    name: NONFORWARDABLE_NOT_MAGICALLY_UNCOPYABLE
+    statement: >
+      Quantum should claim resistance to ordinary forwarding and downloading,
+      not physical impossibility of external recording.
+  QK-027:
+    name: CONTENT_URLS_ARE_NOT_CREDENTIALS
+    statement: >
+      Internal media locations must not serve as durable transferable access tokens.
+  QK-028:
+    name: SECRETS_NEVER_ENTER_SEMANTIC_IR
+    statement: >
+      Security secrets remain references to protected secret storage rather than
+      fields in semantic project objects.
+  QK-029:
+    name: SECURITY_EVENTS_HAVE_PROVENANCE_WITHOUT_SECRETS
+    statement: >
+      Authentication, revocation and security decisions are auditable without
+      recording raw secret material.
+  QK-030:
+    name: PROTECTED_ACCESS_DEGRADES_CLOSED
+    statement: >
+      When critical credential verification is unavailable or uncertain,
+      protected content is not served.
+  QK-031:
+    name: DEVICE_CONVENIENCE_CANNOT_WEAKEN_KEY_REQUIREMENT
+    statement: >
+      Future large-screen pairing may transfer an authenticated session, but it
+      may not convert an unauthenticated device into a durable credential.
+  QK-032:
+    name: KEY_CAN_OUTLIVE_THE_PITCH
+    statement: >
+      After a transaction, the same physical Key identity may be granted new
+      scoped capabilities such as production-portal access without changing its
+      original credential provenance.
+# =====================================================================
+# 3. SECURITY OBJECTIVE
+# =====================================================================
+security_objective:
+  protect_against:
+    - copied_QR
+    - forwarded_entry_URL
+    - bookmarked_protected_URL
+    - replayed_physical_authentication
+    - casual_link_sharing
+    - raw_asset_URL_sharing
+    - lost_Key_after_revocation
+    - stolen_Key_after_revocation
+    - credential_database_leak
+    - compromised_single_Key
+    - unauthorized_bulk_scraping
+    - browser_cache_persistence
+    - accidental_download
+    - credential_secret_logging
+    - credential_secret_provenance_leakage
+  reduce_but_cannot_eliminate:
+    - screenshot
+    - screen_recording
+    - external_camera_recording
+    - authorized_holder_intentionally_reproducing_information
+    - human_memory
+    - manual_recreation
+  out_of_scope_as_absolute_guarantee:
+    - preventing_all_analog_capture
+    - preventing_a_determined_authorized_viewer_from_describing_what_they_saw
+  canonical_security_claim: >
+    Quantum Key access is physical-possession-gated, non-forwardable by ordinary
+    link sharing, short-lived, revocable, replay-resistant where supported,
+    non-downloadable by default and leak-attributable where configured.
+# =====================================================================
+# 4. THREAT ACTORS
+# =====================================================================
+threat_model:
+  threat_actors:
+    ACCIDENTAL_FORWARDER:
+      goal:
+        - email_project_link_to_colleague
+      expected_control:
+        - forwarded_URL_useless_without_valid_session_or_Key
+    CASUAL_COPYER:
+      goal:
+        - photograph_QR
+      expected_control:
+        - public_doorway_only
+    LOST_KEY_HOLDER:
+      goal:
+        - use_lost_Key
+      expected_control:
+        - revocation
+    NETWORK_OBSERVER:
+      goal:
+        - recover_session_or_content
+      expected_control:
+        - secure_transport
+        - session_protection
+    REPLAY_ATTACKER:
+      goal:
+        - reuse_captured_physical_authentication_message
+      expected_control:
+        - freshness
+        - replay_detection
+    WEB_SCRAPER:
+      goal:
+        - enumerate_or_bulk_download_protected_material
+      expected_control:
+        - access_scopes
+        - rate_limits
+        - short_lived_resources
+        - authorization_on_every_protected_request
+    AUTHORIZED_LEAKER:
+      goal:
+        - externally_record_content
+      expected_control:
+        - attribution_deterrence
+      absolute_prevention:
+        possible: false
+    INSIDER_WITH_DATABASE:
+      goal:
+        - obtain_Key_secrets
+      expected_control:
+        - encrypted_or_external_secret_store
+        - per_Key_isolation
+        - least_privilege
+        - audit
+# =====================================================================
+# 5. NON-GOALS
+# =====================================================================
+non_goals:
+  - replace_corporate_identity_management
+  - prove_signatory_authority
+  - replace_e_signature
+  - replace_payment_KYC
+  - provide_DRM_guarantee_against_external_camera
+  - store_project_media_on_Key
+  - require_wallet_or_blockchain
+  - require_QAS_coin
+  - provide_cross_device_presentation_protocol
+  - define_commercial_offer_expiration
+  - define_legal_review_permissions
+  - define_ProductionPortal_UI
+# =====================================================================
+# 6. QUANTUM KEY
+# =====================================================================
+quantum_key:
+  QuantumKey:
+    extends:
+      - 10.CanonicalObject
+    object_class:
+      value: DOMAIN_OBJECT
+    fields:
+      key_id:
+      key_version:
+      target_experience_ref:
+      project_id:
+      target_account_ref:
+        nullable: true
+      intended_recipient_ref:
+        nullable: true
+      presentation_spec_ref:
+        owner: spec_19
+      credential_ref:
+      PublicProjectLocator_ref:
+      ResonanceSerial:
+      binding_policy_ref:
+      access_policy_ref:
+      lifecycle_state:
+      issued_at:
+      activated_at:
+        nullable: true
+      last_successful_auth_at:
+        nullable: true
+      revoked_at:
+        nullable: true
+      revocation_reason:
+        nullable: true
+      replacement_key_ref:
+        nullable: true
+      transaction_state_ref:
+        nullable: true
+      provenance_ref:
+      digest:
+  key_contains:
+    semantic:
+      - stable_key_identity
+      - target_experience_binding
+      - credential_reference
+      - visible_public_locator
+      - ResonanceSerial
+  key_does_not_contain:
+    - project_movie_file
+    - screenplay_file
+    - pitch_deck_file
+    - financial_model_file
+    - root_credential_secret
+    - plain_text_backend_master_key
+# =====================================================================
+# 7. IDENTIFIERS
+# =====================================================================
+identifier_model:
+  prefixes:
+    QuantumKey: qkey_
+    credential: qcred_
+    provisioning_profile: qprovprof_
+    provisioning_receipt: qprovrec_
+    public_locator: qlocpub_
+    verification_request: qverify_
+    possession_assertion: qposs_
+    auth_session: qauth_
+    access_grant: qgrant_
+    resource_grant: qresgrant_
+    replay_record: qreplay_
+    revocation: qrevoke_
+    replacement: qreplace_
+    security_event: qsecevt_
+  rules:
+    - IDs_do_not_embed_raw_secret
+    - public_locator_not_secret
+    - ResonanceSerial_not_secret
+    - authentication_message_not_used_as_long_term_identifier
+# =====================================================================
+# 8. KEY BINDING
+# =====================================================================
+key_binding:
+  KeyBinding:
+    fields:
+      binding_id:
+      key_ref:
+      project_id:
+      experience_ref:
+      target_account_ref:
+        nullable: true
+      intended_recipient_ref:
+        nullable: true
+      transfer_policy:
+        enum:
+          - PHYSICAL_HANDOFF_ALLOWED
+          - INTENDED_RECIPIENT_ONLY
+          - ORGANIZATION_ONLY
+      access_scope_template_ref:
+      created_at:
+      provenance_ref:
+  default_cold_executive_policy:
+    transfer_policy: PHYSICAL_HANDOFF_ALLOWED
+  rationale: >
+    The executive may physically hand the card to a trusted colleague. The
+    architecture should prevent emailing the experience while preserving
+    intentional physical transfer.
+# =====================================================================
+# 9. RESONANCE SERIAL
+# =====================================================================
+resonance_serial:
+  ResonanceSerial:
+    fields:
+      visible_value:
+      project_symbolism_refs:
+      public_professional_context_refs:
+      issuance_sequence_ref:
+        nullable: true
+      generated_by_policy:
+      security_relevance:
+        value: NONE
+  constraints:
+    - may_contain_7
+    - may_be_unique
+    - may_be_meaningful
+    - never_authentication_secret
+    - never_used_as_password
+    - not_required_for_access
+# =====================================================================
+# 10. PUBLIC PROJECT LOCATOR
+# =====================================================================
+public_locator:
+  PublicProjectLocator:
+    fields:
+      locator_id:
+      key_ref:
+      project_id:
+      opaque_public_path:
+      status:
+      created_at:
+      expires_at:
+        nullable: true
+      presentation_metadata:
+      provenance_ref:
+  security_class:
+    secret: false
+  visible_QR:
+    encodes:
+      - PublicProjectLocator
+  if_used_without_authenticated_Key:
+    response_semantics: |
+      QUANTUM ANIMATION STUDIO
+      PRIVATE PROJECT
+      Physical Quantum Key required.
+  prohibited:
+    - embed_long_term_access_secret
+    - embed_raw_project_storage_URL
+    - embed_signing_credential
+    - bypass_physical_authentication
+# =====================================================================
+# 11. SECURE PHYSICAL CREDENTIAL
+# =====================================================================
+physical_credential:
+  SecurePhysicalCredentialContract:
+    fields:
+      credential_id:
+      key_ref:
+      implementation_ref:
+      credential_class:
+      algorithm_profile:
+      secret_ref:
+      public_parameters:
+      freshness_capability:
+      replay_detection_capability:
+      monotonic_counter_capability:
+      dynamic_message_capability:
+      mutual_auth_capability:
+      key_diversification_capability:
+      lock_configuration:
+      provisioning_profile_ref:
+      provider_metadata_ref:
+      created_at:
+  required_capabilities:
+    - physical_presence_proof
+    - backend_verification
+    - unique_Key_identity
+    - key_revocation
+    - secret_not_visibly_exposed
+  strongly_preferred:
+    - dynamic_authentication_message
+    - freshness_counter_or_nonce
+    - replay_detection
+    - diversified_per_Key_secret
+  provider_independence:
+    required: true
+# =====================================================================
+# 12. REFERENCE IMPLEMENTATION BOUNDARY
+# =====================================================================
+reference_implementation:
+  architectural_requirement:
+    capability: security.physical_credential.dynamic_auth
+  current_candidate_family:
+    description: >
+      Secure dynamic NFC credential capable of producing backend-verifiable,
+      tap-specific or freshness-bound authentication material.
+  canonical_provider:
+    value: NONE
+  rule: >
+    A specific NFC integrated circuit may be selected as a reference
+    implementation after conformance testing but may not appear as a semantic
+    dependency outside implementation configuration.
+  amendment_required:
+    target: 15_quantum_reference_implementation_contracts_build_spec.yaml
+# =====================================================================
+# 13. CREDENTIAL PROVISIONING PROFILE
+# =====================================================================
+provisioning:
+  CredentialProvisioningProfile:
+    extends:
+      - 10.IntermediateRepresentation
+    object_class:
+      value: SPECIFICATION
+    fields:
+      profile_id:
+      credential_capability_id:
+      key_diversification_policy:
+      dynamic_message_policy:
+      counter_policy:
+      replay_policy:
+      public_locator_template:
+      secret_slot_policy:
+      access_key_policy:
+      lock_policy:
+      privacy_policy:
+      verification_policy:
+      provisioning_adapter_requirement:
+      profile_version:
+      digest:
+  hard_rule: >
+    Provisioning configuration is versioned and reproducible without exposing
+    actual secret values.
+# =====================================================================
+# 14. PROVISIONING RECEIPT
+# =====================================================================
+provisioning_receipt:
+  CredentialProvisioningReceipt:
+    extends:
+      - 10.ExecutionReceipt
+    fields:
+      provisioning_receipt_id:
+      key_ref:
+      credential_ref:
+      provisioning_profile_ref:
+      adapter_implementation_ref:
+      device_identifier:
+      public_parameters_digest:
+      verification_test_ref:
+      secret_refs_used:
+        representation: REFERENCES_ONLY
+      provisioned_at:
+      outcome:
+      evidence_refs:
+      digest:
+  forbidden:
+    - raw_secret_value
+    - root_key_material
+    - exported_credential_private_secret
+# =====================================================================
+# 15. MANUFACTURING / PROVISIONING SEPARATION
+# =====================================================================
+manufacturing_separation:
+  physical_manufacturer:
+    may_receive:
+      - physical_key_body_spec
+      - finish
+      - engraving
+      - safe_RF_geometry
+      - public_visual_QR
+      - visible_serial
+    must_not_receive:
+      - root_credential_secret
+      - backend_verification_secret
+      - global_master_secret
+  Quantum_provisioning_boundary:
+    performs:
+      - assign_key_id
+      - bind_project
+      - bind_target_experience
+      - provision_secure_credential
+      - verify_dynamic_auth
+      - register_public_locator
+      - activate_Key_record
+      - final_security_QC
+  principle: >
+    Engraving and physical fabrication do not imply trust with authentication secrets.
+# =====================================================================
+# 16. KEY DIVERSIFICATION
+# =====================================================================
+key_diversification:
+  principle: >
+    Every Key should use credential material isolated from unrelated Keys.
+  KeyDiversificationPolicy:
+    fields:
+      policy_id:
+      root_secret_ref:
+      derivation_context:
+      derivation_inputs:
+      credential_secret_count:
+      rotation_policy:
+      compromise_blast_radius:
+      algorithm_profile:
+      version:
+  desired_blast_radius:
+    single_Key_compromise:
+      affects:
+        - single_Key_or_small_defined_scope
+  forbidden:
+    - same_plain_secret_on_all_Keys
+# =====================================================================
+# 17. ROOT SECRET MANAGEMENT
+# =====================================================================
+root_secrets:
+  policy:
+    - use_secret_store_reference
+    - least_privilege
+    - audited_access
+    - rotation_supported
+    - environment_separation
+    - raw_secret_never_in_logs
+    - raw_secret_never_in_provenance
+    - raw_secret_never_in_model_prompt
+  source_contract:
+    spec: 15.secret_store_adapter
+  future_high_assurance:
+    may_use:
+      - HSM_backed_key_operations
+      - managed_KMS
+      - equivalent_high_assurance_secret_boundary
+  semantic_architecture:
+    provider_agnostic: true
+# =====================================================================
+# 18. SECURE PHYSICAL CREDENTIAL ADAPTER
+# =====================================================================
+credential_adapter:
+  capability_id: security.physical_credential.dynamic_auth
+  SecurePhysicalCredentialAdapter:
+    provisioning_interfaces:
+      - inspect_blank_credential()
+      - provision_credential()
+      - configure_dynamic_auth()
+      - lock_configuration()
+      - verify_provisioning()
+    verification_interfaces:
+      - parse_authentication_message()
+      - verify_authentication_message()
+      - evaluate_freshness()
+      - derive_key_identity()
+      - normalize_security_error()
+    lifecycle_interfaces:
+      - inspect_credential()
+      - rotate_supported_material()
+      - revoke_local_binding()
+      - conformance_test()
+  normalized_errors:
+    - INVALID_CREDENTIAL
+    - UNKNOWN_CREDENTIAL
+    - AUTHENTICATION_FAILED
+    - REPLAY_DETECTED
+    - STALE_ASSERTION
+    - COUNTER_ROLLBACK
+    - CREDENTIAL_LOCKED
+    - CREDENTIAL_DAMAGED
+    - UNSUPPORTED_CREDENTIAL
+    - ADAPTER_FAILURE
+  provider_specific_fields:
+    namespace_required: true
+  provider_semantics_may_not_escape_adapter:
+    value: true
+# =====================================================================
+# 19. AUTHENTICATION MESSAGE
+# =====================================================================
+authentication_message:
+  CredentialVerificationRequest:
+    fields:
+      verification_request_id:
+      public_locator_ref:
+      raw_provider_message_ref:
+        storage: EPHEMERAL_SECURE
+      request_received_at:
+      network_context_ref:
+      adapter_ref:
+      correlation_id:
+  rule: >
+    Raw provider authentication messages are ephemeral verification inputs and
+    are not durable project semantics unless transformed into sanitized evidence.
+# =====================================================================
+# 20. PHYSICAL POSSESSION ASSERTION
+# =====================================================================
+possession_assertion:
+  PhysicalPossessionAssertion:
+    extends:
+      - 10.EvidenceObject
+    fields:
+      assertion_id:
+      key_ref:
+      credential_ref:
+      verified_at:
+      freshness:
+      replay_status:
+      credential_status:
+      verification_adapter_ref:
+      verification_policy_ref:
+      sanitized_auth_evidence_ref:
+      confidence:
+      expires_at:
+      digest:
+  raw_secret:
+    included: false
+  semantics: >
+    PhysicalPossessionAssertion proves that Quantum accepted a fresh
+    cryptographic interaction with the registered physical Key under the pinned
+    verification policy.
+# =====================================================================
+# 21. FRESHNESS
+# =====================================================================
+freshness:
+  FreshnessPolicy:
+    fields:
+      policy_id:
+      mechanism:
+        enum:
+          - MONOTONIC_COUNTER
+          - NONCE
+          - TIME_BOUND
+          - SIGNED_DYNAMIC_MESSAGE
+          - IMPLEMENTATION_SPECIFIC_NORMALIZED
+      maximum_age:
+        nullable: true
+      counter_window:
+        nullable: true
+      replay_cache_requirement:
+      out_of_order_policy:
+      reset_policy:
+      version:
+  hard_rule: >
+    Freshness semantics are implementation-dependent internally but normalize to
+    one Quantum verification result.
+# =====================================================================
+# 22. REPLAY STATE
+# =====================================================================
+replay:
+  ReplayState:
+    fields:
+      key_ref:
+      credential_ref:
+      last_accepted_counter:
+        nullable: true
+      last_assertion_digest:
+      accepted_message_refs:
+        bounded: true
+      anomaly_state:
+      updated_at:
+  replay_outcomes:
+    FRESH:
+      allow_next_validation: true
+    DUPLICATE:
+      allow_next_validation: false
+    STALE:
+      allow_next_validation: false
+    COUNTER_ROLLBACK:
+      allow_next_validation: false
+    UNKNOWN:
+      allow_next_validation: false_if_high_assurance_required
+# =====================================================================
+# 23. VERIFICATION RESULT
+# =====================================================================
+verification_result:
+  CredentialVerificationResult:
+    fields:
+      verification_request_ref:
+      credential_known:
+      cryptographic_validity:
+      freshness_validity:
+      replay_validity:
+      key_lifecycle_validity:
+      binding_validity:
+      policy_validity:
+      possession_assertion_ref:
+        nullable: true
+      outcome:
+        enum:
+          - PASS
+          - FAIL
+          - UNCERTAIN
+      normalized_error:
+        nullable: true
+      evaluated_at:
+      policy_version:
+      evidence_refs:
+  rule: >
+    Protected session issuance requires PASS.
+# =====================================================================
+# 24. AUTHENTICATION POLICY
+# =====================================================================
+authentication_policy:
+  AuthenticationPolicy:
+    fields:
+      policy_id:
+      required_credential_class:
+      freshness_policy_ref:
+      accepted_Key_states:
+      access_scope_template_ref:
+      session_lifetime:
+      idle_timeout:
+      reauthentication_after:
+      concurrent_session_policy:
+      risk_escalation_policy:
+      telemetry_policy:
+      privacy_policy:
+      version:
+  default_executive_viewing:
+    password_required: false
+    user_account_required: false
+    app_required: false
+    physical_Key_required_for_new_primary_session: true
+# =====================================================================
+# 25. AUTHENTICATION STATE MACHINE
+# =====================================================================
+authentication_state_machine:
+  states:
+    - PUBLIC_DOORWAY
+    - PHYSICAL_KEY_REQUIRED
+    - CREDENTIAL_MESSAGE_RECEIVED
+    - VERIFYING
+    - AUTHENTICATION_FAILED
+    - ACCESS_GRANTED
+    - SESSION_ACTIVE
+    - SESSION_EXPIRED
+    - KEY_REVOKED
+    - SECURITY_BLOCKED
+  transitions:
+    PUBLIC_DOORWAY_to_PHYSICAL_KEY_REQUIRED:
+      when:
+        - no_valid_session
+    PHYSICAL_KEY_REQUIRED_to_CREDENTIAL_MESSAGE_RECEIVED:
+      when:
+        - physical_credential_interaction
+    CREDENTIAL_MESSAGE_RECEIVED_to_VERIFYING:
+      automatic: true
+    VERIFYING_to_ACCESS_GRANTED:
+      requires:
+        - verification_PASS
+    VERIFYING_to_AUTHENTICATION_FAILED:
+      when:
+        - verification_FAIL
+    ACCESS_GRANTED_to_SESSION_ACTIVE:
+      requires:
+        - session_issued
+    SESSION_ACTIVE_to_SESSION_EXPIRED:
+      when:
+        - absolute_expiry
+        - inactivity_expiry
+        - policy_revocation
+    any_to_KEY_REVOKED:
+      when:
+        - key_lifecycle_REVOKED
+# =====================================================================
+# 26. ACCESS GRANTED
+# =====================================================================
+access_granted:
+  canonical_transition:
+    message: ACCESS GRANTED
+  AccessGrantedEvent:
+    fields:
+      event_id:
+      key_ref:
+      project_id:
+      target_experience_ref:
+      possession_assertion_ref:
+      session_ref:
+      first_activation:
+      occurred_at:
+      provenance_ref:
+  presentation_owner:
+    future: 26_quantum_studio_avatar_identity_build_spec.yaml
+  security_owner:
+    this_spec: true
+  rule: >
+    Security establishes that access is granted. Future presentation/Avatar
+    systems decide how that moment is cinematically expressed.
+# =====================================================================
+# 27. KEY ACTIVATION
+# =====================================================================
+activation:
+  KeyActivation:
+    extends:
+      - 10.ExperienceObject
+    fields:
+      activation_id:
+      key_ref:
+      target_experience_ref:
+      project_id:
+      first_successful_access_at:
+      activation_session_ref:
+      activation_device_class:
+      source_delivery_ref:
+        nullable: true
+      evidence_refs:
+      provenance_ref:
+  emit_once:
+    first_successful_physical_authentication: true
+  event:
+    name: ACCESS.KEY_ACTIVATED
+  commercial_offer_timer_effect:
+    value: NONE
+  private_studio_semantics:
+    message: MESSAGE RECEIVED
+# =====================================================================
+# 28. AUTHENTICATION SESSION
+# =====================================================================
+session:
+  AuthenticationSession:
+    extends:
+      - 10.CanonicalObject
+    object_class:
+      value: EXECUTION_STATE
+    fields:
+      session_id:
+      key_ref:
+      possession_assertion_ref:
+      project_id:
+      target_experience_ref:
+      device_session_ref:
+      issued_at:
+      last_activity_at:
+      expires_at:
+      idle_expires_at:
+      access_scope:
+      session_state:
+      policy_ref:
+      session_watermark_seed_ref:
+      created_by_gateway_ref:
+      provenance_ref:
+  state:
+    enum:
+      - ACTIVE
+      - EXPIRED
+      - REVOKED
+      - SUPERSEDED
+      - SECURITY_BLOCKED
+  mutable:
+    execution_state_only: true
+# =====================================================================
+# 29. SESSION TOKEN POLICY
+# =====================================================================
+session_token:
+  principles:
+    - opaque_or_cryptographically_protected
+    - short_lived
+    - not_embedded_in_shareable_project_URL
+    - protected_from_client_script_where_possible
+    - secure_transport_only
+    - explicit_expiration
+    - server_side_revocation_supported
+  browser_cookie_policy:
+    preferred:
+      - Secure
+      - HttpOnly
+      - SameSite_as_policy_requires
+  forbidden:
+    - long_lived_project_bearer_token_in_URL
+    - credential_root_secret_in_browser
+    - raw_physical_Key_secret_in_browser_storage
+# =====================================================================
+# 30. ACCESS SCOPE
+# =====================================================================
+access_scope:
+  ProtectedAccessScope:
+    fields:
+      scope_id:
+      capabilities:
+      project_id:
+      experience_ref:
+      permitted_resource_classes:
+      prohibited_resource_classes:
+      expires_at:
+      policy_ref:
+  initial_executive_scope:
+    may_include:
+      - ProofOfFilm_stream
+      - initial_private_experience_entry
+  future_scope_extensions:
+    delegated_to:
+      - spec_22_CuratedProjectExperience
+      - spec_24_legal_review
+      - spec_28_ProductionPortal
+  hard_rule: >
+    Access scope may expand only through authorized downstream domain state,
+    never because the browser asks for more.
+# =====================================================================
+# 31. PROTECTED ACCESS GRANT
+# =====================================================================
+access_grant:
+  ProtectedAccessGrant:
+    fields:
+      grant_id:
+      session_ref:
+      project_id:
+      capability:
+      resource_class:
+      resource_ref:
+        nullable: true
+      issued_at:
+      expires_at:
+      single_use:
+      revocable:
+      watermark_seed_ref:
+        nullable: true
+      provenance_ref:
+# =====================================================================
+# 32. PROTECTED RESOURCE GRANT
+# =====================================================================
+resource_grant:
+  ProtectedResourceGrant:
+    fields:
+      resource_grant_id:
+      session_ref:
+      artifact_ref:
+      rendition_ref:
+      allowed_operation:
+        enum:
+          - STREAM
+          - VIEW
+          - RENDER
+      issued_at:
+      expires_at:
+      maximum_requests:
+      content_disposition_policy:
+      cache_policy:
+      watermark_seed_ref:
+      provenance_ref:
+  default_creative_content:
+    download_allowed: false
+  direct_blob_URL:
+    stable: false
+# =====================================================================
+# 33. OBJECT STORAGE INTEGRATION
+# =====================================================================
+object_storage:
+  source_contract:
+    spec: 15.object_storage_adapter
+  protected_delivery:
+    use:
+      - short_lived_signed_read
+      - gateway_proxy
+      - equivalent_authorized_delivery
+  requirements:
+    - resource_grant_validation
+    - exact_artifact_identity
+    - content_digest_preserved
+    - expiration
+    - access_control
+  rule: >
+    Object-storage implementation details must not become public project access semantics.
+# =====================================================================
+# 34. NO-FORWARDING MODEL
+# =====================================================================
+non_forwarding:
+  protected_against:
+    copied_public_QR:
+      result: PHYSICAL_KEY_REQUIRED
+    copied_public_locator_URL:
+      result: PHYSICAL_KEY_REQUIRED
+    copied_internal_page_URL:
+      result:
+        - requires_valid_session
+        - otherwise_PHYSICAL_KEY_REQUIRED
+    expired_resource_URL:
+      result: DENY
+    emailed_sessionless_link:
+      result: DENY_PROTECTED_CONTENT
+  physical_transfer:
+    allowed_when_binding_policy_allows: true
+  canonical_phrase: >
+    The card travels. The link does not.
+# =====================================================================
+# 35. SESSION SHARING POLICY
+# =====================================================================
+session_sharing:
+  default:
+    direct_session_transfer_between_unrelated_devices: false
+  future_cross_device_transfer:
+    owner: 21_quantum_cross_device_presentation_runtime_build_spec.yaml
+  interface_for_spec_21:
+    SessionTransferAuthorization:
+      fields:
+        source_session_ref:
+        target_pairing_challenge_ref:
+        requested_scope:
+        maximum_lifetime:
+        originating_Key_ref:
+        policy_ref:
+  hard_rule: >
+    Spec 21 can create a scoped display grant from a valid authenticated session;
+    it cannot create a new long-term Quantum Key credential.
+# =====================================================================
+# 36. SESSION CONCURRENCY
+# =====================================================================
+session_concurrency:
+  ConcurrentSessionPolicy:
+    fields:
+      policy_id:
+      maximum_primary_sessions:
+      maximum_display_sessions:
+      new_primary_session_behavior:
+        enum:
+          - ALLOW
+          - REVOKE_OLDEST
+          - REQUIRE_REAUTH
+          - DENY
+      physical_handoff_behavior:
+      version:
+  default_cold_executive_policy:
+    maximum_primary_sessions: 1
+    new_primary_session_behavior: REVOKE_OLDEST
+  rationale: >
+    A physical Key handed to another viewer can transfer the active experience
+    while reducing persistent link sharing.
+# =====================================================================
+# 37. KEY LIFECYCLE
+# =====================================================================
+key_lifecycle:
+  KeyLifecycleState:
+    enum:
+      - UNREGISTERED
+      - REGISTERED
+      - PROVISIONING
+      - PROVISIONED
+      - QA_PENDING
+      - READY
+      - DISPATCHED
+      - ACTIVE
+      - ACTIVATED
+      - TRANSACTED
+      - PRODUCTION_CREDENTIAL
+      - ARCHIVAL
+      - SUSPENDED
+      - REVOKED
+      - REPLACED
+      - DESTROYED
+  state_ownership:
+    owner: spec_20
+  transition_authority:
+    role_based: true
+# =====================================================================
+# 38. KEY LIFECYCLE TRANSITIONS
+# =====================================================================
+key_transitions:
+  REGISTERED_to_PROVISIONING:
+    requires:
+      - physical_Key_inventory
+      - binding_created
+  PROVISIONING_to_PROVISIONED:
+    requires:
+      - provisioning_receipt_PASS
+  PROVISIONED_to_QA_PENDING:
+    automatic: true
+  QA_PENDING_to_READY:
+    requires:
+      - cryptographic_conformance_PASS
+      - public_locator_PASS
+      - binding_PASS
+  READY_to_DISPATCHED:
+    triggered_by:
+      - spec_19_PhysicalExperienceManifest_sealed
+  DISPATCHED_to_ACTIVE:
+    policy:
+      may_activate_pre_delivery: true
+  ACTIVE_to_ACTIVATED:
+    trigger:
+      - first_successful_physical_auth
+  ACTIVATED_to_TRANSACTED:
+    future_trigger:
+      - valid_commercial_transaction_event
+  TRANSACTED_to_PRODUCTION_CREDENTIAL:
+    future_owner_of_new_capabilities:
+      - spec_28
+  any_to_SUSPENDED:
+    requires:
+      - security_or_business_policy
+  any_active_to_REVOKED:
+    requires:
+      - authorized_revocation
+  REVOKED_to_REPLACED:
+    requires:
+      - replacement_Key_created
+  REVOKED_to_ACTIVE:
+    default_allowed: false
+# =====================================================================
+# 39. REVOCATION
+# =====================================================================
+revocation:
+  KeyRevocation:
+    extends:
+      - 10.CanonicalObject
+    fields:
+      revocation_id:
+      key_ref:
+      reason:
+        enum:
+          - LOST
+          - STOLEN
+          - COMPROMISED
+          - REPLACED
+          - OFFER_POLICY
+          - TARGET_WITHDRAWN
+          - SECURITY_INCIDENT
+          - ADMINISTRATIVE
+      requested_by:
+      authority_ref:
+      effective_at:
+      revoke_sessions:
+      revoke_resource_grants:
+      evidence_refs:
+      provenance_ref:
+  required_effects:
+    - reject_new_physical_auth
+    - revoke_configured_active_sessions
+    - revoke_configured_resource_grants
+    - emit_security_event
+# =====================================================================
+# 40. REPLACEMENT
+# =====================================================================
+replacement:
+  KeyReplacement:
+    fields:
+      replacement_id:
+      old_Key_ref:
+      new_Key_ref:
+      reason:
+      transfer_project_binding:
+      transfer_target_binding:
+      transfer_access_policy:
+      old_Key_revocation_ref:
+      created_at:
+      provenance_ref:
+  rule: >
+    New Key receives new credential identity and new provisioning receipt.
+# =====================================================================
+# 41. LOST / STOLEN KEY
+# =====================================================================
+lost_stolen:
+  response:
+    - revoke_Key
+    - revoke_sessions_if_policy_requires
+    - revoke_resource_grants
+    - inspect_recent_authentication
+    - issue_security_event
+    - optionally_replace
+  must_not_require:
+    - deleting_project
+    - invalidating_ProofOfFilm
+    - changing_creative_semantics
+  blast_radius:
+    target: Key_and_sessions_only
+# =====================================================================
+# 42. KEY INVENTORY
+# =====================================================================
+inventory:
+  QuantumKeyInventoryRecord:
+    fields:
+      inventory_id:
+      physical_unit_id:
+      credential_ref:
+      lifecycle_state:
+      manufacturing_batch_ref:
+      physical_QC_ref:
+      provisioning_receipt_ref:
+      current_binding_ref:
+      custody_ref:
+      condition:
+      storage_location_class:
+      last_inventory_check:
+      provenance_ref:
+  security:
+    storage_location_detail:
+      model_visible: false
+# =====================================================================
+# 43. PROVISIONING STATION
+# =====================================================================
+provisioning_station:
+  capability_id: security.credential.provision
+  normalized_interfaces:
+    - detect_credential()
+    - read_public_parameters()
+    - execute_secure_provisioning()
+    - verify_provisioned_credential()
+    - lock_configuration()
+    - produce_sanitized_receipt()
+  requirements:
+    - privileged_environment
+    - secret_store_access
+    - audit
+    - operator_or_automation_identity
+    - no_secret_logging
+    - test_mode_separation
+    - production_mode_protection
+  direct_model_access:
+    forbidden: true
+  future_adapter:
+    patch_spec_15: true
+# =====================================================================
+# 44. KEY QA
+# =====================================================================
+key_QA:
+  SecureKeyQCContract:
+    fields:
+      contract_id:
+      physical_presence_test:
+      cryptographic_verification_test:
+      unique_binding_test:
+      replay_test:
+      public_locator_test:
+      revoked_state_test:
+      incorrect_Key_test:
+      malformed_message_test:
+      session_issuance_test:
+      secret_leak_scan:
+      presentation_binding_test:
+  formal_acceptance_owner:
+    security_domain:
+      this_spec: true
+    aesthetic_physical_quality:
+      owner: spec_19
+  note: >
+    Security conformance is deterministic security validation, not creative QC.
+# =====================================================================
+# 45. FIRST ACTIVATION TELEMETRY
+# =====================================================================
+activation_telemetry:
+  first_activation_event:
+    name: ACCESS.KEY_ACTIVATED
+  allowed_fields:
+    - key_ref
+    - target_experience_ref
+    - project_id
+    - timestamp
+    - coarse_device_class
+    - coarse_browser_class_if_needed
+    - source_delivery_ref
+    - policy_version
+  prohibited_by_default:
+    - unrelated_device_fingerprinting
+    - contacts
+    - photo_library
+    - private_location_history
+    - advertising_identifier
+    - unrelated_behavioral_tracking
+  creator_or_studio_surface:
+    private_status:
+      message: MESSAGE RECEIVED
+# =====================================================================
+# 46. REPEAT ACTIVATION
+# =====================================================================
+repeat_authentication:
+  event:
+    name: ACCESS.KEY_AUTHENTICATED
+  emitted:
+    every_successful_physical_auth: true
+  first_activation_flag:
+    true_only_once: true
+  commercial_timer:
+    affected: false
+# =====================================================================
+# 47. SESSION WATERMARK SEED
+# =====================================================================
+forensic_attribution:
+  SessionWatermarkSeed:
+    fields:
+      watermark_seed_ref:
+      session_ref:
+      key_ref:
+      project_id:
+      created_at:
+      secret_ref:
+      policy_ref:
+  purpose:
+    - derive_session_specific_forensic_marking
+    - attribute_leak_to_Key_or_session_when_supported
+  actual_media_marking:
+    owner:
+      - downstream_presentation_or_media_runtime
+  visible_watermark_required:
+    default: false
+  hard_rule: >
+    Forensic attribution should not materially degrade the cinematic experience.
+# =====================================================================
+# 48. COPY / SCREENSHOT CONTROLS
+# =====================================================================
+capture_controls:
+  browser_controls:
+    may_attempt:
+      - disable_context_menu
+      - suppress_standard_download_UI
+      - prevent_simple_drag_export
+      - render_protected_readers
+      - omit_direct_blob_locations
+      - content_security_policy
+      - restrictive_cache_headers
+  security_truth:
+    cannot_guarantee:
+      - screenshot_prevention
+      - operating_system_screen_recording_prevention
+      - external_camera_prevention
+  canonical_statement: >
+    Prevent ordinary forwarding and downloading; deter and attribute leakage;
+    accept irreducible analog capture risk.
+# =====================================================================
+# 49. BROWSER SECURITY BASELINE
+# =====================================================================
+browser_security:
+  transport:
+    secure_transport_required: true
+  session:
+    - short_lived
+    - revocable
+    - no_session_secret_in_URL
+    - protected_cookie_or_equivalent
+    - origin_validation
+    - CSRF_protection_where_applicable
+  response:
+    - restrictive_content_security_policy
+    - frame_embedding_policy
+    - cache_policy
+    - MIME_integrity
+    - no_sensitive_referrer_leakage
+  input:
+    - validate_all_public_locator_parameters
+    - rate_limit_authentication_attempts
+    - reject_malformed_dynamic_messages
+  secret_handling:
+    - no_raw_credential_secret_to_client
+    - no_root_secret_to_client
+# =====================================================================
+# 50. AUTHENTICATION RATE LIMITING
+# =====================================================================
+rate_limiting:
+  RateLimitPolicy:
+    fields:
+      policy_id:
+      public_locator_request_limit:
+      credential_failure_limit:
+      replay_failure_limit:
+      session_creation_limit:
+      scrape_limit:
+      backoff:
+      temporary_block:
+      anomaly_threshold:
+      version:
+  principle: >
+    Security controls should frustrate automated abuse without making legitimate
+    physical Key use fragile.
+# =====================================================================
+# 51. AUTOMATED SCRAPING
+# =====================================================================
+scraping:
+  controls:
+    - authenticated_resource_requests
+    - resource_grant_expiry
+    - rate_limits
+    - no_index
+    - robots_policy_not_security
+    - request_anomaly_detection
+    - bounded_resource_enumeration
+    - artifact_ref_nonpredictability
+  rule: >
+    Search-engine exclusion is useful hygiene but never treated as access control.
+# =====================================================================
+# 52. CONTENT CACHE
+# =====================================================================
+cache_policy:
+  public_page:
+    cache:
+      allowed_if_no_sensitive_content: true
+  protected_HTML:
+    cache:
+      default: NO_STORE_OR_EQUIVALENT
+  protected_media:
+    cache:
+      policy_controlled: true
+      permanent_public_cache: false
+  service_worker:
+    offline_protected_archive:
+      default: false
+  reason: >
+    Normal experience should not leave a convenient persistent local project archive.
+# =====================================================================
+# 53. CORPORATE ENVIRONMENT COMPATIBILITY
+# =====================================================================
+enterprise_compatibility:
+  normal_requirements:
+    - HTTPS
+    - normal_browser
+    - standard_video_playback
+    - no_executable
+    - no_plugin
+    - no_browser_extension
+    - no_VPN
+    - no_corporate_SSO_requirement
+    - no_USB
+  fallback_if_corporate_network_blocks:
+    - authenticated_mobile_browser_remains_valid
+    - future_spec_21_may_pair_to_permitted_display
+  principle: >
+    The client environment should not need to trust custom Quantum software in
+    order to view the protected experience.
+# =====================================================================
+# 54. CROSS-DEVICE HANDOFF CONTRACT
+# =====================================================================
+cross_device_boundary:
+  future_owner:
+    spec: 21_quantum_cross_device_presentation_runtime_build_spec.yaml
+  spec_20_exposes:
+    validate_source_session:
+      input:
+        - session_ref
+      output:
+        - session_state
+        - transfer_capabilities
+    authorize_display_pairing:
+      input:
+        - source_session_ref
+        - pairing_challenge_ref
+      output:
+        - SessionTransferAuthorization
+    issue_display_scope:
+      output:
+        - ProtectedAccessGrant
+  spec_20_does_not:
+    - discover_nearby_display
+    - control_AirPlay
+    - control_Cast
+    - render_pairing_UI
+    - select_target_monitor
+# =====================================================================
+# 55. COMMERCIAL OFFER BOUNDARY
+# =====================================================================
+commercial_boundary:
+  future_owner:
+    spec: 23_quantum_commercial_offer_conversion_build_spec.yaml
+  KeyActivation:
+    offer_timer_effect: NONE
+  OfferReveal:
+    access_system_may_receive_state: true
+    access_system_does_not_own_state: true
+  after_offer_expiration:
+    access_policy:
+      determined_by_commercial_domain: true
+  default_possible_result:
+    - ARCHIVAL_KEY
+    - protected_project_access_removed
+# =====================================================================
+# 56. TRANSACTION BOUNDARY
+# =====================================================================
+transaction_boundary:
+  after_valid_transaction:
+    spec_20_may_receive:
+      - COMMERCIAL.AGREEMENT_EXECUTED
+      - COMMERCIAL.WORK_AUTHORIZED
+  allowed_security_effect:
+    - update_Key_lifecycle_state
+    - attach_future_scope_template
+  cannot:
+    - decide_transaction_validity
+    - decide_payment_cleared
+    - decide_rights_transfer
+# =====================================================================
+# 57. PRODUCTION CREDENTIAL EXTENSION
+# =====================================================================
+production_credential_extension:
+  future_owner:
+    spec: 28_quantum_production_portal_client_experience_build_spec.yaml
+  Key_state:
+    eligible_transition:
+      TRANSACTED_to_PRODUCTION_CREDENTIAL: true
+  security_behavior:
+    same_physical_credential_may_continue: true
+    access_scope_changes_server_side: true
+  principle: >
+    The card can become the long-lived gateway to the purchased project's
+    production portal without storing production data itself.
+# =====================================================================
+# 58. EXPIRED / ARCHIVAL KEY
+# =====================================================================
+archival_state:
+  ARCHIVAL:
+    authentication_may_still_identify_Key: true
+  protected_project_scope:
+    determined_by:
+      - commercial_policy
+      - transaction_state
+      - production_portal_state
+  possible_response:
+    presentation_owner: downstream_experience
+  security_rule: >
+    Expiration changes authorization, not historical Key identity.
+# =====================================================================
+# 59. SECURITY EVENTS
+# =====================================================================
+security_events:
+  family: ACCESS_SECURITY
+  types:
+    ACCESS.KEY_ACTIVATED:
+      severity: INFO
+    ACCESS.KEY_AUTHENTICATED:
+      severity: INFO
+    ACCESS.AUTH_FAILED:
+      severity: INFO_OR_WARNING
+    ACCESS.REPLAY_DETECTED:
+      severity: WARNING
+    ACCESS.UNKNOWN_CREDENTIAL:
+      severity: WARNING
+    ACCESS.KEY_REVOKED:
+      severity: INFO
+    ACCESS.REVOKED_KEY_USED:
+      severity: WARNING
+    ACCESS.KEY_REPLACED:
+      severity: INFO
+    ACCESS.SESSION_ISSUED:
+      severity: INFO
+    ACCESS.SESSION_EXPIRED:
+      severity: INFO
+    ACCESS.SESSION_REVOKED:
+      severity: INFO
+    ACCESS.SCRAPE_ANOMALY:
+      severity: WARNING
+    ACCESS.SECURITY_POLICY_BLOCK:
+      severity: WARNING
+  event_transport:
+    existing_global_event_bus: true
+# =====================================================================
+# 60. AUDIT LOG
+# =====================================================================
+audit:
+  AccessAuditRecord:
+    fields:
+      audit_id:
+      event_type:
+      key_ref:
+        nullable: true
+      credential_ref:
+        nullable: true
+      session_ref:
+        nullable: true
+      project_id:
+        nullable: true
+      target_experience_ref:
+        nullable: true
+      action:
+      outcome:
+      sanitized_reason:
+      actor_class:
+      policy_version:
+      occurred_at:
+      correlation_id:
+      evidence_refs:
+  forbidden:
+    - raw_secret
+    - full_sensitive_auth_message_if_not_required
+    - root_key
+    - plaintext_private_key
+# =====================================================================
+# 61. PROVENANCE
+# =====================================================================
+provenance:
+  required_paths:
+    - QuantumKey_to_target_experience
+    - QuantumKey_to_project
+    - QuantumKey_to_presentation_spec
+    - QuantumKey_to_credential
+    - credential_to_provisioning_profile
+    - credential_to_provisioning_receipt
+    - credential_to_reference_implementation
+    - PublicProjectLocator_to_Key
+    - physical_possession_assertion_to_Key
+    - AuthenticationSession_to_possession_assertion
+    - ProtectedAccessGrant_to_session
+    - KeyActivation_to_delivery_ref_when_available
+    - KeyRevocation_to_authority
+    - replacement_to_old_and_new_Key
+  security_redaction:
+    mandatory: true
+  emits_to:
+    - 09_quantum_project_provenance_dependency_graph_build_spec.yaml
+# =====================================================================
+# 62. PRIVACY
+# =====================================================================
+privacy:
+  principles:
+    - data_minimization
+    - purpose_limitation
+    - professional_context
+    - no_hidden_advertising_identity_collection
+    - no_contact_scraping_from_device
+    - no_location_history_collection
+    - no_unrelated_tracking
+  required_for_authentication:
+    normal:
+      - Key_identity
+      - cryptographic_verification
+      - request_time
+      - session_context
+  not_required:
+    - personal_account
+    - phone_number
+    - personal_email
+    - contact_list
+    - precise_location
+  coarse_device_class:
+    allowed_if_operationally_useful: true
+  exact_device_fingerprinting:
+    default: false
+# =====================================================================
+# 63. DATA RETENTION
+# =====================================================================
+retention:
+  long_term:
+    - Key_identity
+    - provisioning_receipt
+    - revocation
+    - replacement_lineage
+    - first_activation
+    - security_incidents
+    - audit_required_for_business_or_security
+  short_to_medium:
+    - routine_authentication_logs
+    - raw_security_diagnostics
+  ephemeral:
+    - raw_dynamic_authentication_message_where_not_needed_after_verification
+    - temporary_network_diagnostics
+  secrets:
+    governed_by_secret_store: true
+  principle: >
+    Retain enough to prove credential history and investigate abuse without
+    turning access telemetry into unnecessary personal surveillance.
+# =====================================================================
+# 64. KEY COMPROMISE RESPONSE
+# =====================================================================
+compromise_response:
+  KeyCompromiseIncident:
+    fields:
+      incident_id:
+      key_ref:
+      detected_at:
+      detection_source:
+      suspected_scope:
+      active_session_refs:
+      response_actions:
+      evidence_refs:
+      status:
+  automatic_actions_may_include:
+    - suspend_Key
+    - revoke_sessions
+    - revoke_resource_grants
+    - require_new_physical_auth
+    - prepare_replacement
+  root_secret_compromise:
+    severity: CRITICAL
+    response:
+      - broader_Key_population_analysis
+      - credential_rotation_or_reissue
+      - incident_governance
+# =====================================================================
+# 65. FAILURE MODES
+# =====================================================================
+failure_modes:
+  CREDENTIAL_VERIFICATION_SERVICE_UNAVAILABLE:
+    behavior:
+      - fail_closed_for_new_sessions
+      - preserve_existing_valid_session_if_policy_allows
+  SECRET_STORE_UNAVAILABLE:
+    behavior:
+      - fail_closed_for_operations_requiring_secret
+      - never_fallback_to_embedded_secret
+  REPLAY_STORE_UNAVAILABLE:
+    behavior:
+      - fail_closed_if_replay_detection_required
+  PUBLIC_LOCATOR_SERVICE_UNAVAILABLE:
+    behavior:
+      - protected_access_unavailable
+      - preserve_no_data_loss
+  SESSION_STORE_UNAVAILABLE:
+    behavior:
+      - no_new_session
+      - existing_stateless_session_behavior_only_if_explicitly_safe
+  OBJECT_STORAGE_UNAVAILABLE:
+    behavior:
+      - auth_may_succeed
+      - protected_content_temporarily_unavailable
+      - do_not_change_Key_state
+  KEY_DAMAGED:
+    behavior:
+      - fail_auth
+      - replacement_workflow
+  KEY_REVOKED:
+    behavior:
+      - explicit_access_denial
+  CORPORATE_BROWSER_BLOCK:
+    behavior:
+      - preserve_mobile_path
+      - future_spec_21_fallback
+  PROVIDER_ADAPTER_FAILURE:
+    behavior:
+      - normalize_error
+      - no_provider_semantics_leak
+      - fail_closed
+# =====================================================================
+# 66. DEGRADED MODES
+# =====================================================================
+degraded_modes:
+  MOBILE_ONLY:
+    condition:
+      - corporate_desktop_incompatible
+    behavior:
+      - full_authenticated_phone_experience_remains_available
+  NO_FORENSIC_MARKING:
+    condition:
+      - watermark_capability_unavailable
+    behavior:
+      - access_allowed_if_not_hard_requirement
+      - leak_attribution_marked_degraded
+  SINGLE_SESSION:
+    condition:
+      - advanced_session_transfer_unavailable
+    behavior:
+      - primary_authenticated_device_only
+  NO_DYNAMIC_PRESENTATION:
+    condition:
+      - downstream_avatar_or_UI_unavailable
+    behavior:
+      - secure_minimal_access_page
+  hard_rule: >
+    Degraded convenience cannot weaken physical authentication requirements.
+# =====================================================================
+# 67. RECOVERY
+# =====================================================================
+recovery:
+  ordered:
+    - verify_Key_registry
+    - verify_credential_bindings
+    - verify_secret_store_availability
+    - verify_revocation_state
+    - verify_replay_state
+    - verify_session_store
+    - verify_public_locators
+    - verify_object_access_gateway
+    - run_test_Key_conformance
+    - reopen_new_session_gate
+  restore_requirements:
+    - no_revoked_Key_reactivated
+    - replay_state_consistent
+    - root_secret_versions_resolvable
+    - session_revocations_preserved
+# =====================================================================
+# 68. CONCURRENCY
+# =====================================================================
+concurrency:
+  physical_auth:
+    concurrent_requests_allowed: true
+  replay_state:
+    atomic_update_required: true
+  first_activation:
+    exactly_once_logical_semantics: true
+  Key_revocation_vs_authentication:
+    rule: >
+      Revocation effective at policy timestamp wins over later verification.
+  session_creation:
+    concurrent_policy_enforced: true
+  replacement:
+    old_and_new_Key_transition_atomic_or_reconciled: true
+# =====================================================================
+# 69. IDEMPOTENCY
+# =====================================================================
+idempotency:
+  provisioning:
+    same_Key_same_profile:
+      must_detect_existing_state: true
+  first_activation:
+    duplicate_event:
+      return_existing_activation: true
+  revocation:
+    repeated_same_revocation:
+      safe: true
+  replacement:
+    idempotency_key_required: true
+  session_creation:
+    same_possession_assertion:
+      policy:
+        may_return_existing_or_issue_new_based_on_session_policy
+# =====================================================================
+# 70. OBSERVABILITY
+# =====================================================================
+observability:
+  credential:
+    - provisioning_success_rate
+    - provisioning_failure_rate
+    - QA_pass_rate
+    - credential_failure_rate
+  authentication:
+    - auth_success_rate
+    - auth_failure_rate
+    - replay_detection_rate
+    - verification_latency
+    - first_activation_rate
+  sessions:
+    - session_issue_rate
+    - active_sessions
+    - average_session_lifetime
+    - session_revocation_rate
+    - concurrent_session_conflicts
+  access:
+    - protected_resource_grant_rate
+    - resource_denial_rate
+    - forwarded_URL_denial_rate
+    - scrape_anomaly_rate
+  lifecycle:
+    - lost_Key_rate
+    - replacement_rate
+    - revocation_rate
+  security:
+    - suspected_compromise_count
+    - root_secret_access_audit_anomalies
+    - secret_leak_scan_failures
+  privacy:
+    - prohibited_tracking_field_count
+    - retention_policy_violations
+# =====================================================================
+# 71. SECURITY TESTS
+# =====================================================================
+security_tests:
+  provisioning:
+    - blank_Key_cannot_authenticate
+    - incorrectly_provisioned_Key_fails_QA
+    - two_Keys_have_distinct_security_identity
+    - provisioning_receipt_contains_no_raw_secret
+  QR:
+    - photographed_QR_opens_public_doorway_only
+    - copied_QR_does_not_reveal_ProofOfFilm
+  authentication:
+    - valid_Key_authenticates
+    - random_Key_fails
+    - unknown_credential_fails
+    - malformed_message_fails
+    - stale_message_fails
+    - replayed_message_fails
+    - revoked_Key_fails
+    - replacement_old_Key_fails
+  session:
+    - successful_auth_issues_session
+    - expired_session_fails
+    - revoked_session_fails
+    - forwarded_page_URL_without_session_fails
+    - copied_resource_URL_after_expiry_fails
+  secrets:
+    - raw_root_secret_absent_from_logs
+    - raw_root_secret_absent_from_provenance
+    - raw_root_secret_absent_from_model_context
+    - credential_secret_absent_from_QR
+  capture:
+    - system_does_not_claim_impossible_screenshot_prevention
+# =====================================================================
+# 72. PROPERTY TESTS
+# =====================================================================
+property_tests:
+  - QR_alone_never_grants_protected_project_access
+  - ResonanceSerial_never_grants_access
+  - physical_manufacturer_never_requires_root_secret
+  - courier_never_requires_root_secret
+  - model_prompt_never_receives_root_secret
+  - new_primary_session_requires_valid_policy_and_physical_assertion
+  - revoked_Key_cannot_become_ACTIVE_without_explicit_replacement_or_policy_exception
+  - replacement_Key_has_new_credential_identity
+  - Key_activation_never_starts_commercial_offer_clock
+  - physical_viewing_authority_never_implies_signing_authority
+  - protected_resource_URL_is_not_permanent_project_credential
+  - provider_specific_credential_fields_never_escape_adapter
+  - credential_verification_uncertainty_fails_closed
+  - session_transfer_cannot_create_new_long_term_Key
+  - protected_access_failure_does_not_mutate_project_semantics
+  - lost_Key_repair_has_minimum_security_blast_radius
+# =====================================================================
+# 73. ADVERSARIAL TESTS
+# =====================================================================
+adversarial_tests:
+  copy_front_of_card:
+    attack:
+      - photograph_QR
+      - send_to_remote_person
+    expected:
+      - remote_person_sees_Physical_Quantum_Key_required
+  replay_auth:
+    attack:
+      - capture_prior_valid_dynamic_auth_message
+      - replay
+    expected:
+      - REPLAY_DETECTED_or_STALE_ASSERTION
+  enumerate_project:
+    attack:
+      - guess_public_locator_paths
+    expected:
+      - no_protected_content
+      - rate_limit_or_not_found
+  steal_active_session_URL:
+    attack:
+      - copy_browser_URL_only
+    expected:
+      - insufficient_without_session_authority
+  steal_Key:
+    attack:
+      - obtain_physical_Key_before_revocation
+    reality:
+      - possession_may_grant_viewing_access
+    after_revocation:
+      - access_denied
+    note: >
+      This is a bearer credential by design; revocation is therefore essential.
+  external_camera:
+    attack:
+      - film_display_with_second_device
+    expected:
+      - may_succeed
+    security_claim:
+      - risk_accepted
+      - attribution_possible_where_enabled
+  compromised_manufacturer:
+    attack:
+      - attempts_to_clone_visual_card
+    expected:
+      - visual_clone_lacks_valid_credential_identity
+  compromised_single_Key:
+    attack:
+      - extract_or_clone_single_Key_material
+    expected:
+      - blast_radius_does_not_include_all_Keys
+# =====================================================================
+# 74. SCENARIO TESTS
+# =====================================================================
+scenario_tests:
+  normal_executive:
+    steps:
+      - scan_or_tap_Key
+      - secure_physical_auth
+      - ACCESS_GRANTED
+      - first_activation_event
+      - protected_session
+      - ProofOfFilm
+    requires:
+      - no_password
+      - no_account
+      - no_install
+  copied_QR:
+    steps:
+      - photograph_QR
+      - open_elsewhere
+    result:
+      message: Physical Quantum Key required.
+  hand_Key_to_colleague:
+    binding:
+      PHYSICAL_HANDOFF_ALLOWED
+    result:
+      - fresh_authentication
+      - prior_primary_session_revoked_if_policy_requires
+      - colleague_can_view
+  lost_after_viewing:
+    steps:
+      - Key_reported_lost
+      - revoke
+      - active_session_policy_applied
+      - replacement_created
+    result:
+      - old_Key_denied
+      - new_Key_valid
+  executive_signs_future_deal:
+    after_transaction:
+      result:
+        - Key_state_TRANSACTED
+        - future_spec_28_may_add_PRODUCTION_CREDENTIAL_scope
+    no_new_physical_card_required:
+      default: true
+  corporate_PC_blocked:
+    result:
+      - phone_session_remains_valid
+      - spec_21_can_offer_big_screen_pairing_later
+# =====================================================================
+# 75. VALIDATION GATES
+# =====================================================================
+validation_gates:
+  - id: QK-G01
+    check: roadmap numbering conflict resolved by moving roadmap to 90
+  - id: QK-G02
+    check: QuantumKeyAccess has one explicit security owner
+  - id: QK-G03
+    check: QR is public locator and not authentication credential
+  - id: QK-G04
+    check: normal access requires no manually typed secret
+  - id: QK-G05
+    check: ResonanceSerial has zero security authority
+  - id: QK-G06
+    check: each target experience can receive unique credential identity
+  - id: QK-G07
+    check: physical handoff is supported under policy
+  - id: QK-G08
+    check: forwarded link does not transfer possession authority
+  - id: QK-G09
+    check: credential adapter is provider-independent
+  - id: QK-G10
+    check: provider semantics terminate at adapter
+  - id: QK-G11
+    check: secrets remain outside semantic IR
+  - id: QK-G12
+    check: secrets remain outside provenance
+  - id: QK-G13
+    check: physical manufacturer receives no root secret
+  - id: QK-G14
+    check: Key contains no project file archive
+  - id: QK-G15
+    check: per-Key security isolation exists
+  - id: QK-G16
+    check: replay or stale assertion handling exists
+  - id: QK-G17
+    check: protected session issuance requires verification PASS
+  - id: QK-G18
+    check: sessions are short-lived and revocable
+  - id: QK-G19
+    check: direct project resource URLs are not permanent credentials
+  - id: QK-G20
+    check: public doorway displays Physical Quantum Key required when unauthenticated
+  - id: QK-G21
+    check: ACCESS_GRANTED is an explicit state transition
+  - id: QK-G22
+    check: first successful authentication emits ACCESS.KEY_ACTIVATED once
+  - id: QK-G23
+    check: Key activation does not alter commercial offer clock
+  - id: QK-G24
+    check: lost Key can be revoked without changing project semantics
+  - id: QK-G25
+    check: replacement Key receives new credential identity
+  - id: QK-G26
+    check: viewing access cannot imply contract-signing authority
+  - id: QK-G27
+    check: normal experience requires only secure browser infrastructure downstream
+  - id: QK-G28
+    check: no app, extension, VPN, SSO or USB required
+  - id: QK-G29
+    check: screenshot-proof is not claimed
+  - id: QK-G30
+    check: external-camera risk explicitly accepted
+  - id: QK-G31
+    check: forensic watermark seed can be generated without visibly degrading experience
+  - id: QK-G32
+    check: cross-device presentation remains owned by spec 21
+  - id: QK-G33
+    check: commercial offer state remains owned by spec 23
+  - id: QK-G34
+    check: production portal scope remains owned by spec 28
+  - id: QK-G35
+    check: privacy telemetry is minimal and purpose-bound
+  - id: QK-G36
+    check: secret-store adapter from spec 15 is reused
+  - id: QK-G37
+    check: object-storage adapter from spec 15 is reused
+  - id: QK-G38
+    check: security recovery cannot reactivate revoked credentials accidentally
+  - id: QK-G39
+    check: authentication infrastructure can fail closed
+  - id: QK-G40
+    check: security events are sanitized and auditable
+# =====================================================================
+# 76. IMPLEMENTATION WAVES
+# =====================================================================
+implementation_waves:
+  QKW1:
+    name: domain_and_registry
+    targets:
+      - QuantumKey
+      - KeyBinding
+      - PublicProjectLocator
+      - lifecycle
+      - inventory
+  QKW2:
+    name: security_adapter
+    depends_on:
+      - QKW1
+    targets:
+      - SecurePhysicalCredentialContract
+      - SecurePhysicalCredentialAdapter
+      - provisioning_profile
+      - secret_store_integration
+  QKW3:
+    name: provisioning
+    depends_on:
+      - QKW2
+    targets:
+      - provisioning_station
+      - diversification
+      - provisioning_receipt
+      - Key_QA
+  QKW4:
+    name: authentication
+    depends_on:
+      - QKW3
+    targets:
+      - verification
+      - freshness
+      - replay
+      - PhysicalPossessionAssertion
+      - AccessGateway
+  QKW5:
+    name: browser_session
+    depends_on:
+      - QKW4
+    targets:
+      - AuthenticationSession
+      - ProtectedAccessGrant
+      - resource_grants
+      - non_forwarding
+      - cache_policy
+  QKW6:
+    name: lifecycle_security
+    depends_on:
+      - QKW5
+    targets:
+      - activation
+      - revocation
+      - replacement
+      - loss_response
+      - compromise_response
+  QKW7:
+    name: downstream_handoff
+    depends_on:
+      - QKW5
+    targets:
+      - spec_21_session_transfer_contract
+      - spec_23_commercial_state_boundary
+      - spec_28_production_credential_extension
+  QKW8:
+    name: adversarial_validation
+    depends_on:
+      - QKW6
+      - QKW7
+    targets:
+      - attack_tests
+      - recovery
+      - security_observability
+      - privacy_validation
+# =====================================================================
+# 77. OPEN DECISIONS
+# =====================================================================
+open_decisions:
+  - id: QK-OD-01
+    decision: secure physical credential reference implementation
+    status: SELECT_AFTER_CONFORMANCE
+    candidate_family:
+      - secure_dynamic_NFC
+  - id: QK-OD-02
+    decision: exact secure credential IC
+    status: REFERENCE_IMPLEMENTATION_DECISION
+  - id: QK-OD-03
+    decision: exact card antenna / RF construction
+    status: PHYSICAL_PROTOTYPE_REQUIRED
+    coordinates_with:
+      - spec_19
+  - id: QK-OD-04
+    decision: production provisioning reader
+    status: REFERENCE_IMPLEMENTATION_DECISION
+  - id: QK-OD-05
+    decision: root-key HSM/KMS implementation
+    status: REFERENCE_IMPLEMENTATION_DECISION
+  - id: QK-OD-06
+    decision: default session lifetime
+    status: SECURITY_USABILITY_TEST_REQUIRED
+  - id: QK-OD-07
+    decision: default idle timeout
+    status: SECURITY_USABILITY_TEST_REQUIRED
+  - id: QK-OD-08
+    decision: maximum active primary sessions
+    status: POLICY_TUNING
+  - id: QK-OD-09
+    decision: forensic watermark implementation
+    status: FUTURE_ADAPTER_DECISION
+  - id: QK-OD-10
+    decision: authentication gateway physical topology
+    status: IMPLEMENTATION_DECISION
+  - id: QK-OD-11
+    decision: session-store implementation
+    status: IMPLEMENTATION_DECISION
+  - id: QK-OD-12
+    decision: exact public domain / hostname
+    status: BRAND_AND_INFRASTRUCTURE_DECISION
+  - id: QK-OD-13
+    decision: browser protected-content delivery mode
+    status: BENCHMARK_REQUIRED
+  - id: QK-OD-14
+    decision: whether active session transfers when Key is physically handed off
+    status: POLICY_TEST_REQUIRED
+# =====================================================================
+# 78. RISKS / CONTROLS
+# =====================================================================
+risks:
+  - risk: QR accidentally becomes bearer token
+    control:
+      - locator_only_contract
+      - security_tests
+  - risk: visible serial used as password
+    control:
+      - zero_security_authority
+  - risk: one shared secret compromises entire Key fleet
+    control:
+      - per_Key_diversification
+  - risk: manufacturer obtains security secrets
+    control:
+      - manufacturing_provisioning_separation
+  - risk: captured NFC interaction replayed
+    control:
+      - dynamic_auth
+      - freshness
+      - replay_state
+  - risk: active session forwarded
+    control:
+      - session_not_in_URL
+      - short_lifetime
+      - policy
+  - risk: resource URL becomes permanent download
+    control:
+      - ProtectedResourceGrant
+      - expiry
+      - no_stable_blob_URL
+  - risk: Key stolen before revocation
+    control:
+      - bearer_credential_threat_model
+      - rapid_revocation
+      - minimal_nonpublic_data_on_card
+  - risk: security theater exceeds real control
+    control:
+      - conformance_tests
+      - cryptographic_possession_assertion
+  - risk: promise of screenshot prevention becomes false claim
+    control:
+      - explicit_capture_limit
+  - risk: custom security stack incompatible with corporate devices
+    control:
+      - browser_first
+      - no_install
+      - phone_fallback
+      - spec_21_pairing
+  - risk: telemetry becomes surveillance
+    control:
+      - data_minimization
+      - coarse_device_only
+      - no_location_history
+  - risk: credentials leak through observability
+    control:
+      - sanitized_audit
+      - no_raw_secret_logging
+  - risk: provider lock-in
+    control:
+      - SecurePhysicalCredentialAdapter
+      - normalized_contracts
+      - spec_15_conformance
+  - risk: access system starts commercial timer incorrectly
+    control:
+      - explicit_owner_boundary
+      - property_test
+  - risk: credential system becomes contract authority
+    control:
+      - viewing_vs_signing_authority_separation
+# =====================================================================
+# 79. DEFINITION OF DONE
+# =====================================================================
+definition_of_done:
+  numbering:
+    - old_roadmap_moved_to_90
+  domain:
+    - QuantumKey
+    - KeyBinding
+    - PublicProjectLocator
+    - QuantumKeyCredential
+    - lifecycle
+  security:
+    - SecurePhysicalCredentialContract
+    - provider_independent_adapter
+    - secret_store_boundary
+    - per_Key_diversification
+    - provisioning
+    - replay_detection
+    - revocation
+    - replacement
+  authentication:
+    - PhysicalPossessionAssertion
+    - CredentialVerificationResult
+    - ACCESS_GRANTED
+    - zero_secret_typing
+    - first_activation_event
+  browser:
+    - AuthenticationSession
+    - ProtectedAccessGrant
+    - ProtectedResourceGrant
+    - non_forwardable_URL_semantics
+    - protected_cache_policy
+  privacy:
+    - minimal_telemetry
+    - no_private_location_requirement
+    - no_device_contact_scraping
+  lifecycle:
+    - lost_Key
+    - stolen_Key
+    - compromised_Key
+    - replacement
+    - archival
+    - future_production_credential_extension
+  integration:
+    - spec_15_adapter_patch_contract
+    - spec_19_physical_handoff
+    - spec_21_session_transfer_boundary
+    - spec_23_offer_boundary
+    - spec_28_production_portal_boundary
+  quality:
+    - security_conformance_tests
+    - adversarial_tests
+    - recovery
+    - observability
+  release:
+    requirement: QK-G01_through_QK-G40_pass
+# =====================================================================
+# 80. FINAL ARCHITECTURAL LAWS
+# =====================================================================
+final_architectural_laws:
+  law_01: >
+    The Quantum Key is a real physical bearer credential, not a decorative QR card.
+  law_02: >
+    QR identifies the doorway. Cryptographic physical possession opens it.
+  law_03: >
+    Normal access requires no typed password, code or account.
+  law_04: >
+    The visible ResonanceSerial is identity and symbolism, never authentication.
+  law_05: >
+    One cold-target experience normally receives one unique Quantum Key identity.
+  law_06: >
+    The card may be physically transferred; the protected link may not substitute
+    for that transfer.
+  law_07: >
+    The Quantum Key contains access capability, not project files.
+  law_08: >
+    Root secrets never enter model prompts, semantic IR, provenance or manufacturing vendors.
+  law_09: >
+    Compromise of one Key should have the smallest possible credential blast radius.
+  law_10: >
+    Credential implementations are replaceable adapters, not architecture.
+  law_11: >
+    Dynamic freshness and replay resistance are preferred wherever the physical
+    credential implementation can provide them.
+  law_12: >
+    New protected sessions require a valid physical possession assertion under
+    the active authentication policy.
+  law_13: >
+    Access sessions are temporary, scoped and revocable.
+  law_14: >
+    A project URL is never a permanent bearer credential.
+  law_15: >
+    Protected resource URLs are temporary implementation details.
+  law_16: >
+    Forwarding a URL must not transfer the same authority as handing over the Key.
+  law_17: >
+    ACCESS GRANTED is a first-class state transition.
+  law_18: >
+    First successful authentication means MESSAGE RECEIVED.
+  law_19: >
+    Key activation does not start the commercial offer clock.
+  law_20: >
+    Possession may establish viewing authority but never contract-signing authority.
+  law_21: >
+    Lost and stolen Keys must be revocable without touching creative project semantics.
+  law_22: >
+    Replacement creates new credential identity.
+  law_23: >
+    Quantum should prevent ordinary forwarding and downloading without making
+    impossible claims about external recording.
+  law_24: >
+    A determined viewer can film a screen; Quantum accepts that irreducible risk.
+  law_25: >
+    Forensic attribution may deter leakage but may not visibly damage the cinematic experience.
+  law_26: >
+    Corporate compatibility is maximized by making the protected endpoint an
+    ordinary secure browser rather than custom client software.
+  law_27: >
+    Convenience features such as big-screen pairing may transfer scoped session
+    authority but cannot create new long-term credentials.
+  law_28: >
+    Security failure degrades closed.
+  law_29: >
+    Authentication telemetry must remain operational rather than invasive.
+  law_30: >
+    Security theater is acceptable only when real security exists underneath it.
+  law_31: >
+    The physical Key can survive the sale and later unlock new authorized scopes.
+  law_32: >
+    The desired interaction is:
+    physical object
+    -> cryptographic proof
+    -> ACCESS GRANTED
+    -> private experience.

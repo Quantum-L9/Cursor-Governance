@@ -1,0 +1,38 @@
+schema: program-execution-blueprint.index.v2
+schema_version: 2.0.0
+blueprint_contract: program-execution-blueprint.v2
+required_sources:
+- PROGRAM.yaml
+- PHASE0_USER_CONFIG.yaml
+- EXECUTION_TARGETS.yaml
+- AUTHORITY_REGISTRY.yaml
+- DECISION_REGISTER.yaml
+- UNKNOWN_REGISTER.yaml
+- RISK_REGISTER.yaml
+- WAIVER_REGISTER.yaml
+- EVIDENCE_CATALOG.yaml
+- DO_NOT_BUILD.yaml
+- CURRENT_STATE_DELTA.yaml
+- WORKSTREAMS.yaml
+- DEPENDENCY_GRAPH.yaml
+- EXECUTION_WAVES.yaml
+- TASK_CARDS.yaml
+- CONVERGENCE_GATES.yaml
+- OBSERVABILITY_PLAN.yaml
+- CUTOVER_AND_ROLLBACK.yaml
+- SOURCE_TRACEABILITY.yaml
+canonical_owners:
+  phase0_user_config: PHASE0_USER_CONFIG.yaml
+  task_dependencies: DEPENDENCY_GRAPH.yaml
+  wave_dependencies: EXECUTION_WAVES.yaml
+  gate_definitions: CONVERGENCE_GATES.yaml
+  runtime_gate_results: Program Execution Controller
+  task_definition_state: TASK_CARDS.yaml
+  task_runtime_state: Program Execution Controller
+  final_program_verdict: program_owner_acceptance
+
+controller_import:
+  immutable: true
+  digest_algorithm: sha256
+  unknown_contract: reject
+  source_change: mark_runtime_stale

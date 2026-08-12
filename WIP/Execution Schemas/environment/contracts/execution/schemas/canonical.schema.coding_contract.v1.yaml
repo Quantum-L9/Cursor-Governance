@@ -1,0 +1,777 @@
+schema_id: canonical.schema.coding_contract.v1
+schema_name: Canonical Coding Contract Schema
+schema_class: canonical_execution_contract_schema
+schema_family: l9_execution_architecture
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.coding_contract.v1.yaml
+generated_at: '2026-08-12T02:43:10'
+created_from:
+- file: canonical.schema.plan_document.v1.yaml
+  role: sister_execution_schema_alignment
+  checksum_sha256: fab85677985d48ba20a383692808fab5819e2adfc9f62534123eda18aff21986
+purpose:
+  primary: 'Define the reusable canonical schema for execution-grade coding contracts. A valid coding contract translates
+    an approved plan or validated spec into deterministic implementation instructions with explicit scope, authority, dependency
+    topology, file emission rules, test obligations, validation honesty, rollback expectations, evidence requirements, and
+    completion gates.
+
+    '
+  output_level: schema_not_instance
+  intended_use:
+  - derive_coding_contracts
+  - gate_code_generation
+  - drive_repo_implementation
+  - define_file_emission
+  - define_dependency_order
+  - define_test_generation
+  - define_validation_receipts
+  - define_machine_completion_state
+  not_for:
+  - planning_without_implementation
+  - architecture_brainstorming
+  - direct_unbounded_code_generation
+  - repository_specific_instances
+  - validation_claims_without_receipts
+ontology:
+  parent_type: execution_contract_schema
+  specialized_type: coding_contract_schema
+  instance_type_generated_by_this_schema: coding_contract
+  upstream_inputs:
+  - validated_plan_document
+  - validated_spec
+  downstream_artifacts:
+  - implementation_files
+  - tests
+  - validation_results
+  - validation_not_run_record
+  - machine_summary
+  - rollback_receipt
+  related_schema_types:
+  - canonical.schema.plan_document.v1
+  - canonical.schema.capability_preflight.v1
+  - canonical.schema.dependency_topology.v1
+  - canonical.schema.rollback_contract.v1
+  - canonical.schema.validation_evidence.v1
+  - canonical.schema.convergence_contract.v1
+  - canonical.schema.execution_packet.v1
+inheritance:
+  extends:
+  - canonical.knowledge_object.schema.v1
+  - canonical.execution_contract.schema.v1
+  - canonical.validation_contract.schema.v1
+  aligns_with:
+  - canonical.schema.plan_document.v1
+  provides:
+  - prime_directive_model
+  - source_context_model
+  - preflight_audit_model
+  - resolved_implementation_contract_model
+  - dependency_topology_model
+  - execution_envelope_model
+  - file_emission_model
+  - test_generation_model
+  - security_reliability_model
+  - validation_honesty_model
+  - rollback_model
+  - evidence_model
+  - machine_summary_model
+  - convergence_model
+contract_executability_law:
+  expression:
+    all_required:
+    - source_contract_valid
+    - preflight_complete
+    - implementation_contract_resolved
+    - dependency_DAG_valid
+    - execution_envelope_locked
+    - file_plan_complete
+    - tests_defined
+    - validation_strategy_defined
+    - rollback_strategy_defined
+  rule: 'A coding contract is executable only when all required implementation, dependency, validation, and safety conditions
+    are resolved. Code generation MUST NOT begin while blockers, unresolved dependency cycles, or ambiguous file ownership
+    remain.
+
+    '
+required_sections:
+  metadata:
+    required: true
+    purpose: Identify, version, and classify a coding contract instance.
+    fields:
+      contract_id:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+      schema_version:
+        type: semver
+        required: true
+      status:
+        enum:
+        - draft
+        - preflight_blocked
+        - implementation_ready
+        - executing
+        - validation_failed
+        - converged
+        - superseded
+        required: true
+      created_at:
+        type: datetime_or_date
+        required: true
+      owner:
+        type: string
+        required: false
+      source_plan_ref:
+        type: ref
+        required: false
+      source_spec_ref:
+        type: ref
+        required: false
+  prime_directive:
+    required: true
+    purpose: Define non-negotiable coding behavior.
+    fields:
+      role:
+        type: string
+        required: true
+      implementation_standard:
+        enum:
+        - production_grade
+        - migration_safe
+        - security_critical
+        - prototype
+        required: true
+      complete_files_only:
+        const: true
+      prohibited_output:
+        type: list
+        canonical_values:
+        - pseudo_code
+        - ellipses
+        - omitted_imports
+        - hidden_placeholders
+        - invented_APIs
+        - skipped_tests
+        - fake_validation
+        - TODO_compliance_markers
+        - partial_file_fragments
+  source_context:
+    required: true
+    purpose: Bind implementation to validated upstream truth.
+    fields:
+      source_type:
+        enum:
+        - plan_document
+        - canonical_spec
+        - build_contract
+        - approved_patch
+        required: true
+      source_ref:
+        type: ref
+        required: true
+      source_version:
+        type: string
+        required: true
+      source_hash:
+        type: sha256
+        required: true
+      authority_order:
+        type: ordered_list
+        required: true
+      unknowns:
+        type: list
+        required: true
+  preflight_audit:
+    required: true
+    purpose: Surface implementation blockers before file generation.
+    fields:
+      blocking:
+        const: true
+      issues:
+        type: list
+        item_schema:
+          id:
+            type: string
+            required: true
+          issue:
+            type: string
+            required: true
+          category:
+            enum:
+            - identifier
+            - import
+            - cycle
+            - network
+            - framework
+            - validation
+            - security
+            - package_boundary
+            - dependency_topology
+            - runtime_mismatch
+            - contract_gap
+            - test_gap
+            - file_ownership
+            required: true
+          severity:
+            enum:
+            - blocker
+            - major
+            - minor
+            - advisory
+            required: true
+          location:
+            type: string
+            required: true
+          resolution:
+            type: string
+            required: true
+          contract_impact:
+            enum:
+            - none
+            - modifies_runtime_contract
+            - modifies_dependency_contract
+            - modifies_file_plan
+            - modifies_validation_plan
+            - modifies_security_contract
+            - modifies_test_plan
+            required: true
+      halt_if_blocker_open:
+        const: true
+  resolved_implementation_contract:
+    required: true
+    purpose: Become the implementation source of truth after preflight.
+    fields:
+      language_runtime:
+        type: runtime_descriptor
+        required: true
+      package_manager:
+        type: string
+        required: false
+      workspace_model:
+        type: string
+        required: false
+      package_set:
+        type: list
+        required: true
+      resolved_identifiers:
+        type: list
+        required: true
+      resolved_imports:
+        type: list
+        required: true
+      resolved_dependency_boundaries:
+        type: list
+        required: true
+      network_posture:
+        enum:
+        - no_outbound
+        - injected_transport_only
+        - controlled_outbound
+        - blocked
+        required: true
+      external_IO_policy:
+        enum:
+        - injected_interfaces_only
+        - deterministic_fakes_only
+        - prohibited
+        required: true
+      validation_feasibility:
+        enum:
+        - runnable_here
+        - partially_runnable
+        - not_runnable_here
+        - blocked
+        required: true
+      test_policy:
+        enum:
+        - observable_behavior_only
+        required: true
+      precedence_rule:
+        const: resolved_implementation_contract_wins_over_later_files
+  execution_envelope:
+    required: true
+    purpose: Bound implementation side effects.
+    fields:
+      filesystem:
+        type: map
+        required: true
+        fields:
+          may_create:
+            type: list
+            required: true
+          may_modify:
+            type: list
+            required: true
+          may_delete:
+            type: list
+            required: false
+          deny:
+            type: list
+            required: true
+      commands:
+        type: map
+        required: true
+        fields:
+          allow:
+            type: list
+            required: true
+          deny:
+            type: list
+            required: true
+      network:
+        type: map
+        required: true
+      secrets:
+        type: map
+        required: true
+      write_mode:
+        enum:
+        - dry_run
+        - explicit_write
+        required: true
+  dependency_topology:
+    required: true
+    composition: schema_ref
+    schema_ref: canonical.schema.dependency_topology.v1
+    purpose: Own dependency DAG semantics.
+    instance_binding: dependency_topology_ref
+  file_emission_contract:
+    required: true
+    purpose: Define exact generated file targets and content obligations.
+    fields:
+      generation_order_basis:
+        enum:
+        - dependency_topology
+        - explicit_order
+        - migration_sequence
+        required: true
+      file_targets:
+        type: list
+        min_items: 1
+        item_schema:
+          path:
+            type: string
+            required: true
+          owner:
+            type: string
+            required: true
+          purpose:
+            type: string
+            required: true
+          must_contain:
+            type: list
+            required: true
+          must_not_contain:
+            type: list
+            required: true
+          validation_command:
+            type: string_or_null
+            required: false
+          content_required:
+            const: true
+      complete_file_content_required:
+        const: true
+      no_overwrite_without_authority:
+        const: true
+  test_generation_contract:
+    required: true
+    purpose: Define tests as behavioral proof rather than decorative mocks.
+    fields:
+      framework:
+        type: string
+        required: true
+      deterministic_required:
+        const: true
+      external_IO_policy:
+        enum:
+        - no_real_network_no_real_secrets_no_real_LLM
+        - injected_fakes_only
+        required: true
+      assertion_policy:
+        const: observable_behavior_and_returned_structures
+      forbidden_tests:
+        type: list
+        canonical_values:
+        - skipped_tests
+        - disabled_tests
+        - mock_call_count_only_tests
+        - outbound_network_tests
+        - secret_dependent_tests
+      required_test_classes:
+        type: list
+        required: true
+        item_enum:
+        - unit
+        - integration
+        - architecture
+        - regression
+        - security
+        - migration
+        - property
+        - smoke
+  security_and_reliability:
+    required: true
+    purpose: Lock implementation safety boundaries.
+    fields:
+      injected_interface_requirements:
+        type: list
+        required: true
+      deterministic_behavior_required:
+        type: boolean
+        required: true
+      forbidden_runtime_patterns:
+        type: list
+        required: true
+      failure_policy:
+        enum:
+        - explicit_fail_closed
+        - explicit_fail_open
+        - domain_defined
+        required: true
+      retry_policy:
+        type: map
+        required: false
+      secret_policy:
+        type: map
+        required: true
+  validation_honesty:
+    required: true
+    composition: schema_ref
+    schema_ref: canonical.schema.validation_evidence.v1
+    purpose: Govern claim evidence through canonical validation evidence records.
+    instance_binding: validation_honesty_ref
+  rollback:
+    required: true
+    composition: schema_ref
+    schema_ref: canonical.schema.rollback_contract.v1
+    purpose: Own typed rollback and compensation semantics.
+    instance_binding: rollback_ref
+  evidence_contract:
+    required: true
+    composition: schema_ref
+    schema_ref: canonical.schema.validation_evidence.v1
+    purpose: Bind validation claims to canonical evidence records.
+    instance_binding: validation_evidence_refs
+  output_contract:
+    required: true
+    purpose: Define deterministic response and artifact order.
+    fields:
+      output_order:
+        type: ordered_list
+        required: true
+        canonical_values:
+        - preflight_audit
+        - resolved_implementation_contract
+        - dependency_topology
+        - generated_files
+        - tests
+        - validation_results
+        - rollback_receipt_if_used
+        - machine_summary
+      first_class_only:
+        type: boolean
+        required: true
+      sidecars_allowed:
+        type: boolean
+        required: true
+  machine_summary:
+    required: true
+    purpose: Provide machine-readable completion state.
+    fields:
+      status:
+        enum:
+        - complete
+        - partial
+        - blocked
+        required: true
+      preflight_audit_completed:
+        type: boolean
+        required: true
+      dependency_DAG_valid:
+        type: boolean
+        required: true
+      files_generated:
+        type: list
+        required: true
+      tests_generated:
+        type: list
+        required: true
+      validation_commands:
+        type: list
+        required: true
+      validation_status:
+        enum:
+        - passed
+        - failed
+        - not_run
+        - blocked
+        - skipped
+        - unknown
+        required: true
+      validation_evidence:
+        type: list
+        required: true
+      spec_changes_made:
+        type: list
+        required: true
+      security_assertions:
+        type: list
+        required: true
+      known_limitations:
+        type: list
+        required: true
+      blocked_items:
+        type: list
+        required: true
+      minimum_safe_next_action:
+        type: string
+        required: true
+      convergence_status:
+        enum:
+        - converged
+        - partial
+        - blocked
+        required: true
+  convergence:
+    required: true
+    composition: schema_ref
+    schema_ref: canonical.schema.convergence_contract.v1
+    purpose: Own completion and convergence semantics.
+    instance_binding: convergence_ref
+  capability_preflight:
+    required: true
+    composition: schema_ref
+    schema_ref: canonical.schema.capability_preflight.v1
+    purpose: Prove implementation environment and required capabilities before code generation.
+    instance_binding: capability_preflight_ref
+repo_agnostic_enum_registry:
+  coding_contract_status:
+  - draft
+  - preflight_blocked
+  - implementation_ready
+  - executing
+  - validation_failed
+  - converged
+  - superseded
+  implementation_standard:
+  - production_grade
+  - migration_safe
+  - security_critical
+  - prototype
+  issue_category:
+  - identifier
+  - import
+  - cycle
+  - network
+  - framework
+  - validation
+  - security
+  - package_boundary
+  - dependency_topology
+  - runtime_mismatch
+  - contract_gap
+  - test_gap
+  - file_ownership
+  severity:
+  - blocker
+  - major
+  - minor
+  - advisory
+  validation_status:
+  - passed
+  - failed
+  - not_run
+  - blocked
+  - skipped
+  - unknown
+  write_mode:
+  - dry_run
+  - explicit_write
+  test_class:
+  - unit
+  - integration
+  - architecture
+  - regression
+  - security
+  - migration
+  - property
+  - smoke
+  generation_order_basis:
+  - dependency_topology
+  - explicit_order
+  - migration_sequence
+plan_alignment:
+  sibling_schema:
+    const: canonical.schema.plan_document.v1
+  derivation_rule: 'A coding contract SHOULD be derived from a validated plan or canonical spec. The plan defines mission,
+    baseline, envelope, side effects, rollback, and evidence properties. The coding contract resolves those into implementation,
+    dependency, file, test, security, and validation obligations.
+
+    '
+  required_mappings:
+    immutable_baseline:
+      from: plan.immutable_baseline
+      to:
+      - source_context
+      - preflight_audit
+    execution_envelope:
+      from: plan.execution_envelope
+      to: execution_envelope
+    side_effects_and_idempotency:
+      from: plan.side_effects_and_idempotency
+      to:
+      - security_and_reliability
+      - rollback
+    execution_DAG:
+      from: plan.execution_DAG
+      to: dependency_topology
+    property_evidence_matrix:
+      from: plan.property_evidence_matrix
+      to:
+      - test_generation_contract
+      - validation_honesty
+    convergence:
+      from: plan.convergence
+      to:
+      - machine_summary
+      - convergence
+validation_rules:
+- id: CODE-SCHEMA-001
+  severity: blocker
+  rule: Code generation must not begin while preflight blockers remain open.
+- id: CODE-SCHEMA-002
+  severity: blocker
+  rule: Dependency topology must be acyclic before file generation.
+- id: CODE-SCHEMA-003
+  severity: blocker
+  rule: Every generated file must have explicit path, purpose, required content, forbidden content, and ownership.
+- id: CODE-SCHEMA-004
+  severity: blocker
+  rule: Generated implementation must remain inside the execution envelope.
+- id: CODE-SCHEMA-005
+  severity: blocker
+  rule: Complete file content is required; partial fragments, ellipses, placeholders, and TODO compliance markers are forbidden.
+- id: CODE-SCHEMA-006
+  severity: blocker
+  rule: Tests must assert observable behavior or returned structures, not mock call counts alone.
+- id: CODE-SCHEMA-007
+  severity: blocker
+  rule: Validation status passed or failed requires captured evidence.
+- id: CODE-SCHEMA-008
+  severity: blocker
+  rule: Runtime, security, and external IO must honor resolved implementation boundaries.
+- id: CODE-SCHEMA-009
+  severity: blocker
+  rule: Coding contract must define rollback strategy before irreversible implementation actions.
+- id: CODE-SCHEMA-010
+  severity: major
+  rule: Unknown implementation facts must remain explicit and block only affected phases.
+- id: CODE-SCHEMA-011
+  severity: blocker
+  rule: Machine summary status must match validation evidence and open blockers.
+- id: CODE-SCHEMA-012
+  severity: blocker
+  rule: A coding contract derived from a plan must preserve the plan execution envelope and property evidence obligations.
+derivation_targets:
+  can_generate:
+  - coding_contract
+  - implementation_plan
+  - file_emission_plan
+  - dependency_DAG
+  - test_plan
+  - security_constraints
+  - validation_plan
+  - rollback_plan
+  - generated_files
+  - validation_results
+  - machine_summary
+  - execution_contract
+anti_drift_rules:
+- Do not embed repository names, concrete file paths, package names, usernames, branch names, or commit SHAs into reusable
+  enums.
+- Do not let coding contracts redefine upstream architectural authority.
+- Do not relax an upstream execution envelope during coding contract derivation.
+- Do not convert unknowns into assumed implementation facts.
+- Do not let file generation imply validation success.
+- Do not let test existence imply behavioral coverage.
+- Do not let runtime profiles define authority.
+- Do not let generated code modify the contract that authorized it.
+- Do not mark convergence complete while validation or blocker state disagrees.
+- Do not redefine sibling primitive contracts inside Coding Contract instances.
+- Validation honesty is enforced through validation evidence claim rules; no dangling validation_honesty schema authority
+  exists in this family.
+minimum_viable_instance_requirements:
+  required:
+  - metadata
+  - prime_directive
+  - source_context
+  - preflight_audit
+  - resolved_implementation_contract
+  - execution_envelope
+  - file_emission_contract
+  - test_generation_contract
+  - security_and_reliability
+  - output_contract
+  - machine_summary
+  - capability_preflight_ref
+  - dependency_topology_ref
+  - rollback_contract_ref
+  - validation_evidence_refs
+  - convergence_contract_ref
+related_schemas:
+  plan_document:
+    schema_ref: canonical.schema.plan_document.v1
+    required: false
+    authority: upstream_execution_intent
+  capability_preflight:
+    schema_ref: canonical.schema.capability_preflight.v1
+    required: true
+    authority: canonical_primitive
+  dependency_topology:
+    schema_ref: canonical.schema.dependency_topology.v1
+    required: true
+    authority: canonical_primitive
+  rollback_contract:
+    schema_ref: canonical.schema.rollback_contract.v1
+    required: true
+    authority: canonical_primitive
+  validation_evidence:
+    schema_ref: canonical.schema.validation_evidence.v1
+    required: true
+    authority: canonical_primitive
+  convergence_contract:
+    schema_ref: canonical.schema.convergence_contract.v1
+    required: true
+    authority: canonical_primitive
+schema_dependency_direction:
+  depends_on:
+  - canonical.schema.plan_document.v1
+  - canonical.schema.capability_preflight.v1
+  - canonical.schema.dependency_topology.v1
+  - canonical.schema.rollback_contract.v1
+  - canonical.schema.validation_evidence.v1
+  - canonical.schema.convergence_contract.v1
+  must_not_depend_on:
+  - canonical.schema.execution_contract.v1
+  - canonical.schema.mutation_authorization.v1
+  - canonical.schema.execution_packet.v1
+  cycle_policy: schema_dependency_graph_must_be_acyclic
+execution_family:
+  role: implementation_anchor
+  upstream:
+  - canonical.schema.plan_document.v1
+  composes:
+  - canonical.schema.capability_preflight.v1
+  - canonical.schema.dependency_topology.v1
+  - canonical.schema.rollback_contract.v1
+  - canonical.schema.validation_evidence.v1
+  - canonical.schema.convergence_contract.v1
+  downstream:
+  - canonical.schema.execution_contract.v1
+  - canonical.schema.mutation_authorization.v1
+  - canonical.schema.execution_packet.v1
+  invariant: coding_contract_defines_implementation_not_execution_packet_authority
