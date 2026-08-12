@@ -6,6 +6,12 @@ GC_ROOT="$(cd "$(dirname "$REAL_HOOK")/.." && pwd)"
 # shellcheck source=../hooks/graphiti_common.sh
 source "$GC_ROOT/hooks/graphiti_common.sh"
 GATE_LIB="$GC_ROOT/graphiti/graphiti_gate_lib.py"
+REPO_ROOT="$(cd "$GC_ROOT/.." && pwd)"
+if [ -x "$REPO_ROOT/.venv/bin/python3" ]; then
+  GRAPHITI_PYTHON="$REPO_ROOT/.venv/bin/python3"
+else
+  GRAPHITI_PYTHON="$(command -v python3)"
+fi
 STATE_DIR="$HOME/.cursor/graphiti-state"
 mkdir -p "$STATE_DIR"
 TEST_STATE="$STATE_DIR/e2e-test.json"
@@ -14,7 +20,7 @@ CONV='e2e-test'
 run_gate() {
   local mode="$1"
   export GRAPHITI_WRITE_GATES=1
-  python3 "$GATE_LIB" "$mode" <<< "$2"
+  "$GRAPHITI_PYTHON" "$GATE_LIB" "$mode" <<< "$2"
 }
 
 expect() {
@@ -67,7 +73,7 @@ expect "subagent deny" "$(run_gate subagent '{"conversation_id":"e2e-test"}')" d
 
 # --- gates off ---
 export GRAPHITI_WRITE_GATES=0
-expect "gates off" "$(python3 "$GATE_LIB" pre_tool_use <<< '{"conversation_id":"e2e-test","tool_name":"Write"}')" allow
+expect "gates off" "$("$GRAPHITI_PYTHON" "$GATE_LIB" pre_tool_use <<< '{"conversation_id":"e2e-test","tool_name":"Write"}')" allow
 
 rm -f "$TEST_STATE"
 echo "OK: graphiti gate E2E full passed"
