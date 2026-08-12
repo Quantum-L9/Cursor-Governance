@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +16,7 @@ from environment.agents.runtime_paths import assignment_root, subagent_receipt_r
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def _digest(body: dict[str, Any]) -> str:
@@ -28,7 +28,7 @@ def write_json(path: Path, body: dict[str, Any]) -> dict[str, Any]:
     path.parent.mkdir(parents=True, exist_ok=True)
     digest = _digest(body)
     body = {**body, "receipt_digest": digest}
-    path.write_text(json.dumps(body, indent=2, sort_keys=True) + '\n', encoding="utf-8")
+    path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return body
 
 

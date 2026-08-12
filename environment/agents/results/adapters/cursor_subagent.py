@@ -7,6 +7,7 @@ from typing import Any
 
 _BRIDGE = Path(__file__).resolve().parents[2] / "cursor-subagents" / "result_bridge.py"
 
+
 def _load_bridge():
     spec = importlib.util.spec_from_file_location("cursor_result_bridge", _BRIDGE)
     if spec is None or spec.loader is None:
@@ -15,6 +16,7 @@ def _load_bridge():
     sys.modules["cursor_result_bridge"] = mod
     spec.loader.exec_module(mod)
     return mod
+
 
 result_bridge = _load_bridge()
 

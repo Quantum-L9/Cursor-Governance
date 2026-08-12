@@ -7,6 +7,7 @@ from typing import Any
 
 from environment.agents.lifecycle import receipts
 
+
 def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
     assignment_id = payload.get("assignment_id")
     if not assignment_id:
@@ -45,12 +46,14 @@ def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
     )
     return {"status": "RETURNED", "idempotent": False, "return_receipt": body}
 
+
 def main() -> int:
     payload = json.load(sys.stdin)
     result = compose_subagent_stop(payload)
     json.dump(result, sys.stdout)
     print()
     return 0 if result.get("status") in {"RETURNED"} else 2
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

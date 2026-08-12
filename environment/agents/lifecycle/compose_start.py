@@ -7,13 +7,18 @@ from typing import Any
 
 from environment.agents.lifecycle import receipts
 
+
 def _deny(reason: str) -> dict[str, Any]:
     return {"permission": "deny", "reason": reason}
+
 
 def _allow(dispatch: dict[str, Any]) -> dict[str, Any]:
     return {"permission": "allow", "dispatch_receipt": dispatch.get("receipt_digest")}
 
-def compose_subagent_start(payload: dict[str, Any], *, repo_root: Path | None = None) -> dict[str, Any]:
+
+def compose_subagent_start(
+    payload: dict[str, Any], *, repo_root: Path | None = None
+) -> dict[str, Any]:
     """Composed subagentStart gate. Graphiti satisfaction assumed pre-checked by runner."""
     assignment = payload.get("assignment") or {}
     assignment_id = assignment.get("assignment_id") or payload.get("assignment_id")
@@ -46,7 +51,9 @@ def compose_subagent_start(payload: dict[str, Any], *, repo_root: Path | None = 
         "campaign_id": assignment.get("campaign_id") or payload.get("campaign_id"),
         "graph_id": assignment.get("graph_id") or payload.get("graph_id"),
         "action_id": assignment.get("action_id") or payload.get("action_id"),
-        "parent_agent_id": assignment.get("parent_agent_id") or payload.get("parent_agent_id") or "cursor",
+        "parent_agent_id": assignment.get("parent_agent_id")
+        or payload.get("parent_agent_id")
+        or "cursor",
         "subagent_role": role,
         "lease_id": lease.get("lease_id"),
         "base_sha": base_sha,
@@ -59,12 +66,14 @@ def compose_subagent_start(payload: dict[str, Any], *, repo_root: Path | None = 
     dispatch = receipts.write_dispatch(fields)
     return _allow(dispatch)
 
+
 def main() -> int:
     payload = json.load(sys.stdin)
     result = compose_subagent_start(payload)
     json.dump(result, sys.stdout)
     print()
     return 0 if result.get("permission") == "allow" else 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

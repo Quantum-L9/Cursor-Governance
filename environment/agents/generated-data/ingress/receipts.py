@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,7 @@ def write_ingress(body: dict[str, Any]) -> dict[str, Any]:
     body = {
         **body,
         "schema": SCHEMA,
-        "observed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "observed_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
     }
     digest = hashlib.sha256(
         json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
@@ -37,7 +37,7 @@ def write_ingress(body: dict[str, Any]) -> dict[str, Any]:
     body["receipt_digest"] = digest
     path = _path(body["acceptance_receipt_digest"])
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(body, indent=2, sort_keys=True) + '\n', encoding="utf-8")
+    path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return body
 
 
@@ -49,5 +49,5 @@ def load_ingress(acceptance_digest: str) -> dict[str, Any] | None:
 def quarantine_meta(meta: dict[str, Any]) -> Path:
     path = generated_data_quarantine_root() / f"{meta.get('packet_digest', 'unknown')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(meta, indent=2, sort_keys=True) + '\n', encoding="utf-8")
+    path.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path

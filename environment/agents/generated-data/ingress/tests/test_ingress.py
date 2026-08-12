@@ -27,7 +27,9 @@ class IngressTests(unittest.TestCase):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc1"}
         packet = {"notes": "api_key=SUPERSECRET123", "units": [1]}
         self.assertFalse(security_gate.preflight(packet)["safe"])
-        out = ingest.ingest_accepted_result(accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc)
+        out = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+        )
         self.assertEqual(out["outcome"], "QUARANTINED")
         # quarantine meta must not echo secret
         qdir = Path(self.tmp.name) / "generated-data" / "quarantine"
@@ -37,14 +39,20 @@ class IngressTests(unittest.TestCase):
     def test_safe_capture_and_idempotent(self):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc2"}
         packet = {"units": [{"class": "repository_fact"}], "notes": "clean"}
-        a = ingest.ingest_accepted_result(accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc)
-        b = ingest.ingest_accepted_result(accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc)
+        a = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+        )
+        b = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+        )
         self.assertEqual(a["outcome"], "CAPTURED")
         self.assertEqual(a["receipt_digest"], b["receipt_digest"])
 
     def test_no_reusable(self):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc3"}
-        out = ingest.ingest_accepted_result(accepted_result={}, generated_data_packet=None, acceptance_receipt=acc)
+        out = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=None, acceptance_receipt=acc
+        )
         self.assertEqual(out["outcome"], "NO_REUSABLE_DATA")
 
 

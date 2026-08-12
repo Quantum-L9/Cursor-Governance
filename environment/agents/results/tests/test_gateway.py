@@ -44,8 +44,23 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(a["receipt_digest"], b["receipt_digest"])
 
     def test_wrong_lease(self):
-        ret = {"assignment_id": "a1", "status": "RETURNED", "lease_id": "L1", "base_sha": "sha", "parent_agent_id": "cursor", "surface": "cursor-ide"}
-        surface = {"schema": "l9.cursor-subagent.result.v1", "status": "completed", "assignment_id": "a1", "lease_id": "L2", "base_sha": "sha", "result_id": "r2", "agent_id": "cursor"}
+        ret = {
+            "assignment_id": "a1",
+            "status": "RETURNED",
+            "lease_id": "L1",
+            "base_sha": "sha",
+            "parent_agent_id": "cursor",
+            "surface": "cursor-ide",
+        }
+        surface = {
+            "schema": "l9.cursor-subagent.result.v1",
+            "status": "completed",
+            "assignment_id": "a1",
+            "lease_id": "L2",
+            "base_sha": "sha",
+            "result_id": "r2",
+            "agent_id": "cursor",
+        }
         out = gateway.accept(return_receipt=ret, surface_result=surface)
         self.assertEqual(out["status"], "REJECTED")
 

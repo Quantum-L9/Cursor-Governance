@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import tempfile
 import unittest
@@ -44,7 +43,9 @@ class LifecycleTests(unittest.TestCase):
         self.assertIsNotNone(receipts.load_dispatch("asg-1"))
 
     def test_start_wrong_assignment(self):
-        out = compose_start.compose_subagent_start({"lease": {"lease_id": "x"}, "deployment_receipt": {"status": "READY"}})
+        out = compose_start.compose_subagent_start(
+            {"lease": {"lease_id": "x"}, "deployment_receipt": {"status": "READY"}}
+        )
         self.assertEqual(out["permission"], "deny")
 
     def test_start_stale_deployment(self):
@@ -94,7 +95,11 @@ class LifecycleTests(unittest.TestCase):
             }
         )
         self.assertEqual(body["schema"], "l9.pr-remediation-assignment.v1")
-        self.assertTrue((Path(self.tmp.name) / "agents" / "assignments" / "pr-remediation" / "pr-1.json").is_file())
+        self.assertTrue(
+            (
+                Path(self.tmp.name) / "agents" / "assignments" / "pr-remediation" / "pr-1.json"
+            ).is_file()
+        )
 
 
 if __name__ == "__main__":

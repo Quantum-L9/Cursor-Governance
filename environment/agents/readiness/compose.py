@@ -31,7 +31,8 @@ def execution_ready(dimensions: dict[str, bool]) -> dict[str, Any]:
     }
 
 
-def completion_evidence_ok(*,
+def completion_evidence_ok(
+    *,
     return_receipt: dict | None,
     acceptance_receipt: dict | None,
     ingress_receipt: dict | None,
