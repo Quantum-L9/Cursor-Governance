@@ -41,7 +41,7 @@ When optimizing PlasticOS artifacts, also verify against workspace rules:
 - `INVARIANTS.md` enforced invariants
 - Odoo 19 patterns (no `_sql_constraints`, `<list>` not `<tree>`, etc.)
 - `pipeline_v2.py` must remain inactive
-- Repo governance paths use `$HOME/Dropbox/...` not machine-specific absolute paths in committed rules
+- Repo governance paths use `$HOME/.cursor-governance` (never Dropbox; never machine-specific absolute paths in committed rules)
 
 Authority: workspace rules win for Odoo-specific patterns; L9 transport/Gate rules win for node/service artifacts.
 

@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-08-12T03:59:33Z",
+  "generated_utc": "2026-08-12T15:05:46Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:fbc5c4746fc032e9c471bc8f701e75e2ccd0971f84b71d16a31ea77483b94d98",
+  "source_tree_digest": "sha256:03645cbb4e9d49c90582ce69f0ff3f21ee79636fc1862d0ff2345e3dea23728b",
   "summary": {
     "total_mdc_files": 64,
     "always_apply_true": 43,
@@ -1246,7 +1246,7 @@
       "first_heading": "Learned Lessons — Critical Prevention Rules",
       "has_yaml_frontmatter": true,
       "line_count": 778,
-      "content_digest": "sha256:7a7ff8fa50b46f45625805713846755929c6afba244848f431fac80a456c221d",
+      "content_digest": "sha256:d61dd32823aa676d36ecef5d74607149875db9ccbcd54cdb976e65c769ef6096",
       "authority": "compatibility",
       "context_cost": "high",
       "deprecated": false,

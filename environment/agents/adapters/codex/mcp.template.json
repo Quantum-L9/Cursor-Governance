@@ -11,9 +11,9 @@
     "note": "HTTP MCP block for Codex (cloud settings or CLI). Env-refs only — never hardcode tokens. Peer of environment/claude-code/mcp.template.json."
   },
   "mcpServers": {
-    "l9-shared-memory": {
+    "graphiti-memory": {
       "type": "http",
-      "url": "https://memory.quantumaipartners.com/graphiti/mcp",
+      "url": "${GRAPHITI_MCP_URL:-https://memory.quantumaipartners.com/graphiti/mcp}",
       "headers": {
         "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}",
         "X-L9-User-Id": "codex_agent",

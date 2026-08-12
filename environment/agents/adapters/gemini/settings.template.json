@@ -11,8 +11,8 @@
     "note": "Merge mcpServers into ~/.gemini/settings.json. $VARS expand from the environment; never hardcode tokens."
   },
   "mcpServers": {
-    "l9-shared-memory": {
-      "httpUrl": "https://memory.quantumaipartners.com/graphiti/mcp",
+    "graphiti-memory": {
+      "httpUrl": "${GRAPHITI_MCP_URL}",
       "headers": {
         "Authorization": "Bearer $GRAPHITI_MCP_TOKEN",
         "X-L9-User-Id": "gemini_agent",

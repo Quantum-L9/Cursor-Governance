@@ -15,14 +15,14 @@ dag_executor: .cursor/workflows-synced/wire_executor.py
 
 ## GOVERNANCE WORKSPACE (run first on new/existing repos)
 
-Ensures `.cursor-commands` points at Dropbox GlobalCommands SSOT and `sessionEnd` backup hook is active.
+Ensures `.cursor-commands` points at `$HOME/.cursor-governance` (GitHub clone SSOT) and `sessionEnd` backup hook is active.
 
 ```bash
 # Check only (exit 1 if miswired)
-bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/check_governance_wiring.sh" "$(pwd)"
+bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 
 # Repair + re-check (what /wire governance runs)
-bash "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/wire_governance_workspace.sh" "$(pwd)"
+bash "$HOME/.cursor-governance/ops/scripts/wire_governance_workspace.sh" "$(pwd)"
 ```
 
 **Aliases:** `/wire governance`, `/wire governance-workspace`, `/wire .cursor-commands`

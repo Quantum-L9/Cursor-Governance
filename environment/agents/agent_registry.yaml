@@ -105,7 +105,7 @@ agents:
     source: claude-code
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
-    legacy_token_env: L9_MEMORY_CLIENT_TOKEN   # already deployed in Claude account env; still honored
+    legacy_token_env: GRAPHITI_MCP_TOKEN   # Graphiti front door only; L9_MEMORY_CLIENT_TOKEN retired (ADR-0006)
     role: implementer
     surfaces: [claude-cli, claude-web, claude-mobile]
     assigned_groups: [cursor-governance, l9-graphiti-memory, l9-node-template]

@@ -763,7 +763,7 @@
     },
     {
       "composition_role": "general",
-      "description": "Wire and verify a repo's Cursor governance symlinks against the Dropbox governance SSOT. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
+      "description": "Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-governance-symlinks",
@@ -1039,5 +1039,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "85366cd090b7c9d6de94aae1a033e575e5d244f627d23832ffd37a9b4c806393",
-  "source_skill_corpus_sha256": "0fa3745e24fb50500906cb6eb5844b125d12fda747f857c8fcd8814bb289ac64"
+  "source_skill_corpus_sha256": "90da68c0b50638903403c61316890c8cc9ca6cbb059d56f7bcecfc42ee51f65d"
 }

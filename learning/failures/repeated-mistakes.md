@@ -32,10 +32,11 @@ startup_required: true
 **Key:** "Fix it" ≠ approval. Each command needs explicit "yes"/"approved"
 **MCP-ID:** `lesson-002-vps-readonly`
 
-### **3. DROPBOX NOT LIBRARY** 🚨 ULTRA
-**Rule:** GlobalCommands at `$HOME/Dropbox/Cursor Governance/GlobalCommands`
-**Wrong:** `/Users/ib-mac/Library/Application Support/Cursor/GlobalCommands`
-**Verify:** `ls .cursor-commands/ | wc -l` → should be ~30, not ~8
+### **3. GOVERNANCE SSOT — GITHUB CLONE ONLY** 🚨 ULTRA
+**Historical:** An earlier layout kept GlobalCommands under Dropbox and treated Library paths as wrong; Dropbox ENOENT loops followed when that tree was retired.
+**Current doctrine:** Governance SSOT is `$HOME/.cursor-governance` (GitHub clone) only. Dropbox is not SSOT and not a fallback. Do not probe or retry Dropbox paths.
+**Wrong:** `$HOME/Dropbox/Cursor Governance/...`, Library `GlobalCommands`, hardcoded `/Users/<name>/...`
+**Verify:** `test -f "$HOME/.cursor-governance/CANONICAL_LAW.md"` and `.cursor-commands` → that clone
 **MCP-ID:** `lesson-003-dropbox-not-library`
 
 ### **4. VPS MEMORY ONLY** 🚨 ULTRA
@@ -215,7 +216,7 @@ Before ANY execution task:
 |---|--------|------|----------|
 | 1 | NO OVERSTEP | 🚨 ULTRA | If tool fails → FIX or ASK, don't bypass |
 | 2 | VPS READ-ONLY | 🚨 ULTRA | ASK → WAIT → EXECUTE for VPS changes |
-| 3 | DROPBOX NOT LIBRARY | 🚨 ULTRA | GlobalCommands in Dropbox, not Library |
+| 3 | GOVERNANCE SSOT CLONE ONLY | 🚨 ULTRA | `$HOME/.cursor-governance` only; Dropbox forbidden |
 | 4 | VPS MEMORY ONLY | 🚨 ULTRA | cursor_memory_client.py + Neo4j graphs |
 | 5 | ASK QUESTIONS FIRST | 🔴 CRITICAL | 5 min questions saves 4 hrs rework |
 | 6 | RUN COMMANDS | 🔴 CRITICAL | Execute proactively, show results |

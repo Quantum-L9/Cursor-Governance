@@ -12,6 +12,7 @@ L9_META
 """
 
 import json
+import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -326,18 +327,18 @@ class OperationalOversight:
     def _trigger_learning_processor(self):
         """Trigger learning processor manually"""
         try:
-            # Find GlobalCommands path
+            # Find governance SSOT path (GitHub clone only)
             home = Path.home()
-            ssot_path = home / ".cursor-governance"
-            dropbox_path = home / "Dropbox/Cursor Governance/GlobalCommands"
-            library_path = home / "Library/Application Support/Cursor/GlobalCommands"
-
-            if ssot_path.exists():
-                global_commands = ssot_path
-            elif dropbox_path.exists():
-                global_commands = dropbox_path
-            else:
-                global_commands = library_path
+            global_commands = Path(
+                os.environ.get("L9_GOVERNANCE_DIR", str(home / ".cursor-governance"))
+            ).expanduser()
+            if not (global_commands / "CANONICAL_LAW.md").is_file():
+                self.log(
+                    "  ✗ governance SSOT missing at "
+                    f"{global_commands} (Dropbox/Library fallbacks retired)",
+                    "ERROR",
+                )
+                return
 
             learning_script = global_commands / "ops" / "scripts" / "process_learnings.sh"
             if learning_script.exists():

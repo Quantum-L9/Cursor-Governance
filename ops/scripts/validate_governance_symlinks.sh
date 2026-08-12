@@ -37,7 +37,7 @@ echo "  GlobalCommands:  $GC"
 echo "  Workspace:       $WORKSPACE"
 echo ""
 
-echo "=== Dropbox SSOT ==="
+echo "=== Governance SSOT (~/.cursor-governance) ==="
 for d in "$GC" "$GC/commands" "$GC/skills" "$GC/rules" "$GOV_ROOT/CANONICAL_LAW.md"; do
   [ -e "$d" ] && pass "exists: $d" || fail "missing: $d"
 done
@@ -90,6 +90,10 @@ elif [ -d "$WORKSPACE/.cursor/governance" ]; then
 else
   fail ".cursor/governance/ missing (run setup_workspace_symlinks.sh)"
 fi
+
+# Machine Cursor plans — workspace convenience symlink (not governance SSOT).
+mkdir -p "$HOME/.cursor/plans"
+link_check "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
 
 echo ""
 echo "=== Repo .cursor/ anti-duplication ==="

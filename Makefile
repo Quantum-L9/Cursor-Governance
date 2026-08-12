@@ -166,6 +166,10 @@ backup-gate-test:
 path-lint:
 	bash ops/scripts/validate_governance_no_hardcoded_paths.sh
 
+## Fail if active surfaces teach retired Dropbox SSOT or L9_MEMORY_HTTP side doors
+legacy-doctrine-residue:
+	python3 ops/scripts/validate_legacy_doctrine_residue.py
+
 ## Full-tree pre-commit (nightly / intentional). Not used by `make pr`.
 precommit:
 	@command -v pre-commit >/dev/null 2>&1 || { echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; exit 1; }

@@ -46,8 +46,8 @@ on both repos** — no adapter needed for repo access (answered in this session)
 2. **Identity naming law:** `agent_id` kebab-case unique; `user_id` =
    `<agent_id>_agent`; `source` = agent_id; `principal_id` =
    `<agent_id>-memory-client`; `token_env` = `L9_MEMORY_TOKEN__<AGENT>`;
-   `legacy_token_env` honors already-deployed names (`GRAPHITI_MCP_TOKEN` for
-   Cursor, `L9_MEMORY_CLIENT_TOKEN` for Claude Code).
+   `legacy_token_env` / `token_env` resolve to Graphiti bearers (`GRAPHITI_MCP_TOKEN`
+   / `L9_MEMORY_TOKEN__*`). Retired: `L9_MEMORY_CLIENT_TOKEN`, `L9_MEMORY_HTTP_*`.
 3. **Role catalog:** orchestrator (Cursor), implementer (Claude Code, Codex),
    researcher-builder (Manus), reviewer (Gemini), observer. Hard enforcement =
    server-side namespace grants rendered per role; soft enforcement =

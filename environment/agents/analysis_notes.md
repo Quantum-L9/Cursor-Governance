@@ -21,8 +21,9 @@
 - Roles field exists in principal ("memory-client") — roles are free-form strings; namespace grants are the enforcement (read/write/promote globs + is_admin).
 
 ## Env var contract (claude-code pack, to replicate per agent)
-- GH_TOKEN (bot PAT), L9_GOVERNANCE_DIR, L9_MEMORY_HTTP_URL, L9_MEMORY_CLIENT_TOKEN, USER_ID, L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE
-- mcp.template.json: HTTP MCP with `Authorization: Bearer ${L9_MEMORY_CLIENT_TOKEN}`, url ${L9_MEMORY_HTTP_URL}/mcp
+- GH_TOKEN (bot PAT), L9_GOVERNANCE_DIR, GRAPHITI_MCP_URL, GRAPHITI_MCP_TOKEN, USER_ID, L9_MEMORY_AGENT_ID, L9_MEMORY_SOURCE
+- mcp.template.json: Graphiti MCP (`graphiti-memory`) with `Authorization: Bearer ${GRAPHITI_MCP_TOKEN}`, url `${GRAPHITI_MCP_URL}`
+- Forbidden residue: `L9_MEMORY_HTTP_URL`, `L9_MEMORY_CLIENT_TOKEN`, `l9-shared-memory` (ADR-0006)
 - SessionStart hook: fail-open bash, locates governance clone, emits additionalContext JSON. Authority order: CANONICAL_LAW.md -> AGENTS.md -> SKILL.md.
 
 ## Memory infra live state

@@ -42,7 +42,7 @@ npm install --prefix "$HOME/.local/code-graph-rag-mcp" /tmp/code-graph-rag-mcp.t
 # PlasticOS repo — adjust if your clone path differs
 export REPO_ROOT="$HOME/IB-Odoo_19 (LOCAL)/IB-Odoo_19"
 
-# Governance scripts (Dropbox SSOT)
+# Governance scripts ($HOME/.cursor-governance SSOT)
 export GOV_SKILLS="$HOME/.cursor-governance/skills/l9-code-graph-rag-mcp/scripts"
 
 # Optional overrides

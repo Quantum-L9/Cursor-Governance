@@ -1,44 +1,24 @@
 #!/usr/bin/env bash
 # Session Initialization Script
-# Version: 1.0.0
+# Version: 1.1.0
 # Purpose: Load governance rules and learning context at session start
 # Status: Infrastructure (waiting for Cursor integration)
+# SSOT: $HOME/.cursor-governance only (Dropbox / Library fallbacks retired)
 
 set -e
 
-# Log file for fallback notifications
+# Log file for fallback notifications (legacy path retained for operators)
 FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 
-# Use Dropbox GlobalCommands as single source of truth
-# Set DISABLE_FALLBACK=1 to fail if Dropbox not found (no fallback to Library)
-DISABLE_FALLBACK=${DISABLE_FALLBACK:-0}
-
 # ALWAYS use $HOME - NEVER hardcode /Users/[username] paths
-if [ -d "$HOME/.cursor-governance" ]; then
+if [ -d "$HOME/.cursor-governance" ] && [ -f "$HOME/.cursor-governance/CANONICAL_LAW.md" ]; then
     GLOBAL_COMMANDS="$HOME/.cursor-governance"
     USING_SYNCED_SOURCE=true
-elif [ -d "$HOME/Dropbox/Cursor Governance/GlobalCommands" ]; then
-    GLOBAL_COMMANDS="$HOME/Dropbox/Cursor Governance/GlobalCommands"
-    USING_SYNCED_SOURCE=true
-elif [ -d "$HOME/Library/Application Support/Cursor/GlobalCommands" ]; then
-    if [ "$DISABLE_FALLBACK" = "1" ]; then
-        echo "❌ ERROR: SSOT/Dropbox GlobalCommands not found and fallback disabled!"
-        echo "   Set DISABLE_FALLBACK=0 to allow fallback, or restore the SSOT clone"
-        exit 1
-    fi
-    GLOBAL_COMMANDS="$HOME/Library/Application Support/Cursor/GlobalCommands"
-    USING_SYNCED_SOURCE=false
-    
-    # Log fallback usage
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FALLBACK USED: Library path instead of SSOT clone (~/.cursor-governance)" >> "$FALLBACK_LOG"
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Script: $0" >> "$FALLBACK_LOG"
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   Path: $GLOBAL_COMMANDS" >> "$FALLBACK_LOG"
-    echo "[$(date +%Y-%m-%d\ %H:%M:%S)]   User: $USER" >> "$FALLBACK_LOG"
-    echo "---" >> "$FALLBACK_LOG"
-    
-    echo "⚠️  WARNING: Using Library fallback (logged to $FALLBACK_LOG)"
 else
-    echo "❌ GlobalCommands directory not found!"
+    echo "❌ ERROR: governance SSOT not found at \$HOME/.cursor-governance"
+    echo "   Fix: git clone https://github.com/Quantum-L9/Cursor-Governance.git \"\$HOME/.cursor-governance\""
+    echo "   Dropbox and Library paths are not fallbacks (CANONICAL_LAW / resolve_governance_paths)."
+    echo "[$(date +%Y-%m-%d\ %H:%M:%S)] FAIL: missing \$HOME/.cursor-governance (script=$0 user=$USER)" >> "$FALLBACK_LOG"
     exit 1
 fi
 
@@ -46,24 +26,29 @@ RULES_FILE="$GLOBAL_COMMANDS/rules.json"
 MEMORY_INDEX="$GLOBAL_COMMANDS/ops/logs/memory_index.json"
 LOG_FILE="$GLOBAL_COMMANDS/ops/logs/session_init.log"
 
-# Log fallback status to session log if fallback was used
-if [ "$USING_SYNCED_SOURCE" = false ]; then
-    echo "[$(date)] ⚠️  WARNING: Using Library fallback (should be SSOT/Dropbox)" >> "$LOG_FILE"
-fi
+mkdir -p "$(dirname "$LOG_FILE")"
 
 echo "[$(date)] ========================================" >> "$LOG_FILE"
 echo "[$(date)] Session Initialization Started" >> "$LOG_FILE"
+echo "[$(date)] SSOT: $GLOBAL_COMMANDS" >> "$LOG_FILE"
 
 # Check if governance system is in place
 if [ ! -f "$RULES_FILE" ]; then
     echo "[$(date)] ❌ rules.json not found" >> "$LOG_FILE"
-    exit 1
+    # rules.json is optional/legacy; continue when CANONICAL_LAW exists
 fi
 
-RULES_VERSION=$(cat "$RULES_FILE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('version', 'unknown'))" 2>/dev/null || echo "unknown")
-echo "[$(date)] ✅ Governance rules v${RULES_VERSION} loaded" >> "$LOG_FILE"
+RULES_VERSION="n/a"
+if [ -f "$RULES_FILE" ]; then
+    RULES_VERSION=$(cat "$RULES_FILE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('version', 'unknown'))" 2>/dev/null || echo "unknown")
+    echo "[$(date)] ✅ Governance rules v${RULES_VERSION} loaded" >> "$LOG_FILE"
+else
+    echo "[$(date)] ✅ Governance SSOT via CANONICAL_LAW.md (rules.json absent)" >> "$LOG_FILE"
+fi
 
 # Check learning system status
+LEARNING_COUNT="0"
+RECENT_LEARNINGS="0"
 if [ -f "$MEMORY_INDEX" ]; then
     LEARNING_COUNT=$(cat "$MEMORY_INDEX" | python3 -c "import sys, json; print(len(json.load(sys.stdin).get('learnings', [])))" 2>/dev/null || echo "0")
     echo "[$(date)] ✅ Learning system active: ${LEARNING_COUNT} learnings" >> "$LOG_FILE"
@@ -116,6 +101,6 @@ echo ""
 # Show last session context (if available)
 SHOW_CONTEXT="$GLOBAL_COMMANDS/ops/scripts/show_context.sh"
 if [ -f "$SHOW_CONTEXT" ]; then
+    # shellcheck disable=SC1090
     source "$SHOW_CONTEXT"
 fi
-
