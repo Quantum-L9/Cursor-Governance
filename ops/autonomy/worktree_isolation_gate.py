@@ -18,6 +18,7 @@ Escape hatches (human / ops only):
   L9_GIT_SWITCH_AUTHORIZED=<reason>
   L9_GIT_RESET_AUTHORIZED=<reason>
   L9_WORKTREE_ISOLATION=0
+  L9_GIT_CLEAN_AUTHORIZED=<reason>
 """
 
 from __future__ import annotations
@@ -107,9 +108,39 @@ def _working_tree_dirty(root: Path | None) -> bool:
     return bool(proc.stdout.strip())
 
 
-def command_violates_worktree_isolation(
-    command: str, *, root: Path | None = None
-) -> str | None:
+# Sacred WIP / never-lose: deny parking WIP under /tmp or destructive cleans.
+_MV_CP_WIP_TMP = re.compile(
+    r"""
+    \b(?:mv|cp|rsync)\b
+    [\s\S]{0,240}
+    (?:
+        \bWIP(?:/|\b)[\s\S]{0,240}/tmp/
+      | /tmp/[\s\S]{0,240}\bWIP(?:/|\b)
+    )
+    """,
+    re.I | re.VERBOSE,
+)
+_RM_RF_WIP = re.compile(
+    r"\brm\s+(?:-[a-zA-Z]+\s+)*-(?:[a-zA-Z]*r[a-zA-Z]*f|[a-zA-Z]*f[a-zA-Z]*r)"
+    r"[a-zA-Z]*\s+[^\n]*\bWIP\b",
+    re.I,
+)
+_GIT_CLEAN_WIP = re.compile(r"\bgit\s+clean\b[^\n]*\bWIP\b", re.I)
+_GIT_CLEAN_FORCE = re.compile(
+    r"\bgit\s+clean\b(?:\s+-[a-zA-Z]*)*\s+-(?:[a-zA-Z]*f|[a-zA-Z]*d[a-zA-Z]*x?)",
+    re.I,
+)
+_TMP_HOLD_CREATE = re.compile(
+    r"(?:\bmkdir\b|\bmktemp\b|/tmp/)[^\n]*(?:cg-[^\s]*hold|untracked-hold)",
+    re.I,
+)
+_SCRATCH_HOLD_PARK_WIP = re.compile(
+    r"scratch_hold\.py\s+park\b[^\n]*\bWIP(?:/|\b)",
+    re.I,
+)
+
+
+def command_violates_worktree_isolation(command: str, *, root: Path | None = None) -> str | None:
     """Return deny reason if command is a known foreign-work destroyer."""
     if isolation_disabled() or not command.strip():
         return None
@@ -124,22 +155,14 @@ def command_violates_worktree_isolation(
 
     dirty = _working_tree_dirty(root)
 
-    if (
-        dirty
-        and _RESET.search(command)
-        and not _authorized("L9_GIT_RESET_AUTHORIZED")
-    ):
+    if dirty and _RESET.search(command) and not _authorized("L9_GIT_RESET_AUTHORIZED"):
         return (
             "shared-worktree isolation: git reset denied while the worktree is "
             "dirty (wipes parallel agents' dirty/untracked work). Use a git "
             "worktree, or set L9_GIT_RESET_AUTHORIZED=<reason>."
         )
 
-    if (
-        dirty
-        and _is_branch_switch(command)
-        and not _authorized("L9_GIT_SWITCH_AUTHORIZED")
-    ):
+    if dirty and _is_branch_switch(command) and not _authorized("L9_GIT_SWITCH_AUTHORIZED"):
         return (
             "shared-worktree isolation: git checkout/switch denied while the "
             "worktree is dirty (2026-08-12 thrash wiped in-flight files). "
@@ -164,6 +187,44 @@ def command_violates_worktree_isolation(
             "pathspecs) denied — scoops foreign dirty work on shared clones. "
             "Stage explicit paths, use a git worktree, or set "
             "L9_GIT_BROAD_ADD_AUTHORIZED=<reason>."
+        )
+
+    if _MV_CP_WIP_TMP.search(command):
+        return (
+            "sacred-WIP isolation: moving/copying WIP to/from /tmp denied "
+            "(2026-08-12 incomplete restore lost backlog). Keep WIP in-repo; "
+            "use ops/scripts/scratch_hold.py only for non-WIP paths."
+        )
+
+    if _RM_RF_WIP.search(command):
+        return (
+            "sacred-WIP isolation: rm -rf of WIP denied. WIP/ is tracked sacred "
+            "backlog — never delete to clean make pr."
+        )
+
+    if _GIT_CLEAN_WIP.search(command) or (_GIT_CLEAN_FORCE.search(command) and "WIP" in command):
+        return (
+            "sacred-WIP isolation: git clean targeting WIP denied. Do not scoop "
+            "sacred backlog for a clean worktree."
+        )
+
+    if _GIT_CLEAN_FORCE.search(command) and not _authorized("L9_GIT_CLEAN_AUTHORIZED"):
+        return (
+            "shared-worktree isolation: git clean -f/-fd/-fdx denied on shared "
+            "clones (destroys untracked work). Set L9_GIT_CLEAN_AUTHORIZED=<reason> "
+            "only for a deliberate scoped clean."
+        )
+
+    if _TMP_HOLD_CREATE.search(command):
+        return (
+            "never-lose scratch: creating /tmp/cg-*-hold* or *untracked-hold* "
+            "denied. Park non-WIP via ops/scripts/scratch_hold.py "
+            "(.l9/scratch-hold/); never park WIP."
+        )
+
+    if _SCRATCH_HOLD_PARK_WIP.search(command):
+        return (
+            "sacred-WIP isolation: scratch_hold.py park of WIP denied — vault is for non-WIP only."
         )
 
     return None

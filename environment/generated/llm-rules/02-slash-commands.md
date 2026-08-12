@@ -85,7 +85,7 @@ When a command needs generator scripts:
 | `/lint-fix` | `commands/lint-fix.md` | Systematic lint fixes |
 | `/mem` | `commands/mem.md` | Memory-aware execution |
 | `/migrate` | `commands/migrate.md` | Autonomous code migration |
-| `/plan` | `commands/plan.md` | Create execution plan |
+| `/l9-plan` | `commands/l9-plan.md` | Create PE+autonomy execution plan (`l9-plan` skill) |
 | `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
 | `/probe` | `commands/probe.md` | Import & wiring verification (safe) |
 | `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |

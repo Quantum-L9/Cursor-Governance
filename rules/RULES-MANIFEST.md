@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-12T15:22:05Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-12T16:46:03Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -21,7 +21,7 @@ Generated: `2026-08-12T15:22:05Z`. Source: `rules/*.mdc`.
 | `00-global.mdc` | `l9.rule.00.global` | global | security | always | 279 | `617dac45e91d` |
 | `01-git-push-prohibition.mdc` | `l9.rule.01.git.push.prohibition` | global | git | always | 73 | `634b7fa04d1a` |
 | `01-vps-rules.mdc` | `l9.rule.01.vps.rules` | global | git | always | 185 | `b746e103e439` |
-| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `760117869bfd` |
+| `02-slash-commands.mdc` | `l9.rule.02.slash.commands` | global | governance | always | 153 | `f9346853fcea` |
 | `03-graphiti-memory.mdc` | `l9.rule.03.graphiti.memory` | global | memory | always | 62 | `c32f8bbc9533` |
 | `03-mcp-memory.mdc` | `l9.rule.03.mcp.memory` | global | deployment | auto_attached | 419 | `aa99208c2fcb` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | always | 64 | `204ee35409fc` |
@@ -52,19 +52,19 @@ Generated: `2026-08-12T15:22:05Z`. Source: `rules/*.mdc`.
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | always | 90 | `a7998c5521fd` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | auto_attached | 71 | `cf96edc3a20d` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 129 | `c2b50866ca55` |
-| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 71 | `ebf45d7841f3` |
+| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 74 | `4a015b7b40f4` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | always | 85 | `f67abad4e816` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | always | 52 | `f3dd67b5e508` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.87.cursor.memory.kernel` | global | memory | always | 161 | `9747bd0abea4` |
 | `87-cursor-subagent-orchestration.mdc` | `l9.rule.87.cursor.subagent.orchestration` | global | governance | always | 18 | `80f019c1481c` |
 | `87-l4-local-autonomy.mdc` | `l9.rule.87.l4.local.autonomy` | global | git | always | 48 | `991f1089bcd3` |
 | `87-wire-workflow-guard.mdc` | `l9.rule.87.wire.workflow.guard` | global | ci | auto_attached | 52 | `57cc1b6ac317` |
-| `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `d6d9f3ceb747` |
+| `88-bounded-session-autonomy.mdc` | `l9.rule.88.bounded.session.autonomy` | global | general | agent_requested | 18 | `a99f7b00c3b2` |
 | `88-perplexity-run-harness.mdc` | `l9.rule.88.perplexity.run.harness` | global | governance | always | 51 | `e599b2b56828` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | always | 35 | `b6b565182a82` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 110 | `3d0a8c303d9d` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 64 | `b15272f75d3d` |
-| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 778 | `d8436ca0e53a` |
+| `92-learned-lessons.mdc` | `l9.rule.92.learned.lessons` | global | general | always | 792 | `e3c815752118` |
 | `93-c1-server-protection.mdc` | `l9.rule.93.c1.server.protection` | global | git | always | 82 | `e0d5aa093de5` |
 | `94-deployment-prohibition.mdc` | `l9.rule.94.deployment.prohibition` | global | deployment | always | 19 | `3f41555552fd` |
 | `95-agent-pattern-activation.mdc` | `l9.rule.95.agent.pattern.activation` | global | memory | always | 109 | `1faa1aae1604` |

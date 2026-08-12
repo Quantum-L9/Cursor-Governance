@@ -776,4 +776,18 @@ contain detection patterns like `postgresql://.*:.*@` to find violations.
 
 - When a change introduces a dependency, async pattern, or complexity shift the user did not ask for, name the trade-off in the response.
 
+## 🚨 ULTRA-CRITICAL: Never Park Sacred WIP for make pr
+
+**Incident (2026-08-12):** An agent moved `WIP/` under `/tmp/cg-*-hold*` to clean porcelain for `make pr` and did not restore — backlog looked wiped.
+
+**Rules:**
+- **Never** move/copy/delete `WIP/**` to clean `git status` or pass gates.
+- **Never** create `/tmp/cg-*-hold*` / `*untracked-hold*` parking lots.
+- Non-WIP temporary park only via `ops/scripts/scratch_hold.py` → `.l9/scratch-hold/`.
+- `make pr` and sessionStart restore holds; open holds fail-closed.
+
+**Wrong:** `mv WIP /tmp/cg-untracked-hold-final` then `make pr`
+**Right:** Leave WIP dirty; run `make pr` (scratch dirt is WARN-softened)
+
+
 <!-- generated-from: rules/92-learned-lessons.mdc; do-not-edit -->

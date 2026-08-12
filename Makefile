@@ -237,6 +237,14 @@ pr-security:
 
 ## Local PR gate — CHANGED FILES ONLY (invariant). Does not scan the whole tree.
 ## Nightly GHA owns full-corpus scans. Gate only (no GitHub PR).
+
+# Never-lose scratch hold (non-WIP vault under .l9/scratch-hold/)
+scratch-hold-restore:
+	python3 ops/scripts/scratch_hold.py --workspace "$(or $(WS),$(CURDIR))" restore --all
+
+scratch-hold-status:
+	python3 ops/scripts/scratch_hold.py --workspace "$(or $(WS),$(CURDIR))" status
+
 pr-check:
 	PR_BASE="$(PR_BASE)" PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
 	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \

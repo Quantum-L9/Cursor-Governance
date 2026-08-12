@@ -35,4 +35,11 @@ AND `L9_AUTONOMY_ENABLED=true`:
 - Post-push: `l9-pr-remediation` → green → resolve reviews → merge (program/
   plan Build launch is the auth); older open PRs bottom-up first.
 
+## Scratch hold / sacred WIP (never-lose)
+
+- Never park `WIP/**` under `/tmp` or `.l9/scratch-hold/` to clean `make pr`.
+- Shell gate denies WIP→/tmp moves, `rm -rf WIP`, `/tmp/cg-*-hold*` creation.
+- Non-WIP park/restore: `ops/scripts/scratch_hold.py` (vault `.l9/scratch-hold/`).
+- `make pr` / sessionStart restore-all; open holds fail-closed via `status`.
+
 <!-- generated-from: ops/autonomy/surface_profile.yaml; do-not-edit -->

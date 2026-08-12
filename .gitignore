@@ -98,6 +98,7 @@ reports/
 # runtime state, not source. The SessionStart probe is read-only, but init/run
 # create this tree.
 .l9/
+# .l9/scratch-hold/ — non-WIP park vault (covered by .l9/ above; never park WIP/)
 # L9 Subagent-Generated Data runtime
 .l9/subagent-generated-data/*.sqlite3
 .l9/subagent-generated-data/*.sqlite3-shm

@@ -49,6 +49,7 @@ Draft kernels and duplicate packs here must not fail PR quality gates.
 
 1. **Read and respect** — open relevant WIP before planning or “cleaning up.”
 2. **Do not delete or gitignore** the tree to make status look clean.
+2b. **Never park WIP** under `/tmp` or `.l9/scratch-hold/` for `make pr` — WIP is unparkable; the vault is for non-WIP only (`ops/scripts/scratch_hold.py`).
 3. **Do not treat paths here as runtime imports** or activation dependencies.
 4. **Promote deliberately** — land the live-tree change, then delete the WIP copy
    in the **same** change.
