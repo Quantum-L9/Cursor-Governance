@@ -15,14 +15,26 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 
 ## Settings posture (summary)
 
-- **Allow:** scoped git (incl. non-force push), `gh pr/run` inspect+rerun, GitHub MCP read + `subscribe_pr_activity` + PR create/update.
-- **Deny:** `.env` / `.mcp.json` reads, `rm -rf`, force-push, `reset --hard`, `clean -fd`, `gh pr merge --admin`.
+- **Allow:** scoped local git commits; non-force push + PR create/update **only after L4 release_authorized**.
+- **Deny:** mid-execution push/PR (`ops/autonomy/local_execution_gate.py`), `.env` / `.mcp.json` reads, `rm -rf`, force-push, `reset --hard`, `clean -fd`, `gh pr merge --admin`.
 - **Omitted:** `merge_pull_request` → human merge.
-- **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_AUTONOMOUS_MERGE=false`, `L9_AUTONOMY_MAX_PARALLEL=4`, `L9_AUTONOMY_MAX_MUTATION_LANES=2`, `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`.
+- **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_AUTONOMOUS_MERGE=false`, `L9_AUTONOMY_MAX_PARALLEL=4`, `L9_AUTONOMY_MAX_MUTATION_LANES=2`, `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`, `L9_L4_LOCAL_AUTONOMY=1` (default).
+
+## L4 local autonomy (standing)
+
+| Step | Mechanism |
+|---|---|
+| Stacked local execution | Feature branch commits only; no mid-exec remote |
+| Post-finish kernels | `kernels/Recursive Alignment.md` → `kernels/Validate & Repair.md` |
+| Release receipt | `python3 ops/autonomy/l4_local.py authorize-release` |
+| Scoped PR | `make pr` / `PULL_REQUEST_TEMPLATE.md` |
+| Gate | Claude PreToolUse + Cursor `beforeShellExecution` → `local_execution_gate.py` |
 
 ## Hooks posture
 
-All Claude Code autonomy-related hooks are **fail-open**. They inject context or telemetry; they do not deny tools. Cursor must not invent fail-closed PreToolUse merge enforcement in this skill ship.
+SessionStart / skill-router hooks are **fail-open** (context/telemetry).
+**Fail-closed** remote gates (do not weaken): `ops/autonomy/merge_gate.py` and
+`ops/autonomy/local_execution_gate.py` (L4 no mid-execution push).
 
 ## Profile parallelism flags → Cursor
 

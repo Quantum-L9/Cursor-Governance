@@ -48,6 +48,22 @@ if [[ -n "$(git status --porcelain)" ]]; then
   git status --short
 fi
 
+# L4 local autonomy — no mid-execution push; require release receipt.
+L4_CLI="${GOV_ROOT}/ops/autonomy/l4_local.py"
+if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
+  echo "--- L4 local autonomy remote check ---"
+  if ! python3 "$L4_CLI" --workspace "$WS" check-remote; then
+    echo "FAIL: L4 blocks push/PR until kernels + authorize-release."
+    echo "  1) Finish program/contract locally on stacked branch (no mid-exec push)"
+    echo "  2) Run kernels/Recursive Alignment.md then kernels/Validate & Repair.md"
+    echo "  3) python3 ops/autonomy/l4_local.py begin   # if not already"
+    echo "  4) python3 ops/autonomy/l4_local.py record-kernels"
+    echo "  5) python3 ops/autonomy/l4_local.py authorize-release"
+    echo "  6) re-run make pr"
+    exit 1
+  fi
+fi
+
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
 git push -u origin HEAD
 
@@ -59,16 +75,43 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   if [[ -z "$title" ]]; then
     title="$branch"
   fi
-  body="$(
-    cat <<EOF
+  template_file=""
+  for candidate in \
+    "$WS/PULL_REQUEST_TEMPLATE.md" \
+    "$WS/.github/PULL_REQUEST_TEMPLATE.md" \
+    "$GOV_ROOT/PULL_REQUEST_TEMPLATE.md"; do
+    if [[ -f "$candidate" ]]; then
+      template_file="$candidate"
+      break
+    fi
+  done
+  if [[ -n "$template_file" ]]; then
+    body="$(
+      {
+        cat "$template_file"
+        echo ""
+        echo "## Commits"
+        git log "${PR_BASE}..HEAD" --format='- %s' --reverse
+        echo ""
+        echo "## Test plan"
+        echo "- [x] \`make pr-check\` (local changed-files gate) PASS before open"
+        echo "- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)"
+        echo "- [ ] CI green; agent PR remediation subscribed after open"
+      }
+    )"
+  else
+    body="$(
+      cat <<EOF
 ## Summary
 $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 
 ## Test plan
 - [x] \`make pr-check\` (local changed-files gate) PASS before open
+- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)
 - [ ] CI green; agent PR remediation subscribed after open
 EOF
-  )"
+    )"
+  fi
   pr_url="$(gh pr create --base "$BASE_REF" --title "$title" --body "$body")"
   pr_number="$(gh pr view --json number -q .number)"
   echo "Opened: $pr_url"

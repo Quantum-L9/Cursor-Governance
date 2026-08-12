@@ -38,10 +38,39 @@ machine runtime remains `environment/claude-code/autonomy/` — see its README
 ### 2.0.1 Adapter Autonomy Velocity (Claude Code / peers)
 
 SSOT: `ops/autonomy/surface_profile.yaml` (CANONICAL_LAW §6.1). On adapter
-surfaces with `L9_AUTONOMY_ENABLED=true`, scoped commit/push/PR/remediation is
-authorized without per-action ask; merge is denied by `ops/autonomy/merge_gate.py`.
-Install settings: `make claude-settings WS="$(pwd)"`. Cursor remains ask-first
-except campaign packet / `make pr` remediation.
+surfaces with `L9_AUTONOMY_ENABLED=true`, scoped local commit + post-L4
+push/PR/remediation is authorized without per-action ask; merge is denied by
+`ops/autonomy/merge_gate.py`. Install settings:
+`make claude-settings WS="$(pwd)"`. Cursor remains ask-first except campaign
+packet / `make pr` remediation.
+
+### 2.0.2 L4 Local Autonomy (no mid-execution push)
+
+SSOT: `ops/autonomy/surface_profile.yaml` → `l4_local_autonomy`
+(CANONICAL_LAW §6.2). Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
+
+Proceed L4: stacked-branch **local commits only** through program/contract
+execution — **no mid-execution push**, no push-approval pacing stalls. When
+finished locally, run `kernels/Recursive Alignment.md` then
+`kernels/Validate & Repair.md` on everything, then:
+
+```bash
+python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
+python3 ops/autonomy/l4_local.py record-kernels
+python3 ops/autonomy/l4_local.py authorize-release
+make pr   # push + open scoped PR using PULL_REQUEST_TEMPLATE.md
+# then: l9-pr-remediation Converge → green → resolve review threads
+# then: if user authorized merge — merge; older open PRs first (bottom-up)
+```
+
+After push: run `l9-pr-remediation` until green, resolve all code-review agent
+comments, reach mergeable. When the user authorizes merge, merge. If older open
+PRs exist (earlier `createdAt`), remediate and merge those **bottom-up first**
+so older work lands before newer tips (avoids rebasing old PRs onto new main).
+
+Enforcement: `ops/autonomy/local_execution_gate.py` (Claude PreToolUse + Cursor
+`beforeShellExecution`) and `open_pr_after_gate.sh`. Status:
+`python3 ops/autonomy/l4_local.py status`.
 
 ## 2. Activation — how a session boots L9 governance
 

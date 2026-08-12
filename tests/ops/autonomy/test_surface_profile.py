@@ -18,6 +18,8 @@ def test_profile_block_has_doctrine() -> None:
     block = session_start_block(ROOT)
     assert "Autonomy Velocity Doctrine" in block
     assert "l9-pr-remediation" in block
+    assert "L4 local autonomy" in block
+    assert "Recursive Alignment" in block
     assert block_sha256(ROOT)
 
 
@@ -25,6 +27,8 @@ def test_llm_override_outranks_ask_first() -> None:
     text = llm_rules_override(ROOT)
     assert "99-no-auto-commit" in text
     assert "claude-code" in text
+    assert "L4 Local Autonomy" in text
+    assert "local_execution_gate.py" in text
 
 
 def test_session_start_emits_profile(tmp_path: Path) -> None:
