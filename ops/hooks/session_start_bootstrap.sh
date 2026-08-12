@@ -144,7 +144,7 @@ fi
 GC="$GLOBAL_COMMANDS"
 
 # Never-lose: restore open/.tmp legacy holds into the active workspace.
-if [ -n "${REPO:-}" ] && [ -f "$GC/ops/scripts/scratch_hold.py" ]; then
+if [[ -n "${REPO:-}" && -f "$GC/ops/scripts/scratch_hold.py" ]]; then
   python3 "$GC/ops/scripts/scratch_hold.py" --workspace "$REPO" restore --all >/dev/null 2>&1 || true
 fi
 
