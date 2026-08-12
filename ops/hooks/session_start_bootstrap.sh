@@ -227,3 +227,18 @@ COMBINED="$(printf '%s | ' "${PARTS[@]}")"
 COMBINED="${COMBINED% | }"
 emit_json "$COMBINED"
 exit 0
+
+l9_session_runtime_probe() {
+  local root py
+  root="${GOVERNANCE_ROOT:-${GLOBAL_COMMANDS:-$HOME/.cursor-governance}}"
+  if [ -x "$root/.venv/bin/python3" ]; then py="$root/.venv/bin/python3"; else py="$(command -v python3)"; fi
+  if [ -f "$root/environment/agents/deployment/reconcile.py" ]; then
+    "$py" "$root/environment/agents/deployment/reconcile.py" --surface cursor --workspace "${CURSOR_PROJECT_DIR:-$PWD}" >/dev/null 2>&1 || true
+  fi
+  if [ -f "$root/environment/agents/readiness/probe_runtime.py" ]; then
+    "$py" "$root/environment/agents/readiness/probe_runtime.py" >/dev/null 2>&1 || true
+  fi
+}
+if [ "${L9_SESSION_RUNTIME_PROBE:-0}" = "1" ]; then
+  l9_session_runtime_probe || true
+fi

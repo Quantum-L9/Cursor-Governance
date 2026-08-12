@@ -1,0 +1,55 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: environment/agents/deployment/DEPLOYMENT_CONTRACT.yaml
+#   layer: contract
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-08-12
+#
+# Cursor-native subagent deployment contract (Patch B).
+# Materializes CURSOR_SUBAGENT_ROLES.yaml into ~/.cursor/agents/*.md.
+# Does not schedule, accept results, or mutate Program Execution state.
+
+schema: l9.agents.deployment-contract.v1
+schema_version: 1.0.0
+purpose: >-
+  Reconcile governed Cursor subagent roles into Cursor-native managed
+  definitions under the user agents directory, with project-shadow detection
+  and deployment receipts under L9_RUNTIME_ROOT.
+prohibitions:
+  - scheduling
+  - result_acceptance
+  - program_state_mutation
+  - overwrite_unmanaged_name_collision
+  - delete_unmanaged_user_agent
+  - fake_non_cursor_renderers
+status_values:
+  - DEPLOYMENT_READY
+  - BLOCKED
+surfaces:
+  cursor:
+    renderer_id: cursor
+    renderer_version: "1.0.0"
+    roles_manifest: environment/agents/cursor-subagents/CURSOR_SUBAGENT_ROLES.yaml
+    role_schema: l9.cursor-subagents.roles.v1
+    global_agents_dir: ~/.cursor/agents
+    project_agents_rel: .cursor/agents
+    managed_marker: L9_MANAGED_SUBAGENT
+    role_filenames:
+      recon: l9-recon.md
+      pr_remediation: l9-pr-remediation.md
+      test: l9-test.md
+      documentation: l9-documentation.md
+      verifier_reviewer: l9-verifier-reviewer.md
+    receipt_surface: cursor
+    cursor_frontmatter_fields:
+      - name
+      - description
+      - model
+      - readonly
+      - is_background
+receipt:
+  schema: l9.agents.deployment-receipt.v1
+  path_template: "$L9_RUNTIME_ROOT/agents/deployments/{surface}/{workspace_id}.json"

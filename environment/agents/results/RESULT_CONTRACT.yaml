@@ -1,0 +1,11 @@
+schema: l9.result-gateway-contract.v1
+schema_version: 1.0.0
+authority: >-
+  Returned subagent output becomes authoritative only after Result Gateway
+  acceptance. Conversational claims never accept results.
+adapters:
+  - cursor_subagent
+prohibited:
+  - conversational_acceptance
+  - adapter_direct_memory_write
+  - adapter_direct_processor_invoke

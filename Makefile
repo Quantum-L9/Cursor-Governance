@@ -333,3 +333,13 @@ peer-execution-conformance:
 	$(MAKE) program-execution-conformance
 	$(MAKE) peer-execution-validate
 	$(MAKE) peer-execution-probe
+
+.PHONY: agents-deployment-validate agents-results-validate agents-data-validate agents-runtime-probe
+agents-deployment-validate:
+	$(CURDIR)/.venv/bin/python -m pytest environment/agents/deployment/tests -q
+agents-results-validate:
+	$(CURDIR)/.venv/bin/python -m pytest environment/agents/results/tests environment/agents/lifecycle/tests -q
+agents-data-validate:
+	$(CURDIR)/.venv/bin/python -m pytest environment/agents/generated-data/ingress/tests -q
+agents-runtime-probe:
+	$(CURDIR)/.venv/bin/python environment/agents/readiness/probe_runtime.py

@@ -12,7 +12,8 @@
 # must be connected for each agent peer (Executable Peer Contract v2).
 # Identity remains in agent_registry.yaml (no execution: blocks there).
 # Cross-validated by validate_executable_peers.py (rules E1-E15).
-# readiness_required switches stay false until a later PR lands the satisfier.
+# readiness_required switches stay false until the PR that lands their
+# satisfier flips them (activation law). Patch B flips subagents.deployment.
 
 schema: l9.peer-runtime-bindings.v1
 schema_version: 1.0.0
@@ -33,12 +34,12 @@ peers:
       enabled: true
       roles_manifest: environment/agents/cursor-subagents/CURSOR_SUBAGENT_ROLES.yaml
       deployment:
-        readiness_required: false
+        readiness_required: true
     results:
-      readiness_required: false
+      readiness_required: true
     generated_data:
       required: true
-      capture_readiness_required: false
+      capture_readiness_required: true
 
   claude-code:
     agent_ref: claude-code

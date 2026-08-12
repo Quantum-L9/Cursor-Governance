@@ -90,6 +90,17 @@ fi
 
 handoff_dir="$WS/.l9/pr"
 mkdir -p "$handoff_dir"
+
+# Patch C: typed PRRemediationAssignment via runtime_paths (authoritative); .l9/pr remains pointer/handoff.
+l9_emit_pr_assignment() {
+  local root py aid
+  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+  if [ -x "$root/.venv/bin/python3" ]; then py="$root/.venv/bin/python3"; else py="$(command -v python3)"; fi
+  aid="pr-${pr_number:-0}-${packet_id:-local}"
+  ( cd "$root" && ASSIGNMENT_ID="$aid" PR_NUMBER="${pr_number:-0}" BRANCH="${head_branch:-}" PACKET_ID="${packet_id:-local}"       "$py" -c "import os,sys; sys.path.insert(0,'.'); from environment.agents.lifecycle import receipts; receipts.write_pr_remediation_assignment({'assignment_id':os.environ['ASSIGNMENT_ID'],'pr_number':int(os.environ.get('PR_NUMBER') or 0),'branch':os.environ.get('BRANCH',''),'packet_id':os.environ.get('PACKET_ID',''),'max_cycles':3})" ) || true
+}
+
+
 handoff_path="$handoff_dir/pr-remediation-handoff.json"
 packet_id="make-pr-${pr_number}-$(date -u +%Y%m%dT%H%M%SZ)"
 created_by="${USER:-agent}"
@@ -120,6 +131,7 @@ doc = {
 path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 print(f"Handoff written: {path}")
 PY
+l9_emit_pr_assignment || true
 
 if [[ "$PR_REMEDIATE" == "1" ]]; then
   cat <<EOF
