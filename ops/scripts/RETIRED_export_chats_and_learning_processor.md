@@ -12,10 +12,9 @@ Cursor `workspaceStorage` SQLite hourly (109 GB on this Mac) and looked for
 flat `*.txt` transcripts. Cursor writes nested `.jsonl`. The copies were not
 the chat words.
 
-`com.tenx.learning-processor` → `memory_aggregator.py` read
-`~/Dropbox/Cursor Governance/GlobalCommands/ops/logs/chat_exports` expecting
-SQLite/LevelDB. That path does not exist. Hourly log: `No chat exports found`.
-It never parsed `.jsonl`.
+`com.tenx.learning-processor` → `memory_aggregator.py` used a retired
+Dropbox path for SQLite/LevelDB chat dumps (forbidden as SSOT; that path
+does not exist). Hourly log: `No chat exports found`. It never parsed `.jsonl`.
 
 Local or GitHub copies are useless across machines. Closed-chat words go to S3.
 

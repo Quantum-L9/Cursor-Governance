@@ -228,12 +228,16 @@ def render_txt(doc: dict) -> str:
         f"Diagnosed     {doc['diagnosed_at']}",
         "Nothing in this file has been deleted.",
         "",
-        f"Data disk     {fmt_gib(data['used_gib'])} used     {fmt_gib(data['free_gib'])} free     {data['capacity_pct']}% full",
+        (
+            f"Data disk     {fmt_gib(data['used_gib'])} used     "
+            f"{fmt_gib(data['free_gib'])} free     {data['capacity_pct']}% full"
+        ),
         f"Home folder   {fmt_gib(home) if home is not None else 'unknown'}",
     ]
     if vm:
         lines.append(
-            f"Swap (VM)     {fmt_gib(vm.get('used_gib'))}     leave it — it shrinks after Data is freed"
+            f"Swap (VM)     {fmt_gib(vm.get('used_gib'))}     "
+            "leave it — it shrinks after Data is freed"
         )
     lines += [
         "",
