@@ -1,5 +1,5 @@
 ---
-description: "Existing code is source of truth — new code adapts to established patterns"
+description: Existing code is source of truth — new code adapts to established patterns
 alwaysApply: true
 ---
 

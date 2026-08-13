@@ -1,6 +1,5 @@
 ---
-description: "Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, and session lifecycle"
-globs: ["**/*"]
+description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, and session lifecycle
 alwaysApply: true
 ---
 

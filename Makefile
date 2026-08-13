@@ -376,3 +376,8 @@ agents-data-validate:
 	$(CURDIR)/.venv/bin/python -m pytest environment/agents/generated-data/ingress/tests -q
 agents-runtime-probe:
 	$(CURDIR)/.venv/bin/python environment/agents/readiness/probe_runtime.py
+
+.PHONY: rules-check
+## Cursor-native rules frontmatter + always-apply ratchet (docs/rules-standard.md).
+rules-check:
+	python3 ops/scripts/check_rules_standard.py

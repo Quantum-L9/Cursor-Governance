@@ -1,5 +1,5 @@
 ---
-description: "GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces."
+description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
 alwaysApply: true
 ---
 

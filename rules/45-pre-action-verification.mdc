@@ -1,5 +1,5 @@
 ---
-description: "Verification gates around any action: verify before acting, evidence before claiming success, stop on failure."
+description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure.'
 alwaysApply: true
 ---
 

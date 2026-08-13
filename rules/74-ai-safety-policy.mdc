@@ -1,9 +1,6 @@
 ---
-description: "AI content safety and policy rules for prompts and kernels in L9."
-globs:
-  - "config/kernels/**/*"
-  - "config/prompts/**/*"
-  - "policy/**/*"
+description: AI content safety and policy rules for prompts and kernels in L9.
+globs: config/kernels/**/*, config/prompts/**/*, policy/**/*
 alwaysApply: false
 ---
 

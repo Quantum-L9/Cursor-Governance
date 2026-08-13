@@ -1,14 +1,8 @@
 ---
-id: l9.rule.governance-ssot-paths
-version: 2.0.0
 description: Use the local GitHub clone at $HOME/.cursor-governance as the sole governance root.
-scope: global
-domain: governance
-activation: always
-authority: canonical_global
-context_cost: minimal
 alwaysApply: true
 ---
+
 # Governance SSOT Path Contract
 
 **Authority:** `@.cursor-commands/CANONICAL_LAW.md`

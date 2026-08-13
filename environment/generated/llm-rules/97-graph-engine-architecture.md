@@ -2,7 +2,6 @@
 description: 'Graph Engine architecture: chassis contract, gates, Cypher security, action handlers'
 ---
 
-
 ## Core Principles
 - This is an L9 constellation engine. The chassis handles HTTP/auth/observability; engines handle domain logic only.
 - Engine NEVER imports FastAPI, Starlette, or any HTTP library.

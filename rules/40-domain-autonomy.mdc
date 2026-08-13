@@ -1,10 +1,6 @@
 ---
-description: "Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints."
-globs:
-  - "src/agents/**/*.ts"
-  - "src/agents/**/*.py"
-  - "src/autonomy/**/*"
-  - "packages/agents/**/*"
+description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.'
+globs: src/agents/**/*.ts, src/agents/**/*.py, src/autonomy/**/*, packages/agents/**/*
 alwaysApply: false
 ---
 

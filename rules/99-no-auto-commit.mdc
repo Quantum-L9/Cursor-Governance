@@ -1,5 +1,5 @@
 ---
-description: "Never auto-commit or auto-push without explicit user approval"
+description: Never auto-commit or auto-push without explicit user approval
 alwaysApply: true
 ---
 

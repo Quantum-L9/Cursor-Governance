@@ -1,15 +1,8 @@
 ---
-id: l9.rule.cursor-governance-wiring
-version: 3.0.0
 description: GlobalCommands loads as a Cursor local plugin, not a whole-directory rules symlink. Supersedes v2.0.0.
-scope: global
-domain: governance
-activation: always
-authority: canonical_global
-context_cost: minimal
 alwaysApply: true
-supersedes: l9.rule.cursor-governance-wiring@2.0.0
 ---
+
 # Cursor Governance Wiring Boundary
 
 ## Supersession notice

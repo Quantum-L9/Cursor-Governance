@@ -1,5 +1,5 @@
 ---
-description: "GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation."
+description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
 alwaysApply: true
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: "Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations."
+description: 'Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations.'
 alwaysApply: true
 ---
 

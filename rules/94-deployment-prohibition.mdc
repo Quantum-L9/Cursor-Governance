@@ -1,6 +1,5 @@
 ---
 description: Prohibits AI agents from using the 10X deployment script.
-globs: scripts/deployment/10X_Deploy_Script.sh
 alwaysApply: true
 ---
 

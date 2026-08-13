@@ -1,10 +1,6 @@
 ---
-description: "CI/CD pipeline and policy enforcement rules for L9."
-globs:
-  - ".github/workflows/**/*.yml"
-  - ".github/workflows/**/*.yaml"
-  - "Makefile"
-  - ".gitlab-ci.yml"
+description: CI/CD pipeline and policy enforcement rules for L9.
+globs: .github/workflows/**/*.yml, .github/workflows/**/*.yaml, Makefile, .gitlab-ci.yml
 alwaysApply: false
 ---
 

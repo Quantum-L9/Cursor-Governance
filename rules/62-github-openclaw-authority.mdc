@@ -1,5 +1,5 @@
 ---
-description: "Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask humans to operate github.com UI."
+description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask humans to operate github.com UI.
 alwaysApply: true
 ---
 

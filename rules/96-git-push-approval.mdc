@@ -1,5 +1,5 @@
 ---
-description: "Git push requires explicit user approval — never auto-push"
+description: Git push requires explicit user approval — never auto-push
 alwaysApply: true
 ---
 

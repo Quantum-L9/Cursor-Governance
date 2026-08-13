@@ -1,5 +1,5 @@
 ---
-description: "GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes."
+description: 'GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.'
 alwaysApply: true
 ---
 
