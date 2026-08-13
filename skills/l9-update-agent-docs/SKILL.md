@@ -1,6 +1,7 @@
 ---
 name: l9-update-agent-docs
 description: audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.
+paths: "AGENTS.md, docs/**, README.md"
 metadata:
   skill_schema: 1
   layer: control_plane
