@@ -1,6 +1,7 @@
 ---
 name: l9-prompt-engineering
 description: write effective prompts for LLMs — structure, few-shot examples, chain-of-thought, system prompts, and output parsing. use when designing or improving an LLM prompt, system message, or structured output schema.
+paths: "prompts/**, **/*prompt*.md"
 metadata:
   skill_schema: 1
   layer: control_plane
