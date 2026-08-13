@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-14T15:13:24Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-14T16:07:52Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **66** |
-| `alwaysApply: true` | **44** |
-| `alwaysApply: false` | **22** |
+| Total MDC files | **68** |
+| `alwaysApply: true` | **45** |
+| `alwaysApply: false` | **23** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **0** |
-| Derived compatibility IDs | **66** |
+| Derived compatibility IDs | **68** |
 | Deprecated rules | **1** |
 
 ## Rule index
@@ -28,6 +28,7 @@ Generated: `2026-08-14T15:13:24Z`. Source: `rules/*.mdc`.
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 59 | `c61a1562d055` |
 | `05-recursive-execution-kernel.mdc` | `l9.rule.05.recursive.execution.kernel` | global | execution | agent_requested | 32 | `e71d08c6085e` |
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | auto_attached | 177 | `6f3f1cba9b95` |
+| `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 11 | `35231a24d9bb` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | auto_attached | 184 | `ff7d2c9337b7` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 51 | `0d3ad3e7d982` |
 | `23-l9-skill-routing.mdc` | `l9.rule.23.l9.skill.routing` | global | governance | always | 89 | `a33ee9440db9` |
@@ -35,7 +36,8 @@ Generated: `2026-08-14T15:13:24Z`. Source: `rules/*.mdc`.
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | auto_attached | 139 | `99c30e79186d` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | auto_attached | 176 | `d9eea4c8153c` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | auto_attached | 49 | `6ad1f03ec17c` |
-| `45-pre-action-verification.mdc` | `l9.rule.45.pre.action.verification` | global | general | always | 81 | `f165257cb41e` |
+| `45-pre-action-verification.mdc` | `l9.rule.45.pre.action.verification` | global | general | always | 85 | `997a5055773c` |
+| `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | always | 29 | `c279fab25184` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | always | 201 | `065dbc102466` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | auto_attached | 28 | `cde8669cf30e` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | auto_attached | 28 | `d962c29bcae4` |
