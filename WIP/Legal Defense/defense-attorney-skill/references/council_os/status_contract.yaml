@@ -1,0 +1,85 @@
+schema_version: '1.0'
+contract_id: defense_council_status_semantics
+purpose: Keep provenance, epistemic confidence, courtroom-record status, legal-authority
+  status, and decision status as separate dimensions.
+rules:
+- never_encode_multiple_dimensions_in_one_status_when_separate_fields_are_available
+- source_quality_does_not_equal_courtroom_record_status
+- courtroom_record_status_does_not_equal_legal_truth
+- legal_authority_status_does_not_equal_case_fact_status
+- contradiction_does_not_choose_a_winner_without_a_governing_source_rule
+- superseded_material_may_be_preserved_for_history_but_must_not_drive_current_recommendations
+dimensions:
+  provenance_class:
+    values:
+    - OFFICIAL_COURT_RECORD
+    - OFFICIAL_FORENSIC_LAB
+    - ORIGINAL_MEDIA_DIRECTLY_REVIEWED
+    - DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+    - STATE_DISCOVERY_OR_OFFICER_MATERIAL
+    - DEFENSE_EVIDENCE_AUDIT
+    - PRIVILEGED_CLIENT_INTELLIGENCE
+    - DEFENSE_ARGUMENT_OR_DRAFT
+    - TEMPLATE_OR_SECONDARY_GUIDANCE
+    - USER_FIRSTHAND_REPORT
+    - UNKNOWN_SOURCE_CLASS
+  epistemic_status:
+    values:
+    - VERIFIED
+    - CORROBORATED
+    - REPORTED
+    - INFERRED
+    - HYPOTHESIS
+    - CONTRADICTED
+    - SUPERSEDED
+    - UNKNOWN
+  record_status:
+    values:
+    - NOT_IN_CURRENT_RECORD
+    - RECORD_ESTABLISHED
+    - ADMITTED_EVIDENCE
+    - TESTIMONY_ESTABLISHED
+    - STIPULATED
+    - JUDICIALLY_NOTICED
+    - RECORD_STATUS_UNKNOWN
+  authority_status:
+    values:
+    - CONTROLLING
+    - BINDING_WITHIN_SCOPE
+    - PERSUASIVE
+    - DISTINGUISHABLE
+    - LIMITED
+    - SUPERSEDED
+    - STATUS_UNKNOWN
+    - PRIMARY_VERIFICATION_REQUIRED
+  decision_status:
+    values:
+    - ACT
+    - MODIFY
+    - DEFER
+    - DO_NOT_ACT
+    - VERIFY_FIRST
+    - UNKNOWN
+    - TEAM_RECOMMENDATION_WITH_DISSENT
+legacy_mapping_examples:
+  CLIENT_REPORTED:
+    provenance_class: USER_FIRSTHAND_REPORT
+    epistemic_status: REPORTED
+  CASE_FILE_REPORTED:
+    provenance_class: DEFENSE_EVIDENCE_AUDIT
+    epistemic_status: REPORTED
+  PROVEN_BY_OFFICIAL_DOCUMENT:
+    provenance_class: OFFICIAL_COURT_RECORD
+    epistemic_status: VERIFIED
+  PROVEN_BY_LAB:
+    provenance_class: OFFICIAL_FORENSIC_LAB
+    epistemic_status: VERIFIED
+  DERIVATIVE_MEDIA_FINDING:
+    provenance_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+    epistemic_status: REPORTED
+  DEFENSE_HYPOTHESIS:
+    provenance_class: DEFENSE_ARGUMENT_OR_DRAFT
+    epistemic_status: HYPOTHESIS
+normalization_rule: When a source file uses a legacy granular label, preserve the
+  original label for provenance history and normalize it into these dimensions before
+  reasoning or synthesis.

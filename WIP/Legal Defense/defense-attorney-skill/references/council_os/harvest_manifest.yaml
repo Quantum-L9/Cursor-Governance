@@ -1,0 +1,159 @@
+schema_version: '1.0'
+artifact: legacy_legal_kernel_harvest_manifest
+purpose: Record which reusable operating patterns were distilled into the Council OS and which stale or unverified content
+  was explicitly rejected.
+raw_legacy_files_bundled: false
+runtime_dependency_on_legacy_pack: false
+legacy_sources_count: 15
+sources:
+- source_file: 00_MASTER_KERNEL_INDEX.yaml
+  harvested_patterns:
+  - authority ordering
+  - global invariants
+  - hard-ban pattern
+  rejected_content:
+  - case dates
+  - court posture
+  - fixed theory chain
+  - future-kernel status
+- source_file: 01_legal_high_velocity_reasoning_mode.kernel.yaml
+  harvested_patterns:
+  - case-state lock
+  - ordered decomposition
+  - artifact-first execution
+  - unknown labeling
+  rejected_content:
+  - forced output formats
+  - mandatory NEXT_LEGAL_ACTION
+  - stale court and deadline data
+- source_file: 02_legal_high_velocity_execution_copilot.kernel.yaml
+  harvested_patterns:
+  - workload compression
+  - drift suppression
+  - single execution unit
+  rejected_content:
+  - forced YNP
+  - forced reply terminator
+  - stale active-case assertions
+- source_file: 03_legal_cognitive_kernel.yaml
+  harvested_patterns:
+  - abductive/deductive/inductive engine selection
+  - assumption scan
+  - failure-mode scan
+  - minimal-spine planning
+  rejected_content:
+  - counsel-review dependency
+  - unverified confidence semantics
+- source_file: 04_legal_mode_intelligence_kernel.yaml
+  harvested_patterns:
+  - task taxonomy
+  - confidence-based routing
+  - single-question ambiguity handling
+  rejected_content:
+  - old kernel names as runtime dependencies
+  - lexical trigger rigidity
+- source_file: 05_legal_reasoning_think_strategy.kernel.yaml
+  harvested_patterns:
+  - objective-context-decomposition-leverage-strategy-execution-synthesis flow
+  - bias scan
+  - success conditions
+  rejected_content:
+  - specific civil-pressure tactics
+  - old case conclusions
+  - unverified local-practice claims
+- source_file: 06_legal_zero_stub_document_protocol.kernel.yaml
+  harvested_patterns:
+  - zero-stub rule
+  - document build manifest
+  - source-backed fact sections
+  - exhibit completeness
+  rejected_content:
+  - hardcoded old exhibits
+  - assumption that every output is immediately fileable
+  - fixed signature assertions
+- source_file: 07_legal_first_order_thinking_enforcement.kernel.yaml
+  harvested_patterns:
+  - five leverage gates
+  - dependency check
+  - rabbit-hole detector
+  - functional-over-cosmetic rule
+  rejected_content:
+  - fixed historical dependency chain
+  - time-based session heuristics
+- source_file: 08_legal_recursive_quality_gate.kernel.yaml
+  harvested_patterns:
+  - multi-pass QA
+  - authority/fact/strategy/format separation
+  rejected_content:
+  - stale case facts in QA checks
+  - deliver-after-three-fails rule
+  - hardcoded formatting assertions
+- source_file: beylin_kernel_2_evidence_discovery.md
+  harvested_patterns:
+  - evidence master-index pattern
+  - chain-of-custody schema
+  - timestamped media analysis dimensions
+  - discovery-target status model
+  rejected_content:
+  - old evidence status
+  - old substance conclusions
+  - fixed retention/deadline assertions
+  - pre-2026 odor-law conclusions
+- source_file: beylin_kernel_4_opponent_dossier.md
+  harvested_patterns:
+  - witness intelligence schema
+  - verified-vs-unknown research targets
+  - statement/credibility matrix
+  - cross-target prioritization
+  rejected_content:
+  - speculative motive
+  - unverified prior misconduct
+  - civil pressure assumptions
+  - old factual conclusions
+- source_file: beylin_kernel_3_damages_quantification.md
+  harvested_patterns:
+  - component-separated valuation pattern
+  - scenario-band modeling
+  rejected_content:
+  - fixed multipliers
+  - case-specific dollar anchors
+  - civil damages conclusions
+- source_file: beylin_court_format_kernel.md
+  harvested_patterns:
+  - jurisdiction-profile schema
+  - document-type schema
+  - required-section contract
+  - citation-profile concept
+  rejected_content:
+  - unverified typography
+  - hardcoded captions
+  - stale local-rule assumptions
+- source_file: beylin_kernel_5_nc_criminal_procedure.md
+  harvested_patterns:
+  - event-driven procedure model
+  - phase-specific objectives
+  - deadline-source field
+  - waiver/preservation field
+  rejected_content:
+  - all substantive legal rules unless independently reverified
+  - old hearing date
+  - old court posture
+  - pre-Dobson/Rowdy odor theory
+- source_file: beylin_kernel_6_narrative_comms.md
+  harvested_patterns:
+  - communication-risk classification
+  - external-disclosure review
+  - public-record narrative discipline
+  rejected_content:
+  - absolute privilege claims
+  - civil-media strategy
+  - mugshot campaign
+  - old phase dates
+import_policy:
+  architecture_and_reasoning_methods: HARVEST_AGGRESSIVELY
+  quality_and_validation_mechanics: HARVEST_AGGRESSIVELY
+  case_facts: DO_NOT_IMPORT
+  deadlines_and_posture: DO_NOT_IMPORT
+  legal_holdings_or_statutory_rules: DO_NOT_IMPORT_UNLESS_REVERIFIED_IN_ACTIVE_AUTHORITY_LAYER
+  civil_strategy: PARK_OUTSIDE_CRIMINAL_CORE
+  speculative_opponent_claims: DO_NOT_IMPORT

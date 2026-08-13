@@ -1,0 +1,32 @@
+schema_version: '1.0'
+artifact: first_order_legal_leverage_gate
+cardinal_question: What is the simplest lawful action that produces the most case value without sacrificing a stronger future
+  option?
+gates:
+- id: LG1
+  name: case_impact
+  question: Does this action materially change evidence, burden, procedure, record, rights, or decision quality?
+  fail: DEPRIORITIZE_COSMETIC_WORK
+- id: LG2
+  name: effort_coverage
+  question: Does the expected case coverage justify the complexity and disclosure cost?
+  fail: SIMPLIFY_OR_NARROW
+- id: LG3
+  name: dependency
+  question: What must be verified or completed before this action, and what does this action unlock or foreclose?
+  fail: RESEQUENCE
+- id: LG4
+  name: rabbit_hole
+  question: Has the work expanded beyond the requested objective without material leverage?
+  fail: CUT_SCOPE
+- id: LG5
+  name: clarity
+  question: Are document type, forum, legal objective, material facts, requested relief, and record posture sufficiently known
+    for this action?
+  fail: VERIFY_OR_ASK_ONE_CORE_QUESTION
+rules:
+- functional_before_cosmetic
+- surface_materially_higher_leverage_alternative_without_hijacking_scope
+- derive_dependencies_from_current_case_state_not_legacy_fixed_sequences
+- do_not_equate_length_with_quality
+- do_not_agree_with_user_strategy_without_testing_weakest_element

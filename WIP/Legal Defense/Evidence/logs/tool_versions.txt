@@ -1,0 +1,16 @@
+ffmpeg: ffmpeg version 9.0.1 (Homebrew)
+ffprobe: ffprobe version 9.0.1
+exiftool: 13.55
+python: 3.12.13
+mlx-whisper: 0.4.3
+mlx: 0.32.0
+asr_model: mlx-community/whisper-large-v3-mlx
+asr_cli: mlx_whisper --model mlx-community/whisper-large-v3-mlx --language en --word-timestamps True -f all
+asr_install: WIP/Legal Defense/Evidence/.venv
+network_allowed: Homebrew formulae + Hugging Face model weights only
+media_upload: none
+operator: ib-mac
+pinned: 2026-08-13
+
+asr_cli_chunked: mlx_whisper --model mlx-community/whisper-large-v3-mlx --language en --word-timestamps True --condition-on-previous-text False --hallucination-silence-threshold 2 --clip-timestamps START,END -f all
+asr_note: first full-file run looped Okay after ~04:08 with condition_on_previous_text=True; killed; chunked retry

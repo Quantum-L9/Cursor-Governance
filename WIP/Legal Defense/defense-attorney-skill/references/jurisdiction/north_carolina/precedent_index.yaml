@@ -1,0 +1,65 @@
+schema_version: "3.0"
+verified_snapshot: 2026-08-12
+jurisdiction: North Carolina
+
+topics:
+  cannabis_odor_probable_cause:
+    controlling_or_primary_targets:
+      - id: state_v_dobson_2026
+        court: Supreme Court of North Carolina
+        docket: 190PA24
+        filed: 2026-05-22
+        status_snapshot: published
+        reference: supreme_court/state_v_dobson_2026.md
+      - id: state_v_rowdy_2026
+        court: Supreme Court of North Carolina
+        docket: 300PA24
+        filed: 2026-05-22
+        status_snapshot: modified_and_affirmed
+        reference: supreme_court/state_v_rowdy_2026.md
+    status_sensitive:
+      - id: state_v_schiene
+        supreme_court_docket_reported: 305PA24
+        current_status: STATUS_UNKNOWN
+        reference: supreme_court/state_v_schiene.md
+        requirement: live_docket_verification_before_substantive_reliance
+
+required_stage_separation:
+  - initial_stop
+  - detention_or_extension
+  - frisk_of_person
+  - search_of_person
+  - vehicle_search
+  - later_discovered_evidence
+
+comparator_fields:
+  - odor_characterization
+  - timing_of_odor_claim
+  - cover_or_masking_scent
+  - visible_contraband
+  - suspect_explanation_before_search
+  - lawful_weapon_or_permit_information
+  - evasive_driving_or_delayed_stop
+  - evasive_behavior
+  - location_characterization
+  - criminal_history_and_nexus
+  - passenger_history
+  - officer_safety_articulation
+  - later_discovered_items
+  - facts_known_at_search_moment
+
+classify_each_factor_as:
+  - materially_similar
+  - stronger_for_state
+  - weaker_for_state
+  - stronger_for_defense
+  - distinguishable
+  - unknown
+
+prohibited_reasoning:
+  - odor_is_automatic_probable_cause
+  - criminal_history_alone_creates_probable_cause
+  - high_crime_area_alone_creates_reasonable_suspicion
+  - later_discovered_evidence_retroactively_justifies_earlier_search
+  - all_police_actions_use_same_constitutional_standard
+  - client_reported_fact_is_treated_as_hearing_record

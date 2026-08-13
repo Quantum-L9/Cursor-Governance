@@ -1,0 +1,46 @@
+schema_version: '1.0'
+artifact: zero_stub_legal_document_build_contract
+zero_stub: true
+status_label_when_complete: EXECUTION_READY_IF_ALL_VERIFICATION_GATES_PASS
+phases:
+- id: DB0
+  name: manifest
+  required:
+  - document_type
+  - court_and_division
+  - case_number
+  - parties
+  - objective_or_relief
+  - required_exhibits
+  - authority_set
+  - signature_and_service_requirements
+- id: DB1
+  name: caption_and_identity
+  rule: Use verified current case and court identifiers; do not reuse stale caption state.
+- id: DB2
+  name: facts
+  rule: Every material factual assertion must map to a source and appropriate record status; do not embed legal conclusions
+    as facts.
+- id: DB3
+  name: law_and_argument
+  rule: Every material legal proposition must use validated current authority; distinguish rule, application, counterargument,
+    and requested result.
+- id: DB4
+  name: relief
+  rule: Request only relief supported by the procedural vehicle and argument.
+- id: DB5
+  name: signature_and_service
+  rule: Prepare execution fields accurately but never claim an unsigned document was signed, filed, or served.
+- id: DB6
+  name: exhibits
+  rule: Every referenced exhibit must exist, be correctly labeled, and have a source locator or be omitted until available.
+critical_bans:
+- unfinished_or_stub_sections
+- fabricated_case_or_statute
+- invented_fact_or_testimony
+- bare_legal_conclusion_without_authority
+- stale_case_number_or_court
+- claiming_filing_or_service_not_performed
+- silent_use_of_privileged_or_client_only_fact_as_record_fact
+unknown_rule: If a required filing field is UNKNOWN and cannot lawfully be omitted, stop at VERIFY_FIRST instead of inserting invented filler.
+completeness_rule: Complete means structurally complete and factually/legally validated, not merely long or polished.

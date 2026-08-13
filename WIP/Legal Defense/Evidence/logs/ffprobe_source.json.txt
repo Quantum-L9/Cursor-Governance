@@ -1,0 +1,132 @@
+ffmpeg: ffmpeg version 9.0.1 Copyright (c) 2000-2026 the FFmpeg developers
+ffprobe: ffprobe version 9.0.1 Copyright (c) 2007-2026 the FFmpeg developers
+exiftool: 13.55
+
+===== Axon_Body_4_Video_2026-04-30_0153_D01AQ340U.mp4 =====
+bytes: 4457342395 mtime: Jun 4 15:26
+{
+    "programs": [
+
+    ],
+    "stream_groups": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "r_frame_rate": "30/1"
+        },
+        {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+        }
+    ],
+    "format": {
+        "duration": "8574.799400",
+        "size": "4457342395",
+        "bit_rate": "4158550"
+    }
+}
+
+===== Axon_Body_4_Video_2026-04-30_0211_D01AQ223T.mp4 =====
+bytes: 1818411418 mtime: Jun 4 15:26
+{
+    "programs": [
+
+    ],
+    "stream_groups": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "r_frame_rate": "30/1"
+        },
+        {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+        }
+    ],
+    "format": {
+        "duration": "3383.855667",
+        "size": "1818411418",
+        "bit_rate": "4299028"
+    }
+}
+
+===== Axon_Body_4_Video_2026-04-30_0312_D01AQ223T.mp4 =====
+bytes: 1616201435 mtime: Jun 4 15:28
+{
+    "programs": [
+
+    ],
+    "stream_groups": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "r_frame_rate": "60/1"
+        },
+        {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+        }
+    ],
+    "format": {
+        "duration": "4646.006167",
+        "size": "1616201435",
+        "bit_rate": "2782951"
+    }
+}
+
+===== Axon_Body_4_Video_2026-04-30_0426_D01AQ340U.mp4 =====
+bytes: 2942924430 mtime: Jun 4 15:29
+{
+    "programs": [
+
+    ],
+    "stream_groups": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "r_frame_rate": "30/1"
+        },
+        {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "sample_rate": "48000",
+            "channels": 2,
+            "r_frame_rate": "0/0"
+        }
+    ],
+    "format": {
+        "duration": "5671.373292",
+        "size": "2942924430",
+        "bit_rate": "4151268"
+    }
+}
+

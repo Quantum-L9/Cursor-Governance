@@ -109,3 +109,16 @@ environment/agents/generated-data/.runtime/
 ops/ui-operator/receipts/*.local.*
 ops/ui-operator/receipts/local/
 .l9-ui-profiles/
+
+# ── WIP Legal Defense: media out, case work in (2026-08-13) ──
+# Recordings/photos/WAV/frames/venv never commit. Ingest logs + transcripts do.
+# Root `logs/` and `*.log` above would hide Evidence/logs — negate that tree.
+WIP/Legal Defense/Evidence/originals/
+WIP/Legal Defense/Evidence/working/
+WIP/Legal Defense/Evidence/.venv/
+WIP/Legal Defense/Evidence/derived/frames/
+!WIP/Legal Defense/Evidence/logs/
+!WIP/Legal Defense/Evidence/logs/**
+!WIP/Legal Defense/Evidence/derived/
+!WIP/Legal Defense/Evidence/derived/transcripts/
+!WIP/Legal Defense/Evidence/derived/transcripts/**

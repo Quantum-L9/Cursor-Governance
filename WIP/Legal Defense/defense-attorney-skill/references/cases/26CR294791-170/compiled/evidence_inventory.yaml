@@ -1,0 +1,266 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+items:
+- item: '001'
+  property_id: '3354'
+  description: vacuum-sealed bags of brown mushroom material
+  state_reported_weight_g: 107.5
+  field_label: psilocybin mushrooms
+  lab_submission: SCL item 4
+  lab_result: NO_CHEMICAL_ANALYSIS
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  - SRC005
+  state_primary_direct: true
+  state_source_page: 20
+  evidence_location: back passenger floorboard
+- item: '002'
+  property_id: '3356'
+  description: glass jar containing brown mushroom material
+  state_reported_weight_g: 13.0
+  field_label: psilocybin mushrooms
+  lab_submission: SCL item 5
+  lab_result: NO_CHEMICAL_ANALYSIS
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  - SRC005
+  state_primary_direct: true
+  state_source_page: 21
+  evidence_location: gray bag / back passenger area
+- item: '003'
+  property_id: '3358'
+  description: 13 pink dosage units / tablet material
+  state_reported_weight_g: 4.6
+  field_label: MDMA/ecstasy positive
+  lab_submission: SCL item 1
+  lab_result: PARTIAL_CONFIRMATION
+  lab_detail: item 1-2 tablet pieces/powder contains MDMA, 3.07 +/- 0.03 g; item 1-1 one whole tablet not analyzed
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  - SRC005
+  state_primary_direct: true
+  state_source_page: 22
+  evidence_location: gray bag / back passenger area
+- item: '004'
+  property_id: '3360'
+  description: brown crystalline material
+  state_reported_weight_g: 13.41
+  field_label: MDMA/ecstasy positive
+  lab_submission: SCL item 2
+  lab_result: NO_CHEMICAL_ANALYSIS
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  - SRC005
+  state_primary_direct: true
+  state_source_page: 23
+  evidence_location: gray bag / back passenger area
+- item: '005'
+  property_id: '3368'
+  description: pinkish-purple crystalline material
+  state_reported_weight_g: 3.72
+  field_label: MDMA/ecstasy positive
+  lab_submission: SCL item 3
+  lab_result: NO_CHEMICAL_ANALYSIS
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  - SRC005
+  state_primary_direct: true
+  state_source_page: 24
+  evidence_location: gray bag / back passenger area
+- item: '006'
+  property_id: '3370'
+  description: hard brown substance
+  state_reported_weight_g: 0.82
+  field_label: amphetamines positive
+  lab_submission: NOT_IN_SCL_SUBMISSION_1
+  lab_result: UNKNOWN
+  defense_dispute: client asserts hashish; state weight conflict
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 25
+  evidence_location: gray bag / back passenger area
+  older_defense_audit_weight_g: 0.62
+  weight_resolution: 'direct State discovery controls the State-reported figure: approximately 0.82 g'
+- item: '007'
+  property_id: '3372'
+  description: contact-lens container with pink caps / crystal
+  state_reported_weight_g: 0.52
+  field_label: suspected/believed MDMA
+  lab_submission: NOT_IN_SCL_SUBMISSION_1
+  lab_result: UNKNOWN
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 26
+  evidence_location: gray bag / back passenger area
+  crystal_portion_weight_g: 0.52
+  combined_items_007_008_gross_weight_g: 2.56
+- item: 008
+  property_id: '3404'
+  description: contact-lens container with capsule / crystal
+  state_reported_weight_g: 0.67
+  field_label: suspected/believed MDMA
+  lab_submission: NOT_IN_SCL_SUBMISSION_1
+  lab_result: UNKNOWN
+  sources:
+  - SRC006
+  - SRC009
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 27
+  evidence_location: gray bag / back passenger area
+  crystal_portion_weight_g: 0.67
+  combined_items_007_008_gross_weight_g: 2.56
+- item: 009
+  description: digital scale with white powder residue
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 28
+  evidence_location: gray bag / back passenger area
+- item: '010'
+  description: S&W M&P-15 rifle with optic/magnifier
+  serial_reported: SR35447
+  status: STATE_PRIMARY_DIRECT_WITH_OLDER_AUDIT_VARIANT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 29
+  evidence_location: trunk
+  older_audit_variant: SR3447
+- item: '011'
+  description: Sig Sauer P365 9mm loaded
+  serial_reported: 66G409286
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 30
+  evidence_location: driver-side door
+- item: '012'
+  description: S&W .357 revolver / .38 Special references
+  serial_reported: CNS4339MP340
+  status: STATE_INTERNAL_IDENTIFICATION_ISSUE
+  sources:
+  - SRC006
+  - SRC008
+  - SRC001
+  state_primary_direct: true
+  state_source_page: 31
+  evidence_location: glove box / rear passenger floorboard descriptions across State materials
+  state_note: Foreman supplement reports serial scratched off and not runnable; other State records nonetheless
+    record CNS4339MP340.
+- item: '013'
+  description: US currency
+  state_reported_amount_usd: 1520
+  earlier_client_estimate_usd: 1450
+  status: STATE_PRIMARY_DIRECT_WITH_CLIENT_ESTIMATE_CONFLICT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 32
+  evidence_location: front passenger seat
+- item: '014'
+  description: purple water bong and marijuana smoking device
+  status: STATE_PRIMARY_DIRECT_AND_CHARGED
+  sources:
+  - SRC006
+  - SRC001
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 33
+- item: '015'
+  description: 3 Sig Sauer magazines / 31 rounds 9mm
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 34
+  evidence_location: passenger area
+- item: '016'
+  description: 4 rifle magazines / 108 rounds 5.56/.223
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 35
+  evidence_location: trunk
+- item: '017'
+  description: 5 rounds .38 special
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 36
+  evidence_location: glove box
+- item: 018
+  description: gray bag described as numerous THC items and paraphernalia
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 37
+  evidence_location: back passenger area
+- item: 019
+  description: Apple iPhone black case / broken camera lens
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 38
+  evidence_location: passenger area
+- item: '020'
+  description: Apple iPhone black case / cracked screen protector
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 39
+  evidence_location: passenger area
+- item: '021'
+  description: Motorola smartphone XT2311DL
+  status: STATE_PRIMARY_DIRECT
+  sources:
+  - SRC006
+  - SRC008
+  state_primary_direct: true
+  state_source_page: 40
+  evidence_location: trunk
+drug_totals_as_older_state_audit:
+  status: REPLACED_BY_DIRECT_STATE_DISCOVERY_ACCOUNTING
+  see: state_discovery_primary.yaml#state_pre_lab_drug_accounting
+lab_precedence_rule: use lab_findings.yaml for chemical confirmation; do not describe field labels as confirmed
+  identity
+state_pre_lab_accounting:
+  psilocybin_g_approx: 120.5
+  state_stated_mdma_total_g_approx: 24.29
+  mdma_total_arithmetic: 4.60 + 13.41 + 3.72 + 2.56 = 24.29
+  contact_lens_note: 2.56 g is the direct handwritten combined gross weight for items 007/008; 0.52 g and 0.67 g
+    are crystal portions.
+  warning: Pre-lab State accounting is not chemical confirmation.

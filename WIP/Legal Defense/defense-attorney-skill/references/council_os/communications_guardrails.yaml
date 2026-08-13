@@ -1,0 +1,22 @@
+schema_version: '1.0'
+artifact: case_communications_guardrails
+purpose: Reduce admission, waiver, disclosure, and strategy leakage risk in communications outside the defense workroom.
+risk_classes:
+  public_or_social: CRITICAL
+  law_enforcement_or_prosecution: CRITICAL
+  potential_witness_or_adverse_party: CRITICAL
+  friends_family_or_business_contacts: HIGH
+  medical_or_other_professional_provider: CONTEXT_SENSITIVE
+  court_filing_or_open_court_statement: FULL_COUNCIL_REQUIRED
+default_review_questions:
+- Is this communication required now?
+- Could it admit or imply an element, fact, ownership, knowledge, intent, consent, waiver, or chronology?
+- Could it reveal defense strategy or privileged work product?
+- Could it affect a witness, evidence preservation, or future civil position?
+- Is every factual statement source-supported and strategically necessary?
+rules:
+- do_not_claim_a_communication_is_privileged_without_legal_basis
+- do_not_contact_adverse_witnesses_or_law_enforcement_about_case_facts_without_full_council_review
+- prefer_minimum_necessary_factual_communication
+- public_narrative_must_not_outrun_verified_public_record
+- civil_or_reputation_goal_never_overrides_active_criminal_defense_without_explicit_tradeoff_review

@@ -1,0 +1,77 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+routes:
+  charges_or_count_elements:
+  - case_record.yaml
+  - claim_graph.yaml
+  - argument_bank.yaml
+  drug_identity_or_weight:
+  - lab_findings.yaml
+  - evidence_inventory.yaml
+  - contradictions.yaml
+  - claim_graph.yaml
+  search_stop_or_bodycam:
+  - video_findings.yaml
+  - contradictions.yaml
+  - claim_graph.yaml
+  inventory_chain_or_item:
+  - evidence_inventory.yaml
+  - visual_evidence_index.yaml
+  - contradictions.yaml
+  client_explanation_or_resolution:
+  - defense_intelligence.yaml
+  motion_or_argument:
+  - argument_bank.yaml
+  - template_bank.yaml
+  - case_record.yaml
+  - lab_findings.yaml
+  source_quality_or_provenance:
+  - corpus_contract.yaml
+  - source_manifest.yaml
+  - ingestion_audit.yaml
+  - contradictions.yaml
+  state_narrative_or_search_basis:
+  - state_discovery_primary.yaml
+  - contradictions.yaml
+  - claim_graph.yaml
+  field_test_or_presumptive_identity:
+  - field_tests.yaml
+  - lab_findings.yaml
+  - evidence_inventory.yaml
+  - contradictions.yaml
+  historical_docket_or_case_events:
+  - procedural_snapshot.yaml
+  - case_record.yaml
+cognition_hints:
+  matlock_fact_method:
+  - state_discovery_primary.yaml
+  - case_record.yaml
+  - contradictions.yaml
+  - claim_graph.yaml
+  - video_findings.yaml
+  evidence_counsel:
+  - state_discovery_primary.yaml
+  - field_tests.yaml
+  - lab_findings.yaml
+  - evidence_inventory.yaml
+  - source_manifest.yaml
+  - visual_evidence_index.yaml
+  nc_authority_counsel:
+  - argument_bank.yaml
+  - template_bank.yaml
+  - ../../../jurisdiction/north_carolina/README.md
+  cross_examination_engineer:
+  - video_findings.yaml
+  - contradictions.yaml
+  - claim_graph.yaml
+  state_red_team:
+  - state_discovery_primary.yaml
+  - case_record.yaml
+  - lab_findings.yaml
+  - video_findings.yaml
+  - defense_intelligence.yaml
+  preservation_counsel:
+  - contradictions.yaml
+  - source_manifest.yaml
+  - argument_bank.yaml
+rule: load_minimum_needed_compiled_files; do_not_hydrate_entire_corpus_for_simple_questions
