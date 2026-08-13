@@ -113,7 +113,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)
 - [`skills/_archived/`](skills/_archived/) — retired skill packs (not discoverable; do not activate)
 - [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring
-- [`skills/l9-aws-secrets/SKILL.md`](skills/l9-aws-secrets/SKILL.md) — AWS SM refs via `ops/secrets` (Governance SSOT)
+- [`skills/l9-aws-secrets/SKILL.md`](skills/l9-aws-secrets/SKILL.md) — AWS SM + Infisical Cursor-Governance vault via `ops/secrets`
 - [`skills/l9-ui-operator/SKILL.md`](skills/l9-ui-operator/SKILL.md) — SaaS UI console when API is insufficient (explicit-only)
 
 ### Learning

@@ -1,0 +1,7 @@
+# Adapter display metadata for this Skill pack.
+# Canonical path: agents/meta.yaml (never agents/openai.yaml).
+# Keep discovery triggers in SKILL.md frontmatter; this file is display-only.
+interface:
+  display_name: "L9 Secrets"
+  short_description: "AWS + Infisical credential resolution without printing values"
+  brand_color: "#1E3A5F"

@@ -557,3 +557,20 @@ where they conflict):
 8. Running symlink setup from inside `~/.cursor-governance` must **not** create
    a `.cursor-commands` self-alias (setup removes it). Prefer wiring consumers,
    not the SSOT clone.
+
+<!-- INFISICAL_CURSOR_GOVERNANCE_VAULT_V1 -->
+## Infisical Cursor-Governance vault (2026-08-13) — extends §2.6
+
+Authoritative additions (do not treat older §2.6 bullets as Infisical-unaware):
+
+1. Long-term secret **values** for this agent live in Infisical project
+   **Cursor-Governance** (`slug: cursor-governance`, env `prod`, path `/`
+   as env-var names). Inventory of IDs/key names:
+   `ops/secrets/infisical-cursor-governance.yaml`.
+2. AWS `openclaw-igorbot/*` remains the name-inventory SSOT and the chicken-egg
+   Universal Auth bootstrap. Hydrate Infisical from
+   `openclaw-igorbot/infisical-cursor-governance`
+   (`INFISICAL_CLIENT_ID` / `_SECRET` / `INFISICAL_PROJECT_ID` / `INFISICAL_ENV=prod`).
+3. Skill `l9-aws-secrets` covers **both** vaults. Agents MUST resolve via that
+   skill before asking the human. Values never in git/logs/chat.
+4. Re-port AWS → Infisical: `python3 ops/secrets/port_aws_to_infisical.py`.

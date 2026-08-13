@@ -58,7 +58,7 @@ tiers:
     - skill: "l9-graphiti-memory"
       use_when: "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     - skill: "l9-aws-secrets"
-      use_when: "resolving openclaw-igorbot AWS Secrets Manager refs, syncing the Cursor-Governance ops/secrets registry from AWS, or fail-closed secret checks without Keychain"
+      use_when: "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
 
   explicit_only:
     - skill: "l9-forge"
@@ -425,6 +425,12 @@ claude_routing:
         - sync_secrets_registry
         - resolve_secret
         - aws secrets manager ref
+        - infisical
+        - infisical-cursor-governance
+        - cursor-governance project
+        - hydrate infisical
+        - INFISICAL_PROJECT_ID
+        - port_aws_to_infisical
       supporting:
         - l9-structured-reasoning
     - id: performance_audit
