@@ -94,7 +94,10 @@
           "explore the codebase",
           "identify hotspots",
           "analyze this code",
-          "code analysis"
+          "code analysis",
+          "extract patterns",
+          "pattern detector",
+          "extract_align"
         ],
         "primary": "l9-code-analysis",
         "signal_weight": 8,
@@ -354,7 +357,10 @@
           "security vulnerabilities",
           "security audit",
           "harden before release",
-          "review code for security risks"
+          "review code for security risks",
+          "validate security",
+          "security validator",
+          "hardcoded API keys"
         ],
         "primary": "l9-auditing-security",
         "signal_weight": 8,
@@ -1055,6 +1061,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "93ffcb4ae3f16b2a7145d02a6a86214b090b4e17d22d8c80a39634d69ba7f223",
-  "source_skill_corpus_sha256": "4b787ff80241d950b822d5bbbed5fb2323f586c26d8a3c2516dbb03c9e1a49c1"
+  "source_manifest_sha256": "399a9236b589466bd022ff4a0280ed0637ce44b921a9660e2c4bc5f297a1d3a4",
+  "source_skill_corpus_sha256": "d837db18fb1e7d33059c7256ed8c0c444f944fea420a850207eaf00b6e763a19"
 }

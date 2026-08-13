@@ -28,6 +28,7 @@ Perform a systematic code-level security review: secrets exposure, auth/authz, i
 | Dependencies | `npm audit`, `pip audit`, CVEs | High / Medium |
 | Headers | CORS, CSP, HSTS, frame options | Medium |
 | Data exposure | API fields, errors, logs | High / Medium |
+| Workflow credentials | n8n/L9/Supabase nodes (presence-gated) | High |
 
 ## Authority Order
 
@@ -72,7 +73,12 @@ Perform a systematic code-level security review: secrets exposure, auth/authz, i
    - Verify error messages don't expose stack traces or internal details in production.
    - Check logging for sensitive data being written to logs.
 
-7. **Generate report** — produce a summary with severity ratings (Critical / High / Medium / Low) for each finding, with the file path, line number, and recommended fix.
+7. **Workflow credential lint (presence-gated)** — run only when the scope contains n8n, `.L9.json`, or Supabase workflow/schema files. Skip this check when those files are absent (do not invent a parser). When present:
+   - Prefer `predefinedCredentialType` (or equivalent named credential refs) over hardcoded headers / API keys in nodes.
+   - Flag L9/n8n node names that use emojis or sensitive tokens (secret, password, token, key) in the visible name.
+   - Report as High; do not echo secret values.
+
+8. **Generate report** — produce a summary with severity ratings (Critical / High / Medium / Low) for each finding, with the file path, line number, and recommended fix.
 
 ## Notes
 

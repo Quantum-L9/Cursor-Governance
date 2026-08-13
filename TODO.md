@@ -226,7 +226,7 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 | # | Path | Status | Notes |
 |---|------|--------|-------|
 | B1 | **`profiles/`** | EXISTS (~12 files) | README DEPRECATED; `session-startup-protocol.md` confirmed dead. Content migrated into skills/rules. Update `AUTONOMY_MANIFEST.yaml` `sources` that still cite `profiles/*` before delete. |
-| B2 | **`key components/`** | EXISTS (~9 files) | Stub agent docs; almost no live refs. |
+| B2 | **`key components/`** | ABSENT (absorbed 2026-08-13) | Unique deltas folded into live skills; stubs deleted. See B2 supersession below. |
 | B3 | **`pipeline/`** | EXISTS (3 markdown files) | Doc-only; no hooks/Makefile. |
 | B4 | **`security/`** (repo root docs) | EXISTS (2 files) | Mostly cited from deprecated profiles; not `foundation/security`. |
 | B5 | **`commands/_archived/`** | EXISTS (17 files) | Skipped by commands manifest generator; candidates for hard-delete after retention window. |
@@ -236,6 +236,20 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 | B9 | **`ops/scripts/verify-startup-files.sh`**, **`deploy_cursorrules_global.sh`**, **`README_STARTUP_VERIFICATION.md`** | ABSENT | Already purged with `ops/scripts/_archived` — close the open TODO bullets above as done/stale. |
 | B10 | **`Activation Command.md`** | EXISTS | One-line pointer; unused by hooks. |
 | B11 | **`ops/graphiti/memory-bank-template/`** (non-`RETIRED.md` stubs) | check | Policy: archival only; keep `RETIRED.md` or fold into `MEMORY_BANK_POLICY.md`. |
+
+**B2 supersession (2026-08-13)** — `key components/` stubs deleted; unique deltas absorbed (no new skills, no CLIs, no auto-apply):
+
+| Stub | Successor |
+|------|-----------|
+| 01 pattern-detector | `l9-code-analysis` `references/pattern-alignment.md` + `/extract_align` |
+| 03 error-corrector | `l9-pr-remediation` + `l9-issue-remediation` `references/fix-engine.md` lesson recall |
+| 04 deployment-orchestrator | skipped — `l9-ci-ops` workflow-governance + `make pr` |
+| 05 workflow-explainer | skipped — `/analyze` flow mapping; no `.L9.json` in repo |
+| 06 refactor-assistant | `l9-code-maintenance` `references/refactor-sweep-protocol.md` Discovery |
+| 06 security-validator | `l9-auditing-security` presence-gated workflow credential lint |
+| 07 session-rebuilder | skipped — Graphiti inject / `l9-graphiti-memory` |
+| 09 monitor-agent | skipped — `check_governance_wiring.sh` on-demand |
+| 10 folder-reorganizer | skipped — CANONICAL_LAW + `l9-repository-renovation` |
 
 ### Tier C — judgment required (do not bulk-delete)
 

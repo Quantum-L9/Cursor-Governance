@@ -99,7 +99,7 @@ No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
    - Debt when toolchain/baseline red → [references/debt-remediation.md](references/debt-remediation.md) + `scripts/debt_audit.py`
    - Details: [references/signal-ingestion.md](references/signal-ingestion.md)
 3. **Classify once.** Ownership (`CODEBASE` / `CI_PIPELINE` / `HUMAN` / `FALSE_POSITIVE`) then severity. Cluster by root cause. [references/finding-classifier.md](references/finding-classifier.md) + [references/ownership-boundary.md](references/ownership-boundary.md)
-4. **Fix the full safe batch concurrently.** All codebase clusters this cycle. Skip only true human-product forks and CI-pipeline surfaces (note them). Methodology: [references/fix-engine.md](references/fix-engine.md) + scanner refs. Do not commit yet.
+4. **Fix the full safe batch concurrently.** All codebase clusters this cycle. Skip only true human-product forks and CI-pipeline surfaces (note them). Methodology: [references/fix-engine.md](references/fix-engine.md) (**Lesson Recall** before inventing a patch) + scanner refs. Do not commit yet.
 5. **Local verify (blocking).** Every local gate green. On fail: fix and re-run all. ≤5 iterations.
 6. **Commit + push once.** Conventional message; trailer `Remediation-Cycle: {repo}#{pr}/cycle-{N}`.
 7. **Reply.** Canonical replies; resolve completed threads. [references/review-replies.md](references/review-replies.md)
@@ -127,7 +127,7 @@ On the final observed head SHA:
 - [references/ownership-boundary.md](references/ownership-boundary.md) — codebase vs CI vs human
 - [references/signal-ingestion.md](references/signal-ingestion.md)
 - [references/finding-classifier.md](references/finding-classifier.md)
-- [references/fix-engine.md](references/fix-engine.md)
+- [references/fix-engine.md](references/fix-engine.md) — includes lesson recall against `learning/failures/repeated-mistakes.md` + `learning/patterns/quick-fixes.md`
 - [references/review-replies.md](references/review-replies.md)
 - [references/convergence-loop.md](references/convergence-loop.md) — 15s poll, early stop
 - [references/validation-gates.md](references/validation-gates.md) — inline cycle proofs (not deliverables)

@@ -112,7 +112,7 @@ No tarballs, run-report schemas, or issue-file bundles.
    issue comments (`<!-- l9-issue-remediation:... -->`).
 1. **Discover gates (read-only)** in the owning repo.
 2. **Ingest** issues via scripts; classify ownership + severity; cluster.
-3. **Fix** the full safe codebase batch for this cluster (concurrent when independent).
+3. **Fix** the full safe codebase batch for this cluster (concurrent when independent). Methodology: [references/fix-engine.md](references/fix-engine.md) (**Lesson Recall** before inventing a patch).
 4. **Local verify** → one commit/push with trailer
    `Issue-Remediation-Cycle: {owner}/{repo}#{n}/cycle-{N}`.
 5. **PR handoff** when a PR must go green.
@@ -138,7 +138,7 @@ No tarballs, run-report schemas, or issue-file bundles.
 - [references/ownership-boundary.md](references/ownership-boundary.md)
 - [references/finding-classifier.md](references/finding-classifier.md)
 - [references/cross-repo-routing.md](references/cross-repo-routing.md)
-- [references/fix-engine.md](references/fix-engine.md)
+- [references/fix-engine.md](references/fix-engine.md) — includes lesson recall against `learning/failures/repeated-mistakes.md` + `learning/patterns/quick-fixes.md`
 - [references/convergence-loop.md](references/convergence-loop.md)
 - [references/handoff-to-pr-remediation.md](references/handoff-to-pr-remediation.md)
 - [references/unblock-breadcrumb.md](references/unblock-breadcrumb.md)

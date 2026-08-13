@@ -256,6 +256,9 @@ claude_routing:
         - identify hotspots
         - analyze this code
         - code analysis
+        - extract patterns
+        - pattern detector
+        - extract_align
       supporting:
         - l9-structured-reasoning
     - id: structured_reasoning
@@ -455,6 +458,9 @@ claude_routing:
         - security audit
         - harden before release
         - review code for security risks
+        - validate security
+        - security validator
+        - hardcoded API keys
       supporting:
         - l9-structured-reasoning
     - id: prompt_engineering
