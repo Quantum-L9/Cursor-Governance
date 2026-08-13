@@ -13,6 +13,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(realpath "${BASH_SOURCE[0]}")")" && pwd)"
 INSTALLER="$SCRIPT_DIR/install_ide_profile.sh"
+# Test the tree that contains this installer, not $HOME/.cursor-governance.
+export L9_IDE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)/environment/ide"
 
 FIXTURE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/l9-ide-profile-test.XXXXXX")"
 trap 'rm -rf "$FIXTURE_ROOT"' EXIT
@@ -62,8 +64,12 @@ run_installer "$WS" >/dev/null
 check "settings.json created" "yes" "$([ -f "$WS/.vscode/settings.json" ] && echo yes || echo no)"
 check "stamp created" "yes" "$([ -f "$WS/.vscode/.l9-ide-desired-hash" ] && echo yes || echo no)"
 check "biome owns typescript" '{"editor.defaultFormatter":"biomejs.biome"}' "$(json_get "$WS/.vscode/settings.json" '[typescript]')"
+check "biome owns json" '{"editor.defaultFormatter":"biomejs.biome"}' "$(json_get "$WS/.vscode/settings.json" '[json]')"
+check "jsonc uses vscode json language features" '{"editor.defaultFormatter":"vscode.json-language-features"}' "$(json_get "$WS/.vscode/settings.json" '[jsonc]')"
 check "ruff owns python" 'charliermarsh.ruff' "$(python3 -c '
 import json,sys; print(json.load(open(sys.argv[1]))["[python]"]["editor.defaultFormatter"])' "$WS/.vscode/settings.json")"
+check "ruff nativeServer on" '"on"' "$(json_get "$WS/.vscode/settings.json" 'ruff.nativeServer')"
+check "ruff importStrategy fromEnvironment" '"fromEnvironment"' "$(json_get "$WS/.vscode/settings.json" 'ruff.importStrategy')"
 
 echo "=== eslint_owned: named exception ==="
 WS="$FIXTURE_ROOT/Website-Bot"

@@ -507,3 +507,22 @@ they conflict):
 3. Active additive paths under §9: `ops/graphiti/hydration/openai_fixed_host.py`
    (Sonar-clean Phase B / worker transport) and `ops/graphiti/distill_queue/`
    (SessionEnd enqueue + GHA worker; redacted excerpts only).
+
+<!-- CHAT_TRANSCRIPT_S3_ARCHIVE_V1 -->
+## Closed-chat word archive (2026-08-13) — supersedes §9 `export_chats.sh` / mining dumps
+
+Authoritative corrections (do not treat older §9 “do not archive” bullets as SSOT):
+
+1. `ops/scripts/export_chats.sh`, `parse_chat_exports.py`, `install_export_job.sh`,
+   and `process_learnings.sh` are **retired**. Hourly sqlite/txt dumps and the
+   tenx `com.tenx.learning-processor` → `memory_aggregator.py` Dropbox path are
+   retired. See `ops/scripts/RETIRED_export_chats_and_learning_processor.md`.
+2. When a chat is X'd out (`sessionEnd`), the **words** (user/assistant text)
+   plus timestamps/meta are archived to S3
+   `l9-chat-transcripts-020125249784` key `v1/<conversation_id>.json`.
+   No sqlite, no tool dumps, no git_status noise. Cross-machine SSOT is S3,
+   not GitHub and not a local disk.
+3. Graphiti distill queue remains **excerpts only** for memory. Full words for
+   later mining live in the transcript bucket.
+4. Operator: `python -m ops.graphiti.hydration.archive_transcript`
+   (`--session-id` or `--backfill`). Env `L9_CHAT_TRANSCRIPT_S3_BUCKET`.

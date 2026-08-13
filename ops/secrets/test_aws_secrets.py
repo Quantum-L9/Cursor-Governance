@@ -204,5 +204,37 @@ class ResolveSecretTests(unittest.TestCase):
         )
 
 
+class PortAwsToInfisicalTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.port = _load("port_aws_to_infisical")
+
+    def test_dry_run_never_emits_secret_values(self) -> None:
+        secret = "sk-live-SUPER-SECRET-VALUE-9f3a"
+        lines = self.port.format_dry_run(
+            aws_ids=["openclaw-igorbot/github"],
+            used_env={"GITHUB_TOKEN": f"openclaw-igorbot/github#{secret}"},
+            structured_counts={"github": 1},
+            skipped_root_count=0,
+            root_count=1,
+        )
+        blob = "\n".join(lines)
+        self.assertNotIn(secret, blob)
+        self.assertIn("/ GITHUB_TOKEN", blob)
+        self.assertIn("openclaw-igorbot/github", blob)
+        self.assertIn("count=1", blob)
+
+    def test_die_message_is_status_only(self) -> None:
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            with self.assertRaises(SystemExit) as raised:
+                self.port._die("create failed", status=409)
+            self.assertEqual(raised.exception.code, 1)
+            text = err.getvalue()
+        self.assertIn("create failed", text)
+        self.assertIn("status=409", text)
+        self.assertNotIn("secretValue", text)
+        self.assertNotIn("sk-", text)
+
+
 if __name__ == "__main__":
     unittest.main()

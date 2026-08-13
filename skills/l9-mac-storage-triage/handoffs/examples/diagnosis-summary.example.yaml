@@ -1,0 +1,7 @@
+report_id: "20260721T143000-host"
+classifications:
+  - path: "/Users/operator/Library/Mail"
+    classification: "reclaimable_cache"
+    evidence: "Local Mail store measured during targeted scan; server-backed status still requires confirmation."
+accounting_gap_status: "unresolved"
+write_actions_proposed: false

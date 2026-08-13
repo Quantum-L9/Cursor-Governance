@@ -35,7 +35,9 @@ live in each tool’s native config (keep them in sync when adding scanners):
 | Surface | How WIP is excluded |
 |---|---|
 | pre-commit | root `exclude` regex includes `WIP/` |
-| ruff / mypy / pytest | `pyproject.toml` exclude / `norecursedirs` |
+| ruff / mypy / pytest | `pyproject.toml` exclude / `norecursedirs` + `.ruffignore` |
+| biome | `biome.json` `files.includes` `!**/WIP` + `.biomeignore` |
+| semgrep | root `.semgrepignore` (`WIP/`) |
 | gitleaks (`make pr-security`) | `.gitleaks.toml` allowlist + `run_pr_security.sh` prefixes |
 | changed-file PR gate | `ops/scripts/resolve_changed_files.sh` scratch prefixes |
 | SonarCloud | `sonar.exclusions` + `sonar.cpd.exclusions` |

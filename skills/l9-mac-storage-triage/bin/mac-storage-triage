@@ -1,0 +1,53 @@
+#!/bin/bash
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMMAND="${1:-help}"
+shift || true
+
+case "$COMMAND" in
+  run) exec "$ROOT_DIR/scripts/mode-run.sh" "${1:-diagnose}" ;;
+  diagnose) exec "$ROOT_DIR/scripts/00-diagnose.sh" "$@" ;;
+  summarize) exec "$ROOT_DIR/scripts/01-summarize.sh" "$@" ;;
+  inventory) exec "$ROOT_DIR/scripts/07-inventory-noise.sh" "$@" ;;
+  findings) exec "$ROOT_DIR/scripts/09-emit-findings.sh" "$@" ;;
+  scan) exec "$ROOT_DIR/scripts/scan-ncdu.sh" "$@" ;;
+  open-scan)
+    [ -s "$ROOT_DIR/.state/latest-ncdu-scan" ] || { echo "No saved ncdu scan found." >&2; exit 1; }
+    command -v ncdu >/dev/null 2>&1 || { echo "ncdu is not installed." >&2; exit 1; }
+    exec ncdu -f "$(cat "$ROOT_DIR/.state/latest-ncdu-scan")"
+    ;;
+  init-env) exec "$ROOT_DIR/scripts/02-initialize-env.sh" "$@" ;;
+  validate) exec "$ROOT_DIR/scripts/03-validate-env.sh" "$@" ;;
+  plan) exec "$ROOT_DIR/scripts/04-plan.sh" "$@" ;;
+  apply) exec "$ROOT_DIR/scripts/05-apply.sh" "$@" ;;
+  verify) exec "$ROOT_DIR/scripts/06-verify.sh" "$@" ;;
+  inspect-file) exec "$ROOT_DIR/scripts/inspect-sparse-file.sh" "$@" ;;
+  status)
+    printf 'root=%s\n' "$ROOT_DIR"
+    for f in diagnosis.complete env-validation.complete approved-plan.env apply.complete verification.complete; do
+      if [ -e "$ROOT_DIR/.state/$f" ]; then printf 'present=%s\n' "$f"; else printf 'missing=%s\n' "$f"; fi
+    done
+    ;;
+  help|-h|--help)
+    cat <<'EOF_HELP'
+mac-storage-triage commands:
+  run diagnose             Read-only baseline + noise inventory + summary (default)
+  run repair               Plan allowlisted cache/docker/trash purge; stop for HITL
+  run autonomy             Diagnose then purge allowlisted noise without extra review
+  diagnose                 Low-level read-only baseline only
+  summarize                Evidence summary without cleanup recommendations
+  inventory                Bounded cache/docker/trash inventory
+  findings                 Refresh FINDINGS.txt + findings.json from latest diagnosis
+  scan [absolute-path]     Save one reusable ncdu scan
+  open-scan                Open the latest saved ncdu scan instantly
+  init-env                 Create .env from diagnosed machine facts
+  validate                 Fail-closed environment and action validation
+  plan                     Generate and hash the exact remediation plan
+  apply                    Execute only approved and validated actions
+  verify                   Reconcile free space and action outcomes
+  inspect-file PATH        Compare logical and allocated size of one file
+  status                   Show playbook state receipts
+EOF_HELP
+    ;;
+  *) echo "Unknown command: $COMMAND" >&2; exit 1 ;;
+esac

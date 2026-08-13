@@ -39,6 +39,10 @@
       "ownership_via": "agentdocs",
       "note": "Rendered as a CLAUDE.md ownership statement, not an editor.defaultFormatter key."
     },
+    "vscode-json": {
+      "ownership_via": "agentdocs",
+      "note": "JSONC only. Cursor binds vscode.json-language-features; Biome's editor extension cannot format jsonc."
+    },
     "ruff": {
       "ownership_via": "agentdocs",
       "note": "Rendered as a CLAUDE.md ownership statement, not an editor.defaultFormatter key."
