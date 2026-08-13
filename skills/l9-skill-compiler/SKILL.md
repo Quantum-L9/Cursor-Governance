@@ -1,6 +1,7 @@
 ---
 name: l9-skill-compiler
 description: compile prompts, sops, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into standalone zero-stub skill packs. use when the user asks to create, design, analyze, rebuild, validate, package, or improve reusable agent skills, chatgpt-compatible skill folders, model-agnostic skill packs, or tool-using agent workflows.
+paths: "skills/**"
 metadata:
   skill_schema: 1
   layer: control_plane
