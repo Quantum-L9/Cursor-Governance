@@ -1,6 +1,7 @@
 ---
 name: l9-ci-ops
 description: ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.
+paths: ".github/workflows/**, Makefile, .pre-commit-config.yaml"
 disable-model-invocation: true
 metadata:
   skill_schema: 1
