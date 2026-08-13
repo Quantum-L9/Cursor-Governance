@@ -86,9 +86,10 @@ Graphiti env is inherited from the Mac — not recreated per clone.
 |----------|-----|-----|
 | `GRAPHITI_MCP_URL` | `http://127.0.0.1:8100/mcp/` | N/A |
 | `GRAPHITI_MCP_TOKEN` | Keychain or secrets file | `/opt/graphiti-cursor/graphiti.env` |
-| `OPENAI_API_KEY` | **Never** | VPS only |
+| `OPENAI_API_KEY` | **Never long-lived** in `graphiti.env` / disk. Ephemeral process resolve from AWS SM `l9/OPENAI_API_KEY` is OK for SessionEnd Phase B / local distill worker only | VPS `graphiti.env` for Graphiti server embeddings |
 | `NEO4J_PASSWORD` | **Never** | VPS only |
 | SSH key | `~/.ssh/` or keychain | N/A |
+| `MEMORY_DISTILL_S3_BUCKET` | Optional; enables SessionEnd S3 enqueue | N/A (GHA uses repo var) |
 
 ---
 
@@ -107,7 +108,8 @@ python3 -c "import sys; sys.path.insert(0,'.cursor-commands/ops/graphiti'); from
 |-------|------------|
 | Commit `graphiti.env` to any repo | Machine + keychain |
 | Copy example into each clone | `init_graphiti_machine_env.sh` once |
-| Put VPS `OPENAI_API_KEY` on Mac | VPS `graphiti.env` only |
+| Put VPS `OPENAI_API_KEY` on Mac long-lived | Ephemeral SM resolve for Phase B / GHA only; VPS `graphiti.env` for server |
+| Reintroduce Dropbox LaunchAgent distill | GHA `memory-distill.yml` + S3 queue |
 | Require `/start-session` before env exists | `sessionStart` bootstrap + defaults |
 
 ---

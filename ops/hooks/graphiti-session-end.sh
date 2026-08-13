@@ -100,9 +100,13 @@ CLOSE_ARGS=(
 # Ensure cwd for any incidental resolve matches the project (close passes --project-dir)
 cd "$REPO" || true
 
-if REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+# Capture stdout even when close exits 2 (enqueue fail-loud after Phase A success).
+REPORT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     "$PY" -m ops.graphiti.hydration.cli close \
-    "${CLOSE_ARGS[@]}" 2>/dev/null)"; then
+    "${CLOSE_ARGS[@]}" 2>/dev/null)"
+CLOSE_RC=$?
+
+if [[ -n "$REPORT" ]]; then
   echo "$REPORT" | python3 -c '
 import sys, json
 try:
@@ -111,20 +115,27 @@ except Exception:
     print("INFO: session close finished (unparsed)", file=sys.stderr)
     raise SystemExit(0)
 status = d.get("status", "?")
-writes = len(d.get("writes") or [])
-agent = (d.get("receipt") or {}).get("agent_id") or d.get("agent_id") or ""
-gid = d.get("group_id") or ""
+writes = int(d.get("write_count") or 0)
+warns = int(d.get("warning_count") or 0)
 print(
-    "INFO: session close status=%s writes=%s group=%s agent=%s"
-    % (status, writes, gid, agent),
+    "INFO: session close status=%s writes=%s warnings=%s phase_a=%s phase_b=%s"
+    % (status, writes, warns, bool(d.get("phase_a")), bool(d.get("phase_b"))),
     file=sys.stderr,
 )
 if status == "idempotent_skip":
     print("INFO: close receipt already present — skipped duplicate writes", file=sys.stderr)
-for w in d.get("warnings") or []:
-    print("WARN: %s" % w, file=sys.stderr)
+if d.get("phase_b"):
+    print("INFO: Phase B distill completed", file=sys.stderr)
+if d.get("enqueue_ok") is False:
+    print("ERROR: distill S3 enqueue failed", file=sys.stderr)
+if d.get("enqueue_ok") is True:
+    print("INFO: distill job enqueued", file=sys.stderr)
 ' 2>&1 || echo "INFO: session close finished" >&2
-else
+elif [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]]; then
   echo "WARN: session close failed — Phase A may be missing; use /end-session force-retry" >&2
+fi
+# Fail-loud on enqueue (cli exit 2); keep Graphiti availability fail-open otherwise.
+if [[ "${CLOSE_RC:-0}" == "2" ]]; then
+  exit 2
 fi
 exit 0

@@ -1,57 +1,54 @@
 #!/usr/bin/env bash
-# L9 Transcript Distiller — daily cron wrapper
-# Runs at 5am via launchd, distills yesterday's transcripts.
+# RETIRED (2026-08-12): Mac LaunchAgent / Dropbox daily cron path.
 #
-# Logs: ~/.cursor-governance/ops/logs/distiller_cron.log
-# Reports: ~/.cursor-governance/ops/logs/distiller_reports/
+# Batch distill no longer runs on the laptop. SessionEnd enqueues a redacted
+# job to S3; GitHub Actions workflow memory-distill.yml processes the queue
+# (OpenAI via AWS SM → Graphiti HTTPS). This wrapper remains as a local
+# operator entrypoint that invokes the same worker module.
+#
+# One-time unload of the old LaunchAgent (if still present):
+#   launchctl bootout "gui/$(id -u)/com.l9.transcript-distiller" 2>/dev/null || true
+#   rm -f ~/Library/LaunchAgents/com.l9.transcript-distiller.plist
+#
+# Logs (legacy): ~/.cursor-governance/ops/logs/distiller_cron.log
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_DIR="$SCRIPT_DIR/../logs"
 LOG_FILE="$LOG_DIR/distiller_cron.log"
-L9_ROOT="$HOME/Projects/L9"
 
 mkdir -p "$LOG_DIR"
 
-echo "" >> "$LOG_FILE"
-echo "========================================" >> "$LOG_FILE"
-echo "[$(date)] Distiller cron started" >> "$LOG_FILE"
+{
+  echo ""
+  echo "========================================"
+  echo "[$(date)] Distiller worker (Graphiti queue) started"
+  echo "[$(date)] DEPRECATED LaunchAgent path — prefer GHA memory-distill.yml"
+} >> "$LOG_FILE"
 
-# Load env vars (API keys, model config)
-if [ -f "$L9_ROOT/.env.local" ]; then
-    set -a
-    source "$L9_ROOT/.env.local"
-    set +a
-fi
+PY="${GOV_ROOT}/.venv/bin/python3"
+[[ -x "$PY" ]] || PY="python3"
 
-# Calculate yesterday's date (macOS date syntax)
-YESTERDAY=$(date -v-1d +%Y-%m-%d)
-TODAY=$(date +%Y-%m-%d)
-
-echo "[$(date)] Processing transcripts from $YESTERDAY" >> "$LOG_FILE"
-
-# Run distiller for yesterday's transcripts
-python3 "$SCRIPT_DIR/transcript_distiller.py" \
-    --source transcripts \
-    --since "$YESTERDAY" \
-    --until "$TODAY" \
-    --l9-root "$L9_ROOT" \
-    >> "$LOG_FILE" 2>&1
-
+cd "$GOV_ROOT"
+set +e
+PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+  "$PY" -m ops.graphiti.distill_queue.worker "$@" >> "$LOG_FILE" 2>&1
 EXIT_CODE=$?
+set -e
 
-if [ $EXIT_CODE -eq 0 ]; then
-    echo "[$(date)] Distiller completed successfully" >> "$LOG_FILE"
+if [[ "$EXIT_CODE" -eq 0 ]]; then
+  echo "[$(date)] Distiller completed successfully" >> "$LOG_FILE"
 else
-    echo "[$(date)] Distiller failed with exit code $EXIT_CODE" >> "$LOG_FILE"
+  echo "[$(date)] Distiller failed with exit code $EXIT_CODE" >> "$LOG_FILE"
 fi
 
-# Log rotation: keep under 2MB
-if [ -f "$LOG_FILE" ] && [ "$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)" -gt 2097152 ]; then
-    tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
-    echo "[$(date)] Log rotated" >> "$LOG_FILE"
+if [[ -f "$LOG_FILE" ]] && [[ "$(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0)" -gt 2097152 ]]; then
+  tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+  echo "[$(date)] Log rotated" >> "$LOG_FILE"
 fi
 
 echo "[$(date)] Distiller cron finished" >> "$LOG_FILE"
 echo "========================================" >> "$LOG_FILE"
+exit "$EXIT_CODE"
