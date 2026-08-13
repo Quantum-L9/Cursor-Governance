@@ -1,6 +1,6 @@
 ---
-description: "DEPRECATED — superseded by 03-graphiti-memory.mdc (Graphiti VPS). C1 read-only."
-globs: ["**/*"]
+description: DEPRECATED — superseded by 03-graphiti-memory.mdc (Graphiti VPS). C1 read-only.
+globs: '**/*'
 alwaysApply: false
 ---
 

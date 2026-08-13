@@ -1,0 +1,41 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+snapshot_date: 2026-08-12
+architecture_version: 0.6.0-rc1
+shared_case_brain:
+  compiled_snapshot: compiled/index.yaml
+  operator_fact_overlay: operator_fact_overlay.yaml
+  record_boundary: record_boundary.yaml
+  authority_matrix: authority_matrix.yaml
+  issue_matrix: issue_matrix.yaml
+  unknowns: unknowns.yaml
+  operational_conflicts: operational_conflicts.yaml
+  phase_router: phase_router.yaml
+  deadline_state: deadline_state.yaml
+concern_owners:
+  factual_truth: matlock_fact_method
+  controlling_law: nc_authority_counsel
+  procedural_posture: procedure_architect
+  evidentiary_record: evidence_counsel
+  witness_control: cross_examination_engineer
+  local_execution: catawba_local_counsel
+  downstream_preservation: preservation_counsel
+  prosecution_countercase: state_red_team
+  courtroom_presentation: courtroom_advocacy_counsel
+  option_integration: chief_synthesis
+  final_decision_and_execution: Igor_Beylin
+current_working_phase:
+  value: probable_cause_2026_08_21
+  status: CASE_FILE_REPORTED
+  live_confirmation_required: true
+current_common_goal:
+  value: most_favorable_lawful_outcome_for_Igor_Beylin
+  strategy_file: strategy_objective.yaml
+rules:
+- one_shared_state_multiple_independent_interpretations
+- cognition_inference_does_not_upgrade_fact_status
+- material_dissent_is_preserved
+- state_red_team_required_for_material_tactics
+- future_stage_review_required_when_implicated
+- final_action_requires_human_operator
+case_state_contract: case_state_contract.yaml

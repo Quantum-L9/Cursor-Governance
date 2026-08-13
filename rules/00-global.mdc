@@ -1,5 +1,5 @@
 ---
-description: "Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards."
+description: 'Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards.'
 alwaysApply: true
 ---
 

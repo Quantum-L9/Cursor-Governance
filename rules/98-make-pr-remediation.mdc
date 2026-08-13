@@ -1,5 +1,5 @@
 ---
-description: "After make pr opens a PR, spawn l9-pr-remediation poll worker"
+description: After make pr opens a PR, spawn l9-pr-remediation poll worker
 alwaysApply: true
 ---
 

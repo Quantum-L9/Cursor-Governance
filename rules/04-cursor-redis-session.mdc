@@ -1,5 +1,5 @@
 ---
-description: "Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia."
+description: Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia.
 alwaysApply: true
 ---
 

@@ -1,14 +1,8 @@
 ---
-id: l9.rule.recursive-execution-kernel
-version: 1.0.0
 description: Domain-neutral convergence kernel for complete, source-grounded, validated deliverables.
-scope: global
-domain: execution
-activation: agent_requested
-authority: canonical_global
-context_cost: minimal
 alwaysApply: false
 ---
+
 # Recursive Execution Kernel
 
 ## Objective

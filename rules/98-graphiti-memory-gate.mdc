@@ -1,6 +1,5 @@
 ---
 description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
-globs: ["**/*"]
 alwaysApply: true
 ---
 

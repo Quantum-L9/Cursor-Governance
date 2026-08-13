@@ -1,10 +1,6 @@
 ---
-description: "Observability and performance rules for L9 runtime, agents, memory, and orchestration."
-globs:
-  - "l9/runtime/**/*"
-  - "l9/core/agents/**/*"
-  - "l9/memory/**/*"
-  - "l9/orchestration/**/*"
+description: Observability and performance rules for L9 runtime, agents, memory, and orchestration.
+globs: l9/runtime/**/*, l9/core/agents/**/*, l9/memory/**/*, l9/orchestration/**/*
 alwaysApply: false
 ---
 

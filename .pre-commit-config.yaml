@@ -39,6 +39,13 @@ repos:
         files: ^(rules/|skills/|commands/|environment/agents/adapters/claude-code/|environment/program-execution/)
         pass_filenames: false
 
+      - id: rules-check
+        name: Cursor-native rules standard (ratchet)
+        entry: python3 ops/scripts/check_rules_standard.py
+        language: system
+        files: ^(rules/|ops/scripts/check_rules_standard.py|ops/scripts/lib/rule_frontmatter.py)
+        pass_filenames: false
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Pin must match requirements.txt / l9-ci-sdk ruff==0.16.0 (sdk wins over core).
     rev: v0.16.0

@@ -1,0 +1,15 @@
+# Biome path exclusions (gitignore syntax).
+# Biome 2.5 reads files.includes in biome.json, not this file — keep WIP in both.
+# Do not add WIP/ to .gitignore — the tree is tracked backlog.
+
+WIP/
+current_work/
+C_GOV_FILES/
+reports/
+workflows/
+_archived/
+_archive/
+archive/
+archived/
+ops/generated/
+environment/generated/

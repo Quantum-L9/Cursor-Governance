@@ -1,0 +1,41 @@
+schema_version: '2.0'
+council_os_version: '2.0-rc1'
+purpose: Single control plane for task routing, cognition selection, leverage control, evidence/witness discipline, document production, and convergence QA.
+load_policy: progressive_minimum_needed
+
+control_contracts:
+  architecture: architecture_contract.yaml
+  status_semantics: status_contract.yaml
+  routing: task_router.yaml
+
+always_for_substantive_work:
+  - architecture_contract.yaml
+  - task_router.yaml
+  - leverage_gate.yaml
+
+conditional_modules:
+  - file: status_contract.yaml
+    use_for: [case_fact_status, evidence_status, courtroom_record_status, authority_status, decision_status]
+  - file: cognitive_engine.yaml
+    use_for: [analysis, theory, elements, strategy, prediction]
+  - file: execution_policy.yaml
+    use_for: [multi_step_work, material_tactics, deliverable_generation]
+  - file: evidence_protocol.yaml
+    use_for: [evidence, discovery, chronology, media, chain_of_custody, contradictions]
+  - file: witness_intelligence.yaml
+    use_for: [witness, cross_examination, impeachment, credibility]
+  - file: procedure_event_model.yaml
+    use_for: [deadlines, phase, forum, waiver, procedural_navigation]
+  - file: court_document_profiles.yaml
+    use_for: [filing, motion, memorandum, order, notice, certificate_of_service]
+  - file: document_build_contract.yaml
+    use_for: [drafting_any_external_legal_document]
+  - file: communications_guardrails.yaml
+    use_for: [public_statement, law_enforcement_contact, third_party_case_communication, disclosure]
+  - file: convergence_gate.yaml
+    use_for: [courtroom, filing, material_strategy, high_stakes_output]
+  - file: parked_methods.yaml
+    use_for: [explicit_civil_damages_or_settlement_work_only]
+
+source_provenance: harvest_manifest.yaml
+core_law: Council OS owns method only. Current case state, source claims, deadlines, and law remain controlled by the case-state and authority contracts.

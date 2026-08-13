@@ -1,0 +1,9 @@
+verification_id: "verify-20260721T160000"
+plan_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+free_kib_before: 5242880
+free_kib_after: 68157440
+action_results:
+  - action_id: "spotlight_exclusions"
+    status: "verified"
+    evidence: "Exclusion marker exists at the configured target."
+overall_status: "verified"

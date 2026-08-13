@@ -1,0 +1,45 @@
+# Absolute prefixes that repair/autonomy must never delete.
+# One path per line. Comments start with #.
+# User documents, projects, mail, cloud, and live software stay guarded.
+
+/
+/Users
+/System
+/Library
+/Applications
+/private
+/opt
+/usr
+
+# Home root and primary user data
+$HOME
+$HOME/Documents
+$HOME/Desktop
+$HOME/Downloads
+$HOME/Pictures
+$HOME/Movies
+$HOME/Music
+$HOME/Public
+
+# Cloud / File Provider
+$HOME/Library/CloudStorage
+$HOME/Library/ScreenRecordings
+
+# Mail and macOS app sandboxes
+$HOME/Library/Mail
+$HOME/Library/Containers
+
+# Live software, not residue
+$HOME/miniconda3/envs
+$HOME/miniconda3/bin
+$HOME/.cursor
+$HOME/.cursor-governance
+$HOME/.ssh
+$HOME/.gnupg
+$HOME/dev
+$HOME/odoo
+$HOME/n8n-mcp
+$HOME/Library/Application Support
+$HOME/Library/Group Containers
+$HOME/.local/share/tenx/scripts
+

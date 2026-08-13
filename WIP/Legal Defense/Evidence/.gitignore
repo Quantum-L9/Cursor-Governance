@@ -1,0 +1,23 @@
+# Media and local ASR toolchain stay off git.
+# Case work IS tracked: logs/, derived/transcripts/, this file.
+# Root .gitignore also has `logs/` and `*.log` — those are negated for this tree.
+
+originals/
+working/
+.venv/
+derived/frames/
+
+*.mp4
+*.MP4
+*.wav
+*.WAV
+*.jpg
+*.jpeg
+*.JPG
+*.JPEG
+*.png
+*.PNG
+*.heic
+*.HEIC
+*.mov
+*.MOV

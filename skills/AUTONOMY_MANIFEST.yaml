@@ -107,6 +107,8 @@ tiers:
       reason: "audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR — high blast radius, explicit only"
     - skill: "l9-ui-operator"
       reason: "SaaS admin UI mutations via Playwright cartridges — high blast radius; requires human approve"
+    - skill: "l9-mac-storage-triage"
+      reason: "macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only"
 
   do_not_migrate_to_skills:
     - item: "commands/violation.md"

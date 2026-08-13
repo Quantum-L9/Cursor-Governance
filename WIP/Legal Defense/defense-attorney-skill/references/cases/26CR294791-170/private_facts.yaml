@@ -1,0 +1,15 @@
+schema_version: "1.0"
+case_id: "26CR294791-170"
+load_policy: only_when_identity_or_filing_fields_are_required
+sensitivity: private_personal_case_data
+
+defendant:
+  name: Igor Beylin
+  address: "8523 Dennington Grove Ln, Charlotte, NC 28277"
+  phone: "704-698-5186"
+  concealed_handgun_permit_reported: "NC256332"
+
+rules:
+  - do_not_load_for_general_legal_reasoning
+  - do_not_repeat_private_fields_unless_task_requires_them
+  - verify_current_contact_fields_before_filing

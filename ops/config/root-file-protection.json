@@ -49,7 +49,11 @@
     { "path": ".env.template", "tier": "managed", "rule": "managed" },
     { "path": ".gitattributes", "tier": "managed", "rule": "managed" },
     { "path": ".gitignore", "tier": "managed", "rule": "managed" },
+    { "path": ".semgrepignore", "tier": "managed", "rule": "managed" },
+    { "path": ".ruffignore", "tier": "managed", "rule": "managed" },
+    { "path": ".biomeignore", "tier": "managed", "rule": "managed" },
     { "path": ".python-version", "tier": "managed", "rule": "managed" },
+    { "path": ".cursorignore", "tier": "managed", "rule": "managed" },
     { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" },
     { "path": "governance-health-report.json", "tier": "regenerable", "rule": "regenerable" },
     { "path": ".harvest_executor_state.json", "tier": "regenerable", "rule": "regenerable" }

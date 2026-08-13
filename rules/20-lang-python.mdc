@@ -1,8 +1,6 @@
 ---
-description: "Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo addon suites — use the repo's Odoo Python overlay rule."
-globs:
-  - "src/**/*.py"
-  - "!**/migrations/*.py"
+description: Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo addon suites — use the repo's Odoo Python overlay rule.
+globs: src/**/*.py, !**/migrations/*.py
 alwaysApply: false
 ---
 

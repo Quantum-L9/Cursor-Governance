@@ -1,0 +1,25 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+purpose: Track conflicts between working instructions, filing guides, execution rules, and strategy state that are not evidentiary source contradictions.
+rule: operational_conflicts_do_not_override_current_primary_law_court_orders_or_verified_live_posture
+conflicts:
+  - id: OC001
+    topic: contact_with_district_attorney_office
+    source_a_position: no_substantive_DA_contact_outside_courtroom
+    source_b_position: ministerial_contact_may_be_needed_for_service_logistics
+    status: VERIFY_SCOPE_BEFORE_ACTION
+    handling: distinguish ministerial service logistics from substantive case discussion; verify current service method before contact
+  - id: OC002
+    topic: electronic_filing_time_and_acceptance
+    source_a_position: submission_is_not_acceptance
+    source_b_position: working_guide_also_ties_deadline_to_system_receipt_time
+    status: PRIMARY_RULE_VERIFICATION_REQUIRED
+    handling: do_not_state_exact_filing_effect_or_deadline_from_working_guide_alone
+  - id: OC003
+    topic: charge_code_interpretation
+    status: RESOLVED_FOR_BUNDLED_SNAPSHOT
+    handling: use_compiled_AOC_CR_116_snapshot; later_superseding_instrument_controls_if_verified
+  - id: OC004
+    topic: probable_cause_dismissal_as_case_success_metric
+    status: RESOLVED_BY_CURRENT_ARCHITECTURE
+    handling: treat_PC_dismissal_as_phase_result_not_automatic_final_case_termination; reverify_current_law_when_material

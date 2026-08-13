@@ -1,22 +1,9 @@
 ---
-id: l9.rule.configuration.no-hardcode
-version: 2.0.0
 description: Keep environment-specific hosts, credentials, ports, and identifiers outside source code.
-scope: global
-domain: security
-activation: auto_attached
-authority: canonical_global
-context_cost: minimal
+globs: '**/*.sh, **/*.env*, **/Dockerfile*, **/docker-compose*.yml, **/docker-compose*.yaml, **/*config*.py, **/*config*.ts'
 alwaysApply: false
-globs:
-  - "**/*.sh"
-  - "**/*.env*"
-  - "**/Dockerfile*"
-  - "**/docker-compose*.yml"
-  - "**/docker-compose*.yaml"
-  - "**/*config*.py"
-  - "**/*config*.ts"
 ---
+
 # Configuration: Use Environment Inputs, Do Not Hardcode
 
 ## Rule

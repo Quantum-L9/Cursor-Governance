@@ -1,10 +1,5 @@
 ---
-description: "Testing and QA rules for AI OS agents, runtimes, and integrations."
-globs:
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
-  - "**/*.test.py"
-  - "**/__tests__/**/*"
+description: Testing and QA rules for AI OS agents, runtimes, and integrations.
 alwaysApply: true
 ---
 

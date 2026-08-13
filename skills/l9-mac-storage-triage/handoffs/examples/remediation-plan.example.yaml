@@ -1,0 +1,13 @@
+plan_id: "plan-20260721T150000"
+diagnosis_report_id: "20260721T143000-host"
+actions:
+  - action_id: "spotlight_exclusions"
+    target: "/Users/operator/.local/share/archive"
+    current_state: "Directory exists and is locally writable."
+    intended_change: "Create a .metadata_never_index marker."
+    guards:
+      - "Diagnosis receipt exists."
+      - "Target is not a File Provider root."
+    verification: "Marker exists after execution."
+plan_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+approval_required: true

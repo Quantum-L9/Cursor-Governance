@@ -1,15 +1,8 @@
 ---
-id: l9.rule.graph-layer-boundary
-version: 2.2.0
 description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
-scope: global
-domain: memory
-activation: always
-authority: canonical_global
-context_cost: minimal
 alwaysApply: true
-globs: ["**/*"]
 ---
+
 # Graph Layer Boundary
 
 | Layer | Tool | Answers |

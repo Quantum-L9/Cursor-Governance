@@ -1,5 +1,5 @@
 ---
-description: "L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation."
+description: 'L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.'
 alwaysApply: true
 ---
 

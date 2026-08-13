@@ -1,0 +1,388 @@
+note: Original frontmatter, pre-normalization. Undo record.
+files:
+  00-global.mdc:
+    description: 'Primary global rules for the L9 Secure AI OS monorepo: architecture invariants, safety, and universal coding standards.'
+    alwaysApply: true
+  01-git-push-prohibition.mdc:
+    description: 'NEVER commit or push to git without explicit user request. Push is #1 deployment risk.'
+    alwaysApply: true
+  01-vps-rules.mdc:
+    description: 'L9 production VPS reference: SSH, paths, Docker stack, Caddy routes, and local edit → push → pull workflow.'
+    alwaysApply: true
+  02-slash-commands.mdc:
+    description: Slash command recognition and execution - repo-agnostic governance protocols
+    globs:
+    - '**/*'
+    alwaysApply: true
+  03-graphiti-memory.mdc:
+    description: Graphiti episodic memory SSOT — retrieval authority, group_id contract, no Cursor native memory for repo facts
+    globs:
+    - '**/*'
+    alwaysApply: true
+  03-mcp-memory.mdc:
+    description: DEPRECATED — superseded by 03-graphiti-memory.mdc (Graphiti VPS). C1 read-only.
+    globs:
+    - '**/*'
+    alwaysApply: false
+  04-cursor-redis-session.mdc:
+    description: Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia.
+    alwaysApply: true
+  05-ask-mode.mdc:
+    description: Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
+    globs: []
+    alwaysApply: true
+  05-recursive-execution-kernel.mdc:
+    id: l9.rule.recursive-execution-kernel
+    version: 1.0.0
+    description: Domain-neutral convergence kernel for complete, source-grounded, validated deliverables.
+    scope: global
+    domain: execution
+    activation: agent_requested
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: false
+  10-lang-typescript.mdc:
+    description: TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
+    globs:
+    - '**/*.ts'
+    - '**/*.tsx'
+    - '!**/*.test.ts'
+    - '!**/*.test.tsx'
+    alwaysApply: false
+  20-lang-python.mdc:
+    description: Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo addon suites — use the repo's Odoo Python overlay rule.
+    globs:
+    - src/**/*.py
+    - '!**/migrations/*.py'
+    alwaysApply: false
+  22-context7-auto-invoke.mdc:
+    description: Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.
+    alwaysApply: true
+  23-l9-skill-routing.mdc:
+    description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints; fail closed if skipped.
+    alwaysApply: true
+  25-python-dora-header.mdc:
+    description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
+    globs:
+    - '**/*.py'
+    alwaysApply: true
+  30-framework-react.mdc:
+    description: React UI rules for AI OS control panels, consoles, and visualization surfaces.
+    globs:
+    - apps/web/**/*.tsx
+    - apps/web/**/*.jsx
+    - packages/ui/**/*.tsx
+    - packages/ui/**/*.jsx
+    alwaysApply: false
+  40-domain-autonomy.mdc:
+    description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.'
+    globs:
+    - src/agents/**/*.ts
+    - src/agents/**/*.py
+    - src/autonomy/**/*
+    - packages/agents/**/*
+    alwaysApply: false
+  43-lang-postgresql.mdc:
+    description: PostgreSQL schema, query, migration, and safety invariants.
+    globs:
+    - '**/*.sql'
+    - '**/migrations/**/*.sql'
+    - '**/schema.sql'
+    - '**/seed.sql'
+    - '**/alembic/**/*.py'
+    alwaysApply: false
+  45-pre-action-verification.mdc:
+    description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure.'
+    alwaysApply: true
+  50-qa-testing.mdc:
+    description: Testing and QA rules for AI OS agents, runtimes, and integrations.
+    globs:
+    - '**/*.test.ts'
+    - '**/*.test.tsx'
+    - '**/*.test.py'
+    - '**/__tests__/**/*'
+    alwaysApply: true
+  51-qa-playwright.mdc:
+    description: Playwright E2E test invariants for web UI flows.
+    globs:
+    - '**/*.spec.ts'
+    - '**/*.spec.tsx'
+    - '**/e2e/**/*.ts'
+    - '**/e2e/**/*.tsx'
+    - playwright.config.ts
+    - playwright.config.js
+    alwaysApply: false
+  52-qa-jest.mdc:
+    description: Jest unit test invariants for TypeScript and JavaScript.
+    globs:
+    - '**/*.test.ts'
+    - '**/*.test.tsx'
+    - '**/*.test.js'
+    - '**/*.test.jsx'
+    - '**/__tests__/**/*.ts'
+    - '**/__tests__/**/*.tsx'
+    - '**/__tests__/**/*.js'
+    - '**/__tests__/**/*.jsx'
+    - jest.config.ts
+    - jest.config.js
+    alwaysApply: false
+  60-anti-patterns.mdc:
+    description: Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections.
+    alwaysApply: true
+  61-secrets-and-dependencies.mdc:
+    description: Secrets handling and dependency/supply-chain rules for L9.
+    globs:
+    - '**/package.json'
+    - '**/package-lock.json'
+    - '**/requirements*.txt'
+    - '**/pyproject.toml'
+    - '**/*.env*'
+    - .env.example
+    - .github/workflows/**
+    alwaysApply: false
+  62-github-openclaw-authority.mdc:
+    description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask humans to operate github.com UI.
+    alwaysApply: true
+  65-observability-performance.mdc:
+    description: Observability and performance rules for L9 runtime, agents, memory, and orchestration.
+    globs:
+    - l9/runtime/**/*
+    - l9/core/agents/**/*
+    - l9/memory/**/*
+    - l9/orchestration/**/*
+    alwaysApply: false
+  70-tool-efficiency.mdc:
+    description: 'Developer tooling efficiency: terminal usage, command batching, context budgeting, and Cursor tool ergonomics.'
+    alwaysApply: true
+  71-ci-cd-pipeline.mdc:
+    description: CI/CD pipeline and policy enforcement rules for L9.
+    globs:
+    - .github/workflows/**/*.yml
+    - .github/workflows/**/*.yaml
+    - Makefile
+    - .gitlab-ci.yml
+    alwaysApply: false
+  72-review-ergonomics.mdc:
+    description: Review ergonomics, PR size guidance, and checklists for L9.
+    globs:
+    - .github/PULL_REQUEST_TEMPLATE*
+    - .github/ISSUE_TEMPLATE*
+    - '**/*.md'
+    alwaysApply: false
+  73-prompts-and-evals.mdc:
+    description: Prompt, kernel, and eval discipline for L9.
+    globs:
+    - config/kernels/**/*
+    - config/prompts/**/*
+    - evals/**/*
+    - scripts/eval_*.py
+    alwaysApply: false
+  74-ai-safety-policy.mdc:
+    description: AI content safety and policy rules for prompts and kernels in L9.
+    globs:
+    - config/kernels/**/*
+    - config/prompts/**/*
+    - policy/**/*
+    alwaysApply: false
+  80-gmp-execution.mdc:
+    description: 'GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.'
+    alwaysApply: true
+  81-gmp-audit.mdc:
+    description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
+    alwaysApply: true
+  82-deployment-manifest.mdc:
+    description: Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator prompts.
+    globs:
+    - docker-compose.yml
+    - deploy/**/*
+    - infra/**/*
+    - kubernetes/**/*
+    - helm/**/*
+    alwaysApply: false
+  83-gmp-contracts.mdc:
+    description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
+    alwaysApply: true
+  84-cursor-governance-wiring.mdc:
+    id: l9.rule.cursor-governance-wiring
+    version: 3.0.0
+    description: GlobalCommands loads as a Cursor local plugin, not a whole-directory rules symlink. Supersedes v2.0.0.
+    scope: global
+    domain: governance
+    activation: always
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: true
+    supersedes: l9.rule.cursor-governance-wiring@2.0.0
+  85-workflow-state-bridge.mdc:
+    description: 'Bridge Cursor runs to session resume: Graphiti PICKUP/inject SSOT; workflow_state.md legacy where present.'
+    alwaysApply: true
+  86-module-tier-mapping.mdc:
+    description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.
+    alwaysApply: true
+  87-cursor-memory-kernel.mdc:
+    description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, and session lifecycle
+    globs:
+    - '**/*'
+    alwaysApply: true
+  87-cursor-subagent-orchestration.mdc:
+    description: Govern Cursor-native concurrent subagent delegation.
+    alwaysApply: true
+  87-l4-local-autonomy.mdc:
+    description: L4 local autonomy — stacked local commits, no mid-execution push, kernels then PR template.
+    alwaysApply: true
+  87-wire-workflow-guard.mdc:
+    description: Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
+    globs:
+    - l9/**/orchestrator*.py
+    - l9/**/router*.py
+    - l9/**/controller*.py
+    - infra/**/*
+    - deploy/**/*
+    alwaysApply: false
+  88-bounded-session-autonomy.mdc:
+    description: Bounded session autonomy — parallel Tasks, background PR-poll while main continues, campaign authorization packet, no autonomous merge.
+    alwaysApply: false
+  88-perplexity-run-harness.mdc:
+    description: 'L9-specific Perplexity/Cursor harness: enforce surgical edits, no manual fallbacks, and batch spec generation.'
+    alwaysApply: true
+  88-shared-worktree-isolation.mdc:
+    description: Parallel agents must not scoop, revert, or branch-thrash foreign dirty work on a shared git clone.
+    alwaysApply: true
+  89-constellation-gate-workspace-session.mdc:
+    description: 'Constellation.Gate monorepo: one L9 Governance symlink set at repo root only; avoid duplicate .cursor under constellation-gate/.'
+    globs:
+    - '**/Constellation.Gate/**'
+    - '**/constellation-gate/**'
+    alwaysApply: true
+  90-protected-core.mdc:
+    description: 'Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.'
+    alwaysApply: true
+    globs:
+    - l9/kernel_loader.py
+    - l9/executor.py
+    - l9/websocket_orchestrator.py
+    - l9/memory_substrate_service.py
+    - docker-compose.yml
+    - infra/**/*
+    - deploy/**/*
+    - kubernetes/**/*
+    - helm/**/*
+  91-existing-code-source-of-truth.mdc:
+    description: Existing code is source of truth — new code adapts to established patterns
+    alwaysApply: true
+  92-learned-lessons.mdc:
+    description: Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.
+    alwaysApply: true
+  93-c1-server-protection.mdc:
+    description: 'C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval.'
+    alwaysApply: true
+  94-deployment-prohibition.mdc:
+    description: Prohibits AI agents from using the 10X deployment script.
+    globs: scripts/deployment/10X_Deploy_Script.sh
+    alwaysApply: true
+  95-agent-pattern-activation.mdc:
+    description: 'Agent pattern auto-activation: detect subsystem (auth, tools, memory, code) and required approval before mutations.'
+    alwaysApply: true
+  95-test-fix-policy.mdc:
+    id: l9.rule.testing.integrity
+    version: 2.0.0
+    description: Preserve test intent and fix root causes instead of manufacturing a green suite.
+    scope: global
+    domain: testing
+    activation: always
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: true
+  96-env-no-hardcode.mdc:
+    id: l9.rule.configuration.no-hardcode
+    version: 2.0.0
+    description: Keep environment-specific hosts, credentials, ports, and identifiers outside source code.
+    scope: global
+    domain: security
+    activation: auto_attached
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: false
+    globs:
+    - '**/*.sh'
+    - '**/*.env*'
+    - '**/Dockerfile*'
+    - '**/docker-compose*.yml'
+    - '**/docker-compose*.yaml'
+    - '**/*config*.py'
+    - '**/*config*.ts'
+  96-git-push-approval.mdc:
+    description: Git push requires explicit user approval — never auto-push
+    alwaysApply: true
+  96-output-discipline.mdc:
+    id: l9.rule.output-discipline
+    version: 1.0.0
+    description: Concise output discipline with one decision, no repetition, and explicit validation status.
+    scope: global
+    domain: output
+    activation: agent_requested
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: false
+  97-governance-ssot-paths.mdc:
+    id: l9.rule.governance-ssot-paths
+    version: 2.0.0
+    description: Use the local GitHub clone at $HOME/.cursor-governance as the sole governance root.
+    scope: global
+    domain: governance
+    activation: always
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: true
+  97-graph-engine-architecture.mdc:
+    description: 'Graph Engine architecture: chassis contract, gates, Cypher security, action handlers'
+    alwaysApply: true
+  97-graph-layer-boundary.mdc:
+    id: l9.rule.graph-layer-boundary
+    version: 2.2.0
+    description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
+    scope: global
+    domain: memory
+    activation: always
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: true
+    globs:
+    - '**/*'
+  97-ide-profile-exceptions.mdc:
+    id: l9.rule.ide-profile-exceptions
+    version: 1.0.0
+    description: IDE profile exceptions — eslint_owned workspaces and formatter exclusivity for governed editor settings.
+    scope: global
+    domain: governance
+    activation: agent_requested
+    authority: canonical_global
+    context_cost: minimal
+    alwaysApply: false
+  98-graphiti-memory-gate.mdc:
+    description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
+    globs:
+    - '**/*'
+    alwaysApply: true
+  98-make-pr-remediation.mdc:
+    description: After make pr opens a PR, spawn l9-pr-remediation poll worker
+    alwaysApply: true
+  99-execute-as-instructed.mdc:
+    description: Execute exactly as instructed — no autonomous reasoning or skipping steps
+    alwaysApply: true
+  99-graphiti-temporal.mdc:
+    description: Graphiti temporal contract — Supersedes, conflicts_with, bi-temporal invalidation
+    globs:
+    - '**/*'
+    alwaysApply: true
+  99-incident-report.mdc:
+    description: 'Governance incident reports: unauthorized deletion, VPS overstepping, corrective actions, and permanent enforcement lessons.'
+    alwaysApply: true
+  99-no-auto-commit.mdc:
+    description: Never auto-commit or auto-push without explicit user approval
+    alwaysApply: true
+resurrected:
+  93-perplexity-research-protocol.mdc:
+    prior_path: rules/93-perplexity-research-protocol.md
+    prior_frontmatter: null
+    note: Dead .md had no frontmatter; Stage 2 added shape-D agent-selected frontmatter.

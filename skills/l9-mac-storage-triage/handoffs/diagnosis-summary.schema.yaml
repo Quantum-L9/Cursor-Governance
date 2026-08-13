@@ -1,0 +1,24 @@
+---
+$schema: "http://json-schema.org/draft-07/schema#"
+title: DiagnosisSummary
+description: Classified findings derived only from diagnosis evidence.
+version: "1.0.0"
+type: object
+required: [report_id, classifications, accounting_gap_status, write_actions_proposed]
+properties:
+  report_id: {type: string, minLength: 1}
+  classifications:
+    type: array
+    items:
+      type: object
+      required: [path, classification, evidence]
+      properties:
+        path: {type: string}
+        classification:
+          type: string
+          enum: [confirmed_allocation, apparent_sparse_allocation, inaccessible_scope, cloud_managed_content, reclaimable_cache, archive_candidate, Unknown]
+        evidence: {type: string}
+      additionalProperties: false
+  accounting_gap_status: {type: string, enum: [reconciled, unresolved, Unknown]}
+  write_actions_proposed: {type: boolean, const: false}
+additionalProperties: false

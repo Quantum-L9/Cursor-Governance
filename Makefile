@@ -384,3 +384,8 @@ claude-deepseek:
 
 claude-deepseek-verify:
 	./scripts/verify-routing.sh
+
+.PHONY: rules-check
+## Cursor-native rules frontmatter + always-apply ratchet (docs/rules-standard.md).
+rules-check:
+	python3 ops/scripts/check_rules_standard.py

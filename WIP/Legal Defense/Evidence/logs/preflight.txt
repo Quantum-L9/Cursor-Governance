@@ -1,0 +1,24 @@
+# Preflight — 2026-08-13
+
+## Disk
+Filesystem /dev/disk3s5: 460Gi total, 382Gi used, 31Gi avail (93%).
+Threshold ≥15 GB before copy: Passed (31 Gi).
+
+## Source count
+Plan expected 50 files (4 mp4 + 45 jpg + 1 jpeg). That inventory was incomplete.
+
+Observed (find -type f, all match mp4|jpg|jpeg):
+- 4 mp4
+- 48 jpg (Axon_Capture_Photo_*)
+- 1 jpeg (IMG_7261_2.jpeg)
+- Total: 53
+
+No non-media files. Proceeding with 53 present files. Hard-stop “≠50” treated as planning undercount, not a mixed/unknown batch.
+
+ls -la on source dir shows 55 entries (2 dirs + 53 files).
+
+## Source (read-only)
+/Users/ib-mac/BODYCAM,PHOTOS
+
+## Custody
+/Users/ib-mac/Cursor-Governance/WIP/Legal Defense/Evidence

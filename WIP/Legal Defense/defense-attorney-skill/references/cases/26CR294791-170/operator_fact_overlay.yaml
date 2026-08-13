@@ -1,0 +1,191 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+contract: case_state_contract.yaml
+status_contract: ../../council_os/status_contract.yaml
+purpose: operator_firsthand_and_working_fact_overlay_not_primary_source_snapshot
+rules:
+- never_overwrite_compiled_source_history
+- never_treat_overlay_fact_as_current_record_without_record_event
+- preserve_legacy_status_for_traceability_only
+facts:
+- id: F001
+  proposition: defendant_stopped_immediately_and_safely_after_emergency_equipment
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF fact sequence para_6
+  legacy_status: CLIENT_REPORTED
+- id: F002
+  proposition: concealed_handgun_permit_was_volunteered_unprompted_before_request
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF para_8
+  legacy_status: CLIENT_REPORTED
+- id: F003
+  proposition: license_registration_insurance_were_produced_promptly_and_valid_on_face
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF para_10
+  legacy_status: CLIENT_REPORTED
+- id: F004
+  proposition: officer_asked_about_drinking_then_travel_then_cannabis
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: CONTRADICTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF paras_11_14
+  legacy_status: CLIENT_REPORTED_CONTRADICTED_BY_DIRECT_STATE_AND_DERIVATIVE_MEDIA
+  contradiction_ref: compiled/contradictions.yaml#CC001
+- id: F005
+  proposition: defendant_stated_legal_dispensary_purchase_before_officer_claimed_cannabis_odor
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: CONTRADICTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF paras_14_15
+  legacy_status: CLIENT_REPORTED_CONTRADICTED_BY_DIRECT_STATE_AND_DERIVATIVE_MEDIA
+  contradiction_ref: compiled/contradictions.yaml#CC001
+- id: F006
+  proposition: no_visible_contraband_or_paraphernalia_before_search
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF para_16
+  legacy_status: CLIENT_REPORTED
+- id: F007
+  proposition: no_citation_or_written_warning_was_tendered
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF para_17
+  legacy_status: CLIENT_REPORTED
+- id: F008
+  proposition: no_consent_words_were_spoken
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF paras_20_21
+  legacy_status: CLIENT_REPORTED
+- id: F009
+  proposition: bong_was_recovered_before_handcuffing_and_search_continued_afterward
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF paras_24_26
+  legacy_status: CLIENT_REPORTED
+- id: F010
+  proposition: no_K9_was_deployed_or_present
+  provenance_class: USER_FIRSTHAND_REPORT
+  epistemic_status: CORROBORATED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF para_28
+  legacy_status: CLIENT_REPORTED_CORROBORATED_BY_DERIVATIVE_MEDIA
+  corroboration:
+  - SRC013
+  - SRC014
+  - SRC015
+- id: F011
+  proposition: zero_cannabis_hemp_or_plant_material_recovered
+  provenance_class: DEFENSE_EVIDENCE_AUDIT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF para_29_and_fact_precision
+  legacy_status: CASE_FILE_REPORTED
+- id: F012
+  proposition: other_controlled_substances_were_recovered
+  provenance_class: DEFENSE_EVIDENCE_AUDIT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF fact_precision
+  legacy_status: CASE_FILE_REPORTED
+- id: F013
+  proposition: probable_cause_hearing_reported_for_2026_08_21
+  provenance_class: DEFENSE_EVIDENCE_AUDIT
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: PC_HEARING_HANDOFF
+  legacy_status: CASE_FILE_REPORTED
+  dynamic: true
+  requires_live_docket_confirmation: true
+- id: F014
+  proposition: waiver_of_counsel_signed_at_first_appearance_2026_04_30
+  provenance_class: OFFICIAL_COURT_RECORD
+  epistemic_status: VERIFIED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/case_record.yaml#official_record.waiver_of_counsel
+  legacy_status: PROVEN_BY_OFFICIAL_DOCUMENT
+  requires_official_record_confirmation_if_material: true
+  waiver_scope: UNKNOWN_FROM_TEXT_EXTRACTION
+- id: F015
+  proposition: charging_instrument_text_compiled_from_AOC_CR_116
+  provenance_class: OFFICIAL_COURT_RECORD
+  epistemic_status: VERIFIED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/case_record.yaml
+  legacy_status: PROVEN_BY_OFFICIAL_DOCUMENT
+- id: F016
+  proposition: state_crime_lab_report_W202604061_exists
+  provenance_class: OFFICIAL_FORENSIC_LAB
+  epistemic_status: VERIFIED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/lab_findings.yaml
+  legacy_status: PROVEN_BY_LAB
+- id: F017
+  proposition: SCL_item_1_2_property_3358_contains_MDMA_net_3_07_plus_minus_0_03_g
+  provenance_class: OFFICIAL_FORENSIC_LAB
+  epistemic_status: VERIFIED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/lab_findings.yaml
+  legacy_status: PROVEN_BY_LAB
+- id: F018
+  proposition: derivative_bodycam_analysis_places_odor_statement_before_ID_handoff_and_before_later_CBD_shop_discussion
+  provenance_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/video_findings.yaml
+  legacy_status: DERIVATIVE_MEDIA_FINDING
+- id: F019
+  proposition: state_narrative_reports_search_announced_as_based_on_marijuana_odor_and_does_not_recite_consent_as_basis
+  provenance_class: STATE_DISCOVERY_OR_OFFICER_MATERIAL
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/state_discovery_primary.yaml
+  legacy_status: STATE_REPORTED_DIRECT
+- id: F020
+  proposition: state_narrative_reports_Beylin_refused_investigator_interview_at_police_department
+  provenance_class: STATE_DISCOVERY_OR_OFFICER_MATERIAL
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/state_discovery_primary.yaml
+  legacy_status: STATE_REPORTED_DIRECT
+- id: F021
+  proposition: Miranda_form_visually_marks_do_not_waive_request_attorney_line_and_signature_line_appears_blank
+  provenance_class: STATE_DISCOVERY_OR_OFFICER_MATERIAL
+  epistemic_status: VERIFIED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/state_discovery_primary.yaml
+  legacy_status: DOCUMENT_VISUAL_FINDING
+  legal_effect: UNKNOWN_REQUIRES_STATEMENTS_ANALYSIS
+- id: F022
+  proposition: direct_State_case_notes_explain_24_29_g_prelab_total_using_2_56_g_combined_gross_for_items_007_008
+  provenance_class: STATE_DISCOVERY_OR_OFFICER_MATERIAL
+  epistemic_status: REPORTED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/state_discovery_primary.yaml
+  legacy_status: STATE_REPORTED_DIRECT
+- id: F023
+  proposition: historical_eCourts_snapshot_shows_2026_05_21_PC_hearing_canceled
+  provenance_class: OFFICIAL_COURT_RECORD
+  epistemic_status: VERIFIED
+  record_status: NOT_IN_CURRENT_RECORD
+  source: compiled/procedural_snapshot.yaml
+  legacy_status: PROVEN_BY_OFFICIAL_DOCUMENT_HISTORICAL_ONLY
+  dynamic: true
+  requires_live_docket_confirmation: true
+record_update_rule:
+  when_witness_admits_or_evidence_is_admitted:
+    set_record_status_for_current_proceeding: RECORD_ESTABLISHED
+    preserve_original_provenance: true
+  when_original_media_corrobates:
+    set_epistemic_status: CORROBORATED
+    do_not_assume_admissibility: true

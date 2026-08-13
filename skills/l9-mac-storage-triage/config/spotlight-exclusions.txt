@@ -1,0 +1,1 @@
+# One absolute path per line. File Provider roots are reported for manual Search Privacy configuration.

@@ -1,0 +1,10 @@
+report_id: "20260721T143000-host"
+created_at: "2026-07-21T14:30:00-0400"
+host_name: "host"
+home_dir: "/Users/operator"
+data_volume: "/System/Volumes/Data"
+free_kib: 52428800
+evidence_files:
+  - "reports/20260721T143000-host/df.txt"
+  - "reports/20260721T143000-host/apfs.txt"
+diagnosis_complete: true

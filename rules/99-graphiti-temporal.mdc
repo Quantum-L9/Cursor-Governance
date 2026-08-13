@@ -1,6 +1,5 @@
 ---
 description: Graphiti temporal contract — Supersedes, conflicts_with, bi-temporal invalidation
-globs: ["**/*"]
 alwaysApply: true
 ---
 

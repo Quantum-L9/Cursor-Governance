@@ -1,0 +1,86 @@
+schema_version: '1.0'
+artifact: evidence_and_discovery_protocol
+source_priority_rule: Choose the most authoritative source for the proposition type
+  under the case-state/corpus contracts; do not use one global evidence ranking.
+evidence_node_fields:
+- evidence_id
+- description
+- source_class
+- source_id
+- locator
+- custody_status
+- chemical_or_forensic_status
+- record_status
+- relevance
+- contradictions
+- unknowns
+chronology_fields:
+- event_id
+- timestamp_or_range
+- actor
+- event
+- source_id
+- locator
+- confidence
+- record_status
+- conflicting_timebase
+chain_of_custody_fields:
+- item_id
+- custodian
+- received_at
+- released_at
+- location
+- condition_documented
+- transfer_source
+- gap_status
+media_analysis_dimensions:
+  stop_timeline:
+  - lights
+  - vehicle_stop
+  - first_contact
+  - traffic_mission_actions
+  - investigative_detour
+  - search_announcement
+  - search_start
+  detention_search_timeline:
+  - exit_vehicle
+  - restraint
+  - patrol_vehicle_placement
+  - search_start
+  - search_end
+  odor_or_search_basis:
+  - exact_words
+  - speaker_location
+  - window_or_door_state_if_visible
+  - corroboration
+  - later_discovery_separated_from_pre_search_knowledge
+  firearm_or_item_handling:
+  - first_observation
+  - who_handled
+  - condition_description
+  - serial_or_marking_method
+  - photographs_or_forensics
+  statement_consistency:
+  - report_statement
+  - media_statement
+  - later_testimony
+  - material_delta
+discovery_target_fields:
+- target_id
+- record_requested
+- legal_or_strategic_relevance
+- requested_status
+- received_status
+- source
+- freshness
+- followup_required
+rules:
+- never_use_later_discovered_evidence_to_retroactively_create_earlier_justification
+- never_promote_client_memory_to_record_established_without_basis
+- never_assign_field_test_to_property_item_by_guess
+- preserve_source_conflicts_instead_of_smoothing_them
+- distinguish_gross_weight_from_net_or_chemically_confirmed_weight
+- direct_media_review_over_derivative_summary_when_available
+status_contract: status_contract.yaml
+source_class_rule: Use provenance_class values from status_contract.yaml; do not create
+  a second source taxonomy in this module.

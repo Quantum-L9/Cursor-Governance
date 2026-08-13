@@ -1,5 +1,5 @@
 ---
-description: "Execute exactly as instructed — no autonomous reasoning or skipping steps"
+description: Execute exactly as instructed — no autonomous reasoning or skipping steps
 alwaysApply: true
 ---
 
