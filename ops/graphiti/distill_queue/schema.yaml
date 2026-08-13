@@ -1,0 +1,54 @@
+# Distill queue job — redacted excerpt only (T3 full-chat ingest forbidden).
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$title: DistillQueueJob
+type: object
+additionalProperties: false
+required:
+  - schema_version
+  - job_id
+  - content_hash
+  - session_id
+  - group_id
+  - agent_id
+  - transcript_excerpt
+  - enqueued_at
+properties:
+  schema_version:
+    type: string
+    const: "distill_queue_job/v1"
+  job_id:
+    type: string
+    minLength: 8
+    maxLength: 128
+  content_hash:
+    type: string
+    minLength: 16
+    maxLength: 64
+  session_id:
+    type: string
+    minLength: 1
+    maxLength: 200
+  group_id:
+    type: string
+    minLength: 1
+    maxLength: 200
+  agent_id:
+    type: string
+    minLength: 1
+    maxLength: 120
+  reason:
+    type: string
+    maxLength: 120
+  transcript_excerpt:
+    type: string
+    minLength: 1
+    maxLength: 12000
+  heuristic_pickup:
+    type: object
+    additionalProperties: true
+  enqueued_at:
+    type: string
+    minLength: 8
+  project_name:
+    type: string
+    maxLength: 200

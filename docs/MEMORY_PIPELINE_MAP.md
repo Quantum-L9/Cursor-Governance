@@ -31,8 +31,20 @@ session work
 sessionEnd (X-out / window_close / completed / aborted)
   → idempotent receipt under .l9/memory/closes/{session_id}.json
   → Phase A (≤8s): heuristic pickup_context + session_summary
-  → Phase B (≤18s, if key + time): SessionSignalPacket → promote atomics
+  → Phase B (≤18s, if key + time): SessionSignalPacket via fixed-host OpenAI
+    helper (`ops/graphiti/hydration/openai_fixed_host.py`); ephemeral key from
+    env or AWS SM `l9/OPENAI_API_KEY` (never long-lived in `graphiti.env`)
+  → Enqueue redacted excerpt (≤12k) to S3 distill queue when
+    `MEMORY_DISTILL_S3_BUCKET` is set — content-hash idempotent; enqueue
+    failure is fail-loud (receipt + stderr). Rollback flags:
+    `MEMORY_PHASE_B=0`, `MEMORY_DISTILL_ENQUEUE=0`
   → never raise hook timeout into silent “nothing written” without Phase A attempt
+
+Batch catch-up (no Mac awake at cron time)
+  → GitHub Actions `.github/workflows/memory-distill.yml` (schedule + dispatch)
+  → pull pending S3 jobs → OpenAI distill → Graphiti HTTPS ingest
+  → Mac LaunchAgent `com.l9.transcript-distiller` / Dropbox / C1 `save_memory`
+    are RETIRED (see `ops/scripts/RETIRED_transcript_distiller_launchagent.md`)
 ```
 
 Entry points:
@@ -71,13 +83,19 @@ Do not treat `/end-session` as required for every X-out.
 | `MEMORY_CLOSE_TRANSCRIPT_CHARS` | 12000 |
 | sessionEnd Graphiti hook timeout | 30s (template) |
 | Phase A / B | ≤8s / ≤18s |
+| `MEMORY_PHASE_B` | `1` (set `0` to skip sync distill) |
+| `MEMORY_DISTILL_ENQUEUE` | `1` when bucket set (set `0` to skip S3) |
+| `MEMORY_DISTILL_S3_BUCKET` | unset = enqueue skipped (warn) |
+| `MEMORY_DISTILL_S3_PREFIX` | `distill-queue/pending/` |
+| `MEMORY_DISTILL_TOKEN_BUDGET` | 300 |
 
-T3 full-chat ingest remains **forbidden**.
+T3 full-chat ingest remains **forbidden** — redacted excerpts only.
 
 ## Schemas
 
 - `ops/graphiti/hydration/session_hydration_packet.schema.yaml`
 - `ops/graphiti/hydration/session_signal_packet.schema.yaml`
 - `ops/graphiti/hydration/promotion_rules.yaml`
+- `ops/graphiti/distill_queue/schema.yaml`
 
 WIP packs under `WIP/World Model/` are design evidence only — not runtime SSOT.

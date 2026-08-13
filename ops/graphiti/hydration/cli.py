@@ -24,6 +24,28 @@ def _cmd_compile(args: argparse.Namespace) -> int:
     return 0
 
 
+def _public_close_report(report: dict) -> dict:
+    """Stdout-safe close report — ints/bools only (breaks secret taint to logs)."""
+    enqueue_ok = report.get("enqueue_ok")
+    status = report.get("status")
+    allowed = {
+        "closed",
+        "idempotent_skip",
+        "skipped",
+        "failed",
+        "closed_enqueue_failed",
+    }
+    return {
+        "status": status if status in allowed else "other",
+        "phase_a": bool(report.get("phase_a") is True),
+        "phase_b": bool(report.get("phase_b") is True),
+        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
+        "enqueue_error_present": bool(report.get("enqueue_error")),
+        "write_count": len(report.get("writes") or []),
+        "warning_count": len(report.get("warnings") or []),
+    }
+
+
 def _cmd_close(args: argparse.Namespace) -> int:
     from ops.graphiti.hydration.close_session import close_session
 
@@ -36,8 +58,12 @@ def _cmd_close(args: argparse.Namespace) -> int:
         is_background_agent=args.background,
         dry_run=args.dry_run,
     )
-    print(json.dumps(report, indent=2, ensure_ascii=False))
-    return 0 if report.get("status") != "failed" else 1
+    print(json.dumps(_public_close_report(report), indent=2, ensure_ascii=False))
+    if report.get("status") == "failed":
+        return 1
+    if report.get("enqueue_ok") is False:
+        return 2
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
