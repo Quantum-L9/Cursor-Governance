@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 _GRAPHITI_DIR = Path(__file__).resolve().parent.parent
-_REPO_ROOT = _GRAPHITI_DIR.parent.parent
 if str(_GRAPHITI_DIR) not in sys.path:
     sys.path.insert(0, str(_GRAPHITI_DIR))
 from episode_contract import redact_pii  # noqa: E402

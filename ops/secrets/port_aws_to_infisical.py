@@ -93,11 +93,44 @@ SKIP_ROOT_PREFIXES = (
 )
 
 SECRET_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Literal env-var names only — never derived from SecretString JSON keys/values.
+_ROOT_LOG_NAMES: tuple[str, ...] = tuple(
+    sorted({*ENV_MAP.values(), "GH_TOKEN", "GOOGLE_SERVICE_ACCOUNT_JSON"})
+)
 
 
-def _die(msg: str, code: int = 1) -> None:
-    print(f"port_aws_to_infisical: {msg}", file=sys.stderr)
+def _die(reason: str, status: int | None = None, code: int = 1) -> None:
+    """Log a static reason plus optional HTTP status. Never interpolate secrets."""
+    if status is None:
+        print(f"port_aws_to_infisical: {reason}", file=sys.stderr)
+    else:
+        print(f"port_aws_to_infisical: {reason} status={status}", file=sys.stderr)
     raise SystemExit(code)
+
+
+def format_dry_run(
+    aws_ids: list[str],
+    used_env: dict[str, str],
+    structured_counts: dict[str, int],
+    skipped_root_count: int,
+    root_count: int,
+) -> list[str]:
+    """Summary lines: AWS secret IDs, allowlisted env names, folder counts. No values."""
+    lines = [
+        (
+            f"port_aws_to_infisical: aws_secrets={len(aws_ids)} "
+            f"root_keys={root_count} structured_folders={len(structured_counts)} "
+            f"skipped_root={skipped_root_count}"
+        ),
+        "aws_secret_ids:",
+    ]
+    lines.extend(f"  {sid}" for sid in aws_ids)
+    lines.append("root_env_names:")
+    lines.extend(f"  / {name}" for name in _ROOT_LOG_NAMES if name in used_env)
+    lines.append("structured_folders:")
+    for suffix in sorted(structured_counts):
+        lines.append(f"  {STRUCTURED_ROOT}/{suffix}/ count={structured_counts[suffix]}")
+    return lines
 
 
 def aws_secret_string(secret_id: str) -> str:
@@ -231,7 +264,7 @@ def login(host: str, client_id: str, client_secret: str) -> str:
         body={"clientId": client_id, "clientSecret": client_secret},
     )
     if status != 200 or "accessToken" not in payload:
-        _die(f"Infisical login failed status={status}")
+        _die("Infisical login failed", status=status)
     return str(payload["accessToken"])
 
 
@@ -255,7 +288,7 @@ def ensure_folder(
     err = str(payload.get("error") or "")
     if status in {400, 409} and any(x in err.lower() for x in ("already", "exist", "duplicate")):
         return
-    _die(f"folder create failed path={path} name={name} status={status}")
+    _die("folder create failed", status=status)
 
 
 def ensure_folder_chain(
@@ -315,10 +348,10 @@ def upsert_batch(
                 patch_body,
             )
             if pstatus not in {200, 201}:
-                _die(f"patch failed key={key} path={secret_path} status={pstatus}")
+                _die("patch failed", status=pstatus)
             updated += 1
             continue
-        _die(f"create failed key={key} path={secret_path} status={status}")
+        _die("create failed", status=status)
     return created, updated
 
 
@@ -337,7 +370,7 @@ def list_infisical_keys(
     )
     status, payload = infisical_req(host, "GET", f"/api/v3/secrets/raw?{qs}", token)
     if status != 200:
-        _die(f"list secrets failed path={secret_path} status={status}")
+        _die("list secrets failed", status=status)
     out: list[tuple[str, str]] = []
     for sec in payload.get("secrets") or []:
         k = sec.get("secretKey") or ""
@@ -386,7 +419,7 @@ def main(argv: list[str] | None = None) -> int:
             if ekey in used_env and used_env[ekey] != f"{sid}#{json_key}":
                 ekey = sanitize_key(f"{suffix}_{json_key}".replace("-", "_")).upper()
             if ekey in used_env:
-                _die(f"env name collision {ekey}")
+                _die("env name collision")
             used_env[ekey] = f"{sid}#{json_key}"
             root_items.append(
                 {
@@ -419,20 +452,22 @@ def main(argv: list[str] | None = None) -> int:
             used_env["GH_TOKEN"] = "openclaw-igorbot/github#token"
         structured[suffix] = folder_items
 
+    if args.dry_run:
+        for line in format_dry_run(
+            aws_ids,
+            used_env,
+            {suffix: len(items) for suffix, items in structured.items()},
+            len(skipped_root),
+            len(root_items),
+        ):
+            print(line)
+        return 0
+
     print(
         f"port_aws_to_infisical: aws_secrets={len(aws_ids)} "
         f"root_keys={len(root_items)} structured_folders={len(structured)} "
         f"skipped_root={len(skipped_root)}"
     )
-    if args.dry_run:
-        print("root_keys:")
-        for item in sorted(root_items, key=lambda x: x["secretKey"]):
-            print(f"  / {item['secretKey']}")
-        print("structured_folders:")
-        for suffix in sorted(structured):
-            keys = ",".join(i["secretKey"] for i in structured[suffix])
-            print(f"  {STRUCTURED_ROOT}/{suffix}/ [{keys}]")
-        return 0
 
     created_total = 0
     updated_total = 0
