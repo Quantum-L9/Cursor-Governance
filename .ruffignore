@@ -1,0 +1,15 @@
+# Ruff path exclusions (gitignore syntax).
+# Live exclude SSOT remains [tool.ruff] exclude in pyproject.toml (force-exclude).
+# Keep WIP in both. Do not add WIP/ to .gitignore — the tree is tracked backlog.
+
+WIP/
+current_work/
+C_GOV_FILES/
+reports/
+workflows/
+_archived/
+_archive/
+archive/
+archived/
+ops/generated/
+environment/generated/

@@ -1,0 +1,26 @@
+request_id: mac-storage-triage-2026-07-21
+operation: create
+source_inputs:
+  - l9-playbook-compiler
+  - diagnose_first_kernel_v1
+  - mac_storage_forensics_session
+  - finder_spotlight_recovery_session
+target_use_case: Diagnose, plan, remediate, and verify macOS disk-storage pressure without write-before-read behavior.
+known_skills:
+  - playbook-compiler
+known_kernels:
+  - diagnose_first_kernel@1
+constraints:
+  - read_only_diagnosis_must_precede_plan_or_write
+  - unknown_values_must_remain_UNKNOWN
+  - destructive_actions_require_explicit_approval
+  - cloud_file_provider_roots_require_special_handling
+  - no_claim_of_runtime_success_without_macos_evidence
+domain: macos_storage_operations
+authority_rules:
+  - current_machine_state
+  - populated_environment_file
+  - approved_remediation_plan
+  - execution_receipts
+output_contract: Packaged typed playbook with variable-driven shell scripts, deterministic gates, and validation evidence.
+trace_id: mac-storage-triage-build-20260721

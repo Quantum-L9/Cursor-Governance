@@ -1,0 +1,6 @@
+env_file: "/Users/operator/mac-storage-triage/.env"
+diagnosis_receipt: "/Users/operator/mac-storage-triage/.state/diagnosis.complete"
+approved_actions:
+  - "spotlight_exclusions"
+unknown_count: 0
+validation_status: "pass"

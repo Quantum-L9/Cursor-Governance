@@ -78,6 +78,10 @@ exclude = [
     "**/.cursor",
     "environment/generated/llm-rules",
 ]
+extend-exclude = [
+    "ops/generated",
+    "**/generated",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
@@ -96,6 +100,13 @@ select = ["E", "F", "I", "UP"]
 # legitimately follow executable statements — E402 is expected here.
 "subagent-generated-data/**" = ["E402"]
 "environment/agents/generated-data/**" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+docstring-code-format = false
 
 # python_version pinned to match [project] requires-python — CI's --ignore-missing-imports
 # flag is mirrored here so `uv run mypy .` and the CI mypy step behave identically.

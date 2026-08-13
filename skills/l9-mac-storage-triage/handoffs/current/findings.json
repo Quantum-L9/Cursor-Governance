@@ -1,0 +1,503 @@
+{
+  "schema": "l9-mac-storage-triage/findings/v1",
+  "host": "mac-mini",
+  "diagnosed_at": "2026-08-13T12:21:32-0400",
+  "report_id": "20260813T122129-mac-mini",
+  "apply_allowed": false,
+  "volumes": {
+    "data": {
+      "mount": "/System/Volumes/Data",
+      "used_gib": 404.23,
+      "free_gib": 12.09,
+      "capacity_pct": 97.0
+    },
+    "vm": {
+      "mount": "/System/Volumes/VM",
+      "used_gib": 23,
+      "note": "APFS swap/sleepimage. Do not delete. Shrinks after Data has free space and a reboot."
+    },
+    "home_gib": 297
+  },
+  "findings": [
+    {
+      "id": "C1",
+      "path": "/Users/macm2/.local/share/tenx/logs/chat_exports",
+      "path_display": "~/.local/share/tenx/logs/chat_exports",
+      "gib": 0.02,
+      "kind": "transcript_mirror",
+      "phase": "D",
+      "guard": "none",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "retained",
+      "status": "closed",
+      "label": "Rolling transcript mirror (jsonl). Hourly SQLite dumps purged 2026-08-13.",
+      "next_step": "SQLite dumps gone. Transcripts live in ~/.cursor/projects (~19 MB jsonl) and a rolling copy at chat_exports/current/. S3 not needed.",
+      "inspect": {
+        "child_count": 3,
+        "oldest": "current  created 2026-08-13 15:22",
+        "newest": "current  created 2026-08-13 15:22",
+        "note": "Rolling jsonl/txt/md mirror only. Live chats stay in ~/.cursor/projects. Cursor Application Support workspaceStorage was not deleted.",
+        "top": [
+          {
+            "name": "current",
+            "gib": 0.02,
+            "kind": "dir"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C2",
+      "path": "/Users/macm2/.npm",
+      "path_display": "~/.npm",
+      "gib": 3.92,
+      "kind": "disposable_cache",
+      "phase": "A",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": "purge_stale_caches",
+      "proposed_action": "npm cache clean --force",
+      "status": "allowlisted",
+      "label": "npm package cache",
+      "next_step": "Included when you say repair."
+    },
+    {
+      "id": "C3",
+      "path": "/Users/macm2/miniconda3/pkgs",
+      "path_display": "~/miniconda3/pkgs",
+      "gib": 1.11,
+      "kind": "disposable_cache",
+      "phase": "A",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": "purge_stale_caches",
+      "proposed_action": "conda clean --all --yes",
+      "status": "allowlisted",
+      "label": "conda download cache (environments not touched)",
+      "next_step": "Included when you say repair."
+    },
+    {
+      "id": "C4",
+      "path": "/Users/macm2/Library/Caches/pip",
+      "path_display": "~/Library/Caches/pip",
+      "gib": 0.51,
+      "kind": "disposable_cache",
+      "phase": "A",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": "purge_stale_caches",
+      "proposed_action": "pip cache purge",
+      "status": "allowlisted",
+      "label": "pip package cache",
+      "next_step": "Included when you say repair."
+    },
+    {
+      "id": "C5",
+      "path": "/Users/macm2/Library/Caches/Homebrew",
+      "path_display": "~/Library/Caches/Homebrew",
+      "gib": 0.2,
+      "kind": "disposable_cache",
+      "phase": "A",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": "purge_stale_caches",
+      "proposed_action": "brew cleanup -s",
+      "status": "allowlisted",
+      "label": "Homebrew download cache",
+      "next_step": "Included when you say repair."
+    },
+    {
+      "id": "C6",
+      "path": "/Users/macm2/.cache/uv",
+      "path_display": "~/.cache/uv",
+      "gib": 3.36,
+      "kind": "disposable_cache",
+      "phase": "A",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": "purge_stale_caches",
+      "proposed_action": "uv cache clean",
+      "status": "allowlisted",
+      "label": "uv package cache (downloaded wheels/sdists/builds; not your projects)",
+      "next_step": "Included when you say repair. Regenerates on the next uv sync/install. Confirmed 2026-08-13."
+    },
+    {
+      "id": "C7",
+      "path": "/Users/macm2/.cache/pre-commit",
+      "path_display": "~/.cache/pre-commit",
+      "gib": 0.96,
+      "kind": "disposable_cache",
+      "phase": "B",
+      "guard": "hitl",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "extra_hitl",
+      "status": "candidate",
+      "label": "pre-commit cache",
+      "next_step": "Ask first. Reply keep / delete / protect.",
+      "inspect": {
+        "child_count": 51,
+        "oldest": "README  created 2026-03-26 19:22",
+        "newest": "reporsaaqlkq  created 2026-08-13 14:18",
+        "note": "pre-commit hook environments. Regenerates on the next pre-commit run.",
+        "top": [
+          {
+            "name": "repo75im729b",
+            "gib": 0.28,
+            "kind": "dir"
+          },
+          {
+            "name": "repokkq8g849",
+            "gib": 0.12,
+            "kind": "dir"
+          },
+          {
+            "name": "repo5022wg92",
+            "gib": 0.1,
+            "kind": "dir"
+          },
+          {
+            "name": "repo2hcqqsrj",
+            "gib": 0.08,
+            "kind": "dir"
+          },
+          {
+            "name": "repour4vl3k8",
+            "gib": 0.07,
+            "kind": "dir"
+          },
+          {
+            "name": "repoi0ly0fcg",
+            "gib": 0.07,
+            "kind": "dir"
+          },
+          {
+            "name": "repovjd_xui_",
+            "gib": 0.07,
+            "kind": "dir"
+          },
+          {
+            "name": "repok2g0ylmx",
+            "gib": 0.05,
+            "kind": "dir"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C8",
+      "path": "/Users/macm2/.cache/puppeteer",
+      "path_display": "~/.cache/puppeteer",
+      "gib": 0.53,
+      "kind": "disposable_cache",
+      "phase": "B",
+      "guard": "hitl",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "extra_hitl",
+      "status": "candidate",
+      "label": "puppeteer browser cache",
+      "next_step": "Ask first. Reply keep / delete / protect.",
+      "inspect": {
+        "child_count": 2,
+        "oldest": "chrome-headless-shell  created 2026-07-08 10:21",
+        "newest": "chrome  created 2026-07-08 10:21",
+        "note": "Downloaded Chromium/Firefox builds for Puppeteer. Regenerates on the next puppeteer install.",
+        "top": [
+          {
+            "name": "chrome",
+            "gib": 0.34,
+            "kind": "dir"
+          },
+          {
+            "name": "chrome-headless-shell",
+            "gib": 0.19,
+            "kind": "dir"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C9",
+      "path": "/Users/macm2/Library/Caches/Google",
+      "path_display": "~/Library/Caches/Google",
+      "gib": 3.24,
+      "kind": "disposable_cache",
+      "phase": "A",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": "purge_stale_caches",
+      "proposed_action": "rm Library/Caches/Google",
+      "status": "allowlisted",
+      "label": "Chrome disk cache (pages/scripts). Not bookmarks, passwords, or Application Support.",
+      "next_step": "Included when you say repair. Chrome refills it. Confirmed 2026-08-13. Does not touch Application Support."
+    },
+    {
+      "id": "C10",
+      "path": "/Users/macm2/Library/Caches/com.spotify.client",
+      "path_display": "~/Library/Caches/com.spotify.client",
+      "gib": 2.65,
+      "kind": "disposable_cache",
+      "phase": "B",
+      "guard": "hitl",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "extra_hitl",
+      "status": "open",
+      "label": "Spotify cache (not Spotify app data)",
+      "next_step": "Ask first. Reply keep / delete / protect.",
+      "inspect": {
+        "child_count": 51,
+        "oldest": "Browser  created 2023-05-05 10:25",
+        "newest": "Local State  created 2026-08-13 11:29",
+        "note": "Spotify playback/cache files under Library/Caches only. Not Spotify app data in Application Support.",
+        "top": [
+          {
+            "name": "Browser",
+            "gib": 1.4,
+            "kind": "dir"
+          },
+          {
+            "name": "Default",
+            "gib": 0.57,
+            "kind": "dir"
+          },
+          {
+            "name": "Data",
+            "gib": 0.43,
+            "kind": "dir"
+          },
+          {
+            "name": "WasmTtsEngine",
+            "gib": 0.07,
+            "kind": "dir"
+          },
+          {
+            "name": "CertificateRevocation",
+            "gib": 0.07,
+            "kind": "dir"
+          },
+          {
+            "name": "component_crx_cache",
+            "gib": 0.05,
+            "kind": "dir"
+          },
+          {
+            "name": "WidevineCDM",
+            "gib": 0.02,
+            "kind": "dir"
+          },
+          {
+            "name": "GrShaderCache",
+            "gib": 0.01,
+            "kind": "dir"
+          }
+        ]
+      }
+    },
+    {
+      "id": "C11",
+      "path": "/Users/macm2/Library/Application Support/Claude",
+      "path_display": "~/Library/Application Support/Claude",
+      "gib": 12.57,
+      "kind": "app_data",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "Claude app data",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C13",
+      "path": "/Applications",
+      "path_display": "/Applications",
+      "gib": 31.33,
+      "kind": "live_software",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "Installed applications",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C14",
+      "path": "/Users/macm2/Downloads",
+      "path_display": "~/Downloads",
+      "gib": 13.37,
+      "kind": "user_data",
+      "phase": "D",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "human_review",
+      "status": "guarded",
+      "label": "Downloads folder",
+      "next_step": "Protected. You confirmed 2026-08-13: never auto-delete."
+    },
+    {
+      "id": "C16",
+      "path": "/Library",
+      "path_display": "/Library",
+      "gib": 8.01,
+      "kind": "system",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "macOS system library",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C17",
+      "path": "/private/var",
+      "path_display": "/private/var",
+      "gib": 6.52,
+      "kind": "system",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "macOS system variable data",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C18",
+      "path": "/Users/macm2/Library/Containers",
+      "path_display": "~/Library/Containers",
+      "gib": 3.6,
+      "kind": "macos_sandbox",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "macOS app sandboxes (not Docker)",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C19",
+      "path": "/Users/macm2/Library/ScreenRecordings",
+      "path_display": "~/Library/ScreenRecordings",
+      "gib": 2.78,
+      "kind": "user_media",
+      "phase": "D",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "human_review",
+      "status": "guarded",
+      "label": "Screen recordings",
+      "next_step": "Protected. You confirmed 2026-08-13: never auto-delete."
+    },
+    {
+      "id": "C20",
+      "path": "/opt/homebrew",
+      "path_display": "/opt/homebrew",
+      "gib": 2.55,
+      "kind": "live_software",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "Homebrew programs (Cellar). Only the brew cache is disposable.",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C21",
+      "path": "/Users/macm2/dev",
+      "path_display": "~/dev",
+      "gib": 2.11,
+      "kind": "projects",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "Project trees (dev, odoo, n8n-mcp)",
+      "next_step": "Hands off."
+    },
+    {
+      "id": "C23",
+      "path": "/Users/macm2/docker-volumes",
+      "path_display": "~/docker-volumes",
+      "gib": 0.32,
+      "kind": "docker_volume",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "Docker volumes (unused, still guarded)",
+      "next_step": "Not in the automatic prune. Volumes stay."
+    },
+    {
+      "id": "C25",
+      "path": "/System/Volumes/VM",
+      "path_display": "/System/Volumes/VM",
+      "gib": 23,
+      "kind": "apfs_swap",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "guarded",
+      "label": "Swap / sleep image",
+      "next_step": "Do not delete. Free Data first, then reboot."
+    },
+    {
+      "id": "C26",
+      "path": "/Users/macm2/Documents",
+      "path_display": "~/Documents",
+      "gib": null,
+      "kind": "user_data",
+      "phase": "guard",
+      "guard": "never",
+      "safe_to_delete": false,
+      "repair_action": null,
+      "proposed_action": "none",
+      "status": "unknown",
+      "label": "Documents, Desktop, Mail, Messages",
+      "next_step": "Size unknown (permission or timeout). Treat as hands off."
+    },
+    {
+      "id": "C29",
+      "path": "/Users/macm2/Miniconda3-latest-MacOSX-x86_64.sh",
+      "path_display": "~/Miniconda3-latest-MacOSX-x86_64.sh",
+      "gib": 0.0,
+      "kind": "stale_installer",
+      "phase": "D",
+      "guard": "none",
+      "safe_to_delete": true,
+      "repair_action": null,
+      "proposed_action": "deleted",
+      "status": "closed",
+      "label": "Leftover conda installer (x86_64 .sh from Oct 2025). miniconda3 already installed.",
+      "next_step": "Deleted 2026-08-13. miniconda3 remains."
+    }
+  ],
+  "repair": {
+    "phase_a_actions": [
+      "purge_stale_caches"
+    ],
+    "phase_a_gib": 12.34,
+    "phase_b_gib": 4.14,
+    "phase_c_gib": 0
+  }
+}
