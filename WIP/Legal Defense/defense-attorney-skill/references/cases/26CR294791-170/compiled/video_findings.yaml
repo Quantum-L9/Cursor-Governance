@@ -1,0 +1,82 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+source_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+raw_media_directly_revalidated: false
+sources:
+  primary_officer_bodycam_analysis:
+    source_id: SRC013
+    findings:
+    - time: 00:01:34
+      finding: officer states improper-turn reason
+    - time: 00:01:43
+      finding: officer says driving was not erratic but almost not smooth
+    - time: 00:01:54
+      finding: officer asks whether driver smokes marijuana
+    - time: 00:01:58
+      finding: officer says he smells something a whole lot like marijuana
+    - time: 00:02:18
+      finding: analysis says ID handed to officer after odor statement
+    - time: 00:02:43
+      finding: officer identifies firearm in vehicle
+    - time: 00:02:54
+      finding: officer says firearm is allowed and not a big deal
+    - time: 00:03:00
+      finding: officer turns/steps away briefly then turns back
+    - time: 00:03:17
+      finding: officer says he can search vehicle for probable cause of marijuana and believes driver probably impaired
+    - time: 00:05:05
+      finding: officer states search is for odor of marijuana
+    - time: 00:05:13
+      finding: driver says he has a little marijuana
+  supporting_officer_bodycam_analysis:
+    source_id: SRC015
+    findings:
+    - time: 00:02:39
+      finding: McMurtry announces search for odor of marijuana
+    - time: 00:02:47
+      finding: driver says he has a little marijuana
+    - time: 00:02:59
+      finding: McMurtry asks if it came from CBD shop
+    - time: 00:03:08
+      finding: driver describes a little concentrate in a jar in cupholder and smoking tools
+    - time: 00:04:15
+      finding: supporting officer says if bought from store, just marijuana, and not impaired, there should not
+        be an issue
+    - time: clip
+      finding: no Miranda warning observed in this clip
+  narcotics_detective_bodycam_analysis:
+    source_id: SRC016
+    findings:
+    - time: 00:00:30
+      finding: McMurtry tells detective stop was for improper turn
+    - time: 00:00:54
+      finding: McMurtry states odor of marijuana
+    - time: 00:01:16
+      finding: McMurtry indicates no standardized field sobriety testing
+    - time: 00:01:17
+      finding: McMurtry says he was going to search and then go from there, maybe should have done it the other
+        way around
+    - time: 00:01:45
+      finding: McMurtry describes yellow-line contact without crossing and abrupt turns
+    - time: 00:02:06
+      finding: McMurtry says he thinks impairment is probably drug-related rather than alcohol
+    - time: 00:02:36
+      finding: detective says locked and unlocked containers can be searched without warrant
+    - time: 00:03:42
+      finding: analysis reports detective later searched online for law on locked-box vehicle searches / Carroll
+        doctrine
+  dashcam_analysis:
+    source_id: SRC014
+    findings:
+    - time: 00:00:29
+      finding: analysis places blue-light activation
+    - time: 00:00:36
+      finding: analysis places BMW complete stop seven seconds later
+    - time: pre_stop
+      finding: analysis describes steady lane position and no erratic movements before stop
+    - time: clip
+      finding: window conversation not captured on this dashcam audio source
+    - time: clip
+      finding: no K9 observed
+use_rule: these findings are derivative analytical transcriptions; use as investigation/cross-planning material
+  unless original media or proper record establishes the proposition

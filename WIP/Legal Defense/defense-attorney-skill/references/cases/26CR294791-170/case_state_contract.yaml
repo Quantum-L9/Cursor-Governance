@@ -1,0 +1,80 @@
+schema_version: '1.0'
+contract_id: beylin_26CR294791_170_case_state
+case_id: 26CR294791-170
+purpose: Separate immutable compiled source snapshot, dynamic live posture, operator-reported facts, courtroom record, and operational conflicts.
+
+owners:
+  compiled_source_snapshot:
+    entrypoint: compiled/index.yaml
+    mutability: immutable_until_explicit_recompile
+    owns:
+      - source_provenance
+      - normalized_primary_source_claims
+      - evidence_inventory
+      - lab_findings
+      - derivative_media_findings
+      - source_contradictions
+  dynamic_posture:
+    files:
+      - posture.yaml
+      - phase_router.yaml
+      - deadline_state.yaml
+      - council_state.yaml
+    mutability: update_only_from_verified_delta_or_explicit_user_strategy_change
+  operator_fact_overlay:
+    file: operator_fact_overlay.yaml
+    owns:
+      - client_firsthand_reports
+      - working_case_reports_not_in_compiled_primary_snapshot
+      - current_record_updates_from_user_reported_live_proceeding
+    rule: overlay_must_not_overwrite_compiled_source_history
+  record_boundary:
+    file: record_boundary.yaml
+    owns:
+      - courtroom_record_status
+      - permitted_use_by_record_status
+  operational_conflicts:
+    file: operational_conflicts.yaml
+    owns:
+      - conflicts_between_working_instructions_filing_guides_and_execution_rules
+  legal_issue_map:
+    files:
+      - issue_matrix.yaml
+      - authority_matrix.yaml
+      - unknowns.yaml
+  strategy:
+    file: strategy_objective.yaml
+  private_identity:
+    file: private_facts.yaml
+    load_only_when_needed: true
+
+prohibited_competing_sources:
+  - evidence_ledger.yaml
+  - source_registry.yaml
+  - contradiction_register.yaml
+  - fact_ledger.yaml
+
+precedence_by_question:
+  operative_charging_text: current_verified_operating_instrument_then_compiled_snapshot
+  current_docket_or_order: live_verified_court_source_then_dynamic_posture_snapshot
+  chemical_identity_and_tested_weight: official_lab_source
+  event_chronology: original_media_or_current_record_when_available_then_state_material_or_derivative_analysis_with_labels
+  state_asserted_narrative: state_discovery_or_officer_material
+  client_firsthand_memory: operator_fact_overlay
+  courtroom_argument_fact: record_boundary_only
+  current_law: verified_primary_authority_layer
+
+update_sequence:
+  - identify_new_source_or_live_event
+  - classify_provenance_and_record_status
+  - compare_against_existing_state
+  - record_conflict_or_supersession_without_erasing_history
+  - update_dynamic_overlay_if_applicable
+  - recompile_snapshot_only_when_source_corpus_changes
+  - surface_case_state_delta
+
+fail_closed:
+  - current_posture_materially_unknown
+  - operative_pleading_materially_unknown
+  - source_conflict_without_question_specific_precedence
+  - requested_courtroom_fact_not_in_current_record

@@ -1,0 +1,68 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+active_phase_snapshot: probable_cause_2026_08_21
+issues:
+- id: I001
+  issue: probable_cause_hearing_state_showing
+  priority: critical
+  governing:
+  - NC_15A_611
+  - NC_15A_612
+  record_dependency: state_evidence_and_cross_testimony
+- id: I002
+  issue: cannabis_odor_vehicle_search_totality
+  priority: critical
+  governing:
+  - DOBSON_2026
+  - ROWDY_2026
+  key_unknowns:
+  - exact_officer_testimony_on_odor_timing
+  - other_plus_factors_testified_to
+  - bodycam_corroboration
+- id: I003
+  issue: lab_report_or_forensic_analysis_at_pc_hearing
+  priority: critical
+  governing:
+  - NC_15A_611
+  - NC_90_95_G
+  status: REPORT_EXISTS_SCL_W202604061
+  key_unknowns:
+  - notice_was_served
+  - analyst_or_expert_will_appear
+  - specific_proceeding_use
+  compiled_source: compiled/lab_findings.yaml
+- id: I004
+  issue: charging_instrument_and_charge_elements
+  priority: critical
+  status: VERIFIED_FROM_AOC_CR_116_SNAPSHOT
+  dynamic_warning: a later indictment or superseding instrument would control over this snapshot
+  compiled_source: compiled/case_record.yaml
+- id: I005
+  issue: discovery_timing_after_pc_or_indictment
+  priority: high
+  governing:
+  - NC_15A_902
+  phase_sensitive: true
+- id: I006
+  issue: superior_court_suppression
+  priority: deferred_in_current_phase
+  governing:
+  - NC_15A_977
+  - DOBSON_2026
+  - ROWDY_2026
+  phase: superior_court
+- id: I007
+  issue: inventory_integrity_and_chain
+  priority: deferred_by_user_posture
+  phase: later_phase
+  do_not_raise_in_current_pc_phase: true
+- id: I008
+  issue: drug_identity_and_weight_after_SCL_report
+  priority: critical
+  status: PARTIAL_LAB_CONFIRMATION_ONLY
+  compiled_source: compiled/lab_findings.yaml
+- id: I009
+  issue: bodycam_chronology_vs_client_recollection
+  priority: critical
+  status: MATERIAL_CONTRADICTION
+  compiled_source: compiled/contradictions.yaml#CC001

@@ -1,0 +1,87 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+snapshot_date: '2026-08-12'
+official_record:
+  defendant: Igor Beylin
+  county: Catawba
+  charging_division: District Court Division
+  agency: Maiden Police Department
+  agency_case: I2026-04-30-04
+  arrest_date: '2026-04-30'
+  charging_instrument:
+    source_id: SRC020
+    type: Magistrates Order AOC-CR-116
+    issued: '2026-04-30'
+    charges:
+    - count: 1
+      label: PWIMSD SCH I CS
+      statute: 90-95(a)(1)
+      charging_text: possess with intent to sell, deliver approximately 24.29 grams of MDMA/Ecstasy, a Schedule
+        I controlled substance
+    - count: 2
+      label: ALTER/REMOVE GUN SERIAL NUMBER
+      statute: 14-160.2(A)
+      charging_text: remove permanent serial number / numerous scratch marks from Black Smith and Wesson .38 Special
+        Revolver with intent to conceal or misrepresent identity
+    - count: 3
+      label: TRAFFICKING IN MDA/MDMA
+      statute: 90-95(h)(4B)
+      charging_text: transport; text also states DID POSSESS 28 GRAMS OR MORE BUT LESS THAN 200 GRAMS OF PSILOCYBIN,
+        TO WIT 107.5 GRAMS of MDMA
+    - count: 4
+      label: TRAFFICKING IN MDA/MDMA
+      statute: 90-95(h)(4B)
+      charging_text: possess; text states DID POSSESS 28 GRAMS OR MORE BUT LESS THAN 200 GRAMS OF PSILOCYBIN, TO
+        WIT 107.5 GRAMS of MDMA
+    - count: 5
+      label: POSSESS MARIJ PARAPHERNALIA
+      statute: 90-113.22A
+      charging_text: possess purple water bong and marijuana smoking device to introduce marijuana into the body
+    - count: 6
+      label: IMPROPER TURN
+      statute: 20-153
+      charging_text: left turn from a straight/right-hand-turn travel lane at Startown Rd and W Maiden Rd
+    source_pages: 1-4
+  release:
+    source_id: SRC003
+    bond_amount_usd: 50000
+    bond_type: secured
+    conditions_reported_on_form:
+    - no weapons
+    - no alcohol or drugs unless prescribed by a doctor
+    historical_court_setting_on_form: 2026-05-21 09:00 Courtroom 10
+    current_setting_requires_live_verification: true
+  waiver_of_counsel:
+    source_id: SRC002
+    form_exists: true
+    signed_date: '2026-04-30'
+    scope_from_text_extraction: UNKNOWN
+    visual_checkbox_verification_required: true
+    do_not_infer_full_waiver_from_form_existence: true
+  appearance_bond:
+    source_id: SRC004
+    amount_usd: 50000
+    surety: Palmetto Surety Corporation
+  probable_cause_waiver_on_magistrate_packet:
+    source_id: SRC020
+    source_page: 1
+    visual_status: BLANK_NO_EXECUTED_WAIVER_VISIBLE
+    rule: Do not confuse this with the separate waiver-of-counsel event.
+  probable_cause_disposition_on_packet:
+    source_id: SRC020
+    source_page: 8
+    visual_status: BLANK_IN_UPLOADED_PACKET
+    rule: This uploaded packet does not itself show a completed probable-cause finding.
+dynamic_fields:
+- current_division
+- indictment_status
+- current_hearing_date
+- courtroom
+- current_conditions
+- current_charging_instrument_if_superseded
+procedural_snapshot:
+  source: procedural_snapshot.yaml
+  historical_only: true
+direct_state_discovery:
+  source: state_discovery_primary.yaml
+  direct_pages_reviewed: 1-73

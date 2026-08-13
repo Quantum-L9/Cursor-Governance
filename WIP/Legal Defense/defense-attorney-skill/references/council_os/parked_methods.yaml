@@ -1,0 +1,23 @@
+schema_version: '1.0'
+artifact: parked_reusable_methods
+purpose: Preserve useful methods from legacy legal kernels that should not enter the active criminal-defense core unless explicitly
+  requested.
+methods:
+  civil_valuation:
+    status: INACTIVE_BY_DEFAULT
+    activate_only_if:
+    - user_explicitly_requests_civil_damages
+    - settlement_valuation
+    - civil_demand
+    harvested_method:
+    - separate_damage_categories
+    - require_source_for_each_component
+    - use_scenario_bands_instead_of_single_magic_number
+    - separate_compensatory_punitive_multiplier_and_fee_components
+    - show_assumptions_and_evidence_needed
+    rejected:
+    - fixed_settlement_multiplier
+    - fixed_case_specific_dollar_anchor
+    - automatic_trebling_or_fee_entitlement_without_verified_elements_and_authority
+boundary: Inactive methods cannot influence criminal-hearing strategy, evidence analysis, or plea/waiver advice unless the
+  user explicitly opens that separate track and the Council assesses cross-track risk.

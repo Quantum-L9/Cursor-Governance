@@ -1,0 +1,185 @@
+schema_version: '1.0'
+snapshot_date: '2026-08-12'
+case_id: 26CR294791-170
+sources:
+- source_id: SRC001
+  filename: 26CR294791-170 (4).pdf
+  source_class: OFFICIAL_COURT_RECORD
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: b1d97fc3f6a1fb50339b1bc9a28123124ab1c42bf760c8075a07e703f1a7cc40
+  direct_text_ingested: true
+  scope_note: Magistrate order and charging-text continuations
+- source_id: SRC002
+  filename: 26CR294791-170 (2).pdf
+  source_class: OFFICIAL_COURT_RECORD
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: e82a7426a42d6e41fab8db6dfede64c33d76f6885c74b5c05dced7a28daeb489
+  direct_text_ingested: true
+  scope_note: Waiver of counsel form; checkbox scope requires visual confirmation
+- source_id: SRC003
+  filename: 26CR294791-170.pdf
+  source_class: OFFICIAL_COURT_RECORD
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: b7db2e184d665d09a868db712f722b2177332ae91f78f22f9bdd2679ce7f9a3f
+  direct_text_ingested: true
+  scope_note: Conditions of release / release order
+- source_id: SRC004
+  filename: 26CR294791-170 (3).pdf
+  source_class: OFFICIAL_COURT_RECORD
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: 7c33d4d105a7e028834ed3d2b972731c92f490b4a934efa5cd199f9eef42a80b
+  direct_text_ingested: true
+  scope_note: Appearance bond
+- source_id: SRC005
+  filename: 26-04-30-04_SCL_PP74-115.pdf
+  source_class: OFFICIAL_FORENSIC_LAB
+  snapshot_modified: '2026-06-18T20:52:45Z'
+  content_hash: 0b43be8207f3dc36b5c545ca18a59d8fab02b360e62c7035aa71e5bccf9280e6
+  direct_text_ingested: true
+  scope_note: NC State Crime Laboratory packet W202604061; directly compiled and upload reconfirmed.
+  direct_visual_ingested: true
+  page_count: 42
+  uploaded_sha256: cad683f18961a35cf2573343a4a15958374e983cfde5f2207f070d0951fbc1f9
+- source_id: SRC006
+  filename: DA_DISCOVERY_INITIAL_PP1-73.pdf
+  source_class: STATE_DISCOVERY_OR_OFFICER_MATERIAL
+  snapshot_modified: '2026-06-04T19:26:02Z'
+  content_hash: d5792ff54e1eea9400a07cc14a730daef784feb97bb5bd9fbbf677b32110adfc
+  direct_text_ingested: true
+  scope_note: Directly reviewed all 73 pages, including prosecution summary, lead/supporting officer reports, arrest
+    report, property/evidence records, case notes, Miranda form, field tests, court/release forms, and sensitive
+    background-query pages.
+  direct_visual_ingested: true
+  page_count: 73
+  direct_pages_reviewed: 1-73
+  uploaded_sha256: 38226b7b629d1b7328ddd688746465b687435e891c8261ea35217462749c23f0
+- source_id: SRC007
+  filename: ARREST SUMMARY & NARRATIVE.pdf
+  source_class: STATE_DISCOVERY_OR_OFFICER_MATERIAL
+  snapshot_modified: '2026-06-05T19:27:28Z'
+  content_hash: 2b79ec7d8a0eb158c4f2b2914d1e11e6efeb4a6021b05b90a237dcad26ec9cff
+  direct_text_ingested: false
+  scope_note: Legacy separately named arrest-summary/narrative file was not independently compared in this run.
+    Core narrative/arrest/evidence content is directly present and compiled from SRC006; no byte-identity claim
+    is made.
+  coverage_status: LEGACY_NAMED_SOURCE_NOT_INDEPENDENTLY_UPLOADED
+  core_information_gap_closed_by: SRC006
+  blocks_core_source_convergence: false
+- source_id: SRC008
+  filename: BEYLIN_MASTER_EVIDENCE_INVENTORY.md
+  source_class: DEFENSE_EVIDENCE_AUDIT
+  snapshot_modified: '2026-06-05T22:03:03Z'
+  content_hash: 194232079787c2e021dd4f669da5221e6b560c2a6c013162a8c66c6abdc2e913
+  direct_text_ingested: true
+  scope_note: Defense audit of State evidence inventory
+- source_id: SRC009
+  filename: BEYLIN_DRUG_SUBSTANCE_LOG.md
+  source_class: DEFENSE_EVIDENCE_AUDIT
+  snapshot_modified: '2026-06-05T22:47:52Z'
+  content_hash: a9586ce28d1a532ce317dab3c3d73e260b257c26552af144e66d9fd1e564e76a
+  direct_text_ingested: true
+  scope_note: Defense drug-item and field-test audit
+- source_id: SRC010
+  filename: BEYLIN_TRAFFICKING_THRESHOLD_DEFECT_ANALYSIS.md
+  source_class: DEFENSE_ARGUMENT_OR_DRAFT
+  snapshot_modified: '2026-06-05T23:13:25Z'
+  content_hash: aa6c2b3dcf14ebdadca1a99fce5cac6c3fb881b103204af766e0e77e1c8fb476
+  direct_text_ingested: true
+  scope_note: Defense threshold analysis; legal premises require current authority validation
+- source_id: SRC011
+  filename: BEYLIN_MOTION_TO_DISMISS_COUNTS_3_AND_4.md
+  source_class: DEFENSE_ARGUMENT_OR_DRAFT
+  snapshot_modified: '2026-06-05T23:15:52Z'
+  content_hash: 4d5f22c414a53f8a37a66e9638de31d94d4ce029109967a069140ea1590a9d5d
+  direct_text_ingested: true
+  scope_note: Draft motion; not evidence or authority
+- source_id: SRC012
+  filename: BEYLIN_PRIVILEGED_FACTS_FOR_COUNSEL_MEMO.md
+  source_class: PRIVILEGED_CLIENT_INTELLIGENCE
+  snapshot_modified: '2026-06-05T23:35:18Z'
+  content_hash: ea510407ca770ee7c73312247ffc007f29e3a608b5f7bde4b179eb02a6aa0035
+  direct_text_ingested: true
+  scope_note: Sensitive client strategy/fact memorandum
+- source_id: SRC013
+  filename: Forensic_Video_Analysis_Report.md
+  source_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+  snapshot_modified: '2026-06-05T21:16:29Z'
+  content_hash: 4aab2667a6cfebd72cde1821caffbe12a555d34dc42d24b7c4eee887c81ee955
+  direct_text_ingested: true
+  scope_note: Derivative analysis of McMurtry bodycam
+- source_id: SRC014
+  filename: Forensic_Dashcam_Analysis_Report.md
+  source_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+  snapshot_modified: '2026-06-05T21:16:29Z'
+  content_hash: 5f9d238c5ce9cc4dbf4f17813a2a58cf6acf81612d00eb0c3a1dfa1dde994c98
+  direct_text_ingested: true
+  scope_note: Derivative dashcam analysis
+- source_id: SRC015
+  filename: Forensic_Supporting_Officer_Analysis.md
+  source_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+  snapshot_modified: '2026-06-05T21:16:29Z'
+  content_hash: 2f5f593b631a6b0c354962849bb9643e3312ce056d7f205dec04718c49d11db7
+  direct_text_ingested: true
+  scope_note: Derivative supporting-officer bodycam analysis
+- source_id: SRC016
+  filename: Forensic_Narcotics_Detective_Analysis.md
+  source_class: DERIVATIVE_FORENSIC_MEDIA_ANALYSIS
+  snapshot_modified: '2026-06-05T21:16:29Z'
+  content_hash: dd812518837f04489531ce30742e79d3812746467790c2f4ec53eb19c34527d9
+  direct_text_ingested: true
+  scope_note: Derivative narcotics-detective bodycam analysis
+- source_id: SRC017
+  filename: 2023-Hemp-Motion-to-Suppress-Evidence.docx
+  source_class: TEMPLATE_OR_SECONDARY_GUIDANCE
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: a70452a1d895f2cf686ef505a9f8a9cf786133a0b64bcbb70f6c478e063c862e
+  direct_text_ingested: true
+  scope_note: NCIDS template; predates 2026 Dobson/Rowdy and cannot supply current controlling law
+- source_id: SRC018
+  filename: Motion-to-Suppress-Warrantless-Vehicle-Search copy.docx
+  source_class: TEMPLATE_OR_SECONDARY_GUIDANCE
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: eefe54cae86ae09c09a9c9d193c9ba1d593ee4e15d11b923fdb49b70e3573d08
+  direct_text_ingested: true
+  scope_note: Generic vehicle-search suppression template; facts are placeholders
+- source_id: SRC019
+  filename: Motion & Petitions - NC Templates.md
+  source_class: TEMPLATE_OR_SECONDARY_GUIDANCE
+  snapshot_modified: '2026-05-22T17:37:46Z'
+  content_hash: 64261f1a7ec9b7d055049808d025fcc3447054a3af7e2e036351ad6badbf4c27
+  direct_text_ingested: true
+  scope_note: Template manifest / adaptation notes
+- source_id: SRC020
+  filename: 26CR294791-170 - ARREST.pdf
+  source_class: OFFICIAL_COURT_RECORD
+  direct_text_ingested: true
+  direct_visual_ingested: true
+  page_count: 8
+  direct_pages_reviewed: 1-8
+  uploaded_sha256: c462c1e501a73fba4bcdb685915506b71d2edcb33b25b6dc95151929cb8bb981
+  scope_note: 'Direct charging packet: Magistrate Order, charging-text continuations, and blank judgment/probable-cause
+    disposition pages.'
+- source_id: SRC021
+  filename: 26CR294791-170 - Case Summary.pdf
+  source_class: OFFICIAL_COURT_RECORD
+  direct_text_ingested: true
+  direct_visual_ingested: true
+  page_count: 5
+  direct_pages_reviewed: 1-5
+  uploaded_sha256: d34c036438ba794f334907971196a24ae33decccb7c9e1f287d775c2353091ee
+  scope_note: Direct historical eCourts case-summary snapshot with charges, bond, party display, and event/hearing
+    history.
+unbundled_media_index:
+  original_video_files_indexed: 5
+  evidence_image_entries_indexed: 81
+  original_media_directly_revalidated_during_compilation: false
+  rule: use derivative findings only with DERIVATIVE_MEDIA_FINDING label until original media is directly reviewed
+    in a later controlled update
+coverage_limits:
+- Original bodycam/dashcam media are not bundled or directly revalidated; derivative media findings remain labeled
+  as derivative.
+- Current docket posture, operative pleading, law, and local procedures remain freshness-sensitive after the snapshot.
+- SCL report W202604061 left several submitted items without chemical analysis.
+- MobileDetect test sheets are directly ingested but their one-to-one property-item mapping is not established by
+  the test sheets alone.
+source_convergence_status: PRIMARY_DOCUMENT_CONVERGED_FOR_BUNDLED_SNAPSHOT

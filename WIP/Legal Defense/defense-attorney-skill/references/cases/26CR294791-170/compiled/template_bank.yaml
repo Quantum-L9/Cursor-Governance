@@ -1,0 +1,21 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+classification: TEMPLATE_ONLY
+templates:
+- source_id: SRC017
+  name: 2023 Hemp Motion to Suppress Evidence
+  use: issue spotting / form structure only
+  freshness: STALE_FOR_CURRENT_CANNABIS_ODOR_LAW
+  mandatory_update: rebuild legal rule using current primary authority including 2026 Dobson/Rowdy; do not copy
+    K9 or no-admission facts
+- source_id: SRC018
+  name: Warrantless Vehicle Search Motion
+  use: generic suppression form / affidavit structure only
+  freshness: FACT_PATTERN_TEMPLATE_ONLY
+  mandatory_update: replace every example fact, verify current procedure/statutes, and confirm forum/phase
+- source_id: SRC019
+  name: NCIDS Template Manifest
+  use: navigation / source provenance
+  freshness: historical working notes
+  mandatory_update: do not treat adaptation notes as case facts or current law
+rule: templates never outrank current primary authority or compiled official case facts
