@@ -1,11 +1,6 @@
 ---
-description: "Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS."
-globs:
-  - "l9/**/orchestrator*.py"
-  - "l9/**/router*.py"
-  - "l9/**/controller*.py"
-  - "infra/**/*"
-  - "deploy/**/*"
+description: Guardrails for wiring changes between kernels, executors, orchestrators, and infra in the L9 OS.
+globs: l9/**/orchestrator*.py, l9/**/router*.py, l9/**/controller*.py, infra/**/*, deploy/**/*
 alwaysApply: false
 ---
 

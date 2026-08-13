@@ -1,5 +1,5 @@
 ---
-description: "Critical lessons learned from repeated mistakes. These rules prevent known failure patterns."
+description: Critical lessons learned from repeated mistakes. These rules prevent known failure patterns.
 alwaysApply: true
 ---
 

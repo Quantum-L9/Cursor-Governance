@@ -1,6 +1,5 @@
 ---
-description: "Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only."
-globs: []
+description: Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
 alwaysApply: true
 ---
 

@@ -1,8 +1,7 @@
 ---
-description: "Graph Engine architecture: chassis contract, gates, Cypher security, action handlers"
+description: 'Graph Engine architecture: chassis contract, gates, Cypher security, action handlers'
 alwaysApply: true
 ---
-
 
 ## Core Principles
 - This is an L9 constellation engine. The chassis handles HTTP/auth/observability; engines handle domain logic only.

@@ -1,14 +1,8 @@
 ---
-id: l9.rule.testing.integrity
-version: 2.0.0
 description: Preserve test intent and fix root causes instead of manufacturing a green suite.
-scope: global
-domain: testing
-activation: always
-authority: canonical_global
-context_cost: minimal
 alwaysApply: true
 ---
+
 # Test Integrity Policy
 
 ## Non-negotiable rule

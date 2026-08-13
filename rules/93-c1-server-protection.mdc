@@ -1,5 +1,5 @@
 ---
-description: "C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval."
+description: 'C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval.'
 alwaysApply: true
 ---
 

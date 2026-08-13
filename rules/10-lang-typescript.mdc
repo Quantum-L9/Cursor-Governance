@@ -1,10 +1,6 @@
 ---
-description: "TypeScript + TSX language rules for AI OS UI and agent-facing frontends."
-globs:
-  - "**/*.ts"
-  - "**/*.tsx"
-  - "!**/*.test.ts"
-  - "!**/*.test.tsx"
+description: TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
+globs: '**/*.ts, **/*.tsx, !**/*.test.ts, !**/*.test.tsx'
 alwaysApply: false
 ---
 

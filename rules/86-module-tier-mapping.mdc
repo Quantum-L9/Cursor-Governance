@@ -1,5 +1,5 @@
 ---
-description: "Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier."
+description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.
 alwaysApply: true
 ---
 

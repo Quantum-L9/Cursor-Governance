@@ -1,11 +1,6 @@
 ---
-description: "Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator prompts."
-globs:
-  - "docker-compose.yml"
-  - "deploy/**/*"
-  - "infra/**/*"
-  - "kubernetes/**/*"
-  - "helm/**/*"
+description: Deployment manifest and orchestrator wiring rules derived from DEPLOYMENT_MANIFEST_v1.7 and GMP orchestrator prompts.
+globs: docker-compose.yml, deploy/**/*, infra/**/*, kubernetes/**/*, helm/**/*
 alwaysApply: false
 ---
 

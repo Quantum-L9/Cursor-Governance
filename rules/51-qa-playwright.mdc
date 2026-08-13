@@ -1,12 +1,6 @@
 ---
-description: "Playwright E2E test invariants for web UI flows."
-globs:
-  - "**/*.spec.ts"
-  - "**/*.spec.tsx"
-  - "**/e2e/**/*.ts"
-  - "**/e2e/**/*.tsx"
-  - "playwright.config.ts"
-  - "playwright.config.js"
+description: Playwright E2E test invariants for web UI flows.
+globs: '**/*.spec.ts, **/*.spec.tsx, **/e2e/**/*.ts, **/e2e/**/*.tsx, playwright.config.ts, playwright.config.js'
 alwaysApply: false
 ---
 

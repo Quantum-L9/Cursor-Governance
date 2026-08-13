@@ -1,5 +1,5 @@
 ---
-description: "NEVER commit or push to git without explicit user request. Push is #1 deployment risk."
+description: 'NEVER commit or push to git without explicit user request. Push is #1 deployment risk.'
 alwaysApply: true
 ---
 

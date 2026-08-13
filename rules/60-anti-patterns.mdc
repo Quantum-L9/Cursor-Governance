@@ -1,5 +1,5 @@
 ---
-description: "Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections."
+description: Common anti-patterns and mistakes across TypeScript, Python, React, FastAPI, security, and testing, with side-by-side corrections.
 alwaysApply: true
 ---
 

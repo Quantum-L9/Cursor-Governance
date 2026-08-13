@@ -1,9 +1,6 @@
 ---
-description: "Review ergonomics, PR size guidance, and checklists for L9."
-globs:
-  - ".github/PULL_REQUEST_TEMPLATE*"
-  - ".github/ISSUE_TEMPLATE*"
-  - "**/*.md"
+description: Review ergonomics, PR size guidance, and checklists for L9.
+globs: .github/PULL_REQUEST_TEMPLATE*, .github/ISSUE_TEMPLATE*, **/*.md
 alwaysApply: false
 ---
 

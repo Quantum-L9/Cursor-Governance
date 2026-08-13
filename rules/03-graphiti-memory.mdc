@@ -1,6 +1,5 @@
 ---
 description: Graphiti episodic memory SSOT — retrieval authority, group_id contract, no Cursor native memory for repo facts
-globs: ["**/*"]
 alwaysApply: true
 ---
 

@@ -1,14 +1,8 @@
 ---
-id: l9.rule.output-discipline
-version: 1.0.0
 description: Concise output discipline with one decision, no repetition, and explicit validation status.
-scope: global
-domain: output
-activation: agent_requested
-authority: canonical_global
-context_cost: minimal
 alwaysApply: false
 ---
+
 # Output Discipline
 
 ## Rules

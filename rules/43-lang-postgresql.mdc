@@ -1,11 +1,6 @@
 ---
-description: "PostgreSQL schema, query, migration, and safety invariants."
-globs:
-  - "**/*.sql"
-  - "**/migrations/**/*.sql"
-  - "**/schema.sql"
-  - "**/seed.sql"
-  - "**/alembic/**/*.py"
+description: PostgreSQL schema, query, migration, and safety invariants.
+globs: '**/*.sql, **/migrations/**/*.sql, **/schema.sql, **/seed.sql, **/alembic/**/*.py'
 alwaysApply: false
 ---
 

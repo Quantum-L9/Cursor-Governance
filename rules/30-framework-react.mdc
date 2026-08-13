@@ -1,10 +1,6 @@
 ---
-description: "React UI rules for AI OS control panels, consoles, and visualization surfaces."
-globs:
-  - "apps/web/**/*.tsx"
-  - "apps/web/**/*.jsx"
-  - "packages/ui/**/*.tsx"
-  - "packages/ui/**/*.jsx"
+description: React UI rules for AI OS control panels, consoles, and visualization surfaces.
+globs: apps/web/**/*.tsx, apps/web/**/*.jsx, packages/ui/**/*.tsx, packages/ui/**/*.jsx
 alwaysApply: false
 ---
 

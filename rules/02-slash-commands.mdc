@@ -1,6 +1,5 @@
 ---
-description: "Slash command recognition and execution - repo-agnostic governance protocols"
-globs: ["**/*"]
+description: Slash command recognition and execution - repo-agnostic governance protocols
 alwaysApply: true
 ---
 

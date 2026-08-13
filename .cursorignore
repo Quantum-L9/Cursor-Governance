@@ -1,0 +1,4 @@
+# Derived manifests — RULES-MANIFEST.yaml remains the human-readable generated view.
+# JSON and Markdown are regenerated from rules/*.mdc; keep them out of agent context.
+rules/RULES-MANIFEST.json
+rules/RULES-MANIFEST.md
