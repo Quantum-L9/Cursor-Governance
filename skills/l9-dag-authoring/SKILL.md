@@ -1,6 +1,7 @@
 ---
 name: l9-dag-authoring
 description: create or update l9 workflow dags the proper way via dag-authoring-v1. use when authoring new dags, updating existing dags, wiring commands to dag nodes, or registering dag executors.
+paths: "pipeline/**, workflows/**, **/*dag*.yaml, **/*dag*.py"
 disable-model-invocation: true
 metadata:
   skill_schema: 1
