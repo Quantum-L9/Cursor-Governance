@@ -1,0 +1,7 @@
+receipt_id: "receipt-20260721T151000-spotlight-exclusions"
+action_id: "spotlight_exclusions"
+plan_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+started_at: "2026-07-21T15:10:00-0400"
+finished_at: "2026-07-21T15:10:01-0400"
+status: "success"
+log_file: "/Users/operator/mac-storage-triage/reports/20260721T151000/actions/spotlight-exclusions.log"

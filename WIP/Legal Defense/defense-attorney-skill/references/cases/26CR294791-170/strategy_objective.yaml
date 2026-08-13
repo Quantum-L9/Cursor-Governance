@@ -1,0 +1,38 @@
+schema_version: "1.0"
+case_id: "26CR294791-170"
+client: Igor Beylin
+purpose: personal_pro_se_defense
+
+primary_objective:
+  most_favorable_lawful_case_outcome: true
+
+optimize_lexicographically:
+  - current_law_and_record_accuracy
+  - rights_deadlines_and_waiver_avoidance
+  - dismissal_acquittal_or_charge_reduction_when_legally_supported
+  - weakening_or_exclusion_of_state_evidence_when_procedurally_available
+  - credibility_with_court
+  - favorable_record_creation
+  - preservation_of_future_defenses_and_review
+  - procedural_optionality
+  - information_gain
+  - minimum_unnecessary_defense_disclosure
+  - simple_reliable_human_execution
+
+never_optimize_through:
+  - false_fact
+  - fabricated_authority
+  - misleading_the_court
+  - false_testimony
+  - evidence_destruction_or_manipulation
+  - witness_coaching_to_lie
+  - concealed_material_source_conflict
+
+short_term_rule: >-
+  A favorable intermediate ruling is not automatically the best strategic outcome.
+  Compare the immediate gain against later prosecution, suppression, discovery,
+  testimony-rehearsal, preservation, and disclosure effects.
+
+human_authority:
+  final_decision: Igor_Beylin
+  courtroom_execution: Igor_Beylin

@@ -318,7 +318,13 @@
           "sync secrets registry",
           "sync_secrets_registry",
           "resolve_secret",
-          "aws secrets manager ref"
+          "aws secrets manager ref",
+          "infisical",
+          "infisical-cursor-governance",
+          "cursor-governance project",
+          "hydrate infisical",
+          "INFISICAL_PROJECT_ID",
+          "port_aws_to_infisical"
         ],
         "primary": "l9-aws-secrets",
         "signal_weight": 8,
@@ -587,14 +593,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "resolve openclaw-igorbot aws secrets manager refs via the cursor-governance ops/secrets registry \u2014 use when an agent needs a registered secret by ref (secret_id#json_key), to sync the local aws inventory, ui-session stubs, or fail-closed credential checks without keychain or printing values.",
+      "description": "resolve credentials from cursor-governance ops/secrets (aws secrets manager openclaw-igorbot refs and infisical project cursor-governance) \u2014 use when an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-aws-secrets",
       "path": "skills/l9-aws-secrets",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "resolving openclaw-igorbot AWS Secrets Manager refs, syncing the Cursor-Governance ops/secrets registry from AWS, or fail-closed secret checks without Keychain"
+      "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
     },
     {
       "composition_role": "general",
@@ -850,6 +856,17 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "diagnose macos disk-storage pressure, then reclaim only stale caches and confirmed noise (old docker containers, package caches, trash). use when a mac is low on disk, finder or spotlight is unreliable, caches or containers are bloated, or the user asks to triage storage, free space, clean caches, or run mac-storage-triage. three modes \u2014 diagnose (read-only), repair (hitl after diagnosis), autonomy (diagnose then purge allowlisted noise without review).",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-mac-storage-triage",
+      "path": "skills/l9-mac-storage-triage",
+      "reason": "macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.",
       "disable_model_invocation": false,
@@ -1038,6 +1055,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "85366cd090b7c9d6de94aae1a033e575e5d244f627d23832ffd37a9b4c806393",
-  "source_skill_corpus_sha256": "2619a66c50fd24ac1c6f6e50445c85b2663336104c60e66d9e92d80882b1affa"
+  "source_manifest_sha256": "93ffcb4ae3f16b2a7145d02a6a86214b090b4e17d22d8c80a39634d69ba7f223",
+  "source_skill_corpus_sha256": "4b787ff80241d950b822d5bbbed5fb2323f586c26d8a3c2516dbb03c9e1a49c1"
 }

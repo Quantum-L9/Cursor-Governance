@@ -403,13 +403,14 @@ activation path, however convenient it seems in the moment.
 
 ## Formatter ownership
 
-Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, Ruff owns Python.
+Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, VS Code JSON language features owns JSONC (the Biome extension cannot format jsonc), Ruff owns Python.
 
 Exactly one formatter owns each language. Do not reformat a file with a tool other than its owner, and do not add config for a competing formatter: the result is a diff that churns on every save.
 
 | Languages | Owner | Note |
 |---|---|---|
-| `javascript`, `javascriptreact`, `typescript`, `typescriptreact`, `json`, `jsonc` | **biome** | bound by the governed IDE profile |
+| `javascript`, `javascriptreact`, `typescript`, `typescriptreact`, `json` | **biome** | bound by the governed IDE profile |
+| `jsonc` | **vscode-json** | bound by the governed IDE profile |
 | `python` | **ruff** | bound by the governed IDE profile |
 
 Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
@@ -557,3 +558,32 @@ where they conflict):
 8. Running symlink setup from inside `~/.cursor-governance` must **not** create
    a `.cursor-commands` self-alias (setup removes it). Prefer wiring consumers,
    not the SSOT clone.
+
+<!-- INFISICAL_CURSOR_GOVERNANCE_VAULT_V1 -->
+## Infisical Cursor-Governance vault (2026-08-13) — extends §2.6
+
+Authoritative additions (do not treat older §2.6 bullets as Infisical-unaware):
+
+1. Long-term secret **values** for this agent live in Infisical project
+   **Cursor-Governance** (`slug: cursor-governance`, env `prod`, path `/`
+   as env-var names). Inventory of IDs/key names:
+   `ops/secrets/infisical-cursor-governance.yaml`.
+2. AWS `openclaw-igorbot/*` remains the name-inventory SSOT and the chicken-egg
+   Universal Auth bootstrap. Hydrate Infisical from
+   `openclaw-igorbot/infisical-cursor-governance`
+   (`INFISICAL_CLIENT_ID` / `_SECRET` / `INFISICAL_PROJECT_ID` / `INFISICAL_ENV=prod`).
+3. Skill `l9-aws-secrets` covers **both** vaults. Agents MUST resolve via that
+   skill before asking the human. Values never in git/logs/chat.
+4. Re-port AWS → Infisical: `python3 ops/secrets/port_aws_to_infisical.py`.
+
+<!-- CHAT_TRANSCRIPT_S3_ARCHIVE_V1 -->
+## Closed-chat word archive (2026-08-13)
+
+Authoritative additions:
+
+1. Hourly `ops/scripts/export_chats.sh` and tenx `com.tenx.learning-processor`
+   (`memory_aggregator.py`) are retired. They never captured nested `.jsonl` words.
+2. On chat X-out (`sessionEnd`), archive user/assistant text + timestamps to S3
+   `l9-chat-transcripts-020125249784` (`python -m ops.graphiti.hydration.archive_transcript`).
+   Not GitHub, not a local-only copy. No sqlite.
+3. See `ops/scripts/RETIRED_export_chats_and_learning_processor.md`.

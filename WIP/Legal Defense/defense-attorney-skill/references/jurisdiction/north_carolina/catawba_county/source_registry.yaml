@@ -1,0 +1,38 @@
+meta:
+  jurisdiction: catawba_county_north_carolina
+  verified_through: 2026-08-12
+  source_policy: primary_sources_first
+
+sources:
+  - id: catawba_county_judicial_branch
+    authority: official_judicial_branch
+    url: https://www.nccourts.gov/locations/catawba-county
+    supports:
+      - prosecutorial_district_36
+      - superior_court_district_19
+      - district_court_district_36
+
+  - id: catawba_first_appearance_order_2026
+    authority: local_administrative_order
+    filed: 2025-12-05
+    effective: 2026-01-01
+    url: https://www.nccourts.gov/documents/local-rules-and-forms/administrative-order-addressing-first-appearances-in-felony-cases-and-the-setting-of-court-dates-in-other-matters
+    supports:
+      - new_indictment_scheduling
+      - felony_first_appearance_scheduling
+      - superior_court_probation_violation_scheduling
+      - misdemeanor_appeal_scheduling
+      - superior_court_failure_to_appear_scheduling
+      - arraignment_timing_local_order
+
+  - id: nc_chapter_15a
+    authority: north_carolina_general_assembly
+    url: https://www.ncleg.gov/EnactedLegislation/Statutes/HTML/ByChapter/Chapter_15A.html
+    supports:
+      - statewide_criminal_procedure
+
+  - id: catawba_administrative_schedules
+    authority: official_judicial_branch
+    url: https://www.nccourts.gov/locations/catawba-county/catawba-county-local-administrative-schedules
+    supports:
+      - current_calendar_lookup

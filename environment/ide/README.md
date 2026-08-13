@@ -47,7 +47,7 @@ nothing. That is how `eslint_owned` gets no JS/TS formatter key.
 
 | Class | JS/TS formatter | Python formatter |
 |---|---|---|
-| `biome_default` | Biome (governance) | Ruff (governance) |
+| `biome_default` | Biome (JS/TS/JSON); built-in JSON language features (JSONC) | Ruff (governance) |
 | `eslint_owned` | none written — repo's ESLint/Prettier config wins | Ruff (governance) |
 
 Classification order (first match wins): workspace basename matches

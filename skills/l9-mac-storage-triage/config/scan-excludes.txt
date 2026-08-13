@@ -1,0 +1,4 @@
+Library/CloudStorage
+Library/CloudStorage/*
+.Trash
+.Trash/*

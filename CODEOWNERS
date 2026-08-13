@@ -36,3 +36,4 @@
 /conftest.py                           @cryptoxdog
 /ops/config/root-file-protection.json  @cryptoxdog
 /ops/scripts/validate_root_file_protection.py @cryptoxdog
+/biome.json                            @cryptoxdog

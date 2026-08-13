@@ -1,0 +1,50 @@
+schema_version: '1.0'
+case_id: 26CR294791-170
+source_id: SRC006
+source_file: DA_DISCOVERY_INITIAL_PP1-73.pdf
+records:
+- record_id: FT001
+  source_page: 46
+  test_number: 00028
+  date: '2026-04-30'
+  time: 03:31:25
+  result_display: POSITIVE RESULT
+  probable_substances_detected:
+  - opiates
+  - heroin
+  - codeine
+  - morphine
+  item_mapping: UNKNOWN_FROM_TEST_SHEET
+- record_id: FT002
+  source_page: 47
+  test_number: 00029
+  date: '2026-04-30'
+  time: 03:38:03
+  result_display: POSITIVE RESULT
+  probable_substances_detected:
+  - MDMA
+  - MDA
+  item_mapping: UNKNOWN_FROM_TEST_SHEET
+- record_id: FT003
+  source_page: 48
+  test_number: '00030'
+  date: '2026-04-30'
+  time: 03:49:18
+  result_display: POSITIVE RESULT
+  probable_substances_detected:
+  - methamphetamine
+  - amphetamine
+  item_mapping: UNKNOWN_FROM_TEST_SHEET
+narrative_crosswalk:
+  state_narrative_reports:
+  - 13 dosage units approximately 4.6 g field-tested positive for MDMA/ecstasy
+  - pink crystal-like material approximately 3.72 g field-tested positive for MDMA/ecstasy
+  - crystal rock-like material approximately 13.41 g field-tested positive for MDMA/ecstasy
+  - hard brown substance approximately 0.82 g field-tested positive for amphetamines
+  - contact-lens-container items were described as believed/suspected MDMA/ecstasy
+  one_to_one_mapping_rule: Do not map FT001-FT003 to a specific property item unless another direct source supplies
+    the mapping.
+  unlinked_opiate_flag: The packet contains a positive opiate test sheet even though the narrative inventory does
+    not clearly identify which property item it belongs to. Preserve as an unresolved source-linkage issue.
+lab_precedence: Field-test indications do not override SCL chemical findings. Use lab_findings.yaml for confirmed
+  identity.

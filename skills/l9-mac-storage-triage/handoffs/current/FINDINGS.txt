@@ -1,0 +1,159 @@
+STORAGE FINDINGS
+Host          mac-mini
+Diagnosed     2026-08-13T12:21:32-0400
+Phase A caches purged 2026-08-13T15:38 (repair). Phase B / guarded untouched.
+
+Data disk     290 GB used     124 GB free     71% full
+Home folder   (not re-measured this apply)
+Swap (VM)     23.0 GB     leave it — it shrinks after Data is freed
+
+Open this file. The JSON next to it is the machine copy for repair.
+Undecided rows (Ask first) include What's inside. Reply keep / delete / protect.
+
+
+SIZE            SAFE TO DROP?                     WHERE  /  WHAT
+----            -------------                     ----
+
+0 GB            Gone  —  purged 2026-08-13        ~/.npm
+                                                  npm package cache (+ leftover _npx after npm cache clean)
+                                                  Deleted. Regenerates on the next npm install.
+
+0 GB            Gone  —  purged 2026-08-13        ~/.cache/uv
+                                                  uv package cache (downloaded wheels/sdists/builds; not your projects)
+                                                  Deleted (uv cache clean --force, 3.2 GiB). Regenerates on the next uv sync.
+
+0 GB            Gone  —  purged 2026-08-13        ~/Library/Caches/Google
+                                                  Chrome disk cache (pages/scripts). Not bookmarks, passwords, or Application Support.
+                                                  Deleted. Chrome Application Support kept.
+
+1.11 GB         Kept  —  conda clean was a no-op  ~/miniconda3/pkgs
+                                                  Live packages for conda base (not unused tarballs). Dry-run: nothing unused.
+                                                  Not deleted. rm of pkgs would break the base env. miniconda3/envs still empty.
+
+0 GB            Gone  —  purged 2026-08-13        ~/Library/Caches/pip
+                                                  pip package cache
+                                                  Deleted (pip3 cache purge, 546 MB). Tiny selfcheck residue (~196K).
+
+0 GB            Gone  —  purged 2026-08-13        ~/Library/Caches/Homebrew
+                                                  Homebrew download cache
+                                                  Deleted (rm of brew --cache only). Did not run brew cleanup — dry-run would have removed /opt/homebrew portable-ruby.
+
+2.65 GB         Ask first                         ~/Library/Caches/com.spotify.client
+                                                  Spotify cache (not Spotify app data)
+                                                  Ask first. Reply keep / delete / protect.
+                                                  What's inside
+                                                    Spotify playback/cache files under Library/Caches only. Not Spotify app
+                                                    data in Application Support.
+                                                    oldest  Browser  created 2023-05-05 10:25
+                                                    newest  Local State  created 2026-08-13 11:29
+                                                    items   51
+                                                      1.40 GB     Browser
+                                                      0.57 GB     Default
+                                                      0.43 GB     Data
+                                                      0.07 GB     WasmTtsEngine
+                                                      0.07 GB     CertificateRevocation
+                                                      0.05 GB     component_crx_cache
+                                                      0.02 GB     WidevineCDM
+                                                      0.01 GB     GrShaderCache
+
+0.96 GB         Ask first                         ~/.cache/pre-commit
+                                                  pre-commit cache
+                                                  Ask first. Reply keep / delete / protect.
+                                                  What's inside
+                                                    pre-commit hook environments. Regenerates on the next pre-commit run.
+                                                    oldest  README  created 2026-03-26 19:22
+                                                    newest  reporsaaqlkq  created 2026-08-13 14:18
+                                                    items   51
+                                                      0.28 GB     repo75im729b
+                                                      0.12 GB     repokkq8g849
+                                                      0.10 GB     repo5022wg92
+                                                      0.08 GB     repo2hcqqsrj
+                                                      0.07 GB     repour4vl3k8
+                                                      0.07 GB     repoi0ly0fcg
+                                                      0.07 GB     repovjd_xui_
+                                                      0.05 GB     repok2g0ylmx
+
+0.53 GB         Ask first                         ~/.cache/puppeteer
+                                                  puppeteer browser cache
+                                                  Ask first. Reply keep / delete / protect.
+                                                  What's inside
+                                                    Downloaded Chromium/Firefox builds for Puppeteer. Regenerates on the
+                                                    next puppeteer install.
+                                                    oldest  chrome-headless-shell  created 2026-07-08 10:21
+                                                    newest  chrome  created 2026-07-08 10:21
+                                                    items   2
+                                                      0.34 GB     chrome
+                                                      0.19 GB     chrome-headless-shell
+
+13.4 GB         Protected  —  never delete        ~/Downloads
+                                                  Downloads folder
+                                                  Protected. You confirmed 2026-08-13: never auto-delete.
+
+2.78 GB         Protected  —  never delete        ~/Library/ScreenRecordings
+                                                  Screen recordings
+                                                  Protected. You confirmed 2026-08-13: never auto-delete.
+
+0 GB            Gone  —  already deleted          ~/.local/share/tenx/logs/chat_exports
+                                                  Rolling transcript mirror and hourly SQLite dumps.
+                                                  Deleted 2026-08-13 after S3 archive of live jsonl. Live chats stay in ~/.cursor/projects.
+
+0 GB            Gone  —  already deleted          ~/Miniconda3-latest-MacOSX-x86_64.sh
+                                                  Leftover conda installer (x86_64 .sh from Oct 2025). miniconda3 already installed.
+                                                  Deleted 2026-08-13. miniconda3 remains.
+
+31.3 GB         Never                             /Applications
+                                                  Installed applications
+                                                  Hands off.
+
+23.0 GB         Never                             /System/Volumes/VM
+                                                  Swap / sleep image
+                                                  Do not delete. Free Data first, then reboot.
+
+12.6 GB         Never                             ~/Library/Application Support/Claude
+                                                  Claude app data
+                                                  Hands off.
+
+8.01 GB         Never                             /Library
+                                                  macOS system library
+                                                  Hands off.
+
+6.52 GB         Never                             /private/var
+                                                  macOS system variable data
+                                                  Hands off.
+
+3.60 GB         Never                             ~/Library/Containers
+                                                  macOS app sandboxes (not Docker)
+                                                  Hands off.
+
+2.55 GB         Never                             /opt/homebrew
+                                                  Homebrew programs (Cellar). Only the brew cache is disposable.
+                                                  Hands off.
+
+2.11 GB         Never                             ~/dev
+                                                  Project trees (dev, odoo, n8n-mcp)
+                                                  Hands off.
+
+0.32 GB         Never                             ~/docker-volumes
+                                                  Docker volumes (unused, still guarded)
+                                                  Not in the automatic prune. Volumes stay.
+
+unknown         Never                             ~/Documents
+                                                  Documents, Desktop, Mail, Messages
+                                                  Size unknown (permission or timeout). Treat as hands off.
+
+
+PHASES
+
+  A   caches already on the repair list          done 2026-08-13
+      Purged npm, uv, Chrome Caches/Google, pip, Homebrew cache.
+      conda pkgs kept (clean --all found nothing unused).
+
+  B   extra caches                               4.14 GB
+      Ask first. Not automatic. Spotify / pre-commit / puppeteer still present.
+
+  C   old hourly chat exports                    0 GB
+      Already purged. Live transcripts kept; duplicates removed.
+
+  Hands off forever:  Documents, Desktop, Mail, apps, projects,
+  Application Support, Docker volumes, swap (VM).
+

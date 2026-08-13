@@ -1,0 +1,108 @@
+schema_version: "1.0"
+policy: specialists_are_bounded_cognitions_not_claimed_professionals
+
+specialists:
+  fourth_amendment_search_specialist:
+    trigger:
+      - stop
+      - detention
+      - frisk
+      - search
+      - vehicle_search
+      - cannabis_odor
+      - probable_cause
+    concern: search_and_seizure_doctrine_and_fact_timing
+    bundled_sources:
+      - references/jurisdiction/north_carolina/search_and_seizure.md
+      - references/jurisdiction/north_carolina/precedent_index.yaml
+      - references/jurisdiction/north_carolina/supreme_court/state_v_dobson_2026.md
+      - references/jurisdiction/north_carolina/supreme_court/state_v_rowdy_2026.md
+    live_primary_verification_if_material: true
+
+  forensic_lab_specialist:
+    trigger:
+      - lab_report
+      - chemical_analysis
+      - forensic_analysis
+      - substance_identity
+      - weight
+    concern: laboratory_evidence_foundation_and_notice_demand
+    bundled_sources:
+      - references/evidence_analysis.md
+      - references/jurisdiction/north_carolina/criminal_procedure.md
+    live_primary_research_required_for_exact_statutory_rule: true
+
+  controlled_substances_specialist:
+    trigger:
+      - trafficking
+      - possession
+      - controlled_substance
+      - schedule
+      - substance_weight
+    concern: offense_specific_drug_law
+    charging_instrument_required_for_element_analysis: true
+    live_primary_research_required: true
+
+  firearms_specialist:
+    trigger:
+      - firearm_charge
+      - concealed_weapon
+      - permit
+    concern: offense_specific_firearms_law
+    charging_instrument_required_for_element_analysis: true
+    live_primary_research_required: true
+
+  statements_miranda_specialist:
+    trigger:
+      - interrogation
+      - statement
+      - confession
+      - miranda
+    concern: statements_and_constitutional_procedure
+    live_primary_research_required: true
+
+  discovery_brady_giglio_specialist:
+    trigger:
+      - discovery
+      - brady
+      - giglio
+      - impeachment_disclosure
+    concern: disclosure_rights_and_timing
+    live_primary_research_required: true
+
+  digital_evidence_specialist:
+    trigger:
+      - phone
+      - device
+      - extraction
+      - digital_forensics
+      - location_data
+    concern: digital_evidence_attribution_integrity_and_scope
+    bundled_sources:
+      - references/evidence_analysis.md
+    expert_science_claims_require_source: true
+
+  appellate_preservation_specialist:
+    trigger:
+      - preserve
+      - appeal
+      - objection_record
+      - adverse_ruling
+    concern: issue_preservation_and_reviewability
+    live_primary_research_required: true
+
+  sentencing_exposure_specialist:
+    trigger:
+      - sentencing
+      - exposure
+      - prior_record_level
+      - habitual
+    concern: sentencing_and_case_exposure
+    current_charge_and_record_information_required: true
+    live_primary_research_required: true
+
+rules:
+  - specialist_does_not_override_permanent_owner
+  - specialist_must_label_missing_primary_authority
+  - no_specialist_may_invent_expert_testimony
+  - activate_only_when_triggered

@@ -1,0 +1,36 @@
+schema_version: "3.0"
+case_id: "26CR294791-170"
+phase_scope: probable_cause_2026_08_21
+source_basis: BEYLIN_PC_FORGE_project_instructions_v2 + PC_HEARING_HANDOFF
+
+user_locked_posture:
+  representation: pro_se
+  pc_hearing_waiver: prohibited
+  defendant_testimony: prohibited_by_user_strategy
+  immediate_trial_or_plea_under_15A_613: consent_withheld
+  suppression_motion_before_pc_hearing: deferred
+  inventory_discrepancy_at_pc_hearing: prohibited
+  public_statement: prohibited
+  witness_or_officer_contact: prohibited
+
+phase_specific_rules:
+  courtroom_suppression_vocabulary:
+    status: avoid_in_current_pc_argument
+    reason: working_strategy_separates_pc_showing_from_superior_court_suppression
+  cross_style:
+    closed_ended: true
+    one_fact_per_question: true
+    avoid_why: true
+  factual_precision:
+    zero_cannabis_recovered: CASE_FILE_REPORTED
+    other_controlled_substances_recovered: CASE_FILE_REPORTED
+
+legal_reality_overrides:
+  - current_verified_law
+  - actual_judge_orders
+  - actual_case_posture
+  - user's_new_explicit_instruction
+
+expiration:
+  event: probable_cause_phase_ends
+  rule: do_not_auto_carry_phase_specific_locks_into_later_phases

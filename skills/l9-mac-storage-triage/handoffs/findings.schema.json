@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "l9-mac-storage-triage findings",
+  "description": "Machine mirror of FINDINGS.txt. Repair reads this file; humans read FINDINGS.txt.",
+  "type": "object",
+  "required": ["schema", "host", "diagnosed_at", "apply_allowed", "volumes", "findings", "repair"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "type": "string", "const": "l9-mac-storage-triage/findings/v1" },
+    "host": { "type": "string", "minLength": 1 },
+    "diagnosed_at": { "type": "string", "minLength": 1 },
+    "report_id": { "type": ["string", "null"] },
+    "apply_allowed": { "type": "boolean" },
+    "volumes": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["mount", "used_gib", "free_gib", "capacity_pct"],
+          "properties": {
+            "mount": { "type": "string" },
+            "used_gib": { "type": "number" },
+            "free_gib": { "type": "number" },
+            "capacity_pct": { "type": "number" }
+          }
+        },
+        "vm": {
+          "type": "object",
+          "properties": {
+            "mount": { "type": "string" },
+            "used_gib": { "type": ["number", "null"] },
+            "note": { "type": "string" }
+          }
+        },
+        "home_gib": { "type": ["number", "null"] }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "gib",
+          "kind",
+          "phase",
+          "guard",
+          "safe_to_delete",
+          "repair_action",
+          "proposed_action",
+          "status",
+          "label",
+          "next_step"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "path_display": { "type": "string" },
+          "gib": { "type": ["number", "null"] },
+          "kind": { "type": "string" },
+          "phase": { "type": "string", "enum": ["A", "B", "C", "D", "guard"] },
+          "guard": { "type": "string", "enum": ["never", "hitl", "none"] },
+          "safe_to_delete": { "type": "boolean" },
+          "repair_action": {
+            "type": ["string", "null"],
+            "enum": [null, "purge_stale_caches", "docker_prune_unused", "empty_trash"]
+          },
+          "proposed_action": { "type": "string" },
+          "status": { "type": "string", "enum": ["open", "allowlisted", "candidate", "guarded", "unknown", "closed"] },
+          "label": { "type": "string" },
+          "next_step": { "type": "string" },
+          "inspect": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "child_count": { "type": "integer" },
+              "oldest": { "type": ["string", "null"] },
+              "newest": { "type": ["string", "null"] },
+              "note": { "type": "string" },
+              "top": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": { "type": "string" },
+                    "gib": { "type": ["number", "null"] },
+                    "kind": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repair": {
+      "type": "object",
+      "required": ["phase_a_actions", "phase_a_gib", "phase_b_gib", "phase_c_gib"],
+      "properties": {
+        "phase_a_actions": { "type": "array", "items": { "type": "string" } },
+        "phase_a_gib": { "type": "number" },
+        "phase_b_gib": { "type": "number" },
+        "phase_c_gib": { "type": "number" }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+schema_version: '1.0'
+artifact: witness_intelligence_protocol
+purpose: Maintain source-grounded witness intelligence for preparation and cross without turning research hypotheses into
+  facts.
+witness_fields:
+- witness_id
+- role
+- knowledge_basis
+- known_statements
+- report_statements
+- media_statements
+- hearing_testimony
+- trial_testimony
+- contradictions
+- verified_impeachment_material
+- unverified_research_targets
+- bias_or_motive_evidence
+- cross_targets
+- rehabilitation_risk
+- record_status
+statement_fields:
+- statement_id
+- proposition
+- source_id
+- locator
+- date_or_event
+- status
+- contradicts
+- corroborates
+cross_target_fields:
+- target_fact
+- why_material
+- current_support
+- question_sequence_ref
+- danger_answer
+- impeachment_route
+- stop_point
+- likely_rehabilitation
+research_target_rule: A research target remains UNKNOWN until sourced. Prior complaints, misconduct, training gaps, motive,
+  dishonesty, or patterns may not be stated as fact merely because they would be useful impeachment.
+admissibility_boundary: Whether information exists, is discoverable, is admissible, and is strategically wise to use are separate
+  questions owned by the appropriate cognitions.
+rules:
+- steelman_witness_explanation_before_calling_inconsistency_impeachment
+- distinguish_memory_error_from_provable_falsehood
+- do_not_use_personal_character_attacks_when_specific_source_backed_contradiction_is_available
+- cross_priorities_follow_materiality_and_answer_control_not_drama

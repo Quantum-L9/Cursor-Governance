@@ -1,0 +1,30 @@
+schema_version: "1.0"
+case_id: "26CR294791-170"
+snapshot_date: 2026-08-12
+rule: recompute_countdowns_from_current_date_do_not_freeze_T_minus_values
+
+dates:
+  - id: D001
+    date: 2026-08-13
+    action_reported: protective_lab_report_objection_target_filing_and_service
+    type: tactical_target_from_working_pack
+    verification_required: true
+  - id: D002
+    date: 2026-08-14
+    action_reported: five_business_day_backstop_before_2026_08_21_under_working_90_95_g_analysis
+    type: statutory_calculation_from_working_pack
+    verification_required: true
+  - id: D003
+    date: 2026-08-17
+    action_reported: confirm_hearing_date_time_courtroom_division_and_recording_access
+    type: operational_target
+  - id: D004
+    date: 2026-08-21
+    action_reported: probable_cause_hearing
+    type: reported_court_event
+    live_docket_confirmation_required: true
+  - id: D005
+    date: 2026-09-04
+    action_reported: approximate_discovery_clock_marker_if_applicable
+    type: approximate_only
+    do_not_treat_as_deadline_without_recalculation_under_15A_902: true

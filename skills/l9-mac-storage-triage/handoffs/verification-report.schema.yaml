@@ -1,0 +1,24 @@
+---
+$schema: "http://json-schema.org/draft-07/schema#"
+title: VerificationReport
+description: Final reconciliation of free space and action-specific outcomes.
+version: "1.0.0"
+type: object
+required: [verification_id, plan_sha256, free_kib_before, free_kib_after, action_results, overall_status]
+properties:
+  verification_id: {type: string, minLength: 1}
+  plan_sha256: {type: string, pattern: "^[a-f0-9]{64}$"}
+  free_kib_before: {type: integer, minimum: 0}
+  free_kib_after: {type: integer, minimum: 0}
+  action_results:
+    type: array
+    items:
+      type: object
+      required: [action_id, status, evidence]
+      properties:
+        action_id: {type: string}
+        status: {type: string, enum: [verified, failed, Unknown]}
+        evidence: {type: string}
+      additionalProperties: false
+  overall_status: {type: string, enum: [verified, partial, failed, Unknown]}
+additionalProperties: false

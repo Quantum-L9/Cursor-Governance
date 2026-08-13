@@ -38,6 +38,9 @@ sessionEnd (X-out / window_close / completed / aborted)
     `MEMORY_DISTILL_S3_BUCKET` is set — content-hash idempotent; enqueue
     failure is fail-loud (receipt + stderr). Rollback flags:
     `MEMORY_PHASE_B=0`, `MEMORY_DISTILL_ENQUEUE=0`
+  → Archive **full chat words** (user/assistant text + timestamps, no sqlite/tools)
+    to S3 `L9_CHAT_TRANSCRIPT_S3_BUCKET` / `l9-chat-transcripts-020125249784`
+    (`ops.graphiti.hydration.archive_transcript`, background from sessionEnd)
   → never raise hook timeout into silent “nothing written” without Phase A attempt
 
 Batch catch-up (no Mac awake at cron time)

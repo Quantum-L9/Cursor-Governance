@@ -88,6 +88,15 @@ fi
 PY="${GOV_ROOT}/.venv/bin/python3"
 [ -x "$PY" ] || PY="python3"
 
+# Full-words S3 archive on chat close (X-out). Background: do not spend the 30s Graphiti budget.
+ARCHIVE_ARGS=(--session-id "$SESSION_ID" --project-dir "$REPO")
+[ -n "${TRANSCRIPT_PATH:-}" ] && ARCHIVE_ARGS+=(--transcript-path "$TRANSCRIPT_PATH")
+(
+  cd "$GOV_ROOT" || exit 0
+  PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -m ops.graphiti.hydration.archive_transcript "${ARCHIVE_ARGS[@]}"
+) >>"${TMPDIR:-/tmp}/l9-chat-transcript-archive.log" 2>&1 &
+
 CLOSE_ARGS=(
   --project-dir "$REPO"
   --session-id "$SESSION_ID"

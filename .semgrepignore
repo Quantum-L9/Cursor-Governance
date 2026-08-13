@@ -1,0 +1,46 @@
+# Semgrep path exclusions. A repo-root .semgrepignore replaces Semgrep's
+# built-in default template, so keep the common skips below plus CG scratch.
+# WIP/ is tracked backlog — never gated. Do not add WIP/ to .gitignore.
+
+# VCS
+.git
+.svn
+.hg
+_darcs
+CVS
+
+# Large / generated
+build/
+vendor/
+dist/
+*.min.js
+.env/
+.tox/
+
+# Package managers
+node_modules/
+.npm/
+.yarn/
+.venv/
+_opam/
+_build/
+_cargo/
+
+# Common test paths (Semgrep default template)
+test/
+tests/
+testsuite/
+*_test.go
+
+# Cursor-Governance scratch / backlog (tracked, never scanned)
+WIP/
+current_work/
+C_GOV_FILES/
+reports/
+workflows/
+_archived/
+_archive/
+archive/
+archived/
+ops/generated/
+environment/generated/

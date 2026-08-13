@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "class": "biome_default",
-  "comment": "Extensions installed in EVERY governed workspace. Biome owns JS/TS/JSON formatting here, so Prettier is deliberately absent (formatter exclusivity).",
+  "comment": "Extensions installed in EVERY governed workspace. Biome owns JS/TS/JSON formatting here, so Prettier is deliberately absent (formatter exclusivity). JSONC uses the built-in vscode.json-language-features formatter.",
   "extensions": [
     "biomejs.biome",
     "charliermarsh.ruff",
