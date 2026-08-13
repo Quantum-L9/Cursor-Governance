@@ -6,8 +6,8 @@ role: fix_engine
 tags: [pr, fix, code, methodology, local-verify, batch]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-08-06
+version: 3.1.0
+updated: 2026-08-13
 /L9_META -->
 
 # Fix Engine
@@ -28,6 +28,21 @@ Apply fixes for classified **codebase** findings. Independent clusters run concu
 - MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
 - NEVER push partial fixes — all or nothing per cycle for the codebase batch.
+
+## Lesson Recall (before inventing a fix)
+
+Before proposing a new patch, search the governance learning corpus for a matching known pattern:
+
+```bash
+rg -i "<error class or key phrase>" \
+  "$HOME/.cursor-governance/learning/failures/repeated-mistakes.md" \
+  "$HOME/.cursor-governance/learning/patterns/quick-fixes.md"
+```
+
+- If a match is found, apply that template (smallest diff that implements it).
+- If no match, proceed with the smallest original fix.
+- Do **not** auto-apply unmatched regex patches.
+- Do **not** write `memory_log.json` or `session_status.md` (retired; Graphiti is session SSOT).
 
 ## Gate Discovery (MANDATORY FIRST STEP)
 

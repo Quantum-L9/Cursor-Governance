@@ -9,10 +9,12 @@ auto_chain: ynp
 
 ## WHAT IT DOES
 
-1. Extract patterns from code
+1. Extract patterns from code (and from skill/prompt/workflow packs when those are the target)
 2. Compare to L9 standards
 3. Identify misalignments
 4. Generate alignment plan
+
+Load `skills/l9-code-analysis/references/pattern-alignment.md` for scan dimensions.
 
 ---
 
@@ -26,7 +28,11 @@ SCAN:
 ├── Logging patterns
 ├── Async patterns
 ├── Import patterns
-└── Testing patterns
+├── Testing patterns
+└── Pack / workflow (when target is a skill, prompt, or workflow pack)
+    ├── Repeated node or section structures
+    ├── Reasoning chains (if → validate → mutate → return)
+    └── Reusable field / ID patterns grounded in repo docs
 ```
 
 ### 2. COMPARE TO STANDARDS

@@ -6,8 +6,8 @@ role: sweep_protocol
 tags: [refactor-sweep, governance, dry-run]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-08-06
+version: 3.1.0
+updated: 2026-08-13
 /L9_META -->
 
 # Refactor Sweep Protocol
@@ -22,7 +22,7 @@ intent → DISCOVERY → CLASSIFICATION → IMPACT → GOVERNANCE DECISION → R
 
 ## Phases
 
-1. **Discovery** — locate instances via `rg` over intent-derived tokens and known path markers.
+1. **Discovery** — locate instances via `rg` over intent-derived tokens and known path markers. Also `rg` `$HOME/.cursor-governance/learning/failures/repeated-mistakes.md` and `$HOME/.cursor-governance/learning/patterns/quick-fixes.md` for constraint tokens (known-bad patterns the sweep must not reintroduce; known-good templates to prefer). There is no `lessons.learned.md` — those two files are the corpus.
 2. **Classification** — assign layer/domain; flag bootstrap, lifecycle, protected paths.
 3. **Impact** — mechanical? logic change? import graph? public contract?
 4. **Governance** — one of: Eligible for harvest-use | GMP REQUIRED | FORBIDDEN.

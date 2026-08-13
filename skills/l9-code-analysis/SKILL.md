@@ -40,7 +40,7 @@ Optional accelerators: [parallel-subagent-patterns.md](references/parallel-subag
 
 1. **Classify target** — MODULE | SERVICE | AGENT | ROUTER | TOOL | KERNEL | CONFIG.
 2. **Route mode** — analyze (understand) | evaluate (audit) | analyze+evaluate (both).
-3. **Execute** — structure map → flow trace → hotspots → health (analyze) or tier/L9/gap checks (evaluate).
+3. **Execute** — structure map → flow trace → hotspots → health (analyze) or tier/L9/gap checks (evaluate). When the target is a skill, prompt, or workflow pack, load [pattern-alignment.md](references/pattern-alignment.md) pack-scan dimensions.
 4. **Recommend** — continue, `/evaluate`, `/gmp`, or load parallel/dependency refs for large scope.
 
 ## Resource Map
@@ -50,7 +50,7 @@ Optional accelerators: [parallel-subagent-patterns.md](references/parallel-subag
 - [references/analyze-evaluate-workflow.md](references/analyze-evaluate-workflow.md) — combined cross-reference, impact, auto-fix candidates.
 - [references/parallel-subagent-patterns.md](references/parallel-subagent-patterns.md) — parallel explore / four-lens review.
 - [references/dependency-analysis.md](references/dependency-analysis.md) — module graph, cycles, blast radius.
-- [references/pattern-alignment.md](references/pattern-alignment.md) — extract_align vs repo standards.
+- [references/pattern-alignment.md](references/pattern-alignment.md) — extract_align vs repo standards (includes pack/workflow scan dimensions).
 
 ## Validation
 
