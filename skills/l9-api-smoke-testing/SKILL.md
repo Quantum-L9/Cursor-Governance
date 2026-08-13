@@ -1,6 +1,7 @@
 ---
 name: l9-api-smoke-testing
 description: start the dev server, discover API routes from the codebase, hit every endpoint, and report which ones return errors. use when verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes.
+paths: "**/api/**, **/routes/**, **/*router*.py, **/*controller*.py"
 metadata:
   skill_schema: 1
   layer: control_plane
