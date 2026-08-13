@@ -376,3 +376,11 @@ agents-data-validate:
 	$(CURDIR)/.venv/bin/python -m pytest environment/agents/generated-data/ingress/tests -q
 agents-runtime-probe:
 	$(CURDIR)/.venv/bin/python environment/agents/readiness/probe_runtime.py
+
+# DeepSeek V4 Pro launcher for Claude Code (env-routed; no keys in git)
+.PHONY: claude-deepseek claude-deepseek-verify
+claude-deepseek:
+	./scripts/claude-deepseek.sh
+
+claude-deepseek-verify:
+	./scripts/verify-routing.sh

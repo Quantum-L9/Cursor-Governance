@@ -38,6 +38,7 @@ node_modules/
 # Environment variables (keep template)
 .env
 .env.local
+.env.*.local
 env.local
 !.env.template
 
