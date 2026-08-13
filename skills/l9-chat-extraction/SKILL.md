@@ -1,15 +1,16 @@
 ---
 name: l9-chat-extraction
 description: extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, memory, extraction, chat, lessons, patterns]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, memory, extraction, chat, lessons, patterns]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Chat Extraction

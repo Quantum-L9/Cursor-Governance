@@ -33,6 +33,8 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     for line in text[4:end].splitlines():
         if not line.strip():
             continue
+        if line.startswith((" ", "\t")):
+            continue
         key, sep, value = line.partition(":")
         if not sep:
             raise ValueError(f"invalid frontmatter line: {line}")
@@ -52,9 +54,11 @@ def main() -> int:
     skill = (root / "SKILL.md").read_text(encoding="utf-8")
     try:
         frontmatter = parse_frontmatter(skill)
-        if set(frontmatter) != {"name", "description"}:
+        allowed = {"name", "description", "paths", "disable-model-invocation", "metadata"}
+        extra = set(frontmatter) - allowed
+        if "name" not in frontmatter or "description" not in frontmatter or extra:
             errors.append(
-                f"frontmatter keys must be name and description only: {sorted(frontmatter)}"
+                f"frontmatter keys must be native Cursor fields only: {sorted(frontmatter)}"
             )
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", frontmatter.get("name", "")):
             errors.append("name must be lowercase hyphenated")

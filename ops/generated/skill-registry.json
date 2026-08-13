@@ -856,6 +856,17 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "diagnose macos disk-storage pressure, then reclaim only stale caches and confirmed noise (old docker containers, package caches, trash). use when a mac is low on disk, finder or spotlight is unreliable, caches or containers are bloated, or the user asks to triage storage, free space, clean caches, or run mac-storage-triage. three modes \u2014 diagnose (read-only), repair (hitl after diagnosis), autonomy (diagnose then purge allowlisted noise without review).",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-mac-storage-triage",
+      "path": "skills/l9-mac-storage-triage",
+      "reason": "macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.",
       "disable_model_invocation": false,
@@ -1044,6 +1055,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "c71d49418a81038526c655a6706ea276f1ba25285a389b58935826f0bebef2de",
-  "source_skill_corpus_sha256": "3fc87b579854c325caf8383193068435a4b6791516dfffc60e4939cf499837e6"
+  "source_manifest_sha256": "93ffcb4ae3f16b2a7145d02a6a86214b090b4e17d22d8c80a39634d69ba7f223",
+  "source_skill_corpus_sha256": "4b787ff80241d950b822d5bbbed5fb2323f586c26d8a3c2516dbb03c9e1a49c1"
 }

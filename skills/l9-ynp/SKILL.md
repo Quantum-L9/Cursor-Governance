@@ -1,14 +1,15 @@
 ---
 name: l9-ynp
 description: synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, ynp, next-action, leverage, priority]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, ynp, next-action, leverage, priority]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Your Next Play (YNP)

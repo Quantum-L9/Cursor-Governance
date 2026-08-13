@@ -1,15 +1,16 @@
 ---
 name: l9-inspect
 description: inspect code before it enters l9 — external code gate and existing file audit via inspect-v1 dag. use when validating markdown with code blocks, proposed files not yet in repo, or auditing existing repo files before import/refactor.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, inspect, validation, external-code, audit, dag]
-owner: igor_beylin
-status: active
-version: 3.0.1
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, inspect, validation, external-code, audit, dag]
+  owner: igor_beylin
+  status: active
+  version: 3.0.1
+  updated: 2026-06-06
 ---
 
 # Inspect

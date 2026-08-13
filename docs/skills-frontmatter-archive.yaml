@@ -1,0 +1,591 @@
+# Original SKILL.md frontmatter, pre-nesting. Undo record.
+- path: skills/_archived/l9-pr-analysis/SKILL.md
+  frontmatter: |
+    name: l9-pr-analysis
+    description: deprecated — do not activate. superseded by l9-pr-remediation (Diagnose + Converge). archived out of live skills discovery.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, pr, deprecated]
+    owner: igor_beylin
+    status: deprecated
+    version: 2.0.1
+    updated: 2026-08-07
+    superseded_by: l9-pr-remediation
+    disable-model-invocation: true
+- path: skills/_archived/l9-pr-remediation-deprecated/SKILL.md
+  frontmatter: |
+    name: l9-pr-remediation-deprecated
+    description: deprecated packaging-heavy pr remediation pack retained for reference only. do not activate. use l9-pr-remediation instead — the unified single-path pack with concurrent clusters, short polls, sonar/codeql/debt depth, and no run-report or tar deliverables.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, pr, remediation, deprecated]
+    owner: igor_beylin
+    status: deprecated
+    version: 3.5.0
+    updated: 2026-08-06
+    superseded_by: l9-pr-remediation
+    disable-model-invocation: true
+- path: skills/_archived/l9-structured-reasoning-deprecated/SKILL.md
+  frontmatter: |
+    name: l9-structured-reasoning-deprecated
+    description: deprecated block-protocol structured reasoning pack retained for reference only. do not activate. use l9-structured-reasoning instead, which owns adaptive routing, evidence ledgers, and document-corpus modes.
+    disable-model-invocation: true
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, reasoning, deprecated]
+    owner: igor_beylin
+    status: deprecated
+    version: 1.1.0
+    updated: 2026-08-06
+    superseded_by: l9-structured-reasoning
+- path: skills/l9-api-smoke-testing/SKILL.md
+  frontmatter: |
+    name: l9-api-smoke-testing
+    description: start the dev server, discover API routes from the codebase, hit every endpoint, and report which ones return errors. use when verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, api, testing, smoke-test, http]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-architecture-decision-records/SKILL.md
+  frontmatter: |
+    name: l9-architecture-decision-records
+    description: document technical decisions as Architecture Decision Records (ADRs) with context, options considered, and rationale. use when capturing a significant architecture or design decision, recording trade-offs, or creating an ADR.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, adr, architecture, documentation, decisions]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-auditing-performance/SKILL.md
+  frontmatter: |
+    name: l9-auditing-performance
+    description: audit and optimize application performance, including bundle size, rendering, database queries, and Core Web Vitals. use when the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, performance, profiling, optimization, web-vitals]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-auditing-security/SKILL.md
+  frontmatter: |
+    name: l9-auditing-security
+    description: perform a systematic security audit of a codebase, checking for OWASP Top 10 vulnerabilities, secrets exposure, and insecure patterns. use when reviewing code for security risks, scanning for exposed secrets, or hardening before release.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, security, audit, owasp, secrets]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-aws-secrets/SKILL.md
+  frontmatter: |
+    name: l9-aws-secrets
+    description: resolve openclaw-igorbot aws secrets manager refs via the cursor-governance ops/secrets registry — use when an agent needs a registered secret by ref (secret_id#json_key), to sync the local aws inventory, ui-session stubs, or fail-closed credential checks without keychain or printing values.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, aws, secrets, openclaw-igorbot, registry, fail-closed, ssot]
+    owner: igor_beylin
+    status: active
+    version: 1.1.0
+    updated: 2026-08-06
+- path: skills/l9-bounded-autonomy/SKILL.md
+  frontmatter: |
+    name: l9-bounded-autonomy
+    description: >-
+      bounded autonomy campaign SOP for Cursor — parallel non-dependent Tasks,
+      background PR-poll subagents while main continues, campaign authorization
+      packet, join/merge-gate without autonomous merge. use when user runs
+      /autonomy, needs PR convergence while continuing other work, or fans out
+      independent lanes under ADR-0001 / pr-convergence budgets.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, autonomy, parallel, pr-poll, subagent, campaign, merge-gate]
+    owner: igor_beylin
+    status: active
+    version: 1.0.0
+    updated: 2026-08-02
+    disable-model-invocation: true
+- path: skills/l9-chat-extraction/SKILL.md
+  frontmatter: |
+    name: l9-chat-extraction
+    description: extract learnings and specific content from chat conversations to memory or structured output. use when closing sessions, capturing lessons, patterns, errors, preferences, code blocks, decisions, requirements, or action items from conversation.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, memory, extraction, chat, lessons, patterns]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-ci-ops/SKILL.md
+  frontmatter: |
+    name: l9-ci-ops
+    description: ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, ci, github-actions, pr-check, policy, triage]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-cli-optimization/SKILL.md
+  frontmatter: |
+    name: l9-cli-optimization
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    disable-model-invocation: true
+    future_home: https://github.com/Quantum-L9/l9-tools
+    status: active
+    description: Identify underutilized, verified repository-owned capabilities and enable their full utilization — activating dormant or miswired code, off-by-default features, unread config, and unused signals — then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.
+- path: skills/l9-code-analysis/SKILL.md
+  frontmatter: |
+    name: l9-code-analysis
+    description: rapidly analyze, deeply evaluate, or combine analysis and evaluation for code targets. use when exploring unfamiliar code, auditing structure, mapping flows, identifying hotspots, or assessing quality before edits.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, analysis, evaluate, structure, hotspots, compliance]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+- path: skills/l9-code-graph-rag-mcp/SKILL.md
+  frontmatter: |
+    name: l9-code-graph-rag-mcp
+    description: operate @er77/code-graph-rag-mcp for repo-local code structure — token-safe tool selection, cli indexing, importers, impact analysis, cross-module discovery. use when code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or mcp indexing is needed.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, mcp, code-graph, rag, token_discipline, plasticos]
+    owner: igor_beylin
+    status: active
+    version: 1.0.0
+    updated: 2026-06-07
+    sources:
+      - er77/code-graph-rag-mcp@v2.7.15
+      - assets/user-execution-guide.md
+- path: skills/l9-code-maintenance/SKILL.md
+  frontmatter: |
+    name: l9-code-maintenance
+    description: lint-fix, migrate, clean/compress, consolidate, and refactor-sweep via dag executors with a --dry-run CLI. use for systematic lint fixes, pattern migrations, or read-only refactor impact analysis before mutating.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, lint, migrate, refactor, maintenance, dag, dry-run]
+    owner: igor_beylin
+    status: active
+    version: 3.0.0
+    updated: 2026-08-06
+    disable-model-invocation: true
+- path: skills/l9-component-verification/SKILL.md
+  frontmatter: |
+    name: l9-component-verification
+    description: component audit, deterministic verify, and runtime probe escalation ladder. use for /audit-component, /verify-component, or /probe wiring checks.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, verification, audit, probe, wiring]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-context7-docs/SKILL.md
+  frontmatter: |
+    name: l9-context7-docs
+    description: Use Context7 documentation before coding when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.
+    skill_schema: 1
+    layer: control_plane
+    role: documentation_grounding
+    tags: [l9, context7, documentation, libraries, frameworks, sdk, api, current_docs]
+    owner: igor_beylin
+    status: active
+    version: 1.1.1
+    updated: 2026-06-06
+- path: skills/l9-dag-authoring/SKILL.md
+  frontmatter: |
+    name: l9-dag-authoring
+    description: create or update l9 workflow dags the proper way via dag-authoring-v1. use when authoring new dags, updating existing dags, wiring commands to dag nodes, or registering dag executors.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, dag, workflow, authoring, governance]
+    owner: igor_beylin
+    status: active
+    version: 1.1.1
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-e2e-blocker-resolution/SKILL.md
+  frontmatter: |
+    name: l9-e2e-blocker-resolution
+    description: run repo e2e or local-proof tests, classify and fix in-repo blockers, then write a brief for remaining external gates and a todo.md session-reference entry. use when the user asks to run e2e, clear e2e blockers, document remaining secrets/env gaps, or produce a session-start surface for blocked proof paths.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, e2e, blockers, verification, secrets, todo, brief, session-start]
+    owner: igor_beylin
+    status: active
+    disable-model-invocation: true
+    version: 1.0.0
+    updated: 2026-07-31
+- path: skills/l9-end-session/SKILL.md
+  frontmatter: |
+    name: l9-end-session
+    description: force-retry session close — manual PICKUP/learnings when auto sessionEnd failed or offline. use for recovery, richer handoff, or governance backup — not required for normal X-out.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, session, handoff, memory, governance, graphiti, force-retry]
+    owner: igor_beylin
+    status: active
+    version: 1.5.0
+    updated: 2026-08-11
+    disable-model-invocation: true
+- path: skills/l9-forge/SKILL.md
+  frontmatter: |
+    name: l9-forge
+    description: autonomous high-velocity execution with zero pauses — batch gmp runs, auto-fix validation, deliver code tests and reports. use when user invokes /forge or requests maximum-velocity autonomous delivery.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, forge, autonomous, gmp, velocity]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-gap-analysis/SKILL.md
+  frontmatter: |
+    name: l9-gap-analysis
+    description: perform read-only delta gap analysis against a target state with scoring and optional actionable recommendations. use when assessing readiness, missing pieces, compliance drift, or percent-complete status.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, gap-analysis, readiness, scoring, delta]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+- path: skills/l9-gmp-protocol/SKILL.md
+  frontmatter: |
+    name: l9-gmp-protocol
+    description: execute deterministic repo changes through locked gmp phases 0-6 with a modification lock and a signed evidence report. use when a change must be traceable and drift-free — adding/refactoring/fixing modules, gated edits, or any task that needs a locked todo plan, phase-by-phase execution, and an evidence report in reports/.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, gmp, deterministic, phases, evidence, modification_lock, governance]
+    owner: igor_beylin
+    status: active
+    version: 1.1.0
+    updated: 2026-06-04
+- path: skills/l9-governance-symlinks/SKILL.md
+  frontmatter: |
+    name: l9-governance-symlinks
+    description: Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.
+    disable-model-invocation: true
+- path: skills/l9-governance-wiring/SKILL.md
+  frontmatter: |
+    name: l9-governance-wiring
+    description: workspace governance symlinks, component wire executor, confirm-wiring audit, governance checks, rules inventory, and github ssot backup. use for /wire governance, confirm-wiring, or governance-backup.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, governance, wiring, symlinks, backup]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-graphiti-memory/SKILL.md
+  frontmatter: |
+    name: l9-graphiti-memory
+    description: Graphiti VPS memory — prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, graphiti, memory, prefetch, gmp, end-session]
+    owner: igor_beylin
+    status: active
+    version: 1.4.0
+    updated: 2026-08-07
+    disable-model-invocation: false
+- path: skills/l9-harvest-pipeline/SKILL.md
+  frontmatter: |
+    name: l9-harvest-pipeline
+    description: harvest code extraction via sed/dag and use-harvest deployment pipeline. use when extracting code from documents, deploying harvested files, or running harvest-deploy-v1 dag — never manually rewrite code from documents.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, harvest, sed, deployment, dag, governance]
+    owner: igor_beylin
+    status: active
+    version: 3.2.1
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-incident-response/SKILL.md
+  frontmatter: |
+    name: l9-incident-response
+    description: handle production incidents — triage, mitigate, communicate, and write postmortems. use when a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, incident, ops, postmortem, sev]
+    owner: igor_beylin
+    status: active
+    version: 1.1.1
+    updated: 2026-06-06
+- path: skills/l9-inspect/SKILL.md
+  frontmatter: |
+    name: l9-inspect
+    description: inspect code before it enters l9 — external code gate and existing file audit via inspect-v1 dag. use when validating markdown with code blocks, proposed files not yet in repo, or auditing existing repo files before import/refactor.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, inspect, validation, external-code, audit, dag]
+    owner: igor_beylin
+    status: active
+    version: 3.0.1
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-issue-remediation/SKILL.md
+  frontmatter: |
+    name: l9-issue-remediation
+    description: diagnose or converge open github issues across all non-archived quantum-l9 repos — inventory and rank blockers, fix at the obvious owning repo, hand prs to l9-pr-remediation, and leave graphiti pickup plus issue comment plus conditional root session-reference markdown so the next agent can resume. use when reviewing org issue readiness or blockers, or when the user asks to fix, remediate, unblock, or converge open issues across repos.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, issues, github, diagnose, remediation, cross-repo, unblock, graphiti, fleet]
+    owner: igor_beylin
+    status: active
+    version: 1.0.0
+    updated: 2026-08-11
+    disable-model-invocation: true
+- path: skills/l9-kubernetes-deploying/SKILL.md
+  frontmatter: |
+    name: l9-kubernetes-deploying
+    description: deploy applications to Kubernetes — Deployments, Services, Ingress, ConfigMaps, Secrets, health checks, and scaling. use when writing or debugging Kubernetes manifests, deploying to a cluster, or configuring scaling/health checks.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, kubernetes, k8s, deployment, ops]
+    owner: igor_beylin
+    status: active
+    version: 1.1.0
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-monitoring-terminal-errors/SKILL.md
+  frontmatter: |
+    name: l9-monitoring-terminal-errors
+    description: watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, terminal, errors, monitoring, debugging]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-plan/SKILL.md
+  frontmatter: |
+    name: l9-plan
+    description: create a machine-validated execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes. do not use when the user only wants to execute an already-settled plan or a trivial fully-specified one-line fix.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
+    owner: igor_beylin
+    status: active
+    version: 4.0.0
+    updated: 2026-08-12
+- path: skills/l9-pr-remediation/SKILL.md
+  frontmatter: |
+    name: l9-pr-remediation
+    description: diagnose or converge a github pr — read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, pr, ci, code-review, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github]
+    owner: igor_beylin
+    status: active
+    version: 3.1.0
+    updated: 2026-08-07
+    disable-model-invocation: true
+- path: skills/l9-prompt-engineering/SKILL.md
+  frontmatter: |
+    name: l9-prompt-engineering
+    description: write effective prompts for LLMs — structure, few-shot examples, chain-of-thought, system prompts, and output parsing. use when designing or improving an LLM prompt, system message, or structured output schema.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, prompt, llm, prompt-engineering]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-python-tdd-with-uv/SKILL.md
+  frontmatter: |
+    name: l9-python-tdd-with-uv
+    description: test-driven development in Python using uv as the package manager. covers the red-green-refactor cycle, vertical slicing, and uv project setup. use when starting Python TDD with uv, setting up a uv project, or running a red-green-refactor loop.
+    disable-model-invocation: true
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, python, tdd, uv, testing]
+    owner: igor_beylin
+    status: active
+    version: 1.1.1
+    updated: 2026-06-06
+- path: skills/l9-recursive-optimization/SKILL.md
+  frontmatter: |
+    name: l9-recursive-optimization
+    description: recursively align, improve, and converge artifact groups, packs, prompts, plans, and agent outputs until complete and execution-ready. use when hardening l9 packs, auditing contract compliance, improving prompts or skill packs, or when recursive alignment, recursive improvement, or recursive optimization is requested.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, recursive, alignment, improvement, optimization, convergence, audit, hardening]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-07
+    sources:
+      - Recursive Alignment.md
+      - Recursive Improvement.md
+- path: skills/l9-repo-index/SKILL.md
+  frontmatter: |
+    name: l9-repo-index
+    description: export repo indexes for fast lookup — repo-agnostic index generation. use when refreshing reports/repo-index, searching classes/functions/models before grep, or bootstrapping codebase navigation indexes.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, index, repo, lookup, odoo]
+    owner: igor_beylin
+    status: active
+    version: 1.1.1
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-repository-renovation/SKILL.md
+  frontmatter: |
+    name: l9-repository-renovation
+    disable-model-invocation: true
+    description: audit, reconcile, and renovate a real software repository from fragmented manifests, duplicated automation, stale configuration, dead wiring, ignored tests, documentation drift, and ambiguous ownership into a coherent, validated implementation delivered through a governed pull request. use when the user asks to fix a messy repo end to end, align pyproject/package manifests with actual capabilities, collapse competing dependency or test authorities, turn an audit into full production files, modernize repository control planes, or continue remediation until the pr is green. do not use for audit-only commentary, isolated feature development, cosmetic refactors, or repositories the user has not authorized for modification.
+- path: skills/l9-setting-up-ci/SKILL.md
+  frontmatter: |
+    name: l9-setting-up-ci
+    description: set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, ci, github-actions, pipeline, devops]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-setting-up-terraform/SKILL.md
+  frontmatter: |
+    name: l9-setting-up-terraform
+    description: set up Terraform infrastructure-as-code for cloud resources, including provider configuration, modules, state management, and CI integration. use when bootstrapping Terraform IaC, structuring modules/state, or wiring Terraform into CI.
+    disable-model-invocation: true
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, terraform, iac, infrastructure, ops]
+    owner: igor_beylin
+    status: active
+    version: 1.0.1
+    updated: 2026-06-06
+- path: skills/l9-skill-compiler/SKILL.md
+  frontmatter: |
+    name: l9-skill-compiler
+    description: compile prompts, sops, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into standalone zero-stub skill packs. use when the user asks to create, design, analyze, rebuild, validate, package, or improve reusable agent skills, chatgpt-compatible skill folders, model-agnostic skill packs, or tool-using agent workflows.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, skill, compiler, control_plane, zero_stub, standalone]
+    owner: igor_beylin
+    status: active
+    version: 1.3.0
+    updated: 2026-08-06
+- path: skills/l9-structured-reasoning/SKILL.md
+  frontmatter: |
+    name: l9-structured-reasoning
+    description: Adaptive evidence-based reasoning for difficult planning, plan review, architecture, debugging, multi-document corpus analysis, and multi-option decisions. Use when the user explicitly needs trade-off analysis, root-cause reasoning, architecture choices, a plan stress test, corpus gap/coherence/dependency work, or a decision record grounded in evidence. Route only the proof obligations needed for the task, risk, evidence state, and available capabilities. Do not activate for simple factual answers, direct rewrites, deterministic file operations, trivial reversible fixes, or when a more specific domain Skill already supplies a complete reasoning contract.
+- path: skills/l9-ui-operator/SKILL.md
+  frontmatter: |
+    name: l9-ui-operator
+    description: portable saas dashboard ui operator — use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-aws-secrets for refs without keychain.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, ui-operator, playwright, cartridges, playbook, aws-secrets]
+    owner: igor_beylin
+    status: active
+    version: 1.0.0
+    updated: 2026-08-06
+    disable-model-invocation: true
+- path: skills/l9-update-agent-docs/SKILL.md
+  frontmatter: |
+    name: l9-update-agent-docs
+    description: audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, docs, agents, ci, maintenance]
+    owner: igor_beylin
+    status: active
+    version: 2.0.2
+    updated: 2026-08-06
+- path: skills/l9-update-command/SKILL.md
+  frontmatter: |
+    name: l9-update-command
+    description: minimize slash commands to dag triggers via slash-command-update workflow. use when reducing a command to a thin trigger or auditing dag-trigger commands.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, commands, dag, meta]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06
+    disable-model-invocation: true
+- path: skills/l9-wire-skill-into-repo/SKILL.md
+  frontmatter: |
+    name: l9-wire-skill-into-repo
+    description: registers, updates, or retires agent skills in discovery tables, autonomy manifests, adapter symlinks, subagent preloads, and related agent docs. use immediately after l9-skill-compiler finishes, when a skill pack exists but is not discoverable, when the user asks to wire or register a skill, or when a skill must be deprecated, unwired, archived, deregistered, or superseded — deprecate means archive out of live skills/ and clear every registry, never leave a deprecated pack discoverable.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, wiring, unwire, deprecate, registry, skills, discovery]
+    owner: igor_beylin
+    status: active
+    version: 2.1.0
+    updated: 2026-08-06
+- path: skills/l9-ynp/SKILL.md
+  frontmatter: |
+    name: l9-ynp
+    description: synthesize the single highest-leverage next action from current context. use after completing work, when priorities are unclear, or when the user asks what to do next.
+    skill_schema: 1
+    layer: control_plane
+    role: skill_entrypoint
+    tags: [l9, ynp, next-action, leverage, priority]
+    owner: igor_beylin
+    status: active
+    version: 2.0.0
+    updated: 2026-06-06

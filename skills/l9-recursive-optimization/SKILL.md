@@ -1,15 +1,16 @@
 ---
 name: l9-recursive-optimization
 description: recursively align, improve, and converge artifact groups, packs, prompts, plans, and agent outputs until complete and execution-ready. use when hardening l9 packs, auditing contract compliance, improving prompts or skill packs, or when recursive alignment, recursive improvement, or recursive optimization is requested.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, recursive, alignment, improvement, optimization, convergence, audit, hardening]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-07
-sources:
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, recursive, alignment, improvement, optimization, convergence, audit, hardening]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-07
+  sources:
   - Recursive Alignment.md
   - Recursive Improvement.md
 ---

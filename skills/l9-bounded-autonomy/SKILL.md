@@ -6,15 +6,16 @@ description: >-
   packet, join/merge-gate without autonomous merge. use when user runs
   /autonomy, needs PR convergence while continuing other work, or fans out
   independent lanes under ADR-0001 / pr-convergence budgets.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, autonomy, parallel, pr-poll, subagent, campaign, merge-gate]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-08-02
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, autonomy, parallel, pr-poll, subagent, campaign, merge-gate]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: 2026-08-02
 ---
 
 # Bounded Autonomy (Cursor SOP)

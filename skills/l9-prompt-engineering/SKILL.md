@@ -1,14 +1,16 @@
 ---
 name: l9-prompt-engineering
 description: write effective prompts for LLMs — structure, few-shot examples, chain-of-thought, system prompts, and output parsing. use when designing or improving an LLM prompt, system message, or structured output schema.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, prompt, llm, prompt-engineering]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
+paths: "prompts/**, **/*prompt*.md"
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, prompt, llm, prompt-engineering]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Prompt Engineering

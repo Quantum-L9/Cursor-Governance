@@ -389,3 +389,8 @@ claude-deepseek-verify:
 ## Cursor-native rules frontmatter + always-apply ratchet (docs/rules-standard.md).
 rules-check:
 	python3 ops/scripts/check_rules_standard.py
+
+.PHONY: skills-check
+## Cursor-native skill frontmatter + discovery-footprint ratchet (docs/skills-standard.md).
+skills-check:
+	python3 ops/scripts/check_skills_standard.py

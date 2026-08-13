@@ -1,14 +1,15 @@
 ---
 name: l9-code-analysis
 description: rapidly analyze, deeply evaluate, or combine analysis and evaluation for code targets. use when exploring unfamiliar code, auditing structure, mapping flows, identifying hotspots, or assessing quality before edits.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, analysis, evaluate, structure, hotspots, compliance]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, analysis, evaluate, structure, hotspots, compliance]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Code Analysis

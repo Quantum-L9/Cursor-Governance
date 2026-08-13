@@ -1,15 +1,16 @@
 ---
 name: l9-mac-storage-triage
 description: "diagnose macos disk-storage pressure, then reclaim only stale caches and confirmed noise (old docker containers, package caches, trash). use when a mac is low on disk, finder or spotlight is unreliable, caches or containers are bloated, or the user asks to triage storage, free space, clean caches, or run mac-storage-triage. three modes — diagnose (read-only), repair (hitl after diagnosis), autonomy (diagnose then purge allowlisted noise without review)."
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, macos, storage, disk, caches, docker, diagnose-first]
-owner: igor_beylin
-status: active
-version: 1.1.0
-updated: 2026-08-13
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, macos, storage, disk, caches, docker, diagnose-first]
+  owner: igor_beylin
+  status: active
+  version: 1.1.0
+  updated: 2026-08-13
 ---
 
 # Mac Storage Triage

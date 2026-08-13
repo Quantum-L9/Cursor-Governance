@@ -1,15 +1,16 @@
 ---
 name: l9-repo-index
 description: export repo indexes for fast lookup — repo-agnostic index generation. use when refreshing reports/repo-index, searching classes/functions/models before grep, or bootstrapping codebase navigation indexes.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, index, repo, lookup, odoo]
-owner: igor_beylin
-status: active
-version: 1.1.1
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, index, repo, lookup, odoo]
+  owner: igor_beylin
+  status: active
+  version: 1.1.1
+  updated: 2026-06-06
 ---
 
 # Repo Index

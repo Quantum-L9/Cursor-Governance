@@ -3,9 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import py_compile
 import re
-import subprocess
-import sys
 from pathlib import Path
 
 REQUIRED_FILES = {
@@ -68,6 +67,8 @@ def frontmatter(skill_text: str) -> tuple[dict[str, str], str | None]:
     for raw in skill_text[4:end].splitlines():
         if not raw.strip():
             continue
+        if raw.startswith((" ", "\t")):
+            continue
         if ":" not in raw:
             return {}, f"invalid frontmatter line: {raw}"
         key, value = raw.split(":", 1)
@@ -96,10 +97,10 @@ def main() -> int:
         errors.append(metadata_error)
     # name and description are required; disable-model-invocation is the optional
     # governance flag that marks a high-blast-radius skill explicit-only.
-    allowed_keys = {"name", "description", "disable-model-invocation"}
+    allowed_keys = {"name", "description", "paths", "disable-model-invocation", "metadata"}
     if "name" not in metadata or "description" not in metadata or set(metadata) - allowed_keys:
         errors.append(
-            "SKILL.md frontmatter must contain name, description, and optionally disable-model-invocation"
+            "SKILL.md frontmatter must contain name, description, and only native Cursor keys"
         )
     if metadata.get("name") != root.name:
         errors.append("frontmatter name must match skill directory")
@@ -161,15 +162,13 @@ def main() -> int:
     if any(path.exists() for path in forbidden_examples):
         errors.append("initializer example files remain")
 
-    compile_result = subprocess.run(
-        [sys.executable, "-m", "compileall", "-q", str(root / "scripts")],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-    if compile_result.returncode != 0:
-        errors.append(f"script compilation failed: {compile_result.stdout.strip()}")
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        for script in sorted(scripts_dir.glob("*.py")):
+            try:
+                py_compile.compile(str(script), doraise=True)
+            except py_compile.PyCompileError as exc:
+                errors.append(f"script compilation failed: {exc}")
 
     placeholder_patterns = [
         re.compile(r"\[TODO[^\]]*\]", re.I),

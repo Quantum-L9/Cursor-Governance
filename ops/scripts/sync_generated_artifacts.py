@@ -94,7 +94,12 @@ def _frontmatter_status(skill_md: Path) -> str:
     fm = yaml.safe_load(text[4:end]) or {}
     if not isinstance(fm, dict):
         return ""
-    return str(fm.get("status") or "").strip().lower()
+    status = fm.get("status")
+    if status in (None, ""):
+        meta = fm.get("metadata")
+        if isinstance(meta, dict):
+            status = meta.get("status")
+    return str(status or "").strip().lower()
 
 
 def find_live_deprecated_skills(root: Path) -> list[str]:

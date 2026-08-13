@@ -2,14 +2,15 @@
 name: l9-setting-up-terraform
 description: set up Terraform infrastructure-as-code for cloud resources, including provider configuration, modules, state management, and CI integration. use when bootstrapping Terraform IaC, structuring modules/state, or wiring Terraform into CI.
 disable-model-invocation: true
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, terraform, iac, infrastructure, ops]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, terraform, iac, infrastructure, ops]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Setup Terraform

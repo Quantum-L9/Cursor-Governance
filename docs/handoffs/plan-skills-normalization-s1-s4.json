@@ -1,0 +1,467 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Normalize Cursor-native skill frontmatter and scoped paths",
+  "objective": "Execute skills-normalization-pack Stages 1-4 on a fresh chore/skills-normalization branch from origin/main: nest non-native SKILL.md keys under metadata without data loss, lock archived skills, install a folded-YAML-safe skills-check gate, then add paths only for PATHS-PROPOSAL skills whose globs match a non-empty non-hostile tracked set. Do not rewrite descriptions, do not relocate _archived/, and do not scope empty or secrets-correlated skills.",
+  "success_criteria": [
+    "docs/skills-frontmatter-archive.yaml exists with one verbatim frontmatter entry per scanned SKILL.md before any nest write",
+    "python3 ops/scripts/check_skills_standard.py prints PASS with 0 non-native top-level keys on live and archived SKILL.md files",
+    "ops/scripts/sync_generated_artifacts.py _frontmatter_status reads status from top-level or metadata.status and still classifies deprecated packs",
+    "l9-skill-compiler references document audit fields under metadata rather than as top-level SKILL.md keys",
+    "every skills/_archived/*/SKILL.md has disable-model-invocation true",
+    "docs/skills-inventory.md lists live count, discovery footprint bytes/tokens vs 16384, description-band flags, and quoted overlap clusters with no description text rewritten",
+    "paths added only to the Stage-4 apply set; skip set remains unscoped; each applied glob still matches a non-empty tracked file set",
+    "make pr-check PASS on the feature branch changed files"
+  ],
+  "scope": {
+    "in": [
+      "skills/**/SKILL.md frontmatter nest and archived disable-model-invocation",
+      "docs/skills-frontmatter-archive.yaml undo record",
+      "docs/skills-inventory.md Stage 3 report",
+      "ops/scripts/check_skills_standard.py plus Makefile skills-check append and pre-commit hook append",
+      "ops/scripts/sync_generated_artifacts.py status reader dual-read",
+      "skills/l9-skill-compiler/references/file-contract.md meta-standard.md validation-checklist.md nest teaching",
+      "Stage 4 paths on the verified apply set from PATHS-PROPOSAL.md"
+    ],
+    "out": [
+      "Stage 4 paths on skip set: l9-e2e-blocker-resolution, l9-repo-index, l9-setting-up-terraform, l9-kubernetes-deploying, l9-aws-secrets",
+      "Relocate skills/_archived/ to docs/archived-skills/",
+      "Any SKILL.md description rewrite",
+      "name or folder renames",
+      "CANONICAL_LAW.md, ORG_INVARIANTS.yaml, CODEOWNERS, .claude/settings.json, .claude/hooks/**",
+      "skills/AUTONOMY_MANIFEST.yaml content edits",
+      "Rules normalization pack, housekeeping pack install, Legal Defense WIP",
+      "Force-push, hard-reset, admin-merge, scanner weakening"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "python3 WIP/Cursor ToDo's/skills-normalization-pack/scripts/nest_skill_metadata.py --skills-dir skills",
+      "pass_criteria": "DRY-RUN: 45 live scanned, 0 unparseable, 0 name/folder mismatches, 43 would change",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "rg skill_schema|layer:|role:|tags: skills/AUTONOMY_MANIFEST.yaml",
+      "pass_criteria": "no matches; manifest is not coupled to keys that will nest",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "git ls-files match of PATHS-PROPOSAL globs",
+      "pass_criteria": "12 apply non-empty; 3 empty skip; k8s=1 hostile fixture skip; aws-secrets skip because .cursorignore absent",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk high --evidence sufficient",
+      "pass_criteria": "depth=deep omit_gates=[]",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-baseline-preflight",
+      "task": "Create chore/skills-normalization from origin/main, lock full SHA, re-run nest dry-run and glob census on that tree, stop_and_replan on drift from this plan's apply/skip set",
+      "files": [
+        "skills-normalization-pack/PATHS-PROPOSAL.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new branch from origin/main, not feat/wip-legal-defense-26cr-ingest",
+      "leverage_rank": 2,
+      "shared_root_cause": "wrong-branch dirt would mix legal WIP with skill frontmatter"
+    },
+    {
+      "id": "todo-02-archive-and-nest",
+      "task": "Write docs/skills-frontmatter-archive.yaml then apply nest_skill_metadata.py --apply --include-archived so every non-native key moves under metadata in name, description, paths, disable-model-invocation, metadata order with values unchanged",
+      "files": [
+        "docs/skills-frontmatter-archive.yaml",
+        "skills/**/SKILL.md",
+        "skills-normalization-pack/scripts/nest_skill_metadata.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "operation": "Replace",
+      "anchor": "SKILL.md YAML frontmatter only",
+      "leverage_rank": 1,
+      "shared_root_cause": "non-native top-level keys are the shared drift"
+    },
+    {
+      "id": "todo-03-coupling-readers",
+      "task": "Update _frontmatter_status to read status from top-level or metadata.status; retarget l9-skill-compiler file-contract, meta-standard, and validation-checklist to the nested metadata shape",
+      "files": [
+        "ops/scripts/sync_generated_artifacts.py",
+        "skills/l9-skill-compiler/references/file-contract.md",
+        "skills/l9-skill-compiler/references/meta-standard.md",
+        "skills/l9-skill-compiler/references/validation-checklist.md"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [
+        "todo-02-archive-and-nest"
+      ],
+      "operation": "Replace",
+      "anchor": "_frontmatter_status and compiler Required Fields examples",
+      "leverage_rank": 3,
+      "shared_root_cause": "readers and compiler still teach top-level audit keys"
+    },
+    {
+      "id": "todo-04-archived-lock",
+      "task": "Enumerate skills/_archived/*/SKILL.md disable-model-invocation values, add true only if missing, record flag-all decision and relocate recommendation without moving the tree",
+      "files": [
+        "skills/_archived/l9-pr-analysis/SKILL.md",
+        "skills/_archived/l9-pr-remediation-deprecated/SKILL.md",
+        "skills/_archived/l9-structured-reasoning-deprecated/SKILL.md",
+        "docs/skills-inventory.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-02-archive-and-nest"
+      ],
+      "operation": "Replace",
+      "anchor": "archived SKILL.md frontmatter disable-model-invocation",
+      "leverage_rank": 6
+    },
+    {
+      "id": "todo-05-checker-inventory",
+      "task": "Install folded-YAML-safe ops/scripts/check_skills_standard.py, append make skills-check and a pre-commit local hook, write docs/skills-inventory.md with footprint, description-band flags, and quoted overlap clusters",
+      "files": [
+        "ops/scripts/check_skills_standard.py",
+        "Makefile",
+        ".pre-commit-config.yaml",
+        "docs/skills-inventory.md",
+        "skills-normalization-pack/scripts/check_skills_standard.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-02-archive-and-nest",
+        "todo-04-archived-lock"
+      ],
+      "operation": "Create",
+      "anchor": "append-only Makefile and .pre-commit-config.yaml; new checker file",
+      "leverage_rank": 4,
+      "shared_root_cause": "no ratchet exists so nest drift returns"
+    },
+    {
+      "id": "todo-06-paths-verify",
+      "task": "Reconfirm tracked-file matches for all 17 PATHS-PROPOSAL globs on the execution SHA and freeze apply vs skip; abort Stage 4 if the apply/skip set differs from this plan",
+      "files": [
+        "skills-normalization-pack/PATHS-PROPOSAL.md"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [
+        "todo-05-checker-inventory"
+      ],
+      "operation": "Wrap",
+      "anchor": "PATHS-PROPOSAL recommended-for-paths table",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-07-paths-apply",
+      "task": "Add the proposed paths key to each apply-set skill, one local commit per skill, re-run make skills-check after each; leave skip-set unscoped",
+      "files": [
+        "skills/l9-api-smoke-testing/SKILL.md",
+        "skills/l9-architecture-decision-records/SKILL.md",
+        "skills/l9-ci-ops/SKILL.md",
+        "skills/l9-code-graph-rag-mcp/SKILL.md",
+        "skills/l9-dag-authoring/SKILL.md",
+        "skills/l9-prompt-engineering/SKILL.md",
+        "skills/l9-python-tdd-with-uv/SKILL.md",
+        "skills/l9-setting-up-ci/SKILL.md",
+        "skills/l9-skill-compiler/SKILL.md",
+        "skills/l9-update-agent-docs/SKILL.md",
+        "skills/l9-update-command/SKILL.md",
+        "skills/l9-wire-skill-into-repo/SKILL.md"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "todo-06-paths-verify"
+      ],
+      "operation": "Insert",
+      "anchor": "native paths field after description",
+      "leverage_rank": 7
+    },
+    {
+      "id": "todo-08-prove",
+      "task": "Run make skills-check and make pr-check; prove zero non-native keys, archived flags present, apply-set globs still non-empty, skip-set has no paths key",
+      "files": [
+        "ops/scripts/check_skills_standard.py",
+        "Makefile"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-03-coupling-readers",
+        "todo-07-paths-apply"
+      ],
+      "operation": "Wrap",
+      "anchor": "skills-check and pr-check outputs",
+      "leverage_rank": 8
+    },
+    {
+      "id": "todo-09-converge",
+      "task": "Record kernels, authorize L4 release, open scoped PR with PULL_REQUEST_TEMPLATE.md, run l9-pr-remediation to green+mergeable, merge this stack after older open PRs",
+      "files": [
+        ".l9/pr/pr-remediation-handoff.json",
+        "PULL_REQUEST_TEMPLATE.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-08-prove"
+      ],
+      "operation": "Create",
+      "anchor": "make pr after l4_local authorize-release",
+      "leverage_rank": 9
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline-preflight",
+    "todo-02-archive-and-nest",
+    "todo-03-coupling-readers",
+    "todo-05-checker-inventory",
+    "todo-06-paths-verify",
+    "todo-07-paths-apply",
+    "todo-08-prove",
+    "todo-09-converge"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Execution SHA locked on chore/skills-normalization from origin/main",
+      "unlocks": "lossless nest"
+    },
+    {
+      "id": "M1",
+      "outcome": "All SKILL.md frontmatter is Cursor-native with metadata nest and couplings updated",
+      "unlocks": "checker ratchet and Stage 4"
+    },
+    {
+      "id": "M2",
+      "outcome": "skills-check PASS and inventory written",
+      "unlocks": "path scoping"
+    },
+    {
+      "id": "M3",
+      "outcome": "Apply-set skills scoped; skip-set unscoped; pr-check PASS",
+      "unlocks": "PR converge"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M0",
+      "evidence_required": "git rev-parse HEAD on chore/skills-normalization equals locked SHA; nest dry-run still 0 unparseable",
+      "no_go_action": "stop_and_replan; do not nest on feat/wip-legal-defense-26cr-ingest"
+    },
+    {
+      "id": "C2",
+      "after": "M1",
+      "evidence_required": "archive file entry count equals scanned SKILL.md count; no description text diff outside frontmatter key moves",
+      "no_go_action": "restore from archive and stop"
+    },
+    {
+      "id": "C3",
+      "after": "M2",
+      "evidence_required": "make skills-check PASS; discovery footprint printed and <= 16384",
+      "no_go_action": "do not add any paths"
+    },
+    {
+      "id": "C4",
+      "after": "M3",
+      "evidence_required": "each apply-set paths still matches >=1 tracked file; skip-set SKILL.md has no paths key; make pr-check PASS",
+      "no_go_action": "revert the last paths commit and leave that skill unscoped"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No new always-on agent law; skills-check is Makefile/pre-commit only. AGENTS.md is additive_only and does not need a skills-check mention for this change."
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "Pack deny list; symlink law unchanged."
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "No directory-structure change that README indexes."
+    },
+    {
+      "surface": "TODO.md",
+      "action": "n_a",
+      "reason": "Work is a bounded pack execution, not a new standing TODO item."
+    },
+    {
+      "surface": "Makefile",
+      "action": "update",
+      "todo_ids": [
+        "todo-05-checker-inventory"
+      ],
+      "reason": "Append-only skills-check target. File is additive_only."
+    },
+    {
+      "surface": ".pre-commit-config.yaml",
+      "action": "update",
+      "todo_ids": [
+        "todo-05-checker-inventory"
+      ],
+      "reason": "Append-only local hook. File is additive_only."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If Cursor treats an empty paths match as hide-the-skill, which proposed globs would delete a skill from discovery on this repo?",
+      "If sync_generated_artifacts.py keeps reading only top-level status after nest, which live safety check dies?",
+      "If l9-skill-compiler keeps teaching top-level skill_schema, how fast does nest drift return?",
+      "If l9-kubernetes-deploying is scoped to the single hostile fixture match, when does the skill become invisible during real k8s work?",
+      "If nest_skill_metadata.py mishandles description: >- on l9-bounded-autonomy, what routing text is lost?"
+    ],
+    "assumed_false_ifs": [
+      "AUTONOMY_MANIFEST.yaml does not parse SKILL.md skill_schema/layer/role/tags",
+      "origin/main skill tree still has 45 live SKILL.md and the same apply/skip glob census",
+      "Cursor paths is opt-in hide-unless-match, so a wrong glob is worse than no glob",
+      "Makefile and .pre-commit-config.yaml accept append-only additions without rewriting existing keys"
+    ],
+    "blast_radius": "Wrong nest loses governance metadata or breaks deprecated-skill detection. Wrong paths hide a skill exactly when it is needed. A checker that cannot parse folded YAML false-fails l9-bounded-autonomy and blocks make pr.",
+    "rollback": "Restore SKILL.md frontmatter from docs/skills-frontmatter-archive.yaml. Revert the last Stage-4 commit per skill. git restore scoped paths on the feature branch. Do not force-push. If PR is open, close or revert-commit."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-02-archive-and-nest",
+      "todo-01-baseline-preflight",
+      "todo-03-coupling-readers",
+      "todo-05-checker-inventory",
+      "todo-06-paths-verify",
+      "todo-04-archived-lock",
+      "todo-07-paths-apply",
+      "todo-08-prove",
+      "todo-09-converge"
+    ],
+    "shared_causes": [
+      "Non-native top-level SKILL.md keys",
+      "No skills-standard ratchet",
+      "Readers and compiler still assume top-level audit fields",
+      "PATHS-PROPOSAL written against a generic repo, not this tree's tracked files"
+    ],
+    "deletions_or_consolidations": [
+      "Do not add paths to five proposal rows that would hide or secrets-correlate a skill",
+      "Do not create tools/check_skills_standard.py; this repo's gate home is ops/scripts/"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Stage 4 empty or hostile globs hide skills",
+      "mitigation": "Verify-then-apply. Skip e2e, repo-index, terraform, kubernetes, aws-secrets. One commit per applied skill so a single revert restores that skill."
+    },
+    {
+      "risk": "Nesting status breaks deprecated-pack detection",
+      "mitigation": "Dual-read status in sync_generated_artifacts.py in the same wave as nest, before checker install."
+    },
+    {
+      "risk": "Working on feat/wip-legal-defense-26cr-ingest mixes unrelated WIP",
+      "mitigation": "New branch from origin/main only. stop_and_replan if HEAD is the legal-defense branch."
+    },
+    {
+      "risk": "Makefile or pre-commit overwrite violates additive_only",
+      "mitigation": "Append a target and a hook only. No existing key or hook rewrite."
+    },
+    {
+      "risk": "Folded description parse bug in the pack checker",
+      "mitigation": "Install yaml.safe_load checker, not the pack's line-regex description length logic."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U-PATHS-RUNTIME",
+      "question": "Does this Cursor build hide a skill whenever paths is set and no matching file is in context?",
+      "decision_effect": "If hide-on-empty is false, skip-set caution is extra-safe and apply-set is still correct. If true, empty globs are fatal.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U-MAIN-DRIFT",
+      "question": "Does origin/main still have the same 45 live skills and glob census as this workspace?",
+      "decision_effect": "Apply/skip set can change; Stage 4 must re-verify on the execution SHA.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "F1",
+      "command": "python3 ops/scripts/check_skills_standard.py",
+      "pass_criteria": "prints PASS; 0 non-native top-level keys; archived flags present; discovery footprint <= 16384",
+      "status": "pending"
+    },
+    {
+      "id": "F2",
+      "command": "python3 -c \"from pathlib import Path; import yaml; p=Path('skills/l9-bounded-autonomy/SKILL.md'); t=p.read_text(); e=t.find(chr(10)+'---',3); fm=yaml.safe_load(t[4:e]); assert 'skill_schema' not in fm; assert fm['metadata']['skill_schema']==1; assert 'bounded autonomy' in fm['description']\"",
+      "pass_criteria": "folded description preserved; audit keys only under metadata",
+      "status": "pending"
+    },
+    {
+      "id": "F3",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on changed files vs PR_BASE origin/main",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U-MAIN-DRIFT"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Plan is executable after Build. U-MAIN-DRIFT is a probe at todo-01, not a planning blocker. Do not mark planning converged while final_validation is pending."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/**/SKILL.md",
+      "docs/skills-frontmatter-archive.yaml",
+      "docs/skills-inventory.md",
+      "ops/scripts/check_skills_standard.py",
+      "ops/scripts/sync_generated_artifacts.py",
+      "Makefile",
+      ".pre-commit-config.yaml",
+      "skills/l9-skill-compiler/references/file-contract.md",
+      "skills/l9-skill-compiler/references/meta-standard.md",
+      "skills/l9-skill-compiler/references/validation-checklist.md"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "ORG_INVARIANTS.yaml",
+      "CODEOWNERS",
+      ".claude/settings.json",
+      ".claude/hooks/**",
+      "skills/AUTONOMY_MANIFEST.yaml",
+      "pyproject.toml",
+      "WIP/Legal Defense/**"
+    ],
+    "preserved_contracts": [
+      "Cursor-native SKILL.md fields only at top level: name, description, paths, disable-model-invocation, metadata",
+      "Description text unchanged in Stages 1-4",
+      "Makefile and .pre-commit-config.yaml additive_only",
+      "sync_generated_artifacts deprecated-status detection remains true after nest",
+      "Empty or hostile paths must not be written"
+    ],
+    "validation_commands": [
+      "python3 ops/scripts/check_skills_standard.py",
+      "make skills-check",
+      "make pr-check"
+    ]
+  }
+}

@@ -14,7 +14,7 @@ updated: 2026-08-11
 
 ## Pack structure
 
-- [ ] `SKILL.md` frontmatter: name, description, audit fields, `disable-model-invocation: true`
+- [ ] `SKILL.md` frontmatter: name, description, audit fields under `metadata:`, `disable-model-invocation: true`
 - [ ] `agents/meta.yaml` present; no `agents/openai.yaml`
 - [ ] Every `references/` file linked from `SKILL.md`
 - [ ] Every `scripts/` file named in SKILL.md or linked refs

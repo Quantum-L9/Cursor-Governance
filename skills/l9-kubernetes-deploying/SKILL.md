@@ -1,15 +1,16 @@
 ---
 name: l9-kubernetes-deploying
 description: deploy applications to Kubernetes — Deployments, Services, Ingress, ConfigMaps, Secrets, health checks, and scaling. use when writing or debugging Kubernetes manifests, deploying to a cluster, or configuring scaling/health checks.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, kubernetes, k8s, deployment, ops]
-owner: igor_beylin
-status: active
-version: 1.1.0
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, kubernetes, k8s, deployment, ops]
+  owner: igor_beylin
+  status: active
+  version: 1.1.0
+  updated: 2026-06-06
 ---
 
 # Kubernetes Deploying

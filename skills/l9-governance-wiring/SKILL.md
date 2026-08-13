@@ -1,15 +1,16 @@
 ---
 name: l9-governance-wiring
 description: workspace governance symlinks, component wire executor, confirm-wiring audit, governance checks, rules inventory, and github ssot backup. use for /wire governance, confirm-wiring, or governance-backup.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, governance, wiring, symlinks, backup]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, governance, wiring, symlinks, backup]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Governance Wiring

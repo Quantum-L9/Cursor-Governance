@@ -1,14 +1,15 @@
 ---
 name: l9-aws-secrets
 description: resolve credentials from cursor-governance ops/secrets (aws secrets manager openclaw-igorbot refs and infisical project cursor-governance) — use when an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, aws, infisical, secrets, openclaw-igorbot, registry, fail-closed, ssot]
-owner: igor_beylin
-status: active
-version: 1.2.0
-updated: 2026-08-13
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, aws, infisical, secrets, openclaw-igorbot, registry, fail-closed, ssot]
+  owner: igor_beylin
+  status: active
+  version: 1.2.0
+  updated: 2026-08-13
 ---
 
 # l9-aws-secrets

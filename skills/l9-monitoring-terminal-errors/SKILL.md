@@ -1,14 +1,15 @@
 ---
 name: l9-monitoring-terminal-errors
 description: watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, terminal, errors, monitoring, debugging]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, terminal, errors, monitoring, debugging]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Monitoring Terminal Errors

@@ -1,14 +1,15 @@
 ---
 name: l9-plan
 description: create a machine-validated execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes. do not use when the user only wants to execute an already-settled plan or a trivial fully-specified one-line fix.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
-owner: igor_beylin
-status: active
-version: 4.0.0
-updated: 2026-08-12
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
+  owner: igor_beylin
+  status: active
+  version: 4.0.0
+  updated: 2026-08-12
 ---
 
 # Execution Planning

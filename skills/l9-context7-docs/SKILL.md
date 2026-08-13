@@ -1,14 +1,15 @@
 ---
 name: l9-context7-docs
 description: Use Context7 documentation before coding when current library, framework, SDK, API, version-specific behavior, or unfamiliar dependency docs could prevent implementation mistakes, deprecated patterns, or debug loops.
-skill_schema: 1
-layer: control_plane
-role: documentation_grounding
-tags: [l9, context7, documentation, libraries, frameworks, sdk, api, current_docs]
-owner: igor_beylin
-status: active
-version: 1.1.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: documentation_grounding
+  tags: [l9, context7, documentation, libraries, frameworks, sdk, api, current_docs]
+  owner: igor_beylin
+  status: active
+  version: 1.1.1
+  updated: 2026-06-06
 ---
 
 # Context7 Documentation Grounding

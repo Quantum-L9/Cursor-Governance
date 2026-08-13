@@ -1,15 +1,16 @@
 ---
 name: l9-end-session
 description: force-retry session close — manual PICKUP/learnings when auto sessionEnd failed or offline. use for recovery, richer handoff, or governance backup — not required for normal X-out.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, session, handoff, memory, governance, graphiti, force-retry]
-owner: igor_beylin
-status: active
-version: 1.5.0
-updated: 2026-08-11
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, session, handoff, memory, governance, graphiti, force-retry]
+  owner: igor_beylin
+  status: active
+  version: 1.5.0
+  updated: 2026-08-11
 ---
 
 # End Session (force-retry / offline recovery)

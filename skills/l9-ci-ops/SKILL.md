@@ -1,15 +1,17 @@
 ---
 name: l9-ci-ops
 description: ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, ci, github-actions, pr-check, policy, triage]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
+paths: ".github/workflows/**, Makefile, .pre-commit-config.yaml"
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, ci, github-actions, pr-check, policy, triage]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # CI/CD Operations

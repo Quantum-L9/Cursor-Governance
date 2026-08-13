@@ -1,15 +1,16 @@
 ---
 name: l9-code-maintenance
 description: lint-fix, migrate, clean/compress, consolidate, and refactor-sweep via dag executors with a --dry-run CLI. use for systematic lint fixes, pattern migrations, or read-only refactor impact analysis before mutating.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, lint, migrate, refactor, maintenance, dag, dry-run]
-owner: igor_beylin
-status: active
-version: 3.0.0
-updated: 2026-08-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, lint, migrate, refactor, maintenance, dag, dry-run]
+  owner: igor_beylin
+  status: active
+  version: 3.0.0
+  updated: 2026-08-06
 ---
 
 # Code Maintenance

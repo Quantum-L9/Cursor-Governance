@@ -1,15 +1,17 @@
 ---
 name: l9-update-command
 description: minimize slash commands to dag triggers via slash-command-update workflow. use when reducing a command to a thin trigger or auditing dag-trigger commands.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, commands, dag, meta]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
+paths: "commands/**"
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, commands, dag, meta]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Update Command — Minimize Slash Commands

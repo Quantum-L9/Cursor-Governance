@@ -1,15 +1,16 @@
 ---
 name: l9-ui-operator
 description: portable saas dashboard ui operator — use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-aws-secrets for refs without keychain.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, ui-operator, playwright, cartridges, playbook, aws-secrets]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-08-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, ui-operator, playwright, cartridges, playbook, aws-secrets]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: 2026-08-06
 ---
 
 # l9-ui-operator
