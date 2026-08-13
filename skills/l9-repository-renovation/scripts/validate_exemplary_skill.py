@@ -3,9 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import py_compile
 import re
-import subprocess
-import sys
 from pathlib import Path
 
 REQUIRED_FILES = {
@@ -163,15 +162,13 @@ def main() -> int:
     if any(path.exists() for path in forbidden_examples):
         errors.append("initializer example files remain")
 
-    compile_result = subprocess.run(
-        [sys.executable, "-m", "compileall", "-q", str(root / "scripts")],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-    )
-    if compile_result.returncode != 0:
-        errors.append(f"script compilation failed: {compile_result.stdout.strip()}")
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        for script in sorted(scripts_dir.glob("*.py")):
+            try:
+                py_compile.compile(str(script), doraise=True)
+            except py_compile.PyCompileError as exc:
+                errors.append(f"script compilation failed: {exc}")
 
     placeholder_patterns = [
         re.compile(r"\[TODO[^\]]*\]", re.I),
