@@ -44,6 +44,7 @@
     { "path": ".sonarcloud.properties", "tier": "managed", "rule": "managed" },
     { "path": "end-session.yaml", "tier": "managed", "rule": "managed" },
     { "path": ".editorconfig", "tier": "managed", "rule": "managed" },
+    { "path": "biome.json", "tier": "managed", "rule": "managed" },
     { "path": ".env.example", "tier": "managed", "rule": "managed" },
     { "path": ".env.template", "tier": "managed", "rule": "managed" },
     { "path": ".gitattributes", "tier": "managed", "rule": "managed" },

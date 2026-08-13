@@ -1,4 +1,6 @@
 {
   "python.analysis.typeCheckingMode": "basic",
-  "cursorpyright.analysis.typeCheckingMode": "basic"
+  "cursorpyright.analysis.typeCheckingMode": "basic",
+  "ruff.nativeServer": "on",
+  "ruff.importStrategy": "fromEnvironment"
 }

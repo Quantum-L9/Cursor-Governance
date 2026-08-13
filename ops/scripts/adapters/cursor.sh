@@ -80,6 +80,36 @@ print("\n".join(out))
 PY
 )"
 
+# `cursor --install-extension --force` updates the desired set but does not
+# uninstall a second marketplace Ruff ID someone installed by hand. Leftover
+# *version folders* of charliermarsh.ruff itself are a one-shot operator
+# cleanup (not sessionStart): pruning them every boot would race the editor.
+prune_foreign_ruff_extensions() {
+  command -v cursor >/dev/null 2>&1 || return 0
+  local installed id lowered
+  installed="$(cursor --list-extensions 2>/dev/null || true)"
+  [ -n "$installed" ] || return 0
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    lowered="$(printf '%s' "$id" | tr '[:upper:]' '[:lower:]')"
+    case "$lowered" in
+      *ruff*)
+        if [ "$lowered" != "charliermarsh.ruff" ]; then
+          if [ "$DRY_RUN" -eq 1 ]; then
+            log "Would uninstall foreign Ruff extension: $id"
+          else
+            log "Uninstalling foreign Ruff extension: $id"
+            cursor --uninstall-extension "$id" >/dev/null 2>&1 || \
+              echo "WARN: uninstall failed: $id" >&2
+          fi
+        fi
+        ;;
+    esac
+  done <<EOF
+$installed
+EOF
+}
+
 EXT_STAMP="$HOME/.cursor/.l9-ide-desired-hash"
 EXT_HASH="$(printf '%s\n' "$DESIRED_EXTS" | shasum -a 256 | awk '{print $1}')"
 EXT_STATE="skipped"
@@ -116,6 +146,8 @@ EOF
     EXT_STATE="partial"
   fi
 fi
+
+prune_foreign_ruff_extensions
 
 # --- Workspace settings (managed-key merge, repo scope) ------------------------
 

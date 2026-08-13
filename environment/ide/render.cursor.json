@@ -11,6 +11,10 @@
     "biome": {
       "format_extension": "biomejs.biome"
     },
+    "vscode-json": {
+      "format_extension": "vscode.json-language-features",
+      "note": "Built-in JSON language features. Biome's Cursor/VS Code extension does not register a formatter for the jsonc language id (settings.json, tsconfig.json, …)."
+    },
     "ruff": {
       "format_extension": "charliermarsh.ruff",
       "code_actions": {
