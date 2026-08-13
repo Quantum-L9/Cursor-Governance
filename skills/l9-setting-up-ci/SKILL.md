@@ -1,6 +1,7 @@
 ---
 name: l9-setting-up-ci
 description: set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.
+paths: ".github/workflows/**, .gitlab-ci.yml, Makefile"
 metadata:
   skill_schema: 1
   layer: control_plane
