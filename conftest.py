@@ -23,6 +23,8 @@ collect_ignore = [
     "environment/program-execution/integrations",
     "environment/program-execution/conformance",
     "environment/program-execution/tests",
+    # Local runtime / nested worktrees — never root-suite collection targets.
+    ".l9",
     # Skill self-check scripts share basename `self_test.py` and collide under
     # pytest prepend import mode. They are invoked by skill tooling, not root CI.
     "skills/l9-cli-optimization/scripts/self_test.py",

@@ -8,6 +8,11 @@ Load skill **`l9-bounded-autonomy`**. Explicit-only with optional proactive **hi
 (`hint_allowed` → `source: explicit_hint`). Router may recommend Read; **packet still
 required**. Recommendation ≠ mutation authority.
 
+**First-class family registry:**
+[`environment/contracts/autonomy/MANIFEST.yaml`](../environment/contracts/autonomy/MANIFEST.yaml)
+(SSOT map for root `autonomy/`, `ops/autonomy`, Claude scheduler). PE Controller
+remains authoritative; autonomy stays `owns_program_state: false`.
+
 ## Steps
 
 1. **Create campaign authorization packet** (see skill `references/campaign-authorization-packet.md`). State it in chat (first screen). Never call it an “envelope”.

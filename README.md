@@ -109,6 +109,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 - [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
 - [`skills/l9-plan/SKILL.md`](skills/l9-plan/SKILL.md) — execution planning → PE+autonomy `.plan.md`
 - [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md) — **first-class** executable plan template SSOT
+- [`environment/contracts/autonomy/MANIFEST.yaml`](environment/contracts/autonomy/MANIFEST.yaml) — **first-class** autonomy family registry (subordinate to PE; `owns_program_state: false`)
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)
 - [`skills/_archived/`](skills/_archived/) — retired skill packs (not discoverable; do not activate)
 - [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring

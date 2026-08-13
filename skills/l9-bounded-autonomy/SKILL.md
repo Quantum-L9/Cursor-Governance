@@ -72,6 +72,7 @@ Packet → Phase-0 → validate locks/budgets
 
 ## Resource Map
 
+- [environment/contracts/autonomy/MANIFEST.yaml](../../environment/contracts/autonomy/MANIFEST.yaml) — first-class autonomy family registry (subordinate to PE)
 - [references/doctrine-map.md](references/doctrine-map.md)
 - [references/campaign-authorization-packet.md](references/campaign-authorization-packet.md)
 - [references/parallel-nondependent.md](references/parallel-nondependent.md)
