@@ -13,6 +13,7 @@ Contents:
 - `scripts/verify-routing.sh` - asserts routing + secret hygiene
 - `.cursor/rules/claude-code-deepseek.mdc` - persistent repo rule
 - `docs/MOBILE.md`, `docs/TROUBLESHOOTING.md`
+- `docs/MERGE-RUNBOOK.md` - for the agent merging PR #121
 
 Assumes the Claude Code CLI and the Cursor Claude Code plugin are already installed.
 The plugin is an IDE bridge only; routing is env-var based.
