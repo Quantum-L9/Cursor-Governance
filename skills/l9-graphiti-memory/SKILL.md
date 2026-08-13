@@ -1,15 +1,16 @@
 ---
 name: l9-graphiti-memory
 description: Graphiti VPS memory — prefetch, group resolution, episode writes, GMP Phase 0 MEMORY_PREFETCH, /end-session PICKUP. Use when wiring memory, debugging prefetch, bootstrap, Graphiti health, or closing a session.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, graphiti, memory, prefetch, gmp, end-session]
-owner: igor_beylin
-status: active
-version: 1.4.0
-updated: 2026-08-07
 disable-model-invocation: false
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, graphiti, memory, prefetch, gmp, end-session]
+  owner: igor_beylin
+  status: active
+  version: 1.4.0
+  updated: 2026-08-07
 ---
 
 # Graphiti Global Memory

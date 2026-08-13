@@ -1,15 +1,16 @@
 ---
 name: l9-component-verification
 description: component audit, deterministic verify, and runtime probe escalation ladder. use for /audit-component, /verify-component, or /probe wiring checks.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, verification, audit, probe, wiring]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, verification, audit, probe, wiring]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Component Verification

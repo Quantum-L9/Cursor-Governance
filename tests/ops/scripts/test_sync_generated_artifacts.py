@@ -100,6 +100,20 @@ def test_live_deprecated_skills_are_rejected(tmp_path: Path) -> None:
     assert_no_live_deprecated_skills(tmp_path)
 
 
+def test_live_deprecated_skills_read_nested_metadata_status(tmp_path: Path) -> None:
+    skills = tmp_path / "skills"
+    skills.mkdir()
+    deprecated = skills / "l9-demo-deprecated-nested"
+    deprecated.mkdir()
+    (deprecated / "SKILL.md").write_text(
+        "---\nname: l9-demo-deprecated-nested\ndescription: retired\n"
+        "metadata:\n  status: deprecated\n---\n\n# x\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="deprecated skills cannot remain"):
+        assert_no_live_deprecated_skills(tmp_path)
+
+
 def test_commands_manifest_preserves_prior_slash(tmp_path: Path) -> None:
     commands = tmp_path / "commands"
     commands.mkdir()

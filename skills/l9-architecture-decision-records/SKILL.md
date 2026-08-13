@@ -1,14 +1,15 @@
 ---
 name: l9-architecture-decision-records
 description: document technical decisions as Architecture Decision Records (ADRs) with context, options considered, and rationale. use when capturing a significant architecture or design decision, recording trade-offs, or creating an ADR.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, adr, architecture, documentation, decisions]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, adr, architecture, documentation, decisions]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Architecture Decision Records

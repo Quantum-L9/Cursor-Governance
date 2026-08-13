@@ -68,6 +68,8 @@ def frontmatter(skill_text: str) -> tuple[dict[str, str], str | None]:
     for raw in skill_text[4:end].splitlines():
         if not raw.strip():
             continue
+        if raw.startswith((" ", "\t")):
+            continue
         if ":" not in raw:
             return {}, f"invalid frontmatter line: {raw}"
         key, value = raw.split(":", 1)
@@ -96,10 +98,10 @@ def main() -> int:
         errors.append(metadata_error)
     # name and description are required; disable-model-invocation is the optional
     # governance flag that marks a high-blast-radius skill explicit-only.
-    allowed_keys = {"name", "description", "disable-model-invocation"}
+    allowed_keys = {"name", "description", "paths", "disable-model-invocation", "metadata"}
     if "name" not in metadata or "description" not in metadata or set(metadata) - allowed_keys:
         errors.append(
-            "SKILL.md frontmatter must contain name, description, and optionally disable-model-invocation"
+            "SKILL.md frontmatter must contain name, description, and only native Cursor keys"
         )
     if metadata.get("name") != root.name:
         errors.append("frontmatter name must match skill directory")

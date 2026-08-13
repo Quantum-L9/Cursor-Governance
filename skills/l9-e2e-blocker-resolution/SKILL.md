@@ -1,15 +1,16 @@
 ---
 name: l9-e2e-blocker-resolution
 description: run repo e2e or local-proof tests, classify and fix in-repo blockers, then write a brief for remaining external gates and a todo.md session-reference entry. use when the user asks to run e2e, clear e2e blockers, document remaining secrets/env gaps, or produce a session-start surface for blocked proof paths.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, e2e, blockers, verification, secrets, todo, brief, session-start]
-owner: igor_beylin
-status: active
 disable-model-invocation: true
-version: 1.0.0
-updated: 2026-07-31
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, e2e, blockers, verification, secrets, todo, brief, session-start]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: 2026-07-31
 ---
 
 # E2E Blocker Resolution

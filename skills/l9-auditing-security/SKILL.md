@@ -1,14 +1,15 @@
 ---
 name: l9-auditing-security
 description: perform a systematic security audit of a codebase, checking for OWASP Top 10 vulnerabilities, secrets exposure, and insecure patterns. use when reviewing code for security risks, scanning for exposed secrets, or hardening before release.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, security, audit, owasp, secrets]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, security, audit, owasp, secrets]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Security Audit

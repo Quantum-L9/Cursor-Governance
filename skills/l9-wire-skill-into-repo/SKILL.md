@@ -1,14 +1,15 @@
 ---
 name: l9-wire-skill-into-repo
 description: registers, updates, or retires agent skills in discovery tables, autonomy manifests, adapter symlinks, subagent preloads, and related agent docs. use immediately after l9-skill-compiler finishes, when a skill pack exists but is not discoverable, when the user asks to wire or register a skill, or when a skill must be deprecated, unwired, archived, deregistered, or superseded — deprecate means archive out of live skills/ and clear every registry, never leave a deprecated pack discoverable.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, wiring, unwire, deprecate, registry, skills, discovery]
-owner: igor_beylin
-status: active
-version: 2.1.0
-updated: 2026-08-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, wiring, unwire, deprecate, registry, skills, discovery]
+  owner: igor_beylin
+  status: active
+  version: 2.1.0
+  updated: 2026-08-06
 ---
 
 # Wire Skill Into Repo (L9)

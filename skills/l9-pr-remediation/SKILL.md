@@ -1,15 +1,16 @@
 ---
 name: l9-pr-remediation
 description: diagnose or converge a github pr — read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, pr, ci, code-review, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github]
-owner: igor_beylin
-status: active
-version: 3.1.0
-updated: 2026-08-07
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, pr, ci, code-review, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github]
+  owner: igor_beylin
+  status: active
+  version: 3.1.0
+  updated: 2026-08-07
 ---
 
 # PR Remediation

@@ -1,15 +1,16 @@
 ---
 name: l9-forge
 description: autonomous high-velocity execution with zero pauses — batch gmp runs, auto-fix validation, deliver code tests and reports. use when user invokes /forge or requests maximum-velocity autonomous delivery.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, forge, autonomous, gmp, velocity]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, forge, autonomous, gmp, velocity]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Forge — Autonomous Execution

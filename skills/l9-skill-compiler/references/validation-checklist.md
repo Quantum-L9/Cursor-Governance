@@ -15,7 +15,7 @@ updated: 2026-08-06
 ## Required Files
 
 - [ ] `SKILL.md` exists.
-- [ ] `SKILL.md` frontmatter includes `name`, `description`, and audit fields (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
+- [ ] `SKILL.md` frontmatter includes `name`, `description`, and audit fields nested under `metadata:` (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
 - [ ] No duplicate `SKILL_META` HTML comment on `SKILL.md`.
 - [ ] `agents/meta.yaml` exists (display_name, short_description, brand_color).
 - [ ] **No** `agents/openai.yaml` (rename to `agents/meta.yaml` if found).

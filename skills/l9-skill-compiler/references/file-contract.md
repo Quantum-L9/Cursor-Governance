@@ -43,7 +43,7 @@ Avoid:
 - full kernel prose
 - repeated reference content
 
-`SKILL.md` also carries audit fields in the same YAML frontmatter block (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
+`SKILL.md` carries Cursor-native frontmatter (`name`, `description`, optional `paths` / `disable-model-invocation`) plus audit fields nested under `metadata:` (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
 
 Always create `agents/meta.yaml` for adapter display metadata. Never create `agents/openai.yaml`. Do not duplicate metadata in HTML comments on `SKILL.md`.
 

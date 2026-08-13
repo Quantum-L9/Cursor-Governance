@@ -2,15 +2,16 @@
 name: l9-structured-reasoning-deprecated
 description: deprecated block-protocol structured reasoning pack retained for reference only. do not activate. use l9-structured-reasoning instead, which owns adaptive routing, evidence ledgers, and document-corpus modes.
 disable-model-invocation: true
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, reasoning, deprecated]
-owner: igor_beylin
-status: deprecated
-version: 1.1.0
-updated: 2026-08-06
-superseded_by: l9-structured-reasoning
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, reasoning, deprecated]
+  owner: igor_beylin
+  status: deprecated
+  version: 1.1.0
+  updated: 2026-08-06
+  superseded_by: l9-structured-reasoning
 ---
 
 # Structured Reasoning (Deprecated)

@@ -1,15 +1,16 @@
 ---
 name: l9-issue-remediation
 description: diagnose or converge open github issues across all non-archived quantum-l9 repos — inventory and rank blockers, fix at the obvious owning repo, hand prs to l9-pr-remediation, and leave graphiti pickup plus issue comment plus conditional root session-reference markdown so the next agent can resume. use when reviewing org issue readiness or blockers, or when the user asks to fix, remediate, unblock, or converge open issues across repos.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, issues, github, diagnose, remediation, cross-repo, unblock, graphiti, fleet]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-08-11
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, issues, github, diagnose, remediation, cross-repo, unblock, graphiti, fleet]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: 2026-08-11
 ---
 
 # Issue Remediation

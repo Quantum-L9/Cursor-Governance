@@ -1,14 +1,15 @@
 ---
 name: l9-gmp-protocol
 description: execute deterministic repo changes through locked gmp phases 0-6 with a modification lock and a signed evidence report. use when a change must be traceable and drift-free — adding/refactoring/fixing modules, gated edits, or any task that needs a locked todo plan, phase-by-phase execution, and an evidence report in reports/.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, gmp, deterministic, phases, evidence, modification_lock, governance]
-owner: igor_beylin
-status: active
-version: 1.1.0
-updated: 2026-06-04
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, gmp, deterministic, phases, evidence, modification_lock, governance]
+  owner: igor_beylin
+  status: active
+  version: 1.1.0
+  updated: 2026-06-04
 ---
 
 # GMP Protocol — Deterministic Phased Execution

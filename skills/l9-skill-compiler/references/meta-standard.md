@@ -30,22 +30,25 @@ All discovery and audit metadata lives in one frontmatter block. Do **not** add 
 ---
 name: skill-name              # required — must match directory name
 description: lowercase what + when triggers  # required — agent discovery
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [tag1, tag2]
-owner: igor_beylin
-status: active | experimental | deprecated
-version: 1.0.0
-updated: YYYY-MM-DD
-sources:                      # optional — kernel/source provenance only
-  - source-file.yaml
+disable-model-invocation: false  # optional — true = explicit /skill-name only
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [tag1, tag2]
+  owner: igor_beylin
+  status: active | experimental | deprecated
+  version: 1.0.0
+  updated: YYYY-MM-DD
+  sources:                    # optional — kernel/source provenance only
+    - source-file.yaml
 ---
 ```
 
+- Native top-level fields only: `name`, `description`, `paths`, `disable-model-invocation`, `metadata`.
 - `name` and `description` are required for agent discovery (Cursor, Claude Code).
 - Do not duplicate `name` as `origin` — `name` is the canonical identifier.
-- Optional fields (`sources`, `disable-model-invocation`) only when needed.
+- Audit fields (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`, `sources`) live under `metadata:`. Do not place them at top level.
 
 ### Other markdown files (`references/`, etc.)
 

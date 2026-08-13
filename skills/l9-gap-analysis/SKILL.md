@@ -1,14 +1,15 @@
 ---
 name: l9-gap-analysis
 description: perform read-only delta gap analysis against a target state with scoring and optional actionable recommendations. use when assessing readiness, missing pieces, compliance drift, or percent-complete status.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, gap-analysis, readiness, scoring, delta]
-owner: igor_beylin
-status: active
-version: 2.0.0
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, gap-analysis, readiness, scoring, delta]
+  owner: igor_beylin
+  status: active
+  version: 2.0.0
+  updated: 2026-06-06
 ---
 
 # Gap Analysis

@@ -32,7 +32,8 @@ compiled_prompt:
   skill_pack_improvement_contract:
     SKILL_md:
       MUST_have_single_yaml_frontmatter: true
-      MUST_have_fields: [name, description, skill_schema, layer, role, tags, owner, status, version, updated]
+      MUST_have_fields: [name, description, metadata]
+      MUST_nest_audit_fields_under_metadata: [skill_schema, layer, role, tags, owner, status, version, updated]
       MUST_have_sections: [Purpose, "Core Contract or compact workflow", "Authority Order", "Resource Map", "Validation", "Failure Handling"]
       MUST_NOT_have: [embedded slash-command frontmatter blocks, duplicate name blocks, SKILL_META HTML comment]
       router_rule: SKILL.md is control plane; workflows longer than 40 lines MUST move to references/

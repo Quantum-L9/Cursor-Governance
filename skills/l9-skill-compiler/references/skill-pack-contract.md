@@ -89,14 +89,15 @@ Single YAML frontmatter — discovery and audit in one block:
 ---
 name: skill-name
 description: lowercase trigger description
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [tag1, tag2]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: YYYY-MM-DD
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [tag1, tag2]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: YYYY-MM-DD
 ---
 ```
 

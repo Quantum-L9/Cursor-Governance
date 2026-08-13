@@ -1,14 +1,15 @@
 ---
 name: l9-aws-secrets
 description: resolve openclaw-igorbot aws secrets manager refs via the cursor-governance ops/secrets registry — use when an agent needs a registered secret by ref (secret_id#json_key), to sync the local aws inventory, ui-session stubs, or fail-closed credential checks without keychain or printing values.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, aws, secrets, openclaw-igorbot, registry, fail-closed, ssot]
-owner: igor_beylin
-status: active
-version: 1.1.0
-updated: 2026-08-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, aws, secrets, openclaw-igorbot, registry, fail-closed, ssot]
+  owner: igor_beylin
+  status: active
+  version: 1.1.0
+  updated: 2026-08-06
 ---
 
 # l9-aws-secrets

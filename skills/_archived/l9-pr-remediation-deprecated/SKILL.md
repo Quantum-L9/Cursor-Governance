@@ -1,16 +1,17 @@
 ---
 name: l9-pr-remediation-deprecated
 description: deprecated packaging-heavy pr remediation pack retained for reference only. do not activate. use l9-pr-remediation instead — the unified single-path pack with concurrent clusters, short polls, sonar/codeql/debt depth, and no run-report or tar deliverables.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, pr, remediation, deprecated]
-owner: igor_beylin
-status: deprecated
-version: 3.5.0
-updated: 2026-08-06
-superseded_by: l9-pr-remediation
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, pr, remediation, deprecated]
+  owner: igor_beylin
+  status: deprecated
+  version: 3.5.0
+  updated: 2026-08-06
+  superseded_by: l9-pr-remediation
 ---
 
 # PR Remediation (Deprecated)

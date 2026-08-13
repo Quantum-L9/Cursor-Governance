@@ -1,15 +1,16 @@
 ---
 name: l9-code-graph-rag-mcp
 description: operate @er77/code-graph-rag-mcp for repo-local code structure — token-safe tool selection, cli indexing, importers, impact analysis, cross-module discovery. use when code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or mcp indexing is needed.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, mcp, code-graph, rag, token_discipline, plasticos]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-06-07
-sources:
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, mcp, code-graph, rag, token_discipline, plasticos]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: 2026-06-07
+  sources:
   - er77/code-graph-rag-mcp@v2.7.15
   - assets/user-execution-guide.md
 ---

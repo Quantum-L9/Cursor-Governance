@@ -1,15 +1,16 @@
 ---
 name: l9-dag-authoring
 description: create or update l9 workflow dags the proper way via dag-authoring-v1. use when authoring new dags, updating existing dags, wiring commands to dag nodes, or registering dag executors.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, dag, workflow, authoring, governance]
-owner: igor_beylin
-status: active
-version: 1.1.1
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, dag, workflow, authoring, governance]
+  owner: igor_beylin
+  status: active
+  version: 1.1.1
+  updated: 2026-06-06
 ---
 
 # DAG Authoring

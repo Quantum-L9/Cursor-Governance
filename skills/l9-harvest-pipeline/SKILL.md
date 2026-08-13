@@ -1,15 +1,16 @@
 ---
 name: l9-harvest-pipeline
 description: harvest code extraction via sed/dag and use-harvest deployment pipeline. use when extracting code from documents, deploying harvested files, or running harvest-deploy-v1 dag — never manually rewrite code from documents.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, harvest, sed, deployment, dag, governance]
-owner: igor_beylin
-status: active
-version: 3.2.1
-updated: 2026-06-06
 disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, harvest, sed, deployment, dag, governance]
+  owner: igor_beylin
+  status: active
+  version: 3.2.1
+  updated: 2026-06-06
 ---
 
 # Harvest Pipeline

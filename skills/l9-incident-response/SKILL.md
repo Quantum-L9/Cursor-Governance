@@ -1,14 +1,15 @@
 ---
 name: l9-incident-response
 description: handle production incidents — triage, mitigate, communicate, and write postmortems. use when a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, incident, ops, postmortem, sev]
-owner: igor_beylin
-status: active
-version: 1.1.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, incident, ops, postmortem, sev]
+  owner: igor_beylin
+  status: active
+  version: 1.1.1
+  updated: 2026-06-06
 ---
 
 # Incident Response

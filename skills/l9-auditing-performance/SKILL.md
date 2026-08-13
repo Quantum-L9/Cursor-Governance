@@ -1,14 +1,15 @@
 ---
 name: l9-auditing-performance
 description: audit and optimize application performance, including bundle size, rendering, database queries, and Core Web Vitals. use when the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, performance, profiling, optimization, web-vitals]
-owner: igor_beylin
-status: active
-version: 1.0.1
-updated: 2026-06-06
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, performance, profiling, optimization, web-vitals]
+  owner: igor_beylin
+  status: active
+  version: 1.0.1
+  updated: 2026-06-06
 ---
 
 # Performance Audit
