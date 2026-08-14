@@ -1,0 +1,76 @@
+# Closes H-02 recurrence. Reports by default; deletes only when told to.
+name: branch-hygiene
+
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+    inputs:
+      delete_merged:
+        description: "Delete fully-merged branches (true/false)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+
+jobs:
+  branch-hygiene:
+    runs-on: ubuntu-latest
+    env:
+      STALE_DAYS: "30"
+      DELETE_MERGED: ${{ github.event.inputs.delete_merged || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify branches
+        id: classify
+        run: |
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          cutoff=$(( $(date +%s) - STALE_DAYS*86400 ))
+          : > merged.txt; : > unmerged.txt
+
+          for ref in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin); do
+            br=${ref#origin/}
+            [ "$br" = "main" ] && continue
+            [ "$br" = "HEAD" ] && continue
+            ts=$(git log -1 --format=%ct "$ref")
+            age=$(( ( $(date +%s) - ts ) / 86400 ))
+            if git merge-base --is-ancestor "$ref" origin/main; then
+              echo "$br|$age|merged" >> merged.txt
+            elif [ "$ts" -lt "$cutoff" ]; then
+              echo "$br|$age|stale-unmerged" >> unmerged.txt
+            fi
+          done
+
+          echo "### Branch hygiene report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| branch | days idle | state |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---:|---|" >> $GITHUB_STEP_SUMMARY
+          awk -F'|' '{printf "| `%s` | %s | %s |\n", $1, $2, $3}' merged.txt unmerged.txt \
+            >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "merged: $(wc -l < merged.txt), stale-unmerged: $(wc -l < unmerged.txt)" \
+            >> $GITHUB_STEP_SUMMARY
+
+      - name: Warn on stale unmerged work
+        run: |
+          if [ -s unmerged.txt ]; then
+            echo "::warning::stale unmerged branches contain work that exists nowhere else."
+            echo "Open a PR, cherry-pick, or file a Linear issue before deleting:"
+            cut -d'|' -f1 unmerged.txt
+          fi
+
+      - name: Delete merged branches
+        if: env.DELETE_MERGED == 'true'
+        run: |
+          while IFS='|' read -r br age state; do
+            [ -n "$br" ] || continue
+            echo "deleting merged branch $br (idle ${age}d)"
+            git push origin --delete "$br"
+          done < merged.txt
+
+      - name: Never auto-delete unmerged
+        run: echo "unmerged branches are never deleted by this workflow"
