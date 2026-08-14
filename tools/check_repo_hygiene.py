@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """RB-HK-001 hygiene gate. Run from repo root. Exit non-zero on violation."""
+
 import json
 import os
 import pathlib
@@ -14,9 +15,7 @@ BANNED_TRACKED = [
     "docs/skills-inventory.md",
 ]
 # H-03 named paths from RB-HK-001. Other historical space paths are deferred.
-SECRET_PAT = re.compile(
-    r"lin_api_|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}"
-)
+SECRET_PAT = re.compile(r"lin_api_|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}")
 ALLOWED_MCP = {"graphiti-memory"}
 
 errs, warns = [], []
@@ -24,9 +23,7 @@ errs, warns = [], []
 
 def sh(*args):
     try:
-        return subprocess.run(
-            args, capture_output=True, text=True, check=False
-        ).stdout.splitlines()
+        return subprocess.run(args, capture_output=True, text=True, check=False).stdout.splitlines()
     except FileNotFoundError:
         return []
 
@@ -53,10 +50,7 @@ if h03:
 other_spaces = [
     t
     for t in tracked
-    if " " in t
-    and not is_h03(t)
-    and not t.startswith("WIP/")
-    and not t.startswith("current_work/")
+    if " " in t and not is_h03(t) and not t.startswith("WIP/") and not t.startswith("current_work/")
 ]
 if other_spaces:
     preview = ", ".join(other_spaces[:6])
