@@ -618,7 +618,7 @@ Authoritative correction (do not treat the older `98-make-pr-remediation`
 stem above as live):
 
 1. Rule stem `98-make-pr-remediation` was renamed to `48-make-pr-remediation`
- (`rules/48-make-pr-remediation.mdc`) in rules-corpus-cleanup-v1.
+   (`rules/48-make-pr-remediation.mdc`) in rules-corpus-cleanup-v1.
 2. Handoff path remains `.l9/pr/pr-remediation-handoff.json`.
 
 <!-- PRECOMMIT_HOOK_ATTRIBUTION_V1 -->
