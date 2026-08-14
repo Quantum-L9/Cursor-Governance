@@ -108,6 +108,8 @@ tiers:
     reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
   - skill: l9-git-work-preserve
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+  - skill: l9-plan-audit
+    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   do_not_migrate_to_skills:
   - item: commands/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context

@@ -96,6 +96,9 @@ commands:
   file: commands/governance-backup.md
   enabled: true
 - slash: /harvest
+  file: commands/_harvest-copy-REVIEW.md
+  enabled: true
+- slash: /harvest
   file: commands/harvest.md
   enabled: true
 - slash: /harvest2

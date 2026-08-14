@@ -907,6 +907,17 @@
     },
     {
       "composition_role": "general",
+      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan) or to auto-build plans.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-plan-audit",
+      "path": "skills/l9-plan-audit",
+      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "diagnose or converge a github pr \u2014 read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1072,6 +1083,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "6b3f05526f0588c436b146b99d4b48848a3e6fe69cc58f76674bee9614a39f78",
-  "source_skill_corpus_sha256": "81ecf00d1340f3af815b2629ab6cabba8af626a8d1800421d1b9f1c052b437ff"
+  "source_manifest_sha256": "76dd27d1771b7735c7e937a144f4afe19d10a5195225107fc56eaa450282b520",
+  "source_skill_corpus_sha256": "ceb77c48c36207d3c8ad9d0b59a29507414df5ceeacaed253ff799621337ed04"
 }

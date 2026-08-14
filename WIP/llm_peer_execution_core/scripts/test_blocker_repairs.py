@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import ast
+import importlib.util
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+import yaml
+
+PACK_ROOT = Path(__file__).resolve().parents[1]
+OVERLAY = PACK_ROOT / "repo_overlay"
+PE = OVERLAY / "environment/program-execution"
+
+
+def _load_apply_module():
+    path = PACK_ROOT / "scripts/apply_pr_pack.py"
+    spec = importlib.util.spec_from_file_location("peer_pack_apply", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("unable to load apply_pr_pack")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _git(repo: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr or result.stdout)
+    return result.stdout.strip()
+
+
+class BlockerRepairTests(unittest.TestCase):
+    def test_import_ownership_is_complete_after_declared_common_move(self) -> None:
+        apply_text = (PACK_ROOT / "scripts/apply_pr_pack.py").read_text(encoding="utf-8")
+        self.assertIn(
+            (
+                '"environment/program-execution/adapters/common",\n'
+                '        "environment/program-execution/peer_execution",'
+            ),
+            apply_text,
+        )
+        direct = {path.stem for path in (PE / "peer_execution").glob("*.py")}
+        moved = {"approvals", "base", "errors", "models", "protocol", "receipts"}
+        required = set()
+        for path in (PE / "peer_execution").glob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                    required.add(node.module.split(".", 1)[0])
+        self.assertFalse(required - direct - moved)
+        self.assertIn("digests", direct)
+        self.assertIn("imports", direct)
+
+    def test_every_routable_registry_provider_is_thin(self) -> None:
+        registry = yaml.safe_load(
+            (PE / "registry/EXECUTION_ADAPTER_REGISTRY.yaml").read_text(encoding="utf-8")
+        )
+        forbidden_bases = {"BaseExecutionAdapter", "PeerExecutionAdapter", "DriverExecutionAdapter"}
+        forbidden_modules = {
+            "peer_execution.base",
+            "peer_execution.core_receipts",
+            "peer_execution.receipts",
+            "peer_execution.runtime_store",
+        }
+        for entry in registry["adapters"]:
+            provider = PE / entry["provider_module"]
+            self.assertTrue(provider.is_file(), entry["adapter_id"])
+            tree = ast.parse(provider.read_text(encoding="utf-8"))
+            exported = any(
+                isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == "PROVIDER_CLASS"
+                    for target in node.targets
+                )
+                for node in ast.walk(tree)
+            )
+            if entry.get("status") == "non_routable":
+                self.assertFalse(exported, entry["adapter_id"])
+                continue
+            self.assertTrue(exported, entry["adapter_id"])
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    self.assertNotIn(node.module or "", forbidden_modules, entry["adapter_id"])
+                if isinstance(node, ast.ClassDef):
+                    for base in node.bases:
+                        name = getattr(base, "id", getattr(base, "attr", ""))
+                        self.assertNotIn(name, forbidden_bases, entry["adapter_id"])
+
+    def test_peer_providers_do_not_load_generic_context_or_permission_policy(self) -> None:
+        peer_ids = {
+            "cursor-foreground",
+            "cursor-background",
+            "claude-code-direct",
+            "chatgpt-manual-handoff",
+            "codex-cloud",
+            "gemini-review",
+            "manus-cloud",
+        }
+        registry = yaml.safe_load(
+            (PE / "registry/EXECUTION_ADAPTER_REGISTRY.yaml").read_text(encoding="utf-8")
+        )
+        for entry in registry["adapters"]:
+            if entry["adapter_id"] not in peer_ids:
+                continue
+            text = (PE / entry["provider_module"]).read_text(encoding="utf-8")
+            self.assertNotIn("peer_execution.context", text)
+            self.assertNotIn("peer_execution.permissions", text)
+            self.assertNotIn("peer_execution.approvals", text)
+
+    def test_attempt_receipt_is_durable_before_collect_pass_receipt(self) -> None:
+        source = (PE / "peer_execution/execution.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        collect = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "collect"
+        )
+        calls = []
+        for node in ast.walk(collect):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    calls.append((node.lineno, node.func.attr))
+        write_line = min(line for line, name in calls if name == "_write_attempt_receipt")
+        append_line = min(line for line, name in calls if name == "_append")
+        self.assertLess(write_line, append_line)
+        self.assertIn("attempt receipt target escapes Controller attempts root", source)
+        self.assertIn("conflicting evidence", source)
+
+    def test_pipeline_requests_controller_abort_on_post_claim_failures(self) -> None:
+        text = (PE / "scripts/run_peer_task_pipeline.py").read_text(encoding="utf-8")
+        self.assertIn('"abort-execution"', text)
+        for reason in (
+            "pre_execution_controller_failure",
+            "provider_probe_blocked_after_admission",
+            "controller_start_failure",
+            "peer_execution_failure",
+            "attempt_handoff_or_verification_failure",
+            "controller_verification_failed",
+        ):
+            self.assertIn(reason, text)
+
+    def test_controller_abort_patch_adds_only_controller_owned_transition(self) -> None:
+        apply = _load_apply_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            root = (
+                repo
+                / "environment/program-execution/core/"
+                "program-execution-controller-template/scripts/pec"
+            )
+            root.mkdir(parents=True)
+            (root / "controller.py").write_text(
+                "from .common import digest_object, load_json, load_yaml, parse_time, "
+                "run_git, utc_now, write_json\n\n"
+                "def recover(workspace: Path, actor: str) -> dict[str, Any]:\n    return {}\n",
+                encoding="utf-8",
+            )
+            (root / "cli.py").write_text(
+                "from .controller import (\n    add_approval,\n)\n\n"
+                "def parser():\n"
+                "    cmd = sub.add_parser(\"recover\")\n"
+                "    cmd.add_argument(\"--workspace\", required=True, type=Path)\n"
+                "    cmd.add_argument(\"--actor\", required=True)\n\n"
+                "def main():\n"
+                "        elif args.command == \"recover\":\n"
+                "            value = recover(args.workspace, args.actor)\n",
+                encoding="utf-8",
+            )
+            apply.patch_controller_abort(repo)
+            controller = (root / "controller.py").read_text(encoding="utf-8")
+            cli = (root / "cli.py").read_text(encoding="utf-8")
+            self.assertIn("def abort_execution(", controller)
+            self.assertIn("BEGIN IMMEDIATE", controller)
+            self.assertIn("unrecorded-attempt-receipt.json", controller)
+            self.assertIn('sub.add_parser("abort-execution")', cli)
+
+    def test_atomic_apply_helper_rolls_back_failed_patch(self) -> None:
+        apply = _load_apply_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            _git(repo, "init")
+            _git(repo, "config", "user.email", "test@example.invalid")
+            _git(repo, "config", "user.name", "Test")
+            (repo / "sample.txt").write_text("base\n", encoding="utf-8")
+            _git(repo, "add", "sample.txt")
+            _git(repo, "commit", "-m", "base")
+            head = _git(repo, "rev-parse", "HEAD")
+            apply.BASE_SHA = head
+            (repo / "sample.txt").write_text("changed\n", encoding="utf-8")
+            _git(repo, "add", "sample.txt")
+            expected_tree = _git(repo, "write-tree")
+            patch_result = subprocess.run(
+                ["git", "diff", "--cached", "--binary", "--full-index", head, "--"],
+                cwd=repo,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            patch = patch_result.stdout
+            _git(repo, "reset", "--hard", head)
+            apply._apply_patch_atomically(repo, patch, expected_tree)
+            self.assertEqual((repo / "sample.txt").read_text(encoding="utf-8"), "changed\n")
+            _git(repo, "reset", "--hard", head)
+            with self.assertRaises(RuntimeError):
+                apply._apply_patch_atomically(repo, "not a patch\n", expected_tree)
+            self.assertEqual(_git(repo, "status", "--porcelain"), "")
+            self.assertEqual((repo / "sample.txt").read_text(encoding="utf-8"), "base\n")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

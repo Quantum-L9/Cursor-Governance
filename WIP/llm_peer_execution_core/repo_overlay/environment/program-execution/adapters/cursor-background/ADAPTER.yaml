@@ -1,0 +1,36 @@
+schema: program-execution-adapter.spec.v1
+adapter_id: cursor-background
+adapter_version: 1.0.0
+adapter_kind: worker_host
+contract_family: program-execution-system.v2
+provider:
+  type: cursor_task_tools
+  protocol_version: 1.0.0
+capabilities:
+  target_kinds:
+  - git_repository
+  actions:
+  - inspect
+  - local_write
+  - artifact_production
+  async_execution: true
+  cancellation: conditional
+  structured_output: true
+  isolated_execution: true
+  remote_credentials: forbidden
+identity:
+  binding: peer_runtime_binding
+  memory_write: via_generated_data_pipeline
+security:
+  default_deny: true
+  may_narrow_authority: true
+  may_widen_authority: false
+  autonomous_merge: false
+  force_push: false
+  direct_graphiti_write: false
+receipts:
+  lifecycle_schema: program-execution-adapter.lifecycle-receipt.v1
+  terminal_core_receipt: attempt
+status:
+  default: conditional
+  blocked_reason: Requires a live Cursor task handle for cancellation.

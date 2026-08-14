@@ -159,10 +159,19 @@
       "alias": null,
       "class": "always",
       "output": "45-pre-action-verification.md",
-      "output_sha256": "de0c35936ddbed97b3df6289ebdf247e60ce369301e03d428bf6c81c8b7713de",
+      "output_sha256": "6ae4b8ef529ec9c4824ee9dc59d4d33d8ea2553e230d3ea070903b57495498d3",
       "source": "rules/45-pre-action-verification.mdc",
-      "source_sha256": "f165257cb41ed98ccff1c86783a7b13cd8a2693e335e85eea31e65961764be63",
+      "source_sha256": "997a5055773c84020c2a86e57e0bf3f353ab873569e42091437e3cc596e81559",
       "stem": "45-pre-action-verification"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "46-kernel-pack-new-branch.md",
+      "output_sha256": "829e0d7f3c3c18f18d1a5beb6b5e77f4b576d3da157f928ad8a419d104520f31",
+      "source": "rules/46-kernel-pack-new-branch.mdc",
+      "source_sha256": "c279fab25184510a78908aff3cef9f078c377492c1c6c6dd07f8b7d7f84e55da",
+      "stem": "46-kernel-pack-new-branch"
     },
     {
       "alias": null,
@@ -610,9 +619,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 61,
+    "projected": 62,
     "skipped_agent_requested": 5,
-    "source_mdc": 67
+    "source_mdc": 68
   },
-  "tree_sha256": "aa6f9772d7e302229aae89e575a6047bb0e31254ce7012d504b359d01466e9f9"
+  "tree_sha256": "2c05c5b8536acf2069b26cb0f0a091570ae5b7ca76086b95926657a642bda0e0"
 }
