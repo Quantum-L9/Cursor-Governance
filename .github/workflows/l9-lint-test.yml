@@ -11,10 +11,13 @@
 name: L9 Lint and Test
 
 on:
+  # No pull_request paths filter, deliberately. "Lint and Type Check" and "Test
+  # Suite" are required contexts in the main-protection ruleset, and a filtered-out
+  # workflow never reports its contexts at all — the PR sits BLOCKED forever with no
+  # failing check to fix (PR #136 was stuck exactly this way). The WIP-only CI saving
+  # is kept by the per-job `scope` step below, which skips the expensive steps while
+  # the job itself still runs and reports the required context.
   pull_request:
-    paths-ignore:
-      # Scratch/reference dumps — never gate CI on WIP-only changes
-      - "WIP/**"
   push:
     branches:
       - main
@@ -40,14 +43,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Decides once whether this event touches anything outside WIP/. Consumer jobs
+  # below still run and report their required contexts either way; they just skip
+  # their expensive steps when the answer is no.
+  scope:
+    name: Scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Any change outside WIP/?
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" != "pull_request" ]; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          # The API file list needs no checkout, so a WIP-only PR never even clones.
+          files="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
+            --paginate --jq '.[].filename')"
+          if printf '%s\n' "${files}" | grep -qvE '^(WIP/|$)'; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "run=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice::WIP-only diff — lint/test steps skipped, contexts still report."
+          fi
+
   lint:
     name: Lint and Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: scope
     permissions:
       contents: read
     steps:
       - name: Checkout immutable event revision
+        if: needs.scope.outputs.run == 'true'
         env:
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
@@ -61,10 +102,12 @@ jobs:
           git checkout --detach FETCH_HEAD
           git remote set-url origin "https://github.com/${REPOSITORY}.git"
       - name: Set up Python
+        if: needs.scope.outputs.run == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install lint tools
+        if: needs.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           # Single locked toolchain — ruff/mypy (and their type stubs) are exact-pinned
@@ -79,10 +122,13 @@ jobs:
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
       - name: ruff check
+        if: needs.scope.outputs.run == 'true'
         run: uv run --frozen --no-build ruff check . --output-format=github
       - name: ruff format --check
+        if: needs.scope.outputs.run == 'true'
         run: uv run --frozen --no-build ruff format --check .
       - name: mypy
+        if: needs.scope.outputs.run == 'true'
         # Advisory only (2026-07-28): 328 pre-existing type errors across 15 files
         # (see TODO.md "mypy debt") predate this step ever going green — ruff was
         # failing first and always short-circuited the job before mypy ran, so this
@@ -97,6 +143,7 @@ jobs:
             --show-error-codes --pretty \
             --ignore-missing-imports
       - name: uv lock --check (lockfile drift guard)
+        if: needs.scope.outputs.run == 'true'
         # Independent, second check of the same invariant ops/scripts/backup_to_github.sh
         # now enforces before every automated commit — catches uv.lock drift introduced
         # through any path (not just that script), on every push to main.
@@ -108,6 +155,7 @@ jobs:
             echo "::notice::no uv.lock present, skipping lockfile drift check"
           fi
       - name: Conflict-marker scan (repo-wide fast-detection tripwire)
+        if: needs.scope.outputs.run == 'true'
         # ops/scripts/backup_to_github.sh and ops/scripts/governance_sync.sh push
         # directly to main with no PR/branch-protection gate, so this job cannot
         # block a bad commit before it lands — it's a fast-detection tripwire that
@@ -129,10 +177,12 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: scope
     permissions:
       contents: read
     steps:
       - name: Checkout immutable event revision
+        if: needs.scope.outputs.run == 'true'
         env:
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
@@ -146,10 +196,12 @@ jobs:
           git checkout --detach FETCH_HEAD
           git remote set-url origin "https://github.com/${REPOSITORY}.git"
       - name: Set up Python
+        if: needs.scope.outputs.run == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install test tools
+        if: needs.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           # [tool.uv] package = false — this repo is not an installable package, so
@@ -163,6 +215,7 @@ jobs:
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
       - name: pytest with coverage
+        if: needs.scope.outputs.run == 'true'
         env:
           TESTING: "true"
         run: |
