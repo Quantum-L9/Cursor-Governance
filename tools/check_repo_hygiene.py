@@ -32,8 +32,10 @@ def sh(*args):
 
 
 def is_h03(path: str) -> bool:
-    return path == "Activation Command.md" or path == "commands/harvest copy.md" or path.startswith(
-        "key components/"
+    return (
+        path == "Activation Command.md"
+        or path == "commands/harvest copy.md"
+        or path.startswith("key components/")
     )
 
 
@@ -42,26 +44,28 @@ if not tracked:
     sys.exit("no tracked files found - run from repo root inside a git repo")
 tracked_set = set(tracked)
 
-print("tracked files: %d" % len(tracked))
+print(f"tracked files: {len(tracked)}")
 
 h03 = [t for t in tracked if is_h03(t)]
 if h03:
-    errs.append("H-03 space paths still tracked (%d): %s" % (len(h03), ", ".join(h03[:8])))
+    errs.append(f"H-03 space paths still tracked ({len(h03)}): {', '.join(h03[:8])}")
 
 other_spaces = [
     t
     for t in tracked
-    if " " in t and not is_h03(t) and not t.startswith("WIP/") and not t.startswith("current_work/")
+    if " " in t
+    and not is_h03(t)
+    and not t.startswith("WIP/")
+    and not t.startswith("current_work/")
 ]
 if other_spaces:
-    warns.append(
-        "deferred space paths outside H-03 (%d): %s" % (len(other_spaces), ", ".join(other_spaces[:6]))
-    )
+    preview = ", ".join(other_spaces[:6])
+    warns.append(f"deferred space paths outside H-03 ({len(other_spaces)}): {preview}")
 
 for b in BANNED_TRACKED:
     hits = [t for t in tracked if t.endswith(b) or t == b]
     if hits:
-        errs.append("generated/runtime file tracked: %s" % ", ".join(hits))
+        errs.append(f"generated/runtime file tracked: {', '.join(hits)}")
 
 if pathlib.Path(".env.template").exists() and pathlib.Path(".env.example").exists():
     errs.append("both .env.example and .env.template exist - keep .env.example only")
@@ -89,7 +93,7 @@ if not pathlib.Path(".github/dependabot.yml").exists():
 
 for wf in ("repo-hygiene.yml", "governance-self-check.yml", "branch-hygiene.yml"):
     if not pathlib.Path(".github/workflows", wf).exists():
-        warns.append(".github/workflows/%s not installed" % wf)
+        warns.append(f".github/workflows/{wf} not installed")
 
 for cfg in (".mcp.json", ".cursor/mcp.json"):
     if cfg not in tracked_set:
@@ -98,13 +102,13 @@ for cfg in (".mcp.json", ".cursor/mcp.json"):
     try:
         servers = json.loads(p.read_text(encoding="utf-8")).get("mcpServers", {})
     except Exception as e:
-        errs.append("%s invalid JSON: %s" % (cfg, e))
+        errs.append(f"{cfg} invalid JSON: {e}")
         continue
     unknown = sorted(set(servers) - ALLOWED_MCP)
     if unknown:
-        errs.append("%s non-allowlisted MCP server(s): %s" % (cfg, ", ".join(unknown)))
+        errs.append(f"{cfg} non-allowlisted MCP server(s): {', '.join(unknown)}")
     else:
-        print("  %s -> %s" % (cfg, ", ".join(sorted(servers)) or "none"))
+        print(f"  {cfg} -> {', '.join(sorted(servers)) or 'none'}")
 
 skip = (
     "-pack/",
@@ -125,15 +129,15 @@ for t in tracked:
     except Exception:
         continue
     if SECRET_PAT.search(body):
-        errs.append("credential pattern in tracked file: %s" % t)
+        errs.append(f"credential pattern in tracked file: {t}")
 
 print("")
 for w in warns:
-    print("  warn: %s" % w)
+    print(f"  warn: {w}")
 if errs:
-    print("\nFAIL (%d)" % len(errs))
+    print(f"\nFAIL ({len(errs)})")
     for e in errs:
-        print("  - %s" % e)
+        print(f"  - {e}")
     print("\nSee WIP/housekeeping-pack/RUNBOOK.md Section 4")
     sys.exit(1)
 print("PASS")
