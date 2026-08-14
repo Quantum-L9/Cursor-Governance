@@ -31,12 +31,28 @@ def _repo_root_from_skill(skill_root: Path) -> Path:
 
 
 def _under_repo(repo: Path, *parts: str) -> Path:
-    """Resolve path under repo with realpath+commonpath (Sonar S2083 sanitizer)."""
+    """Confine *parts under repo without rejecting governed symlink mirrors.
+
+    Sonar S2083: reject ``..`` / absolute segments and require the *logical*
+    join (``os.path.abspath``, no symlink follow) stays under the realpath
+    repo root. Using ``realpath`` on the final target incorrectly fails when
+    ``.cursor/plans`` is the governed home symlink ``→ ~/.cursor/plans``.
+    I/O still goes through the symlink path (write lands in the mirror).
+    """
     root = os.path.realpath(str(repo))
-    target = os.path.realpath(os.path.join(root, *parts))
-    if os.path.commonpath([root, target]) != root:
-        raise SystemExit(f"path escapes repo root: {target}")
-    return Path(target)
+    for part in parts:
+        if not part or part == os.curdir:
+            continue
+        if part == os.pardir or os.path.isabs(part):
+            raise SystemExit(f"path escapes repo root: invalid segment {part!r}")
+        if os.sep in part or (os.altsep and os.altsep in part):
+            # Allow nested rel segments only as separate *parts args.
+            raise SystemExit(f"path escapes repo root: nested segment {part!r}")
+    joined = os.path.join(root, *parts)
+    logical = os.path.abspath(joined)
+    if os.path.commonpath([root, logical]) != root:
+        raise SystemExit(f"path escapes repo root: {logical}")
+    return Path(joined)
 
 
 def _sha256(path: Path) -> str:
