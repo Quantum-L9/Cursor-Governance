@@ -487,7 +487,7 @@ Authoritative corrections (do not treat older bullets above as SSOT):
 2. After `make pr` opens a PR, the remediation handoff path is
    `.l9/pr/pr-remediation-handoff.json` (written by
    `ops/scripts/open_pr_after_gate.sh`), **not**
-   `memory-bank/pr-remediation-handoff.json`. Rule `48-make-pr-remediation`
+   `memory-bank/pr-remediation-handoff.json`. Rule `98-make-pr-remediation`
    matches this path.
 3. Residual `memory-bank/` trees are archival residue; wiring checks WARN if
    present and PASS when absent. Agents must not recreate them.
@@ -610,3 +610,13 @@ not the landing path in a dirty or unrelated checkout. Rule:
 ## Peer Execution shared runtime (2026-08-14)
 
 Bounded concurrency runtime is provider-neutral at `environment/program-execution/peer_execution/autonomy/`. Every provider binds to the same shared runtime through Program Execution; no provider owns a scheduler. Human merge only.
+
+<!-- RULES_CORPUS_CLEANUP_REFS_V1 -->
+## Rules corpus cleanup refs (2026-08-14) — supersedes MEMORY_BANK_RETIRED rule id
+
+Authoritative correction (do not treat the older `98-make-pr-remediation`
+stem above as live):
+
+1. Rule stem `98-make-pr-remediation` was renamed to `48-make-pr-remediation`
+   (`rules/48-make-pr-remediation.mdc`) in rules-corpus-cleanup-v1.
+2. Handoff path remains `.l9/pr/pr-remediation-handoff.json`.

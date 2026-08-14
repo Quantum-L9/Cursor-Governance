@@ -399,13 +399,14 @@ If user says any of these:
 
 ```python
 # ✅✅✅ PREFERRED — Modern, clean syntax ✅✅✅
-def foo(x: str | None = None) -> dict | None:
-    ...
+def foo(x: str | None = None) -> dict | None: ...
+
 
 # ✅ ALSO VALID — Older style, still works
 from typing import Optional
-def foo(x: Optional[str] = None) -> Optional[dict]:
-    ...
+
+
+def foo(x: Optional[str] = None) -> Optional[dict]: ...
 ```
 
 **Rule:** Use modern `str | None` syntax. It's cleaner and VPS supports it.
@@ -438,7 +439,7 @@ KernelProtocols = Union[KernelValidator, KernelDiscovery, IntegrityVerifier]
 # ✅✅✅ CORRECT — Just export individual protocols ✅✅✅
 __all__ = [
     "CacheClient",
-    "GraphClient", 
+    "GraphClient",
     "VectorStore",
     "MemoryRepository",
 ]
@@ -499,6 +500,7 @@ Before creating ANY new file that implements functionality:
 ```python
 # memory/consolidation.py — UPDATE EXISTING
 from memory.deduplication import DeduplicationEngine
+
 
 async def _run_deduplication(self, batch_size, sleep_ms):
     engine = DeduplicationEngine(...)  # Use new engine
