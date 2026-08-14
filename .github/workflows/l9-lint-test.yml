@@ -70,8 +70,14 @@ jobs:
             exit 0
           fi
           # The API file list needs no checkout, so a WIP-only PR never even clones.
-          files="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
-            --paginate --jq '.[].filename')"
+          # Fail open: if the file list is unavailable, run the full suite rather
+          # than skip work on an unverified assumption about the diff.
+          if ! files="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
+              --paginate --jq '.[].filename')"; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+            echo "::warning::could not list PR files — running the full suite"
+            exit 0
+          fi
           if printf '%s\n' "${files}" | grep -qvE '^(WIP/|$)'; then
             echo "run=true" >> "${GITHUB_OUTPUT}"
           else
