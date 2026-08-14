@@ -33,6 +33,28 @@ wiping untracked in-flight fix files.
    loads SSOT until your change is merged + SSOT activated (or you sync the
    command file into the SSOT clone deliberately).
 
+## Automated writers: the repo-write lock
+
+Per-agent worktrees answer *parallel agents*. They do not answer *automation*
+that writes into whichever workspace is open. `ops/scripts/lib/repo_write_lock.sh`
+serializes that automation:
+
+1. `make pr` holds the lock for its whole run.
+2. sessionStart reconcilers (`install_ide_profile.sh`,
+   `setup_claude_code_plugins.sh`, via `run_reconciler`) wait briefly and then
+   skip fail-soft. An explicit human invocation warns and proceeds.
+3. The ledger (`$HOME/.cursor/l9-repo-write.<id>.lock.d/owner`) records
+   pid, timestamp, workspace, and label, so
+   `ops/scripts/attribute_tree_writers.sh` can name a concurrent writer.
+
+Without this, a reconciler write during a pre-commit hook is reported as
+"files were modified by this hook" against a hook that never wrote — see
+`learning/failures/precommit-hook-attribution.md`.
+
+The lock is machine-local and short-lived. It is **not** the tracked
+`.governance-build-lock` kill switch, and it does **not** replace a worktree.
+Disable with `L9_REPO_WRITE_LOCK=0` (diagnostics only).
+
 ## Enforcement
 
 - `ops/autonomy/worktree_isolation_gate.py` via `local_execution_gate.py`

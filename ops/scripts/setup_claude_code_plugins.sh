@@ -63,6 +63,30 @@ log() {
   fi
 }
 
+# Project-scope installs write <workspace>/.claude/settings.json. Writing that
+# while `make pr` runs lands inside a pre-commit hook's window and is reported
+# as "files were modified by this hook" against a hook that never wrote. Yield
+# to the repo-write lock: a --quiet (hook-driven) run skips, an explicit run
+# warns and proceeds.
+LOCK_LIB="$SCRIPT_DIR/lib/repo_write_lock.sh"
+if [ -d "$WORKSPACE_DIR" ]; then
+  WORKSPACE_DIR="$(cd "$WORKSPACE_DIR" && pwd)"
+fi
+if [ -f "$LOCK_LIB" ]; then
+  # shellcheck source=lib/repo_write_lock.sh
+  . "$LOCK_LIB"
+  export L9_REPO_WRITE_LOCK_LABEL="setup_claude_code_plugins"
+  if ! repo_write_lock_acquire "$WORKSPACE_DIR" "${L9_PLUGINS_LOCK_WAIT_S:-45}"; then
+    if [ "$QUIET" -eq 1 ]; then
+      echo "claude-plugins: skipped ($(repo_write_lock_skip_note "$WORKSPACE_DIR"))"
+      exit 0
+    fi
+    echo "WARN: $(repo_write_lock_skip_note "$WORKSPACE_DIR") — reconciling anyway (explicit run)" >&2
+  else
+    trap 'repo_write_lock_release' EXIT
+  fi
+fi
+
 # Prefer the native install (~/.local/bin) over a stale npm-global copy.
 if [ -x "$HOME/.local/bin/claude" ]; then
   export PATH="$HOME/.local/bin:$PATH"

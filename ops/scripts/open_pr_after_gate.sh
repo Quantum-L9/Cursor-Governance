@@ -17,6 +17,13 @@ fi
 
 cd "$WS"
 
+# Same reason as run_pr_gate.sh: l4_local.py and friends need the project
+# interpreter (3.11+). Under the system 3.9 the L4 check dies on an import and
+# is read as "release not authorized", blocking a PR that is in fact cleared.
+if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
+  export PATH="$GOV_ROOT/.venv/bin:$PATH"
+fi
+
 # Never-lose restore + soft dirty WARN (WIP/reports/.l9 scratch do not force cleanup).
 _scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
 _scratch_hold_restore() {

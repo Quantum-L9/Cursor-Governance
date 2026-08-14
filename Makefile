@@ -1,5 +1,6 @@
 .PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
+.PHONY: repo-write-lock-test precommit-hook-contract
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -34,6 +35,7 @@ PR_REMEDIATE ?= 1
 
 help:
 	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
@@ -165,6 +167,14 @@ ide-profile-test:
 ## Fixture selftest for the sessionEnd backup gate (writes only under $$TMPDIR)
 backup-gate-test:
 	bash ops/scripts/test_backup_gate.sh
+
+## Fixture selftest for the repo-write lock (writes only under $$TMPDIR)
+repo-write-lock-test:
+	bash ops/scripts/test_repo_write_lock.sh
+
+## Fail if a pre-commit hook is not declared read_only or writer
+precommit-hook-contract:
+	python3 ops/scripts/validate_precommit_hook_contract.py
 
 ## Fail if any script/rule/hook hardcodes a /Users or /home path instead of $$HOME
 path-lint:
