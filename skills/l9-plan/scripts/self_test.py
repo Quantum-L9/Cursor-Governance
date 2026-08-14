@@ -135,6 +135,7 @@ def main() -> int:
             _under_repo(fake_repo, "..", "escape")
             errors.append("expected .. segment to be rejected")
         except SystemExit:
+            # Expected: path-traversal ".." must raise SystemExit; no error to record.
             pass
 
     if errors:
