@@ -13,7 +13,7 @@ DEFAULT_EXCLUDED = [
     "commands/README.md",
     "commands/commands-index.md",
     "commands/COMMANDS_MANIFEST.yaml",
-    "commands/harvest copy.md",
+    "commands/_harvest-copy-REVIEW.md",
     "commands/_archived/",
     "commands/dora-commands/",
     "commands/emma-repo-commands/",
