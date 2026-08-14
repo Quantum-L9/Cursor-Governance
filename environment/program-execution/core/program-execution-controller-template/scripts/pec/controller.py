@@ -403,10 +403,23 @@ def status(workspace: Path) -> dict[str, Any]:
                 }
             )
         ledger_ok, ledger_message = ledger.verify()
+        plan_revision = None
+        try:
+            from .replan import current_plan_revision
+
+            plan = current_plan_revision(workspace)
+            plan_revision = {
+                "plan_revision": plan["plan_revision"],
+                "active_replan_revision_id": plan.get("active_replan_revision_id"),
+            }
+        except ControllerError:
+            # Runtime predates the replan layer; durable plan revision is unavailable.
+            plan_revision = None
         return {
             "program": db.get_meta("program"),
             "program_digest": db.get_meta("program_digest"),
             "global_halt": db.get_meta("global_halt", False),
+            "plan_revision": plan_revision,
             "tasks": tasks,
             "gates": db.gates(),
             "decisions": db.decisions(),
