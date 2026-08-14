@@ -17,8 +17,7 @@ capabilities:
   isolated_execution: true
   remote_credentials: conditional
 identity:
-  binding: agent_registry
-  agent_ref: gemini
+  binding: peer_runtime_binding
   memory_write: via_generated_data_pipeline
 security:
   default_deny: true
@@ -32,6 +31,4 @@ receipts:
   terminal_core_receipt: verification
 status:
   default: dormant
-  blocked_reason: No local gemini executable or Gemini verification transport is available in this
-    environment; the adapter is registered for coverage but reports BLOCKED until a transport is
-    provisioned.
+  blocked_reason: No local gemini executable or Gemini verification transport is available.

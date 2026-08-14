@@ -1,11 +1,3 @@
-"""Shared contracts for the Program Execution adapter layer."""
+"""Compatibility imports. Canonical shared execution code lives in peer_execution/."""
 
-from .base import BaseExecutionAdapter
-from .models import CapabilityReceipt, LifecycleReceipt, ProbeContext
-
-__all__ = [
-    "BaseExecutionAdapter",
-    "CapabilityReceipt",
-    "LifecycleReceipt",
-    "ProbeContext",
-]
+from peer_execution import *  # noqa: F401,F403

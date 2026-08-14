@@ -9,10 +9,11 @@ rules:
 - remote_actions_not_worker_fallbacks
 - deployment_records_not_target_deployments
 - dormant_and_non_routable_never_selected
+- peer_provider_identity_resolves_from_runtime_binding
+- execution_profile_applies_before_provider_invocation
 - no_match_returns_CAPABILITY_UNSUPPORTED
 preference:
   repository_implementation:
-  - claude-code-bounded-autonomy
   - claude-code-direct
   - cursor-background
   - cursor-foreground
@@ -25,6 +26,7 @@ preference:
   verification:
   - ci-github-actions
   - ci-generic-shell
+  - gemini-review
   remote_repository_action:
   - github-remote-actions
   check_read_or_publication:

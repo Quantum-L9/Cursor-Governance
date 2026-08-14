@@ -10,9 +10,6 @@ entries:
 - adapter_id: claude-code-direct
   status: UNKNOWN
   last_probe: null
-- adapter_id: claude-code-bounded-autonomy
-  status: UNKNOWN
-  last_probe: null
 - adapter_id: chatgpt-manual-handoff
   status: UNKNOWN
   last_probe: null

@@ -78,10 +78,15 @@ default posture in the committed `settings.template.json` and
 Standing single-lane velocity on adapter surfaces does **not** require
 `/autonomy` or auto-init of the Python campaign scheduler. SessionStart injects
 the Profile `session_start_block`. Multi-lane fan-out still uses `/autonomy`.
-`99-no-auto-commit` / `96-git-push-approval` are waived on adapter surfaces per
+`99-no-auto-commit` / `99-no-auto-commit` are waived on adapter surfaces per
 Profile; Cursor is unchanged. See CANONICAL_LAW §6.1.
 
 ## Follow-ups
 
 - Distribution-owner sign-off is required before `L9_AUTONOMY_AUTONOMOUS_MERGE`
   is ever set to `true`; that change would supersede this ADR.
+
+
+## 2026-08-13 supersession note
+
+Shared bounded-autonomy runtime home moves to `environment/program-execution/peer_execution/autonomy/` (see ADR-0017 and ADR-0021). This ADR keeps its title and historical Claude Code concurrent-autonomy decision. Do not retitle this file.

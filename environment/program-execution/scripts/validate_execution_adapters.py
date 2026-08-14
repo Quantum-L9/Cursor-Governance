@@ -16,7 +16,6 @@ EXPECTED_ADAPTERS = {
     "cursor-foreground",
     "cursor-background",
     "claude-code-direct",
-    "claude-code-bounded-autonomy",
     "chatgpt-manual-handoff",
     "ci-generic-shell",
     "ci-github-actions",

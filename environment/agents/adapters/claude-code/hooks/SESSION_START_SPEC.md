@@ -12,7 +12,7 @@
 3. Emit Claude SessionStart JSON envelope with `additionalContext`.
 4. **Mobile-safe** — committed consumer copy must not require `~/.cursor`.
 5. **No new brains** under `environment/agents/adapters/claude-code/` — call `ops/autonomy/*` and
-   `environment/agents/adapters/claude-code/autonomy/bootstrap.py` only.
+   `environment/program-execution/peer_execution/autonomy/bootstrap.py` only.
 6. Reconcile (`reconcile_claude_settings`) is **install-time**, not SessionStart-critical.
 
 ## Must emit when governance found

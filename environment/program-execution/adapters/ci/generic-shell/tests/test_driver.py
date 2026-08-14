@@ -6,7 +6,7 @@ from pathlib import Path
 
 class GenericShellSourceTests(unittest.TestCase):
     def test_no_shell_true(self) -> None:
-        text = (Path(__file__).resolve().parents[1] / "driver.py").read_text()
+        text = (Path(__file__).resolve().parents[1] / "provider.py").read_text()
         self.assertNotIn("shell=True", text)
 
 

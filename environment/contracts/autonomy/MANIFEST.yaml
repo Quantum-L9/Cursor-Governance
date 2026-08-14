@@ -1,14 +1,12 @@
 schema: l9.autonomy-contracts.manifest.v1
-schema_version: 1.0.0
+schema_version: 2.0.0
 family: l9_autonomy_architecture
 status: active
 updated: "2026-08-12"
 purpose: >
-  First-class autonomy family registry (Cursor-primary). Registers the three live
-  autonomy homes and their SSOT paths. Program Execution remains the controller;
-  root autonomy declares owns_program_state: false and must not outlive a Program
-  lease. This MANIFEST elevates discovery and fail-closed validation — it does
-  not relocate runtime brains into environment/contracts/.
+  First-class autonomy family registry. Program Execution remains the controller;
+  root autonomy declares owns_program_state: false. Shared bounded-concurrency
+  mechanics are Peer Execution infrastructure, not provider-owned adapter state.
 law:
   program_execution_controller: environment/program-execution
   peer_contract: environment/agents/PEER_EXECUTION.md
@@ -60,33 +58,34 @@ artifacts:
     receipt_path: .l9/autonomy/l4-release-receipt.json
     meta: meta/l4-local-autonomy.meta.md
     consumed_by:
-      - rules/87-l4-local-autonomy.mdc
+      - rules/88-l4-local-autonomy.mdc
       - ops/hooks/l4-local-execution-gate-shell.sh
       - skills/l9-bounded-autonomy
     not_for:
       - mid_execution_push_before_release_authorized
-  - artifact_id: claude-code-bounded-autonomy-scheduler
-    kind: adapter_scheduler
+  - artifact_id: peer-execution-bounded-autonomy-runtime
+    kind: execution_runtime
     first_class_artifact: true
     version: 1.0.0
     status: active
-    canonical_path: environment/agents/adapters/claude-code/autonomy/
-    e14_exemption: true
+    canonical_path: environment/program-execution/peer_execution/autonomy/
+    owns_program_state: false
     note: >
-      Claude-owned bounded-concurrency scheduler (E14). Not a forbidden copy of
-      root autonomy/; Cursor maps invariants via l9-bounded-autonomy Tasks.
-    meta: meta/claude-code-bounded-autonomy-scheduler.meta.md
+      Shared provider-neutral bounded-concurrency mechanics discovered in the
+      former Claude adapter. No provider receives a scheduler exemption.
+    meta: meta/peer-execution-bounded-autonomy-runtime.meta.md
     consumed_by:
       - make autonomy-validate
-      - environment/agents/adapters/claude-code
+      - environment/program-execution/peer_execution
+      - skills/l9-bounded-autonomy
     not_for:
-      - cursor_reimplementation_of_scheduler_python
-      - citing_environment/claude-code/autonomy_as_live_path
+      - provider_owned_scheduler
+      - owning_program_state
 forbidden_second_ssots:
   - path_glob: skills/**/surface_profile.yaml
     reason: surface profile must remain ops/autonomy/surface_profile.yaml
-  - path_glob: environment/claude-code/autonomy/**
-    reason: transitional symlink extinguished; adapters path is sole Claude home
+  - path_glob: environment/agents/adapters/*/autonomy/**
+    reason: provider adapters must not own autonomy or scheduler runtimes
 projections:
   - path: commands/autonomy.md
     relation: discovery_pointer

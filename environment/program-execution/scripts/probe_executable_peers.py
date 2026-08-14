@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
-from adapters.common.imports import load_module
+from peer_execution.bindings import load_peer_bindings
+from peer_execution.imports import load_module
+from peer_execution.models import ProbeContext
+
+from scripts.provider_loader import instantiate
 
 
 def _subsystem_root() -> Path:
@@ -19,7 +23,6 @@ def _repo_root() -> Path:
 
 
 def _resolve_runtime_root() -> Path:
-    """Canonical agents/readiness via runtime_paths; legacy fallback if import fails."""
     repo = _repo_root()
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))
@@ -27,7 +30,7 @@ def _resolve_runtime_root() -> Path:
         from environment.agents.runtime_paths import peer_readiness_root
 
         return peer_readiness_root()
-    except Exception:  # noqa: BLE001 — probe must still run in thin PYTHONPATH setups
+    except Exception:  # noqa: BLE001
         return (Path.home() / ".l9" / "programs" / "_peer-readiness").resolve()
 
 
@@ -40,19 +43,11 @@ def _readiness_builder():
 
 
 def _required_peers(repo_root: Path) -> dict[str, Any]:
-    bindings_path = repo_root / "environment/agents/PEER_RUNTIME_BINDINGS.yaml"
-    if not bindings_path.is_file():
-        raise FileNotFoundError(
-            f"PEER_RUNTIME_BINDINGS.yaml missing at {bindings_path} (probe refuses vacuous PASS)"
-        )
-    doc = yaml.safe_load(bindings_path.read_text(encoding="utf-8"))
-    if not isinstance(doc, dict):
-        raise ValueError("PEER_RUNTIME_BINDINGS.yaml must be an object")
-    peers = doc.get("peers") or {}
+    doc = load_peer_bindings(repo_root)
     return {
         key: peer
-        for key, peer in peers.items()
-        if isinstance(peer, dict) and (peer.get("execution") or {}).get("required") is True
+        for key, peer in (doc.get("peers") or {}).items()
+        if (peer.get("execution") or {}).get("required") is True
     }
 
 
@@ -65,7 +60,7 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
         required = _required_peers(repo_root)
     except (OSError, ValueError, FileNotFoundError) as exc:
         return {
-            "schema": "l9.executable-peer-probe-report.v1",
+            "schema": "l9.executable-peer-probe-report.v2",
             "status": "FAIL",
             "runtime_root": str(runtime_root),
             "peers": [],
@@ -76,13 +71,54 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
         receipts = []
         agent_ready = False
         for binding in bindings:
-            surface = str(binding.get("surface"))
-            adapter_id = str(binding.get("adapter_id"))
-            # Readiness remains binding-level: (agent_ref, surface, adapter_id)
-            receipt = build_readiness(subsystem_root, repo_root, agent_id, surface, adapter_id)
+            surface = binding["surface"]
+            provider_ref = binding["provider_ref"]
+            profile_ref = binding["execution_profile_ref"]
+            probe_runtime = runtime_root / "provider-probes" / agent_id / provider_ref
+            probe_digest = (
+                "sha256:"
+                + hashlib.sha256(
+                    f"peer-readiness:{agent_id}:{surface}:{provider_ref}".encode()
+                ).hexdigest()
+            )
+            try:
+                adapter = instantiate(
+                    provider_ref,
+                    probe_runtime,
+                    execution_profile_ref=profile_ref,
+                    binding_context={
+                        "agent_ref": agent_id,
+                        "surface": surface,
+                        "provider_ref": provider_ref,
+                        "execution_profile_ref": profile_ref,
+                    },
+                )
+                provider_probe = adapter.probe(
+                    ProbeContext(
+                        repository_root=str(repo_root),
+                        runtime_root=str(probe_runtime),
+                        program_lock_digest=probe_digest,
+                        metadata={"agent_ref": agent_id, "surface": surface},
+                    )
+                ).to_dict()
+            except Exception as exc:  # noqa: BLE001
+                provider_probe = {
+                    "status": "BLOCKED",
+                    "blocked_reason": "provider_probe_exception",
+                    "error_type": type(exc).__name__,
+                }
+            receipt = build_readiness(
+                subsystem_root,
+                repo_root,
+                agent_id,
+                surface,
+                provider_ref,
+                profile_ref,
+                provider_probe=provider_probe,
+            )
             out_dir = runtime_root / agent_id
             out_dir.mkdir(parents=True, exist_ok=True)
-            (out_dir / f"{adapter_id}.json").write_text(
+            (out_dir / f"{provider_ref}.json").write_text(
                 json.dumps(receipt, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
@@ -98,7 +134,8 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
                 "bindings": [
                     {
                         "surface": r["surface"],
-                        "adapter_id": r["adapter_id"],
+                        "provider_ref": r["provider_ref"],
+                        "execution_profile_ref": r["execution_profile_ref"],
                         "status": r["status"],
                         "receipt_digest": r["receipt_digest"],
                     }
@@ -107,7 +144,7 @@ def probe(subsystem_root: Path, repo_root: Path, runtime_root: Path) -> dict[str
             }
         )
     return {
-        "schema": "l9.executable-peer-probe-report.v1",
+        "schema": "l9.executable-peer-probe-report.v2",
         "status": "PASS" if all_ready else "FAIL",
         "runtime_root": str(runtime_root),
         "peers": peers_out,
@@ -128,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         for peer in report["peers"]:
             mark = "READY" if peer["ready"] else "BLOCKED"
-            bindings = ", ".join(f"{b['adapter_id']}={b['status']}" for b in peer["bindings"])
+            bindings = ", ".join(f"{b['provider_ref']}={b['status']}" for b in peer["bindings"])
             print(f"[{mark}] {peer['agent_id']}: {bindings}")
         print(f"{report['status']} — {len(report['peers'])} execution.required peer(s)")
         for err in report.get("errors") or []:

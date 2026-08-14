@@ -1,16 +1,40 @@
-# Adapter-Layer Architecture
+# Peer Execution Architecture
 
-The Controller renders a digest-bound contract. A router selects a fresh,
-conformant adapter whose capabilities and authority cover the request. The
-adapter returns lifecycle receipts and a canonical terminal receipt. Independent
-verification remains a separate adapter and the Controller alone advances
-program state.
+The Program Controller remains the sole Program-state authority. Provider
+integration is subordinate to Controller admission and is split into explicit
+layers so a new model or host never becomes a new execution system.
 
 ```text
-Controller -> router -> adapter -> provider -> host
-     ^           |          |          |
-     +--- canonical receipts + lifecycle evidence
+Program Controller
+  -> Peer Runtime Binding
+  -> Execution Profile
+  -> Peer Execution Core
+  -> Shared Transport
+  -> Thin Provider
+  -> Provider / Host
 ```
 
-Existing runtime providers are invoked through bridges. Their schedulers,
-leases, identities, and memory transports are never copied into this tree.
+## Ownership
+
+- `core/` owns Program truth, Program Locks, readiness, task state, canonical
+  receipts, independent verification, and convergence.
+- `peer_execution/` owns provider-neutral lifecycle, context manifests,
+  permissions, budgets, shared process mechanics, provider result normalization,
+  and Program-facing receipt construction.
+- `environment/program-execution/peer_execution/autonomy/` owns shared admitted-dispatch bounded
+  concurrency mechanics. It is subordinate to Program Controller readiness and
+  root `autonomy/` authorization.
+- `adapters/<provider>/` contains only provider-specific capability probing,
+  request translation/invocation, response translation, and provider-specific
+  helpers.
+- `environment/agents/PEER_RUNTIME_BINDINGS.yaml` owns peer identity -> surface ->
+  provider -> execution-profile topology.
+
+Provider descriptors never own `agent_ref`. A provider may disappear or be
+substituted without changing peer identity or Program state.
+
+## Failure law
+
+Provider absence, transport absence, and unsupported capabilities return
+`BLOCKED` or `CAPABILITY_UNSUPPORTED`. They never create false completion,
+provider-local Program state, or a second scheduler.

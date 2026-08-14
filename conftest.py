@@ -17,6 +17,7 @@ tests use repo-root-compatible imports and remain in the default suite.
 """
 
 collect_ignore = [
+    "environment/program-execution/peer_execution",
     # Owned Claude autonomy suite (python-contract.json claude-code-autonomy).
     "environment/agents/adapters/claude-code/autonomy",
     "environment/program-execution/adapters",

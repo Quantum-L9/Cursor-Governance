@@ -1,6 +1,7 @@
-schema: program-execution-adapter.matrix.v1
-base_sha: 3c9ba5c675b91e5d1d2b20d777ff14fcb669a48c
-adapter_count: 14
+schema: l9.peer-execution.adapter-matrix.v2
+source_base_sha: 5707ea8cefd15cfd5b80a9c1503e3f03119f6adc
+generated_from_worktree: true
+adapter_count: 13
 adapters:
 - adapter_id: cursor-foreground
   kind: worker_host
@@ -11,7 +12,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: f0d87c97ecd8fc7e32ad7afca0c77f5dd2bb515cf0bf32ddec66423e411821f1
+  descriptor_sha256: 3c44c9540dae3722026283453be2940ea7178d3f162a41e59760d772deaf09cb
 - adapter_id: cursor-background
   kind: worker_host
   status: conditional
@@ -21,7 +22,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: conditional
-  descriptor_sha256: a8c639e8f9f4a810711a01698fb1a0d37f258ce3e4b0bb33c88f1d6253dc14cf
+  descriptor_sha256: 2c2cc7a5dae787a59bf4ea21d9aacff2297a09311ca434c6f8eb8886c3a416b6
 - adapter_id: claude-code-direct
   kind: worker_host
   status: conditional
@@ -31,17 +32,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 1eac2d5380b53f28379a722421143ae21c7066c91aeeb9c15239bac73a75f4a9
-- adapter_id: claude-code-bounded-autonomy
-  kind: worker_host
-  status: conditional
-  provider_type: claude_bounded_autonomy
-  actions:
-  - inspect
-  - local_write
-  - artifact_production
-  cancellation: unsupported
-  descriptor_sha256: 3daca12fc6b7d9b12f33dd06b97dec674f0b78746969a733756b0d7e8b12d6da
+  descriptor_sha256: 1e32a54f07f2a2ff32307c86e3555656f8d0b2a3a3c9e30731269f2c071c8e16
 - adapter_id: chatgpt-manual-handoff
   kind: worker_host
   status: dormant
@@ -115,7 +106,7 @@ adapters:
   - local_write
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 234213da69470b82b119c50d3a895d4ae22c047db0115bb02fbe9fa5ea61fb2b
+  descriptor_sha256: 7e012b0245c9135a0de986b8f285f33965598d7fb2d04f01d95cac94449a7ce0
 - adapter_id: gemini-review
   kind: verifier
   status: dormant
@@ -123,7 +114,7 @@ adapters:
   actions:
   - verify
   cancellation: unsupported
-  descriptor_sha256: cf017ca086ff3088b35a16617d926b57695ec0fc1a8b146172f6f946ed14e103
+  descriptor_sha256: 0b8508e8abf4dc73bf131060c94863861ccd69704044c47118127c1e0bca6b87
 - adapter_id: manus-cloud
   kind: worker_host
   status: dormant
@@ -132,4 +123,4 @@ adapters:
   - inspect
   - artifact_production
   cancellation: unsupported
-  descriptor_sha256: 26d14fe6aed3e4351237bb3213247304bf0cc6e33fb70c04843fe9263b24a8bd
+  descriptor_sha256: 7d92ced52144b08124a820d0e61224afac28a92f9aee66c5e0d5d4c95d8c2f13

@@ -8,8 +8,8 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 |---|---|---|
 | ADR-0001 | `docs/decisions/ADR-0001-claude-code-bounded-concurrent-autonomy.md` | Autonomy ON, merge OFF, remediation ON |
 | Settings | `environment/agents/adapters/claude-code/settings.template.json` | Allow scoped push/PR create; omit merge; deny force/admin |
-| Profile | `environment/agents/adapters/claude-code/autonomy/profiles/pr-convergence.json` | Lanes 4/2, waiting_external, merge_gate |
-| Runtime | `environment/agents/adapters/claude-code/autonomy/*.py` | Claude-only machine scheduler (do not rewrite for Cursor) |
+| Profile | `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` | Lanes 4/2, waiting_external, merge_gate |
+| Runtime | `environment/program-execution/peer_execution/autonomy/*.py` | Claude-only machine scheduler (do not rewrite for Cursor) |
 | Hooks | `environment/agents/adapters/claude-code/hooks/*` | Thin fail-open adapters over `ops/skill_routing/` (SessionStart, route hint, usage log) |
 | Routing | `ops/skill_routing/` + `ops/generated/skill-registry.json`; rule `rules/23-l9-skill-routing.mdc` (+ generated `environment/generated/llm-rules/l9-skill-routing.md`) | Recommendation ≠ authority; `hint_allowed` may surface Read (`explicit_hint`); mutate only with packet |
 
@@ -51,7 +51,7 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 
 ## Dual-surface rule
 
-- **Claude Code surface:** use `environment/agents/adapters/claude-code/autonomy/cli.py` + profile — see `claude-code-bridge.md`.
+- **Claude Code surface:** use `environment/program-execution/peer_execution/autonomy/cli.py` + profile — see `claude-code-bridge.md`.
 - **Cursor surface:** this skill + `/autonomy` + agent-requested rule — Task/background poll SOP only; no second Python scheduler.
 
 ## Program Execution System (PES) Phase 0

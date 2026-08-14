@@ -29,15 +29,6 @@ entries:
   - local_write
   - artifact_production
   default_status: conditional
-- adapter_id: claude-code-bounded-autonomy
-  adapter_kind: worker_host
-  target_kinds:
-  - git_repository
-  actions:
-  - inspect
-  - local_write
-  - artifact_production
-  default_status: conditional
 - adapter_id: chatgpt-manual-handoff
   adapter_kind: worker_host
   target_kinds:

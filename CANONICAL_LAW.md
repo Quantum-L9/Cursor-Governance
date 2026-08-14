@@ -34,6 +34,7 @@ status: active
 | **Org invariants** | `~/.cursor-governance/ORG_INVARIANTS.yaml` | Canonical Quantum-L9 policy; mirrored to consumer repos |
 | **Executable plan template** | `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` | First-class primitive (`MANIFEST.yaml`); `/plan` + `l9-plan` default projection; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only |
 | **Autonomy family** | `environment/contracts/autonomy/MANIFEST.yaml` | First-class subordinate primitive family (root `autonomy/` + `ops/autonomy` + Claude scheduler SSOTs); PE Controller remains authoritative; `owns_program_state: false`; validate via `make autonomy-contracts-validate` |
+| **Peer Execution thin-adapter law** | `environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml` | Binding provider-neutral execution architecture; validate via `make peer-execution-conformance` |
 
 **Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.  
 **Never** expose the governance root under `.cursor/governance/` — that path holds only the law file + README.
@@ -272,7 +273,7 @@ auth: `L9_MERGE_AUTHORIZED=<reason>`.
 | Local cache | `intelligence/context-memory/sessions/*.json` | Fallback only |
 | MCP interface | `ops/graphiti/graphiti_memory_client.py` | L9-Ops-MCP |
 
-**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`  
+**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`  
 **Skill:** `skills/l9-graphiti-memory/SKILL.md`  
 **Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES`
 

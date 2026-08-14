@@ -19,8 +19,7 @@ capabilities:
   isolated_execution: true
   remote_credentials: conditional
 identity:
-  binding: agent_registry
-  agent_ref: claude-code
+  binding: peer_runtime_binding
   memory_write: via_generated_data_pipeline
 security:
   default_deny: true

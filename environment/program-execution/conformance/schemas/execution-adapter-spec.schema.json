@@ -1,238 +1,117 @@
 {
   "$id": "https://quantum-l9.dev/program-execution/execution-adapter-spec.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Program Execution Adapter Specification",
+  "type": "object",
   "additionalProperties": false,
+  "required": [
+    "schema", "adapter_id", "adapter_version", "adapter_kind",
+    "contract_family", "provider", "capabilities", "identity",
+    "security", "receipts", "status"
+  ],
   "properties": {
+    "schema": {"const": "program-execution-adapter.spec.v1"},
     "adapter_id": {
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "type": "string"
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "adapter_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
     },
     "adapter_kind": {
       "enum": [
-        "worker_host",
-        "verifier",
-        "remote_action",
-        "deployment_record",
-        "target_deployment_factory",
-        "target_deployment"
+        "worker_host", "verifier", "remote_action", "deployment_record",
+        "target_deployment_factory", "target_deployment"
       ]
     },
-    "adapter_version": {
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "type": "string"
+    "contract_family": {"const": "program-execution-system.v2"},
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "protocol_version"],
+      "properties": {
+        "type": {
+          "enum": [
+            "root_autonomy", "cursor_task_tools",
+            "subprocess", "manual_handoff", "gh_cli", "factory"
+          ]
+        },
+        "protocol_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
     },
     "capabilities": {
+      "type": "object",
       "additionalProperties": false,
-      "properties": {
-        "actions": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "async_execution": {
-          "type": "boolean"
-        },
-        "cancellation": {
-          "enum": [
-            "supported",
-            "unsupported",
-            "conditional"
-          ]
-        },
-        "isolated_execution": {
-          "type": "boolean"
-        },
-        "remote_credentials": {
-          "enum": [
-            "forbidden",
-            "conditional",
-            "required"
-          ]
-        },
-        "structured_output": {
-          "type": "boolean"
-        },
-        "target_kinds": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
       "required": [
-        "target_kinds",
-        "actions",
-        "async_execution",
-        "cancellation",
-        "structured_output",
-        "isolated_execution",
-        "remote_credentials"
+        "target_kinds", "actions", "async_execution", "cancellation",
+        "structured_output", "isolated_execution", "remote_credentials"
       ],
-      "type": "object"
-    },
-    "contract_family": {
-      "const": "program-execution-system.v2"
+      "properties": {
+        "target_kinds": {"type": "array", "items": {"type": "string"}},
+        "actions": {"type": "array", "items": {"type": "string"}},
+        "async_execution": {"type": "boolean"},
+        "cancellation": {"enum": ["supported", "unsupported", "conditional"]},
+        "structured_output": {"type": "boolean"},
+        "isolated_execution": {"type": "boolean"},
+        "remote_credentials": {"enum": ["forbidden", "conditional", "required"]}
+      }
     },
     "identity": {
+      "type": "object",
       "additionalProperties": false,
+      "required": ["binding", "memory_write"],
       "properties": {
-        "agent_ref": {
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-          "type": "string"
-        },
         "binding": {
           "enum": [
-            "agent_registry",
-            "controller_contract",
-            "external_receipt"
+            "peer_runtime_binding", "controller_contract", "external_receipt"
           ]
         },
         "memory_write": {
-          "enum": [
-            "forbidden",
-            "via_generated_data_pipeline"
-          ]
+          "enum": ["forbidden", "via_generated_data_pipeline"]
         }
-      },
-      "required": [
-        "binding",
-        "memory_write"
-      ],
-      "if": {
-        "properties": {
-          "binding": {
-            "const": "agent_registry"
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "agent_ref"
-        ]
-      },
-      "type": "object"
+      }
     },
-    "provider": {
+    "security": {
+      "type": "object",
       "additionalProperties": false,
-      "properties": {
-        "protocol_version": {
-          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-          "type": "string"
-        },
-        "type": {
-          "enum": [
-            "root_autonomy",
-            "claude_bounded_autonomy",
-            "cursor_task_tools",
-            "subprocess",
-            "manual_handoff",
-            "gh_cli",
-            "factory"
-          ]
-        }
-      },
       "required": [
-        "type",
-        "protocol_version"
+        "default_deny", "may_narrow_authority", "may_widen_authority",
+        "autonomous_merge", "force_push", "direct_graphiti_write"
       ],
-      "type": "object"
+      "properties": {
+        "default_deny": {"const": true},
+        "may_narrow_authority": {"const": true},
+        "may_widen_authority": {"const": false},
+        "autonomous_merge": {"const": false},
+        "force_push": {"const": false},
+        "direct_graphiti_write": {"const": false}
+      }
     },
     "receipts": {
+      "type": "object",
       "additionalProperties": false,
+      "required": ["lifecycle_schema", "terminal_core_receipt"],
       "properties": {
         "lifecycle_schema": {
           "const": "program-execution-adapter.lifecycle-receipt.v1"
         },
         "terminal_core_receipt": {
-          "enum": [
-            "attempt",
-            "verification",
-            "remote_action",
-            "deployment",
-            "none"
-          ]
+          "enum": ["attempt", "verification", "remote_action", "deployment", "none"]
         }
-      },
-      "required": [
-        "lifecycle_schema",
-        "terminal_core_receipt"
-      ],
-      "type": "object"
-    },
-    "schema": {
-      "const": "program-execution-adapter.spec.v1"
-    },
-    "security": {
-      "additionalProperties": false,
-      "properties": {
-        "autonomous_merge": {
-          "const": false
-        },
-        "default_deny": {
-          "const": true
-        },
-        "direct_graphiti_write": {
-          "const": false
-        },
-        "force_push": {
-          "const": false
-        },
-        "may_narrow_authority": {
-          "const": true
-        },
-        "may_widen_authority": {
-          "const": false
-        }
-      },
-      "required": [
-        "default_deny",
-        "may_narrow_authority",
-        "may_widen_authority",
-        "autonomous_merge",
-        "force_push",
-        "direct_graphiti_write"
-      ],
-      "type": "object"
+      }
     },
     "status": {
+      "type": "object",
       "additionalProperties": false,
+      "required": ["default", "blocked_reason"],
       "properties": {
-        "blocked_reason": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "default": {
-          "enum": [
-            "active",
-            "conditional",
-            "dormant",
-            "non_routable"
-          ]
-        }
-      },
-      "required": [
-        "default",
-        "blocked_reason"
-      ],
-      "type": "object"
+        "default": {"enum": ["active", "conditional", "dormant", "non_routable"]},
+        "blocked_reason": {"type": ["string", "null"]}
+      }
     }
-  },
-  "required": [
-    "schema",
-    "adapter_id",
-    "adapter_version",
-    "adapter_kind",
-    "contract_family",
-    "provider",
-    "capabilities",
-    "identity",
-    "security",
-    "receipts",
-    "status"
-  ],
-  "title": "Program Execution Adapter Specification",
-  "type": "object"
+  }
 }

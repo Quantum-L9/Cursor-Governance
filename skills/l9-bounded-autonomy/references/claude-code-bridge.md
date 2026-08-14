@@ -1,17 +1,21 @@
 # Claude Code bridge
 
-When `L9_GOVERNANCE_SURFACE=claude-code` (or the session is clearly Claude Code CLI/Web/Mobile):
-
-1. **Do not invent a second scheduler.** Use the shipped runtime:
+When `L9_GOVERNANCE_SURFACE=claude-code` or the session is clearly Claude Code
+CLI/Web/Mobile, use the shared Peer Execution bounded runtime. Claude is a thin
+provider and does not own a scheduler.
 
 ```bash
-python3 "$HOME/.cursor-governance/environment/agents/adapters/claude-code/autonomy/cli.py" init <campaign.json>
-python3 "$HOME/.cursor-governance/environment/agents/adapters/claude-code/autonomy/cli.py" plan <campaign-id>
+python3 "$HOME/.cursor-governance/environment/program-execution/peer_execution/autonomy/cli.py" init <campaign.json>
+python3 "$HOME/.cursor-governance/environment/program-execution/peer_execution/autonomy/cli.py" plan <campaign-id>
 ```
 
-2. Profile default: `environment/agents/adapters/claude-code/autonomy/profiles/pr-convergence.json`.
-3. Permissions and env already encode A4 remediation + merge OFF — see `settings.template.json`.
-4. This Cursor skill remains the **SOP narrative** and cross-surface contract; Claude machine enforcement stays in `autonomy/*.py` + permissions.
-5. SessionStart autonomy bootstrap is fail-open — degraded context must not block startup.
+1. Shared bounded-runtime default profile:
+   `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json`.
+2. Root `autonomy/` remains the authorization/control plane and owns no Program state.
+3. Peer Execution Core owns admitted-dispatch concurrency and lifecycle mechanics.
+4. Claude-specific code owns only Claude invocation and response translation.
+5. SessionStart context bootstrap remains fail-open; degraded context does not widen authority.
 
-When the session is Cursor Composer/Agent: follow Protocols A–C with Task tools; do not require `cli.py` unless the user asks to drive a Claude campaign from the same repo.
+When the session is Cursor Composer/Agent, use the same Program Controller and
+Peer Execution substrate through the Cursor provider binding. No surface may
+invent a second scheduler.

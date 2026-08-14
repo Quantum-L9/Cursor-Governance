@@ -1,109 +1,141 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://quantum-l9.dev/schemas/peer-runtime-bindings.v1.json",
-  "title": "L9 Peer Runtime Bindings",
-  "description": "Sole topology SSOT for cross-plane peer runtime bindings (l9.peer-runtime-bindings.v1).",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema", "schema_version", "peers"],
-  "properties": {
-    "schema": {
-      "type": "string",
-      "const": "l9.peer-runtime-bindings.v1"
-    },
-    "schema_version": {
-      "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-    },
-    "peers": {
-      "type": "object",
-      "minProperties": 1,
-      "additionalProperties": false,
-      "patternProperties": {
-        "^[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
-          "$ref": "#/$defs/peer"
-        }
-      }
-    }
-  },
   "$defs": {
-    "kebabId": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
-    },
-    "nonEmpty": {
-      "type": "string",
-      "minLength": 1
+    "autonomy": {
+      "additionalProperties": false,
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/kebabId"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "required",
+        "provider_id"
+      ],
+      "type": "object"
     },
     "binding": {
-      "type": "object",
       "additionalProperties": false,
-      "required": ["surface", "adapter_id"],
       "properties": {
-        "surface": {"$ref": "#/$defs/nonEmpty"},
-        "adapter_id": {"$ref": "#/$defs/kebabId"}
-      }
-    },
-    "execution": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["required", "bindings"],
-      "properties": {
-        "required": {"type": "boolean"},
-        "bindings": {
-          "type": "array",
-          "items": {"$ref": "#/$defs/binding"}
+        "execution_profile_ref": {
+          "$ref": "#/$defs/kebabId"
+        },
+        "provider_ref": {
+          "$ref": "#/$defs/kebabId"
+        },
+        "surface": {
+          "$ref": "#/$defs/nonEmpty"
         }
-      }
-    },
-    "autonomy": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["required", "provider_id"],
-      "properties": {
-        "required": {"type": "boolean"},
-        "provider_id": {"$ref": "#/$defs/kebabId"}
-      }
+      },
+      "required": [
+        "surface",
+        "provider_ref",
+        "execution_profile_ref"
+      ],
+      "type": "object"
     },
     "deployment": {
-      "type": "object",
       "additionalProperties": false,
-      "required": ["readiness_required"],
       "properties": {
-        "readiness_required": {"type": "boolean"}
-      }
+        "readiness_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "readiness_required"
+      ],
+      "type": "object"
     },
-    "subagents": {
-      "type": "object",
+    "execution": {
       "additionalProperties": false,
-      "required": ["enabled"],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "required": {
+                "const": true
+              }
+            },
+            "required": [
+              "required"
+            ]
+          },
+          "then": {
+            "properties": {
+              "bindings": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ],
       "properties": {
-        "enabled": {"type": "boolean"},
-        "roles_manifest": {"$ref": "#/$defs/nonEmpty"},
-        "deployment": {"$ref": "#/$defs/deployment"}
-      }
-    },
-    "results": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["readiness_required"],
-      "properties": {
-        "readiness_required": {"type": "boolean"}
-      }
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/binding"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "required",
+        "bindings"
+      ],
+      "type": "object"
     },
     "generated_data": {
-      "type": "object",
       "additionalProperties": false,
-      "required": ["required", "capture_readiness_required"],
       "properties": {
-        "required": {"type": "boolean"},
-        "capture_readiness_required": {"type": "boolean"}
-      }
+        "capture_readiness_required": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "required",
+        "capture_readiness_required"
+      ],
+      "type": "object"
+    },
+    "kebabId": {
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "nonEmpty": {
+      "minLength": 1,
+      "type": "string"
     },
     "peer": {
-      "type": "object",
       "additionalProperties": false,
+      "properties": {
+        "agent_ref": {
+          "$ref": "#/$defs/kebabId"
+        },
+        "autonomy": {
+          "$ref": "#/$defs/autonomy"
+        },
+        "execution": {
+          "$ref": "#/$defs/execution"
+        },
+        "generated_data": {
+          "$ref": "#/$defs/generated_data"
+        },
+        "results": {
+          "$ref": "#/$defs/results"
+        },
+        "subagents": {
+          "$ref": "#/$defs/subagents"
+        }
+      },
       "required": [
         "agent_ref",
         "execution",
@@ -111,14 +143,67 @@
         "results",
         "generated_data"
       ],
+      "type": "object"
+    },
+    "results": {
+      "additionalProperties": false,
       "properties": {
-        "agent_ref": {"$ref": "#/$defs/kebabId"},
-        "execution": {"$ref": "#/$defs/execution"},
-        "autonomy": {"$ref": "#/$defs/autonomy"},
-        "subagents": {"$ref": "#/$defs/subagents"},
-        "results": {"$ref": "#/$defs/results"},
-        "generated_data": {"$ref": "#/$defs/generated_data"}
-      }
+        "readiness_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "readiness_required"
+      ],
+      "type": "object"
+    },
+    "subagents": {
+      "additionalProperties": false,
+      "properties": {
+        "deployment": {
+          "$ref": "#/$defs/deployment"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "roles_manifest": {
+          "$ref": "#/$defs/nonEmpty"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
     }
-  }
+  },
+  "$id": "https://quantum-l9.dev/schemas/peer-runtime-bindings.v2.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Sole topology SSOT for peer, provider, and execution-profile bindings.",
+  "properties": {
+    "peers": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$ref": "#/$defs/peer"
+        }
+      },
+      "type": "object"
+    },
+    "schema": {
+      "const": "l9.peer-runtime-bindings.v2"
+    },
+    "schema_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "peers"
+  ],
+  "title": "L9 Peer Runtime Bindings",
+  "type": "object"
 }

@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 
 from adapters.common.digests import digest_object
-from adapters.common.imports import load_module
 from adapters.common.models import ProbeContext
 from adapters.common.schema_registry import SchemaRegistry
 from conformance.helpers import PROGRAM_DIGEST, valid_contract
+from scripts.provider_loader import instantiate
 
 
 class GenericShellLifecycleTests(unittest.TestCase):
@@ -31,11 +31,7 @@ class GenericShellLifecycleTests(unittest.TestCase):
             contract.pop("contract_digest")
             contract["contract_digest"] = digest_object(contract)
 
-            module = load_module(
-                root / "adapters/ci/generic-shell/driver.py",
-                "pes_test_generic_shell_lifecycle",
-            )
-            adapter = module.GenericShellVerifier(temporary / "runtime")
+            adapter = instantiate("ci-generic-shell", temporary / "runtime")
             capability = adapter.probe(
                 ProbeContext(
                     repository_root=str(root.parents[1]),
@@ -78,11 +74,7 @@ class GenericShellLifecycleTests(unittest.TestCase):
             contract["observed_changed_files"] = []
             contract.pop("contract_digest")
             contract["contract_digest"] = digest_object(contract)
-            module = load_module(
-                root / "adapters/ci/generic-shell/driver.py",
-                "pes_test_generic_shell_failed_lifecycle",
-            )
-            adapter = module.GenericShellVerifier(temporary / "runtime")
+            adapter = instantiate("ci-generic-shell", temporary / "runtime")
             adapter.probe(
                 ProbeContext(
                     repository_root=str(root.parents[1]),

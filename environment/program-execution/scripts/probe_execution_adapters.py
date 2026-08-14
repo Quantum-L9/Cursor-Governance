@@ -34,6 +34,8 @@ def main() -> int:
     runtime = args.runtime.expanduser().resolve()
     receipts = []
     for entry in load_registry().get("adapters") or []:
+        if entry.get("status") == "non_routable":
+            continue
         adapter_id = str(entry["adapter_id"])
         adapter = instantiate(adapter_id, runtime)
         receipt = adapter.probe(
