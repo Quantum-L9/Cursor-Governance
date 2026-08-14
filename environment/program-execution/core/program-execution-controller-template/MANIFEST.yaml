@@ -149,6 +149,9 @@ files:
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
+- path: scripts/pec/replan.py
+  sha256: b09ac1bd862b9391289086bf7cea23aa76121636cc46b7e1cd20af678a266045
+  bytes: 8561
 - path: scripts/pec/state.py
   sha256: 56782e09c6e9a4c5b534a0fd331da02efb8e4930d4d7a65f57217c1d68ddbd2b
   bytes: 23430
@@ -210,5 +213,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 68
-  total_bytes: 213979
+  file_count: 69
+  total_bytes: 222540
