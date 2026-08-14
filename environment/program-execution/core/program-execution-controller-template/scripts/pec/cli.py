@@ -189,6 +189,12 @@ def parser() -> argparse.ArgumentParser:
 
     cmd = sub.add_parser("replan-list")
     cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser("project-replan")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--repository-root", required=True, type=Path)
+    cmd.add_argument("--actor", required=True)
+    cmd.add_argument("--replan-revision-id")
     return p
 
 
@@ -310,6 +316,15 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             from .replan import list_revisions
 
             value = {"revisions": list_revisions(args.workspace)}
+        elif args.command == "project-replan":
+            from .replan import project
+
+            value = project(
+                args.workspace,
+                repository_root=args.repository_root,
+                actor=args.actor,
+                replan_revision_id=args.replan_revision_id,
+            )
         else:
             raise ControllerError(f"unsupported command: {args.command}")
         print_json(value)

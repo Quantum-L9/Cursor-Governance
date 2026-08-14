@@ -233,3 +233,44 @@ def list_revisions(workspace: Path) -> list[dict[str, Any]]:
     for path in sorted(root.glob("*.json")):
         items.append(json.loads(path.read_text(encoding="utf-8")))
     return items
+
+
+def project(workspace: Path, *, repository_root: Path, actor: str,
+            replan_revision_id: str | None = None) -> dict[str, Any]:
+    """Project the canonical semantic revision of the active Replan Revision
+    to every registered execution peer through the shared projection seam.
+
+    The seam is the canonical peer_execution module resolved from the
+    repository root; the Controller never owns a second copy of projection
+    semantics.
+    """
+    import sys
+
+    workspace = workspace.resolve()
+    plan = current_plan_revision(workspace)
+    if replan_revision_id is None:
+        replan_revision_id = plan.get("active_replan_revision_id")
+    if not replan_revision_id:
+        raise ControllerError("no active Replan Revision to project")
+    revision = load_json(workspace / REVISIONS_REL / f"{replan_revision_id}.json")
+    if revision["status"] != "activated":
+        raise ControllerError("only an activated Replan Revision may be projected")
+    root = Path(repository_root).resolve()
+    pe_root = root / "environment/program-execution"
+    if not pe_root.is_dir():
+        raise ControllerError(f"program-execution seam not found under repository root: {pe_root}")
+    sys.path.insert(0, str(pe_root))
+    from peer_execution.replan_projection import (  # canonical shared seam
+        build_semantic_revision,
+        project_to_peers,
+    )
+
+    semantic = build_semantic_revision(
+        pe_root / "core/shared/REPLAN_CONTRACT.yaml",
+        pe_root / "core/shared/schemas/replan-revision.schema.json",
+        replan_revision_id=replan_revision_id,
+        plan_revision=plan["plan_revision"],
+        activated_at=revision["activated_at"],
+        actor=actor,
+    )
+    return project_to_peers(root, workspace, semantic_revision=semantic, actor=actor)
