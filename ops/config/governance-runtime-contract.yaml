@@ -1,0 +1,110 @@
+# === L9 GOVERNANCE RUNTIME CONTRACT ===
+# Compact machine-readable SSOT for HIGH-RISK duplicated governance invariants.
+#
+# This file is deliberately small. It holds only facts that are duplicated
+# across prose authority (CANONICAL_LAW.md, AGENTS.md), runtime (Makefile,
+# end-session.yaml), CI, and generated artifacts — the places where a change on
+# one surface silently contradicts another. It is NOT the whole governance
+# corpus.
+#
+# The contract-surface validator proves every projection below still agrees
+# with this contract:
+#     python3 ops/scripts/validate_governance_contract_surface.py
+# Any single divergence fails closed (SP-11 / EV-X-01).
+schema_version: canonical.schema.governance_runtime_contract.v1/1.0.0
+status: active
+maintainer: "Igor Beylin"
+
+# Each invariant is a duplicated fact plus the mechanical projections that must
+# stay consistent with it. Projection check types understood by the validator:
+#   file_exists   {path}
+#   file_contains {path, pattern (substring), present: true|false}
+invariants:
+  - id: pr-gate-case-insensitive
+    priority: P0
+    statement: >-
+      `make pr` and every capitalization (PR, Pr, pR) run the same pre-PR gate;
+      the Makefile remaps non-canonical casing to `pr`. Authority prose must not
+      claim make targets are case-sensitive or that `make PR` errors.
+    projections:
+      - type: file_contains
+        path: Makefile
+        pattern: "PR Pr pR: pr"
+        present: true
+      - type: file_contains
+        path: AGENTS.md
+        pattern: "make pr` / `make PR` / `make Pr` / `make pR`"
+        present: true
+      # CANONICAL_LAW.md is additive_only (ops/config/root-file-protection.json), so a
+      # `present: false` projection on it can never be satisfied by a correction — the
+      # stale sentence cannot be deleted, only superseded. Assert the corrected statement
+      # is present instead; the superseding row carries it.
+      - type: file_contains
+        path: CANONICAL_LAW.md
+        pattern: "make pr` / `make PR` / `make Pr` / `make pR` all run the same gate"
+        present: true
+
+  - id: memory-single-front-door
+    priority: P0
+    statement: >-
+      Graphiti is the single session-memory front door
+      (ops/graphiti/graphiti_memory_client.py; runtime
+      .cursor-commands/ops/graphiti/graphiti_memory_client.py). The retired
+      agents/cursor/cursor_memory_client.py must not be invoked by the session
+      protocol.
+    projections:
+      - type: file_exists
+        path: ops/graphiti/graphiti_memory_client.py
+      - type: file_contains
+        path: end-session.yaml
+        pattern: "graphiti/graphiti_memory_client.py"
+        present: true
+      - type: file_contains
+        path: end-session.yaml
+        pattern: "agents/cursor/cursor_memory_client.py"
+        present: false
+
+  - id: self-check-validator-paths
+    priority: P0
+    statement: >-
+      governance-self-check invokes the real validators under ops/scripts and
+      fails closed if they are missing (no tools/ path, no warning-and-pass).
+    projections:
+      - type: file_exists
+        path: ops/scripts/check_rules_standard.py
+      - type: file_exists
+        path: ops/scripts/check_skills_standard.py
+      - type: file_contains
+        path: .github/workflows/governance-self-check.yml
+        pattern: "ops/scripts/check_rules_standard.py"
+        present: true
+      - type: file_contains
+        path: .github/workflows/governance-self-check.yml
+        pattern: "tools/check_rules_standard.py"
+        present: false
+
+  - id: generated-artifact-generator
+    priority: P1
+    statement: >-
+      Derived governance artifacts are produced deterministically by
+      sync_generated_artifacts.py; the generator and its principal targets
+      exist and are content-verified (not mtime-verified) in CI.
+    projections:
+      - type: file_exists
+        path: ops/scripts/sync_generated_artifacts.py
+      - type: file_exists
+        path: ops/generated/skill-registry.json
+      - type: file_exists
+        path: rules/RULES-MANIFEST.yaml
+
+  - id: pr-template-surfaces
+    priority: P1
+    statement: >-
+      The pull-request template exists both as the repo-root SSOT
+      (PULL_REQUEST_TEMPLATE.md) and as the GitHub-visible template
+      (.github/pull_request_template.md).
+    projections:
+      - type: file_exists
+        path: PULL_REQUEST_TEMPLATE.md
+      - type: file_exists
+        path: .github/pull_request_template.md

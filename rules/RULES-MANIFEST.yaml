@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-14T18:39:33Z'
+generated_utc: '2026-08-14T21:19:18Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:d54f32afb94f6449de9f120e5375dc15086312680d4702e376793b4760e50015
+source_tree_digest: sha256:28b303b4007690288530c2e3bad0355f50ca9d46858501b5ec675ef8a404454c
 summary:
   total_mdc_files: 63
   always_apply_true: 27
@@ -92,7 +92,7 @@ rules:
   first_heading: Cursor + Redis Session Context (no amnesia)
   has_yaml_frontmatter: true
   line_count: 70
-  content_digest: sha256:41c3af182d35d45bdace5830e1fcbdd2851bec5966fabf9a9ac5a453edebbf98
+  content_digest: sha256:64a0e957121bb68ace388ae9e41928768cfc6998952a8acfc6e9f8a1e4d07c88
   authority: canonical_global
   context_cost: minimal
   deprecated: false

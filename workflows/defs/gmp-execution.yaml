@@ -43,7 +43,7 @@ variables:
   component: "core/tools"
   domain: "tools"
   working_dir: "/Users/ib-mac/Projects/L9"
-  memory_client: "agents/cursor/cursor_memory_client.py"
+  memory_client: "ops/graphiti/graphiti_memory_client.py"
 
 steps:
   # ==========================================================================

@@ -38,7 +38,7 @@ def node_memory_read(state: GMPState) -> GMPState:
         result = subprocess.run(
             [
                 "python3",
-                "agents/cursor/cursor_memory_client.py",
+                "ops/graphiti/graphiti_memory_client.py",
                 "search",
                 state.task[:100],
             ],
@@ -187,7 +187,7 @@ def node_memory_write(state: GMPState) -> GMPState:
         result = subprocess.run(
             [
                 "python3",
-                "agents/cursor/cursor_memory_client.py",
+                "ops/graphiti/graphiti_memory_client.py",
                 "write",
                 summary,
                 "--kind",
