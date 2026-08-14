@@ -47,10 +47,18 @@ class CheckRulesStandardTests(unittest.TestCase):
             _write(
                 root,
                 "00-global.mdc",
-                "---\nid: x\ndescription: kernel\nalwaysApply: true\n---\n\n# G\n",
+                "---\nownerTeam: x\ndescription: kernel\nalwaysApply: true\n---\n\n# G\n",
             )
             errs, _warns, _total, _files = check_rules(root)
             self.assertTrue(any("non-native" in item for item in errs))
+            # L9 metadata id is allowed
+            _write(
+                root,
+                "01-ok.mdc",
+                "---\nid: l9.rule.ok\ndescription: ok\nalwaysApply: false\n---\n\n# O\n",
+            )
+            errs2, _w2, _t2, _f2 = check_rules(root)
+            self.assertFalse(any("01-ok.mdc: non-native" in item for item in errs2))
 
     def test_yaml_list_globs_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -63,7 +71,7 @@ class CheckRulesStandardTests(unittest.TestCase):
             errs, _warns, _total, _files = check_rules(root)
             self.assertTrue(any("YAML list form" in item for item in errs))
 
-    def test_prefix_collision_is_warning_not_error(self) -> None:
+    def test_prefix_collision_is_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _write(
@@ -77,9 +85,9 @@ class CheckRulesStandardTests(unittest.TestCase):
                 "---\ndescription: b\nalwaysApply: false\n---\n\n# B\n",
             )
             errs, warns, _total, files = check_rules(root)
-            self.assertEqual(errs, [])
             self.assertEqual(files, 2)
-            self.assertTrue(any("prefix 93-" in item for item in warns))
+            self.assertTrue(any("prefix 93-" in item for item in errs))
+            self.assertFalse(any("prefix 93-" in item for item in warns))
 
     def test_dead_md_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

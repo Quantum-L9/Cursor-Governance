@@ -1,5 +1,11 @@
 ---
-description: 'GMP v1.7 action workflow: enforce Phases 0–6, quick actions, and corrective runs for L9 repo changes.'
+id: l9.rule.80.gmp.execution
+version: 1.0.0
+description: "GMP v1.7 action workflow: enforce Phases 0\u20136, quick actions, and\
+  \ corrective runs for L9 repo changes."
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

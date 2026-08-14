@@ -1,7 +1,13 @@
 ---
-description: React UI rules for AI OS control panels, consoles, and visualization surfaces.
-globs: apps/web/**/*.tsx, apps/web/**/*.jsx, packages/ui/**/*.tsx, packages/ui/**/*.jsx
+id: l9.rule.30.framework.react
+version: 1.0.0
+description: React UI rules for AI OS control panels, consoles, and visualization
+  surfaces.
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: apps/web/**/*.tsx, apps/web/**/*.jsx, packages/ui/**/*.tsx, packages/ui/**/*.jsx
 ---
 
 # React Framework Rules for L9 OS UI

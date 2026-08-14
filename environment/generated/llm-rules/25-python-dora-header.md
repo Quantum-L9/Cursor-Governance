@@ -1,5 +1,7 @@
 ---
 description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
+paths:
+- '**/*.py'
 ---
 
 # Python L9 Module Structure: Three-Block System

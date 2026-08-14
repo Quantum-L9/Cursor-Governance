@@ -1,5 +1,11 @@
 ---
-description: Graphiti group_id gate — forbidden namespaces; Write gates when GRAPHITI_WRITE_GATES=1
+id: l9.rule.graphiti.memory.gate
+version: 1.0.0
+description: "Graphiti group_id gate \u2014 forbidden namespaces; Write gates when\
+  \ GRAPHITI_WRITE_GATES=1"
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

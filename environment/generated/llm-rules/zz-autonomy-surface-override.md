@@ -7,7 +7,7 @@ description: Autonomy Velocity Override — adapter surfaces outrank ask-first c
 When `L9_GOVERNANCE_SURFACE` is `claude-code`, `codex`, `gemini`, or `manus`
 AND `L9_AUTONOMY_ENABLED=true`:
 
-1. This override **outranks** `99-no-auto-commit` and `96-git-push-approval`
+1. This override **outranks** `99-no-auto-commit` (git mutation gate; push-approval twin retired)
    for scoped feature-branch **local commits**. Remote push/PR remain gated
    by L4 local autonomy (below), not by per-action chat pacing.
 2. Completing reversible work MUST proceed L4-local: stacked-branch commits

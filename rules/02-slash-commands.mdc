@@ -1,5 +1,10 @@
 ---
+id: l9.rule.slash-commands
+version: 1.0.0
 description: Slash command recognition and execution - repo-agnostic governance protocols
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

@@ -1,5 +1,11 @@
 ---
-description: 'C1 server protection: no Docker, deploy, or .env changes and no remote git operations without explicit user approval.'
+id: l9.rule.93.c1.server.protection
+version: 1.0.0
+description: 'C1 server protection: no Docker, deploy, or .env changes and no remote
+  git operations without explicit user approval.'
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

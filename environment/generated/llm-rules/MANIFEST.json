@@ -6,28 +6,10 @@
       "alias": null,
       "class": "always",
       "output": "00-global.md",
-      "output_sha256": "71464b1473327b38db955649df791f0983b834749ac9eb84ecf04cd357450295",
+      "output_sha256": "8b3ecdbe2f9d0c817cab569f6834e24cef6fbd14ad8761c78f2798798d787b25",
       "source": "rules/00-global.mdc",
-      "source_sha256": "a9a3c4f08ebd4cb9abbea724f13fed925c03a593a02530944314d0031be863d6",
+      "source_sha256": "c5b2842185acfba3d54108747cf6a05d670d4708caa9f5421ab91a1e5500dcf7",
       "stem": "00-global"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "01-git-push-prohibition.md",
-      "output_sha256": "5dbf023418dc869d435d14886a2e42e23abb635c962a803547fe30ba69e2f19e",
-      "source": "rules/01-git-push-prohibition.mdc",
-      "source_sha256": "6b927b2c58ab6fbf9ee74de2a899042b06f0d51a968d17f47584a7929a4ff480",
-      "stem": "01-git-push-prohibition"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "01-vps-rules.md",
-      "output_sha256": "5ccea06706c62642c30b0f7bb3197a3027dbb37f18d65a66f4ec1ac5e6cd1ceb",
-      "source": "rules/01-vps-rules.mdc",
-      "source_sha256": "5e450fe4b1a501c82054ef37958910a6e9fba29d03ddcbf869c16f5a7a633b69",
-      "stem": "01-vps-rules"
     },
     {
       "alias": null,
@@ -35,34 +17,25 @@
       "output": "02-slash-commands.md",
       "output_sha256": "303c458298f20704de754fb945ddb52f78cd7a4f1b17cdba34669e43d1ebab77",
       "source": "rules/02-slash-commands.mdc",
-      "source_sha256": "74135d8079dfa0d95248b7c9b22cd2d10b6f658affb6bb5cb0da3d081b7d945b",
+      "source_sha256": "aa501ee5b8e0861ba96b12c4a1c744b8b8ef1ac858ed4204f381dfdaf29b31c9",
       "stem": "02-slash-commands"
     },
     {
       "alias": null,
       "class": "always",
       "output": "03-graphiti-memory.md",
-      "output_sha256": "ae05b6546ef6fa8b9bff84d3d4399047f93a3efae210308cc992b89facfa4118",
+      "output_sha256": "756bc89707b95d831c770e2f00fefe6f11a0ce404bef4f61f1dd5d248ebf0099",
       "source": "rules/03-graphiti-memory.mdc",
-      "source_sha256": "ac7320148e833b8a822ef6ed0a32882caac67626a26d7377f130beb6e9e46b0f",
+      "source_sha256": "d3fca17315f96f3157e038e1b311b5482748b5a5733163cd41d888f1b555580d",
       "stem": "03-graphiti-memory"
     },
     {
       "alias": null,
-      "class": "paths",
-      "output": "03-mcp-memory.md",
-      "output_sha256": "fcc822a51433f161854baa58906984d6fb5595c5674536fae5550dc8d42ddfc1",
-      "source": "rules/03-mcp-memory.mdc",
-      "source_sha256": "9acc51f294a81701c055bec689a0c6f1e141f143fb054a26504f821d6d0be188",
-      "stem": "03-mcp-memory"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "04-cursor-redis-session.md",
-      "output_sha256": "c03e4dceef12e367cde58889f90fef15bedddc6def8b391052fe8e0c0eacb968",
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
       "source": "rules/04-cursor-redis-session.mdc",
-      "source_sha256": "20b6d6cc1849c6c81ee5c3503686a18c204e38b1a9ca36530bfc652f216b5e15",
+      "source_sha256": "41c3af182d35d45bdace5830e1fcbdd2851bec5966fabf9a9ac5a453edebbf98",
       "stem": "04-cursor-redis-session"
     },
     {
@@ -71,17 +44,35 @@
       "output": "05-ask-mode.md",
       "output_sha256": "1dc9a659f231e205858a605c0592d0db995cee612f7e0187d26538dae3ef2d15",
       "source": "rules/05-ask-mode.mdc",
-      "source_sha256": "c61a1562d055e7370d98190c3d0b37f71b8cf1aa1537d655e793440f6ba8ba62",
+      "source_sha256": "4b2f5f47210034c6e3437b3a87e93dc22c07e1f1cb4c16cf51feb7ad75ed709f",
       "stem": "05-ask-mode"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "06-governance-ssot-paths.md",
+      "output_sha256": "558fc57999614b155b11ce03c53ace31b22d79fe9b6391ef1255db000bb49c05",
+      "source": "rules/06-governance-ssot-paths.mdc",
+      "source_sha256": "a8c0978cff70bea2b859557c5aa2b7ed5f9157d959006b981252d9b582c372e0",
+      "stem": "06-governance-ssot-paths"
     },
     {
       "alias": null,
       "class": "skipped_agent_requested",
       "output": null,
       "output_sha256": null,
-      "source": "rules/05-recursive-execution-kernel.mdc",
-      "source_sha256": "e71d08c6085e7fcff4a583fd8aa0247d625dc40e8d29c9812618f8754a706142",
-      "stem": "05-recursive-execution-kernel"
+      "source": "rules/08-vps-ops.mdc",
+      "source_sha256": "8ca195f6994dff9d46d94b3848c7ab1c7aebe657b75020c7f500478eb931845d",
+      "stem": "08-vps-ops"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "09-execute-as-instructed.md",
+      "output_sha256": "aab6750c69451964588aa07a7a00a617b7730b7456353c2ee01e404715062970",
+      "source": "rules/09-execute-as-instructed.mdc",
+      "source_sha256": "13d3fb35583701052ed812f7253a4ac95b110cf6a81ab2301a11351286299a69",
+      "stem": "09-execute-as-instructed"
     },
     {
       "alias": null,
@@ -89,7 +80,7 @@
       "output": "10-lang-typescript.md",
       "output_sha256": "4a36c7a18f3edab8730a0ea88c4f676723a28131ccbda54ec16fc5b98040c111",
       "source": "rules/10-lang-typescript.mdc",
-      "source_sha256": "6f3f1cba9b952521278c4487be474df3f4e6d29e3c856d7cfccae38a3ca74988",
+      "source_sha256": "bb98eadfc112a416fe0a841420bcebc289f08d9b47d1ad7c8e171fd5c04952f9",
       "stem": "10-lang-typescript"
     },
     {
@@ -98,7 +89,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/15-work-tracking.mdc",
-      "source_sha256": "35231a24d9bb5f333e3a914566c9d9c77b8c9280de2e2c884303223cc42dad1b",
+      "source_sha256": "4a5143808f79dd176faf104f80e93c55a8fc7f5baafb77353033666ce317f79d",
       "stem": "15-work-tracking"
     },
     {
@@ -107,7 +98,7 @@
       "output": "20-lang-python.md",
       "output_sha256": "fc7f7da2ee1ed404c5544d0b35285ea6a7ad99a46634c2f4b73e5dbe5013b82f",
       "source": "rules/20-lang-python.mdc",
-      "source_sha256": "ff7d2c9337b7694e90f892e67385042b21a5942ccb173ea000322d355af02df6",
+      "source_sha256": "fa976f39b4585a1d7688c52444654fab2608911b0564f4c1412c2b839c47e14b",
       "stem": "20-lang-python"
     },
     {
@@ -116,7 +107,7 @@
       "output": "22-context7-auto-invoke.md",
       "output_sha256": "db295057a5e6f1d9bd1242114d974841033200535f55ea4249115a2c95b006e1",
       "source": "rules/22-context7-auto-invoke.mdc",
-      "source_sha256": "0d3ad3e7d98260fda81fa7798dcbb03ebb6e8d260b767f85cd7757bde7c8a5d2",
+      "source_sha256": "a64ab8418b70384f982a52abf74236555915022fe8bc831aaeec475d863fae39",
       "stem": "22-context7-auto-invoke"
     },
     {
@@ -125,16 +116,16 @@
       "output": "l9-skill-routing.md",
       "output_sha256": "95acece3ac89926edb2553da695422d0ea5347c96ca5d52475c00d2989c9149b",
       "source": "rules/23-l9-skill-routing.mdc",
-      "source_sha256": "a33ee9440db96979874ba1c74d8937374ba88598c74684ca301426a37725a227",
+      "source_sha256": "e62389dfd475b0b203b2796805bba03032ff94153eb667cdc278033cb8c143c0",
       "stem": "23-l9-skill-routing"
     },
     {
       "alias": null,
-      "class": "always",
+      "class": "paths",
       "output": "25-python-dora-header.md",
-      "output_sha256": "623716e98230870b0113862ed780501cc30e85b4084f6e361da846d309dcf720",
+      "output_sha256": "70b64a35db5aa1beb23eab5eeefdf6e66e63c69386cd03c2e319d2b61cd3def5",
       "source": "rules/25-python-dora-header.mdc",
-      "source_sha256": "3d3c0adce1deb768a774a090c594ea89faf044f87949492fc5b9f76a29f4fd3f",
+      "source_sha256": "49302e69c080624cbf70972d5415cd308dcc2107f04b6884c17bea6d3ab6bfed",
       "stem": "25-python-dora-header"
     },
     {
@@ -143,7 +134,7 @@
       "output": "30-framework-react.md",
       "output_sha256": "67f6ef7f128a8b2ae24c23f73511e03d2a7145f0ad56760ac648dcc447952117",
       "source": "rules/30-framework-react.mdc",
-      "source_sha256": "99c30e79186db744a74321e1b7c14554f1339abaf4c1acfbf11ef93155fe0d60",
+      "source_sha256": "935829c0a8d132de6f52815eea4a1f55d0ccd23fe3cd0a383569b9be7ebfbaa8",
       "stem": "30-framework-react"
     },
     {
@@ -152,8 +143,17 @@
       "output": "40-domain-autonomy.md",
       "output_sha256": "f29e43a1c17b738f2608b8984b41060f3852505998c754cfeeac21b918d007d6",
       "source": "rules/40-domain-autonomy.mdc",
-      "source_sha256": "d9eea4c8153c90725a4027c12dac338b48215edb9b1353b0acab4283df2e2344",
+      "source_sha256": "fbbfa0dc8cc4cb8f450637d33c2078c920a1cef9fb91981e92078c7c3593cb1a",
       "stem": "40-domain-autonomy"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/41-graph-engine-architecture.mdc",
+      "source_sha256": "db87e22cdb8a906b6cbd7f9070f298a9cdd6056341c4d382aa03c9984fddf86b",
+      "stem": "41-graph-engine-architecture"
     },
     {
       "alias": null,
@@ -161,8 +161,17 @@
       "output": "43-lang-postgresql.md",
       "output_sha256": "af98bbc160a9890376f422471dd21be6e3ae64ae72a894c44f2f345139993753",
       "source": "rules/43-lang-postgresql.mdc",
-      "source_sha256": "6ad1f03ec17c39fe18471dcf61a34d1fe384a2954db369315e68c80cf777c4fd",
+      "source_sha256": "3a3ff21bfdecc5f52b5c12108e50d8a2f72d866dac18b7174fa1bb740bc4d19e",
       "stem": "43-lang-postgresql"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/44-recursive-execution-kernel.mdc",
+      "source_sha256": "4c064ea19ce384b8b99e721f4f9fe510dfbb9efef35fe3c1a8aa87b5153d23f8",
+      "stem": "44-recursive-execution-kernel"
     },
     {
       "alias": null,
@@ -170,7 +179,7 @@
       "output": "45-pre-action-verification.md",
       "output_sha256": "de0c35936ddbed97b3df6289ebdf247e60ce369301e03d428bf6c81c8b7713de",
       "source": "rules/45-pre-action-verification.mdc",
-      "source_sha256": "f165257cb41ed98ccff1c86783a7b13cd8a2693e335e85eea31e65961764be63",
+      "source_sha256": "2d4e738329b08948b8c03c4e4b68dfa2ba1c8ef3838c52fcd14a2a750f8cf96b",
       "stem": "45-pre-action-verification"
     },
     {
@@ -179,16 +188,43 @@
       "output": "46-kernel-pack-new-branch.md",
       "output_sha256": "47bbe086da0b3e9bf6cf090274dfd76b5c7cda9dd637a0107714859d1385be3b",
       "source": "rules/46-kernel-pack-new-branch.mdc",
-      "source_sha256": "f86689c88713f507e79a6d07e66823fb92912b685a24f336c59be3df227dac77",
+      "source_sha256": "76c8cba8c93adcbe9ca8575a351a41438c5986c766a0db33d3468192e51155bf",
       "stem": "46-kernel-pack-new-branch"
     },
     {
       "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/47-agent-pattern-activation.mdc",
+      "source_sha256": "058301b4286b547a7093852b2132af5e70fbeafa82508dd7109fc77059439acc",
+      "stem": "47-agent-pattern-activation"
+    },
+    {
+      "alias": null,
       "class": "always",
+      "output": "48-make-pr-remediation.md",
+      "output_sha256": "12f134bf8ef28bb3a373c921427f391ff849a5e0c601c1181392d0fcfc6ff025",
+      "source": "rules/48-make-pr-remediation.mdc",
+      "source_sha256": "d2f7931bd6c9b7bf2085e65d35456457758a0674ea59344dae721815a479c58b",
+      "stem": "48-make-pr-remediation"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "49-shared-worktree-isolation.md",
+      "output_sha256": "242f9af8c15494d37a979c361ec8c2cd57c5d505f4d81699443e133f04eec82d",
+      "source": "rules/49-shared-worktree-isolation.mdc",
+      "source_sha256": "e8ea31172e9327412132e032eae55e4f3e9fe94b5a042a44a774c0e159471fa7",
+      "stem": "49-shared-worktree-isolation"
+    },
+    {
+      "alias": null,
+      "class": "paths",
       "output": "50-qa-testing.md",
-      "output_sha256": "8e69b4b7ca39c6b237904d46e1d9841cc7d5ec213231e8e2c4a9bf7816eac47f",
+      "output_sha256": "af0c80a140d3a9e409feac97231f5308aa7bc9a8c3115a90ee1481309f704f0b",
       "source": "rules/50-qa-testing.mdc",
-      "source_sha256": "065dbc102466b415197c31d80bd912d395d0ff8a0c3f01784c7c71a6e8e84527",
+      "source_sha256": "4e739913c1984a274600531628f5badb63f1e85a0760ff4aa146b2ae52160809",
       "stem": "50-qa-testing"
     },
     {
@@ -197,7 +233,7 @@
       "output": "51-qa-playwright.md",
       "output_sha256": "9c31c991789bcd3f60acff703451db780fc6dd33d9748382fcda46f4519e6242",
       "source": "rules/51-qa-playwright.mdc",
-      "source_sha256": "cde8669cf30efe443b9e5e9015de473dede37bb26e1f76093aae7e1cd24b2f3a",
+      "source_sha256": "ea8a218a6725c0c634c0c4d3638db9f17157f2872849adcfdca27c5b94ea72a9",
       "stem": "51-qa-playwright"
     },
     {
@@ -206,16 +242,25 @@
       "output": "52-qa-jest.md",
       "output_sha256": "486337af333a4e5e6c43f9b92219b6a5fabe5a5f283dd728aad21b301bedbb34",
       "source": "rules/52-qa-jest.mdc",
-      "source_sha256": "d962c29bcae401c5c85a28f20af15fcb5af5786c19c372c163f562b76dedc23e",
+      "source_sha256": "38f6e2e26683d3838a5ecc8111c20471cec71ff937322cbfeaa4b1ac4f658fe9",
       "stem": "52-qa-jest"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/59-incident-lessons.mdc",
+      "source_sha256": "3fb8e334a6b1d7ee411e5013311a64aa117377221ed0382eeebd9dcc6d442bd5",
+      "stem": "59-incident-lessons"
     },
     {
       "alias": null,
       "class": "always",
       "output": "60-anti-patterns.md",
-      "output_sha256": "c178711dbbe80037d990fa650b5baf265f0e850d29f64a093a302858fc79961d",
+      "output_sha256": "63b4b1b9fc44b3a5d3d238f0fea3870e59593c4c62614cf0625e58ea728f77d2",
       "source": "rules/60-anti-patterns.mdc",
-      "source_sha256": "dd7c1435ca07d907e9f459e0fc238ce99b6fb39868fd940fd2a39bbc29232d75",
+      "source_sha256": "664ff6afbb7f014a68eed4088a99b7d08240adfcfec0a57ad8b04595d316a7af",
       "stem": "60-anti-patterns"
     },
     {
@@ -224,7 +269,7 @@
       "output": "61-secrets-and-dependencies.md",
       "output_sha256": "e833c08faffca81084218f067627ebf0739dffcc553e55494b349fee967eef54",
       "source": "rules/61-secrets-and-dependencies.mdc",
-      "source_sha256": "8cb3bf6fe6924f9288232503e9df0cefec40ca9fdd56cf75a17b64c047f99bac",
+      "source_sha256": "d90a13c2549aff9a428e86c049506b3ab937f5f2b7f522ee8d7462eaf25f0642",
       "stem": "61-secrets-and-dependencies"
     },
     {
@@ -233,8 +278,17 @@
       "output": "62-github-openclaw-authority.md",
       "output_sha256": "5a708c7ad3a03fd4a1d072850dd2b033a0d286d3584cf9df07df6fad5220c17f",
       "source": "rules/62-github-openclaw-authority.mdc",
-      "source_sha256": "8fa1679e0328a8ed1ec943c55fdb9370bf530b21e45b0d2af82ade8c6ce2be3f",
+      "source_sha256": "9b4abefa8ef4ede36d0ed6e55fef4eb702b7c3407c3053bf0d363f13bddc8b5d",
       "stem": "62-github-openclaw-authority"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "63-env-no-hardcode.md",
+      "output_sha256": "ea3ee2215973c7a467ebc149dcf47a3c25dc75b8f893722504777d01a97231e0",
+      "source": "rules/63-env-no-hardcode.mdc",
+      "source_sha256": "369e0ab6d90f769d8a3a3595bab13131c2bc62aa8ceaba861cf9e050d6602f8c",
+      "stem": "63-env-no-hardcode"
     },
     {
       "alias": null,
@@ -242,16 +296,25 @@
       "output": "65-observability-performance.md",
       "output_sha256": "3e3ac769dd2b4fa4acc9040ec5d187dbf81ef4fbdc0a143b5769ae89ecf1f37e",
       "source": "rules/65-observability-performance.mdc",
-      "source_sha256": "ad209459616653360578f26722566d88d5a2169ee3fdf54155bae578eae9ee8d",
+      "source_sha256": "888c5c4b905773c1f2a7f5d3a320f00eb562ef400bb29732df67ae075bc29615",
       "stem": "65-observability-performance"
     },
     {
       "alias": null,
-      "class": "always",
-      "output": "70-tool-efficiency.md",
-      "output_sha256": "999b5fdd1ed94edeeea180537ab167bf5fc6573f9f43c8b09bc3352b761afa6a",
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/69-ide-profile-exceptions.mdc",
+      "source_sha256": "2bc076e7c46c893fe4503cb2f8ad1aad360b1d67454a8e45ccff5c3e67de462e",
+      "stem": "69-ide-profile-exceptions"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
       "source": "rules/70-tool-efficiency.mdc",
-      "source_sha256": "993687901db89ac4c228a6f8da1ed5e4e85749c87705bfcda3bc8346707e2de5",
+      "source_sha256": "80a4344c46497fd6d064c3928aec6a31cab68c7247a156a7702e0fd160ab4895",
       "stem": "70-tool-efficiency"
     },
     {
@@ -260,16 +323,16 @@
       "output": "71-ci-cd-pipeline.md",
       "output_sha256": "aaed5e1f0ee27e95b9804ceec872bceda61a220b047237bee54bb99dd816cce7",
       "source": "rules/71-ci-cd-pipeline.mdc",
-      "source_sha256": "09190b8a211610e66d342f3dc9b58d0b30069b8c8749d95cc1422ec86a93b097",
+      "source_sha256": "760adb0709d8765380b09dc6586495bf574d93a593dc12124b619c22ccf528e5",
       "stem": "71-ci-cd-pipeline"
     },
     {
       "alias": null,
       "class": "paths",
       "output": "72-review-ergonomics.md",
-      "output_sha256": "379d4b77a7c3c266061188c112f012ad6e0bc3d08b69b37f4a509e2f48ef852a",
+      "output_sha256": "346d7e6025c228223c4c087a341371221a0e48bac4d318b74ced280aa30dc699",
       "source": "rules/72-review-ergonomics.mdc",
-      "source_sha256": "59ba4135d674e9279554df876490bf863b301eebee20a2d1dc635d7cc2d81344",
+      "source_sha256": "9bc54c2a659101fb803a4685d9853e3cfadb111b12150cf9924b1a76f5264185",
       "stem": "72-review-ergonomics"
     },
     {
@@ -278,7 +341,7 @@
       "output": "73-prompts-and-evals.md",
       "output_sha256": "e78643c1e4858bf9ebd1c813db7ff8bf58f04125003ec2296e8bfb7109e90efc",
       "source": "rules/73-prompts-and-evals.mdc",
-      "source_sha256": "3c76fec810f98a183fe6037f96baa9e685b6a4d602f69f36afaaaa1eb7e00b5c",
+      "source_sha256": "e9cb31a41b5ac0e51a59bd0d586449a35fd5dc7b380fe5b2631df28860927df1",
       "stem": "73-prompts-and-evals"
     },
     {
@@ -287,8 +350,53 @@
       "output": "74-ai-safety-policy.md",
       "output_sha256": "607aab450efe457f927f6407b1cef97d3847f2fc6630636dc4615281e16dbdaf",
       "source": "rules/74-ai-safety-policy.mdc",
-      "source_sha256": "541f5a39f891353ad4e8131ba3b74f77768bc823c6e3bdc176657989663272f0",
+      "source_sha256": "30dafdd1c06c150b8cb4eb5d73c21e9ee8eabcc65b2e67198bd8c0276a5ed8fe",
       "stem": "74-ai-safety-policy"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/75-bounded-session-autonomy.mdc",
+      "source_sha256": "0127f988d59bca7813440c0a0b16ade7dbc59248c5b7e55769ae3beb4e3604bc",
+      "stem": "75-bounded-session-autonomy"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "76-wire-workflow-guard.md",
+      "output_sha256": "f4ab7211cb4b2fd87b0a36cd53306647b3d7fe0f4ce8c4f842e76e7dbb915136",
+      "source": "rules/76-wire-workflow-guard.mdc",
+      "source_sha256": "f94087db811af336ea3e26d82b4a8908fa7174aa01f89e5c07e43d788a875b01",
+      "stem": "76-wire-workflow-guard"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/77-cursor-subagent-orchestration.mdc",
+      "source_sha256": "67cc9f7af1be2a4c66d51c7060801a03710a1d94042cfc039cb505435efd65a1",
+      "stem": "77-cursor-subagent-orchestration"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/78-perplexity-run-harness.mdc",
+      "source_sha256": "ff0c6fe1e02f0c89851b78a8d84e8d223e724484bf3e8f1bfe7e0e8feb8d61ac",
+      "stem": "78-perplexity-run-harness"
+    },
+    {
+      "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/79-output-discipline.mdc",
+      "source_sha256": "ea8f58ae1f555e814980ef9e7d0262d7e9f642efca6f9a0e65f07e519acf2989",
+      "stem": "79-output-discipline"
     },
     {
       "alias": null,
@@ -296,16 +404,16 @@
       "output": "80-gmp-execution.md",
       "output_sha256": "a59c797f4ed73342f5c6a0460fab5ef596adf42139e62ce65eadedf54b70ddb7",
       "source": "rules/80-gmp-execution.mdc",
-      "source_sha256": "ed64dfe9390fcc4b066ccf8dc2eba10a986561482e62629ded3f379f2345f103",
+      "source_sha256": "14a64f58c0e8796dbd97d481056ce93ffaadcc49cce17a00218d7025a2fca3be",
       "stem": "80-gmp-execution"
     },
     {
       "alias": null,
-      "class": "always",
-      "output": "81-gmp-audit.md",
-      "output_sha256": "2c86bacd25ed9ab432f72d5c1fc5394f561a6cfb1e8b4ca399940098561f77a4",
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
       "source": "rules/81-gmp-audit.mdc",
-      "source_sha256": "ef4a222671dc4c3ada65a662ca7cbe5618e148d6da795938e682cc7b5e8600af",
+      "source_sha256": "0a3985c2fdc4018fead5a265052db7ba51482417ad2b06d497c21f4a9c3f6c8b",
       "stem": "81-gmp-audit"
     },
     {
@@ -314,7 +422,7 @@
       "output": "82-deployment-manifest.md",
       "output_sha256": "0ea7c3505b44b6e37656d61287d461714e479114c33f431a1be9d91cfb2aa8e5",
       "source": "rules/82-deployment-manifest.mdc",
-      "source_sha256": "479c5a2ecc1b5df064767fdfb4f4777f462f739d06f1b57e61961973415db041",
+      "source_sha256": "b57f632b093ece624e9a8a83684f4180235eaa03736bf45ab0e78e9ccf166e48",
       "stem": "82-deployment-manifest"
     },
     {
@@ -323,7 +431,7 @@
       "output": "83-gmp-contracts.md",
       "output_sha256": "0ca828dd87c73e774efb2521f7916eb0cfb86a233644aedbfab26f2f3bfdcf3d",
       "source": "rules/83-gmp-contracts.mdc",
-      "source_sha256": "24c536dd8153889939a6c1bf0b4dbcac54df08f6bfc2a16846bc9127359438ee",
+      "source_sha256": "f9c358d00e0e27d5bd5df868f50e936b4e764256ff5eee6788e55d066073f4ea",
       "stem": "83-gmp-contracts"
     },
     {
@@ -332,25 +440,25 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/84-cursor-governance-wiring.mdc",
-      "source_sha256": "4491ac1e7c19bde3254c35f240d4e2df959ba2a2e1222118001d429ed8472071",
+      "source_sha256": "f82e47eb9d687f82a3595c21e2ed4649c24564caa92330aa4bbe2d63ef865cc6",
       "stem": "84-cursor-governance-wiring"
     },
     {
       "alias": null,
-      "class": "always",
-      "output": "85-workflow-state-bridge.md",
-      "output_sha256": "16bbddc0bcf0b71408e8d4785288c0de60d50d334d7364008075488a30c236f8",
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
       "source": "rules/85-workflow-state-bridge.mdc",
-      "source_sha256": "5053dea9a2beb64c1aad071f5419e06b1ca6a4ed110d9b50426167e1d2ba8be2",
+      "source_sha256": "3e623c8e396dc0f747bbef455f5e7b0daada207a97d8c902e8fb0c6480ac1109",
       "stem": "85-workflow-state-bridge"
     },
     {
       "alias": null,
-      "class": "always",
-      "output": "86-module-tier-mapping.md",
-      "output_sha256": "5efb7ea6e4b16c7eb34632b34f591d1d18fb7f20845f98fb4cb8c8e6c1f3fdb9",
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
       "source": "rules/86-module-tier-mapping.mdc",
-      "source_sha256": "2e4024f8f8b742b2a23286e704b49e51f6a4b1d5941b858e72492cc88a956c44",
+      "source_sha256": "7a05740e99d20427b6ecf97036dc27f4c52e7d4110fc439b41c47659299444b6",
       "stem": "86-module-tier-mapping"
     },
     {
@@ -359,70 +467,25 @@
       "output": "87-cursor-memory-kernel.md",
       "output_sha256": "399be95ce8aa2bc97306c4eedeb2a6a1efc83434201960fe17bf614f833145e0",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "fdf0be39c33ede365590562f3720b335cdbb438eeb4d65aa5c2c6b78d812ec48",
+      "source_sha256": "a27cb68253193181023d324b60f94306664114f6a847e511d7180547bf3b0cc6",
       "stem": "87-cursor-memory-kernel"
     },
     {
       "alias": null,
       "class": "always",
-      "output": "87-cursor-subagent-orchestration.md",
-      "output_sha256": "e47ac46ed730782764d4e5f833155de856e23f388fdf5659834862da3d31bd13",
-      "source": "rules/87-cursor-subagent-orchestration.mdc",
-      "source_sha256": "33604398e139e5fe5e0032bd0b71fd879cf5d08aab3aa92b7e0d295c0b98492a",
-      "stem": "87-cursor-subagent-orchestration"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "87-l4-local-autonomy.md",
-      "output_sha256": "e2b6262a05f6f0dc0fedbfca44a9bb33b81a254035418cd36a5d585e67894879",
-      "source": "rules/87-l4-local-autonomy.mdc",
-      "source_sha256": "7c709b33b6d71a82c6a916bb63be0836a23c3d2071fc290a247c86a9295df6a4",
-      "stem": "87-l4-local-autonomy"
-    },
-    {
-      "alias": null,
-      "class": "paths",
-      "output": "87-wire-workflow-guard.md",
-      "output_sha256": "989e138ef178a6eac35a7a8234e89ccb948f722473e2c3377808f4b961c0bdaf",
-      "source": "rules/87-wire-workflow-guard.mdc",
-      "source_sha256": "279122e9a3d0b0e3cb1cd694f1a40c8a761a761ec0631944f3108dedb12120b0",
-      "stem": "87-wire-workflow-guard"
+      "output": "88-l4-local-autonomy.md",
+      "output_sha256": "44446a42b90af9908e0579d3a8dc7b8c714972d515d978ce0c1d83946559aeec",
+      "source": "rules/88-l4-local-autonomy.mdc",
+      "source_sha256": "89868b2524ac44833afa5eef8c3c1b3ef7d2a9a56c6da5f4c89b995d0e809c95",
+      "stem": "88-l4-local-autonomy"
     },
     {
       "alias": null,
       "class": "skipped_agent_requested",
       "output": null,
       "output_sha256": null,
-      "source": "rules/88-bounded-session-autonomy.mdc",
-      "source_sha256": "a99f7b00c3b29f04b05dcdc8e25964f1f1b6e634e97a2d26c11be7ac88fd5548",
-      "stem": "88-bounded-session-autonomy"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "88-perplexity-run-harness.md",
-      "output_sha256": "d37abdcc2da34d77feeae4d743188b72445f012d0dfec31558961d53a126f95f",
-      "source": "rules/88-perplexity-run-harness.mdc",
-      "source_sha256": "12437e7f5e20582321593a21b4bdd4f9aacd284e9e477e3b0563fd49f0515393",
-      "stem": "88-perplexity-run-harness"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "88-shared-worktree-isolation.md",
-      "output_sha256": "c23c9a76da415059d7ef6086c1efa87ce78191e06df022fe71cb2a515fb847d2",
-      "source": "rules/88-shared-worktree-isolation.mdc",
-      "source_sha256": "65e2a9c8fa6c7bfa669d14689d08cd0bae0d07ed6d550bb606aa973b941c97da",
-      "stem": "88-shared-worktree-isolation"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "89-constellation-gate-workspace-session.md",
-      "output_sha256": "28277ccec3ce3441e71b79143b1b5c9f6fa555d1879220f36a17419c2c9a7587",
       "source": "rules/89-constellation-gate-workspace-session.mdc",
-      "source_sha256": "da564ec0d699b253730bb0d642dec4bb341bca45a19abb4b5e6067958a21f6ba",
+      "source_sha256": "3b1b5e0cfd03da7d73088ccd28950e9c7d7880e546dd08c7203205c848bafb24",
       "stem": "89-constellation-gate-workspace-session"
     },
     {
@@ -431,7 +494,7 @@
       "output": "90-protected-core.md",
       "output_sha256": "f40231bec8753dcbb3aa20b33a005462a88c5769b1f6991a39ca4f6ce46e181b",
       "source": "rules/90-protected-core.mdc",
-      "source_sha256": "fcba3a0e98ebfda837aa7856037aca1d510ea0ce42333c7ac5c7ff743a146e78",
+      "source_sha256": "0e67f1cc2c1765a37d8339965fa241824f0d27572ab65e1007da1af441b71141",
       "stem": "90-protected-core"
     },
     {
@@ -440,16 +503,16 @@
       "output": "91-existing-code-source-of-truth.md",
       "output_sha256": "0636b16608b55d6c8029499a71a4201ae0ec5e6c6edf0ef72ef03bd3706a592c",
       "source": "rules/91-existing-code-source-of-truth.mdc",
-      "source_sha256": "4c00176a23711ef6c460a7453e4f93c8123c7d32652a200bc2c6c80019bcb651",
+      "source_sha256": "5043e3374dca1b01239a5b52a128e659655d0a82a56045adec8581c4a7cd7b3c",
       "stem": "91-existing-code-source-of-truth"
     },
     {
       "alias": null,
       "class": "always",
       "output": "92-learned-lessons.md",
-      "output_sha256": "eb244ec1f3f8b9a740de8b7c6f5cedb07db74fece3a0a8fdbe76bf4978c7b5f2",
+      "output_sha256": "c5a9c1dfd9f3d9a7f7b729fed50a5b0ac2fbb887ca9542af6a39d4b3b79e9cd6",
       "source": "rules/92-learned-lessons.mdc",
-      "source_sha256": "29fa6efe0c8e57c6a0b910c4b230dc846c81f718cc68a63eee3bd37d397f8226",
+      "source_sha256": "320bf13f04a1e2ad137c13c37a9f00d6d69736c6837d2cc7fbc5b1344b6c9754",
       "stem": "92-learned-lessons"
     },
     {
@@ -458,17 +521,8 @@
       "output": "93-c1-server-protection.md",
       "output_sha256": "1e072b39495b55116e5c9689d8a82a1743cd84896d205e7ab3c1abd480caac80",
       "source": "rules/93-c1-server-protection.mdc",
-      "source_sha256": "425be8bde08fecaa85a16b28fab3f82682b05dcf6f56c45ac72c78621335fe08",
+      "source_sha256": "a89e589b42cb168531ffc51d35a2c34240aed66657742c8f466f660f4d2ad820",
       "stem": "93-c1-server-protection"
-    },
-    {
-      "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
-      "source": "rules/93-perplexity-research-protocol.mdc",
-      "source_sha256": "6ee421f2585c015265deeaf56ef7e93e9516a6225259456d7468aff3470f56cb",
-      "stem": "93-perplexity-research-protocol"
     },
     {
       "alias": null,
@@ -476,17 +530,8 @@
       "output": "94-deployment-prohibition.md",
       "output_sha256": "fc3a11f9369585d6cc89f39f9b582787d4a99ef1599a109debac1a77e835a210",
       "source": "rules/94-deployment-prohibition.mdc",
-      "source_sha256": "7a94db235388e55e7b9521f2d2f54459f7ad606fa74d92be84e23395fc0512b7",
+      "source_sha256": "95043be2ba114f2e5eceb4321ed1c8df46795c1db151d3aaba1e8a7cba2f3d7a",
       "stem": "94-deployment-prohibition"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "95-agent-pattern-activation.md",
-      "output_sha256": "0a1744a94f6b3e49938e20f5ad10f8c2f99cf44a369c3255816ede43a910722d",
-      "source": "rules/95-agent-pattern-activation.mdc",
-      "source_sha256": "0c077285f21f534b9ec49f51b0bfc616d1060efc610fb5bbcfc2b738df8e5a52",
-      "stem": "95-agent-pattern-activation"
     },
     {
       "alias": null,
@@ -494,53 +539,8 @@
       "output": "95-test-fix-policy.md",
       "output_sha256": "2043d8a124a30820d550f4d1051727398f6ee818597c778f2d3f167e0fe3a002",
       "source": "rules/95-test-fix-policy.mdc",
-      "source_sha256": "bdcb5376bddae23433ec06bac92b6599db848c601069a0dbba5350179dffa900",
+      "source_sha256": "cbf9a0e89a3dc1e3cbba07e5fa375886a08c2892d06cdb89f2f10df15f132b67",
       "stem": "95-test-fix-policy"
-    },
-    {
-      "alias": null,
-      "class": "paths",
-      "output": "96-env-no-hardcode.md",
-      "output_sha256": "38a9346d4ec91252638a646d08f2e51e397177b566d2b46c95020879d0037887",
-      "source": "rules/96-env-no-hardcode.mdc",
-      "source_sha256": "dfb9fe3954f4381bdd32947b0e021be3b6b03837d702f2d982b0fdeea136fd0a",
-      "stem": "96-env-no-hardcode"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "96-git-push-approval.md",
-      "output_sha256": "28b0e639fe5e1fba50206022fc4b811fff9b0b0b303bc3d99f97786226b04d12",
-      "source": "rules/96-git-push-approval.mdc",
-      "source_sha256": "6612401e27a540b7b1cd767cda917eb9b4f6e3b60f9bcd490628b03b67cf1e1e",
-      "stem": "96-git-push-approval"
-    },
-    {
-      "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
-      "source": "rules/96-output-discipline.mdc",
-      "source_sha256": "3079c1d21f943c929e7b72bc47d0033080c8dc858ea4db603c060050e2b0fce3",
-      "stem": "96-output-discipline"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "97-governance-ssot-paths.md",
-      "output_sha256": "885f9f13577d8e2e9f67791dc29286085ea5a3d945a952e47accda0e524706ce",
-      "source": "rules/97-governance-ssot-paths.mdc",
-      "source_sha256": "f472f499420b38a5f2ac0f72edaf77dca4ccb78c95298a24cc7251085de5583a",
-      "stem": "97-governance-ssot-paths"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "97-graph-engine-architecture.md",
-      "output_sha256": "0461265d0503e7b283e056a1f407db5bf274284b3a58ca3d2e70d4b5556ce6a0",
-      "source": "rules/97-graph-engine-architecture.mdc",
-      "source_sha256": "8ba078e7917cbd1a469e53cee8a0513f9d457b036dbc24eef0e30438be23f9dd",
-      "stem": "97-graph-engine-architecture"
     },
     {
       "alias": null,
@@ -548,17 +548,8 @@
       "output": "97-graph-layer-boundary.md",
       "output_sha256": "7980ac86a9d33ce04d2ac433d281e73ce0911fa5cc96ccc8acd3f78c43d52124",
       "source": "rules/97-graph-layer-boundary.mdc",
-      "source_sha256": "cb4121c0d61d39e1951384a69fb7d896311b4e141fb3bdb6f75c1506b67fc0c3",
+      "source_sha256": "381364ee74a45f6638a617f20670a40678f11b0f1495161ad9159dcf404f410f",
       "stem": "97-graph-layer-boundary"
-    },
-    {
-      "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
-      "source": "rules/97-ide-profile-exceptions.mdc",
-      "source_sha256": "32e96e77cfe34c281a1b8e2176b67c50bd7f18321804ed495960e38754ab8e65",
-      "stem": "97-ide-profile-exceptions"
     },
     {
       "alias": null,
@@ -566,61 +557,25 @@
       "output": "98-graphiti-memory-gate.md",
       "output_sha256": "4100a76ba82d53b0607ccd9c6cbbe2a6ffc22d7f2384ef0c61aed31397eab52b",
       "source": "rules/98-graphiti-memory-gate.mdc",
-      "source_sha256": "c9da41934e34a0d32f1124becc66d08bdeb150df2a12587362d20d55220da2e7",
+      "source_sha256": "2d2dc233b222ca49e634e12a2cc8e10de846428911b1d7c3d9cf01bdfe57a7c5",
       "stem": "98-graphiti-memory-gate"
     },
     {
       "alias": null,
       "class": "always",
-      "output": "98-make-pr-remediation.md",
-      "output_sha256": "ed1061a94f65d46d480885fcb832c690a3b59d73295a7709424b4cd33467fdef",
-      "source": "rules/98-make-pr-remediation.mdc",
-      "source_sha256": "fec38412787bc673a20c9b909ee7a34bebd333208508206a3825fff116f1afa8",
-      "stem": "98-make-pr-remediation"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "99-execute-as-instructed.md",
-      "output_sha256": "a6a548adfad67a42ad273e0bb145e43f14b8ba9f6c7aa70869e4e8d2ba55528d",
-      "source": "rules/99-execute-as-instructed.mdc",
-      "source_sha256": "ed81ca9d7f79a3bdb92356090f6574722c148b974bf57686b3317d4512ae09dc",
-      "stem": "99-execute-as-instructed"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "99-graphiti-temporal.md",
-      "output_sha256": "5b78ac984645ed55089924489a0498a05149a66665ac34b6fffca0eeb5190daf",
-      "source": "rules/99-graphiti-temporal.mdc",
-      "source_sha256": "a57d2288be2934c6266370a7454ff1c5c6fe6375c0ab4bc983ede86afcea3eab",
-      "stem": "99-graphiti-temporal"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "99-incident-report.md",
-      "output_sha256": "29e1dbcea5971470d6b067678e45c4405a4ef91e4a907db6a1e7a1bad80f3ed6",
-      "source": "rules/99-incident-report.mdc",
-      "source_sha256": "7bf15c37f97f4c9cde0ff40a17b057d8a1723664703085cfd70758ec36ec8206",
-      "stem": "99-incident-report"
-    },
-    {
-      "alias": null,
-      "class": "always",
       "output": "99-no-auto-commit.md",
-      "output_sha256": "a44dc74232f94bf584ca66a5ced058cb5bfbf0731d1041d5fa8042956a624902",
+      "output_sha256": "c5a79d7784bccca8d9105ce50993d5be0ac5206ea30684d440298ee210675666",
       "source": "rules/99-no-auto-commit.mdc",
-      "source_sha256": "6258c09dd6bc6716f27776d25f3c1d61980ba3dfc193581e0d1cc33b9d9f8193",
+      "source_sha256": "a66549b17594f12b71a4a1a6360b5eed005a058c570808a915a3de106447af10",
       "stem": "99-no-auto-commit"
     },
     {
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "1a6dcef21b2d4f883535779dd1e7cedf5c07c06ec1a054d74073388eb2f93707",
+      "output_sha256": "c1c13567dea0705c76e9093737a700aa3a6645c9dd06cebc36e68a5b5e58d7b6",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "311cff8856b681319a38f6efbc4159bc8dc68ab508f2e16f1947e0db80e45636",
+      "source_sha256": "189d44d524199dd48c9875f1a03081b0c9208d3d4759893215c72384e06bf6d6",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -628,9 +583,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 62,
-    "skipped_agent_requested": 6,
-    "source_mdc": 69
+    "projected": 46,
+    "skipped_agent_requested": 17,
+    "source_mdc": 64
   },
-  "tree_sha256": "30172c4fb4526e9050c553cd1aaebed46de0c382922b08c374a1b98106889deb"
+  "tree_sha256": "cf797c296d743f303664594d9a4f04acdcddcdd07643ed5c629d94e0cbc34913"
 }

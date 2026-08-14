@@ -1,5 +1,11 @@
 ---
 description: Testing and QA rules for AI OS agents, runtimes, and integrations.
+paths:
+- '**/test_*.py'
+- '**/*_test.py'
+- '**/tests/**'
+- '**/*.test.*'
+- '**/*.spec.*'
 ---
 
 # Testing & QA Rules for L9 OS

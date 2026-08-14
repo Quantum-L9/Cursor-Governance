@@ -1,7 +1,13 @@
 ---
-description: "KERNEL pack / PE overlay landings use a new branch from origin/main without asking. Do not mix unrelated WIP."
+id: l9.rule.46.kernel.pack.new.branch
+version: 1.0.0
+description: KERNEL pack / PE overlay landings use a new branch from origin/main without
+  asking. Do not mix unrelated WIP.
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
-globs: "**/*.plan.md,WIP/**,environment/program-execution/**,AGENTS.md"
+globs: '**/*.plan.md,WIP/**,environment/program-execution/**,AGENTS.md'
 ---
 
 <!-- L9_META

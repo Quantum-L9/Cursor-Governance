@@ -1,5 +1,10 @@
 ---
+id: l9.rule.94.deployment.prohibition
+version: 1.0.0
 description: Prohibits AI agents from using the 10X deployment script.
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

@@ -1,5 +1,11 @@
 ---
-description: Existing code is source of truth — new code adapts to established patterns
+id: l9.rule.91.existing.code.source.of.truth
+version: 1.0.0
+description: "Existing code is source of truth \u2014 new code adapts to established\
+  \ patterns"
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

@@ -1,7 +1,12 @@
 ---
+id: l9.rule.71.ci.cd.pipeline
+version: 1.0.0
 description: CI/CD pipeline and policy enforcement rules for L9.
-globs: .github/workflows/**/*.yml, .github/workflows/**/*.yaml, Makefile, .gitlab-ci.yml
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: .github/workflows/**/*.yml, .github/workflows/**/*.yaml, Makefile, .gitlab-ci.yml
 ---
 
 # CI/CD pipeline (L9)

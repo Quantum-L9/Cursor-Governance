@@ -85,7 +85,7 @@ compiled_prompt:
 
   authority_order:
     1: CANONICAL_LAW.md (.cursor/governance/CANONICAL_LAW.md)
-    2: .cursor-commands/rules/97-governance-ssot-paths.mdc
+    2: .cursor-commands/rules/06-governance-ssot-paths.mdc
     3: other global .cursor-commands/rules/*.mdc
     4: repo .cursor/rules/*.mdc (overlay — narrower, non-conflicting only)
     5: AGENTS.md / INVARIANTS.md (executable ground truth for PlasticOS commands)
@@ -157,7 +157,7 @@ compiled_prompt:
   batch_strategy:
     global_preferred_batch_size: 5_to_8
     group_global_by_prefix:
-      - "97-governance-ssot-paths first"
+      - "06-governance-ssot-paths first"
       - "00-09 global / git / slash"
       - "80-89 gmp"
       - "90-99 protection"
@@ -291,7 +291,7 @@ compiled_prompt:
   mode: report_only
 
   source_authority:
-    highest: [CANONICAL_LAW.md, 97-governance-ssot-paths.mdc, global .cursor-commands/rules/]
+    highest: [CANONICAL_LAW.md, 06-governance-ssot-paths.mdc, global .cursor-commands/rules/]
     not_applicable: [TransportPacket, Gate routing, node build pipeline — unless rule explicitly governs L9 nodes]
 
   rule_alignment_passes:
@@ -348,9 +348,9 @@ compiled_prompt:
 run_id: GMP-RULES-HARDEN-001
 updated: null
 rules:
-  - path: .cursor-commands/rules/97-governance-ssot-paths.mdc
+  - path: .cursor-commands/rules/06-governance-ssot-paths.mdc
     tree: global_cursor
-    basename: 97-governance-ssot-paths
+    basename: 06-governance-ssot-paths
     alwaysApply: true
     globs: null
     topic: governance_paths
@@ -367,7 +367,7 @@ Pre-populate every `.cursor-commands/rules/*.mdc`, `.cursor/rules/*.mdc`, and `.
 
 ## Execution order (Phase 2)
 
-1. **Global Wave 0:** `97-governance-ssot-paths.mdc` alone first.
+1. **Global Wave 0:** `06-governance-ssot-paths.mdc` alone first.
 2. **Global batches:** 5–8 files by prefix (see `batch_strategy.group_global_by_prefix`).
 3. **Overlay Wave 1:** 8 high-drift PlasticOS rules (see `overlay_waves.wave_1`).
 4. **CHECKPOINT** — show inventory + sample alignment + alwaysApply before/after counts.

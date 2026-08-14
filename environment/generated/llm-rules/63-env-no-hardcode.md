@@ -1,0 +1,42 @@
+---
+description: Keep environment-specific hosts, credentials, ports, and identifiers outside source code.
+paths:
+- '**/*.sh'
+- '**/*.env*'
+- '**/Dockerfile*'
+- '**/docker-compose*.yml'
+- '**/docker-compose*.yaml'
+- '**/*config*.py'
+- '**/*config*.ts'
+---
+
+# Configuration: Use Environment Inputs, Do Not Hardcode
+
+## Rule
+
+Do not hardcode secrets or environment-specific values in scripts, application configuration, deployment files, or tests.
+
+This includes:
+
+- credentials, tokens, and private keys;
+- database names and users;
+- hosts and ports;
+- deployment identifiers;
+- environment-specific module, tenant, or service lists.
+
+## Required pattern
+
+- Read configuration from environment variables or an approved secret/configuration provider.
+- Provide safe, non-secret defaults only when the same default is valid in every environment.
+- Document variable names in an example configuration file without real credentials.
+- Validate required inputs at startup and fail with a clear message.
+- Keep test fixtures deterministic and isolated from production configuration.
+
+## Checklist
+
+- [ ] No new literal credential, private endpoint, machine path, or deployment identifier.
+- [ ] Required variables are validated.
+- [ ] Example configuration is updated when the contract changes.
+- [ ] Logs and generated reports redact secret values.
+
+<!-- generated-from: rules/63-env-no-hardcode.mdc; do-not-edit -->

@@ -1,7 +1,13 @@
 ---
-description: Observability and performance rules for L9 runtime, agents, memory, and orchestration.
-globs: l9/runtime/**/*, l9/core/agents/**/*, l9/memory/**/*, l9/orchestration/**/*
+id: l9.rule.65.observability.performance
+version: 1.0.0
+description: Observability and performance rules for L9 runtime, agents, memory, and
+  orchestration.
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: l9/runtime/**/*, l9/core/agents/**/*, l9/memory/**/*, l9/orchestration/**/*
 ---
 
 # Observability and performance (L9)

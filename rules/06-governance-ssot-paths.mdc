@@ -1,0 +1,56 @@
+---
+id: l9.rule.governance-ssot-paths
+version: 1.0.0
+description: Use the local GitHub clone at $HOME/.cursor-governance as the sole governance
+  root.
+scope: global
+domain: git
+activation: always
+authority: canonical_global
+alwaysApply: true
+---
+
+# Governance SSOT Path Contract
+
+**Authority:** `@.cursor-commands/CANONICAL_LAW.md`
+
+## Binding contract
+
+The sole local governance root is the GitHub clone at `$HOME/.cursor-governance`.
+The repository root is also the shared governance content root, so:
+
+```text
+$GOV_ROOT == $GLOBAL_COMMANDS == $HOME/.cursor-governance
+```
+
+There is no nested `GlobalCommands/` directory and no cloud-storage fallback.
+
+| Layer | Requirement |
+|---|---|
+| SSOT working copy | `$HOME/.cursor-governance` |
+| Remote | `Quantum-L9/Cursor-Governance` |
+| Resolver | `ops/scripts/resolve_governance_paths.sh` |
+| Workspace reference plane | `.cursor-commands` symlink to the clone root |
+| Workspace activation plane | real repository-owned `.cursor/rules/` directory |
+| Auto-sync | guarded fast-forward-only synchronization |
+
+## Required resolution API
+
+Governance scripts source `resolve_governance_paths.sh` and use the exported `$GOV_ROOT` and `$GLOBAL_COMMANDS` values. Hooks installed as real files must resolve the clone explicitly rather than deriving the root from a cloud path.
+
+## Forbidden
+
+- machine-specific `/Users/<name>/...` or `/home/<name>/...` paths;
+- cloud-storage governance roots or fallback reads;
+- a nested `GlobalCommands/` tree;
+- deriving governance from the installed hook directory;
+- whole-directory `.cursor/rules` links to global rules.
+
+## Allowed
+
+- `$HOME/.cursor-governance`;
+- `$GOV_ROOT` and `$GLOBAL_COMMANDS` after resolver success;
+- repository-relative `.cursor-commands/...` references;
+- selected individual shared-rule symlinks inside a real local overlay.
+
+Run the path and wiring validators before committing governance changes.

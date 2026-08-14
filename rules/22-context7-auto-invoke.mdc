@@ -1,5 +1,11 @@
 ---
-description: Auto-invoke Context7 MCP before coding on external libraries — FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools.
+id: l9.rule.22.context7.auto.invoke
+version: 1.0.0
+description: "Auto-invoke Context7 MCP before coding on external libraries \u2014\
+  \ FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools."
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

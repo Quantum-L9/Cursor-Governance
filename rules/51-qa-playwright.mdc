@@ -1,7 +1,13 @@
 ---
+id: l9.rule.51.qa.playwright
+version: 1.0.0
 description: Playwright E2E test invariants for web UI flows.
-globs: '**/*.spec.ts, **/*.spec.tsx, **/e2e/**/*.ts, **/e2e/**/*.tsx, playwright.config.ts, playwright.config.js'
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: '**/*.spec.ts, **/*.spec.tsx, **/e2e/**/*.ts, **/e2e/**/*.tsx, playwright.config.ts,
+  playwright.config.js'
 ---
 
 # Playwright E2E invariants

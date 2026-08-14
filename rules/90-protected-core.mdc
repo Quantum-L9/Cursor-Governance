@@ -1,5 +1,11 @@
 ---
-description: 'Protected L9 core and infra files: require separate Phase 0 plan and dedicated GMP runs before any edit.'
+id: l9.rule.90.protected.core
+version: 1.0.0
+description: 'Protected L9 core and infra files: require separate Phase 0 plan and
+  dedicated GMP runs before any edit.'
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

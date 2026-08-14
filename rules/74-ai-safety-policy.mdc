@@ -1,7 +1,12 @@
 ---
+id: l9.rule.74.ai.safety.policy
+version: 1.0.0
 description: AI content safety and policy rules for prompts and kernels in L9.
-globs: config/kernels/**/*, config/prompts/**/*, policy/**/*
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: config/kernels/**/*, config/prompts/**/*, policy/**/*
 ---
 
 # AI safety policy (L9)

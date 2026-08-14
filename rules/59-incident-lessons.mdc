@@ -1,0 +1,22 @@
+---
+id: l9.rule.incident.lessons
+version: 2.0.0
+description: Pointer to incident-lessons corpus (load when handling incidents)
+scope: global
+domain: deployment
+activation: agent_requested
+authority: canonical_global
+context_cost: minimal
+alwaysApply: false
+---
+
+# Incident lessons (pointer)
+
+## MUST
+
+- When triaging an incident, read `learning/failures/incidents/incident-report-corpus.md`
+- Capture new lessons via harvest / Graphiti — do not grow this rule
+
+## MUST NOT
+
+- Re-embed the full incident corpus into always-apply context

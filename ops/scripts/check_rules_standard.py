@@ -23,6 +23,22 @@ if str(_SCRIPTS) not in sys.path:
 from lib.rule_frontmatter import always_apply_is_true, parse_rule  # noqa: E402
 
 NATIVE_FIELDS = {"description", "globs", "alwaysApply"}
+# L9 rule-metadata.schema.json extension fields (ignored by Cursor; validated by
+# ops/schemas/rule-metadata.schema.json via validate_rules_manifest.py).
+L9_METADATA_FIELDS = {
+    "id",
+    "version",
+    "scope",
+    "activation",
+    "domain",
+    "authority",
+    "context_cost",
+    "deprecated",
+    "replacement",
+    "removal_plan",
+    "extends",
+}
+ALLOWED_FIELDS = NATIVE_FIELDS | L9_METADATA_FIELDS
 # Measured post-Stage-1 always-apply total on origin/main @ cb00181. Target: 12288.
 ALWAYS_BUDGET = int(os.environ.get("RULES_ALWAYS_BUDGET", "181203"))
 SINGLE_MAX = 4096
@@ -74,7 +90,7 @@ def check_rules(root: Path) -> tuple[list[str], list[str], int, int]:
             errs.append(f"{path.name}: no frontmatter")
             continue
 
-        extra = set(parsed.metadata) - NATIVE_FIELDS
+        extra = set(parsed.metadata) - ALLOWED_FIELDS
         if extra:
             errs.append(f"{path.name}: non-native frontmatter fields: " + ", ".join(sorted(extra)))
 
@@ -103,8 +119,8 @@ def check_rules(root: Path) -> tuple[list[str], list[str], int, int]:
     for prefix, names in sorted(prefixes.items()):
         if len(names) > 1:
             joined = ", ".join(sorted(names))
-            warns.append(
-                f"prefix {prefix}- shared by {len(names)} files: {joined} (warn until Stage 3)"
+            errs.append(
+                f"prefix {prefix}- shared by {len(names)} files: {joined}"
             )
 
     if always_total > ALWAYS_BUDGET:

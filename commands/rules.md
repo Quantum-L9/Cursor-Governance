@@ -68,10 +68,10 @@ grep -L "alwaysApply: true" .cursor/rules/*.mdc | xargs -I{} basename {}
 
 | File | Purpose |
 |------|---------|
-| `01-git-push-prohibition.mdc` | NEVER push without explicit request |
-| `96-git-push-approval.mdc` | Git push requires approval |
+| `99-no-auto-commit.mdc` (git mutation gate) | NEVER push without explicit request |
+| `99-no-auto-commit.mdc` (merged) | Git push requires approval |
 | `99-no-auto-commit.mdc` | Never auto-commit |
-| `99-execute-as-instructed.mdc` | Execute exactly as instructed |
+| `09-execute-as-instructed.mdc` | Execute exactly as instructed |
 | `91-existing-code-source-of-truth.mdc` | Existing code wins |
 | `92-learned-lessons.mdc` | Critical prevention rules |
 

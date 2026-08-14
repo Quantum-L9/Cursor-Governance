@@ -1,7 +1,13 @@
 ---
-description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes, escalation, and irreversible action constraints.'
-globs: src/agents/**/*.ts, src/agents/**/*.py, src/autonomy/**/*, packages/agents/**/*
+id: l9.rule.40.domain.autonomy
+version: 1.0.0
+description: 'Autonomous agents and AI OS autonomy domain rules: safety envelopes,
+  escalation, and irreversible action constraints.'
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: src/agents/**/*.ts, src/agents/**/*.py, src/autonomy/**/*, packages/agents/**/*
 ---
 
 # Autonomous Agent & Autonomy Domain Rules

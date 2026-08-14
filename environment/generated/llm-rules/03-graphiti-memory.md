@@ -1,5 +1,5 @@
 ---
-description: Graphiti episodic memory SSOT — retrieval authority, group_id contract, no Cursor native memory for repo facts
+description: Graphiti episodic memory SSOT — retrieval authority, group_id, temporal supersedes/conflicts
 ---
 
 # Graphiti Memory (SSOT)
