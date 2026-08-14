@@ -103,7 +103,7 @@
     },
     {
       "path": "adapters/claude-code/ADAPTER.yaml",
-      "sha256": "1e32a54f07f2a2ff32307c86e3555656f8d0b2a3a3c9e30731269f2c071c8e16"
+      "sha256": "def7f58a108e553371922c451dc87ba1b4cde4f5ada7eef9a8d057d03adb60f3"
     },
     {
       "path": "adapters/claude-code/README.md",
@@ -115,7 +115,7 @@
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "fe112ff8a993bdc0689c0b939d1d5e1b5d840a716f1336047183f2b9d3b004dc"
+      "sha256": "16d05fd0c67ca8b8c7e3f4634dd18768343b1bef98cb3893ae52f2e9fcfd2912"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -123,7 +123,7 @@
     },
     {
       "path": "adapters/claude-code/tests/test_driver.py",
-      "sha256": "f1462bb522134a88c4b1ca165d09bd04d9023b5561297a5bff79cd80376e073c"
+      "sha256": "984b30415a31761649257bcb65ffee286da55566dcf417e0b06629d36c17c2cf"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",

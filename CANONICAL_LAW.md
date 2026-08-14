@@ -273,7 +273,7 @@ auth: `L9_MERGE_AUTHORIZED=<reason>`.
 | Local cache | `intelligence/context-memory/sessions/*.json` | Fallback only |
 | MCP interface | `ops/graphiti/graphiti_memory_client.py` | L9-Ops-MCP |
 
-**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`
+**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`  
 **Skill:** `skills/l9-graphiti-memory/SKILL.md`  
 **Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES`
 

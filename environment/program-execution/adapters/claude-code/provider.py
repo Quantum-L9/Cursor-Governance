@@ -23,22 +23,19 @@ class ClaudeCodeProvider:
 
     def probe(self, context) -> ProviderProbe:
         executable = shutil.which("claude")
-        autonomy = self.repository_root / "autonomy/adapters/conformance.py"
-        missing = []
-        if executable is None:
-            missing.append("claude")
-        if not autonomy.is_file():
-            missing.append(str(autonomy))
+        required = [
+            self.repository_root / "autonomy/adapters/claude_code/adapter.py",
+            self.repository_root / "autonomy/adapters/conformance.py",
+        ]
+        missing = [str(path) for path in required if not path.is_file()]
         return ProviderProbe(
             status="PASS" if not missing else "BLOCKED",
             blocked_reason=(
-                None
-                if not missing
-                else "Claude executable or root-autonomy conformance is unavailable"
+                None if not missing else "root-autonomy Claude Code provider is unavailable"
             ),
             evidence=(
                 {"type": "executable", "path": executable},
-                {"type": "missing", "items": missing},
+                {"type": "path_probe", "missing": missing},
             ),
             observed_capabilities=("inspect", "local_write", "artifact_production"),
         )

@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+_SUBSYSTEM = Path(__file__).resolve().parents[3]
+if str(_SUBSYSTEM) not in sys.path:
+    sys.path.insert(0, str(_SUBSYSTEM))
 
 
 class ClaudeProviderSourceTests(unittest.TestCase):
@@ -69,6 +76,27 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         parser = self._stream_parser()
         with self.assertRaisesRegex(ValueError, "non-empty"):
             parser.parse_claude_json("")
+
+    def _provider(self):
+        path = Path(__file__).resolve().parents[1] / "provider.py"
+        spec = importlib.util.spec_from_file_location("claude_provider_test", path)
+        if spec is None or spec.loader is None:
+            self.fail(f"cannot load provider: {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_binding_probe_passes_without_claude_executable(self) -> None:
+        module = self._provider()
+        repo_root = Path(__file__).resolve().parents[5]
+        with tempfile.TemporaryDirectory() as temporary:
+            provider = module.ClaudeCodeProvider(temporary, repo_root)
+            with patch.object(module.shutil, "which", return_value=None):
+                probe = provider.probe(None)
+        self.assertEqual(probe.status, "PASS")
+        self.assertIsNone(probe.blocked_reason)
+        self.assertIn({"type": "executable", "path": None}, probe.evidence)
+        self.assertIn({"type": "path_probe", "missing": []}, probe.evidence)
 
 
 if __name__ == "__main__":
