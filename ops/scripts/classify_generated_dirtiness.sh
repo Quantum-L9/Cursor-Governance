@@ -17,12 +17,17 @@ if [[ -z "$AFTER" ]]; then
   git status --porcelain >"$AFTER"
 fi
 
-python3 - "$ROOT" "$BEFORE" "$AFTER" <<'PY'
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+python3 - "$ROOT" "$BEFORE" "$AFTER" "$SCRIPT_DIR/lib" <<'PY'
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(sys.argv[1]) / "ops" / "scripts"))
-from sync_generated_artifacts import is_generated_path  # noqa: E402
+root = Path(sys.argv[1])
+# Shared with attribute_tree_writers.sh so "generated" and "scratch" cannot
+# drift between "does this fail the gate" and "who wrote it".
+sys.path.insert(0, sys.argv[4])
+import dirtiness  # noqa: E402
 
 before = {
     line
@@ -39,33 +44,15 @@ if not new_lines:
     print("OK: no new dirtiness")
     raise SystemExit(0)
 
-# Sacred / scratch prefixes: never FAIL the PR gate for these dirtiness lines.
-SCRATCH_PREFIXES = (
-    "WIP/",
-    "WIP",
-    "current_work/",
-    "C_GOV_FILES/",
-    "reports/",
-    ".l9/",
-    ".l9/scratch-hold/",
-)
-
-def _is_scratch_path(path: str) -> bool:
-    p = path.replace("\\", "/").lstrip("./")
-    if p in {"WIP", ".l9"}:
-        return True
-    return any(p == pref.rstrip("/") or p.startswith(pref) for pref in SCRATCH_PREFIXES)
-
 non_generated: list[str] = []
 generated: list[str] = []
 scratch: list[str] = []
 for line in new_lines:
-    path = line[3:].strip()
-    if " -> " in path:
-        path = path.split(" -> ", 1)[1]
-    if _is_scratch_path(path):
+    path = dirtiness.porcelain_path(line)
+    classification = dirtiness.classify_path(root, path)
+    if classification == "scratch":
         scratch.append(path)
-    elif is_generated_path(path):
+    elif classification == "generated":
         generated.append(path)
     else:
         non_generated.append(path)
