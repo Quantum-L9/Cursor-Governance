@@ -542,9 +542,7 @@ def validate(root: Path, mode: str) -> list[str]:
             and phase0.get("autonomy", {}).get("profile") == "program_deploy_max_autonomy"
         ):
             if not phase0.get("stop_conditions_reviewed"):
-                errors.append(
-                    "PHASE0_INCOMPLETE: deploy profile requires stop_conditions_reviewed"
-                )
+                errors.append("PHASE0_INCOMPLETE: deploy profile requires stop_conditions_reviewed")
             align = phase0.get("alignment") or {}
             for key in ("uv_lock_check", "toolchain_pin_lockstep"):
                 if align.get(key) not in {"pass", "not_applicable"}:

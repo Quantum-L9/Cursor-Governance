@@ -171,11 +171,11 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: scripts/validate_blueprint.py
-  sha256: 577a44cdc4a320d12d78b0f85397de058bbddc3565ea128c3986fe074b41d5d2
-  bytes: 23542
+  sha256: ad8916a6247821c36a9243b1f44cb9eeb6cf639f944b217be20db6a017a831c7
+  bytes: 23504
 integrity:
   algorithm: sha256
   self_excluded: true
 summary:
   file_count: 57
-  total_bytes: 108933
+  total_bytes: 108895

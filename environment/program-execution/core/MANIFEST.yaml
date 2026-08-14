@@ -204,8 +204,8 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: program-execution-blueprint-template/scripts/validate_blueprint.py
-  sha256: 577a44cdc4a320d12d78b0f85397de058bbddc3565ea128c3986fe074b41d5d2
-  bytes: 23542
+  sha256: ad8916a6247821c36a9243b1f44cb9eeb6cf639f944b217be20db6a017a831c7
+  bytes: 23504
 - path: program-execution-controller-template/ARCHITECTURE.md
   sha256: 2e9c4fd4d6acd9c3aeb216743a94aaaf53170cb5b6e557102ea0d9b2ec964c3b
   bytes: 1340
@@ -459,8 +459,8 @@ files:
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
 - path: tests/test_autonomy_rail.py
-  sha256: e5d21eaf10a1e5aab5ae74305ca1dcee83a6b5e54bb539c08ae72377b08cb954
-  bytes: 3837
+  sha256: 5f29a2ac881118936fd70f078cc96cdd0c4a2c5c588964303c1f20b8f96bd092
+  bytes: 3861
 - path: tests/test_pair_alignment.py
   sha256: 81b298a4128e9a2674ab00519c4e22c908e4331d7244c8b4b06b9606a81e50ec
   bytes: 1748
@@ -484,4 +484,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 159
-  total_bytes: 395740
+  total_bytes: 395726
