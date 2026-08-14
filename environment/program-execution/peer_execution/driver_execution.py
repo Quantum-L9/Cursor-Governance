@@ -72,9 +72,11 @@ class DriverInvocation:
 class ThinExecutionDriver(Protocol):
     provider_id: str
 
-    def probe(self, context: ProbeContext) -> ProviderProbe: ...
+    def probe(self, context: ProbeContext) -> ProviderProbe:
+        ...
 
-    def invoke(self, request: DriverExecutionRequest) -> DriverInvocation: ...
+    def invoke(self, request: DriverExecutionRequest) -> DriverInvocation:
+        ...
 
     def poll(
         self, request: DriverExecutionRequest, state: Mapping[str, Any]

@@ -368,9 +368,11 @@ def validate_provider_invocation(
 class ThinProvider(Protocol):
     provider_id: str
 
-    def probe(self, context: ProbeContext) -> ProviderProbe: ...
+    def probe(self, context: ProbeContext) -> ProviderProbe:
+        ...
 
-    def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation: ...
+    def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
+        ...
 
     def poll(
         self,
