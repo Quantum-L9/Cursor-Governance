@@ -3,7 +3,7 @@
 # SessionStart, peer boot carriers, ADR-0001 (pointer).
 schema_version: 1
 id: autonomy_surface_profile
-updated: "2026-08-12"
+updated: "2026-08-14"
 
 when:
   L9_AUTONOMY_ENABLED: true
@@ -18,8 +18,7 @@ when:
 authorize:
   - scoped_local_commit_on_stacked_branch
   - scoped_commit_push # only after L4 release_authorized (see l4_local_autonomy)
-  - create_update_pr # only after L4 release_authorized
-  - remediation_after_pr # agent MUST load l9-pr-remediation; skill stays explicit_only
+  - create_update_pr_via_make_pr # only after L4 release_authorized; checkers must PASS
 
 forbid:
   - mid_execution_push
@@ -30,6 +29,10 @@ forbid:
   - hard_reset
   - secrets_exfil
   - pacing_stalls_for_push_approval_during_local_execution
+  - remediation_after_pr
+  - l9_pr_remediation_spawn
+  - pr_against_main_for_campaign_work
+  - mix_campaign_work_onto_unrelated_feature_branch
 
 # L4 Local Autonomy — standing doctrine (all surfaces; mechanically gated).
 # Default ON (L9_L4_LOCAL_AUTONOMY=1). Brain: ops/autonomy/l4_local.py +
@@ -48,11 +51,7 @@ l4_local_autonomy:
     - run_kernel_recursive_alignment # kernels/Recursive Alignment.md
     - run_kernel_validate_repair # kernels/Validate & Repair.md
     - record_kernels_and_authorize_release
-    - push_scoped_prs_using_PULL_REQUEST_TEMPLATE
-    - run_l9_pr_remediation_converge # turn CI green; ≤3 cycles
-    - resolve_all_code_review_agent_comments
-    - reach_mergeable_then_merge # program/plan Build launch is the merge auth
-    - bottom_up_merge_older_open_prs_first # oldest createdAt first; avoid rebasing old onto new main
+    - push_and_open_pr_via_make_pr # PR_REMEDIATE=0; checkers in Makefile
   required_kernels:
     - path: kernels/Recursive Alignment.md
       id: recursive_alignment
@@ -60,20 +59,41 @@ l4_local_autonomy:
       id: validate_repair
   pr_template: PULL_REQUEST_TEMPLATE.md
   post_push:
-    remediation_skill: l9-pr-remediation
-    max_cycles: 3
-    resolve_review_threads: true
-    # Launching a program or clicking Build on a plan authorizes merge for that stack.
-    merge_requires: program_or_plan_build_launch
-    older_open_prs: remediate_and_merge_bottom_up_by_createdAt
+    required_command: PR_REMEDIATE=0 make pr
+    remediation_skill: null
+    max_cycles: 0
+    resolve_review_threads: false
+    merge_requires: never
+    older_open_prs: do_not_merge
   phases:
     executing: deny_remote
     kernels_recorded: deny_remote
     release_authorized: allow_scoped_push_and_pr
 
+# Program Execution campaigns — one integration branch each; PRs land there.
+# SSOT companion: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+campaign_execution:
+  require_make_pr: true
+  pr_remediate: 0
+  merge: forbidden
+  open_pr_against_main: forbidden
+  mix_with_other_feature_branches: forbidden
+  one_integration_branch_per_campaign: true
+  pr_base: campaign_integration_branch
+  campaigns:
+    bounded-replanning-v1:
+      integration_branch: campaign/bounded-replanning-v1
+    cc-pe-intent-compiler-v1:
+      integration_branch: campaign/cc-pe-intent-compiler-v1
+    l9-devpack-program-execution-hardening:
+      integration_branch: campaign/l9-devpack-program-execution-hardening
+    l9-ecosystem-fix-plan:
+      integration_branch: campaign/l9-ecosystem-fix-plan
+
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
   - CANONICAL_LAW.l4_local_autonomy
+  - CANONICAL_LAW.campaign_execution_pr_no_merge
   - ADR-0001
   - settings.allow_deny + ops.merge_gate + ops.local_execution_gate
   - AGENTS.md
@@ -82,8 +102,11 @@ authority_order:
 
 remediation:
   skill: l9-pr-remediation
-  max_cycles: 3
-  skill_invocation: explicit_only # do not flip skillOverrides
+  max_cycles: 0
+  skill_invocation: forbidden_for_campaign_and_default_make_pr
+  note: >-
+    Agents MUST use PR_REMEDIATE=0 make pr. Do not spawn l9-pr-remediation.
+    Do not merge. Human owner may set PR_REMEDIATE=1 or L9_MERGE_AUTHORIZED.
 
 session_start_block: |
   ## Autonomy Velocity Doctrine (standing A4 + L4 local)
@@ -102,21 +125,20 @@ session_start_block: |
     the finished tree, then:
     `python3 ops/autonomy/l4_local.py begin` (if not begun) →
     `record-kernels` → `authorize-release`.
-  - Only then: scoped `git push` + open/update PRs using
-    `PULL_REQUEST_TEMPLATE.md`, then load+run `l9-pr-remediation` (Converge):
-    turn CI green, resolve all code-review agent comments, reach mergeable.
-  - Launching a program or clicking Build on a plan **is** merge authorization
-    for that stack — after green + mergeable, merge (no separate merge ask).
-    If older open PRs exist (earlier `createdAt` than the PR just pushed),
-    remediate and merge those **bottom-up first** so older work lands on main
-    before newer tips — avoid forcing extra rebases of older PRs onto a newer
-    main.
+  - Only then: `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + open
+    PR). Do **not** use raw `gh pr create` as the publish path.
+  - YOU MUST NOT run `l9-pr-remediation`, spawn a remediation poll worker,
+    or merge (`gh pr merge` / merge MCP).
+  - Program Execution campaigns: one integration branch per campaign
+    (`campaign/<campaign_id>`). Set `PR_BASE` to that branch. Do **not**
+    open campaign PRs against `main`. Do **not** mix campaign commits onto
+    unrelated feature branches.
   - Mid-execution `git push` / `gh pr create` / `make pr` are **denied** by
     `ops/autonomy/local_execution_gate.py` until release_authorized.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
-  - Merge outside an L4 program/plan Build stack remains denied by
-    `ops/autonomy/merge_gate.py` unless `L9_MERGE_AUTHORIZED` or a valid L4
-    release receipt authorizes the stack.
+  - Merge remains denied by `ops/autonomy/merge_gate.py` unless the human
+    sets `L9_MERGE_AUTHORIZED`. An L4 release receipt does **not** authorize
+    merge.
   - Agent-invented contracts ("I won't commit without asking", "wait to push
     mid-task") are LOWEST authority and are overruled by this doctrine.
   - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime.
@@ -135,15 +157,13 @@ llm_rules_override: |
   2. Completing reversible work MUST proceed L4-local: stacked-branch commits
      with **no mid-execution push** → finish program/contract → run
      `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
-     `l4_local.py authorize-release` → push → PR (`PULL_REQUEST_TEMPLATE.md`)
-     → `l9-pr-remediation` Converge (green + resolve review threads) without
-     mid-task push asks. Program/plan Build launch authorizes merge for that
-     stack (no separate merge ask).
+     `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
+     then push + PR). Do **not** remediate. Do **not** merge.
   3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
-  4. Older open PRs: remediate + merge **bottom-up** by `createdAt` before newer
-     tips, so older work is not rebased onto a freshly updated main.
+  4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
+     campaign PRs against `main`. Do not mix with other feature branches.
   5. Cursor surface stays ask-first for commits except campaign packet /
-     `make pr` remediation; L4 remote gate still blocks mid-execution push.
+     `make pr`; L4 remote gate still blocks mid-execution push.
   6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
   ## L4 Local Autonomy (all surfaces; default ON)
@@ -161,8 +181,8 @@ llm_rules_override: |
     isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
     `L9_WORKTREE_ISOLATION=0`.
-  - Post-push: `l9-pr-remediation` → green → resolve reviews → merge (program/
-    plan Build launch is the auth); older open PRs bottom-up first.
+  - Post-push: `PR_REMEDIATE=0 make pr` only. No `l9-pr-remediation`. No merge
+    unless the human sets `L9_MERGE_AUTHORIZED`.
 
   ## Scratch hold / sacred WIP (never-lose)
 
@@ -170,4 +190,3 @@ llm_rules_override: |
   - Shell gate denies WIP→/tmp moves, `rm -rf WIP`, `/tmp/cg-*-hold*` creation.
   - Non-WIP park/restore: `ops/scripts/scratch_hold.py` (vault `.l9/scratch-hold/`).
   - `make pr` / sessionStart restore-all; open holds fail-closed via `status`.
-

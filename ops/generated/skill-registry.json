@@ -1073,5 +1073,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "6b3f05526f0588c436b146b99d4b48848a3e6fe69cc58f76674bee9614a39f78",
-  "source_skill_corpus_sha256": "68a2cf7950860b9abb7b0c4f4a0b0c5fe75edce4114cb6cf8a58f15b0eb091d5"
+  "source_skill_corpus_sha256": "234feafa86d1d7382d3d2a90dc9aca83afa1d03eadf80b4e999ddb820469c6a7"
 }

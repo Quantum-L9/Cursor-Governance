@@ -8,7 +8,7 @@ WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"
 BASE_REF="${PR_BASE#origin/}"
-PR_REMEDIATE="${PR_REMEDIATE:-1}"
+PR_REMEDIATE="${PR_REMEDIATE:-0}"
 GOV_ROOT="${GOV_ROOT:-}"
 if [[ -z "$GOV_ROOT" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

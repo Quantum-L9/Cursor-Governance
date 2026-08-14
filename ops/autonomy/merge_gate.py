@@ -5,9 +5,9 @@ Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/me
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches:
-  L9_MERGE_AUTHORIZED=<nonempty reason string>
-  L4 program/plan Build: valid ``.l9/autonomy/l4-release-receipt.json`` allows
-  ordinary ``gh pr merge`` / merge MCP only (not force-push, hard-reset, admin).
+  L9_MERGE_AUTHORIZED=<nonempty reason string>  # human only
+  An L4 release receipt does NOT authorize merge (campaign_execution /
+  post_push.merge_requires=never).
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from l4_local import release_allows_remote, workspace_from_event, workspace_root  # noqa: E402
+from l4_local import workspace_from_event  # noqa: E402
 
 DENY_TOOL_NAMES = {
     "mcp__github__merge_pull_request",
@@ -31,7 +31,6 @@ DENY_TOOL_NAMES = {
 }
 
 MERGE_BASH = re.compile(r"\bgh\s+pr\s+merge\b", re.I)
-ADMIN_MERGE = re.compile(r"--admin\b", re.I)
 
 DENY_BASH_PATTERNS = (
     MERGE_BASH,
@@ -56,19 +55,6 @@ def _deny(reason: str) -> int:
     return 0
 
 
-def _l4_program_merge_authorized(root: Path) -> bool:
-    """Program/plan Build launch implies merge once L4 release is authorized."""
-    try:
-        allowed, _ = release_allows_remote(root)
-        return allowed
-    except (OSError, RuntimeError, ValueError):
-        return False
-
-
-def _merge_only_command(command: str) -> bool:
-    return bool(MERGE_BASH.search(command)) and not ADMIN_MERGE.search(command)
-
-
 def evaluate(
     tool_name: str,
     tool_input: dict[str, Any],
@@ -79,32 +65,23 @@ def evaluate(
     if os.environ.get("L9_MERGE_AUTHORIZED", "").strip():
         return None
 
-    ws = root if root is not None else workspace_root()
-    program_merge_ok = _l4_program_merge_authorized(ws)
+    del root  # signature kept for hook callers
 
     if tool_name in DENY_TOOL_NAMES:
-        if program_merge_ok:
-            return None
         return (
-            "Autonomy Surface Profile forbids merge_pull_request outside an "
-            "authorized L4 program/plan Build stack. Launching a program or "
-            "Build authorizes merge for that stack (release receipt); else set "
-            "L9_MERGE_AUTHORIZED=<reason>."
+            "Autonomy Surface Profile forbids merge_pull_request. "
+            "Do not remediate or merge. Human only: L9_MERGE_AUTHORIZED=<reason>."
         )
 
     if tool_name in {"Bash", "bash", "Shell", "shell"}:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         for pattern in DENY_BASH_PATTERNS:
-            if not pattern.search(command):
-                continue
-            if _merge_only_command(command) and program_merge_ok:
-                return None
-            return (
-                "Autonomy Surface Profile forbids merge/force/hard-reset via shell. "
-                "Program/plan Build + L4 release receipt authorizes ordinary "
-                "gh pr merge only; force/admin/hard-reset need "
-                "L9_MERGE_AUTHORIZED."
-            )
+            if pattern.search(command):
+                return (
+                    "Autonomy Surface Profile forbids merge/force/hard-reset via "
+                    "shell. Agents must use PR_REMEDIATE=0 make pr and must not "
+                    "merge. Human only: L9_MERGE_AUTHORIZED=<reason>."
+                )
     return None
 
 

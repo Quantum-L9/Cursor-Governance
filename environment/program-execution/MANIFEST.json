@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "9a17316ddbe8beb19c06f9528865759a9bcdd3adbece84e2738c01cde2516150"
+      "sha256": "55987d5bf97386bae76e53bb5602d5df578d81e5c74b55e672ffdd6b22ceb748"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -396,6 +396,14 @@
     {
       "path": "adapters/manus/tests/test_driver.py",
       "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
+    },
+    {
+      "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "sha256": "ac89e9b26ab8938fff7e2eaafb6611de0c7c244710cebc66ce95a6948d8cce45"
+    },
+    {
+      "path": "campaigns/README.md",
+      "sha256": "0805941318e4e3cfa2e2cc9ae2ad9f6d5280b7cd496dbac30f11d76e0c31b2df"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",

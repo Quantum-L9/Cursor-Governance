@@ -9,26 +9,23 @@ authority: canonical_global
 alwaysApply: true
 ---
 
-# make pr → subscribe + PR remediation (agent contract)
+# make pr → checkers + PR open (no remediation)
 
-When `make pr` / `make PR` / any capitalization of `pr` finishes with an
-`L9_AGENT_REQUIRED` block (or `.l9/pr/pr-remediation-handoff.json` was
-just written):
+Default publish path is `PR_REMEDIATE=0 make pr` (Autonomy Surface Profile
+`campaign_execution` / `l4_local_autonomy.post_push`).
 
-1. **Immediately** spawn a background Task:
-   - `run_in_background: true`
-   - `subagent_type: generalPurpose`
-   - `description: "PR #<n> poll/remediate"`
-2. Prompt = `poll_worker` from
-   `skills/l9-bounded-autonomy/references/prompt-templates.md`, filled from the
-   handoff JSON (`packet_id`, `pr_number`, `branch`, `created_by`).
-3. Load and follow `skills/l9-pr-remediation/SKILL.md` (≤3 fix-push cycles;
-   never merge; never force-push).
-4. Main agent **continues** other work — do **not** AwaitShell / block on CI
-   for that PR.
+Agents MUST:
 
-Escape hatches (no spawn required): `make pr-check`, `OPEN_PR=0`, or
-`PR_REMEDIATE=0`.
+1. Use `make pr` (any capitalization) so Makefile checkers run before push.
+2. Pass `PR_REMEDIATE=0` (this is now the script default).
+3. For Program Execution campaigns, set `PR_BASE` to
+   `origin/campaign/<campaign_id>` — never open those PRs against `main`.
+4. **Not** spawn `l9-pr-remediation` / poll workers.
+5. **Not** merge.
+
+If a human explicitly sets `PR_REMEDIATE=1` and `make pr` writes
+`.l9/pr/pr-remediation-handoff.json` plus `L9_AGENT_REQUIRED`, follow that
+human override only. The standing agent contract is no-remediate / no-merge.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),
 that counts as explicit approval for the push + PR open performed by
