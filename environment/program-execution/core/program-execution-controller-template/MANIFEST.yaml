@@ -105,8 +105,8 @@ files:
   sha256: 7aded64e0720289753f37cabdc9789f146a67cc2b06e131bf7d0ebccf67bf4b4
   bytes: 1582
 - path: schemas/handoff-receipt.schema.json
-  sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
-  bytes: 1918
+  sha256: 9ddd5c591093a6b5099dfc67f5e43d527e5c18f638b5e72141f2a474d0471455
+  bytes: 3939
 - path: schemas/program-lock.schema.json
   sha256: ff384bfa7738bdea9589eb78cdb7d5515bdb06c117150f27c8d0d6cadcaefc3e
   bytes: 2484
@@ -135,8 +135,8 @@ files:
   sha256: 96f1cc147b5417fa6d4dada330b1c455d424f42d2b0a534ace8562c4b1fad656
   bytes: 6383
 - path: scripts/pec/cli.py
-  sha256: 8af10ba3e49c0e0c9064279d7212f49bbd2218f302e7b1e7138691450fb0b0de
-  bytes: 13016
+  sha256: d6b3e8a59690dd2a8a948e033a7da285190830944837e2aa5563b37cb7833b9e
+  bytes: 13137
 - path: scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
   bytes: 2419
@@ -144,8 +144,8 @@ files:
   sha256: 35a2e669bc41a400f3128a0c0294753ccfe4c6f072111e60fba8d50c3d5f0391
   bytes: 12814
 - path: scripts/pec/controller.py
-  sha256: 1e9b9c24e86ba6d79d896ee36d34e7631be1302175350ec57ec448318df58175
-  bytes: 53411
+  sha256: e312e494735b20f100f3b35d5fd3ffe816c5923aede93d816cdaae48b8e37500
+  bytes: 56901
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -214,4 +214,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 69
-  total_bytes: 234270
+  total_bytes: 239902

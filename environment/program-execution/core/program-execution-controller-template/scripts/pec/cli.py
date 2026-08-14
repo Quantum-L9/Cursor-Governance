@@ -157,6 +157,7 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--actor", required=True)
     cmd.add_argument("--output", required=True, type=Path)
+    cmd.add_argument("--repository-root", type=Path)
 
     cmd = sub.add_parser("plan-revision")
     cmd.add_argument("--workspace", required=True, type=Path)
@@ -281,7 +282,9 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
         elif args.command == "resume":
             value = set_halt(args.workspace, False, args.reason, args.actor)
         elif args.command == "export-handoff":
-            value = export_handoff(args.workspace, args.actor, args.output)
+            value = export_handoff(
+                args.workspace, args.actor, args.output, repository_root=args.repository_root
+            )
         elif args.command == "plan-revision":
             from .replan import current_plan_revision
 
