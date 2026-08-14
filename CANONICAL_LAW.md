@@ -526,3 +526,15 @@ Authoritative corrections (do not treat older §9 “do not archive” bullets a
    later mining live in the transcript bucket.
 4. Operator: `python -m ops.graphiti.hydration.archive_transcript`
    (`--session-id` or `--backfill`). Env `L9_CHAT_TRANSCRIPT_S3_BUCKET`.
+
+<!-- DIAGNOSE_FIRST_KERNEL_PATH_V1 -->
+## Diagnose First kernel path (2026-08-14) — supersedes §11 Source kernel line
+
+Authoritative correction (do not treat the older §11 **Source kernel** path as SSOT
+where it conflicts):
+
+1. Full Diagnose First kernel SSOT is
+   `WIP/backlog/kernels/diagnose-first/Diagnose First Kernel.md`.
+2. The older pointer `WIP/Diagnose First Kernel.md` is absent on tip — do not use it.
+3. `prompts/10X Kernels/Diagnose First Kernel.md` remains a short digest only, not §11 SSOT.
+4. Skill `l9-git-work-preserve` / slash `/git-work-preserve` bind the backlog full kernel.

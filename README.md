@@ -83,7 +83,7 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 ```
 
 `execution-governance/`, `foundation/`, `environment/`,
-`telemetry/`, `prompts/`, `current_work/`, and `logs/`
+`telemetry/`, `prompts/`, and `logs/`
 hold supporting docs, in-progress notes, and legacy scaffolding; treat
 `CANONICAL_LAW.md` and `skills/*/SKILL.md` as the sources of truth over any
 directory listing, including this one. The former nested `operations/ops/`

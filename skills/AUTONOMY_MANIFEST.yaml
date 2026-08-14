@@ -1,611 +1,602 @@
 version: 1
-purpose: "Canonical cross-surface skill autonomy and routing registry for governed L9 agents."
-principle: "Model-invocable skills are selected from SKILL.md descriptions; explicit-only skills remain user-triggered; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets."
-
+purpose: Canonical cross-surface skill autonomy and routing registry for governed L9 agents.
+principle: Model-invocable skills are selected from SKILL.md descriptions; explicit-only skills remain user-triggered; deterministic behavior lives in skill instructions, references, and optional skill-local scripts/assets.
 cursor_discovery:
   enabled_by:
-    - "~/.cursor/skills symlinked to GlobalCommands/skills"
-    - "skill folder contains SKILL.md"
-    - "frontmatter name matches folder name"
-    - "description states what the skill does and when to use it"
+  - ~/.cursor/skills symlinked to GlobalCommands/skills
+  - skill folder contains SKILL.md
+  - frontmatter name matches folder name
+  - description states what the skill does and when to use it
   automatic_invocation:
-    rule: "available unless disable-model-invocation: true is present"
+    rule: 'available unless disable-model-invocation: true is present'
   explicit_invocation:
-    rule: "set disable-model-invocation: true for high-blast-radius or lifecycle-boundary skills"
-
+    rule: 'set disable-model-invocation: true for high-blast-radius or lifecycle-boundary skills'
 tiers:
   auto_invoke:
-    - skill: "l9-context7-docs"
-      use_when: "current library, framework, SDK, API, or version-specific documentation could prevent implementation mistakes"
-    - skill: "l9-recursive-optimization"
-      use_when: "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
-    - skill: "l9-structured-reasoning"
-      use_when: "planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed"
-    - skill: "l9-gmp-protocol"
-      use_when: "work must be phased, auditable, traceable, or touches protected/high-risk areas"
-    - skill: "l9-plan"
-      use_when: "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
-    - skill: "l9-code-analysis"
-      use_when: "exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots"
-    - skill: "l9-gap-analysis"
-      use_when: "assessing readiness, missing pieces, compliance drift, or percent-complete status"
-    - skill: "l9-ynp"
-      use_when: "work just completed, priorities are unclear, or the user asks what to do next"
-    - skill: "l9-skill-compiler"
-      use_when: "compiling prompts, SOPs, kernels, or workflows into standalone zero-stub skill packs"
-    - skill: "l9-wire-skill-into-repo"
-      use_when: "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
-    - skill: "l9-update-agent-docs"
-      use_when: "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
-    - skill: "l9-code-graph-rag-mcp"
-      use_when: "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
-    - skill: "l9-api-smoke-testing"
-      use_when: "verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes"
-    - skill: "l9-architecture-decision-records"
-      use_when: "capturing a significant architecture/design decision, recording trade-offs, or creating an ADR"
-    - skill: "l9-auditing-performance"
-      use_when: "the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance"
-    - skill: "l9-auditing-security"
-      use_when: "reviewing code for security risks, scanning for exposed secrets, or hardening before release"
-    - skill: "l9-monitoring-terminal-errors"
-      use_when: "a dev server, watcher, or test process is running and may emit runtime errors to fix live"
-    - skill: "l9-prompt-engineering"
-      use_when: "designing or improving an LLM prompt, system message, or structured output schema"
-    - skill: "l9-incident-response"
-      use_when: "a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem"
-    - skill: "l9-setting-up-ci"
-      use_when: "bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions"
-    - skill: "l9-graphiti-memory"
-      use_when: "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
-    - skill: "l9-aws-secrets"
-      use_when: "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
-
+  - skill: l9-context7-docs
+    use_when: current library, framework, SDK, API, or version-specific documentation could prevent implementation mistakes
+  - skill: l9-recursive-optimization
+    use_when: recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready
+  - skill: l9-structured-reasoning
+    use_when: planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed
+  - skill: l9-gmp-protocol
+    use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
+  - skill: l9-plan
+    use_when: scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first
+  - skill: l9-code-analysis
+    use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
+  - skill: l9-gap-analysis
+    use_when: assessing readiness, missing pieces, compliance drift, or percent-complete status
+  - skill: l9-ynp
+    use_when: work just completed, priorities are unclear, or the user asks what to do next
+  - skill: l9-skill-compiler
+    use_when: compiling prompts, SOPs, kernels, or workflows into standalone zero-stub skill packs
+  - skill: l9-wire-skill-into-repo
+    use_when: registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads
+  - skill: l9-update-agent-docs
+    use_when: refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes
+  - skill: l9-code-graph-rag-mcp
+    use_when: code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed
+  - skill: l9-api-smoke-testing
+    use_when: verifying API health after changes, smoke-testing endpoints, or hunting 404/500 regressions across routes
+  - skill: l9-architecture-decision-records
+    use_when: capturing a significant architecture/design decision, recording trade-offs, or creating an ADR
+  - skill: l9-auditing-performance
+    use_when: the app is slow, profiling for bottlenecks, or optimizing bundle/render/query performance
+  - skill: l9-auditing-security
+    use_when: reviewing code for security risks, scanning for exposed secrets, or hardening before release
+  - skill: l9-monitoring-terminal-errors
+    use_when: a dev server, watcher, or test process is running and may emit runtime errors to fix live
+  - skill: l9-prompt-engineering
+    use_when: designing or improving an LLM prompt, system message, or structured output schema
+  - skill: l9-incident-response
+    use_when: a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem
+  - skill: l9-setting-up-ci
+    use_when: bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions
+  - skill: l9-graphiti-memory
+    use_when: wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health
+  - skill: l9-aws-secrets
+    use_when: an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values
   explicit_only:
-    - skill: "l9-forge"
-      reason: "zero-pause batch execution"
-    - skill: "l9-harvest-pipeline"
-      reason: "sed/cp harvest deployment pipeline"
-    - skill: "l9-governance-wiring"
-      reason: "symlinks, hooks, and governance backup"
-    - skill: "l9-end-session"
-      reason: "session lifecycle boundary"
-    - skill: "l9-update-command"
-      reason: "meta tooling that changes command/skill structure"
-    - skill: "l9-code-maintenance"
-      reason: "lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate"
-    - skill: "l9-ci-ops"
-      reason: "CI/CD pipeline operations and gate authoring"
-    - skill: "l9-component-verification"
-      reason: "component audit/verify/probe escalation ladder"
-    - skill: "l9-chat-extraction"
-      reason: "extracts chat content to memory or structured output"
-    - skill: "l9-dag-authoring"
-      reason: "creates/updates DAGs — structural meta tooling"
-    - skill: "l9-inspect"
-      reason: "external code gate and file audit before code enters L9"
-    - skill: "l9-repo-index"
-      reason: "repo index export — on-demand only"
-    - skill: "l9-python-tdd-with-uv"
-      reason: "non-default stack (uv) — invoke explicitly for Python TDD"
-    - skill: "l9-kubernetes-deploying"
-      reason: "infra deploy operation — high blast radius, explicit only"
-    - skill: "l9-setting-up-terraform"
-      reason: "infra-as-code bootstrap — high blast radius, explicit only"
-    - skill: "l9-pr-remediation"
-      reason: "PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) — high blast radius, explicit only; hint_allowed for read-only Diagnose"
-    - skill: "l9-issue-remediation"
-      reason: "Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose"
-    - skill: "l9-bounded-autonomy"
-      reason: "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only"
-    - skill: "l9-cli-optimization"
-      reason: "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only"
-    - skill: "l9-e2e-blocker-resolution"
-      reason: "runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only"
-    - skill: "l9-governance-symlinks"
-      reason: "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only"
-    - skill: "l9-repository-renovation"
-      reason: "audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR — high blast radius, explicit only"
-    - skill: "l9-ui-operator"
-      reason: "SaaS admin UI mutations via Playwright cartridges — high blast radius; requires human approve"
-    - skill: "l9-mac-storage-triage"
-      reason: "macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only"
-
+  - skill: l9-forge
+    reason: zero-pause batch execution
+  - skill: l9-harvest-pipeline
+    reason: sed/cp harvest deployment pipeline
+  - skill: l9-governance-wiring
+    reason: symlinks, hooks, and governance backup
+  - skill: l9-end-session
+    reason: session lifecycle boundary
+  - skill: l9-update-command
+    reason: meta tooling that changes command/skill structure
+  - skill: l9-code-maintenance
+    reason: lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate
+  - skill: l9-ci-ops
+    reason: CI/CD pipeline operations and gate authoring
+  - skill: l9-component-verification
+    reason: component audit/verify/probe escalation ladder
+  - skill: l9-chat-extraction
+    reason: extracts chat content to memory or structured output
+  - skill: l9-dag-authoring
+    reason: creates/updates DAGs — structural meta tooling
+  - skill: l9-inspect
+    reason: external code gate and file audit before code enters L9
+  - skill: l9-repo-index
+    reason: repo index export — on-demand only
+  - skill: l9-python-tdd-with-uv
+    reason: non-default stack (uv) — invoke explicitly for Python TDD
+  - skill: l9-kubernetes-deploying
+    reason: infra deploy operation — high blast radius, explicit only
+  - skill: l9-setting-up-terraform
+    reason: infra-as-code bootstrap — high blast radius, explicit only
+  - skill: l9-pr-remediation
+    reason: PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) — high blast radius, explicit only; hint_allowed for read-only Diagnose
+  - skill: l9-issue-remediation
+    reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
+  - skill: l9-bounded-autonomy
+    reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
+  - skill: l9-cli-optimization
+    reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
+  - skill: l9-e2e-blocker-resolution
+    reason: runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only
+  - skill: l9-governance-symlinks
+    reason: narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only
+  - skill: l9-repository-renovation
+    reason: audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR — high blast radius, explicit only
+  - skill: l9-ui-operator
+    reason: SaaS admin UI mutations via Playwright cartridges — high blast radius; requires human approve
+  - skill: l9-mac-storage-triage
+    reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
+  - skill: l9-git-work-preserve
+    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   do_not_migrate_to_skills:
-    - item: "commands/violation.md"
-      reason: "violation handling belongs in always-applied rules or hooks, not optional skill context"
-    - item: "commands/mem.md"
-      reason: "memory plumbing belongs in MCP/client workflow documentation, not a model-selected skill"
-    - item: "commands/start-session.md"
-      reason: "session startup is lifecycle/bootstrap behavior; skills do not auto-run at IDE startup"
-    - item: "commands/emma-repo-commands/"
-      reason: "repo-specific Emma wiring; omit from GlobalCommands"
-    - item: "commands/workflow executors/"
-      reason: "obsolete duplicate executor folder; prefer Cursor-native skill instructions and optional skill-local scripts only when needed"
-    - item: "commands/dora-commands/"
-      reason: "unwired legacy DORA commands; archive or rebuild only if aligned to the current stack"
-    - item: "skills/_archived/l9-pr-analysis/"
-      reason: "superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile"
-    - item: "skills/_archived/l9-pr-remediation-deprecated/"
-      reason: "superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile"
-
+  - item: commands/violation.md
+    reason: violation handling belongs in always-applied rules or hooks, not optional skill context
+  - item: commands/mem.md
+    reason: memory plumbing belongs in MCP/client workflow documentation, not a model-selected skill
+  - item: commands/start-session.md
+    reason: session startup is lifecycle/bootstrap behavior; skills do not auto-run at IDE startup
+  - item: commands/emma-repo-commands/
+    reason: repo-specific Emma wiring; omit from GlobalCommands
+  - item: commands/workflow executors/
+    reason: obsolete duplicate executor folder; prefer Cursor-native skill instructions and optional skill-local scripts only when needed
+  - item: commands/dora-commands/
+    reason: unwired legacy DORA commands; archive or rebuild only if aligned to the current stack
+  - item: skills/_archived/l9-pr-analysis/
+    reason: superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-pr-remediation-deprecated/
+    reason: superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile
 reasoning_routing:
-  purpose: "Which l9-structured-reasoning reference applies to which task class."
-  sources: ["profiles/orchestrator.md", "profiles/reasoning_l9.md"]
-  note: "Advisory routing context for the model, not an execution order. No orchestrator process exists."
+  purpose: Which l9-structured-reasoning reference applies to which task class.
+  sources:
+  - profiles/orchestrator.md
+  - profiles/reasoning_l9.md
+  note: Advisory routing context for the model, not an execution order. No orchestrator process exists.
   routes:
-    - task_class: "L9 platform work — kernel, executor, memory substrate, tool dispatch, approval gates"
-      reference: "l9-structured-reasoning/references/reasoning-protocol.md#l9-platform-invariants"
-    - task_class: "Tool, library, API, or architecture selection"
-      reference: "l9-structured-reasoning/references/technical-operations-reasoning.md"
-    - task_class: "Multi-document corpus analysis — gaps, coherence, dependency mapping"
-      reference: "l9-structured-reasoning/references/document-corpus-reasoning.md"
-    - task_class: "Depth selection for a single problem"
-      reference: "l9-structured-reasoning/references/reasoning-modes.md"
-    - task_class: "Strategic angle, only when the user explicitly requests one"
-      reference: "l9-structured-reasoning/references/persona-lenses.md"
-
+  - task_class: L9 platform work — kernel, executor, memory substrate, tool dispatch, approval gates
+    reference: l9-structured-reasoning/references/reasoning-protocol.md#l9-platform-invariants
+  - task_class: Tool, library, API, or architecture selection
+    reference: l9-structured-reasoning/references/technical-operations-reasoning.md
+  - task_class: Multi-document corpus analysis — gaps, coherence, dependency mapping
+    reference: l9-structured-reasoning/references/document-corpus-reasoning.md
+  - task_class: Depth selection for a single problem
+    reference: l9-structured-reasoning/references/reasoning-modes.md
+  - task_class: Strategic angle, only when the user explicitly requests one
+    reference: l9-structured-reasoning/references/persona-lenses.md
 claude_routing:
   version: 2
-  purpose: >
-    Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and
-    Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce
-    native skill selection while preserving model judgment, explicit-only boundaries,
-    and narrow composition. Recommendation never grants mutation authority.
+  purpose: 'Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce native skill selection while preserving model judgment, explicit-only boundaries, and narrow composition. Recommendation never grants mutation authority.
+
+    '
   max_primary: 1
   max_supporting: 2
   force_threshold: 8
   advisory_threshold: 6
   primary_skills:
-    - l9-context7-docs
-    - l9-recursive-optimization
-    - l9-structured-reasoning
-    - l9-gmp-protocol
-    - l9-plan
-    - l9-code-analysis
-    - l9-gap-analysis
-    - l9-ynp
-    - l9-skill-compiler
-    - l9-wire-skill-into-repo
-    - l9-update-agent-docs
-    - l9-api-smoke-testing
-    - l9-auditing-performance
-    - l9-auditing-security
-    - l9-prompt-engineering
-    - l9-incident-response
-    - l9-setting-up-ci
-    - l9-graphiti-memory
-    - l9-aws-secrets
-    - l9-code-graph-rag-mcp
-    - l9-architecture-decision-records
-    - l9-monitoring-terminal-errors
+  - l9-context7-docs
+  - l9-recursive-optimization
+  - l9-structured-reasoning
+  - l9-gmp-protocol
+  - l9-plan
+  - l9-code-analysis
+  - l9-gap-analysis
+  - l9-ynp
+  - l9-skill-compiler
+  - l9-wire-skill-into-repo
+  - l9-update-agent-docs
+  - l9-api-smoke-testing
+  - l9-auditing-performance
+  - l9-auditing-security
+  - l9-prompt-engineering
+  - l9-incident-response
+  - l9-setting-up-ci
+  - l9-graphiti-memory
+  - l9-aws-secrets
+  - l9-code-graph-rag-mcp
+  - l9-architecture-decision-records
+  - l9-monitoring-terminal-errors
   supporting_skills:
-    - l9-structured-reasoning
-    - l9-context7-docs
-    - l9-gap-analysis
-    - l9-prompt-engineering
-    - l9-graphiti-memory
-    - l9-architecture-decision-records
-    - l9-update-agent-docs
-    - l9-ynp
-    - l9-wire-skill-into-repo
+  - l9-structured-reasoning
+  - l9-context7-docs
+  - l9-gap-analysis
+  - l9-prompt-engineering
+  - l9-graphiti-memory
+  - l9-architecture-decision-records
+  - l9-update-agent-docs
+  - l9-ynp
+  - l9-wire-skill-into-repo
   trivial_patterns:
-    - '^fix (the )?typo\b'
-    - '^correct (the )?spelling\b'
-    - '^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$'
-    - '^show (me )?(the )?(file|status|diff)\b'
+  - ^fix (the )?typo\b
+  - ^correct (the )?spelling\b
+  - ^rename [a-z0-9_.-]+ to [a-z0-9_.-]+$
+  - ^show (me )?(the )?(file|status|diff)\b
   routes:
-    - id: pr_analysis
-      primary: l9-pr-remediation
-      signal_weight: 8
-      hint_allowed: true
-      positive_signals:
-        - review pr
-        - pull request review
-        - merge blockers
-        - review comments
-        - pr readiness
-        - ready to merge
-        - analyze this pr
-        - pr analysis
-        - diagnose this pr
-      negative_signals:
-        - implement the review fixes
-        - push commits
-        - merge the pr
-        - merge this pr
-        - remediate the pr
-        - babysit the pr
-      supporting: []
-      note: >
-        explicit_only + hint_allowed — Read Diagnose path only; Converge mutate
-        requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.
-    - id: issue_remediation
-      primary: l9-issue-remediation
-      signal_weight: 8
-      hint_allowed: true
-      positive_signals:
-        - open issues
-        - github issues
-        - issue blockers
-        - unblock issues
-        - org issues
-        - cross-repo issues
-        - diagnose issues
-        - /issues
-      negative_signals:
-        - remediate the issue
-        - fix the issue
-        - unblock the issue
-        - babysit issues
-        - converge issues
-      supporting:
-        - l9-pr-remediation
-      note: >
-        explicit_only + hint_allowed — Read Diagnose path only; Converge mutate
-        requires explicit fix/remediate/unblock/babysit or autonomy packet.
-        PR green/merge stays on l9-pr-remediation.
-    - id: code_analysis
-      primary: l9-code-analysis
-      signal_weight: 8
-      positive_signals:
-        - unfamiliar repository
-        - audit this repository
-        - map the code flows
-        - map code flows
-        - explore the codebase
-        - identify hotspots
-        - analyze this code
-        - code analysis
-        - extract patterns
-        - pattern detector
-        - extract_align
-      supporting:
-        - l9-structured-reasoning
-    - id: structured_reasoning
-      primary: l9-structured-reasoning
-      signal_weight: 8
-      positive_signals:
-        - architecture plan
-        - compare the trade-offs
-        - compare trade-offs
-        - root cause analysis
-        - deep reasoning
-        - decision support
-        - trade-off analysis
-      supporting: []
-    - id: gap_analysis
-      primary: l9-gap-analysis
-      signal_weight: 8
-      positive_signals:
-        - what is missing
-        - readiness gaps
-        - percent complete
-        - compliance drift
-        - gap analysis
-        - delta gap
-      supporting:
-        - l9-structured-reasoning
-    - id: plan
-      primary: l9-plan
-      signal_weight: 8
-      positive_signals:
-        - create an execution plan
-        - write a plan first
-        - plan before building
-        - implementation plan
-        - scope is unclear
-        - decompose the requirements
-        - make a plan
-        - plan this
-        - plan before coding
-        - write a plan
-        - planning mode
-        - execution plan
-        - decompose requirements
-      supporting:
-        - l9-structured-reasoning
-    - id: gmp_protocol
-      primary: l9-gmp-protocol
-      signal_weight: 8
-      positive_signals:
-        - gmp protocol
-        - run gmp
-        - modification lock
-        - phased auditable change
-        - signed evidence report
-        - gmp phases
-      supporting:
-        - l9-structured-reasoning
-    - id: skill_compiler
-      primary: l9-skill-compiler
-      signal_weight: 8
-      positive_signals:
-        - installable skill
-        - skill pack
-        - compile this prompt into a skill
-        - turn this workflow into a skill
-        - turn this operating procedure into
-        - create a skill
-        - compile a skill
-      supporting:
-        - l9-prompt-engineering
-    - id: wire_skill
-      primary: l9-wire-skill-into-repo
-      signal_weight: 8
-      positive_signals:
-        - wire the skill
-        - wire skill into
-        - register the skill
-        - skill discovery tables
-        - subagent preload
-      supporting:
-        - l9-update-agent-docs
-    - id: update_agent_docs
-      primary: l9-update-agent-docs
-      signal_weight: 8
-      positive_signals:
-        - update agents.md
-        - refresh agent docs
-        - update claude.md
-        - update invariants.md
-        - update architecture.md
-      supporting: []
-    - id: context7_docs
-      primary: l9-context7-docs
-      signal_weight: 8
-      positive_signals:
-        - sdk documentation
-        - current library documentation
-        - version-specific documentation
-        - current api documentation
-        - current next.js
-        - check the docs
-        - use context7
-      supporting:
-        - l9-structured-reasoning
-    - id: api_smoke
-      primary: l9-api-smoke-testing
-      signal_weight: 8
-      positive_signals:
-        - smoke test the routes
-        - api endpoint returns 500
-        - api returns 500
-        - endpoint returns 404
-        - verify api health
-        - smoke test api
-      supporting:
-        - l9-structured-reasoning
-    - id: ci_setup
-      primary: l9-setting-up-ci
-      signal_weight: 8
-      positive_signals:
-        - set up github actions ci
-        - bootstrap ci
-        - add lint type checking and tests
-        - add ci stages
-        - set up ci
-      supporting:
-        - l9-structured-reasoning
-    - id: incident_response
-      primary: l9-incident-response
-      signal_weight: 8
-      positive_signals:
-        - active production incident
-        - sev1
-        - sev2
-        - coordinated mitigation
-        - write a postmortem
-      supporting:
-        - l9-structured-reasoning
-    - id: next_action
-      primary: l9-ynp
-      signal_weight: 8
-      positive_signals:
-        - what should i do next
-        - work is complete what next
-        - priorities are unclear
-        - next highest leverage action
-        - what next
-      supporting: []
-    - id: graphiti_memory
-      primary: l9-graphiti-memory
-      signal_weight: 8
-      positive_signals:
-        - graphiti memory
-        - memory prefetch
-        - mcp health failure
-        - memory bootstrap
-        - episode write
-        - graphiti health
-      supporting:
-        - l9-structured-reasoning
-    - id: aws_secrets
-      primary: l9-aws-secrets
-      signal_weight: 8
-      positive_signals:
-        - resolve aws secret
-        - openclaw-igorbot
-        - secrets registry
-        - sync secrets registry
-        - sync_secrets_registry
-        - resolve_secret
-        - aws secrets manager ref
-        - infisical
-        - infisical-cursor-governance
-        - cursor-governance project
-        - hydrate infisical
-        - INFISICAL_PROJECT_ID
-        - port_aws_to_infisical
-      supporting:
-        - l9-structured-reasoning
-    - id: performance_audit
-      primary: l9-auditing-performance
-      signal_weight: 8
-      positive_signals:
-        - performance bottleneck
-        - profile the slow
-        - app is slow
-        - optimize bundle performance
-        - slow query
-      supporting:
-        - l9-structured-reasoning
-    - id: security_audit
-      primary: l9-auditing-security
-      signal_weight: 8
-      positive_signals:
-        - exposed secrets
-        - security vulnerabilities
-        - security audit
-        - harden before release
-        - review code for security risks
-        - validate security
-        - security validator
-        - hardcoded API keys
-      supporting:
-        - l9-structured-reasoning
-    - id: prompt_engineering
-      primary: l9-prompt-engineering
-      signal_weight: 8
-      positive_signals:
-        - improve this prompt
-        - design a system prompt
-        - structured output schema
-        - prompt engineering
-      supporting:
-        - l9-structured-reasoning
-    - id: recursive_optimization
-      primary: l9-recursive-optimization
-      signal_weight: 8
-      positive_signals:
-        - recursively improve
-        - converge until execution-ready
-        - recursive optimization
-        - align this artifact pack
-        - harden this pack
-        - improve the skills
-        - proactively use skills
-        - skill router
-        - use skills more
-        - use skills
-        - wire it test it
-        - find it wire it
-      supporting:
-        - l9-structured-reasoning
-    - id: code_graph
-      primary: l9-code-graph-rag-mcp
-      signal_weight: 8
-      positive_signals:
-        - code graph
-        - batch_index
-        - semantic code search
-        - analyze_code_impact
-        - list_module_importers
-      supporting:
-        - l9-code-analysis
-    - id: adr
-      primary: l9-architecture-decision-records
-      signal_weight: 8
-      positive_signals:
-        - write an adr
-        - architecture decision record
-        - record this decision
-        - create an adr
-      supporting:
-        - l9-structured-reasoning
-    - id: terminal_errors
-      primary: l9-monitoring-terminal-errors
-      signal_weight: 8
-      positive_signals:
-        - watch the terminal
-        - fix terminal errors
-        - monitor running process
-        - stack traces from the server
-      supporting: []
-    - id: e2e_blocker
-      primary: l9-e2e-blocker-resolution
-      signal_weight: 8
-      hint_allowed: true
-      required_any:
-        - e2e
-        - end to end
-        - end-to-end
-        - playwright
-        - cypress
-        - local proof
-        - local-proof
-      positive_signals:
-        - run e2e
-        - clear e2e blockers
-        - e2e blockers
-        - e2e tests
-        - local proof
-        - fix e2e
-        - e2e failure
-        - end-to-end tests
-      negative_signals:
-        - deploy to production
-        - merge the pr
-        - kubernetes deploy
-      supporting:
-        - l9-structured-reasoning
-    - id: ui_operator
-      primary: l9-ui-operator
-      signal_weight: 8
-      hint_allowed: true
-      required_any:
-        - github packages
-        - vercel
-        - admin ui
-        - dashboard
-        - cartridge
-        - api insufficient
-        - ui operator
-      positive_signals:
-        - github packages
-        - vercel dashboard
-        - admin ui
-        - saas dashboard
-        - ui operator
-        - cartridge
-        - api insufficient
-        - configure via ui
-      supporting: []
-      note: >
-        explicit_only + hint_allowed — Read/attach only; human approve required for
-        console.py --mode run. Recommendation grants no mutation authority.
-    - id: bounded_autonomy
-      primary: l9-bounded-autonomy
-      signal_weight: 8
-      hint_allowed: true
-      required_any:
-        - /autonomy
-        - bounded autonomy
-        - autonomy campaign
-        - campaign authorization
-        - pr convergence
-        - background pr poll
-      positive_signals:
-        - /autonomy
-        - bounded autonomy campaign
-        - parallel non-dependent tasks
-        - background pr poll
-        - pr convergence campaign
-        - poll pr while continuing
-      supporting:
-        - l9-structured-reasoning
-      note: >
-        explicit_only + hint_allowed — recommendation is routing evidence only
-        (source: explicit_hint); requires /autonomy or explicit user campaign
-        authority (campaign authorization packet). Never mutate from a hint alone.
+  - id: pr_analysis
+    primary: l9-pr-remediation
+    signal_weight: 8
+    hint_allowed: true
+    positive_signals:
+    - review pr
+    - pull request review
+    - merge blockers
+    - review comments
+    - pr readiness
+    - ready to merge
+    - analyze this pr
+    - pr analysis
+    - diagnose this pr
+    negative_signals:
+    - implement the review fixes
+    - push commits
+    - merge the pr
+    - merge this pr
+    - remediate the pr
+    - babysit the pr
+    supporting: []
+    note: 'explicit_only + hint_allowed — Read Diagnose path only; Converge mutate requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.
 
-# Slash command library (file-backed). Enabled whenever l9-governance is activated.
-# Recognition: rules/02-slash-commands.mdc. Map: commands/COMMANDS_MANIFEST.yaml.
+      '
+  - id: issue_remediation
+    primary: l9-issue-remediation
+    signal_weight: 8
+    hint_allowed: true
+    positive_signals:
+    - open issues
+    - github issues
+    - issue blockers
+    - unblock issues
+    - org issues
+    - cross-repo issues
+    - diagnose issues
+    - /issues
+    negative_signals:
+    - remediate the issue
+    - fix the issue
+    - unblock the issue
+    - babysit issues
+    - converge issues
+    supporting:
+    - l9-pr-remediation
+    note: 'explicit_only + hint_allowed — Read Diagnose path only; Converge mutate requires explicit fix/remediate/unblock/babysit or autonomy packet. PR green/merge stays on l9-pr-remediation.
+
+      '
+  - id: code_analysis
+    primary: l9-code-analysis
+    signal_weight: 8
+    positive_signals:
+    - unfamiliar repository
+    - audit this repository
+    - map the code flows
+    - map code flows
+    - explore the codebase
+    - identify hotspots
+    - analyze this code
+    - code analysis
+    - extract patterns
+    - pattern detector
+    - extract_align
+    supporting:
+    - l9-structured-reasoning
+  - id: structured_reasoning
+    primary: l9-structured-reasoning
+    signal_weight: 8
+    positive_signals:
+    - architecture plan
+    - compare the trade-offs
+    - compare trade-offs
+    - root cause analysis
+    - deep reasoning
+    - decision support
+    - trade-off analysis
+    supporting: []
+  - id: gap_analysis
+    primary: l9-gap-analysis
+    signal_weight: 8
+    positive_signals:
+    - what is missing
+    - readiness gaps
+    - percent complete
+    - compliance drift
+    - gap analysis
+    - delta gap
+    supporting:
+    - l9-structured-reasoning
+  - id: plan
+    primary: l9-plan
+    signal_weight: 8
+    positive_signals:
+    - create an execution plan
+    - write a plan first
+    - plan before building
+    - implementation plan
+    - scope is unclear
+    - decompose the requirements
+    - make a plan
+    - plan this
+    - plan before coding
+    - write a plan
+    - planning mode
+    - execution plan
+    - decompose requirements
+    supporting:
+    - l9-structured-reasoning
+  - id: gmp_protocol
+    primary: l9-gmp-protocol
+    signal_weight: 8
+    positive_signals:
+    - gmp protocol
+    - run gmp
+    - modification lock
+    - phased auditable change
+    - signed evidence report
+    - gmp phases
+    supporting:
+    - l9-structured-reasoning
+  - id: skill_compiler
+    primary: l9-skill-compiler
+    signal_weight: 8
+    positive_signals:
+    - installable skill
+    - skill pack
+    - compile this prompt into a skill
+    - turn this workflow into a skill
+    - turn this operating procedure into
+    - create a skill
+    - compile a skill
+    supporting:
+    - l9-prompt-engineering
+  - id: wire_skill
+    primary: l9-wire-skill-into-repo
+    signal_weight: 8
+    positive_signals:
+    - wire the skill
+    - wire skill into
+    - register the skill
+    - skill discovery tables
+    - subagent preload
+    supporting:
+    - l9-update-agent-docs
+  - id: update_agent_docs
+    primary: l9-update-agent-docs
+    signal_weight: 8
+    positive_signals:
+    - update agents.md
+    - refresh agent docs
+    - update claude.md
+    - update invariants.md
+    - update architecture.md
+    supporting: []
+  - id: context7_docs
+    primary: l9-context7-docs
+    signal_weight: 8
+    positive_signals:
+    - sdk documentation
+    - current library documentation
+    - version-specific documentation
+    - current api documentation
+    - current next.js
+    - check the docs
+    - use context7
+    supporting:
+    - l9-structured-reasoning
+  - id: api_smoke
+    primary: l9-api-smoke-testing
+    signal_weight: 8
+    positive_signals:
+    - smoke test the routes
+    - api endpoint returns 500
+    - api returns 500
+    - endpoint returns 404
+    - verify api health
+    - smoke test api
+    supporting:
+    - l9-structured-reasoning
+  - id: ci_setup
+    primary: l9-setting-up-ci
+    signal_weight: 8
+    positive_signals:
+    - set up github actions ci
+    - bootstrap ci
+    - add lint type checking and tests
+    - add ci stages
+    - set up ci
+    supporting:
+    - l9-structured-reasoning
+  - id: incident_response
+    primary: l9-incident-response
+    signal_weight: 8
+    positive_signals:
+    - active production incident
+    - sev1
+    - sev2
+    - coordinated mitigation
+    - write a postmortem
+    supporting:
+    - l9-structured-reasoning
+  - id: next_action
+    primary: l9-ynp
+    signal_weight: 8
+    positive_signals:
+    - what should i do next
+    - work is complete what next
+    - priorities are unclear
+    - next highest leverage action
+    - what next
+    supporting: []
+  - id: graphiti_memory
+    primary: l9-graphiti-memory
+    signal_weight: 8
+    positive_signals:
+    - graphiti memory
+    - memory prefetch
+    - mcp health failure
+    - memory bootstrap
+    - episode write
+    - graphiti health
+    supporting:
+    - l9-structured-reasoning
+  - id: aws_secrets
+    primary: l9-aws-secrets
+    signal_weight: 8
+    positive_signals:
+    - resolve aws secret
+    - openclaw-igorbot
+    - secrets registry
+    - sync secrets registry
+    - sync_secrets_registry
+    - resolve_secret
+    - aws secrets manager ref
+    - infisical
+    - infisical-cursor-governance
+    - cursor-governance project
+    - hydrate infisical
+    - INFISICAL_PROJECT_ID
+    - port_aws_to_infisical
+    supporting:
+    - l9-structured-reasoning
+  - id: performance_audit
+    primary: l9-auditing-performance
+    signal_weight: 8
+    positive_signals:
+    - performance bottleneck
+    - profile the slow
+    - app is slow
+    - optimize bundle performance
+    - slow query
+    supporting:
+    - l9-structured-reasoning
+  - id: security_audit
+    primary: l9-auditing-security
+    signal_weight: 8
+    positive_signals:
+    - exposed secrets
+    - security vulnerabilities
+    - security audit
+    - harden before release
+    - review code for security risks
+    - validate security
+    - security validator
+    - hardcoded API keys
+    supporting:
+    - l9-structured-reasoning
+  - id: prompt_engineering
+    primary: l9-prompt-engineering
+    signal_weight: 8
+    positive_signals:
+    - improve this prompt
+    - design a system prompt
+    - structured output schema
+    - prompt engineering
+    supporting:
+    - l9-structured-reasoning
+  - id: recursive_optimization
+    primary: l9-recursive-optimization
+    signal_weight: 8
+    positive_signals:
+    - recursively improve
+    - converge until execution-ready
+    - recursive optimization
+    - align this artifact pack
+    - harden this pack
+    - improve the skills
+    - proactively use skills
+    - skill router
+    - use skills more
+    - use skills
+    - wire it test it
+    - find it wire it
+    supporting:
+    - l9-structured-reasoning
+  - id: code_graph
+    primary: l9-code-graph-rag-mcp
+    signal_weight: 8
+    positive_signals:
+    - code graph
+    - batch_index
+    - semantic code search
+    - analyze_code_impact
+    - list_module_importers
+    supporting:
+    - l9-code-analysis
+  - id: adr
+    primary: l9-architecture-decision-records
+    signal_weight: 8
+    positive_signals:
+    - write an adr
+    - architecture decision record
+    - record this decision
+    - create an adr
+    supporting:
+    - l9-structured-reasoning
+  - id: terminal_errors
+    primary: l9-monitoring-terminal-errors
+    signal_weight: 8
+    positive_signals:
+    - watch the terminal
+    - fix terminal errors
+    - monitor running process
+    - stack traces from the server
+    supporting: []
+  - id: e2e_blocker
+    primary: l9-e2e-blocker-resolution
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - e2e
+    - end to end
+    - end-to-end
+    - playwright
+    - cypress
+    - local proof
+    - local-proof
+    positive_signals:
+    - run e2e
+    - clear e2e blockers
+    - e2e blockers
+    - e2e tests
+    - local proof
+    - fix e2e
+    - e2e failure
+    - end-to-end tests
+    negative_signals:
+    - deploy to production
+    - merge the pr
+    - kubernetes deploy
+    supporting:
+    - l9-structured-reasoning
+  - id: ui_operator
+    primary: l9-ui-operator
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - github packages
+    - vercel
+    - admin ui
+    - dashboard
+    - cartridge
+    - api insufficient
+    - ui operator
+    positive_signals:
+    - github packages
+    - vercel dashboard
+    - admin ui
+    - saas dashboard
+    - ui operator
+    - cartridge
+    - api insufficient
+    - configure via ui
+    supporting: []
+    note: 'explicit_only + hint_allowed — Read/attach only; human approve required for console.py --mode run. Recommendation grants no mutation authority.
+
+      '
+  - id: bounded_autonomy
+    primary: l9-bounded-autonomy
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /autonomy
+    - bounded autonomy
+    - autonomy campaign
+    - campaign authorization
+    - pr convergence
+    - background pr poll
+    positive_signals:
+    - /autonomy
+    - bounded autonomy campaign
+    - parallel non-dependent tasks
+    - background pr poll
+    - pr convergence campaign
+    - poll pr while continuing
+    supporting:
+    - l9-structured-reasoning
+    note: 'explicit_only + hint_allowed — recommendation is routing evidence only (source: explicit_hint); requires /autonomy or explicit user campaign authority (campaign authorization packet). Never mutate from a hint alone.
+
+      '
 slash_commands:
-  registry: "commands/COMMANDS_MANIFEST.yaml"
-  index: "commands/commands-index.md"
-  recognition_rule: "rules/02-slash-commands.mdc"
+  registry: commands/COMMANDS_MANIFEST.yaml
+  index: commands/commands-index.md
+  recognition_rule: rules/02-slash-commands.mdc
   activation:
-    - "l9-governance Cursor local plugin (commands/ under plugin root)"
-    - ".cursor-commands symlink in consumer workspace"
-    - "sessionStart bootstrap / /start-session / make start"
-  policy: "When user types /cmd, ALWAYS read commands/{cmd}.md if present; skill is fallback only."
+  - l9-governance Cursor local plugin (commands/ under plugin root)
+  - .cursor-commands symlink in consumer workspace
+  - sessionStart bootstrap / /start-session / make start
+  policy: When user types /cmd, ALWAYS read commands/{cmd}.md if present; skill is fallback only.
