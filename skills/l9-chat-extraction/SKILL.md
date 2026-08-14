@@ -34,7 +34,7 @@ Extract durable value from conversation — lessons, patterns, errors, preferenc
 2. `.cursor/rules/87-cursor-memory-kernel.mdc` — memory write format
 3. [`references/extract-chat.md`](references/extract-chat.md) — learnings → memory workflow
 4. [`references/extract-from-chat.md`](references/extract-from-chat.md) — structured content extraction
-5. `agents/cursor/cursor_memory_client.py` — CLI entry point
+5. `.cursor-commands/ops/graphiti/graphiti_memory_client.py` — CLI entry point
 
 ## Compact Workflow
 
@@ -58,7 +58,7 @@ See [`references/extract-from-chat.md`](references/extract-from-chat.md).
 
 - [`references/extract-chat.md`](references/extract-chat.md) — lessons/patterns/errors → memory writes
 - [`references/extract-from-chat.md`](references/extract-from-chat.md) — code/decisions/requirements/actions extraction
-- `agents/cursor/cursor_memory_client.py` — memory CLI
+- `.cursor-commands/ops/graphiti/graphiti_memory_client.py` — memory CLI
 - `docs/MEMORY_PIPELINE_MAP.md` — pipeline routing
 
 ## Validation

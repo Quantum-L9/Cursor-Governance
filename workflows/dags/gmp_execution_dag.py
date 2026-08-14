@@ -97,13 +97,13 @@ Execute these commands:
 
 ```bash
 # 1. Search for related work and patterns
-python3 agents/cursor/cursor_memory_client.py search "{task_keywords}"
+python3 ops/graphiti/graphiti_memory_client.py search "{task_keywords}"
 
 # 2. Search for lessons and errors to avoid
-python3 agents/cursor/cursor_memory_client.py search "lessons errors {component}"
+python3 ops/graphiti/graphiti_memory_client.py search "lessons errors {component}"
 
 # 3. Search for domain patterns
-python3 agents/cursor/cursor_memory_client.py search "{domain} patterns"
+python3 ops/graphiti/graphiti_memory_client.py search "{domain} patterns"
 ```
 
 Output format:
@@ -323,15 +323,15 @@ Execute these commands:
 
 ```bash
 # 1. Write GMP summary
-python3 agents/cursor/cursor_memory_client.py write \\
+python3 ops/graphiti/graphiti_memory_client.py write \\
   "GMP-XXX: {summary_of_changes}. Tags: gmp, {component}" --kind lesson
 
 # 2. Write patterns discovered (if any)
-python3 agents/cursor/cursor_memory_client.py write \\
+python3 ops/graphiti/graphiti_memory_client.py write \\
   "{pattern_description}. Tags: {domain}, pattern" --kind pattern
 
 # 3. Write errors/fixes encountered (if any)
-python3 agents/cursor/cursor_memory_client.py write \\
+python3 ops/graphiti/graphiti_memory_client.py write \\
   "{error_and_fix}. Tags: error, {component}" --kind lesson
 ```
 

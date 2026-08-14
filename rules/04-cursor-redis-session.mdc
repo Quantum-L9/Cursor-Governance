@@ -57,12 +57,12 @@ If MCP is unavailable, the client can use the cache REST API:
 - **GET** `/api/v1/memory/cache/session/context/{session_id}` — get session context
 - **POST** `/api/v1/memory/cache/session/context` — body: `{ "session_id": "...", "context": { ... }, "ttl": 86400 }`
 
-Or run:
-
-```bash
-python3 agents/cursor/cursor_memory_client.py cache-session
-python3 agents/cursor/cursor_memory_client.py cache-set-session '{"summary":"...","next_steps":[...]}'
-```
+> **Retired CLI:** the former `cursor_memory_client.py cache-session` /
+> `cache-set-session` commands are removed (that client and its C1 Redis backend
+> are decommissioned). Session resume is Graphiti (`03-graphiti-memory.mdc`); use
+> `.cursor-commands/ops/graphiti/graphiti_memory_client.py inject "<task>"` at
+> resume and PICKUP writes at session end. The MCP/REST session-context tools
+> above remain the only supported short-term cache surface.
 
 ## Backend
 

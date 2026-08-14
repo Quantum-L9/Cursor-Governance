@@ -184,23 +184,35 @@ def _iter_active_files() -> list[Path]:
     return sorted(set(out))
 
 
+def _scan_retired_client(rel: str, text: str, sink: set[str]) -> None:
+    """Record any LIVE retired-client invocation (retirement notices exempt)."""
+    for i, line in enumerate(text.splitlines(), 1):
+        if not RETIRED_MEMORY_CLIENT.search(line):
+            continue
+        if ALLOW_LINE.search(line) or RETIRED_CLIENT_ALLOW.search(line):
+            continue
+        sink.add(f"{rel}:{i}: {line.strip()[:160]}")
+
+
 def main() -> int:
     findings: list[str] = []
+    client_findings: set[str] = set()
+
+    # Full active corpus: Dropbox/HTTP side doors AND the retired memory client.
     for path in _iter_active_files():
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         rel = path.relative_to(ROOT).as_posix()
+        _scan_retired_client(rel, text, client_findings)
         for i, line in enumerate(text.splitlines(), 1):
             if ALLOW_LINE.search(line):
                 continue
             if DROPBOX_LIVE.search(line) or HTTP_LIVE.search(line):
                 findings.append(f"{rel}:{i}: {line.strip()[:160]}")
 
-    # Scoped memory-front-door check: no LIVE retired-client call on any
-    # governance authority / session-protocol surface.
-    client_findings: list[str] = []
+    # Authority / session-protocol root surfaces not covered by ACTIVE_ROOTS.
     for rel in AUTHORITY_PROTOCOL_SURFACES:
         path = ROOT / rel
         if not path.is_file():
@@ -209,12 +221,7 @@ def main() -> int:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        for i, line in enumerate(text.splitlines(), 1):
-            if not RETIRED_MEMORY_CLIENT.search(line):
-                continue
-            if RETIRED_CLIENT_ALLOW.search(line):
-                continue
-            client_findings.append(f"{rel}:{i}: {line.strip()[:160]}")
+        _scan_retired_client(rel, text, client_findings)
 
     if findings or client_findings:
         if findings:
@@ -225,9 +232,9 @@ def main() -> int:
             if len(findings) > 80:
                 print(f"  ... and {len(findings) - 80} more")
         if client_findings:
-            print("FAIL: governance authority/protocol surface calls the retired memory client")
+            print("FAIL: active surface calls the retired memory client (agents/cursor/cursor_memory_client.py)")
             print("Use the Graphiti front door (ops/graphiti/graphiti_memory_client.py) instead.")
-            for hit in client_findings:
+            for hit in sorted(client_findings):
                 print(f"  {hit}")
         return 1
 
