@@ -52,10 +52,10 @@
     }
   ],
   "handoff_id": "HANDOFF-f851018936cf4e58",
-  "program_digest": "37935898886c1a40de22b6f08dd3507d383c85f48089dd1cc5a0bcf1ddfeb5f7",
+  "program_digest": "158e26c7a72176347eb2a62754b499d6387a45b988f835faacdb1f30590a9847",
   "program_id": "l9-ecosystem-fix-plan",
-  "receipt_digest": "a28e3fe0280a8d36fbc641095b199b1b2cfa4fb69ac6ef83b8238323c7276004",
-  "recommended_program_verdict": "INCONCLUSIVE",
+  "receipt_digest": "6249ec0a943a001b732ba2182c51abf53760da8e254b4c083740e4db86a947da",
+  "recommended_program_verdict": "CONVERGED",
   "residual_risks": [
     "RISK-001",
     "RISK-002",

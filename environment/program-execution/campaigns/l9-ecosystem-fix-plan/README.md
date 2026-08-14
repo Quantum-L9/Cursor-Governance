@@ -5,13 +5,13 @@ governance SSOT, per the campaign source's `intended_drop_path`.
 
 | Artifact | Purpose |
 |---|---|
-| `CAMPAIGN_SOURCE.yaml` | Immutable operator-intent seed (`l9.program-execution.campaign-source.v2`). sha256 `2e6e137597958203e595bcbceea52fc9fbb83dcb71cbc18dfa901a84f572ee79`. |
+| `CAMPAIGN_SOURCE.yaml` | Immutable operator-intent seed (`l9.program-execution.campaign-source.v2`). sha256 `158e26c7a72176347eb2a62754b499d6387a45b988f835faacdb1f30590a9847`. |
 | `source-integrity-receipt.json` | Digest binding of the source (matches the pack's recorded digest). |
 | `handoff/CAMPAIGN_HANDOFF.md` | Human-readable controller handoff + AUTH-001 approval packet. |
 | `handoff/handoff.json` | Schema-valid `program-execution-controller.handoff-receipt.v2`. |
 | `deliverables/ib-odoo_19/` | Hand-off for the out-of-scope `cryptoxdog/IB-Odoo_19` target (TASK-004 match mapper + TASK-006 converge mapping) that could not be pushed to that repo. |
 
-## Outcome (recommended verdict: INCONCLUSIVE)
+## Outcome (owner terminal verdict: CONVERGED)
 
 - **Admission locked** — TASK-001 COMPLETED, GATE-001 PASS.
 - **Reachable engineering landed as reviewable PRs** (bounded, reversible, feature-gated):
@@ -29,4 +29,7 @@ SQLite ledger, per-run workspaces, receipts) is intentionally **NOT** committed 
 under the external program root `$HOME/.l9/programs/l9-ecosystem-fix-plan`. Only the immutable
 source, closeout receipts, and the Odoo hand-off deliverable are registered in the SSOT.
 
-_Terminal verdict is reserved to AUTH-001 (program owner); the controller only recommends._
+_AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
+authorization ceiling to commit/push/pull_request. Merge remains denied. The
+controller still only recommends; IB-Odoo_19 waves remain blocked on target
+binding._

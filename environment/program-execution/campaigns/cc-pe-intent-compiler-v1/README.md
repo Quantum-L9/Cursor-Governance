@@ -29,7 +29,7 @@ It compiles into a Blueprint only by running the very `intent → resolution →
 synthesis` pipeline it specifies. No Blueprint pair is materialized at admission
 time, so there is no instantiated-mode validation receipt here.
 
-## Outcome (recommended verdict: INCONCLUSIVE)
+## Outcome (owner terminal verdict: CONVERGED)
 
 - **Registered.** The contract is preserved immutably with an integrity receipt
   and a campaign-source seed; the ten governing ADRs are captured in the
@@ -51,5 +51,7 @@ Per the established campaign convention, mutable controller runtime state is
 integrity receipt, the admission handoff, and the out-of-scope target deliverable
 are registered.
 
-_No commit/push/PR/merge/release/deploy against `l9-devpack-compiler` is
-authorized by this contract. Terminal verdict is reserved to the program owner._
+_AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
+authorization ceiling to commit/push/pull_request in Cursor-Governance. Merge
+remains denied. Commit/push/PR/merge/release/deploy against the foreign
+`l9-devpack-compiler` target stay unauthorized until that repo is attached._
