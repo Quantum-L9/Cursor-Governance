@@ -259,7 +259,7 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 | C2 | **`foundation/security/_archived/signatures/`** | Immutable provenance carve-out in migration reports; may need cold storage, not git wipe. Blocks careless whole-`foundation/` delete (A7). |
 | C3 | **`intelligence/context-memory/`** (non-archived) | CANONICAL_LAW still lists `graphiti_sink.py` / related; CHANGELOG: sink kept, never wired. Decide keep-lean vs archive. |
 | C4 | **`intelligence/reasoning/*`** | Explicit KEEP for `reasoning-snapshot-generator.py` (2026-07-19); `cursor-native-reasoning.md` overlap with `l9-structured-reasoning` TBD. |
-| C5 | **`current_work/`**, **`reports/`**, **`WIP/`** | Scratch / evidence / harvest — cleanup by human policy, not “orphan code”. |
+| C5 | **`reports/`**, **`WIP/`** | Scratch / evidence — cleanup by human policy. **`current_work/`** deleted (RB-HK-001); `repo-hygiene` fail-closes if it reappears. |
 | C6 | **`commands/emma-repo-commands/`** | Manifest omit from GlobalCommands; still has `wire_emma.md` — owner call. |
 
 ### Suggested delete PR sequence (when authorized)

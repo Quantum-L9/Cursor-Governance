@@ -133,3 +133,6 @@ docs/skills-inventory.md
 .harvest_executor_state.json
 # .governance-build-lock stays tracked — session_start_bootstrap.sh reads it
 
+# retired harvest dump — repo-hygiene fail-closes if this directory reappears
+current_work/
+
