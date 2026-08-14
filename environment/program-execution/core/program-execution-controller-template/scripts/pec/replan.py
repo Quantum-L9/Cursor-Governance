@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator
+
 from .common import digest_object, load_json, utc_now, write_json
 from .controller import ControllerError, _runtime_config, open_runtime
 
@@ -23,6 +25,29 @@ FORBIDDEN = {
 
 PLAN_REVISION_REL = Path("runtime/plan-revision.json")
 REVISIONS_REL = Path("runtime/replan-revisions")
+SCHEMA_REL = Path("shared/schemas/replan-revision.schema.json")
+
+
+def _revision_schema() -> dict[str, Any]:
+    """Load the canonical Replan Revision schema from the core pair."""
+    core = Path(__file__).resolve().parents[3]
+    path = core / SCHEMA_REL
+    if not path.is_file():
+        raise ControllerError(f"Replan Revision schema missing from core pair: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _validate_revision_payload(payload: dict[str, Any]) -> None:
+    errors = sorted(
+        Draft202012Validator(_revision_schema()).iter_errors(payload),
+        key=lambda error: list(error.path),
+    )
+    if errors:
+        messages = [
+            f"{'.'.join(str(part) for part in error.path) or '<root>'}: {error.message}"
+            for error in errors
+        ]
+        raise ControllerError("Replan Revision schema validation failed: " + "; ".join(messages))
 
 
 def _lock_digest(workspace: Path) -> str:
@@ -78,6 +103,11 @@ def propose(
     lock_digest = _lock_digest(workspace)
     plan = current_plan_revision(workspace)
     containment = _containment(delta)
+    if containment["result"] == "FAIL":
+        raise ControllerError(
+            "authority containment failed: "
+            + ", ".join(containment["forbidden_classes_present"])
+        )
     payload: dict[str, Any] = {
         "schema": "program-execution.replan.revision.v1",
         "revision_id": revision_id,
@@ -98,6 +128,7 @@ def propose(
         "rejected_reason": None,
     }
     payload["revision_digest"] = digest_object(payload)
+    _validate_revision_payload(payload)
     target = workspace / REVISIONS_REL / f"{revision_id}.json"
     if target.exists():
         raise ControllerError(f"replan revision already exists: {revision_id}")
@@ -233,6 +264,62 @@ def list_revisions(workspace: Path) -> list[dict[str, Any]]:
     for path in sorted(root.glob("*.json")):
         items.append(json.loads(path.read_text(encoding="utf-8")))
     return items
+
+
+def plan_adaptation(workspace: Path) -> dict[str, Any]:
+    """Future-plan adaptation view derived from the active Replan Revision.
+
+    The Program Lock never mutates; the Controller computes the current future
+    execution plan as locked dependencies plus the active revision's bounded
+    operations. Returns dependency overrides, runtime-only split children, and
+    scoped runtime Unknowns — all reversible, all outside git.
+    """
+    workspace = workspace.resolve()
+    plan = current_plan_revision(workspace)
+    revision_id = plan.get("active_replan_revision_id")
+    empty: dict[str, Any] = {
+        "dependency_overrides": {},
+        "runtime_child_tasks": {},
+        "scoped_unknowns": [],
+        "active_replan_revision_id": None,
+    }
+    if not revision_id:
+        return empty
+    path = workspace / REVISIONS_REL / f"{revision_id}.json"
+    if not path.is_file():
+        raise ControllerError(f"active Replan Revision missing: {revision_id}")
+    revision = load_json(path)
+    if revision["status"] != "activated":
+        raise ControllerError(f"active Replan Revision is not activated: {revision_id}")
+    overrides: dict[str, dict[str, list[str]]] = {}
+    children: dict[str, list[str]] = {}
+    unknowns: list[dict[str, Any]] = []
+    for operation in (revision.get("delta") or {}).get("operations") or []:
+        opcode = operation.get("op")
+        target = operation.get("target_task_id")
+        if not target:
+            continue
+        if opcode == "reorder":
+            overrides[target] = {
+                "add": list(operation.get("add_dependencies") or []),
+                "remove": list(operation.get("remove_dependencies") or []),
+            }
+        elif opcode == "split":
+            children[target] = list(operation.get("child_task_ids") or [])
+        elif opcode == "add_unknown":
+            unknowns.append(
+                {
+                    "unknown_id": operation.get("unknown_id"),
+                    "blocked_task_ids": list(operation.get("blocked_task_ids") or []),
+                    "note": operation.get("note"),
+                }
+            )
+    return {
+        "dependency_overrides": overrides,
+        "runtime_child_tasks": children,
+        "scoped_unknowns": unknowns,
+        "active_replan_revision_id": revision_id,
+    }
 
 
 def project(workspace: Path, *, repository_root: Path, actor: str,

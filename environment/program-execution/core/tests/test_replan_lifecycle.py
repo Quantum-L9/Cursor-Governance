@@ -116,13 +116,11 @@ def runtime(tmp_path: Path):
     return workspace
 
 
-def _delta(classes: list[str]) -> dict:
+def _delta(classes: list[str], operations: list[dict] | None = None) -> dict:
     return {
         "classes": classes,
-        "future_task_splits": [],
-        "dependency_changes": [],
-        "diagnostics_added": [],
-        "scoped_unknowns": [],
+        "operations": operations
+        or [{"op": "adapt_strategy", "target_task_id": "TASK-003", "note": "fixture"}],
     }
 
 
@@ -132,7 +130,7 @@ def _propose(workspace: Path, revision_id: str = "rev-1", **overrides) -> dict:
         program_id="fixture-replan-program",
         trigger_evidence_ids=["EVID-001"],
         affected_future_task_ids=["TASK-003"],
-        delta=_delta(["future_task_split"]),
+        delta=_delta(["reversible_implementation_strategy"]),
         expected_validation_effect="deterministic_local_validation",
         proposer_actor="worker-a",
     )
@@ -187,14 +185,18 @@ def test_activation_requires_controller_actor(runtime):
         activate(runtime, "rev-1", actor="worker-a")
 
 
-def test_authority_widening_delta_blocks_verification(runtime):
-    # authorization_ceiling is the contract's permission-widening class.
-    _propose(runtime, revision_id="rev-wide", delta=_delta(["authorization_ceiling"]))
-    revision = next(r for r in list_revisions(runtime) if r["revision_id"] == "rev-wide")
-    assert revision["authority_containment"]["result"] == "FAIL"
-    assert revision["authority_containment"]["widens_lock"] is True
+def test_authority_widening_delta_fails_closed_at_propose(runtime):
+    # authorization_ceiling is the contract's permission-widening class. A
+    # hostile delta is rejected before any revision file is written.
     with pytest.raises(ControllerError, match="authority containment failed"):
-        verify(runtime, "rev-wide", verifier_actor="verifier-a")
+        _propose(runtime, revision_id="rev-wide", delta=_delta(["authorization_ceiling"]))
+    assert [r["revision_id"] for r in list_revisions(runtime)] == []
+
+
+def test_unknown_delta_class_fails_schema_validation(runtime):
+    with pytest.raises(ControllerError, match="schema validation failed"):
+        _propose(runtime, revision_id="rev-unknown", delta=_delta(["silent_edit"]))
+    assert [r["revision_id"] for r in list_revisions(runtime)] == []
 
 
 def test_forbidden_classes_pinned_to_canonical_contract():
@@ -204,10 +206,10 @@ def test_forbidden_classes_pinned_to_canonical_contract():
     assert replan.FORBIDDEN == set(contract["forbidden_authority_delta_classes"])
 
 
-def test_missing_trigger_evidence_blocks_verification(runtime):
-    _propose(runtime, trigger_evidence_ids=[])
-    with pytest.raises(ControllerError, match="trigger evidence required"):
-        verify(runtime, "rev-1", verifier_actor="verifier-a")
+def test_missing_trigger_evidence_fails_closed_at_propose(runtime):
+    with pytest.raises(ControllerError, match="schema validation failed"):
+        _propose(runtime, trigger_evidence_ids=[])
+    assert [r["revision_id"] for r in list_revisions(runtime)] == []
 
 
 def test_rejection_preserves_previous_valid_plan(runtime):

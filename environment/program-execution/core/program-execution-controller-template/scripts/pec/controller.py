@@ -291,10 +291,22 @@ def task_readiness(
     db: StateDB, task: dict[str, Any], workspace: Path | None = None
 ) -> tuple[bool, list[str]]:
     blockers: list[str] = []
+    adaptation: dict[str, Any] = {
+        "dependency_overrides": {},
+        "scoped_unknowns": [],
+    }
     if workspace is not None:
         lock_ok, _ = verify_program_lock(workspace / "runtime" / "program-lock.json")
         if not lock_ok:
             blockers.append("program_lock_stale_or_invalid")
+        try:
+            from .replan import plan_adaptation
+
+            adaptation = plan_adaptation(workspace)
+        except ControllerError:
+            # Replan layer unavailable or plan revision not yet initialized;
+            # readiness falls back to the locked plan alone.
+            pass
     if db.get_meta("global_halt", False):
         blockers.append("global_halt")
     if task["definition_status"] != "ready":
@@ -311,7 +323,15 @@ def task_readiness(
         "CANCELLED",
     }:
         blockers.append(f"runtime_state_not_claimable:{task['runtime_state']}")
-    for dep in task["dependencies"]:
+    override = adaptation["dependency_overrides"].get(task["id"])
+    effective_dependencies = list(task["dependencies"])
+    if override:
+        removed = set(override.get("remove") or [])
+        effective_dependencies = [dep for dep in effective_dependencies if dep not in removed]
+        for dep in override.get("add") or []:
+            if dep not in effective_dependencies:
+                effective_dependencies.append(dep)
+    for dep in effective_dependencies:
         dependency = db.task(dep)
         if dependency is None or dependency["runtime_state"] not in {"PASSED_LOCAL", "COMPLETED"}:
             blockers.append(f"dependency_not_complete:{dep}")
@@ -327,6 +347,9 @@ def task_readiness(
             or not item["evidence_ids"]
         ):
             blockers.append(f"blocking_unknown:{unknown_id}")
+    for scoped in adaptation["scoped_unknowns"]:
+        if task["id"] in (scoped.get("blocked_task_ids") or []) and scoped.get("unknown_id"):
+            blockers.append(f"scoped_runtime_unknown:{scoped['unknown_id']}")
     for evidence_id in task["required_evidence"]:
         if not _evidence_valid(db, evidence_id):
             blockers.append(f"required_evidence_missing_or_invalid:{evidence_id}")
@@ -446,7 +469,29 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
                 "blockers": blockers,
             }
             (ready if ok else blocked).append(item)
-        return {"ready": ready, "blocked": blocked}
+        children: list[dict[str, Any]] = []
+        try:
+            from .replan import plan_adaptation
+
+            adaptation = plan_adaptation(workspace)
+        except ControllerError:
+            adaptation = {"runtime_child_tasks": {}, "scoped_unknowns": []}
+        for parent_id, child_ids in adaptation["runtime_child_tasks"].items():
+            parent = db.task(parent_id)
+            if parent is None:
+                continue
+            for child_id in child_ids:
+                children.append(
+                    {
+                        "id": child_id,
+                        "title": f"{parent['title']} / {child_id}",
+                        "runtime_only": True,
+                        "parent_task_id": parent_id,
+                        "parent_authority": parent.get("authorization_ceiling", {}),
+                        "blockers": ["runtime_split_child_pending_admission"],
+                    }
+                )
+        return {"ready": ready, "blocked": blocked, "runtime_split_children": children}
     finally:
         db.close()
 

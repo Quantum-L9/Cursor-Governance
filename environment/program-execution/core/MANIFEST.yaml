@@ -342,14 +342,14 @@ files:
   sha256: 35a2e669bc41a400f3128a0c0294753ccfe4c6f072111e60fba8d50c3d5f0391
   bytes: 12814
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 14becbf2d32f15101cf6e7a92e0e70a4d6c9cf959d0dd2826a405b4160c32858
-  bytes: 51364
+  sha256: 1e9b9c24e86ba6d79d896ee36d34e7631be1302175350ec57ec448318df58175
+  bytes: 53411
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
 - path: program-execution-controller-template/scripts/pec/replan.py
-  sha256: b73006bb02132c0a2acee8ace357c1e51234aae07b6459fe858240d5571cc80f
-  bytes: 10348
+  sha256: 98c29e044902005024781cdd6c143ea573002b4defc3d3fd7f88fba93d988250
+  bytes: 13840
 - path: program-execution-controller-template/scripts/pec/state.py
   sha256: 56782e09c6e9a4c5b534a0fd331da02efb8e4930d4d7a65f57217c1d68ddbd2b
   bytes: 23430
@@ -459,17 +459,20 @@ files:
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
 - path: shared/schemas/replan-revision.schema.json
-  sha256: 8572cdd2e616c5e0e83c84a8d0d1c21be304b1b691026df143dca1a54027c5e7
-  bytes: 4109
+  sha256: 89546ee78fc22a01b71f53a975d232a8b69a8c09f994dc1bc3df491a9708cbba
+  bytes: 5166
 - path: tests/test_pair_alignment.py
   sha256: 81b298a4128e9a2674ab00519c4e22c908e4331d7244c8b4b06b9606a81e50ec
   bytes: 1748
 - path: tests/test_replan_contract.py
   sha256: 339df81ed6f92d4c9ff97bab242f070df187d7cabc80380b17ced6eb24b840e3
   bytes: 3979
+- path: tests/test_replan_integration.py
+  sha256: df5b1f24e0eaf48300122c10fde1ef6b8eae5aba921f3b14d646bacebce72af1
+  bytes: 10327
 - path: tests/test_replan_lifecycle.py
-  sha256: 529f3e0609059456d35777b97461955483b225da8c6d11b1f0a9e6e006d4e129
-  bytes: 9922
+  sha256: 1d564de7a9a9887c872758f0fbe0be169f9c4785b9d4dafd1cea923bb0b2d3cc
+  bytes: 10133
 - path: validation/execution_trace.jsonl
   sha256: 2ae20bccfb4dcc8ecf89e7a7a8e8628b19e78b279f4cd1c24e69f2e8c19ae4d0
   bytes: 558
@@ -489,5 +492,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 161
-  total_bytes: 412468
+  file_count: 162
+  total_bytes: 429602
