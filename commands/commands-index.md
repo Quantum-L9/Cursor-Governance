@@ -29,6 +29,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | `/ynp` | Highest-leverage next action |
 | `/rules` | Load governance rules / project state |
 | `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class `canonical.template.executable_plan.v1` |
+| `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
 | `/analyze` | Explore structure, flows, hotspots |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |

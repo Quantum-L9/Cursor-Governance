@@ -1,39 +1,29 @@
 # CODEOWNERS for Quantum-L9/Cursor-Governance
 #
-# Note: this file only governs THIS repo. It does not cascade org-wide, and
-# the nested .github/.github/CODEOWNERS in Quantum-L9/.github does not
-# cascade to this repo either — each repo needs its own.
+# AUTO-REQUEST DISABLED (solo maintainer): live @owner lines cause GitHub to
+# automatically request review on every PR (Dependabot included). There is no
+# repository API/setting to turn that off while keeping live owners.
+# Ownership map retained below as comments for humans; re-enable @owners when
+# a second reviewer joins.
 #
-# Single-maintainer org today (confirmed via `gh api orgs/Quantum-L9/members`).
-# Split this file by path once a second reviewer joins.
+# Note: this file only governs THIS repo. It does not cascade org-wide.
+#
 
-*                                       @cryptoxdog
-
-# High-risk files per AGENTS.md §5.2 — listed explicitly so a future
-# multi-owner split doesn't silently drop required review on these.
-/CANONICAL_LAW.md                      @cryptoxdog
-/ops/scripts/resolve_governance_paths.sh @cryptoxdog
-/ops/scripts/backup_to_github.sh       @cryptoxdog
-/ops/hooks/session_start_bootstrap.sh  @cryptoxdog
-/ops/scripts/_archived/                @cryptoxdog
-# Protected build/dependency + gate contract — append-only, never overwritten
-# by tooling (ORG_INVARIANTS.yaml protected_paths; AGENTS.md §5.2).
-/pyproject.toml                        @cryptoxdog
-
-# Repository-root protection. The `*` rule above already routes every root file to
-# the owner; these explicit entries keep that review requirement even after a future
-# multi-owner split. The authoritative protected-file list and per-file tier live in
-# ops/config/root-file-protection.json, mechanically enforced on every PR by
-# .github/workflows/root-file-protection.yml — that CI gate enforces the policy on
-# every root file independently of CODEOWNERS pattern matching.
-/AGENTS.md                             @cryptoxdog
-/ORG_INVARIANTS.yaml                   @cryptoxdog
-/README.md                             @cryptoxdog
-/LICENSE                               @cryptoxdog
-/CODEOWNERS                            @cryptoxdog
-/Makefile                              @cryptoxdog
-/requirements.txt                      @cryptoxdog
-/conftest.py                           @cryptoxdog
-/ops/config/root-file-protection.json  @cryptoxdog
-/ops/scripts/validate_root_file_protection.py @cryptoxdog
-/biome.json                            @cryptoxdog
+# *                                       @cryptoxdog
+# /CANONICAL_LAW.md                      @cryptoxdog
+# /ops/scripts/resolve_governance_paths.sh @cryptoxdog
+# /ops/scripts/backup_to_github.sh       @cryptoxdog
+# /ops/hooks/session_start_bootstrap.sh  @cryptoxdog
+# /ops/scripts/_archived/                @cryptoxdog
+# /pyproject.toml                        @cryptoxdog
+# /AGENTS.md                             @cryptoxdog
+# /ORG_INVARIANTS.yaml                   @cryptoxdog
+# /README.md                             @cryptoxdog
+# /LICENSE                               @cryptoxdog
+# /CODEOWNERS                            @cryptoxdog
+# /Makefile                              @cryptoxdog
+# /requirements.txt                      @cryptoxdog
+# /conftest.py                           @cryptoxdog
+# /ops/config/root-file-protection.json  @cryptoxdog
+# /ops/scripts/validate_root_file_protection.py @cryptoxdog
+# /biome.json                            @cryptoxdog
