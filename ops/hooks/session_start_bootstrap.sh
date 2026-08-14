@@ -17,11 +17,37 @@ fi
 # Slow reconcilers (plugins, IDE, cold venv) are backgrounded during sessionStart.
 # Manual `make start` sets L9_BOOTSTRAP_SYNC=1 to run them in the foreground.
 BOOTSTRAP_SYNC="${L9_BOOTSTRAP_SYNC:-0}"
+
+# Reconcilers write into the workspace (.vscode/settings.json, .claude/, the
+# AGENTS.md formatter block). Writing while `make pr` runs lands the change
+# inside some pre-commit hook's window, and pre-commit then reports "files were
+# modified by this hook" against a hook that never wrote anything. Yield to the
+# repo-write lock instead; activation reconciles again next session.
+_reconciler_guarded() {
+  local lib="${GC:-$HOME/.cursor-governance}/ops/scripts/lib/repo_write_lock.sh"
+  local ws="${REPO:-$PWD}" rc=0
+  if [ ! -f "$lib" ]; then
+    "$@"
+    return $?
+  fi
+  # shellcheck source=/dev/null
+  . "$lib"
+  export L9_REPO_WRITE_LOCK_LABEL="sessionStart-reconciler"
+  if repo_write_lock_acquire "$ws" "${L9_RECONCILER_LOCK_WAIT_S:-45}"; then
+    "$@"
+    rc=$?
+    repo_write_lock_release
+    return $rc
+  fi
+  echo "L9: reconciler skipped ($(repo_write_lock_skip_note "$ws")): $*" >&2
+  return 0
+}
+
 run_reconciler() {
   if [ "$BOOTSTRAP_SYNC" = "1" ]; then
-    "$@" >&2 || true
+    _reconciler_guarded "$@" >&2 || true
   else
-    ( "$@" >/dev/null 2>&1 & )
+    ( _reconciler_guarded "$@" >/dev/null 2>&1 & )
   fi
 }
 

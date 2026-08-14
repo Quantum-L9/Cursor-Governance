@@ -13,6 +13,14 @@ PR_MYPY_STRICT="${PR_MYPY_STRICT:-0}"
 cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
 
+# The governance generators and validators target the project interpreter
+# (3.11+, `from datetime import UTC`). A bare `python3` can be the system 3.9,
+# in which case the sync step aborts the gate with an import traceback and no
+# verdict. Prefer the project venv when it exists.
+if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
+  export PATH="$GOV_ROOT/.venv/bin:$PATH"
+fi
+
 # Never-lose: restore open/legacy holds around the gate; fail closed if still open.
 _scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
 _scratch_hold_restore() {
@@ -28,22 +36,126 @@ _scratch_hold_status() {
 
 _scratch_hold_restore
 
+# Repo-write lock held for the whole gate. pre-commit blames "files were
+# modified by this hook" on whichever hook was running when the tree changed
+# (pre_commit/commands/run.py _run_single_hook), so backgrounded reconcilers
+# must not write during the run. Advisory: a missed lock warns, never blocks.
+# shellcheck source=lib/repo_write_lock.sh
+. "$GOV_ROOT/ops/scripts/lib/repo_write_lock.sh"
+export L9_REPO_WRITE_LOCK_LABEL="make-pr-gate"
+if repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}"; then
+  echo "repo-write lock: held for this gate run"
+else
+  echo "WARN: $(repo_write_lock_skip_note "$WS") — continuing; concurrent writes may be misattributed"
+fi
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 
 status_before="$(mktemp)"
 changed_file="$(mktemp)"
-trap 'rm -f "$status_before" "$changed_file"' EXIT
+precommit_log="$(mktemp)"
+py_list="$(mktemp)"
+trap 'rm -f "$status_before" "$changed_file" "$precommit_log" "$py_list"; repo_write_lock_release' EXIT
 git status --porcelain >"$status_before"
 
-bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS"
+# Two dirtiness domains, deliberately reported apart:
+#   tracked   — git diff, exactly what pre-commit compares (run.py _get_diff)
+#   worktree  — git status --porcelain, which also sees untracked files
+_tracked_diff_digest() {
+  # cksum, not shasum/sha1sum: POSIX and present on every runner. This only
+  # needs to detect change, not resist collision attacks.
+  git diff --no-ext-diff --no-textconv --ignore-submodules | cksum | awk '{print $1}'
+}
+tracked_before="$(_tracked_diff_digest)"
 
-if ! git status --porcelain | diff -q "$status_before" - >/dev/null; then
-  if bash "$SCRIPT_DIR/classify_generated_dirtiness.sh" "$WS" "$status_before"; then
-    echo "WARN: generated artifacts updated by pre-commit — stage them with your commit:"
+# shellcheck source=lib/precommit_log.sh
+. "$GOV_ROOT/ops/scripts/lib/precommit_log.sh"
+
+# Print "<hook-id> (exit <n>)" for every hook that genuinely returned non-zero.
+# A hook that only tripped the modified-files check prints no exit-code line.
+_precommit_failing_hooks() {
+  precommit_failed_hooks "$1" | while read -r hook_id code; do
+    printf '  %s (exit %s)\n' "$hook_id" "$code"
+  done
+}
+
+# Compare the current worktree against $status_before. 0 = clean or only
+# generated/scratch churn (WARN), 1 = non-generated dirt the caller must handle.
+_gate_classify_dirtiness() {
+  local phase="$1" after rc=0
+  after="$(mktemp)"
+  git status --porcelain >"$after"
+  if diff -q "$status_before" "$after" >/dev/null; then
+    rm -f "$after"
+    return 0
+  fi
+  if bash "$SCRIPT_DIR/classify_generated_dirtiness.sh" "$WS" "$status_before" "$after"; then
+    echo "WARN: generated/scratch artifacts changed during ${phase} — stage them with your commit:"
     git status --short
   else
-    echo "FAIL: pre-commit autofixed non-generated files — review, stage, and re-run make pr"
+    rc=1
+  fi
+  rm -f "$after"
+  return "$rc"
+}
+
+_gate_run_precommit() {
+  local rc=0
+  set +e
+  bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
+  rc="${PIPESTATUS[0]}"
+  set -e
+  return "$rc"
+}
+
+_gate_run_precommit && precommit_rc=0 || precommit_rc=$?
+
+if [[ "${L9_GATE_STRICT_LEGACY:-0}" = "1" && "$precommit_rc" -ne 0 ]]; then
+  echo "FAIL: pre-commit exited ${precommit_rc} (L9_GATE_STRICT_LEGACY=1 — no classification)"
+  exit "$precommit_rc"
+fi
+
+# pre-commit returns non-zero for `files_modified or bool(retcode)` (run.py).
+# Only a real hook exit code is a validator failure; a modified tree is
+# dirtiness this gate can classify, attribute, and often heal.
+if [[ "$precommit_rc" -ne 0 ]] && grep -q '^- exit code: ' "$precommit_log"; then
+  echo "FAIL: pre-commit hook(s) failed:"
+  _precommit_failing_hooks "$precommit_log"
+  exit 1
+fi
+
+if [[ "$precommit_rc" -ne 0 ]]; then
+  echo "NOTE: pre-commit exited ${precommit_rc} solely because the worktree changed during a hook."
+  echo "      That names the hook's time window, not the writer — classifying below."
+fi
+
+if ! _gate_classify_dirtiness "pre-commit"; then
+  if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
+    bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" "$precommit_log" || true
+  fi
+
+  if [[ "${PR_GATE_RETRY:-1}" = "1" ]]; then
+    echo "--- quiescing and retrying pre-commit once ---"
+    repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}" \
+      || echo "WARN: $(repo_write_lock_skip_note "$WS") — retrying anyway"
+    git status --porcelain >"$status_before"
+    tracked_before="$(_tracked_diff_digest)"
+    _gate_run_precommit && precommit_rc=0 || precommit_rc=$?
+    if [[ "$precommit_rc" -ne 0 ]] && grep -q '^- exit code: ' "$precommit_log"; then
+      echo "FAIL: pre-commit hook(s) failed on retry:"
+      _precommit_failing_hooks "$precommit_log"
+      exit 1
+    fi
+  fi
+
+  if ! _gate_classify_dirtiness "pre-commit retry"; then
+    echo "FAIL: non-generated files changed during the gate and persisted through a retry."
+    echo "      Review the attribution above; stage intended edits, or stop the writer, then re-run make pr."
+    if [[ "$(_tracked_diff_digest)" != "$tracked_before" ]]; then
+      echo "      tracked-file changes present (this is what pre-commit compares)"
+    else
+      echo "      untracked-only churn (never triggers pre-commit's modified-files check)"
+    fi
     git status --short
     exit 1
   fi
@@ -54,8 +166,6 @@ PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
 
 echo "--- ruff (changed Python) ---"
 py_count=0
-py_list="$(mktemp)"
-trap 'rm -f "$status_before" "$changed_file" "$py_list"' EXIT
 grep -E '\.(py|pyi)$' "$changed_file" >"$py_list" || true
 py_count="$(grep -c . "$py_list" || true)"
 if [[ "${py_count:-0}" -eq 0 ]]; then
@@ -89,15 +199,13 @@ python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
   --root "$WS" \
   --changed-file "$changed_file" \
   --check
-if ! git status --porcelain | diff -q "$status_before" - >/dev/null; then
-  if bash "$SCRIPT_DIR/classify_generated_dirtiness.sh" "$WS" "$status_before"; then
-    echo "WARN: stage generated files with your commit (validators PASS):"
-    git status --short
-  else
-    echo "FAIL: unexpected non-generated dirtiness after sync"
-    git status --short
-    exit 1
+if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
+  if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
+    bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" || true
   fi
+  echo "FAIL: unexpected non-generated dirtiness after sync"
+  git status --short
+  exit 1
 fi
 
 echo "--- skill-activation ---"

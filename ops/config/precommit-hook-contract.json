@@ -1,0 +1,59 @@
+{
+  "$comment": "Declares, per pre-commit hook id, whether the hook may write into the repository. pre-commit reports 'files were modified by this hook' for any tree change inside that hook's wall-clock window (pre_commit/commands/run.py _run_single_hook), so a read_only declaration is what lets ops/scripts/attribute_tree_writers.sh exonerate a hook and look for the real writer. Validated by ops/scripts/validate_precommit_hook_contract.py against .pre-commit-config.yaml — every configured hook id must appear here.",
+  "version": 1,
+  "hooks": {
+    "check-merge-conflict": {
+      "mode": "read_only",
+      "note": "upstream pre-commit-hooks scanner"
+    },
+    "no-hardcoded-paths": {
+      "mode": "read_only",
+      "note": "validate_governance_no_hardcoded_paths.sh — greps only"
+    },
+    "symlinks-check": {
+      "mode": "read_only",
+      "note": "validate_governance_symlinks.sh writes only $HOME/.cursor/plans, outside the repo. Widest window in the hook set, so it absorbs blame for concurrent writers."
+    },
+    "legacy-doctrine-residue": {
+      "mode": "read_only",
+      "note": "validate_legacy_doctrine_residue.py — greps only"
+    },
+    "sync-generated-artifacts": {
+      "mode": "writer",
+      "output_prefixes": [
+        "rules/RULES-MANIFEST.",
+        "environment/generated/llm-rules/",
+        "ops/generated/skill-registry.json",
+        "environment/agents/adapters/claude-code/settings.template.json",
+        "commands/COMMANDS_MANIFEST.yaml",
+        "skills/AUTONOMY_MANIFEST.yaml",
+        "environment/program-execution/core/MANIFEST.yaml",
+        "environment/program-execution/MANIFEST.json",
+        "skills/"
+      ],
+      "note": "SKIPped on the make pr path; run_pr_gate.sh heals separately. Prefixes mirror GENERATED_PATH_PREFIXES in ops/scripts/sync_generated_artifacts.py."
+    },
+    "rules-check": {
+      "mode": "read_only",
+      "note": "check_rules_standard.py ratchet — reports only"
+    },
+    "skills-check": {
+      "mode": "read_only",
+      "note": "check_skills_standard.py ratchet — reports only"
+    },
+    "repo-hygiene": {
+      "mode": "read_only",
+      "note": "tools/check_repo_hygiene.py — reports only"
+    },
+    "ruff": {
+      "mode": "writer",
+      "output_prefixes": [],
+      "note": "runs with --fix; may rewrite any passed Python file"
+    },
+    "ruff-format": {
+      "mode": "writer",
+      "output_prefixes": [],
+      "note": "reformats any passed Python file"
+    }
+  }
+}

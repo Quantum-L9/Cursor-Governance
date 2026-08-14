@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-14T17:08:52Z'
+generated_utc: '2026-08-14T18:39:33Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:8d0153bd0c1f87eb80465918bbc8810fcf71d87888aa5f0c7d62817a44db47fe
+source_tree_digest: sha256:d54f32afb94f6449de9f120e5375dc15086312680d4702e376793b4760e50015
 summary:
   total_mdc_files: 63
   always_apply_true: 27
@@ -533,8 +533,8 @@ rules:
   globs: null
   first_heading: make pr → subscribe + PR remediation (agent contract)
   has_yaml_frontmatter: true
-  line_count: 36
-  content_digest: sha256:d2f7931bd6c9b7bf2085e65d35456457758a0674ea59344dae721815a479c58b
+  line_count: 61
+  content_digest: sha256:f322130df313fd4dbee5eb57b987659fade17b6be0fac59faa3ce2d75e93bdd5
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: Shared worktree isolation
   has_yaml_frontmatter: true
-  line_count: 49
-  content_digest: sha256:e8ea31172e9327412132e032eae55e4f3e9fe94b5a042a44a774c0e159471fa7
+  line_count: 71
+  content_digest: sha256:f27e0d6faa056149e87d24103c756e925877f66414d5646181be64cd8cd9c8f8
   authority: canonical_global
   context_cost: minimal
   deprecated: false

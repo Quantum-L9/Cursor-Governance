@@ -620,3 +620,36 @@ stem above as live):
 1. Rule stem `98-make-pr-remediation` was renamed to `48-make-pr-remediation`
    (`rules/48-make-pr-remediation.mdc`) in rules-corpus-cleanup-v1.
 2. Handoff path remains `.l9/pr/pr-remediation-handoff.json`.
+
+<!-- PRECOMMIT_HOOK_ATTRIBUTION_V1 -->
+## pre-commit "files were modified by this hook" names a window (2026-08-14)
+
+`_run_single_hook` diffs the tracked worktree before and after each hook and
+threads the result forward (`pre_commit/commands/run.py`). The message therefore
+means "the tree changed while this hook was running" — **not** "this hook
+wrote". `symlinks-check` has the widest window in this repo's hook set and
+absorbs blame for concurrent writers; it is repo-read-only.
+
+1. Do **not** audit the named hook first. Measure:
+
+```bash
+bash ops/scripts/attribute_tree_writers.sh "$(pwd)" <status-before> <precommit-log>
+cat .l9/pr/gate-dirtiness.json
+```
+
+2. `make pr` no longer dies on that exit code. It separates a real
+ `- exit code:` (FAIL, hook named) from a modified tree (classify → attribute →
+ quiesce → retry once → FAIL with exact paths). `L9_GATE_STRICT_LEGACY=1`
+ restores the old behavior.
+3. Every hook is declared `read_only` or `writer` in
+ `ops/config/precommit-hook-contract.json`; `make precommit-hook-contract`
+ fails closed on drift.
+4. Automated writers serialize behind `ops/scripts/lib/repo_write_lock.sh`
+ (`make pr` holds it; sessionStart reconcilers yield). Machine-local and
+ short-lived — distinct from the tracked `.governance-build-lock` kill switch,
+ and not a substitute for a per-agent worktree (`rules/49`).
+5. The gate's two dirtiness domains are reported apart: tracked (`git diff`,
+ what pre-commit compares) and untracked (`git status --porcelain`).
+ Untracked-only churn can never have produced the message.
+
+Background: `learning/failures/precommit-hook-attribution.md`.
