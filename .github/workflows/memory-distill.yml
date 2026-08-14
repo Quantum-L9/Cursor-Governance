@@ -68,7 +68,7 @@ jobs:
           echo "MEMORY_DISTILL_S3_BUCKET=${BUCKET}" >> "$GITHUB_ENV"
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@be2e7ad815e27b890489a89ce2717b0f9e26b56e  # v4.3.1
+        uses: aws-actions/configure-aws-credentials@12d377b18dd4953d7567a83256c49ac571f4d565  # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-1
