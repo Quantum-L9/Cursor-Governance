@@ -654,6 +654,20 @@ cat .l9/pr/gate-dirtiness.json
 
 Background: `learning/failures/precommit-hook-attribution.md`.
 
+<!-- PLAN_AUDIT_SESSIONSTART_V1 -->
+## SessionStart Plan audit (2026-08-12) — extends tip-activation §6 sections
+
+Authoritative addition (do not treat older “Governance / Runtime / Graphiti
+hydrate / Code-graph” lists as exhaustive):
+
+1. Bootstrap `additional_context` also includes `### Plan audit`, produced by
+   `skills/l9-plan-audit/scripts/audit_plans.py` (fail-open, ~2s budget).
+2. Scans machine-global Cursor plans (`<workspace>/.cursor/plans` →
+   `~/.cursor/plans`) for **unbuilt** plans with mtime in the last **7 days**
+   and attaches staleness flags (see skill `references/staleness-rules.md`).
+3. Findings are **display-only** — do not auto-Build. On-demand:
+   `/plan-audit` → same CLI. `/start-session` STATE_SYNC surfaces the section.
+
 <!-- CAMPAIGN_EXECUTION_MAKE_PR_NO_MERGE_V1 -->
 ## Campaign execution publish path (2026-08-14) — supersedes §2.0.2 / L4 merge phrasing
 

@@ -4,8 +4,16 @@ limits:
   global_max_workers: 1
   max_writers_per_repository: 1
   max_contract_authority_writers: 1
+deploy_profile_limits:
+  # Applied only when Phase 0 selects program_deploy_max_autonomy and phase0_complete.
+  global_max_workers: 4
+  max_mutation_lanes: 2
+  max_writers_per_repository: 1
+  max_contract_authority_writers: 1
 rules:
 - distinct repositories may run in parallel only when no dependency shared-authority shared-data or shared-gate
   edge exists
 - program-control tasks are serialized with authority changes
-- raise limits only after pilot and negative tests pass
+- raise limits only after Phase 0 deploy profile selection and negative tests pass
+- never exceed one active writer per repository
+- default template stays at global_max_workers 1 until Phase 0 selects deploy profile

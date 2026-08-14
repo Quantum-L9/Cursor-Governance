@@ -15,8 +15,8 @@ files:
   sha256: ccbb623d315524b338ddaa2d20a60e753aa038a898bbd85cc06c896a2b9097df
   bytes: 702
 - path: CONVERGENCE_GATES.yaml
-  sha256: 31b9280a78c734fe0750ff31414a44a80f97621afb42b8843cb74c06eb9457e6
-  bytes: 1265
+  sha256: b8935b85e30f4b936e6504dfc0f220a0482fa193633e646aaf2c9d2eae034e79
+  bytes: 2213
 - path: CURRENT_STATE_DELTA.yaml
   sha256: 66a0eb629c1b89d249f60ba70df7de2b702821a4684ab9c17de495bea46436e2
   bytes: 560
@@ -39,11 +39,11 @@ files:
   sha256: d39a716f80bc94d0c1481a63f89d47d562784bfe9a7a14d3bba639fb7840c093
   bytes: 542
 - path: EVIDENCE_CATALOG.yaml
-  sha256: 71dcf0856fdd4ae13c1933fa1d22666ecec5282bce9e71b52730b2984e031c52
-  bytes: 428
+  sha256: 933bc0898c5d6984ff4eacefff1a50d62435c45f68155921740b7baea95f4a9b
+  bytes: 805
 - path: EXECUTION_INDEX.yaml
-  sha256: 57547ccc41d57f4c0377465c329c1f798e39f9fe21958af1d8c9fa1ed2ea171e
-  bytes: 1024
+  sha256: c16261ff2db1de63e561e5b94bb34d49a20421a51a1dc7fd6b8b743a4234d490
+  bytes: 1050
 - path: EXECUTION_TARGETS.yaml
   sha256: de28a21e21f4bfa9f9f3dcb4614df21d0980aff051f58c74cd06d05d9599cc03
   bytes: 389
@@ -65,6 +65,9 @@ files:
 - path: OPERATING_MODEL.md
   sha256: a970fb5a1be950efd484688e8bcc9b87b094fcf29612e993e6fb97dc306aad75
   bytes: 672
+- path: PHASE0_USER_CONFIG.yaml
+  sha256: 9fe8720130379b9d104760f62bdec1ead196dc7b2e022b0c9ad97e056c7906e5
+  bytes: 1931
 - path: PROGRAM.yaml
   sha256: 40b2dfe948ee53195e9de2dc7c36b273c925c14665bd007c1a0dd46864969902
   bytes: 1361
@@ -75,8 +78,8 @@ files:
   sha256: 14bdf55746f27ac02532305c6d519e99fa335d86cef9bb36ed5aeff65f65e42d
   bytes: 428
 - path: RUNBOOK.md
-  sha256: 4459b817affe40aa381d5b1829f9cf684524b98e1bf446e63ffbacea35a9d0a6
-  bytes: 1074
+  sha256: e6050ca2040e1b456151bcf52c2c59c41b28b1695b0148947541c9fab164cb44
+  bytes: 2173
 - path: SOURCE_TRACEABILITY.yaml
   sha256: 0821e9b7bca9c28ba297bfdee643caad91f0f9963ca8469277b4d7caf33466a4
   bytes: 465
@@ -105,8 +108,8 @@ files:
   sha256: 0e856ab93174227c5b440672fb189dad4c96eb6b9a720fdad1942c6a06246f97
   bytes: 318
 - path: schemas/convergence-gates.schema.json
-  sha256: 923114a85166f700d67b7cff84ef3a5a29c73d7641dce2781a68ca12ef0609b1
-  bytes: 3746
+  sha256: 1ceb2c61283502a083b995d2535bf57e202c2dbe8b092994bd6a17b26f772e43
+  bytes: 3917
 - path: schemas/current-state-delta.schema.json
   sha256: a3a4e7f30adfeac169106d822cfa756bc108e163d2979647f580f9ed7a4ba2d7
   bytes: 623
@@ -137,6 +140,9 @@ files:
 - path: schemas/observability-plan.schema.json
   sha256: b7edfa7e105a868d43090fb5a50ce6c9661e3d0fef48a6adfa37bbd6c7929b82
   bytes: 487
+- path: schemas/phase0-user-config.schema.json
+  sha256: c8fc1eaa8b11ec742c56ebdc2e6f4b0ea32b0758cd706be2dc5f96dcd85b1b2c
+  bytes: 5564
 - path: schemas/program.schema.json
   sha256: cb08383542b9efc87795e6ee71e421edb01f4f3e6c8f3f02e62770e1197ce5d4
   bytes: 3720
@@ -165,11 +171,11 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: scripts/validate_blueprint.py
-  sha256: b0fa81ad4a03c40396f804370db6cab6c0fe524d41da4ffa6d5f85b2cd7d809f
-  bytes: 21559
+  sha256: ad8916a6247821c36a9243b1f44cb9eeb6cf639f944b217be20db6a017a831c7
+  bytes: 23504
 integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 55
-  total_bytes: 96834
+  file_count: 57
+  total_bytes: 108895

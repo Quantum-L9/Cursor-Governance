@@ -141,12 +141,12 @@ phase_2_lessons:
   
   commands:
     lesson: |
-      python3 agents/cursor/cursor_memory_client.py write \
+      python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
         "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" \
         --kind lesson
     
     error: |
-      python3 agents/cursor/cursor_memory_client.py write \
+      python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
         "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" \
         --kind error
   
@@ -173,7 +173,7 @@ phase_3_git_state:
     
     # Write to memory if uncommitted changes exist
     if [ "$UNCOMMITTED" -gt 0 ]; then
-      python3 agents/cursor/cursor_memory_client.py write \
+      python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
         "GIT|branch=$BRANCH|commit=$COMMIT|uncommitted=$UNCOMMITTED|staged=$STAGED" \
         --kind git_state
     fi
@@ -244,7 +244,7 @@ phase_5_confirmation:
     └─ Last commit: {commit}
     
     🎯 NEXT SESSION RESUME:
-       python3 agents/cursor/cursor_memory_client.py search "PICKUP|"
+       python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|"
     
     👋 Ready to resume anytime.
 
@@ -258,13 +258,13 @@ quick_reference:
     manual_backup: "bash .cursor-commands/ops/scripts/backup_to_github.sh"
   minimal_end: |
     # Minimum viable session end (30 seconds)
-    python3 agents/cursor/cursor_memory_client.py write \
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
       "PICKUP|date=$(date +%Y-%m-%d)|task=TASK|files=FILES|next=NEXT|blocker=none|gmps=none|outcome=success" \
       --kind pickup_context
   
   resume_search: |
     # At next session start
-    python3 agents/cursor/cursor_memory_client.py search "PICKUP|" --limit 3
+    python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
   
   memory_kinds:
     - pickup_context: "Session handoff (MOST IMPORTANT)"

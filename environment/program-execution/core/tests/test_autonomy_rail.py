@@ -80,12 +80,12 @@ class AutonomyRailHostileTests(unittest.TestCase):
         self.assertFalse(hostile["completeness"]["phase0_complete"])
         result = subprocess.run(
             [
-            sys.executable,
-            str(BP / "scripts" / "validate_blueprint.py"),
-            str(BP),
-            "--mode",
-            "template",
-        ],
+                sys.executable,
+                str(BP / "scripts" / "validate_blueprint.py"),
+                str(BP),
+                "--mode",
+                "template",
+            ],
             check=False,
             capture_output=True,
             text=True,
