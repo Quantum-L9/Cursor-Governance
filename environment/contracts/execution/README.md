@@ -1,29 +1,33 @@
-# Execution contracts (first-class)
+# Execution contracts
 
-Cursor-primary home for L9 execution-architecture **contracts and templates**.
+This directory is the first-class SSOT for L9 execution architecture law and
+registered execution templates.
 
-| Path | Role |
-|------|------|
-| [`MANIFEST.yaml`](MANIFEST.yaml) | Registry of first-class artifacts in this tree |
-| [`templates/canonical.template.executable_plan.v1.plan.md`](templates/canonical.template.executable_plan.v1.plan.md) | Executable Cursor `.plan.md` template (PE + autonomy) |
-| [`templates/canonical.template.executable_plan.v1.plan.md.meta.md`](templates/canonical.template.executable_plan.v1.plan.md.meta.md) | Primitive metadata sidecar |
+## Binding law
 
-Related schema (still WIP until promoted):  
-`WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.plan_document.v1.yaml`
+`PEER_EXECUTION_THIN_ADAPTER_LAW.yaml` requires:
+
+```text
+Program Controller
+-> Peer Runtime Binding
+-> Execution Profile
+-> Peer Execution Core
+-> Shared Transport
+-> Thin Provider
+-> Provider / Host
+```
+
+The accepted decisions implementing that law live under `adr/`.
+
+## Execution template
+
+`templates/canonical.template.executable_plan.v1.plan.md` remains the canonical
+executable-plan template.
 
 ## Law
 
-- This directory is **repo SSOT** for registered templates.
-- Skill/command paths may **symlink or project** here; they must not fork a second body.
-- `.cursor/plans/` is a local IDE mirror only — never the git SSOT (`.cursor/` is gitignored).
-
-## Execute path for template instances
-
-```text
-.plan.md instance
-  → @environment/program-execution
-  → @autonomy (subordinate Program lease)
-  → PE adapter
-```
-
-See `environment/agents/PEER_EXECUTION.md`.
+- This directory is repo SSOT for registered execution contracts/templates.
+- Provider adapters MUST remain thin.
+- Peer identity MUST resolve from `PEER_RUNTIME_BINDINGS.yaml`, never a provider.
+- Shared execution behavior MUST move upstream rather than be copied.
+- Program Execution remains the sole Program-state authority.

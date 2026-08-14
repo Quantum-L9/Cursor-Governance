@@ -1,21 +1,11 @@
+"""Compatibility shim. Canonical implementation: peer_execution/imports.py."""
+
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-from types import ModuleType
+import peer_execution.imports as _canonical
 
-
-def load_module(path: str | Path, name: str) -> ModuleType:
-    source = Path(path).resolve()
-    spec = importlib.util.spec_from_file_location(name, source)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"unable to load module: {source}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    try:
-        spec.loader.exec_module(module)
-    except Exception:
-        sys.modules.pop(name, None)
-        raise
-    return module
+__all__ = list(
+    getattr(_canonical, "__all__", None)
+    or [name for name in dir(_canonical) if not name.startswith("_")]
+)
+globals().update({name: getattr(_canonical, name) for name in __all__})

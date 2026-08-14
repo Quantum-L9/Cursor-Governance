@@ -62,7 +62,7 @@
         "local": {
           "argv": [
             ".",
-            "--ignore=environment/agents/adapters/claude-code/autonomy",
+            "--ignore=environment/program-execution/peer_execution/autonomy",
             "--ignore=environment/agents/generated-data/tests",
             "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests"
           ]
@@ -70,7 +70,7 @@
         "ci": {
           "argv": [
             ".",
-            "--ignore=environment/agents/adapters/claude-code/autonomy",
+            "--ignore=environment/program-execution/peer_execution/autonomy",
             "--ignore=environment/agents/generated-data/tests",
             "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests",
             "-n",
@@ -90,27 +90,29 @@
     {
       "id": "claude-code-autonomy",
       "kind": "pytest",
-      "working_directory": ".",
+      "working_directory": "environment/program-execution/peer_execution",
       "owned_paths": [
-        "environment/agents/adapters/claude-code/autonomy/tests"
+        "environment/program-execution/peer_execution/autonomy/tests"
       ],
       "env": {
         "TESTING": "true",
-        "PYTHONPATH": "${REPO_ROOT}/environment/agents/adapters/claude-code"
+        "PYTHONPATH": "${REPO_ROOT}/environment/program-execution/peer_execution"
       },
       "append_user_pytest_args": true,
       "allow_exit_5": true,
       "profiles": {
         "local": {
           "argv": [
-            "environment/agents/adapters/claude-code/autonomy/tests",
+            "autonomy/tests",
+            "--import-mode=importlib",
             "-o",
             "addopts="
           ]
         },
         "ci": {
           "argv": [
-            "environment/agents/adapters/claude-code/autonomy/tests",
+            "autonomy/tests",
+            "--import-mode=importlib",
             "-o",
             "addopts=",
             "-n",
@@ -121,7 +123,7 @@
           ]
         }
       },
-      "rationale": "Root autonomy/ (W7 control plane) and environment/agents/adapters/claude-code/autonomy/ (Claude Code bounded-concurrency runtime) share the top-level package name, so this suite runs with PYTHONPATH=environment/agents/adapters/claude-code to bind the correct package. '-o addopts=' clears root pytest settings so the root active-suite ignores cannot reintroduce package shadowing here. CI profile keeps xdist and the 300s timeout with no root coverage arguments. Transitional symlink environment/agents/adapters/claude-code/autonomy is also ignored by repo-root to avoid double collection."
+      "rationale": "Root autonomy/ (W7 control plane) and environment/program-execution/peer_execution/autonomy/ (Claude Code bounded-concurrency runtime) share the top-level package name, so this suite runs with cwd and PYTHONPATH=environment/program-execution/peer_execution to bind the correct package. '-o addopts=' clears root pytest settings so the root active-suite ignores cannot reintroduce package shadowing here. CI profile keeps xdist and the 300s timeout with no root coverage arguments. peer_execution/autonomy is also ignored by repo-root to avoid double collection."
     },
     {
       "id": "subagent-generated-data-wave3",

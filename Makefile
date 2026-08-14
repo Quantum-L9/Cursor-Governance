@@ -127,7 +127,7 @@ autonomy-contracts-validate:
 
 ## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
 autonomy-validate: autonomy-contracts-validate
-	python3 environment/agents/adapters/claude-code/autonomy/validate_autonomy.py
+	python3 environment/program-execution/peer_execution/autonomy/validate_autonomy.py
 
 
 ## L4 local autonomy (stacked local commits → kernels → authorize → push/PR).
@@ -228,7 +228,7 @@ uv-lock-check:
 	@if [ -f uv.lock ]; then uv lock --check; else echo "OK: no uv.lock present, skipping"; fi
 
 ## Pytest suite. make pr runs this only when Python files changed.
-## Splits root autonomy/ from environment/agents/adapters/claude-code/autonomy/ (same package name).
+## Splits root autonomy/ from environment/program-execution/peer_execution/autonomy/ (same package name).
 test: venv
 	bash ops/scripts/run_pytest_suites.sh --tb=short -q
 
@@ -330,6 +330,7 @@ program-execution-core-validate:
 
 program-execution-adapters:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B $(PE_ROOT)/scripts/validate_thin_providers.py
 
 program-execution-conformance: autonomy-contracts-validate
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/run_conformance.py

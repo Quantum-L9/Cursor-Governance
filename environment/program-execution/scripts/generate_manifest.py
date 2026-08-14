@@ -20,9 +20,12 @@ def generate(root: Path) -> dict[str, object]:
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
+        rel_parts = path.relative_to(root).parts
         if path.name in EXCLUDED_NAMES or path.suffix in EXCLUDED_SUFFIXES:
             continue
-        if "core" in path.relative_to(root).parts[:1]:
+        if any(part in EXCLUDED_NAMES for part in rel_parts):
+            continue
+        if "core" in rel_parts[:1]:
             continue
         files.append(
             {

@@ -74,4 +74,10 @@ Must include execute authority:
 
 → **Auto-chains to /ynp** (recommends `/autonomy` + PE pipeline, or `/gmp` when GMP-locked)
 
+---
+
+## NOTES
+
+- KERNEL pack / PE overlay / governed architecture landings: **new branch from `origin/main`** without asking. Do not mix unrelated WIP. Ask only if the user named the target branch or `origin/main` cannot be resolved. SSOT: `AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`; `rules/46-kernel-pack-new-branch.mdc`.
+
 --- End Command ---

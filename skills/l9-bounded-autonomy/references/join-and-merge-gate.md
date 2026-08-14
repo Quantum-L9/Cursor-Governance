@@ -1,6 +1,6 @@
 # Protocol C — Join and merge gate
 
-Mirrors `environment/agents/adapters/claude-code/autonomy/profiles/pr-convergence.json` `merge_gate` and join barrier. Cursor reports eligibility; humans merge.
+Mirrors `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` `merge_gate` and join barrier. Cursor reports eligibility; humans merge.
 
 ## Join barrier
 

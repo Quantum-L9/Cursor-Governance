@@ -1,21 +1,31 @@
 # Program Execution
 
-This subsystem installs the sealed Program Execution System under `core/` and
-keeps host-specific execution behind replaceable adapters.
+Program Execution is the serial authority plane for executable programs. Peer
+and model providers connect through one shared Peer Execution Core.
 
-- `core/` owns program truth, Program Locks, task readiness, canonical receipts,
-  and independent convergence evaluation.
-- `adapters/` translates exact Controller contracts into host operations.
-- `integrations/` reuses existing Cursor-Governance runtimes without copying them.
-- `conformance/` proves authority narrowing, digest binding, honest capability
-  reporting, cancellation truthfulness, and separation of duties.
-- `registry/` controls deterministic routing, concurrency, health, and failover.
+- `core/`: Program truth, Program Locks, readiness, leases, task state,
+  verification, canonical receipts, and convergence.
+- `peer_execution/`: canonical provider request/result contracts, context,
+  profiles, permissions, lifecycle, shared transports, telemetry evidence, and
+  terminal receipt normalization.
+- `adapters/`: thin provider or external-system translation only.
+- `integrations/`: bridges to existing runtimes without copying authority.
+- `registry/`: provider registry, execution profiles, routing, concurrency,
+  health, and failover.
+- `conformance/`: fail-closed architecture and behavioral checks.
 
-Mutable runtime belongs under `$HOME/.l9/programs/` and
-`$HOME/.l9/program-worktrees/`, never in this source tree.
+Canonical peer topology lives only in
+`environment/agents/PEER_RUNTIME_BINDINGS.yaml`:
 
-Each execution adapter is the Controller-side peer of a surface adapter in
-`environment/agents/adapters/`. The identity ↔ execution cross-link and the
-universal peer-execution contract are documented in
-`environment/agents/PEER_EXECUTION.md` and validated by
-`make peer-execution-conformance` / `make peer-execution-probe`.
+```text
+agent_ref + surface -> provider_ref + execution_profile_ref
+```
+
+A provider descriptor is identity-neutral. It MUST NOT carry `agent_ref`, own
+Program state, author policy defaults, construct canonical receipts, or copy
+scheduler/autonomy/memory behavior.
+
+The binding law is registered at
+`environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml`.
+
+Mutable runtime belongs under `$HOME/.l9/`, never this source tree.

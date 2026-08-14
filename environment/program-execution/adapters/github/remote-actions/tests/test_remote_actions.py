@@ -10,7 +10,10 @@ class RemoteActionSourceTests(unittest.TestCase):
         text = "\n".join(path.read_text(encoding="utf-8") for path in root.glob("*.py"))
         self.assertNotIn("pr merge", text)
         self.assertNotIn("enable_auto_merge", text)
-        self.assertIn("require_exact_approval", text)
+        approvals = (
+            Path(__file__).resolve().parents[4] / "peer_execution/approvals.py"
+        ).read_text()
+        self.assertIn("require_exact_approval", approvals)
 
 
 if __name__ == "__main__":

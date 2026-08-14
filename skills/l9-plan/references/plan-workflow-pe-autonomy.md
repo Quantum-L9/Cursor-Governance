@@ -89,3 +89,4 @@ Optional (activate when conditions in template/schema apply): inventory classifi
 - Never weaken scanners to obtain PASS.
 - Do not push, open a PR, or mutate product code from plan mode.
 - `autonomous_merge` remains `false` in the campaign packet (`COMPATIBILITY.yaml`); L4 plan/PE stack merge only after green+mergeable per AGENTS.md.
+- KERNEL pack / PE overlay landings: new branch from `origin/main` without asking (`AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`).

@@ -5,18 +5,14 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
+#   version: 2.0.0
 #   updated: 2026-08-12
 #
-# PEER RUNTIME BINDINGS — sole topology SSOT for which canonical subsystems
-# must be connected for each agent peer (Executable Peer Contract v2).
-# Identity remains in agent_registry.yaml (no execution: blocks there).
-# Cross-validated by validate_executable_peers.py (rules E1-E15).
-# readiness_required switches stay false until the PR that lands their
-# satisfier flips them (activation law). Patch B flips subagents.deployment.
+# Sole topology SSOT for peer identity -> surface -> provider -> execution profile.
+# Provider descriptors never carry agent_ref. Runtime health remains receipt-backed.
 
-schema: l9.peer-runtime-bindings.v1
-schema_version: 1.0.0
+schema: l9.peer-runtime-bindings.v2
+schema_version: 2.0.0
 peers:
   cursor:
     agent_ref: cursor
@@ -24,9 +20,11 @@ peers:
       required: true
       bindings:
         - surface: cursor-ide
-          adapter_id: cursor-foreground
+          provider_ref: cursor-foreground
+          execution_profile_ref: worker-default
         - surface: cursor-ide
-          adapter_id: cursor-background
+          provider_ref: cursor-background
+          execution_profile_ref: worker-default
     autonomy:
       required: true
       provider_id: root-autonomy-control-plane
@@ -47,13 +45,14 @@ peers:
       required: true
       bindings:
         - surface: claude-cli
-          adapter_id: claude-code-direct
-        - surface: claude-cli
-          adapter_id: claude-code-bounded-autonomy
+          provider_ref: claude-code-direct
+          execution_profile_ref: worker-default
         - surface: claude-web
-          adapter_id: claude-code-direct
+          provider_ref: claude-code-direct
+          execution_profile_ref: worker-default
         - surface: claude-mobile
-          adapter_id: claude-code-direct
+          provider_ref: claude-code-direct
+          execution_profile_ref: worker-default
     autonomy:
       required: true
       provider_id: root-autonomy-control-plane
@@ -69,7 +68,10 @@ peers:
     agent_ref: codex
     execution:
       required: false
-      bindings: []
+      bindings:
+        - surface: codex-cloud
+          provider_ref: codex-cloud
+          execution_profile_ref: worker-default
     subagents:
       enabled: false
     results:
@@ -82,7 +84,10 @@ peers:
     agent_ref: gemini
     execution:
       required: false
-      bindings: []
+      bindings:
+        - surface: gemini-cli
+          provider_ref: gemini-review
+          execution_profile_ref: reviewer-default
     subagents:
       enabled: false
     results:
@@ -95,7 +100,10 @@ peers:
     agent_ref: manus
     execution:
       required: false
-      bindings: []
+      bindings:
+        - surface: manus-cloud
+          provider_ref: manus-cloud
+          execution_profile_ref: worker-read-only
     subagents:
       enabled: false
     results:

@@ -17,8 +17,8 @@ class RuntimeStateLocationTests(unittest.TestCase):
     def test_path_escape_is_normalized(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = RuntimeStore(directory)
-            path = store.save("../../escape", {"adapter_id": "test"})
-            self.assertTrue(path.is_relative_to(Path(directory).resolve()))
+            with self.assertRaisesRegex(ValueError, "unsafe runtime identifier"):
+                store.save("../../escape", {"adapter_id": "test"})
 
 
 if __name__ == "__main__":

@@ -5,12 +5,13 @@ import sys
 import unittest
 from pathlib import Path
 
-from adapters.common.imports import load_module
+from peer_execution.imports import load_module
 
 
 def _test_files(root: Path) -> list[Path]:
     files = list((root / "conformance").glob("test_*.py"))
     files.extend((root / "tests").glob("test_*.py"))
+    files.extend((root / "peer_execution/tests").glob("test_*.py"))
     files.extend((root / "adapters").glob("**/tests/test_*.py"))
     files.extend((root / "integrations").glob("**/tests/test_*.py"))
     return sorted(set(path.resolve() for path in files))

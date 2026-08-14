@@ -40,7 +40,7 @@ class AgentIdentityIntegrationTests(unittest.TestCase):
             reader = reader_module.AgentRegistryReader(repository)
             # The descriptor's identity.agent_ref foreign key is passed in by the
             # caller (resolved via agent_ref_for); the hardcoded map is gone.
-            value = binding_module.bind_identity(reader, "cursor-foreground", agent_ref="cursor")
+            value = binding_module.bind_identity(reader, agent_ref="cursor")
             self.assertEqual(value["agent_id"], "cursor")
 
 

@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from adapters.common.approvals import require_exact_approval
-from adapters.common.base import BaseExecutionAdapter
-from adapters.common.imports import load_module
+from peer_execution.driver_execution import DriverExecutionRequest, DriverInvocation
+from peer_execution.imports import load_module
+from peer_execution.provider import ProviderProbe
 
 
-class GitHubDeploymentsAdapter(BaseExecutionAdapter):
-    adapter_id = "github-deployments"
-    capabilities = ("read_environment", "create_deployment_record")
-    cancellation = "unsupported"
+class GitHubDeploymentsDriver:
+    provider_id = "github-deployments"
 
     def __init__(self, runtime_root: str | Path, repository_root: str | Path) -> None:
-        super().__init__(runtime_root)
         self.repository_root = Path(repository_root).resolve()
         module = load_module(
             self.repository_root
@@ -23,85 +19,70 @@ class GitHubDeploymentsAdapter(BaseExecutionAdapter):
         )
         self.transport = module.GhTransport(self.repository_root)
 
-    def _probe_status(self, context):
-        module = load_module(
+    def probe(self, context) -> ProviderProbe:
+        auth = load_module(
             self.repository_root
             / "environment/program-execution/adapters/github/common/auth_probe.py",
             "pes_gh_auth_probe_deployments",
-        )
-        authentication = module.probe(self.repository_root)
+        ).probe(self.repository_root)
         repository = context.metadata.get("repository")
-        if authentication["status"] != "PASS":
-            return "BLOCKED", authentication.get("reason"), [authentication]
-        if not isinstance(repository, str) or not repository:
-            return (
-                "BLOCKED",
-                "repository is required for deployments probe",
-                [authentication],
+        if auth["status"] != "PASS" or not isinstance(repository, str) or not repository:
+            return ProviderProbe(
+                status="BLOCKED",
+                blocked_reason=auth.get("reason") or "repository is required for deployments probe",
+                evidence=(auth,),
             )
-        permission_module = load_module(
+        permissions = load_module(
             self.repository_root
             / "environment/program-execution/adapters/github/common/permission_probe.py",
             "pes_gh_permission_probe_deployments",
+        ).repository_permissions(self.transport, repository)
+        readable = permissions["status"] == "PASS" and bool(
+            permissions.get("permissions", {}).get("pull")
         )
-        permissions = permission_module.repository_permissions(
-            self.transport,
-            repository,
-        )
-        readable = bool(permissions.get("permissions", {}).get("pull"))
-        status = "PASS" if permissions["status"] == "PASS" and readable else "BLOCKED"
-        reason = None if status == "PASS" else "deployment read permission is unproven"
-        return status, reason, [authentication, permissions]
-
-    def _effective_capabilities(self, context, status, evidence):
-        if status != "PASS":
-            return ()
-        capabilities = ["read_environment"]
-        if context.metadata.get("deployments_write_proven") is True:
+        capabilities = ["read_environment"] if readable else []
+        if readable and context.metadata.get("deployments_write_proven") is True:
             capabilities.append("create_deployment_record")
-        return tuple(capabilities)
+        return ProviderProbe(
+            status="PASS" if readable else "BLOCKED",
+            blocked_reason=None if readable else "deployment read permission is unproven",
+            evidence=(auth, permissions),
+            observed_capabilities=tuple(capabilities),
+        )
 
-    def _dispatch_record(self, record: dict[str, Any]):
-        contract = record["contract"]
+    def invoke(self, request: DriverExecutionRequest) -> DriverInvocation:
+        contract = request.contract
         actions = list(contract.get("requested_actions") or [])
         if actions == ["read_environment"]:
-            module = load_module(
-                Path(__file__).with_name("environment_gate.py"),
-                "pes_environment_gate",
-            )
-            result = module.read_environment(
+            result = load_module(
+                Path(__file__).with_name("environment_gate.py"), "pes_environment_gate"
+            ).read_environment(
                 self.transport,
                 str(contract["repository"]),
                 str(contract["environment"]),
             )
-            mapper = load_module(
-                Path(__file__).with_name("receipt_mapper.py"),
-                "pes_environment_read_receipt_mapper",
-            )
-            record["result"] = mapper.environment_read_receipt(
-                contract,
-                result or {},
-            )
-            return "PASS", [{"type": "environment_read"}]
-        if actions != ["create_deployment_record"]:
+            operation = "read_environment"
+        elif actions == ["create_deployment_record"]:
+            for key in ("artifact_digest", "rollback_plan_digest"):
+                if not isinstance(contract.get(key), str) or not contract.get(key):
+                    raise ValueError(f"deployment record field missing: {key}")
+            result = load_module(
+                Path(__file__).with_name("deployment_record.py"), "pes_deployment_record"
+            ).create_record(self.transport, contract)
+            operation = "create_deployment_record"
+        else:
             raise ValueError("exactly one deployment-record action is required")
-        approval = require_exact_approval(contract, "create_deployment_record")
-        required = {"artifact_digest", "rollback_plan_digest"}
-        missing = sorted(required - set(contract))
-        if missing:
-            raise ValueError(f"deployment record fields missing: {missing}")
-        module = load_module(
-            Path(__file__).with_name("deployment_record.py"),
-            "pes_deployment_record",
+        return DriverInvocation(
+            status="PASS",
+            payload={"operation": operation, "result": result or {}},
+            evidence=({"type": "github_deployment", "operation": operation},),
         )
-        result = module.create_record(self.transport, contract)
-        mapper = load_module(
-            Path(__file__).with_name("receipt_mapper.py"),
-            "pes_deployment_receipt_mapper",
-        )
-        record["result"] = mapper.deployment_receipt(
-            contract,
-            result or {},
-            approval.approval_id,
-        )
-        return "PASS", [{"type": "github_deployment_record"}]
+
+    def poll(self, request, state) -> DriverInvocation:
+        return DriverInvocation(status="UNSUPPORTED", state=state)
+
+    def cancel(self, request, state) -> DriverInvocation:
+        return DriverInvocation(status="UNSUPPORTED", state=state)
+
+
+PROVIDER_CLASS = GitHubDeploymentsDriver

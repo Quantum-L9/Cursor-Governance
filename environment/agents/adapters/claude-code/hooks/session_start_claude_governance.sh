@@ -90,7 +90,7 @@ if GOV=$(resolve_governance_dir); then
   fi
 
   # --- Bounded-autonomy campaign context (fail-open; read-only probe) ------
-  AUTONOMY_BOOTSTRAP="$GOV/environment/agents/adapters/claude-code/autonomy/bootstrap.py"
+  AUTONOMY_BOOTSTRAP="$GOV/environment/program-execution/peer_execution/autonomy/bootstrap.py"
   if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v "$PY" >/dev/null 2>&1; then
     AUTONOMY_CONTEXT=$("$PY" "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null || true)
     [ -n "$AUTONOMY_CONTEXT" ] && LINES+=("--- bounded autonomy ---" "$AUTONOMY_CONTEXT")

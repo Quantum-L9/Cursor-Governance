@@ -52,7 +52,12 @@ def build_context(
         "pes_peer_context_readiness",
     )
     readiness = readiness_module.build_readiness(
-        subsystem_root, repo_root, agent_id, surface, adapter_id
+        subsystem_root,
+        repo_root,
+        agent_id,
+        surface,
+        adapter_id,
+        "worker-default",
     )
 
     return {

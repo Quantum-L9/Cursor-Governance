@@ -19,7 +19,7 @@ class IdentityBindingTests(unittest.TestCase):
         )
         repository = Path(__file__).resolve().parents[3]
         reader = reader_module.AgentRegistryReader(repository)
-        binding = binding_module.bind_identity(reader, "chatgpt-manual-handoff")
+        binding = binding_module.bind_identity(reader, None)
         self.assertEqual(binding["binding"], "controller_contract")
         self.assertIsNone(binding["agent_id"])
 

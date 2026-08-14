@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from adapters.common.base import BaseExecutionAdapter
-from adapters.common.errors import CanonicalErrorCode
-from adapters.common.imports import load_module
+from peer_execution.imports import load_module
+from peer_execution.provider import (
+    CanonicalExecutionRequest,
+    CanonicalProviderResult,
+    ProviderInvocation,
+    ProviderProbe,
+)
 
 
-class CursorBackgroundAdapter(BaseExecutionAdapter):
-    adapter_id = "cursor-background"
-    capabilities = ("inspect", "local_write", "artifact_production")
-    cancellation = "conditional"
+class CursorBackgroundProvider:
+    provider_id = "cursor-background"
 
     def __init__(self, runtime_root: str | Path, repository_root: str | Path) -> None:
-        super().__init__(runtime_root)
         self.repository_root = Path(repository_root).resolve()
         module = load_module(
             self.repository_root
@@ -24,64 +24,70 @@ class CursorBackgroundAdapter(BaseExecutionAdapter):
         )
         self.transport = module.BackgroundTransport(runtime_root)
 
-    def _probe_status(self, context):
+    def probe(self, context) -> ProviderProbe:
         required = [
             self.repository_root / "autonomy/adapters/cursor/adapter.py",
             self.repository_root / "autonomy/adapters/conformance.py",
         ]
         missing = [str(path) for path in required if not path.is_file()]
-        return (
-            "PASS" if not missing else "BLOCKED",
-            None if not missing else "root-autonomy Cursor provider is unavailable",
-            [{"type": "path_probe", "missing": missing}],
+        return ProviderProbe(
+            status="PASS" if not missing else "BLOCKED",
+            blocked_reason=(
+                None if not missing else "root-autonomy Cursor provider is unavailable"
+            ),
+            evidence=({"type": "path_probe", "missing": missing},),
+            observed_capabilities=("inspect", "local_write", "artifact_production"),
         )
 
-    def _dispatch_record(self, record: dict[str, Any]):
-        request = {
+    def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
+        host_request = {
             "schema": "program-execution-adapter.cursor-task.v1",
             "mode": "background",
-            "dispatch_id": record["dispatch_id"],
-            "contract": record["contract"],
+            "dispatch_id": request.execution_id,
+            "contract": dict(request.rendered_contract),
+            "canonical_execution_request": request.to_dict(),
             "run_in_background": True,
         }
-        path = self.transport.dispatch(record["dispatch_id"], request)
-        return "RUNNING", [{"type": "cursor_task_request", "path": str(path)}]
-
-    def status(self, dispatch_id: str):
-        record = self.runtime.load(dispatch_id)
-        host_status = self.transport.status(dispatch_id)
-        result = self.transport.collect(dispatch_id)
-        if result is not None:
-            mapper = load_module(
-                Path(__file__).with_name("receipt_mapper.py"),
-                "pes_cursor_background_receipt_mapper",
-            )
-            record["result"] = mapper.map_result(record["contract"], result)
-            host_status = "PASS"
-        record["status"] = host_status
-        self.runtime.save(dispatch_id, record)
-        return super().status(dispatch_id)
-
-    def cancel(self, dispatch_id: str):
-        record = self.runtime.load(dispatch_id)
-        from adapters.common.contracts import validate_contract
-
-        binding = validate_contract(record["contract"])
-        if not self.transport.cancel(dispatch_id):
-            return self._append(
-                phase="cancel",
-                binding=binding,
-                status="UNSUPPORTED",
-                dispatch_id=dispatch_id,
-                canonical_error_code=CanonicalErrorCode.CANCELLATION_UNSUPPORTED.value,
-                adapter_error_code="CURSOR_TASK_HANDLE_UNAVAILABLE",
-            )
-        record["status"] = "CANCELLED"
-        self.runtime.save(dispatch_id, record)
-        return self._append(
-            phase="cancel",
-            binding=binding,
-            status="CANCELLED",
-            dispatch_id=dispatch_id,
-            evidence=[{"type": "cursor_cancel_request", "accepted": True}],
+        path = self.transport.dispatch(request.execution_id, host_request)
+        return ProviderInvocation(
+            status="RUNNING",
+            state={"request_path": str(path)},
+            evidence=({"type": "cursor_task_request", "path": str(path)},),
         )
+
+    def poll(self, request, state) -> ProviderInvocation:
+        host_status = self.transport.status(request.execution_id)
+        result = self.transport.collect(request.execution_id)
+        if result is None:
+            return ProviderInvocation(status=str(host_status), state=state)
+        provider_result = CanonicalProviderResult(
+            execution_id=request.execution_id,
+            status="PASS",
+            structured_payload=dict(result),
+            provider_metadata={"provider_surface": "cursor-background"},
+            session_or_run_id=request.execution_id,
+            observed_capabilities=("inspect", "local_write", "artifact_production"),
+        )
+        return ProviderInvocation(
+            status="PASS",
+            state=state,
+            evidence=({"type": "cursor_task_result", "received": True},),
+            result=provider_result,
+        )
+
+    def cancel(self, request, state) -> ProviderInvocation:
+        accepted = bool(self.transport.cancel(request.execution_id))
+        return ProviderInvocation(
+            status="CANCELLED" if accepted else "UNSUPPORTED",
+            state=state,
+            evidence=(
+                {
+                    "type": "cursor_cancel_request",
+                    "execution_id": request.execution_id,
+                    "accepted": accepted,
+                },
+            ),
+        )
+
+
+PROVIDER_CLASS = CursorBackgroundProvider

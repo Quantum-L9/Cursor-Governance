@@ -19,8 +19,7 @@ capabilities:
   isolated_execution: true
   remote_credentials: conditional
 identity:
-  binding: agent_registry
-  agent_ref: claude-code
+  binding: peer_runtime_binding
   memory_write: via_generated_data_pipeline
 security:
   default_deny: true
@@ -34,4 +33,4 @@ receipts:
   terminal_core_receipt: attempt
 status:
   default: conditional
-  blocked_reason: Requires the Claude executable and root-autonomy conformance.
+  blocked_reason: Requires root-autonomy Claude Code conformance. Invoke still needs the Claude executable.

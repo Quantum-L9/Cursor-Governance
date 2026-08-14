@@ -55,8 +55,9 @@ root autonomy/  +  @autonomy (/autonomy → l9-bounded-autonomy)
   MAY the leased agent act?  (packet, lanes, PR poll) — owns_program_state: false
         │
         ▼
-PE adapter (Cursor: cursor-foreground | cursor-background;
-            Claude: claude-code-bounded-autonomy)
+Peer Execution Core -> thin provider
+  (Cursor: cursor-foreground | cursor-background;
+   Claude: claude-code-direct)
 ```
 
 Program leases are authoritative. Autonomy leases are subordinate and **must not outlive** the Program lease (`COMPATIBILITY.yaml` / autonomy-control-plane bridge). Never invent a second scheduler; never widen Blueprint ceilings via the campaign packet.
@@ -99,7 +100,7 @@ python scripts/pec.py next --workspace …
 | Work class | Prefer |
 |------------|--------|
 | interactive local repair (this Cursor plan default) | `cursor-foreground` → `claude-code-direct` |
-| repository implementation | `claude-code-bounded-autonomy` → `cursor-background` → `cursor-foreground` |
+| repository implementation | `claude-code-direct` → `cursor-background` → `cursor-foreground` |
 | verification | `ci-github-actions` / `ci-generic-shell` |
 | remote PR/merge actions | `github-remote-actions` only with exact approval |
 
@@ -120,7 +121,8 @@ program_execution:
   program_lock_digest: <sha256 from Controller>
   blueprint_ref: $HOME/.l9/programs/<program_id>/blueprint
   runtime_ref: $HOME/.l9/programs/<program_id>/runtime
-  adapter_id: cursor-foreground    # or routed adapter
+  provider_ref: cursor-foreground  # or routed thin provider
+  execution_profile_ref: worker-default
   autonomy_provider_id: root-autonomy-control-plane
 declared_prs: []
 declared_branches: [<feature-branch>]

@@ -1,36 +1,11 @@
+"""Compatibility shim. Canonical implementation: peer_execution/protocol.py."""
+
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Protocol
+import peer_execution.protocol as _canonical
 
-from .models import CapabilityReceipt, LifecycleReceipt, ProbeContext
-
-
-class ExecutionAdapter(Protocol):
-    def probe(self, context: ProbeContext) -> CapabilityReceipt:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
-
-    def prepare(self, contract: Mapping[str, Any]) -> LifecycleReceipt:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
-
-    def dispatch(self, prepared: Mapping[str, Any]) -> LifecycleReceipt:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
-
-    def status(self, dispatch_id: str) -> LifecycleReceipt:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
-
-    def collect(self, dispatch_id: str) -> Mapping[str, Any]:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
-
-    def cancel(self, dispatch_id: str) -> LifecycleReceipt:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
-
-    def cleanup(self, dispatch_id: str) -> LifecycleReceipt:
-        # Empty: typing.Protocol structural hook — no runtime body.
-        pass
+__all__ = list(
+    getattr(_canonical, "__all__", None)
+    or [name for name in dir(_canonical) if not name.startswith("_")]
+)
+globals().update({name: getattr(_canonical, name) for name in __all__})

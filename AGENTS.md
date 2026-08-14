@@ -587,3 +587,26 @@ Authoritative additions:
    `l9-chat-transcripts-020125249784` (`python -m ops.graphiti.hydration.archive_transcript`).
    Not GitHub, not a local-only copy. No sqlite.
 3. See `ops/scripts/RETIRED_export_chats_and_learning_processor.md`.
+
+<!-- KERNEL_PACK_NEW_BRANCH_DEFAULT_V1 -->
+## KERNEL pack landing branch default (2026-08-13)
+
+Do **not** ask whether to land a KERNEL pack, PE overlay, or similar governed
+architecture change on the current feature branch vs a new branch.
+
+Default, without asking:
+
+1. Create a **new branch from `origin/main`** (ff-only tip) in this clone.
+2. Do **not** mix unrelated WIP (legal ingest, other feature work) into that
+   branch.
+3. Ask only if the user already named the target branch as the subject of the
+   change, or `origin/main` cannot be resolved.
+
+Stock pack apply scripts that hard-reset or require a foreign `BASE_SHA` are
+not the landing path in a dirty or unrelated checkout. Rule:
+`rules/46-kernel-pack-new-branch.mdc`.
+
+<!-- PEER_EXECUTION_CORE_RUNTIME_V1 -->
+## Peer Execution shared runtime (2026-08-14)
+
+Bounded concurrency runtime is provider-neutral at `environment/program-execution/peer_execution/autonomy/`. Every provider binds to the same shared runtime through Program Execution; no provider owns a scheduler. Human merge only.

@@ -1,13 +1,35 @@
 schema: l9.execution-contracts.manifest.v1
-schema_version: 1.0.0
+schema_version: 2.0.0
 family: l9_execution_architecture
 status: active
 updated: '2026-08-12'
 purpose: >
-  First-class execution contract artifacts owned by Cursor-Governance
-  (Cursor-primary). Schemas may also live under WIP until promoted; templates
-  that agents fill are registered here once they are repo SSOT.
+  First-class execution contracts, architecture law, and templates owned by
+  Cursor-Governance. Program Execution is the authority plane; providers are
+  thin bindings to shared Peer Execution infrastructure.
 artifacts:
+  - artifact_id: l9.peer_execution.thin_adapter_law.v1
+    artifact_filename: PEER_EXECUTION_THIN_ADAPTER_LAW.yaml
+    path: PEER_EXECUTION_THIN_ADAPTER_LAW.yaml
+    kind: architecture_law
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    consumed_by:
+      - environment/program-execution
+      - environment/agents/PEER_EXECUTION.md
+    not_for:
+      - provider_local_policy_forks
+      - duplicated_execution_cores
+  - artifact_id: peer-execution-thin-adapter-adrs
+    path: adr/
+    kind: architecture_decisions
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    consumed_by:
+      - environment/program-execution
+      - environment/agents/PEER_EXECUTION.md
   - artifact_id: canonical.template.executable_plan.v1
     artifact_filename: canonical.template.executable_plan.v1.plan.md
     path: templates/canonical.template.executable_plan.v1.plan.md

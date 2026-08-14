@@ -25,7 +25,7 @@ class CodexCloudAdapterTests(unittest.TestCase):
             self.assertEqual(list(receipt.capabilities), [])
 
     def test_driver_declares_no_forbidden_operations(self) -> None:
-        text = (Path(__file__).resolve().parents[1] / "driver.py").read_text()
+        text = (Path(__file__).resolve().parents[1] / "provider.py").read_text()
         self.assertNotIn("merge_pull_request(", text)
         self.assertNotIn("git push --force", text)
 
