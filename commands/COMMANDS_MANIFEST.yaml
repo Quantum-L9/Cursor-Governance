@@ -83,6 +83,9 @@ commands:
 - slash: /gap-analysis-new
   file: commands/gap-analysis-new.md
   enabled: true
+- slash: /git-work-preserve
+  file: commands/git-work-preserve.md
+  enabled: true
 - slash: /gmp
   file: commands/gmp.md
   enabled: true

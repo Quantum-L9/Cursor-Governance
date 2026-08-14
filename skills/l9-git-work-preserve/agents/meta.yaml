@@ -1,0 +1,4 @@
+interface:
+  display_name: "L9 Git Work Preserve"
+  short_description: "Diagnose-first audit/extract/prune-propose for git work — never lose unique commits."
+  brand_color: "#1F4E79"
