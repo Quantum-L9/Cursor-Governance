@@ -119,9 +119,7 @@ def check_rules(root: Path) -> tuple[list[str], list[str], int, int]:
     for prefix, names in sorted(prefixes.items()):
         if len(names) > 1:
             joined = ", ".join(sorted(names))
-            errs.append(
-                f"prefix {prefix}- shared by {len(names)} files: {joined}"
-            )
+            errs.append(f"prefix {prefix}- shared by {len(names)} files: {joined}")
 
     if always_total > ALWAYS_BUDGET:
         errs.append(
