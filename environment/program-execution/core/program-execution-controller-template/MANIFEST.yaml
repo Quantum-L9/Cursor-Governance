@@ -36,14 +36,14 @@ files:
   sha256: db71b0c919817ce37ad1a1b7c9f9a9b57efeeee4a4aec2ad8e0de7a4a5cb2dea
   bytes: 510
 - path: policy/autonomy.yaml
-  sha256: 4354af00edd2f89e7d354f12e869c4bf1e0176f9ca48f637bc36e46437bc22a5
-  bytes: 637
+  sha256: 632fffda27dbf46e1a81733b29225d7729bda4fc840b3886a1fc088198e1bf35
+  bytes: 1667
 - path: policy/evidence.yaml
   sha256: 1c2c29eeb2990e765f8561fc0593b2c9d737016aa44f2b22c7cc537ff3ff805c
   bytes: 459
 - path: policy/parallelism.yaml
-  sha256: 242e1662e69977f6f6cef23b38fd08d9f7e1bcf06d56100c15963a60cab79967
-  bytes: 432
+  sha256: 7f5cce35f8f53ca01498a001c4b92486997848763f741128eedfca83e474a4a8
+  bytes: 819
 - path: policy/remote-actions.yaml
   sha256: 6ec60ea6135ed408e0288917cf73db8ed23b6af2d299903c20e724560a011197
   bytes: 537
@@ -51,8 +51,8 @@ files:
   sha256: 99bde611c460d0986377c5f64e7773221f203bf5e9e62bc4cb6355d1c3371f92
   bytes: 727
 - path: policy/stop-conditions.yaml
-  sha256: c8511588c7ddb4b6911162a694d52abed589bcdaf95ace256fcdf76b8c2d5f8e
-  bytes: 652
+  sha256: 928e35ff2e76015fea913f86b43fd9f271c67cd7aedbc2f1ce77a52485572561
+  bytes: 2039
 - path: policy/waivers.yaml
   sha256: 1ad9c11bb1400280b352d17c607c870698bc236159bb78da7006bfb1a0496e9a
   bytes: 339
@@ -62,6 +62,9 @@ files:
 - path: references/AUTHORITY_AND_RISK.md
   sha256: f81205b91059939a2f70be2f97ec131f0a257f86f3171158e47fdade0def6c7a
   bytes: 531
+- path: references/AUTONOMY_BRIDGE.md
+  sha256: 888788784ff76f67e4ed0e455229a687be70ca3fa75a8cb82d7eac103855bac6
+  bytes: 2087
 - path: references/BLUEPRINT_MAPPING.md
   sha256: cdc2a94d49820a61cfc32e4b83f5e03b04343cc9c484342e9f6a0708c87c6652
   bytes: 1230
@@ -210,5 +213,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 68
-  total_bytes: 213979
+  file_count: 69
+  total_bytes: 218870

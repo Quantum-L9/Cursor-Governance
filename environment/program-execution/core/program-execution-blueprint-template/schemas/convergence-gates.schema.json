@@ -67,7 +67,14 @@
               "migration",
               "release",
               "operations",
-              "security"
+              "security",
+              "phase0"
+            ]
+          },
+          "blocking_class": {
+            "enum": [
+              "true_blocking",
+              "advisory_or_cosmetic"
             ]
           },
           "scope": {

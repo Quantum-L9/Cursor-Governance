@@ -551,3 +551,18 @@ where it conflicts):
    supersedes/conflicts live inside `03-graphiti-memory.mdc`.
 2. Live §8 rule set: `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`,
    `98-graphiti-memory-gate.mdc` (plus skill / flags unchanged).
+
+<!-- DIAGNOSE_FIRST_KERNEL_PATH_V2 -->
+## Diagnose First kernel path (2026-08-14) — supersedes the WIP backlog path
+
+Authoritative correction (do not treat the older 2026-08-14 **WIP/backlog**
+Diagnose First path as SSOT where it conflicts):
+
+1. Full Diagnose First kernel SSOT is `kernels/Diagnose First Kernel.md`.
+2. The 2026-08-14 pointer
+   `WIP/backlog/kernels/diagnose-first/Diagnose First Kernel.md` is retired —
+   do not restore that path.
+3. `prompts/10X Kernels/Diagnose First Kernel.md` remains a short digest only,
+   not §11 SSOT.
+4. Skill `l9-git-work-preserve` / slash `/git-work-preserve` bind
+   `kernels/Diagnose First Kernel.md`.

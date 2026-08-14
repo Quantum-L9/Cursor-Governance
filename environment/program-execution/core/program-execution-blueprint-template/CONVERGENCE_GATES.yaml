@@ -8,6 +8,30 @@ result_values:
 - NOT_APPLICABLE_WITH_REASON
 unknown_is_non_passing: true
 gates:
+- id: GATE-000
+  name: phase0_user_config_complete
+  definition_status: active
+  owner: '{{PROGRAM_OWNER}}'
+  class: phase0
+  blocking_class: true_blocking
+  scope:
+    wave_ids:
+    - W0
+    task_ids:
+    - TASK-001
+  method:
+    type: inspection
+    steps:
+    - Inspect PHASE0_USER_CONFIG.yaml completeness, blocking inventory, alignment, and operator_ack.
+  pass_condition: When program_deploying is false, Phase 0 may remain draft with phase0_complete false.
+    When program_deploying is true, phase0_complete is true, stop_conditions_reviewed is true,
+    alignment.uv_lock_check and toolchain_pin_lockstep are pass or not_applicable, make_pr_gate_required
+    is true, autonomous_merge is false, and advisory CI is inventoried or waived.
+  fail_condition: program_deploying true with incomplete Phase 0, uncleared environmental stops, or lock/pin misalignment.
+  blocking: true
+  required_evidence_ids:
+  - EVID-002
+  waiver_allowed: false
 - id: GATE-001
   name: authority_and_decision_lock
   definition_status: active
