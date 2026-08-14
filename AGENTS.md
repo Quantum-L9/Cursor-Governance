@@ -667,3 +667,20 @@ hydrate / Code-graph” lists as exhaustive):
    and attaches staleness flags (see skill `references/staleness-rules.md`).
 3. Findings are **display-only** — do not auto-Build. On-demand:
    `/plan-audit` → same CLI. `/start-session` STATE_SYNC surfaces the section.
+
+<!-- CAMPAIGN_EXECUTION_MAKE_PR_NO_MERGE_V1 -->
+## Campaign execution publish path (2026-08-14) — supersedes §2.0.2 / L4 merge phrasing
+
+Authoritative corrections for Program Execution campaigns and default `make pr`:
+
+1. After L4 kernels + `authorize-release`, agents MUST publish with
+   `PR_REMEDIATE=0 make pr` so Makefile checkers run and only clean code is
+   pushed. Do not use raw `gh pr create` as the publish path.
+2. Do **not** remediate (`l9-pr-remediation` / poll workers). Do **not** merge.
+   `ops/autonomy/merge_gate.py` no longer treats an L4 release receipt as merge
+   authority. Human only: `L9_MERGE_AUTHORIZED`.
+3. Each campaign has one integration branch. Land all campaign PRs into that
+   branch (`PR_BASE=origin/campaign/<campaign_id>`). Do **not** open campaign
+   PRs against `main`. Do **not** mix campaign work onto other feature branches.
+4. Branch map and order: `environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml`.
+   Profile SSOT: `ops/autonomy/surface_profile.yaml` → `campaign_execution`.

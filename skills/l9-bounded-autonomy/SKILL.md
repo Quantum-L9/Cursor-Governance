@@ -39,9 +39,9 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 1. Create a **campaign authorization packet** via `/autonomy` or explicit user campaign phrase before remediation pushes.
 2. Build Phase-0 action graph (`id`, `depends_on`, `mutation`, `lock_keys`, `isolation_key`, `kind`).
 3. **MUST** launch all ready independent `work` Tasks in one message (Protocol A).
-4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push** and no push-approval pacing stalls. After local finish → run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release` → scoped push/PR via `PULL_REQUEST_TEMPLATE.md` → `l9-pr-remediation` Converge (green + resolve review threads) → merge. Launching a program or clicking Build on a plan **is** the merge authorization for that stack (no separate merge ask). Remediate/merge older open PRs **bottom-up** by `createdAt` first.
-5. **MUST** spawn `Task` with `run_in_background: true` for each PR that needs CI/review watch (Protocol B). After spawn, **main continues** — must not block the main turn on CI; must not `AwaitShell` waiting on that poll worker.
-6. Join before merge-ready claims; for an L4 program/plan Build stack, merge when green+mergeable (Protocol C). Outside that stack, do not merge without `L9_MERGE_AUTHORIZED`.
+4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push**. After local finish → run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr`. Do **not** remediate. Do **not** merge. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`.
+5. Do **not** spawn `l9-pr-remediation` poll workers unless a human set `PR_REMEDIATE=1`.
+6. Do **not** merge. Human only: `L9_MERGE_AUTHORIZED`. An L4 release receipt is not merge authority.
 7. Close with Graphiti-primary PICKUP when ending campaign/session (Protocol D / handoff).
 
 ## MUST NOT

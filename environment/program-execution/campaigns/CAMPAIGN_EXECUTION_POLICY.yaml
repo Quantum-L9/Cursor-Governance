@@ -1,0 +1,41 @@
+# Campaign execution landing policy (operator overlay).
+# Does not mutate immutable CAMPAIGN_SOURCE.yaml files.
+# SSOT companion: ops/autonomy/surface_profile.yaml → campaign_execution
+schema: l9.program-execution.campaign-execution-policy.v1
+schema_version: 1.0.0
+updated: "2026-08-14"
+
+publish:
+  required_command: PR_REMEDIATE=0 make pr
+  require_makefile_checkers: true
+  raw_gh_pr_create: forbidden
+  remediate: false
+  merge: false
+  open_pr_against_main: false
+  mix_with_other_feature_branches: false
+
+campaigns:
+  - id: bounded-replanning-v1
+    integration_branch: campaign/bounded-replanning-v1
+    pr_base: campaign/bounded-replanning-v1
+    execute_order: 1
+    lane: pe_host
+  - id: l9-devpack-program-execution-hardening
+    integration_branch: campaign/l9-devpack-program-execution-hardening
+    pr_base: campaign/l9-devpack-program-execution-hardening
+    execute_order: 2
+    lane: compiler
+  - id: cc-pe-intent-compiler-v1
+    integration_branch: campaign/cc-pe-intent-compiler-v1
+    pr_base: campaign/cc-pe-intent-compiler-v1
+    execute_order: 3
+    lane: compiler
+  - id: l9-ecosystem-fix-plan
+    integration_branch: campaign/l9-ecosystem-fix-plan
+    pr_base: campaign/l9-ecosystem-fix-plan
+    execute_order: 4
+    lane: ecosystem
+    parallel_with:
+      - bounded-replanning-v1
+      - l9-devpack-program-execution-hardening
+      - cc-pe-intent-compiler-v1

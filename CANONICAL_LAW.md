@@ -566,3 +566,17 @@ Diagnose First path as SSOT where it conflicts):
    not §11 SSOT.
 4. Skill `l9-git-work-preserve` / slash `/git-work-preserve` bind
    `kernels/Diagnose First Kernel.md`.
+
+<!-- CAMPAIGN_EXECUTION_PR_NO_MERGE_V1 -->
+## 6.2.2 Campaign execution: make pr, no remediate, no merge (2026-08-14)
+
+Supersedes §6.1 remediation row, §6.2 post-push merge phrasing, and §6.2.1
+(program/plan Build implies merge) for agent action:
+
+1. Required publish path after L4 release: `PR_REMEDIATE=0 make pr`.
+2. Agents MUST NOT spawn `l9-pr-remediation` or merge. An L4 release receipt
+   does **not** authorize `gh pr merge`. Human only: `L9_MERGE_AUTHORIZED`.
+3. Program Execution campaigns land on `campaign/<campaign_id>` and MUST set
+   `PR_BASE` to that branch. Opening those PRs against `main` is forbidden.
+4. SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`) and
+   `environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml`.

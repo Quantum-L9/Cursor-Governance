@@ -24,22 +24,19 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
    - `kernels/Recursive Alignment.md`
    - then `kernels/Validate & Repair.md`
    on the finished tree.
-5. Authorize release, then push scoped PRs using `PULL_REQUEST_TEMPLATE.md`:
+5. Authorize release, then publish **only** via Makefile checkers:
 
 ```bash
 python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
 python3 ops/autonomy/l4_local.py record-kernels
 python3 ops/autonomy/l4_local.py authorize-release
-make pr
+PR_REMEDIATE=0 make pr
 ```
 
-6. After push: run `l9-pr-remediation` Converge — turn CI green, resolve all
-   code-review agent comments, reach mergeable.
-7. Launching a program or clicking Build on a plan **is** merge authorization
-   for that stack — do not wait for a separate merge ask. After remediation
-   reaches mergeable: merge. If older open PRs exist (earlier `createdAt` than
-   the PR just pushed), remediate and merge those **bottom-up first** so older
-   work is not rebased onto a newer main.
+6. Do **not** run `l9-pr-remediation`, spawn a remediation poll worker, or merge.
+7. Program Execution campaigns: land work on `campaign/<campaign_id>` and set
+   `PR_BASE` to that branch. Do **not** open campaign PRs against `main`.
+   Do **not** mix campaign commits onto unrelated feature branches.
 
 ## Enforcement
 
@@ -53,4 +50,6 @@ make pr
 - Mid-execution remote mutation
 - Skipping post-exec kernels before first push/PR
 - Inventing "wait for push approval" contracts that recreate pacing stalls
-- Merging newer tips before older open PRs when bottom-up order is required
+- Merging any PR (including after program/plan Build)
+- Spawning `l9-pr-remediation` after `make pr`
+- Opening campaign PRs against `main`

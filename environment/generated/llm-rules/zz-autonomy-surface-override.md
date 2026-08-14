@@ -13,15 +13,13 @@ AND `L9_AUTONOMY_ENABLED=true`:
 2. Completing reversible work MUST proceed L4-local: stacked-branch commits
    with **no mid-execution push** → finish program/contract → run
    `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
-   `l4_local.py authorize-release` → push → PR (`PULL_REQUEST_TEMPLATE.md`)
-   → `l9-pr-remediation` Converge (green + resolve review threads) without
-   mid-task push asks. Program/plan Build launch authorizes merge for that
-   stack (no separate merge ask).
+   `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
+   then push + PR). Do **not** remediate. Do **not** merge.
 3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
-4. Older open PRs: remediate + merge **bottom-up** by `createdAt` before newer
-   tips, so older work is not rebased onto a freshly updated main.
+4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
+   campaign PRs against `main`. Do not mix with other feature branches.
 5. Cursor surface stays ask-first for commits except campaign packet /
-   `make pr` remediation; L4 remote gate still blocks mid-execution push.
+   `make pr`; L4 remote gate still blocks mid-execution push.
 6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
 ## L4 Local Autonomy (all surfaces; default ON)
@@ -39,8 +37,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
   isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
   `L9_WORKTREE_ISOLATION=0`.
-- Post-push: `l9-pr-remediation` → green → resolve reviews → merge (program/
-  plan Build launch is the auth); older open PRs bottom-up first.
+- Post-push: `PR_REMEDIATE=0 make pr` only. No `l9-pr-remediation`. No merge
+  unless the human sets `L9_MERGE_AUTHORIZED`.
 
 ## Scratch hold / sacred WIP (never-lose)
 

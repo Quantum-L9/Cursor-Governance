@@ -78,7 +78,7 @@ def test_denies_mcp_merge_tool_without_receipt(stacked_repo: Path) -> None:
     assert "deny" in out
 
 
-def test_l4_release_receipt_allows_ordinary_merge(stacked_repo: Path) -> None:
+def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="merge-auth-test")
     record_kernels(stacked_repo)
     authorize_release(stacked_repo)
@@ -94,7 +94,8 @@ def test_l4_release_receipt_allows_ordinary_merge(stacked_repo: Path) -> None:
         }
     )
     assert code == 0, err
-    assert out.strip() == ""
+    payload = json.loads(out)
+    assert payload["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
 def test_l4_release_receipt_still_denies_force(stacked_repo: Path) -> None:
