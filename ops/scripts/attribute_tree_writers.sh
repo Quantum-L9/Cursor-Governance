@@ -23,12 +23,16 @@ PRECOMMIT_LOG="${3:-}"
 WS="$(cd "$WS" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-cd "$WS"
+cd "$WS" || exit 0
 
 # shellcheck source=lib/repo_write_lock.sh
 . "$SCRIPT_DIR/lib/repo_write_lock.sh"
 # shellcheck source=lib/precommit_log.sh
 . "$SCRIPT_DIR/lib/precommit_log.sh"
+
+_tracked_diff_digest() {
+  git diff --no-ext-diff --no-textconv --ignore-submodules | cksum | awk '{print $1}'
+}
 
 AFTER="$(mktemp)"
 REPLAY="$(mktemp)"
@@ -77,9 +81,11 @@ PY
     repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}" || true
     echo "--- read_only hook replay (declared read-only must show no delta) ---"
     for hook_id in $read_only_ids; do
-      before_digest="$(git diff --no-ext-diff --no-textconv --ignore-submodules | shasum | awk '{print $1}')"
+      before_digest="$(_tracked_diff_digest)"
+      # --all-files rather than the gate's changed-file list: for a hook that
+      # claims to write nothing, the wider input is the stricter test.
       pre-commit run "$hook_id" --all-files >/dev/null 2>&1
-      after_digest="$(git diff --no-ext-diff --no-textconv --ignore-submodules | shasum | awk '{print $1}')"
+      after_digest="$(_tracked_diff_digest)"
       if [[ "$before_digest" = "$after_digest" ]]; then
         echo "  $hook_id: no tracked delta (read_only honoured)"
         printf '%s\tclean\n' "$hook_id" >>"$REPLAY"

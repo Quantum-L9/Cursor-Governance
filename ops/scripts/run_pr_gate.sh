@@ -13,6 +13,14 @@ PR_MYPY_STRICT="${PR_MYPY_STRICT:-0}"
 cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
 
+# The governance generators and validators target the project interpreter
+# (3.11+, `from datetime import UTC`). A bare `python3` can be the system 3.9,
+# in which case the sync step aborts the gate with an import traceback and no
+# verdict. Prefer the project venv when it exists.
+if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
+  export PATH="$GOV_ROOT/.venv/bin:$PATH"
+fi
+
 # Never-lose: restore open/legacy holds around the gate; fail closed if still open.
 _scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
 _scratch_hold_restore() {
@@ -54,7 +62,9 @@ git status --porcelain >"$status_before"
 #   tracked   — git diff, exactly what pre-commit compares (run.py _get_diff)
 #   worktree  — git status --porcelain, which also sees untracked files
 _tracked_diff_digest() {
-  git diff --no-ext-diff --no-textconv --ignore-submodules | shasum | awk '{print $1}'
+  # cksum, not shasum/sha1sum: POSIX and present on every runner. This only
+  # needs to detect change, not resist collision attacks.
+  git diff --no-ext-diff --no-textconv --ignore-submodules | cksum | awk '{print $1}'
 }
 tracked_before="$(_tracked_diff_digest)"
 

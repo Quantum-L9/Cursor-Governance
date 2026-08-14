@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 # Sacred / scratch trees: git-visible, never gate-blocking. Keep in sync with
@@ -51,6 +52,7 @@ def _load_is_generated_path():
     return is_generated_path
 
 
+@lru_cache(maxsize=8)
 def protected_root_files(root: Path) -> set[str]:
     """Repository-root files registered in the append-only protection policy."""
     policy = root / "ops" / "config" / "root-file-protection.json"

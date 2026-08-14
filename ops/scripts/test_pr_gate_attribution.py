@@ -29,7 +29,9 @@ ATTRIBUTE = SCRIPTS / "attribute_tree_writers.sh"
 LOG_LIB = SCRIPTS / "lib" / "precommit_log.sh"
 
 
-def run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+def run(
+    cmd: list[str], cwd: Path, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess:
     merged = {**os.environ, **(env or {})}
     return subprocess.run(cmd, cwd=cwd, env=merged, capture_output=True, text=True)
 
@@ -83,7 +85,9 @@ def classify(repo: Path, before: Path) -> subprocess.CompletedProcess:
 class TestDirtinessClassification:
     def test_generated_only_dirt_is_tolerated(self, fixture_repo: Path, tmp_path: Path) -> None:
         before = snapshot(fixture_repo, tmp_path / "before.txt")
-        (fixture_repo / "rules" / "RULES-MANIFEST.yaml").write_text("rules: [a]\n", encoding="utf-8")
+        (fixture_repo / "rules" / "RULES-MANIFEST.yaml").write_text(
+            "rules: [a]\n", encoding="utf-8"
+        )
 
         result = classify(fixture_repo, before)
 
@@ -110,9 +114,7 @@ class TestDirtinessClassification:
         assert result.returncode == 1
         assert "rules/authored.mdc" in result.stdout
 
-    def test_protected_root_file_is_not_generated(
-        self, fixture_repo: Path, tmp_path: Path
-    ) -> None:
+    def test_protected_root_file_is_not_generated(self, fixture_repo: Path, tmp_path: Path) -> None:
         before = snapshot(fixture_repo, tmp_path / "before.txt")
         (fixture_repo / "AGENTS.md").write_text("# agents\nmore\n", encoding="utf-8")
 
@@ -150,7 +152,9 @@ class TestPrecommitLogParsing:
 
     def test_modified_files_is_not_reported_as_a_failure(self, tmp_path: Path) -> None:
         assert self.parse(tmp_path, self.MODIFIED_ONLY, "precommit_failed_hooks") == ""
-        assert self.parse(tmp_path, self.MODIFIED_ONLY, "precommit_blamed_hooks") == "symlinks-check"
+        assert (
+            self.parse(tmp_path, self.MODIFIED_ONLY, "precommit_blamed_hooks") == "symlinks-check"
+        )
 
     def test_exit_code_is_reported_with_its_hook(self, tmp_path: Path) -> None:
         assert self.parse(tmp_path, self.REAL_FAILURE, "precommit_failed_hooks") == "rules-check 1"
@@ -222,7 +226,8 @@ class TestWriterAttribution:
                 "bash",
                 "-c",
                 f'. "{lock_lib}"; L9_REPO_WRITE_LOCK_LABEL=install_ide_profile '
-                f'repo_write_lock_acquire "{fixture_repo}" 0; repo_write_lock_holder "{fixture_repo}"',
+                f'repo_write_lock_acquire "{fixture_repo}" 0; '
+                f'repo_write_lock_holder "{fixture_repo}"',
             ],
             cwd=fixture_repo,
             env={"HOME": str(home)},

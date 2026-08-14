@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -58,7 +57,9 @@ def validate(root: Path) -> list[str]:
             continue
         mode = entry.get("mode")
         if mode not in VALID_MODES:
-            errors.append(f"hook '{hook_id}' has mode {mode!r}; expected one of {sorted(VALID_MODES)}")
+            errors.append(
+                f"hook '{hook_id}' has mode {mode!r}; expected one of {sorted(VALID_MODES)}"
+            )
             continue
         if mode == "writer" and not isinstance(entry.get("output_prefixes"), list):
             errors.append(f"writer hook '{hook_id}' must declare an output_prefixes list")

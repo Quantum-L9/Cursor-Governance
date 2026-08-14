@@ -57,9 +57,7 @@ def check_forced_sync(root: Path) -> list[str]:
     # A generator that could not run proves nothing; report it rather than
     # passing vacuously (the generators need the project interpreter, not
     # whatever python3 happens to be first on PATH).
-    errors = [
-        f"forced sync could not complete: {message}" for message in result.get("errors", [])
-    ]
+    errors = [f"forced sync could not complete: {message}" for message in result.get("errors", [])]
     errors.extend(
         f"forced sync wrote {path!r}, which is_generated_path() does not match — "
         "add it to GENERATED_PATH_PREFIXES or the gate will hard-fail on it"
