@@ -394,3 +394,11 @@ rules-check:
 ## Cursor-native skill frontmatter + discovery-footprint ratchet (docs/skills-standard.md).
 skills-check:
 	python3 ops/scripts/check_skills_standard.py
+
+.PHONY: hygiene hygiene-fix
+## RB-HK-001 repository housekeeping gate.
+hygiene:
+	python3 tools/check_repo_hygiene.py
+
+hygiene-fix:
+	@echo "See WIP/housekeeping-pack/RUNBOOK.md Section 4"

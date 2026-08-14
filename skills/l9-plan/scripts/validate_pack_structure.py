@@ -62,9 +62,17 @@ def _missing_required(root: Path) -> list[str]:
 
 
 def _skill_version(skill: str) -> tuple[int, ...] | None:
-    for line in skill.splitlines():
-        if line.startswith("version:"):
-            raw = line.split(":", 1)[1].strip().strip("\"'")
+    """Read version from YAML frontmatter (top-level or nested under metadata)."""
+    if not skill.startswith("---"):
+        return None
+    parts = skill.split("---", 2)
+    if len(parts) < 3:
+        return None
+    front = parts[1]
+    for line in front.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("version:"):
+            raw = stripped.split(":", 1)[1].strip().strip("\"'")
             try:
                 return tuple(int(part) for part in raw.split("."))
             except ValueError:

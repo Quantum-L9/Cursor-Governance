@@ -1,0 +1,11 @@
+---
+description: Use when touching TODO.md, WIP/, current_work/, or deciding where in-flight work lives.
+alwaysApply: false
+---
+
+# Work tracking
+
+- Never read or write `WIP/`. It is human-owned scratch. `.cursorignore` lists `WIP/`.
+- Maintain `TODO.md` as the agent task queue. One task per line. Status prefix required: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked.
+- Include a Linear identifier when work spans sessions.
+- `current_work/` is retired. Do not recreate it. Migrate leftovers to `WIP/` (human) or `TODO.md` (agent).
