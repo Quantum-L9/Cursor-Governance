@@ -1,7 +1,10 @@
 ---
-description: "KERNEL pack / PE overlay landings use a new branch from origin/main without asking. Do not mix unrelated WIP."
-alwaysApply: false
-globs: "**/*.plan.md,WIP/**,environment/program-execution/**,AGENTS.md"
+description: KERNEL pack / PE overlay landings use a new branch from origin/main without asking. Do not mix unrelated WIP.
+paths:
+- '**/*.plan.md'
+- WIP/**
+- environment/program-execution/**
+- AGENTS.md
 ---
 
 <!-- L9_META
@@ -28,3 +31,5 @@ the landing path in a dirty or unrelated checkout.
 
 SSOT narrative: `AGENTS.md` section `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`.
 Planning: `skills/l9-plan/references/planning-doctrine.md` law item 9.
+
+<!-- generated-from: rules/46-kernel-pack-new-branch.mdc; do-not-edit -->

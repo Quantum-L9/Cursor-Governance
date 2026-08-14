@@ -94,6 +94,15 @@
     },
     {
       "alias": null,
+      "class": "skipped_agent_requested",
+      "output": null,
+      "output_sha256": null,
+      "source": "rules/15-work-tracking.mdc",
+      "source_sha256": "35231a24d9bb5f333e3a914566c9d9c77b8c9280de2e2c884303223cc42dad1b",
+      "stem": "15-work-tracking"
+    },
+    {
+      "alias": null,
       "class": "paths",
       "output": "20-lang-python.md",
       "output_sha256": "fc7f7da2ee1ed404c5544d0b35285ea6a7ad99a46634c2f4b73e5dbe5013b82f",
@@ -163,6 +172,15 @@
       "source": "rules/45-pre-action-verification.mdc",
       "source_sha256": "f165257cb41ed98ccff1c86783a7b13cd8a2693e335e85eea31e65961764be63",
       "stem": "45-pre-action-verification"
+    },
+    {
+      "alias": null,
+      "class": "paths",
+      "output": "46-kernel-pack-new-branch.md",
+      "output_sha256": "47bbe086da0b3e9bf6cf090274dfd76b5c7cda9dd637a0107714859d1385be3b",
+      "source": "rules/46-kernel-pack-new-branch.mdc",
+      "source_sha256": "f86689c88713f507e79a6d07e66823fb92912b685a24f336c59be3df227dac77",
+      "stem": "46-kernel-pack-new-branch"
     },
     {
       "alias": null,
@@ -610,9 +628,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 61,
-    "skipped_agent_requested": 5,
-    "source_mdc": 67
+    "projected": 62,
+    "skipped_agent_requested": 6,
+    "source_mdc": 69
   },
-  "tree_sha256": "aa6f9772d7e302229aae89e575a6047bb0e31254ce7012d504b359d01466e9f9"
+  "tree_sha256": "30172c4fb4526e9050c553cd1aaebed46de0c382922b08c374a1b98106889deb"
 }

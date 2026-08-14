@@ -27,10 +27,6 @@ Before any operation that writes, deploys, or calls an external system:
   pasted earlier in the conversation, never hardcode, never echo the value back.
 - **Confirm intent when the mode is ambiguous.** "Analyze and propose" and "execute the fix" are
   different requests. When both readings are live, ask which — do not pick.
-- **KERNEL pack / PE overlay landing branch is not ambiguous.** Do not ask current-feature-branch
-  vs new-branch. Default: new branch from `origin/main` in this clone. Ask only if the user
-  already named the target branch, or `origin/main` cannot be resolved. See
-  `AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1` and `rules/46-kernel-pack-new-branch.mdc`.
 
 ## Gate 2 — After success: evidence
 

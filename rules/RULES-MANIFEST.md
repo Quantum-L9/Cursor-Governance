@@ -1,14 +1,14 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-14T16:07:52Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-14T16:27:58Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
 | Total MDC files | **68** |
-| `alwaysApply: true` | **45** |
-| `alwaysApply: false` | **23** |
+| `alwaysApply: true` | **44** |
+| `alwaysApply: false` | **24** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **0** |
 | Derived compatibility IDs | **68** |
@@ -36,8 +36,8 @@ Generated: `2026-08-14T16:07:52Z`. Source: `rules/*.mdc`.
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | auto_attached | 139 | `99c30e79186d` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | auto_attached | 176 | `d9eea4c8153c` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | auto_attached | 49 | `6ad1f03ec17c` |
-| `45-pre-action-verification.mdc` | `l9.rule.45.pre.action.verification` | global | general | always | 85 | `997a5055773c` |
-| `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | always | 29 | `c279fab25184` |
+| `45-pre-action-verification.mdc` | `l9.rule.45.pre.action.verification` | global | general | always | 81 | `f165257cb41e` |
+| `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | auto_attached | 30 | `f86689c88713` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | always | 201 | `065dbc102466` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | auto_attached | 28 | `cde8669cf30e` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | auto_attached | 28 | `d962c29bcae4` |
