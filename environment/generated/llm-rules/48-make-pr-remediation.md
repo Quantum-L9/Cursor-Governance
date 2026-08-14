@@ -28,4 +28,29 @@ that counts as explicit approval for the push + PR open performed by
 `ops/scripts/open_pr_after_gate.sh` (overrides the generic “ask before push”
 default for this one command path only).
 
+## Gate dirtiness semantics (do not misread pre-commit)
+
+pre-commit exits non-zero for **two unrelated reasons** —
+`files_modified or bool(retcode)`:
+
+- `- exit code: <n>` — a hook genuinely failed. The gate FAILs and names it.
+- `- files were modified by this hook` — the tracked worktree changed during
+  that hook's **wall-clock window**. It does **not** identify the writer.
+
+The gate therefore classifies rather than aborts. Generated/scratch churn is a
+WARN to stage; non-generated dirt is attributed, quiesced, retried once, then
+FAILed with exact paths.
+
+**Never audit the named hook first.** Run the attribution and read the receipt:
+
+```bash
+bash ops/scripts/attribute_tree_writers.sh "$(pwd)" <status-before-file> <precommit-log>
+cat .l9/pr/gate-dirtiness.json
+```
+
+A hook declared `read_only` in `ops/config/precommit-hook-contract.json` that
+shows no delta on replay is exonerated — look for a concurrent writer in the
+repo-write lock ledger instead. `L9_GATE_STRICT_LEGACY=1` restores the old
+abort-on-any-non-zero behavior.
+
 <!-- generated-from: rules/48-make-pr-remediation.mdc; do-not-edit -->
