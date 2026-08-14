@@ -35,10 +35,14 @@ invariants:
         path: AGENTS.md
         pattern: "make pr` / `make PR` / `make Pr` / `make pR`"
         present: true
+      # CANONICAL_LAW.md is additive_only (ops/config/root-file-protection.json), so a
+      # `present: false` projection on it can never be satisfied by a correction — the
+      # stale sentence cannot be deleted, only superseded. Assert the corrected statement
+      # is present instead; the superseding row carries it.
       - type: file_contains
         path: CANONICAL_LAW.md
-        pattern: "case-sensitive; `make PR` is not a target and errors"
-        present: false
+        pattern: "make pr` / `make PR` / `make Pr` / `make pR` all run the same gate"
+        present: true
 
   - id: memory-single-front-door
     priority: P0
