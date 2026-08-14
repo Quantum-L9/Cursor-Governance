@@ -28,6 +28,34 @@ ACTIVE_ROOTS = (
 ACTIVE_FILES = (
     ".mcp.json",
     ".env.example",
+    "end-session.yaml",
+)
+
+# Governance authority + session-protocol surfaces that must never carry a
+# LIVE instruction to the retired memory client. Scoped deliberately: the
+# execution engine (workflows/) and rules corpus migrate under a separate
+# memory-front-door plan; this gate protects the authority/protocol class.
+AUTHORITY_PROTOCOL_SURFACES = (
+    "end-session.yaml",
+    "AGENTS.md",
+    "CANONICAL_LAW.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    "PULL_REQUEST_TEMPLATE.md",
+    ".github/pull_request_template.md",
+)
+
+# Retired session-memory client. Graphiti (ops/graphiti/graphiti_memory_client.py,
+# runtime .cursor-commands/ops/graphiti/...) is the single front door.
+RETIRED_MEMORY_CLIENT = re.compile(r"agents/cursor/cursor_memory_client\.py")
+
+# A mention that teaches the client is gone (a retirement notice) is allowed;
+# only a live invocation on an authority surface is a violation.
+RETIRED_CLIENT_ALLOW = re.compile(
+    r"(?i)("
+    r"deprecated|retired|replaced by|superseded|no longer|historical|"
+    r"do not use|don't use|use graphiti|instead of|forbidden|removed"
+    r")"
 )
 
 SKIP_DIR_PARTS = {
@@ -170,16 +198,40 @@ def main() -> int:
             if DROPBOX_LIVE.search(line) or HTTP_LIVE.search(line):
                 findings.append(f"{rel}:{i}: {line.strip()[:160]}")
 
-    if findings:
-        print("FAIL: active doctrine teaches retired Dropbox SSOT or L9_MEMORY_HTTP side door")
-        print("Active surfaces must use $HOME/.cursor-governance + Graphiti only (ADR-0006).")
-        for hit in findings[:80]:
-            print(f"  {hit}")
-        if len(findings) > 80:
-            print(f"  ... and {len(findings) - 80} more")
+    # Scoped memory-front-door check: no LIVE retired-client call on any
+    # governance authority / session-protocol surface.
+    client_findings: list[str] = []
+    for rel in AUTHORITY_PROTOCOL_SURFACES:
+        path = ROOT / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            if not RETIRED_MEMORY_CLIENT.search(line):
+                continue
+            if RETIRED_CLIENT_ALLOW.search(line):
+                continue
+            client_findings.append(f"{rel}:{i}: {line.strip()[:160]}")
+
+    if findings or client_findings:
+        if findings:
+            print("FAIL: active doctrine teaches retired Dropbox SSOT or L9_MEMORY_HTTP side door")
+            print("Active surfaces must use $HOME/.cursor-governance + Graphiti only (ADR-0006).")
+            for hit in findings[:80]:
+                print(f"  {hit}")
+            if len(findings) > 80:
+                print(f"  ... and {len(findings) - 80} more")
+        if client_findings:
+            print("FAIL: governance authority/protocol surface calls the retired memory client")
+            print("Use the Graphiti front door (ops/graphiti/graphiti_memory_client.py) instead.")
+            for hit in client_findings:
+                print(f"  {hit}")
         return 1
 
-    print("PASS: no active Dropbox SSOT / L9_MEMORY_HTTP side-door teaching")
+    print("PASS: no active Dropbox SSOT / L9_MEMORY_HTTP side-door or retired-client teaching")
     return 0
 
 

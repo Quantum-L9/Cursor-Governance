@@ -75,6 +75,49 @@ class LegacyDoctrineResidueTests(unittest.TestCase):
             finally:
                 mod.ROOT = original
 
+    def test_retired_client_allow_permits_retirement_notice(self) -> None:
+        mod = _load_mod()
+        # A doctrine line that teaches the client is gone is allowed.
+        self.assertTrue(
+            mod.RETIRED_CLIENT_ALLOW.search(
+                "- `cursor_memory_client.py` — replaced by `graphiti_memory_client.py`"
+            )
+        )
+        self.assertTrue(mod.RETIRED_MEMORY_CLIENT.search("agents/cursor/cursor_memory_client.py"))
+
+    def test_main_fails_on_live_retired_client_call_on_authority_surface(self) -> None:
+        mod = _load_mod()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # A live invocation on the session protocol must fail closed.
+            (root / "end-session.yaml").write_text(
+                "phase_2:\n  command: |\n"
+                '    python3 agents/cursor/cursor_memory_client.py write "X" --kind lesson\n',
+                encoding="utf-8",
+            )
+            original = mod.ROOT
+            try:
+                mod.ROOT = root
+                self.assertEqual(mod.main(), 1)
+            finally:
+                mod.ROOT = original
+
+    def test_main_passes_when_retired_client_only_named_as_retired(self) -> None:
+        mod = _load_mod()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "CANONICAL_LAW.md").write_text(
+                "- `cursor_memory_client.py` (agents/cursor/cursor_memory_client.py) "
+                "is retired — use the Graphiti front door instead.\n",
+                encoding="utf-8",
+            )
+            original = mod.ROOT
+            try:
+                mod.ROOT = root
+                self.assertEqual(mod.main(), 0)
+            finally:
+                mod.ROOT = original
+
 
 if __name__ == "__main__":
     unittest.main()

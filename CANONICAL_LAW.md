@@ -371,7 +371,7 @@ to "let CI catch it." CI is the second line of defence, not the first.
 
 | Rule | Detail |
 |------|--------|
-| Target | Lowercase `make pr` (alias `make pr-check`). Make targets are case-sensitive; `make PR` is not a target and errors. |
+| Target | `make pr` (alias `make pr-check`). The Makefile remaps any capitalization — `make pr` / `make PR` / `make Pr` / `make pR` all run the same gate (`AGENTS.md` §6). |
 | Scope | CHANGED FILES ONLY (`AGENTS.md` §2.3 invariant). Full-tree is `make pr-full` / `make precommit` — intentional/nightly, and never a substitute for `make pr`. |
 | Applies to | Every L9 / Quantum-L9 coding workspace and every agent surface (Cursor, Claude Code CLI · Web · Mobile, Codex, Gemini, …). |
 | Authority | Non-optional. Sits above per-session context in the authority order; enforced operationally in `AGENTS.md` §6. |

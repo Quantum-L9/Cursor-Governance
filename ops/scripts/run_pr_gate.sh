@@ -28,6 +28,16 @@ _scratch_hold_status() {
 
 _scratch_hold_restore
 
+# Always-run governance contract surface: cheap, changed-file-INDEPENDENT.
+# A Markdown/YAML/config-only mutation must never bypass the checks that prove
+# its semantics (P2-12). These validate the governance repo (GOV_ROOT).
+echo "=== governance contract surface (always-run) ==="
+if [[ -f "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py" ]]; then
+  python3 "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py"
+fi
+if [[ -f "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py" ]]; then
+  python3 "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py"
+fi
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 
