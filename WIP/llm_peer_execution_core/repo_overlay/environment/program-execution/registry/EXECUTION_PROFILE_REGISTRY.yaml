@@ -1,0 +1,37 @@
+schema: l9.peer-execution.profile-registry.v1
+schema_version: 1.0.0
+default_profile_ref: worker-default
+profiles:
+  worker-default:
+    permission_profile_ref: repo-local-bounded
+    inference_budget:
+      max_turns: 12
+    timeout_budget:
+      dispatch_seconds: 1800
+      poll_seconds: 30
+    retry_policy:
+      max_attempts: 1
+      backoff_seconds: 0
+    context_policy_ref: contract-minimal-v1
+  worker-read-only:
+    permission_profile_ref: read-only
+    inference_budget:
+      max_turns: 8
+    timeout_budget:
+      dispatch_seconds: 1200
+      poll_seconds: 30
+    retry_policy:
+      max_attempts: 1
+      backoff_seconds: 0
+    context_policy_ref: contract-minimal-v1
+  reviewer-default:
+    permission_profile_ref: read-only
+    inference_budget:
+      max_turns: 8
+    timeout_budget:
+      dispatch_seconds: 1200
+      poll_seconds: 30
+    retry_policy:
+      max_attempts: 1
+      backoff_seconds: 0
+    context_policy_ref: contract-minimal-v1
