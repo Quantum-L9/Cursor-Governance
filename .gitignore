@@ -35,12 +35,11 @@ logs/
 # Node modules (if any)
 node_modules/
 
-# Environment variables (keep template)
+# Environment variables (keep .env.example)
 .env
 .env.local
 .env.*.local
 env.local
-!.env.template
 
 # Backup files
 *.backup
@@ -77,9 +76,10 @@ __pycache__/
 .claude/rules/
 .claude/rules
 
-# ── WIP/ is intentionally tracked (sacred backlog / glorified todo) ─────────
-# Do NOT add a blanket `WIP/` ignore — the tree is commit-eligible draft corpus.
-# Agents must read and respect it; scanners exclude it via tool configs, not git.
+# ── WIP/ is git-tracked human scratch; agents do not read or write it ──────
+# Do NOT add a blanket `WIP/` gitignore — the tree stays commit-eligible.
+# Agents are kept out via .cursorignore (`WIP/`) + rules/15-work-tracking.mdc.
+# Scanners already exclude WIP/ via tool configs, not git.
 # Only credential-shaped filenames under WIP are denylisted (2026-07-21: a
 # session-end sync hook nearly staged a live Google OAuth client secret from
 # WIP/google_oauth_*.json — caught before origin). Keep these patterns.
@@ -123,3 +123,16 @@ WIP/Legal Defense/Evidence/derived/frames/
 !WIP/Legal Defense/Evidence/derived/
 !WIP/Legal Defense/Evidence/derived/transcripts/
 !WIP/Legal Defense/Evidence/derived/transcripts/**
+
+# generated reports - CI artifacts, not source
+governance-health-report.json
+docs/rules-frontmatter-inventory.md
+docs/skills-inventory.md
+
+# runtime state
+.harvest_executor_state.json
+# .governance-build-lock stays tracked — session_start_bootstrap.sh reads it
+
+# retired harvest dump — repo-hygiene fail-closes if this directory reappears
+current_work/
+

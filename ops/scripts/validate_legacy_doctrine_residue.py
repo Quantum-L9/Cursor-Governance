@@ -27,7 +27,6 @@ ACTIVE_ROOTS = (
 # Root / top-level active contracts not covered by ACTIVE_ROOTS directories.
 ACTIVE_FILES = (
     ".mcp.json",
-    ".env.template",
     ".env.example",
 )
 

@@ -1,0 +1,73 @@
+# Closes H-03, H-04, H-05 permanently.
+name: repo-hygiene
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: H-03 named space paths are gone
+        run: |
+          if git ls-files | grep -E '^(Activation Command\.md|key components/|commands/harvest copy\.md)'; then
+            echo "::error::H-03 space paths still tracked"
+            git ls-files | grep -E '^(Activation Command\.md|key components/|commands/harvest copy\.md)'
+            exit 1
+          fi
+          echo "ok: H-03 named space paths absent"
+
+      - name: No generated reports or runtime state tracked
+        run: |
+          banned='governance-health-report.json|\.harvest_executor_state\.json|rules-frontmatter-inventory\.md|skills-inventory\.md'
+          if git ls-files | grep -Eq "$banned"; then
+            echo "::error::generated or runtime files are tracked:"
+            git ls-files | grep -E "$banned"
+            exit 1
+          fi
+          echo "ok: no generated artifacts tracked"
+
+      - name: Single env template
+        run: |
+          if [ -f .env.template ] && [ -f .env.example ]; then
+            echo "::error::both .env.example and .env.template exist; keep .env.example only"
+            exit 1
+          fi
+          echo "ok: single env template"
+
+      - name: current_work/ stays retired
+        run: |
+          if [ -d current_work ]; then
+            echo "::error::current_work/ is retired. Use WIP/ (human) or TODO.md (agent)."
+            exit 1
+          fi
+          echo "ok: current_work/ absent"
+
+      - name: WIP is cursorignored
+        run: |
+          if [ -d WIP ] && ! grep -qE '^WIP/?$' .cursorignore 2>/dev/null; then
+            echo "::error::WIP/ exists but is not listed in .cursorignore"
+            exit 1
+          fi
+          echo "ok: WIP/ boundary intact"
+
+      - name: Full hygiene check
+        run: |
+          if [ -f tools/check_repo_hygiene.py ]; then
+            python3 tools/check_repo_hygiene.py
+          else
+            echo "::warning::tools/check_repo_hygiene.py not installed yet"
+          fi
