@@ -72,7 +72,6 @@ def _provider_errors(subsystem: Path, entry: dict[str, Any]) -> tuple[bool, list
         if exported:
             errors.append(f"{provider_ref}: non-routable factory must not export PROVIDER_CLASS")
         return True, errors
-    thin_expected = True
     if peer_bound and "agent_ref" in identity:
         errors.append(f"{provider_ref}: provider descriptor must not carry agent_ref")
     adapter_dir = provider_path.parent

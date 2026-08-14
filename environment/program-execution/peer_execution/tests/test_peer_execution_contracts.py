@@ -5,8 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pydantic import ValidationError
-
 from peer_execution.context import (
     build_context_manifest,
     load_context_manifest,
@@ -26,6 +24,7 @@ from peer_execution.provider import (
 from peer_execution.runner import run_to_terminal
 from peer_execution.runtime_store import RuntimeStore
 from peer_execution.subprocess_runner import run_argv
+from pydantic import ValidationError
 
 
 class PeerExecutionContractTests(unittest.TestCase):

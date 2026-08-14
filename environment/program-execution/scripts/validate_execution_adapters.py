@@ -115,6 +115,9 @@ def _compound_body_errors(
             if token.type == tokenize.OP and token.string == ":" and token_depth == 0
         ]
         if colon_positions and colon_positions[-1] < len(significant) - 1:
+            after = significant[colon_positions[-1] + 1 :]
+            if after and all(token.string == "..." for token, _depth in after):
+                continue
             errors.append(("E701", line_number))
     return errors
 

@@ -963,7 +963,7 @@
     },
     {
       "path": "peer_execution/driver_execution.py",
-      "sha256": "535c6d3fd09ee430b83f9065a6091dfac31ba8474e720b2f8204520b9efcc1ef"
+      "sha256": "9e34eff47d981f82ce34bf869d3985ebf55e1df31d45659412fc651c8152e95c"
     },
     {
       "path": "peer_execution/errors.py",
@@ -971,7 +971,7 @@
     },
     {
       "path": "peer_execution/execution.py",
-      "sha256": "81435f482d0038e6b166ca8cbd16aea880837e88407806a39c24ccacf3686f75"
+      "sha256": "03041b2e451806534da47d75dfb238bd6b74ac1daa29bdd8c581fa1ab2fdd538"
     },
     {
       "path": "peer_execution/imports.py",
@@ -995,7 +995,7 @@
     },
     {
       "path": "peer_execution/provider.py",
-      "sha256": "bd025451a60ae5a81fe3f8fa80fd41be0df4d08ef13a0afc54d6a723479f2f84"
+      "sha256": "c9d962da4cc14abeb319519e4bc19846856ae2c3f0379c7350b85679ee4e267e"
     },
     {
       "path": "peer_execution/receipts.py",
@@ -1023,7 +1023,7 @@
     },
     {
       "path": "peer_execution/tests/test_peer_execution_contracts.py",
-      "sha256": "2d4d5ecfa9859e5719d0c996bf73692252be0ecd5ce43e3ef0c859ec74357ddb"
+      "sha256": "29a227853fb437e503f0ab0945fd8964c4820af3f9c8495ffd4b7866cea2ff8c"
     },
     {
       "path": "registry/EXECUTION_ADAPTER_HEALTH.yaml",
@@ -1111,7 +1111,7 @@
     },
     {
       "path": "scripts/validate_execution_adapters.py",
-      "sha256": "991439a392fbc81a6e46a084ba5dc1abb5eb5dce5d30c10e608c66773bfea55e"
+      "sha256": "467dab820b9d454e9efbe0d37ceca048cec93a8a446686cbcdb6832214d08d61"
     },
     {
       "path": "scripts/validate_manifest.py",
@@ -1119,7 +1119,7 @@
     },
     {
       "path": "scripts/validate_thin_providers.py",
-      "sha256": "c2d110b7a872be771ce6248c88929e85be9d2c918175adee709133322437667c"
+      "sha256": "989ac035f8c3cb882e0f54c29581b5d08b26337e2c504dbb836d356ecbf5346a"
     },
     {
       "path": "tests/__init__.py",

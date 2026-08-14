@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import structlog
-
-log = structlog.get_logger("peer_execution")
-
 import json
 import os
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+import structlog
 
 from .base import BaseExecutionAdapter
 from .context import write_context_manifest
@@ -24,6 +22,8 @@ from .provider import (
     ThinProvider,
     validate_provider_invocation,
 )
+
+log = structlog.get_logger("peer_execution")
 
 _TERMINAL_PROVIDER_STATUSES = {"PASS", "FAIL", "BLOCKED", "CANCELLED"}
 _CLAIMED_STATUSES = {"completed", "failed", "blocked", "stopped"}
