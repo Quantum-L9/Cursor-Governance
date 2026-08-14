@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import sys
 
+
 def main() -> int:
     raw = sys.stdin.read().strip()
     if not raw:

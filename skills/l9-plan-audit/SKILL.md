@@ -1,14 +1,15 @@
 ---
 name: l9-plan-audit
 description: audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan) or to auto-build plans.
-skill_schema: 1
-layer: control_plane
-role: skill_entrypoint
-tags: [l9, plan, audit, session-start, staleness, cursor-plans]
-owner: igor_beylin
-status: active
-version: 1.0.0
-updated: 2026-08-12
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, plan, audit, session-start, staleness, cursor-plans]
+  owner: igor_beylin
+  status: active
+  version: 1.0.0
+  updated: 2026-08-12
 ---
 
 # l9-plan-audit
