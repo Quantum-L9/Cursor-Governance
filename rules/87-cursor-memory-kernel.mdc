@@ -1,5 +1,11 @@
 ---
-description: Cursor Memory Kernel enforcement — authoritative source for memory operations, kinds, and session lifecycle
+id: l9.rule.cursor.memory.kernel
+version: 1.0.0
+description: "Cursor Memory Kernel enforcement \u2014 authoritative source for memory\
+  \ operations, kinds, and session lifecycle"
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

@@ -1,5 +1,11 @@
 ---
-description: GlobalCommands loads as a Cursor local plugin, not a whole-directory rules symlink. Supersedes v2.0.0.
+id: l9.rule.cursor-governance-wiring
+version: 1.0.0
+description: GlobalCommands loads as a Cursor local plugin, not a whole-directory
+  rules symlink. Supersedes v2.0.0.
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 
@@ -16,7 +22,7 @@ skills,commands}` directories), so every governed repo was in violation of its o
 governance rule. Rather than build the individual-symlink selector v2.0.0 called
 for, this version replaces that plan entirely: governance content loads through
 Cursor's own local-plugin mechanism instead of any rules-directory symlink, global
-or selective. Per the Graphiti `Supersedes` convention (`99-graphiti-temporal.mdc`),
+or selective. Per the Graphiti `Supersedes` convention (`03-graphiti-memory.mdc`),
 this is a replacement, not a silent overwrite — v2.0.0's text is preserved in git
 history, not deleted.
 

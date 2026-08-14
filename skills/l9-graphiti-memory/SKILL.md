@@ -127,7 +127,7 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 1. `rules/03-graphiti-memory.mdc`
 2. `ops/graphiti/MEMORY_BANK_POLICY.md` (deprecated — archival note only)
 3. `ops/graphiti/group_registry.yaml`
-4. `rules/97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`
+4. `rules/97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc` (temporal folded into `03-graphiti-memory.mdc`)
 5. `skills/l9-end-session/SKILL.md` — session-close write path
 6. `docs/decisions/ADR-0005-one-agent-memory-domain-out-of-band.md`
 

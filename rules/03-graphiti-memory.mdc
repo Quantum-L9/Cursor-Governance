@@ -1,5 +1,12 @@
 ---
-description: Graphiti episodic memory SSOT — retrieval authority, group_id contract, no Cursor native memory for repo facts
+id: l9.rule.graphiti.memory
+version: 1.1.0
+description: "Graphiti episodic memory SSOT \u2014 retrieval authority, group_id,\
+  \ temporal supersedes/conflicts"
+scope: global
+domain: memory
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

@@ -1,7 +1,12 @@
 ---
+id: l9.rule.73.prompts.and.evals
+version: 1.0.0
 description: Prompt, kernel, and eval discipline for L9.
-globs: config/kernels/**/*, config/prompts/**/*, evals/**/*, scripts/eval_*.py
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: config/kernels/**/*, config/prompts/**/*, evals/**/*, scripts/eval_*.py
 ---
 
 # Prompts and evals (L9)

@@ -1,0 +1,96 @@
+# rules-corpus-cleanup-v1 — Phase 0 freeze (adapted to disk @ aeab4df)
+schema: l9.rules-cleanup-rename-map/v1
+captured_at: "2026-08-14T16:07:00Z"
+baseline:
+  branch: feat/rules-corpus-cleanup
+  commit_sha: aeab4dfbc93aaea21de73044f1dc4fc65603af80
+  mdc_count: 67
+  always_apply_true: 45
+  notes:
+    - "46-kernel-pack-new-branch.mdc already occupies 46 — recursive kernel → 44"
+    - "88-shared-worktree-isolation.mdc added — move to 49"
+    - "93-perplexity-research-protocol is .mdc — fold into 78 then delete"
+    - "Extra demotions 85 + 81 to hit always≤28 given +2 new always rules"
+pinned:
+  - 00-global.mdc
+  - 02-slash-commands.mdc
+  - 03-graphiti-memory.mdc
+  - 23-l9-skill-routing.mdc
+  - 45-pre-action-verification.mdc
+  - 84-cursor-governance-wiring.mdc
+  - 87-cursor-memory-kernel.mdc
+  - 92-learned-lessons.mdc
+  - 97-graph-layer-boundary.mdc
+  - 98-graphiti-memory-gate.mdc
+  - 99-no-auto-commit.mdc
+deletes:
+  - 01-git-push-prohibition.mdc
+  - 96-git-push-approval.mdc
+  - 03-mcp-memory.mdc
+  - 99-graphiti-temporal.mdc
+  - 93-perplexity-research-protocol.mdc
+renames:
+  01-vps-rules.mdc: 08-vps-ops.mdc
+  05-recursive-execution-kernel.mdc: 44-recursive-execution-kernel.mdc
+  87-cursor-subagent-orchestration.mdc: 77-cursor-subagent-orchestration.mdc
+  87-l4-local-autonomy.mdc: 88-l4-local-autonomy.mdc
+  87-wire-workflow-guard.mdc: 76-wire-workflow-guard.mdc
+  88-bounded-session-autonomy.mdc: 75-bounded-session-autonomy.mdc
+  88-perplexity-run-harness.mdc: 78-perplexity-run-harness.mdc
+  88-shared-worktree-isolation.mdc: 49-shared-worktree-isolation.mdc
+  95-agent-pattern-activation.mdc: 47-agent-pattern-activation.mdc
+  96-env-no-hardcode.mdc: 63-env-no-hardcode.mdc
+  96-output-discipline.mdc: 79-output-discipline.mdc
+  97-governance-ssot-paths.mdc: 06-governance-ssot-paths.mdc
+  97-graph-engine-architecture.mdc: 41-graph-engine-architecture.mdc
+  97-ide-profile-exceptions.mdc: 69-ide-profile-exceptions.mdc
+  98-make-pr-remediation.mdc: 48-make-pr-remediation.mdc
+  99-execute-as-instructed.mdc: 09-execute-as-instructed.mdc
+  99-incident-report.mdc: 59-incident-lessons.mdc
+stable_ids:
+  99-no-auto-commit.mdc: l9.rule.git.mutation-gate
+  03-graphiti-memory.mdc: l9.rule.graphiti.memory
+  87-cursor-memory-kernel.mdc: l9.rule.cursor.memory.kernel
+  88-l4-local-autonomy.mdc: l9.rule.l4.local-autonomy
+  98-graphiti-memory-gate.mdc: l9.rule.graphiti.memory.gate
+  44-recursive-execution-kernel.mdc: l9.rule.recursive-execution-kernel
+  84-cursor-governance-wiring.mdc: l9.rule.cursor-governance-wiring
+  95-test-fix-policy.mdc: l9.rule.testing.integrity
+  63-env-no-hardcode.mdc: l9.rule.configuration.no-hardcode
+  79-output-discipline.mdc: l9.rule.output-discipline
+  06-governance-ssot-paths.mdc: l9.rule.governance-ssot-paths
+  97-graph-layer-boundary.mdc: l9.rule.graph-layer-boundary
+  69-ide-profile-exceptions.mdc: l9.rule.ide-profile-exceptions
+demotions:
+  08-vps-ops.mdc: {activation: agent_requested, alwaysApply: false}
+  04-cursor-redis-session.mdc: {activation: agent_requested, alwaysApply: false}
+  47-agent-pattern-activation.mdc: {activation: agent_requested, alwaysApply: false}
+  41-graph-engine-architecture.mdc: {activation: agent_requested, alwaysApply: false}
+  86-module-tier-mapping.mdc: {activation: agent_requested, alwaysApply: false}
+  89-constellation-gate-workspace-session.mdc: {activation: agent_requested, alwaysApply: false}
+  78-perplexity-run-harness.mdc: {activation: agent_requested, alwaysApply: false}
+  77-cursor-subagent-orchestration.mdc: {activation: agent_requested, alwaysApply: false}
+  25-python-dora-header.mdc: {activation: auto_attached, alwaysApply: false, globs: ["**/*.py"]}
+  50-qa-testing.mdc: {activation: auto_attached, alwaysApply: false, globs: ["**/test_*.py", "**/*_test.py", "**/tests/**", "**/*.test.*", "**/*.spec.*"]}
+  70-tool-efficiency.mdc: {activation: agent_requested, alwaysApply: false}
+  85-workflow-state-bridge.mdc: {activation: agent_requested, alwaysApply: false}
+  81-gmp-audit.mdc: {activation: agent_requested, alwaysApply: false}
+  59-incident-lessons.mdc: {activation: agent_requested, alwaysApply: false}
+always_math:
+  start: 45
+  delete_git_pair: -2
+  delete_temporal: -1
+  demote_incident: -1
+  demote_roster: -13
+  target: 28
+extracts:
+  92-learned-lessons.mdc: learning/failures/learned-lessons-corpus.md
+  99-incident-report.mdc: learning/failures/incidents/incident-report-corpus.md
+  60-anti-patterns.mdc: learning/patterns/anti-patterns.md
+consumer_note: Prefer id selectors in rule-selection; stem/file break on rename. Out-of-repo rules.yaml not mutated.
+---
+completion:
+  status: implemented
+  mdc_count: 63
+  always_apply_true: 28
+  unique_prefixes: true

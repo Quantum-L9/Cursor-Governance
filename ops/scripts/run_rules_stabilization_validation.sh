@@ -71,7 +71,8 @@ run_gate "Python syntax compilation" python3 -c \
   "$SCRIPT_DIR/capture_rules_cleanup_preflight.py" \
   "$SCRIPT_DIR/audit_rules_corpus.py" \
   "$SCRIPT_DIR/inventory_cursor_extensions.py" \
-  "$SCRIPT_DIR/inventory_mcp_servers.py"
+  "$SCRIPT_DIR/inventory_mcp_servers.py" \
+  "$SCRIPT_DIR/audit_rule_references.py"
 run_gate "Manifest generation" python3 "$SCRIPT_DIR/generate_rules_manifest.py" --root "$GOV_ROOT"
 run_gate "Manifest validation" python3 "$SCRIPT_DIR/validate_rules_manifest.py" --root "$GOV_ROOT"
 run_gate "Corpus audit generation" python3 "$SCRIPT_DIR/audit_rules_corpus.py" --root "$GOV_ROOT"
@@ -90,6 +91,7 @@ scoped=(
   "$SCRIPT_DIR/audit_rules_corpus.py"
   "$SCRIPT_DIR/inventory_cursor_extensions.py"
   "$SCRIPT_DIR/inventory_mcp_servers.py"
+  "$SCRIPT_DIR/audit_rule_references.py"
 )
 if [ -x "$GOV_ROOT/.venv/bin/ruff" ]; then
   run_gate "Scoped ruff" "$GOV_ROOT/.venv/bin/ruff" check "${scoped[@]}"
@@ -114,9 +116,12 @@ cat >> "$REPORT" <<'EOF_REPORT'
 Cursor UI discovery and all four activation modes require an installed Cursor session. They are tracked in the consumer repository's `reports/cursor-rules-activation-baseline.md` and are not represented as automated success.
 EOF_REPORT
 
+run_gate "Stale rule references" python3 "$SCRIPT_DIR/audit_rule_references.py" --root "$GOV_ROOT"
+
 if [ "$FAIL" -ne 0 ]; then
   echo "RESULT: FAIL - see $REPORT" >&2
   exit 1
 fi
 
 echo "RESULT: PASS - see $REPORT"
+

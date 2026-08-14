@@ -1,5 +1,11 @@
 ---
-description: Behavioral rules for Ask Mode in Cursor - no code generation, plain English explanations only.
+id: l9.rule.05.ask.mode
+version: 1.0.0
+description: Behavioral rules for Ask Mode in Cursor - no code generation, plain English
+  explanations only.
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

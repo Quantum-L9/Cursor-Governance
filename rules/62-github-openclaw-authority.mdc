@@ -1,5 +1,11 @@
 ---
-description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask humans to operate github.com UI.
+id: l9.rule.62.github.openclaw.authority
+version: 1.0.0
+description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask
+  humans to operate github.com UI.
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

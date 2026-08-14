@@ -1,6 +1,12 @@
 ---
+id: l9.rule.50.qa.testing
+version: 1.0.0
 description: Testing and QA rules for AI OS agents, runtimes, and integrations.
-alwaysApply: true
+scope: global
+activation: auto_attached
+authority: canonical_global
+alwaysApply: false
+globs: '**/test_*.py,**/*_test.py,**/tests/**,**/*.test.*,**/*.spec.*'
 ---
 
 # Testing & QA Rules for L9 OS

@@ -1,49 +1,36 @@
 ---
-description: Never auto-commit or auto-push without explicit user approval
+description: Ask-first git commit/push SSOT with L4 and autonomy-surface precedence
 ---
 
-# No Auto Commit/Push Rule
+# Git mutation gate (ask-first)
 
-## NEVER commit or push without explicit user approval
+**SSOT filename:** `99-no-auto-commit.mdc` · **id:** `l9.rule.git.mutation-gate`
 
-- **NEVER** run `git commit` without the user explicitly asking
-- **NEVER** run `git push` without the user explicitly asking
-- **NEVER** run `git add && git commit` chains without approval
-- **NEVER** assume the user wants changes committed
+## MUST NOT (Cursor default)
 
-## What to do instead
+- Run `git commit` or `git push` (any form, including `--force`) without explicit user request
+- Chain `git add && git commit` / assume approval from silence or "looks good"
 
-1. Make the code changes
-2. Show the user what changed (diff or summary)
-3. **WAIT** for the user to say "commit" or "push" or similar
+## MAY without asking
 
-## Acceptable triggers for commit/push
+- `git status`, `git diff`, `git log`, `git fetch`, `git branch` (read-only)
 
-Only proceed with git operations when user says:
-- "commit this"
-- "push it"
-- "commit and push"
-- "save this to git"
-- Or similar explicit instruction
+## Precedence (highest first)
 
-## NOT acceptable triggers
+1. **Mechanical gates** — `ops/autonomy/local_execution_gate.py`, L4 receipts, `merge_gate.py`
+2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `git push` / `gh pr create` / `make pr` denied until `authorize-release`
+3. **This rule** — Cursor ask-first for commit/push; waived only when all of:
+   - `L9_GOVERNANCE_SURFACE` is an adapter (`claude-code`, `codex`, `gemini`, `manus`) — not `cursor`
+   - `L9_AUTONOMY_ENABLED=true`
+   - Action is on the Autonomy Surface Profile authorize list (`ops/autonomy/surface_profile.yaml`)
+   - Or a campaign packet / `make pr` remediation path applies
+4. Force-push, hard-reset, admin-merge, and secrets exfil: **never** waived
 
-- Completing a code change
-- Fixing a bug
-- "That looks good"
-- Silence
-
-## Adapter Autonomy Velocity waiver
-
-When **all** of the following are true, this rule is **waived** for scoped
-feature-branch `git commit` / `git push` and PR create/update:
-
-1. `L9_GOVERNANCE_SURFACE` is an adapter (`claude-code`, `codex`, `gemini`, `manus`) — **not** `cursor`
-2. `L9_AUTONOMY_ENABLED=true`
-3. Action is on the Autonomy Surface Profile authorize list (`ops/autonomy/surface_profile.yaml`)
-
-Merge, force-push, hard-reset, admin-merge, and secrets remain forbidden.
-Cursor remains ask-first unless a campaign packet or `make pr` remediation path applies.
 Projected override: `zz-autonomy-surface-override.md`.
+
+## Approval phrases
+
+Commit: "commit", "commit this", "commit and push", "save this to git".
+Push: "push", "push it", "git push", "push to origin" (separate unless user said commit and push together).
 
 <!-- generated-from: rules/99-no-auto-commit.mdc; do-not-edit -->

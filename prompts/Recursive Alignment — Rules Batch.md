@@ -9,7 +9,7 @@ compiled_prompt:
   mode: report_only
 
   source_authority:
-    highest: [CANONICAL_LAW.md, 97-governance-ssot-paths.mdc, global .cursor-commands/rules/]
+    highest: [CANONICAL_LAW.md, 06-governance-ssot-paths.mdc, global .cursor-commands/rules/]
     not_applicable: [TransportPacket, Gate routing, node build pipeline — unless rule explicitly governs L9 nodes]
 
   rule_alignment_passes:

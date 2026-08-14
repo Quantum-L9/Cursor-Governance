@@ -1,5 +1,11 @@
 ---
-description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure.'
+id: l9.rule.pre-action-verification
+version: 1.0.0
+description: 'Verification gates around any action: verify before acting, evidence
+  before claiming success, stop on failure.'
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

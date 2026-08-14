@@ -1,5 +1,11 @@
 ---
-description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
+id: l9.rule.83.gmp.contracts
+version: 1.0.0
+description: 'GMP contract enforcement: binding report paths, sequential GMP IDs,
+  ISO dates, and post-write validation.'
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

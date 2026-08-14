@@ -1,7 +1,13 @@
 ---
-description: Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo addon suites — use the repo's Odoo Python overlay rule.
-globs: src/**/*.py, !**/migrations/*.py
+id: l9.rule.20.lang.python
+version: 1.0.0
+description: "Python rules for L9 pure-Python repos (src/ layout, uv). Not for Odoo\
+  \ addon suites \u2014 use the repo's Odoo Python overlay rule."
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: src/**/*.py, !**/migrations/*.py
 ---
 
 # Python Language Rules for L9 OS Core Runtime

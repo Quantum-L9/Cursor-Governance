@@ -1,5 +1,11 @@
 ---
-description: Keep structural code graphs, episodic memory, repository resume state, and static law distinct.
+id: l9.rule.graph-layer-boundary
+version: 1.0.0
+description: Keep structural code graphs, episodic memory, repository resume state,
+  and static law distinct.
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

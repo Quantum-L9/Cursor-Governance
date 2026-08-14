@@ -1,5 +1,11 @@
 ---
-description: Use when touching TODO.md, WIP/, current_work/, or deciding where in-flight work lives.
+id: l9.rule.15.work.tracking
+version: 1.0.0
+description: Use when touching TODO.md, WIP/, current_work/, or deciding where in-flight
+  work lives.
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
 ---
 

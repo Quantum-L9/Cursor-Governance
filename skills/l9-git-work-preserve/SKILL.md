@@ -35,7 +35,7 @@ Load detail: [references/audit-workflow.md](references/audit-workflow.md), [refe
 
 1. Explicit user objective and auth env flags.
 2. [references/diagnose-first-binding.md](references/diagnose-first-binding.md) + CANONICAL_LAW §11.
-3. `ops/autonomy/worktree_isolation_gate.py` / rule `88-shared-worktree-isolation` (consume; do not weaken).
+3. `ops/autonomy/worktree_isolation_gate.py` / rule `49-shared-worktree-isolation` (consume; do not weaken).
 4. This skill's scripts and receipt schema.
 5. `Unknown` — keep the ref; do not delete.
 

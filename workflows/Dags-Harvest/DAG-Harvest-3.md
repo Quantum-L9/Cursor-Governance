@@ -404,7 +404,7 @@ Now updating `tools/export_repo_indexes.py`:
 
 Now updating the `/index` command documentation:
 
-Also need to update the `.cursor/rules/03-mcp-memory.mdc` which references `readme/repo-index/`:
+Also need to update the `.cursor/rules/03-graphiti-memory.mdc` which references `readme/repo-index/`:
 
 Let me verify the export script works:
 
@@ -439,7 +439,7 @@ reports/
 | ------------------------------------ | ------------------------------------------ |
 | `tools/export_repo_indexes.py`       | `readme/repo-index` → `reports/repo-index` |
 | `.cursor-commands/commands/index.md` | Updated paths                              |
-| `.cursor/rules/03-mcp-memory.mdc`    | Updated paths                              |
+| `.cursor/rules/03-graphiti-memory.mdc`    | Updated paths                              |
 
 ### Generators
 

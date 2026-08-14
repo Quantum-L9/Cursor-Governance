@@ -539,3 +539,14 @@ where it conflicts):
 2. The older pointer `WIP/Diagnose First Kernel.md` is absent on tip — do not use it.
 3. `prompts/10X Kernels/Diagnose First Kernel.md` remains a short digest only, not §11 SSOT.
 4. Skill `l9-git-work-preserve` / slash `/git-work-preserve` bind the backlog full kernel.
+
+<!-- RULES_CORPUS_CLEANUP_GRAPHITI_REFS_V1 -->
+## Graphiti rule refs after corpus cleanup (2026-08-14) — supersedes §8 Rules line
+
+Authoritative correction (do not treat the older §8 **Rules** stem list as SSOT
+where it conflicts):
+
+1. `99-graphiti-temporal.mdc` was **deleted** in rules-corpus-cleanup-v1; temporal
+   supersedes/conflicts live inside `03-graphiti-memory.mdc`.
+2. Live §8 rule set: `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`,
+   `98-graphiti-memory-gate.mdc` (plus skill / flags unchanged).

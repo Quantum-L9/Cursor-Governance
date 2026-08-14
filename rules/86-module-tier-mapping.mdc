@@ -1,6 +1,12 @@
 ---
-description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right GMP module prompts per tier.
-alwaysApply: true
+id: l9.rule.86.module.tier.mapping
+version: 1.0.0
+description: Map files to L9 tiers (kernel, runtime, infra, UX) and inject the right
+  GMP module prompts per tier.
+scope: global
+activation: agent_requested
+authority: canonical_global
+alwaysApply: false
 ---
 
 # Module ↔ tier mapping (L9)

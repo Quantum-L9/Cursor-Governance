@@ -79,6 +79,15 @@ def validate(root: Path) -> list[str]:
         fail(errors, "duplicate rule IDs in manifest")
 
     disk_files = sorted(path.name for path in rules_dir.glob("*.mdc"))
+    # Unique NN- numeric prefixes (rules-corpus-cleanup-v1).
+    prefixes: dict[str, list[str]] = {}
+    for name in disk_files:
+        if len(name) >= 3 and name[0:2].isdigit() and name[2] == "-":
+            prefixes.setdefault(name[0:2], []).append(name)
+    for prefix, names in sorted(prefixes.items()):
+        if len(names) > 1:
+            fail(errors, f"duplicate NN- prefix {prefix}-: {', '.join(names)}")
+
     if sorted(files) != disk_files:
         fail(errors, "manifest file set differs from rules/*.mdc")
 

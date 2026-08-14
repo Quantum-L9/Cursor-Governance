@@ -1,6 +1,12 @@
 ---
-description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
-alwaysApply: true
+id: l9.rule.81.gmp.audit
+version: 1.0.0
+description: 'GMP audit and verification rules: canonical and guide prompts mapped
+  to L9 PRs and workspaces.'
+scope: global
+activation: agent_requested
+authority: canonical_global
+alwaysApply: false
 ---
 
 # GMP audit and verification (L9)

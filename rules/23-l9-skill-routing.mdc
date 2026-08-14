@@ -1,5 +1,11 @@
 ---
-description: Proactive L9 skill selection — Read the matching skill before non-trivial work; honor Cursor skill-route hints; fail closed if skipped.
+id: l9.rule.skill-routing
+version: 1.0.0
+description: "Proactive L9 skill selection \u2014 Read the matching skill before non-trivial\
+  \ work; honor Cursor skill-route hints; fail closed if skipped."
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

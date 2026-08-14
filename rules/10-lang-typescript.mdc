@@ -1,7 +1,12 @@
 ---
+id: l9.rule.10.lang.typescript
+version: 1.0.0
 description: TypeScript + TSX language rules for AI OS UI and agent-facing frontends.
-globs: '**/*.ts, **/*.tsx, !**/*.test.ts, !**/*.test.tsx'
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: '**/*.ts, **/*.tsx, !**/*.test.ts, !**/*.test.tsx'
 ---
 
 # TypeScript/React Language Rules for L9 OS Frontend

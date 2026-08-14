@@ -1,5 +1,11 @@
 ---
-description: Preserve test intent and fix root causes instead of manufacturing a green suite.
+id: l9.rule.testing.integrity
+version: 1.0.0
+description: Preserve test intent and fix root causes instead of manufacturing a green
+  suite.
+scope: global
+activation: always
+authority: canonical_global
 alwaysApply: true
 ---
 

@@ -1,6 +1,13 @@
 ---
-description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__ block per codegen contract.'
-alwaysApply: true
+id: l9.rule.25.python.dora.header
+version: 1.0.0
+description: 'L9 Python module structure: header meta, footer meta, and DORA __l9_trace__
+  block per codegen contract.'
+scope: global
+activation: auto_attached
+authority: canonical_global
+alwaysApply: false
+globs: '**/*.py'
 ---
 
 # Python L9 Module Structure: Three-Block System

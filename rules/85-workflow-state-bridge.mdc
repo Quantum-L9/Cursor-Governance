@@ -1,6 +1,12 @@
 ---
-description: 'Bridge Cursor runs to session resume: Graphiti PICKUP/inject SSOT; workflow_state.md legacy where present.'
-alwaysApply: true
+id: l9.rule.85.workflow.state.bridge
+version: 1.0.0
+description: 'Bridge Cursor runs to session resume: Graphiti PICKUP/inject SSOT; workflow_state.md
+  legacy where present.'
+scope: global
+activation: agent_requested
+authority: canonical_global
+alwaysApply: false
 ---
 
 # Session resume bridge (L9)

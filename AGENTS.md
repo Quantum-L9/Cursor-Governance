@@ -610,3 +610,13 @@ not the landing path in a dirty or unrelated checkout. Rule:
 ## Peer Execution shared runtime (2026-08-14)
 
 Bounded concurrency runtime is provider-neutral at `environment/program-execution/peer_execution/autonomy/`. Every provider binds to the same shared runtime through Program Execution; no provider owns a scheduler. Human merge only.
+
+<!-- RULES_CORPUS_CLEANUP_REFS_V1 -->
+## Rules corpus cleanup refs (2026-08-14) — supersedes MEMORY_BANK_RETIRED rule id
+
+Authoritative correction (do not treat the older `98-make-pr-remediation`
+stem above as live):
+
+1. Rule stem `98-make-pr-remediation` was renamed to `48-make-pr-remediation`
+   (`rules/48-make-pr-remediation.mdc`) in rules-corpus-cleanup-v1.
+2. Handoff path remains `.l9/pr/pr-remediation-handoff.json`.

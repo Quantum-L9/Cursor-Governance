@@ -1,7 +1,12 @@
 ---
+id: l9.rule.43.lang.postgresql
+version: 1.0.0
 description: PostgreSQL schema, query, migration, and safety invariants.
-globs: '**/*.sql, **/migrations/**/*.sql, **/schema.sql, **/seed.sql, **/alembic/**/*.py'
+scope: global
+activation: agent_requested
+authority: canonical_global
 alwaysApply: false
+globs: '**/*.sql, **/migrations/**/*.sql, **/schema.sql, **/seed.sql, **/alembic/**/*.py'
 ---
 
 # PostgreSQL invariants

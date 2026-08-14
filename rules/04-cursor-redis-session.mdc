@@ -1,6 +1,12 @@
 ---
-description: Redis session context via MCP (cache_get_session_context / cache_set_session_context) to resume work and avoid cross-session amnesia.
-alwaysApply: true
+id: l9.rule.04.cursor.redis.session
+version: 1.0.0
+description: Redis session context via MCP (cache_get_session_context / cache_set_session_context)
+  to resume work and avoid cross-session amnesia.
+scope: global
+activation: agent_requested
+authority: canonical_global
+alwaysApply: false
 ---
 
 # Cursor + Redis Session Context (no amnesia)
