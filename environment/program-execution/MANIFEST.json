@@ -998,6 +998,10 @@
       "sha256": "c9d962da4cc14abeb319519e4bc19846856ae2c3f0379c7350b85679ee4e267e"
     },
     {
+      "path": "peer_execution/pytest.ini",
+      "sha256": "7d87d018140c5e1f544040571ca0f8b4b0bcd164cb0fdb464ae1f1ec1560b538"
+    },
+    {
       "path": "peer_execution/receipts.py",
       "sha256": "a645745fcdc010e23ab87af5647ab0e0ad8bf4c14265d210861ec1676fdb4ee3"
     },
@@ -1071,7 +1075,7 @@
     },
     {
       "path": "scripts/generate_manifest.py",
-      "sha256": "6124b4c210eaf5878b8104089e936f8fb54ee78ff97a4bd6d25ed6444c582bc7"
+      "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
     },
     {
       "path": "scripts/peer_execution_cli.py",
