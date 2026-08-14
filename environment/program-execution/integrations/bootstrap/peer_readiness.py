@@ -105,16 +105,15 @@ def build_readiness(
     probe_value = dict(provider_probe or {})
     probe_status = str(probe_value.get("status") or "UNKNOWN")
     probe_integrity_ok = False
-    probe_receipt: CapabilityReceipt | None = None
     if probe_value.get("receipt_digest") is not None:
         try:
-            probe_receipt = CapabilityReceipt.from_dict(probe_value)
+            receipt = CapabilityReceipt.from_dict(probe_value)
         except (KeyError, TypeError, ValueError):
-            probe_receipt = None
+            pass
         else:
-            probe_integrity_ok = probe_receipt.adapter_id == provider_ref
+            probe_integrity_ok = receipt.adapter_id == provider_ref
             if probe_status == "PASS":
-                probe_integrity_ok = probe_integrity_ok and probe_receipt.is_fresh(observed)
+                probe_integrity_ok = probe_integrity_ok and receipt.is_fresh(observed)
     elif probe_status != "PASS":
         probe_integrity_ok = True
     if probe_status == "PASS" and not probe_integrity_ok:
