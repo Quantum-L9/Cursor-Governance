@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-14T17:08:52Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-14T21:19:18Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -21,7 +21,7 @@ Generated: `2026-08-14T17:08:52Z`. Source: `rules/*.mdc`.
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 34 | `c5b2842185ac` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 157 | `aa501ee5b8e0` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 68 | `d3fca17315f9` |
-| `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `41c3af182d35` |
+| `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `a8c0978cff70` |
 | `08-vps-ops.mdc` | `l9.rule.08.vps.ops` | global | git | agent_requested | 192 | `8ca195f6994d` |
@@ -40,8 +40,8 @@ Generated: `2026-08-14T17:08:52Z`. Source: `rules/*.mdc`.
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 87 | `2d4e738329b0` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
-| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 36 | `d2f7931bd6c9` |
-| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 49 | `e8ea31172e93` |
+| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 61 | `f322130df313` |
+| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 71 | `f27e0d6faa05` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |

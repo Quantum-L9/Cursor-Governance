@@ -35,7 +35,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/04-cursor-redis-session.mdc",
-      "source_sha256": "41c3af182d35d45bdace5830e1fcbdd2851bec5966fabf9a9ac5a453edebbf98",
+      "source_sha256": "64a0e957121bb68ace388ae9e41928768cfc6998952a8acfc6e9f8a1e4d07c88",
       "stem": "04-cursor-redis-session"
     },
     {
@@ -204,18 +204,18 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "12f134bf8ef28bb3a373c921427f391ff849a5e0c601c1181392d0fcfc6ff025",
+      "output_sha256": "275fe795dbb4cb01808c2abd397c5fd0c425a11d85ccfed83fa6ed09919894b0",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "d2f7931bd6c9b7bf2085e65d35456457758a0674ea59344dae721815a479c58b",
+      "source_sha256": "f322130df313fd4dbee5eb57b987659fade17b6be0fac59faa3ce2d75e93bdd5",
       "stem": "48-make-pr-remediation"
     },
     {
       "alias": null,
       "class": "always",
       "output": "49-shared-worktree-isolation.md",
-      "output_sha256": "242f9af8c15494d37a979c361ec8c2cd57c5d505f4d81699443e133f04eec82d",
+      "output_sha256": "9ec3b1ceac92c5c9ee9c236d3e397e3d7dce9fcbc5e1d0b8069d9e1c575c1663",
       "source": "rules/49-shared-worktree-isolation.mdc",
-      "source_sha256": "e8ea31172e9327412132e032eae55e4f3e9fe94b5a042a44a774c0e159471fa7",
+      "source_sha256": "f27e0d6faa056149e87d24103c756e925877f66414d5646181be64cd8cd9c8f8",
       "stem": "49-shared-worktree-isolation"
     },
     {
@@ -587,5 +587,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 64
   },
-  "tree_sha256": "cf797c296d743f303664594d9a4f04acdcddcdd07643ed5c629d94e0cbc34913"
+  "tree_sha256": "c0be5dbd36ad316630594652da1cba3d60c28877f4de2c38d150f9f5f13ffe5a"
 }

@@ -3,21 +3,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=resolve_governance_paths.sh
-source "$SCRIPT_DIR/resolve_governance_paths.sh"
-
-resolve_governance_paths_or_exit
+# Scan the checkout this script ships in, not $HOME/.cursor-governance. Resolving a
+# machine-level SSOT clone made the validator unrunnable on a CI runner (no such clone
+# exists there, and resolve_governance_paths_or_exit hard-exits 1), and made a local run
+# from a worktree validate a different tree than the one under test. Override with
+# GOVERNANCE_SCAN_ROOT to point at another clone deliberately.
+GOVERNANCE_SCAN_ROOT="${GOVERNANCE_SCAN_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 FAIL=0
 
 SCAN_FILES=(
-  "$GLOBAL_COMMANDS/ops/hooks/session_end_governance_backup.sh"
-  "$GLOBAL_COMMANDS/ops/scripts/resolve_governance_paths.sh"
-  "$GLOBAL_COMMANDS/ops/scripts/backup_to_github.sh"
-  "$GLOBAL_COMMANDS/ops/scripts/setup_workspace_symlinks.sh"
-  "$GLOBAL_COMMANDS/ops/scripts/validate_governance_symlinks.sh"
-  "$GLOBAL_COMMANDS/ops/scripts/install_ide_profile.sh"
-  "$GLOBAL_COMMANDS/ops/scripts/backup_gate.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/hooks/session_end_governance_backup.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/scripts/resolve_governance_paths.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/scripts/backup_to_github.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/scripts/setup_workspace_symlinks.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/scripts/validate_governance_symlinks.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/scripts/install_ide_profile.sh"
+  "$GOVERNANCE_SCAN_ROOT/ops/scripts/backup_gate.sh"
 )
 
 pass() { echo "  OK: $1"; }
@@ -41,7 +43,7 @@ scan_file() {
 }
 
 echo "=== Governance path contract (CANONICAL_LAW §9) ==="
-echo "  GlobalCommands: $GLOBAL_COMMANDS"
+echo "  Scan root: $GOVERNANCE_SCAN_ROOT"
 echo "  Scope: governance wiring kernel (ops/hooks + path resolvers)"
 echo ""
 
@@ -56,7 +58,7 @@ done
 
 echo ""
 if [ $FAIL -eq 0 ]; then
-  echo "RESULT: PASS — wiring kernel resolves via resolve_governance_paths.sh (~/.cursor-governance SSOT)"
+  echo "RESULT: PASS — wiring kernel in $GOVERNANCE_SCAN_ROOT resolves paths dynamically"
   exit 0
 fi
 

@@ -84,6 +84,27 @@ WORKSPACE="${WORKSPACE:-$PWD}"
 [ -d "$WORKSPACE" ] || fail_open "workspace not a directory: $WORKSPACE"
 WORKSPACE="$(cd "$WORKSPACE" && pwd)"
 
+# This script writes .vscode/settings.json and the AGENTS.md formatter block.
+# Doing that while `make pr` runs puts the write inside a pre-commit hook's
+# window, which pre-commit then reports as "files were modified by this hook"
+# against a hook that never wrote. Wait for the repo-write lock; a --quiet
+# (hook-driven) run yields entirely, an explicit run proceeds with a warning.
+LOCK_LIB="$SCRIPT_DIR/lib/repo_write_lock.sh"
+if [ "$DRY_RUN" -eq 0 ] && [ -f "$LOCK_LIB" ]; then
+  # shellcheck source=lib/repo_write_lock.sh
+  . "$LOCK_LIB"
+  export L9_REPO_WRITE_LOCK_LABEL="install_ide_profile"
+  if ! repo_write_lock_acquire "$WORKSPACE" "${L9_IDE_LOCK_WAIT_S:-45}"; then
+    if [ "$QUIET" -eq 1 ]; then
+      echo "ide-profile: skipped ($(repo_write_lock_skip_note "$WORKSPACE"))"
+      exit 0
+    fi
+    echo "WARN: $(repo_write_lock_skip_note "$WORKSPACE") — reconciling anyway (explicit run)" >&2
+  else
+    trap 'repo_write_lock_release' EXIT
+  fi
+fi
+
 # --- Classification -----------------------------------------------------------
 # 1) basename match  2) any path-segment match  3) eslint markers without biome markers
 

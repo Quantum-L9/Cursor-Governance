@@ -12,10 +12,11 @@
 name: L9 Root-File Protection
 
 on:
+  # No paths filter: "Root-file append-only gate" is a required context in the
+  # main-protection ruleset, and a filtered-out workflow never reports it, leaving
+  # the PR permanently BLOCKED with nothing to fix. A WIP-only diff touches no root
+  # file, so the gate is a cheap trivial pass rather than a missing check.
   pull_request:
-    paths-ignore:
-      # Scratch/reference dumps — never gate CI on WIP-only changes
-      - "WIP/**"
 
 permissions:
   contents: read

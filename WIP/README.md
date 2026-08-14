@@ -63,17 +63,6 @@ Draft kernels and duplicate packs here must not fail PR quality gates.
 ```text
 WIP/
 ├── README.md                         ← this file (policy SSOT for the folder)
-├── backlog/
-│   ├── program-execution/
-│   │   └── phase0-autonomy-rail/     ← PE Phase 0 / LL-001–004 (not in live core)
-│   ├── plan-schema/
-│   │   └── canonical.schema.plan_document.v1.yaml
-│   ├── kernels/
-│   │   ├── diagnose-first/           ← full kernel; law §11 is distill only
-│   │   ├── preflight/                ← not compiled as skills
-│   │   └── control-plane-stages/     ← Audit→Release cousins; not Cursor skills
-│   └── memory/
-│       └── graphiti-memory-integration-waves/
 ├── Execution Schemas/                ← draft execution contract schemas
 ├── claude code environment/          ← cloud/mobile Claude pack drafts + receipts
 ├── out-of-scope-hold/                ← parked items (scripts, schemas, …)
