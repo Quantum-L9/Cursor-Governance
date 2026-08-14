@@ -1,0 +1,22 @@
+schema: l9.git_work_preserve.receipt/v1
+description: Evidence receipt for inventory diagnosis extract or prune
+required:
+  - receipt_id
+  - mode
+  - repo
+  - created_at
+  - baseline_ref
+properties:
+  receipt_id: {type: string}
+  mode: {enum: [audit, diagnose-value, extract, prune-propose, prune-execute, stash-deep-analysis]}
+  repo: {type: string}
+  created_at: {type: string}
+  baseline_ref: {type: string, description: "usually origin/main"}
+  ref: {type: string}
+  tip_sha: {type: string}
+  classification: {enum: [keep_push, extract, archive_ref, prune_candidate, unknown]}
+  confidence: {enum: [high, medium, low, unknown]}
+  unique_commits: {type: integer}
+  unique_paths: {type: array, items: {type: string}}
+  auth_env: {type: string, description: "name of auth env if mutation"}
+  rollback: {type: string, description: "reflog or tip SHA recovery hint"}

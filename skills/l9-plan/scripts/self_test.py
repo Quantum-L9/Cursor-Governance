@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from sync_cursor_plan_template import _under_repo  # noqa: E402
 
 # Keep in parity with SKILL.md ## Validation fenced block.
 INVOKED = [
@@ -109,6 +116,26 @@ def main() -> int:
             "python3 scripts/sync_cursor_plan_template.py .\n"
             f"{sync.stderr}"
         )
+
+    # Governed consumer layout: .cursor/plans → external home plans dir.
+    with tempfile.TemporaryDirectory() as tmp:
+        fake_repo = Path(tmp) / "repo"
+        home_plans = Path(tmp) / "home-plans"
+        (fake_repo / ".cursor").mkdir(parents=True)
+        home_plans.mkdir()
+        os.symlink(home_plans, fake_repo / ".cursor" / "plans")
+        try:
+            mirror = _under_repo(fake_repo, ".cursor", "plans", "_TEMPLATE.plan.md")
+            expected = (fake_repo / ".cursor" / "plans" / "_TEMPLATE.plan.md").resolve()
+            if mirror.resolve() != expected:
+                errors.append(f"symlink mirror path unexpected: {mirror}")
+        except SystemExit as exc:
+            errors.append(f"home-symlink .cursor/plans wrongly rejected: {exc}")
+        try:
+            _under_repo(fake_repo, "..", "escape")
+            errors.append("expected .. segment to be rejected")
+        except SystemExit:
+            pass
 
     if errors:
         for e in errors:
