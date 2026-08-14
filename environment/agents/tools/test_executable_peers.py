@@ -69,7 +69,7 @@ class ExecutablePeerContractTests(unittest.TestCase):
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.peers["cursor"]["agent_ref"] = "not-an-agent"
         errors: list[str] = []
-        module._check_agent_refs(model, errors)
+        module._check_peer_identity(model, errors)
         self.assertTrue(any("[E4]" in e for e in errors), errors)
 
     def test_e6_required_without_binding(self) -> None:
@@ -77,14 +77,18 @@ class ExecutablePeerContractTests(unittest.TestCase):
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.peers["codex"]["execution"] = {"required": True, "bindings": []}
         errors: list[str] = []
-        module._check_execution_shape(model, errors)
+        module._check_peer_identity(model, errors)
         self.assertTrue(any("[E6]" in e for e in errors), errors)
 
     def test_e7_unknown_surface(self) -> None:
         module = _load()
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.peers["cursor"]["execution"]["bindings"] = [
-            {"surface": "not-a-surface", "adapter_id": "cursor-foreground"}
+            {
+                "surface": "not-a-surface",
+                "provider_ref": "cursor-foreground",
+                "execution_profile_ref": "worker-default",
+            }
         ]
         errors: list[str] = []
         module._check_bindings(model, errors)
@@ -94,7 +98,11 @@ class ExecutablePeerContractTests(unittest.TestCase):
         module = _load()
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.peers["cursor"]["execution"]["bindings"] = [
-            {"surface": "cursor-ide", "adapter_id": "no-such-adapter"}
+            {
+                "surface": "cursor-ide",
+                "provider_ref": "no-such-adapter",
+                "execution_profile_ref": "worker-default",
+            }
         ]
         errors: list[str] = []
         module._check_bindings(model, errors)
@@ -105,33 +113,44 @@ class ExecutablePeerContractTests(unittest.TestCase):
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.peers["codex"]["execution"] = {
             "required": True,
-            "bindings": [{"surface": "codex-cloud", "adapter_id": "codex-cloud"}],
+            "bindings": [
+                {
+                    "surface": "codex-cloud",
+                    "provider_ref": "codex-cloud",
+                    "execution_profile_ref": "worker-default",
+                }
+            ],
         }
         errors: list[str] = []
         module._check_bindings(model, errors)
         self.assertTrue(any("[E12]" in e for e in errors), errors)
 
-    def test_e14_missing_roles_manifest(self) -> None:
+    def test_e14_missing_bootstrap_carrier(self) -> None:
         module = _load()
         model = module.ExecutablePeerModel(REPO_ROOT)
-        model.peers["cursor"]["subagents"] = {
-            "enabled": True,
-            "roles_manifest": "environment/agents/does-not-exist.yaml",
-            "deployment": {"readiness_required": False},
-        }
+        model.peers["codex"]["execution"]["required"] = True
+        model.agents["codex"]["adapter"] = "no-such-adapter"
         errors: list[str] = []
-        module._check_no_copied_autonomy_and_carriers(model, errors)
-        self.assertTrue(any("[E14]" in e and "roles manifest" in e for e in errors), errors)
+        module._check_carriers(model, errors)
+        self.assertTrue(any("[E14]" in e and "bootstrap carrier" in e for e in errors), errors)
 
     def test_e15_duplicate_peer_binding(self) -> None:
         module = _load()
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.peers["cursor"]["execution"]["bindings"] = [
-            {"surface": "cursor-ide", "adapter_id": "cursor-foreground"},
-            {"surface": "cursor-ide", "adapter_id": "cursor-foreground"},
+            {
+                "surface": "cursor-ide",
+                "provider_ref": "cursor-foreground",
+                "execution_profile_ref": "worker-default",
+            },
+            {
+                "surface": "cursor-ide",
+                "provider_ref": "cursor-foreground",
+                "execution_profile_ref": "worker-default",
+            },
         ]
         errors: list[str] = []
-        module._check_duplicates_and_identity_plane(model, errors)
+        module._check_bindings(model, errors)
         self.assertTrue(any("[E15]" in e and "duplicate" in e for e in errors), errors)
 
     def test_e15_registry_must_not_carry_execution(self) -> None:
@@ -139,7 +158,7 @@ class ExecutablePeerContractTests(unittest.TestCase):
         model = module.ExecutablePeerModel(REPO_ROOT)
         model.agents["cursor"]["execution"] = {"required": True, "bindings": []}
         errors: list[str] = []
-        module._check_duplicates_and_identity_plane(model, errors)
+        module._check_carriers(model, errors)
         self.assertTrue(any("[E15]" in e and "agent_registry" in e for e in errors), errors)
 
     def test_no_dual_read_of_registry_execution(self) -> None:
@@ -153,7 +172,7 @@ class ExecutablePeerContractTests(unittest.TestCase):
         self.assertNotIn('agent.get("execution")', validator)
         self.assertNotRegex(validator, r"""agents\[.*\]\.get\(\s*['\"]execution['\"]""")
         # Probe must read bindings only — never agent_registry.
-        self.assertIn("PEER_RUNTIME_BINDINGS.yaml", probe)
+        self.assertIn("load_peer_bindings", probe)
         self.assertNotIn("agent_registry.yaml", probe)
         self.assertIsNotNone(re.search(r"execution\.required|get\(\"required\"\)", probe))
 
