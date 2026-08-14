@@ -963,7 +963,7 @@
     },
     {
       "path": "peer_execution/driver_execution.py",
-      "sha256": "9e34eff47d981f82ce34bf869d3985ebf55e1df31d45659412fc651c8152e95c"
+      "sha256": "a8041d9fb2609059f89c6e845a5ca9ecd873df4541cc54efcb66aebb98ee7648"
     },
     {
       "path": "peer_execution/errors.py",
@@ -995,7 +995,7 @@
     },
     {
       "path": "peer_execution/provider.py",
-      "sha256": "c9d962da4cc14abeb319519e4bc19846856ae2c3f0379c7350b85679ee4e267e"
+      "sha256": "48e301a7eeb4c0713f9426af2be9c654ac205baef34e6cbd7d648573e8334b9e"
     },
     {
       "path": "peer_execution/pytest.ini",

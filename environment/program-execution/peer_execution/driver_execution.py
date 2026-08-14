@@ -72,17 +72,17 @@ class DriverInvocation:
 class ThinExecutionDriver(Protocol):
     provider_id: str
 
-    def probe(self, context: ProbeContext) -> ProviderProbe: ...
+    def probe(self, context: ProbeContext) -> ProviderProbe:
+        raise NotImplementedError
 
-    def invoke(self, request: DriverExecutionRequest) -> DriverInvocation: ...
+    def invoke(self, request: DriverExecutionRequest) -> DriverInvocation:
+        raise NotImplementedError
 
-    def poll(
-        self, request: DriverExecutionRequest, state: Mapping[str, Any]
-    ) -> DriverInvocation: ...
+    def poll(self, request: DriverExecutionRequest, state: Mapping[str, Any]) -> DriverInvocation:
+        raise NotImplementedError
 
-    def cancel(
-        self, request: DriverExecutionRequest, state: Mapping[str, Any]
-    ) -> DriverInvocation: ...
+    def cancel(self, request: DriverExecutionRequest, state: Mapping[str, Any]) -> DriverInvocation:
+        raise NotImplementedError
 
 
 class DriverExecutionAdapter(BaseExecutionAdapter):
