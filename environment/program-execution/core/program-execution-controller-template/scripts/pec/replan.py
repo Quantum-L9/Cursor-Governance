@@ -105,8 +105,7 @@ def propose(
     containment = _containment(delta)
     if containment["result"] == "FAIL":
         raise ControllerError(
-            "authority containment failed: "
-            + ", ".join(containment["forbidden_classes_present"])
+            "authority containment failed: " + ", ".join(containment["forbidden_classes_present"])
         )
     payload: dict[str, Any] = {
         "schema": "program-execution.replan.revision.v1",
@@ -322,8 +321,9 @@ def plan_adaptation(workspace: Path) -> dict[str, Any]:
     }
 
 
-def project(workspace: Path, *, repository_root: Path, actor: str,
-            replan_revision_id: str | None = None) -> dict[str, Any]:
+def project(
+    workspace: Path, *, repository_root: Path, actor: str, replan_revision_id: str | None = None
+) -> dict[str, Any]:
     """Project the canonical semantic revision of the active Replan Revision
     to every registered execution peer through the shared projection seam.
 

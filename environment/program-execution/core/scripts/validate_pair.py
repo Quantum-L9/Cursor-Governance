@@ -108,7 +108,10 @@ def validate(root: Path, mode: str) -> list[str]:
     for rel, expected_schema in shared_schemas.items():
         value = load(root / rel)
         expected_version = "1.0.0" if expected_schema == "program-execution.replan.v1" else "2.0.0"
-        if value.get("schema") != expected_schema or value.get("schema_version") != expected_version:
+        if (
+            value.get("schema") != expected_schema
+            or value.get("schema_version") != expected_version
+        ):
             errors.append(f"{rel}: shared contract mismatch")
     expected = {
         "blueprint": compat.get("blueprint_contract"),

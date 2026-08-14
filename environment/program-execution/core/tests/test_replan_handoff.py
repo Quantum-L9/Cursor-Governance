@@ -13,14 +13,9 @@ REPO_ROOT = CORE.parents[2]
 TEMPLATE = CORE / "program-execution-controller-template"
 sys.path.insert(0, str(TEMPLATE / "scripts"))
 
-from pec.controller import ControllerError, bootstrap, export_handoff  # noqa: E402
+from pec.controller import bootstrap, export_handoff  # noqa: E402
 from pec.replan import activate, propose, verify  # noqa: E402
-
 from test_replan_integration import (  # noqa: E402
-    EMPTY_SOURCES,
-    INDEX,
-    PROGRAM,
-    TASK_CARDS,
     _write_blueprint,
 )
 
@@ -118,7 +113,9 @@ def test_handoff_with_parity_pass_records_full_peer_coverage(runtime):
     )
     assert receipt["peer_parity"]["status"] == "PASS"
     bindings = yaml.safe_load(
-        (Path(REPO_ROOT) / "environment/agents/PEER_RUNTIME_BINDINGS.yaml").read_text(encoding="utf-8")
+        (Path(REPO_ROOT) / "environment/agents/PEER_RUNTIME_BINDINGS.yaml").read_text(
+            encoding="utf-8"
+        )
     )
     declared = set(bindings["peers"])
     assert set(receipt["peer_parity"]["peer_coverage"]) == declared

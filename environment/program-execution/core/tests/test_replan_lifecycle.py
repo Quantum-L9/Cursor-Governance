@@ -259,7 +259,11 @@ def test_revisions_are_append_only(runtime):
         for line in (runtime / "ledger/events.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     replan_events = [e for e in events if e["type"].startswith("REPLAN_")]
-    assert [e["type"] for e in replan_events] == ["REPLAN_PROPOSED", "REPLAN_VERIFIED", "REPLAN_ACTIVATED"]
+    assert [e["type"] for e in replan_events] == [
+        "REPLAN_PROPOSED",
+        "REPLAN_VERIFIED",
+        "REPLAN_ACTIVATED",
+    ]
     assert all(e["payload"]["revision_id"] == "rev-1" for e in replan_events)
     assert replan_events[2]["payload"]["plan_revision"] == "plan-rev-0+rev-1"
     assert len({e["digest"] for e in replan_events}) == 3

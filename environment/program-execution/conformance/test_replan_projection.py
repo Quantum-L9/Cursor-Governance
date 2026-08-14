@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-
-import yaml
 from pathlib import Path
 from unittest import mock
 
+import yaml
 from peer_execution.replan_projection import (
     applicable_peers,
     build_semantic_revision,
@@ -66,9 +65,7 @@ class ReplanProjectionTests(unittest.TestCase):
             self.assertTrue(
                 (workspace / "runtime/projection/replan-semantic-revision.json").is_file()
             )
-            self.assertTrue(
-                (workspace / "runtime/projection/peer-accounting.json").is_file()
-            )
+            self.assertTrue((workspace / "runtime/projection/peer-accounting.json").is_file())
             verification = verify_projection(REPO_ROOT, workspace)
             self.assertEqual(verification["status"], "ACTIVE")
 
@@ -89,9 +86,7 @@ class ReplanProjectionTests(unittest.TestCase):
                     REPO_ROOT, workspace, semantic_revision=semantic, actor=ACTOR
                 )
             self.assertEqual(accounting["status"], "BLOCKED")
-            legacy = next(
-                r for r in accounting["records"] if r["peer_id"] == "legacy-bot"
-            )
+            legacy = next(r for r in accounting["records"] if r["peer_id"] == "legacy-bot")
             self.assertEqual(legacy["capability"], "unsupported")
             self.assertTrue(legacy["fail_closed"])
 

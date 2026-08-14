@@ -130,9 +130,7 @@ EMPTY_SOURCES = {
     "CURRENT_STATE_DELTA.yaml": "{}",
     "WORKSTREAMS.yaml": "workstreams:\n- id: WS-01\n  name: Chain\n  owner: fixture\n",
     "DEPENDENCY_GRAPH.yaml": (
-        "edges:\n"
-        "- from: T1\n  to: T2\n  blocking: true\n"
-        "- from: T2\n  to: T3\n  blocking: true\n"
+        "edges:\n- from: T1\n  to: T2\n  blocking: true\n- from: T2\n  to: T3\n  blocking: true\n"
     ),
     "EXECUTION_WAVES.yaml": "waves:\n- id: W0\n  name: all\n  task_ids: [T1, T2, T3]\n",
     "CONVERGENCE_GATES.yaml": "gates: []\n",
@@ -168,7 +166,9 @@ def _blockers(view: dict, task_id: str) -> list[str]:
     return []
 
 
-def _propose(workspace: Path, revision_id: str, *, classes: list[str], operations: list[dict]) -> None:
+def _propose(
+    workspace: Path, revision_id: str, *, classes: list[str], operations: list[dict]
+) -> None:
     propose(
         workspace,
         revision_id=revision_id,

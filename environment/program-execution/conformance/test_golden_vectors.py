@@ -46,7 +46,9 @@ class GoldenVectorTests(unittest.TestCase):
         for vector in GOLDEN_VECTORS:
             result = evaluate_vector(vector)
             self.assertEqual(
-                result["authority_result"], vector["expected"]["authority_result"], vector["vector_id"]
+                result["authority_result"],
+                vector["expected"]["authority_result"],
+                vector["vector_id"],
             )
             self.assertEqual(result["blocker"], vector["expected"]["blocker"], vector["vector_id"])
             self.assertEqual(
@@ -97,7 +99,9 @@ class GoldenVectorTests(unittest.TestCase):
             report = run_parity_gate(REPO_ROOT, workspace)
             self.assertEqual(report["status"], "PASS", report["failures"])
             self.assertTrue(report["per_peer_digests"])
-            peer_digests = {entry["normalized_vector_digest"] for entry in report["per_peer_digests"]}
+            peer_digests = {
+                entry["normalized_vector_digest"] for entry in report["per_peer_digests"]
+            }
             self.assertEqual(len(peer_digests), 1)
 
     def test_parity_gate_blocks_when_a_peer_diverges(self) -> None:

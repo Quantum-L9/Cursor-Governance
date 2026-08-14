@@ -115,16 +115,12 @@ def project_to_peers(
         }
         record["record_digest"] = digest_object(record)
         records.append(record)
-    unaccounted = [
-        record["peer_id"] for record in records if record["capability"] != "supported"
-    ]
+    unaccounted = [record["peer_id"] for record in records if record["capability"] != "supported"]
     status = "BLOCKED" if unaccounted else "ACTIVE"
     target = workspace / "runtime/projection"
     target.mkdir(parents=True, exist_ok=True)
     semantic_revision_file = target / "replan-semantic-revision.json"
-    semantic_revision_file.write_text(
-        _canonical_json(semantic_revision) + "\n", encoding="utf-8"
-    )
+    semantic_revision_file.write_text(_canonical_json(semantic_revision) + "\n", encoding="utf-8")
     accounting = {
         "schema": "program-execution.replan.peer-accounting.v1",
         "semantic_revision_digest": revision_digest,

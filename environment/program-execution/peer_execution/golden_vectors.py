@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from .digests import digest_object
-from .replan_projection import applicable_peers, verify_projection
+from .replan_projection import verify_projection
 
 ALLOWED_DELTA_CLASSES = {
     "reversible_implementation_strategy",
@@ -202,7 +202,11 @@ def evaluate_vector(vector: dict[str, Any]) -> dict[str, Any]:
         return result
     classes = entry["input"].get("delta_classes") or []
     forbidden = [item for item in classes if item in FORBIDDEN_DELTA_CLASSES]
-    unknown = [item for item in classes if item not in ALLOWED_DELTA_CLASSES and item not in FORBIDDEN_DELTA_CLASSES]
+    unknown = [
+        item
+        for item in classes
+        if item not in ALLOWED_DELTA_CLASSES and item not in FORBIDDEN_DELTA_CLASSES
+    ]
     if forbidden:
         result.update(
             {
