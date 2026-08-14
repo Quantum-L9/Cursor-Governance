@@ -143,59 +143,59 @@
     },
     {
       "path": "adapters/common/__init__.py",
-      "sha256": "61c53609a529ef348b0b2e3e2463003dbcbd8abed3dbb8899f0932dbbef74ecc"
+      "sha256": "d04f742e8feebb727b883726291d4b03d1f9d0c0745c8dad51cbc3240fe59adb"
     },
     {
       "path": "adapters/common/approvals.py",
-      "sha256": "9933bc707e6095033dfc17dfd184e2a6a3db7ff5f20e22db393a0235c752e55f"
+      "sha256": "a6d2acfee951a473532a2a0fd1d5c07194ef3a0a8254fd41d56e2dd569ad7aa2"
     },
     {
       "path": "adapters/common/base.py",
-      "sha256": "c07fcdf3546d8be7fa2af46d3200c1c915cd1ef17a9c15236567193f3b770dbb"
+      "sha256": "0158cc1ed5bd0f68c8630d903ec27061f7045fd8d56a613cb0df52db8823636b"
     },
     {
       "path": "adapters/common/contracts.py",
-      "sha256": "c760f71151a29fe73620f814ee1c701da0493a544daa1362b2907065ae9add79"
+      "sha256": "a20c3ef1d1279f86c2f66fa80f75ed53740dede915c868b3e56602c3a60d3510"
     },
     {
       "path": "adapters/common/core_receipts.py",
-      "sha256": "7b91cee3aa04b12117adbd9172da346ef46b8065da5901d861f50ad9ad729082"
+      "sha256": "5144dd731cf63caebfea63451050c0746640e101ce5db7bb8834988c29fe885c"
     },
     {
       "path": "adapters/common/digests.py",
-      "sha256": "89b7a14e58104aea614b42a27fb38e27c68f3e7213822f0f1686c91bfe69feb0"
+      "sha256": "eeb4506442a9073c03f5ae85ac4252cc52c4d9e3fe80d8c7943693e8bc7422e1"
     },
     {
       "path": "adapters/common/errors.py",
-      "sha256": "824bd9a640f601b82ffcafab1c0365295620fb8f5004370d445a568784eb433a"
+      "sha256": "6ac6d4ef90301a0902629a9c513ba017ca904159d632b2832575c8294f56b7d7"
     },
     {
       "path": "adapters/common/imports.py",
-      "sha256": "8a9ed0e6dd8b33be1833a2a351a3704dd498a1444160f9f657f5e276fae2e7e5"
+      "sha256": "57aae99835736db47674d7bbb604eb0c970ce6ca42bbb2759e6a21d74fc44287"
     },
     {
       "path": "adapters/common/models.py",
-      "sha256": "655ad8616a46ae4f484c4997fb746df7d08087f3627307a465ff4a0bc1c57943"
+      "sha256": "0c31f6814ff141c75cd759bc3e523376766d0e5fc7e7eff8cc1f7d6e6dd4699a"
     },
     {
       "path": "adapters/common/protocol.py",
-      "sha256": "962aa339805269f46f8b3bd485016268a3404ca0b54780e1a4be6ceb1779f62a"
+      "sha256": "8597c544112b7102ea95147f1f2dd6fb11455d3a2127ff06135c3e3b47ed64e2"
     },
     {
       "path": "adapters/common/receipts.py",
-      "sha256": "e01f6d79ab9a86b00914ed129a1ea706974160e7cf65f549d7a646018c92763f"
+      "sha256": "5e53980a3e9687bfd7a88d8c637614afa9e7075c9adfadcf2d7ecac690df5b82"
     },
     {
       "path": "adapters/common/runtime_store.py",
-      "sha256": "b0e1587d51a4810be75151575352a88619e56b6141b1617825ffded38f481b26"
+      "sha256": "313ca21ccdf242dc590981445b8693e5c606580cdf1c76ba4ea8f29ad8bec8cb"
     },
     {
       "path": "adapters/common/schema_registry.py",
-      "sha256": "9cbb21229209e4fb58d13a4a5c5423747a630dc49bf913a6d69eb396578264ad"
+      "sha256": "c86044c440bc5cdd1054d7466c3bfe005a5768f9412e77f3995a6e74834bdb4c"
     },
     {
       "path": "adapters/common/subprocess_runner.py",
-      "sha256": "1132d982cfa0c50638de4f40e12735422c3e6e15ff238eeb9ad9f9b188577634"
+      "sha256": "5a0ccbafcf538472a1fceb023bf73e201befe7cd7746e64f940963bbd67afb25"
     },
     {
       "path": "adapters/cursor-background/ADAPTER.yaml",
@@ -759,7 +759,7 @@
     },
     {
       "path": "integrations/bootstrap/peer_readiness.py",
-      "sha256": "7789fda5a1f7b3150cf7735dd062621b1cff91c63fe8744f270e5d45086a2126"
+      "sha256": "87a9119316edb456d098c653f0a84226c7f037e56d0ad832d5630de9d0c47d4b"
     },
     {
       "path": "integrations/bootstrap/status_probe.py",
