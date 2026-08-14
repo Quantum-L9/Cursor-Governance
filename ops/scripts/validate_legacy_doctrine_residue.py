@@ -232,7 +232,10 @@ def main() -> int:
             if len(findings) > 80:
                 print(f"  ... and {len(findings) - 80} more")
         if client_findings:
-            print("FAIL: active surface calls the retired memory client (agents/cursor/cursor_memory_client.py)")
+            print(
+                "FAIL: active surface calls the retired memory client "
+                "(agents/cursor/cursor_memory_client.py)"
+            )
             print("Use the Graphiti front door (ops/graphiti/graphiti_memory_client.py) instead.")
             for hit in sorted(client_findings):
                 print(f"  {hit}")
