@@ -75,3 +75,18 @@ python3 scripts/pack_self_test.py
 - Inventory fails → stop; report git error; no prune.
 - Diagnosis confidence unknown → classify `keep_push` / keep ref.
 - Auth env missing on prune-execute → refuse and emit prune-propose only.
+
+## make clean (ship + reset)
+
+Orchestrator (does not replace this skill's report-only default):
+
+```bash
+make -C "$HOME/.cursor-governance" clean WS="$(pwd)"
+# preview: CLEAN_MODE=plan
+```
+
+`ops/scripts/workspace_clean.py` classifies dirty/untracked paths with
+`ops/config/workspace-clean-routing.yaml`, extracts each destination into its
+own worktree, opens a scoped PR, prunes only ancestor-of-`origin/main` locals
+that are not checked out elsewhere, and primes `$HOME/.l9/primed/<dest>`.
+Ambiguous paths block apply. Secrets and machine-local files are never shipped.

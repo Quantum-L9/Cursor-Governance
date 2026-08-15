@@ -1,0 +1,65 @@
+# Fail-closed destination map for `make clean` / `make workspace-clean`.
+# A path ships only when it matches exactly one destination (or is tracked in
+# the current clone whose origin remote matches exactly one destination).
+# Ambiguous and unmatched-untracked paths block apply. Machine-local and
+# secret paths are never committed.
+schema: l9.workspace_clean.routing/v1
+
+never_commit:
+  - ".env"
+  - ".env.local"
+  - ".env.*.local"
+  - "**/.env"
+  - "**/.env.local"
+  - "**/.env.*.local"
+  - ".claude/settings.local.json"
+  - "**/.claude/settings.local.json"
+
+skip_machine_local:
+  - ".cursor-commands"
+  - ".cursor/"
+  - ".vscode/"
+  - ".claude/"
+  - ".mcp.json"
+  - ".l9/"
+  - ".DS_Store"
+
+destinations:
+  cursor-governance:
+    github: Quantum-L9/Cursor-Governance
+    clone_paths:
+      - "$HOME/.cursor-governance"
+    globs:
+      - "scripts/claude-deepseek.sh"
+      - "scripts/claude-deepseek.ps1"
+      - "scripts/verify-routing.sh"
+      - "scripts/preflight.sh"
+      - "scripts/preflight.ps1"
+      - ".cursor/rules/claude-code-deepseek.mdc"
+      - "skills/l9-claude-code-deepseek/**"
+      - "skills/l9-git-work-preserve/**"
+      - "WIP/deepseek-claude-pack/**"
+      - "ops/scripts/workspace_clean.py"
+      - "ops/scripts/run_workspace_clean.sh"
+      - "ops/scripts/test_workspace_clean.py"
+      - "ops/config/workspace-clean-routing.yaml"
+      - "commands/clean.md"
+
+  website-bot:
+    github: Quantum-L9/Website-Bot
+    clone_paths:
+      - "$HOME/Website-Bot"
+    globs:
+      - "packages/bot-interop/**"
+      - "packages/validation-executor/**"
+      - "src/**"
+      - "astro_template/**"
+      - "schemas/**"
+      - "config/**"
+      - "scripts/normalize-spec.ts"
+      - "scripts/run-pipeline.ts"
+      - "scripts/generate-spec.ts"
+      - "scripts/provision-client.ts"
+      - "scripts/validate-*.mjs"
+      - "scripts/verify-*.mjs"
+      - "scripts/lib/**"
