@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +14,7 @@ import yaml
 PE_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
 EXPECTED_DIGEST = "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010"
+PEC_CLI = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 
 
 def _load(name: str, path: Path):
@@ -65,6 +69,66 @@ class CompileCampaignSourceTests(unittest.TestCase):
             )
             with self.assertRaises(self.compiler.CompileError):
                 self.compiler.compile_source(source, Path(raw) / "out")
+
+    def test_decisions_without_options_fail_loudly(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            data = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+            data["decisions"][0].pop("options")
+            source.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self.compiler.compile_source(source, Path(raw) / "out")
+            self.assertIn("options", str(ctx.exception))
+
+    def test_full_admission_loop_compile_collect_accept_bootstrap(self) -> None:
+        """The closed loop: compile → collect → accept → bootstrap → validate."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            target = tmp / "blueprint"
+            self.compiler.compile_source(SOURCE, target)  # self-validates template mode
+
+            collect = _load("collect_evidence_test", PE_ROOT / "scripts/collect_evidence.py")
+            collected = collect.collect_evidence(
+                target,
+                evidence_id="EVID-001",
+                revision="rev-1",
+                digest=None,
+                notes="loop test",
+                producer="test",
+                expires_at=None,
+            )
+            self.assertEqual(collected["status"], "COLLECTED")
+
+            accept = _load("accept_blueprint_test", PE_ROOT / "scripts/accept_blueprint.py")
+            accepted = accept.accept_blueprint(
+                target, actor="test", evidence_ids=["EVID-001"]
+            )
+            self.assertEqual(accepted["status"], "ACCEPTED")
+            self.assertTrue((target / "ACCEPTANCE_RECEIPT.yaml").is_file())
+
+            workspace = tmp / "runtime"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(PEC_CLI),
+                    "bootstrap",
+                    "--workspace",
+                    str(workspace),
+                    "--blueprint",
+                    str(target),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            validated = subprocess.run(
+                [sys.executable, str(PEC_CLI), "validate", "--workspace", str(workspace)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(validated.returncode, 0, validated.stderr)
+            self.assertEqual(json.loads(validated.stdout)["status"], "PASS")
 
 
 if __name__ == "__main__":

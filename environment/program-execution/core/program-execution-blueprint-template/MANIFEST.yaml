@@ -1,181 +1,123 @@
 schema: program-execution-blueprint.manifest.v2
 schema_version: 2.0.0
-artifact: program-execution-blueprint-template
+template: program-execution-blueprint
 files:
 - path: AGENT_EXECUTION_CONTRACT.md
   sha256: be73f72e1cdde6b79d3ca9c3fbc40977217bccbfe776919633e0203688eb95f4
-  bytes: 1117
 - path: ARCHITECTURE.md
   sha256: d41a09d677c1d64cb04ef86de3458ca492847c998c8bc5a70cdee586b0db389b
-  bytes: 1050
 - path: AUTHORITY_REGISTRY.yaml
   sha256: 5b52fdf4526e7a2d2d28af41a5f1d4eb679d78db6403a4b3b684b77b3c708843
-  bytes: 676
 - path: CHANGELOG.md
   sha256: ccbb623d315524b338ddaa2d20a60e753aa038a898bbd85cc06c896a2b9097df
-  bytes: 702
 - path: CONVERGENCE_GATES.yaml
   sha256: b8935b85e30f4b936e6504dfc0f220a0482fa193633e646aaf2c9d2eae034e79
-  bytes: 2213
 - path: CURRENT_STATE_DELTA.yaml
   sha256: 66a0eb629c1b89d249f60ba70df7de2b702821a4684ab9c17de495bea46436e2
-  bytes: 560
 - path: CUTOVER_AND_ROLLBACK.yaml
   sha256: f04e4195997fe4aebdc31d8ea13a9e809b584e615bbdbb905d1fe164bcd09c86
-  bytes: 534
 - path: DECISION_REGISTER.yaml
   sha256: 7dcfd4181ea6be993b0019976baed16c5bce6ff6f4434338dce2bbbc4b3460a2
-  bytes: 562
 - path: DEFINITION_OF_DONE.md
   sha256: ec11dae2c42f2c383abd7410f007d4c980685d3ccfad449db72e12b2462fd5b9
-  bytes: 1545
 - path: DEPENDENCY_GRAPH.yaml
   sha256: 1ddbebc003e0a73ccc98f68c5c01c0a231d38480c96dfe3718b5222c57188488
-  bytes: 497
 - path: DESIGN_RATIONALE.md
   sha256: 426688fedf0f8e289711bdb939d8713284512d4d56756a824cd4c3ec6e767201
-  bytes: 727
 - path: DO_NOT_BUILD.yaml
   sha256: d39a716f80bc94d0c1481a63f89d47d562784bfe9a7a14d3bba639fb7840c093
-  bytes: 542
 - path: EVIDENCE_CATALOG.yaml
   sha256: 933bc0898c5d6984ff4eacefff1a50d62435c45f68155921740b7baea95f4a9b
-  bytes: 805
 - path: EXECUTION_INDEX.yaml
   sha256: c16261ff2db1de63e561e5b94bb34d49a20421a51a1dc7fd6b8b743a4234d490
-  bytes: 1050
 - path: EXECUTION_TARGETS.yaml
   sha256: de28a21e21f4bfa9f9f3dcb4614df21d0980aff051f58c74cd06d05d9599cc03
-  bytes: 389
 - path: EXECUTION_WAVES.yaml
   sha256: 8bc0671179d3166b1973bc1bf540150d7846edb764b6451155abed79b8d90ab1
-  bytes: 736
 - path: EXECUTIVE_DECISION.md
   sha256: a9018cb9449efc7d1efe850cad3d91b57a4e756615a68c12f80f6801bbf6aace
-  bytes: 1316
 - path: HANDOFF.md
   sha256: 3a99fee383aa110ccd9d2f318900778a413c554d677f183ff59db682146e1224
-  bytes: 1391
 - path: INSTANTIATION_GUIDE.md
   sha256: e4556104dce5b92b51eb725547cf80c58b31a270d0ae2615b575f968560065cf
-  bytes: 1228
 - path: OBSERVABILITY_PLAN.yaml
   sha256: 95b4dabf6487a4e95208a0473c743f8af36ee5deac7d2da223e42bf2b5036d9f
-  bytes: 468
 - path: OPERATING_MODEL.md
   sha256: a970fb5a1be950efd484688e8bcc9b87b094fcf29612e993e6fb97dc306aad75
-  bytes: 672
 - path: PHASE0_USER_CONFIG.yaml
   sha256: 9fe8720130379b9d104760f62bdec1ead196dc7b2e022b0c9ad97e056c7906e5
-  bytes: 1931
 - path: PROGRAM.yaml
   sha256: 40b2dfe948ee53195e9de2dc7c36b273c925c14665bd007c1a0dd46864969902
-  bytes: 1361
 - path: README.md
   sha256: 08a8a0cd9d0731bb65a503f72c0f6d05af874e4efa68a1a9f4a2d4f2a54ed28c
-  bytes: 1477
 - path: RISK_REGISTER.yaml
   sha256: 14bdf55746f27ac02532305c6d519e99fa335d86cef9bb36ed5aeff65f65e42d
-  bytes: 428
 - path: RUNBOOK.md
   sha256: e6050ca2040e1b456151bcf52c2c59c41b28b1695b0148947541c9fab164cb44
-  bytes: 2173
 - path: SOURCE_TRACEABILITY.yaml
   sha256: 0821e9b7bca9c28ba297bfdee643caad91f0f9963ca8469277b4d7caf33466a4
-  bytes: 465
 - path: TASK_CARDS.yaml
   sha256: 97e32906957a9bb12bdde24e8c7f717749a9378747cba7d57b1380601a80eedf
-  bytes: 2946
 - path: TEMPLATE_VARIABLES.yaml
   sha256: 87e9e660f52207748db4f25115cbce4a577041c3ce4536a8b7f620151ae5febc
-  bytes: 547
 - path: UNKNOWN_REGISTER.yaml
   sha256: 65988820d114b3fb1f28d157b95ecd1c176e5b7b075c0c742b41708b4db29167
-  bytes: 461
 - path: VALIDATION.md
   sha256: be0158aeccddbc62053389e02d6d436006595b509238af30403edb6b8c6f3a41
-  bytes: 609
 - path: WAIVER_REGISTER.yaml
   sha256: 9123fc2af10c8462475b0ddf2ff7455bb5ab62c248dc42af22e62e377b51dce1
-  bytes: 406
 - path: WORKSTREAMS.yaml
   sha256: 4e2b907e0ee55f2a6a51c0ce5a78b4b34a6b4c51641c9b4cbf111110dcbe7f25
-  bytes: 457
+- path: schemas/acceptance-receipt.schema.json
+  sha256: a08d5719126e88f61b0e64c09645a622594a83f7763c1a93081c08d3395c4af6
 - path: schemas/authority-registry.schema.json
   sha256: b01c4ad0600b5695493779edffb0a14c0adaf816e1cddb5651583165d4dbe88e
-  bytes: 3126
 - path: schemas/convergence-gate.schema.json
   sha256: 0e856ab93174227c5b440672fb189dad4c96eb6b9a720fdad1942c6a06246f97
-  bytes: 318
 - path: schemas/convergence-gates.schema.json
   sha256: 1ceb2c61283502a083b995d2535bf57e202c2dbe8b092994bd6a17b26f772e43
-  bytes: 3917
 - path: schemas/current-state-delta.schema.json
   sha256: b600208c44d49ccfab18ac4ac1102b6f7f00d36d28350699e5cec95fbd002c25
-  bytes: 2131
 - path: schemas/cutover-and-rollback.schema.json
   sha256: 84bd085c2afdaab7ecea8ee10bfd2b09e8c9e46fd127a5c18644d3289abf896c
-  bytes: 1683
 - path: schemas/decision-register.schema.json
   sha256: 5b83f34f66e17f3702c85770a2505452fcbddcf4ba8adb948322cb9b5c3c4242
-  bytes: 3243
 - path: schemas/dependency-graph.schema.json
   sha256: ca9df0e4a6e81b8ff89f186e06dc58e3b5190c590a40744e0fb83f3df361456c
-  bytes: 641
 - path: schemas/do-not-build.schema.json
   sha256: 191dcf5146fd66e9643bb2adc6a93b9da673ef697e35d617e12dda53f76ab782
-  bytes: 1480
 - path: schemas/evidence-catalog.schema.json
   sha256: 64b5e4f9b0acd6f447fb3a758462ebfe46d847eb9fa296e0fca4634fd6534df5
-  bytes: 3140
 - path: schemas/execution-index.schema.json
   sha256: a73904532ee0be5caf22210a36ca6d31b4b77794865cba260352fae70a234407
-  bytes: 1235
 - path: schemas/execution-targets.schema.json
   sha256: 02f7a448fa7a1653f70dd2883f79e671522ee6ede690594eaaeab94710442e72
-  bytes: 2503
 - path: schemas/execution-waves.schema.json
   sha256: 172d3b9fa2b597ab67d84f5a88db14103f4f36dc7fbb90357d7229e12afd2fb1
-  bytes: 1757
 - path: schemas/observability-plan.schema.json
   sha256: e04d47b0438b922fe1cb30c1099f9d8095bf968c5666264d76d2804227ea2e59
-  bytes: 1733
 - path: schemas/phase0-user-config.schema.json
   sha256: c8fc1eaa8b11ec742c56ebdc2e6f4b0ea32b0758cd706be2dc5f96dcd85b1b2c
-  bytes: 5564
 - path: schemas/program.schema.json
   sha256: cb08383542b9efc87795e6ee71e421edb01f4f3e6c8f3f02e62770e1197ce5d4
-  bytes: 3720
 - path: schemas/risk-register.schema.json
   sha256: 056475911ef4fa35b5172681ef2fc71218ba53bd8ea7d603f1082b9c0f2e6b30
-  bytes: 2663
 - path: schemas/source-traceability.schema.json
   sha256: ddc04c12634ca3fdf3cef55c9d5e7ef14ac6396e9c5fce01ab8826c2206d1929
-  bytes: 1815
 - path: schemas/task-card.schema.json
   sha256: 49713e146de1991478f9f30e5f443c79d41d0fe75a13038fa59395199d6485b7
-  bytes: 374
 - path: schemas/task-cards.schema.json
   sha256: 837d5b1798ad9f35275dab4af86f253ec716597baba0c5327e288c89d8ff1d11
-  bytes: 9114
 - path: schemas/unknown-register.schema.json
   sha256: 6e84ce48972fb1f8bb951990c8b54873fd96a86c1c3c468679458c73d5c60239
-  bytes: 2140
 - path: schemas/waiver-register.schema.json
   sha256: 9b236ce4a9b85d117064a91bc352fd03d19028e75dc8fa63353cab558a64cb5a
-  bytes: 2429
 - path: schemas/workstreams.schema.json
   sha256: 39b6a5da2ce940e03a365b45843eeb7acc160edc96c3d4566c6b17953d9d8477
-  bytes: 3048
 - path: scripts/instantiate.py
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
-  bytes: 3111
 - path: scripts/validate_blueprint.py
   sha256: 8fa3fcad28619eed156935f5b2a79e6b927762710e6f68391340cfe0a45a597f
-  bytes: 23561
 integrity:
   algorithm: sha256
   self_excluded: true
-summary:
-  file_count: 57
-  total_bytes: 116487

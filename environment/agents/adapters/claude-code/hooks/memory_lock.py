@@ -35,10 +35,13 @@ def _current_session_id(contract: dict) -> str | None:
 
 def command_acquire(args: argparse.Namespace) -> int:
     contract = st.load_contract()
-    session_id = _current_session_id(contract)
+    # --session-id pins the lock to one session; without it the newest fresh
+    # receipt wins — which can be ANOTHER live session on a shared machine.
+    session_id = args.session_id or _current_session_id(contract)
     if not session_id:
         print(
-            "no fresh SessionStart receipt; memory prefetch must run before locking",
+            "no fresh SessionStart receipt; memory prefetch must run before locking "
+            "(or pass --session-id explicitly)",
             file=sys.stderr,
         )
         return 3
@@ -112,6 +115,15 @@ def main() -> int:
     acq = sub.add_parser("acquire", help="conflict-check and acquire a Graphiti phase-lock")
     acq.add_argument("--namespace", required=True)
     acq.add_argument("--task", required=True)
+    acq.add_argument(
+        "--session-id",
+        default=None,
+        help=(
+            "pin the lock to a specific session id instead of the newest fresh receipt "
+            "(find yours: newest ~/.claude/projects/<project>/<uuid>.jsonl for this "
+            "conversation; required when other live sessions have fresher receipts)"
+        ),
+    )
     acq.add_argument("--force", action="store_true", help="proceed despite reported conflicts")
     acq.set_defaults(func=command_acquire)
     stt = sub.add_parser("status", help="show local lock state")
