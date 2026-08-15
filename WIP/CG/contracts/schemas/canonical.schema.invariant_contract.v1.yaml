@@ -1,0 +1,49 @@
+schema_id: canonical.schema.invariant_contract.v1
+schema_name: Canonical Invariant Contract Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.invariant_contract.v1.yaml
+purpose:
+  primary: Define unconditional truths that must remain true whenever their declared scope applies.
+  output_level: schema_not_instance
+  intended_use: [constitutional_invariants, repository_invariants, runtime_invariants, safety_invariants]
+  not_for: [ordered_decision_logic, runtime_capability_claims, procedural_workflows]
+ontology:
+  parent_type: governance_contract_schema
+  specialized_type: invariant_contract_schema
+  instance_type_generated_by_this_schema: invariant_contract
+  related_schema_types: [canonical.schema.governance_contract.v1, canonical.schema.evidence_contract.v1]
+inheritance:
+  extends: [canonical.schema.governance_contract.v1]
+  provides: [invariant_definition_model, violation_model]
+required_sections:
+  invariant_definition:
+    required: true
+    fields:
+      assertion: {type: string, required: true}
+      subject: {type: string, required: true}
+      predicate: {type: string, required: true}
+      expected_state: {type: any, required: true}
+      applies_when: {type: list_string, required: false, allow_empty: true}
+      forbidden_states: {type: list, required: true, min_items: 1}
+  violation:
+    required: true
+    fields:
+      effect: {enum: [fail_closed, stop, deny, block_transition], required: true}
+      reason_code: {type: string, required: true}
+validation_rules:
+  - {id: INV-CONTRACT-001, severity: blocker, rule: metadata.kind must equal invariant.}
+  - {id: INV-CONTRACT-002, severity: blocker, rule: an invariant has no default allow branch and is either satisfied or violated within scope.}
+  - {id: INV-CONTRACT-003, severity: blocker, rule: every invariant must have property evidence proving positive state and detectable violation.}
+  - {id: INV-CONTRACT-004, severity: blocker, rule: forbidden states may not overlap expected state.}
+derivation_targets:
+  can_generate: [invariant_contract, invariant_assertion, architecture_test, negative_fixture, invariant_projection]
+anti_drift_rules:
+  - Do not encode conditional policy tables as invariants.
+  - Do not weaken an invariant through skill-local prose.
+  - Do not claim an invariant is active without violation detection.
+minimum_viable_instance_requirements:
+  required: [metadata, authority, scope, invariant_definition, violation, enforcement, evidence_obligations, provenance, lifecycle]
