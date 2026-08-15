@@ -40,8 +40,10 @@ def test_happy_path_no_questionnaire(tmp_path: Path, capsys) -> None:
     code = run(
         [
             "intent",
-            "Evolve l9-devpack-compiler so a minimal goal compiles into a "
-            "validator-clean Blueprint v2",
+            (
+                "Evolve l9-devpack-compiler so a minimal goal compiles into a "
+                + "validator-clean Blueprint v2"
+            ),
             "--repo-root",
             str(repo),
             "--output",

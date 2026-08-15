@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import compiler.resolver as resolver
 import pytest
 from compiler.intent import Intent, parse_intent
 from compiler.policy import DEFAULT_PROFILE, load_policy
 from compiler.repo_truth import RepoTruth, discover
-from compiler.resolver import resolve
 
 
 def _truth(
@@ -41,7 +41,7 @@ def _intent(objective: str = "Make repo X achieve Y.") -> Intent:
 
 
 def test_happy_path_resolution_is_ready(tmp_path: Path) -> None:
-    resolution = resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
+    resolution = resolver.resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
     assert resolution["schema"] == "program-execution.intent-resolution.v1"
     assert resolution["synthesis_status"] == "ready"
     assert resolution["program_action"]["mode"] == "create"
@@ -49,14 +49,14 @@ def test_happy_path_resolution_is_ready(tmp_path: Path) -> None:
 
 
 def test_sparse_input_needs_no_clarification(tmp_path: Path) -> None:
-    resolution = resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
+    resolution = resolver.resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
     assert resolution["decisions"]["requires_human_authority"] == []
     assert resolution["unknowns"] == []
 
 
 def test_evidence_determined_fact_auto_resolves_with_provenance(tmp_path: Path) -> None:
     truth = _truth(tmp_path, owner="Igor Beylin", test_command="pytest -q")
-    resolution = resolve(_intent(), truth=truth)
+    resolution = resolver.resolve(_intent(), truth=truth)
     statements = [r["statement"] for r in resolution["derived_requirements"]]
     test_req = next(s for s in statements if "pytest -q" in s)
     source = next(
@@ -67,7 +67,7 @@ def test_evidence_determined_fact_auto_resolves_with_provenance(tmp_path: Path) 
 
 
 def test_policy_determined_fact_auto_resolves_with_policy_provenance(tmp_path: Path) -> None:
-    resolution = resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
+    resolution = resolver.resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
     ceiling_req = next(
         r
         for r in resolution["derived_requirements"]
@@ -79,7 +79,7 @@ def test_policy_determined_fact_auto_resolves_with_policy_provenance(tmp_path: P
 
 def test_authority_bearing_choice_becomes_scoped_unknown(tmp_path: Path) -> None:
     truth = _truth(tmp_path, owner=None, remote=None, revision=None)
-    resolution = resolve(_intent(), truth=truth)
+    resolution = resolver.resolve(_intent(), truth=truth)
     assert resolution["unknowns"], "authority-bearing issues must be explicit"
     assert all(u["blocks"] for u in resolution["unknowns"])
     assert resolution["synthesis_status"] in {"blocked", "requires_authority"}
@@ -90,7 +90,6 @@ def test_missing_ownership_never_invents_owner(tmp_path: Path) -> None:
     policy = load_policy(DEFAULT_PROFILE)
     policy["provenance"] = []  # drop policy default owner for this scenario
     truth = _truth(tmp_path, owner=None)
-    import compiler.resolver as resolver
 
     monkeypatch_loader = pytest.MonkeyPatch()
     monkeypatch_loader.setattr(resolver, "load_policy", lambda _profile: policy)
@@ -107,7 +106,7 @@ def test_unknown_scoping_blocks_only_dependents(tmp_path: Path) -> None:
     truth = _truth(
         tmp_path, owner=None, remote="https://github.com/Quantum-L9/Cursor-Governance.git"
     )
-    resolution = resolve(_intent(), truth=truth)
+    resolution = resolver.resolve(_intent(), truth=truth)
     # Local implementation is not globally blocked: the only Unknown is scoped.
     assert resolution["synthesis_status"] in {"ready", "requires_authority"}
     for unknown in resolution["unknowns"]:
@@ -124,7 +123,7 @@ def test_permission_widening_is_rejected_not_silently_applied(tmp_path: Path) ->
     )
     policy = load_policy(DEFAULT_PROFILE)
     assert policy["authorization_ceiling"]["merge"] is False
-    resolution = resolve(intent, truth=_truth(tmp_path, owner="Igor Beylin"))
+    resolution = resolver.resolve(intent, truth=_truth(tmp_path, owner="Igor Beylin"))
     assert resolution["_compiler_meta"]["ceiling"]["merge"] is False
     assert any("widen" in u["topic"].lower() for u in resolution["unknowns"]), (
         "widening request must escalate, not silently apply"
@@ -133,7 +132,7 @@ def test_permission_widening_is_rejected_not_silently_applied(tmp_path: Path) ->
 
 def test_structural_evidence_is_not_runtime_proof(tmp_path: Path) -> None:
     """A declared test command is structural evidence, never a PASS claim."""
-    resolution = resolve(
+    resolution = resolver.resolve(
         _intent(), truth=_truth(tmp_path, owner="Igor Beylin", test_command="pytest -q")
     )
     payload = {k: v for k, v in resolution.items() if not k.startswith("_")}
@@ -164,7 +163,7 @@ def test_existing_program_material_change_supersedes(tmp_path: Path) -> None:
             "governing_authority": {"policy_profile": "quantum-l9.safe-autonomy.v1"},
         }
     ]
-    resolution = resolve(
+    resolution = resolver.resolve(
         parse_intent(
             {
                 "schema": "program-execution.intent.v1",
