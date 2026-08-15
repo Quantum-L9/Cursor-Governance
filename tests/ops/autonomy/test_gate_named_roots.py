@@ -75,9 +75,7 @@ def test_unresolvable_named_root_fails_closed(
 
     session = _session_root(tmp_path)
     missing = tmp_path / "does-not-exist"
-    reason = evaluate(
-        "Bash", {"command": f"cd {missing} && git push"}, root=session
-    )
+    reason = evaluate("Bash", {"command": f"cd {missing} && git push"}, root=session)
     assert reason is not None
     assert "could not be resolved" in reason
 

@@ -88,9 +88,7 @@ def test_git_commit_message_with_revert_words_is_not_denied():
 def test_unrelated_segment_cannot_trigger_git_patterns():
     # `echo` segment mentioning git ops must not deny the real harmless segment.
     assert (
-        command_violates_worktree_isolation(
-            "echo 'git revert foo' && git status", root=None
-        )
+        command_violates_worktree_isolation("echo 'git revert foo' && git status", root=None)
         is None
     )
 
@@ -104,7 +102,5 @@ def test_unrelated_segment_cannot_trigger_git_patterns():
         "git clean -fd",
     ],
 )
-def test_dangerous_git_commands_still_denied_on_dirty_tree(
-    command: str, tmp_path: Path
-) -> None:
+def test_dangerous_git_commands_still_denied_on_dirty_tree(command: str, tmp_path: Path) -> None:
     assert command_violates_worktree_isolation(command, root=_dirty_repo(tmp_path)) is not None

@@ -19,11 +19,7 @@ import yaml
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR_PATH = (
-    PE_ROOT
-    / "core"
-    / "program-execution-blueprint-template"
-    / "scripts"
-    / "validate_blueprint.py"
+    PE_ROOT / "core" / "program-execution-blueprint-template" / "scripts" / "validate_blueprint.py"
 )
 _VALIDATOR_MODULE_NAME = "pec_validate_blueprint"
 _SCAN_SUFFIXES = {".md", ".yaml", ".yml", ".json", ".py"}

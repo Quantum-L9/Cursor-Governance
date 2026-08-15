@@ -24,8 +24,10 @@ from blueprint_ops import (  # noqa: E402
     load_yaml,
     patch_phase0_operator_name,
     scan_placeholders,
-    validate_blueprint as validate_blueprint_artifact,
     write_manifest,
+)
+from blueprint_ops import (  # noqa: E402
+    validate_blueprint as validate_blueprint_artifact,
 )
 
 PE_ROOT = Path(__file__).resolve().parents[1]
@@ -154,7 +156,9 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def _phase0_gate(prog: dict[str, Any], tasks: list[dict[str, Any]], waves: list[dict[str, Any]]) -> dict[str, Any]:
+def _phase0_gate(
+    prog: dict[str, Any], tasks: list[dict[str, Any]], waves: list[dict[str, Any]]
+) -> dict[str, Any]:
     """Build the phase-0 completeness gate from compiled program data.
 
     The template's own GATE-000 references template-only scaffolding (W0 /
@@ -830,14 +834,12 @@ def compile_source(
     placeholder_errors = scan_placeholders(target)
     if placeholder_errors:
         raise CompileError(
-            "unresolved placeholders in compiled blueprint: "
-            + "; ".join(placeholder_errors[:5])
+            "unresolved placeholders in compiled blueprint: " + "; ".join(placeholder_errors[:5])
         )
     validation_errors = validate_blueprint_artifact(target, "template")
     if validation_errors:
         raise CompileError(
-            "compiled blueprint failed template validation: "
-            + "; ".join(validation_errors[:5])
+            "compiled blueprint failed template validation: " + "; ".join(validation_errors[:5])
         )
     return {
         "campaign_id": campaign_id,

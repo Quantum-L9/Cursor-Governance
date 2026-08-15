@@ -18,9 +18,7 @@ from __future__ import annotations
 
 import re
 
-_HEREDOC_OPEN_RE = re.compile(
-    r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$"
-)
+_HEREDOC_OPEN_RE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$")
 _SEPARATOR_PAIRS = ("&&", "||")
 _SEPARATOR_SINGLES = ";|"
 

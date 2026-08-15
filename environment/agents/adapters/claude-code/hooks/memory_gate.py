@@ -101,7 +101,7 @@ def main() -> int:
                     f"No conflict-checked phase-lock held. Governed write '{rule['id']}' "
                     f"requires a verified Graphiti lock on one of {namespaces}. Acquire: "
                     "python3 environment/agents/adapters/claude-code/hooks/memory_lock.py acquire "
-                    f'--namespace {namespaces[0]} --session-id {session_id} '
+                    f"--namespace {namespaces[0]} --session-id {session_id} "
                     f'--task "<what you are changing>".'
                 )
         return 0

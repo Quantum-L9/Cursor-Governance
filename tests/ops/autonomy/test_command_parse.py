@@ -58,7 +58,10 @@ def test_extract_named_roots_rejects_dynamic_and_unsafe_tokens():
 
 
 def test_extract_named_roots_ignores_heredoc_data():
-    command = "python - <<'EOF'\ncd /tmp/not-a-command && git -C /tmp/also-data push\nEOF\ncd /tmp/real && git push"
+    command = (
+        "python - <<'EOF'\ncd /tmp/not-a-command && git -C /tmp/also-data push\nEOF\n"
+        "cd /tmp/real && git push"
+    )
     assert extract_named_roots(command) == ["/tmp/real"]
 
 

@@ -43,9 +43,7 @@ class VerifyCommittedWorkTest(unittest.TestCase):
 
             verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
             self.assertEqual(verification["verdict"], "PASSED_LOCAL")
-            self.assertEqual(
-                verification["observed_changed_files"], ["docs/result.txt"]
-            )
+            self.assertEqual(verification["observed_changed_files"], ["docs/result.txt"])
             cleanup_worktree(repo, workspace)
 
 

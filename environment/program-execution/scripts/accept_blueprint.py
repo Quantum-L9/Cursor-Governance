@@ -68,13 +68,13 @@ def _validate_receipt(receipt: dict[str, Any]) -> None:
     if errors:
         raise RuntimeError(
             "acceptance receipt schema: "
-            + "; ".join(f"{'.'.join(str(p) for p in e.path) or '<root>'}: {e.message}" for e in errors)
+            + "; ".join(
+                f"{'.'.join(str(p) for p in e.path) or '<root>'}: {e.message}" for e in errors
+            )
         )
 
 
-def accept_blueprint(
-    blueprint: Path, *, actor: str, evidence_ids: list[str]
-) -> dict[str, Any]:
+def accept_blueprint(blueprint: Path, *, actor: str, evidence_ids: list[str]) -> dict[str, Any]:
     root = blueprint.resolve()
     program_path = root / "PROGRAM.yaml"
     if not program_path.is_file():
@@ -133,9 +133,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--evidence-id", action="append", default=[])
     args = parser.parse_args(argv)
     try:
-        result = accept_blueprint(
-            args.blueprint, actor=args.actor, evidence_ids=args.evidence_id
-        )
+        result = accept_blueprint(args.blueprint, actor=args.actor, evidence_ids=args.evidence_id)
     except RuntimeError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1

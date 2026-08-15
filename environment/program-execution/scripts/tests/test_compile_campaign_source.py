@@ -100,9 +100,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertEqual(collected["status"], "COLLECTED")
 
             accept = _load("accept_blueprint_test", PE_ROOT / "scripts/accept_blueprint.py")
-            accepted = accept.accept_blueprint(
-                target, actor="test", evidence_ids=["EVID-001"]
-            )
+            accepted = accept.accept_blueprint(target, actor="test", evidence_ids=["EVID-001"])
             self.assertEqual(accepted["status"], "ACCEPTED")
             self.assertTrue((target / "ACCEPTANCE_RECEIPT.yaml").is_file())
 
