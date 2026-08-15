@@ -46,6 +46,11 @@ def parser() -> argparse.ArgumentParser:
     cmd = sub.add_parser("bootstrap")
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--blueprint", required=True, type=Path)
+    cmd.add_argument(
+        "--admission-draft",
+        action="store_true",
+        help="Lock a draft Blueprint without marking tasks ready",
+    )
 
     cmd = sub.add_parser("validate")
     cmd.add_argument("--workspace", required=True, type=Path)
@@ -164,7 +169,12 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
     args = parser().parse_args(argv)
     try:
         if args.command == "bootstrap":
-            value = bootstrap(args.workspace, args.blueprint, template_root)
+            value = bootstrap(
+                args.workspace,
+                args.blueprint,
+                template_root,
+                admission_draft=args.admission_draft,
+            )
         elif args.command == "validate":
             value = validate_runtime(args.workspace)
             if value["status"] != "PASS":

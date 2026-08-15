@@ -111,11 +111,11 @@ files:
   sha256: 1ceb2c61283502a083b995d2535bf57e202c2dbe8b092994bd6a17b26f772e43
   bytes: 3917
 - path: schemas/current-state-delta.schema.json
-  sha256: a3a4e7f30adfeac169106d822cfa756bc108e163d2979647f580f9ed7a4ba2d7
-  bytes: 623
+  sha256: b600208c44d49ccfab18ac4ac1102b6f7f00d36d28350699e5cec95fbd002c25
+  bytes: 2131
 - path: schemas/cutover-and-rollback.schema.json
-  sha256: f20bd186b706d8a99783a2a46c12c2092dd74c23c2b3798853d5dfcfcf93dd00
-  bytes: 475
+  sha256: 84bd085c2afdaab7ecea8ee10bfd2b09e8c9e46fd127a5c18644d3289abf896c
+  bytes: 1683
 - path: schemas/decision-register.schema.json
   sha256: 5b83f34f66e17f3702c85770a2505452fcbddcf4ba8adb948322cb9b5c3c4242
   bytes: 3243
@@ -123,8 +123,8 @@ files:
   sha256: ca9df0e4a6e81b8ff89f186e06dc58e3b5190c590a40744e0fb83f3df361456c
   bytes: 641
 - path: schemas/do-not-build.schema.json
-  sha256: 8795ea4dd4f07b12d02a839bf238fed5daf25ad2f050705248d2f7d6eb1ebf8a
-  bytes: 515
+  sha256: 191dcf5146fd66e9643bb2adc6a93b9da673ef697e35d617e12dda53f76ab782
+  bytes: 1480
 - path: schemas/evidence-catalog.schema.json
   sha256: 64b5e4f9b0acd6f447fb3a758462ebfe46d847eb9fa296e0fca4634fd6534df5
   bytes: 3140
@@ -135,11 +135,11 @@ files:
   sha256: 02f7a448fa7a1653f70dd2883f79e671522ee6ede690594eaaeab94710442e72
   bytes: 2503
 - path: schemas/execution-waves.schema.json
-  sha256: 01a60c92010c847b0b045df5e3aeba84b00fc9fb880278319d30735d8eadefb6
-  bytes: 473
+  sha256: 172d3b9fa2b597ab67d84f5a88db14103f4f36dc7fbb90357d7229e12afd2fb1
+  bytes: 1757
 - path: schemas/observability-plan.schema.json
-  sha256: b7edfa7e105a868d43090fb5a50ce6c9661e3d0fef48a6adfa37bbd6c7929b82
-  bytes: 487
+  sha256: e04d47b0438b922fe1cb30c1099f9d8095bf968c5666264d76d2804227ea2e59
+  bytes: 1733
 - path: schemas/phase0-user-config.schema.json
   sha256: c8fc1eaa8b11ec742c56ebdc2e6f4b0ea32b0758cd706be2dc5f96dcd85b1b2c
   bytes: 5564
@@ -150,8 +150,8 @@ files:
   sha256: 056475911ef4fa35b5172681ef2fc71218ba53bd8ea7d603f1082b9c0f2e6b30
   bytes: 2663
 - path: schemas/source-traceability.schema.json
-  sha256: 74739ee9030f2f2b6cdc18300d6a0620418e2a6af04a4eae27104bda273e3cfe
-  bytes: 491
+  sha256: ddc04c12634ca3fdf3cef55c9d5e7ef14ac6396e9c5fce01ab8826c2206d1929
+  bytes: 1815
 - path: schemas/task-card.schema.json
   sha256: 49713e146de1991478f9f30e5f443c79d41d0fe75a13038fa59395199d6485b7
   bytes: 374
@@ -171,11 +171,11 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: scripts/validate_blueprint.py
-  sha256: ad8916a6247821c36a9243b1f44cb9eeb6cf639f944b217be20db6a017a831c7
-  bytes: 23504
+  sha256: 8fa3fcad28619eed156935f5b2a79e6b927762710e6f68391340cfe0a45a597f
+  bytes: 23561
 integrity:
   algorithm: sha256
   self_excluded: true
 summary:
   file_count: 57
-  total_bytes: 108895
+  total_bytes: 116487

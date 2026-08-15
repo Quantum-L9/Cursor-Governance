@@ -53,3 +53,12 @@ integrity receipt are registered.
 
 _No commit/push/PR/merge/release/deploy is authorized by this campaign during
 admission. Terminal verdict is reserved to the program owner (AUTH-001)._
+
+## Honesty
+
+`definition_status` remains `draft`. This overlay does not accept the
+program. `CAMPAIGN_SOURCE.yaml` bytes and
+`source-integrity-receipt.json` are immutable. Compile through
+`scripts/compile_campaign_source.py`; do not treat an ad-hoc
+`$HOME/.l9/blueprints` compiler as SSOT. Instantiated Blueprint
+validation stays FAIL while evidence is planned.

@@ -28,6 +28,18 @@ class ClaudeCodeProvider:
             self.repository_root / "autonomy/adapters/conformance.py",
         ]
         missing = [str(path) for path in required if not path.is_file()]
+        metadata = self._provider_metadata()
+        if executable is None:
+            return ProviderProbe(
+                status="BLOCKED",
+                blocked_reason="claude executable is absent",
+                evidence=(
+                    {"type": "executable", "path": None},
+                    {"type": "path_probe", "missing": missing},
+                    {"type": "provider_metadata", **metadata},
+                ),
+                observed_capabilities=("inspect", "local_write", "artifact_production"),
+            )
         return ProviderProbe(
             status="PASS" if not missing else "BLOCKED",
             blocked_reason=(
@@ -36,6 +48,7 @@ class ClaudeCodeProvider:
             evidence=(
                 {"type": "executable", "path": executable},
                 {"type": "path_probe", "missing": missing},
+                {"type": "provider_metadata", **metadata},
             ),
             observed_capabilities=("inspect", "local_write", "artifact_production"),
         )

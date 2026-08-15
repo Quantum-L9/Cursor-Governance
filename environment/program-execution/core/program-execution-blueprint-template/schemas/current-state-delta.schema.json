@@ -19,10 +19,82 @@
     "schema_version": {
       "const": "2.0.0"
     },
-    "snapshot_at": {},
-    "freshness_policy": {},
-    "sources": {},
-    "deltas": {},
-    "next_blocking_action": {}
+    "snapshot_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "freshness_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "maximum_age": {
+          "type": "string"
+        },
+        "stale_result": {
+          "type": "string"
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "evidence_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "freshness": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "deltas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "expected_state": {
+            "type": "string"
+          },
+          "observed_state": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "required_action": {
+            "type": "string"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "next_blocking_action": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }

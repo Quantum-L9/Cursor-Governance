@@ -50,3 +50,10 @@ the SSOT.
 
 _Terminal verdict is reserved to the program owner (AUTH-001); the controller
 only recommends._
+
+## Honesty
+
+This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
+path mismatches are not rewritten here. It is not on the compile
+allowlist. Instantiated-mode claims in `VALIDATION_EVIDENCE.md` are
+historical notes, not a live Program Lock.

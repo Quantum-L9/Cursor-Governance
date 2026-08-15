@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "ARCHITECTURE.md",
-      "sha256": "320e323797e9f7371816c73f686d2cbfc014ab2d39bd7123d5129242579daacd"
+      "sha256": "bb29f3a85d6cec867d34dde552b702cb482fc7b2f0bc5725cc0210e54e5eea87"
     },
     {
       "path": "COMPATIBILITY.yaml",
@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "55987d5bf97386bae76e53bb5602d5df578d81e5c74b55e672ffdd6b22ceb748"
+      "sha256": "5ed117b9bce571ee3316e60ec7a3fbffbe8bcd87cadff40c2396865a629a6289"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -47,11 +47,15 @@
     },
     {
       "path": "adapters/chatgpt/provider.py",
-      "sha256": "b74ec236485ba3ebe659ea9f7a7ba17e8debe4fd296c8e81961e695032161c29"
+      "sha256": "d9a5c24a9ff0e9ce8aa4b8f65f77480b691557a98bc2361dd52e690b4c39e01b"
     },
     {
       "path": "adapters/chatgpt/tests/test_handoff.py",
       "sha256": "6c2c78621f398975c565e63b10c0c1a420c9fc37f7e8fc694ea6d5052c47633c"
+    },
+    {
+      "path": "adapters/chatgpt/tests/test_provider.py",
+      "sha256": "e878af22dc679d59fe23b2ec2917dc6e19030ac1cef24e01a831614e3d9217b7"
     },
     {
       "path": "adapters/ci/generic-shell/ADAPTER.yaml",
@@ -115,7 +119,7 @@
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "16d05fd0c67ca8b8c7e3f4634dd18768343b1bef98cb3893ae52f2e9fcfd2912"
+      "sha256": "965489b28aa0c56171d7c595e36b29487c1724cca6697b76d8961014609cb3cc"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -123,7 +127,7 @@
     },
     {
       "path": "adapters/claude-code/tests/test_driver.py",
-      "sha256": "984b30415a31761649257bcb65ffee286da55566dcf417e0b06629d36c17c2cf"
+      "sha256": "8964f51d75ac5fcefc25dde2069888a559248b75adb21acc36ced3297e6ac008"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
@@ -207,7 +211,7 @@
     },
     {
       "path": "adapters/cursor-background/provider.py",
-      "sha256": "cf29857e6c660ca5076781a57075356c082821f1b834e827a925535ef94177a7"
+      "sha256": "cb684146e05012d664238d3c89246a986c6a1a17d2285f1d2c777b1038d43f8b"
     },
     {
       "path": "adapters/cursor-background/task_monitor.py",
@@ -215,7 +219,7 @@
     },
     {
       "path": "adapters/cursor-background/tests/test_provider.py",
-      "sha256": "bdaf27cd92089edd1cf873c02dd085aff8cfa26138bf6041d76d0f989da3684b"
+      "sha256": "6c739deef8900d1a899ad39faa00e2c13b18070ccae6b1954a7800ae9dd3feff"
     },
     {
       "path": "adapters/cursor-foreground/ADAPTER.yaml",
@@ -227,11 +231,11 @@
     },
     {
       "path": "adapters/cursor-foreground/provider.py",
-      "sha256": "36970349389099c9056e2cabe639a60e8b8d68d173a88583c9ec1b06ad5a47d0"
+      "sha256": "c0297995578687afb67b12605be1197ec0198221948f5d5314b9a7fc0e405edc"
     },
     {
       "path": "adapters/cursor-foreground/tests/test_provider.py",
-      "sha256": "3b179fd6bbdbe030cffeb5317156e533e2c944101bccbdf8b2ccc3e7af3c94a0"
+      "sha256": "c325e5d29884581eaa5b8983df3d6ee3b2750ed0e952108a81c7ad7a1fc5f1e8"
     },
     {
       "path": "adapters/deployment/target-specific/ADAPTER.yaml",
@@ -399,11 +403,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "ac89e9b26ab8938fff7e2eaafb6611de0c7c244710cebc66ce95a6948d8cce45"
+      "sha256": "2ee40da84910d92cc4dc6fb5ba05db44bf50ce14e207ebef65ecb646870821fa"
+    },
+    {
+      "path": "campaigns/COMPILE_ALLOWLIST.yaml",
+      "sha256": "6bfdfbc654b6bc7943f85bd97f29ce59e0008bdc732336d696ecc785e43ec2e4"
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "0805941318e4e3cfa2e2cc9ae2ad9f6d5280b7cd496dbac30f11d76e0c31b2df"
+      "sha256": "c576948eaea988dafc2883876ae4a794a246a59c10ae54f81e94aa99a34f5ce7"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
@@ -411,7 +419,7 @@
     },
     {
       "path": "campaigns/bounded-replanning-v1/README.md",
-      "sha256": "218c0f0d2320ab043f3e5c448f4e754314ecd0d9d53331002cf1b443ecdb4558"
+      "sha256": "ce0fd106c41f449dd5eb0c46c8f588ee031395e3190b79a21eca921a68c81076"
     },
     {
       "path": "campaigns/bounded-replanning-v1/source-integrity-receipt.json",
@@ -427,7 +435,7 @@
     },
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/README.md",
-      "sha256": "2e12d559863d264bb62f7e35fcf35df46a9d14f2c0684fd31310621d575e5f8f"
+      "sha256": "e43b39ec75627aa5b21a7a987cde80a70680b80efd638c69e13bd7664f06b5e8"
     },
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/deliverables/l9-devpack-compiler/IMPLEMENTATION_DESIGN.md",
@@ -459,7 +467,7 @@
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/README.md",
-      "sha256": "1b065350a9896baa86d09fe0b9d689c97d1aef4326818c8f584087e60b6b108d"
+      "sha256": "98e301df93f18f07aff61c54fc6f077650890debf376ac597cc9905820e0bec0"
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/VALIDATION_EVIDENCE.md",
@@ -491,7 +499,7 @@
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/README.md",
-      "sha256": "8d8612bd899f2ccc25c013cbe089ab0bd2c0f74927b5d74f395b437b155e7c9d"
+      "sha256": "380bf513670e2693960b28ad149502d9be9d95d57b4d4fdd298353936efaf34b"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/IB-Odoo_19-INTEGRATION-DELIVERY.md",
@@ -656,6 +664,10 @@
     {
       "path": "conformance/test_authority_narrowing.py",
       "sha256": "60456c3717767860aebd279d82e7f91ce02251df0083bbbac30f9e7d22b3400f"
+    },
+    {
+      "path": "conformance/test_campaign_source_schema.py",
+      "sha256": "88857abf8cadcf4cbe30e3b66767a455bb99e8c52665d43b73ce6f9f5ba2ad5c"
     },
     {
       "path": "conformance/test_cancellation.py",
@@ -851,7 +863,7 @@
     },
     {
       "path": "peer_execution/autonomy/bootstrap.py",
-      "sha256": "3aa512f5e11edd097b2a4d02c5943812ac1085d3fbf5219932986e0e12f5f18e"
+      "sha256": "5e11c0cb2fd258a3d80fec2d8296a3c6e44074370661c34bf5e87e356f4f7766"
     },
     {
       "path": "peer_execution/autonomy/claim_lease.py",
@@ -1082,6 +1094,14 @@
       "sha256": "5511f91b8e31ce01ec2388abd421e204959af6b8fbda0d3f4a60c14e9684d58f"
     },
     {
+      "path": "scripts/campaign_pr_copy.py",
+      "sha256": "7796af1594d284f7cb646a0ce0dcb3abe330c4136042096d26cb15508af738c8"
+    },
+    {
+      "path": "scripts/compile_campaign_source.py",
+      "sha256": "a9ab82d81ae9950b2a3154b86e8ba16f55da0ab7238bb2f8489d2651fe5e992e"
+    },
+    {
       "path": "scripts/generate_manifest.py",
       "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
     },
@@ -1091,7 +1111,7 @@
     },
     {
       "path": "scripts/probe_executable_peers.py",
-      "sha256": "edada92a612c7452f378064cc86057e211967bdf21d2d8bd8fbd6a46fbfe93f0"
+      "sha256": "6345e13e777dc6eec9ca34a1003795a50c511ea009c7a63928f6ef30363900a9"
     },
     {
       "path": "scripts/probe_execution_adapters.py",
@@ -1115,15 +1135,23 @@
     },
     {
       "path": "scripts/run_conformance.py",
-      "sha256": "88a112c4edae22928ee683aad2dbdc6c8f560318a980bc0915a9c80ced495e3f"
+      "sha256": "780cb453680a1e0f48cb7016306068c44b45a435c0bd2cd5fdda7285091cd159"
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
       "sha256": "0e7d61be182b1c33cf500cc21e6c0d5efcb1c3154560ca3d573ddbe4518419b5"
     },
     {
+      "path": "scripts/tests/test_campaign_pr_copy.py",
+      "sha256": "2ac691a09dae2e7fc8270afd16fd612dfddcfddd5827f56bbe6c63f3c0169682"
+    },
+    {
+      "path": "scripts/tests/test_compile_campaign_source.py",
+      "sha256": "e47ee23372942214f5a373032d236d8f387cdbca9e9509304a4ff5d87d55f59b"
+    },
+    {
       "path": "scripts/validate_execution_adapters.py",
-      "sha256": "467dab820b9d454e9efbe0d37ceca048cec93a8a446686cbcdb6832214d08d61"
+      "sha256": "8f6e04551ef6cbe459ce06b4f4ca246887356437538fb614b710d100a5681777"
     },
     {
       "path": "scripts/validate_manifest.py",
@@ -1167,7 +1195,7 @@
     },
     {
       "path": "tests/test_probe_command.py",
-      "sha256": "6f8504042717bc639ec170f692b394b19249ca3bd242b48a1d2b965d06717d6f"
+      "sha256": "51827563729563cbe3eb0124fd4abbcbdeffa4c1395bf75f358c130cd0078b68"
     },
     {
       "path": "tests/test_registry_alignment.py",
