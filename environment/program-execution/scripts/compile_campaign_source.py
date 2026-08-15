@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import sys
@@ -12,8 +11,24 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
 from jsonschema import Draft202012Validator
+
+# Sibling import safety: this module is also loaded via importlib (tests) with
+# PYTHONPATH pointing at the PE root, so the scripts/ dir may not be on sys.path.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from blueprint_ops import (  # noqa: E402
+    dump_yaml,
+    load_yaml,
+    patch_phase0_operator_name,
+    scan_placeholders,
+    write_manifest,
+)
+from blueprint_ops import (  # noqa: E402
+    validate_blueprint as validate_blueprint_artifact,
+)
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PE_ROOT / "core/shared/schemas/campaign-source.schema.json"
@@ -30,21 +45,11 @@ EVIDENCE_TYPE = {
 }
 CONTRACT_KEYS = ("pair", "blueprint", "controller_minimum")
 AUTH_REQUIRED = ("id", "responsibility", "owner")
+TASK_STATUSES_ADMITTED = {"ready", "blocked", "cancelled", "superseded"}
 
 
 class CompileError(RuntimeError):
     pass
-
-
-def load_yaml(path: Path) -> Any:
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
-
-
-def dump_yaml(path: Path, data: object) -> None:
-    path.write_text(
-        yaml.safe_dump(data, sort_keys=False, width=110, allow_unicode=True),
-        encoding="utf-8",
-    )
 
 
 def utc_now() -> str:
@@ -68,34 +73,6 @@ def load_allowlist() -> set[str]:
     if not isinstance(ids, list) or not ids:
         raise CompileError("COMPILE_ALLOWLIST.yaml has no campaign_ids")
     return {str(item) for item in ids}
-
-
-def write_manifest(root: Path, compiled_from: str) -> None:
-    files = []
-    for path in sorted(root.rglob("*")):
-        if (
-            path.is_file()
-            and path.name != "MANIFEST.yaml"
-            and "__pycache__" not in path.parts
-            and path.suffix != ".pyc"
-        ):
-            files.append(
-                {
-                    "path": path.relative_to(root).as_posix(),
-                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                }
-            )
-    dump_yaml(
-        root / "MANIFEST.yaml",
-        {
-            "schema": "program-execution-blueprint.manifest.v2",
-            "schema_version": "2.0.0",
-            "template": "program-execution-blueprint",
-            "compiled_from": compiled_from,
-            "files": files,
-            "integrity": {"algorithm": "sha256", "self_excluded": True},
-        },
-    )
 
 
 def _load_instantiate() -> Any:
@@ -147,12 +124,78 @@ def _require_auth(item: dict[str, Any]) -> None:
         raise CompileError(f"authority missing required keys: {missing}")
 
 
-def _gate_000(target: Path) -> list[dict[str, Any]]:
-    path = target / "CONVERGENCE_GATES.yaml"
-    if not path.is_file():
-        return []
-    gates = load_yaml(path).get("gates") or []
-    return [item for item in gates if item.get("id") == "GATE-000"]
+def _semantic_precheck(src: dict[str, Any]) -> list[str]:
+    """Fail loudly on source shapes that have no valid compiled representation.
+
+    Run before any artifact is written. Returns compile warnings.
+    """
+    warnings: list[str] = []
+    for decision in src.get("decisions") or []:
+        if not decision.get("options"):
+            raise CompileError(
+                f"decision {decision['id']!r} has no options array; every decision requires "
+                "source-side options (id + description) because the Blueprint Decision "
+                "Register mandates non-empty options — fix the source, never synthesize "
+                "options in the compiled artifact"
+            )
+    for task in src.get("tasks") or []:
+        status = task.get("definition_status")
+        if status not in TASK_STATUSES_ADMITTED:
+            raise CompileError(
+                f"task {task['id']!r}: definition_status {status!r} is not admitted by the "
+                f"instantiated Blueprint validator ({sorted(TASK_STATUSES_ADMITTED)}); "
+                "fix the source"
+            )
+        for entry in task.get("validation") or []:
+            if entry.get("method") == "command":
+                warnings.append(
+                    f"task {task['id']!r} validation {entry.get('id')!r} uses method 'command'; "
+                    "compiled Task Cards remap validations to method 'inspection' — required "
+                    "shell commands come from the worker Source Contract, not the campaign source"
+                )
+    return warnings
+
+
+def _phase0_gate(
+    prog: dict[str, Any], tasks: list[dict[str, Any]], waves: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Build the phase-0 completeness gate from compiled program data.
+
+    The template's own GATE-000 references template-only scaffolding (W0 /
+    TASK-001 / EVID-002) and must never be re-read from the instantiated tree.
+    """
+    wave_ids = [wave["id"] for wave in waves if wave.get("id") == "W0"]
+    task_ids = [task["id"] for task in tasks if task.get("wave_id") == "W0"]
+    return {
+        "id": "GATE-000",
+        "name": "phase0_user_config_complete",
+        "definition_status": "active",
+        "owner": prog["owner"],
+        "class": "phase0",
+        "blocking_class": "true_blocking",
+        "scope": {"wave_ids": wave_ids, "task_ids": task_ids},
+        "method": {
+            "type": "inspection",
+            "steps": [
+                "Inspect PHASE0_USER_CONFIG.yaml completeness, blocking inventory, "
+                "alignment, and operator_ack."
+            ],
+        },
+        "pass_condition": (
+            "When program_deploying is false, Phase 0 may remain draft with "
+            "phase0_complete false. When program_deploying is true, phase0_complete "
+            "is true, stop_conditions_reviewed is true, alignment.uv_lock_check and "
+            "toolchain_pin_lockstep are pass or not_applicable, make_pr_gate_required "
+            "is true, autonomous_merge is false, and advisory CI is inventoried or waived."
+        ),
+        "fail_condition": (
+            "program_deploying true with incomplete Phase 0, uncleared environmental "
+            "stops, or lock/pin misalignment."
+        ),
+        "blocking": True,
+        "required_evidence_ids": [],
+        "waiver_allowed": False,
+    }
 
 
 def compile_source(
@@ -173,9 +216,11 @@ def compile_source(
     allowed = load_allowlist()
     if campaign_id not in allowed:
         raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
+    warnings = _semantic_precheck(src)
     now = stamp or utc_now()
     ensure_instantiated(target, src, now)
     prog = src["program"]
+    patch_phase0_operator_name(target, str(prog["owner"]))
     tasks = list(src.get("tasks") or [])
     gates = list(src.get("gates") or [])
     waves = list(src.get("waves") or [])
@@ -215,6 +260,9 @@ def compile_source(
     compiled_targets = []
     for item in src.get("targets") or []:
         mapped = dict(item)
+        # Source-only metadata: the Blueprint target schema has
+        # additionalProperties: false and no default_branch field.
+        mapped.pop("default_branch", None)
         adapter = str(mapped.get("adapter") or "git")
         mapped["adapter"] = _remap_adapter(adapter)
         compiled_targets.append(mapped)
@@ -625,7 +673,7 @@ def compile_source(
     )
 
     class_map = {"entry": "authority", "completion": "validation"}
-    compiled_gates = list(_gate_000(target))
+    compiled_gates = [_phase0_gate(prog, tasks, waves)]
     for item in gates:
         wave_ids = [wave["id"] for wave in waves if item["id"] in (wave.get("exit_gate_ids") or [])]
         compiled_gates.append(
@@ -783,11 +831,22 @@ def compile_source(
         encoding="utf-8",
     )
     write_manifest(target, repo_rel or compiled_from)
+    placeholder_errors = scan_placeholders(target)
+    if placeholder_errors:
+        raise CompileError(
+            "unresolved placeholders in compiled blueprint: " + "; ".join(placeholder_errors[:5])
+        )
+    validation_errors = validate_blueprint_artifact(target, "template")
+    if validation_errors:
+        raise CompileError(
+            "compiled blueprint failed template validation: " + "; ".join(validation_errors[:5])
+        )
     return {
         "campaign_id": campaign_id,
         "target": str(target),
         "compiled_from": repo_rel or compiled_from,
         "task_count": len(compiled_tasks),
+        "warnings": warnings,
     }
 
 

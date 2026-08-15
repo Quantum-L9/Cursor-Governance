@@ -286,6 +286,13 @@ def render_contract(
                 "Do not use remote credentials or claim independent verification.",
                 f"Write the Attempt Receipt to `{rendered['attempt_receipt_path']}`.",
                 "",
+                (
+                    "Worktree contract: leave changes dirty (uncommitted) OR commit them on "
+                    + "this task branch — verification covers both. Declare EVERY touched path "
+                    + "in `changed_files` exactly; commits happen later at campaign integration, "
+                    + "not inside this task."
+                ),
+                "",
             ]
         )
         + "\n",

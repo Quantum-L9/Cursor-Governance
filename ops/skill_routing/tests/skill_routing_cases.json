@@ -54,6 +54,13 @@
       ]
     },
     {
+      "prompt": "Activate l9-ci-core and stamp biome.json, do not invent a ci.yml",
+      "expected_primary": "l9-setting-up-ci",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ]
+    },
+    {
       "prompt": "We have an active production incident and need coordinated mitigation",
       "expected_primary": "l9-incident-response",
       "expected_supporting": [

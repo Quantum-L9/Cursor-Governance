@@ -134,6 +134,9 @@ files:
 - path: program-execution-blueprint-template/WORKSTREAMS.yaml
   sha256: 4e2b907e0ee55f2a6a51c0ce5a78b4b34a6b4c51641c9b4cbf111110dcbe7f25
   bytes: 457
+- path: program-execution-blueprint-template/schemas/acceptance-receipt.schema.json
+  sha256: a08d5719126e88f61b0e64c09645a622594a83f7763c1a93081c08d3395c4af6
+  bytes: 875
 - path: program-execution-blueprint-template/schemas/authority-registry.schema.json
   sha256: b01c4ad0600b5695493779edffb0a14c0adaf816e1cddb5651583165d4dbe88e
   bytes: 3126
@@ -225,8 +228,8 @@ files:
   sha256: 5f61529b813d694d4790fccb85f6bd6ffbac112df748ec9816f41305459540b6
   bytes: 1346
 - path: program-execution-controller-template/RUNBOOK.md
-  sha256: 270b5ce077dd8de9a0fbabe203a8822e827ce52a8e78fe69d92319ea9f82ee91
-  bytes: 2912
+  sha256: 1235dd9c2cb3bcd366ff9e60efba3f959fdea424b57792c9cb3c5c7ff1294a62
+  bytes: 4661
 - path: program-execution-controller-template/SECURITY.md
   sha256: 1bb8ae37d783ba450dbaafb779dfdcae5c2ac474ff72cbcdf1b08c5398fc4f2e
   bytes: 958
@@ -348,11 +351,11 @@ files:
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
   bytes: 2419
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: 73725f2b414f101e397bb478815f5ff3dd534040f7ba2509b1cba9a4b7b21d85
-  bytes: 12997
+  sha256: ad2fd6c8006c9bc24b4b43c0814b8afd9ea62fe13b2a966aec39cbf008eeb8bf
+  bytes: 13392
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 0c1f21cf8c0aa7c271dd7a29fa0c3b6b9cd68ecd98190c2d95d191acf55b9838
-  bytes: 66752
+  sha256: 380ce8213d77a6e972953cbb4f28c10a92b5cc3f0118f78d3a6c4a0b9659136a
+  bytes: 67393
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -422,6 +425,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_state_transition.py
   sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
   bytes: 1649
+- path: program-execution-controller-template/scripts/tests/test_verify_committed_work.py
+  sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
+  bytes: 1882
 - path: program-execution-controller-template/scripts/tests/test_waived_gate.py
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
   bytes: 2866
@@ -525,5 +531,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 173
-  total_bytes: 498977
+  file_count: 175
+  total_bytes: 504519

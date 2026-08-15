@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
-"""SessionStart prefetch — thin wrap of Cursor hydration compiler (front door)."""
+"""SessionStart prefetch — thin wrap of Cursor hydration compiler (front door).
+
+Mid-session repair: when the automatic SessionStart stamp is stale or missing,
+run with an explicit session id instead of guessing:
+
+    python3 memory_prefetch.py --session-id <uuid>
+
+Find your session id as the newest
+``~/.claude/projects/<project>/<uuid>.jsonl`` for this conversation.
+"""
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -28,11 +38,21 @@ def _emit(context: str) -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(prog="memory_prefetch")
+    parser.add_argument(
+        "--session-id",
+        default=None,
+        help=(
+            "stamp the receipt for this session id instead of reading stdin "
+            "(newest ~/.claude/projects/<project>/<uuid>.jsonl for this conversation)"
+        ),
+    )
+    args = parser.parse_args()
     try:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         event = {}
-    session_id = str(event.get("session_id", "")) or "unknown-session"
+    session_id = args.session_id or str(event.get("session_id", "")) or "unknown-session"
 
     try:
         contract = st.load_contract()

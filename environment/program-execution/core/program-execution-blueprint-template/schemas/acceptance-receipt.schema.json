@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-blueprint.acceptance-receipt.v1",
+  "title": "Blueprint acceptance receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "program_id",
+    "accepted_at",
+    "actor",
+    "evidence_ids"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-blueprint.acceptance-receipt.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "program_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^EVID-[A-Z0-9-]+$"
+      }
+    }
+  }
+}
