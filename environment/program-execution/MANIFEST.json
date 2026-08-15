@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "5ed117b9bce571ee3316e60ec7a3fbffbe8bcd87cadff40c2396865a629a6289"
+      "sha256": "3eb27481468554f42d3da995ddcf4befba56abb12980fee35ad289200c15538d"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -403,7 +403,11 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "747b30c0fac9b260ed97a5c690ea62f906e2660b49c732460e4104a5016e4697"
+      "sha256": "aecc91929617ab73c9e2ac27e761c31b578ed85626ba685828299bb6536a1909"
+    },
+    {
+      "path": "campaigns/CAMPAIGN_STATUS.yaml",
+      "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
@@ -411,7 +415,7 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "f617ccdc9d1935533e7fcc42eee345b7fa4a8af357acbe1ac8b575ed35d6fdd5"
+      "sha256": "b5869199051b6ca79aadc0aaffbcdcd6c1dba7e6932a9c6ff1c173752d3c2289"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
@@ -419,11 +423,15 @@
     },
     {
       "path": "campaigns/bounded-replanning-v1/README.md",
-      "sha256": "2437c109ba9a976cefb0aa8d84db279f9ccb9ae0d240f8682ff250048cb192e0"
+      "sha256": "93c89ee1351a8ec736fbdf92ee8dffaf6958b5cd5a9f5b530defad3ae16e1a17"
     },
     {
       "path": "campaigns/bounded-replanning-v1/handoff/CAMPAIGN_HANDOFF.md",
       "sha256": "10651af791769b76150d2657b0df9a8e6cebded619309072d75919e452570feb"
+    },
+    {
+      "path": "campaigns/bounded-replanning-v1/handoff/CLOSEOUT.yaml",
+      "sha256": "6df4b1c4345762722bebd1a571be378bf5166e47fbfce96a6c9fcd3ce820bb17"
     },
     {
       "path": "campaigns/bounded-replanning-v1/handoff/handoff.json",
@@ -532,6 +540,14 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "0b3ce12c3ef8ef91bf74febf1a2d852651c0051ef8bd20e0cb52efa853e70c6b"
+    },
+    {
+      "path": "campaigns/scripts/close_campaign.py",
+      "sha256": "3fcc5222468ca66cc2d620b732a2d1c047b5933084e8fbe90a0b8caf1d51a1cd"
+    },
+    {
+      "path": "campaigns/scripts/test_close_campaign.py",
+      "sha256": "121b10c566dbf4ace506bc0252948f7d56d113643256071969493112b9ec8efc"
     },
     {
       "path": "conformance/README.md",

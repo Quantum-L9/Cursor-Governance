@@ -19,9 +19,11 @@ peer under one canonical semantic revision.
 
 ## Status
 
-- **owner_converged** / `definition_status: draft`. This PR registers the
-  corrected campaign source only; no Blueprint pair is instantiated, no Program
-  Lock is created, and no controller runtime executed.
+- **complete** — live closeout in `handoff/CLOSEOUT.yaml` and
+  `../CAMPAIGN_STATUS.yaml`. Evidence: PR #149 merged to `main`
+  (`63efde4f`). Do not resume this campaign.
+- Immutable source `metadata.status` remains `operator_intake` (seed is
+  sealed). Agents read the live ledger, not that field.
 - Governing decisions **ADR-0011 … ADR-0016** are present and accepted
   (`docs/decisions/`, PR #91).
 - **Target is in-scope:** unlike the devpack campaigns, `TARGET-001` is
