@@ -59,6 +59,9 @@ fi
 if [[ -f "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py" ]]; then
   python3 "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py"
 fi
+if [[ -f "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py" ]]; then
+  python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
+fi
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 

@@ -198,6 +198,70 @@ class RootProtectionTests(unittest.TestCase):
             commit(repo, "overwrite without justification")
             self.assertEqual(rp.main(["--base", base, "--repo", str(repo)]), 1)
 
+    # --- Inventory-complete reconciliation (P2-11) ---
+
+    def test_inventory_clean_repo_reconciles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_repo(Path(tmp))
+            unreg, stale = rp.reconcile_root_inventory(repo, CONFIG)
+            self.assertEqual((unreg, stale), ([], []))
+
+    def test_inventory_flags_preexisting_unregistered_root_file(self) -> None:
+        # A root file that predates any diff and was never registered must fail,
+        # even when nothing in the current change touches it (base == head).
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_repo(Path(tmp))
+            (repo / "SNEAKY.md").write_text("never classified\n", encoding="utf-8")
+            commit(repo, "pre-existing unregistered root file")
+            unreg, _ = rp.reconcile_root_inventory(repo, CONFIG)
+            self.assertIn("SNEAKY.md", unreg)
+            self.assertEqual(rp.main(["--base", "HEAD", "--repo", str(repo)]), 1)
+
+    def test_inventory_flags_stale_registry_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_repo(Path(tmp))
+            cfg = json.loads(json.dumps(CONFIG))
+            cfg["protected_files"].append(
+                {"path": "GHOST.json", "tier": "regenerable", "rule": "regenerable"}
+            )
+            (repo / "ops" / "config" / "root-file-protection.json").write_text(
+                json.dumps(cfg), encoding="utf-8"
+            )
+            commit(repo, "register a path that is not a tracked root file")
+            _, stale = rp.reconcile_root_inventory(repo, cfg)
+            self.assertIn("GHOST.json", stale)
+            self.assertEqual(rp.main(["--base", "HEAD", "--repo", str(repo)]), 1)
+
+    def test_inventory_exempt_root_file_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_repo(Path(tmp))
+            cfg = json.loads(json.dumps(CONFIG))
+            cfg["exempt_root_files"] = ["scratch.txt"]
+            (repo / "scratch.txt").write_text("exempt on purpose\n", encoding="utf-8")
+            (repo / "ops" / "config" / "root-file-protection.json").write_text(
+                json.dumps(cfg), encoding="utf-8"
+            )
+            commit(repo, "exempt root file")
+            unreg, stale = rp.reconcile_root_inventory(repo, cfg)
+            self.assertEqual((unreg, stale), ([], []))
+
+    def test_inventory_case_sensitive(self) -> None:
+        # Registry casing must match git exactly; a case drift is a mismatch.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_repo(Path(tmp))
+            cfg = json.loads(json.dumps(CONFIG))
+            cfg["protected_files"].append(
+                {"path": "Notes.md", "tier": "managed", "rule": "managed"}
+            )
+            (repo / "notes.md").write_text("lowercase on disk\n", encoding="utf-8")
+            (repo / "ops" / "config" / "root-file-protection.json").write_text(
+                json.dumps(cfg), encoding="utf-8"
+            )
+            commit(repo, "case-mismatched registration")
+            unreg, stale = rp.reconcile_root_inventory(repo, cfg)
+            self.assertIn("notes.md", unreg)  # tracked, lowercase, unregistered
+            self.assertIn("Notes.md", stale)  # registered, mixed-case, not tracked
+
 
 if __name__ == "__main__":
     unittest.main()

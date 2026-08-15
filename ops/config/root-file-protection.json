@@ -1,6 +1,6 @@
 {
   "schema_version": "1.1.0",
-  "description": "Append-only protection contract for repository-root files. Read by ops/scripts/validate_root_file_protection.py (the fail-closed CI gate). Review routing is registered separately in CODEOWNERS and ORG_INVARIANTS.yaml protected_paths. Every protected file is owner-reviewed via CODEOWNERS regardless of tier; the tier only decides whether the mechanical additive-only gate also applies.",
+  "description": "Append-only protection contract for repository-root files. Read by ops/scripts/validate_root_file_protection.py (the fail-closed CI gate). The mechanical guarantee is the CI gate plus the ALLOW-ROOT-DELETION marker; ownership mode is solo_ruleset, so CODEOWNERS auto-request is disabled and CODEOWNERS review is NOT a guaranteed control until owners are re-enabled (codeowners_enforced). CODEOWNERS/ORG_INVARIANTS.yaml protected_paths remain the dormant ownership map.",
   "rules": {
     "additive_only": "Strict. A PR may only add lines. Any removal or in-place rewrite of an existing line (or whole-file deletion) fails the gate unless a matching justification marker is present in the PR's commit messages. Purely additive changes and brand-new files pass.",
     "managed": "Human-edited operational file. Edits, overwrites, and deletions are allowed WITHOUT a justification marker, but the file is still routed to CODEOWNERS for human review. Not additive-locked.",
@@ -54,8 +54,9 @@
     { "path": ".biomeignore", "tier": "managed", "rule": "managed" },
     { "path": ".python-version", "tier": "managed", "rule": "managed" },
     { "path": ".cursorignore", "tier": "managed", "rule": "managed" },
-    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" },
-    { "path": "governance-health-report.json", "tier": "regenerable", "rule": "regenerable" },
-    { "path": ".harvest_executor_state.json", "tier": "regenerable", "rule": "regenerable" }
-  ]
+    { "path": ".governance-build-lock", "tier": "managed", "rule": "managed" },
+    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" }
+  ],
+  "exempt_root_files": [],
+  "inventory_note": "Inventory completeness (validate_root_file_protection.py --strict-inventory or default reconcile): every tracked repo-root file (git ls-files, case-exact) must appear in protected_files or exempt_root_files, and every entry must name a tracked root file. Runtime-only artifacts that are gitignored (e.g. .harvest_executor_state.json, governance-health-report.json) are NOT tracked and must NOT be registered here; they are governed by .gitignore, not by this append-only gate."
 }

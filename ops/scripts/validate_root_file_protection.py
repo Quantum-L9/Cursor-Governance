@@ -11,9 +11,11 @@ Justification marker (in any commit message in the PR range):
 
     ALLOW-ROOT-DELETION: <root-relative-path> — <reason with proof of necessity>
 
-The marker authorizes the CI gate only; human CODEOWNERS approval is still required
-(CODEOWNERS + ORG_INVARIANTS.yaml protected_paths). This script is read-only and
-never edits repository files.
+The marker authorizes the CI gate. Ownership mode is solo_ruleset: CODEOWNERS
+auto-request is disabled, so the enforced controls are this gate plus the marker,
+not a guaranteed CODEOWNERS approval (CODEOWNERS/ORG_INVARIANTS.yaml protected_paths
+are the dormant ownership map, live again under codeowners_enforced). This script
+is read-only and never edits repository files.
 
 Usage:
     validate_root_file_protection.py [--base <ref>] [--head <ref>] [--repo <path>]
@@ -180,6 +182,32 @@ def check(repo: Path, config: dict, base: str, head: str) -> list[dict]:
     return findings
 
 
+def tracked_root_files(repo: Path) -> set[str]:
+    """Every tracked repository-root file (top level only), case-exact."""
+    out = run_git(repo, ["ls-files", "-z"])
+    return {name for name in out.split("\0") if name and "/" not in name}
+
+
+def reconcile_root_inventory(repo: Path, config: dict) -> tuple[list[str], list[str]]:
+    """Return (unregistered, stale) — the complete-inventory reconciliation.
+
+    Delta-based checks only see files changed in the PR, so a root file that
+    predates the PR and was never classified stays invisible forever (P2-11).
+    This compares the FULL tracked root inventory against the registry every run:
+      tracked_root_files == registered_root_files ∪ exempt_root_files
+    Comparison is case-sensitive, so a casing drift is a mismatch, not a match.
+    """
+    tracked = tracked_root_files(repo)
+    registered = {e["path"] for e in config["protected_files"]}
+    exempt = set(config.get("exempt_root_files", []))
+    for value in exempt:
+        _require_safe(_SAFE_ROOT_RELPATH, value, "exempt root path")
+    known = registered | exempt
+    unregistered = sorted(tracked - known)
+    stale = sorted(known - tracked)
+    return unregistered, stale
+
+
 def added_root_files_outside_policy(repo: Path, base: str, head: str, config: dict) -> list[str]:
     protected = {e["path"] for e in config["protected_files"]}
     mb = merge_base(repo, base, head)
@@ -217,7 +245,12 @@ def main(argv: list[str] | None = None) -> int:
             repo = Path(run_git(Path.cwd(), ["rev-parse", "--show-toplevel"]).strip())
         config = load_config(repo)
         findings = check(repo, config, base, head)
-        unregistered = added_root_files_outside_policy(repo, base, head, config)
+        # Complete-inventory reconciliation (authoritative; not delta-based).
+        inv_unregistered, inv_stale = reconcile_root_inventory(repo, config)
+        # Delta view kept for a PR-scoped message; its hits are a subset of
+        # inv_unregistered, so de-duplicate below.
+        delta_unregistered = added_root_files_outside_policy(repo, base, head, config)
+        unregistered = sorted(set(inv_unregistered) | set(delta_unregistered))
     except ProtectionError as exc:
         print(f"[root-protect] FATAL: {exc}", file=sys.stderr)
         return 2
@@ -232,9 +265,13 @@ def main(argv: list[str] | None = None) -> int:
     # unprotected. Fail closed: every root file must be classified into a tier, so the
     # guarantee "every root file is protected" cannot be silently bypassed.
     for name in unregistered:
-        print(f"[root-protect]   FAIL {name}: new root file not registered in {CONFIG_RELPATH}")
+        print(f"[root-protect]   FAIL {name}: root file not registered in {CONFIG_RELPATH}")
+    # Stale registry entries: a path is registered/exempt but no longer a tracked
+    # root file. The registry must describe reality exactly (P2-11).
+    for name in inv_stale:
+        print(f"[root-protect]   FAIL {name}: registry entry references a non-tracked root file")
 
-    failures = len(violations) + len(unregistered)
+    failures = len(violations) + len(unregistered) + len(inv_stale)
     if failures:
         print(f"[root-protect] FAILED: {failures} issue(s)")
         if violations:
@@ -247,8 +284,16 @@ def main(argv: list[str] | None = None) -> int:
                 "[root-protect] For a new root file: register it in "
                 f"{CONFIG_RELPATH} with a tier (additive_only / managed / regenerable)."
             )
+        if inv_stale:
+            print(
+                "[root-protect] For a stale entry: remove it from "
+                f"{CONFIG_RELPATH} (runtime/gitignored artifacts must not be registered)."
+            )
         return 1
-    print("[root-protect] OK: every changed root file is protected and compliant")
+    print(
+        "[root-protect] OK: complete root inventory reconciled "
+        f"({len(tracked_root_files(repo))} tracked root files) and compliant"
+    )
     return 0
 
 
