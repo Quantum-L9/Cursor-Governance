@@ -661,6 +661,17 @@
     },
     {
       "composition_role": "general",
+      "description": "wire Claude Code in a consumer clone to DeepSeek (not Anthropic billing). use when opening Claude Code in a new Cursor tab, hydrating DEEPSEEK_API_KEY, or repeating the Website-Bot DeepSeek setup in another repo.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-claude-code-deepseek",
+      "path": "skills/l9-claude-code-deepseek",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing"
+    },
+    {
+      "composition_role": "general",
       "description": "Identify underutilized, verified repository-owned capabilities and enable their full utilization \u2014 activating dormant or miswired code, off-by-default features, unread config, and unused signals \u2014 then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1101,6 +1112,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "8fd98d3724d4267b1b13389bc6cfd8f2616f30bc42462a6d630dc7459507ac40",
-  "source_skill_corpus_sha256": "93f60598f7aeb074d029664f5255a3130283881dd247bcd500cd3b5210732548"
+  "source_manifest_sha256": "d3c0a64ad6df41192e133c1b06889c89966355e611fc194f259e7644e6477a7d",
+  "source_skill_corpus_sha256": "f3ad710a6939731f1919b5111cdbfb216be7fa21e506af9ed921d4972677c83c"
 }
