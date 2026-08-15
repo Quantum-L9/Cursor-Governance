@@ -14,10 +14,10 @@ jobs:
   governance-self-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version-file: .python-version
 
@@ -83,6 +83,12 @@ jobs:
       - name: Skills standard gate
         run: |
           v=ops/scripts/check_skills_standard.py
+          [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
+          python3 "$v"
+
+      - name: Workflow action pins (third-party = full SHA)
+        run: |
+          v=ops/scripts/validate_workflow_action_pins.py
           [ -f "$v" ] || { echo "::error::mandatory validator $v missing"; exit 1; }
           python3 "$v"
 

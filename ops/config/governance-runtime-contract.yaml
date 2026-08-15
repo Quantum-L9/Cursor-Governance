@@ -97,6 +97,28 @@ invariants:
       - type: file_exists
         path: rules/RULES-MANIFEST.yaml
 
+  - id: workflow-action-pins
+    priority: P1
+    statement: >-
+      Third-party GitHub Actions are pinned to full commit SHAs, enforced by
+      validate_workflow_action_pins.py; the pre-commit scratch exclusion is
+      anchored so it never swallows .github/workflows/** (P1-10).
+    projections:
+      - type: file_exists
+        path: ops/scripts/validate_workflow_action_pins.py
+      - type: file_contains
+        path: .github/workflows/governance-self-check.yml
+        pattern: "validate_workflow_action_pins.py"
+        present: true
+      - type: file_contains
+        path: .pre-commit-config.yaml
+        pattern: "^workflows/"
+        present: true
+      - type: file_contains
+        path: .pre-commit-config.yaml
+        pattern: "reports/|workflows/)"
+        present: false
+
   - id: pr-template-surfaces
     priority: P1
     statement: >-
