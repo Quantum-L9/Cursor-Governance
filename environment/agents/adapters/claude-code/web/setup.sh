@@ -70,7 +70,46 @@ if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "${L9_GOVERNANCE_DIR}" != "$GOV_DIR" ]; 
 fi
 export L9_GOVERNANCE_DIR="$GOV_DIR"
 
-if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
+# 3a) Validated bootstrap handoff.
+#     setup.bootstrap.sh must materialize the governance clone in order to find
+#     THIS file, so re-cloning/fetching/resetting the same tree here is pure
+#     duplicate work. The bootstrap signals what it did with
+#     L9_GOVERNANCE_BOOTSTRAPPED=1 — but the marker is never trusted on its own.
+#     It is honoured only if the tree it claims to have produced independently
+#     validates as usable and on the requested ref. Any failed check falls
+#     through to the normal synchronization path below, so direct invocation of
+#     this script (no bootstrap, no marker) is completely unaffected.
+governance_handoff_valid() {
+  [ "${L9_GOVERNANCE_BOOTSTRAPPED:-}" = "1" ] || return 1
+  [ -d "$GOV_DIR" ] || { echo "WARN: handoff marker set but $GOV_DIR is absent"; return 1; }
+  git -C "$GOV_DIR" rev-parse --git-dir >/dev/null 2>&1 \
+    || { echo "WARN: handoff marker set but $GOV_DIR is not a git repository"; return 1; }
+  local required
+  for required in \
+    CANONICAL_LAW.md \
+    AGENTS.md \
+    ops/scripts/ensure_uv_environment.sh \
+    ops/scripts/reconcile_claude_settings.py \
+    environment/agents/adapters/claude-code/install.sh
+  do
+    [ -f "$GOV_DIR/$required" ] \
+      || { echo "WARN: handoff tree incomplete (missing $required)"; return 1; }
+  done
+  local head_ref
+  head_ref="$(git -C "$GOV_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+  if [ "$head_ref" != "$GOV_BRANCH" ] && [ "$head_ref" != "HEAD" ]; then
+    echo "WARN: handoff tree is on '$head_ref', requested '$GOV_BRANCH'"
+    return 1
+  fi
+  git -C "$GOV_DIR" rev-parse HEAD >/dev/null 2>&1 \
+    || { echo "WARN: handoff tree has no resolvable HEAD"; return 1; }
+  return 0
+}
+
+if governance_handoff_valid; then
+  log "Governance handed off by bootstrap — validated, skipping duplicate sync"
+  log "Governance at $(git -C "$GOV_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown) (${GOV_BRANCH})"
+elif [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
   log "Cloning governance from GitHub (${GOV_BRANCH}) -> $GOV_DIR"
   git clone --depth 1 --branch "$GOV_BRANCH" "$GOV_REMOTE" "$GOV_DIR" \
     || echo "WARN: governance clone failed — allowlist github.com"

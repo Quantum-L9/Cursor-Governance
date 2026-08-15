@@ -49,6 +49,33 @@ already resolve to. It matters that it exists: the sandbox's system `python3` is
 locked venv the memory gate cannot import its brain and governed writes are
 denied.
 
+### Secrets, and what does *not* belong in this environment
+
+The account environment carries **bootstrap credentials only**. Everything
+downstream resolves at run time through the canonical provider
+(`ops/secrets/hydrate_infisical.py`, which reuses the one Infisical client this
+repo already has). Do not grow the variables field into a second secret
+inventory — `ops/secrets` is the SSOT.
+
+```bash
+# names and availability only; never values
+python3 ops/secrets/hydrate_infisical.py --check --require SONAR_TOKEN,SEMGREP_APP_TOKEN
+eval "$(python3 ops/secrets/hydrate_infisical.py --export SONAR_TOKEN)"
+```
+
+Two things are deliberately **absent** from the variables field because they
+name one repository while the environment is reused across many:
+
+- `GRAPHITI_GROUP_ID` — `group_registry.yaml` resolves in the order
+  `[explicit_env, git_remote_match, path_hint_match]`, so setting it here files
+  every repo's memory under one group.
+- `SONAR_PROJECT_KEY` / `SONAR_ORG_KEY` — `install.sh` derives them from the
+  active `sonar-project.properties` and clears them when the workspace has none.
+
+Breakglass keys (merge, push bypass, reset/revert/switch, broad-add, memory
+enforcement) are listed in the template as documented-but-unset. Setting one in
+the account environment makes the bypass permanent for every session.
+
 > **The variables field is literal text — no shell expansion.** `FOO=$HOME/x` is
 > stored as the characters `$HOME/x`. Never reference `$HOME` there; that is why
 > `L9_GOVERNANCE_DIR` is deliberately absent from `environment.env.example` (the

@@ -99,7 +99,12 @@ if [ ! -f "$SETUP" ]; then
 fi
 
 # Preserve consumer workspace cwd (Anthropic runs setup before Claude starts).
-bash "$SETUP"
+# Signal that this stub already materialized and checked out the governance tree
+# so canonical setup does not fetch/reset the very same clone a second time. The
+# marker is a claim, not an authorization: setup.sh re-validates the tree
+# (git repo, canonical files present, ref matches) and falls back to its own
+# synchronization if any check fails.
+L9_GOVERNANCE_BOOTSTRAPPED=1 bash "$SETUP"
 
 # --- 3) Durable exports for in-session Bash --------------------------------
 # CLAUDE_ENV_FILE is not present in every cloud runtime, so write our own env
@@ -116,13 +121,11 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
 } > "$L9_ENV_FILE"
 
-# Per-repo Sonar override when the workspace declares one.
-if [ -f sonar-project.properties ]; then
-  key=$(sed -n 's/^sonar.projectKey=//p' sonar-project.properties | head -1)
-  org=$(sed -n 's/^sonar.organization=//p' sonar-project.properties | head -1)
-  [ -n "$key" ] && echo "export SONAR_PROJECT_KEY=$(printf %q "$key")" >> "$L9_ENV_FILE"
-  [ -n "$org" ] && echo "export SONAR_ORG_KEY=$(printf %q "$org")" >> "$L9_ENV_FILE"
-fi
+# NOTE: Sonar project identity is deliberately NOT written here. It is
+# per-repository, this env file is per-session and outlives a cd into another
+# repo, and the canonical consumer (skills/l9-pr-remediation/scripts/sonar_fetch.py)
+# takes --project/--organization as required arguments rather than reading env.
+# install.sh resolves it from the active workspace instead.
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   cat "$L9_ENV_FILE" >> "$CLAUDE_ENV_FILE"

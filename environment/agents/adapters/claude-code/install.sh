@@ -166,6 +166,144 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
   say "excluded activation artifacts via $exclude_file (local, uncommitted)"
 fi
 
+# --- 5.2) Canonical security/checker toolchain ------------------------------
+# The adapter NEVER reimplements a check. ops/scripts/run_pr_security.sh owns
+# gitleaks/bandit/semgrep/pip-audit policy; all we do is make sure the binaries
+# it reaches for actually exist, so a missing tool cannot masquerade as a pass.
+#
+# Ownership per the canonical runner:
+#   bandit / semgrep / pip-audit -> pinned, executed through uvx / uv tool run
+#   gitleaks                     -> machine CLI on PATH, pin 8.24.3
+# Its policy is to SKIP a checker whose binary is absent. That keeps the gate
+# non-blocking on a bare machine, but it also means a skip reads as a pass, so
+# provision the binaries here and report anything still missing as DEGRADED.
+log "Canonical checker toolchain"
+GITLEAKS_PIN="8.24.3"
+
+if ! command -v uvx >/dev/null 2>&1 && ! command -v uv >/dev/null 2>&1; then
+  warn "neither uvx nor uv on PATH — bandit/semgrep/pip-audit will SKIP in the security gate"
+  FAILURES=$((FAILURES + 1))
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  if [ "$CHECK" = "1" ]; then
+    warn "gitleaks absent — canonical security gate would SKIP secret scanning"
+  else
+    say "installing gitleaks $GITLEAKS_PIN (canonical pin: l9-ci-core security.yml)"
+    gl_arch=$(uname -m)
+    case "$gl_arch" in
+      x86_64|amd64) gl_arch=x64 ;;
+      aarch64|arm64) gl_arch=arm64 ;;
+      *) gl_arch="" ;;
+    esac
+    gl_os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    if [ -n "$gl_arch" ] && [ "$gl_os" = "linux" ]; then
+      gl_url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_PIN}/gitleaks_${GITLEAKS_PIN}_${gl_os}_${gl_arch}.tar.gz"
+      gl_tmp=$(mktemp -d)
+      if curl -fsSL --proto '=https' --tlsv1.2 "$gl_url" -o "$gl_tmp/gitleaks.tar.gz" 2>/dev/null \
+        && tar -xzf "$gl_tmp/gitleaks.tar.gz" -C "$gl_tmp" gitleaks 2>/dev/null; then
+        gl_dest="$HOME/.local/bin"
+        mkdir -p "$gl_dest"
+        install -m 0755 "$gl_tmp/gitleaks" "$gl_dest/gitleaks" 2>/dev/null \
+          || cp "$gl_tmp/gitleaks" "$gl_dest/gitleaks"
+        chmod +x "$gl_dest/gitleaks" 2>/dev/null || true
+        case ":$PATH:" in *":$gl_dest:"*) : ;; *) PATH="$gl_dest:$PATH"; export PATH ;; esac
+      else
+        warn "gitleaks download failed — secret scanning will SKIP (allowlist github.com)"
+      fi
+      rm -rf "$gl_tmp"
+    else
+      warn "no gitleaks build for ${gl_os}/${gl_arch} — secret scanning will SKIP"
+    fi
+  fi
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gl_have=$(gitleaks version 2>/dev/null | head -1 | awk '{print $NF}')
+  say "gitleaks: ${gl_have:-unknown} (canonical pin $GITLEAKS_PIN)"
+  [ -n "$gl_have" ] && [ "$gl_have" != "$GITLEAKS_PIN" ] \
+    && warn "gitleaks $gl_have != canonical pin $GITLEAKS_PIN"
+else
+  warn "gitleaks STILL ABSENT — the canonical gate will SKIP secret scanning (reported, not hidden)"
+  FAILURES=$((FAILURES + 1))
+fi
+
+# pre-commit is the CANONICAL_LAW §12 `make pr` gate; provision it wherever the
+# workspace declares hooks, on every surface rather than only in the cloud.
+if [ -f "$WORKSPACE/.pre-commit-config.yaml" ] && ! command -v pre-commit >/dev/null 2>&1; then
+  if [ "$CHECK" = "1" ]; then
+    warn "pre-commit absent — 'make pr' would fail (workspace declares hooks)"
+  else
+    say "installing pre-commit (make pr gate)"
+    python3 -m pip install --quiet pre-commit 2>/dev/null \
+      || warn "pre-commit install failed — 'make pr' will fail (allowlist pypi.org)"
+  fi
+fi
+
+# --- 5.3) Canonical secret provider -----------------------------------------
+# ops/secrets is the SSOT inventory. The adapter resolves through it and keeps
+# NO inventory of its own: the account environment carries bootstrap credentials
+# only, and every downstream token (SONAR_TOKEN, SEMGREP_APP_TOKEN, ...) is
+# fetched at run time. Values are never printed, here or by the resolver.
+log "Canonical secret provider"
+HYDRATE="$GOV_DIR/ops/secrets/hydrate_infisical.py"
+if [ -f "$HYDRATE" ]; then
+  if "$GOV_PY" "$HYDRATE" --check --require SONAR_TOKEN,SEMGREP_APP_TOKEN 2>&1; then
+    say "secret provider: ENABLED"
+  else
+    warn "secret provider DEGRADED — authenticated Sonar/Semgrep unavailable this session"
+    warn "  set INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET, or configure the AWS CLI"
+  fi
+else
+  warn "missing ops/secrets/hydrate_infisical.py — no canonical secret resolution"
+fi
+
+# --- 5.5) Repository-scoped identity (never account-global) ----------------
+# This adapter's account environment is reused across consumer repositories, so
+# anything that names ONE repository must be resolved from the active workspace
+# and cleared when that workspace does not declare it. Credentials are
+# environment-level; identities are not.
+log "Repository-scoped identity"
+
+# Graphiti namespace. group_registry.yaml resolves in the order
+# [explicit_env, git_remote_match, path_hint_match], so an inherited
+# GRAPHITI_GROUP_ID outranks repo-aware resolution for every repo. Report what
+# the canonical resolver returns for THIS workspace; never pin it here.
+if [ -n "${GRAPHITI_GROUP_ID:-}" ]; then
+  warn "GRAPHITI_GROUP_ID='$GRAPHITI_GROUP_ID' is set — this outranks repo-aware"
+  warn "  resolution for every repository. Remove it from the account environment."
+fi
+GRAPHITI_RESOLVE=$(cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/graphiti/graphiti_memory_client.py" resolve 2>/dev/null)
+GROUP_RESOLVED=$(printf '%s' "$GRAPHITI_RESOLVE" | sed -n 's/.*"group_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+GROUP_METHOD=$(printf '%s' "$GRAPHITI_RESOLVE" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+if [ -n "$GROUP_RESOLVED" ]; then
+  say "graphiti group for this workspace: $GROUP_RESOLVED (via ${GROUP_METHOD:-unknown})"
+else
+  warn "graphiti group unresolved for $WORKSPACE — memory writes will be read-only/aborted"
+fi
+
+# Sonar project identity. The canonical consumer
+# (skills/l9-pr-remediation/scripts/sonar_fetch.py) takes --project/--organization
+# as required arguments, so nothing should inherit these from the environment.
+# Derive them from the workspace when it declares a project; clear them when it
+# does not, so one repo's identity can never mis-file another repo's analysis.
+if [ -f "$WORKSPACE/sonar-project.properties" ]; then
+  sonar_key=$(sed -n 's/^sonar\.projectKey=//p' "$WORKSPACE/sonar-project.properties" | head -1)
+  sonar_org=$(sed -n 's/^sonar\.organization=//p' "$WORKSPACE/sonar-project.properties" | head -1)
+  if [ -n "${SONAR_PROJECT_KEY:-}" ] && [ -n "$sonar_key" ] && [ "$SONAR_PROJECT_KEY" != "$sonar_key" ]; then
+    warn "inherited SONAR_PROJECT_KEY='$SONAR_PROJECT_KEY' replaced by workspace value '$sonar_key'"
+  fi
+  export SONAR_PROJECT_KEY="$sonar_key" SONAR_ORG_KEY="$sonar_org"
+  say "sonar identity from workspace: project=${sonar_key:-<none>} org=${sonar_org:-<none>}"
+else
+  if [ -n "${SONAR_PROJECT_KEY:-}" ] || [ -n "${SONAR_ORG_KEY:-}" ]; then
+    warn "clearing inherited Sonar identity (project='${SONAR_PROJECT_KEY:-}' org='${SONAR_ORG_KEY:-}')"
+    warn "  — this workspace declares no sonar-project.properties"
+  fi
+  unset SONAR_PROJECT_KEY SONAR_ORG_KEY
+  say "sonar identity: none (workspace declares no sonar-project.properties)"
+fi
+
 # --- 6) Readiness preflight (report only; never blocks a session) ----------
 log "Adapter preflight"
 "$GOV_PY" -c 'import pydantic, yaml, jsonschema' 2>/dev/null \

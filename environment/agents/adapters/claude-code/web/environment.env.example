@@ -47,7 +47,13 @@ GRAPHITI_MEMORY_ENABLED=1
 GRAPHITI_WRITE_GATES=1
 GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
 GRAPHITI_MCP_TOKEN=REPLACE_WITH_GRAPHITI_MCP_BEARER_TOKEN
-GRAPHITI_GROUP_ID=cursor-governance
+#
+# GRAPHITI_GROUP_ID is deliberately ABSENT. This account environment is reused
+# across consumer repositories, and group_registry.yaml resolves in the order
+# [explicit_env, git_remote_match, path_hint_match] — so an env value here wins
+# over repo-aware resolution and would file every repo's memory under one group.
+# Transport and auth are environment-level; the namespace is per-repository.
+# Legitimate one-off override: export GRAPHITI_GROUP_ID for that shell only.
 # Declarative posture markers. Enforcement is the PreToolUse memory gate
 # (hooks/memory_gate.py), which fails closed by construction.
 L9_MEMORY_REQUIRED=true
@@ -103,11 +109,30 @@ PR_REMEDIATE=0
 L9_PROACTIVE_SKILLS=true
 L9_SKILL_USAGE_LOGGING=true
 
-# --- Optional SonarCloud (Cursor-Governance defaults; overridden per repo) ----
-# setup.bootstrap.sh overrides the two key vars from a repo's sonar-project.properties.
-SONAR_TOKEN=REPLACE_WITH_ROTATED_SONAR_TOKEN
-SONAR_ORG_KEY=quantum-l9
-SONAR_PROJECT_KEY=Quantum-L9_Cursor-Governance
+# --- SonarCloud: credential only, never project identity ----------------------
+# SONAR_PROJECT_KEY / SONAR_ORG_KEY are deliberately ABSENT. They identify ONE
+# repository; this environment is reused across many. install.sh derives them
+# from the active repo's sonar-project.properties and actively unsets them when
+# the repo declares no Sonar project, so Cursor-Governance's identity can never
+# leak into a consumer repo and mis-file its analysis.
+#
+# The token is a credential, not identity, so it may live at environment level —
+# but prefer resolving it from the canonical secret provider below (SONAR_TOKEN
+# is already registered there). Set it here only if you are not using Infisical.
+# SONAR_TOKEN=REPLACE_WITH_ROTATED_SONAR_TOKEN
+
+# --- Canonical secret provider (ops/secrets) ----------------------------------
+# Bootstrap credentials ONLY. Everything else (SONAR_TOKEN, SEMGREP_APP_TOKEN,
+# and the rest of the openclaw-igorbot inventory) resolves through the provider
+# at run time — do not copy downstream secrets into this field.
+# Universal Auth identity for the Infisical project `cursor-governance`; the
+# machine identity is registered in ops/secrets/infisical-cursor-governance.yaml.
+INFISICAL_CLIENT_ID=REPLACE_WITH_INFISICAL_UA_CLIENT_ID
+INFISICAL_CLIENT_SECRET=REPLACE_WITH_INFISICAL_UA_CLIENT_SECRET
+INFISICAL_PROJECT_ID=REPLACE_WITH_INFISICAL_PROJECT_ID
+INFISICAL_ENV=prod
+INFISICAL_SITE_URL=https://app.infisical.com
+INFISICAL_SECRET_PATH=/
 
 # --- Toolchain hygiene --------------------------------------------------------
 PYTHONDONTWRITEBYTECODE=1
