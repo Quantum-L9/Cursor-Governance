@@ -25,6 +25,8 @@
     "observability",
     "cutover_and_rollback",
     "traceability",
+    "do_not_build",
+    "current_state",
     "lock_digest"
   ],
   "properties": {
@@ -126,6 +128,12 @@
       "type": "object"
     },
     "traceability": {
+      "type": "object"
+    },
+    "do_not_build": {
+      "type": "object"
+    },
+    "current_state": {
       "type": "object"
     },
     "lock_digest": {

@@ -28,3 +28,9 @@ terms:
   definition: Controller-produced evidence evaluating the actual attempt against the exact Rendered Contract.
 - term: Handoff Receipt
   definition: Controller export summarizing runtime state and evidence for program-owner acceptance.
+- term: Replan Revision
+  definition: A digest-bound future-plan adaptation bound to the Program Lock digest and previous plan revision.
+  forbidden_synonyms:
+  - informal prompt rewrite
+- term: Plan Revision
+  definition: The Controller-owned identity of the currently active future-execution plan inside one Program Lock.

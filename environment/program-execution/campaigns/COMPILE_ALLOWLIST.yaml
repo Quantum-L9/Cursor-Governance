@@ -1,0 +1,6 @@
+schema: l9.program-execution.campaign-compile-allowlist.v1
+schema_version: 1.0.0
+# Campaign ids the in-repo compiler may emit. Keep this file outside
+# immutable CAMPAIGN_SOURCE.yaml bytes.
+campaign_ids:
+  - bounded-replanning-v1

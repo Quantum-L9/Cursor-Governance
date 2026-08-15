@@ -2,6 +2,7 @@ schema: program-execution-system.compatibility.v2
 pair_contract: program-execution-system.v2
 blueprint_contract: program-execution-blueprint.v2
 controller_contract: program-execution-controller.v2
+replan_contract: program-execution.replan.v1
 compatibility:
   major_version: exact_match_required
   minor_version: allowed_only_when_declared_backward_compatible

@@ -1,6 +1,6 @@
 # Diagnose-First binding
 
-**Full kernel SSOT:** `WIP/backlog/kernels/diagnose-first/Diagnose First Kernel.md`  
+**Full kernel SSOT:** `kernels/Diagnose First Kernel.md`  
 **Law:** `CANONICAL_LAW.md` §11 (append may correct the source-kernel path).
 
 ## Binding rules for this skill

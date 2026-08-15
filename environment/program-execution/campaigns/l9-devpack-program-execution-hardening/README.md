@@ -52,3 +52,10 @@ _AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
 authorization ceiling to commit/push/pull_request. Merge remains denied. The
 controller still only recommends; engineering waves remain blocked on target
 binding._
+
+## Honesty
+
+This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
+path mismatches are not rewritten here. It is not on the compile
+allowlist. Instantiated-mode claims in `VALIDATION_EVIDENCE.md` are
+historical notes, not a live Program Lock.

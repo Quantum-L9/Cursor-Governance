@@ -101,3 +101,23 @@ jobs:
         run: |
           uv run --frozen --no-build python \
             environment/program-execution/scripts/probe_executable_peers.py
+      - name: Program Execution core pair + campaign compile
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python \
+            environment/program-execution/core/scripts/validate_pair.py \
+            environment/program-execution/core --mode template
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/conformance/test_campaign_source_schema.py
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/scripts/tests/test_compile_campaign_source.py
+      - name: Program Execution thin providers
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/validate_thin_providers.py

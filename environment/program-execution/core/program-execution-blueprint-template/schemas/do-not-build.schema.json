@@ -16,7 +16,53 @@
     "schema_version": {
       "const": "2.0.0"
     },
-    "prohibited_primary_paths": {},
-    "allowed_experiments": {}
+    "prohibited_primary_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path_or_pattern": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "detection": {
+            "type": "string"
+          },
+          "exception_authority": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "allowed_experiments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiry": {
+            "type": "string"
+          }
+        }
+      }
+    }
   }
 }

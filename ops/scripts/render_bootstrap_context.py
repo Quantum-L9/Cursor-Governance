@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 import sys
 
-MAX_VALUE_CHARS = 300
-
 
 def main() -> int:
     raw = sys.stdin.read().strip()
@@ -36,14 +34,11 @@ def main() -> int:
         print("context: (empty)")
         return 0
 
+    # additional_context is sectioned markdown (Governance / Runtime / Graphiti /
+    # Code-graph / Plan audit). Do not split on " | " — wiring and plan-audit
+    # headers use pipes as field separators, and a 300-char chop hid Plan audit.
     print("context:")
-    for part in context.split(" | "):
-        part = part.strip()
-        if not part:
-            continue
-        if len(part) > MAX_VALUE_CHARS:
-            part = part[:MAX_VALUE_CHARS] + " …"
-        print(f"  - {part}")
+    print(context.rstrip())
     return 0
 
 
