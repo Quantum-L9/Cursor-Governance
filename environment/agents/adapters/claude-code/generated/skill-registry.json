@@ -24,6 +24,7 @@
       "l9-setting-up-ci",
       "l9-graphiti-memory",
       "l9-aws-secrets",
+      "l9-plan-audit",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
       "l9-monitoring-terminal-errors"
@@ -41,7 +42,7 @@
           "remediate the pr",
           "babysit the pr"
         ],
-        "note": "explicit_only + hint_allowed \u2014 Read Diagnose path only; Converge mutate requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.\n",
+        "note": "hint_allowed \u2014 Read Diagnose path; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.\n",
         "positive_signals": [
           "review pr",
           "pull request review",
@@ -52,6 +53,31 @@
           "analyze this pr",
           "pr analysis",
           "diagnose this pr"
+        ],
+        "primary": "l9-pr-remediation",
+        "signal_weight": 8,
+        "supporting": []
+      },
+      {
+        "hint_allowed": true,
+        "id": "pr_remediation_until_green",
+        "negative_signals": [
+          "merge the pr",
+          "merge this pr",
+          "admin merge",
+          "force push"
+        ],
+        "note": "Auto-authorized remediate-until-green for an OPEN PR under a campaign/PE packet: bounded cycles (surface_profile.remediation.max_cycles), then HALT before merge. Merge/force-push/scope-widening remain human-only; merge uses L9_MERGE_AUTHORIZED or the one-shot merge-authorization.json file channel.\n",
+        "positive_signals": [
+          "remediate the pr",
+          "remediate until green",
+          "pr is failing",
+          "fix the failing checks",
+          "ci is red",
+          "get the pr green",
+          "make the pr mergeable",
+          "resolve review threads",
+          "babysit the pr"
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
@@ -94,7 +120,10 @@
           "explore the codebase",
           "identify hotspots",
           "analyze this code",
-          "code analysis"
+          "code analysis",
+          "extract patterns",
+          "pattern detector",
+          "extract_align"
         ],
         "primary": "l9-code-analysis",
         "signal_weight": 8,
@@ -257,7 +286,11 @@
           "bootstrap ci",
           "add lint type checking and tests",
           "add ci stages",
-          "set up ci"
+          "set up ci",
+          "activate l9-ci-core",
+          "add biome",
+          "stamp biome.json",
+          "seed l9-ci-pack"
         ],
         "primary": "l9-setting-up-ci",
         "signal_weight": 8,
@@ -333,6 +366,23 @@
         ]
       },
       {
+        "id": "plan_audit",
+        "positive_signals": [
+          "plan audit",
+          "unbuilt plans",
+          "stale plans",
+          "audit .cursor/plans",
+          "/plan-audit",
+          "which plans are unbuilt"
+        ],
+        "primary": "l9-plan-audit",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-plan",
+          "l9-ynp"
+        ]
+      },
+      {
         "id": "performance_audit",
         "positive_signals": [
           "performance bottleneck",
@@ -354,7 +404,10 @@
           "security vulnerabilities",
           "security audit",
           "harden before release",
-          "review code for security risks"
+          "review code for security risks",
+          "validate security",
+          "security validator",
+          "hardcoded API keys"
         ],
         "primary": "l9-auditing-security",
         "signal_weight": 8,
@@ -637,6 +690,17 @@
     },
     {
       "composition_role": "general",
+      "description": "wire Claude Code in a consumer clone to DeepSeek (not Anthropic billing). use when opening Claude Code in a new Cursor tab, hydrating DEEPSEEK_API_KEY, or repeating the Website-Bot DeepSeek setup in another repo.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-claude-code-deepseek",
+      "path": "skills/l9-claude-code-deepseek",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing"
+    },
+    {
+      "composition_role": "general",
       "description": "Identify underutilized, verified repository-owned capabilities and enable their full utilization \u2014 activating dormant or miswired code, off-by-default features, unread config, and unused signals \u2014 then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -757,6 +821,17 @@
       "when_to_use": "assessing readiness, missing pieces, compliance drift, or percent-complete status"
     },
     {
+      "composition_role": "general",
+      "description": "diagnose-first audit extract and prune-propose for unpushed dirty orphan stale and stash git work. use when cleaning branches worktrees or stashes never lose unique commits without receipts and auth.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-git-work-preserve",
+      "path": "skills/l9-git-work-preserve",
+      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "execute deterministic repo changes through locked gmp phases 0-6 with a modification lock and a signed evidence report. use when a change must be traceable and drift-free \u2014 adding/refactoring/fixing modules, gated edits, or any task that needs a locked todo plan, phase-by-phase execution, and an evidence report in reports/.",
       "disable_model_invocation": false,
@@ -856,6 +931,17 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "diagnose macos disk-storage pressure, then reclaim only stale caches and confirmed noise (old docker containers, package caches, trash). use when a mac is low on disk, finder or spotlight is unreliable, caches or containers are bloated, or the user asks to triage storage, free space, clean caches, or run mac-storage-triage. three modes \u2014 diagnose (read-only), repair (hitl after diagnosis), autonomy (diagnose then purge allowlisted noise without review).",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-mac-storage-triage",
+      "path": "skills/l9-mac-storage-triage",
+      "reason": "macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.",
       "disable_model_invocation": false,
@@ -878,13 +964,24 @@
       "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
     },
     {
+      "composition_role": "primary",
+      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan) or to auto-build plans.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-plan-audit",
+      "path": "skills/l9-plan-audit",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked"
+    },
+    {
       "composition_role": "general",
       "description": "diagnose or converge a github pr \u2014 read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) \u2014 high blast radius, explicit only; hint_allowed for read-only Diagnose",
+      "reason": "Diagnose remains hint-routeable; remediation is auto-authorized only as remediate-until-green-and-mergeable under a campaign/PE packet (surface_profile.remediation: max_cycles 5, then HALT before merge). Merge, force-push, and scope widening stay human-only.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -945,14 +1042,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.",
+      "description": "activate governed L9 CI from the org seeder or l9-ci-core stamp. never invent ci.yml or biome.json. use when bootstrapping CI, activating l9-ci-core, adding Biome, or adding lint/test/type-check stages.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-setting-up-ci",
       "path": "skills/l9-setting-up-ci",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions"
+      "when_to_use": "bootstrapping CI, activating l9-ci-core / Biome, or adding lint/test/type-check stages without inventing ci.yml or biome.json"
     },
     {
       "composition_role": "general",
@@ -1044,6 +1141,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "c71d49418a81038526c655a6706ea276f1ba25285a389b58935826f0bebef2de",
-  "source_skill_corpus_sha256": "3fc87b579854c325caf8383193068435a4b6791516dfffc60e4939cf499837e6"
+  "source_manifest_sha256": "a163a3efdfe92c67f9087cec95fd86b0b5040793726ebf52b404b5a7f851047f",
+  "source_skill_corpus_sha256": "6c60a42bebefd0b10bcca045979c5dcf2bf80a876578b65e6cd4240da77763b6"
 }
