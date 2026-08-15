@@ -261,7 +261,11 @@
           "bootstrap ci",
           "add lint type checking and tests",
           "add ci stages",
-          "set up ci"
+          "set up ci",
+          "activate l9-ci-core",
+          "add biome",
+          "stamp biome.json",
+          "seed l9-ci-pack"
         ],
         "primary": "l9-setting-up-ci",
         "signal_weight": 8,
@@ -1013,14 +1017,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.",
+      "description": "activate governed L9 CI from the org seeder or l9-ci-core stamp. never invent ci.yml or biome.json. use when bootstrapping CI, activating l9-ci-core, adding Biome, or adding lint/test/type-check stages.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-setting-up-ci",
       "path": "skills/l9-setting-up-ci",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions"
+      "when_to_use": "bootstrapping CI, activating l9-ci-core / Biome, or adding lint/test/type-check stages without inventing ci.yml or biome.json"
     },
     {
       "composition_role": "general",
@@ -1112,6 +1116,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "d3c0a64ad6df41192e133c1b06889c89966355e611fc194f259e7644e6477a7d",
-  "source_skill_corpus_sha256": "c254eb2216d5dabd48de2a2068a39bd1d0b45818e30f83cf14493ff9d1ff0c28"
+  "source_manifest_sha256": "a4320a89f845896e3a80475adfe077f025f8d528b4dccbea88083bc2b170f1e4",
+  "source_skill_corpus_sha256": "c74d9eca569cc4688d523fa4a35335ee8f301a4d8118eb7e63f640b2b83b6ac2"
 }

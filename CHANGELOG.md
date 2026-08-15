@@ -7,6 +7,12 @@ history instead of trusting a backfilled entry here.
 
 ## [Unreleased]
 
+### Changed
+- **`l9-setting-up-ci` 2.0.0:** consumer CI bootstrap now prefers the
+  `Quantum-L9/.github` seeder / `l9-ci-pack`, then `l9-ci-core`
+  `presets/typescript/stamp.sh`. Agents must not invent `ci.yml` or
+  `biome.json`, and must not add ESLint/Prettier as a second JS/TS/JSON owner.
+
 ### Added
 - **L4 Local Autonomy (no mid-execution push):** standing doctrine in
   `ops/autonomy/surface_profile.yaml` (`l4_local_autonomy`), CANONICAL_LAW §6.2,
