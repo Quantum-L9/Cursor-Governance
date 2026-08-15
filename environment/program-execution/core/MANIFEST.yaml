@@ -9,14 +9,14 @@ files:
   sha256: 81200312df8937dd955d337de2e63dac4631f1808ae0fb7acc4303d2bf936bdd
   bytes: 2340
 - path: CANONICAL_VOCABULARY.yaml
-  sha256: 2e9eeedd6e601e2eca5ce2ffb7fecbf5482ea6bc2ff6579b013e0759ab070abd
-  bytes: 1720
+  sha256: 42242e604dd95a879d1e745ba74cc79c9d2aff13336464f0845bf547cdb14f9a
+  bytes: 2044
 - path: CHANGELOG.md
   sha256: 88c5fafd37497bd9d0bf412e157c482b547dadb7f940f44040943d15e542a7c5
   bytes: 709
 - path: COMPATIBILITY.yaml
-  sha256: 0263ec66e58929935c61427083268f8c2b158fccaaf662cfd6493b0b7f769ce3
-  bytes: 533
+  sha256: 6d3cacf40f9c3c9829ab0ba7b40808b9e4b8bc7ae144ba1cea5de046c39d3ee1
+  bytes: 578
 - path: CONVERGENCE_REPORT.yaml
   sha256: 96563f11dbceebfc62c092ce7edac4731a942bcc7f45ddee72b6911737f2b778
   bytes: 916
@@ -312,8 +312,8 @@ files:
   sha256: 7aded64e0720289753f37cabdc9789f146a67cc2b06e131bf7d0ebccf67bf4b4
   bytes: 1582
 - path: program-execution-controller-template/schemas/handoff-receipt.schema.json
-  sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
-  bytes: 1918
+  sha256: 9ddd5c591093a6b5099dfc67f5e43d527e5c18f638b5e72141f2a474d0471455
+  bytes: 3939
 - path: program-execution-controller-template/schemas/program-lock.schema.json
   sha256: bebc5ba411df775dc7a483834a16d0a4d6daaa7b0987c7da65aeba6e68e0082d
   bytes: 2630
@@ -324,8 +324,8 @@ files:
   sha256: 6d3dacdc7efea95c5e1a599eb79edfe8c38211620e2bf050368ec61721fe3f28
   bytes: 2666
 - path: program-execution-controller-template/schemas/task-contract.schema.json
-  sha256: 3f1a95fd2cbb97fc20691bb0a9aba53defb9399e7a258d859924a5166f9b0220
-  bytes: 3526
+  sha256: aad248e986dba5ad6b47af683380d82130de66a5a3fc799565d1e33316b8a514
+  bytes: 3700
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
   sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
   bytes: 2078
@@ -342,20 +342,23 @@ files:
   sha256: 1a7d73ea1a26192fd2c4036ce8ca253b153a5ec913db25a111a8f55aafae42bb
   bytes: 7118
 - path: program-execution-controller-template/scripts/pec/cli.py
-  sha256: 0393f69de6fc26c44af84353d2440a9066f213551ceb7b0bbccedf850e8db8c3
-  bytes: 9867
+  sha256: fd0fc6a7f0faba0c30b95f4aae09b70e02e744f39d769e05229f5d23de7b3b4c
+  bytes: 13407
 - path: program-execution-controller-template/scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
   bytes: 2419
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: c06c0e5fcf0c2f695c3d2014441b0a3cf0239c9ffda66d662eeda3b843e2ede3
-  bytes: 12541
+  sha256: 73725f2b414f101e397bb478815f5ff3dd534040f7ba2509b1cba9a4b7b21d85
+  bytes: 12997
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 0dad472eaa9a646c18a0bb953f57a54ed44e69d7c9fb85a4ef8b219f38ef82b3
-  bytes: 58237
+  sha256: dfa99978c77b614996b25d6fb50906f55457c12862f48b282b0ed2dd43d31bc4
+  bytes: 64315
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
+- path: program-execution-controller-template/scripts/pec/replan.py
+  sha256: 6c7df55ab9aa8566f88a4eb65bdbbe2ad1091f3c72bcca634de1cb325f21349a
+  bytes: 13822
 - path: program-execution-controller-template/scripts/pec/state.py
   sha256: 56782e09c6e9a4c5b534a0fd331da02efb8e4930d4d7a65f57217c1d68ddbd2b
   bytes: 23430
@@ -438,8 +441,11 @@ files:
   sha256: bc10b4bf18bfdf1ffad63e574e28139939f64b171aaf519046c028999d5dccec
   bytes: 2625
 - path: scripts/validate_pair.py
-  sha256: bd768fdc3daf6ef78da45fd42e49981d32b60bad2b41e130669055d1a81a0e8f
-  bytes: 10117
+  sha256: dff22030b2acb370684406aae0d0eefd03480b48cc7b93d6bddb3703a2c29fa9
+  bytes: 10417
+- path: scripts/validate_replan.py
+  sha256: a823d852d2fc9879495735b2b4f5b050059ea6a67987fc733f81a673a43dcc9c
+  bytes: 3855
 - path: shared/AUTHORIZATION_MODEL.yaml
   sha256: 2a7d346233543ce8a9aa62b0ea219e5627cc0bfd34979adbe56dd7318aa81a05
   bytes: 843
@@ -458,15 +464,18 @@ files:
 - path: shared/OWNERSHIP_MATRIX.yaml
   sha256: 936389561ac91db740279b4ff09d2c94cb440303b292d4ab42f456db97c2ca08
   bytes: 1978
+- path: shared/REPLAN_CONTRACT.yaml
+  sha256: 6d081f36eb88055270e93f23dceb06b158003688f386d6e2dd1ae9f61aeb00fb
+  bytes: 1306
 - path: shared/STATE_MODEL.yaml
-  sha256: b10991c403b4ab08b278fd2315234464b01814fbaa5981a054ea65c8d101810f
-  bytes: 1262
+  sha256: e8b785723f49e8942f0ae4d95774d722ffdfd196877164f48e00bd2705c44452
+  bytes: 1521
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
 - path: shared/schemas/campaign-source.schema.json
-  sha256: 81ee2e84308b8c170b414467541f87a89bc6e9411d76f09a07a4a77eec0c0509
-  bytes: 4583
+  sha256: ed7608eb993bcdf12a1bbf96c1750834db802d5949ed1c13200a3fb48c5dff62
+  bytes: 4614
 - path: shared/schemas/evidence-reference.schema.json
   sha256: a40c5ddc764d4c99bfe0c501def26ac26ad025d5cc799e9aa0bf412cdf125ba8
   bytes: 2076
@@ -476,12 +485,27 @@ files:
 - path: shared/schemas/handoff-receipt.schema.json
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
+- path: shared/schemas/replan-revision.schema.json
+  sha256: 89546ee78fc22a01b71f53a975d232a8b69a8c09f994dc1bc3df491a9708cbba
+  bytes: 5166
 - path: tests/test_autonomy_rail.py
   sha256: 5f29a2ac881118936fd70f078cc96cdd0c4a2c5c588964303c1f20b8f96bd092
   bytes: 3861
 - path: tests/test_pair_alignment.py
   sha256: 81b298a4128e9a2674ab00519c4e22c908e4331d7244c8b4b06b9606a81e50ec
   bytes: 1748
+- path: tests/test_replan_contract.py
+  sha256: 339df81ed6f92d4c9ff97bab242f070df187d7cabc80380b17ced6eb24b840e3
+  bytes: 3979
+- path: tests/test_replan_handoff.py
+  sha256: 93816e89cdd1b6d4ed14bf608d66a38ec04bfd5e4202fc8005702991b4eab13f
+  bytes: 5042
+- path: tests/test_replan_integration.py
+  sha256: a468e2bff4028c444fb9261d2dc5fac029fa357c4ec451bf65ea1719548d4831
+  bytes: 10519
+- path: tests/test_replan_lifecycle.py
+  sha256: 1dac7417c1cc4c83a7344001f3df43a73e98394d3dec5a8f7e60041fbd130ada
+  bytes: 10284
 - path: validation/execution_trace.jsonl
   sha256: 2ae20bccfb4dcc8ecf89e7a7a8e8628b19e78b279f4cd1c24e69f2e8c19ae4d0
   bytes: 558
@@ -501,5 +525,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 165
-  total_bytes: 425814
+  file_count: 173
+  total_bytes: 493015

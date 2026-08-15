@@ -19,7 +19,7 @@ peer under one canonical semantic revision.
 
 ## Status
 
-- **operator_intake** / `definition_status: draft`. This PR registers the
+- **owner_converged** / `definition_status: draft`. This PR registers the
   corrected campaign source only; no Blueprint pair is instantiated, no Program
   Lock is created, and no controller runtime executed.
 - Governing decisions **ADR-0011 … ADR-0016** are present and accepted
@@ -35,8 +35,8 @@ peer under one canonical semantic revision.
 | Field | Value |
 |---|---|
 | Digest algorithm | sha256 |
-| Digest | `7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619` |
-| Bytes | `50487` |
+| Digest | `9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010` |
+| Bytes | `50453` |
 
 > Note on canonicalization: the operator-supplied source arrived with paste
 > artifacts (smart quotes, `*` bullets, flattened indentation). It was rendered
@@ -51,8 +51,10 @@ Per the established campaign convention, mutable controller runtime state is
 `$HOME/.l9/programs/bounded-replanning-v1`. Only the immutable source and its
 integrity receipt are registered.
 
-_No commit/push/PR/merge/release/deploy is authorized by this campaign during
-admission. Terminal verdict is reserved to the program owner (AUTH-001)._
+_AUTH-001 declared owner terminal verdict CONVERGED and expanded the
+authorization ceiling to commit/push/pull_request. Merge, release, and deploy
+remain denied. Engineering admission (Blueprint instantiate, Program Lock, W0)
+is still not performed by this registration._
 
 ## Honesty
 

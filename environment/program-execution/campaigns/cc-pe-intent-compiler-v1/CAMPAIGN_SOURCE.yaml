@@ -5,7 +5,8 @@ metadata:
   title: Program Execution Intent Compiler v1 (CC-PE-INTENT-COMPILER-V1)
   version: 1.0.0
   created_at: '2026-08-11T00:00:00Z'
-  status: operator_intake
+  status: owner_converged
+  owner_terminal_verdict: CONVERGED
   owner: Igor Beylin
   intended_host: Quantum-L9/Cursor-Governance
   intended_drop_path: environment/program-execution/campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml
@@ -18,8 +19,8 @@ integrity:
   canonical_encoding: utf-8
   canonical_line_endings: lf
   digest_record_location: source-integrity-receipt.json
-  source_digest: 1380d7dbb306f142a2682d593f7bb2a99ed2228c5bb67c2d7d727b4ddbdea196
-  source_bytes: 23708
+  source_digest: fa3a19475a8b3206f210a2eb4b20adcdef01e696b798922b3aa0d91b08bcc7b3
+  source_bytes: 23705
   generated_counts_or_digests_may_be_hand_edited: false
 pipeline_contract:
   pair: program-execution-system.v2
@@ -47,9 +48,6 @@ operator_directive:
   mode: autonomous_evidence_driven_repo_local
   policy_profile: quantum-l9.safe-autonomy.v1
   prohibited_actions:
-  - commit
-  - push
-  - pull_request
   - merge
   - publish
   - release

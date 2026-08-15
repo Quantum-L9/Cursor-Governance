@@ -26,6 +26,10 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 | `cc-pe-intent-compiler-v1` | `campaign/cc-pe-intent-compiler-v1` | 3 (same compiler repo, after hardening) |
 | `l9-ecosystem-fix-plan` | `campaign/l9-ecosystem-fix-plan` | 4 (parallel; after attaching `IB-Odoo_19`) |
 
+Owner (AUTH-001) terminal verdict on 2026-08-14: **CONVERGED**. Locked campaign
+YAML ceilings are `commit/push/pull_request: true` and `merge: false`. This
+verdict expands authorization; it does not claim engineering waves completed.
+
 Stacked work inside a campaign:
 
 ```bash

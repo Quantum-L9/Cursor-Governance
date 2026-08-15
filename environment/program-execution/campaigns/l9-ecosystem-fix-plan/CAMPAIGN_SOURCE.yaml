@@ -6,7 +6,8 @@ metadata:
   title: "L9 Ecosystem Low-Hanging-Fruit Fix Campaign"
   version: "1.0.0"
   created_at: "2026-08-05T12:47:00Z"
-  status: operator_intake
+  status: owner_converged
+  owner_terminal_verdict: CONVERGED
   owner: "Igor Beylin"
   intended_host: Quantum-L9/Cursor-Governance
   intended_drop_path: >-
@@ -565,9 +566,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -640,9 +641,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -701,9 +702,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -764,9 +765,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -836,9 +837,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -896,9 +897,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -972,9 +973,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false

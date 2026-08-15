@@ -248,6 +248,14 @@ def render_contract(
         "attempt_number": attempt_number,
         "attempt_receipt_path": str(receipt_path),
     }
+    # Fresh attempt contracts are rendered from current durable typed state, so
+    # each new attempt carries the active plan revision and any active Replan
+    # Revision. Conversational history is never an input to rendering.
+    from .replan import current_plan_revision
+
+    plan = current_plan_revision(workspace)
+    rendered["plan_revision"] = plan["plan_revision"]
+    rendered["active_replan_revision_id"] = plan.get("active_replan_revision_id")
     rendered["contract_digest"] = digest_object(rendered)
     target = workspace / "contracts" / "rendered" / f"{task_id}.json"
     write_json(target, rendered)

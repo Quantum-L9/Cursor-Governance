@@ -49,3 +49,13 @@ campaigns:
       - bounded-replanning-v1
       - l9-devpack-program-execution-hardening
       - cc-pe-intent-compiler-v1
+
+owner:
+  authority_id: AUTH-001
+  terminal_verdict: CONVERGED
+  declared_at: "2026-08-14T21:28:53Z"
+  authorization_ceiling:
+    commit: true
+    push: true
+    pull_request: true
+    merge: false

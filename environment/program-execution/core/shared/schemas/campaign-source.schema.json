@@ -38,6 +38,7 @@
           "enum": [
             "operator_intake",
             "registered",
+            "owner_converged",
             "withdrawn"
           ]
         },

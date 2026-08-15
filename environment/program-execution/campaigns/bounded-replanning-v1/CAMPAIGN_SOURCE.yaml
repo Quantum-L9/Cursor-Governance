@@ -6,7 +6,8 @@ metadata:
   title: Program Execution Bounded Replanning Layer
   version: 1.0.0
   created_at: "2026-08-11T13:45:00Z"
-  status: operator_intake
+  status: owner_converged
+  owner_terminal_verdict: CONVERGED
   owner: "Igor Beylin"
   intended_host: Quantum-L9/Cursor-Governance
   intended_drop_path: >-
@@ -188,9 +189,6 @@ program:
       - autonomous architecture changes
       - autonomous permission expansion
       - remote repository mutation
-      - commit
-      - push
-      - pull request
       - merge
       - release
       - publish
@@ -818,9 +816,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -895,9 +893,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -968,9 +966,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1041,9 +1039,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1115,9 +1113,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1199,9 +1197,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1264,9 +1262,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false

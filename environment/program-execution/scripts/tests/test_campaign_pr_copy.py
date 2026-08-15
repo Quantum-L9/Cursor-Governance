@@ -15,7 +15,7 @@ PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/campaign_pr_copy.py"
 CAMPAIGNS = PE_ROOT / "campaigns"
 BOUNDED = CAMPAIGNS / "bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
-BOUNDED_DIGEST = "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619"
+BOUNDED_DIGEST = "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010"
 
 
 def _load():
