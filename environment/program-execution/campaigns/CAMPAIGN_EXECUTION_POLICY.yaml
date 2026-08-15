@@ -17,10 +17,30 @@ publish:
   required_command: PR_REMEDIATE=0 make pr
   require_makefile_checkers: true
   raw_gh_pr_create: forbidden
-  remediate: false
+  # Operator default 2026-08-15: remediate the open PR until CI is green and
+  # the PR is mergeable (bounded cycles), then HALT before merge. Merge stays
+  # human-only (L9_MERGE_AUTHORIZED or one-shot merge-authorization.json).
+  remediate: true
+  remediate_max_cycles: 5
+  halt_before_merge: true
   merge: false
   open_pr_against_main: false
   mix_with_other_feature_branches: false
+
+# Stacked-PR policy: when a PR is already open for the workstream, the next PR
+# bases on the open PR's head. Bottom-up merge order; rebase and conflict
+# resolution are forbidden — disjoint scopes keep the stack mergeable.
+# One feature branch off main per program; exclusive worktree lease per agent.
+pr_stacking:
+  enabled: true
+  first_pr_base: pr_base
+  subsequent_pr_base: open_pr_head
+  merge_order: bottom_up
+  rebase: false
+  conflict_resolution: false
+  one_feature_branch_per_program: true
+  exclusive_worktree_lease: true
+  helper: ops/scripts/stack_pr.py
 
 pr_copy:
   title_template: "[{campaign_id}] {metadata.title}"

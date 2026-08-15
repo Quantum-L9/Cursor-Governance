@@ -93,7 +93,11 @@ tiers:
   - skill: l9-setting-up-terraform
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
-    reason: PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) — high blast radius, explicit only; hint_allowed for read-only Diagnose
+    reason: >-
+      Diagnose remains hint-routeable; remediation is auto-authorized only as
+      remediate-until-green-and-mergeable under a campaign/PE packet
+      (surface_profile.remediation: max_cycles 5, then HALT before merge).
+      Merge, force-push, and scope widening stay human-only.
   - skill: l9-issue-remediation
     reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
   - skill: l9-bounded-autonomy
@@ -217,7 +221,30 @@ claude_routing:
     - remediate the pr
     - babysit the pr
     supporting: []
-    note: 'explicit_only + hint_allowed — Read Diagnose path only; Converge mutate requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.
+    note: 'hint_allowed — Read Diagnose path; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.
+
+      '
+  - id: pr_remediation_until_green
+    primary: l9-pr-remediation
+    signal_weight: 8
+    hint_allowed: true
+    positive_signals:
+    - remediate the pr
+    - remediate until green
+    - pr is failing
+    - fix the failing checks
+    - ci is red
+    - get the pr green
+    - make the pr mergeable
+    - resolve review threads
+    - babysit the pr
+    negative_signals:
+    - merge the pr
+    - merge this pr
+    - admin merge
+    - force push
+    supporting: []
+    note: 'Auto-authorized remediate-until-green for an OPEN PR under a campaign/PE packet: bounded cycles (surface_profile.remediation.max_cycles), then HALT before merge. Merge/force-push/scope-widening remain human-only; merge uses L9_MERGE_AUTHORIZED or the one-shot merge-authorization.json file channel.
 
       '
   - id: issue_remediation

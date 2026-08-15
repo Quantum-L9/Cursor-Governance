@@ -1,7 +1,7 @@
 ---
 id: l9.rule.48.make.pr.remediation
-version: 1.0.0
-description: After make pr opens a PR, spawn l9-pr-remediation poll worker
+version: 1.1.0
+description: After make pr opens a PR, remediate until green + mergeable, then halt before merge (stacked bottom-up PRs, no rebase)
 scope: global
 domain: general
 activation: always
@@ -9,7 +9,7 @@ authority: canonical_global
 alwaysApply: true
 ---
 
-# make pr → checkers + PR open (no remediation)
+# make pr → checkers + PR open → remediate-until-green → HALT before merge
 
 Default publish path is `PR_REMEDIATE=0 make pr` (Autonomy Surface Profile
 `campaign_execution` / `l4_local_autonomy.post_push`).
@@ -20,12 +20,27 @@ Agents MUST:
 2. Pass `PR_REMEDIATE=0` (this is now the script default).
 3. For Program Execution campaigns, set `PR_BASE` to
    `origin/campaign/<campaign_id>` — never open those PRs against `main`.
-4. **Not** spawn `l9-pr-remediation` / poll workers.
-5. **Not** merge.
+4. After the PR is open: remediate with `l9-pr-remediation` until CI is green
+   and the PR is mergeable (bounded: `surface_profile.remediation.max_cycles`),
+   resolving review threads — then **HALT before merge**.
+5. **Not** merge. Merge is human-only: `L9_MERGE_AUTHORIZED=<reason>` or a
+   one-shot entry in `~/.l9/autonomy/merge-authorization.json`
+   (`ops/autonomy/merge_gate.py` enforces both channels).
+
+Stacked PRs (operator default 2026-08-15):
+
+- When a PR is already open for the workstream, the next PR **stacks on the
+  open PR's head** (`ops/scripts/stack_pr.py base`). Merge order is
+  **bottom-up**; older PRs first.
+- Rebase and conflict resolution are **forbidden**. Disjoint scopes keep the
+  stack mergeable; if scopes overlap, stop and re-plan.
+- One feature branch per program; exclusive worktree lease per mutating agent
+  (`surface_profile.pr_stacking`, `CAMPAIGN_EXECUTION_POLICY.pr_stacking`).
 
 If a human explicitly sets `PR_REMEDIATE=1` and `make pr` writes
 `.l9/pr/pr-remediation-handoff.json` plus `L9_AGENT_REQUIRED`, follow that
-human override only. The standing agent contract is no-remediate / no-merge.
+human override only. The standing agent contract is remediate-until-green,
+then halt; merge stays human.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),
 that counts as explicit approval for the push + PR open performed by
