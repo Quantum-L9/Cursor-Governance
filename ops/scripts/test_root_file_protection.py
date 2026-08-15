@@ -259,8 +259,8 @@ class RootProtectionTests(unittest.TestCase):
             )
             commit(repo, "case-mismatched registration")
             unreg, stale = rp.reconcile_root_inventory(repo, cfg)
-            self.assertIn("notes.md", unreg)   # tracked, lowercase, unregistered
-            self.assertIn("Notes.md", stale)   # registered, mixed-case, not tracked
+            self.assertIn("notes.md", unreg)  # tracked, lowercase, unregistered
+            self.assertIn("Notes.md", stale)  # registered, mixed-case, not tracked
 
 
 if __name__ == "__main__":
