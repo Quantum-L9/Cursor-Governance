@@ -10,7 +10,7 @@ import yaml
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
-EXPECTED_DIGEST = "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619"
+EXPECTED_DIGEST = "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010"
 
 
 def _load(name: str, path: Path):
