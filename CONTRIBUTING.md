@@ -10,7 +10,7 @@ Before opening any pull request, verify each item:
 - [ ] Read [CANONICAL_LAW.md §8](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md#8) for workspace wiring requirements
 - [ ] Reviewed [CANONICAL_LAW.md §7 Anti-Patterns](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md#7-anti-patterns) — never violate these
 - [ ] All CI gates green (no bypassing required status checks)
-- [ ] CODEOWNERS notified for blast-radius files
+- [ ] Protected-root rewrites carry an `ALLOW-ROOT-DELETION:` marker (ownership mode is `solo_ruleset`; CODEOWNERS auto-request is disabled — see `CODEOWNERS`)
 
 ---
 
@@ -58,7 +58,7 @@ All pull requests must pass:
 
 - Branches: `feat/<scope>`, `fix/<scope>`, `chore/<scope>`, `docs/<scope>`
 - Commits: Conventional Commits format — `feat(scope): message`
-- PRs targeting `main` require 2 CODEOWNERS approvals for blast-radius paths
+- Ownership mode is `solo_ruleset`: CODEOWNERS auto-request is disabled, so blast-radius PRs are gated by the required status checks (root-file protection, governance self-check) plus the `ALLOW-ROOT-DELETION:` marker for protected rewrites — not by a CODEOWNERS approval count. The `2 CODEOWNERS approvals` policy re-activates when owners are re-enabled (`codeowners_enforced`).
 
 ---
 

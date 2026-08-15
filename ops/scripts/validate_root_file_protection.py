@@ -11,9 +11,11 @@ Justification marker (in any commit message in the PR range):
 
     ALLOW-ROOT-DELETION: <root-relative-path> — <reason with proof of necessity>
 
-The marker authorizes the CI gate only; human CODEOWNERS approval is still required
-(CODEOWNERS + ORG_INVARIANTS.yaml protected_paths). This script is read-only and
-never edits repository files.
+The marker authorizes the CI gate. Ownership mode is solo_ruleset: CODEOWNERS
+auto-request is disabled, so the enforced controls are this gate plus the marker,
+not a guaranteed CODEOWNERS approval (CODEOWNERS/ORG_INVARIANTS.yaml protected_paths
+are the dormant ownership map, live again under codeowners_enforced). This script
+is read-only and never edits repository files.
 
 Usage:
     validate_root_file_protection.py [--base <ref>] [--head <ref>] [--repo <path>]

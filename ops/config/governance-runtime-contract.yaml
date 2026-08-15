@@ -14,6 +14,10 @@
 schema_version: canonical.schema.governance_runtime_contract.v1/1.0.0
 status: active
 maintainer: "Igor Beylin"
+# Current review-authority mode. solo_ruleset: CODEOWNERS auto-request disabled;
+# protected changes gated by CI + the ALLOW-ROOT-DELETION marker. codeowners_enforced
+# re-activates CODEOWNERS approval once a second reviewer + GitHub protection exist.
+ownership_mode: solo_ruleset
 
 # Each invariant is a duplicated fact plus the mechanical projections that must
 # stay consistent with it. Projection check types understood by the validator:
@@ -117,6 +121,37 @@ invariants:
       - type: file_contains
         path: .pre-commit-config.yaml
         pattern: "reports/|workflows/)"
+        present: false
+
+  - id: ownership-mode-solo-ruleset
+    priority: P0
+    statement: >-
+      Ownership mode is solo_ruleset: CODEOWNERS auto-request is disabled and no
+      surface may claim a guaranteed CODEOWNERS approval / mandatory approval
+      count as an active control.
+    projections:
+      - type: file_contains
+        path: CODEOWNERS
+        pattern: "AUTO-REQUEST DISABLED"
+        present: true
+      - type: file_contains
+        path: PULL_REQUEST_TEMPLATE.md
+        pattern: "trigger auto-request"
+        present: false
+      - type: file_contains
+        path: CONTRIBUTING.md
+        pattern: "require 2 CODEOWNERS approvals for blast-radius"
+        present: false
+
+  - id: entrypoint-graphiti-not-memory-bank
+    priority: P1
+    statement: >-
+      Human entrypoints describe Graphiti session hydration, not the retired
+      memory-bank/ activation read.
+    projections:
+      - type: file_contains
+        path: README.md
+        pattern: "memory-bank/activeContext.md"
         present: false
 
   - id: root-inventory-complete
