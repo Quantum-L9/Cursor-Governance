@@ -3,7 +3,15 @@
 # SSOT companion: ops/autonomy/surface_profile.yaml → campaign_execution
 schema: l9.program-execution.campaign-execution-policy.v1
 schema_version: 1.0.0
-updated: "2026-08-14"
+updated: "2026-08-15"
+closeout:
+  required: true
+  last_step: true
+  live_ledger: CAMPAIGN_STATUS.yaml
+  pec_command: pec close
+  in_repo_command: python3 environment/program-execution/campaigns/scripts/close_campaign.py close
+  next_campaign: first execute_order whose lifecycle is not complete or cancelled
+  leaving_in_progress_after_merge_or_converged: defect
 
 publish:
   required_command: PR_REMEDIATE=0 make pr
@@ -30,16 +38,20 @@ campaigns:
     pr_base: campaign/bounded-replanning-v1
     execute_order: 1
     lane: pe_host
-  - id: l9-devpack-program-execution-hardening
-    integration_branch: campaign/l9-devpack-program-execution-hardening
-    pr_base: campaign/l9-devpack-program-execution-hardening
-    execute_order: 2
-    lane: compiler
   - id: cc-pe-intent-compiler-v1
     integration_branch: campaign/cc-pe-intent-compiler-v1
     pr_base: campaign/cc-pe-intent-compiler-v1
+    execute_order: 2
+    lane: compiler
+    role: build
+  - id: l9-devpack-program-execution-hardening
+    integration_branch: campaign/l9-devpack-program-execution-hardening
+    pr_base: campaign/l9-devpack-program-execution-hardening
     execute_order: 3
     lane: compiler
+    role: harden
+    depends_on:
+      - cc-pe-intent-compiler-v1
   - id: l9-ecosystem-fix-plan
     integration_branch: campaign/l9-ecosystem-fix-plan
     pr_base: campaign/l9-ecosystem-fix-plan
