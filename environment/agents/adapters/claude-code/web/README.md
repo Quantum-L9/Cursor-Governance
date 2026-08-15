@@ -13,8 +13,13 @@ field.
 | Field (in the edit dialog) | Paste / set from | Purpose |
 |---|---|---|
 | **Network access** | `network-policy.md` | let the sandbox reach GitHub, registries, scanners |
-| **Environment variables** | `environment.env.example` | credentials + governance/memory locations (placeholders → real values in the UI) |
-| **Setup script** | `setup.sh` | install `gh`, toolchains, `pre-commit` (the `make pr` gate, CANONICAL_LAW §12), clone governance, provision memory |
+| **Environment variables** | `environment.env.example` | credentials + surface/memory/autonomy posture (placeholders → real values in the UI) |
+| **Setup script** | `setup.bootstrap.sh` | normalize the environment, clone governance, then exec the canonical `setup.sh` from that clone |
+
+> **The variables field is literal text — no shell expansion.** `FOO=$HOME/x` is
+> stored as the characters `$HOME/x`. Never reference `$HOME` there; that is why
+> `L9_GOVERNANCE_DIR` is deliberately absent from `environment.env.example` (the
+> SSOT path is hard-pinned by `setup.sh` and the SessionStart hook instead).
 
 ## Steps
 
@@ -31,8 +36,11 @@ field.
    propagate to every new session with **no re-paste**. (Pasting `setup.sh`
    directly still works — it's the same logic — but you own keeping it in sync.)
    Either way it is idempotent, auto-detects Python vs Node, clones governance to
-   `$HOME/.cursor-governance`, provisions `pre-commit` (the `make pr` gate,
-   CANONICAL_LAW §12), and optionally wires the shared-memory MCP client (`.mcp.json`).
+   `$HOME/.cursor-governance`, installs the governance clone's own runtime
+   dependencies (`pydantic` / `pyyaml` / `jsonschema` — without them the memory
+   gate fails closed and every governed write is denied), provisions `pre-commit`
+   (the `make pr` gate, CANONICAL_LAW §12), and wires the shared-memory MCP
+   client (`.mcp.json`).
 4. **Per-repo (git-tracked, recommended)** — in each consumer repo commit the
    `.claude/` triad so the SessionStart hook boots governance from the clone (see
    the parent `README.md` §4). Committing is preferred: it is explicit, reviewable,
@@ -44,12 +52,19 @@ field.
 ## Verify (in a fresh session after saving)
 
 ```bash
-gh auth status                              # Logged in as <bot-user>
-ls "$HOME/.cursor-governance/CANONICAL_LAW.md"   # governance clone present
-# Memory = Cursor Graphiti front door only (ADR-0006).
-# Optional: curl -sS -o /dev/null -w "%{http_code}\n" "$GRAPHITI_FRONT_DOOR/healthz"
+gh auth status                                    # Logged in as <bot-user>
+ls "$HOME/.cursor-governance/CANONICAL_LAW.md"    # governance clone present
+echo "$L9_GOVERNANCE_SURFACE"                     # must print exactly: claude-code
+echo "$L9_GOVERNANCE_DIR"                         # must be an expanded path, not '$HOME/...'
+python3 -c 'import pydantic, yaml, jsonschema'    # governance gates importable
+[ -n "$GRAPHITI_MCP_TOKEN" ] && echo "memory bearer present"
+# Memory = Cursor Graphiti front door only (ADR-0006). Proves the write path:
+python3 "$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_lock.py" \
+  acquire --namespace cursor-governance --task "env smoke"
 # The SessionStart hook should have injected an "L9 Governance — Claude Code session"
-# context block listing the governance clone and available skills.
+# context block listing the governance clone and available skills. A hydrate line
+# reading DEGRADED with facts_returned=0 almost always means GRAPHITI_MCP_TOKEN is
+# unset or the governance runtime deps did not install.
 ```
 
 ## Shared memory (required for governed Mobile/Web)

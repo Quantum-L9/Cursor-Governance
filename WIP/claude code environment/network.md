@@ -27,3 +27,4 @@ sonarcloud.io
 `memory.quantumaipartners.com` is required for HTTPS Graphiti (`/graphiti/mcp`).
 MCP connectors routed through Anthropic may not need allowlisting; keep the host
 for setup probes and `.mcp.json` HTTP clients.
+

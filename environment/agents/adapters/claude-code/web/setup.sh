@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# L9 Claude Code environment — Setup script (Web & Mobile)
+# L9 Claude Code environment — canonical Setup script (Web · Mobile · --cloud)
 #
-# Paste into claude.ai/code → your environment → Setup script.
+# NOT the script you paste. Paste web/setup.bootstrap.sh into
+# claude.ai/code -> environment -> Setup script; it clones this repo and execs
+# this file from the clone, so edits here reach every new session with no
+# re-paste. (Pasting this file directly still works — you then own the drift.)
+#
 # Runs in Anthropic's ephemeral Linux sandbox before the model starts.
-# Account-level: Mobile inherits the same script. Credentials come only from
-# the Claude environment variables field + GitHub — nothing from a host IDE.
+# Account-level: Mobile inherits the same environment. Credentials come only
+# from the Environment variables field + GitHub — nothing from a host IDE.
 #
-# Env vars (from the Environment variables field):
-#   GH_TOKEN                          — required for gh
-#   L9_GOVERNANCE_REMOTE / _BRANCH    — defaults: GitHub Quantum-L9/Cursor-Governance @ main
+# Env vars (see web/environment.env.example):
+#   GH_TOKEN                       — required for gh
+#   GRAPHITI_MCP_URL / _TOKEN      — Cursor Graphiti front door (ADR-0006/0007)
+#   L9_GOVERNANCE_REMOTE / _BRANCH — default Quantum-L9/Cursor-Governance @ main
 #   USER_ID / L9_MEMORY_AGENT_ID / L9_MEMORY_SOURCE — writer identity only
-#   Memory plane: Cursor Graphiti front door (mcp.template.json); no HTTP side door
 #
 # Governance always lands at $HOME/.cursor-governance (GitHub main).
-# See environment.env.example and network-policy.md.
+# See web/environment.env.example and web/network-policy.md.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-# Cloud Graphiti default when unset (CLI hosts export loopback tunnel URL).
+# Cloud Graphiti default when unset (CLI hosts export the loopback tunnel URL).
 : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 
 log() { printf '\n=== %s ===\n' "$*"; }
@@ -50,13 +54,15 @@ fi
 
 # 3) Governance SSOT — GitHub main only (Quantum-L9/Cursor-Governance).
 #    Always materialize at $HOME/.cursor-governance. Ignore other overrides so
-#    the sandbox never follows a host IDE path pasted into env by mistake.
+#    the sandbox never follows a host IDE path pasted into env by mistake, and
+#    never follows an unexpanded literal '$HOME' from the .env-format field.
 GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
 GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
 GOV_DIR="$HOME/.cursor-governance"
 if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "${L9_GOVERNANCE_DIR}" != "$GOV_DIR" ]; then
   echo "WARN: ignoring L9_GOVERNANCE_DIR='${L9_GOVERNANCE_DIR}' — Web/Mobile SSOT is always \$HOME/.cursor-governance"
 fi
+export L9_GOVERNANCE_DIR="$GOV_DIR"
 
 if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
   log "Cloning governance from GitHub (${GOV_BRANCH}) -> $GOV_DIR"
@@ -75,7 +81,45 @@ else
   fi
 fi
 
-# 3.5) Install Claude Code triad into this workspace when the repo has not
+# 3.1) Governance RUNTIME dependencies.
+#      The gates the adapter depends on are ordinary Python imports:
+#        ops/graphiti/*            -> pydantic  (memory front door, phase-lock)
+#        ops/autonomy/*            -> pyyaml    (surface profile, L4 gates)
+#        program-execution/core/*  -> jsonschema
+#      Without them the PreToolUse memory gate fails closed and every governed
+#      write is denied. They CANNOT be installed with `pip install -e .`: this
+#      repo is a flat-layout multi-package tree, so setuptools refuses automatic
+#      discovery and the editable build errors out. Install the declared
+#      `[project].dependencies` by name instead (tomllib is stdlib on 3.11+),
+#      which stays in sync with pyproject.toml with no second list to maintain.
+if [ -f "$GOV_DIR/pyproject.toml" ]; then
+  log "Governance runtime deps (memory + autonomy gates)"
+  GOV_DEPS=$(python3 - "$GOV_DIR/pyproject.toml" <<'PY' 2>/dev/null
+import sys, tomllib
+from pathlib import Path
+try:
+    data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except (OSError, tomllib.TOMLDecodeError):
+    sys.exit(1)
+for dep in data.get("project", {}).get("dependencies", []):
+    print(dep)
+PY
+  )
+  if [ -n "$GOV_DEPS" ]; then
+    # shellcheck disable=SC2086 # deliberate word-splitting: one requirement per line
+    python3 -m pip install --quiet --prefer-binary $GOV_DEPS 2>/dev/null \
+      || echo "WARN: governance runtime deps failed to install — memory gate will fail closed (allowlist pypi.org)"
+  else
+    echo "WARN: could not read [project].dependencies from governance pyproject.toml"
+  fi
+  # Prove the gates can import before the model starts; this is the exact
+  # failure that surfaces as "No conflict-checked phase-lock held".
+  python3 -c 'import pydantic, yaml, jsonschema' 2>/dev/null \
+    && echo "governance imports OK: pydantic + pyyaml + jsonschema" \
+    || echo "WARN: governance imports still failing — Graphiti phase-lock and governed writes will be blocked"
+fi
+
+# 3.5) Install the Claude Code triad into this workspace when the repo has not
 #      committed it. Never overwrite files the repo already has.
 CC_ENV="$GOV_DIR/environment/agents/adapters/claude-code"
 if [ -d "$CC_ENV" ]; then
@@ -95,8 +139,8 @@ if [ -d "$CC_ENV" ]; then
   # Keep activation artifacts out of the working tree. setup_workspace_symlinks.sh
   # and skill reconciliation create machine-local wiring (.cursor-commands/.cursor
   # symlinks into the SSOT, generated .claude/{skills,rules} mirrors, per-workspace
-  # .l9/ and memory-bank/ state). None are committable, but they otherwise show as
-  # untracked and tempt a governed session into committing dangling symlinks.
+  # .l9/ state). None are committable, but they otherwise show as untracked and
+  # tempt a governed session into committing dangling symlinks.
   # Write them to .git/info/exclude — LOCAL and uncommitted, so this never mutates
   # a consumer's tracked .gitignore. Idempotent: only append globs not already present.
   # NOTE: excludes only the GENERATED .claude mirrors; .claude/settings.json and
@@ -123,12 +167,16 @@ else
 fi
 
 # 4) Language toolchains — only what the workspace declares.
+#    NOTE: `--only-binary :all:` is applied to third-party resolution only. It is
+#    NOT combined with `-e .` (an editable install must build from source, so the
+#    pair always fails), and the L9 flat-layout repos cannot be installed editable
+#    at all — their deps come from step 3.1 / the `[dev]` extra by name.
 if [ -f pyproject.toml ] || ls ./*.py >/dev/null 2>&1; then
   log "Python toolchain"
   python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
   if [ -f pyproject.toml ]; then
-    pip install --only-binary :all: -e '.[dev,server]' 2>/dev/null \
-      || pip install --only-binary :all: -e '.[dev]' 2>/dev/null \
+    pip install --prefer-binary -e '.[dev,server]' 2>/dev/null \
+      || pip install --prefer-binary -e '.[dev]' 2>/dev/null \
       || pip install --only-binary :all: ruff mypy pytest build 2>/dev/null || true
   else
     pip install --only-binary :all: ruff mypy pytest 2>/dev/null || true
@@ -167,13 +215,40 @@ fi
 if [ "${USER_ID:-}" = "cursor_agent" ] || [ "${L9_MEMORY_AGENT_ID:-}" = "cursor_agent" ]; then
   echo "WARNING: memory identity 'cursor_agent' is reserved — set USER_ID=claude_code_agent and L9_MEMORY_AGENT_ID=claude-code."
 fi
+for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
+  [ -n "${!retired:-}" ] && echo "WARN: $retired set — retired ADR-0006 side door; remove it from the environment variables field"
+done
 log "Memory identity: agent_id=${L9_MEMORY_AGENT_ID:-claude-code} user_id=${USER_ID:-claude_code_agent}"
-log "Shared memory: Cursor Graphiti front door (graphiti-memory @ 127.0.0.1:8100 via mcp.template.json)"
+log "Shared memory: Cursor Graphiti front door ($GRAPHITI_MCP_URL via mcp.template.json)"
+if [ -z "${GRAPHITI_MCP_TOKEN:-}" ]; then
+  echo "WARN: GRAPHITI_MCP_TOKEN unset — SessionStart hydrate and governed-write phase-lock run DEGRADED."
+fi
 if [ ! -f .mcp.json ]; then
   echo "WARN: .mcp.json missing — step 3.5 should have copied mcp.template.json (Graphiti front door)."
 fi
 
-# 6) Versions for the setup log.
+# 6) L4 local autonomy — report the publish gate the session will run under.
+#    Read-only: never begin a phase or authorize a release on the setup path.
+#    Brain: ops/autonomy/l4_local.py + local_execution_gate.py (SSOT:
+#    ops/autonomy/surface_profile.yaml). Mid-execution push/PR stay denied until
+#    the kernels are recorded and release is authorized.
+if [ -f "$GOV_DIR/ops/autonomy/l4_local.py" ] && git rev-parse --git-dir >/dev/null 2>&1; then
+  log "L4 local autonomy"
+  python3 "$GOV_DIR/ops/autonomy/l4_local.py" status 2>/dev/null \
+    || echo "phase: not begun (push/PR denied until 'l4_local.py authorize-release')"
+  for kernel in "Recursive Alignment.md" "Validate & Repair.md"; do
+    [ -f "$GOV_DIR/kernels/$kernel" ] \
+      || echo "WARN: missing required kernel: kernels/$kernel"
+  done
+  # Restore any scratch-hold parked by a previous session before work resumes
+  # (surface_profile: sacred WIP is never lost to a clean `make pr`).
+  if [ -f "$GOV_DIR/ops/scripts/scratch_hold.py" ]; then
+    python3 "$GOV_DIR/ops/scripts/scratch_hold.py" restore --all 2>/dev/null \
+      || true
+  fi
+fi
+
+# 7) Versions for the setup log.
 log "Tool versions"
 have gh      && gh --version | head -1        || true
 have python3 && python3 --version            || true
