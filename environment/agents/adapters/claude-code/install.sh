@@ -240,22 +240,23 @@ if [ -f "$WORKSPACE/.pre-commit-config.yaml" ] && ! command -v pre-commit >/dev/
   fi
 fi
 
-# --- 5.3) Canonical secret provider -----------------------------------------
-# ops/secrets is the SSOT inventory. The adapter resolves through it and keeps
-# NO inventory of its own: the account environment carries bootstrap credentials
-# only, and every downstream token (SONAR_TOKEN, SEMGREP_APP_TOKEN, ...) is
-# fetched at run time. Values are never printed, here or by the resolver.
-log "Canonical secret provider"
-HYDRATE="$GOV_DIR/ops/secrets/hydrate_infisical.py"
-if [ -f "$HYDRATE" ]; then
-  if "$GOV_PY" "$HYDRATE" --check --require SONAR_TOKEN,SEMGREP_APP_TOKEN 2>&1; then
+# --- 5.3) Canonical secret bootstrap ----------------------------------------
+# Delegated, not implemented. ops/secrets/bootstrap_agent_env.sh is the SHARED
+# bootstrap every agent surface calls — Codex, Gemini, Manus and the generic
+# adapter invoke this exact script the same way. This adapter keeps no secret
+# inventory and no private bootstrap: it passes its surface id and the names it
+# needs, and reports whatever comes back.
+log "Canonical secret bootstrap (shared, all surfaces)"
+SECRET_BOOTSTRAP="$GOV_DIR/ops/secrets/bootstrap_agent_env.sh"
+if [ -f "$SECRET_BOOTSTRAP" ]; then
+  if bash "$SECRET_BOOTSTRAP" --check --surface claude-code \
+      --require SONAR_TOKEN,SEMGREP_APP_TOKEN 2>&1; then
     say "secret provider: ENABLED"
   else
     warn "secret provider DEGRADED — authenticated Sonar/Semgrep unavailable this session"
-    warn "  set INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET, or configure the AWS CLI"
   fi
 else
-  warn "missing ops/secrets/hydrate_infisical.py — no canonical secret resolution"
+  warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical secret resolution"
 fi
 
 # --- 5.5) Repository-scoped identity (never account-global) ----------------

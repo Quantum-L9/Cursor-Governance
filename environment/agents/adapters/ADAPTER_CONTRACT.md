@@ -34,6 +34,40 @@ Authentication uses `GRAPHITI_MCP_TOKEN`. Writer identity is separate and comes
 from `agent_registry.yaml` through `USER_ID`, `L9_MEMORY_AGENT_ID`, and
 `L9_MEMORY_SOURCE`. Surface adapters never invent a second `agent_id`.
 
+## Secret carrier
+
+`ops/secrets/` is the SSOT inventory for every surface. Adapters resolve through
+it and keep no inventory of their own.
+
+The bootstrap is shared, not per-surface. Every adapter calls the identical
+entrypoint and passes its own surface id:
+
+```bash
+bash ops/secrets/bootstrap_agent_env.sh --check --surface <surface-id> \
+  --require SONAR_TOKEN,SEMGREP_APP_TOKEN
+eval "$(bash ops/secrets/bootstrap_agent_env.sh --export SONAR_TOKEN)"
+```
+
+Credential precedence is fixed by that script: `INFISICAL_CLIENT_ID` /
+`INFISICAL_CLIENT_SECRET` from the surface environment first (for sandboxes with
+no AWS CLI), otherwise the AWS bootstrap ref
+`openclaw-igorbot/infisical-cursor-governance`.
+
+Rules binding on every surface, present and future:
+
+- An adapter environment file carries **bootstrap credentials only**. Adding a
+  capability means registering its secret in `ops/secrets` — never appending a
+  downstream token to an adapter env file.
+- No adapter implements its own resolver, vault path, or bootstrap script. A
+  surface-specific copy of this bootstrap is a contract violation.
+- Values never reach git, logs, receipts, or chat. `--check` reports names and
+  availability only.
+- A provider that cannot be reached is **DEGRADED, reported, and non-fatal** —
+  adapters degrade and continue rather than aborting the session.
+- Refs in `openclaw-igorbot.registry.yaml` marked `provisioned: true` exist.
+  A failure to resolve one is a *delivery* problem for that surface; do not ask
+  a human to mint a replacement secret (`l9-aws-secrets`, CANONICAL_LAW §14).
+
 ## Executable peer carrier
 
 Execution topology lives only in `environment/agents/PEER_RUNTIME_BINDINGS.yaml`.
