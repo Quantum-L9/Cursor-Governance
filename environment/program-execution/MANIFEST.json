@@ -671,7 +671,7 @@
     },
     {
       "path": "compiler/tests/test_cli.py",
-      "sha256": "6d20391bc80c55752c1da55133826b29a28b30417862ac9fe8d9db1281915f91"
+      "sha256": "0612456f0338a9f84754b58e8a7e8cbf51f6cc2fdd93b0045ef2bdadfd863800"
     },
     {
       "path": "compiler/tests/test_intent_schema.py",
@@ -683,7 +683,7 @@
     },
     {
       "path": "compiler/tests/test_resolver.py",
-      "sha256": "ef3bfb11e2607cde51c2d04eca931f62543f65b07393729b8b3b96e6e4cfe02e"
+      "sha256": "884cc613d05309970ced8a2e2a1427484ff7578178e3e3694d8631360a50d072"
     },
     {
       "path": "compiler/tests/test_synthesizer.py",
