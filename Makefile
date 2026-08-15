@@ -370,6 +370,7 @@ peer-execution-validate:
 peer-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B \
 		$(PE_ROOT)/scripts/probe_executable_peers.py
+# Honest BLOCKED (Cursor file-drop / missing Claude host) is inventory, not FAIL.
 
 # Full executable-peer conformance: compose the identity, adapter, program,
 # and readiness gates (Executable Peer Contract v1, section 14).

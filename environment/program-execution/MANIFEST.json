@@ -1107,7 +1107,7 @@
     },
     {
       "path": "scripts/probe_executable_peers.py",
-      "sha256": "edada92a612c7452f378064cc86057e211967bdf21d2d8bd8fbd6a46fbfe93f0"
+      "sha256": "6345e13e777dc6eec9ca34a1003795a50c511ea009c7a63928f6ef30363900a9"
     },
     {
       "path": "scripts/probe_execution_adapters.py",
@@ -1187,7 +1187,7 @@
     },
     {
       "path": "tests/test_probe_command.py",
-      "sha256": "6f8504042717bc639ec170f692b394b19249ca3bd242b48a1d2b965d06717d6f"
+      "sha256": "51827563729563cbe3eb0124fd4abbcbdeffa4c1395bf75f358c130cd0078b68"
     },
     {
       "path": "tests/test_registry_alignment.py",
