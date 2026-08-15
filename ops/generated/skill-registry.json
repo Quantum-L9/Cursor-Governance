@@ -42,7 +42,7 @@
           "remediate the pr",
           "babysit the pr"
         ],
-        "note": "explicit_only + hint_allowed \u2014 Read Diagnose path only; Converge mutate requires explicit fix/remediate/babysit, make-pr handoff, or autonomy packet.\n",
+        "note": "hint_allowed \u2014 Read Diagnose path; remediate-until-green routes via pr_remediation_until_green (below) under packet bounds.\n",
         "positive_signals": [
           "review pr",
           "pull request review",
@@ -53,6 +53,31 @@
           "analyze this pr",
           "pr analysis",
           "diagnose this pr"
+        ],
+        "primary": "l9-pr-remediation",
+        "signal_weight": 8,
+        "supporting": []
+      },
+      {
+        "hint_allowed": true,
+        "id": "pr_remediation_until_green",
+        "negative_signals": [
+          "merge the pr",
+          "merge this pr",
+          "admin merge",
+          "force push"
+        ],
+        "note": "Auto-authorized remediate-until-green for an OPEN PR under a campaign/PE packet: bounded cycles (surface_profile.remediation.max_cycles), then HALT before merge. Merge/force-push/scope-widening remain human-only; merge uses L9_MERGE_AUTHORIZED or the one-shot merge-authorization.json file channel.\n",
+        "positive_signals": [
+          "remediate the pr",
+          "remediate until green",
+          "pr is failing",
+          "fix the failing checks",
+          "ci is red",
+          "get the pr green",
+          "make the pr mergeable",
+          "resolve review threads",
+          "babysit the pr"
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
@@ -952,7 +977,7 @@
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "PR Diagnose (hint) + Converge remediation (concurrent clusters, push + review replies) \u2014 high blast radius, explicit only; hint_allowed for read-only Diagnose",
+      "reason": "Diagnose remains hint-routeable; remediation is auto-authorized only as remediate-until-green-and-mergeable under a campaign/PE packet (surface_profile.remediation: max_cycles 5, then HALT before merge). Merge, force-push, and scope widening stay human-only.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1112,6 +1137,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "d3c0a64ad6df41192e133c1b06889c89966355e611fc194f259e7644e6477a7d",
-  "source_skill_corpus_sha256": "c254eb2216d5dabd48de2a2068a39bd1d0b45818e30f83cf14493ff9d1ff0c28"
+  "source_manifest_sha256": "c118c2a2b2668ed59d397d1baab83e1fac6fe41543017c8ec98abb78bd55129b",
+  "source_skill_corpus_sha256": "d3d0a7e446b197508f472b0acac422eaa4756400911b8b7639c40f769b315196"
 }

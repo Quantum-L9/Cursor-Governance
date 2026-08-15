@@ -18,6 +18,10 @@
       "mode": "read_only",
       "note": "validate_legacy_doctrine_residue.py — greps only"
     },
+    "gh-package-deps-preflight": {
+      "mode": "read_only",
+      "note": "validate_gh_package_deps.py — reads package files; optional live registry metadata check"
+    },
     "sync-generated-artifacts": {
       "mode": "writer",
       "output_prefixes": [

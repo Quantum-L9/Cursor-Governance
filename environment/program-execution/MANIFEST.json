@@ -403,7 +403,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "aecc91929617ab73c9e2ac27e761c31b578ed85626ba685828299bb6536a1909"
+      "sha256": "f098e858d11e07528ce5d0a52588b61535607612762675ec851aeb3e2e6c26f4"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -607,7 +607,7 @@
     },
     {
       "path": "compiler/blueprint_validate.py",
-      "sha256": "21e4b0c9b3c54ebf17e23d5ce4ba9092b410ec88b3fcc67f18e91c55147912d6"
+      "sha256": "cb063e98d3a84813a859899e468a479b1a78a11b9e2b6f0d716df1500c33a952"
     },
     {
       "path": "compiler/cli.py",

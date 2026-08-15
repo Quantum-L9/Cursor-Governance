@@ -667,12 +667,46 @@ def cmd_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _fresh_conflicts(data: list[Any], now: datetime | None = None) -> list[Any]:
+    """Drop conflict edges whose expired_at / invalid_at timestamps are past.
+
+    Factory repair 2026-08-15: stale, unrelated conflict edges previously
+    blocked phase-lock acquisition long after expiring. Freshness filtering is
+    the default; opt back in with --include-expired.
+    """
+    if now is None:
+        now = datetime.now(UTC)
+    fresh: list[Any] = []
+    for edge in data:
+        if not isinstance(edge, dict):
+            fresh.append(edge)
+            continue
+        stale = False
+        for key in ("expired_at", "invalid_at"):
+            value = edge.get(key)
+            if isinstance(value, str):
+                try:
+                    if datetime.fromisoformat(value.replace("Z", "+00:00")) < now:
+                        stale = True
+                        break
+                except ValueError:
+                    continue
+            elif isinstance(value, (int, float)) and 0 < value < now.timestamp():
+                stale = True
+                break
+        if not stale:
+            fresh.append(edge)
+    return fresh
+
+
 def cmd_conflicts(_args: argparse.Namespace) -> int:
     load_env()
     group_id = resolve_group_id(Path.cwd()).get("group_id")
     if not group_id:
         raise SystemExit("no group_id")
     data = _search_group("conflicts_with", group_id, limit=20)
+    if not getattr(_args, "include_expired", False):
+        data = _fresh_conflicts(data)
     print(json.dumps({"group_id": group_id, "conflicts": data}, indent=2))
     return 0
 
@@ -739,7 +773,10 @@ def main() -> int:
     p_bootstrap.add_argument("--group-id", default=None)
     p_stats = sub.add_parser("stats")
     p_stats.add_argument("--group", default=None)
-    sub.add_parser("conflicts")
+    p_conflicts = sub.add_parser("conflicts")
+    p_conflicts.add_argument(
+        "--include-expired", action="store_true", help="include expired/invalidated conflict edges"
+    )
     sub.add_parser("phase-lock")
     p_autoseed = sub.add_parser("autoseed-check")
     p_autoseed.add_argument("--group-id", default=None)
