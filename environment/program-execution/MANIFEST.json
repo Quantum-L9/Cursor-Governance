@@ -418,6 +418,10 @@
       "sha256": "0d4c92ae9df397e49aa23cce7051325911bba7711fe8ae1f47b6d728543ba73c"
     },
     {
+      "path": "campaigns/PE_COMPILER_MODULE_ALIGNMENT.yaml",
+      "sha256": "44e76163da0b89feb225618483dcdb77582cb6911a490c97f05cffb91b5d928c"
+    },
+    {
       "path": "campaigns/README.md",
       "sha256": "b5869199051b6ca79aadc0aaffbcdcd6c1dba7e6932a9c6ff1c173752d3c2289"
     },
@@ -444,6 +448,10 @@
     {
       "path": "campaigns/bounded-replanning-v1/source-integrity-receipt.json",
       "sha256": "1ca2176712392500b6a44441262f431453b7f4e2c2cc7da648041cbf3c104a33"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "b364d3556281d8046cc0f3aefc550f13f779f2cb8736f3e2ac05879e1225a8c6"
     },
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml",
@@ -476,6 +484,10 @@
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json",
       "sha256": "ac6aabbd6df3fa9a112939512e02f7f08fea429417e0558aaa2f3f1d837b7259"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "99b14a38d384741d06c907dbf5af589ee2988ae04ed4932faf93865263ee9f3f"
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml",
@@ -584,6 +596,10 @@
     {
       "path": "campaigns/scripts/test_close_campaign.py",
       "sha256": "121b10c566dbf4ace506bc0252948f7d56d113643256071969493112b9ec8efc"
+    },
+    {
+      "path": "compiler/README.md",
+      "sha256": "ac04ed0a73c753bac833c6c3a5888dfb274f3e7caa73410bcc74ce36bcc7cad3"
     },
     {
       "path": "conformance/README.md",

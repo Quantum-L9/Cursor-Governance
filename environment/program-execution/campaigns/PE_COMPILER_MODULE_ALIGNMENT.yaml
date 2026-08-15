@@ -1,0 +1,126 @@
+schema: l9.program-execution.auth-001-supersession.v1
+schema_version: 1.0.0
+supersession_id: AUTH-001-PE-COMPILER-IN-TREE-2026-08-14
+authority: AUTH-001
+owner: Igor Beylin
+issued_at: '2026-08-14T00:00:00Z'
+status: accepted
+kind: operator_target_and_placement_supersession
+
+# Immutable seeds stay sealed. This receipt overrides execution binding only.
+preserves_immutable_sources: true
+does_not_mutate:
+  - environment/program-execution/campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml
+  - environment/program-execution/campaigns/cc-pe-intent-compiler-v1/CONTRACT_SOURCE.md
+  - environment/program-execution/campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json
+  - environment/program-execution/campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml
+  - environment/program-execution/campaigns/l9-devpack-program-execution-hardening/PROGRAM_SOURCE.md
+  - environment/program-execution/campaigns/l9-devpack-program-execution-hardening/source-integrity-receipt.json
+  - environment/program-execution/campaigns/cc-pe-intent-compiler-v1/handoff/handoff.json
+  - environment/program-execution/campaigns/l9-devpack-program-execution-hardening/handoff/handoff.json
+
+reason: >
+  Operator correction: l9-devpack-compiler is not a separate git repository.
+  It is a Program Execution module. Building that module is the intent-compiler
+  campaign. Hardening remediates the same module. Admission UNK-001 that waited
+  for a foreign repo is a misread of the sample user goal, not a missing clone.
+
+repository:
+  id: Quantum-L9/Cursor-Governance
+  kind: git_repository
+  reachability: in_scope
+  source_of_truth: environment/program-execution
+
+module:
+  logical_name: l9-devpack-compiler
+  kind: pe_module
+  path: environment/program-execution/compiler
+  role: compiler_boundary
+  emits: program-execution-blueprint.v2
+  must_not_become: runtime_controller
+  sample_user_goal: >
+    Evolve l9-devpack-compiler so I can give it a simple goal and it handles
+    the full execution pipeline autonomously.
+  sample_user_goal_means: >
+    The compiler module accepts sparse natural-language intent. It is not a
+    request to create or attach Quantum-L9/l9-devpack-compiler.
+
+prohibited:
+  - create_repository_quantum_l9_l9_devpack_compiler
+  - attach_foreign_compiler_repo_as_TASK_001_target
+  - treat_sample_intent_target_as_missing_clone
+  - second_runtime_controller
+  - compiler_owned_mutable_runtime_state
+
+campaigns:
+  - id: cc-pe-intent-compiler-v1
+    role: build
+    sequence: 1
+    objective: >
+      Implement program-execution.intent.v1, Intent Resolver, Program
+      Synthesizer, official-validator adapter, and minimal front door as the
+      PE compiler module.
+    target_repository_id: Quantum-L9/Cursor-Governance
+    target_module_path: environment/program-execution/compiler
+    supersedes_registration_fields:
+      program.target_repository_id: l9-devpack-compiler
+      program.target_reachability: out_of_scope_in_this_session
+    unk_001: resolved
+    unk_001_resolution: >
+      No separate compiler repository is required. Bind Cursor-Governance and
+      implement under environment/program-execution/compiler.
+    next_action: >
+      Execute CONTRACT_SOURCE.md in-tree against the PE compiler module.
+      Quality Gates A–F remain the campaign gates.
+
+  - id: l9-devpack-program-execution-hardening
+    role: harden
+    sequence: 2
+    depends_on:
+      - cc-pe-intent-compiler-v1
+    objective: >
+      Harden the same PE compiler module into a provenance-safe compiler and
+      intermediate representation that emits Blueprint v2 authority without
+      becoming a competing runtime.
+    target_repository_id: Quantum-L9/Cursor-Governance
+    target_module_path: environment/program-execution/compiler
+    supersedes_registration_fields:
+      program.target_repository_id: l9-devpack-compiler
+      program.target_reachability: out_of_scope_in_this_session
+      program.blocking_unknown: UNK-001
+    supersedes_program_source_scope:
+      exclude_modifications_to_cursor_governance_program_execution_core: superseded
+      allowed_now:
+        - environment/program-execution/compiler
+        - compiler projection seams required to emit Blueprint v2
+      still_forbidden:
+        - second runtime controller
+        - compiler-owned mutable runtime state
+        - remote mutation
+        - weaken validators or delete tests to pass
+    unk_001: resolved
+    unk_001_resolution: >
+      Bind Quantum-L9/Cursor-Governance at the Controller-managed base SHA.
+      The mutable surface is environment/program-execution/compiler, not a
+      foreign repository_id=l9-devpack-compiler.
+    next_action: >
+      After the build campaign materializes the module (or in the same
+      worktree once the module home exists), apply REMEDIATION_DESIGN.md to
+      that module. TASK-002–TASK-007 unblock when TASK-001 binds this repo.
+
+deferred:
+  - id: l9-ecosystem-fix-plan
+    reason: Operator directed Odoo last. This supersession does not admit IB-Odoo_19 work.
+
+out_of_scope:
+  - bounded-replanning-v1
+  - CG-PES-RUN2-HARDENING
+  - creating any new git repository
+
+alignment_rules:
+  - one_repository: Quantum-L9/Cursor-Governance
+  - one_module: environment/program-execution/compiler
+  - one_runtime: existing Program Execution Controller
+  - build_then_harden: true
+  - historical_admission_handoffs_remain_evidence: true
+  - current_execution_authority: this_supersession
