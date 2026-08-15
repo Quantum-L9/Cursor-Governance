@@ -18,6 +18,13 @@
     "note": "The formatter-ownership block in CLAUDE.md is the only ownership carrier that survives a clone into a Claude Code Web/Mobile sandbox."
   },
   "surfaces": {
+    "installer": {
+      "shared": "install.sh",
+      "note": "ONE installer for every surface. Surface entrypoints are thin callers that do only what their surface uniquely needs, then delegate. Adapter wiring belongs in install.sh, never in a caller.",
+      "cli": "make claude-install (WS=<repo>) -> install.sh",
+      "web_mobile": "web/setup.bootstrap.sh -> web/setup.sh -> install.sh",
+      "dependency_policy": "uv.lock is the sole source of interpreter and dependency versions; applied via the ops/scripts/ensure_uv_environment.sh wrapper. No adapter file re-declares a pin."
+    },
     "skills": {
       "cli": "$HOME/.claude/skills/ (user scope, reconciled by setup_claude_code_plugins.sh)",
       "web_mobile": "referenced from the governance clone created by web/setup.sh"

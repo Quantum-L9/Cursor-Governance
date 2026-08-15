@@ -32,6 +32,7 @@ HERE = Path(__file__).resolve().parent
 
 REQUIRED_FILES: tuple[str, ...] = (
     "README.md",
+    "install.sh",
     "render.claude.json",
     "settings.template.json",
     "mcp.template.json",
@@ -190,6 +191,46 @@ def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
         print("  OK: web/setup.sh pins governance to $HOME/.cursor-governance")
 
 
+def check_dependency_policy(failures: list[str]) -> None:
+    """uv.lock is the only source of dependency and interpreter versions.
+
+    The adapter must apply it through the ``ensure_uv_environment.sh`` wrapper
+    and must never re-declare a governance runtime dependency by name — a second
+    version list drifts from the lock silently and installs into whatever
+    interpreter happens to be on PATH.
+    """
+    installer = HERE / "install.sh"
+    if not installer.is_file():
+        _fail("missing install.sh — the shared adapter installer", failures)
+        return
+    text = installer.read_text(encoding="utf-8")
+    if "ensure_uv_environment.sh" in text:
+        print("  OK: install.sh applies uv.lock via ensure_uv_environment.sh")
+    else:
+        _fail("install.sh must apply uv.lock via ops/scripts/ensure_uv_environment.sh", failures)
+
+    # Runtime deps owned by the governance pyproject/uv.lock. Naming one in an
+    # install command means a pin was rewritten instead of being consumed.
+    governed = ("pydantic", "pyyaml", "structlog", "langgraph", "jsonschema")
+    install_re = re.compile(r"(?:pip|uv pip)\s+install[^\n|&;]*", re.IGNORECASE)
+    before = len(failures)
+    for path in sorted(HERE.rglob("*.sh")):
+        try:
+            body = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for command in install_re.findall(body):
+            named = [dep for dep in governed if dep in command.lower()]
+            if named:
+                _fail(
+                    f"{path.relative_to(HERE)} installs governed dependencies by name "
+                    f"({', '.join(named)}); consume uv.lock instead",
+                    failures,
+                )
+    if len(failures) == before:
+        print("  OK: no adapter script re-declares a governed dependency pin")
+
+
 def check_memory_identity_distinct(failures: list[str]) -> None:
     """Claude Code's memory identity must differ from Cursor's (`cursor_agent`).
 
@@ -278,6 +319,7 @@ def main() -> int:
     check_no_secrets(failures)
     check_mcp_uses_env_refs(failures)
     check_setup_linux_sandbox_hygiene(failures)
+    check_dependency_policy(failures)
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
     check_memory_enforcement(failures)
