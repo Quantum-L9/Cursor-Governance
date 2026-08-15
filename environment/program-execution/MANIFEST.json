@@ -1175,11 +1175,11 @@
     },
     {
       "path": "scripts/tests/test_campaign_pr_copy.py",
-      "sha256": "2ac691a09dae2e7fc8270afd16fd612dfddcfddd5827f56bbe6c63f3c0169682"
+      "sha256": "ead6054e3c6332980b8083cedc4cf296355d1ef681248d3b247035fd650c8144"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "e47ee23372942214f5a373032d236d8f387cdbca9e9509304a4ff5d87d55f59b"
+      "sha256": "d006c8ebe4d580ff65b04ef8bda1bc5641d20f95dbe7c9d06296e8bec9bf5982"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
