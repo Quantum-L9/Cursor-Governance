@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution.intent.v1",
+  "title": "Program Execution Intent v1",
+  "description": "Minimal user-facing goal-level entry contract for the Program Execution intent compiler. Only information that cannot be safely discovered may be required. Optional constraints may only narrow the active policy profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "objective"],
+  "properties": {
+    "schema": {
+      "const": "program-execution.intent.v1"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "policy_profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "termination": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": ["program_handoff", "authority_boundary"]
+        },
+        "convergence_owner": {
+          "type": "string"
+        }
+      }
+    },
+    "constraints": {
+      "description": "Optional user-supplied constraints. Narrowing only: they may reduce scope or lower permission ceilings, never widen the active policy profile.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "include": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "permission_ceiling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "inspect": {
+              "type": "boolean"
+            },
+            "local_write": {
+              "type": "boolean"
+            },
+            "commit": {
+              "type": "boolean"
+            },
+            "push": {
+              "type": "boolean"
+            },
+            "pull_request": {
+              "type": "boolean"
+            },
+            "merge": {
+              "type": "boolean"
+            },
+            "publish_or_release": {
+              "type": "boolean"
+            },
+            "deploy_or_migrate": {
+              "type": "boolean"
+            },
+            "destructive_change": {
+              "type": "boolean"
+            },
+            "external_message": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

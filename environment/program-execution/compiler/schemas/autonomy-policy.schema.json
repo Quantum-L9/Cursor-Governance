@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution.autonomy-policy.v1",
+  "title": "Program Execution Autonomy Policy v1",
+  "description": "Referenced autonomy profiles for Program Execution programs. Overlays may narrow, never widen.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "execution", "planning", "decisions", "authorization_ceiling", "verification", "unknowns", "replanning"],
+  "properties": {
+    "schema": {
+      "const": "program-execution.autonomy-policy.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*\\.v[0-9]+$"
+    },
+    "provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "default_owner": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["continue_until"],
+      "properties": {
+        "continue_until": {
+          "enum": ["blocking_authority_boundary", "final_handoff", "first_failure"]
+        }
+      }
+    },
+    "planning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generate_tasks",
+        "reorder_independent_tasks",
+        "split_tasks",
+        "merge_tasks",
+        "repair_failed_plan",
+        "create_scoped_unknowns"
+      ],
+      "properties": {
+        "generate_tasks": {
+          "type": "boolean"
+        },
+        "reorder_independent_tasks": {
+          "type": "boolean"
+        },
+        "split_tasks": {
+          "type": "boolean"
+        },
+        "merge_tasks": {
+          "type": "boolean"
+        },
+        "repair_failed_plan": {
+          "type": "boolean"
+        },
+        "create_scoped_unknowns": {
+          "type": "boolean"
+        }
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_determined",
+        "policy_determined",
+        "reversible_planning_choice",
+        "architecture_change",
+        "public_contract_change",
+        "permission_expansion",
+        "irreversible_risk_acceptance"
+      ],
+      "properties": {
+        "evidence_determined": {
+          "enum": ["auto", "require_authority"]
+        },
+        "policy_determined": {
+          "enum": ["auto", "require_authority"]
+        },
+        "reversible_planning_choice": {
+          "enum": ["auto", "require_authority"]
+        },
+        "architecture_change": {
+          "enum": ["auto", "require_authority"]
+        },
+        "public_contract_change": {
+          "enum": ["auto", "require_authority"]
+        },
+        "permission_expansion": {
+          "enum": ["auto", "require_authority"]
+        },
+        "irreversible_risk_acceptance": {
+          "enum": ["auto", "require_authority"]
+        }
+      }
+    },
+    "authorization_ceiling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inspect",
+        "local_write",
+        "commit",
+        "push",
+        "pull_request",
+        "merge",
+        "publish_or_release",
+        "deploy_or_migrate",
+        "destructive_change",
+        "external_message"
+      ],
+      "properties": {
+        "inspect": {
+          "type": "boolean"
+        },
+        "local_write": {
+          "type": "boolean"
+        },
+        "commit": {
+          "type": "boolean"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "pull_request": {
+          "type": "boolean"
+        },
+        "merge": {
+          "type": "boolean"
+        },
+        "publish_or_release": {
+          "type": "boolean"
+        },
+        "deploy_or_migrate": {
+          "type": "boolean"
+        },
+        "destructive_change": {
+          "type": "boolean"
+        },
+        "external_message": {
+          "type": "boolean"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["independent", "worker_self_verification"],
+      "properties": {
+        "independent": {
+          "enum": ["required", "optional"]
+        },
+        "worker_self_verification": {
+          "enum": ["insufficient", "sufficient"]
+        }
+      }
+    },
+    "unknowns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["block_only_dependents", "resolve_from_authoritative_evidence"],
+      "properties": {
+        "block_only_dependents": {
+          "type": "boolean"
+        },
+        "resolve_from_authoritative_evidence": {
+          "type": "boolean"
+        }
+      }
+    },
+    "replanning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_within_locked_authority", "authority_widening"],
+      "properties": {
+        "allowed_within_locked_authority": {
+          "type": "boolean"
+        },
+        "authority_widening": {
+          "enum": ["forbidden", "owner_only"]
+        }
+      }
+    }
+  }
+}
