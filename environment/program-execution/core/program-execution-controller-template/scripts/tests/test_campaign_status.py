@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from helpers import bootstrap_repo, register_contract, run_cli
+from helpers import bootstrap_repo, cleanup_worktree, prepare_attempt, register_contract, run_cli
 
 
 class CampaignStatusTest(unittest.TestCase):
@@ -35,6 +35,77 @@ class CampaignStatusTest(unittest.TestCase):
             restored = json.loads(receipt.read_text(encoding="utf-8"))
             self.assertEqual(restored["runtime_status"], "active")
             self.assertEqual(restored["actor"], "worker-a")
+
+    def test_export_handoff_completes_runtime_status(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            prepare_attempt(temp, workspace)
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            evidence_id = verification["evidence_id"]
+            run_cli(
+                "evaluate-gate",
+                "GATE-001",
+                "PASS",
+                "--workspace",
+                str(workspace),
+                "--evidence-id",
+                evidence_id,
+                "--method",
+                "independent verification",
+                "--actor",
+                "controller",
+            )
+            run_cli(
+                "complete",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "operator",
+                "--evidence-id",
+                evidence_id,
+            )
+            receipt = run_cli(
+                "export-handoff",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "operator",
+                "--output",
+                str(temp / "handoff.json"),
+            )
+            self.assertEqual(receipt["recommended_program_verdict"], "CONVERGED")
+            status = json.loads((workspace / "runtime" / "campaign-status.json").read_text())
+            self.assertEqual(status["runtime_status"], "completed")
+            self.assertEqual(status["verdict"], "CONVERGED")
+            self.assertEqual(
+                run_cli("status", "--workspace", str(workspace))["campaign_status"][
+                    "runtime_status"
+                ],
+                "completed",
+            )
+            cleanup_worktree(repo, workspace)
+
+    def test_pec_close_marks_completed(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            closed = run_cli(
+                "close",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "AUTH-001",
+                "--verdict",
+                "CONVERGED",
+                "--evidence",
+                "pull_request=https://example.test/pr/1",
+            )
+            self.assertEqual(closed["runtime_status"], "completed")
+            self.assertEqual(closed["verdict"], "CONVERGED")
+            cleanup_worktree(repo, workspace)
 
 
 if __name__ == "__main__":
