@@ -309,9 +309,9 @@ decisions:
 authorization_ceiling:
   inspect: true
   local_write: true
-  commit: false
-  push: false
-  pull_request: false
+  commit: true
+  push: true
+  pull_request: true
   merge: false
   publish_or_release: false
   deploy_or_migrate: false

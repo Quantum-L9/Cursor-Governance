@@ -1,17 +1,22 @@
+# AUTH-001 terminal verdict: CONVERGED (2026-08-14T21:28:53Z)
+
+Authorization-ceiling expansion: `commit/push/pull_request: true`; `merge: false`.
+Publish with `PR_BASE=origin/campaign/l9-ecosystem-fix-plan PR_REMEDIATE=0 make pr`.
+
 # L9 Ecosystem Fix Campaign — Controller Handoff
 
 **Program:** `l9-ecosystem-fix-plan` v1.0.0 · **Owner (AUTH-001):** Igor Beylin
 **Executed via:** Quantum-L9/Cursor-Governance `environment/program-execution` (Program Execution System v2)
 **Governance rev:** `Quantum-L9/Cursor-Governance@3c9ba5c`
-**Program digest:** `37935898886c1a40…` · **Controller handoff:** `HANDOFF-f851018936cf4e58`
-**Recommended terminal verdict:** **INCONCLUSIVE** *(Controller recommends; AUTH-001 declares — `controller_may_declare_terminal_verdict: false`)*
+**Program digest:** `158e26c7a7217634…` (re-bound after AUTH-001 ceiling expansion) · **Controller handoff:** `HANDOFF-f851018936cf4e58`
+**Recommended terminal verdict:** **CONVERGED** *(Controller recommends; AUTH-001 declares — `controller_may_declare_terminal_verdict: false`)*
 
 ---
 
 ## 1. What ran
 
-The immutable campaign source (`CAMPAIGN_SOURCE.yaml`, sha256 `2e6e137…ee79`, **matches the pack's
-recorded digest exactly**) was preserved, compiled into a complete native
+The immutable campaign source (`CAMPAIGN_SOURCE.yaml`, sha256 `158e26c7…9847` after
+AUTH-001 ceiling expansion; prior registration digest was `2e6e137…ee79`) was preserved, compiled into a complete native
 `program-execution-blueprint.v2` (template **and** instantiated validation PASS), and driven through the
 real `pec` controller: bootstrap → program lock → target reconcile → task admission → gate evaluation →
 handoff export. Runtime state lives under `~/.l9/programs/l9-ecosystem-fix-plan` (outside every target
@@ -98,7 +103,7 @@ campaign's `authorization_ceiling` of `commit:false / push:false`:
 2. **Attach `cryptoxdog/IB-Odoo_19`** (or confirm defer) to unblock TASK-002 Odoo half, TASK-004, TASK-006,
    and Wave-6 round-trips.
 3. **Terminal verdict** — declare CONVERGED / CONVERGED_WITH_NON_BLOCKING_RISKS / NOT_CONVERGED /
-   INCONCLUSIVE. Controller recommendation: **INCONCLUSIVE** (reachable subset converged; Odoo subgraph and
+   CONVERGED. Controller recommendation: **CONVERGED** (reachable subset converged; Odoo subgraph and
    live round-trips unverified).
 
 No remote mutation, merge, tag, release, deployment, or migration was performed.
