@@ -54,8 +54,9 @@
     { "path": ".biomeignore", "tier": "managed", "rule": "managed" },
     { "path": ".python-version", "tier": "managed", "rule": "managed" },
     { "path": ".cursorignore", "tier": "managed", "rule": "managed" },
-    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" },
-    { "path": "governance-health-report.json", "tier": "regenerable", "rule": "regenerable" },
-    { "path": ".harvest_executor_state.json", "tier": "regenerable", "rule": "regenerable" }
-  ]
+    { "path": ".governance-build-lock", "tier": "managed", "rule": "managed" },
+    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" }
+  ],
+  "exempt_root_files": [],
+  "inventory_note": "Inventory completeness (validate_root_file_protection.py --strict-inventory or default reconcile): every tracked repo-root file (git ls-files, case-exact) must appear in protected_files or exempt_root_files, and every entry must name a tracked root file. Runtime-only artifacts that are gitignored (e.g. .harvest_executor_state.json, governance-health-report.json) are NOT tracked and must NOT be registered here; they are governed by .gitignore, not by this append-only gate."
 }

@@ -119,6 +119,28 @@ invariants:
         pattern: "reports/|workflows/)"
         present: false
 
+  - id: root-inventory-complete
+    priority: P2
+    statement: >-
+      Root-file protection reconciles the COMPLETE tracked root inventory
+      (case-exact) against the registry every run, not just PR-changed files;
+      runtime/gitignored artifacts are not registered as protected root files.
+    projections:
+      - type: file_exists
+        path: ops/config/root-file-protection.json
+      - type: file_contains
+        path: ops/scripts/validate_root_file_protection.py
+        pattern: "reconcile_root_inventory"
+        present: true
+      - type: file_contains
+        path: ops/config/root-file-protection.json
+        pattern: ".governance-build-lock"
+        present: true
+      - type: file_contains
+        path: ops/config/root-file-protection.json
+        pattern: "\"governance-health-report.json\", \"tier\""
+        present: false
+
   - id: pr-template-surfaces
     priority: P1
     statement: >-
