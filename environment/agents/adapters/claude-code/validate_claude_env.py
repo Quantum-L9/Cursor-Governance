@@ -65,6 +65,14 @@ SECRET_RE = re.compile(
 )
 
 
+def _governance_root() -> Path:
+    """Walk up to the governance clone root (CANONICAL_LAW.md / .git marker)."""
+    for parent in HERE.parents:
+        if (parent / "CANONICAL_LAW.md").is_file() or (parent / ".git").exists():
+            return parent
+    return HERE
+
+
 def _fail(msg: str, failures: list[str]) -> None:
     print(f"  FAIL: {msg}")
     failures.append(msg)
@@ -201,13 +209,50 @@ def check_dependency_policy(failures: list[str]) -> None:
     """
     installer = HERE / "install.sh"
     if not installer.is_file():
-        _fail("missing install.sh — the shared adapter installer", failures)
+        _fail("missing install.sh — the Claude Code adapter installer", failures)
         return
     text = installer.read_text(encoding="utf-8")
-    if "ensure_uv_environment.sh" in text:
-        print("  OK: install.sh applies uv.lock via ensure_uv_environment.sh")
+
+    # The adapter must DELEGATE to the shared, surface-agnostic bootstrap rather
+    # than applying the lock itself — every agent surface uses that one path.
+    if "bootstrap_agent_environment.sh" not in text:
+        _fail(
+            "install.sh must delegate to ops/scripts/bootstrap_agent_environment.sh "
+            "(the bootstrap shared by every agent surface)",
+            failures,
+        )
+        return
+    print("  OK: install.sh delegates to the shared agent bootstrap")
+
+    shared = _governance_root() / "ops" / "scripts" / "bootstrap_agent_environment.sh"
+    if not shared.is_file():
+        _fail("missing ops/scripts/bootstrap_agent_environment.sh", failures)
+    elif "ensure_uv_environment.sh" in shared.read_text(encoding="utf-8"):
+        print("  OK: shared bootstrap applies uv.lock via ensure_uv_environment.sh")
     else:
-        _fail("install.sh must apply uv.lock via ops/scripts/ensure_uv_environment.sh", failures)
+        _fail(
+            "shared bootstrap must apply uv.lock via ops/scripts/ensure_uv_environment.sh",
+            failures,
+        )
+
+    # Generic machinery must not creep back into the vendor adapter, or the
+    # surfaces silently diverge again.
+    adapter_only = {
+        "ensure_uv_environment.sh": "locked toolchain",
+        "gitleaks": "checker provisioning",
+        "hydrate_infisical": "secret resolution",
+        "scratch_hold.py": "scratch-hold restore",
+    }
+    leaked = [f"{token} ({why})" for token, why in adapter_only.items() if token in text]
+    if leaked:
+        _fail(
+            "install.sh re-implements shared bootstrap concerns: "
+            + ", ".join(leaked)
+            + " — move them to ops/scripts/bootstrap_agent_environment.sh",
+            failures,
+        )
+    else:
+        print("  OK: adapter holds vendor wiring only; generic concerns stay shared")
 
     # Runtime deps owned by the governance pyproject/uv.lock. Naming one in an
     # install command means a pin was rewritten instead of being consumed.
