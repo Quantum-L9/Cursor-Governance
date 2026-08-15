@@ -3,15 +3,15 @@
 
 from __future__ import annotations
 
-import json
+import copy
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "ops" / "scripts" / "workspace_clean.py"
 sys.path.insert(0, str(ROOT / "ops" / "scripts"))
 import workspace_clean as wc  # noqa: E402
 
@@ -35,8 +35,12 @@ def _init_repo(path: Path, remote: str) -> Path:
     return path
 
 
-def test_classify(routing: dict) -> list[str]:
-    errors: list[str] = []
+@pytest.fixture
+def routing() -> dict:
+    return wc.load_routing(ROOT)
+
+
+def test_classify(routing: dict) -> None:
     cases = [
         ("scripts/claude-deepseek.sh", False, "ship", "cursor-governance"),
         (".cursor/rules/claude-code-deepseek.mdc", False, "ship", "cursor-governance"),
@@ -50,20 +54,18 @@ def test_classify(routing: dict) -> list[str]:
         verdict = wc.classify_path(
             rel, routing=routing, current_dest="website-bot", tracked=tracked
         )
-        if verdict["action"] != action or (dest and verdict["dest"] != dest):
-            errors.append(f"classify {rel}: got {verdict} want action={action} dest={dest}")
-    return errors
+        assert verdict["action"] == action, f"{rel}: {verdict}"
+        if dest:
+            assert verdict["dest"] == dest, f"{rel}: {verdict}"
 
 
-def test_plan_and_apply(tmp: Path, routing: dict) -> list[str]:
-    del routing
-    errors: list[str] = []
+def test_plan_and_apply(tmp_path: Path, routing: dict) -> None:
     ws = _init_repo(
-        tmp / "Website-Bot",
+        tmp_path / "Website-Bot",
         "git@github.com:Quantum-L9/Website-Bot.git",
     )
     gov = _init_repo(
-        tmp / "cursor-governance",
+        tmp_path / "cursor-governance",
         "git@github.com:Quantum-L9/Cursor-Governance.git",
     )
     (ws / "scripts").mkdir()
@@ -74,66 +76,29 @@ def test_plan_and_apply(tmp: Path, routing: dict) -> list[str]:
     (ws / "mystery").mkdir()
     (ws / "mystery" / "untracked.txt").write_text("nope\n", encoding="utf-8")
 
-    # Point routing clones at the fixtures.
-    routing_path = ROOT / "ops" / "config" / "workspace-clean-routing.yaml"
-    original = routing_path.read_text(encoding="utf-8")
-    patched = original.replace("$HOME/.cursor-governance", str(gov)).replace(
-        "$HOME/Website-Bot", str(ws)
-    )
-    routing_path.write_text(patched, encoding="utf-8")
-    os.environ["L9_WORKSPACE_CLEAN_HOME"] = str(tmp / "state")
-    try:
-        plan = wc.build_plan(ws, ROOT, "main")
-        if not plan["ambiguous"]:
-            errors.append("expected mystery/untracked.txt to block")
-        (ws / "mystery" / "untracked.txt").unlink()
-        (ws / "mystery").rmdir()
-        plan = wc.build_plan(ws, ROOT, "main")
-        if plan["blocked"]:
-            errors.append(f"expected unblocked plan after removing mystery: {plan['ambiguous']}")
-        dests = plan["destinations"]
-        if "cursor-governance" not in dests or "scripts/claude-deepseek.sh" not in dests[
-            "cursor-governance"
-        ]["paths"]:
-            errors.append(f"deepseek not routed to governance: {dests}")
-        if "website-bot" not in dests or "packages/bot-interop/package-lock.json" not in dests[
-            "website-bot"
-        ]["paths"]:
-            errors.append(f"interop not routed to website-bot: {dests}")
-        skip_paths = {row["path"] for row in plan["skipped"]}
-        if ".env.local" not in skip_paths:
-            errors.append("expected .env.local skipped")
+    routed = copy.deepcopy(routing)
+    routed["destinations"]["cursor-governance"]["clone_paths"] = [str(gov)]
+    routed["destinations"]["website-bot"]["clone_paths"] = [str(ws)]
+    os.environ["L9_WORKSPACE_CLEAN_HOME"] = str(tmp_path / "state")
 
-        applied = wc.apply_plan(plan, remote=False, sweep=True)
-        if applied.get("errors"):
-            errors.append(f"apply errors: {applied['errors']}")
-        if (ws / "scripts" / "claude-deepseek.sh").exists():
-            errors.append("expected deepseek swept from Website-Bot after ship")
-        if (ws / ".env.local").exists() is False:
-            errors.append("must not sweep secrets")
-        shipped_gov = (applied.get("shipped") or {}).get("cursor-governance") or {}
-        wt = shipped_gov.get("worktree")
-        if not wt or not (Path(wt) / "scripts" / "claude-deepseek.sh").is_file():
-            errors.append(f"governance worktree missing shipped script: {shipped_gov}")
-    finally:
-        routing_path.write_text(original, encoding="utf-8")
-    return errors
+    plan = wc.build_plan(ws, ROOT, "main", routing=routed)
+    assert plan["ambiguous"], "expected mystery/untracked.txt to block"
+    (ws / "mystery" / "untracked.txt").unlink()
+    (ws / "mystery").rmdir()
+    plan = wc.build_plan(ws, ROOT, "main", routing=routed)
+    assert not plan["blocked"], plan["ambiguous"]
+    dests = plan["destinations"]
+    assert "cursor-governance" in dests
+    assert "scripts/claude-deepseek.sh" in dests["cursor-governance"]["paths"]
+    assert "website-bot" in dests
+    assert "packages/bot-interop/package-lock.json" in dests["website-bot"]["paths"]
+    skip_paths = {row["path"] for row in plan["skipped"]}
+    assert ".env.local" in skip_paths
 
-
-def main() -> int:
-    routing = wc.load_routing(ROOT)
-    errors = test_classify(routing)
-    with tempfile.TemporaryDirectory() as tmp:
-        errors.extend(test_plan_and_apply(Path(tmp), routing))
-    if errors:
-        print("FAIL")
-        for err in errors:
-            print(f"  {err}")
-        return 1
-    print("PASS: test_workspace_clean")
-    print(json.dumps({"schema": wc.SCHEMA, "cases": 7}, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    applied = wc.apply_plan(plan, remote=False, sweep=True)
+    assert not applied.get("errors"), applied.get("errors")
+    assert not (ws / "scripts" / "claude-deepseek.sh").exists()
+    assert (ws / ".env.local").exists()
+    shipped_gov = (applied.get("shipped") or {}).get("cursor-governance") or {}
+    wt = shipped_gov.get("worktree")
+    assert wt and (Path(wt) / "scripts" / "claude-deepseek.sh").is_file()

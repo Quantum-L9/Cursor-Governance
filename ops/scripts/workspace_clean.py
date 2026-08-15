@@ -166,13 +166,16 @@ def resolve_clone(dest: dict[str, Any]) -> Path | None:
     return None
 
 
-def build_plan(ws: Path, gov_root: Path, baseline: str) -> dict[str, Any]:
-    routing = load_routing(gov_root)
+def build_plan(
+    ws: Path,
+    gov_root: Path,
+    baseline: str,
+    routing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    routing = routing if routing is not None else load_routing(gov_root)
     current_dest = current_destination(ws, routing)
     porcelain = [
-        line
-        for line in _run(ws, "status", "--porcelain").stdout.splitlines()
-        if line.strip()
+        line for line in _run(ws, "status", "--porcelain").stdout.splitlines() if line.strip()
     ]
     tracked_names = set(_run(ws, "ls-files").stdout.splitlines())
 
@@ -262,7 +265,7 @@ def build_plan(ws: Path, gov_root: Path, baseline: str) -> dict[str, Any]:
         paths = by_dest.get(dest_id) or []
         if not paths and dest_id != current_dest:
             continue
-        if not paths and dest_id == current_dest and not push_existing:
+        if not paths and not push_existing:
             continue
         clone = resolve_clone(dest)
         destinations[dest_id] = {

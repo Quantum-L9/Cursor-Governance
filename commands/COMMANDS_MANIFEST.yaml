@@ -40,6 +40,9 @@ commands:
 - slash: /ci-policy
   file: commands/ci-policy.md
   enabled: true
+- slash: /clean
+  file: commands/clean.md
+  enabled: true
 - slash: /clean_compress
   file: commands/clean_compress.md
   enabled: true
