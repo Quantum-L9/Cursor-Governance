@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution.replan.revision.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "revision_id",
+    "program_id",
+    "program_lock_digest",
+    "previous_plan_revision",
+    "proposed_plan_revision",
+    "trigger_evidence_ids",
+    "affected_future_task_ids",
+    "delta",
+    "authority_containment",
+    "expected_validation_effect",
+    "proposer_actor",
+    "verifier_actor",
+    "status",
+    "created_at",
+    "revision_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution.replan.revision.v1"
+    },
+    "revision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "program_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "program_lock_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "previous_plan_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposed_plan_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trigger_evidence_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "affected_future_task_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classes",
+        "operations"
+      ],
+      "properties": {
+        "classes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "reversible_implementation_strategy",
+              "reorder_where_deps_permit",
+              "split_task_into_children",
+              "add_diagnostics",
+              "scoped_runtime_unknown",
+              "resolve_unknown_from_evidence",
+              "retry_failed_compliant_path"
+            ]
+          }
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target_task_id"
+            ],
+            "properties": {
+              "op": {
+                "enum": [
+                  "adapt_strategy",
+                  "reorder",
+                  "split",
+                  "add_diagnostic",
+                  "add_unknown",
+                  "resolve_unknown",
+                  "retry"
+                ]
+              },
+              "target_task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "note": {
+                "type": "string"
+              },
+              "remove_dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "add_dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "child_task_ids": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "unknown_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blocked_task_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "authority_containment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result",
+        "forbidden_classes_present",
+        "widens_lock"
+      ],
+      "properties": {
+        "result": {
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "forbidden_classes_present": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "widens_lock": {
+          "type": "boolean"
+        }
+      }
+    },
+    "expected_validation_effect": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposer_actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verifier_actor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "verified",
+        "activated",
+        "rejected",
+        "stale"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "activated_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rejected_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "revision_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

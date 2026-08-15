@@ -1,0 +1,45 @@
+schema: program-execution.replan.v1
+schema_version: 1.0.0
+contract_id: program-execution.replan.v1
+owner: environment/program-execution/core
+revision_schema: shared/schemas/replan-revision.schema.json
+plan_revision_state: runtime/plan-revision.json
+persistence: controller_runtime_replan_revisions
+activation_actor: controller_only
+proposer_may_not_verify: true
+failed_revision_preserves_previous_plan: true
+stale_when:
+  - program_lock_digest_mismatch
+  - previous_plan_revision_mismatch
+allowed_delta_classes:
+  - reversible_implementation_strategy
+  - reorder_where_deps_permit
+  - split_task_into_children
+  - add_diagnostics
+  - scoped_runtime_unknown
+  - resolve_unknown_from_evidence
+  - retry_failed_compliant_path
+forbidden_authority_delta_classes:
+  - objective
+  - architecture
+  - public_contract
+  - ownership
+  - target_set
+  - authorization_ceiling
+  - accepted_risk
+  - mandatory_convergence_gates
+  - historical_evidence
+historical_receipts: immutable_append_only
+peer_projection:
+  canonical_source_only: true
+  discover_peers_from: environment/agents/PEER_RUNTIME_BINDINGS.yaml
+  per_peer_semantic_override: prohibited
+  unsupported_peer: explicit_fail_closed
+  partial_activation: prohibited
+governing_adrs:
+  - ADR-0011
+  - ADR-0012
+  - ADR-0013
+  - ADR-0014
+  - ADR-0015
+  - ADR-0016

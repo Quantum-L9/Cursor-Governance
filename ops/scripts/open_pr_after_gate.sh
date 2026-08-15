@@ -113,6 +113,26 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   if [[ -z "$title" ]]; then
     title="$branch"
   fi
+  campaign_copy=""
+  campaign_body=""
+  _campaign_copy_py="$GOV_ROOT/environment/program-execution/scripts/campaign_pr_copy.py"
+  if [[ -f "$_campaign_copy_py" ]]; then
+    campaign_copy="$(
+      python3 "$_campaign_copy_py" \
+        --pr-base "$PR_BASE" \
+        --branch "$branch" \
+        ${CAMPAIGN_ID:+--campaign-id "$CAMPAIGN_ID"} \
+        --activate \
+        --json 2>/dev/null || true
+    )"
+    if [[ -n "$campaign_copy" ]]; then
+      campaign_title="$(printf '%s' "$campaign_copy" | python3 -c 'import json,sys; print(json.load(sys.stdin)["title"])' 2>/dev/null || true)"
+      campaign_body="$(printf '%s' "$campaign_copy" | python3 -c 'import json,sys; print(json.load(sys.stdin)["body"])' 2>/dev/null || true)"
+      if [[ -n "$campaign_title" ]]; then
+        title="$campaign_title"
+      fi
+    fi
+  fi
   template_file=""
   for candidate in \
     "$WS/PULL_REQUEST_TEMPLATE.md" \
@@ -126,6 +146,9 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   if [[ -n "$template_file" ]]; then
     body="$(
       {
+        if [[ -n "${campaign_body:-}" ]]; then
+          printf '%s\n\n' "$campaign_body"
+        fi
         cat "$template_file"
         echo ""
         echo "## Commits"
@@ -140,7 +163,9 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   else
     body="$(
       cat <<EOF
-## Summary
+${campaign_body:+$campaign_body
+
+}## Summary
 $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 
 ## Test plan

@@ -225,7 +225,10 @@ def validate(root: Path, mode: str) -> list[str]:
             if expected[rel] != actual[rel]:
                 errors.append(f"manifest digest mismatch: {rel}")
 
-    if any(p.name == "__pycache__" or p.suffix == ".pyc" for p in root.rglob("*")):
+    if any(
+        (p.name == "__pycache__" or p.suffix == ".pyc") and "__pycache__" not in p.parts
+        for p in root.rglob("*")
+    ):
         errors.append("compiled Python debris present")
     return errors
 

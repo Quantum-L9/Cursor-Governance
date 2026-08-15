@@ -35,6 +35,8 @@ ROOT_REQUIRED = [
     "shared/EVIDENCE_MODEL.yaml",
     "shared/ERROR_TAXONOMY.yaml",
     "shared/HANDOFF_PROTOCOL.yaml",
+    "shared/REPLAN_CONTRACT.yaml",
+    "shared/schemas/replan-revision.schema.json",
     "program-execution-blueprint-template/PROGRAM.yaml",
     "program-execution-controller-template/CONTROLLER.yaml",
     "MANIFEST.yaml",
@@ -101,10 +103,15 @@ def validate(root: Path, mode: str) -> list[str]:
         "shared/EVIDENCE_MODEL.yaml": "program-execution-system.evidence-model.v2",
         "shared/ERROR_TAXONOMY.yaml": "program-execution-system.error-taxonomy.v2",
         "shared/HANDOFF_PROTOCOL.yaml": "program-execution-system.handoff-protocol.v2",
+        "shared/REPLAN_CONTRACT.yaml": "program-execution.replan.v1",
     }
     for rel, expected_schema in shared_schemas.items():
         value = load(root / rel)
-        if value.get("schema") != expected_schema or value.get("schema_version") != "2.0.0":
+        expected_version = "1.0.0" if expected_schema == "program-execution.replan.v1" else "2.0.0"
+        if (
+            value.get("schema") != expected_schema
+            or value.get("schema_version") != expected_version
+        ):
             errors.append(f"{rel}: shared contract mismatch")
     expected = {
         "blueprint": compat.get("blueprint_contract"),
@@ -184,6 +191,8 @@ def validate(root: Path, mode: str) -> list[str]:
         if set(task.get("authorization_ceiling", {})) != action_keys:
             errors.append(f"{task.get('id')}: authorization ceiling action set mismatch")
     for path in root.rglob("*"):
+        if "__pycache__" in path.parts:
+            continue
         if path.name == "__pycache__" or path.suffix == ".pyc":
             errors.append(f"compiled debris: {path.relative_to(root)}")
     for path in [

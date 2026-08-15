@@ -33,3 +33,9 @@ _AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
 authorization ceiling to commit/push/pull_request. Merge remains denied. The
 controller still only recommends; IB-Odoo_19 waves remain blocked on target
 binding._
+
+## Honesty
+
+This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
+path fields are not rewritten here. It is not on the compile allowlist.
+Do not treat closeout receipts as current controller runtime.

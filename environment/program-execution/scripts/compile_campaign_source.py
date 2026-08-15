@@ -1,0 +1,809 @@
+#!/usr/bin/env python3
+"""Compile a campaign-source.v2 seed into a Blueprint v2 pair."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import yaml
+from jsonschema import Draft202012Validator
+
+PE_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_PATH = PE_ROOT / "core/shared/schemas/campaign-source.schema.json"
+ALLOWLIST_PATH = PE_ROOT / "campaigns/COMPILE_ALLOWLIST.yaml"
+BLUEPRINT_TEMPLATE = PE_ROOT / "core/program-execution-blueprint-template"
+ADAPTER_REMAP = {"git_repo_adapter": "git"}
+LIKELIHOOD = {"possible": "medium", "likely": "high", "unlikely": "low"}
+SEVERITY = {"critical": "critical", "material": "high", "low": "low"}
+EVIDENCE_TYPE = {
+    "repository_inspection": "inspection",
+    "architecture_decision_records": "inspection",
+    "test_result": "test_result",
+    "conformance_result": "test_result",
+}
+CONTRACT_KEYS = ("pair", "blueprint", "controller_minimum")
+AUTH_REQUIRED = ("id", "responsibility", "owner")
+
+
+class CompileError(RuntimeError):
+    pass
+
+
+def load_yaml(path: Path) -> Any:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def dump_yaml(path: Path, data: object) -> None:
+    path.write_text(
+        yaml.safe_dump(data, sort_keys=False, width=110, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+
+def utc_now() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+def validate_campaign_source(data: dict[str, Any]) -> list[str]:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(data),
+        key=lambda item: list(item.path),
+    )
+    return [
+        f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}" for err in errors
+    ]
+
+
+def load_allowlist() -> set[str]:
+    raw = load_yaml(ALLOWLIST_PATH)
+    ids = raw.get("campaign_ids") if isinstance(raw, dict) else None
+    if not isinstance(ids, list) or not ids:
+        raise CompileError("COMPILE_ALLOWLIST.yaml has no campaign_ids")
+    return {str(item) for item in ids}
+
+
+def write_manifest(root: Path, compiled_from: str) -> None:
+    files = []
+    for path in sorted(root.rglob("*")):
+        if (
+            path.is_file()
+            and path.name != "MANIFEST.yaml"
+            and "__pycache__" not in path.parts
+            and path.suffix != ".pyc"
+        ):
+            files.append(
+                {
+                    "path": path.relative_to(root).as_posix(),
+                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                }
+            )
+    dump_yaml(
+        root / "MANIFEST.yaml",
+        {
+            "schema": "program-execution-blueprint.manifest.v2",
+            "schema_version": "2.0.0",
+            "template": "program-execution-blueprint",
+            "compiled_from": compiled_from,
+            "files": files,
+            "integrity": {"algorithm": "sha256", "self_excluded": True},
+        },
+    )
+
+
+def _load_instantiate() -> Any:
+    path = BLUEPRINT_TEMPLATE / "scripts/instantiate.py"
+    spec = importlib.util.spec_from_file_location("pe_bp_instantiate", path)
+    if spec is None or spec.loader is None:
+        raise CompileError(f"cannot load instantiate.py: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def ensure_instantiated(target: Path, src: dict[str, Any], stamp: str) -> None:
+    if (target / "PROGRAM.yaml").is_file():
+        return
+    if target.exists() and any(target.iterdir()):
+        raise CompileError(f"target is not an empty Blueprint tree: {target}")
+    prog = src["program"]
+    module = _load_instantiate()
+    module.render_tree(
+        target,
+        {
+            "PROGRAM_NAME": str(prog["name"]),
+            "PROGRAM_ID": str(prog["id"]),
+            "PROGRAM_VERSION": str(prog.get("version") or "1.0.0"),
+            "PROGRAM_OWNER": str(prog["owner"]),
+            "DATE": stamp,
+        },
+    )
+
+
+def _program_contracts(prog: dict[str, Any]) -> dict[str, str]:
+    raw = dict(prog.get("contracts") or {})
+    return {
+        "blueprint": "program-execution-blueprint.v2",
+        "controller_minimum": "program-execution-controller.v2",
+        "pair": "program-execution-system.v2",
+        **{key: raw[key] for key in CONTRACT_KEYS if key in raw},
+    }
+
+
+def _remap_adapter(value: str) -> str:
+    return ADAPTER_REMAP.get(value, value)
+
+
+def _require_auth(item: dict[str, Any]) -> None:
+    missing = [key for key in AUTH_REQUIRED if not item.get(key)]
+    if missing:
+        raise CompileError(f"authority missing required keys: {missing}")
+
+
+def _gate_000(target: Path) -> list[dict[str, Any]]:
+    path = target / "CONVERGENCE_GATES.yaml"
+    if not path.is_file():
+        return []
+    gates = load_yaml(path).get("gates") or []
+    return [item for item in gates if item.get("id") == "GATE-000"]
+
+
+def compile_source(
+    source: Path,
+    target: Path,
+    *,
+    stamp: str | None = None,
+) -> dict[str, Any]:
+    source = source.resolve()
+    target = target.resolve()
+    src = load_yaml(source)
+    if not isinstance(src, dict):
+        raise CompileError("campaign source must be an object")
+    schema_errors = validate_campaign_source(src)
+    if schema_errors:
+        raise CompileError("campaign source schema: " + "; ".join(schema_errors))
+    campaign_id = src["metadata"]["campaign_id"]
+    allowed = load_allowlist()
+    if campaign_id not in allowed:
+        raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
+    now = stamp or utc_now()
+    ensure_instantiated(target, src, now)
+    prog = src["program"]
+    tasks = list(src.get("tasks") or [])
+    gates = list(src.get("gates") or [])
+    waves = list(src.get("waves") or [])
+    workstreams = list(src.get("workstreams") or [])
+    task_by_id = {item["id"]: item for item in tasks}
+    compiled_from = source.as_posix()
+    repo_rel = ""
+    try:
+        repo_rel = source.relative_to(PE_ROOT.parents[1]).as_posix()
+    except ValueError:
+        repo_rel = source.name
+
+    dump_yaml(
+        target / "PROGRAM.yaml",
+        {
+            "schema": "program-execution-blueprint.program.v2",
+            "schema_version": "2.0.0",
+            "program": {
+                "id": prog["id"],
+                "name": prog["name"],
+                "version": prog.get("version") or "1.0.0",
+                "owner": prog["owner"],
+                "definition_status": "draft",
+                "snapshot_at": now,
+                "objective": str(prog["objective"]).strip(),
+                "problem_statement": str(prog["problem_statement"]).strip(),
+                "target_state": str(prog["target_state"]).strip(),
+                "scope": prog["scope"],
+                "contracts": _program_contracts(prog),
+                "authority_order": prog["authority_order"],
+                "operating_rules": prog["operating_rules"],
+                "terminal_verdicts": prog["terminal_verdicts"],
+            },
+        },
+    )
+
+    compiled_targets = []
+    for item in src.get("targets") or []:
+        mapped = dict(item)
+        adapter = str(mapped.get("adapter") or "git")
+        mapped["adapter"] = _remap_adapter(adapter)
+        compiled_targets.append(mapped)
+    dump_yaml(
+        target / "EXECUTION_TARGETS.yaml",
+        {
+            "schema": "program-execution-blueprint.execution-targets.v2",
+            "schema_version": "2.0.0",
+            "targets": compiled_targets,
+        },
+    )
+
+    first_target = compiled_targets[0]["id"] if compiled_targets else "TARGET-001"
+    first_gate = gates[0]["id"] if gates else "GATE-001"
+    responsibilities = []
+    for auth in src.get("authorities") or []:
+        _require_auth(auth)
+        responsibilities.append(
+            {
+                "id": auth["id"],
+                "responsibility": auth["responsibility"],
+                "owner_target_id": first_target,
+                "source_of_truth": str(auth["owner"]),
+                "consumers": ["controller", "workers", "verifiers"],
+                "allowed_roles": ["authority"],
+                "prohibited_owner_target_ids": [],
+                "enforcement": ["schema", "tests", "controller_import"],
+                "validation_gate_ids": list(auth.get("validation_gate_ids") or [first_gate]),
+                "definition_status": "active",
+            }
+        )
+    dump_yaml(
+        target / "AUTHORITY_REGISTRY.yaml",
+        {
+            "schema": "program-execution-blueprint.authority-registry.v2",
+            "schema_version": "2.0.0",
+            "policy": {
+                "one_owner_per_responsibility": True,
+                "projection_does_not_transfer_authority": True,
+                "unresolved_conflict_result": "BLOCKED",
+            },
+            "responsibilities": responsibilities,
+        },
+    )
+
+    dump_yaml(
+        target / "DECISION_REGISTER.yaml",
+        {
+            "schema": "program-execution-blueprint.decision-register.v2",
+            "schema_version": "2.0.0",
+            "policy": "No blocked decision may be silently defaulted.",
+            "decisions": [
+                {
+                    "id": item["id"],
+                    "question": item["question"],
+                    "status": item["status"],
+                    "owner": item.get("authority_id") or prog["owner"],
+                    "options": [
+                        {
+                            "id": option["id"],
+                            "description": option["description"],
+                            "benefits": [option["description"]],
+                            "risks": ["Rejected alternative would violate accepted ADRs."],
+                        }
+                        for option in item.get("options") or []
+                    ],
+                    "selected_option": item.get("selected_option_id"),
+                    "rationale": (
+                        f"Selected {item.get('selected_option_id')} per {item.get('authority_id')}."
+                    ),
+                    "evidence_ids": list(item.get("required_evidence_ids") or []),
+                    "blocks": list(item.get("blocking_task_ids") or []),
+                    "required_by": item.get("authority_id") or "AUTH-005",
+                    "supersedes": None,
+                }
+                for item in src.get("decisions") or []
+            ],
+        },
+    )
+
+    dump_yaml(
+        target / "UNKNOWN_REGISTER.yaml",
+        {
+            "schema": "program-execution-blueprint.unknown-register.v2",
+            "schema_version": "2.0.0",
+            "policy": "Unknowns remain explicit and block only named work.",
+            "unknowns": [
+                {
+                    "id": item["id"],
+                    "topic": str(item["statement"]).strip(),
+                    "owner": item["owner"],
+                    "blocks": list(item.get("blocking_task_ids") or []),
+                    "safe_state": (
+                        "Do not execute named dependent tasks until evidence-bound resolution."
+                    ),
+                    "resolution_requirements": [str(item["resolution_method"]).strip()],
+                    "resolution_evidence_ids": list(item.get("resolution_evidence_ids") or []),
+                    "status": item["status"],
+                    "resolved_at": None,
+                }
+                for item in src.get("unknowns") or []
+            ],
+        },
+    )
+
+    dump_yaml(
+        target / "RISK_REGISTER.yaml",
+        {
+            "schema": "program-execution-blueprint.risk-register.v2",
+            "schema_version": "2.0.0",
+            "risks": [
+                {
+                    "id": item["id"],
+                    "risk": item["statement"],
+                    "severity": SEVERITY.get(item.get("impact"), "high"),
+                    "likelihood": LIKELIHOOD.get(
+                        item.get("likelihood"),
+                        item.get("likelihood") or "UNKNOWN",
+                    ),
+                    "owner": item["owner"],
+                    "trigger": item["statement"],
+                    "preventive_controls": list(item.get("mitigations") or ["inspect"]),
+                    "contingency": [
+                        "halt_named_subgraph",
+                        "preserve_previous_valid_plan",
+                    ],
+                    "related_tasks": [task["id"] for task in tasks],
+                    "related_gates": [gate["id"] for gate in gates],
+                    "acceptance_decision_id": None,
+                    "status": "open",
+                }
+                for item in src.get("risks") or []
+            ],
+        },
+    )
+
+    dump_yaml(
+        target / "WAIVER_REGISTER.yaml",
+        {
+            "schema": "program-execution-blueprint.waiver-register.v2",
+            "schema_version": "2.0.0",
+            "policy": {
+                "implicit_waivers_forbidden": True,
+                "expired_waiver_non_passing": True,
+            },
+            "waivers": list(src.get("waivers") or []),
+        },
+    )
+
+    dump_yaml(
+        target / "EVIDENCE_CATALOG.yaml",
+        {
+            "schema": "program-execution-blueprint.evidence-catalog.v2",
+            "schema_version": "2.0.0",
+            "evidence": [
+                {
+                    "id": item["id"],
+                    "type": EVIDENCE_TYPE.get(item.get("source_type"), "other"),
+                    "source": item.get("source_location") or item.get("claim"),
+                    "revision": "UNKNOWN",
+                    "digest": None,
+                    "method": item.get("collection_method") or "inspection",
+                    "environment": "planning",
+                    "producer": str(item.get("producer") or "controller"),
+                    "produced_at": now,
+                    "expires_at": None,
+                    "result": "INFORMATIONAL",
+                    "status": "planned",
+                    "supports": list(item.get("supports") or []),
+                    "contradicts": list(item.get("contradicts") or []),
+                    "notes": item.get("claim"),
+                }
+                for item in src.get("evidence_requirements") or []
+            ],
+        },
+    )
+
+    dump_yaml(
+        target / "DO_NOT_BUILD.yaml",
+        {
+            "schema": "program-execution-blueprint.do-not-build.v2",
+            "schema_version": "2.0.0",
+            "prohibited_primary_paths": [
+                {
+                    "id": item["id"],
+                    "path_or_pattern": item["statement"],
+                    "reason": item["rationale"],
+                    "detection": "review_and_conformance",
+                    "exception_authority": "NONE",
+                }
+                for item in src.get("prohibited_paths") or []
+            ],
+            "allowed_experiments": [
+                {
+                    "id": "EXP-001",
+                    "scope": f"Isolated $HOME/.l9/programs/{campaign_id} only",
+                    "constraints": [
+                        "must_not_become_production_authority",
+                        "must_be_disposable",
+                        "must_be_labeled_experimental",
+                    ],
+                    "expiry": now,
+                }
+            ],
+        },
+    )
+
+    evidence = list(src.get("evidence_requirements") or [])
+    dump_yaml(
+        target / "CURRENT_STATE_DELTA.yaml",
+        {
+            "schema": "program-execution-blueprint.current-state-delta.v2",
+            "schema_version": "2.0.0",
+            "snapshot_at": now,
+            "freshness_policy": {
+                "maximum_age": "admission_window",
+                "stale_result": "BLOCKED",
+            },
+            "sources": [
+                {
+                    "source_id": f"SRC-{index:03d}",
+                    "evidence_id": item["id"],
+                    "revision": "UNKNOWN",
+                    "freshness": "collect_at_admission",
+                }
+                for index, item in enumerate(evidence[:5], start=1)
+            ],
+            "deltas": [
+                {
+                    "id": "DELTA-001",
+                    "target_id": first_target,
+                    "expected_state": "Native Blueprint compiled",
+                    "observed_state": "Campaign source registered",
+                    "classification": "UNKNOWN",
+                    "impact": "Admission remains blocking",
+                    "required_action": "Collect planned evidence",
+                    "evidence_ids": [item["id"] for item in evidence[:5]],
+                }
+            ],
+            "next_blocking_action": "Collect admission evidence.",
+        },
+    )
+
+    ws_exit: dict[str, list[str]] = {}
+    for wave in waves:
+        for task_id in wave.get("task_ids") or []:
+            workstream = task_by_id.get(task_id, {}).get("workstream_id")
+            if workstream:
+                ws_exit.setdefault(workstream, [])
+                for gate_id in wave.get("exit_gate_ids") or []:
+                    if gate_id not in ws_exit[workstream]:
+                        ws_exit[workstream].append(gate_id)
+    dump_yaml(
+        target / "WORKSTREAMS.yaml",
+        {
+            "schema": "program-execution-blueprint.workstreams.v2",
+            "schema_version": "2.0.0",
+            "workstreams": [
+                {
+                    "id": item["id"],
+                    "name": item["name"],
+                    "objective": str(item["objective"]).strip(),
+                    "owner": item["owner"],
+                    "target_ids": [first_target],
+                    "scope": {
+                        "include": [str(item["objective"]).strip()],
+                        "exclude": ["remote mutation", "merge", "deploy"],
+                    },
+                    "inputs": ["CAMPAIGN_SOURCE.yaml"],
+                    "outputs": ["task receipts", "gate evidence"],
+                    "entry_gate_ids": [] if item["id"] == workstreams[0]["id"] else [first_gate],
+                    "exit_gate_ids": ws_exit.get(item["id"]) or [first_gate],
+                    "rollback_boundary": (
+                        "Discard unaccepted generated artifacts; no remote mutation."
+                    ),
+                    "definition_status": "active",
+                }
+                for item in workstreams
+            ],
+        },
+    )
+
+    edges = []
+    for index, edge in enumerate(src.get("dependency_edges") or [], start=1):
+        predecessor = task_by_id.get(edge["from"], {})
+        edges.append(
+            {
+                "id": f"EDGE-{index:03d}",
+                "from": edge["from"],
+                "to": edge["to"],
+                "relation": "requires",
+                "blocking": True,
+                "proof_gate_ids": predecessor.get("completion_gate_ids") or [],
+            }
+        )
+    wave_groups = [
+        list(wave.get("task_ids") or []) for wave in waves if len(wave.get("task_ids") or []) > 1
+    ]
+    dump_yaml(
+        target / "DEPENDENCY_GRAPH.yaml",
+        {
+            "schema": "program-execution-blueprint.dependency-graph.v2",
+            "schema_version": "2.0.0",
+            "direction": "predecessor_to_successor",
+            "nodes": [
+                {
+                    "id": item["id"],
+                    "entity_type": "task",
+                    "owner": (item.get("authority_basis_ids") or ["AUTH-001"])[0],
+                }
+                for item in tasks
+            ],
+            "edges": edges,
+            "critical_path": [item["id"] for item in tasks],
+            "parallelizable_groups": wave_groups,
+            "hard_rule": ("No successor may bypass a predecessor by reproducing its output."),
+        },
+    )
+
+    compiled_waves = []
+    for index, wave in enumerate(waves):
+        ws_ids = sorted(
+            {
+                task_by_id[task_id]["workstream_id"]
+                for task_id in wave.get("task_ids") or []
+                if task_id in task_by_id
+            }
+        )
+        compiled_waves.append(
+            {
+                "id": wave["id"],
+                "name": wave["name"],
+                "sequence": index,
+                "depends_on": list(wave.get("predecessor_wave_ids") or []),
+                "workstream_ids": ws_ids,
+                "task_ids": list(wave.get("task_ids") or []),
+                "entry_gate_ids": [],
+                "exit_gate_ids": list(wave.get("exit_gate_ids") or []),
+                "rollback_boundary": ("Restore worktree to Program Lock base; preserve receipts."),
+                "definition_status": "active",
+            }
+        )
+    dump_yaml(
+        target / "EXECUTION_WAVES.yaml",
+        {
+            "schema": "program-execution-blueprint.execution-waves.v2",
+            "schema_version": "2.0.0",
+            "promotion_rule": (
+                "A wave starts only when prior waves and blocking entry gates pass."
+            ),
+            "waves": compiled_waves,
+        },
+    )
+
+    compiled_tasks = []
+    for item in tasks:
+        ceiling = dict(item.get("authorization_ceiling") or {})
+        if item.get("execution_kind") == "program_control":
+            ceiling["local_write"] = False
+        suffix = item["id"].split("-")[-1]
+        compiled_tasks.append(
+            {
+                "id": item["id"],
+                "title": item["title"],
+                "definition_status": item["definition_status"],
+                "workstream_id": item["workstream_id"],
+                "wave_id": item["wave_id"],
+                "target_id": item["target_id"],
+                "execution_kind": item["execution_kind"],
+                "objective": str(item["objective"]).strip(),
+                "authority_basis_ids": item["authority_basis_ids"],
+                "required_decision_ids": item.get("required_decision_ids") or [],
+                "blocking_unknown_ids": item.get("blocking_unknown_ids") or [],
+                "input_evidence_ids": item.get("input_evidence_ids") or [],
+                "actions": item["actions"],
+                "outputs": [
+                    {
+                        "id": f"OUT-{suffix}",
+                        "type": "receipt",
+                        "location": f"receipts/{item['id']}",
+                        "required": True,
+                    }
+                ],
+                "acceptance": item["acceptance"],
+                "validation": [
+                    {
+                        "id": f"VAL-{suffix}",
+                        "method": "inspection",
+                        "command_or_inspection": str(item["acceptance"][0]["statement"]).strip(),
+                        "environment": ("planning" if item["id"] == "TASK-001" else "local"),
+                        "expected_result": "PASS",
+                    }
+                ],
+                "negative_cases": item["negative_cases"],
+                "rollback": item["rollback"],
+                "risk": item["risk"],
+                "authorization_ceiling": ceiling,
+                "completion_gate_ids": item["completion_gate_ids"],
+            }
+        )
+    dump_yaml(
+        target / "TASK_CARDS.yaml",
+        {
+            "schema": "program-execution-blueprint.task-cards.v2",
+            "schema_version": "2.0.0",
+            "tasks": compiled_tasks,
+        },
+    )
+
+    class_map = {"entry": "authority", "completion": "validation"}
+    compiled_gates = list(_gate_000(target))
+    for item in gates:
+        wave_ids = [wave["id"] for wave in waves if item["id"] in (wave.get("exit_gate_ids") or [])]
+        compiled_gates.append(
+            {
+                "id": item["id"],
+                "name": item["name"],
+                "definition_status": "active",
+                "owner": item.get("owner_authority_id") or prog["owner"],
+                "class": class_map.get(item.get("gate_type"), "validation"),
+                "scope": {
+                    "wave_ids": wave_ids,
+                    "task_ids": list(item.get("task_ids") or []),
+                },
+                "method": {
+                    "type": "inspection",
+                    "steps": list(item.get("pass_criteria") or ["Inspect required evidence."]),
+                },
+                "pass_condition": "; ".join(item.get("pass_criteria") or ["PASS"]),
+                "fail_condition": str(item.get("failure_effect") or "BLOCKED"),
+                "blocking": bool(item.get("blocking", True)),
+                "required_evidence_ids": list(item.get("required_evidence_ids") or []),
+                "waiver_allowed": False,
+            }
+        )
+    dump_yaml(
+        target / "CONVERGENCE_GATES.yaml",
+        {
+            "schema": "program-execution-blueprint.convergence-gates.v2",
+            "schema_version": "2.0.0",
+            "result_values": [
+                "PASS",
+                "FAIL",
+                "BLOCKED",
+                "UNKNOWN",
+                "NOT_APPLICABLE_WITH_REASON",
+            ],
+            "unknown_is_non_passing": True,
+            "gates": compiled_gates,
+        },
+    )
+
+    obs = src.get("observability") or {}
+    fields = list(obs.get("program_progress_fields") or obs.keys() or ["progress"])
+    dump_yaml(
+        target / "OBSERVABILITY_PLAN.yaml",
+        {
+            "schema": "program-execution-blueprint.observability-plan.v2",
+            "schema_version": "2.0.0",
+            "signals": [
+                {
+                    "id": f"OBS-{index:03d}",
+                    "name": name,
+                    "owner": "AUTH-002",
+                    "source_target_id": first_target,
+                    "collection_method": "controller_projection",
+                    "expected_range": "defined",
+                    "alert_condition": "missing_or_stale",
+                    "retention": "program_lifetime",
+                    "related_gate_ids": [first_gate],
+                    "status": "planned",
+                }
+                for index, name in enumerate(fields[:8], start=1)
+            ],
+            "incident_routing": [
+                {
+                    "condition": "blocking_signal_breach",
+                    "owner": prog["owner"],
+                    "action": "pause_affected_wave_and_preserve_evidence",
+                }
+            ],
+        },
+    )
+
+    cut = src.get("cutover_and_rollback") or {}
+    dump_yaml(
+        target / "CUTOVER_AND_ROLLBACK.yaml",
+        {
+            "schema": "program-execution-blueprint.cutover-and-rollback.v2",
+            "schema_version": "2.0.0",
+            "cutover": {
+                "required_gate_ids": [item["id"] for item in gates[-2:]] or [first_gate],
+                "approval_action": "publish_or_release",
+                "steps": list(cut.get("preconditions") or ["accepted_blueprint"]),
+                "abort_conditions": ["blocking_gate_failure", "parity_failure"],
+                "observation_window": "until_handoff",
+            },
+            "rollback": {
+                "trigger_conditions": [
+                    "blocking_gate_failure",
+                    "authority_containment_failure",
+                ],
+                "steps": list(cut.get("rollback_rules") or ["preserve_failed_replan_evidence"]),
+                "data_reconciliation": "append_only_receipts_never_rewritten",
+                "validation": ["prior_evidence_unchanged"],
+                "owner": "AUTH-001",
+            },
+        },
+    )
+
+    dump_yaml(
+        target / "SOURCE_TRACEABILITY.yaml",
+        {
+            "schema": "program-execution-blueprint.source-traceability.v2",
+            "schema_version": "2.0.0",
+            "authority_classes": [
+                "governing",
+                "supporting",
+                "contradicting",
+                "example",
+                "historical",
+                "inferred",
+            ],
+            "sources": [
+                {
+                    "id": "SRC-001",
+                    "source": repo_rel or source.name,
+                    "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
+                    "authority_class": "governing",
+                    "evidence_id": (evidence[0]["id"] if evidence else first_gate),
+                    "claims": ["Campaign source is the immutable operator intent."],
+                    "target_ids": [first_target],
+                    "workstream_ids": [item["id"] for item in workstreams],
+                    "task_ids": [item["id"] for item in tasks],
+                    "gate_ids": [item["id"] for item in gates],
+                    "status": "active",
+                }
+            ],
+        },
+    )
+
+    (target / "EXECUTIVE_DECISION.md").write_text(
+        "\n".join(
+            [
+                f"# Executive Decision: {prog['name']}",
+                "",
+                "## Decision",
+                "",
+                str(prog["objective"]).strip(),
+                "",
+                "## Problem being resolved",
+                "",
+                str(prog["problem_statement"]).strip(),
+                "",
+                "## Target state",
+                "",
+                str(prog["target_state"]).strip(),
+                "",
+                "## Authority assignment",
+                "",
+                "Reference `AUTHORITY_REGISTRY.yaml`.",
+                "",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    write_manifest(target, repo_rel or compiled_from)
+    return {
+        "campaign_id": campaign_id,
+        "target": str(target),
+        "compiled_from": repo_rel or compiled_from,
+        "task_count": len(compiled_tasks),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="compile_campaign_source")
+    parser.add_argument("--source", required=True, type=Path)
+    parser.add_argument("--target", required=True, type=Path)
+    args = parser.parse_args(argv)
+    try:
+        result = compile_source(args.source, args.target)
+    except CompileError as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

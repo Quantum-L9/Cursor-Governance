@@ -95,6 +95,104 @@
     "receipt_digest": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
+    },
+    "replan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_revision",
+        "active_replan_revision_id",
+        "revisions"
+      ],
+      "properties": {
+        "plan_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "active_replan_revision_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contract_digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revisions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "failed_revisions_visible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "peer_parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PASS",
+            "BLOCKED",
+            "NOT_RUN"
+          ]
+        },
+        "semantic_revision_digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "peer_coverage": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rollback_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategy",
+        "program_lock_digest"
+      ],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "program_lock_digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blueprint_root": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "worktree_isolation": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

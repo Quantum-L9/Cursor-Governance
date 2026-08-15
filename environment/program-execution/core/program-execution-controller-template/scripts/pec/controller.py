@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib.util
 import json
 import os
 import subprocess
@@ -10,15 +11,89 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from .blueprint import verify_program_lock, write_program_lock
+from .blueprint import BlueprintError, verify_program_lock, write_program_lock
 from .common import digest_object, load_json, load_yaml, parse_time, run_git, utc_now, write_json
-from .contracts import path_allowed, validate_source_contract
+from .contracts import ContractError, path_allowed, validate_source_contract
 from .ledger import EventLedger
 from .state import StateDB
 
 
 class ControllerError(RuntimeError):
     pass
+
+
+CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
+SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
+RUNTIME_STATUSES = {"operator_intake", "active", "halted", "completed"}
+TERMINAL_RUNTIME = {"halted", "completed"}
+
+
+def campaign_status_path(workspace: Path) -> Path:
+    return workspace.resolve() / "runtime" / "campaign-status.json"
+
+
+def read_campaign_status(workspace: Path) -> dict[str, Any] | None:
+    path = campaign_status_path(workspace)
+    if not path.is_file():
+        return None
+    return load_json(path)
+
+
+def write_campaign_status(
+    workspace: Path,
+    *,
+    campaign_id: str,
+    source_status: str,
+    runtime_status: str,
+    actor: str,
+    ledger: EventLedger | None = None,
+) -> dict[str, Any]:
+    if source_status not in SOURCE_STATUSES:
+        raise ControllerError(f"invalid source_status={source_status}")
+    if runtime_status not in RUNTIME_STATUSES:
+        raise ControllerError(f"invalid runtime_status={runtime_status}")
+    payload = {
+        "schema": CAMPAIGN_STATUS_SCHEMA,
+        "campaign_id": campaign_id,
+        "source_status": source_status,
+        "runtime_status": runtime_status,
+        "activated_at": utc_now() if runtime_status == "active" else None,
+        "actor": actor,
+    }
+    write_json(campaign_status_path(workspace), payload)
+    if ledger is not None and runtime_status == "active":
+        ledger.append("CAMPAIGN_ACTIVATED", actor, payload)
+    return payload
+
+
+def _campaign_id_from_program(program: dict[str, Any] | None) -> str:
+    return str((program or {}).get("id") or "unknown")
+
+
+def ensure_campaign_active(
+    workspace: Path,
+    actor: str,
+    db: StateDB,
+    ledger: EventLedger,
+) -> dict[str, Any]:
+    current = read_campaign_status(workspace)
+    if current and current.get("runtime_status") == "active":
+        return current
+    if current and current.get("runtime_status") in TERMINAL_RUNTIME:
+        raise ControllerError(
+            f"campaign cannot run; runtime_status={current.get('runtime_status')}"
+        )
+    source_status = str((current or {}).get("source_status") or "operator_intake")
+    payload = write_campaign_status(
+        workspace,
+        campaign_id=_campaign_id_from_program(db.get_meta("program")),
+        source_status=source_status,
+        runtime_status="active",
+        actor=actor,
+        ledger=ledger,
+    )
+    db.set_meta("campaign_status", payload)
+    return payload
 
 
 def open_runtime(workspace: Path) -> tuple[StateDB, EventLedger]:
@@ -51,10 +126,55 @@ def _validate_schema(workspace: Path, schema_name: str, value: Any) -> None:
         raise ControllerError(f"schema validation failed for {schema_name}: " + "; ".join(messages))
 
 
-def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str, Any]:
+def _validate_blueprint(blueprint: Path, mode: str) -> list[str]:
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "program-execution-blueprint-template"
+        / "scripts"
+        / "validate_blueprint.py"
+    )
+    spec = importlib.util.spec_from_file_location("pec_validate_blueprint", path)
+    if spec is None or spec.loader is None:
+        raise ControllerError(f"cannot load validate_blueprint.py: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return list(module.validate(blueprint, mode))
+
+
+def _complete_pair(blueprint: Path) -> bool:
+    return (blueprint / "MANIFEST.yaml").is_file() and (blueprint / "README.md").is_file()
+
+
+def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
+    program = load_yaml(blueprint / "PROGRAM.yaml").get("program") or {}
+    status = program.get("definition_status")
+    if admission_draft:
+        if _complete_pair(blueprint):
+            return _validate_blueprint(blueprint, "template")
+        return []
+    if status != "accepted":
+        return [
+            "bootstrap requires an accepted Blueprint; "
+            f"found definition_status={status}; use --admission-draft"
+        ]
+    if _complete_pair(blueprint):
+        return _validate_blueprint(blueprint, "instantiated")
+    return []
+
+
+def bootstrap(
+    workspace: Path,
+    blueprint: Path,
+    template_root: Path,
+    *,
+    admission_draft: bool = False,
+) -> dict[str, Any]:
     workspace = workspace.resolve()
     blueprint = blueprint.resolve()
     template_root = template_root.resolve()
+    admission_errors = _admission_errors(blueprint, admission_draft=admission_draft)
+    if admission_errors:
+        raise ControllerError("blueprint admission failed: " + "; ".join(admission_errors))
     if workspace.exists() and any(workspace.iterdir()):
         raise ControllerError(f"workspace is not empty: {workspace}")
     for rel in [
@@ -72,7 +192,10 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
         "recovery",
     ]:
         (workspace / rel).mkdir(parents=True, exist_ok=True)
-    lock = write_program_lock(blueprint, workspace / "runtime" / "program-lock.json")
+    try:
+        lock = write_program_lock(blueprint, workspace / "runtime" / "program-lock.json")
+    except BlueprintError as exc:
+        raise ControllerError(str(exc)) from exc
     controller_definition = load_yaml(template_root / "CONTROLLER.yaml")["controller"]
     if controller_definition["contracts"]["blueprint"] != lock["blueprint_contract"]:
         raise ControllerError("Controller and Blueprint contract versions are incompatible")
@@ -94,6 +217,11 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
         db.set_meta("waves", lock["waves"])
         db.set_meta("risks", lock["risks"])
         db.set_meta("global_halt", False)
+        db.set_meta("admission_draft", bool(admission_draft))
+        db.set_meta(
+            "definition_status",
+            "draft" if admission_draft else lock["program"].get("definition_status"),
+        )
         for target in lock["targets"]:
             if target.get("repository_id"):
                 db.upsert_repository(target["repository_id"], target["id"])
@@ -119,6 +247,15 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
                 "controller_contract": config["controller_contract"],
             },
         )
+        campaign_status = write_campaign_status(
+            workspace,
+            campaign_id=_campaign_id_from_program(lock.get("program")),
+            source_status="operator_intake",
+            runtime_status="operator_intake" if admission_draft else "active",
+            actor="controller",
+            ledger=None if admission_draft else ledger,
+        )
+        db.set_meta("campaign_status", campaign_status)
     finally:
         db.close()
     return {
@@ -127,6 +264,11 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
         "program_digest": lock["lock_digest"],
         "tasks": len(lock["tasks"]),
         "targets": len(lock["targets"]),
+        "admission_draft": bool(admission_draft),
+        "definition_status": (
+            "draft" if admission_draft else lock["program"].get("definition_status")
+        ),
+        "campaign_status": campaign_status,
     }
 
 
@@ -291,10 +433,22 @@ def task_readiness(
     db: StateDB, task: dict[str, Any], workspace: Path | None = None
 ) -> tuple[bool, list[str]]:
     blockers: list[str] = []
+    adaptation: dict[str, Any] = {
+        "dependency_overrides": {},
+        "scoped_unknowns": [],
+    }
     if workspace is not None:
         lock_ok, _ = verify_program_lock(workspace / "runtime" / "program-lock.json")
         if not lock_ok:
             blockers.append("program_lock_stale_or_invalid")
+        try:
+            from .replan import plan_adaptation
+
+            adaptation = plan_adaptation(workspace)
+        except ControllerError:
+            # Replan layer unavailable or plan revision not yet initialized;
+            # readiness falls back to the locked plan alone.
+            pass
     if db.get_meta("global_halt", False):
         blockers.append("global_halt")
     if task["definition_status"] != "ready":
@@ -311,7 +465,15 @@ def task_readiness(
         "CANCELLED",
     }:
         blockers.append(f"runtime_state_not_claimable:{task['runtime_state']}")
-    for dep in task["dependencies"]:
+    override = adaptation["dependency_overrides"].get(task["id"])
+    effective_dependencies = list(task["dependencies"])
+    if override:
+        removed = set(override.get("remove") or [])
+        effective_dependencies = [dep for dep in effective_dependencies if dep not in removed]
+        for dep in override.get("add") or []:
+            if dep not in effective_dependencies:
+                effective_dependencies.append(dep)
+    for dep in effective_dependencies:
         dependency = db.task(dep)
         if dependency is None or dependency["runtime_state"] not in {"PASSED_LOCAL", "COMPLETED"}:
             blockers.append(f"dependency_not_complete:{dep}")
@@ -327,6 +489,9 @@ def task_readiness(
             or not item["evidence_ids"]
         ):
             blockers.append(f"blocking_unknown:{unknown_id}")
+    for scoped in adaptation["scoped_unknowns"]:
+        if task["id"] in (scoped.get("blocked_task_ids") or []) and scoped.get("unknown_id"):
+            blockers.append(f"scoped_runtime_unknown:{scoped['unknown_id']}")
     for evidence_id in task["required_evidence"]:
         if not _evidence_valid(db, evidence_id):
             blockers.append(f"required_evidence_missing_or_invalid:{evidence_id}")
@@ -403,10 +568,45 @@ def status(workspace: Path) -> dict[str, Any]:
                 }
             )
         ledger_ok, ledger_message = ledger.verify()
+        program = db.get_meta("program") or {}
+        admission_draft = bool(db.get_meta("admission_draft", False))
+        definition_status = "draft" if admission_draft else program.get("definition_status")
+        campaign_root = Path.home() / ".l9/autonomy/campaigns"
+        plan_revision = None
+        try:
+            from .replan import current_plan_revision
+
+            plan = current_plan_revision(workspace)
+            plan_revision = {
+                "plan_revision": plan["plan_revision"],
+                "active_replan_revision_id": plan.get("active_replan_revision_id"),
+            }
+        except ControllerError:
+            # Runtime predates the replan layer; durable plan revision is unavailable.
+            plan_revision = None
         return {
-            "program": db.get_meta("program"),
+            "program": program,
             "program_digest": db.get_meta("program_digest"),
             "global_halt": db.get_meta("global_halt", False),
+            "plan_revision": plan_revision,
+            "definition_status": definition_status,
+            "admission_draft": admission_draft,
+            "campaign_status": read_campaign_status(workspace)
+            or db.get_meta("campaign_status")
+            or {
+                "source_status": "operator_intake",
+                "runtime_status": "operator_intake",
+            },
+            "autonomy_plane": {
+                "authoritative": False,
+                "note": (
+                    "Program Controller is authoritative; autonomy campaign "
+                    "packets are not a second scheduler"
+                ),
+                "campaign_packets_present": bool(
+                    campaign_root.is_dir() and any(campaign_root.glob("*.json"))
+                ),
+            },
             "tasks": tasks,
             "gates": db.gates(),
             "decisions": db.decisions(),
@@ -422,6 +622,7 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
     db, _ = open_runtime(workspace)
     try:
         ready, blocked = [], []
+        admission_draft = bool(db.get_meta("admission_draft", False))
         for task in db.tasks():
             ok, blockers = task_readiness(db, task, workspace)
             item = {
@@ -432,8 +633,42 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
                 "repository_id": task.get("repository_id"),
                 "blockers": blockers,
             }
-            (ready if ok else blocked).append(item)
-        return {"ready": ready, "blocked": blocked}
+            if admission_draft:
+                item["blockers"] = list(blockers) + ["admission_draft"]
+                blocked.append(item)
+            elif ok:
+                ready.append(item)
+            else:
+                blocked.append(item)
+        children: list[dict[str, Any]] = []
+        try:
+            from .replan import plan_adaptation
+
+            adaptation = plan_adaptation(workspace)
+        except ControllerError:
+            adaptation = {"runtime_child_tasks": {}, "scoped_unknowns": []}
+        for parent_id, child_ids in adaptation["runtime_child_tasks"].items():
+            parent = db.task(parent_id)
+            if parent is None:
+                continue
+            for child_id in child_ids:
+                children.append(
+                    {
+                        "id": child_id,
+                        "title": f"{parent['title']} / {child_id}",
+                        "runtime_only": True,
+                        "parent_task_id": parent_id,
+                        "parent_authority": parent.get("authorization_ceiling", {}),
+                        "blockers": ["runtime_split_child_pending_admission"],
+                    }
+                )
+        return {
+            "ready": ready,
+            "blocked": blocked,
+            "runtime_split_children": children,
+            "definition_status": "draft" if admission_draft else None,
+            "admission_draft": admission_draft,
+        }
     finally:
         db.close()
 
@@ -447,6 +682,7 @@ def claim_task(workspace: Path, task_id: str, holder: str, ttl_hours: int = 8) -
         ok, blockers = task_readiness(db, task, workspace)
         if not ok:
             raise ControllerError("task not eligible: " + ", ".join(blockers))
+        ensure_campaign_active(workspace, holder, db, ledger)
         if task["execution_kind"] != "repo_local" or not task.get("repository_id"):
             raise ControllerError("only repo_local tasks use worker leases")
         if task["runtime_state"] != "ELIGIBLE":
@@ -547,6 +783,7 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
         task = db.task(task_id)
         if task is None or task["runtime_state"] != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
+        ensure_campaign_active(workspace, actor, db, ledger)
         db.transition_task(task_id, "EXECUTING")
         ledger.append(
             "TASK_EXECUTION_STARTED",
@@ -732,6 +969,22 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 if changed and all(path_allowed(path, patterns) for path in changed)
                 else "FAIL"
             )
+            lock = load_json(workspace / "runtime" / "program-lock.json")
+            prohibited = [
+                item.get("path_or_pattern")
+                for item in (lock.get("do_not_build") or {}).get("prohibited_primary_paths") or []
+                if isinstance(item, dict) and item.get("path_or_pattern")
+            ]
+            dnb_hit = False
+            for path in changed:
+                for pattern in prohibited:
+                    try:
+                        if path_allowed(path, [str(pattern)]):
+                            dnb_hit = True
+                    except ContractError:
+                        if str(pattern) in path:
+                            dnb_hit = True
+            gates["do_not_build"] = "FAIL" if dnb_hit else "PASS"
             gates["symlink"] = (
                 "PASS"
                 if not any(
@@ -1120,7 +1373,47 @@ def set_halt(workspace: Path, halted: bool, reason: str, actor: str) -> dict[str
         db.close()
 
 
-def export_handoff(workspace: Path, actor: str, output: Path) -> dict[str, Any]:
+def _replan_contract_digest() -> str:
+    import hashlib
+
+    core = Path(__file__).resolve().parents[3]
+    contract = core / "shared/REPLAN_CONTRACT.yaml"
+    if not contract.is_file():
+        raise ControllerError(f"Replan contract missing from core pair: {contract}")
+    return hashlib.sha256(contract.read_bytes()).hexdigest()
+
+
+def _peer_parity_section(repository_root: Path, workspace: Path) -> dict[str, Any]:
+    import sys
+
+    pe_root = Path(repository_root).resolve() / "environment/program-execution"
+    if not pe_root.is_dir():
+        raise ControllerError(f"program-execution seam not found under repository root: {pe_root}")
+    sys.path.insert(0, str(pe_root))
+    from peer_execution.golden_vectors import run_parity_gate
+
+    report = run_parity_gate(repository_root, workspace)
+    accounting_path = Path(workspace).resolve() / "runtime/projection/peer-accounting.json"
+    semantic_digest = None
+    coverage: list[str] = []
+    if accounting_path.is_file():
+        accounting = json.loads(accounting_path.read_text(encoding="utf-8"))
+        semantic_digest = accounting.get("semantic_revision_digest")
+        coverage = [record["peer_id"] for record in accounting.get("records") or []]
+    return {
+        "status": "PASS" if report["status"] == "PASS" else "BLOCKED",
+        "semantic_revision_digest": semantic_digest,
+        "peer_coverage": coverage,
+        "failures": report.get("failures", []),
+    }
+
+
+def export_handoff(
+    workspace: Path,
+    actor: str,
+    output: Path,
+    repository_root: Path | None = None,
+) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         tasks = db.tasks()
@@ -1206,6 +1499,48 @@ def export_handoff(workspace: Path, actor: str, output: Path) -> dict[str, Any]:
             ],
             "residual_risks": open_risks,
             "recommended_program_verdict": recommendation,
+        }
+        # Replan section: contract revision, plan revision, and the full
+        # revision history. Failed and stale revisions remain visible; the
+        # Controller recommends but never declares terminal convergence.
+        from .replan import current_plan_revision, list_revisions
+
+        plan = current_plan_revision(workspace)
+        revisions = list_revisions(workspace)
+        receipt["replan"] = {
+            "plan_revision": plan["plan_revision"],
+            "active_replan_revision_id": plan.get("active_replan_revision_id"),
+            "contract_digest": _replan_contract_digest(),
+            "revisions": revisions,
+            "failed_revisions_visible": [
+                revision["revision_id"]
+                for revision in revisions
+                if revision["status"] in {"rejected", "stale"}
+            ],
+        }
+        # Peer parity section: coverage and cross-peer results are required
+        # whenever a repository root is supplied; a missing or blocked parity
+        # proof caps the recommendation at INCONCLUSIVE.
+        receipt["peer_parity"] = {
+            "status": "NOT_RUN",
+            "semantic_revision_digest": None,
+            "peer_coverage": [],
+            "failures": [],
+        }
+        if repository_root is not None:
+            parity = _peer_parity_section(repository_root, workspace)
+            receipt["peer_parity"] = parity
+            if parity["status"] != "PASS" and recommendation in {
+                "CONVERGED",
+                "CONVERGED_WITH_NON_BLOCKING_RISKS",
+            }:
+                recommendation = "INCONCLUSIVE"
+                receipt["recommended_program_verdict"] = recommendation
+        receipt["rollback_state"] = {
+            "strategy": "restore_source_worktree_from_program_lock_base",
+            "program_lock_digest": db.get_meta("program_digest"),
+            "blueprint_root": _runtime_config(workspace).get("blueprint_root"),
+            "worktree_isolation": True,
         }
         receipt["receipt_digest"] = digest_object(receipt)
         _validate_schema(workspace, "handoff-receipt.schema.json", receipt)
