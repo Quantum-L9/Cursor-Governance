@@ -883,9 +883,16 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         db.close()
 
 
-def _changed_paths(worktree: Path) -> list[str]:
+def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
+    """Union of dirty working-tree changes and committed work since the base.
+
+    The worker contract allows both styles: leave the worktree dirty, or
+    commit on the task branch. Either way every touched path must be declared
+    in the Attempt Receipt and stay inside the Source Contract's writable
+    paths.
+    """
     raw = run_git(worktree, "status", "--porcelain=v1", "-z", "--untracked-files=all").stdout
-    paths: list[str] = []
+    paths: set[str] = set()
     parts = raw.split("\0")
     index = 0
     while index < len(parts):
@@ -898,9 +905,16 @@ def _changed_paths(worktree: Path) -> list[str]:
         if status_code[0] in {"R", "C"} and index + 1 < len(parts):
             index += 1
             path = parts[index]
-        paths.append(path.replace("\\", "/"))
+        paths.add(path.replace("\\", "/"))
         index += 1
-    return sorted(set(paths))
+    if base_sha:
+        committed = run_git(
+            worktree, "diff", "--name-only", f"{base_sha}..HEAD", check=False
+        ).stdout
+        for line in committed.splitlines():
+            if line.strip():
+                paths.add(line.strip().replace("\\", "/"))
+    return sorted(paths)
 
 
 def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
@@ -1002,7 +1016,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 == 0
                 else "FAIL"
             )
-            changed = _changed_paths(worktree)
+            changed = _changed_paths(worktree, task.get("base_sha"))
             declared = sorted(set(receipt.get("changed_files") or []))
             gates["changed_files_exact"] = "PASS" if declared == changed else "FAIL"
             patterns = contract.get("writable_paths") or []
