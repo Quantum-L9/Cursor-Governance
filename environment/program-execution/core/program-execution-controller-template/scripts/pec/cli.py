@@ -318,9 +318,7 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
                     raise ControllerError(f"evidence must be key=value, got {item}")
                 key, value_text = item.split("=", 1)
                 evidence[key] = value_text
-            value = complete_campaign(
-                args.workspace, args.actor, args.verdict, evidence=evidence
-            )
+            value = complete_campaign(args.workspace, args.actor, args.verdict, evidence=evidence)
         elif args.command == "plan-revision":
             from .replan import current_plan_revision
 

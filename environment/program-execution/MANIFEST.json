@@ -547,7 +547,7 @@
     },
     {
       "path": "campaigns/scripts/test_close_campaign.py",
-      "sha256": "0f32b3879d936036e7cd8812551348bff6de86db0d76af001878f1646eb91fdf"
+      "sha256": "121b10c566dbf4ace506bc0252948f7d56d113643256071969493112b9ec8efc"
     },
     {
       "path": "conformance/README.md",

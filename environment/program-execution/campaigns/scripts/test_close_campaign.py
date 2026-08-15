@@ -12,9 +12,7 @@ class CloseCampaignTest(unittest.TestCase):
         root = temp / "campaigns"
         root.mkdir()
         (root / "CAMPAIGN_EXECUTION_POLICY.yaml").write_text(
-            "campaigns:\n"
-            "  - id: alpha\n    execute_order: 1\n"
-            "  - id: beta\n    execute_order: 2\n",
+            "campaigns:\n  - id: alpha\n    execute_order: 1\n  - id: beta\n    execute_order: 2\n",
             encoding="utf-8",
         )
         return root
