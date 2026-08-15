@@ -53,6 +53,8 @@ class BootstrapAdmissionTest(unittest.TestCase):
             status = run_cli("status", "--workspace", str(temp / "runtime"))
             self.assertEqual(status["definition_status"], "draft")
             self.assertTrue(status["admission_draft"])
+            self.assertEqual(status["campaign_status"]["runtime_status"], "operator_intake")
+            self.assertEqual(status["campaign_status"]["source_status"], "operator_intake")
             nxt = run_cli("next", "--workspace", str(temp / "runtime"))
             self.assertEqual(nxt["ready"], [])
             self.assertTrue(nxt["admission_draft"])

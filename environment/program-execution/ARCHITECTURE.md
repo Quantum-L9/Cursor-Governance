@@ -53,3 +53,7 @@ plane writes the other's packets. pec does not auto-init
 Compile campaign source → validate Blueprint → `pec bootstrap`. Default
 bootstrap calls instantiated `validate_blueprint` on a complete pair and
 refuses `definition_status=draft`. `--admission-draft` is inspect-only.
+Running a campaign (default bootstrap, `claim`, or `start`) sets
+`runtime_status=active` on a pec receipt. Immutable
+`CAMPAIGN_SOURCE.yaml` `metadata.status` stays `operator_intake`.
+Campaign PR titles come from `metadata.title`, not the branch name.

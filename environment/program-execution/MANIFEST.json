@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "ARCHITECTURE.md",
-      "sha256": "60adfe9ec7a9ce64498b1dcb0e95ccde34462769a4a7a6c33623fb55a8461f9f"
+      "sha256": "bb29f3a85d6cec867d34dde552b702cb482fc7b2f0bc5725cc0210e54e5eea87"
     },
     {
       "path": "COMPATIBILITY.yaml",
@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "7e24d16650ed74bcd4b82f9879202572c34353f393e170f8d02ccc9d3a9de694"
+      "sha256": "5ed117b9bce571ee3316e60ec7a3fbffbe8bcd87cadff40c2396865a629a6289"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -403,7 +403,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "ac89e9b26ab8938fff7e2eaafb6611de0c7c244710cebc66ce95a6948d8cce45"
+      "sha256": "2ee40da84910d92cc4dc6fb5ba05db44bf50ce14e207ebef65ecb646870821fa"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
@@ -411,7 +411,7 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "0805941318e4e3cfa2e2cc9ae2ad9f6d5280b7cd496dbac30f11d76e0c31b2df"
+      "sha256": "c576948eaea988dafc2883876ae4a794a246a59c10ae54f81e94aa99a34f5ce7"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
@@ -1094,6 +1094,10 @@
       "sha256": "5511f91b8e31ce01ec2388abd421e204959af6b8fbda0d3f4a60c14e9684d58f"
     },
     {
+      "path": "scripts/campaign_pr_copy.py",
+      "sha256": "7796af1594d284f7cb646a0ce0dcb3abe330c4136042096d26cb15508af738c8"
+    },
+    {
       "path": "scripts/compile_campaign_source.py",
       "sha256": "a9ab82d81ae9950b2a3154b86e8ba16f55da0ab7238bb2f8489d2651fe5e992e"
     },
@@ -1136,6 +1140,10 @@
     {
       "path": "scripts/run_peer_task_pipeline.py",
       "sha256": "0e7d61be182b1c33cf500cc21e6c0d5efcb1c3154560ca3d573ddbe4518419b5"
+    },
+    {
+      "path": "scripts/tests/test_campaign_pr_copy.py",
+      "sha256": "2ac691a09dae2e7fc8270afd16fd612dfddcfddd5827f56bbe6c63f3c0169682"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",

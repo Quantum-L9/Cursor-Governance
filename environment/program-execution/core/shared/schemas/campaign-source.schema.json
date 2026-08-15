@@ -33,6 +33,14 @@
           "type": "string",
           "minLength": 1
         },
+        "status": {
+          "type": "string",
+          "enum": [
+            "operator_intake",
+            "registered",
+            "withdrawn"
+          ]
+        },
         "source_is_immutable": {
           "type": "boolean"
         }

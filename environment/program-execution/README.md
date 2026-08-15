@@ -52,6 +52,11 @@ Campaign seeds are an unbound dialect until compiled. The in-repo path is:
 4. `pec bootstrap` refuses an unvalidated draft lock. Use
    `--admission-draft` only to inspect a draft; `pec next` then returns
    `ready: []` and status prints `definition_status=draft`.
+   Default bootstrap and the first `claim`/`start` write
+   `runtime/campaign-status.json` with `runtime_status=active`.
+   `--admission-draft` leaves `runtime_status=operator_intake`.
+   Campaign `make pr` uses `scripts/campaign_pr_copy.py` so the title is
+   `[{campaign_id}] {metadata.title}`, not the GitHub branch default.
 
 `git` and `git_repo_adapter` are campaign target tokens only. pec
 reconcile binds `repository_id` to a local path. They are not worker

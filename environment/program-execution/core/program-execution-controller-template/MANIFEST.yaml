@@ -147,8 +147,8 @@ files:
   sha256: c06c0e5fcf0c2f695c3d2014441b0a3cf0239c9ffda66d662eeda3b843e2ede3
   bytes: 12541
 - path: scripts/pec/controller.py
-  sha256: 0ba6c37b62c33114f2b138d5b1fe86c3d4116d6a0b3906aa782796835037811a
-  bytes: 54945
+  sha256: 0dad472eaa9a646c18a0bb953f57a54ed44e69d7c9fb85a4ef8b219f38ef82b3
+  bytes: 58237
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -171,8 +171,11 @@ files:
   sha256: 9af0d1fff94883ede8b15a109f76d591ea84f092c26edc80c8bf5e1e71abced4
   bytes: 1018
 - path: scripts/tests/test_bootstrap_admission.py
-  sha256: 8bd9f261b19a4c1f27b207fa4091a1b6895dae0be99b8bf3b05fc17705955507
-  bytes: 2320
+  sha256: f0006c1d40ac7d409a58f6cd39a9a351e24a0ee4dcdb3738e619aba775791e5a
+  bytes: 2505
+- path: scripts/tests/test_campaign_status.py
+  sha256: 3fe77a4398f78df46b3327ba142b358109a07931f1f4847c289f645d08e3f40f
+  bytes: 1789
 - path: scripts/tests/test_changed_files.py
   sha256: 1de461c7d7d3a79519657f926c1e10a42990b264e5e9d9468c6797479ea836df
   bytes: 1191
@@ -225,5 +228,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 73
-  total_bytes: 231456
+  file_count: 74
+  total_bytes: 236722
