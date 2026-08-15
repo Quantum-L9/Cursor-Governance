@@ -71,13 +71,16 @@ import json,sys; print(json.load(open(sys.argv[1]))["[python]"]["editor.defaultF
 check "ruff nativeServer on" '"on"' "$(json_get "$WS/.vscode/settings.json" 'ruff.nativeServer')"
 check "ruff importStrategy fromEnvironment" '"fromEnvironment"' "$(json_get "$WS/.vscode/settings.json" 'ruff.importStrategy')"
 
-echo "=== eslint_owned: named exception ==="
+echo "=== product repos are not hard-classified eslint_owned ==="
 WS="$FIXTURE_ROOT/Website-Bot"
 mkdir -p "$WS"
 run_installer "$WS" >/dev/null
-check "no JS formatter key written" "__missing__" "$(json_get "$WS/.vscode/settings.json" '[typescript]')"
-check "python settings still applied" "yes" "$([ "$(json_get "$WS/.vscode/settings.json" '[python]')" != "__missing__" ] && echo yes || echo no)"
-check "class recorded as eslint_owned" "eslint_owned" "$(json_get "$WS/.vscode/.l9-ide-desired-hash" class | tr -d '"')"
+check "Website-Bot without eslint config is biome_default" "biome_default" "$(json_get "$WS/.vscode/.l9-ide-desired-hash" class | tr -d '"')"
+check "biome owns typescript" '{"editor.defaultFormatter":"biomejs.biome"}' "$(json_get "$WS/.vscode/settings.json" '[typescript]')"
+WS="$FIXTURE_ROOT/SEO-Bot"
+mkdir -p "$WS"
+run_installer "$WS" >/dev/null
+check "SEO-Bot without eslint config is biome_default" "biome_default" "$(json_get "$WS/.vscode/.l9-ide-desired-hash" class | tr -d '"')"
 
 echo "=== eslint_owned: heuristic (eslint config, no biome.json) ==="
 WS="$FIXTURE_ROOT/some-node-app"
@@ -195,7 +198,7 @@ echo "=== policy.json is the ownership authority for both classes ==="
 check "biome_default binds JS/TS from policy" '{"editor.defaultFormatter":"biomejs.biome"}' \
   "$(json_get "$FIXTURE_ROOT/plain-repo/.vscode/settings.json" '[typescript]')"
 check "eslint_owned binds nothing for JS/TS" "__missing__" \
-  "$(json_get "$FIXTURE_ROOT/Website-Bot/.vscode/settings.json" '[typescript]')"
+  "$(json_get "$FIXTURE_ROOT/some-node-app/.vscode/settings.json" '[typescript]')"
 check "policy declares no extension IDs" "no" \
   "$(grep -q 'biomejs.biome\|charliermarsh.ruff' "${L9_IDE_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)/environment/ide}/policy.json" && echo yes || echo no)"
 
