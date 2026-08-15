@@ -18,7 +18,7 @@ becoming a competing runtime authority.
 | `handoff/CAMPAIGN_HANDOFF.md` | Human-readable admission handoff + owner terminal-verdict note. |
 | `deliverables/l9-devpack-compiler/` | Hand-off for the out-of-scope `l9-devpack-compiler` target (W1–W7 remediation design that could not be pushed to that repo). |
 
-## Outcome (recommended verdict: INCONCLUSIVE)
+## Outcome (owner terminal verdict: CONVERGED)
 
 - **Definition materialized and validated GREEN.** The native Blueprint v2 +
   Controller pair was instantiated from this repo's
@@ -48,5 +48,7 @@ source, its integrity receipt, the admission handoff, the reproducible
 validation evidence, and the out-of-scope target deliverable are registered in
 the SSOT.
 
-_Terminal verdict is reserved to the program owner (AUTH-001); the controller
-only recommends._
+_AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
+authorization ceiling to commit/push/pull_request. Merge remains denied. The
+controller still only recommends; engineering waves remain blocked on target
+binding._

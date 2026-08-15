@@ -56,7 +56,7 @@ program:
       - modifications to Cursor-Governance Program Execution core
       - creation of a second runtime controller or runtime state store
       - remote repository mutation
-      - commit, push, pull request, merge, release, or deployment
+      - merge, release, or deployment
       - credential values or persistent remote credentials
       - weakening DPK red-lines or existing tests merely to pass validation
   contracts:
@@ -1134,9 +1134,6 @@ workstreams:
         - documentation
         - final changed-file set
       exclude:
-        - commit
-        - push
-        - pull request
         - merge
         - release
         - deployment
@@ -1418,9 +1415,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: false
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1503,9 +1500,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1584,9 +1581,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1667,9 +1664,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1754,9 +1751,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1845,9 +1842,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
@@ -1976,9 +1973,9 @@ tasks:
     authorization_ceiling:
       inspect: true
       local_write: true
-      commit: false
-      push: false
-      pull_request: false
+      commit: true
+      push: true
+      pull_request: true
       merge: false
       publish_or_release: false
       deploy_or_migrate: false
