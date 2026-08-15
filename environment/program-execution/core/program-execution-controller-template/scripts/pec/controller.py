@@ -291,10 +291,22 @@ def task_readiness(
     db: StateDB, task: dict[str, Any], workspace: Path | None = None
 ) -> tuple[bool, list[str]]:
     blockers: list[str] = []
+    adaptation: dict[str, Any] = {
+        "dependency_overrides": {},
+        "scoped_unknowns": [],
+    }
     if workspace is not None:
         lock_ok, _ = verify_program_lock(workspace / "runtime" / "program-lock.json")
         if not lock_ok:
             blockers.append("program_lock_stale_or_invalid")
+        try:
+            from .replan import plan_adaptation
+
+            adaptation = plan_adaptation(workspace)
+        except ControllerError:
+            # Replan layer unavailable or plan revision not yet initialized;
+            # readiness falls back to the locked plan alone.
+            pass
     if db.get_meta("global_halt", False):
         blockers.append("global_halt")
     if task["definition_status"] != "ready":
@@ -311,7 +323,15 @@ def task_readiness(
         "CANCELLED",
     }:
         blockers.append(f"runtime_state_not_claimable:{task['runtime_state']}")
-    for dep in task["dependencies"]:
+    override = adaptation["dependency_overrides"].get(task["id"])
+    effective_dependencies = list(task["dependencies"])
+    if override:
+        removed = set(override.get("remove") or [])
+        effective_dependencies = [dep for dep in effective_dependencies if dep not in removed]
+        for dep in override.get("add") or []:
+            if dep not in effective_dependencies:
+                effective_dependencies.append(dep)
+    for dep in effective_dependencies:
         dependency = db.task(dep)
         if dependency is None or dependency["runtime_state"] not in {"PASSED_LOCAL", "COMPLETED"}:
             blockers.append(f"dependency_not_complete:{dep}")
@@ -327,6 +347,9 @@ def task_readiness(
             or not item["evidence_ids"]
         ):
             blockers.append(f"blocking_unknown:{unknown_id}")
+    for scoped in adaptation["scoped_unknowns"]:
+        if task["id"] in (scoped.get("blocked_task_ids") or []) and scoped.get("unknown_id"):
+            blockers.append(f"scoped_runtime_unknown:{scoped['unknown_id']}")
     for evidence_id in task["required_evidence"]:
         if not _evidence_valid(db, evidence_id):
             blockers.append(f"required_evidence_missing_or_invalid:{evidence_id}")
@@ -403,10 +426,23 @@ def status(workspace: Path) -> dict[str, Any]:
                 }
             )
         ledger_ok, ledger_message = ledger.verify()
+        plan_revision = None
+        try:
+            from .replan import current_plan_revision
+
+            plan = current_plan_revision(workspace)
+            plan_revision = {
+                "plan_revision": plan["plan_revision"],
+                "active_replan_revision_id": plan.get("active_replan_revision_id"),
+            }
+        except ControllerError:
+            # Runtime predates the replan layer; durable plan revision is unavailable.
+            plan_revision = None
         return {
             "program": db.get_meta("program"),
             "program_digest": db.get_meta("program_digest"),
             "global_halt": db.get_meta("global_halt", False),
+            "plan_revision": plan_revision,
             "tasks": tasks,
             "gates": db.gates(),
             "decisions": db.decisions(),
@@ -433,7 +469,29 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
                 "blockers": blockers,
             }
             (ready if ok else blocked).append(item)
-        return {"ready": ready, "blocked": blocked}
+        children: list[dict[str, Any]] = []
+        try:
+            from .replan import plan_adaptation
+
+            adaptation = plan_adaptation(workspace)
+        except ControllerError:
+            adaptation = {"runtime_child_tasks": {}, "scoped_unknowns": []}
+        for parent_id, child_ids in adaptation["runtime_child_tasks"].items():
+            parent = db.task(parent_id)
+            if parent is None:
+                continue
+            for child_id in child_ids:
+                children.append(
+                    {
+                        "id": child_id,
+                        "title": f"{parent['title']} / {child_id}",
+                        "runtime_only": True,
+                        "parent_task_id": parent_id,
+                        "parent_authority": parent.get("authorization_ceiling", {}),
+                        "blockers": ["runtime_split_child_pending_admission"],
+                    }
+                )
+        return {"ready": ready, "blocked": blocked, "runtime_split_children": children}
     finally:
         db.close()
 
@@ -1120,7 +1178,47 @@ def set_halt(workspace: Path, halted: bool, reason: str, actor: str) -> dict[str
         db.close()
 
 
-def export_handoff(workspace: Path, actor: str, output: Path) -> dict[str, Any]:
+def _replan_contract_digest() -> str:
+    import hashlib
+
+    core = Path(__file__).resolve().parents[3]
+    contract = core / "shared/REPLAN_CONTRACT.yaml"
+    if not contract.is_file():
+        raise ControllerError(f"Replan contract missing from core pair: {contract}")
+    return hashlib.sha256(contract.read_bytes()).hexdigest()
+
+
+def _peer_parity_section(repository_root: Path, workspace: Path) -> dict[str, Any]:
+    import sys
+
+    pe_root = Path(repository_root).resolve() / "environment/program-execution"
+    if not pe_root.is_dir():
+        raise ControllerError(f"program-execution seam not found under repository root: {pe_root}")
+    sys.path.insert(0, str(pe_root))
+    from peer_execution.golden_vectors import run_parity_gate
+
+    report = run_parity_gate(repository_root, workspace)
+    accounting_path = Path(workspace).resolve() / "runtime/projection/peer-accounting.json"
+    semantic_digest = None
+    coverage: list[str] = []
+    if accounting_path.is_file():
+        accounting = json.loads(accounting_path.read_text(encoding="utf-8"))
+        semantic_digest = accounting.get("semantic_revision_digest")
+        coverage = [record["peer_id"] for record in accounting.get("records") or []]
+    return {
+        "status": "PASS" if report["status"] == "PASS" else "BLOCKED",
+        "semantic_revision_digest": semantic_digest,
+        "peer_coverage": coverage,
+        "failures": report.get("failures", []),
+    }
+
+
+def export_handoff(
+    workspace: Path,
+    actor: str,
+    output: Path,
+    repository_root: Path | None = None,
+) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         tasks = db.tasks()
@@ -1206,6 +1304,48 @@ def export_handoff(workspace: Path, actor: str, output: Path) -> dict[str, Any]:
             ],
             "residual_risks": open_risks,
             "recommended_program_verdict": recommendation,
+        }
+        # Replan section: contract revision, plan revision, and the full
+        # revision history. Failed and stale revisions remain visible; the
+        # Controller recommends but never declares terminal convergence.
+        from .replan import current_plan_revision, list_revisions
+
+        plan = current_plan_revision(workspace)
+        revisions = list_revisions(workspace)
+        receipt["replan"] = {
+            "plan_revision": plan["plan_revision"],
+            "active_replan_revision_id": plan.get("active_replan_revision_id"),
+            "contract_digest": _replan_contract_digest(),
+            "revisions": revisions,
+            "failed_revisions_visible": [
+                revision["revision_id"]
+                for revision in revisions
+                if revision["status"] in {"rejected", "stale"}
+            ],
+        }
+        # Peer parity section: coverage and cross-peer results are required
+        # whenever a repository root is supplied; a missing or blocked parity
+        # proof caps the recommendation at INCONCLUSIVE.
+        receipt["peer_parity"] = {
+            "status": "NOT_RUN",
+            "semantic_revision_digest": None,
+            "peer_coverage": [],
+            "failures": [],
+        }
+        if repository_root is not None:
+            parity = _peer_parity_section(repository_root, workspace)
+            receipt["peer_parity"] = parity
+            if parity["status"] != "PASS" and recommendation in {
+                "CONVERGED",
+                "CONVERGED_WITH_NON_BLOCKING_RISKS",
+            }:
+                recommendation = "INCONCLUSIVE"
+                receipt["recommended_program_verdict"] = recommendation
+        receipt["rollback_state"] = {
+            "strategy": "restore_source_worktree_from_program_lock_base",
+            "program_lock_digest": db.get_meta("program_digest"),
+            "blueprint_root": _runtime_config(workspace).get("blueprint_root"),
+            "worktree_isolation": True,
         }
         receipt["receipt_digest"] = digest_object(receipt)
         _validate_schema(workspace, "handoff-receipt.schema.json", receipt)

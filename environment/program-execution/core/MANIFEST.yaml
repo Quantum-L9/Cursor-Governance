@@ -9,14 +9,14 @@ files:
   sha256: 81200312df8937dd955d337de2e63dac4631f1808ae0fb7acc4303d2bf936bdd
   bytes: 2340
 - path: CANONICAL_VOCABULARY.yaml
-  sha256: 2e9eeedd6e601e2eca5ce2ffb7fecbf5482ea6bc2ff6579b013e0759ab070abd
-  bytes: 1720
+  sha256: 42242e604dd95a879d1e745ba74cc79c9d2aff13336464f0845bf547cdb14f9a
+  bytes: 2044
 - path: CHANGELOG.md
   sha256: 88c5fafd37497bd9d0bf412e157c482b547dadb7f940f44040943d15e542a7c5
   bytes: 709
 - path: COMPATIBILITY.yaml
-  sha256: 0263ec66e58929935c61427083268f8c2b158fccaaf662cfd6493b0b7f769ce3
-  bytes: 533
+  sha256: 6d3cacf40f9c3c9829ab0ba7b40808b9e4b8bc7ae144ba1cea5de046c39d3ee1
+  bytes: 578
 - path: CONVERGENCE_REPORT.yaml
   sha256: 96563f11dbceebfc62c092ce7edac4731a942bcc7f45ddee72b6911737f2b778
   bytes: 916
@@ -303,8 +303,8 @@ files:
   sha256: 7aded64e0720289753f37cabdc9789f146a67cc2b06e131bf7d0ebccf67bf4b4
   bytes: 1582
 - path: program-execution-controller-template/schemas/handoff-receipt.schema.json
-  sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
-  bytes: 1918
+  sha256: 9ddd5c591093a6b5099dfc67f5e43d527e5c18f638b5e72141f2a474d0471455
+  bytes: 3939
 - path: program-execution-controller-template/schemas/program-lock.schema.json
   sha256: ff384bfa7738bdea9589eb78cdb7d5515bdb06c117150f27c8d0d6cadcaefc3e
   bytes: 2484
@@ -315,8 +315,8 @@ files:
   sha256: 71c4f2dfd7c1b8deee9d1c8ea3dbdce05355d52b8a8aac5d8afc4457d47e15a3
   bytes: 2608
 - path: program-execution-controller-template/schemas/task-contract.schema.json
-  sha256: 3f1a95fd2cbb97fc20691bb0a9aba53defb9399e7a258d859924a5166f9b0220
-  bytes: 3526
+  sha256: aad248e986dba5ad6b47af683380d82130de66a5a3fc799565d1e33316b8a514
+  bytes: 3700
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
   sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
   bytes: 2078
@@ -333,20 +333,23 @@ files:
   sha256: 96f1cc147b5417fa6d4dada330b1c455d424f42d2b0a534ace8562c4b1fad656
   bytes: 6383
 - path: program-execution-controller-template/scripts/pec/cli.py
-  sha256: 0bff24a734cde731819025199d3578a882c3b1eda250b68294a5458e004aa927
-  bytes: 9597
+  sha256: d6b3e8a59690dd2a8a948e033a7da285190830944837e2aa5563b37cb7833b9e
+  bytes: 13137
 - path: program-execution-controller-template/scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
   bytes: 2419
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: 664a0eab7fb45784f812b1036cd9cef6bfe44b49675d1d9defc398f0d8cad442
-  bytes: 12358
+  sha256: 35a2e669bc41a400f3128a0c0294753ccfe4c6f072111e60fba8d50c3d5f0391
+  bytes: 12814
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 1b3a7072754e1f02c626de2d41d77bec8349946b5537d3abcdf6c962def00c41
-  bytes: 50835
+  sha256: e312e494735b20f100f3b35d5fd3ffe816c5923aede93d816cdaae48b8e37500
+  bytes: 56901
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
+- path: program-execution-controller-template/scripts/pec/replan.py
+  sha256: 6c7df55ab9aa8566f88a4eb65bdbbe2ad1091f3c72bcca634de1cb325f21349a
+  bytes: 13822
 - path: program-execution-controller-template/scripts/pec/state.py
   sha256: 56782e09c6e9a4c5b534a0fd331da02efb8e4930d4d7a65f57217c1d68ddbd2b
   bytes: 23430
@@ -414,8 +417,11 @@ files:
   sha256: bc10b4bf18bfdf1ffad63e574e28139939f64b171aaf519046c028999d5dccec
   bytes: 2625
 - path: scripts/validate_pair.py
-  sha256: 4303c58b5c7a5920562f8c523cc201892d55cc8b3409f003cc4d3832043f7f7b
-  bytes: 10056
+  sha256: 72e1fea701e7594378942bd03b94ac2ff068238cc2fc45882aec9296a4f4eb59
+  bytes: 10356
+- path: scripts/validate_replan.py
+  sha256: a823d852d2fc9879495735b2b4f5b050059ea6a67987fc733f81a673a43dcc9c
+  bytes: 3855
 - path: shared/AUTHORIZATION_MODEL.yaml
   sha256: 2a7d346233543ce8a9aa62b0ea219e5627cc0bfd34979adbe56dd7318aa81a05
   bytes: 843
@@ -434,9 +440,12 @@ files:
 - path: shared/OWNERSHIP_MATRIX.yaml
   sha256: 936389561ac91db740279b4ff09d2c94cb440303b292d4ab42f456db97c2ca08
   bytes: 1978
+- path: shared/REPLAN_CONTRACT.yaml
+  sha256: 6d081f36eb88055270e93f23dceb06b158003688f386d6e2dd1ae9f61aeb00fb
+  bytes: 1306
 - path: shared/STATE_MODEL.yaml
-  sha256: b10991c403b4ab08b278fd2315234464b01814fbaa5981a054ea65c8d101810f
-  bytes: 1262
+  sha256: e8b785723f49e8942f0ae4d95774d722ffdfd196877164f48e00bd2705c44452
+  bytes: 1521
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
@@ -449,9 +458,24 @@ files:
 - path: shared/schemas/handoff-receipt.schema.json
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
+- path: shared/schemas/replan-revision.schema.json
+  sha256: 89546ee78fc22a01b71f53a975d232a8b69a8c09f994dc1bc3df491a9708cbba
+  bytes: 5166
 - path: tests/test_pair_alignment.py
   sha256: 81b298a4128e9a2674ab00519c4e22c908e4331d7244c8b4b06b9606a81e50ec
   bytes: 1748
+- path: tests/test_replan_contract.py
+  sha256: 339df81ed6f92d4c9ff97bab242f070df187d7cabc80380b17ced6eb24b840e3
+  bytes: 3979
+- path: tests/test_replan_handoff.py
+  sha256: 93816e89cdd1b6d4ed14bf608d66a38ec04bfd5e4202fc8005702991b4eab13f
+  bytes: 5042
+- path: tests/test_replan_integration.py
+  sha256: 95535606046901376c53a6e03330990d70a4fd33eb1d0dcdc4e376010e723736
+  bytes: 10516
+- path: tests/test_replan_lifecycle.py
+  sha256: 00b3aaffb5dcb10d6995a83b59ea052e7b5563e18d959a66b386895fd7b7756c
+  bytes: 10281
 - path: validation/execution_trace.jsonl
   sha256: 2ae20bccfb4dcc8ecf89e7a7a8e8628b19e78b279f4cd1c24e69f2e8c19ae4d0
   bytes: 558
@@ -471,5 +495,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 155
-  total_bytes: 373642
+  file_count: 163
+  total_bytes: 440794

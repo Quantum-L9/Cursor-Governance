@@ -157,6 +157,45 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--actor", required=True)
     cmd.add_argument("--output", required=True, type=Path)
+    cmd.add_argument("--repository-root", type=Path)
+
+    cmd = sub.add_parser("plan-revision")
+    cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser("replan-propose")
+    cmd.add_argument("revision_id")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--program-id", required=True)
+    cmd.add_argument("--trigger-evidence-id", action="append", default=[])
+    cmd.add_argument("--affected-future-task-id", action="append", default=[])
+    cmd.add_argument("--delta-file", required=True, type=Path)
+    cmd.add_argument("--expected-validation-effect", required=True)
+    cmd.add_argument("--proposer-actor", required=True)
+
+    cmd = sub.add_parser("replan-verify")
+    cmd.add_argument("revision_id")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--verifier-actor", required=True)
+
+    cmd = sub.add_parser("replan-activate")
+    cmd.add_argument("revision_id")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--actor", required=True)
+
+    cmd = sub.add_parser("replan-reject")
+    cmd.add_argument("revision_id")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--reason", required=True)
+    cmd.add_argument("--actor", required=True)
+
+    cmd = sub.add_parser("replan-list")
+    cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser("project-replan")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--repository-root", required=True, type=Path)
+    cmd.add_argument("--actor", required=True)
+    cmd.add_argument("--replan-revision-id")
     return p
 
 
@@ -243,7 +282,52 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
         elif args.command == "resume":
             value = set_halt(args.workspace, False, args.reason, args.actor)
         elif args.command == "export-handoff":
-            value = export_handoff(args.workspace, args.actor, args.output)
+            value = export_handoff(
+                args.workspace, args.actor, args.output, repository_root=args.repository_root
+            )
+        elif args.command == "plan-revision":
+            from .replan import current_plan_revision
+
+            value = current_plan_revision(args.workspace)
+        elif args.command == "replan-propose":
+            from .replan import propose
+
+            delta = json.loads(args.delta_file.read_text(encoding="utf-8"))
+            value = propose(
+                args.workspace,
+                revision_id=args.revision_id,
+                program_id=args.program_id,
+                trigger_evidence_ids=args.trigger_evidence_id,
+                affected_future_task_ids=args.affected_future_task_id,
+                delta=delta,
+                expected_validation_effect=args.expected_validation_effect,
+                proposer_actor=args.proposer_actor,
+            )
+        elif args.command == "replan-verify":
+            from .replan import verify
+
+            value = verify(args.workspace, args.revision_id, verifier_actor=args.verifier_actor)
+        elif args.command == "replan-activate":
+            from .replan import activate
+
+            value = activate(args.workspace, args.revision_id, actor=args.actor)
+        elif args.command == "replan-reject":
+            from .replan import reject
+
+            value = reject(args.workspace, args.revision_id, actor=args.actor, reason=args.reason)
+        elif args.command == "replan-list":
+            from .replan import list_revisions
+
+            value = {"revisions": list_revisions(args.workspace)}
+        elif args.command == "project-replan":
+            from .replan import project
+
+            value = project(
+                args.workspace,
+                repository_root=args.repository_root,
+                actor=args.actor,
+                replan_revision_id=args.replan_revision_id,
+            )
         else:
             raise ControllerError(f"unsupported command: {args.command}")
         print_json(value)

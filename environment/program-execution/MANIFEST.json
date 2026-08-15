@@ -694,6 +694,10 @@
       "sha256": "96d00c38d3a5ea5f24403953701841a6ce0c761e4a731feb8a601bd2030bcc53"
     },
     {
+      "path": "conformance/test_golden_vectors.py",
+      "sha256": "3bec17b771f69b5433976896ca20a9a421c0eacd5fa3e0e1cb9d7d85228a3029"
+    },
+    {
       "path": "conformance/test_identity_binding.py",
       "sha256": "61c482e0a130afc57e9f7085d85b8e15f6b1d01ca84152ad1a1556157f1f5ec7"
     },
@@ -704,6 +708,14 @@
     {
       "path": "conformance/test_receipt_integrity.py",
       "sha256": "d79c9e7431313b606007c972dd34723e6c18498dedcd042dd47efc847da8f5a3"
+    },
+    {
+      "path": "conformance/test_replan_peer_parity.py",
+      "sha256": "49013639e350626eb4179f4930d4ed7252a48fb811d4ae8a58ebe07b976499eb"
+    },
+    {
+      "path": "conformance/test_replan_projection.py",
+      "sha256": "3b5ae145b68cf4d1375fb5b11a314d8af0360a33d35832760fe43927316d016f"
     },
     {
       "path": "conformance/test_schema_roundtrip.py",
@@ -990,6 +1002,10 @@
       "sha256": "03041b2e451806534da47d75dfb238bd6b74ac1daa29bdd8c581fa1ab2fdd538"
     },
     {
+      "path": "peer_execution/golden_vectors.py",
+      "sha256": "5c6d57b979a552d7495bd1cd5d6efea129a8a204634406e0a7c9d058ab32fbca"
+    },
+    {
       "path": "peer_execution/imports.py",
       "sha256": "8847fdfd6313b03d907701d12b16a4fd03007439ae3d330e47a70ef8d6b83ac7"
     },
@@ -1020,6 +1036,10 @@
     {
       "path": "peer_execution/receipts.py",
       "sha256": "a645745fcdc010e23ab87af5647ab0e0ad8bf4c14265d210861ec1676fdb4ee3"
+    },
+    {
+      "path": "peer_execution/replan_projection.py",
+      "sha256": "b126ff35696d3ce182bda41e0af674eb07ce4bcd0514ee4de8392053e50ccc6d"
     },
     {
       "path": "peer_execution/runner.py",
@@ -1124,6 +1144,10 @@
     {
       "path": "scripts/run_conformance.py",
       "sha256": "88a112c4edae22928ee683aad2dbdc6c8f560318a980bc0915a9c80ced495e3f"
+    },
+    {
+      "path": "scripts/run_parity_gate.py",
+      "sha256": "55c36e8a52f9579848ee4bd0596376f69649f66df99e3d1f16d601be881bc1a1"
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
