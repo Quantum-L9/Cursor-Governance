@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-
-sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
-
 import json
 import subprocess
 import sys
@@ -22,6 +18,7 @@ from peer_execution.golden_vectors import (
 )
 from peer_execution.replan_projection import build_semantic_revision, project_to_peers
 
+sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent.parent
 CONTRACT = ROOT / "core/shared/REPLAN_CONTRACT.yaml"

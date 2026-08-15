@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import sys
-
-sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
-
 import hashlib
+import sys
 import unittest
 from pathlib import Path
 
 import yaml
 
+sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
 ROOT = Path(__file__).resolve().parents[1]
 BINDINGS = ROOT.parent / "agents" / "PEER_RUNTIME_BINDINGS.yaml"
 CONTRACT = ROOT / "core/shared/REPLAN_CONTRACT.yaml"

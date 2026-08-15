@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import sys
-
-# Keep the controller template free of compiled debris (validate_controller checks).
-sys.dont_write_bytecode = True
 from pathlib import Path
 
 import pytest
@@ -16,6 +13,8 @@ REPO_ROOT = CORE.parents[2]
 TEMPLATE = CORE / "program-execution-controller-template"
 sys.path.insert(0, str(TEMPLATE / "scripts"))
 
+# Keep the controller template free of compiled debris (validate_controller checks).
+sys.dont_write_bytecode = True
 from pec.controller import bootstrap, export_handoff  # noqa: E402
 from pec.replan import activate, propose, verify  # noqa: E402
 from test_replan_integration import (  # noqa: E402

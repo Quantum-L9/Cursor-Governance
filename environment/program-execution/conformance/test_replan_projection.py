@@ -8,9 +8,6 @@ and that partial semantic revision activation is impossible.
 from __future__ import annotations
 
 import sys
-
-sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
-
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,6 +20,8 @@ from peer_execution.replan_projection import (
     project_to_peers,
     verify_projection,
 )
+
+sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent.parent

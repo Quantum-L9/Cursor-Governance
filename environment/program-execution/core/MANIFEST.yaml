@@ -468,13 +468,13 @@ files:
   sha256: 339df81ed6f92d4c9ff97bab242f070df187d7cabc80380b17ced6eb24b840e3
   bytes: 3979
 - path: tests/test_replan_handoff.py
-  sha256: 82da5acd345e917777cdd7b34b75ef09f8b0a16caf32648ad877e88602c351d4
-  bytes: 5043
+  sha256: 93816e89cdd1b6d4ed14bf608d66a38ec04bfd5e4202fc8005702991b4eab13f
+  bytes: 5042
 - path: tests/test_replan_integration.py
-  sha256: 30c3aa992b2e096b36a7ef7db3f569c40bdd1d0e0d7b8fe0415548c2a76b3474
-  bytes: 10434
+  sha256: 95535606046901376c53a6e03330990d70a4fd33eb1d0dcdc4e376010e723736
+  bytes: 10516
 - path: tests/test_replan_lifecycle.py
-  sha256: 4816bee27dc756ad9b5f48be77f4f449472bc9c896d3242f4bf964d6d86c3850
+  sha256: 00b3aaffb5dcb10d6995a83b59ea052e7b5563e18d959a66b386895fd7b7756c
   bytes: 10281
 - path: validation/execution_trace.jsonl
   sha256: 2ae20bccfb4dcc8ecf89e7a7a8e8628b19e78b279f4cd1c24e69f2e8c19ae4d0
@@ -496,4 +496,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 163
-  total_bytes: 440713
+  total_bytes: 440794

@@ -11,9 +11,6 @@ from __future__ import annotations
 
 import json
 import sys
-
-# Keep the controller template free of compiled debris (validate_controller checks).
-sys.dont_write_bytecode = True
 from pathlib import Path
 
 import pytest
@@ -23,6 +20,9 @@ TEMPLATE = CORE / "program-execution-controller-template"
 sys.path.insert(0, str(TEMPLATE / "scripts"))
 
 from pec import replan  # noqa: E402
+
+# Keep the controller template free of compiled debris (validate_controller checks).
+sys.dont_write_bytecode = True
 from pec.controller import ControllerError, bootstrap, status  # noqa: E402
 from pec.replan import (  # noqa: E402
     activate,

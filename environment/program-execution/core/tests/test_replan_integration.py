@@ -12,9 +12,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-
-# Keep the controller template free of compiled debris (validate_controller checks).
-sys.dont_write_bytecode = True
 from pathlib import Path
 
 import pytest
@@ -23,6 +20,8 @@ CORE = Path(__file__).resolve().parents[1]
 TEMPLATE = CORE / "program-execution-controller-template"
 sys.path.insert(0, str(TEMPLATE / "scripts"))
 
+# Keep the controller template free of compiled debris (validate_controller checks).
+sys.dont_write_bytecode = True
 from pec.controller import bootstrap, next_tasks, status  # noqa: E402
 from pec.replan import (  # noqa: E402
     activate,
@@ -189,7 +188,14 @@ def _propose(
 def _pec_cli(workspace: Path, command: str) -> dict:
     """Drive the Controller CLI in a fresh process: durable state only."""
     proc = subprocess.run(
-        [sys.executable, "-B", str(TEMPLATE / "scripts/pec.py"), command, "--workspace", str(workspace)],
+        [
+            sys.executable,
+            "-B",
+            str(TEMPLATE / "scripts/pec.py"),
+            command,
+            "--workspace",
+            str(workspace),
+        ],
         capture_output=True,
         text=True,
     )
