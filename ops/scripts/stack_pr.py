@@ -24,6 +24,7 @@ import json
 import subprocess
 import sys
 from typing import Any
+from urllib.parse import quote
 
 
 def _gh(*args: str) -> Any:
@@ -36,7 +37,13 @@ def _gh(*args: str) -> Any:
     if proc.returncode != 0:
         print(f"stack_pr: gh api failed: {proc.stderr.strip()}", file=sys.stderr)
         raise SystemExit(1)
-    return json.loads(proc.stdout)
+    text = proc.stdout.strip()
+    if not text:
+        return []
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return text  # --jq string fields (e.g. default_branch) are not JSON
 
 
 def open_prs(repo: str, prefix: str) -> list[dict[str, Any]]:
@@ -44,9 +51,7 @@ def open_prs(repo: str, prefix: str) -> list[dict[str, Any]]:
     if prefix:
         query += f" head:{prefix}"
     return _gh(
-        "search/issues",
-        "-f",
-        f"q={query}",
+        f"search/issues?q={quote(query)}",
         "--jq",
         ".items[] | {number, title, head: .head.label, base: .base.label}",
     )
