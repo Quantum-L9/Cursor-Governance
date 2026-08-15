@@ -1,0 +1,10 @@
+schema: program-execution.intent.v1
+objective: Make repo X achieve Y and keep going until verified.
+tasks:
+  - implement feature
+files:
+  - src/main.py
+execution_waves:
+  - w0
+worker_prompts:
+  - "write the code"

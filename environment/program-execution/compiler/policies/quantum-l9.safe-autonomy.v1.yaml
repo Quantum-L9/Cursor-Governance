@@ -1,0 +1,49 @@
+schema: program-execution.autonomy-policy.v1
+id: quantum-l9.safe-autonomy.v1
+provenance:
+  - source: environment/program-execution/campaigns/cc-pe-intent-compiler-v1/CONTRACT_SOURCE.md
+    digest: fa3a19475a8b3206f210a2eb4b20adcdef01e696b798922b3aa0d91b08bcc7b3
+    default_owner: Igor Beylin
+    note: >
+      AUTH-001 owner ceiling expansion (2026-08-14, verdict CONVERGED) resealed the
+      contract so commit/push/pull_request are allowed on campaign integration
+      branches; merge remains denied. This profile mirrors the resealed ceilings
+      and never widens them. default_owner is recorded from the AUTH-001
+      supersession receipts (owner: Igor Beylin), not inferred.
+execution:
+  continue_until: blocking_authority_boundary
+planning:
+  generate_tasks: true
+  reorder_independent_tasks: true
+  split_tasks: true
+  merge_tasks: true
+  repair_failed_plan: true
+  create_scoped_unknowns: true
+decisions:
+  evidence_determined: auto
+  policy_determined: auto
+  reversible_planning_choice: auto
+  architecture_change: require_authority
+  public_contract_change: require_authority
+  permission_expansion: require_authority
+  irreversible_risk_acceptance: require_authority
+authorization_ceiling:
+  inspect: true
+  local_write: true
+  commit: true
+  push: true
+  pull_request: true
+  merge: false
+  publish_or_release: false
+  deploy_or_migrate: false
+  destructive_change: false
+  external_message: false
+verification:
+  independent: required
+  worker_self_verification: insufficient
+unknowns:
+  block_only_dependents: true
+  resolve_from_authoritative_evidence: true
+replanning:
+  allowed_within_locked_authority: true
+  authority_widening: forbidden
