@@ -26,7 +26,20 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+from command_parse import (  # noqa: E402
+    segment_head,
+    segment_words,
+    split_segments,
+    strip_heredoc_bodies,
+    wrapper_subcommands,
+)
 
 # Broad add forms that scoop the whole dirty tree.
 _BROAD_ADD_SHORT = re.compile(
@@ -41,9 +54,6 @@ _BROAD_ADD_DOT = re.compile(
     r"\bgit\s+add\s+(?:(?:-[A-Za-z]+|--[a-z-]+)\s+)*\.(?:\s|$)",
     re.I,
 )
-
-_REVERT = re.compile(r"\bgit\s+revert\b", re.I)
-_RESET = re.compile(r"\bgit\s+reset\b", re.I)
 
 # Branch moves (not path checkout `git checkout -- file`, not create -b).
 _SWITCH = re.compile(r"\bgit\s+switch\b", re.I)
@@ -127,7 +137,11 @@ _SCRATCH_HOLD_PARK_WIP = re.compile(r"scratch_hold\.py\s+park\b[^\n]*\bWIP\b", r
 
 
 def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
-    if _REVERT.search(command) and not _authorized("L9_GIT_REVERT_AUTHORIZED"):
+    # Subcommand-position checks: only argv[1] can trigger revert/reset, so a
+    # commit message like `git commit -m "mention git revert"` never matches.
+    words = segment_words(command)
+    subcommand = words[1] if len(words) > 1 else None
+    if subcommand == "revert" and not _authorized("L9_GIT_REVERT_AUTHORIZED"):
         return (
             "shared-worktree isolation: git "
             "revert denied (destroyed in-flight commands/plan.md on 2026-08-12). "
@@ -135,7 +149,7 @@ def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
             "target commit has no foreign/out-of-scope paths, or use a "
             "dedicated git worktree per parallel agent."
         )
-    if dirty and _RESET.search(command) and not _authorized("L9_GIT_RESET_AUTHORIZED"):
+    if dirty and subcommand == "reset" and not _authorized("L9_GIT_RESET_AUTHORIZED"):
         return (
             "shared-worktree isolation: git reset denied while the worktree is "
             "dirty (wipes parallel agents dirty/untracked work). Use a git "
@@ -204,9 +218,41 @@ def _deny_sacred_wip(command: str) -> str | None:
     return None
 
 
+def _git_command_segments(command: str) -> list[str]:
+    """Segments that ARE git commands, including wrapper-nested ones.
+
+    Heredoc bodies are stripped first (they are data, not commands); quoted
+    spans are preserved, so a real ``bash -c 'git revert …'`` still surfaces
+    via the wrapper descent.
+    """
+    segments: list[str] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        if segment_head(segment) == "git":
+            segments.append(segment)
+        for nested in wrapper_subcommands(segment):
+            if segment_head(nested) == "git":
+                segments.append(nested)
+    return segments
+
+
 def command_violates_worktree_isolation(command: str, *, root: Path | None = None) -> str | None:
     """Return deny reason if command is a known foreign-work destroyer."""
     if isolation_disabled() or not command.strip():
         return None
     dirty = _working_tree_dirty(root)
-    return _deny_shared_git(command, dirty=dirty) or _deny_sacred_wip(command)
+    sanitized = strip_heredoc_bodies(command)
+    # Sacred-WIP patterns span whole pipelines (mv/cp/rm/mkdir … WIP) and match
+    # the sanitized full text; git-subcommand patterns match per git segment so
+    # message text in unrelated segments can never trip them. The diff-pipe
+    # scoop loop is inherently cross-segment and keeps the full-text check.
+    for segment in _git_command_segments(command):
+        reason = _deny_shared_git(segment, dirty=dirty)
+        if reason:
+            return reason
+    if _is_diff_name_pipe_add(sanitized) and not _authorized("L9_GIT_BROAD_ADD_AUTHORIZED"):
+        return (
+            "shared-worktree isolation: piping name-only diff into staging "
+            "denied — that scoops parallel agents dirty files. Stage an explicit "
+            "allowlist of paths you authored, or set L9_GIT_BROAD_ADD_AUTHORIZED=<reason>."
+        )
+    return _deny_sacred_wip(sanitized)

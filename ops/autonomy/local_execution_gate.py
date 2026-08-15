@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,13 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from command_parse import (  # noqa: E402
+    extract_named_roots,
+    segment_head,
+    split_segments,
+    strip_heredoc_bodies,
+    wrapper_subcommands,
+)
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
@@ -54,11 +62,63 @@ DENY_MCP_TOOLS = {
 
 
 def command_is_remote_mutation(command: str) -> bool:
-    return any(p.search(command) for p in REMOTE_BASH_PATTERNS)
+    """Detect remote mutation in command text only (heredoc data is excluded).
+
+    Matching is command-position scoped: a segment only counts when its head
+    is the tool the pattern names (git/gh/make). Quoted spans are preserved,
+    so ``bash -c 'git push …'`` still matches via the wrapper descent.
+    ``echo 'git push'`` and other data segments never match. Residual accepted:
+    ``ssh host 'git push'`` / ``sudo git push`` heads are not pattern targets.
+    """
+    segments: list[str] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        segments.append(segment)
+        segments.extend(wrapper_subcommands(segment))
+    for segment in segments:
+        head = segment_head(segment)
+        if head not in {"git", "gh", "make"}:
+            continue
+        if any(pattern.search(segment) for pattern in REMOTE_BASH_PATTERNS):
+            return True
+    return False
+
+
+def _repo_root_from_path(path: str) -> Path | None:
+    """Resolve a named path to its git repo root (symlinks resolved).
+
+    Fails closed: only an existing directory inside a git work tree qualifies.
+    """
+    try:
+        candidate = Path(path).resolve()
+    except OSError:
+        return None
+    if not candidate.is_dir():
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(candidate), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    top = Path(proc.stdout.strip())
+    return top if top.is_dir() else None
 
 
 def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str | None:
-    """Return deny reason or None if allowed."""
+    """Return deny reason or None if allowed.
+
+    Workspace resolution: when the command explicitly names repo paths
+    (``git -C <path>`` / ``cd <path>``), EVERY named root must hold a valid L4
+    release receipt — otherwise the session-root check applies unchanged.
+    Dynamic path tokens never widen the gate (extract_named_roots ignores
+    them), so unknown targets stay fail-closed.
+    """
     if tool_name in DENY_MCP_TOOLS or tool_name.endswith("create_pull_request"):
         allowed, reason = release_allows_remote(root)
         return None if allowed else reason
@@ -70,6 +130,21 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
             return iso
         if not command_is_remote_mutation(command):
             return None
+        named_roots = extract_named_roots(command)
+        if named_roots:
+            resolved = [_repo_root_from_path(path) for path in named_roots]
+            if any(item is None for item in resolved):
+                return (
+                    "L4 named root could not be resolved to a git repository; "
+                    "fail-closed on unresolved remote-mutation targets"
+                )
+            if all(release_allows_remote(item)[0] for item in resolved):  # type: ignore[union-attr]
+                return None
+            denied = next(
+                item for item in resolved if item is not None and not release_allows_remote(item)[0]
+            )
+            _, reason = release_allows_remote(denied)
+            return reason
         allowed, reason = release_allows_remote(root)
         return None if allowed else reason
     return None

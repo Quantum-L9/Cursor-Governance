@@ -1,5 +1,27 @@
 # Controller Runbook
 
+## 0. Compile the campaign source and admit the Blueprint
+
+Ordering is load-bearing. The compiler self-validates its output (template
+mode); evidence is collected next; acceptance is the operator's act and MUST
+precede bootstrap — after bootstrap the Program Lock freezes the Blueprint
+digests and any further edit poisons every verification with STALE.
+
+```bash
+# 1. Compile (hard-fails on sources with no valid compiled representation)
+python3 environment/program-execution/scripts/compile_campaign_source.py \
+  --source path/to/CAMPAIGN_SOURCE.yaml --target $BLUEPRINT_DIR
+
+# 2. Collect admission evidence for every EVID-* a task requires
+python3 environment/program-execution/scripts/collect_evidence.py \
+  --blueprint $BLUEPRINT_DIR --evidence-id EVID-002 --revision <sha-or-ref> \
+  --notes "collected at admission" --producer operator
+
+# 3. Accept the Blueprint (operator act: flip → validate → receipt → re-validate)
+python3 environment/program-execution/scripts/accept_blueprint.py \
+  --blueprint $BLUEPRINT_DIR --actor operator --evidence-id EVID-002
+```
+
 ## 1. Validate and instantiate
 
 ```bash
@@ -56,6 +78,17 @@ python scripts/pec.py render-contract TASK-002 --workspace ../runtime
 ```
 
 Give only the Rendered Contract, Worker Brief, and worktree to the worker.
+
+**Worker contract:** leave the task worktree dirty (uncommitted) OR commit on
+the task branch — `verify` covers both (union of dirty changes and
+`base_sha..HEAD`). The Attempt Receipt must declare EVERY touched path
+exactly; all paths must stay inside the Source Contract's writable paths.
+Commit happens later at campaign integration, not inside the task.
+
+**Retry after a FAILED verdict:** `release-lease TASK-XXX` → remove the task
+worktree and its branch (`git worktree remove <ws>/worktrees/TASK-XXX --force`
+and `git branch -D pec/<wave>/task-xxx`) → `claim` again (FAILED→ELIGIBLE is a
+legal transition) → `prepare` → `render-contract` → re-execute.
 
 ## 8. Record and verify
 
