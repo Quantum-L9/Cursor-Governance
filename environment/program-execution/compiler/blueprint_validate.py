@@ -7,6 +7,7 @@ scripts/validate_blueprint.py). Never maintains a second approximate validator.
 from __future__ import annotations
 
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -24,8 +25,12 @@ class ValidationResult:
 
 
 def validate(blueprint_root: Path, mode: str = "instantiated") -> ValidationResult:
+    # sys.executable, not bare `python3` from PATH: the validator needs
+    # jsonschema, and PATH/HOME/user-site state varies by shell (2026-08-15
+    # factory repair — `python3` under a clean HOME or a venv-prefixed PATH
+    # silently lost jsonschema and failed every blueprint validation).
     completed = subprocess.run(
-        ["python3", str(VALIDATOR), str(blueprint_root), "--mode", mode],
+        [sys.executable, str(VALIDATOR), str(blueprint_root), "--mode", mode],
         capture_output=True,
         text=True,
         check=False,
