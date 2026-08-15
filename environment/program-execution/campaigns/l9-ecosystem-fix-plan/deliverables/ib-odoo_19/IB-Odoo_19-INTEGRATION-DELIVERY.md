@@ -1,13 +1,12 @@
 # IB-Odoo_19 Integration Delivery — l9-ecosystem-fix campaign
 
-**Target:** `cryptoxdog/IB-Odoo_19` · **Status:** OUT OF SESSION SCOPE — not a
-Quantum-L9 repo, not attachable this session, **could not be pushed to.**
-**Therefore this is a hand-off deliverable**: apply it to IB-Odoo_19 yourself (or
-attach the repo in a future session and I'll open the PR directly).
+**Target:** `cryptoxdog/IB-Odoo_19` · **Status:** remaining live work (v1.1.0).
+Execute from `origin/Staging` when the operator says run. This file is the
+TASK-004 / TASK-006 design. **Not applied.**
 
-This covers the two Odoo-side campaign tasks that were blocked on the unreachable
-target, now fully specified against the **verified** CEG/EIE contracts and the
-**resolved** DEC-001 identity decision:
+TASK-002 (writeback default) is specified in `CAMPAIGN_SOURCE.yaml`. Closed
+EIE / CEG / Gate / PR #141 work lives in `history/v1.0.0/` and is not in
+this campaign anymore.
 
 - **TASK-004** — Wave 3 match mapper contract break (`results` → `candidates`) +
   DEC-001 identity mapping.
@@ -118,32 +117,29 @@ Use the canonical EIE fixtures `contracts/converge_request.json` /
 
 ---
 
-## 4. How to apply (since IB-Odoo_19 can't be pushed from here)
+## 4. How to apply (only when the operator says run)
 
-```bash
-git clone https://github.com/cryptoxdog/IB-Odoo_19
-cd IB-Odoo_19 && git checkout -b claude/campaign-execution-pipeline-dbc5cl
-# place the two reference mappers under plasticos_gate / plasticos_matching,
-# adapting imports to the Odoo module env, then:
-#   - replace payload.get("results") -> the map_match_response() call
-#   - wire the converge request/response through the converge mapper
-# add frozen-fixture tests using CEG PR #195 + EIE PR #166 canonical fixtures
-git add -A && git commit && git push -u origin HEAD   # then open a PR
-```
+See `../../EXECUTION_FROM_ODOO.md`. Bind a fresh worktree from `origin/Staging`.
+Do not use the constellation `fix/install-smoke-runtime-gate` clone.
 
-Or **attach `cryptoxdog/IB-Odoo_19` to a session** (grant access in the Claude
-GitHub settings) and I'll wire these in and open the PR directly, then run the
-Wave-6 round-trip validations end to end.
+Place the two reference mappers under `plasticos_gate`, adapt imports, then:
+
+- replace `payload.get("results")` with `map_match_response()` / `candidates`
+- wire converge request/response through the converge mapper
+- add frozen-fixture tests using CEG #195 + EIE #166 canonical fixtures
+- flip `plasticos.gate.auto_writeback` default to `0` (TASK-002 remainder)
+
+L4 local commits only. Publish with `PR_REMEDIATE=0 make pr` against
+`campaign/l9-ecosystem-fix-plan`. No merge from the controller.
 
 ---
 
-## 5. What remains blocked until IB-Odoo_19 is reachable
+## 5. Remaining campaign work
 
-- Applying/merging these mappers into IB-Odoo_19.
-- Odoo Gate writeback safe-default + PR #141 install-smoke (TASK-002 Odoo half).
-- The six Wave-6 launch-critical round-trip paths and six failure cases (they
-  all transit Odoo). Controller verdict stays **INCONCLUSIVE** until then.
+- TASK-002 writeback default.
+- These mappers (TASK-004 / TASK-006).
+- TASK-007 Wave-6 round-trips after those three land.
 
 Companion artifacts: `../../handoff/CAMPAIGN_HANDOFF.md`,
-`../../handoff/handoff.json`. Upstream contracts landed in **EIE PR #166** and
-**CEG PR #195**.
+`../../handoff/handoff.json`. Frozen fixtures: CEG `contracts/match_response.json`,
+EIE `contracts/converge_*.json`.

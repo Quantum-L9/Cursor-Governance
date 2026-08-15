@@ -1,7 +1,8 @@
 """Reference mapper: Odoo <-> EIE converge request/response (TASK-006).
 
-DELIVERABLE for cryptoxdog/IB-Odoo_19 (out-of-session-scope target; could not be
-pushed to that repo). Drop into plasticos_gate and adapt to the Odoo env.
+DELIVERABLE for cryptoxdog/IB-Odoo_19 (in scope; apply only when execution
+starts). Drop into plasticos_gate and adapt to the Odoo env. Not applied in
+the 2026-08-14 remediations pass.
 
 Grounds (verified against EIE app/models/schemas.py + app/engines/handlers.py):
 - The constellation "converge" action EIE owns (POST /v1/execute) validates the
