@@ -12,6 +12,9 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+
+# Keep the controller template free of compiled debris (validate_controller checks).
+sys.dont_write_bytecode = True
 from pathlib import Path
 
 import pytest
@@ -186,7 +189,7 @@ def _propose(
 def _pec_cli(workspace: Path, command: str) -> dict:
     """Drive the Controller CLI in a fresh process: durable state only."""
     proc = subprocess.run(
-        [sys.executable, str(TEMPLATE / "scripts/pec.py"), command, "--workspace", str(workspace)],
+        [sys.executable, "-B", str(TEMPLATE / "scripts/pec.py"), command, "--workspace", str(workspace)],
         capture_output=True,
         text=True,
     )

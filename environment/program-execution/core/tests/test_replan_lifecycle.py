@@ -11,6 +11,9 @@ from __future__ import annotations
 
 import json
 import sys
+
+# Keep the controller template free of compiled debris (validate_controller checks).
+sys.dont_write_bytecode = True
 from pathlib import Path
 
 import pytest

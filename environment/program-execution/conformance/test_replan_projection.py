@@ -7,6 +7,10 @@ and that partial semantic revision activation is impossible.
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
+
 import tempfile
 import unittest
 from pathlib import Path

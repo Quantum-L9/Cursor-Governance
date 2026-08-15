@@ -117,8 +117,8 @@ files:
   sha256: 71c4f2dfd7c1b8deee9d1c8ea3dbdce05355d52b8a8aac5d8afc4457d47e15a3
   bytes: 2608
 - path: schemas/task-contract.schema.json
-  sha256: 3f1a95fd2cbb97fc20691bb0a9aba53defb9399e7a258d859924a5166f9b0220
-  bytes: 3526
+  sha256: aad248e986dba5ad6b47af683380d82130de66a5a3fc799565d1e33316b8a514
+  bytes: 3700
 - path: schemas/verification-receipt.schema.json
   sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
   bytes: 2078
@@ -214,4 +214,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 69
-  total_bytes: 239884
+  total_bytes: 240058

@@ -315,8 +315,8 @@ files:
   sha256: 71c4f2dfd7c1b8deee9d1c8ea3dbdce05355d52b8a8aac5d8afc4457d47e15a3
   bytes: 2608
 - path: program-execution-controller-template/schemas/task-contract.schema.json
-  sha256: 3f1a95fd2cbb97fc20691bb0a9aba53defb9399e7a258d859924a5166f9b0220
-  bytes: 3526
+  sha256: aad248e986dba5ad6b47af683380d82130de66a5a3fc799565d1e33316b8a514
+  bytes: 3700
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
   sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
   bytes: 2078
@@ -468,14 +468,14 @@ files:
   sha256: 339df81ed6f92d4c9ff97bab242f070df187d7cabc80380b17ced6eb24b840e3
   bytes: 3979
 - path: tests/test_replan_handoff.py
-  sha256: 73dfcd327ec2ee65306ad6580cf6ad0b48afd72681c3fdc3c602bd3c2961bb58
-  bytes: 4926
+  sha256: 82da5acd345e917777cdd7b34b75ef09f8b0a16caf32648ad877e88602c351d4
+  bytes: 5043
 - path: tests/test_replan_integration.py
-  sha256: 60837c35f4e9be7971e1980dd429f8711b5776f345231cb2744faf4365516f68
-  bytes: 10311
+  sha256: 30c3aa992b2e096b36a7ef7db3f569c40bdd1d0e0d7b8fe0415548c2a76b3474
+  bytes: 10434
 - path: tests/test_replan_lifecycle.py
-  sha256: d66aa91fc4191e02cbba5bdf2e6a0ff15da43f9d8e5d96123f58df0d56180000
-  bytes: 10164
+  sha256: 4816bee27dc756ad9b5f48be77f4f449472bc9c896d3242f4bf964d6d86c3850
+  bytes: 10281
 - path: validation/execution_trace.jsonl
   sha256: 2ae20bccfb4dcc8ecf89e7a7a8e8628b19e78b279f4cd1c24e69f2e8c19ae4d0
   bytes: 558
@@ -496,4 +496,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 163
-  total_bytes: 440182
+  total_bytes: 440713

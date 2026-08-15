@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True  # keep PE tree free of compiled debris
+
 import json
 import subprocess
 import sys
