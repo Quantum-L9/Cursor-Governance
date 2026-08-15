@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution.intent-resolution.v1",
+  "title": "Program Execution Intent Resolution v1",
+  "description": "Canonical intermediate artifact between user intent and Program Synthesis. Every material derived requirement must trace to user, evidence, decision, or policy. No unattributed machine inference may become execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "intent",
+    "targets",
+    "governing_authority",
+    "derived_requirements",
+    "decisions",
+    "unknowns",
+    "evidence",
+    "program_action",
+    "confidence",
+    "synthesis_status"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution.intent-resolution.v1"
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "original_objective", "normalized_objective"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^INTENT-[A-Z0-9-]+$"
+        },
+        "original_objective": {
+          "type": "string"
+        },
+        "normalized_objective": {
+          "type": "string"
+        }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository_id", "resolution_source", "confidence"],
+        "properties": {
+          "repository_id": {
+            "type": "string"
+          },
+          "resolution_source": {
+            "enum": ["user", "evidence", "decision", "policy"]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "enum": ["high", "medium", "low"]
+          }
+        }
+      }
+    },
+    "governing_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_profile"],
+      "properties": {
+        "policy_profile": {
+          "type": "string"
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "decision_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "derived_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "statement", "source"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^REQ-[A-Z0-9-]+$"
+          },
+          "statement": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "ref"],
+            "properties": {
+              "type": {
+                "enum": ["evidence", "decision", "policy", "user"]
+              },
+              "ref": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted_from_authority", "accepted_from_policy", "requires_human_authority"],
+      "properties": {
+        "accepted_from_authority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "accepted_from_policy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requires_human_authority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "topic", "blocks", "safe_state", "resolution_requirements"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^UNK-[A-Z0-9-]+$"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "safe_state": {
+            "type": "string"
+          },
+          "resolution_requirements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authoritative", "supporting", "stale_or_conflicting"],
+      "properties": {
+        "authoritative": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supporting": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stale_or_conflicting": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "program_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "enum": ["create", "extend", "supersede"]
+        },
+        "parent_program_ref": {
+          "type": ["string", "null"]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intent_resolution",
+        "target_resolution",
+        "authority_resolution",
+        "repository_understanding"
+      ],
+      "properties": {
+        "intent_resolution": {
+          "enum": ["high", "medium", "low"]
+        },
+        "target_resolution": {
+          "enum": ["high", "medium", "low"]
+        },
+        "authority_resolution": {
+          "enum": ["high", "medium", "low"]
+        },
+        "repository_understanding": {
+          "enum": ["high", "medium", "low"]
+        }
+      }
+    },
+    "synthesis_status": {
+      "enum": ["ready", "blocked", "requires_authority"]
+    }
+  }
+}

@@ -599,7 +599,95 @@
     },
     {
       "path": "compiler/README.md",
-      "sha256": "ac04ed0a73c753bac833c6c3a5888dfb274f3e7caa73410bcc74ce36bcc7cad3"
+      "sha256": "0ebf0088950dc3502a3a2cea3c442e72d5fe293f36820f5dbeb743f6f77cf5d5"
+    },
+    {
+      "path": "compiler/__init__.py",
+      "sha256": "c4dbdb538048f7e48d4c92128d8556df61051d2c486c0cc1e8427dc15cb7b25e"
+    },
+    {
+      "path": "compiler/blueprint_validate.py",
+      "sha256": "21e4b0c9b3c54ebf17e23d5ce4ba9092b410ec88b3fcc67f18e91c55147912d6"
+    },
+    {
+      "path": "compiler/cli.py",
+      "sha256": "9ef741686383dd264cec1511ff4c5c7f328ea2376d23626c775ac789ac017f7f"
+    },
+    {
+      "path": "compiler/fixtures/implementation-prescribing-intent.yaml",
+      "sha256": "7c85f8fa3bb52538c7c66725cdbeef0b639df120fce2cd28ef1f9d8efe6218c3"
+    },
+    {
+      "path": "compiler/fixtures/minimal-intent.yaml",
+      "sha256": "ff75f92d93a5315a0c2c9a6c5af63b8730e1485d064ac561f1f2b4fd215b6107"
+    },
+    {
+      "path": "compiler/intent.py",
+      "sha256": "6a8249bc0807369248256559851ad38c08dbf58fa96312ea5775191a7a4d8b17"
+    },
+    {
+      "path": "compiler/policies/quantum-l9.safe-autonomy.v1.yaml",
+      "sha256": "0831bee0c2505015cb0df3e56890dfced4f0caf199ef8ccd407086978ee9a37e"
+    },
+    {
+      "path": "compiler/policy.py",
+      "sha256": "9781da5fb7afd20fc7ac874c1ff1a52a8b6f2b1b3f8805115f349fce75e0c471"
+    },
+    {
+      "path": "compiler/program_action.py",
+      "sha256": "4107dbbc61a3f98afe7cd242d223c9c3db03ee40dcedb4ac758f9752183ceac3"
+    },
+    {
+      "path": "compiler/repo_truth.py",
+      "sha256": "752eb63d3f0a3595fc7326bea0a4eec31d5bb9f3d6b26ff9f3f3f8c6662c5e48"
+    },
+    {
+      "path": "compiler/resolver.py",
+      "sha256": "26af9a34a9e7d3ec763d2332714ca711320a58a15c92132477f62fbbe734e33b"
+    },
+    {
+      "path": "compiler/schemas/autonomy-policy.schema.json",
+      "sha256": "0e59212b051ba980cbd44580e5523f8cfd0d2db83b53744f36ac888fd70d1f2f"
+    },
+    {
+      "path": "compiler/schemas/intent-resolution.schema.json",
+      "sha256": "95c00d483d2b63e744a0577efe3b63203df3bb3a80ea8df7f25ee2bb589546df"
+    },
+    {
+      "path": "compiler/schemas/intent.schema.json",
+      "sha256": "93ad40d0d1cc72fd555ec4a8967025ad05169caaf4559a2c8f94c7c1a6bf451e"
+    },
+    {
+      "path": "compiler/synthesizer.py",
+      "sha256": "3b786826461d15f77fd10fb40cc32bad68d52da593edf432eb17a9573c05e3a1"
+    },
+    {
+      "path": "compiler/tests/conftest.py",
+      "sha256": "be205204e91535e40bc5a325d011ba7a5b98f7d245fd324c86be0ef532025ebf"
+    },
+    {
+      "path": "compiler/tests/test_blueprint_validation.py",
+      "sha256": "5ffd7f042a0539c79290f9903681879ba901870794fecb9630c854fd39d90ac4"
+    },
+    {
+      "path": "compiler/tests/test_cli.py",
+      "sha256": "0612456f0338a9f84754b58e8a7e8cbf51f6cc2fdd93b0045ef2bdadfd863800"
+    },
+    {
+      "path": "compiler/tests/test_intent_schema.py",
+      "sha256": "e636c5802a37456e3c99a3bf6b4a0317a15f44149c77138fa2a6555cf78a8832"
+    },
+    {
+      "path": "compiler/tests/test_program_action.py",
+      "sha256": "ac8e527976068bf14e476fb8941c9a3ad6b6abbf6a01029eb5b2aa4dd2a50574"
+    },
+    {
+      "path": "compiler/tests/test_resolver.py",
+      "sha256": "884cc613d05309970ced8a2e2a1427484ff7578178e3e3694d8631360a50d072"
+    },
+    {
+      "path": "compiler/tests/test_synthesizer.py",
+      "sha256": "1b14d5796c4b687987151e941318ada50aef2b3d039927a99022c38f90b88601"
     },
     {
       "path": "conformance/README.md",

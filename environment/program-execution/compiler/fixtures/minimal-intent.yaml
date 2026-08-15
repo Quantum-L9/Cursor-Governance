@@ -1,0 +1,9 @@
+schema: program-execution.intent.v1
+objective: >
+  Evolve l9-devpack-compiler so I can give it a simple goal and it handles
+  the full execution pipeline autonomously.
+targets:
+  - Quantum-L9/Cursor-Governance
+policy_profile: quantum-l9.safe-autonomy.v1
+termination:
+  mode: program_handoff
