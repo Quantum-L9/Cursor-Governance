@@ -26,6 +26,7 @@ CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
 SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
 RUNTIME_STATUSES = {"operator_intake", "active", "halted", "completed"}
 TERMINAL_RUNTIME = {"halted", "completed"}
+TERMINAL_VERDICTS = {"CONVERGED", "CONVERGED_WITH_NON_BLOCKING_RISKS", "NOT_CONVERGED"}
 
 
 def campaign_status_path(workspace: Path) -> Path:
@@ -47,23 +48,64 @@ def write_campaign_status(
     runtime_status: str,
     actor: str,
     ledger: EventLedger | None = None,
+    verdict: str | None = None,
+    evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if source_status not in SOURCE_STATUSES:
         raise ControllerError(f"invalid source_status={source_status}")
     if runtime_status not in RUNTIME_STATUSES:
         raise ControllerError(f"invalid runtime_status={runtime_status}")
+    current = read_campaign_status(workspace) or {}
+    activated_at = current.get("activated_at")
+    if runtime_status == "active" and not activated_at:
+        activated_at = utc_now()
     payload = {
         "schema": CAMPAIGN_STATUS_SCHEMA,
         "campaign_id": campaign_id,
         "source_status": source_status,
         "runtime_status": runtime_status,
-        "activated_at": utc_now() if runtime_status == "active" else None,
+        "activated_at": activated_at,
+        "completed_at": utc_now() if runtime_status == "completed" else current.get("completed_at"),
+        "verdict": verdict if runtime_status == "completed" else current.get("verdict"),
+        "evidence": evidence or current.get("evidence") or {},
         "actor": actor,
     }
     write_json(campaign_status_path(workspace), payload)
     if ledger is not None and runtime_status == "active":
         ledger.append("CAMPAIGN_ACTIVATED", actor, payload)
+    if ledger is not None and runtime_status == "completed":
+        ledger.append("CAMPAIGN_COMPLETED", actor, payload)
     return payload
+
+
+def complete_campaign(
+    workspace: Path,
+    actor: str,
+    verdict: str,
+    evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Mark a live campaign completed. Last required campaign step."""
+    if verdict not in TERMINAL_VERDICTS:
+        raise ControllerError(f"closeout requires a terminal verdict, got {verdict}")
+    db, ledger = open_runtime(workspace)
+    try:
+        current = read_campaign_status(workspace) or db.get_meta("campaign_status") or {}
+        payload = write_campaign_status(
+            workspace,
+            campaign_id=str(
+                current.get("campaign_id") or _campaign_id_from_program(db.get_meta("program"))
+            ),
+            source_status=str(current.get("source_status") or "operator_intake"),
+            runtime_status="completed",
+            actor=actor,
+            ledger=ledger,
+            verdict=verdict,
+            evidence=evidence,
+        )
+        db.set_meta("campaign_status", payload)
+        return payload
+    finally:
+        db.close()
 
 
 def _campaign_id_from_program(program: dict[str, Any] | None) -> str:
@@ -1557,6 +1599,21 @@ def export_handoff(
                 "receipt_digest": receipt["receipt_digest"],
             },
         )
+        if recommendation in TERMINAL_VERDICTS:
+            campaign_id = _campaign_id_from_program(program)
+            current = read_campaign_status(workspace) or {}
+            payload = write_campaign_status(
+                workspace,
+                campaign_id=campaign_id,
+                source_status=str(current.get("source_status") or "operator_intake"),
+                runtime_status="completed",
+                actor=actor,
+                ledger=ledger,
+                verdict=recommendation,
+                evidence={"handoff_id": receipt["handoff_id"], "output": str(output)},
+            )
+            db.set_meta("campaign_status", payload)
+            receipt["campaign_status"] = payload
         return receipt
     finally:
         db.close()

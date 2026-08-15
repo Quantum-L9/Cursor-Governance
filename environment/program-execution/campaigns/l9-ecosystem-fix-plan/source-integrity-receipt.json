@@ -2,14 +2,16 @@
   "schema": "source-integrity-receipt.v1",
   "campaign_id": "l9-ecosystem-fix-plan",
   "source_file": "CAMPAIGN_SOURCE.yaml",
+  "source_version": "1.1.0",
+  "successor_of": {
+    "version": "1.0.0",
+    "path": "history/v1.0.0/CAMPAIGN_SOURCE.yaml",
+    "digest": "2e6e137597958203e595bcbceea52fc9fbb83dcb71cbc18dfa901a84f572ee79"
+  },
   "digest_algorithm": "sha256",
-  "digest": "158e26c7a72176347eb2a62754b499d6387a45b988f835faacdb1f30590a9847",
-  "bytes": 41733,
-  "pack_recorded_digest": "158e26c7a72176347eb2a62754b499d6387a45b988f835faacdb1f30590a9847",
-  "pack_recorded_bytes": 41733,
-  "digest_matches_pack": true,
-  "collected_at": "2026-08-14T21:28:53Z",
-  "collection_method": "owner_authorization_ceiling_expansion",
-  "producer": "AUTH-001",
-  "owner_terminal_verdict": "CONVERGED"
+  "digest": "073fd52bedaa8eea4876ffde18a38ecb149da7319924466445bd82d5752c1f16",
+  "bytes": 25808,
+  "collected_at": "2026-08-14",
+  "collection_method": "operator_authorized_remaining_only_rewrite",
+  "producer": "AUTH-001-L9-ECOSYSTEM-REMAINING-2026-08-14"
 }

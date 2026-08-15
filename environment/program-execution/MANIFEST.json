@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "5ed117b9bce571ee3316e60ec7a3fbffbe8bcd87cadff40c2396865a629a6289"
+      "sha256": "3eb27481468554f42d3da995ddcf4befba56abb12980fee35ad289200c15538d"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -403,15 +403,27 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "747b30c0fac9b260ed97a5c690ea62f906e2660b49c732460e4104a5016e4697"
+      "sha256": "aecc91929617ab73c9e2ac27e761c31b578ed85626ba685828299bb6536a1909"
+    },
+    {
+      "path": "campaigns/CAMPAIGN_STATUS.yaml",
+      "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
       "sha256": "6bfdfbc654b6bc7943f85bd97f29ce59e0008bdc732336d696ecc785e43ec2e4"
     },
     {
+      "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
+      "sha256": "0d4c92ae9df397e49aa23cce7051325911bba7711fe8ae1f47b6d728543ba73c"
+    },
+    {
+      "path": "campaigns/PE_COMPILER_MODULE_ALIGNMENT.yaml",
+      "sha256": "44e76163da0b89feb225618483dcdb77582cb6911a490c97f05cffb91b5d928c"
+    },
+    {
       "path": "campaigns/README.md",
-      "sha256": "f617ccdc9d1935533e7fcc42eee345b7fa4a8af357acbe1ac8b575ed35d6fdd5"
+      "sha256": "b5869199051b6ca79aadc0aaffbcdcd6c1dba7e6932a9c6ff1c173752d3c2289"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
@@ -419,11 +431,15 @@
     },
     {
       "path": "campaigns/bounded-replanning-v1/README.md",
-      "sha256": "2437c109ba9a976cefb0aa8d84db279f9ccb9ae0d240f8682ff250048cb192e0"
+      "sha256": "93c89ee1351a8ec736fbdf92ee8dffaf6958b5cd5a9f5b530defad3ae16e1a17"
     },
     {
       "path": "campaigns/bounded-replanning-v1/handoff/CAMPAIGN_HANDOFF.md",
       "sha256": "10651af791769b76150d2657b0df9a8e6cebded619309072d75919e452570feb"
+    },
+    {
+      "path": "campaigns/bounded-replanning-v1/handoff/CLOSEOUT.yaml",
+      "sha256": "6df4b1c4345762722bebd1a571be378bf5166e47fbfce96a6c9fcd3ce820bb17"
     },
     {
       "path": "campaigns/bounded-replanning-v1/handoff/handoff.json",
@@ -432,6 +448,10 @@
     {
       "path": "campaigns/bounded-replanning-v1/source-integrity-receipt.json",
       "sha256": "1ca2176712392500b6a44441262f431453b7f4e2c2cc7da648041cbf3c104a33"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "b364d3556281d8046cc0f3aefc550f13f779f2cb8736f3e2ac05879e1225a8c6"
     },
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml",
@@ -464,6 +484,10 @@
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json",
       "sha256": "ac6aabbd6df3fa9a112939512e02f7f08fea429417e0558aaa2f3f1d837b7259"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "99b14a38d384741d06c907dbf5af589ee2988ae04ed4932faf93865263ee9f3f"
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml",
@@ -502,36 +526,80 @@
       "sha256": "429013d3ef711d967d385b757cd65d4e938dbf38109b1b0927779c935bae6e3a"
     },
     {
+      "path": "campaigns/l9-ecosystem-fix-plan/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "4b3d3c0bd16d3c507872b7a080f9fcffa210e64c4b2182a936ab4d4529f766a3"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/CAMPAIGN_EXECUTION_BINDING.yaml",
+      "sha256": "df450764dc9f2cdd31f9daa161469e3c71b4a4151927e70908d9d4dd50cde6cc"
+    },
+    {
       "path": "campaigns/l9-ecosystem-fix-plan/CAMPAIGN_SOURCE.yaml",
-      "sha256": "158e26c7a72176347eb2a62754b499d6387a45b988f835faacdb1f30590a9847"
+      "sha256": "073fd52bedaa8eea4876ffde18a38ecb149da7319924466445bd82d5752c1f16"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/CURRENT_STATE.yaml",
+      "sha256": "9b0475d19da18b3e665d5f1873cb5c7f7d9a87d57d62a1ed8ba1ee753569302c"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/EXECUTION_FROM_ODOO.md",
+      "sha256": "eb28b6a9b1165005f53afa3bf4d2fba61d81e22a0d843d6be085462c1316ed59"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/README.md",
-      "sha256": "406b2070e5868e55bb38164a83ccb63322f67ca369fd3fa33aea4da5de5d7aa4"
+      "sha256": "f131235ae1787d18694687895654c472b3dd5f3f767161a72057069edd7e88e8"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/IB-Odoo_19-INTEGRATION-DELIVERY.md",
-      "sha256": "061968bf587598fca2ebd0555e30259a5956d2150e20fd87ae5896c8272281d8"
+      "sha256": "851f6c5cae3227a654a968f413141a81063a794e8992450b79807ff8c9cbe432"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_ceg_match_mapper.py",
-      "sha256": "eb14d197d73accc50eaf693fd9cf3510ac50d7a431c809cc9d4232c2c35a7ebb"
+      "sha256": "9c6dfd9a0abb6a48cf5076db636ea519b375b81c45a272a1aed7ebd2a01343e3"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_eie_converge_mapper.py",
-      "sha256": "0f935e12fec8576779c3a3c0433119f8c8616ac511a81b689ad587d449f7dafd"
+      "sha256": "56582e32d87f7fe864c67ef8ce428f39de9a2707cdf69b796d58992081bb9918"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/handoff/CAMPAIGN_HANDOFF.md",
-      "sha256": "b1728dfdc407840d54dbb9129634161652d5720a9217d8f99f8c50d0f0756058"
+      "sha256": "6ac23212106bb2fe53c8c142c251badfbfbe97da96acb90a0908c97e235d66ee"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/handoff/handoff.json",
-      "sha256": "9d1e1cd8d7afd9cb40c8e86cf16f158cfb711ef0502890bf6c597fb0277cfcf1"
+      "sha256": "e5fe91db5175393cb742c32c6ce727c6b9184d9e486d64d5f7274b604d1ad380"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/history/v1.0.0/CAMPAIGN_SOURCE.yaml",
+      "sha256": "2e6e137597958203e595bcbceea52fc9fbb83dcb71cbc18dfa901a84f572ee79"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/history/v1.0.0/README.md",
+      "sha256": "4912712c3c2178f0b88da04cd3629e6557b19d22f52f32cab7fccebe46636955"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/history/v1.0.0/handoff.json",
+      "sha256": "eb80f6f418cd968632afcd95472c4544b97099e141d8ed2a88174b73f906b732"
+    },
+    {
+      "path": "campaigns/l9-ecosystem-fix-plan/history/v1.0.0/source-integrity-receipt.json",
+      "sha256": "337bb070d9e5d1fec322e3c09c7fc3894bc938c0b3d0e640e3c94f70bb7a767b"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
-      "sha256": "0b3ce12c3ef8ef91bf74febf1a2d852651c0051ef8bd20e0cb52efa853e70c6b"
+      "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
+    },
+    {
+      "path": "campaigns/scripts/close_campaign.py",
+      "sha256": "3fcc5222468ca66cc2d620b732a2d1c047b5933084e8fbe90a0b8caf1d51a1cd"
+    },
+    {
+      "path": "campaigns/scripts/test_close_campaign.py",
+      "sha256": "121b10c566dbf4ace506bc0252948f7d56d113643256071969493112b9ec8efc"
+    },
+    {
+      "path": "compiler/README.md",
+      "sha256": "ac04ed0a73c753bac833c6c3a5888dfb274f3e7caa73410bcc74ce36bcc7cad3"
     },
     {
       "path": "conformance/README.md",
