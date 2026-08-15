@@ -24,6 +24,7 @@
       "l9-setting-up-ci",
       "l9-graphiti-memory",
       "l9-aws-secrets",
+      "l9-plan-audit",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
       "l9-monitoring-terminal-errors"
@@ -333,6 +334,23 @@
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "plan_audit",
+        "positive_signals": [
+          "plan audit",
+          "unbuilt plans",
+          "stale plans",
+          "audit .cursor/plans",
+          "/plan-audit",
+          "which plans are unbuilt"
+        ],
+        "primary": "l9-plan-audit",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-plan",
+          "l9-ynp"
         ]
       },
       {
@@ -906,6 +924,17 @@
       "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
     },
     {
+      "composition_role": "primary",
+      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan) or to auto-build plans.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-plan-audit",
+      "path": "skills/l9-plan-audit",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked"
+    },
+    {
       "composition_role": "general",
       "description": "diagnose or converge a github pr \u2014 read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
       "disable_model_invocation": true,
@@ -1072,6 +1101,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "6b3f05526f0588c436b146b99d4b48848a3e6fe69cc58f76674bee9614a39f78",
-  "source_skill_corpus_sha256": "234feafa86d1d7382d3d2a90dc9aca83afa1d03eadf80b4e999ddb820469c6a7"
+  "source_manifest_sha256": "8fd98d3724d4267b1b13389bc6cfd8f2616f30bc42462a6d630dc7459507ac40",
+  "source_skill_corpus_sha256": "93f60598f7aeb074d029664f5255a3130283881dd247bcd500cd3b5210732548"
 }

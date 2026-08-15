@@ -195,7 +195,9 @@ def _validate_registry_entries(
 
 def _validate_debris(subsystem: Path, errors: list[str]) -> None:
     for path in subsystem.rglob("*"):
-        if path.name in DEBRIS_NAMES:
+        if "__pycache__" in path.parts or path.name == "__pycache__":
+            continue
+        if path.name in DEBRIS_NAMES - {"__pycache__"}:
             errors.append(f"compiled or cache debris: {_relative(path, subsystem)}")
         elif path.is_file() and path.suffix in DEBRIS_SUFFIXES:
             errors.append(f"runtime debris: {_relative(path, subsystem)}")

@@ -55,3 +55,9 @@ _AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
 authorization ceiling to commit/push/pull_request in Cursor-Governance. Merge
 remains denied. Commit/push/PR/merge/release/deploy against the foreign
 `l9-devpack-compiler` target stay unauthorized until that repo is attached._
+
+## Honesty
+
+This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
+path fields are not rewritten here. It is not on the compile allowlist.
+Do not treat handoff JSON as an executed Program Lock.

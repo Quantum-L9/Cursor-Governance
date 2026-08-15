@@ -15,6 +15,9 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 | Merge | forbidden (human `L9_MERGE_AUTHORIZED` only) |
 | PR base | the campaign integration branch — **not** `main` |
 | Mixing | do not land campaign commits on unrelated feature branches |
+| PR title | `[{campaign_id}] {metadata.title}` via `scripts/campaign_pr_copy.py` |
+| PR body | campaign id, title, objective, integration branch, execute order |
+| Runtime status | pec writes `$HOME/.l9/programs/<id>/runtime/campaign-status.json`; running flips `runtime_status` to `active`. Source `metadata.status` stays `operator_intake`. |
 
 | Campaign | Integration branch | Execute order |
 |---|---|---|

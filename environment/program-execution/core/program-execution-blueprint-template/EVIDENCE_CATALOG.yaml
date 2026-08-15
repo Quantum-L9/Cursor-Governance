@@ -17,3 +17,18 @@ evidence:
   - DELTA-001
   contradicts: []
   notes: null
+- id: EVID-002
+  type: inspection
+  source: PHASE0_USER_CONFIG.yaml
+  revision: UNKNOWN
+  digest: null
+  method: inspection
+  environment: planning
+  producer: '{{PROGRAM_OWNER}}'
+  produced_at: '{{DATE}}'
+  expires_at: null
+  result: INFORMATIONAL
+  status: planned
+  supports: []
+  contradicts: []
+  notes: Phase 0 completeness, CI inventory, lock/pin alignment, packet bind

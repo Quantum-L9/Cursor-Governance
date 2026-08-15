@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.program-execution.campaign-source.v2",
+  "title": "Program Execution campaign source v2",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "schema_version",
+    "metadata",
+    "program"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.program-execution.campaign-source.v2"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "campaign_id",
+        "title"
+      ],
+      "properties": {
+        "campaign_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "operator_intake",
+            "registered",
+            "owner_converged",
+            "withdrawn"
+          ]
+        },
+        "source_is_immutable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "pipeline_contract": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "operator_directive": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "program": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "name",
+        "definition_status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "definition_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contracts": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "adapter": {
+            "enum": [
+              "git",
+              "git_repo_adapter",
+              "controller"
+            ]
+          },
+          "repository_id": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    },
+    "authorities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id",
+          "responsibility"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "responsibility": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "selected_option_id": {
+            "type": ["string", "null"]
+          },
+          "blocking_task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "blocking_task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "likelihood": {
+            "enum": [
+              "possible",
+              "likely",
+              "unlikely",
+              "high",
+              "medium",
+              "low",
+              "UNKNOWN"
+            ]
+          }
+        }
+      }
+    },
+    "waves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "predecessor_wave_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-08-14T21:08:45Z",
+  "generated_utc": "2026-08-14T22:05:41Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:8118ad00c32511648773eca187fb0b6394da37e4a6193c7bcf6082f67c7e3624",
+  "source_tree_digest": "sha256:f98050fdf367e71b669670fa3ddfc7132d06927c5504eeab0517562a62ddff47",
   "summary": {
     "total_mdc_files": 63,
     "always_apply_true": 27,
@@ -101,7 +101,7 @@
       "first_heading": "Cursor + Redis Session Context (no amnesia)",
       "has_yaml_frontmatter": true,
       "line_count": 70,
-      "content_digest": "sha256:41c3af182d35d45bdace5830e1fcbdd2851bec5966fabf9a9ac5a453edebbf98",
+      "content_digest": "sha256:64a0e957121bb68ace388ae9e41928768cfc6998952a8acfc6e9f8a1e4d07c88",
       "authority": "canonical_global",
       "context_cost": "minimal",
       "deprecated": false,

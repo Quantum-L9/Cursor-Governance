@@ -32,6 +32,7 @@ REQUIRED_FILES = [
     "EXECUTION_WAVES.yaml",
     "TASK_CARDS.yaml",
     "CONVERGENCE_GATES.yaml",
+    "PHASE0_USER_CONFIG.yaml",
     "OBSERVABILITY_PLAN.yaml",
     "CUTOVER_AND_ROLLBACK.yaml",
     "SOURCE_TRACEABILITY.yaml",
@@ -63,6 +64,7 @@ SCHEMA_MAP = {
     "EXECUTION_WAVES.yaml": "execution-waves.schema.json",
     "TASK_CARDS.yaml": "task-cards.schema.json",
     "CONVERGENCE_GATES.yaml": "convergence-gates.schema.json",
+    "PHASE0_USER_CONFIG.yaml": "phase0-user-config.schema.json",
     "OBSERVABILITY_PLAN.yaml": "observability-plan.schema.json",
     "CUTOVER_AND_ROLLBACK.yaml": "cutover-and-rollback.schema.json",
     "SOURCE_TRACEABILITY.yaml": "source-traceability.schema.json",
@@ -496,7 +498,10 @@ def validate(root: Path, mode: str) -> list[str]:
         if expected[rel] != actual[rel]:
             errors.append(f"manifest checksum mismatch: {rel}")
 
-    if any(p.name == "__pycache__" or p.suffix == ".pyc" for p in root.rglob("*")):
+    if any(
+        (p.name == "__pycache__" or p.suffix == ".pyc") and "__pycache__" not in p.parts
+        for p in root.rglob("*")
+    ):
         errors.append("compiled Python debris present")
 
     if mode == "instantiated":
@@ -526,6 +531,38 @@ def validate(root: Path, mode: str) -> list[str]:
                 errors.append(
                     f"task {task['id']}: instantiated definition_status must be ready, blocked, cancelled, or superseded"  # noqa: E501
                 )
+        phase0 = data["PHASE0_USER_CONFIG.yaml"]
+        if phase0.get("autonomy", {}).get("autonomous_merge") is not False:
+            errors.append("PHASE0_USER_CONFIG.yaml: autonomous_merge must be false")
+        if phase0.get("program_deploying") and not phase0.get("completeness", {}).get(
+            "phase0_complete"
+        ):
+            errors.append(
+                "PHASE0_INCOMPLETE: program_deploying requires completeness.phase0_complete"
+            )
+        if (
+            phase0.get("program_deploying")
+            and phase0.get("autonomy", {}).get("profile") == "program_deploy_max_autonomy"
+        ):
+            if not phase0.get("stop_conditions_reviewed"):
+                errors.append("PHASE0_INCOMPLETE: deploy profile requires stop_conditions_reviewed")
+            align = phase0.get("alignment") or {}
+            for key in ("uv_lock_check", "toolchain_pin_lockstep"):
+                if align.get(key) not in {"pass", "not_applicable"}:
+                    errors.append(
+                        f"PHASE0_INCOMPLETE: alignment.{key} must be pass or not_applicable"
+                    )
+            if not align.get("make_pr_gate_required", True):
+                errors.append("PHASE0_INCOMPLETE: make_pr_gate_required must remain true")
+
+    phase0_template = data.get("PHASE0_USER_CONFIG.yaml")
+    if phase0_template is not None:
+        if phase0_template.get("autonomy", {}).get("autonomous_merge") is not False:
+            errors.append("PHASE0_USER_CONFIG.yaml: autonomous_merge must be false")
+        if phase0_template.get("alignment", {}).get("make_pr_gate_required") is not True:
+            errors.append("PHASE0_USER_CONFIG.yaml: make_pr_gate_required must be true")
+        if "GATE-000" not in gate_ids:
+            errors.append("CONVERGENCE_GATES.yaml: GATE-000 phase0 gate is required")
 
     return errors
 

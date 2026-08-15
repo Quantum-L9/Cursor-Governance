@@ -22,13 +22,13 @@ auto_chain: null
 ### READ (Search)
 
 ```bash
-python3 agents/cursor/cursor_memory_client.py search "query"
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "query"
 ```
 
 ### WRITE
 
 ```bash
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "content" --kind lesson|pattern|error|note
 ```
 
@@ -38,13 +38,13 @@ Load relevant context before execution:
 
 ```bash
 # Preferences
-python3 agents/cursor/cursor_memory_client.py search "preferences"
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "preferences"
 
 # Lessons for task
-python3 agents/cursor/cursor_memory_client.py search "{task} lessons errors"
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "{task} lessons errors"
 
 # Patterns
-python3 agents/cursor/cursor_memory_client.py search "{domain} patterns"
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "{domain} patterns"
 ```
 
 ---

@@ -17,6 +17,10 @@ domains:
     owner: program owner
     values: [CONVERGED, CONVERGED_WITH_NON_BLOCKING_RISKS, NOT_CONVERGED, INCONCLUSIVE]
     law: Controller recommendations are advisory until explicitly accepted.
+  replan_revision_state:
+    owner: Program Execution Controller
+    values: [proposed, verified, activated, rejected, stale]
+    law: A Replan Revision may change future execution only inside the immutable Program Lock. Historical receipts stay append-only.
 forbidden_collapses:
 - task_status_as_both_definition_and_runtime
 - gate_status_inside_blueprint_definition

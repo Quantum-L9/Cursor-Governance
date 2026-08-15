@@ -337,6 +337,8 @@ PE_ROOT := environment/program-execution
 
 program-execution-core-validate:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B $(PE_ROOT)/core/scripts/validate_pair.py 		$(PE_ROOT)/core --mode template
+	$(MAKE) program-execution-campaign-schema
+	$(MAKE) program-execution-campaign-compile
 
 program-execution-adapters:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
@@ -344,6 +346,8 @@ program-execution-adapters:
 
 program-execution-conformance: autonomy-contracts-validate
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/run_conformance.py
+	PYTHONDONTWRITEBYTECODE=1 python3 -B $(PE_ROOT)/scripts/validate_manifest.py
+	$(MAKE) program-execution-controller-tests
 
 program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
@@ -366,6 +370,7 @@ peer-execution-validate:
 peer-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B \
 		$(PE_ROOT)/scripts/probe_executable_peers.py
+# Honest BLOCKED (Cursor file-drop / missing Claude host) is inventory, not FAIL.
 
 # Full executable-peer conformance: compose the identity, adapter, program,
 # and readiness gates (Executable Peer Contract v1, section 14).
@@ -377,6 +382,7 @@ peer-execution-conformance:
 	$(MAKE) program-execution-conformance
 	$(MAKE) peer-execution-validate
 	$(MAKE) peer-execution-probe
+	$(MAKE) program-execution-core-validate
 
 .PHONY: agents-deployment-validate agents-results-validate agents-data-validate agents-runtime-probe
 agents-deployment-validate:
@@ -395,6 +401,21 @@ claude-deepseek:
 
 claude-deepseek-verify:
 	./scripts/verify-routing.sh
+
+.PHONY: program-execution-campaign-schema program-execution-campaign-compile
+.PHONY: program-execution-controller-tests
+program-execution-campaign-schema:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
+		$(PE_ROOT)/conformance/test_campaign_source_schema.py
+
+program-execution-campaign-compile:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
+		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py
+
+program-execution-controller-tests:
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover \
+		-s $(PE_ROOT)/core/program-execution-controller-template/scripts/tests \
+		-p 'test_*.py'
 
 .PHONY: rules-check
 ## Cursor-native rules frontmatter + always-apply ratchet (docs/rules-standard.md).
