@@ -55,6 +55,10 @@ Campaign seeds are an unbound dialect until compiled. The in-repo path is:
    Default bootstrap and the first `claim`/`start` write
    `runtime/campaign-status.json` with `runtime_status=active`.
    `--admission-draft` leaves `runtime_status=operator_intake`.
+   Closeout is required: `pec close` or a terminal `export-handoff`
+   (`CONVERGED` / `NOT_CONVERGED`) sets `runtime_status=completed`.
+   Mirror that in `campaigns/CAMPAIGN_STATUS.yaml` so the next agent
+   does not restart a finished campaign.
    Campaign `make pr` uses `scripts/campaign_pr_copy.py` so the title is
    `[{campaign_id}] {metadata.title}`, not the GitHub branch default.
 

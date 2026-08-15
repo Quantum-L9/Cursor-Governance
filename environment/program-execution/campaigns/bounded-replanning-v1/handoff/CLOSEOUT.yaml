@@ -1,0 +1,9 @@
+schema: l9.program-execution.campaign-closeout.v1
+id: bounded-replanning-v1
+lifecycle: complete
+closed_at: "2026-08-15T00:52:49Z"
+verdict: CONVERGED
+evidence:
+  pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/149"
+  merge_sha: 63efde4fdb6f99b0e7e7834211a803b564673351
+closed_by: AUTH-001

@@ -1,41 +1,31 @@
-# Campaign: l9-ecosystem-fix-plan
+# Campaign: l9-ecosystem-fix-plan (remaining Odoo surface)
 
-Registration of the **L9 Ecosystem Low-Hanging-Fruit Fix Campaign** in the
-governance SSOT, per the campaign source's `intended_drop_path`.
+Live source is **v1.1.0**. Completed EIE / CEG / Gate / PR #141 work was
+removed from the executable campaign. v1.0.0 is archived under
+`history/v1.0.0/`.
 
 | Artifact | Purpose |
 |---|---|
-| `CAMPAIGN_SOURCE.yaml` | Immutable operator-intent seed (`l9.program-execution.campaign-source.v2`). sha256 `158e26c7a72176347eb2a62754b499d6387a45b988f835faacdb1f30590a9847`. |
-| `source-integrity-receipt.json` | Digest binding of the source (matches the pack's recorded digest). |
-| `handoff/CAMPAIGN_HANDOFF.md` | Human-readable controller handoff + AUTH-001 approval packet. |
-| `handoff/handoff.json` | Schema-valid `program-execution-controller.handoff-receipt.v2`. |
-| `deliverables/ib-odoo_19/` | Hand-off for the out-of-scope `cryptoxdog/IB-Odoo_19` target (TASK-004 match mapper + TASK-006 converge mapping) that could not be pushed to that repo. |
+| `CAMPAIGN_SOURCE.yaml` | Live remaining-only seed (v1.1.0). |
+| `source-integrity-receipt.json` | Digest of the live source. |
+| `history/v1.0.0/` | Sealed original seed + 2026-08-05 handoff. |
+| `AUTH-001-SUPERSESSION.yaml` | Operator cut to remaining surface. |
+| `CURRENT_STATE.yaml` | Staging inspection of leftover `plasticos_gate` gaps. |
+| `CAMPAIGN_EXECUTION_BINDING.yaml` | PE v2 / L4 landing rules. |
+| `EXECUTION_FROM_ODOO.md` | Runbook. Do not follow until the operator says run. |
+| `handoff/CAMPAIGN_HANDOFF.md` | Current handoff. |
+| `handoff/handoff.json` | Current remaining-only receipt. |
+| `deliverables/ib-odoo_19/` | TASK-004 / TASK-006 reference mappers. Not applied. |
 
-## Outcome (owner terminal verdict: CONVERGED)
+## Remaining work
 
-- **Admission locked** — TASK-001 COMPLETED, GATE-001 PASS.
-- **Reachable engineering landed as reviewable PRs** (bounded, reversible, feature-gated):
-  - EIE — [Quantum-L9/Enrichment.Inference.Engine#166](https://github.com/Quantum-L9/Enrichment.Inference.Engine/pull/166)
-  - CEG — [Quantum-L9/Cognitive.Engine.Graphs#195](https://github.com/Quantum-L9/Cognitive.Engine.Graphs/pull/195)
-- **DEC-001** accepted → OPTION-B (candidate identity is the namespaced `entity_ref`).
-- **Blocked** — `cryptoxdog/IB-Odoo_19` is out of scope / unreachable; TASK-002 (Odoo half),
-  TASK-004, TASK-006, and the Wave-6 round-trips remain unexecuted. Their design is delivered
-  under `deliverables/ib-odoo_19/` for manual application (or attach the repo and re-run).
+| Task | State | Work |
+|---|---|---|
+| TASK-002 | READY | Writeback default `"1"` → `"0"` |
+| TASK-004 | READY | `results` → `candidates` + `resolve_buyer_partner_id()` |
+| TASK-006 | READY | Converge map, no fabricated fields |
+| TASK-007 | BLOCKED | Wave-6 after the three READY tasks |
 
-## Note on scope of this registration
+No open Unknowns. TARGET-001 only. Do not mutate EIE, CEG, or Gate.
 
-Per **DNB-003**, mutable controller runtime state (the instantiated blueprint/controller pair,
-SQLite ledger, per-run workspaces, receipts) is intentionally **NOT** committed here — it lives
-under the external program root `$HOME/.l9/programs/l9-ecosystem-fix-plan`. Only the immutable
-source, closeout receipts, and the Odoo hand-off deliverable are registered in the SSOT.
-
-_AUTH-001 declared owner terminal verdict CONVERGED and expanded this campaign's
-authorization ceiling to commit/push/pull_request. Merge remains denied. The
-controller still only recommends; IB-Odoo_19 waves remain blocked on target
-binding._
-
-## Honesty
-
-This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
-path fields are not rewritten here. It is not on the compile allowlist.
-Do not treat closeout receipts as current controller runtime.
+**Not started** — no `pec` bootstrap, no Odoo mutation in this pass.

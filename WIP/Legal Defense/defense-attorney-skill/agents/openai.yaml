@@ -1,7 +1,0 @@
-interface:
-  display_name: Beylin Defense Council V6 RC1
-  short_description: Case-specific North Carolina criminal-defense council for evidence, procedure, hearings, filings, preservation, and adversarial strategy.
-policy:
-  products:
-    - chatgpt
-  allow_implicit_invocation: true

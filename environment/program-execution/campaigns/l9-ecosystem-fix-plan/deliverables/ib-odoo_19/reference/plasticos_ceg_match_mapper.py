@@ -1,8 +1,8 @@
 """Reference mapper: CEG match response -> Odoo buyer-match records (TASK-004).
 
-DELIVERABLE for cryptoxdog/IB-Odoo_19 (out-of-session-scope target; could not be
-pushed to that repo). Drop into the plasticos_gate / plasticos_matching mapper
-and adapt imports to the module's Odoo env.
+DELIVERABLE for cryptoxdog/IB-Odoo_19 (in scope; apply only when execution
+starts). Drop into the plasticos_gate mapper and adapt imports to the module
+Odoo env. Not applied in the 2026-08-14 remediations pass.
 
 Grounds:
 - Wave 3 contract break: the live CEG /v1/execute match response returns its rows
