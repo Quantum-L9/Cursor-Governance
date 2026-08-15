@@ -8,6 +8,10 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Changed
+- **IDE class:** `eslint_owned_repos` is empty. Website-Bot and SEO-Bot
+  classify as `biome_default` unless the eslint-without-biome heuristic
+  matches. Named-exception tests assert both product names are not
+  hard-locked to ESLint.
 - **`l9-setting-up-ci` 2.0.0:** consumer CI bootstrap now prefers the
   `Quantum-L9/.github` seeder / `l9-ci-pack`, then `l9-ci-core`
   `presets/typescript/stamp.sh`. Agents must not invent `ci.yml` or

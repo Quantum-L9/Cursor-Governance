@@ -146,10 +146,9 @@ settings, never in YAML.
 
 - `l9-ci-core` executes CI. `Quantum-L9/.github` only distributes callers and
   the locked formatter contract. `l9-ci-sdk` owns the Biome scanner.
-- Already-seeded repos that still have an ESLint `l9-lint-test-node.yml` will
-  **not** be overwritten by a later missing-only seed. Replace that one file
-  from `l9-ci-pack/workflows/l9-lint-test-node.yml` (or the typescript preset)
-  when activating Biome in an existing repo.
+- The org seeder replaces a **stock** ESLint `l9-lint-test-node.yml` with the
+  Biome caller. Customized Node lint workflows are kept. Do not invent a
+  second lint workflow.
 - Keep installs deterministic (`npm ci` / frozen lockfiles) in any job you
   touch. Third-party actions stay SHA-pinned.
 - Load `l9-ci-ops` for triage after setup, not for inventing a new pipeline.
@@ -177,9 +176,9 @@ settings, never in YAML.
 ## Failure Handling
 
 - Unknown stack → inspect manifests; ask if still ambiguous.
-- Seeder skipped a dest because the file exists → keep it; do not overwrite
-  with a invented replacement. If the existing file is the stock ESLint
-  caller, replace that one file from the pack.
-- Repo listed in `eslint_owned_repos` → Governance PR to remove it, then
-  re-run the IDE profile.
+- Seeder skipped a dest because the file exists → keep it, unless it is the
+  stock ESLint `l9-lint-test-node.yml` (the seeder replaces that one file).
+- Workspace still classified `eslint_owned` after `biome.json` exists →
+  confirm it is not listed in `eslint_owned_repos`, then re-run
+  `install_ide_profile.sh`.
 - SHA-pin policy required → follow the consumer repo rule.

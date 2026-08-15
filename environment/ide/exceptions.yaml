@@ -3,9 +3,10 @@ schema: 1
 # Workspaces where ESLint owns lint/format. The IDE profile must NEVER set Biome as
 # editor.defaultFormatter here, and must never write a biome.json into the repo.
 # Project-level ESLint/Prettier config in these repos is Founder-owned and out of scope.
-eslint_owned_repos:
-  - Website-Bot
-  - SEO-Bot
+#
+# Empty: Website-Bot and SEO-Bot activate Biome. A workspace is eslint_owned
+# only via the heuristic below (eslint config present, no biome.json).
+eslint_owned_repos: []
 
 # Detection order — first match wins, workspace is classified eslint_owned.
 #   1. basename(workspace) case-insensitively equals an entry above
