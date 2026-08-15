@@ -14,6 +14,16 @@ publish:
   open_pr_against_main: false
   mix_with_other_feature_branches: false
 
+pr_copy:
+  title_template: "[{campaign_id}] {metadata.title}"
+  body_required:
+    - campaign_id
+    - metadata.title
+    - program.objective
+    - pr_base
+  reject_if_title_is_branch_default: true
+  reject_if_title_collides_with_other_open_campaign_pr: true
+
 campaigns:
   - id: bounded-replanning-v1
     integration_branch: campaign/bounded-replanning-v1

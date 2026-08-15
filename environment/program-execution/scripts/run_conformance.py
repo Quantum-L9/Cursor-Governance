@@ -14,6 +14,7 @@ def _test_files(root: Path) -> list[Path]:
     files.extend((root / "peer_execution/tests").glob("test_*.py"))
     files.extend((root / "adapters").glob("**/tests/test_*.py"))
     files.extend((root / "integrations").glob("**/tests/test_*.py"))
+    files.extend((root / "scripts/tests").glob("test_*.py"))
     return sorted(set(path.resolve() for path in files))
 
 

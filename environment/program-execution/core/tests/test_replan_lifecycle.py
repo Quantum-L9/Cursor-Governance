@@ -65,7 +65,7 @@ program:
   name: Replan Lifecycle Fixture
   version: 1.0.0
   owner: fixture-owner
-  definition_status: draft
+  definition_status: accepted
   objective: Exercise the Controller Replan Revision lifecycle.
   contracts:
     pair: program-execution-system.v2

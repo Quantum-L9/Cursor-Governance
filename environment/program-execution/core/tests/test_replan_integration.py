@@ -63,7 +63,7 @@ program:
   name: Long Chain Fixture
   version: 1.0.0
   owner: fixture-owner
-  definition_status: draft
+  definition_status: accepted
   objective: Exercise long-chain bounded replanning.
   contracts:
     pair: program-execution-system.v2

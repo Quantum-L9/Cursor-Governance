@@ -16,7 +16,65 @@
     "schema_version": {
       "const": "2.0.0"
     },
-    "cutover": {},
-    "rollback": {}
+    "cutover": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "required_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "approval_action": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "abort_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observation_window": {
+          "type": "string"
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "trigger_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "data_reconciliation": {
+          "type": "string"
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "owner": {
+          "type": "string"
+        }
+      }
+    }
   }
 }

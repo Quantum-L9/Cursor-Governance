@@ -10,8 +10,8 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 import yaml
 from peer_execution.replan_projection import (
@@ -82,7 +82,7 @@ class ReplanProjectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp) / "workspace"
             workspace.mkdir()
-            with mock.patch(
+            with unittest.mock.patch(
                 "peer_execution.replan_projection.load_peer_bindings", return_value=doc
             ):
                 accounting = project_to_peers(
@@ -104,7 +104,7 @@ class ReplanProjectionTests(unittest.TestCase):
             # A newly registered peer with no accounting yet must block promotion.
             peers["new-peer"] = dict(peers["cursor"], agent_ref="new-peer")
             doc = dict(bindings, peers=peers)
-            with mock.patch(
+            with unittest.mock.patch(
                 "peer_execution.replan_projection.load_peer_bindings", return_value=doc
             ):
                 verification = verify_projection(REPO_ROOT, workspace)

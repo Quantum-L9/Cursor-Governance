@@ -41,13 +41,13 @@ EXTRACT:
 ### 2. WRITE TO MEMORY
 
 ```bash
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "LESSON: {content}" --kind lesson
 
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "PATTERN: {content}" --kind pattern
 
-python3 agents/cursor/cursor_memory_client.py write \
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
   "ERROR: {issue} → FIX: {solution}" --kind error
 ```
 

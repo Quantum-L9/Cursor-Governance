@@ -191,6 +191,8 @@ def validate(root: Path, mode: str) -> list[str]:
         if set(task.get("authorization_ceiling", {})) != action_keys:
             errors.append(f"{task.get('id')}: authorization ceiling action set mismatch")
     for path in root.rglob("*"):
+        if "__pycache__" in path.parts:
+            continue
         if path.name == "__pycache__" or path.suffix == ".pyc":
             errors.append(f"compiled debris: {path.relative_to(root)}")
     for path in [
