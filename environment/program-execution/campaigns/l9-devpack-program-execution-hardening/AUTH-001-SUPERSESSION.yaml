@@ -1,0 +1,39 @@
+schema: l9.program-execution.auth-001-supersession.v1
+schema_version: 1.0.0
+supersession_id: AUTH-001-DEVPACK-HARDENING-IN-TREE-2026-08-14
+authority: AUTH-001
+owner: Igor Beylin
+issued_at: '2026-08-14T00:00:00Z'
+status: accepted
+campaign_id: l9-devpack-program-execution-hardening
+shared_alignment: ../PE_COMPILER_MODULE_ALIGNMENT.yaml
+
+preserves:
+  source: PROGRAM_SOURCE.md
+  source_digest: aa1bc91c4c784aacd7be79e77149f776f95ef218439ec3f5e54dcab25314f78d
+  campaign_source: CAMPAIGN_SOURCE.yaml
+  historical_handoff: handoff/handoff.json
+
+overrides:
+  target_repository_id: Quantum-L9/Cursor-Governance
+  target_reachability: in_scope
+  target_kind: pe_module
+  target_module_path: environment/program-execution/compiler
+  unk_001: resolved
+  program_source_exclude_pe_core: superseded_for_compiler_module_only
+
+interpretation:
+  program_objective_unchanged: true
+  expected_existing_foreign_repo: false
+  campaign_is: harden_the_pe_compiler_module
+  may_modify:
+    - environment/program-execution/compiler
+    - compiler_to_blueprint_projection_seams
+  must_not:
+    - create_second_controller
+    - own_mutable_runtime_state
+    - remote_mutation
+
+sibling:
+  campaign_id: cc-pe-intent-compiler-v1
+  relationship: build_same_module_first

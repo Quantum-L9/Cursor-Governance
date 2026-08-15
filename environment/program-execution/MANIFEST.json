@@ -410,6 +410,10 @@
       "sha256": "6bfdfbc654b6bc7943f85bd97f29ce59e0008bdc732336d696ecc785e43ec2e4"
     },
     {
+      "path": "campaigns/PE_COMPILER_MODULE_ALIGNMENT.yaml",
+      "sha256": "44e76163da0b89feb225618483dcdb77582cb6911a490c97f05cffb91b5d928c"
+    },
+    {
       "path": "campaigns/README.md",
       "sha256": "f617ccdc9d1935533e7fcc42eee345b7fa4a8af357acbe1ac8b575ed35d6fdd5"
     },
@@ -432,6 +436,10 @@
     {
       "path": "campaigns/bounded-replanning-v1/source-integrity-receipt.json",
       "sha256": "1ca2176712392500b6a44441262f431453b7f4e2c2cc7da648041cbf3c104a33"
+    },
+    {
+      "path": "campaigns/cc-pe-intent-compiler-v1/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "b364d3556281d8046cc0f3aefc550f13f779f2cb8736f3e2ac05879e1225a8c6"
     },
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/CAMPAIGN_SOURCE.yaml",
@@ -464,6 +472,10 @@
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json",
       "sha256": "ac6aabbd6df3fa9a112939512e02f7f08fea429417e0558aaa2f3f1d837b7259"
+    },
+    {
+      "path": "campaigns/l9-devpack-program-execution-hardening/AUTH-001-SUPERSESSION.yaml",
+      "sha256": "99b14a38d384741d06c907dbf5af589ee2988ae04ed4932faf93865263ee9f3f"
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/CAMPAIGN_SOURCE.yaml",
@@ -532,6 +544,10 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "0b3ce12c3ef8ef91bf74febf1a2d852651c0051ef8bd20e0cb52efa853e70c6b"
+    },
+    {
+      "path": "compiler/README.md",
+      "sha256": "ac04ed0a73c753bac833c6c3a5888dfb274f3e7caa73410bcc74ce36bcc7cad3"
     },
     {
       "path": "conformance/README.md",
