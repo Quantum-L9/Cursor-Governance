@@ -16,9 +16,10 @@
 # --- GitHub (required for gh, make pr, PR remediation) ------------------------
 # Dedicated bot-user fine-grained PAT so pushes trigger Actions.
 # SSOT for the value is AWS Secrets Manager (CANONICAL_LAW §14), ref
-# openclaw-igorbot/github#token — resolve and paste, do not mint a second PAT.
+# `openclaw-igorbot/github#token` — resolve and paste, do not mint a second PAT.
+# The ref stays in this comment on purpose: its `#` would be read as a
+# start-of-comment by .env parsers, truncating the value to a wrong ref.
 GH_TOKEN=REPLACE_WITH_BOT_USER_FINE_GRAINED_PAT
-GITHUB_TOKEN_REF=openclaw-igorbot/github#token
 
 # --- Governance SSOT ----------------------------------------------------------
 # L9_GOVERNANCE_DIR is deliberately ABSENT. The cloud SSOT is always
