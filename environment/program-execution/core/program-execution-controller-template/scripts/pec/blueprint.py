@@ -8,9 +8,7 @@ from jsonschema import Draft202012Validator
 
 from .common import digest_object, load_yaml, sha256_file, utc_now, write_json
 
-LOCK_SCHEMA = (
-    Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
-)
+LOCK_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
 
 
 class BlueprintError(RuntimeError):
@@ -128,8 +126,7 @@ def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
         key=lambda item: list(item.path),
     )
     return [
-        f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}"
-        for err in errors
+        f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}" for err in errors
     ]
 
 
@@ -137,9 +134,7 @@ def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
     lock = normalize_blueprint(root)
     schema_errors = validate_program_lock_schema(lock)
     if schema_errors:
-        raise BlueprintError(
-            "program lock schema failed: " + "; ".join(schema_errors)
-        )
+        raise BlueprintError("program lock schema failed: " + "; ".join(schema_errors))
     write_json(target, lock)
     return lock
 

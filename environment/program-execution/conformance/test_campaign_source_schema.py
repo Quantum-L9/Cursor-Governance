@@ -32,8 +32,7 @@ class CampaignSourceSchemaTests(unittest.TestCase):
                     key=lambda item: list(item.path),
                 )
                 messages = [
-                    f"{'.'.join(str(part) for part in err.path) or '<root>'}: "
-                    f"{err.message}"
+                    f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}"
                     for err in errors
                 ]
                 self.assertEqual(messages, [], msg="\n".join(messages))

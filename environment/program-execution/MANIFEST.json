@@ -47,7 +47,7 @@
     },
     {
       "path": "adapters/chatgpt/provider.py",
-      "sha256": "dd57ec5450c701ebce7429751eafa640d09ecab38401fa4663de358685c3e70d"
+      "sha256": "d9a5c24a9ff0e9ce8aa4b8f65f77480b691557a98bc2361dd52e690b4c39e01b"
     },
     {
       "path": "adapters/chatgpt/tests/test_handoff.py",
@@ -127,7 +127,7 @@
     },
     {
       "path": "adapters/claude-code/tests/test_driver.py",
-      "sha256": "c15985b3815b18391e22a51a3853c42f4afe487414b9eb9195cb0eca1ac2ef26"
+      "sha256": "8964f51d75ac5fcefc25dde2069888a559248b75adb21acc36ced3297e6ac008"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
@@ -211,7 +211,7 @@
     },
     {
       "path": "adapters/cursor-background/provider.py",
-      "sha256": "bf04c155f7e0a9f39affde59c5c4f66db8e13171b4d27c115b6855a4276dbdaf"
+      "sha256": "cb684146e05012d664238d3c89246a986c6a1a17d2285f1d2c777b1038d43f8b"
     },
     {
       "path": "adapters/cursor-background/task_monitor.py",
@@ -231,7 +231,7 @@
     },
     {
       "path": "adapters/cursor-foreground/provider.py",
-      "sha256": "206fbba62a6de6e8d64e94547941ff9be854b9f19449a5992c6a44751c3f09eb"
+      "sha256": "c0297995578687afb67b12605be1197ec0198221948f5d5314b9a7fc0e405edc"
     },
     {
       "path": "adapters/cursor-foreground/tests/test_provider.py",
@@ -667,7 +667,7 @@
     },
     {
       "path": "conformance/test_campaign_source_schema.py",
-      "sha256": "66f765cf63a4518a84e7760c4520555b38e18487f2cd82870dda246614be1077"
+      "sha256": "88857abf8cadcf4cbe30e3b66767a455bb99e8c52665d43b73ce6f9f5ba2ad5c"
     },
     {
       "path": "conformance/test_cancellation.py",
@@ -1095,7 +1095,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "5c1521ce2827c8dbb5097de0a99e20eb22c350aac04a891b111b8942567887ab"
+      "sha256": "a9ab82d81ae9950b2a3154b86e8ba16f55da0ab7238bb2f8489d2651fe5e992e"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1139,7 +1139,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "466e95e1c9fb2ec3c14e5485282181e0250c493208846ed4ceac8e4afbc60c81"
+      "sha256": "e47ee23372942214f5a373032d236d8f387cdbca9e9509304a4ff5d87d55f59b"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

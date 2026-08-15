@@ -97,9 +97,7 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         self.assertEqual(probe.blocked_reason, "claude executable is absent")
         self.assertIn({"type": "executable", "path": None}, probe.evidence)
         self.assertIn({"type": "path_probe", "missing": []}, probe.evidence)
-        self.assertTrue(
-            any(item.get("type") == "provider_metadata" for item in probe.evidence)
-        )
+        self.assertTrue(any(item.get("type") == "provider_metadata" for item in probe.evidence))
 
 
 if __name__ == "__main__":

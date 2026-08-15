@@ -9,12 +9,8 @@ from pathlib import Path
 import yaml
 
 PE_ROOT = Path(__file__).resolve().parents[2]
-SOURCE = (
-    PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
-)
-EXPECTED_DIGEST = (
-    "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619"
-)
+SOURCE = PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
+EXPECTED_DIGEST = "7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619"
 
 
 def _load(name: str, path: Path):
@@ -34,8 +30,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
         )
         self.validator = _load(
             "validate_blueprint_test",
-            PE_ROOT
-            / "core/program-execution-blueprint-template/scripts/validate_blueprint.py",
+            PE_ROOT / "core/program-execution-blueprint-template/scripts/validate_blueprint.py",
         )
 
     def test_source_digest_is_immutable(self) -> None:
@@ -48,9 +43,9 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.compiler.compile_source(SOURCE, target)
             digest = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
             self.assertEqual(digest, EXPECTED_DIGEST)
-            tasks = yaml.safe_load(
-                (target / "TASK_CARDS.yaml").read_text(encoding="utf-8")
-            )["tasks"]
+            tasks = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))[
+                "tasks"
+            ]
             task_007 = next(item for item in tasks if item["id"] == "TASK-007")
             self.assertEqual(task_007["execution_kind"], "program_control")
             self.assertFalse(task_007["authorization_ceiling"]["local_write"])

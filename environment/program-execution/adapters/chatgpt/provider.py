@@ -79,9 +79,7 @@ class ChatGPTManualHandoffProvider:
         )
         value = collector.collect_returned_artifact(returned, state["envelope"])
         raw = value.get("status")
-        status = raw if raw == "PASS" else (
-            raw if raw in {"FAIL", "BLOCKED"} else "BLOCKED"
-        )
+        status = raw if raw == "PASS" else (raw if raw in {"FAIL", "BLOCKED"} else "BLOCKED")
         result = CanonicalProviderResult(
             execution_id=request.execution_id,
             status=status,

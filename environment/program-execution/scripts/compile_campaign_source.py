@@ -58,8 +58,7 @@ def validate_campaign_source(data: dict[str, Any]) -> list[str]:
         key=lambda item: list(item.path),
     )
     return [
-        f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}"
-        for err in errors
+        f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}" for err in errors
     ]
 
 
@@ -173,9 +172,7 @@ def compile_source(
     campaign_id = src["metadata"]["campaign_id"]
     allowed = load_allowlist()
     if campaign_id not in allowed:
-        raise CompileError(
-            f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml"
-        )
+        raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
     now = stamp or utc_now()
     ensure_instantiated(target, src, now)
     prog = src["program"]
@@ -230,7 +227,7 @@ def compile_source(
         },
     )
 
-    first_target = (compiled_targets[0]["id"] if compiled_targets else "TARGET-001")
+    first_target = compiled_targets[0]["id"] if compiled_targets else "TARGET-001"
     first_gate = gates[0]["id"] if gates else "GATE-001"
     responsibilities = []
     for auth in src.get("authorities") or []:
@@ -245,9 +242,7 @@ def compile_source(
                 "allowed_roles": ["authority"],
                 "prohibited_owner_target_ids": [],
                 "enforcement": ["schema", "tests", "controller_import"],
-                "validation_gate_ids": list(
-                    auth.get("validation_gate_ids") or [first_gate]
-                ),
+                "validation_gate_ids": list(auth.get("validation_gate_ids") or [first_gate]),
                 "definition_status": "active",
             }
         )
@@ -282,16 +277,13 @@ def compile_source(
                             "id": option["id"],
                             "description": option["description"],
                             "benefits": [option["description"]],
-                            "risks": [
-                                "Rejected alternative would violate accepted ADRs."
-                            ],
+                            "risks": ["Rejected alternative would violate accepted ADRs."],
                         }
                         for option in item.get("options") or []
                     ],
                     "selected_option": item.get("selected_option_id"),
                     "rationale": (
-                        f"Selected {item.get('selected_option_id')} per "
-                        f"{item.get('authority_id')}."
+                        f"Selected {item.get('selected_option_id')} per {item.get('authority_id')}."
                     ),
                     "evidence_ids": list(item.get("required_evidence_ids") or []),
                     "blocks": list(item.get("blocking_task_ids") or []),
@@ -316,15 +308,10 @@ def compile_source(
                     "owner": item["owner"],
                     "blocks": list(item.get("blocking_task_ids") or []),
                     "safe_state": (
-                        "Do not execute named dependent tasks until "
-                        "evidence-bound resolution."
+                        "Do not execute named dependent tasks until evidence-bound resolution."
                     ),
-                    "resolution_requirements": [
-                        str(item["resolution_method"]).strip()
-                    ],
-                    "resolution_evidence_ids": list(
-                        item.get("resolution_evidence_ids") or []
-                    ),
+                    "resolution_requirements": [str(item["resolution_method"]).strip()],
+                    "resolution_evidence_ids": list(item.get("resolution_evidence_ids") or []),
                     "status": item["status"],
                     "resolved_at": None,
                 }
@@ -349,9 +336,7 @@ def compile_source(
                     ),
                     "owner": item["owner"],
                     "trigger": item["statement"],
-                    "preventive_controls": list(
-                        item.get("mitigations") or ["inspect"]
-                    ),
+                    "preventive_controls": list(item.get("mitigations") or ["inspect"]),
                     "contingency": [
                         "halt_named_subgraph",
                         "preserve_previous_valid_plan",
@@ -526,9 +511,7 @@ def compile_source(
             }
         )
     wave_groups = [
-        list(wave.get("task_ids") or [])
-        for wave in waves
-        if len(wave.get("task_ids") or []) > 1
+        list(wave.get("task_ids") or []) for wave in waves if len(wave.get("task_ids") or []) > 1
     ]
     dump_yaml(
         target / "DEPENDENCY_GRAPH.yaml",
@@ -547,9 +530,7 @@ def compile_source(
             "edges": edges,
             "critical_path": [item["id"] for item in tasks],
             "parallelizable_groups": wave_groups,
-            "hard_rule": (
-                "No successor may bypass a predecessor by reproducing its output."
-            ),
+            "hard_rule": ("No successor may bypass a predecessor by reproducing its output."),
         },
     )
 
@@ -572,9 +553,7 @@ def compile_source(
                 "task_ids": list(wave.get("task_ids") or []),
                 "entry_gate_ids": [],
                 "exit_gate_ids": list(wave.get("exit_gate_ids") or []),
-                "rollback_boundary": (
-                    "Restore worktree to Program Lock base; preserve receipts."
-                ),
+                "rollback_boundary": ("Restore worktree to Program Lock base; preserve receipts."),
                 "definition_status": "active",
             }
         )
@@ -624,12 +603,8 @@ def compile_source(
                     {
                         "id": f"VAL-{suffix}",
                         "method": "inspection",
-                        "command_or_inspection": str(
-                            item["acceptance"][0]["statement"]
-                        ).strip(),
-                        "environment": (
-                            "planning" if item["id"] == "TASK-001" else "local"
-                        ),
+                        "command_or_inspection": str(item["acceptance"][0]["statement"]).strip(),
+                        "environment": ("planning" if item["id"] == "TASK-001" else "local"),
                         "expected_result": "PASS",
                     }
                 ],
@@ -652,11 +627,7 @@ def compile_source(
     class_map = {"entry": "authority", "completion": "validation"}
     compiled_gates = list(_gate_000(target))
     for item in gates:
-        wave_ids = [
-            wave["id"]
-            for wave in waves
-            if item["id"] in (wave.get("exit_gate_ids") or [])
-        ]
+        wave_ids = [wave["id"] for wave in waves if item["id"] in (wave.get("exit_gate_ids") or [])]
         compiled_gates.append(
             {
                 "id": item["id"],
@@ -670,18 +641,12 @@ def compile_source(
                 },
                 "method": {
                     "type": "inspection",
-                    "steps": list(
-                        item.get("pass_criteria") or ["Inspect required evidence."]
-                    ),
+                    "steps": list(item.get("pass_criteria") or ["Inspect required evidence."]),
                 },
-                "pass_condition": "; ".join(
-                    item.get("pass_criteria") or ["PASS"]
-                ),
+                "pass_condition": "; ".join(item.get("pass_criteria") or ["PASS"]),
                 "fail_condition": str(item.get("failure_effect") or "BLOCKED"),
                 "blocking": bool(item.get("blocking", True)),
-                "required_evidence_ids": list(
-                    item.get("required_evidence_ids") or []
-                ),
+                "required_evidence_ids": list(item.get("required_evidence_ids") or []),
                 "waiver_allowed": False,
             }
         )
@@ -752,9 +717,7 @@ def compile_source(
                     "blocking_gate_failure",
                     "authority_containment_failure",
                 ],
-                "steps": list(
-                    cut.get("rollback_rules") or ["preserve_failed_replan_evidence"]
-                ),
+                "steps": list(cut.get("rollback_rules") or ["preserve_failed_replan_evidence"]),
                 "data_reconciliation": "append_only_receipts_never_rewritten",
                 "validation": ["prior_evidence_unchanged"],
                 "owner": "AUTH-001",
@@ -779,9 +742,7 @@ def compile_source(
                 {
                     "id": "SRC-001",
                     "source": repo_rel or source.name,
-                    "revision": src.get("integrity", {}).get(
-                        "digest_algorithm", "sha256"
-                    ),
+                    "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
                     "authority_class": "governing",
                     "evidence_id": (evidence[0]["id"] if evidence else first_gate),
                     "claims": ["Campaign source is the immutable operator intent."],

@@ -100,9 +100,7 @@ def bootstrap(
     template_root = template_root.resolve()
     admission_errors = _admission_errors(blueprint, admission_draft=admission_draft)
     if admission_errors:
-        raise ControllerError(
-            "blueprint admission failed: " + "; ".join(admission_errors)
-        )
+        raise ControllerError("blueprint admission failed: " + "; ".join(admission_errors))
     if workspace.exists() and any(workspace.iterdir()):
         raise ControllerError(f"workspace is not empty: {workspace}")
     for rel in [
@@ -465,9 +463,7 @@ def status(workspace: Path) -> dict[str, Any]:
         ledger_ok, ledger_message = ledger.verify()
         program = db.get_meta("program") or {}
         admission_draft = bool(db.get_meta("admission_draft", False))
-        definition_status = (
-            "draft" if admission_draft else program.get("definition_status")
-        )
+        definition_status = "draft" if admission_draft else program.get("definition_status")
         campaign_root = Path.home() / ".l9/autonomy/campaigns"
         return {
             "program": program,
@@ -825,10 +821,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             lock = load_json(workspace / "runtime" / "program-lock.json")
             prohibited = [
                 item.get("path_or_pattern")
-                for item in (lock.get("do_not_build") or {}).get(
-                    "prohibited_primary_paths"
-                )
-                or []
+                for item in (lock.get("do_not_build") or {}).get("prohibited_primary_paths") or []
                 if isinstance(item, dict) and item.get("path_or_pattern")
             ]
             dnb_hit = False

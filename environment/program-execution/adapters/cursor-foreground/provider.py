@@ -64,8 +64,10 @@ class CursorForegroundProvider:
         if result is None:
             return ProviderInvocation(status="RUNNING", state=state)
         host_status = result.get("status")
-        status = host_status if host_status == "PASS" else (
-            host_status if host_status in {"FAIL", "BLOCKED"} else "BLOCKED"
+        status = (
+            host_status
+            if host_status == "PASS"
+            else (host_status if host_status in {"FAIL", "BLOCKED"} else "BLOCKED")
         )
         provider_result = CanonicalProviderResult(
             execution_id=request.execution_id,
