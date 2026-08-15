@@ -426,8 +426,8 @@ files:
   sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
   bytes: 1649
 - path: program-execution-controller-template/scripts/tests/test_verify_committed_work.py
-  sha256: 62768c53babcbb81565a631516400ea48d6247d92e6e95ee28b5d337d9047d39
-  bytes: 1912
+  sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
+  bytes: 1882
 - path: program-execution-controller-template/scripts/tests/test_waived_gate.py
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
   bytes: 2866
@@ -532,4 +532,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 175
-  total_bytes: 504491
+  total_bytes: 504461

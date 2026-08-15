@@ -1271,7 +1271,7 @@
     },
     {
       "path": "scripts/accept_blueprint.py",
-      "sha256": "e22f47da4d2a5b3e26b69b25a99c26020816f296f138c8059e3a76ba7d6886f7"
+      "sha256": "e55107f515f22340d51fcdccda30abf63497545ef6670dc2d7d44f150825f145"
     },
     {
       "path": "scripts/adapter_cli.py",
@@ -1283,7 +1283,7 @@
     },
     {
       "path": "scripts/blueprint_ops.py",
-      "sha256": "a4692ea4cd5583f977ac1e12deab9f15ebc72615518294b6f8cf7a3826e6416a"
+      "sha256": "c7cae64da3979a31621edf7eb7897a5eacbe8578a2edabd433c023caabe91ba0"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
@@ -1295,7 +1295,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "563def3830054dd7d3b5776ce658fa26c6a8ab9c859936e6c84a52176096c725"
+      "sha256": "2caae543362f2cb29d80275552d4f484d9e1237345647d05da05269b0311b368"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1347,7 +1347,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "8130298d72d11472dc71c433ab3d1f109da0cbf185854f068aea8bb4dac331e1"
+      "sha256": "6d4cd10d899f9501fe3a90c69fbbbbf23901265f8d815dba3cbebf75a494b1f1"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
