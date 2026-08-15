@@ -46,6 +46,8 @@ help:
 	@echo "  make ui-operator-sync — uv sync --extra ui-operator (then: playwright install)"
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" pr WS=\"\$$(pwd)\""
 	@echo "  Prefer l9-ci-core thin Makefile (identical across repos) when adopting the common workflow."
+	@echo "  make clean / workspace-clean — ship leftover work to scoped PRs by repo, prune merged locals, prime main (CLEAN_MODE=plan to preview; CLEAN_REMOTE=0 to stay local)"
+	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" clean WS=\"\$$(pwd)\""
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -441,3 +443,13 @@ hygiene:
 
 hygiene-fix:
 	@echo "See WIP/housekeeping-pack/RUNBOOK.md Section 4"
+
+# Workspace ship+reset. Default apply opens scoped PRs (never main).
+# Preview: CLEAN_MODE=plan. Local only: CLEAN_REMOTE=0.
+# Consumer: make -C "$(HOME)/.cursor-governance" clean WS="$(pwd)"
+CLEAN_MODE ?= apply
+CLEAN_REMOTE ?= 1
+.PHONY: clean workspace-clean
+clean workspace-clean:
+	CLEAN_MODE="$(CLEAN_MODE)" CLEAN_REMOTE="$(CLEAN_REMOTE)" PR_BASE="$(PR_BASE)" \
+	WS="$(WS)" bash "$(CURDIR)/ops/scripts/run_workspace_clean.sh"

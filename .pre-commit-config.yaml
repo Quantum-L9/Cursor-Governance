@@ -32,6 +32,13 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: gh-package-deps-preflight
+        name: "@quantum-l9 deps are published and lock-true (tarball + integrity)"
+        entry: python3 ops/scripts/validate_gh_package_deps.py
+        language: system
+        pass_filenames: false
+        files: '(^|/)(package\.json|package-lock\.json)$'
+
       # Commit-time heal. make pr SKIPs this hook and runs sync in run_pr_gate
       # with WARN+continue so digest churn never blocks the PR gate.
       - id: sync-generated-artifacts

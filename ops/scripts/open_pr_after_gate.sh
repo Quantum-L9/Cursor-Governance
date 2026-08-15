@@ -175,7 +175,11 @@ $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 EOF
     )"
   fi
-  pr_url="$(gh pr create --base "$BASE_REF" --title "$title" --body "$body")"
+  # Explicit --head: gh otherwise aborts with "must first push the current
+  # branch" in worktree/CI contexts where upstream tracking is not visible
+  # (2026-08-15 factory repair).
+  head_branch="$(git rev-parse --abbrev-ref HEAD)"
+  pr_url="$(gh pr create --head "$head_branch" --base "$BASE_REF" --title "$title" --body "$body")"
   pr_number="$(gh pr view --json number -q .number)"
   echo "Opened: $pr_url"
 else

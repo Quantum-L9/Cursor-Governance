@@ -134,3 +134,76 @@ def test_l4_release_receipt_still_denies_admin_merge(stacked_repo: Path) -> None
     )
     assert code == 0, err
     assert "deny" in out
+
+
+def _auth_file(
+    tmp_path: Path,
+    *,
+    repo: str = "Quantum-L9/SEO-Bot",
+    pr: int = 53,
+    expires_at: float | None = None,
+    extra: str = "",
+) -> Path:
+    import time
+
+    entries = [{"repo": repo, "pr": pr, "expires_at": expires_at or (time.time() + 3600)}]
+    payload = json.dumps({"authorizations": entries}) + extra
+    path = tmp_path / "merge-authorization.json"
+    path.write_text(payload, encoding="utf-8")
+    return path
+
+
+def test_human_file_authorization_allows_matching_merge(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path)
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash",
+            },
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_human_file_authorization_expired_denies(tmp_path: Path) -> None:
+    import time
+
+    auth = _auth_file(tmp_path, expires_at=time.time() - 60)
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_human_file_authorization_wrong_repo_denies(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, repo="Quantum-L9/Website-Bot")
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_human_file_authorization_malformed_denies(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, extra="{broken")
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
