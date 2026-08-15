@@ -66,9 +66,15 @@ def _emit_secret_value(value: str) -> None:
 
 
 def _safe_path(path: Path | str) -> Path:
-    """Resolve a CLI/file path; require it stay under cwd or system temp (S8707)."""
+    """Resolve a CLI/file path; require it stay under cwd, system temp, or the
+    governance root (S8707). The governance root is always allowed so the
+    resolver works when invoked from a consumer repo (2026-08-15 factory repair)."""
     resolved = Path(path).expanduser().resolve()
-    allowed = (Path.cwd().resolve(), Path(tempfile.gettempdir()).resolve())
+    allowed = (
+        Path.cwd().resolve(),
+        Path(tempfile.gettempdir()).resolve(),
+        Path(__file__).resolve().parents[2],  # governance root (ops/secrets -> ops -> root)
+    )
     for root in allowed:
         try:
             resolved.relative_to(root)

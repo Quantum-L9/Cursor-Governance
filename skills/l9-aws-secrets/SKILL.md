@@ -60,6 +60,24 @@ while the secret is already in AWS or Infisical is a protocol failure.
 GitHub PAT. Export `GH_TOKEN` / `GITHUB_TOKEN`. Do **not** create a second PAT.
 Do **not** ask the human to click `github.com` UI when this PAT can finish the job.
 
+## npm / GitHub Packages auth
+
+Plain `NODE_AUTH_TOKEN` env is **not** honored by npm for the `@quantum-l9`
+scoped registry unless an `.npmrc` line maps it. From any clone, prefer the
+wrapper — it resolves the sole PAT and execs your command with
+`npm_config_//npm.pkg.github.com/:_authToken` set (nothing persisted):
+
+```bash
+ops/secrets/authed_npm.sh npm ci
+ops/secrets/authed_npm.sh npm publish
+```
+
+Or inline, without persisting auth anywhere:
+
+```bash
+npm ci "--//npm.pkg.github.com/:_authToken=$(resolve_secret.py --ref 'openclaw-igorbot/github#token')"
+```
+
 ## Interpreter
 
 ```bash
