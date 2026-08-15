@@ -106,9 +106,25 @@ claude-skills-test:
 	python3 environment/agents/adapters/claude-code/tests/test_skill_reconciliation.py
 	python3 environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py
 
-.PHONY: claude-settings claude-settings-check
+.PHONY: claude-settings claude-settings-check claude-install claude-install-check
+
+## Install the Claude Code adapter on THIS machine (CLI / Desktop).
+## Runs the exact same installer Web and Mobile reach through
+## web/setup.bootstrap.sh -> web/setup.sh, so there is one adapter to maintain:
+## locked toolchain from uv.lock, settings triad, skills, MCP front door,
+## git excludes, preflight.
+## Usage: make claude-install WS=/path/to/repo   (WS defaults to this clone)
+claude-install:
+	bash environment/agents/adapters/claude-code/install.sh \
+		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))"
+
+## Read-only: report adapter drift without writing anything.
+claude-install-check:
+	bash environment/agents/adapters/claude-code/install.sh --check \
+		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))"
 
 ## Reconcile Claude settings triad (template → gov .claude → ~/.claude → optional WS).
+## Component step of claude-install; use claude-install for a full adapter wire-up.
 ## Usage: make claude-settings WS=/path/to/repo
 ## Check: make claude-settings-check WS=/path/to/repo
 claude-settings:
