@@ -97,7 +97,7 @@ files:
 - path: scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
 - path: scripts/pec/contracts.py
-  sha256: e7ce37231086c98bfb081f2f586a12888f7bf91ddd107514f4c4dbbc2c9296aa
+  sha256: ad2fd6c8006c9bc24b4b43c0814b8afd9ea62fe13b2a966aec39cbf008eeb8bf
 - path: scripts/pec/controller.py
   sha256: 380ce8213d77a6e972953cbb4f28c10a92b5cc3f0118f78d3a6c4a0b9659136a
 - path: scripts/pec/ledger.py
