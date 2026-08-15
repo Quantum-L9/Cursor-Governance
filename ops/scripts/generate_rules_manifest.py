@@ -33,6 +33,7 @@ __all__ = [
     "normalize_globs",
     "build_manifest",
     "build_entry",
+    "serialize_manifest",
 ]
 
 
@@ -110,7 +111,10 @@ def context_cost(line_count: int, explicit: Any) -> str:
     return "high"
 
 
-def build_entry(path: Path) -> dict[str, Any]:
+def build_entry(
+    path: Path,
+    projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     parsed = parse_rule(path)
     raw = path.read_bytes()
     text = raw.decode("utf-8")
@@ -127,7 +131,7 @@ def build_entry(path: Path) -> dict[str, Any]:
     activation = infer_activation(metadata, globs)
     deprecated, replacement, removal_plan = infer_deprecation(metadata, description, parsed.body)
     lines = text.splitlines()
-    return {
+    entry: dict[str, Any] = {
         "file": path.name,
         "id": rule_id,
         "id_source": id_source,
@@ -155,11 +159,33 @@ def build_entry(path: Path) -> dict[str, Any]:
         if all(metadata.get(k) for k in ("id", "scope", "domain", "activation", "authority"))
         else "mixed_or_derived",
     }
+    if projection:
+        for key in (
+            "migration_state",
+            "binding",
+            "contracts",
+            "projection",
+            "context",
+            "semantic_authority",
+        ):
+            if key in projection:
+                entry[key] = projection[key]
+    return entry
 
 
-def build_manifest(root: Path) -> dict[str, Any]:
+def build_manifest(
+    root: Path,
+    projection_index: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     rules_dir = root / "rules"
-    entries = [build_entry(path) for path in sorted(rules_dir.glob("*.mdc"), key=lambda p: p.name)]
+    index = projection_index or {}
+    entries = [
+        build_entry(
+            path,
+            index.get(path.relative_to(root).as_posix()) if index else None,
+        )
+        for path in sorted(rules_dir.glob("*.mdc"), key=lambda p: p.name)
+    ]
     true_count = sum(entry["always_apply"] is True for entry in entries)
     false_count = sum(entry["always_apply"] is False for entry in entries)
     null_count = len(entries) - true_count - false_count
@@ -235,6 +261,13 @@ def render_markdown(manifest: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def serialize_manifest(manifest: dict[str, Any]) -> dict[str, str]:
+    return {
+        "json": json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        "yaml": yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True, width=1000),
+    }
+
+
 def write_if_changed(path: Path, content: str) -> bool:
     if path.exists() and path.read_text(encoding="utf-8") == content:
         return False
@@ -272,8 +305,9 @@ def main() -> int:
             )
             return 0
 
-    json_text = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
-    yaml_text = yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True, width=1000)
+    serialized = serialize_manifest(manifest)
+    json_text = serialized["json"]
+    yaml_text = serialized["yaml"]
     markdown_text = render_markdown(manifest)
     wrote = any(
         [

@@ -422,6 +422,13 @@ program-execution-controller-tests:
 rules-check:
 	python3 ops/scripts/check_rules_standard.py
 
+.PHONY: rules-contract-shadow rules-contract-check
+## Foundation shadow: stdout only. Does not write rules or census files.
+rules-contract-shadow:
+	python3 ops/contracts/build_rules.py census
+rules-contract-check:
+	python3 ops/contracts/build_rules.py check
+
 .PHONY: skills-check
 ## Cursor-native skill frontmatter + discovery-footprint ratchet (docs/skills-standard.md).
 skills-check:

@@ -1,0 +1,115 @@
+schema_id: canonical.schema.contract_extraction_record.v1
+schema_name: Canonical Contract Extraction Record Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.contract_extraction_record.v1.yaml
+purpose:
+  primary: Capture one candidate doctrine statement from an existing source with exact provenance normalized semantics ownership classification confidence conflicts duplicates and explicit migration disposition without promoting extracted prose directly into authority.
+  output_level: schema_not_instance
+  intended_use: [doctrine_inventory, skill_doctrine_extraction, rule_doctrine_extraction, conflict_detection, duplicate_detection, contract_candidate_generation]
+  not_for: [automatic_contract_activation, silent_conflict_resolution, rewriting_source_meaning, invented_missing_context]
+ontology:
+  parent_type: governance_migration_artifact_schema
+  specialized_type: contract_extraction_record_schema
+  instance_type_generated_by_this_schema: contract_extraction_record
+  related_schema_types: [canonical.schema.governance_contract.v1, canonical.schema.contract_registry.v1]
+inheritance:
+  extends: [canonical.knowledge_object.schema.v1]
+  provides: [source_provenance_model, doctrine_signal_model, semantic_normalization_model, migration_disposition_model, conflict_cluster_model]
+required_sections:
+  extraction_identity:
+    required: true
+    fields:
+      extraction_id: {type: string, required: true}
+      extracted_at: {type: datetime, required: true}
+      extractor: {type: string, required: true}
+  source:
+    required: true
+    fields:
+      source_kind: {enum: [skill, rule, agent_document, workflow, command, prompt, policy_document, code, other], required: true}
+      repository: {type: string, required: true}
+      commit_sha: {type: full_commit_SHA, required: true}
+      path: {type: string, required: true}
+      line_start: {type: integer, required: false, minimum: 1}
+      line_end: {type: integer, required: false, minimum: 1}
+      section: {type: string_or_null, required: false}
+      source_sha256: {type: sha256, required: true}
+      exact_text: {type: string, required: true}
+      sensitivity:
+        enum: [public, internal, confidential, restricted, unknown]
+        required: true
+      redistribution:
+        enum: [allowed, internal_only, prohibited, unknown]
+        required: true
+  signals:
+    required: true
+    fields:
+      normative_tokens: {type: list_string, required: true, allow_empty: true}
+      authority_tokens: {type: list_string, required: true, allow_empty: true}
+      failure_tokens: {type: list_string, required: true, allow_empty: true}
+      ownership_tokens: {type: list_string, required: true, allow_empty: true}
+  classification:
+    required: true
+    fields:
+      candidate_kind: {enum: [invariant, policy, capability, workflow, evidence, routing_activation, rationale, example, obsolete, conflict, unknown], required: true}
+      doctrine_strength: {enum: [hard_normative, conditional_normative, advisory, descriptive, unknown], required: true}
+      sharedness: {enum: [repository_global, domain_shared, skill_local, projection_only, unknown], required: true}
+      risk: {enum: [critical, high, medium, low], required: true}
+  normalized_semantics:
+    required: true
+    fields:
+      subject: {type: string_or_null, required: true}
+      action: {type: string_or_null, required: true}
+      object: {type: string_or_null, required: true}
+      effect: {enum: [require, prohibit, permit, constrain, stop, route, attest, none, unknown], required: true}
+      conditions: {type: list_string, required: true, allow_empty: true}
+      exceptions: {type: list_string, required: true, allow_empty: true}
+      inferred_scope: {type: list_string, required: true, allow_empty: true}
+      authority_hint: {type: string_or_null, required: false}
+  extraction_quality:
+    required: true
+    fields:
+      confidence: {type: number_0_to_1, required: true}
+      ambiguity: {type: list_string, required: true, allow_empty: true}
+      meaning_preserved: {type: boolean, required: true}
+  resolution:
+    required: true
+    fields:
+      disposition: {enum: [extract_new_contract, attach_existing_contract, create_skill_local_contract, convert_to_projection, retain_as_rationale, retire_obsolete, unresolved_conflict, needs_human_review], required: true}
+      proposed_contract_id: {type: string_or_null, required: false}
+      existing_contract_refs: {type: list_string, required: true, allow_empty: true}
+      duplicate_cluster: {type: string_or_null, required: false}
+      conflict_cluster: {type: string_or_null, required: false}
+      review_status: {enum: [unreviewed, accepted, rejected, blocked], required: true}
+conditional_rules:
+  - when: source.redistribution in [prohibited, unknown]
+    require: [exact_text must remain within approved internal extraction storage and must not be projected externally]
+  - when: source.sensitivity in [restricted, unknown]
+    require: [review_status cannot become accepted without explicit human review]
+  - when: classification.doctrine_strength in [hard_normative, conditional_normative] and extraction_quality.confidence < 0.85
+    require: [resolution.disposition == needs_human_review]
+  - when: resolution.disposition == unresolved_conflict
+    require: [resolution.conflict_cluster is non-null]
+validation_rules:
+  - {id: EXTRACT-001, severity: blocker, rule: every extraction record must bind to an immutable source commit and source hash.}
+  - {id: EXTRACT-002, severity: blocker, rule: exact source text must be preserved before normalization subject to sensitivity and redistribution controls.}
+  - {id: EXTRACT-003, severity: blocker, rule: extraction does not itself create canonical authority.}
+  - {id: EXTRACT-004, severity: blocker, rule: ambiguity must be recorded rather than silently resolved.}
+  - {id: EXTRACT-005, severity: blocker, rule: conflicting doctrine must remain unresolved until an authoritative decision exists.}
+  - {id: EXTRACT-006, severity: blocker, rule: low-confidence normative extraction requires human review before contract generation.}
+  - {id: EXTRACT-007, severity: major, rule: rationale and examples must not be promoted into normative contracts without explicit reclassification.}
+  - {id: EXTRACT-008, severity: blocker, rule: restricted or unknown-sensitive exact text may not be externally projected by default.}
+derivation_targets:
+  can_generate: [doctrine_inventory, contract_candidate, duplicate_cluster, conflict_cluster, doctrine_heatmap, extraction_review_queue, hidden_doctrine_report]
+anti_drift_rules:
+  - Extract before rewriting.
+  - Preserve exact provenance.
+  - Normalize semantics without improving or correcting source meaning.
+  - Never silently reconcile conflicting doctrine.
+  - Never promote an extraction record directly to active authority.
+  - Unknown remains unknown.
+minimum_viable_instance_requirements:
+  required: [extraction_identity, source, signals, classification, normalized_semantics, extraction_quality, resolution]
