@@ -32,3 +32,34 @@ The binding law is registered at
 `environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml`.
 
 Mutable runtime belongs under `$HOME/.l9/`, never this source tree.
+
+## Campaign compile then validate then bootstrap
+
+Campaign seeds are an unbound dialect until compiled. The in-repo path is:
+
+1. Validate `CAMPAIGN_SOURCE.yaml` against
+   `core/shared/schemas/campaign-source.schema.json`.
+2. Compile only ids listed in `campaigns/COMPILE_ALLOWLIST.yaml`:
+
+   ```bash
+   python3 environment/program-execution/scripts/compile_campaign_source.py \
+     --source environment/program-execution/campaigns/<id>/CAMPAIGN_SOURCE.yaml \
+     --target "$HOME/.l9/blueprints/<id>"
+   ```
+
+3. `validate_blueprint --mode template` must PASS. Instantiated mode stays
+   FAIL while `definition_status=draft` or evidence is `planned`.
+4. `pec bootstrap` refuses an unvalidated draft lock. Use
+   `--admission-draft` only to inspect a draft; `pec next` then returns
+   `ready: []` and status prints `definition_status=draft`.
+
+`git` and `git_repo_adapter` are campaign target tokens only. pec
+reconcile binds `repository_id` to a local path. They are not worker
+adapters and must not be added to `EXECUTION_ADAPTER_REGISTRY.yaml`.
+
+Cursor and ChatGPT file-drop / handoff results never become PASS unless
+the host payload carries `status: PASS`. Cursor file-drop probes stay
+BLOCKED. Claude probes stay BLOCKED when the `claude` executable is
+absent. DeepSeek is not a Program Execution provider.
+
+Claude `backend_mode` and `model_hint` are probe evidence only.

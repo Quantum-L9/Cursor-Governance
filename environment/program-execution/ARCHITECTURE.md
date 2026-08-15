@@ -1,4 +1,4 @@
-# Peer Execution Architecture
+# Program Execution Architecture
 
 The Program Controller remains the sole Program-state authority. Provider
 integration is subordinate to Controller admission and is split into explicit
@@ -38,3 +38,18 @@ substituted without changing peer identity or Program state.
 Provider absence, transport absence, and unsupported capabilities return
 `BLOCKED` or `CAPABILITY_UNSUPPORTED`. They never create false completion,
 provider-local Program state, or a second scheduler.
+
+## Dual plane
+
+The Program Controller is the sole Program-state authority. The autonomy
+runtime at `peer_execution/autonomy/` is a subordinate dispatch plane.
+`pec status` reports a read-only `autonomy_plane` object. Autonomy
+`compile_context()` reports a read-only `program_plane` object. Neither
+plane writes the other's packets. pec does not auto-init
+`.l9/autonomy/campaigns`.
+
+## Admission
+
+Compile campaign source → validate Blueprint → `pec bootstrap`. Default
+bootstrap calls instantiated `validate_blueprint` on a complete pair and
+refuses `definition_status=draft`. `--admission-draft` is inspect-only.

@@ -137,6 +137,9 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
         raise ContractError("Source Contract omits Blueprint evidence obligations")
     if not contract.get("stop_conditions") or not contract.get("rollback"):
         raise ContractError("stop_conditions and rollback are required")
+    rollback = contract.get("rollback")
+    if isinstance(rollback, str) and "REPLACE_WITH" in rollback:
+        raise ContractError("rollback placeholder REPLACE_WITH is forbidden")
     return {
         **contract,
         "requested_actions": sorted(set(actions)),

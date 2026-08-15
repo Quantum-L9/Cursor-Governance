@@ -42,6 +42,13 @@ def compile_context(workspace: Path) -> dict[str, Any]:
         "discover_before_ask": _truthy(os.environ.get("L9_DISCOVER_BEFORE_ASK", "true")),
         "exact_sha_gate": _truthy(os.environ.get("L9_REQUIRE_EXACT_SHA_GREEN", "true")),
         "workspace": str(workspace),
+        "program_plane": {
+            "authoritative": True,
+            "note": (
+                "Program Controller is authoritative; this autonomy context "
+                "does not write campaign packets or Program Locks"
+            ),
+        },
     }
     if not enabled:
         result["status"] = "disabled"
@@ -97,6 +104,7 @@ def render_text(context: dict[str, Any]) -> str:
         f"  discover-before-ask: {str(context['discover_before_ask']).lower()}",
         f"  exact-SHA merge gate: {str(context['exact_sha_gate']).lower()}",
         f"  status: {context.get('status', 'unknown')}",
+        "  program-plane: authoritative (read-only from autonomy)",
     ]
     if context.get("campaign_id"):
         lines.extend(

@@ -4,7 +4,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator
+
 from .common import digest_object, load_yaml, sha256_file, utc_now, write_json
+
+LOCK_SCHEMA = (
+    Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
+)
 
 
 class BlueprintError(RuntimeError):
@@ -115,8 +121,25 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
     return body
 
 
+def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
+    schema = json.loads(LOCK_SCHEMA.read_text(encoding="utf-8"))
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(lock),
+        key=lambda item: list(item.path),
+    )
+    return [
+        f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}"
+        for err in errors
+    ]
+
+
 def write_program_lock(root: Path, target: Path) -> dict[str, Any]:
     lock = normalize_blueprint(root)
+    schema_errors = validate_program_lock_schema(lock)
+    if schema_errors:
+        raise BlueprintError(
+            "program lock schema failed: " + "; ".join(schema_errors)
+        )
     write_json(target, lock)
     return lock
 
@@ -131,6 +154,7 @@ def verify_program_lock(lock_path: Path) -> tuple[bool, list[str]]:
         return False, [f"program lock parse failure: {exc}"]
     if lock.get("schema") != "program-execution-controller.program-lock.v2":
         errors.append("program lock schema mismatch")
+    errors.extend(validate_program_lock_schema(lock))
     claimed = lock.get("lock_digest")
     body = dict(lock)
     body.pop("lock_digest", None)

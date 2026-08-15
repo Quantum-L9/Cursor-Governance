@@ -86,17 +86,20 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
-    def test_binding_probe_passes_without_claude_executable(self) -> None:
+    def test_binding_probe_blocks_without_claude_executable(self) -> None:
         module = self._provider()
         repo_root = Path(__file__).resolve().parents[5]
         with tempfile.TemporaryDirectory() as temporary:
             provider = module.ClaudeCodeProvider(temporary, repo_root)
             with patch.object(module.shutil, "which", return_value=None):
                 probe = provider.probe(None)
-        self.assertEqual(probe.status, "PASS")
-        self.assertIsNone(probe.blocked_reason)
+        self.assertEqual(probe.status, "BLOCKED")
+        self.assertEqual(probe.blocked_reason, "claude executable is absent")
         self.assertIn({"type": "executable", "path": None}, probe.evidence)
         self.assertIn({"type": "path_probe", "missing": []}, probe.evidence)
+        self.assertTrue(
+            any(item.get("type") == "provider_metadata" for item in probe.evidence)
+        )
 
 
 if __name__ == "__main__":

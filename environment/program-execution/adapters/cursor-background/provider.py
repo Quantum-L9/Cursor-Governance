@@ -31,11 +31,15 @@ class CursorBackgroundProvider:
         ]
         missing = [str(path) for path in required if not path.is_file()]
         return ProviderProbe(
-            status="PASS" if not missing else "BLOCKED",
-            blocked_reason=(
-                None if not missing else "root-autonomy Cursor provider is unavailable"
+            status="BLOCKED",
+            blocked_reason="cursor file-drop transport is not a live probe",
+            evidence=(
+                {
+                    "type": "path_probe",
+                    "missing": missing,
+                    "transport": "file-drop",
+                },
             ),
-            evidence=({"type": "path_probe", "missing": missing},),
             observed_capabilities=("inspect", "local_write", "artifact_production"),
         )
 
@@ -60,16 +64,20 @@ class CursorBackgroundProvider:
         result = self.transport.collect(request.execution_id)
         if result is None:
             return ProviderInvocation(status=str(host_status), state=state)
+        raw = result.get("status")
+        status = raw if raw == "PASS" else (
+            raw if raw in {"FAIL", "BLOCKED"} else "BLOCKED"
+        )
         provider_result = CanonicalProviderResult(
             execution_id=request.execution_id,
-            status="PASS",
+            status=status,
             structured_payload=dict(result),
             provider_metadata={"provider_surface": "cursor-background"},
             session_or_run_id=request.execution_id,
             observed_capabilities=("inspect", "local_write", "artifact_production"),
         )
         return ProviderInvocation(
-            status="PASS",
+            status=status,
             state=state,
             evidence=({"type": "cursor_task_result", "received": True},),
             result=provider_result,

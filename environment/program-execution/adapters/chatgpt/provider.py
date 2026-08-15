@@ -78,15 +78,19 @@ class ChatGPTManualHandoffProvider:
             "pes_chatgpt_artifact_collector",
         )
         value = collector.collect_returned_artifact(returned, state["envelope"])
+        raw = value.get("status")
+        status = raw if raw == "PASS" else (
+            raw if raw in {"FAIL", "BLOCKED"} else "BLOCKED"
+        )
         result = CanonicalProviderResult(
             execution_id=request.execution_id,
-            status="PASS",
+            status=status,
             structured_payload=dict(value),
             provider_metadata={"provider_surface": "chatgpt-manual-handoff"},
             session_or_run_id=request.execution_id,
             observed_capabilities=("inspect", "artifact_production"),
         )
-        return ProviderInvocation(status="PASS", state=state, result=result)
+        return ProviderInvocation(status=status, state=state, result=result)
 
     def cancel(self, request, state) -> ProviderInvocation:
         return ProviderInvocation(status="UNSUPPORTED", state=state)

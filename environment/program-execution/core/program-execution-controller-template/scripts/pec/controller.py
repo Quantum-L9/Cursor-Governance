@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import importlib.util
 import json
 import os
 import subprocess
@@ -10,9 +11,9 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from .blueprint import verify_program_lock, write_program_lock
+from .blueprint import BlueprintError, verify_program_lock, write_program_lock
 from .common import digest_object, load_json, load_yaml, parse_time, run_git, utc_now, write_json
-from .contracts import path_allowed, validate_source_contract
+from .contracts import ContractError, path_allowed, validate_source_contract
 from .ledger import EventLedger
 from .state import StateDB
 
@@ -51,10 +52,57 @@ def _validate_schema(workspace: Path, schema_name: str, value: Any) -> None:
         raise ControllerError(f"schema validation failed for {schema_name}: " + "; ".join(messages))
 
 
-def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str, Any]:
+def _validate_blueprint(blueprint: Path, mode: str) -> list[str]:
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "program-execution-blueprint-template"
+        / "scripts"
+        / "validate_blueprint.py"
+    )
+    spec = importlib.util.spec_from_file_location("pec_validate_blueprint", path)
+    if spec is None or spec.loader is None:
+        raise ControllerError(f"cannot load validate_blueprint.py: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return list(module.validate(blueprint, mode))
+
+
+def _complete_pair(blueprint: Path) -> bool:
+    return (blueprint / "MANIFEST.yaml").is_file() and (blueprint / "README.md").is_file()
+
+
+def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
+    program = load_yaml(blueprint / "PROGRAM.yaml").get("program") or {}
+    status = program.get("definition_status")
+    if admission_draft:
+        if _complete_pair(blueprint):
+            return _validate_blueprint(blueprint, "template")
+        return []
+    if status != "accepted":
+        return [
+            "bootstrap requires an accepted Blueprint; "
+            f"found definition_status={status}; use --admission-draft"
+        ]
+    if _complete_pair(blueprint):
+        return _validate_blueprint(blueprint, "instantiated")
+    return []
+
+
+def bootstrap(
+    workspace: Path,
+    blueprint: Path,
+    template_root: Path,
+    *,
+    admission_draft: bool = False,
+) -> dict[str, Any]:
     workspace = workspace.resolve()
     blueprint = blueprint.resolve()
     template_root = template_root.resolve()
+    admission_errors = _admission_errors(blueprint, admission_draft=admission_draft)
+    if admission_errors:
+        raise ControllerError(
+            "blueprint admission failed: " + "; ".join(admission_errors)
+        )
     if workspace.exists() and any(workspace.iterdir()):
         raise ControllerError(f"workspace is not empty: {workspace}")
     for rel in [
@@ -72,7 +120,10 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
         "recovery",
     ]:
         (workspace / rel).mkdir(parents=True, exist_ok=True)
-    lock = write_program_lock(blueprint, workspace / "runtime" / "program-lock.json")
+    try:
+        lock = write_program_lock(blueprint, workspace / "runtime" / "program-lock.json")
+    except BlueprintError as exc:
+        raise ControllerError(str(exc)) from exc
     controller_definition = load_yaml(template_root / "CONTROLLER.yaml")["controller"]
     if controller_definition["contracts"]["blueprint"] != lock["blueprint_contract"]:
         raise ControllerError("Controller and Blueprint contract versions are incompatible")
@@ -94,6 +145,11 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
         db.set_meta("waves", lock["waves"])
         db.set_meta("risks", lock["risks"])
         db.set_meta("global_halt", False)
+        db.set_meta("admission_draft", bool(admission_draft))
+        db.set_meta(
+            "definition_status",
+            "draft" if admission_draft else lock["program"].get("definition_status"),
+        )
         for target in lock["targets"]:
             if target.get("repository_id"):
                 db.upsert_repository(target["repository_id"], target["id"])
@@ -127,6 +183,10 @@ def bootstrap(workspace: Path, blueprint: Path, template_root: Path) -> dict[str
         "program_digest": lock["lock_digest"],
         "tasks": len(lock["tasks"]),
         "targets": len(lock["targets"]),
+        "admission_draft": bool(admission_draft),
+        "definition_status": (
+            "draft" if admission_draft else lock["program"].get("definition_status")
+        ),
     }
 
 
@@ -403,10 +463,28 @@ def status(workspace: Path) -> dict[str, Any]:
                 }
             )
         ledger_ok, ledger_message = ledger.verify()
+        program = db.get_meta("program") or {}
+        admission_draft = bool(db.get_meta("admission_draft", False))
+        definition_status = (
+            "draft" if admission_draft else program.get("definition_status")
+        )
+        campaign_root = Path.home() / ".l9/autonomy/campaigns"
         return {
-            "program": db.get_meta("program"),
+            "program": program,
             "program_digest": db.get_meta("program_digest"),
             "global_halt": db.get_meta("global_halt", False),
+            "definition_status": definition_status,
+            "admission_draft": admission_draft,
+            "autonomy_plane": {
+                "authoritative": False,
+                "note": (
+                    "Program Controller is authoritative; autonomy campaign "
+                    "packets are not a second scheduler"
+                ),
+                "campaign_packets_present": bool(
+                    campaign_root.is_dir() and any(campaign_root.glob("*.json"))
+                ),
+            },
             "tasks": tasks,
             "gates": db.gates(),
             "decisions": db.decisions(),
@@ -422,6 +500,7 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
     db, _ = open_runtime(workspace)
     try:
         ready, blocked = [], []
+        admission_draft = bool(db.get_meta("admission_draft", False))
         for task in db.tasks():
             ok, blockers = task_readiness(db, task, workspace)
             item = {
@@ -432,8 +511,19 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
                 "repository_id": task.get("repository_id"),
                 "blockers": blockers,
             }
-            (ready if ok else blocked).append(item)
-        return {"ready": ready, "blocked": blocked}
+            if admission_draft:
+                item["blockers"] = list(blockers) + ["admission_draft"]
+                blocked.append(item)
+            elif ok:
+                ready.append(item)
+            else:
+                blocked.append(item)
+        return {
+            "ready": ready,
+            "blocked": blocked,
+            "definition_status": "draft" if admission_draft else None,
+            "admission_draft": admission_draft,
+        }
     finally:
         db.close()
 
@@ -732,6 +822,25 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 if changed and all(path_allowed(path, patterns) for path in changed)
                 else "FAIL"
             )
+            lock = load_json(workspace / "runtime" / "program-lock.json")
+            prohibited = [
+                item.get("path_or_pattern")
+                for item in (lock.get("do_not_build") or {}).get(
+                    "prohibited_primary_paths"
+                )
+                or []
+                if isinstance(item, dict) and item.get("path_or_pattern")
+            ]
+            dnb_hit = False
+            for path in changed:
+                for pattern in prohibited:
+                    try:
+                        if path_allowed(path, [str(pattern)]):
+                            dnb_hit = True
+                    except ContractError:
+                        if str(pattern) in path:
+                            dnb_hit = True
+            gates["do_not_build"] = "FAIL" if dnb_hit else "PASS"
             gates["symlink"] = (
                 "PASS"
                 if not any(

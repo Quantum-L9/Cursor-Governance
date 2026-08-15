@@ -30,3 +30,9 @@ under the external program root `$HOME/.l9/programs/l9-ecosystem-fix-plan`. Only
 source, closeout receipts, and the Odoo hand-off deliverable are registered in the SSOT.
 
 _Terminal verdict is reserved to AUTH-001 (program owner); the controller only recommends._
+
+## Honesty
+
+This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
+path fields are not rewritten here. It is not on the compile allowlist.
+Do not treat closeout receipts as current controller runtime.

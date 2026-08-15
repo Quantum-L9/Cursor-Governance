@@ -53,3 +53,9 @@ are registered.
 
 _No commit/push/PR/merge/release/deploy against `l9-devpack-compiler` is
 authorized by this contract. Terminal verdict is reserved to the program owner._
+
+## Honesty
+
+This leftover campaign is archival / INCONCLUSIVE. Receipt producer and
+path fields are not rewritten here. It is not on the compile allowlist.
+Do not treat handoff JSON as an executed Program Lock.

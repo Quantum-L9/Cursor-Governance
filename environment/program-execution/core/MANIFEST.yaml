@@ -144,11 +144,11 @@ files:
   sha256: 1ceb2c61283502a083b995d2535bf57e202c2dbe8b092994bd6a17b26f772e43
   bytes: 3917
 - path: program-execution-blueprint-template/schemas/current-state-delta.schema.json
-  sha256: a3a4e7f30adfeac169106d822cfa756bc108e163d2979647f580f9ed7a4ba2d7
-  bytes: 623
+  sha256: b600208c44d49ccfab18ac4ac1102b6f7f00d36d28350699e5cec95fbd002c25
+  bytes: 2131
 - path: program-execution-blueprint-template/schemas/cutover-and-rollback.schema.json
-  sha256: f20bd186b706d8a99783a2a46c12c2092dd74c23c2b3798853d5dfcfcf93dd00
-  bytes: 475
+  sha256: 84bd085c2afdaab7ecea8ee10bfd2b09e8c9e46fd127a5c18644d3289abf896c
+  bytes: 1683
 - path: program-execution-blueprint-template/schemas/decision-register.schema.json
   sha256: 5b83f34f66e17f3702c85770a2505452fcbddcf4ba8adb948322cb9b5c3c4242
   bytes: 3243
@@ -156,8 +156,8 @@ files:
   sha256: ca9df0e4a6e81b8ff89f186e06dc58e3b5190c590a40744e0fb83f3df361456c
   bytes: 641
 - path: program-execution-blueprint-template/schemas/do-not-build.schema.json
-  sha256: 8795ea4dd4f07b12d02a839bf238fed5daf25ad2f050705248d2f7d6eb1ebf8a
-  bytes: 515
+  sha256: 191dcf5146fd66e9643bb2adc6a93b9da673ef697e35d617e12dda53f76ab782
+  bytes: 1480
 - path: program-execution-blueprint-template/schemas/evidence-catalog.schema.json
   sha256: 64b5e4f9b0acd6f447fb3a758462ebfe46d847eb9fa296e0fca4634fd6534df5
   bytes: 3140
@@ -168,11 +168,11 @@ files:
   sha256: 02f7a448fa7a1653f70dd2883f79e671522ee6ede690594eaaeab94710442e72
   bytes: 2503
 - path: program-execution-blueprint-template/schemas/execution-waves.schema.json
-  sha256: 01a60c92010c847b0b045df5e3aeba84b00fc9fb880278319d30735d8eadefb6
-  bytes: 473
+  sha256: 172d3b9fa2b597ab67d84f5a88db14103f4f36dc7fbb90357d7229e12afd2fb1
+  bytes: 1757
 - path: program-execution-blueprint-template/schemas/observability-plan.schema.json
-  sha256: b7edfa7e105a868d43090fb5a50ce6c9661e3d0fef48a6adfa37bbd6c7929b82
-  bytes: 487
+  sha256: e04d47b0438b922fe1cb30c1099f9d8095bf968c5666264d76d2804227ea2e59
+  bytes: 1733
 - path: program-execution-blueprint-template/schemas/phase0-user-config.schema.json
   sha256: c8fc1eaa8b11ec742c56ebdc2e6f4b0ea32b0758cd706be2dc5f96dcd85b1b2c
   bytes: 5564
@@ -183,8 +183,8 @@ files:
   sha256: 056475911ef4fa35b5172681ef2fc71218ba53bd8ea7d603f1082b9c0f2e6b30
   bytes: 2663
 - path: program-execution-blueprint-template/schemas/source-traceability.schema.json
-  sha256: 74739ee9030f2f2b6cdc18300d6a0620418e2a6af04a4eae27104bda273e3cfe
-  bytes: 491
+  sha256: ddc04c12634ca3fdf3cef55c9d5e7ef14ac6396e9c5fce01ab8826c2206d1929
+  bytes: 1815
 - path: program-execution-blueprint-template/schemas/task-card.schema.json
   sha256: 49713e146de1991478f9f30e5f443c79d41d0fe75a13038fa59395199d6485b7
   bytes: 374
@@ -204,8 +204,8 @@ files:
   sha256: 1820def7bc85ac2478028ef5bae0091ec07f4b9dd159f427b9e4ea3df10c29fa
   bytes: 3111
 - path: program-execution-blueprint-template/scripts/validate_blueprint.py
-  sha256: ad8916a6247821c36a9243b1f44cb9eeb6cf639f944b217be20db6a017a831c7
-  bytes: 23504
+  sha256: 8fa3fcad28619eed156935f5b2a79e6b927762710e6f68391340cfe0a45a597f
+  bytes: 23561
 - path: program-execution-controller-template/ARCHITECTURE.md
   sha256: 2e9c4fd4d6acd9c3aeb216743a94aaaf53170cb5b6e557102ea0d9b2ec964c3b
   bytes: 1340
@@ -315,14 +315,14 @@ files:
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
 - path: program-execution-controller-template/schemas/program-lock.schema.json
-  sha256: ff384bfa7738bdea9589eb78cdb7d5515bdb06c117150f27c8d0d6cadcaefc3e
-  bytes: 2484
+  sha256: bebc5ba411df775dc7a483834a16d0a4d6daaa7b0987c7da65aeba6e68e0082d
+  bytes: 2630
 - path: program-execution-controller-template/schemas/repository-registration.schema.json
   sha256: c71c33aa73f8382311cbc5d71fd5e597f5d0b45f9e9ec798be8a3e189a123643
   bytes: 958
 - path: program-execution-controller-template/schemas/source-contract.schema.json
-  sha256: 71c4f2dfd7c1b8deee9d1c8ea3dbdce05355d52b8a8aac5d8afc4457d47e15a3
-  bytes: 2608
+  sha256: 6d3dacdc7efea95c5e1a599eb79edfe8c38211620e2bf050368ec61721fe3f28
+  bytes: 2666
 - path: program-execution-controller-template/schemas/task-contract.schema.json
   sha256: 3f1a95fd2cbb97fc20691bb0a9aba53defb9399e7a258d859924a5166f9b0220
   bytes: 3526
@@ -339,20 +339,20 @@ files:
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
   bytes: 52
 - path: program-execution-controller-template/scripts/pec/blueprint.py
-  sha256: 96f1cc147b5417fa6d4dada330b1c455d424f42d2b0a534ace8562c4b1fad656
-  bytes: 6383
+  sha256: b10d2cff87209ded7b4622ac965f70129fc21d356cf081b37ed320f9558251e4
+  bytes: 7156
 - path: program-execution-controller-template/scripts/pec/cli.py
-  sha256: 0bff24a734cde731819025199d3578a882c3b1eda250b68294a5458e004aa927
-  bytes: 9597
+  sha256: 0393f69de6fc26c44af84353d2440a9066f213551ceb7b0bbccedf850e8db8c3
+  bytes: 9867
 - path: program-execution-controller-template/scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
   bytes: 2419
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: 664a0eab7fb45784f812b1036cd9cef6bfe44b49675d1d9defc398f0d8cad442
-  bytes: 12358
+  sha256: c06c0e5fcf0c2f695c3d2014441b0a3cf0239c9ffda66d662eeda3b843e2ede3
+  bytes: 12541
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 1b3a7072754e1f02c626de2d41d77bec8349946b5537d3abcdf6c962def00c41
-  bytes: 50835
+  sha256: cf45e8d60edc41bd3f9d0b8f665c297f88510d6d13519947e9c275f204301317
+  bytes: 55045
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -374,6 +374,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_authority_inflation.py
   sha256: 9af0d1fff94883ede8b15a109f76d591ea84f092c26edc80c8bf5e1e71abced4
   bytes: 1018
+- path: program-execution-controller-template/scripts/tests/test_bootstrap_admission.py
+  sha256: 8bd9f261b19a4c1f27b207fa4091a1b6895dae0be99b8bf3b05fc17705955507
+  bytes: 2320
 - path: program-execution-controller-template/scripts/tests/test_changed_files.py
   sha256: 1de461c7d7d3a79519657f926c1e10a42990b264e5e9d9468c6797479ea836df
   bytes: 1191
@@ -383,6 +386,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_decision_unknown.py
   sha256: 1534779aa307ad0c4c22f856e6fcc8993fc231695c150d87238e15c03bb3ac2e
   bytes: 1537
+- path: program-execution-controller-template/scripts/tests/test_do_not_build_verify.py
+  sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
+  bytes: 2083
 - path: program-execution-controller-template/scripts/tests/test_leases_and_approval.py
   sha256: 0c6b15be5b8830d11fa8b84bcee0dc00261250319e8021c0b5220c63f82de14a
   bytes: 967
@@ -395,12 +401,18 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_program_lock_drift.py
   sha256: 94db34782cf1ff822ac99d779b9b4ad35e617d804c250457e6e65455fb6ccf6c
   bytes: 882
+- path: program-execution-controller-template/scripts/tests/test_program_lock_schema.py
+  sha256: b1666159c9fabafe648a7e61f0cd05d8809a78b702ff2d39f4a4ed8813dea005
+  bytes: 1314
 - path: program-execution-controller-template/scripts/tests/test_recovery.py
   sha256: 6a1ee7d5145edc6a942639256fa785baa74fa50dac9a8492ec2412302f014c02
   bytes: 1045
 - path: program-execution-controller-template/scripts/tests/test_scope.py
   sha256: 25df4fca8992212c17f6ed5a925b37708d1b4f8bf91d1f8fac45651aee6dae82
   bytes: 558
+- path: program-execution-controller-template/scripts/tests/test_source_contract_placeholder.py
+  sha256: 563e575266c92977c52a4447109a0c6df6c7c087a2b942fe5db567d76d978098
+  bytes: 1310
 - path: program-execution-controller-template/scripts/tests/test_state_transition.py
   sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
   bytes: 1649
@@ -411,8 +423,8 @@ files:
   sha256: 86f42e5a3d23a6a5e2c4087cdc6116160ac6d5e109629d7a67dbc1f9e03b88c7
   bytes: 2609
 - path: program-execution-controller-template/scripts/validate_controller.py
-  sha256: cdf2a0fa6dd19e6a47491ac69feecdb6ac5f289526c36a4352b4675e3e51c151
-  bytes: 9549
+  sha256: 501ea8b226f1b81d8fbeb3904a06512ac04386f80cc274e3056cf378d63024ff
+  bytes: 9606
 - path: scripts/generate_manifest.py
   sha256: d2f1be14f99214a2a487011f80ac4c4d10aff93013690069e2884e469a19eff9
   bytes: 1500
@@ -423,8 +435,8 @@ files:
   sha256: bc10b4bf18bfdf1ffad63e574e28139939f64b171aaf519046c028999d5dccec
   bytes: 2625
 - path: scripts/validate_pair.py
-  sha256: 4303c58b5c7a5920562f8c523cc201892d55cc8b3409f003cc4d3832043f7f7b
-  bytes: 10056
+  sha256: bd768fdc3daf6ef78da45fd42e49981d32b60bad2b41e130669055d1a81a0e8f
+  bytes: 10117
 - path: shared/AUTHORIZATION_MODEL.yaml
   sha256: 2a7d346233543ce8a9aa62b0ea219e5627cc0bfd34979adbe56dd7318aa81a05
   bytes: 843
@@ -449,6 +461,9 @@ files:
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
+- path: shared/schemas/campaign-source.schema.json
+  sha256: 7b4d22e7abfa3b652b89df5edc94458ebe6de9a816068a669fb483b9276b65b9
+  bytes: 4411
 - path: shared/schemas/evidence-reference.schema.json
   sha256: a40c5ddc764d4c99bfe0c501def26ac26ad025d5cc799e9aa0bf412cdf125ba8
   bytes: 2076
@@ -483,5 +498,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 159
-  total_bytes: 395726
+  file_count: 164
+  total_bytes: 420514
