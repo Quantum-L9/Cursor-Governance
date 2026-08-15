@@ -52,7 +52,7 @@ tiers:
   - skill: l9-incident-response
     use_when: a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem
   - skill: l9-setting-up-ci
-    use_when: bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions
+    use_when: bootstrapping CI, activating l9-ci-core / Biome, or adding lint/test/type-check stages without inventing ci.yml or biome.json
   - skill: l9-graphiti-memory
     use_when: wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health
   - skill: l9-aws-secrets
@@ -411,6 +411,10 @@ claude_routing:
     - add lint type checking and tests
     - add ci stages
     - set up ci
+    - activate l9-ci-core
+    - add biome
+    - stamp biome.json
+    - seed l9-ci-pack
     supporting:
     - l9-structured-reasoning
   - id: incident_response

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "class": "eslint_owned",
-  "comment": "Additional extensions for workspaces where ESLint (not Biome) owns lint/format — e.g. Website-Bot, SEO-Bot. Biome is still installed from the core set but is never set as defaultFormatter for these workspaces.",
+  "comment": "Additional extensions for workspaces classified eslint_owned (heuristic: eslint config, no biome.json). Biome is still installed from the core set but is never set as defaultFormatter for these workspaces.",
   "extensions": [
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode"

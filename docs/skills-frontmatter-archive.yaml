@@ -489,15 +489,15 @@
 - path: skills/l9-setting-up-ci/SKILL.md
   frontmatter: |
     name: l9-setting-up-ci
-    description: set up a GitHub Actions CI/CD pipeline with linting, testing, type-checking, and deployment steps. use when bootstrapping CI for a repo or adding lint/test/type-check/deploy stages to GitHub Actions.
+    description: activate governed L9 CI from the org seeder or l9-ci-core stamp. never invent ci.yml or biome.json. use when bootstrapping CI, activating l9-ci-core, adding Biome, or adding lint/test/type-check stages.
     skill_schema: 1
     layer: control_plane
     role: skill_entrypoint
-    tags: [l9, ci, github-actions, pipeline, devops]
+    tags: [l9, ci, github-actions, biome, l9-ci-core, seeder]
     owner: igor_beylin
     status: active
-    version: 1.0.1
-    updated: 2026-06-06
+    version: 2.0.0
+    updated: 2026-08-15
 - path: skills/l9-setting-up-terraform/SKILL.md
   frontmatter: |
     name: l9-setting-up-terraform
