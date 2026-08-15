@@ -1,0 +1,240 @@
+schema_id: canonical.schema.cursor_rules_manifest.v3
+schema_name: Canonical Cursor Rules Manifest v3 Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 3.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.cursor_rules_manifest.v3.yaml
+generated_at: "2026-08-14T17:33:00-04:00"
+purpose:
+  primary: >
+    Define the deterministic generated registry describing every tracked Cursor
+    rule, its migration state, activation, contract binding, resolved semantic
+    inputs, projection integrity, context cost, lifecycle, and semantic ownership.
+    The manifest describes rule delivery state but never owns governance meaning.
+  output_level: schema_not_instance
+  intended_use:
+    - generate_RULES_MANIFEST_yaml
+    - generate_RULES_MANIFEST_json
+    - generate_RULES_MANIFEST_markdown
+    - validate_rule_inventory
+    - validate_projection_integrity
+    - expose_rule_migration_state
+    - expose_contract_rule_impact
+  not_for:
+    - hand_authored_policy
+    - source_binding_configuration
+    - semantic_conflict_resolution
+ontology:
+  parent_type: generated_governance_registry_schema
+  specialized_type: cursor_rules_manifest_schema
+  instance_type_generated_by_this_schema: cursor_rules_manifest
+  related_schema_types:
+    - canonical.schema.rule_activation_binding.v1
+    - canonical.schema.contract_registry.v1
+inheritance:
+  extends:
+    - canonical.knowledge_object.schema.v1
+  provides:
+    - full_rule_inventory_model
+    - projection_registry_model
+    - migration_summary_model
+    - context_budget_summary_model
+    - contract_binding_summary_model
+manifest_authority_law:
+  generated: true
+  hand_edit_allowed: false
+  owns_semantics: false
+  source_configuration: false
+required_sections:
+  metadata:
+    required: true
+    fields:
+      schema:
+        const: l9.cursor-rules-manifest/v3
+      generated_utc:
+        type: datetime
+        required: true
+      generator:
+        const: ops/scripts/generate_rules_manifest.py
+      rules_directory:
+        const: rules
+      source_tree_digest:
+        type: sha256_prefixed
+        required: true
+  summary:
+    required: true
+    fields:
+      total_mdc_files:
+        type: integer
+        minimum: 0
+        required: true
+      always_apply_true:
+        type: integer
+        minimum: 0
+        required: true
+      always_apply_false:
+        type: integer
+        minimum: 0
+        required: true
+      legacy_rules:
+        type: integer
+        minimum: 0
+        required: true
+      extracted_rules:
+        type: integer
+        minimum: 0
+        required: true
+      hybrid_rules:
+        type: integer
+        minimum: 0
+        required: true
+      contract_bound_rules:
+        type: integer
+        minimum: 0
+        required: true
+      generated_rules:
+        type: integer
+        minimum: 0
+        required: true
+      retired_rules:
+        type: integer
+        minimum: 0
+        required: true
+      always_apply_bytes:
+        type: integer
+        minimum: 0
+        required: true
+      always_apply_token_estimate:
+        type: integer
+        minimum: 0
+        required: true
+      unowned_normative_statements:
+        type: integer_or_null
+        required: true
+      unresolved_contract_refs:
+        type: integer
+        minimum: 0
+        required: true
+      unresolved_conflicts:
+        type: integer
+        minimum: 0
+        required: true
+      projection_drift_count:
+        type: integer
+        minimum: 0
+        required: true
+      context_budget_violations:
+        type: integer
+        minimum: 0
+        required: true
+  rules:
+    required: true
+    type: list
+    item_schema:
+      file:
+        type: string
+        required: true
+      id:
+        type: string
+        required: true
+      version:
+        type: semver_or_null
+        required: true
+      description:
+        type: string
+        required: true
+      scope:
+        type: string
+        required: true
+      domain:
+        type: string
+        required: true
+      activation:
+        type: string
+        required: true
+      always_apply:
+        type: boolean_or_null
+        required: true
+      globs:
+        type: list_string_or_null
+        required: true
+      content_digest:
+        type: sha256_prefixed
+        required: true
+      migration_state:
+        enum:
+          - legacy
+          - extracted
+          - hybrid
+          - contract_bound
+          - generated
+          - retired
+        required: true
+      binding:
+        type: map_or_null
+        required: true
+      contracts:
+        type: list
+        required: true
+      projection:
+        type: map_or_null
+        required: true
+      context:
+        type: map
+        required: true
+      semantic_authority:
+        type: map
+        required: true
+      lifecycle:
+        type: map
+        required: true
+validation_rules:
+  - id: RULE-MAN-001
+    severity: blocker
+    rule: Every tracked rules/*.mdc file MUST have exactly one manifest entry.
+  - id: RULE-MAN-002
+    severity: blocker
+    rule: Manifest entry IDs and file paths MUST be unique.
+  - id: RULE-MAN-003
+    severity: blocker
+    rule: Every generated rule MUST resolve a canonical binding.
+  - id: RULE-MAN-004
+    severity: blocker
+    rule: Stored binding, contract, and projection digests MUST match actual canonical state.
+  - id: RULE-MAN-005
+    severity: blocker
+    rule: Manifest summary values MUST be computed from manifest entries and evidence inputs.
+  - id: RULE-MAN-006
+    severity: blocker
+    rule: The manifest MUST NOT own shared governance semantics.
+  - id: RULE-MAN-007
+    severity: blocker
+    rule: Hand edits MUST fail deterministic regeneration parity.
+  - id: RULE-MAN-008
+    severity: blocker
+    rule: Generated-rule semantic_authority.owner MUST equal contracts.
+  - id: RULE-MAN-009
+    severity: blocker
+    rule: Legacy semantic ownership MUST remain explicitly visible as migration debt.
+derivation_targets:
+  can_generate:
+    - RULES_MANIFEST_yaml
+    - RULES_MANIFEST_json
+    - RULES_MANIFEST_markdown
+    - rule_migration_dashboard
+    - rule_contract_impact_map
+    - rule_context_budget_report
+anti_drift_rules:
+  - Manifest describes projections but never becomes projection source configuration.
+  - Generated fields are computed.
+  - Volatile generation time is excluded from semantic equality.
+  - Legacy authority remains visible until migrated.
+  - Rule ordering never defines authority.
+  - Digest mismatch fails closed.
+minimum_viable_instance_requirements:
+  required:
+    - metadata
+    - summary
+    - rules

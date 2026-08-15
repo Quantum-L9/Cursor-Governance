@@ -1,0 +1,25 @@
+$schema: l9.rule-doctrine-ratchet-baseline/v1
+status: bootstrap_required
+policy:
+  legacy_debt_may_increase: false
+  legacy_debt_may_decrease: true
+  new_conflicts_allowed: false
+  automatic_upward_rebaseline_allowed: false
+bootstrap:
+  required_command: >
+    python3 ops/contracts/build_rule_doctrine_census.py
+    --bootstrap-baseline
+    --reason "<reviewed reason of at least 20 characters>"
+  requirements:
+    - clean_git_workspace
+    - immutable_HEAD_bound_extraction
+    - zero_extraction_integrity_errors
+    - reviewed_scan_profile
+  note: >
+    This sentinel MUST NOT be treated as a passing baseline. Bootstrap replaces
+    it with exact doctrine fingerprints and conflict-pair allowances computed
+    from the bound repository state.
+allowances:
+  unowned_doctrine: []
+  potential_conflict_pairs: []
+integrity_digest: null
