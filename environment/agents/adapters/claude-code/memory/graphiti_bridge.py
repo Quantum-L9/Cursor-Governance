@@ -42,6 +42,13 @@ def _python(root: Path) -> str:
     return sys.executable
 
 
+def bind_session_env(env: dict[str, str], session_id: str | None) -> dict[str, str]:
+    """Force Graphiti CLI conversation id to the caller's session (no setdefault)."""
+    if session_id:
+        env["CURSOR_CONVERSATION_ID"] = session_id
+    return env
+
+
 def ensure_tunnel(workspace: Path | None = None) -> None:
     root = find_governance_root()
     tunnel = root / TUNNEL_REL
@@ -73,9 +80,7 @@ def run_graphiti(
     cwd = workspace or Path.cwd()
     if ensure:
         ensure_tunnel(cwd)
-    env = os.environ.copy()
-    if session_id:
-        env.setdefault("CURSOR_CONVERSATION_ID", session_id)
+    env = bind_session_env(os.environ.copy(), session_id)
     proc = subprocess.run(  # noqa: S603
         [_python(root), str(client), *args],
         cwd=str(cwd),
@@ -145,12 +150,9 @@ def write_episode(
 
 def phase_lock_satisfied(session_id: str) -> bool:
     """True when Cursor Graphiti state shows gmp:phase_lock for this session."""
-    conv = session_id or os.environ.get("CURSOR_CONVERSATION_ID") or "default"
-    path = Path.home() / ".cursor" / "graphiti-state" / f"{conv}.json"
-    if not path.is_file():
-        # Also accept default conversation state when Claude session ids differ.
-        alt = Path.home() / ".cursor" / "graphiti-state" / "default.json"
-        path = alt if alt.is_file() else path
+    if not session_id:
+        return False
+    path = Path.home() / ".cursor" / "graphiti-state" / f"{session_id}.json"
     if not path.is_file():
         return False
     try:

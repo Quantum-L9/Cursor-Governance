@@ -171,9 +171,16 @@ fi
 
 GC="$GLOBAL_COMMANDS"
 
-# Never-lose: restore open/.tmp legacy holds into the active workspace.
-if [[ -n "${REPO:-}" && -f "$GC/ops/scripts/scratch_hold.py" ]]; then
-  python3 "$GC/ops/scripts/scratch_hold.py" --workspace "$REPO" restore --all >/dev/null 2>&1 || true
+# Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
+# only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
+# plan audit, and the additional_context JSON envelope.
+SHARED_BOOTSTRAP="$GC/ops/scripts/bootstrap_agent_environment.sh"
+if [ -f "$SHARED_BOOTSTRAP" ]; then
+  bash "$SHARED_BOOTSTRAP" \
+    --surface cursor \
+    --governance "$GC" \
+    --workspace "${REPO:-$PWD}" \
+    --quiet || true
 fi
 
 # Self-heal installed bootstrap + activator sidecar from tip SSOT
@@ -209,20 +216,11 @@ if [ -x "$PLUGIN_SETUP" ]; then
   fi
 fi
 
-# venv: sync warm path sync; cold build backgrounded
+# venv: shared bootstrap owns uv sync; report the result only
 VENV_NOTE="absent"
-if command -v uv >/dev/null 2>&1 && [[ -f "$GC/uv.lock" ]]; then
-  if [[ -x "$GC/.venv/bin/python3" ]]; then
-    if ( cd "$GC" && uv sync --locked --extra dev --no-build >/dev/null 2>&1 ); then
-      export PATH="$GC/.venv/bin:$PATH"
-      VENV_NOTE="locked (uv.lock)"
-    else
-      VENV_NOTE="uv sync --locked failed — run: cd \"$GC\" && uv sync --extra dev"
-    fi
-  else
-    run_reconciler bash -c "cd \"$GC\" && uv sync --locked --extra dev --no-build"
-    VENV_NOTE="not yet built — background sync started; run 'make venv' in $GC for foreground + wait"
-  fi
+if [[ -x "$GC/.venv/bin/python3" ]]; then
+  export PATH="$GC/.venv/bin:$PATH"
+  VENV_NOTE="locked (uv.lock)"
 fi
 
 # IDE profile backgrounded
@@ -448,18 +446,3 @@ print(json.dumps({
 PY
 
 exit 0
-
-l9_session_runtime_probe() {
-  local root py
-  root="${GOVERNANCE_ROOT:-${GLOBAL_COMMANDS:-$HOME/.cursor-governance}}"
-  if [ -x "$root/.venv/bin/python3" ]; then py="$root/.venv/bin/python3"; else py="$(command -v python3)"; fi
-  if [ -f "$root/environment/agents/deployment/reconcile.py" ]; then
-    "$py" "$root/environment/agents/deployment/reconcile.py" --surface cursor --workspace "${CURSOR_PROJECT_DIR:-$PWD}" >/dev/null 2>&1 || true
-  fi
-  if [ -f "$root/environment/agents/readiness/probe_runtime.py" ]; then
-    "$py" "$root/environment/agents/readiness/probe_runtime.py" >/dev/null 2>&1 || true
-  fi
-}
-if [ "${L9_SESSION_RUNTIME_PROBE:-0}" = "1" ]; then
-  l9_session_runtime_probe || true
-fi

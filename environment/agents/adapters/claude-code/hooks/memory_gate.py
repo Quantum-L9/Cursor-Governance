@@ -51,7 +51,10 @@ def main() -> int:
         return 0
     tool_name = str(event.get("tool_name", ""))
     tool_input = event.get("tool_input") or {}
-    session_id = str(event.get("session_id", ""))
+    try:
+        session_id = st.resolve_session_id(event=event)
+    except ValueError:
+        session_id = ""
 
     try:
         contract = st.load_contract()
@@ -96,6 +99,12 @@ def main() -> int:
             )
 
         if "phase_lock" in requires:
+            env_mismatch = _project_dir_mismatch(contract, session_id)
+            if env_mismatch:
+                _deny(env_mismatch)
+            mismatch = _lock_identity_mismatch(contract, namespaces, session_id)
+            if mismatch:
+                _deny(mismatch)
             if not _has_verified_lock(contract, namespaces, session_id):
                 _deny(
                     f"No conflict-checked phase-lock held. Governed write '{rule['id']}' "
@@ -111,6 +120,38 @@ def main() -> int:
             "Failing closed. Operator override: L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>."
         )
     return 0
+
+
+def _project_dir_mismatch(contract: dict, session_id: str) -> str:
+    claude = os.environ.get("CLAUDE_PROJECT_DIR", "").strip()
+    cursor = os.environ.get("CURSOR_PROJECT_DIR", "").strip()
+    if not claude or not cursor:
+        return ""
+    if Path(claude).resolve() == Path(cursor).resolve():
+        return ""
+    gate = st.identity_snapshot(contract, session_id or "UNKNOWN")
+    return (
+        "LOCK_IDENTITY_MISMATCH: CLAUDE_PROJECT_DIR and CURSOR_PROJECT_DIR disagree. "
+        f"CLAUDE_PROJECT_DIR={Path(claude).resolve()} "
+        f"CURSOR_PROJECT_DIR={Path(cursor).resolve()} gate={gate}"
+    )
+
+
+def _lock_identity_mismatch(contract: dict, namespaces: list[str], session_id: str) -> str:
+    """Return LOCK_IDENTITY_MISMATCH reason when a lock exists under a different identity."""
+    gate = st.identity_snapshot(contract, session_id or "UNKNOWN")
+    for namespace in namespaces:
+        lock = st.read_lock(contract, namespace)
+        if not lock:
+            continue
+        lock_session = str(lock.get("session_id") or "")
+        if lock_session and lock_session != session_id:
+            held = st.identity_snapshot(contract, lock_session)
+            return (
+                "LOCK_IDENTITY_MISMATCH: lock and gate session/state-root disagree. "
+                f"lock={held} gate={gate}"
+            )
+    return ""
 
 
 def _has_verified_lock(contract: dict, namespaces: list[str], session_id: str) -> bool:

@@ -42,14 +42,43 @@ def workspace_root() -> Path:
     gate (and vice versa) instead of silently pointing at a different state root.
     If no ancestor has ``.l9/memory``, preserve the prior behavior (cwd).
     """
-    env = os.environ.get("CLAUDE_PROJECT_DIR")
-    if env:
-        return Path(env).resolve()
+    for key in ("CLAUDE_PROJECT_DIR", "CURSOR_PROJECT_DIR"):
+        env = os.environ.get(key)
+        if env:
+            return Path(env).resolve()
     cwd = Path.cwd().resolve()
     for base in (cwd, *cwd.parents):
         if (base / ".l9" / "memory").is_dir():
             return base
     return cwd
+
+
+def resolve_session_id(*, event: dict[str, Any] | None = None, cli_arg: str | None = None) -> str:
+    """Authoritative session id: hook event first, else required CLI arg.
+
+    Lock and gate paths MUST NOT default to ``unknown-session``.
+    """
+    if event:
+        sid = str(event.get("session_id") or "").strip()
+        if sid:
+            return sid
+    sid = str(cli_arg or "").strip()
+    if sid:
+        return sid
+    raise ValueError("session_id required (hook event or --session-id)")
+
+
+def graphiti_state_path(session_id: str) -> Path:
+    return Path.home() / ".cursor" / "graphiti-state" / f"{session_id}.json"
+
+
+def identity_snapshot(contract: dict[str, Any], session_id: str) -> dict[str, str]:
+    return {
+        "session_id": session_id,
+        "workspace_root": str(workspace_root()),
+        "memory_state_root": str(state_root(contract)),
+        "graphiti_state_file": str(graphiti_state_path(session_id)),
+    }
 
 
 def state_root(contract: dict[str, Any]) -> Path:

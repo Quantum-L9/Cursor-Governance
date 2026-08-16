@@ -64,3 +64,9 @@ errors:
 - code: ADAPTER_ABSENT_FOR_REMOTE
   owner: Controller
   effect: deny push/PR when adapter_status is absent
+- code: REVISION_MISMATCH
+  owner: Controller
+  effect: deny PE mutation until governance/runtime/workspace revisions agree
+- code: LOCK_IDENTITY_MISMATCH
+  owner: Controller
+  effect: deny governed writes until lock and gate share session_id and state root

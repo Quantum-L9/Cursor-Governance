@@ -64,6 +64,12 @@ def parser() -> argparse.ArgumentParser:
         cmd = sub.add_parser(name)
         cmd.add_argument("--workspace", required=True, type=Path)
 
+    cmd = sub.add_parser("preflight")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--task-id")
+    cmd.add_argument("--surface", default="cursor")
+    cmd.add_argument("--receipt-workspace", type=Path)
+
     cmd = sub.add_parser("draft-contract")
     cmd.add_argument("task_id")
     cmd.add_argument("--workspace", required=True, type=Path)
@@ -241,10 +247,28 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             value = status(args.workspace)
         elif args.command == "next":
             value = next_tasks(args.workspace)
+        elif args.command == "preflight":
+            from .preflight import preflight
+
+            value = preflight(
+                args.workspace,
+                task_id=args.task_id,
+                surface=args.surface,
+                receipt_workspace=args.receipt_workspace,
+            )
         elif args.command == "draft-contract":
             db, _ = open_runtime(args.workspace)
             try:
-                value = {"path": str(draft_source_contract(db, args.task_id, args.output))}
+                value = {
+                    "path": str(
+                        draft_source_contract(
+                            db,
+                            args.task_id,
+                            args.output,
+                            workspace=args.workspace.resolve(),
+                        )
+                    )
+                }
             finally:
                 db.close()
         elif args.command == "register-contract":
