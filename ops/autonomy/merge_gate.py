@@ -137,7 +137,9 @@ def _never_waive_command(command: str) -> bool:
 
 
 def _never_waive_tool(tool_name: str, tool_input: dict[str, Any]) -> bool:
-    if tool_name in DENY_TOOL_NAMES and bool(tool_input.get("admin") or tool_input.get("admin_override")):
+    if tool_name in DENY_TOOL_NAMES and bool(
+        tool_input.get("admin") or tool_input.get("admin_override")
+    ):
         return True
     return False
 
