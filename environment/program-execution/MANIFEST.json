@@ -30,6 +30,10 @@
       "sha256": "c38173eb85f8826d1a645528df15ab4e3342dd07c76bce74838c67da2ba85f7c"
     },
     {
+      "path": "adapters/ai-control-plane.project-policy.yaml",
+      "sha256": "6a28e7e6e5b99e90f4819a9cb06f7ad278efecdc7637b6698908e19a39add302"
+    },
+    {
       "path": "adapters/chatgpt/ADAPTER.yaml",
       "sha256": "381144680e3d90f1bd28742306f779049400a2e0ae018bfc0f0a57dfa02c1cfe"
     },
@@ -1347,7 +1351,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "b7dfbf9210bf38528cf03a00ae597c13ca90e511fd3d9b04f47ae4de60b55420"
+      "sha256": "5e327504c25a5418e9277dc89fb7e9dc1f0461ea2312d7dfd68bfc8c9314e4ae"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1379,7 +1383,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "5dc3eea765e5b41a66b4509e7a1f0b06b3b4529c1b3be0bd7e88b33b863fe8b6"
+      "sha256": "7e9d5ca8d91d4a3b59a73b44fa5881602f2479315b226c07a4997ea3a90a7004"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

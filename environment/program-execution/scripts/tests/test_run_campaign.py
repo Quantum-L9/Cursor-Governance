@@ -61,6 +61,49 @@ ACTIVATE_SEED = {
     ],
 }
 
+READY_SEED = {
+    "campaign_id": "demo-activate-v1",
+    "title": "Demo Activate",
+    "objective": "Activate a proper PE campaign from the minimum file set.",
+    "plan_status": "Ready",
+    "tasks": [
+        {
+            "id": "TASK-001",
+            "title": "Lock current state",
+            "objective": "Record baseline.",
+            "actions": ["inspect_repository_head"],
+            "consumers": ["pec"],
+            "entrypoints": ["make campaign"],
+            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "nugget_id": "nugget-task-001",
+            "acceptance": [
+                {
+                    "id": "AC-001",
+                    "statement": "Baseline is recorded.",
+                    "required_evidence_types": ["runtime_behavior"],
+                }
+            ],
+        },
+        {
+            "id": "TASK-002",
+            "title": "Implement change",
+            "objective": "Edit declared paths only.",
+            "actions": ["edit_only_declared_paths"],
+            "consumers": ["pec"],
+            "entrypoints": ["make campaign"],
+            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "nugget_id": "nugget-task-002",
+            "acceptance": [
+                {
+                    "id": "AC-002",
+                    "statement": "Declared paths contain the change.",
+                    "required_evidence_types": ["runtime_behavior"],
+                }
+            ],
+        },
+    ],
+}
+
 INTENT_V1 = {
     "schema": "program-execution.intent.v1",
     "objective": "Make repo X achieve Y.",
@@ -130,7 +173,7 @@ def _host_repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").write_text(
         HOST_STATUS, encoding="utf-8"
     )
-    _dump(tmp / "intent.yaml", ACTIVATE_SEED)
+    _dump(tmp / "intent.yaml", READY_SEED)
     return tmp
 
 
@@ -384,28 +427,21 @@ class RunCampaignTests(unittest.TestCase):
             brief.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
-            report = self.mod.run_campaign(
-                brief,
-                until="activate",
-                primary=other_primary,
-                repo_root=root,
-                l9_root=Path(raw) / "l9",
-                hooks=self.mod.Hooks(
-                    context7_stack=_stack_ok,
-                    write_task_output=_write_task_output,
-                    compile_activation=self.activate.compile_activation,
-                ),
-            )
-            self.assertEqual(report.campaign_id, "pe-memory")
+            with self.assertRaises((self.mod.CampaignError, self.activate.CompileError)):
+                self.mod.run_campaign(
+                    brief,
+                    until="activate",
+                    primary=other_primary,
+                    repo_root=root,
+                    l9_root=Path(raw) / "l9",
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                    ),
+                )
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"
-            names = {path.name for path in campaign_dir.iterdir() if path.is_file()}
-            self.assertEqual(names, self.mod.ALLOWED_CAMPAIGN_FILES)
-            self.assertNotIn("INTENT.yaml", names)
-            source = yaml.safe_load(
-                (campaign_dir / "CAMPAIGN_SOURCE.yaml").read_text(encoding="utf-8")
-            )
-            self.assertEqual(len(source["tasks"]), 7)
-            self.assertEqual(source["metadata"]["intended_host"], "Quantum-L9/Cursor-Governance")
+            self.assertFalse((campaign_dir / "source-integrity-receipt.json").is_file())
 
     def test_refuses_hash_campaign_id(self) -> None:
         with self.assertRaises(self.mod.CampaignError) as ctx:
@@ -691,49 +727,82 @@ class RunCampaignTests(unittest.TestCase):
             target = l9 / "program-worktrees" / "demo-activate-v1"
             target.mkdir(parents=True)
             _git_init(target)
-            report = self.mod.run_campaign(
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                        make_pr=lambda worktree, campaign_id: (
+                            opened.append(campaign_id)
+                            or {"number": 7, "url": "https://example.test/7"}
+                        ),
+                    ),
+                )
+            self.assertIn("INCOMPLETE", str(ctx.exception))
+            self.assertIn("skip CHANGE", str(ctx.exception))
+            self.assertEqual(opened, [])
+
+    def test_until_stages_unchanged(self) -> None:
+        self.assertEqual(
+            self.mod.UNTIL_STAGES,
+            (
+                "activate",
+                "blueprint",
+                "admit",
+                "bootstrap",
+                "arm",
+                "execute",
+                "pr",
+                "close",
+            ),
+        )
+
+    def test_plan_window_writes_nuggets(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            l9 = Path(raw) / "l9"
+            self.mod.run_campaign(
                 root / "intent.yaml",
-                until="close",
-                primary=Path(raw) / "primary",
+                until="activate",
+                primary=Path(raw) / "other-primary",
                 repo_root=root,
                 l9_root=l9,
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
                     write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
-                    make_pr=lambda worktree, campaign_id: (
-                        opened.append(campaign_id) or {"number": 7, "url": "https://example.test/7"}
-                    ),
                 ),
             )
-            self.assertIn("execute", report.stages_completed)
-            self.assertIn("close", report.stages_completed)
-            self.assertEqual(opened, ["demo-activate-v1"])
-            workspace = l9 / "programs" / "demo-activate-v1"
-            pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
-            status = subprocess.run(
-                [sys.executable, str(pec), "status", "--workspace", str(workspace)],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(status.returncode, 0, status.stderr)
-            payload = json.loads(status.stdout)
-            states = {item["id"]: item["runtime_state"] for item in payload["tasks"]}
-            self.assertEqual(states["TASK-001"], "COMPLETED")
-            self.assertEqual(states["TASK-002"], "COMPLETED")
-            self.assertEqual(payload["campaign_status"]["runtime_status"], "completed")
-            live = root / "environment/program-execution/campaigns/demo-activate-v1"
-            done = root / "environment/program-execution/campaigns/COMPLETED/demo-activate-v1"
-            self.assertFalse(live.exists())
-            self.assertTrue(done.is_dir())
-            ledger = yaml.safe_load(
-                (root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").read_text(
-                    encoding="utf-8"
-                )
-            )
-            row = next(item for item in ledger["campaigns"] if item["id"] == "demo-activate-v1")
-            self.assertEqual(row["lifecycle"], "complete")
+            nuggets = l9 / "primed" / "demo-activate-v1" / "nuggets.json"
+            self.assertTrue(nuggets.is_file())
+            payload = json.loads(nuggets.read_text(encoding="utf-8"))
+            self.assertTrue(any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"]))
+
+    def test_incomplete_skips_change(self) -> None:
+        decision = self.mod.dispatch_kernel_change(
+            {"kernel_verdict": "INCOMPLETE", "gates": {"validation": "INCOMPLETE"}}
+        )
+        self.assertEqual(decision["action"], "skip_change")
+        self.assertFalse(decision["diagnosed"])
+
+    def test_fail_diagnoses_then_reverifies(self) -> None:
+        calls: list[str] = []
+        result = self.mod.apply_fail_change(
+            {"kernel_verdict": "FAIL", "gates": {"validation": "FAIL"}},
+            rewrite=lambda: calls.append("rewrite"),
+            reverify=lambda: calls.append("reverify") or {"kernel_verdict": "PASS"},
+        )
+        self.assertEqual(decision := result["action"], "change")
+        self.assertTrue(result["diagnosed"])
+        self.assertEqual(calls, ["rewrite", "reverify"])
+        self.assertEqual(result["reverify"]["kernel_verdict"], "PASS")
+        self.assertEqual(decision, "change")
 
 
 if __name__ == "__main__":

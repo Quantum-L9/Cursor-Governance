@@ -330,8 +330,8 @@ files:
   sha256: ee581bf533d59a04402901ebdfc7d673918bcbc32fbfe1a9943029671b64fbea
   bytes: 3700
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
-  sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
-  bytes: 2078
+  sha256: c11832210052974f9ec8b31d1b63e36087fb35b5d5385bbec993a55307c5d21e
+  bytes: 2476
 - path: program-execution-controller-template/schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
   bytes: 1221
@@ -351,11 +351,11 @@ files:
   sha256: 871aa8a77da5abcdfd1ee29156b2df42085a09bcf119ad209bc755142a6ad2f1
   bytes: 2467
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: 45e0a931399dc4015b18557362289d45495689e69d1925aa9b9bf2210e0bc5e9
-  bytes: 14343
+  sha256: e88e35d4b01c4a0216d08f4b8994447361aee51eef948114176ed12daa23973e
+  bytes: 15017
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 678afa0e50d7c6f7716923497a715e8c21495505f7ed9f2dceb51cbf8ab61e81
-  bytes: 72528
+  sha256: ed9068ca8ce9dd84034d10064644518f7883cd48d67a60a5d9bbf3d3084ef4ab
+  bytes: 76420
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -401,6 +401,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
   bytes: 2083
+- path: program-execution-controller-template/scripts/tests/test_kernel_verdict.py
+  sha256: 58fd6df31ddb514b51b835be627cc573c692b2f47eaa2f8babe8a131f151c353
+  bytes: 5167
 - path: program-execution-controller-template/scripts/tests/test_leases_and_approval.py
   sha256: 0c6b15be5b8830d11fa8b84bcee0dc00261250319e8021c0b5220c63f82de14a
   bytes: 967
@@ -411,8 +414,8 @@ files:
   sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
   bytes: 7564
 - path: program-execution-controller-template/scripts/tests/test_pipeline_assembly_fill.py
-  sha256: 8d4dae20973c2479d7e1eb95a7abf5eefb091536c3fcaf421520aca8469d7b3a
-  bytes: 11343
+  sha256: 6f6a4dee2727bc736da7a72df2f95b7dba12cb4e48e5b0965d9156c422f8622c
+  bytes: 11424
 - path: program-execution-controller-template/scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
   bytes: 5992
@@ -492,8 +495,8 @@ files:
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
 - path: shared/schemas/campaign-source.schema.json
-  sha256: ed7608eb993bcdf12a1bbf96c1750834db802d5949ed1c13200a3fb48c5dff62
-  bytes: 4614
+  sha256: 835949215dbaa735f7636c82d39b6462d38be98e00d9465b690350d7813732a3
+  bytes: 5611
 - path: shared/schemas/evidence-reference.schema.json
   sha256: a40c5ddc764d4c99bfe0c501def26ac26ad025d5cc799e9aa0bf412cdf125ba8
   bytes: 2076
@@ -543,5 +546,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 179
-  total_bytes: 551840
+  file_count: 180
+  total_bytes: 563049

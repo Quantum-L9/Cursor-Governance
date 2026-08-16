@@ -1,0 +1,69 @@
+schema: l9.program-execution.ai-control-plane.project-policy.v1
+schema_version: 1.0.0
+adr_refs:
+  - ADR-0023
+  - ADR-0024
+  - ADR-0010
+  - ADR-0022
+law: kernels_compile_they_do_not_run
+worker_context: ticket_not_cookbook
+
+authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - adr_0023_kernels_compile
+  - adr_0024_worker_ticket
+  - accepted_program_definition
+  - implementation
+  - UNKNOWN
+
+task_ceiling: CommitReady
+dropped_modes:
+  - deploy
+  - publish
+  - Greenfield
+  - Release-depth
+
+kernel_profile:
+  enum: [BUILD, CHANGE, AUDIT]
+  meaning: contract_enum_not_markdown_pack
+
+plan_status:
+  seal_when: [Ready, ConditionallyReady]
+  maps_to_definition_status: ready
+
+refuse:
+  - implement_task_stub_actions
+  - title_plus_locally_verified_acceptance
+  - missing_nugget_id_on_ready_task
+  - load_seven_kernels_at_task_time
+  - validate_and_repair_as_profile
+  - recursive_leverage_as_profile
+
+wiring_taxonomy:
+  source: Validate-and-Repair harvest only
+  inventory_gate: wiring
+  items:
+    - entrypoints
+    - consumers
+    - validation_commands
+    - kernel_profile
+
+diagnose_first:
+  applies_when: kernel_verdict == FAIL
+  predicates:
+    - refuse_mutate_before_diagnosis
+    - executable_actions_only
+    - revalidate_before_execution
+    - drift_returns_to_rediscover
+    - RolledBack_is_terminal
+
+worker_brief_forbidden_filenames:
+  - AUDIT.md
+  - PLAN.md
+  - BUILD.md
+  - CHANGE.md
+  - VALIDATION.md
+  - DEFINITION_OF_DONE.md
+  - RELEASE.md

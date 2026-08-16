@@ -329,13 +329,13 @@ Before opening *any* PR (opening or updating a PR triggers CI), the local
 changed-files pipeline MUST pass:
 
 ```bash
-make pr-check  # gate only — changed-files pre-commit + ruff + security
 make pr        # gate → open PR → subscribe → agent spawns l9-pr-remediation
 ```
 
-Do not open the PR, and do not push to trigger CI, if `make pr` / `make pr-check`
-fails — fix and re-run first. `make pr` / `make PR` / `make Pr` / `make pR` are
-equivalent (Makefile remaps any capitalization of `pr`).
+Do not open the PR, and do not push to trigger CI, if `make pr` fails — fix and
+re-run first. `make pr` / `make PR` / `make Pr` / `make pR` are equivalent
+(Makefile remaps any capitalization of `pr`). Do not run a separate gate-only
+pass before `make pr`.
 
 `make pr` auto-heals derived artifacts via `ops/scripts/sync_generated_artifacts.py`
 (RULES-MANIFEST, skill-registry, skillOverrides, COMMANDS_MANIFEST, PE digests,
@@ -352,8 +352,8 @@ Task (`run_in_background=true`) using `l9-pr-remediation` + the
 `poll_worker` template in `skills/l9-bounded-autonomy/references/prompt-templates.md`
 (packet fields from the handoff JSON). Cap 3 fix-push cycles; never merge;
 never force-push; main agent continues (do not AwaitShell on that PR). Use
-`make pr-check`, `OPEN_PR=0 make pr`, or `PR_REMEDIATE=0 make pr` to skip
-open and/or remediation spawn. Opening requires commits ahead of `PR_BASE`
+`PR_REMEDIATE=0 make pr` skips remediation spawn after open. Do not run a
+preliminary gate-only pass. Opening requires commits ahead of `PR_BASE`
 (default `origin/main`) and refuses `main`/`master`.
 
 Then run the governance-wiring checks:

@@ -64,8 +64,9 @@ class PipelineAssemblyFillTest(unittest.TestCase):
             )
             prepare_attempt(temp, workspace, output="docs/result.txt")
             verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
-            self.assertEqual(verification["verdict"], "PASSED_LOCAL", verification.get("gates"))
-            self.assertEqual(verification["gates"]["validation"], "PASS")
+            self.assertEqual(verification["kernel_verdict"], "INCOMPLETE", verification.get("gates"))
+            self.assertEqual(verification["verdict"], "FAILED")
+            self.assertEqual(verification["gates"]["validation"], "INCOMPLETE")
             cleanup_worktree(repo, workspace)
 
     def test_inspection_only_missing_output_fails(self) -> None:
@@ -118,7 +119,7 @@ class PipelineAssemblyFillTest(unittest.TestCase):
             )
             verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
             self.assertEqual(verification["verdict"], "FAILED")
-            self.assertEqual(verification["gates"]["validation"], "FAIL")
+            self.assertEqual(verification["gates"]["validation"], "INCOMPLETE")
             Path(prepared["worktree"]).mkdir(parents=True, exist_ok=True)
             cleanup_worktree(repo, workspace)
 

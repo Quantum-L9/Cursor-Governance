@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import uuid
 from pathlib import Path
@@ -1060,6 +1061,113 @@ def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
     }
 
 
+DOD_GATES = (
+    "target_and_scope_verified",
+    "implementation_complete",
+    "no_scope_drift",
+    "validation_honest",
+    "mandatory_checks_green",
+    "final_state_hygienic",
+    "handoff_verified",
+)
+
+
+def _command_runnable(command: str) -> bool:
+    token = command.strip().split(None, 1)[0] if command.strip() else ""
+    if not token:
+        return False
+    if token in {"python3", "python", "make", "bash", "sh"}:
+        return shutil.which(token) is not None or token in {"python3", "python"}
+    return shutil.which(token) is not None or Path(token).exists()
+
+
+def _preflight2_gates(commands: list[str]) -> dict[str, str]:
+    if not commands:
+        return {}
+    runnable = [_command_runnable(command) for command in commands]
+    blocking = "PASS" if runnable and all(runnable) else "INCOMPLETE"
+    return {
+        "preflight2_inventory": "PASS",
+        "preflight2_blocking": blocking,
+        "preflight2_coverage": "PASS",
+    }
+
+
+def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
+    source = task.get("source") if isinstance(task.get("source"), dict) else {}
+    consumers = contract.get("consumers") or source.get("consumers") or []
+    entrypoints = contract.get("entrypoints") or source.get("entrypoints") or []
+    if not consumers and not entrypoints:
+        return "PASS"
+    if consumers and entrypoints:
+        return "PASS"
+    return "INCOMPLETE"
+
+
+def _kernel_and_pec_verdict(gates: dict[str, str]) -> tuple[str, str]:
+    values = list(gates.values())
+    if "STALE" in values:
+        return "FAIL", "STALE"
+    if "INCOMPLETE" in values:
+        return "INCOMPLETE", "FAILED"
+    if values and all(value == "PASS" for value in values):
+        return "PASS", "PASSED_LOCAL"
+    return "FAIL", "FAILED"
+
+
+def _dod_gates_from_verify(
+    gates: dict[str, str],
+    *,
+    kernel_verdict: str,
+    candidate_sha: str | None,
+) -> dict[str, str]:
+    def _and(*names: str) -> str:
+        vals = [gates.get(name, "FAIL") for name in names]
+        if "INCOMPLETE" in vals:
+            return "INCOMPLETE"
+        if all(value == "PASS" for value in vals):
+            return "PASS"
+        return "FAIL"
+
+    honest = gates.get("validation", "FAIL")
+    if honest == "INCOMPLETE":
+        validation_honest = "INCOMPLETE"
+        mandatory = "INCOMPLETE"
+    elif honest == "PASS" and gates.get("worker_validation_claim") == "PASS":
+        validation_honest = "PASS"
+        mandatory = "PASS"
+    else:
+        validation_honest = "FAIL"
+        mandatory = "FAIL"
+    return {
+        "target_and_scope_verified": _and("program_lock", "contract", "scope"),
+        "implementation_complete": _and("changed_files_exact", "scope"),
+        "no_scope_drift": _and("scope", "do_not_build"),
+        "validation_honest": validation_honest,
+        "mandatory_checks_green": mandatory,
+        "final_state_hygienic": gates.get("symlink", "FAIL"),
+        "handoff_verified": (
+            "PASS"
+            if gates.get("receipt_binding") == "PASS" and candidate_sha
+            else ("INCOMPLETE" if kernel_verdict == "INCOMPLETE" else "FAIL")
+        ),
+    }
+
+
+def _latest_verification(workspace: Path, task_id: str) -> dict[str, Any]:
+    path = workspace / "receipts" / "verification" / f"{task_id}.json"
+    if not path.is_file():
+        return {}
+    return load_json(path)
+
+
+def _dod_complete(verification: dict[str, Any]) -> bool:
+    if verification.get("kernel_verdict") != "PASS":
+        return False
+    dod = verification.get("dod_gates") or {}
+    return all(dod.get(name) == "PASS" for name in DOD_GATES)
+
+
 def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
@@ -1173,6 +1281,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 else "FAIL"
             )
             if required_commands:
+                gates.update(_preflight2_gates([str(command) for command in required_commands]))
                 validations = [_run_validation(command, worktree) for command in required_commands]
                 gates["validation"] = (
                     "PASS"
@@ -1180,26 +1289,15 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                     else "FAIL"
                 )
             else:
-                outputs = [
-                    str(item.get("location") or "")
-                    for item in (task.get("source") or {}).get("outputs") or []
-                    if item.get("location")
-                ]
-                if not outputs:
-                    outputs = [str(path) for path in (contract.get("writable_paths") or []) if path]
-                gates["validation"] = (
-                    "PASS"
-                    if outputs and all((worktree / path).is_file() for path in outputs)
-                    else "FAIL"
-                )
+                gates["validation"] = "INCOMPLETE"
+            gates["wiring"] = _wiring_gate(contract, task)
             candidate_sha = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
         gates["residual_unknowns"] = (
             "PASS" if not (receipt.get("residual_unknowns") or []) else "BLOCKED"
         )
-        verdict = (
-            "PASSED_LOCAL"
-            if gates and all(value == "PASS" for value in gates.values())
-            else ("STALE" if "STALE" in gates.values() else "FAILED")
+        kernel_verdict, verdict = _kernel_and_pec_verdict(gates)
+        dod_gates = _dod_gates_from_verify(
+            gates, kernel_verdict=kernel_verdict, candidate_sha=candidate_sha
         )
         attempt_number = attempt["attempt_number"] if attempt else task["attempts"]
         evidence_id = f"EVID-RUNTIME-{task_id}-{int(attempt_number):03d}"
@@ -1215,6 +1313,8 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "observed_changed_files": changed,
             "validations": validations,
             "gates": gates,
+            "kernel_verdict": kernel_verdict,
+            "dod_gates": dod_gates,
             "verdict": verdict,
             "evidence_id": evidence_id,
             "verified_at": utc_now(),
@@ -1473,6 +1573,12 @@ def evaluate_gate(
                 raise ControllerError("waiver evidence is invalid")
         elif waiver_id is not None:
             raise ControllerError("waiver_id is only valid for NOT_APPLICABLE_WITH_REASON")
+        if result == "PASS":
+            for tid in gate["definition"].get("task_ids") or []:
+                if not _dod_complete(_latest_verification(workspace, str(tid))):
+                    raise ControllerError(
+                        "evaluate-gate PASS requires Definition of Done; PASSED_LOCAL is not Done"
+                    )
         evaluated_at = utc_now()
         receipt = {
             "schema": "program-execution-controller.gate-evaluation.v2",
@@ -1535,6 +1641,10 @@ def complete_task(
         else:
             if task["runtime_state"] != "PASSED_LOCAL":
                 raise ControllerError("repository task must be PASSED_LOCAL before completion")
+            if not _dod_complete(_latest_verification(workspace, task_id)):
+                raise ControllerError(
+                    "PASSED_LOCAL is not Done; Definition of Done required before complete"
+                )
             db.transition_task(task_id, "COMPLETED")
             lease = db.active_lease_for_task(task_id)
             if lease:
