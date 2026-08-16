@@ -313,9 +313,7 @@ def check_publish_path_alignment(failures: list[str]) -> None:
 
     problems = 0
     for canonical, (label, needles) in forbidden.items():
-        leaked = [
-            entry for entry in allow if any(needle in entry for needle in needles)
-        ]
+        leaked = [entry for entry in allow if any(needle in entry for needle in needles)]
         if leaked:
             _fail(
                 f"permissions.allow lists `{leaked[0]}`, which the publish-path gate denies "
