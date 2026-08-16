@@ -50,10 +50,11 @@ plane writes the other's packets. pec does not auto-init
 
 ## Admission
 
-Compile campaign source → validate Blueprint → `pec bootstrap`. Default
-bootstrap calls instantiated `validate_blueprint` on a complete pair and
-refuses `definition_status=draft`. `--admission-draft` is inspect-only.
-Running a campaign (default bootstrap, `claim`, or `start`) sets
-`runtime_status=active` on a pec receipt. Immutable
-`CAMPAIGN_SOURCE.yaml` `metadata.status` stays `operator_intake`.
-Campaign PR titles come from `metadata.title`, not the branch name.
+Live campaigns enter only through `make campaign INTENT=`. The runner
+compiles campaign source, validates the Blueprint, then boots pec.
+Default bootstrap calls instantiated `validate_blueprint` on a complete
+pair and refuses `definition_status=draft`. `--admission-draft` is not a
+live path. Running a campaign sets `runtime_status=active` on a pec
+receipt. Immutable `CAMPAIGN_SOURCE.yaml` `metadata.status` stays
+`operator_intake`. Campaign PR titles come from `metadata.title`, not the
+branch name.

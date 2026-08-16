@@ -1,6 +1,6 @@
 ---
 name: l9-pe-campaign-activate
-description: compile only the files required to activate a program execution campaign, run the pe compile/bootstrap/execute pipeline with maximum autonomy, remediate the campaign pr, and merge after remediation is complete. use when the user asks to activate a campaign, compile campaign source, emit campaign seeds, or run a pe campaign through compile, bootstrap, pr, remediate, and merge.
+description: invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -17,10 +17,10 @@ metadata:
 
 ## Purpose
 
-Compile **only** the files that activate a Program Execution campaign, then run
-that campaign through `environment/program-execution` with maximum autonomy:
-L4 local execution, campaign-branch PR, `l9-pr-remediation` Converge, then
-**authorized merge** of that PR once remediation is complete.
+Run the one PE campaign tunnel. The only live invocation is
+`make campaign INTENT=`. The runner emits the allowed file set, admits the
+blueprint, executes every task, opens stacked PRs, remediates those PRs, and
+closes into `campaigns/COMPLETED/<id>/`.
 
 Invoking this skill **is** merge authorization for the single campaign PR this
 run opens. It is not merge authorization for any other PR.
@@ -55,41 +55,31 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 
 ## Compact Workflow
 
-1. Take a memo `.md` or activate YAML
-   ([references/source-contract.md](references/source-contract.md)).
-   `make campaign INTENT=<file>` assigns the id from a memo filename.
-2. Open an exclusive worktree from `origin/main`. Do not mutate a dirty shared clone.
-3. Emit the file set:
+1. One command. No other front door.
 
    ```bash
-   python3 skills/l9-pe-campaign-activate/scripts/compile_activation_files.py \
-     --intent <intent.yaml> --repo-root "$(pwd)"
+   make -C "$HOME/.cursor-governance" campaign INTENT=/path/to/brief.md
    ```
 
-4. Run the PE pipeline in [references/pipeline.md](references/pipeline.md):
-   allowlist compile → template validate → pec bootstrap (draft-honest) →
-   L4 execute ready tasks → kernels → `authorize-release`.
-5. Publish: `PR_BASE=origin/campaign/<id> make pr`.
-6. Converge that PR with `l9-pr-remediation` until required checks are green
-   and the PR is mergeable.
-7. Authorize and merge **that PR only**
-   ([references/merge-authority.md](references/merge-authority.md)):
-
-   ```bash
-   python3 skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py \
-     --repo <owner/repo> --pr <n> \
-     --reason "l9-pe-campaign-activate remediation complete"
-   gh pr merge <n> --squash --delete-branch
-   ```
-
-8. Close the live ledger: `pec close` and
-   `python3 environment/program-execution/campaigns/scripts/close_campaign.py close`.
+   Stay inside that process. Do not call pec, `compile_campaign_source.py`,
+   `compile_activation_files.py`, `accept_blueprint.py`, or
+   `program-execution intent` as a follow-up. If the runner exits nonzero,
+   stop and report its output.
+2. Live SSOT after arm is `$HOME/.l9/programs/<id>/runtime/LAUNCH.json` plus
+   the 15-minute task cards and `STACK.json`. The runner stacks each task PR
+   on the previous task branch. Never `PR_BASE=main`. Do not open the
+   operator memo.
+3. If a STACK.json PR is red, remediate that recorded PR only. Do not start
+   a parallel pec workspace or a new campaign id.
+4. Close is a runner stage. Do not run `pec close` or `close_campaign.py`
+   yourself unless the runner already failed and you are reporting that fail.
 
 ## MUST
 
 - Emit only the allowed file set. Delete any extra file you created by mistake.
 - Keep `CAMPAIGN_SOURCE.yaml` schema-valid and PE-compiler-admissible.
-- Land work on `campaign/<campaign_id>`. Never open this campaign's PR against `main`.
+- Land work on `campaign/<campaign_id>`. Stack each task PR on the previous
+  task branch from `STACK.json`. Never open a campaign PR against `main`.
 - Use `make pr` (not raw `gh pr create`).
 - Merge only after remediation is complete on the observed head SHA.
 - Write the one-shot merge authorization file before `gh pr merge` so
@@ -98,7 +88,9 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 ## MUST NOT
 
 - Emit README, handoff receipts, `INTENT.yaml`, contract/program prose, or alignment YAML
+- Run `program-execution intent` or bootstrap a `pe-<hash>` workspace
 - Mix this campaign onto another feature branch or the primary dirty clone
+- Use `pec --admission-draft` as a live campaign path
 - Force-push, admin-merge, hard-reset, or merge a different PR
 - Set `program.definition_status: accepted` without evidence
 - Weaken tests, skip hooks, or rewrite `CAMPAIGN_SOURCE.yaml` after the receipt is bound
@@ -118,25 +110,22 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 
 ## Validation
 
-Before claiming the campaign is activated:
+Before claiming the campaign finished:
 
-- [ ] `compile_activation_files.py` exit 0; printed paths match the allowed set
-- [ ] no forbidden extras under `campaigns/<id>/`
-- [ ] `compile_campaign_source.py` succeeds against `$HOME/.l9/blueprints/<id>`
-- [ ] `validate_blueprint --mode template` PASS
-- [ ] campaign id present in allowlist, execution policy, surface profile, and status ledger
-- [ ] `make campaign` left host `lifecycle: in_progress` and pec `runtime_status: active`
-- [ ] `PHASE0_USER_CONFIG.yaml` `operator_ack.acknowledged_at` is still null unless Igor acknowledged it
-- [ ] campaign PR is green + mergeable, then merged
-- [ ] `CAMPAIGN_STATUS.yaml` closed (`complete`) after merge
+- [ ] The only command you ran to drive the campaign was `make campaign INTENT=`
+- [ ] Runner exit 0 and `stages_completed` includes `close`
+- [ ] Host `campaigns/<id>/` is gone; `campaigns/COMPLETED/<id>/` exists
+- [ ] pec `runtime_status` is `completed` and `admission_draft` is false
+- [ ] `PHASE0_USER_CONFIG.yaml` `operator_ack.acknowledged_at` is still null
+      unless Igor acknowledged it
+- [ ] Every PR on `STACK.json` is the PR the runner opened (never against main)
 
 ## Failure Handling
 
 - Memo with no numbered Release / program-ordering items → STOP; do not invent tasks
 - Missing activate-YAML `campaign_id` / objective / tasks → STOP; ask
-- Schema or PE compile fail → fix the seed; do not hand-edit the Blueprint
-- Template validate fail → fix source; do not weaken the validator
-- pec bootstrap refuses draft → expected; continue L4 on `campaign/<id>`
-- Remediation max cycles → report remaining blockers; do not merge
-- Merge gate deny → re-run `authorize_campaign_merge.py` for this repo/PR only
-- Dirty shared clone → create a worktree; do not `git switch`
+- Runner FAIL on compile/validate/bootstrap → fix the seed or report; do not
+  hand-edit the Blueprint; do not retry with `--admission-draft`; do not
+  continue in L4 or pec outside the runner
+- Remediation max cycles on a STACK.json PR → report remaining blockers
+- Dirty shared clone → the runner isolates a worktree; do not `git switch`

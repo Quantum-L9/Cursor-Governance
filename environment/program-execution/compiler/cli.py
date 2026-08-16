@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -48,6 +49,15 @@ def build_parser() -> argparse.ArgumentParser:
 def run(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command != "intent":
+        return 2
+    if os.environ.get("L9_ALLOW_INTENT_COMPILER") != "1":
+        print(
+            "FAIL: operator campaigns use "
+            'make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>. '
+            "program-execution intent is not the campaign path "
+            "(set L9_ALLOW_INTENT_COMPILER=1 only for compiler unit tests).",
+            file=sys.stderr,
+        )
         return 2
     raw: dict[str, object] = {"schema": "program-execution.intent.v1", "objective": args.objective}
     if args.target:

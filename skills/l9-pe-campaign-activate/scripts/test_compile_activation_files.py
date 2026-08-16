@@ -139,6 +139,8 @@ class CompileActivationTests(unittest.TestCase):
             self.assertEqual(_semantic_precheck(src), [])
             self.assertEqual(src["metadata"]["status"], "operator_intake")
             self.assertEqual(src["program"]["definition_status"], "draft")
+            self.assertEqual(src["tasks"][0]["definition_status"], "ready")
+            self.assertEqual(src["tasks"][1]["definition_status"], "ready")
             receipt = json.loads(
                 source_path.with_name("source-integrity-receipt.json").read_text(encoding="utf-8")
             )

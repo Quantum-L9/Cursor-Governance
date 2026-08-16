@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -17,6 +18,8 @@ def write_yaml(path: Path, value: Any) -> None:
 
 
 def run_cli(*args: str, expect: int = 0) -> dict[str, Any]:
+    env = os.environ.copy()
+    env.setdefault("L9_ALLOW_PEC_DIRECT", "1")
     completed = subprocess.run(
         [sys.executable, str(SCRIPTS / "pec.py"), *args],
         cwd=CONTROLLER_ROOT,
@@ -24,6 +27,7 @@ def run_cli(*args: str, expect: int = 0) -> dict[str, Any]:
         capture_output=True,
         check=False,
         timeout=45,
+        env=env,
     )
     if completed.returncode != expect:
         raise AssertionError(

@@ -172,6 +172,14 @@
       "expected_source": "explicit_hint"
     },
     {
+      "prompt": "Run make campaign INTENT=brief.md and take this brief through completed",
+      "expected_primary": "l9-pe-campaign-activate",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ],
+      "expected_source": "explicit_hint"
+    },
+    {
       "prompt": "Configure GitHub Packages access via the admin UI cartridge when the API is insufficient",
       "expected_primary": "l9-ui-operator",
       "expected_supporting": [],

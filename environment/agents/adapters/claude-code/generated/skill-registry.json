@@ -62,12 +62,10 @@
         "hint_allowed": true,
         "id": "pr_remediation_until_green",
         "negative_signals": [
-          "merge the pr",
-          "merge this pr",
           "admin merge",
           "force push"
         ],
-        "note": "Auto-authorized remediate-until-green for an OPEN PR under a campaign/PE packet: bounded cycles (surface_profile.remediation.max_cycles), then HALT before merge. Merge/force-push/scope-widening remain human-only; merge uses L9_MERGE_AUTHORIZED or the one-shot merge-authorization.json file channel.\n",
+        "note": "Invoking /l9-pr-remediation authorizes ordinary merge of all open PRs in the target repo after Converge (green + mergeable, bottom-up). Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -77,7 +75,9 @@
           "get the pr green",
           "make the pr mergeable",
           "resolve review threads",
-          "babysit the pr"
+          "babysit the pr",
+          "/l9-pr-remediation",
+          "merge failing prs"
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
@@ -527,6 +527,42 @@
       },
       {
         "hint_allowed": true,
+        "id": "pe_campaign_activate",
+        "negative_signals": [
+          "bounded autonomy",
+          "background pr poll",
+          "/autonomy",
+          "campaign authorization"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Recommendation names make campaign INTENT=; it does not grant pec, compile, or merge authority. Invoking the skill is merge authority for that one campaign after the runner reaches close.\n",
+        "positive_signals": [
+          "make campaign",
+          "make campaign INTENT",
+          "activate a campaign",
+          "run a pe campaign",
+          "campaign INTENT",
+          "take this brief through completed",
+          "/l9-pe-campaign-activate",
+          "compile campaign source"
+        ],
+        "primary": "l9-pe-campaign-activate",
+        "required_any": [
+          "make campaign",
+          "campaign INTENT",
+          "activate a campaign",
+          "activate the campaign",
+          "activate campaign",
+          "pe campaign",
+          "/l9-pe-campaign-activate",
+          "compile campaign source"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "hint_allowed": true,
         "id": "ui_operator",
         "note": "explicit_only + hint_allowed \u2014 Read/attach only; human approve required for console.py --mode run. Recommendation grants no mutation authority.\n",
         "positive_signals": [
@@ -953,6 +989,17 @@
       "when_to_use": "a dev server, watcher, or test process is running and may emit runtime errors to fix live"
     },
     {
+      "composition_role": "general",
+      "description": "invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pe-campaign-activate",
+      "path": "skills/l9-pe-campaign-activate",
+      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation.",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "create a machine-validated execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes. do not use when the user only wants to execute an already-settled plan or a trivial fully-specified one-line fix.",
       "disable_model_invocation": false,
@@ -976,12 +1023,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge a github pr \u2014 read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
+      "description": "diagnose or converge github prs \u2014 read-only status/review, or remediate ci/review/scanner/debt to green then merge all open prs in the target repo. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "Diagnose remains hint-routeable; remediation is auto-authorized only as remediate-until-green-and-mergeable under a campaign/PE packet (surface_profile.remediation: max_cycles 5, then HALT before merge). Merge, force-push, and scope widening stay human-only.",
+      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable and then merges them (ordinary squash). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1141,6 +1188,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "a163a3efdfe92c67f9087cec95fd86b0b5040793726ebf52b404b5a7f851047f",
-  "source_skill_corpus_sha256": "6c60a42bebefd0b10bcca045979c5dcf2bf80a876578b65e6cd4240da77763b6"
+  "source_manifest_sha256": "653f3e203c26c8dbdddb9a9cbfeec55aa18819f5f18553094a378ce8af8d3a1b",
+  "source_skill_corpus_sha256": "73f461d728336a58566da9bb1bdbf504edbefc6e28864dad538256a4a9260fbb"
 }

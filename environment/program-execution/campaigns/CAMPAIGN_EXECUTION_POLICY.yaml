@@ -27,7 +27,7 @@ publish:
   remediations:
     skill: l9-pr-remediation
     merge: authorized_on_skill_invocation
-    scope: all_open_prs_in_target_repo
+    scope: stacked_prs_opened_by_this_run
   open_pr_against_main: false
   mix_with_other_feature_branches: false
 

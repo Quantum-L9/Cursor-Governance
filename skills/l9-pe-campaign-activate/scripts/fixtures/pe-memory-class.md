@@ -2,6 +2,14 @@ Deep audit verdict
 
 Architecture prose only above the program. Do not treat this paragraph as a task.
 
+The root problem is not merely the broker.
+
+It is:
+
+Cursor-Governance still contains an older complete memory lifecycle while l9-graphiti-memory now owns the canonical memory lifecycle.
+
+MCP/API and distillation/projection are prose, not repositories.
+
 Build-ready convergence program
 
 1. Release A — Prove canonical memory and freeze legacy behavior

@@ -37,6 +37,7 @@ GENERATED_PATH_PREFIXES = (
     "rules/RULES-MANIFEST.",
     "environment/generated/llm-rules/",
     "ops/generated/skill-registry.json",
+    "environment/agents/adapters/claude-code/generated/skill-registry.json",
     "environment/agents/adapters/claude-code/settings.template.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
@@ -296,6 +297,20 @@ def sync_skill_registry(root: Path, wrote: list[str]) -> None:
     )
     if out.is_file() and out.read_bytes() != prior:
         wrote.append(str(out.relative_to(root)))
+    mirror = (
+        root
+        / "environment"
+        / "agents"
+        / "adapters"
+        / "claude-code"
+        / "generated"
+        / "skill-registry.json"
+    )
+    if out.is_file() and mirror.parent.is_dir():
+        payload = out.read_bytes()
+        if not mirror.is_file() or mirror.read_bytes() != payload:
+            mirror.write_bytes(payload)
+            wrote.append(str(mirror.relative_to(root)))
 
 
 def reconcile_llm_adapters(

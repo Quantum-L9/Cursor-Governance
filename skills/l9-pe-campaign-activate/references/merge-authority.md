@@ -12,13 +12,18 @@ updated: 2026-08-16
 
 # Authorized merge after remediation
 
+Do not use this file as a campaign front door. Start and finish the
+campaign with `make campaign INTENT=`. These commands apply only to
+STACK.json PRs the runner already opened.
+
 Purpose: this skill's merge step. Standing campaign policy still says
 `merge: false` for ordinary agents. Invoking **this skill** is the operator
 act that authorizes merge of **one** PR.
 
-Invoking **`/l9-pr-remediation`** is a separate operator act that authorizes
-ordinary merge of **all open PRs** in the target repo after they are green
-and mergeable. Receipt SSOT: `ops/autonomy/authorize_merge.py`.
+Invoking **`/l9-pr-remediation`** from `make campaign` authorizes merge of
+**stacked PRs opened by this run** (`STACK.json` `pr_number` values) after
+they are green and mergeable. It does not authorize
+`all_open_prs_in_target_repo`. Receipt SSOT: `ops/autonomy/authorize_merge.py`.
 
 ## When merge is allowed
 
