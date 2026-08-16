@@ -16,10 +16,11 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 try:
     import yaml
@@ -374,7 +375,8 @@ def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
 
 
 def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
-    cmd = ["gh", "pr", "view", "--repo", host_repo, "--json", "number,url,mergeable,state,headRefOid"]
+    fields = "number,url,mergeable,state,headRefOid"
+    cmd = ["gh", "pr", "view", "--repo", host_repo, "--json", fields]
     if number is not None:
         cmd.insert(3, str(number))
     view = subprocess.run(cmd, check=False, capture_output=True, text=True)
@@ -498,7 +500,9 @@ def mark_host_campaign_active(
         raw["campaigns"] = campaigns
         dump_yaml(path, raw)
 
-    policy_path = worktree / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+    policy_path = (
+        worktree / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+    )
     if policy_path.is_file():
         policy = load_yaml(policy_path) or {}
         for item in list(policy.get("campaigns") or []):

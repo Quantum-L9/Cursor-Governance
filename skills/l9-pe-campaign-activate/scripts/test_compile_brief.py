@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,8 +11,6 @@ from pathlib import Path
 import yaml
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-import sys
-
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from compile_brief import (  # noqa: E402

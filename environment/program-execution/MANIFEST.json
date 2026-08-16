@@ -1339,7 +1339,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "090685af97e31492682dae870b8eb4f3d24b6bf192a870d69fd6996d7ec6c413"
+      "sha256": "af4da9313d4ca6d836d16af2f24f6856960e201755cbbface6471f2b377a2d45"
     },
     {
       "path": "scripts/run_conformance.py",
