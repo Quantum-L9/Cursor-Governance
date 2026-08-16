@@ -418,8 +418,8 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
     if first.returncode == 0:
         return {"ok": True, "draft": False, "output": combined}
     raise CampaignError(
-        "pec bootstrap failed; make campaign must accept the blueprint "
-        "before lock: " + combined
+        "pec bootstrap failed; make campaign must accept the blueprint before lock: "
+        + combined
     )
 
 

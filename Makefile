@@ -39,7 +39,7 @@ help:
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
-	@echo "  make campaign INTENT=path — brief → pec execute → stacked PRs → campaigns/COMPLETED (only live PE front door)"
+	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
@@ -63,8 +63,8 @@ start:
 .PHONY: campaign
 ## Activate a PE campaign from a memo .md or an activate YAML.
 ## INTENT= required (brief.md or seed.yaml). No campaign_id required for memos.
-## Live tunnel always runs through close. CAMPAIGN_UNTIL= is refused unless
-## L9_CAMPAIGN_UNTIL_DEBUG=1 (runner unit tests only).
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|pr|merge (default merge).
+## Does not implement target-repo tasks or close the ledger after a host-only merge.
 campaign:
 	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
 	python3 environment/program-execution/scripts/run_campaign.py \
