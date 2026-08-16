@@ -272,6 +272,8 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   # surface — so the proxy silently became true for headless adapters. Gate the
   # desktop-wiring assertion on the surface id instead. The reconcile checks above
   # stay unconditional: they are surface-independent and must keep running here.
+  # PAIRED PREDICATE: run_pr_precommit.sh skips the symlinks-check hook on the same
+  # surface test. Both assert Cursor desktop wiring; change them together.
   if [[ -z "${L9_GOVERNANCE_SURFACE:-}" || "${L9_GOVERNANCE_SURFACE}" == "cursor" ]]; then
     if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
       echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"

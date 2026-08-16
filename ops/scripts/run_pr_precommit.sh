@@ -43,6 +43,8 @@ SKIP_LIST="sync-generated-artifacts"
 # all, so "full clone" alone does not imply "a Cursor machine". Without this the
 # hook fails on wiring the surface is not supposed to have, and `make pr` — the
 # only sanctioned route to GitHub — is unreachable there.
+# PAIRED PREDICATE: run_pr_gate.sh gates check_governance_wiring.sh on the same
+# surface test. Both assert Cursor desktop wiring; change them together.
 SURFACE="${L9_GOVERNANCE_SURFACE:-}"
 if [[ -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" \
    || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" || ! -f "$WS/rules/RULES-MANIFEST.yaml" \
