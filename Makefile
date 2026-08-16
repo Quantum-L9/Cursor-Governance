@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start campaign sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: repo-write-lock-test precommit-hook-contract
 .PHONY: capability-contract-validate capability-check capability-broker-preflight
@@ -35,10 +35,11 @@ OPEN_PR ?= 1
 PR_REMEDIATE ?= 1
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "Targets: start campaign sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
+	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
@@ -58,6 +59,16 @@ start:
 	@cd "$(WS)" && CURSOR_PROJECT_DIR="$(WS)" L9_BOOTSTRAP_SYNC=1 \
 		bash "$(CURDIR)/ops/hooks/session_start_bootstrap.sh" \
 		| python3 "$(CURDIR)/ops/scripts/render_bootstrap_context.py"
+
+## Activate a PE campaign from a memo .md or an activate YAML.
+## INTENT= required (brief.md or seed.yaml). No campaign_id required for memos.
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|pr|merge (default merge).
+## Does not implement target-repo tasks or close the ledger after a host-only merge.
+campaign:
+	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
+	python3 environment/program-execution/scripts/run_campaign.py \
+	  --intent "$(INTENT)" \
+	  --until "$(or $(CAMPAIGN_UNTIL),merge)"
 
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
@@ -452,7 +463,9 @@ program-execution-campaign-schema:
 
 program-execution-campaign-compile:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
-		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py
+		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py \
+		$(PE_ROOT)/scripts/tests/test_run_campaign.py \
+		$(CURDIR)/skills/l9-pe-campaign-activate/scripts/test_compile_brief.py
 
 program-execution-controller-tests:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover \

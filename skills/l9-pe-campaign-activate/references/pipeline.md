@@ -15,6 +15,14 @@ updated: 2026-08-15
 Purpose: run the in-repo Program Execution path after the file set exists.
 Do not invent a second compiler or a second controller.
 
+Operator front door: `make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>`.
+A memo is compiled to an activate seed first (`compile_brief.py`); then this
+pipeline runs. That target calls `environment/program-execution/scripts/run_campaign.py`
+through host-PR merge-if-green. This skill remains the contract; the Make
+target does not replace it. `program-execution.intent.v1` is not an activate
+seed or a memo. The recipe does not implement target-repo tasks, remediate red
+CI, or close the campaign ledger after a host-only merge.
+
 ## 0. Isolate
 
 ```bash
@@ -67,6 +75,28 @@ python3 environment/program-execution/core/program-execution-controller-template
 Default bootstrap refuses an unvalidated draft lock. That is expected for a
 new seed. Use `--admission-draft` only to inspect. Continue L4 execution on
 `campaign/<id>` either way. Do not claim Program Lock accepted.
+
+`pec next` under `--admission-draft` returns `ready: []` with an
+`admission_draft` blocker on every task, including W0. That is inspect-only,
+not an authority stop and not a reason to wait. Unknowns empty and
+`autonomy_plane.campaign_packets_present: false` are also not blockers —
+the Program Controller is authoritative; autonomy packets are not a second
+scheduler. Execute TASK-001 on
+`$HOME/.l9/program-worktrees/<id>` after `l4_local.py begin`. Do not attach
+to a `pe-<intent-hash>` workspace created from `program-execution.intent.v1`.
+
+`make campaign` must mark the campaign **active** on invoke: host
+`CAMPAIGN_STATUS.yaml` `lifecycle: in_progress`, execution-policy row
+`lifecycle: in_progress`, pec `runtime_status: active` (even after
+draft-honest bootstrap), and `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`.
+`CAMPAIGN_SOURCE.yaml` `metadata.status` stays `operator_intake`. Leaving
+those surfaces at `planned` / `operator_intake` after invoke is a defect —
+agents will treat the campaign as idle.
+
+`PHASE0_USER_CONFIG.yaml` `operator_ack.acknowledged_at` is a real human
+acknowledgment from Igor Beylin. `make campaign` fills the name and leaves
+`acknowledged_at: null`. Agents must stop and ask; do not forge the
+timestamp. `program_deploying` stays false until that ack.
 
 ## 5. L4 execute
 

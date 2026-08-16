@@ -156,6 +156,33 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return source evidence, or a planned EVID-001 when the seed omitted it.
+
+    Activate seeds historically emit no ``evidence_requirements``. Falling
+    back to the first gate id for ``SRC-001.evidence_id`` fails template
+    validation (``GATE-*`` is not an evidence id), so pec cannot bootstrap
+    even with ``--admission-draft``.
+    """
+    evidence = [item for item in (src.get("evidence_requirements") or []) if isinstance(item, dict)]
+    if evidence:
+        return evidence
+    host = str((src.get("metadata") or {}).get("intended_host") or "UNKNOWN")
+    return [
+        {
+            "id": "EVID-001",
+            "claim": "campaign_source_and_target_origin_main_are_bound",
+            "source_type": "repository_inspection",
+            "source_location": host,
+            "collection_method": "read_only_inspection",
+            "freshness": "collect_at_admission",
+            "producer": "controller",
+            "supports": ["DELTA-001"],
+            "contradicts": [],
+        }
+    ]
+
+
 def _phase0_gate(
     prog: dict[str, Any], tasks: list[dict[str, Any]], waves: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -412,6 +439,7 @@ def compile_source(
         },
     )
 
+    evidence = _admission_evidence(src)
     dump_yaml(
         target / "EVIDENCE_CATALOG.yaml",
         {
@@ -435,7 +463,7 @@ def compile_source(
                     "contradicts": list(item.get("contradicts") or []),
                     "notes": item.get("claim"),
                 }
-                for item in src.get("evidence_requirements") or []
+                for item in evidence
             ],
         },
     )
@@ -470,7 +498,6 @@ def compile_source(
         },
     )
 
-    evidence = list(src.get("evidence_requirements") or [])
     dump_yaml(
         target / "CURRENT_STATE_DELTA.yaml",
         {
@@ -792,7 +819,7 @@ def compile_source(
                     "source": repo_rel or source.name,
                     "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
                     "authority_class": "governing",
-                    "evidence_id": (evidence[0]["id"] if evidence else first_gate),
+                    "evidence_id": evidence[0]["id"],
                     "claims": ["Campaign source is the immutable operator intent."],
                     "target_ids": [first_target],
                     "workstream_ids": [item["id"] for item in workstreams],
