@@ -30,3 +30,6 @@ campaigns:
   - id: l9-ecosystem-fix-plan
     lifecycle: planned
     notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
+  - id: adr-identity-integrity-v1
+    lifecycle: in_progress
+    notes: Cursor-Governance governance-integrity campaign; identity correction only

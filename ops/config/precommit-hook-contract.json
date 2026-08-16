@@ -49,6 +49,10 @@
       "mode": "read_only",
       "note": "tools/check_repo_hygiene.py — reports only"
     },
+    "adr-identity": {
+      "mode": "read_only",
+      "note": "validate_adr_identity.py — reports only"
+    },
     "ruff": {
       "mode": "writer",
       "output_prefixes": [],

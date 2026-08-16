@@ -68,6 +68,13 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: adr-identity
+        name: ADR numeric identities are unique and machine-resolvable
+        entry: python3 ops/scripts/validate_adr_identity.py
+        language: system
+        files: '(^docs/decisions/ADR-.*\.md$|^environment/program-execution/core/shared/REPLAN_CONTRACT\.yaml$|^ops/scripts/validate_adr_identity\.py$)'
+        pass_filenames: false
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Pin must match requirements.txt / l9-ci-sdk ruff==0.16.0 (sdk wins over core).
     rev: v0.16.0

@@ -403,15 +403,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "ffeff1dc7eb8e87e200e6ef255b65559ea3fd1a1dce96b7fa7f078338f7059c1"
+      "sha256": "2a4e517e3e54aa19f20fcb5e179fc00d28116875eff8892459cc8a44f8c5d810"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
+      "sha256": "1e2324b570cedb7de12fc35ff0c5bb7f42b8b9418ec1258445730d87ec0ffab9"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "c20b36da7591f8affbc9cf306dc6e5bef8ca66a33f630bb7987e8458b9d0b58c"
+      "sha256": "404481cb615d2c826a9a4f48dd6674b7f7f80e14a1c5a33c0fae964fecf6a2d4"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -423,7 +423,15 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "efe890639bfe98adb3f54897935703139c99a6d09a52e7a95ad17e4ec63f21dc"
+      "sha256": "102c8d6f72c00c6b5a593df3e93e5dd03aa0d1965ccf8f4da443d5debea2320e"
+    },
+    {
+      "path": "campaigns/adr-identity-integrity-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "60e36422f563a302648ac1709dd9e616084cd0b9ca4897ff962fc47e3ff02074"
+    },
+    {
+      "path": "campaigns/adr-identity-integrity-v1/source-integrity-receipt.json",
+      "sha256": "7155f9075904ec6bd47781072e0734c609c5a3f3aa36e33ee8339f08716cf9ef"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",

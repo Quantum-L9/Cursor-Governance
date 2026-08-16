@@ -1,4 +1,4 @@
-# ADR-0014: Existing Cursor rules migrate through a strangler lifecycle with a monotonic hidden-doctrine ratchet
+# ADR-0031: Existing Cursor rules migrate through a strangler lifecycle with a monotonic hidden-doctrine ratchet
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -62,7 +62,7 @@ No hidden shared normative doctrine remains.
 Rule may still be hand-rendered temporarily while parity is proven.
 
 ### generated
-`.mdc` is deterministic output under ADR-0011.
+`.mdc` is deterministic output under ADR-0028.
 
 Normative rule-owned prose is zero.
 
@@ -159,7 +159,7 @@ Increasing the baseline is a governance-policy change requiring explicit reviewe
 
 ## New-rule law
 
-After ADR-0014 implementation reaches enforcement:
+After ADR-0031 implementation reaches enforcement:
 
 New `.mdc` files MUST start at `contract_bound` or `generated`.
 
@@ -302,7 +302,7 @@ and no approved path quietly moves it back.
 
 ## Related
 
-- ADR-0007 through ADR-0013
+- ADR-0024 through ADR-0030
 - doctrine extraction schema family
 - skills doctrine census/ratchet
 - `rules/RULES-MANIFEST.yaml`

@@ -26,7 +26,8 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 | `cc-pe-intent-compiler-v1` | `campaign/cc-pe-intent-compiler-v1` | 2 (build PE compiler module) | **complete** (PR #151) |
 | `l9-devpack-program-execution-hardening` | `campaign/l9-devpack-program-execution-hardening` | 3 (harden same module) | **complete** (PR #150) |
 | `l9-ecosystem-fix-plan` | `campaign/l9-ecosystem-fix-plan` | 4 (`IB-Odoo_19`) | planned — **next** (Odoo host [PR #153](https://github.com/cryptoxdog/IB-Odoo_19/pull/153)) |
-| `session-runtime-hydration-convergence-v1` | `campaign/session-runtime-hydration-convergence-v1` | 5 (session runtime; this repo) | planned |
+| `adr-identity-integrity-v1` | `campaign/adr-identity-integrity-v1` | 5 (CG governance-integrity) | planned |
+| `session-runtime-hydration-convergence-v1` | `campaign/session-runtime-hydration-convergence-v1` | 6 (session runtime; this repo) | planned |
 
 Owner (AUTH-001) terminal verdict on 2026-08-14: **CONVERGED**. Locked campaign
 YAML ceilings are `commit/push/pull_request: true` and `merge: false`. This

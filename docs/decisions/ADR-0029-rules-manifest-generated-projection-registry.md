@@ -1,4 +1,4 @@
-# ADR-0012: RULES-MANIFEST.yaml is the generated rule projection registry
+# ADR-0029: RULES-MANIFEST.yaml is the generated rule projection registry
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -71,7 +71,7 @@ Every rule MUST expose one of:
 - `generated`
 - `retired`
 
-The meaning is defined in ADR-0014.
+The meaning is defined in ADR-0031.
 
 ### Legacy entries
 
@@ -172,8 +172,8 @@ The existing manifest becomes significantly more useful: not merely “what rule
 
 ## Related
 
-- ADR-0008
-- ADR-0010
-- ADR-0011
-- ADR-0014
+- ADR-0025
+- ADR-0027
+- ADR-0028
+- ADR-0031
 - `rules/RULES-MANIFEST.yaml`

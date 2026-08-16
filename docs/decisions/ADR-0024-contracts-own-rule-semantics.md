@@ -1,4 +1,4 @@
-# ADR-0007: Contracts own rule semantics; Cursor rules are activation and projection surfaces
+# ADR-0024: Contracts own rule semantics; Cursor rules are activation and projection surfaces
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -92,7 +92,7 @@ They MAY remain for familiar repository organization, stable filenames, historic
 
 ### Existing legacy rules
 
-Existing hand-authored rules remain valid migration sources until converted under ADR-0014.
+Existing hand-authored rules remain valid migration sources until converted under ADR-0031.
 
 Their current normative statements are grandfathered migration debt, not an endorsement of rule-owned authority as the future architecture.
 
@@ -160,4 +160,4 @@ Costs:
 - `canonical.schema.governance_contract.v1`
 - `canonical.schema.contract_projection_binding.v1`
 - `rules/RULES-MANIFEST.yaml`
-- ADR-0008 through ADR-0014
+- ADR-0025 through ADR-0031

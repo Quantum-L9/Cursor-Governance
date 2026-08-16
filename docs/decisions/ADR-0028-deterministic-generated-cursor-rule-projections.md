@@ -1,4 +1,4 @@
-# ADR-0011: Cursor .mdc files are deterministic generated projections with clause-level provenance
+# ADR-0028: Cursor .mdc files are deterministic generated projections with clause-level provenance
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -147,8 +147,8 @@ Deleting generated files is recoverable because semantic authority remains elsew
 
 ## Related
 
-- ADR-0007
-- ADR-0008
-- ADR-0012
-- ADR-0013
+- ADR-0024
+- ADR-0025
+- ADR-0029
+- ADR-0030
 - `canonical.schema.contract_projection_binding.v1`

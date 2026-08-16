@@ -37,9 +37,9 @@ peer_projection:
   unsupported_peer: explicit_fail_closed
   partial_activation: prohibited
 governing_adrs:
-  - ADR-0011
-  - ADR-0012
-  - ADR-0013
-  - ADR-0014
-  - ADR-0015
-  - ADR-0016
+  - docs/decisions/ADR-0011-bounded-replanning-within-program-lock.md
+  - docs/decisions/ADR-0012-evidence-gated-replan-revisions.md
+  - docs/decisions/ADR-0013-canonical-peer-semantics-no-local-forks.md
+  - docs/decisions/ADR-0014-atomic-all-peer-semantic-revisions.md
+  - docs/decisions/ADR-0015-golden-semantic-vectors-peer-parity.md
+  - docs/decisions/ADR-0016-typed-runtime-state-context-projections.md

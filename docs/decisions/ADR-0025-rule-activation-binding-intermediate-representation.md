@@ -1,4 +1,4 @@
-# ADR-0008: Rule Activation Binding is the canonical intermediate representation between contracts and platform rules
+# ADR-0025: Rule Activation Binding is the canonical intermediate representation between contracts and platform rules
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -177,7 +177,7 @@ It also creates the point at which future IDE/agent adapters can diverge without
 
 ## Related
 
-- ADR-0007
-- ADR-0010
-- ADR-0011
+- ADR-0024
+- ADR-0027
+- ADR-0028
 - `canonical.schema.contract_projection_binding.v1`

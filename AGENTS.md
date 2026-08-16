@@ -701,3 +701,16 @@ Authoritative corrections (do not treat older “do not merge / Human only
    receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
    `--admin` stay denied.
 4. `/pr` remains Diagnose-only (no merge).
+
+<!-- ADR_IDENTITY_INTEGRITY_V1 -->
+## ADR identity integrity (2026-08-16) — supersedes Cloud Graphiti ADR number
+
+Authoritative correction (do not treat the older “see ADR-0006 + ADR-0007”
+pointer in the Claude Code adapter placement block as a Program Execution
+identity):
+
+1. The Cloud Graphiti HTTPS reachability decision is **ADR-0023**
+   (`docs/decisions/ADR-0023-cloud-graphiti-https-reachability.md`).
+2. Program Execution **ADR-0007** remains goal-level intent front door.
+3. Numeric ADR ids are globally unique. Create the next ADR as
+   max(existing)+1 only. Run `python3 ops/scripts/validate_adr_identity.py`.
