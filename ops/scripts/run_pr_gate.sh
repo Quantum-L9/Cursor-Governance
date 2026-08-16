@@ -265,9 +265,20 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     fi
     echo "OK: LLM rule adapters reconciled to environment/generated/llm-rules/"
   fi
-  if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
-    echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"
-    exit 1
+  # check_governance_wiring.sh asserts Cursor DESKTOP activation (plugin symlink,
+  # .cursor-commands, .cursor/plans, ~/.cursor/hooks.json). The enclosing guard uses
+  # "~/.cursor exists and is writable" as a proxy for "this is a Cursor machine", but
+  # Graphiti's own state dir (~/.cursor/graphiti-state) creates that path on EVERY
+  # surface — so the proxy silently became true for headless adapters. Gate the
+  # desktop-wiring assertion on the surface id instead. The reconcile checks above
+  # stay unconditional: they are surface-independent and must keep running here.
+  if [[ -z "${L9_GOVERNANCE_SURFACE:-}" || "${L9_GOVERNANCE_SURFACE}" == "cursor" ]]; then
+    if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
+      echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"
+      exit 1
+    fi
+  else
+    echo "OK: skip Cursor desktop wiring (surface=${L9_GOVERNANCE_SURFACE}, not cursor)"
   fi
 else
   echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
