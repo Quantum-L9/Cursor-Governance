@@ -1,423 +1,587 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
-.PHONY: l4-status l4-begin l4-record-kernels l4-authorize
-.PHONY: repo-write-lock-test precommit-hook-contract
-.PHONY: capability-contract-validate capability-check capability-broker-preflight
+# Cursor-Governance repository command surface
+#
+# Architecture:
+#   Makefile = stable repository API + capability graph
+#   scripts  = implementation and complex control flow
+#   targets  = reusable repository capabilities
+#
+# Rules:
+#   - prerequisites express truths/capabilities a target requires;
+#   - recipes express ordered state transitions;
+#   - public targets are stable operator/agent interfaces;
+#   - internal targets may be composed by public capabilities;
+#   - complex behavior stays in scripts, not inline Make/shell;
+#   - make pr is the sole canonical PR shipping entrypoint.
 
-# Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
-# (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
-_pr_case_aliases := $(foreach g,$(MAKECMDGOALS),$(if $(filter pr,$(shell printf '%s' '$(g)' | tr '[:upper:]' '[:lower:]')),$(if $(filter-out pr,$(g)),$(g))))
-ifneq ($(_pr_case_aliases),)
-.PHONY: $(_pr_case_aliases)
-$(_pr_case_aliases): pr
-endif
+.DEFAULT_GOAL := help
 
-# Workspace a target acts on. Defaults to the directory make was invoked from, so
-# `make -C ~/.cursor-governance start` from inside a consumer repo targets that repo.
+# No suffix-based implicit build graph exists in this repository.
+# Disable legacy suffix-rule discovery for a smaller, deterministic command graph.
+.SUFFIXES:
+
+# ---------------------------------------------------------------------------
+# Repository context
+# ---------------------------------------------------------------------------
+
+GOV_ROOT := $(CURDIR)
+
+# Workspace operated on by a target.
+#
+# When Make is entered with:
+#   make -C "$$HOME/.cursor-governance" ...
+#
+# CURDIR is the governance root. Consumer repositories MUST therefore pass:
+#   WS="$$(pwd)"
 WS ?= $(CURDIR)
 
-# When 1, `make pr` fails on mypy errors. Default 0 matches CI (mypy is
-# continue-on-error while the tracked debt in TODO.md remains).
-PR_MYPY_STRICT ?= 0
+# ---------------------------------------------------------------------------
+# PR policy
+# ---------------------------------------------------------------------------
 
-# When 1, security scanners report findings but do not fail `make pr`.
-PR_SECURITY_ADVISORY ?= 0
-
-# Comparison ref for changed-file resolution (merge-base with HEAD ∪ working tree).
-# Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
+# Comparison ref used by changed-file resolution.
 PR_BASE ?= origin/main
 
-# When 1, `make pr` (any capitalization) push+open GitHub PR after gate PASS.
-# Gate-only: `make pr-check` or `OPEN_PR=0 make pr`.
+# Until tracked mypy debt is retired, default behavior matches CI.
+PR_MYPY_STRICT ?= 0
+
+# 0 = security findings are blocking.
+# 1 = security scanners are advisory.
+PR_SECURITY_ADVISORY ?= 0
+
+# 1 = publish/open/reuse the PR after the local gate passes.
+# 0 = run the exact same canonical gate but stop before publication.
 OPEN_PR ?= 1
 
-# When 1 (default), after open: GitHub-subscribe + emit L9_AGENT_REQUIRED so the
-# agent spawns background l9-pr-remediation (poll_worker). PR_REMEDIATE=0 to skip.
+# 1 = emit the post-PR remediation handoff.
 PR_REMEDIATE ?= 1
 
-help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
-	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
-	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
-	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
-	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
-	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
-	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
-	@echo "  make pr-full      — intentional full-tree local gate (nightly-equivalent; slow)"
-	@echo "  make secrets-sync — sync openclaw-igorbot registry from AWS Secrets Manager (refs only)"
-	@echo "  make secrets-check REF='openclaw-igorbot/github#token' — resolve --check (no value printed)"
-	@echo "  make ui-operator-sync — uv sync --extra ui-operator (then: playwright install)"
-	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" pr WS=\"\$$(pwd)\""
-	@echo "  Prefer l9-ci-core thin Makefile (identical across repos) when adopting the common workflow."
-	@echo "  make clean / workspace-clean — ship leftover work to scoped PRs by repo, prune merged locals, prime main (CLEAN_MODE=plan to preview; CLEAN_REMOTE=0 to stay local)"
-	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" clean WS=\"\$$(pwd)\""
+# Authorization propagated into the post-PR convergence plane.
+# Supporting remediation/open-PR logic owns enforcement of:
+#   exact-head green checks
+#   mergeability
+#   blocking reviews
+#   conflict state
+#   no force-push / no required-check bypass
+PR_AUTOMERGE ?= 1
 
-## Run the FULL session-start pipeline against WS, synchronously, with visible output.
-## Same script Cursor runs on sessionStart — one implementation, no drift.
-## Usage from a consumer repo: make -C "$$HOME/.cursor-governance" start WS="$$(pwd)"
-start:
+# ---------------------------------------------------------------------------
+# Other policy/configuration
+# ---------------------------------------------------------------------------
+
+REF ?= openclaw-igorbot/github#token
+
+CLEAN_MODE ?= apply
+CLEAN_REMOTE ?= 1
+
+PE_ROOT := environment/program-execution
+AGENTS_TOOLS := environment/agents/tools
+
+# ---------------------------------------------------------------------------
+# Command-surface metadata
+# ---------------------------------------------------------------------------
+#
+# PUBLIC_TARGETS are the supported human/agent command surface.
+# INTERNAL_TARGETS are implementation capabilities: callable, but not API.
+#
+# Neither classification changes execution semantics; it makes ownership
+# machine-visible and gives .PHONY one authoritative inventory.
+
+PUBLIC_TARGETS := \
+	help \
+	start \
+	venv \
+	sync \
+	wiring-check \
+	symlinks-check \
+	symlinks-install \
+	claude-plugins \
+	claude-skill-registry \
+	sync-generated \
+	claude-skills \
+	claude-skills-check \
+	claude-skills-test \
+	claude-settings \
+	claude-settings-check \
+	claude-env \
+	autonomy-contracts-validate \
+	autonomy-validate \
+	l4-status \
+	l4-begin \
+	l4-record-kernels \
+	l4-authorize \
+	agents-env \
+	ide-profile \
+	ide-profile-test \
+	backup-gate-test \
+	repo-write-lock-test \
+	precommit-hook-contract \
+	path-lint \
+	precommit \
+	precommit-repo \
+	backup \
+	push \
+	graphiti-health \
+	lint \
+	lint-ruff \
+	lint-mypy \
+	test \
+	uv-lock-check \
+	pr \
+	PR \
+	Pr \
+	pR \
+	pr-security \
+	pr-full \
+	rules-validate \
+	rules-stabilize \
+	integrity-check \
+	integrity-snapshot \
+	secrets-sync \
+	secrets-check \
+	ui-operator-sync \
+	program-execution-core-validate \
+	program-execution-adapters \
+	program-execution-conformance \
+	program-execution-probe \
+	peer-execution-conformance \
+	rules-check \
+	rules-contract-check \
+	skills-check \
+	hygiene \
+	hygiene-fix \
+	clean \
+	workspace-clean
+
+INTERNAL_TARGETS := \
+	legacy-doctrine-residue \
+	lint-ruff-full \
+	scratch-hold-restore \
+	scratch-hold-status \
+	agents-runtime-bindings-validate \
+	program-execution-campaign-schema \
+	program-execution-campaign-compile \
+	program-execution-controller-tests \
+	peer-execution-validate \
+	peer-execution-probe \
+	agents-deployment-validate \
+	agents-results-validate \
+	agents-data-validate \
+	agents-runtime-probe \
+	claude-deepseek \
+	claude-deepseek-verify \
+	rules-contract-shadow
+
+ALL_TARGETS := $(sort $(PUBLIC_TARGETS) $(INTERNAL_TARGETS))
+
+.PHONY: $(ALL_TARGETS)
+
+# These are ordered state-transition graphs. Their prerequisites must not be
+# raced by a caller supplying -j.
+.NOTPARALLEL: push pr-full
+
+# ===========================================================================
+##@ Command surface
+# ===========================================================================
+
+help: ## Show the supported repository command surface
+	@awk 'BEGIN {FS = ":.*## "} \
+		/^##@ / {printf "\n%s\n", substr($$0, 5); next} \
+		/^[A-Za-z0-9_.-]+:.*## / {printf "  %-34s %s\n", $$1, $$2}' \
+		$(MAKEFILE_LIST)
+	@printf "\nConsumer repository:\n"
+	@printf "  make -C \"\$$HOME/.cursor-governance\" pr WS=\"\$$(pwd)\"\n"
+
+# ===========================================================================
+##@ Bootstrap and environment
+# ===========================================================================
+
+start: ## Run the full session-start pipeline against WS
 	@cd "$(WS)" && CURSOR_PROJECT_DIR="$(WS)" L9_BOOTSTRAP_SYNC=1 \
-		bash "$(CURDIR)/ops/hooks/session_start_bootstrap.sh" \
-		| python3 "$(CURDIR)/ops/scripts/render_bootstrap_context.py"
+		bash "$(GOV_ROOT)/ops/hooks/session_start_bootstrap.sh" \
+		| python3 "$(GOV_ROOT)/ops/scripts/render_bootstrap_context.py"
 
-## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
-venv:
+venv: ## Reconcile the pinned development environment from uv.lock
 	uv sync --locked --extra dev
 
-## Fast-forward-only pull of this clone from origin/main (same as sessionStart hook)
-sync:
+sync: ## Fast-forward synchronize the governance clone from origin/main
 	bash ops/scripts/governance_sync.sh
 
-## Verify a consumer workspace's symlink wiring. Usage: make wiring-check WS=/path/to/repo
-wiring-check:
+wiring-check: ## Validate governance wiring for WS
 	bash ops/scripts/check_governance_wiring.sh "$(WS)"
 
-## Verify this clone's own symlink health
-symlinks-check:
+symlinks-check: ## Validate governance symlink health
 	bash ops/scripts/validate_governance_symlinks.sh
 
-## Install .cursor-commands + ~/.cursor symlinks. Run from inside the CONSUMER repo, not here.
-symlinks-install:
+symlinks-install: ## Install governance symlinks for a consumer workspace
 	bash ops/scripts/setup_workspace_symlinks.sh
 
-## Reconcile Claude Code plugins to the desired state declared in setup_claude_code_plugins.sh.
-## Usage: make claude-plugins WS=/path/to/repo (defaults to cwd if WS omitted)
-claude-plugins:
-	bash ops/scripts/setup_claude_code_plugins.sh $(if $(WS),--workspace "$(WS)",)
+ide-profile: ## Reconcile the Cursor/VS Code IDE profile for WS
+	bash ops/scripts/install_ide_profile.sh "$(WS)"
 
-## Build the deterministic Claude runtime registry from the canonical skill manifest.
-claude-skill-registry:
-	uv run python3 ops/scripts/build_claude_skill_registry.py --root "$(CURDIR)"
+ui-operator-sync: ## Install optional UI-operator dependencies
+	uv sync --extra ui-operator
 
-## Heal derived manifests/registries/overrides (rules, skills, commands, PE).
-## Idempotent; used by pre-commit and make pr. Never a reason to block make pr alone.
-sync-generated:
-	python3 ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check
+# ===========================================================================
+##@ Claude environment
+# ===========================================================================
 
-## Reconcile L9 skills into Claude native user + project discovery paths.
-claude-skills: claude-skill-registry
-	python3 ops/scripts/reconcile_claude_l9_skills.py --root "$(CURDIR)" \
-		--scope user --scope project --workspace "$(WS)"
+claude-plugins: ## Reconcile Claude Code plugins
+	bash ops/scripts/setup_claude_code_plugins.sh \
+		$(if $(WS),--workspace "$(WS)",)
 
-## Read-only registry/frontmatter/hook/routing drift validation.
-claude-skills-check:
+claude-skill-registry: ## Build the deterministic Claude skill registry
+	uv run python3 ops/scripts/build_claude_skill_registry.py \
+		--root "$(GOV_ROOT)"
+
+sync-generated: ## Reconcile generated governance projections
+	python3 ops/scripts/sync_generated_artifacts.py \
+		--root "$(GOV_ROOT)" --force --check
+
+claude-skills: claude-skill-registry ## Reconcile L9 skills into Claude discovery paths
+	python3 ops/scripts/reconcile_claude_l9_skills.py \
+		--root "$(GOV_ROOT)" \
+		--scope user \
+		--scope project \
+		--workspace "$(WS)"
+
+claude-skills-check: ## Validate Claude skill activation and registry state
 	python3 environment/agents/adapters/claude-code/validate_skill_activation.py
 
-## Behavioral router + reconciliation fixture tests.
-claude-skills-test:
+claude-skills-test: ## Run Claude/Cursor skill routing fixtures
 	python3 environment/agents/adapters/claude-code/tests/test_skill_router.py
 	python3 environment/agents/adapters/claude-code/tests/test_skill_reconciliation.py
 	python3 environment/agents/adapters/claude-code/tests/test_cursor_skill_router.py
 
-.PHONY: claude-settings claude-settings-check
-.PHONY: claude-install claude-install-check
-
-## Install the Claude Code adapter on THIS machine (CLI / Desktop).
-## Runs the exact same installer Web and Mobile reach through
-## web/setup.bootstrap.sh -> web/setup.sh, so there is one adapter to maintain:
-## locked toolchain from uv.lock, settings triad, skills, MCP front door,
-## git excludes, preflight. `claude-settings` below is a component step of this
-## target; use claude-install for a full adapter wire-up.
-## Usage: make claude-install WS=/path/to/repo   (WS defaults to this clone)
-claude-install:
-	bash environment/agents/adapters/claude-code/install.sh \
-		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))"
-
-## Read-only: report adapter drift without writing anything.
-claude-install-check:
-	bash environment/agents/adapters/claude-code/install.sh --check \
-		--governance "$(CURDIR)" --workspace "$(if $(WS),$(WS),$(CURDIR))"
-
-## Reconcile Claude settings triad (template → gov .claude → ~/.claude → optional WS).
-## Usage: make claude-settings WS=/path/to/repo
-## Check: make claude-settings-check WS=/path/to/repo
-claude-settings:
-	python3 ops/scripts/reconcile_claude_settings.py --root "$(CURDIR)" \
+claude-settings: ## Reconcile Claude settings for governance/user/WS
+	python3 ops/scripts/reconcile_claude_settings.py \
+		--root "$(GOV_ROOT)" \
 		$(if $(WS),--workspace "$(WS)",)
 
-claude-settings-check:
-	python3 ops/scripts/reconcile_claude_settings.py --root "$(CURDIR)" --check \
+claude-settings-check: ## Read-only Claude settings drift check
+	python3 ops/scripts/reconcile_claude_settings.py \
+		--root "$(GOV_ROOT)" \
+		--check \
 		$(if $(WS),--workspace "$(WS)",)
 
-## Validate the Claude Code environment adapter and proactive skill activation.
-## Heals the settings triad first (idempotent), then runs structural validation.
-claude-env:
-	$(MAKE) claude-settings
+claude-env: claude-settings ## Reconcile and validate the Claude environment
 	python3 environment/agents/adapters/claude-code/validate_claude_env.py
 
-## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).
-autonomy-contracts-validate:
+# ===========================================================================
+##@ Autonomy
+# ===========================================================================
+
+autonomy-contracts-validate: ## Validate first-class autonomy contracts
 	python3 ops/scripts/validate_autonomy_contracts.py
 
-## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
-autonomy-validate: autonomy-contracts-validate
+autonomy-validate: autonomy-contracts-validate ## Validate bounded-concurrency autonomy runtime
 	python3 environment/program-execution/peer_execution/autonomy/validate_autonomy.py
 
-
-## L4 local autonomy (stacked local commits → kernels → authorize → push/PR).
-l4-status:
+l4-status: ## Show L4 local-autonomy state
 	python3 ops/autonomy/l4_local.py --workspace "$(WS)" status
 
-l4-begin:
-	python3 ops/autonomy/l4_local.py --workspace "$(WS)" begin $(if $(CONTRACT_ID),--contract-id "$(CONTRACT_ID)",)
+l4-begin: ## Begin an L4 local-autonomy execution
+	python3 ops/autonomy/l4_local.py \
+		--workspace "$(WS)" begin \
+		$(if $(CONTRACT_ID),--contract-id "$(CONTRACT_ID)",)
 
-l4-record-kernels:
-	python3 ops/autonomy/l4_local.py --workspace "$(WS)" record-kernels
+l4-record-kernels: ## Record L4 kernel state
+	python3 ops/autonomy/l4_local.py \
+		--workspace "$(WS)" record-kernels
 
-l4-authorize:
-	python3 ops/autonomy/l4_local.py --workspace "$(WS)" authorize-release
+l4-authorize: ## Authorize the L4 release transition
+	python3 ops/autonomy/l4_local.py \
+		--workspace "$(WS)" authorize-release
 
+# ===========================================================================
+##@ Agent environment
+# ===========================================================================
 
-## Validate the multi-agent environment pack: registry naming law, identity uniqueness,
-## role catalog, adapter consistency, no committed secrets
-agents-env:
+agents-env: ## Validate multi-agent registry and adapter consistency
 	python3 environment/agents/tools/validate_agents.py
 
-## Validate PEER_RUNTIME_BINDINGS.yaml against peer-runtime-bindings.schema.json
-## (topology SSOT schema gate; full cross-plane rules are peer-execution-validate).
 agents-runtime-bindings-validate:
-	python3 -B environment/agents/tools/validate_executable_peers.py --schema-only
+	python3 -B $(AGENTS_TOOLS)/validate_executable_peers.py --schema-only
 
-## Reconcile the Cursor IDE profile (extensions + .vscode settings). Usage: make ide-profile WS=/path/to/repo
-ide-profile:
-	bash ops/scripts/install_ide_profile.sh "$(WS)"
+# ===========================================================================
+##@ Repository self-tests
+# ===========================================================================
 
-## Fixture selftest for the IDE profile installer (writes only under $$TMPDIR)
-ide-profile-test:
+ide-profile-test: ## Run the IDE profile installer fixture
 	bash ops/scripts/test_install_ide_profile.sh
 
-## Fixture selftest for the sessionEnd backup gate (writes only under $$TMPDIR)
-backup-gate-test:
+backup-gate-test: ## Run the sessionEnd backup-gate fixture
 	bash ops/scripts/test_backup_gate.sh
 
-## Fixture selftest for the repo-write lock (writes only under $$TMPDIR)
-repo-write-lock-test:
+repo-write-lock-test: ## Run the repository-write-lock fixture
 	bash ops/scripts/test_repo_write_lock.sh
 
-## Fail if a pre-commit hook is not declared read_only or writer
-precommit-hook-contract:
+precommit-hook-contract: ## Validate pre-commit read_only/writer declarations
 	python3 ops/scripts/validate_precommit_hook_contract.py
 
-## Fail if any script/rule/hook hardcodes a /Users or /home path instead of $$HOME
-path-lint:
+path-lint: ## Reject hard-coded /Users and /home paths
 	bash ops/scripts/validate_governance_no_hardcoded_paths.sh
 
-## Fail if active surfaces teach retired Dropbox SSOT or L9_MEMORY_HTTP side doors
 legacy-doctrine-residue:
 	python3 ops/scripts/validate_legacy_doctrine_residue.py
 
-## Full-tree pre-commit (nightly / intentional). Not used by `make pr`.
-precommit:
-	@command -v pre-commit >/dev/null 2>&1 || { echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; exit 1; }
+# ===========================================================================
+##@ Quality
+# ===========================================================================
+
+precommit: ## Run the complete pre-commit YAML against the full tree
+	@command -v pre-commit >/dev/null 2>&1 || { \
+		echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; \
+		exit 1; \
+	}
 	pre-commit run --all-files
 
-## Changed-files pre-commit for PR velocity.
-## Skips machine-local symlinks-check unless WS is a local governance SSOT clone
-## (skills/AUTONOMY_MANIFEST.yaml + rules/RULES-MANIFEST.yaml present).
-precommit-repo:
-	PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh "$(WS)"
+precommit-repo: ## Run pre-commit YAML against the PR changed-file set
+	PR_BASE="$(PR_BASE)" \
+		bash ops/scripts/run_pr_precommit.sh "$(WS)"
 
-## Commit + rebase + push this clone to origin/main (same as sessionEnd hook)
-backup:
-	bash ops/scripts/backup_to_github.sh
-
-## Gate push behind the full pre-commit pipeline: fails (no push) if precommit fails
-push: precommit backup
-
-## Check Graphiti tunnel + MCP tool-plane health (degraded MCP is expected pre-full-wiring)
-graphiti-health: venv
+graphiti-health: venv ## Check Graphiti tool-plane health
 	uv run python3 ops/graphiti/graphiti_memory_client.py health
 
-## Hard ruff gates on CHANGED files only (make pr). Full-tree: lint-ruff-full / make pr-full.
-## Resolver errors fail closed (do not treat as "no Python files").
-lint-ruff: venv
+lint-ruff: venv ## Run Ruff gates against changed Python files
 	@tmp=$$(mktemp); py=$$(mktemp); \
 	trap 'rm -f "$$tmp" "$$py"' EXIT; \
-	if ! PR_BASE="$(PR_BASE)" WS="$(WS)" bash ops/scripts/resolve_changed_files.sh >"$$tmp"; then \
-		echo "FAIL: resolve_changed_files.sh"; exit 1; \
+	if ! PR_BASE="$(PR_BASE)" WS="$(WS)" \
+		bash ops/scripts/resolve_changed_files.sh >"$$tmp"; then \
+		echo "FAIL: resolve_changed_files.sh"; \
+		exit 1; \
 	fi; \
 	grep -E '\.(py|pyi)$$' "$$tmp" >"$$py" || true; \
-	if [ ! -s "$$py" ]; then echo "OK: no changed Python files for ruff"; exit 0; fi; \
+	if [ ! -s "$$py" ]; then \
+		echo "OK: no changed Python files for ruff"; \
+		exit 0; \
+	fi; \
 	echo "ruff (changed): $$(grep -c . "$$py") file(s)"; \
-	xargs uv run --no-build ruff check <"$$py"; \
+	xargs uv run --no-build ruff check <"$$py" && \
 	xargs uv run --no-build ruff format --check <"$$py"
 
 lint-ruff-full: venv
 	uv run --no-build ruff check .
 	uv run --no-build ruff format --check .
 
-## mypy via the locked venv. Advisory in CI today (TODO.md mypy debt); still
-## useful as a local signal. `make lint` keeps it blocking for intentional debt work.
-lint-mypy: venv
-	uv run mypy . --show-error-codes --pretty --ignore-missing-imports
+lint-mypy: venv ## Run blocking full-tree mypy
+	uv run mypy . \
+		--show-error-codes \
+		--pretty \
+		--ignore-missing-imports
 
-## Full-tree ruff + mypy (not the PR gate).
-lint: lint-ruff-full lint-mypy
+# lint targets are independent read-only capabilities after venv is ready.
+# make -j lint may safely execute them concurrently while Make constructs
+# venv only once in the invocation.
+lint: lint-ruff-full lint-mypy ## Run full-tree Ruff and mypy
 
-## Fail if uv.lock is out of sync with pyproject.toml (same as CI lockfile drift guard).
-## Skipped by make pr unless a dependency manifest is in the change set.
-uv-lock-check:
-	@if [ -f uv.lock ]; then uv lock --check; else echo "OK: no uv.lock present, skipping"; fi
-
-## Pytest suite. make pr runs this only when Python files changed.
-## Splits root autonomy/ from environment/program-execution/peer_execution/autonomy/ (same package name).
-test: venv
-	bash ops/scripts/run_pytest_suites.sh --tb=short -q
-
-## Local PR security scanners on CHANGED files only.
-## Pins: l9-ci-core security.yml (gitleaks 8.24.3, bandit==1.8.6, pip-audit==2.9.0).
-## Semgrep: SDK supported range >=1.100.0,<2.0.0. Full-tree = nightly CI.
-pr-security:
-	PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" PR_BASE="$(PR_BASE)" \
-		bash ops/scripts/run_pr_security.sh "$(WS)"
-
-## Local PR gate — CHANGED FILES ONLY (invariant). Does not scan the whole tree.
-## Nightly GHA owns full-corpus scans. Gate only (no GitHub PR).
-
-# Never-lose scratch hold (non-WIP vault under .l9/scratch-hold/)
-scratch-hold-restore:
-	python3 ops/scripts/scratch_hold.py --workspace "$(or $(WS),$(CURDIR))" restore --all
-
-scratch-hold-status:
-	python3 ops/scripts/scratch_hold.py --workspace "$(or $(WS),$(CURDIR))" status
-
-pr-check:
-	PR_BASE="$(PR_BASE)" PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
-	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
-		bash ops/scripts/run_pr_gate.sh
-
-# Additive prerequisite — do not rewrite the pr-check recipe line above.
-pr-check: capability-contract-validate
-
-## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
-## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
-## Requires a feature branch with commits ahead of PR_BASE.
-## OPEN_PR=0 → gate only. PR_REMEDIATE=0 → open+subscribe without agent spawn marker.
-pr: pr-check
-	@if [ "$(OPEN_PR)" = "1" ]; then \
-		PR_BASE="$(PR_BASE)" PR_REMEDIATE="$(PR_REMEDIATE)" GOV_ROOT="$(CURDIR)" \
-			bash ops/scripts/open_pr_after_gate.sh "$(WS)"; \
+uv-lock-check: ## Fail when uv.lock disagrees with pyproject.toml
+	@if [ -f uv.lock ]; then \
+		uv lock --check; \
 	else \
-		echo "OPEN_PR=0 — skipped GitHub PR open (gate already PASS)"; \
+		echo "OK: no uv.lock present, skipping"; \
 	fi
 
-# Explicit aliases (also covered by _pr_case_aliases remap above).
+test: venv ## Run the repository pytest suites
+	bash ops/scripts/run_pytest_suites.sh --tb=short -q
+
+# ===========================================================================
+##@ PR and release
+# ===========================================================================
+
+pr-security: ## Run changed-file PR security scanners
+	PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
+	PR_BASE="$(PR_BASE)" \
+		bash ops/scripts/run_pr_security.sh "$(WS)"
+
+scratch-hold-restore:
+	python3 ops/scripts/scratch_hold.py \
+		--workspace "$(or $(WS),$(GOV_ROOT))" \
+		restore --all
+
+scratch-hold-status:
+	python3 ops/scripts/scratch_hold.py \
+		--workspace "$(or $(WS),$(GOV_ROOT))" \
+		status
+
+# Canonical shipping command.
+#
+# IMPORTANT:
+# There is intentionally NO pr-check target.
+#
+# make pr:
+#   1. validates this repository state once;
+#   2. fails immediately on gate failure;
+#   3. publishes/reuses the PR only after PASS;
+#   4. emits post-PR remediation authorization when enabled.
+#
+# After an agent repairs a failure it runs `make pr` again. That new state
+# receives exactly one new canonical validation attempt.
+#
+# OPEN_PR=0 make pr is the sole gate-only form.
+pr: ## Gate once, then publish/reuse and remediate the PR
+	PR_BASE="$(PR_BASE)" \
+	PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
+	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" \
+	WS="$(WS)" \
+		bash ops/scripts/run_pr_gate.sh
+	@if [ "$(OPEN_PR)" = "1" ]; then \
+		PR_BASE="$(PR_BASE)" \
+		PR_REMEDIATE="$(PR_REMEDIATE)" \
+		PR_AUTOMERGE="$(PR_AUTOMERGE)" \
+		GOV_ROOT="$(GOV_ROOT)" \
+			bash ops/scripts/open_pr_after_gate.sh "$(WS)"; \
+	else \
+		echo "OPEN_PR=0 — canonical PR gate PASS; publication skipped"; \
+	fi
+
+# Explicit compatibility aliases only.
+# No parse-time shell/tr casing mechanism.
 PR Pr pR: pr
 
-## Intentional full-tree local gate (nightly-adjacent). Slow; not the default.
-pr-full: venv precommit lint-ruff-full uv-lock-check test rules-validate
-	@echo "NOTE: corpus security remains nightly CI; pr-full runs local full lint/test/precommit"
-	@echo "RESULT: PASS — full local gate (lint/test/precommit)"
+# Intentional full-tree/nightly-adjacent local gate.
+#
+# These prerequisites are deliberately serialized via .NOTPARALLEL because
+# pre-commit may reconcile files and later checks must inspect the resulting
+# state. Shared `venv` is still deduplicated by the same Make invocation.
+pr-full: venv precommit lint-ruff-full uv-lock-check test rules-validate ## Run the slow full-tree local gate
+	@echo "NOTE: corpus security remains nightly CI"
+	@echo "RESULT: PASS — full local gate"
 
-## Read-only drift check: does the committed rules/RULES-MANIFEST.* still match the
-## live rules/*.mdc corpus? Writes nothing. Exit 1 (with a findings list) on drift.
-rules-validate:
-	python3 ops/scripts/validate_rules_manifest.py --root "$(CURDIR)"
+backup: ## Commit/rebase/push the governance clone using the canonical implementation
+	bash ops/scripts/backup_to_github.sh
 
-## Full rules-subsystem validation harness: overlay/fingerprint/selective-sync test
-## suites, manifest generate+validate, and corpus audit; report at
-## reports/rules-stabilization-validation.md. NOTE: the generate/audit gates rewrite
-## committed artifacts in place — run intentionally and review the diff.
-## Day-to-day: `generate-rules-manifest` in .pre-commit-config.yaml and
-## `make pr` (run_pr_gate.sh) auto-regenerate RULES-MANIFEST.* before validate.
-## For a pure read-only check use `make rules-validate`.
-rules-stabilize:
+# precommit MUST finish successfully before backup/push. Target-scoped
+# .NOTPARALLEL prevents `make -j push` from racing the mutation against its gate.
+push: precommit backup ## Run full pre-commit then backup/push
+
+# ===========================================================================
+##@ Rules, skills, and governance
+# ===========================================================================
+
+rules-validate: ## Read-only rules-manifest drift validation
+	python3 ops/scripts/validate_rules_manifest.py \
+		--root "$(GOV_ROOT)"
+
+rules-stabilize: ## Run the full rules-subsystem stabilization harness
 	bash ops/scripts/run_rules_stabilization_validation.sh
 
-## Read-only integrity check: report drift/missing/extra governed files against the
-## committed integrity/manifest-lock.json baseline. Never repairs, never writes to
-## tracked files (report goes to the gitignored ops/logs/). If the baseline was never
-## seeded it prints "manifest not seeded" and exits 0. Safe to run anytime.
-integrity-check:
+rules-check: ## Validate Cursor-native rules standards
+	python3 ops/scripts/check_rules_standard.py
+
+rules-contract-shadow:
+	python3 ops/contracts/build_rules.py census
+
+rules-contract-check: ## Validate the rules contract
+	python3 ops/contracts/build_rules.py check
+
+skills-check: ## Validate Cursor-native skill standards
+	python3 ops/scripts/check_skills_standard.py
+
+hygiene: ## Run repository housekeeping validation
+	python3 tools/check_repo_hygiene.py
+
+hygiene-fix: ## Show the repository housekeeping repair runbook
+	@echo "See tools/check_repo_hygiene.py"
+
+# ===========================================================================
+##@ Integrity and secrets
+# ===========================================================================
+
+integrity-check: ## Read-only integrity-baseline drift report
 	python3 integrity/hash-verifier.py --no-repair
 
-## Seed/refresh the integrity baseline: snapshot every governed file's sha256 + full
-## base64 content into integrity/manifest-lock.json. Deliberate, high-footprint action
-## (embeds file contents) — run intentionally and review the (large) diff. Not wired
-## into any hook/CI. The self-heal auto-repair mode is intentionally NOT exposed as a
-## target because it overwrites working-tree files from the baseline.
-integrity-snapshot:
+integrity-snapshot: ## Intentionally refresh the integrity baseline
 	python3 integrity/hash-verifier.py --snapshot
 
-## Sync ops/secrets/openclaw-igorbot.registry.yaml from AWS Secrets Manager (refs/key names only).
-secrets-sync:
-	@$(MAKE) venv
-	$(CURDIR)/.venv/bin/python ops/secrets/sync_secrets_registry.py
+# venv is a true dependency, not an imperative sub-make.
+# If both targets are requested in the same Make invocation, environment
+# reconciliation occurs once.
+secrets-sync: venv ## Synchronize the AWS secret-reference registry
+	$(GOV_ROOT)/.venv/bin/python \
+		ops/secrets/sync_secrets_registry.py
 
-## Resolve a secret ref with --check (never prints the value). Example:
-##   make secrets-check REF='openclaw-igorbot/github#token'
-REF ?= openclaw-igorbot/github#token
-secrets-check:
-	@$(MAKE) venv
-	$(CURDIR)/.venv/bin/python ops/secrets/resolve_secret.py --ref "$(REF)" --check
+secrets-check: venv ## Verify a secret reference without printing its value
+	$(GOV_ROOT)/.venv/bin/python \
+		ops/secrets/resolve_secret.py \
+		--ref "$(REF)" \
+		--check
 
-## Validate the zero-static-secret capability contract: no credential may be
-## assigned in an agent surface environment, and no LLM-facing code may reach for
-## raw secret material unless explicitly marked trusted-operator-only.
-capability-contract-validate:
-	python3 ops/secrets/validate_capability_contract.py
+# ===========================================================================
+##@ Program Execution
+# ===========================================================================
 
-## Report which named capabilities this surface can use. Never resolves a secret.
-##   make capability-check REQUIRE=sonar.read_issues,graphiti.query
-REQUIRE ?=
-capability-check:
-	@bash ops/secrets/bootstrap_agent_env.sh --check \
-		--surface "$${L9_GOVERNANCE_SURFACE:-unknown}" \
-		$(if $(REQUIRE),--require-capabilities "$(REQUIRE)",)
-
-## Broker posture (trusted side): boundary isolation + workload identity.
-capability-broker-preflight:
-	python3 ops/secrets/capability_broker.py preflight
-
-## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
-## After this: playwright install
-ui-operator-sync:
-	uv sync --extra ui-operator
-
-# PROGRAM_EXECUTION_ADAPTER_LAYER_V1
-PE_ROOT := environment/program-execution
-.PHONY: program-execution-core-validate program-execution-adapters 	program-execution-conformance program-execution-probe
-
-program-execution-core-validate:
-	PYTHONDONTWRITEBYTECODE=1 python3 -B $(PE_ROOT)/core/scripts/validate_pair.py 		$(PE_ROOT)/core --mode template
+program-execution-core-validate: ## Validate Program Execution core contracts
+	PYTHONDONTWRITEBYTECODE=1 \
+		python3 -B \
+		$(PE_ROOT)/core/scripts/validate_pair.py \
+		$(PE_ROOT)/core \
+		--mode template
 	$(MAKE) program-execution-campaign-schema
 	$(MAKE) program-execution-campaign-compile
 
-program-execution-adapters:
-	PYTHONDONTWRITEBYTECODE=1 python3 -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
-	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B $(PE_ROOT)/scripts/validate_thin_providers.py
+program-execution-campaign-schema:
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONPATH=$(PE_ROOT) \
+		python3 -B -m unittest \
+		$(PE_ROOT)/conformance/test_campaign_source_schema.py
 
-program-execution-conformance: autonomy-contracts-validate
-	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/run_conformance.py
-	PYTHONDONTWRITEBYTECODE=1 python3 -B $(PE_ROOT)/scripts/validate_manifest.py
+program-execution-campaign-compile:
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONPATH=$(PE_ROOT) \
+		python3 -B -m unittest \
+		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py
+
+program-execution-adapters: ## Validate execution adapters and thin providers
+	PYTHONDONTWRITEBYTECODE=1 \
+		python3 -B \
+		$(PE_ROOT)/scripts/validate_execution_adapters.py
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONPATH=$(PE_ROOT) \
+		python3 -B \
+		$(PE_ROOT)/scripts/validate_thin_providers.py
+
+program-execution-conformance: autonomy-contracts-validate ## Run Program Execution conformance
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONPATH=$(PE_ROOT) \
+		python3 -B \
+		$(PE_ROOT)/scripts/run_conformance.py
+	PYTHONDONTWRITEBYTECODE=1 \
+		python3 -B \
+		$(PE_ROOT)/scripts/validate_manifest.py
 	$(MAKE) program-execution-controller-tests
 
-program-execution-probe:
-	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
+program-execution-controller-tests:
+	PYTHONDONTWRITEBYTECODE=1 \
+		python3 -B -m unittest discover \
+		-s $(PE_ROOT)/core/program-execution-controller-template/scripts/tests \
+		-p 'test_*.py'
 
-AGENTS_TOOLS := environment/agents/tools
-.PHONY: peer-execution-validate peer-execution-probe peer-execution-conformance
-.PHONY: agents-runtime-bindings-validate
+program-execution-probe: ## Probe Program Execution adapter readiness
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONPATH=$(PE_ROOT) \
+		python3 -B \
+		$(PE_ROOT)/scripts/probe_execution_adapters.py
 
-# Executable Peer Contract v1 — structural cross-registry gate (E1-E15):
-# agent_registry.yaml execution bindings <-> program-execution adapters +
-# registry <-> canonical autonomy provider. validate_executable_peers.py.
-# v2 also gates PEER_RUNTIME_BINDINGS.yaml topology SSOT (see agents-runtime-bindings-validate).
+# ===========================================================================
+##@ Executable peers
+# ===========================================================================
+
 peer-execution-validate:
-	python3 -B $(AGENTS_TOOLS)/validate_executable_peers.py
+	python3 -B \
+		$(AGENTS_TOOLS)/validate_executable_peers.py
 
-# Binding-level readiness probe. Emits per-(agent,surface,adapter) receipts
-# under $$HOME/.l9/programs/_peer-readiness/ and fails if any enabled agent
-# has no READY binding. Runtime/session-scoped availability gate.
-# Receipts also land under $$L9_RUNTIME_ROOT/agents/readiness/ (default ~/.l9/agents/readiness/).
 peer-execution-probe:
-	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B \
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONPATH=$(PE_ROOT) \
+		python3 -B \
 		$(PE_ROOT)/scripts/probe_executable_peers.py
-# Honest BLOCKED (Cursor file-drop / missing Claude host) is inventory, not FAIL.
 
-# Full executable-peer conformance: compose the identity, adapter, program,
-# and readiness gates (Executable Peer Contract v1, section 14).
-# Also runs agents-runtime-bindings-validate (Executable Peer Contract v2 schema gate).
-peer-execution-conformance:
+# Deliberately ordered orchestration.
+#
+# These are not represented as unordered prerequisites because their sequence
+# is part of the executable-peer contract and must remain deterministic even
+# when the caller uses -j.
+peer-execution-conformance: ## Run complete executable-peer conformance
 	$(MAKE) agents-env
 	$(MAKE) agents-runtime-bindings-validate
 	$(MAKE) program-execution-adapters
@@ -426,70 +590,51 @@ peer-execution-conformance:
 	$(MAKE) peer-execution-probe
 	$(MAKE) program-execution-core-validate
 
-.PHONY: agents-deployment-validate agents-results-validate agents-data-validate agents-runtime-probe
-agents-deployment-validate:
-	$(CURDIR)/.venv/bin/python -m pytest environment/agents/deployment/tests -q
-agents-results-validate:
-	$(CURDIR)/.venv/bin/python -m pytest environment/agents/results/tests environment/agents/lifecycle/tests -q
-agents-data-validate:
-	$(CURDIR)/.venv/bin/python -m pytest environment/agents/generated-data/ingress/tests -q
-agents-runtime-probe:
-	$(CURDIR)/.venv/bin/python environment/agents/readiness/probe_runtime.py
+# ===========================================================================
+##@ Agent runtime validation
+# ===========================================================================
 
-# DeepSeek V4 Pro launcher for Claude Code (env-routed; no keys in git)
-.PHONY: claude-deepseek claude-deepseek-verify
+agents-deployment-validate:
+	$(GOV_ROOT)/.venv/bin/python \
+		-m pytest environment/agents/deployment/tests -q
+
+agents-results-validate:
+	$(GOV_ROOT)/.venv/bin/python \
+		-m pytest \
+		environment/agents/results/tests \
+		environment/agents/lifecycle/tests \
+		-q
+
+agents-data-validate:
+	$(GOV_ROOT)/.venv/bin/python \
+		-m pytest \
+		environment/agents/generated-data/ingress/tests \
+		-q
+
+agents-runtime-probe:
+	$(GOV_ROOT)/.venv/bin/python \
+		environment/agents/readiness/probe_runtime.py
+
+# ===========================================================================
+##@ Model routing
+# ===========================================================================
+
 claude-deepseek:
 	./scripts/claude-deepseek.sh
 
 claude-deepseek-verify:
 	./scripts/verify-routing.sh
 
-.PHONY: program-execution-campaign-schema program-execution-campaign-compile
-.PHONY: program-execution-controller-tests
-program-execution-campaign-schema:
-	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
-		$(PE_ROOT)/conformance/test_campaign_source_schema.py
+# ===========================================================================
+##@ Workspace lifecycle
+# ===========================================================================
 
-program-execution-campaign-compile:
-	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
-		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py
+clean: ## Ship leftover work to scoped PRs, prune merged locals, prime main
+	CLEAN_MODE="$(CLEAN_MODE)" \
+	CLEAN_REMOTE="$(CLEAN_REMOTE)" \
+	PR_BASE="$(PR_BASE)" \
+	WS="$(WS)" \
+		bash "$(GOV_ROOT)/ops/scripts/run_workspace_clean.sh"
 
-program-execution-controller-tests:
-	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover \
-		-s $(PE_ROOT)/core/program-execution-controller-template/scripts/tests \
-		-p 'test_*.py'
-
-.PHONY: rules-check
-## Cursor-native rules frontmatter + always-apply ratchet (docs/rules-standard.md).
-rules-check:
-	python3 ops/scripts/check_rules_standard.py
-
-.PHONY: rules-contract-shadow rules-contract-check
-## Foundation shadow: stdout only. Does not write rules or census files.
-rules-contract-shadow:
-	python3 ops/contracts/build_rules.py census
-rules-contract-check:
-	python3 ops/contracts/build_rules.py check
-
-.PHONY: skills-check
-## Cursor-native skill frontmatter + discovery-footprint ratchet (docs/skills-standard.md).
-skills-check:
-	python3 ops/scripts/check_skills_standard.py
-
-.PHONY: hygiene hygiene-fix
-## RB-HK-001 repository housekeeping gate.
-hygiene:
-	python3 tools/check_repo_hygiene.py
-
-hygiene-fix:
-	@echo "See WIP/housekeeping-pack/RUNBOOK.md Section 4"
-
-# Workspace ship+reset. Default apply opens scoped PRs (never main).
-# Preview: CLEAN_MODE=plan. Local only: CLEAN_REMOTE=0.
-# Consumer: make -C "$(HOME)/.cursor-governance" clean WS="$(pwd)"
-CLEAN_MODE ?= apply
-CLEAN_REMOTE ?= 1
-.PHONY: clean workspace-clean
-clean workspace-clean:
-	CLEAN_MODE="$(CLEAN_MODE)" CLEAN_REMOTE="$(CLEAN_REMOTE)" PR_BASE="$(PR_BASE)" \
-	WS="$(WS)" bash "$(CURDIR)/ops/scripts/run_workspace_clean.sh"
+# One implementation, two public spellings.
+workspace-clean: clean ## Alias for clean
