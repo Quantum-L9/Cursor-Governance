@@ -160,13 +160,36 @@ else
 fi
 
 # pre-commit is the CANONICAL_LAW §12 `make pr` gate, on every surface.
-if [ -f "$WORKSPACE/.pre-commit-config.yaml" ] && ! command -v pre-commit >/dev/null 2>&1; then
-  if [ "$CHECK" = "1" ]; then
-    warn "pre-commit absent — 'make pr' would fail (workspace declares hooks)"
-  else
+# `make pr` is the ONLY sanctioned route to GitHub and ops/scripts/run_pr_precommit.sh
+# hard-exits when the binary is absent, so a surface without pre-commit cannot publish
+# at all. That makes this the one checker whose absence is never quietly tolerable:
+# retry it (activation runs seconds after container boot, before egress is warm),
+# report the real installer error instead of discarding it, and count DEGRADED loudly.
+if [ -f "$WORKSPACE/.pre-commit-config.yaml" ] || [ -f "$GOV_DIR/.pre-commit-config.yaml" ]; then
+  if ! command -v pre-commit >/dev/null 2>&1 && [ "$CHECK" != "1" ]; then
     say "installing pre-commit (make pr gate)"
-    python3 -m pip install --quiet pre-commit 2>/dev/null \
-      || warn "pre-commit install failed — 'make pr' will fail (allowlist pypi.org)"
+    pc_dest="$HOME/.local/bin"
+    mkdir -p "$pc_dest"
+    case ":$PATH:" in *":$pc_dest:"*) : ;; *) PATH="$pc_dest:$PATH"; export PATH ;; esac
+    pc_err=""
+    for pc_attempt in 1 2 3; do
+      # uv is guaranteed by section 1 and installs into an isolated tool env, which
+      # sidesteps PEP 668 externally-managed interpreters; pip --user is the fallback.
+      if command -v uv >/dev/null 2>&1 && pc_err="$(uv tool install pre-commit 2>&1)"; then
+        break
+      fi
+      pc_err="$(python3 -m pip install --user pre-commit 2>&1)" && break
+      [ "$pc_attempt" = "3" ] || sleep $((pc_attempt * 3))
+    done
+    hash -r 2>/dev/null || true
+  fi
+  if command -v pre-commit >/dev/null 2>&1; then
+    say "pre-commit: $(pre-commit --version 2>/dev/null | awk '{print $NF}') (make pr gate)"
+  else
+    warn "pre-commit ABSENT — 'make pr' WILL FAIL, so this surface cannot reach GitHub at all"
+    warn "  run_pr_precommit.sh hard-exits without it; allowlist pypi.org, then re-run this bootstrap"
+    [ -n "${pc_err:-}" ] && warn "  installer said: $(printf '%s' "$pc_err" | tail -3 | tr '\n' ' ')"
+    DEGRADED=$((DEGRADED + 1))
   fi
 fi
 
@@ -174,24 +197,55 @@ fi
 # `make pr` is the only sanctioned way to reach GitHub. That is enforced by
 # ops/autonomy/local_execution_gate.py, which both the Claude PreToolUse hook
 # and the Cursor beforeShellExecution hook route through. A policy nobody
-# probes is a policy that silently stops working, so PROVE it here: feed the
-# gate a raw `git push` and require a deny, and feed it `make pr` and require
-# an allow. A surface where this cannot be proven is reported DEGRADED.
+# probes is a policy that silently stops working, so PROVE it here.
+#
+# The invariant is about the PATH rule, not about timing. Two distinct gates
+# can deny `make pr`, and only one of them is a fault:
+#
+#   PATH rule  (local_execution_gate) — "this is the wrong way to reach GitHub"
+#   PHASE gate (l4_local)             — "not yet; finish locally and authorize"
+#
+# On a fresh session L4 phase is null, so `make pr` is CORRECTLY denied for a
+# phase reason. Asserting a bare allow here made every activation report
+# "publish path NOT ENFORCED" — the exact opposite of the truth, since the
+# surface was more restricted, not less. So assert on the REASON: raw push must
+# be denied by the path rule, and `make pr` must never be denied by it.
 log "Publish-path enforcement"
 GATE="$GOV_DIR/ops/autonomy/local_execution_gate.py"
 if [ -f "$GATE" ]; then
-  _gate_decision() {
+  # Empty output == allowed; otherwise the permissionDecisionReason text.
+  _gate_deny_reason() {
     printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" \
       | "$GOV_PY" "$GATE" claude 2>/dev/null \
-      | grep -q '"permissionDecision": *"deny"' && echo deny || echo allow
+      | grep -o '"permissionDecisionReason": *"[^"]*"' \
+      | head -1
   }
-  deny_raw="$(_gate_decision 'git push origin main')"
-  allow_make="$(_gate_decision 'make pr')"
-  if [ "$deny_raw" = "deny" ] && [ "$allow_make" = "allow" ]; then
-    say "publish path ENFORCED: raw 'git push' denied, 'make pr' allowed"
+  # ops/autonomy/local_execution_gate.py:137 — the path-rule denial marker.
+  PATH_RULE_MARKER='Publish path'
+  raw_reason="$(_gate_deny_reason 'git push origin main')"
+  make_reason="$(_gate_deny_reason 'make pr')"
+
+  raw_blocked_by_path=0
+  case "$raw_reason" in *"$PATH_RULE_MARKER"*) raw_blocked_by_path=1 ;; esac
+  make_blocked_by_path=0
+  case "$make_reason" in *"$PATH_RULE_MARKER"*) make_blocked_by_path=1 ;; esac
+
+  if [ "$raw_blocked_by_path" = "1" ] && [ "$make_blocked_by_path" = "0" ]; then
+    if [ -n "$make_reason" ]; then
+      say "publish path ENFORCED: raw 'git push' denied; 'make pr' is the open route"
+      say "  (currently phase-gated by L4 until authorize-release — expected, not a fault)"
+    else
+      say "publish path ENFORCED: raw 'git push' denied, 'make pr' allowed"
+    fi
   else
-    warn "publish path NOT ENFORCED (raw push=$deny_raw, make pr=$allow_make)"
-    warn "  agents on surface '$SURFACE' could reach GitHub without the Makefile checkers"
+    if [ "$raw_blocked_by_path" = "0" ]; then
+      warn "publish path NOT ENFORCED: raw 'git push' is not denied by the path rule"
+      warn "  agents on surface '$SURFACE' could reach GitHub without the Makefile checkers"
+    fi
+    if [ "$make_blocked_by_path" = "1" ]; then
+      warn "publish path BROKEN: 'make pr' is denied by the path rule itself"
+      warn "  the only sanctioned route to GitHub is closed on surface '$SURFACE'"
+    fi
     DEGRADED=$((DEGRADED + 1))
   fi
   if [ -n "${L9_PUBLISH_PATH_OVERRIDE:-}" ]; then
