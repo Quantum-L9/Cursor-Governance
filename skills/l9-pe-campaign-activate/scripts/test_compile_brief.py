@@ -52,9 +52,7 @@ class CompileBriefTests(unittest.TestCase):
 
     def test_collision_assigns_v2(self) -> None:
         text = FIXTURE.read_text(encoding="utf-8")
-        seed = brief_to_seed(
-            text, filename="PE- Memory.md", existing_ids={"pe-memory"}
-        )
+        seed = brief_to_seed(text, filename="PE- Memory.md", existing_ids={"pe-memory"})
         self.assertEqual(seed["campaign_id"], "pe-memory-v2")
 
     def test_architecture_only_fails_closed(self) -> None:

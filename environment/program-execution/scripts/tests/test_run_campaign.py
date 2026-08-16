@@ -12,9 +12,7 @@ import yaml
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
-ACTIVATE = (
-    PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
-)
+ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
 
 HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
 schema_version: 1.0.0
@@ -153,9 +151,9 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(report.stages_completed, ["activate"])
             self.assertNotIn("INTENT.yaml", names)
             ledger = yaml.safe_load(
-                (
-                    root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
-                ).read_text(encoding="utf-8")
+                (root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").read_text(
+                    encoding="utf-8"
+                )
             )
             row = next(item for item in ledger["campaigns"] if item["id"] == "demo-activate-v1")
             self.assertEqual(row["lifecycle"], "in_progress")
@@ -163,8 +161,7 @@ class RunCampaignTests(unittest.TestCase):
             self.assertIn("operator_ack", row["notes"])
             policy = yaml.safe_load(
                 (
-                    root
-                    / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+                    root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
                 ).read_text(encoding="utf-8")
             )
             prow = next(item for item in policy["campaigns"] if item["id"] == "demo-activate-v1")
@@ -193,9 +190,7 @@ class RunCampaignTests(unittest.TestCase):
     def test_pec_runtime_marked_active(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw) / "program"
-            payload = self.mod.activate_pec_runtime(
-                workspace, campaign_id="demo-activate-v1"
-            )
+            payload = self.mod.activate_pec_runtime(workspace, campaign_id="demo-activate-v1")
             self.assertEqual(payload["runtime_status"], "active")
             stored = json.loads(
                 (workspace / "runtime" / "campaign-status.json").read_text(encoding="utf-8")
@@ -248,10 +243,9 @@ class RunCampaignTests(unittest.TestCase):
                             "mergeable": False,
                             "sha": "",
                         },
-                        authorize_and_merge=lambda host_repo, number: merged.append(
-                            (host_repo, number)
-                        )
-                        or {},
+                        authorize_and_merge=lambda host_repo, number: (
+                            merged.append((host_repo, number)) or {}
+                        ),
                     ),
                 )
             self.assertEqual(ctx.exception.exit_code, 2)

@@ -29,12 +29,8 @@ except ImportError:  # pragma: no cover
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 GOV_ROOT = PE_ROOT.parents[1]
-ACTIVATE_SCRIPT = (
-    GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
-)
-AUTHORIZE_SCRIPT = (
-    GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
-)
+ACTIVATE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
 BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
 VALIDATE_BLUEPRINT = (
@@ -348,8 +344,7 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
         note = "pec bootstrap draft-honest (lock not accepted)"
         if second.returncode != 0:
             raise CampaignError(
-                f"pec --admission-draft failed: "
-                f"{(second.stderr or second.stdout).strip()}"
+                f"pec --admission-draft failed: {(second.stderr or second.stdout).strip()}"
             )
         return {"ok": True, "draft": True, "output": note}
     raise CampaignError(f"pec bootstrap failed: {combined}")
@@ -432,9 +427,7 @@ def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
 
 
 def assert_allowed_campaign_dir(worktree: Path, campaign_id: str) -> None:
-    campaign_dir = (
-        worktree / "environment/program-execution/campaigns" / campaign_id
-    )
+    campaign_dir = worktree / "environment/program-execution/campaigns" / campaign_id
     if not campaign_dir.is_dir():
         raise CampaignError(f"campaign directory missing: {campaign_dir}")
     names = {path.name for path in campaign_dir.iterdir() if path.is_file()}
@@ -450,10 +443,7 @@ OPERATOR_ACK_NOTE = (
     "operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; "
     "agents must stop and ask, never forge it"
 )
-ACTIVE_NOTE = (
-    "launched by make campaign; pec runtime_status=active; "
-    + OPERATOR_ACK_NOTE
-)
+ACTIVE_NOTE = "launched by make campaign; pec runtime_status=active; " + OPERATOR_ACK_NOTE
 
 
 def mark_host_campaign_active(
@@ -515,9 +505,7 @@ def mark_host_campaign_active(
     profile_path = worktree / "ops/autonomy/surface_profile.yaml"
     if profile_path.is_file():
         profile = load_yaml(profile_path) or {}
-        block = ((profile.get("campaign_execution") or {}).get("campaigns") or {}).get(
-            campaign_id
-        )
+        block = ((profile.get("campaign_execution") or {}).get("campaigns") or {}).get(campaign_id)
         if isinstance(block, dict):
             block["lifecycle"] = "in_progress"
             block["launched_by"] = "make campaign"
@@ -734,9 +722,7 @@ def run_campaign(
         log("pec bootstrap draft-honest (lock not accepted)")
     else:
         log("pec bootstrap ok")
-    pec_status = activate_pec_runtime(
-        Path(report.pec_workspace), campaign_id=campaign_id
-    )
+    pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
     log(f"pec runtime_status={pec_status.get('runtime_status')}")
     mark_host_campaign_active(
         write_root,

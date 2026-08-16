@@ -250,9 +250,7 @@ def compile_brief(
         raise BriefError(f"brief not found: {brief_path}")
     raw = load_mapping(brief_path)
     if str((raw or {}).get("schema") or "") == "program-execution.intent.v1":
-        raise BriefError(
-            "program-execution.intent.v1 is not an activate seed or memo brief"
-        )
+        raise BriefError("program-execution.intent.v1 is not an activate seed or memo brief")
     if is_activate_seed(raw):
         seed = dict(raw)
     else:
@@ -262,9 +260,7 @@ def compile_brief(
             existing_ids=existing_ids,
             target_override=target_override,
         )
-    target = output or (
-        Path.home() / ".l9/primed" / f"{seed['campaign_id']}.activate.yaml"
-    )
+    target = output or (Path.home() / ".l9/primed" / f"{seed['campaign_id']}.activate.yaml")
     dump_seed(target, seed)
     return {"seed": seed, "output": str(target)}
 

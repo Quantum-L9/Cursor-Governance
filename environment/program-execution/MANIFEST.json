@@ -1339,7 +1339,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "af4da9313d4ca6d836d16af2f24f6856960e201755cbbface6471f2b377a2d45"
+      "sha256": "3ca36f083e7312a2f4841a4f51a4b3b0b5d184559ec34a763b2b3cabca4a7392"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1363,7 +1363,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "abb9ee6ecf4be428ec2adc6228faa7c10424956636c5d001dd707e918bae98d8"
+      "sha256": "b23cc631f96d1e9ea33281efca95ee0cffa2ad6974b5f24c721e68434e392fe7"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
