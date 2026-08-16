@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${ROOT}/.env.local"
-
-if [[ ! -f "$ENV_FILE" ]]; then
-  echo "ERROR: $ENV_FILE not found. Copy env.local.example to .env.local first." >&2
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SSOT="${HOME}/.cursor-governance"
+# Prefer the live SSOT. After governance_activate_fresh swap, a shell can
+# still be sitting in ~/.cursor-governance.bak.* while the prompt looks current.
+if [[ -f "${SSOT}/.env.local" ]]; then
+  ROOT="$SSOT"
+elif [[ -f "${SCRIPT_ROOT}/.env.local" ]]; then
+  ROOT="$SCRIPT_ROOT"
+else
+  echo "ERROR: .env.local not found in ${SSOT} or ${SCRIPT_ROOT}." >&2
+  echo "Hydrate DEEPSEEK_API_KEY into ${SSOT}/.env.local (gitignored)." >&2
   exit 1
 fi
+ENV_FILE="${ROOT}/.env.local"
 
 set -a
 # shellcheck disable=SC1090

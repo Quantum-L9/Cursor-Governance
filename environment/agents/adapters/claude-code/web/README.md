@@ -25,19 +25,22 @@ Web / Mobile / --cloud   setup.bootstrap.sh ─→ web/setup.sh ─→ ../instal
 CLI / Desktop            make claude-install ──────────────-─→ ../install.sh
 ```
 
-`install.sh` owns everything surface-neutral: the locked toolchain, the settings
-triad, skill discovery, the MCP front door, local git excludes, and the
-readiness preflight. The surface callers own only what their surface uniquely
-needs — for the cloud that is `gh`, credentials, cloning governance, and the
-consumer repo's own language toolchain. **Add adapter behaviour to
-`install.sh`, not to a caller**, or the surfaces drift apart again.
+`install.sh` owns the Claude-specific vendor wiring: the settings triad, skill
+discovery, the `.claude/rules` LLM rules mount, the `.mcp.json` front door, and
+excludes for the generated `.claude` mirrors. The shared bootstrap
+(`ops/scripts/bootstrap_agent_environment.sh`) owns toolchain, checker binaries,
+secrets, repo identity, and preflight. The surface callers own only what their
+surface uniquely needs — for the cloud that is `gh`, credentials, cloning
+governance, and the consumer repo's own language toolchain. **Add adapter
+behaviour to `install.sh`, not to a caller**, or the surfaces drift apart again.
 
 `make claude-install-check` reports drift read-only, writing nothing.
 
 ### Dependencies and tool versions
 
 `uv.lock` in this repo is the only source of interpreter and dependency
-versions. `install.sh` applies it through the existing wrapper,
+versions. The shared bootstrap (`ops/scripts/bootstrap_agent_environment.sh`,
+called by `install.sh`) applies it through the existing wrapper,
 `ops/scripts/ensure_uv_environment.sh` (`uv sync --locked --extra dev`,
 fingerprint-cached so a re-run is a no-op). It never installs a package by
 name, and `validate_claude_env.py` fails any adapter script that tries.

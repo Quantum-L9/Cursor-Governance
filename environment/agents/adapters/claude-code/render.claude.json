@@ -50,6 +50,10 @@
       "ownership_via": "agentdocs",
       "note": "JSONC only. Cursor binds vscode.json-language-features; Biome's editor extension cannot format jsonc."
     },
+    "prettier": {
+      "ownership_via": "agentdocs",
+      "note": "Markdown only. Cursor binds esbenp.prettier-vscode; the built-in Markdown Language Features extension cannot format."
+    },
     "ruff": {
       "ownership_via": "agentdocs",
       "note": "Rendered as a CLAUDE.md ownership statement, not an editor.defaultFormatter key."

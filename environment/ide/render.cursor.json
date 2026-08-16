@@ -29,7 +29,8 @@
       }
     },
     "prettier": {
-      "format_extension": "esbenp.prettier-vscode"
+      "format_extension": "esbenp.prettier-vscode",
+      "note": "Markdown only in biome_default. The built-in Markdown Language Features extension does not register a formatter."
     }
   }
 }
