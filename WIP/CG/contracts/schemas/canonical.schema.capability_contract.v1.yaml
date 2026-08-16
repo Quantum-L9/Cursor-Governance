@@ -1,0 +1,79 @@
+schema_id: canonical.schema.capability_contract.v1
+schema_name: Canonical Capability Contract Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.capability_contract.v1.yaml
+purpose:
+  primary: Define what a runtime tool adapter agent or service is demonstrably capable of doing without granting authority to use that capability.
+  output_level: schema_not_instance
+  intended_use: [runtime_capability_census, tool_contracts, adapter_capabilities, agent_capabilities, execution_preflight]
+  not_for: [authorization, policy_permission, unprobed_capability_assumptions]
+ontology:
+  parent_type: governance_contract_schema
+  specialized_type: capability_contract_schema
+  instance_type_generated_by_this_schema: capability_contract
+  related_schema_types: [canonical.schema.governance_contract.v1, canonical.schema.policy_contract.v1]
+inheritance:
+  extends: [canonical.schema.governance_contract.v1]
+  provides: [capability_model, preflight_probe_model, capability_failure_model]
+capability_authority_law:
+  rule: Capability describes possibility and NEVER grants permission or mutation authority; permission must come from an applicable policy or invariant contract.
+required_sections:
+  provider:
+    required: true
+    fields:
+      actor: {type: string, required: true}
+      runtime: {type: string, required: true}
+      trust_boundary: {type: string, required: true}
+  capabilities:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      capability_id: {type: string, required: true}
+      operation: {type: string, required: true}
+      authority_impact: {enum: [read_only, local_write, bounded_external_write, destructive], required: true}
+      side_effects: {type: list_string, required: true, allow_empty: true}
+      input_contract_ref: {type: string_or_null, required: false}
+      output_contract_ref: {type: string_or_null, required: false}
+      constraints: {type: list_string, required: true, allow_empty: true}
+      forbidden_uses: {type: list_string, required: true, allow_empty: true}
+  preflight_probes:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      probe_id: {type: string, required: true}
+      capability_ref: {type: string, required: true}
+      probe: {type: string, required: true}
+      pass_condition: {type: string, required: true}
+      evidence_type: {type: string, required: true}
+  unavailable_behavior:
+    required: true
+    fields:
+      behavior: {enum: [block, degrade_read_only, route_to_named_fallback], required: true}
+      fallback_capability_ref: {type: string_or_null, required: false}
+conditional_rules:
+  - when: unavailable_behavior.behavior == route_to_named_fallback
+    require: [unavailable_behavior.fallback_capability_ref is non-null]
+  - when: unavailable_behavior.behavior != route_to_named_fallback
+    require: [unavailable_behavior.fallback_capability_ref is null or absent]
+validation_rules:
+  - {id: CAP-CONTRACT-001, severity: blocker, rule: metadata.kind must equal capability.}
+  - {id: CAP-CONTRACT-002, severity: blocker, rule: capability contracts may not contain authorization grants.}
+  - {id: CAP-CONTRACT-003, severity: blocker, rule: every claimed active capability requires a passing probe.}
+  - {id: CAP-CONTRACT-004, severity: blocker, rule: mutation-capable operations must declare authority impact and side effects.}
+  - {id: CAP-CONTRACT-005, severity: blocker, rule: failed blocking probes must not be interpreted as capability availability.}
+  - {id: CAP-CONTRACT-006, severity: blocker, rule: route_to_named_fallback requires a non-null fallback capability reference and other behaviors must not require one.}
+derivation_targets:
+  can_generate: [capability_contract, capability_census, preflight_probe, tool_availability_matrix, execution_capability_receipt]
+anti_drift_rules:
+  - Capability is not authority.
+  - Configuration presence is not capability proof.
+  - Tool documentation is not runtime capability proof.
+  - Failed probes must remain failed rather than inferred away.
+minimum_viable_instance_requirements:
+  required: [metadata, authority, scope, provider, capabilities, preflight_probes, unavailable_behavior, evidence_obligations, provenance]
