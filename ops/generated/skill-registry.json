@@ -679,7 +679,7 @@
     },
     {
       "composition_role": "general",
-      "description": "ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.",
+      "description": "ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr fails, or adding an enforceable ci gate.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-ci-ops",
@@ -1153,5 +1153,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "3778cde8edb9016341fef8e63dcf8128ff2b0dc023f663c0526fc311819795ed",
-  "source_skill_corpus_sha256": "87e0d53d734fda81ab7fdd339ed1d052c14ec24170029876da9f37f11d83caea"
+  "source_skill_corpus_sha256": "b3d71af02e33dc6d321b52cb44b9630cfe042aa6a9962fb5d6908eeec6ad6914"
 }

@@ -14,7 +14,7 @@ closeout:
   leaving_in_progress_after_merge_or_converged: defect
 
 publish:
-  required_command: PR_REMEDIATE=0 make pr
+  required_command: make pr
   require_makefile_checkers: true
   raw_gh_pr_create: forbidden
   # Campaigns publish via make pr and MUST end green + merge-ready.

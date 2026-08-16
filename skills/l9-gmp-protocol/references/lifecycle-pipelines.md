@@ -35,7 +35,7 @@ What do you need?
 │  └─ BUILD → SHIP
 │
 ├─ "Ready to land on remote / production path"
-│  └─ SHIP (after BUILD or small fix + pr-check)
+│  └─ SHIP (after BUILD or small fix + make pr)
 │
 ├─ "Weekly health / preventive maintenance"
 │  └─ CHECK (8–10 min, safe)
@@ -52,12 +52,12 @@ What do you need?
 | Stage | L9 / repo actions |
 |-------|-------------------|
 | **Discover** | `l9-code-analysis` + `l9-gap-analysis`; optional `make audit` |
-| **Build** | `l9-plan` / `l9-structured-reasoning` → implement → local `make pr-check` |
-| **Ship** | `make push` (runs pr-check) → PR to Staging → CI green |
+| **Build** | `l9-plan` / `l9-structured-reasoning` → implement → local `OPEN_PR=0 make pr` |
+| **Ship** | `make pr` → PR to Staging → CI green |
 | **Check** | `make audit`; advisory security scans; review open PRs/CI |
 | **Fix** | `l9-incident-response`; git revert; Odoo `make update` rollback path |
 
-Generic repos: swap `make pr-check` / `make push` / `make audit` for equivalent CI gates.
+Generic repos: swap `make pr` / `make audit` for equivalent CI gates.
 
 ---
 
@@ -90,7 +90,7 @@ Generic repos: swap `make pr-check` / `make push` / `make audit` for equivalent 
 |------|--------|------|
 | 1. Design | `l9-structured-reasoning` or `l9-plan`; Block 9 impl plan if coding | Requirements clear; confidence ≥ 0.8 |
 | 2. Implement | Locked scope only | Incremental validation |
-| 3. Static validate | `make pr-check` or repo lint/test equivalent | Must pass before ship |
+| 3. Static validate | `OPEN_PR=0 make pr` or repo lint/test equivalent | Must pass before ship |
 | 4. Backup checkpoint | Commit or stash before risky steps | Rollback point exists |
 | 5. Ready for SHIP | Pre-ship checklist (below) | All gates green |
 
@@ -99,7 +99,7 @@ Generic repos: swap `make pr-check` / `make push` / `make audit` for equivalent 
 - [ ] No open TODO/FIXME without tracking
 - [ ] Tests added/updated for behavior change
 - [ ] Docs/manifest/wiring updated if applicable
-- [ ] `make pr-check` passed this session
+- [ ] `make pr` (or `OPEN_PR=0 make pr`) passed this session
 - [ ] Rollback plan named (revert commit / module downgrade)
 
 ---
@@ -110,7 +110,7 @@ Generic repos: swap `make pr-check` / `make push` / `make audit` for equivalent 
 
 | Step | Action | On failure |
 |------|--------|------------|
-| 1. Pre-flight | Confirm pr-check passed; review diff | Stop — fix locally |
+| 1. Pre-flight | Confirm `make pr` / `OPEN_PR=0 make pr` passed; review diff | Stop — fix locally |
 | 2. Security | `l9-auditing-security` or CI secret scan | Stop on critical |
 | 3. Backup | Commit pushed; tag or note SHA for rollback | Required before merge |
 | 4. Push / PR | `make push` or `make push pr=1` | Never raw `git push` (PlasticOS) |

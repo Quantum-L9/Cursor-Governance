@@ -43,10 +43,10 @@ Follow skill `l9-plan` (**plan mode default = PE+autonomy workflow**). Required 
 
 ```bash
 # Changed-files scanners only — does NOT push or commit
-make pr-check
+OPEN_PR=0 make pr
 ```
 
-Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
+Make remaps any capitalization of `pr`. There is no `pr-check` target.
 
 ### Project command
 

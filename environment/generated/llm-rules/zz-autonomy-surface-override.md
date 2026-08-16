@@ -13,7 +13,7 @@ AND `L9_AUTONOMY_ENABLED=true`:
 2. Completing reversible work MUST proceed L4-local: stacked-branch commits
    with **no mid-execution push** → finish program/contract → run
    `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
-   `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
+   `l4_local.py authorize-release` → `make pr` (checkers,
    then push + PR). Campaign/make-pr end state is green + merge-ready.
    Invoking `/l9-pr-remediation` then remediates **and merges** all open
    PRs in the target repo (bottom-up). Do **not** merge from the campaign
@@ -49,7 +49,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
   isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
   `L9_WORKTREE_ISOLATION=0`.
-- Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+- Post-push: `make pr` to publish. `PR_AUTOMERGE=1` may merge only the
+  exact green mergeable PR head. Merge
   only after `/l9-pr-remediation` writes
   `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
   mergeable. Force-push / admin-merge stay forbidden.

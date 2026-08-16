@@ -36,7 +36,7 @@ from `agent_registry.yaml` through `USER_ID`, `L9_MEMORY_AGENT_ID`, and
 
 ## Publish path
 
-`PR_REMEDIATE=0 make pr` is the only sanctioned way any surface reaches GitHub.
+`make pr` is the only sanctioned way any surface reaches GitHub.
 It runs the Makefile checkers, then pushes and opens the PR through
 `ops/scripts/open_pr_after_gate.sh`.
 

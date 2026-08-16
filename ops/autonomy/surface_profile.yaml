@@ -65,7 +65,7 @@ l4_local_autonomy:
     - run_kernel_recursive_alignment # kernels/Recursive Alignment.md
     - run_kernel_validate_repair # kernels/Validate & Repair.md
     - record_kernels_and_authorize_release
-    - push_and_open_pr_via_make_pr # PR_REMEDIATE=0; checkers in Makefile
+    - push_and_open_pr_via_make_pr # checkers in Makefile
   required_kernels:
     - path: kernels/Recursive Alignment.md
       id: recursive_alignment
@@ -73,7 +73,7 @@ l4_local_autonomy:
       id: validate_repair
   pr_template: PULL_REQUEST_TEMPLATE.md
   post_push:
-    required_command: PR_REMEDIATE=0 make pr
+    required_command: make pr
     remediation_skill: l9-pr-remediation
     max_cycles: 5
     resolve_review_threads: true
@@ -166,7 +166,7 @@ session_start_block: |
     the finished tree, then:
     `python3 ops/autonomy/l4_local.py begin` (if not begun) →
     `record-kernels` → `authorize-release`.
-  - Only then: `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + open
+  - Only then: `make pr` (Makefile checkers, then push + open
     PR).
   - **`make pr` is the ONLY way to reach GitHub — this is a path rule, not a
     timing rule.** Raw `git push`, `gh pr create`, `gh pr edit`, `make push`
@@ -209,7 +209,7 @@ llm_rules_override: |
   2. Completing reversible work MUST proceed L4-local: stacked-branch commits
      with **no mid-execution push** → finish program/contract → run
      `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
-     `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
+     `l4_local.py authorize-release` → `make pr` (checkers,
      then push + PR). Campaign/make-pr end state is green + merge-ready.
      Invoking `/l9-pr-remediation` then remediates **and merges** all open
      PRs in the target repo (bottom-up). Do **not** merge from the campaign
@@ -245,7 +245,8 @@ llm_rules_override: |
     isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
     `L9_WORKTREE_ISOLATION=0`.
-  - Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+  - Post-push: `make pr` to publish. `PR_AUTOMERGE=1` may merge only the
+    exact green mergeable PR head. Merge
     only after `/l9-pr-remediation` writes
     `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
     mergeable. Force-push / admin-merge stay forbidden.

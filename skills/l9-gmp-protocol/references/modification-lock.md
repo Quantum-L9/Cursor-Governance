@@ -69,7 +69,7 @@ If a run reaches an unapproved high-risk action, STOP and request approval rathe
 
 - New model → `security/ir.model.access.csv` row in the same module; new Python file → wired into `__init__.py`; new model file → added to manifest `data`/`depends`.
 - `sudo()` requires inline justification on the same line.
-- Remote pushes use `make push` (runs `make pr-check`) — never raw `git push`; API push only after `make pr-check` passes and `git push` fails.
+- Remote publication uses `make pr` — never raw `git push`. On failure: diagnose → fix → `make pr`.
 - Odoo 19 patterns are CI-enforced (no `_sql_constraints`, `@api.one/multi`, `<tree>`, `attrs=`, `states=`, `t-esc=`).
 
 ## Evidence-Based Validation (three categories)

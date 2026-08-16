@@ -40,7 +40,7 @@ Required sections (numbered; merge/rename to match the actual change but cover a
 1. **PLAN** — context + the locked TODO table (`ID | File | Lines | Action | Status`) and the MODIFICATION LOCK (may-modify / must-not-modify) and `ADRs CONSULTED`.
 2. **CHANGES** — files, line ranges, action, description (insertions/deletions).
 3. **TODO → CHANGE MAP** — each TODO mapped to its phase, file, operation, and result.
-4. **VALIDATION** — gate results: `py_compile`, import test, ruff, XML, `make pr-check`, unit tests (X passed).
+4. **VALIDATION** — gate results: `py_compile`, import test, ruff, XML, `make pr`, unit tests (X passed).
 5. **INVARIANTS CHECK** — protected systems untouched, no scope drift, repo guardrails honored.
 6. **DECLARATION** — the verbatim final declaration.
 7. **GRAPHITI MEMORY EVIDENCE** (when Graphiti enabled) — episodes written, `group_id`, supersedes/conflicts counts, `memory-bank` updated, token spend (T1), circuit state, `MEMORY_PREFETCH` cited in Phase 0.

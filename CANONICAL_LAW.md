@@ -593,3 +593,17 @@ Supersedes §6.2.2 “MUST NOT … merge” for the remediations skill only:
    green mergeable open PR in the target repo (bottom-up, no `--admin`).
 3. Mechanical gate: `ops/autonomy/merge_gate.py`. Force-push / hard-reset /
    admin-merge remain never-waived.
+
+<!-- LEVEL3_MAKE_PR_SINGLE_PATH_V1 -->
+## 12.1 Level-3 make pr is the sole shipping command (2026-08-16)
+
+Supersedes §12 `pr-check` alias rows and §6.2.2 `PR_REMEDIATE=0 make pr`
+shipping instruction. Historical rows above stay as superseded text.
+
+1. There is no `pr-check` target. Gate-only form is `OPEN_PR=0 make pr`.
+2. Required publish path after L4 release: `make pr`.
+3. Failure path: diagnose → fix → `make pr`. Do not re-run overlapping gates
+   on an unchanged tree.
+4. `PR_AUTOMERGE=1` may merge only the exact green mergeable PR head observed
+   by that invocation. `PR_AUTOMERGE=0` is the opt-out. Standing unbounded
+   merge remains forbidden.

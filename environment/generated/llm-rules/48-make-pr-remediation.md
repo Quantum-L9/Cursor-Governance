@@ -4,18 +4,17 @@ description: After make pr opens a PR, campaign path ends green + merge-ready; /
 
 # make pr → green merge-ready; /l9-pr-remediation → merge
 
-Default publish path is `PR_REMEDIATE=0 make pr` (Autonomy Surface Profile
-`campaign_execution` / `l4_local_autonomy.post_push`).
+Default publish path is `make pr`. Gate-only form is `OPEN_PR=0 make pr`.
+There is no `pr-check` target. On failure: diagnose → fix → `make pr`.
 
 Agents MUST:
 
 1. Use `make pr` (any capitalization) so Makefile checkers run before push.
-2. Pass `PR_REMEDIATE=0` (this is now the script default).
-3. For Program Execution campaigns, set `PR_BASE` to
+2. For Program Execution campaigns, set `PR_BASE` to
    `origin/campaign/<campaign_id>` — never open those PRs against `main`.
-4. Campaign / `make pr` end state: every published PR is **green and
-   merge-ready**. Do **not** merge from that path.
-5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
+3. `PR_AUTOMERGE=1` may merge only this exact green mergeable PR head.
+   `PR_AUTOMERGE=0` is the opt-out. Standing unbounded merge stays forbidden.
+4. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
    with Converge intent): merge **is** authorized for **all open PRs** in
    the target repo. Write the receipt, converge each PR, then merge
    bottom-up:
@@ -40,10 +39,9 @@ Stacked PRs (operator default 2026-08-15):
 - One feature branch per program; exclusive worktree lease per mutating agent
   (`surface_profile.pr_stacking`, `CAMPAIGN_EXECUTION_POLICY.pr_stacking`).
 
-If a human explicitly sets `PR_REMEDIATE=1` and `make pr` writes
-`.l9/pr/pr-remediation-handoff.json` plus `L9_AGENT_REQUIRED`, follow that
-human override. Standing campaign contract is green + merge-ready, no merge.
-`/l9-pr-remediation` is the merge path.
+`PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr` is the same-invocation remediate and
+bounded-merge path. Do not spawn a second remediation worker. `/l9-pr-remediation`
+remains the all-open-PRs merge path.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),
 that counts as explicit approval for the push + PR open performed by

@@ -97,13 +97,13 @@ def is_make_pr(segment: str) -> bool:
     """True when this segment invokes `make pr` — the sanctioned publish path.
 
     Deliberately a token scan, not a regex. Matching the real forms
-    (``PR_REMEDIATE=0 make pr``, ``make -C /path pr``, ``make pr WS=…``) needs
+    (``OPEN_PR=0 make pr``, ``make -C /path pr``, ``make pr WS=…``) needs
     alternation under repetition, which is precisely the shape that backtracks
     exponentially (CodeQL py/redos, flagged on PR #168). This gate runs on every
     shell command an agent issues, so a hostile or merely long argument list must
     not be able to stall it: this scan is linear in the token count.
 
-    Only the goal matters. ``make pr-check`` is not a publish (it never pushes)
+    Only the goal matters. A retired ``pr-check`` target is not a publish (it never pushes)
     and correctly returns False.
     """
     tokens = segment.split()
@@ -135,7 +135,7 @@ def _publish_path_override() -> str:
 def _publish_deny_reason(what: str) -> str:
     return (
         f"Publish path: `{what}` is not a sanctioned way to reach GitHub. "
-        "Use `PR_REMEDIATE=0 make pr`, which runs the Makefile checkers and then "
+        "Use `make pr`, which runs the Makefile checkers and then "
         "pushes and opens the PR via ops/scripts/open_pr_after_gate.sh. "
         "Being L4 release_authorized does not permit a raw push — L4 governs WHEN, "
         f"this governs HOW. Human/ops override: {PUBLISH_PATH_OVERRIDE_ENV}=<reason>."

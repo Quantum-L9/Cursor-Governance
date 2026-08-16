@@ -138,7 +138,7 @@ def _check_code_scope(plan: dict) -> list[str]:
     errors: list[str] = []
     commands = " ".join(str(x.get("command", "")) for x in plan.get("final_validation") or [])
     if "make pr-check" not in commands and re.search(r"\bmake\s+pr\b", commands) is None:
-        errors.append("G_PR_CHECK: code_in_scope true but final_validation lacks make pr-check")
+        errors.append("G_PR_CHECK: code_in_scope true but final_validation lacks make pr")
     handoff = plan.get("gmp_handoff") or {}
     if not handoff.get("may_modify") or not handoff.get("must_not_modify"):
         errors.append("G_GMP_LOCK: code_in_scope requires may_modify and must_not_modify")
