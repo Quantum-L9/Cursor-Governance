@@ -334,6 +334,19 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         "waves": waves,
         "tasks": tasks,
         "gates": gates,
+        "evidence_requirements": [
+            {
+                "id": "EVID-001",
+                "claim": "exact_target_origin_main_revision_and_worktree_state_are_known",
+                "source_type": "repository_inspection",
+                "source_location": repository_id,
+                "collection_method": "read_only_inspection",
+                "freshness": "collect_at_admission",
+                "producer": "controller",
+                "supports": ["TASK-001"],
+                "contradicts": [],
+            }
+        ],
     }
 
 

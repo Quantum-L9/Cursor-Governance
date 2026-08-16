@@ -35,6 +35,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 | Item | Value |
 |---|---|
 | Emit set | exactly the files in [references/file-set.md](references/file-set.md) |
+| Brief IR | [scripts/compile_brief.py](scripts/compile_brief.py) — memo `.md` → activate seed |
 | Compiler | [scripts/compile_activation_files.py](scripts/compile_activation_files.py) |
 | Pipeline | [references/pipeline.md](references/pipeline.md) |
 | Merge | [references/merge-authority.md](references/merge-authority.md) |
@@ -54,8 +55,9 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 
 ## Compact Workflow
 
-1. Collect `campaign_id`, `title`, `objective`, owner, target, and tasks
+1. Take a memo `.md` or activate YAML
    ([references/source-contract.md](references/source-contract.md)).
+   `make campaign INTENT=<file>` assigns the id from a memo filename.
 2. Open an exclusive worktree from `origin/main`. Do not mutate a dirty shared clone.
 3. Emit the file set:
 
@@ -108,8 +110,10 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 - [references/source-contract.md](references/source-contract.md) — intent + seed fields
 - [references/pipeline.md](references/pipeline.md) — PE compile / bootstrap / execute / PR
 - [references/merge-authority.md](references/merge-authority.md) — post-remediation merge
+- [scripts/compile_brief.py](scripts/compile_brief.py)
 - [scripts/compile_activation_files.py](scripts/compile_activation_files.py)
 - [scripts/authorize_campaign_merge.py](scripts/authorize_campaign_merge.py)
+- [scripts/test_compile_brief.py](scripts/test_compile_brief.py)
 - [scripts/test_compile_activation_files.py](scripts/test_compile_activation_files.py)
 
 ## Validation
@@ -121,12 +125,15 @@ Before claiming the campaign is activated:
 - [ ] `compile_campaign_source.py` succeeds against `$HOME/.l9/blueprints/<id>`
 - [ ] `validate_blueprint --mode template` PASS
 - [ ] campaign id present in allowlist, execution policy, surface profile, and status ledger
+- [ ] `make campaign` left host `lifecycle: in_progress` and pec `runtime_status: active`
+- [ ] `PHASE0_USER_CONFIG.yaml` `operator_ack.acknowledged_at` is still null unless Igor acknowledged it
 - [ ] campaign PR is green + mergeable, then merged
 - [ ] `CAMPAIGN_STATUS.yaml` closed (`complete`) after merge
 
 ## Failure Handling
 
-- Missing `campaign_id` / objective / at least one task → STOP; ask
+- Memo with no numbered Release / program-ordering items → STOP; do not invent tasks
+- Missing activate-YAML `campaign_id` / objective / tasks → STOP; ask
 - Schema or PE compile fail → fix the seed; do not hand-edit the Blueprint
 - Template validate fail → fix source; do not weaken the validator
 - pec bootstrap refuses draft → expected; continue L4 on `campaign/<id>`
