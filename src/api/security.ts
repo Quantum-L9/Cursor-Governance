@@ -18,15 +18,15 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { timingSafeEqual } from 'node:crypto';
-import { getConfig } from '../core/config.js';
-import { createModuleLogger } from '../core/logger.js';
+import { timingSafeEqual } from "node:crypto";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { getConfig } from "../core/config.js";
+import { createModuleLogger } from "../core/logger.js";
 
-const logger = createModuleLogger('api:security');
+const logger = createModuleLogger("api:security");
 
 /** Routes reachable without operator auth. */
-const AUTH_EXEMPT = ['/health', '/api/clients/register'];
+const AUTH_EXEMPT = ["/health", "/api/clients/register"];
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_DEFAULT = 120; // requests / IP / minute
@@ -53,15 +53,15 @@ export function constantTimeEqual(a: string, b: string): boolean {
  * Returns null when no usable credential is present.
  */
 export function parseAuthSecret(header: string | undefined): string | null {
-  if (typeof header !== 'string') return null;
-  if (header.startsWith('Bearer ')) {
-    const token = header.slice('Bearer '.length).trim();
+  if (typeof header !== "string") return null;
+  if (header.startsWith("Bearer ")) {
+    const token = header.slice("Bearer ".length).trim();
     return token || null;
   }
-  if (header.startsWith('Basic ')) {
+  if (header.startsWith("Basic ")) {
     try {
-      const decoded = Buffer.from(header.slice('Basic '.length).trim(), 'base64').toString('utf8');
-      const sep = decoded.indexOf(':');
+      const decoded = Buffer.from(header.slice("Basic ".length).trim(), "base64").toString("utf8");
+      const sep = decoded.indexOf(":");
       const pass = sep >= 0 ? decoded.slice(sep + 1) : decoded;
       return pass || null;
     } catch {
@@ -73,21 +73,21 @@ export function parseAuthSecret(header: string | undefined): string | null {
 
 /** True when the path is a rate-limited-stricter, expensive/abusable route. */
 export function isStrictRateLimited(pathname: string): boolean {
-  return pathname === '/api/clients/register' || /^\/api\/clients\/[^/]+\/trigger$/.test(pathname);
+  return pathname === "/api/clients/register" || /^\/api\/clients\/[^/]+\/trigger$/.test(pathname);
 }
 
 function pathname(url: string): string {
-  const q = url.indexOf('?');
+  const q = url.indexOf("?");
   return q >= 0 ? url.slice(0, q) : url;
 }
 
 function isAuthExempt(path: string): boolean {
-  return AUTH_EXEMPT.some((p) => path === p || path.startsWith(p + '/'));
+  return AUTH_EXEMPT.some((p) => path === p || path.startsWith(p + "/"));
 }
 
 export function registerApiSecurity(app: FastifyInstance): void {
   // ── 1. Rate limiter (runs first, so unauthenticated floods are also capped) ──
-  app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     const now = Date.now();
     // Bound memory under IP churn: prune expired buckets, then hard-evict the
     // oldest-inserted entries if we're still over the cap (a burst of unique IPs
@@ -104,7 +104,7 @@ export function registerApiSecurity(app: FastifyInstance): void {
     const path = pathname(request.url);
     const strict = isStrictRateLimited(path);
     const max = strict ? RATE_MAX_STRICT : RATE_MAX_DEFAULT;
-    const key = `${request.ip}:${strict ? 's' : 'd'}`;
+    const key = `${request.ip}:${strict ? "s" : "d"}`;
     let bucket = buckets.get(key);
     if (!bucket || bucket.resetAt <= now) {
       bucket = { count: 0, resetAt: now + RATE_WINDOW_MS };
@@ -112,29 +112,40 @@ export function registerApiSecurity(app: FastifyInstance): void {
     }
     bucket.count += 1;
     if (bucket.count > max) {
-      reply.header('Retry-After', Math.ceil((bucket.resetAt - now) / 1000));
-      logger.warn({ ip: request.ip, path }, 'Rate limit exceeded');
-      return reply.status(429).send({ error: 'rate limit exceeded' });
+      reply.header("Retry-After", Math.ceil((bucket.resetAt - now) / 1000));
+      logger.warn({ ip: request.ip, path }, "Rate limit exceeded");
+      return reply.status(429).send({ error: "rate limit exceeded" });
     }
   });
 
   // ── 2. Operator authentication ───────────────────────────────────────────────
-  app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     const path = pathname(request.url);
     if (isAuthExempt(path)) return;
 
     const key = getConfig().OPERATOR_API_KEY;
-    if (!key) {
-      logger.error({ path }, 'OPERATOR_API_KEY not configured; operator API is locked');
-      reply.header('WWW-Authenticate', 'Basic realm="L9 SEO Bot"');
-      return reply.status(401).send({ error: 'operator authentication not configured' });
+    // Build-intelligence routes also accept the SEO_BOT_API_KEY machine secret —
+    // Website-Bot is the named consumer of l9.website-intelligence/v1 and calls
+    // these endpoints at build time (WEBSITE_INTELLIGENCE_LOCK). Operator routes
+    // remain operator-key-only.
+    const machineKey = path.startsWith("/api/build-intelligence/")
+      ? getConfig().SEO_BOT_API_KEY
+      : undefined;
+    if (!key && !machineKey) {
+      logger.error({ path }, "No operator or machine key configured; API is locked");
+      reply.header("WWW-Authenticate", 'Basic realm="L9 SEO Bot"');
+      return reply.status(401).send({ error: "authentication not configured" });
     }
 
     const presented = parseAuthSecret(request.headers.authorization);
-    if (!presented || !constantTimeEqual(presented, key)) {
-      logger.warn({ ip: request.ip, path }, 'Rejected unauthenticated operator request');
-      reply.header('WWW-Authenticate', 'Basic realm="L9 SEO Bot"');
-      return reply.status(401).send({ error: 'unauthorized' });
+    const accepted =
+      presented !== null &&
+      ((key ? constantTimeEqual(presented, key) : false) ||
+        (machineKey ? constantTimeEqual(presented, machineKey) : false));
+    if (!accepted) {
+      logger.warn({ ip: request.ip, path }, "Rejected unauthenticated request");
+      reply.header("WWW-Authenticate", 'Basic realm="L9 SEO Bot"');
+      return reply.status(401).send({ error: "unauthorized" });
     }
   });
 }
