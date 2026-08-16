@@ -16,6 +16,7 @@
 # What is genuinely Claude-specific, and therefore lives here:
 #   - the .claude settings triad          (reconcile_claude_settings.py)
 #   - Claude skill discovery              (reconcile_claude_l9_skills.py)
+#   - the .claude/rules LLM rules mount   (project_llm_rules.py + reconcile_llm_rule_adapters.py)
 #   - the .mcp.json memory front door     (mcp.template.json)
 #   - excludes for the GENERATED .claude mirrors
 #
@@ -109,6 +110,29 @@ if [ -f "$RECONCILE_SKILLS" ]; then
     || warn "skill reconciliation reported drift or a local name conflict"
 else
   warn "missing ops/scripts/reconcile_claude_l9_skills.py"
+fi
+
+# --- 2b) LLM rules mount (Claude .claude/rules) -----------------------------
+# The generated rules (rules/*.mdc -> environment/generated/llm-rules) are the
+# static governance layer every peer loads: Cursor via the l9-governance plugin,
+# Claude CLI via setup_workspace_symlinks.sh. The cloud path reaches only this
+# installer, so project + reconcile here too — web/mobile sessions get the same
+# generated-rule mount as their CLI and Cursor peers. Both scripts import yaml,
+# so run them on the locked interpreter, not the sandbox's system python3.
+PROJECT_RULES="$GOV_DIR/ops/scripts/project_llm_rules.py"
+RECONCILE_RULES="$GOV_DIR/ops/scripts/reconcile_llm_rule_adapters.py"
+if [ -f "$PROJECT_RULES" ] && [ -f "$RECONCILE_RULES" ]; then
+  if [ "$CHECK" = "1" ]; then
+    "$GOV_PY" "$RECONCILE_RULES" --root "$GOV_DIR" --workspace "$WORKSPACE" --check --quiet \
+      || warn "LLM rules adapter reconcile reported drift"
+  else
+    "$GOV_PY" "$PROJECT_RULES" --root "$GOV_DIR" --quiet \
+      || warn "llm-rules projection failed (non-blocking)"
+    "$GOV_PY" "$RECONCILE_RULES" --root "$GOV_DIR" --workspace "$WORKSPACE" --quiet \
+      || warn "LLM rules adapter reconcile failed (non-blocking)"
+  fi
+else
+  warn "missing ops/scripts/project_llm_rules.py or reconcile_llm_rule_adapters.py"
 fi
 
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
