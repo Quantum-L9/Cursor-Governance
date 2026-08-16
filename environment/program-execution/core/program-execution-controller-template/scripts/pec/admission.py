@@ -30,18 +30,22 @@ SCHEMA = "program-execution-controller.admission-refusal.v1"
 UNKNOWN = "UNKNOWN"
 READY = "READY"
 
-# Commands that only read Controller/runtime state. Everything not listed here is
+# Commands that only READ Controller/runtime state. Everything not listed here is
 # treated as mutating — the safe default when a new subcommand is added.
+#
+# Membership is by observed write behavior, not by how diagnostic a command
+# sounds. `export-handoff` writes runtime/campaign-status.json and an output
+# file, and `draft-contract` writes a draft and opens the runtime; both mutate
+# and are therefore absent. The four below neither write nor open the runtime for
+# write, and `replan-list` / `plan-revision` only project stored revisions.
 READ_ONLY_COMMANDS = frozenset(
     {
         "status",
         "next",
         "preflight",
         "validate",
-        "draft-contract",
         "plan-revision",
         "replan-list",
-        "export-handoff",
     }
 )
 

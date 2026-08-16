@@ -239,6 +239,22 @@ class RuntimeAdmissionTests(unittest.TestCase):
             self.assertIn("tasks", run_cli("status", "--workspace", str(workspace)))
             self.assertIn("blockers", self._preflight_ok(workspace, temp))
 
+    def test_writing_commands_are_not_classified_read_only(self) -> None:
+        """Exemption is by observed write behavior, not by how diagnostic it sounds.
+
+        ``export-handoff`` writes runtime/campaign-status.json and
+        ``draft-contract`` writes a draft plus opens the runtime, so neither may
+        be exempt; the four genuine read-only diagnostics must stay reachable.
+        """
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from pec.admission import READ_ONLY_COMMANDS, is_mutating
+
+        for command in ("export-handoff", "draft-contract", "claim", "record-attempt", "close"):
+            self.assertTrue(is_mutating(command), command)
+            self.assertNotIn(command, READ_ONLY_COMMANDS)
+        for command in ("status", "next", "preflight", "validate"):
+            self.assertFalse(is_mutating(command), command)
+
     def _preflight_ok(self, workspace: Path, temp: Path) -> dict:
         return run_cli(
             "preflight",

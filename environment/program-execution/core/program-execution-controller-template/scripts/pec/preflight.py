@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .admission import load_receipt
 from .common import load_json
 from .controller import open_runtime, task_readiness, validate_runtime
 
@@ -51,21 +52,8 @@ def _repo_root() -> Path:
 def _load_receipt(
     surface: str, receipt_workspace: Path
 ) -> tuple[Path | None, dict[str, Any] | None]:
-    scripts = _repo_root() / "ops" / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    try:
-        from write_runtime_readiness_receipt import receipt_path
-    except ImportError:
-        return None, None
-    path = receipt_path(surface=surface, workspace=receipt_workspace)
-    if not path.is_file():
-        return path, None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return path, None
-    return path, data if isinstance(data, dict) else None
+    """Reuse the admission loader so both gates read one receipt the same way."""
+    return load_receipt(surface, receipt_workspace)
 
 
 def _receipt_blockers(receipt: dict[str, Any] | None) -> list[str]:
