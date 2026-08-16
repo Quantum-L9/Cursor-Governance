@@ -25,10 +25,11 @@ Escape hatches (human / ops only):
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 _HERE = Path(__file__).resolve().parent
@@ -59,6 +60,110 @@ DENY_MCP_TOOLS = {
     "create_pull_request",
     "push_files",
 }
+
+# ---------------------------------------------------------------------------
+# Publish-path enforcement (operator policy, all surfaces).
+#
+# `make pr` is the ONLY sanctioned way to reach GitHub: it runs the Makefile
+# checkers, then pushes and opens the PR through ops/scripts/open_pr_after_gate.sh.
+# A raw `git push` / `gh pr create` skips those checkers entirely, so being
+# release_authorized is NOT sufficient to use one — L4 governs *when* remote
+# work may happen, this governs *how*.
+#
+# Scope: only commands the agent itself issues pass through this gate. The
+# `git push` that open_pr_after_gate.sh runs internally is a subprocess of an
+# already-sanctioned `make pr` and is never re-evaluated here.
+#
+# Breakglass is human/ops only: L9_PUBLISH_PATH_OVERRIDE=<reason>.
+# ---------------------------------------------------------------------------
+RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bgit\s+push\b", re.I), "git push"),
+    (re.compile(r"\bgh\s+pr\s+create\b", re.I), "gh pr create"),
+    (re.compile(r"\bgh\s+pr\s+edit\b", re.I), "gh pr edit"),
+    (re.compile(r"\bmake\s+push\b", re.I), "make push"),
+)
+
+# A leading `VAR=value` shell assignment. Anchored and non-nested: linear time.
+ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+# `make` options that consume a following argument, so that argument is never
+# mistaken for the goal (`make -C /path pr`).
+_MAKE_OPTS_WITH_ARG = frozenset(
+    {"-C", "-f", "-j", "-l", "-o", "-W", "--directory", "--file", "--makefile", "--jobs"}
+)
+
+
+def is_make_pr(segment: str) -> bool:
+    """True when this segment invokes `make pr` — the sanctioned publish path.
+
+    Deliberately a token scan, not a regex. Matching the real forms
+    (``PR_REMEDIATE=0 make pr``, ``make -C /path pr``, ``make pr WS=…``) needs
+    alternation under repetition, which is precisely the shape that backtracks
+    exponentially (CodeQL py/redos, flagged on PR #168). This gate runs on every
+    shell command an agent issues, so a hostile or merely long argument list must
+    not be able to stall it: this scan is linear in the token count.
+
+    Only the goal matters. ``make pr-check`` is not a publish (it never pushes)
+    and correctly returns False.
+    """
+    tokens = segment.split()
+    index = 0
+    while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
+        index += 1
+    if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
+        return False
+    index += 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _MAKE_OPTS_WITH_ARG:
+            index += 2
+            continue
+        if token.startswith("-") or ENV_ASSIGN_RE.match(token):
+            index += 1
+            continue
+        return token == "pr"
+    return False
+
+
+PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
+
+
+def _publish_path_override() -> str:
+    return os.environ.get(PUBLISH_PATH_OVERRIDE_ENV, "").strip()
+
+
+def _publish_deny_reason(what: str) -> str:
+    return (
+        f"Publish path: `{what}` is not a sanctioned way to reach GitHub. "
+        "Use `PR_REMEDIATE=0 make pr`, which runs the Makefile checkers and then "
+        "pushes and opens the PR via ops/scripts/open_pr_after_gate.sh. "
+        "Being L4 release_authorized does not permit a raw push — L4 governs WHEN, "
+        f"this governs HOW. Human/ops override: {PUBLISH_PATH_OVERRIDE_ENV}=<reason>."
+    )
+
+
+def command_bypasses_publish_path(command: str) -> str | None:
+    """Return the offending command form when it reaches GitHub outside `make pr`.
+
+    Command-position scoped exactly like ``command_is_remote_mutation``: heredoc
+    bodies are stripped and only segments whose head is the named tool count, so
+    ``echo 'git push'`` is data, not a push. A segment containing `make pr` is
+    the sanctioned path and is never reported.
+    """
+    segments: list[str] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        segments.append(segment)
+        segments.extend(wrapper_subcommands(segment))
+    for segment in segments:
+        if is_make_pr(segment):
+            continue
+        head = segment_head(segment)
+        if head not in {"git", "gh", "make"}:
+            continue
+        for pattern, label in RAW_PUBLISH_PATTERNS:
+            if pattern.search(segment):
+                return label
+    return None
 
 
 def command_is_remote_mutation(command: str) -> bool:
@@ -120,6 +225,10 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
     them), so unknown targets stay fail-closed.
     """
     if tool_name in DENY_MCP_TOOLS or tool_name.endswith("create_pull_request"):
+        # An MCP push/PR call can never be the sanctioned publish path — it does
+        # not run the Makefile checkers — so it is denied regardless of L4 phase.
+        if not _publish_path_override():
+            return _publish_deny_reason(tool_name)
         allowed, reason = release_allows_remote(root)
         return None if allowed else reason
 
@@ -128,6 +237,9 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
             return iso
+        bypass = command_bypasses_publish_path(command)
+        if bypass and not _publish_path_override():
+            return _publish_deny_reason(bypass)
         if not command_is_remote_mutation(command):
             return None
         named_roots = extract_named_roots(command)
@@ -202,6 +314,9 @@ def main_cursor_shell() -> int:
     iso = command_violates_worktree_isolation(command, root=root)
     if iso:
         return _emit_cursor("deny", iso)
+    bypass = command_bypasses_publish_path(command)
+    if bypass and not _publish_path_override():
+        return _emit_cursor("deny", _publish_deny_reason(bypass))
     if not command_is_remote_mutation(command):
         return _emit_cursor("allow")
     allowed, reason = release_allows_remote(root)

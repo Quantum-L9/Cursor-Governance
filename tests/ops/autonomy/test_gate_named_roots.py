@@ -1,4 +1,9 @@
-"""L4 gate named-root resolution: campaigns in other worktrees may publish."""
+"""L4 gate named-root resolution: campaigns in other worktrees may publish.
+
+These exercise WHERE the L4 receipt is looked up, not HOW GitHub is reached.
+The vehicle is `make pr` — still a remote mutation, but the sanctioned publish
+path, so publish-path enforcement (see test_publish_path_gate.py) does not
+short-circuit the named-root logic under test."""
 
 from __future__ import annotations
 
@@ -49,11 +54,11 @@ def test_named_root_with_release_receipt_is_allowed(
     authorize_release(stacked_repo)
 
     session = _session_root(tmp_path)
-    command = f"cd {stacked_repo} && make push pr=1"
+    command = f"cd {stacked_repo} && make pr"
     assert evaluate("Bash", {"command": command}, root=session) is None
 
-    command_git = f"git -C {stacked_repo} push origin HEAD"
-    assert evaluate("Bash", {"command": command_git}, root=session) is None
+    command_make = f"make -C {stacked_repo} pr"
+    assert evaluate("Bash", {"command": command_make}, root=session) is None
 
 
 def test_named_root_without_receipt_stays_denied(
@@ -63,8 +68,9 @@ def test_named_root_without_receipt_stays_denied(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
 
     session = _session_root(tmp_path)
-    reason = evaluate("Bash", {"command": f"cd {stacked_repo} && git push"}, root=session)
+    reason = evaluate("Bash", {"command": f"cd {stacked_repo} && make pr"}, root=session)
     assert reason is not None
+    assert "make pr" not in reason, "must deny for L4, not publish-path"
 
 
 def test_unresolvable_named_root_fails_closed(
@@ -75,7 +81,7 @@ def test_unresolvable_named_root_fails_closed(
 
     session = _session_root(tmp_path)
     missing = tmp_path / "does-not-exist"
-    reason = evaluate("Bash", {"command": f"cd {missing} && git push"}, root=session)
+    reason = evaluate("Bash", {"command": f"cd {missing} && make pr"}, root=session)
     assert reason is not None
     assert "could not be resolved" in reason
 
@@ -88,10 +94,10 @@ def test_session_root_fallback_unchanged(
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
 
     session = _session_root(tmp_path)
-    reason = evaluate("Bash", {"command": "git push"}, root=session)
+    reason = evaluate("Bash", {"command": "make pr"}, root=session)
     assert reason is not None
     # and a session root WITH a receipt still allows as before
     begin(stacked_repo, contract_id="c2")
     record_kernels(stacked_repo)
     authorize_release(stacked_repo)
-    assert evaluate("Bash", {"command": "git push"}, root=stacked_repo) is None
+    assert evaluate("Bash", {"command": "make pr"}, root=stacked_repo) is None
