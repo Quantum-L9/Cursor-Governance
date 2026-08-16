@@ -1,32 +1,38 @@
 schema: l9.program-execution.campaign-status-ledger.v1
-updated: "2026-08-15T00:56:57Z"
-# Mutable live ledger. Does not rewrite CAMPAIGN_SOURCE.yaml.
-# Agents MUST close a campaign here before starting the next execute_order.
+updated: '2026-08-16T05:34:40Z'
 campaigns:
-  - id: bounded-replanning-v1
-    lifecycle: complete
-    closed_at: "2026-08-15T00:52:49Z"
-    verdict: CONVERGED
-    evidence:
-      pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/149"
-      merge_sha: 63efde4fdb6f99b0e7e7834211a803b564673351
-    closed_by: AUTH-001
-  - id: l9-devpack-program-execution-hardening
-    lifecycle: complete
-    closed_at: "2026-08-15T00:55:13Z"
-    verdict: CONVERGED
-    evidence:
-      pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/150"
-      merge_sha: 233787697a7b430666801e14d6dc945decf73e62
-    closed_by: AUTH-001
-  - id: cc-pe-intent-compiler-v1
-    lifecycle: complete
-    closed_at: "2026-08-15T00:56:57Z"
-    verdict: CONVERGED
-    evidence:
-      pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/151"
-      merge_sha: ccb2fa112f97a6fcafd669e34be18e2bd9cb1355
-    closed_by: AUTH-001
-  - id: l9-ecosystem-fix-plan
-    lifecycle: planned
-    notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
+- id: bounded-replanning-v1
+  lifecycle: complete
+  closed_at: '2026-08-15T00:52:49Z'
+  verdict: CONVERGED
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/149
+    merge_sha: 63efde4fdb6f99b0e7e7834211a803b564673351
+  closed_by: AUTH-001
+- id: l9-devpack-program-execution-hardening
+  lifecycle: complete
+  closed_at: '2026-08-15T00:55:13Z'
+  verdict: CONVERGED
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/150
+    merge_sha: 233787697a7b430666801e14d6dc945decf73e62
+  closed_by: AUTH-001
+- id: cc-pe-intent-compiler-v1
+  lifecycle: complete
+  closed_at: '2026-08-15T00:56:57Z'
+  verdict: CONVERGED
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/151
+    merge_sha: ccb2fa112f97a6fcafd669e34be18e2bd9cb1355
+  closed_by: AUTH-001
+- id: l9-ecosystem-fix-plan
+  lifecycle: planned
+  notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
+- id: l9-dot-github-ci-boundary-v1
+  lifecycle: complete
+  closed_at: '2026-08-16T05:34:40Z'
+  verdict: CONVERGED_WITH_NON_BLOCKING_RISKS
+  evidence:
+    pull_request: https://github.com/Quantum-L9/.github/pull/49
+    merge_sha: ed7445f75c79c2c865c6f172bc1e5dd3640282e4
+  closed_by: AUTH-001

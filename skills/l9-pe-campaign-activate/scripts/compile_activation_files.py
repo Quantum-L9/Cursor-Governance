@@ -76,9 +76,7 @@ def require_intent(raw: Any) -> dict[str, Any]:
     objective = str(raw.get("objective") or "").strip()
     tasks = raw.get("tasks")
     if not CAMPAIGN_ID_RE.match(campaign_id):
-        raise CompileError(
-            "campaign_id must match ^[a-z0-9][a-z0-9-]{2,62}$"
-        )
+        raise CompileError("campaign_id must match ^[a-z0-9][a-z0-9-]{2,62}$")
     if not title:
         raise CompileError("title is required")
     if not objective:
@@ -102,12 +100,8 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
     objective = str(intent["objective"]).strip()
     owner = str(intent.get("owner") or "Igor Beylin").strip()
     target = intent.get("target") if isinstance(intent.get("target"), dict) else {}
-    repository_id = str(
-        target.get("repository_id") or "Quantum-L9/Cursor-Governance"
-    ).strip()
-    source_of_truth = str(
-        target.get("source_of_truth") or "environment/program-execution"
-    ).strip()
+    repository_id = str(target.get("repository_id") or "Quantum-L9/Cursor-Governance").strip()
+    source_of_truth = str(target.get("source_of_truth") or "environment/program-execution").strip()
     adapter = str(target.get("adapter") or "git").strip()
     raw_tasks = list(intent["tasks"])
 
@@ -148,9 +142,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
                 "acceptance": [
                     {
                         "id": f"AC-{index:03d}",
-                        "statement": (
-                            f"{task_title} is complete and locally verified."
-                        ),
+                        "statement": (f"{task_title} is complete and locally verified."),
                     }
                 ],
                 "negative_cases": ["scope_expansion", "remote_mutation_before_release"],
@@ -269,9 +261,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
             "definition_status": "draft",
             "snapshot_at": stamp[:10],
             "objective": objective,
-            "problem_statement": str(
-                intent.get("problem_statement") or objective
-            ).strip(),
+            "problem_statement": str(intent.get("problem_statement") or objective).strip(),
             "target_state": str(intent.get("target_state") or objective).strip(),
             "scope": {
                 "include": [source_of_truth],
@@ -386,11 +376,7 @@ def patch_execution_policy(path: Path, campaign_id: str) -> bool:
     campaigns = list((raw or {}).get("campaigns") or [])
     if any(str(item.get("id")) == campaign_id for item in campaigns if isinstance(item, dict)):
         return False
-    orders = [
-        int(item.get("execute_order") or 0)
-        for item in campaigns
-        if isinstance(item, dict)
-    ]
+    orders = [int(item.get("execute_order") or 0) for item in campaigns if isinstance(item, dict)]
     execute_order = (max(orders) + 1) if orders else 1
     block = (
         f"  - id: {campaign_id}\n"
@@ -419,10 +405,7 @@ def patch_surface_profile(path: Path, campaign_id: str) -> bool:
         re.M,
     ):
         return False
-    block = (
-        f"    {campaign_id}:\n"
-        f"      integration_branch: campaign/{campaign_id}\n"
-    )
+    block = f"    {campaign_id}:\n      integration_branch: campaign/{campaign_id}\n"
     marker = "\nauthority_order:\n"
     if marker not in text:
         raise CompileError(f"{path} missing authority_order marker")
@@ -440,10 +423,14 @@ def patch_status_ledger(path: Path, campaign_id: str) -> bool:
         f"    lifecycle: planned\n"
         f"    notes: compiled by l9-pe-campaign-activate\n"
     )
-    text = path.read_text(encoding="utf-8") if path.is_file() else (
-        "schema: l9.program-execution.campaign-status-ledger.v1\n"
-        f"updated: \"{utc_now()}\"\n"
-        "campaigns:\n"
+    text = (
+        path.read_text(encoding="utf-8")
+        if path.is_file()
+        else (
+            "schema: l9.program-execution.campaign-status-ledger.v1\n"
+            f'updated: "{utc_now()}"\n'
+            "campaigns:\n"
+        )
     )
     if not text.endswith("\n"):
         text += "\n"
@@ -478,9 +465,7 @@ def compile_activation(
     campaign_id = str(intent["campaign_id"]).strip()
     now = stamp or utc_now()
     source = build_source(intent, stamp=now)
-    campaign_dir = (
-        repo_root / "environment" / "program-execution" / "campaigns" / campaign_id
-    )
+    campaign_dir = repo_root / "environment" / "program-execution" / "campaigns" / campaign_id
     campaign_dir.mkdir(parents=True, exist_ok=True)
     source_path = campaign_dir / "CAMPAIGN_SOURCE.yaml"
     dump_yaml(source_path, source)
