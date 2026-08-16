@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check capability-contract-validate capability-check capability-broker-preflight ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: repo-write-lock-test precommit-hook-contract
 
@@ -34,7 +34,7 @@ OPEN_PR ?= 1
 PR_REMEDIATE ?= 1
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check capability-contract-validate capability-check capability-broker-preflight ui-operator-sync"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
@@ -278,7 +278,7 @@ scratch-hold-restore:
 scratch-hold-status:
 	python3 ops/scripts/scratch_hold.py --workspace "$(or $(WS),$(CURDIR))" status
 
-pr-check:
+pr-check: capability-contract-validate
 	PR_BASE="$(PR_BASE)" PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
 	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
 		bash ops/scripts/run_pr_gate.sh
@@ -344,6 +344,24 @@ REF ?= openclaw-igorbot/github#token
 secrets-check:
 	@$(MAKE) venv
 	$(CURDIR)/.venv/bin/python ops/secrets/resolve_secret.py --ref "$(REF)" --check
+
+## Validate the zero-static-secret capability contract: no credential may be
+## assigned in an agent surface environment, and no LLM-facing code may reach for
+## raw secret material unless explicitly marked trusted-operator-only.
+capability-contract-validate:
+	python3 ops/secrets/validate_capability_contract.py
+
+## Report which named capabilities this surface can use. Never resolves a secret.
+##   make capability-check REQUIRE=sonar.read_issues,graphiti.query
+REQUIRE ?=
+capability-check:
+	@bash ops/secrets/bootstrap_agent_env.sh --check \
+		--surface "$${L9_GOVERNANCE_SURFACE:-unknown}" \
+		$(if $(REQUIRE),--require-capabilities "$(REQUIRE)",)
+
+## Broker posture (trusted side): boundary isolation + workload identity.
+capability-broker-preflight:
+	python3 ops/secrets/capability_broker.py preflight
 
 ## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
 ## After this: playwright install

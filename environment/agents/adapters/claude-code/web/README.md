@@ -49,19 +49,26 @@ already resolve to. It matters that it exists: the sandbox's system `python3` is
 locked venv the memory gate cannot import its brain and governed writes are
 denied.
 
-### Secrets, and what does *not* belong in this environment
+### Secrets, and why this environment carries none
 
-The account environment carries **bootstrap credentials only**. Everything
-downstream resolves at run time through the canonical provider
-(`ops/secrets/hydrate_infisical.py`, which reuses the one Infisical client this
-repo already has). Do not grow the variables field into a second secret
-inventory — `ops/secrets` is the SSOT.
+The account environment carries **no credentials at all**. Anthropic stores the
+variables field in plaintext and everything in it is readable by the model, so a
+token there is a token the model possesses — including `INFISICAL_CLIENT_SECRET`,
+which would be a master key to the entire inventory.
+
+Authenticated work resolves through the shared **capability plane** instead. The
+session asks for a named capability; a trusted broker holds the credential and
+returns only sanitized results. `ops/secrets` remains the SSOT.
 
 ```bash
-# names and availability only; never values
-python3 ops/secrets/hydrate_infisical.py --check --require SONAR_TOKEN,SEMGREP_APP_TOKEN
-eval "$(python3 ops/secrets/hydrate_infisical.py --export SONAR_TOKEN)"
+# capability names and status only — there is no value-returning call here
+python3 ops/secrets/bootstrap_agent_env.sh --check --surface claude-code \
+  --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
 ```
+
+Raw secret export is **denied** on this surface, and on every unregistered
+surface. If a capability is unavailable, the fix is broker delivery — never
+pasting a credential into the variables field to turn a check green.
 
 Two things are deliberately **absent** from the variables field because they
 name one repository while the environment is reused across many:

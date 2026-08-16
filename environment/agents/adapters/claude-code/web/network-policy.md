@@ -27,12 +27,13 @@ registry.npmjs.org
 astral.sh
 *.astral.sh
 memory.quantumaipartners.com
-app.infisical.com
-sonarcloud.io
-*.sonarcloud.io
 semgrep.dev
 *.semgrep.dev
 ```
+
+**`app.infisical.com` and `sonarcloud.io` are deliberately NOT in this list.**
+See "Egress the agent must not need" below — an agent container that can reach
+a secret backend is one bad line away from using it.
 
 ### Host → owning capability
 
@@ -45,17 +46,32 @@ semgrep.dev
 | `pypi.org`, `files.pythonhosted.org` | `uv sync --locked` (governance `uv.lock`), `uvx` for bandit / semgrep / pip-audit, `pre-commit`, `uv` itself |
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
-| `memory.quantumaipartners.com` | Graphiti front door (`/graphiti/mcp`) — SessionStart hydrate, phase-lock, governed writes |
-| `app.infisical.com` | canonical secret provider (`ops/secrets/hydrate_infisical.py`) — Universal Auth login + secret read |
-| `sonarcloud.io`, `*.sonarcloud.io` | Sonar issue fetch in `l9-pr-remediation` (`sonar_fetch.py`) |
-| `semgrep.dev`, `*.semgrep.dev` | Semgrep registry rulesets (`p/python`, `p/secrets`) and **authenticated** Semgrep AppSec when `SEMGREP_APP_TOKEN` is resolved. Local CE scanning of already-cached rules does not need it |
+| `memory.quantumaipartners.com` | Graphiti front door. Needed only where the broker is not yet fronting `/graphiti/mcp`; once `L9_CAPABILITY_BROKER_URL` is set, the broker reaches it and the agent does not |
+| `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
+| L9 capability broker host | every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). Add your deployment's broker hostname |
+
+### Egress the agent must not need (contract §16)
+
+Least privilege is a second, independent line of defence behind the capability
+architecture. Even with no credential in the environment, an agent container
+that can reach a secret backend is one mistake away from using one.
+
+| Host | Who reaches it | Why not the agent |
+|---|---|---|
+| `app.infisical.com` | **broker only** | The secret backend. The agent holds no Infisical credential and has no reason to speak to it; blocking egress makes that structural rather than conventional |
+| `sonarcloud.io`, `*.sonarcloud.io` | **broker only** | Authenticated Sonar reads are brokered. Unauthenticated public reads still work if you choose to allow the host; the token never leaves the broker either way |
+| `semgrep.dev` authenticated API | **trusted worker only** | CE rule downloads are fine from the agent; authenticated AppSec is not |
+| AWS Secrets Manager endpoints | **nobody** | The AWS bootstrap path is removed entirely (contract S1). Do not re-add it |
+
+Broker egress allow-list (applied to the broker's own network policy, not this
+one): `app.infisical.com`, `memory.quantumaipartners.com`, `sonarcloud.io`,
+`semgrep.dev`, plus any host a newly registered capability declares.
 
 ### Deliberately absent
 
-- **AWS Secrets Manager endpoints** — the cloud surface bootstraps through
-  Infisical Universal Auth, not the AWS CLI. `hydrate_infisical.py` still falls
-  back to AWS where an operator has it configured; add
-  `secretsmanager.us-east-1.amazonaws.com` only if you use that path.
+- **AWS Secrets Manager endpoints** — the AWS credential bootstrap is removed,
+  not merely unused. Agent surfaces must never obtain Universal Auth credentials
+  from an instance profile (contract S1).
 - Any host not tied to a capability above. Do not widen this list to make a
   test pass — a capability that cannot reach its host must report DEGRADED.
 

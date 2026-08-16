@@ -1,9 +1,13 @@
 """Tests for ops/secrets/hydrate_infisical.py (read-side secret resolution).
 
 No network and no real credentials: the Infisical fetch is stubbed. What is
-asserted here is the contract that matters for safety — bootstrap precedence,
-fail-closed behaviour when the provider is unreachable, and above all that
-``--check`` never emits a secret value.
+asserted here is the contract that matters for safety — fail-closed behaviour
+when the provider is unreachable, that ``--check`` never emits a secret value,
+and that the value-returning path is reachable ONLY by a trusted operator.
+
+The former AWS-bootstrap fallback is gone by design (contract S1) and is
+asserted absent below rather than merely untested: an agent surface must never
+be able to obtain Universal Auth credentials from an instance profile.
 """
 
 from __future__ import annotations
@@ -34,12 +38,26 @@ INFISICAL_ENV_KEYS = (
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     for key in INFISICAL_ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
-    # Never let a developer machine's AWS profile turn this into a live call.
-    monkeypatch.setattr(hi, "_aws_bootstrap", lambda: None)
     return monkeypatch
 
 
-def test_env_credentials_take_precedence(clean_env: pytest.MonkeyPatch) -> None:
+@pytest.fixture
+def operator_env(clean_env: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
+    """A trusted-operator shell: no model-runtime markers anywhere.
+
+    The test suite itself usually runs inside an agent runtime, so these must be
+    cleared explicitly — which is the point. Without this fixture the export
+    tests below would (correctly) be denied.
+    """
+    import surface_trust
+
+    for marker in surface_trust.MODEL_RUNTIME_MARKERS:
+        clean_env.delenv(marker, raising=False)
+    clean_env.setenv("L9_GOVERNANCE_SURFACE", "operator")
+    return clean_env
+
+
+def test_env_credentials_are_read(clean_env: pytest.MonkeyPatch) -> None:
     clean_env.setenv("INFISICAL_CLIENT_ID", "cid")
     clean_env.setenv("INFISICAL_CLIENT_SECRET", "csec")
     clean_env.setenv("INFISICAL_SITE_URL", "https://infisical.example/")
@@ -53,20 +71,17 @@ def test_env_credentials_take_precedence(clean_env: pytest.MonkeyPatch) -> None:
     assert cfg["secret_path"] == hi.DEFAULT_SECRET_PATH
 
 
-def test_falls_back_to_aws_bootstrap(clean_env: pytest.MonkeyPatch) -> None:
-    clean_env.setattr(
-        hi,
-        "_aws_bootstrap",
-        lambda: {
-            "client_id": "aws-id",
-            "client_secret": "aws-secret",
-            "host": "https://aws.example/",
-        },
-    )
-    cfg = hi.bootstrap_config()
-    assert cfg is not None
-    assert cfg["client_id"] == "aws-id"
-    assert cfg["host"] == "https://aws.example"
+def test_no_aws_bootstrap_path_exists() -> None:
+    """Contract S1: the AWS fallback is removed, not merely unused.
+
+    Asserting on absence rather than behaviour is deliberate — a reintroduced
+    helper would silently restore instance-profile credential bootstrap for
+    every surface that imports this module.
+    """
+    assert not hasattr(hi, "_aws_bootstrap")
+    assert "BOOTSTRAP_AWS_REF" not in dir(hi)
+    source = (SECRETS_DIR / "hydrate_infisical.py").read_text(encoding="utf-8")
+    assert "secretsmanager" not in source
 
 
 def test_no_credentials_returns_none(clean_env: pytest.MonkeyPatch) -> None:
@@ -117,11 +132,11 @@ def test_check_never_prints_values(
 
 
 def test_export_emits_quoted_shell_assignment(
-    clean_env: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    operator_env: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    clean_env.setenv("INFISICAL_CLIENT_ID", "cid")
-    clean_env.setenv("INFISICAL_CLIENT_SECRET", "csec")
-    clean_env.setattr(
+    operator_env.setenv("INFISICAL_CLIENT_ID", "cid")
+    operator_env.setenv("INFISICAL_CLIENT_SECRET", "csec")
+    operator_env.setattr(
         hi, "_fetch", lambda cfg, *, with_values: {"SONAR_TOKEN": "va lue'with$quotes"}
     )
     rc = hi.main(["--export", "SONAR_TOKEN"])
@@ -135,8 +150,8 @@ def test_export_emits_quoted_shell_assignment(
     assert shlex.split(out) == ["export", "SONAR_TOKEN=va lue'with$quotes"]
 
 
-def test_export_fails_when_name_absent(clean_env: pytest.MonkeyPatch) -> None:
-    clean_env.setenv("INFISICAL_CLIENT_ID", "cid")
-    clean_env.setenv("INFISICAL_CLIENT_SECRET", "csec")
-    clean_env.setattr(hi, "_fetch", lambda cfg, *, with_values: {})
+def test_export_fails_when_name_absent(operator_env: pytest.MonkeyPatch) -> None:
+    operator_env.setenv("INFISICAL_CLIENT_ID", "cid")
+    operator_env.setenv("INFISICAL_CLIENT_SECRET", "csec")
+    operator_env.setattr(hi, "_fetch", lambda cfg, *, with_values: {})
     assert hi.main(["--export", "SONAR_TOKEN"]) == 1

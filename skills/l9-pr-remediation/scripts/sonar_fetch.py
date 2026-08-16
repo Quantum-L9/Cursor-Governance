@@ -5,9 +5,19 @@ Retrieves the complete issue set for a project's branch or pull request, plus th
 distinct rule metadata, the quality gate, and headline measures, and writes a single
 secret-free JSON snapshot (`sonarcloud-issues-before.json` by convention).
 
-Read-only against SonarCloud: this never mutates issue or hotspot state. The API token
-is read from the environment by reference only (SONAR_TOKEN) and is never printed,
-stored, or written to the snapshot; Authorization headers are redacted in the receipt.
+Read-only against SonarCloud: this never mutates issue or hotspot state.
+
+Authenticated access is BROKERED on model-controlled surfaces (contract §13). This
+process does not read SONAR_TOKEN from the environment when it is running inside an
+agent runtime, because a token there is a token the model possesses. It asks the
+shared capability plane for `sonar.read_issues` and receives sanitized results:
+
+    l9-pr-remediation -> capability client -> L9 broker -> Sonar API
+
+Repository identity still comes from sonar-project.properties via --project /
+--organization; the broker receives project/organization identifiers, never a token.
+A trusted operator running this by hand keeps the direct path. Either way no token is
+printed, stored, or written to the snapshot; Authorization headers are redacted.
 
 Fail-closed: if pagination cannot retrieve every reported issue, the snapshot is marked
 BLOCKED and the process exits non-zero rather than emitting a smaller-than-real set.
@@ -20,9 +30,19 @@ import json
 import os
 import urllib.error
 import urllib.parse
+import sys
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
+
+# The capability plane lives in ops/secrets (the SSOT). Import it rather than
+# re-implementing a second client inside a skill.
+_OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
+if str(_OPS_SECRETS) not in sys.path:
+    sys.path.insert(0, str(_OPS_SECRETS))
+
+from capability_client import CapabilityClient  # noqa: E402
+from surface_trust import classify, require_trusted  # noqa: E402
 
 MEASURE_METRICS = [
     "bugs",
@@ -39,20 +59,93 @@ PAGE_SIZE = 500
 MAX_PAGES = 40  # 500 * 40 = 20000 issues; SonarCloud caps /issues/search near 10000
 
 
-def _request(base_url: str, path: str, params: dict[str, str], token: str | None) -> dict:
-    query = urllib.parse.urlencode({k: v for k, v in params.items() if v not in (None, "")})
-    url = f"{base_url.rstrip('/')}{path}?{query}"
-    request = urllib.request.Request(url, method="GET")
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
-    try:
-        with urllib.request.urlopen(request, timeout=45) as response:  # noqa: S310 (https only)
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:400]
-        raise SystemExit(f"BLOCKED: SonarCloud {path} returned HTTP {exc.code}: {detail}") from exc
-    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-        raise SystemExit(f"BLOCKED: SonarCloud {path} request failed: {exc}") from exc
+class DirectTransport:
+    """Token-in-process path. TRUSTED OPERATOR ONLY.
+
+    Constructing this on a model-controlled surface raises, so the direct path
+    cannot be reached from an agent runtime even by importing this module.
+    """
+
+    def __init__(self, base_url: str, token: str | None, surface: str | None = None) -> None:
+        if token:
+            require_trusted(surface)
+        self.base_url = base_url.rstrip("/")
+        self._token = token
+
+    @property
+    def authenticated(self) -> bool:
+        return bool(self._token)
+
+    def get(self, path: str, params: dict[str, str]) -> dict:
+        query = urllib.parse.urlencode({k: v for k, v in params.items() if v not in (None, "")})
+        request = urllib.request.Request(f"{self.base_url}{path}?{query}", method="GET")
+        if self._token:
+            request.add_header("Authorization", f"Bearer {self._token}")
+        try:
+            with urllib.request.urlopen(request, timeout=45) as response:  # noqa: S310 (https only)
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:400]
+            raise SystemExit(
+                f"BLOCKED: SonarCloud {path} returned HTTP {exc.code}: {detail}"
+            ) from exc
+        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+            raise SystemExit(f"BLOCKED: SonarCloud {path} request failed: {exc}") from exc
+
+
+class BrokerTransport:
+    """Capability path. The credential stays beyond the model boundary.
+
+    Only registry-declared caller params are forwarded; project and organization
+    are workspace-derived on the broker side, so this process cannot ask for a
+    repository it is not working in.
+    """
+
+    CAPABILITY = "sonar.read_issues"
+
+    def __init__(self, client: "CapabilityClient") -> None:
+        self.client = client
+
+    @property
+    def authenticated(self) -> bool:
+        return True
+
+    def get(self, path: str, params: dict[str, str]) -> dict:
+        forward = {
+            key: str(value)
+            for key, value in params.items()
+            if key in ("branch", "pullRequest", "p", "ps") and value not in (None, "")
+        }
+        forward["path"] = path
+        try:
+            return self.client.invoke(self.CAPABILITY, forward).get("result", {})
+        except (LookupError, RuntimeError) as exc:
+            raise SystemExit(f"BLOCKED: brokered SonarCloud {path} failed: {exc}") from exc
+
+
+def build_transport(base_url: str, surface: str | None = None) -> DirectTransport | BrokerTransport:
+    """Pick the transport from the caller's trust class, not from a flag.
+
+    A model-controlled surface gets the broker or nothing. It never falls back to
+    reading SONAR_TOKEN, because that fallback is the vulnerability.
+    """
+    trust = classify(surface)
+    if trust.raw_secret_allowed:
+        token = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARCLOUD_TOKEN")
+        return DirectTransport(base_url, token, surface)
+
+    client = CapabilityClient()
+    status = client.status(BrokerTransport.CAPABILITY)
+    if status.status == "ENABLED":
+        return BrokerTransport(client)
+    # Unauthenticated public read. Honest degradation: fewer issues are visible,
+    # and the snapshot records that it was unauthenticated (contract §18).
+    print(
+        f"sonar_fetch: {BrokerTransport.CAPABILITY} {status.status} ({status.detail}); "
+        "continuing UNAUTHENTICATED — private findings will be absent",
+        file=sys.stderr,
+    )
+    return DirectTransport(base_url, None, surface)
 
 
 def _validated_base_url(value: str) -> str:
@@ -92,7 +185,10 @@ def _scope_params(branch: str | None, pull_request: str | None) -> dict[str, str
 
 
 def fetch_issues(
-    base_url: str, project: str, organization: str, scope: dict[str, str], token: str | None
+    transport: "DirectTransport | BrokerTransport",
+    project: str,
+    organization: str,
+    scope: dict[str, str],
 ) -> dict:
     issues: list[dict] = []
     page = 1
@@ -106,7 +202,7 @@ def fetch_issues(
             "additionalFields": "rules",
             **scope,
         }
-        payload = _request(base_url, "/issues/search", params, token)
+        payload = transport.get("/issues/search", params)
         total = payload.get("total", 0)
         issues.extend(payload.get("issues", []))
         if len(issues) >= total or not payload.get("issues"):
@@ -116,12 +212,12 @@ def fetch_issues(
     return {"issues": issues, "total": total, "retrieved": len(issues), "complete": complete}
 
 
-def fetch_rules(base_url: str, rule_keys: list[str], organization: str, token: str | None) -> dict:
+def fetch_rules(
+    transport: "DirectTransport | BrokerTransport", rule_keys: list[str], organization: str
+) -> dict:
     rules: dict[str, dict] = {}
     for rule_key in sorted(set(rule_keys)):
-        payload = _request(
-            base_url, "/rules/show", {"key": rule_key, "organization": organization}, token
-        )
+        payload = transport.get("/rules/show", {"key": rule_key, "organization": organization})
         rule = payload.get("rule", {})
         rules[rule_key] = {
             "name": rule.get("name"),
@@ -152,21 +248,18 @@ def main() -> int:
     # Sanitize both tainted CLI inputs before they reach a network or file-system sink.
     base_url = _validated_base_url(args.base_url)
     output_path = _validated_output(args.output)
-    token = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARCLOUD_TOKEN")
+    transport = build_transport(base_url)
     scope = _scope_params(args.branch, args.pull_request)
 
-    issues_result = fetch_issues(base_url, args.project, args.organization, scope, token)
+    issues_result = fetch_issues(transport, args.project, args.organization, scope)
     rule_keys = [issue.get("rule", "") for issue in issues_result["issues"] if issue.get("rule")]
-    rules = fetch_rules(base_url, rule_keys, args.organization, token)
+    rules = fetch_rules(transport, rule_keys, args.organization)
 
-    gate = _request(
-        base_url,
+    gate = transport.get(
         "/qualitygates/project_status",
         {"projectKey": args.project, "organization": args.organization, **scope},
-        token,
     )
-    measures = _request(
-        base_url,
+    measures = transport.get(
         "/measures/component",
         {
             "component": args.project,
@@ -174,7 +267,6 @@ def main() -> int:
             "metricKeys": ",".join(MEASURE_METRICS),
             **scope,
         },
-        token,
     )
 
     # The analysis identifier from the quality gate. A per-issue `hash` is a line hash,
@@ -191,8 +283,8 @@ def main() -> int:
                 "/qualitygates/project_status",
                 "/measures/component",
             ],
-            "authenticated": bool(token),
-            "authorization_header": "REDACTED" if token else None,
+            "authenticated": transport.authenticated,
+            "authorization_header": "REDACTED" if transport.authenticated else None,
             "fetched_at": datetime.now(tz=UTC).isoformat(),
             "request_scope": scope or {"scope": "main-analysis"},
             "pagination": {

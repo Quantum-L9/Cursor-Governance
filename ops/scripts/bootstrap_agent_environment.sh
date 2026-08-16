@@ -203,17 +203,38 @@ else
   DEGRADED=$((DEGRADED + 1))
 fi
 
-# --- 3) Secret bootstrap ----------------------------------------------------
-# Delegated to the shared secret bootstrap; no surface keeps an inventory.
-log "Canonical secret bootstrap"
-SECRET_BOOTSTRAP="$GOV_DIR/ops/secrets/bootstrap_agent_env.sh"
-if [ -f "$SECRET_BOOTSTRAP" ]; then
-  bash "$SECRET_BOOTSTRAP" --check --surface "$SURFACE" \
-    --require SONAR_TOKEN,SEMGREP_APP_TOKEN 2>&1 \
-    || warn "secret provider DEGRADED — authenticated Sonar/Semgrep unavailable"
+# --- 3) Capability bootstrap ------------------------------------------------
+# This section used to ask whether SONAR_TOKEN and SEMGREP_APP_TOKEN were
+# available as environment credentials. That question is now the wrong one: a
+# raw secret must never be available to this process, so a surface where those
+# names resolve is a surface that FAILED the security contract, not one that
+# passed it.
+#
+# What a session actually needs to know is which named CAPABILITIES it can use.
+# Those resolve through the shared capability plane, where the credential stays
+# on the far side of the trust boundary. This step reports ENABLED / DEGRADED /
+# UNAVAILABLE / BLOCKED and hydrates nothing.
+log "Canonical capability bootstrap"
+CAP_BOOTSTRAP="$GOV_DIR/ops/secrets/bootstrap_agent_env.sh"
+if [ -f "$CAP_BOOTSTRAP" ]; then
+  bash "$CAP_BOOTSTRAP" --check --surface "$SURFACE" \
+    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query 2>&1 \
+    || warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
 else
-  warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical secret resolution"
+  warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical capability resolution"
 fi
+
+# A surface that still carries raw downstream secrets has not been migrated.
+# Report it loudly here: this is the check that would have caught the old
+# posture, and it must fail visibly rather than be quietly tolerated.
+for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN INFISICAL_CLIENT_SECRET \
+              INFISICAL_TOKEN GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY; do
+  if [ -n "${!leaked:-}" ]; then
+    warn "$leaked is present in this model-controlled surface — PROHIBITED (contract S2/S3)"
+    warn "  remove it from the surface environment; capabilities replace it"
+    DEGRADED=$((DEGRADED + 1))
+  fi
+done
 
 # --- 4) Repository-scoped identity ------------------------------------------
 # An agent environment is reused across consumer repositories, so anything that
@@ -284,10 +305,15 @@ fi
 for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
   [ -n "${!retired:-}" ] && warn "$retired set — retired ADR-0006 side door; remove it"
 done
-if [ -z "${GRAPHITI_MCP_TOKEN:-}" ]; then
-  warn "GRAPHITI_MCP_TOKEN unset — hydrate and governed-write phase-lock run DEGRADED"
+# Memory front door. A bearer in this process is a contract violation, not a
+# readiness signal — the brokered graphiti.* capabilities carry the credential
+# on the trusted side, so an agent surface needs no token at all.
+if [ -n "${GRAPHITI_MCP_TOKEN:-}" ]; then
+  warn "GRAPHITI_MCP_TOKEN present in a model-controlled surface — PROHIBITED (contract S3)"
+  warn "  remove it; memory resolves through the graphiti.query / graphiti.write_governed"
+  warn "  capabilities, which keep the bearer beyond the model boundary"
 else
-  say "memory front door: ${GRAPHITI_MCP_URL:-https://memory.quantumaipartners.com/graphiti/mcp} (bearer present)"
+  say "memory front door: brokered (no bearer in this process; graphiti.* capabilities)"
 fi
 
 for kernel in "Recursive Alignment.md" "Validate & Repair.md"; do

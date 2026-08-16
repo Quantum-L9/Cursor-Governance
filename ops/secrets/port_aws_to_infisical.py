@@ -9,6 +9,12 @@ Values never go to stdout, logs, or git. Summary is IDs / key names / counts onl
 Bootstrap: openclaw-igorbot/infisical-cursor (Universal Auth).
 """
 
+# L9-TRUSTED-OPERATOR-ONLY — raw-secret paths in this file are reachable only
+# beyond the model boundary and are guarded by surface_trust.require_trusted /
+# the broker's boundary self-check. The marker declares that status for review;
+# it is not a bypass, and it does not disable those runtime guards.
+
+
 from __future__ import annotations
 
 import argparse
