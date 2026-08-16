@@ -88,6 +88,15 @@ campaigns:
     lane: session_runtime
     parallel_with:
       - l9-ecosystem-fix-plan
+  - id: l9-repo-template-control-plane-ready-v1
+    integration_branch: campaign/l9-repo-template-control-plane-ready-v1
+    pr_base: campaign/l9-repo-template-control-plane-ready-v1
+    execute_order: 6
+    lane: ecosystem
+    role: harden
+    target_repository: Quantum-L9/l9-repo-template
+    parallel_with:
+      - l9-ecosystem-fix-plan
 
 owner:
   authority_id: AUTH-001
