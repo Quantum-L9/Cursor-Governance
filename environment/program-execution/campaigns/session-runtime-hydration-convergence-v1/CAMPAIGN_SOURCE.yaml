@@ -1,0 +1,1172 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+metadata:
+  campaign_id: session-runtime-hydration-convergence-v1
+  title: "L9 Session Runtime, Hydration, Secrets & Autonomous PE Convergence"
+  version: 1.0.0
+  created_at: "2026-08-15T23:17:00Z"
+  status: operator_intake
+  owner: "Igor Beylin"
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: >-
+    environment/program-execution/campaigns/session-runtime-hydration-convergence-v1/CAMPAIGN_SOURCE.yaml
+  runtime_root: "$HOME/.l9/programs/session-runtime-hydration-convergence-v1"
+  worktree_root: "$HOME/.l9/program-worktrees/session-runtime-hydration-convergence-v1"
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  required_host_surfaces:
+    - environment/program-execution/core
+    - environment/program-execution/peer_execution
+    - environment/program-execution/adapters
+    - environment/program-execution/conformance
+    - environment/program-execution/registry
+    - environment/program-execution/integrations
+    - environment/contracts/execution
+    - environment/agents
+    - ops/hooks
+    - ops/graphiti
+    - ops/secrets
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - verify_source_integrity_receipt
+    - instantiate_native_blueprint_and_controller
+    - compile_source_into_complete_native_blueprint
+    - collect_current_session_memory_secret_and_peer_runtime_evidence
+    - resolve_blocking_unknowns
+    - validate_blueprint_in_template_mode
+    - accept_blueprint_only_after_evidence_and_authority_resolution
+    - validate_blueprint_in_instantiated_mode
+    - bootstrap_controller_and_create_program_lock
+    - execute_reversible_local_waves
+    - independently_verify_each_blocking_gate
+    - execute_cross_surface_conformance_and_fault_injection
+    - export_controller_handoff_receipt
+    - obtain_program_owner_terminal_verdict
+  authority_boundaries:
+    campaign_source_owns: operator_intent_and_campaign_semantics
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_program_state_program_lock_leases_gates_and_terminal_evidence
+    peer_execution_core_owns: >-
+      session_admission_context_manifests_capability_readiness_shared_execution_lifecycle
+    session_runtime_core_owns: >-
+      canonical_boot_hydration_compilation_readiness_receipts_and_operator_status_projection
+    graphiti_memory_plane_owns: durable_agent_memory_not_program_execution_state
+    runtime_environment_core_owns: >-
+      environment_and_secret_resolution_policy_provenance_and_local_materialization
+    infisical_owns: secret_values_only
+    repository_policy_owns: required_secret_names_sources_scopes_and_fallback_rules
+    provider_adapters_own: transport_and_surface_translation_only
+    native_session_hooks_own: launch_mechanics_only
+operator_directive:
+  objective: >-
+    Converge Cursor-Governance on one machine-validated session runtime for every
+    registered LLM and host surface. Every interactive or autonomous execution
+    must resolve its environment and capabilities, hydrate the correct memory
+    authority lanes, compile a bounded context packet, emit operator-visible status
+    and machine receipts, and prove PE autonomy readiness before autonomous Program
+    Execution admission. Fresh desktop clones must self-bootstrap required agent
+    secrets from Infisical without .env.local or manual secret copying. Claude
+    Web/Mobile must accept explicit environment values supplied above the setup
+    script while producing the same canonical semantic runtime state.
+  mode: controlled_autonomous_until_material_boundary
+  auto_continue:
+    - read_only_repository_inspection
+    - read_only_remote_observation
+    - infisical_secret_read_for_declared_allowlisted_keys_without_value_logging
+    - local_runtime_materialization_of_gitignored_secret_files
+    - reversible_repo_local_work
+    - local_commit_creation_after_task_gate_pass
+    - local_validation
+    - independent_verification
+    - conformance_execution
+    - fault_injection_without_external_mutation
+    - bounded_retry_of_transient_failures
+    - controller_receipt_generation
+  pause_only_for:
+    - missing_or_conflicting_semantic_authority
+    - material_scope_expansion
+    - stale_or_invalid_program_lock
+    - unresolved_blocking_unknown
+    - failed_blocking_gate
+    - secret_creation_rotation_or_write
+    - new_external_secret_provider_or_new_credential_scope
+    - exact_remote_mutation_approval
+    - exact_merge_tag_release_publish_deploy_or_migration_approval
+    - exact_destructive_action_approval
+program:
+  id: session-runtime-hydration-convergence-v1
+  name: "L9 Session Runtime, Hydration, Secrets & Autonomous PE Convergence"
+  version: 1.0.0
+  owner: "Igor Beylin"
+  definition_status: ready
+  snapshot_at: "2026-08-15"
+  objective: >-
+    Establish one deterministic, observable and machine-enforced cognitive bootstrap
+    for Cursor, Claude Code, Claude Web/Mobile, Codex, Gemini, Manus and every future
+    registered peer. Fresh sessions and PE workers must enter execution with the
+    same semantic governance state, authoritative Program state, validated runtime
+    capabilities, correctly scoped memory, bounded context, explicit fallbacks and
+    a fresh Session Readiness Receipt.
+  problem_statement: >-
+    Session initialization, Graphiti hydration, provider environment resolution,
+    desktop secret materialization, fallback behavior and autonomous PE admission
+    currently span multiple hooks, adapters and dependency assumptions. This permits
+    surfaces to start with zero memory, stale or wrong repository memory, unavailable
+    credentials, hidden fallback behavior, duplicated context, provider-specific
+    semantics or no machine-verifiable proof that an autonomous worker is cognitively
+    and operationally ready.
+  target_state: >-
+    A single canonical session boot and admission runtime is the source of execution
+    readiness for all registered peers. Desktop clones obtain only declared required
+    secrets from Infisical and atomically materialize host-required private settings;
+    mobile/web consume explicitly injected environment credentials; CI uses native
+    GitHub secrets and workload identity. Hydration produces typed receipts and a
+    compact model-context projection. Exact continuity, authoritative Program state,
+    semantic repository memory and workspace context remain separate authority lanes.
+    Autonomous PE cannot start without a fresh digest-bound readiness receipt.
+  scope:
+    include:
+      - canonical cross-surface session boot and ensure_ready runtime
+      - Session Readiness Receipt
+      - Hydration Receipt
+      - Runtime Environment Receipt
+      - Context Manifest and semantic context digest
+      - ResumeCapsule v2 exact continuity state
+      - optional compact and verbose operator hydration status
+      - typed hydration authority lanes and explicit fallback states
+      - progressive and token-budgeted context compilation
+      - code-aware and freshness-aware memory filtering
+      - stale-while-revalidate compiled hydration cache
+      - canonical Graphiti client with stdlib-safe read transport beneath it
+      - session working-state journal
+      - fast deterministic continuity checkpoint projection
+      - slow asynchronous LLM memory distillation
+      - idempotent asynchronous write processing
+      - fresh-clone Infisical desktop secret bootstrap
+      - Claude Code project-local secret materialization
+      - Cursor desktop runtime secret resolution
+      - Claude Web/Mobile process-environment compatibility
+      - GitHub Actions secret and OIDC compatibility
+      - local gh credential-store and AWS SSO compatibility
+      - PE Gate-0 session admission
+      - active-peer semantic parity conformance
+      - rehydration after compaction reconnect PE dispatch and Program Lock refresh
+      - fault-injection and negative-path conformance
+      - governance documentation and drift reconciliation
+    exclude:
+      - storing secret values in Git
+      - .env.local as a required or canonical runtime contract
+      - duplicating session bootstrap logic per provider
+      - duplicating Graphiti memory clients or HTTP memory planes
+      - treating Graphiti memory as Program Controller authority
+      - automatically hydrating arbitrary child repositories because they exist on disk
+      - injecting diagnostic receipts or telemetry into model context
+      - retrieving GitHub organization secret values onto desktop clients
+      - distributing server-only infrastructure secrets to agents
+      - widening provider authority because autonomous execution is available
+      - merge release publish deploy migration or destructive remote actions
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+    session_boot: l9.session-boot.v1
+    session_readiness: l9.session-readiness.v1
+    hydration_receipt: l9.hydration-receipt.v1
+    runtime_environment_receipt: l9.runtime-env-receipt.v1
+    context_manifest: l9.context-manifest.v1
+    resume_capsule: l9.resume-capsule.v2
+  authority_order:
+    - applicable_safety_legal_security_requirements
+    - cursor_governance_canonical_law
+    - program_execution_v2_interface_contract
+    - peer_execution_thin_adapter_law
+    - latest_explicit_operator_instruction
+    - accepted_program_controller_state_and_program_lock
+    - latest_accepted_program_decision
+    - canonical_session_runtime_contracts
+    - canonical_runtime_environment_and_secret_policy
+    - canonical_graphiti_memory_contracts
+    - verified_current_state_evidence
+    - exact_rendered_task_contract
+    - provider_or_surface_adapter
+    - historical_memory
+    - UNKNOWN
+  operating_rules:
+    - one_authority_per_responsibility
+    - controller_may_narrow_never_widen
+    - program_controller_state_outranks_memory_state
+    - native_session_hooks_are_carriers_not_readiness_authorities
+    - provider_adapters_translate_transport_only
+    - canonical_boot_core_must_be_callable_by_interactive_sessions_and_PE_workers
+    - session_boot_critical_path_must_not_require_pydantic_or_PyYAML
+    - every_required_hydration_lane_must_terminate_in_an_explicit_machine_state
+    - empty_result_must_never_alias_transport_or_authentication_failure
+    - operator_status_is_optional_but_machine_receipt_is_mandatory
+    - operator_telemetry_must_not_consume_model_context
+    - continuity_uses_exact_checkpoint_resolution_not_semantic_guessing
+    - semantic_memory_may_inform_but_never_replace_authoritative_resume_or_program_state
+    - active_repository_identity_must_be_explicit_or_autonomous_PE_is_blocked
+    - context_is_selected_by_authority_relevance_freshness_novelty_and_token_cost
+    - unused_context_budget_must_not_be_filled_without_value
+    - secret_values_never_enter_logs_receipts_model_context_Graphiti_or_controller_state
+    - secret_hashes_or_prefixes_are_not_required_for_receipt_provenance
+    - desktop_agent_secret_values_are_resolved_from_Infisical_when_required
+    - local_secret_materialization_is_a_cache_not_the_secret_source_of_truth
+    - .env.local_is_not_a_supported_required_dependency
+    - local_GitHub_access_prefers_gh_authenticated_credentials
+    - cloud_credentials_prefer_short_lived_workload_identity_or_SSO
+    - GitHub_Actions_org_repo_environment_secrets_are_consumed_inside_authorized_jobs
+    - no_desktop_path_attempts_to_pull_GitHub_Actions_secret_values
+    - session_close_does_not_depend_on_inline_LLM_distillation
+    - continuity_checkpoint_latency_is_independent_of_slow_memory_distillation
+    - asynchronous_memory_writes_are_idempotent_by_deterministic_identity
+    - autonomous_PE_requires_a_fresh_valid_session_readiness_receipt
+    - missing_required_capability_is_blocked_not_silently_emulated
+    - interactive_degraded_operation_may_continue_only_when_policy_explicitly_allows_it
+    - identical_canonical_inputs_must_compile_to_equivalent_semantic_context_across_peers
+    - rehydration_must_preserve_receipt_chain_and_hydration_epoch
+    - mutable_runtime_state_remains_outside_repository_worktrees
+  terminal_verdicts:
+    - CONVERGED
+    - CONVERGED_WITH_NON_BLOCKING_RISKS
+    - NOT_CONVERGED
+    - INCONCLUSIVE
+targets:
+  - id: TARGET-001
+    name: Cursor-Governance
+    kind: git_repository
+    authority_owner: Quantum-L9
+    execution_mode: repo_local
+    repository_id: Quantum-L9/Cursor-Governance
+    source_of_truth: Quantum-L9/Cursor-Governance
+    environments: [local, ci]
+    mutability: reversible
+    expected_revision: collect_at_admission
+    default_branch: main
+    adapter: git_repo_adapter
+  - id: TARGET-002
+    name: Program Execution Control Plane
+    kind: program_control
+    authority_owner: Quantum-L9/Cursor-Governance
+    execution_mode: program_control
+    repository_id: null
+    source_of_truth: environment/program-execution
+    environments: [local]
+    mutability: controlled
+    expected_revision: collect_at_admission
+    adapter: controller
+authorities:
+  - id: AUTH-001
+    responsibility: program_ownership_scope_and_terminal_verdict
+    owner: "Igor Beylin"
+    authority_type: human_owner
+    scope: [whole_program]
+    may_delegate: false
+  - id: AUTH-002
+    responsibility: program_execution_and_session_admission_architecture
+    owner: environment/program-execution
+    authority_type: canonical_runtime_owner
+    scope: [TARGET-001, TARGET-002]
+    may_delegate: true
+  - id: AUTH-003
+    responsibility: durable_agent_memory_and_hydration_contracts
+    owner: ops/graphiti
+    authority_type: subsystem_owner
+    scope: [TARGET-001]
+    may_delegate: true
+  - id: AUTH-004
+    responsibility: runtime_environment_and_secret_resolution
+    owner: ops/secrets
+    authority_type: subsystem_owner
+    scope: [TARGET-001]
+    may_delegate: true
+  - id: AUTH-005
+    responsibility: peer_execution_context_and_capability_readiness
+    owner: environment/program-execution/peer_execution
+    authority_type: subsystem_owner
+    scope: [TARGET-001, TARGET-002]
+    may_delegate: true
+  - id: AUTH-006
+    responsibility: independent_conformance_and_negative_path_verification
+    owner: environment/program-execution/conformance
+    authority_type: verifier
+    scope: [whole_program]
+    may_delegate: true
+evidence_requirements:
+  - id: EVID-001
+    claim: current_session_activation_and_hook_behavior_is_known
+    source_type: repository_inspection
+    source_location: ops/hooks
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001]
+    contradicts: []
+  - id: EVID-002
+    claim: current_PE_authority_binding_and_thin_adapter_contracts_are_known
+    source_type: repository_inspection
+    source_location: environment/program-execution
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001, GATE-006]
+    contradicts: []
+  - id: EVID-003
+    claim: current_Graphiti_client_hydration_checkpoint_and_distillation_paths_are_known
+    source_type: repository_inspection
+    source_location: ops/graphiti
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001, GATE-004, GATE-005]
+    contradicts: []
+  - id: EVID-004
+    claim: current_secret_tooling_Infisical_configuration_and_safe_fetch_contract_are_known
+    source_type: repository_inspection
+    source_location: ops/secrets
+    collection_method: read_only_inspection_and_redacted_capability_probe
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001, GATE-003]
+    contradicts: []
+  - id: EVID-005
+    claim: current_Claude_Cursor_web_mobile_and_desktop_adapter_contracts_are_known
+    source_type: repository_inspection
+    source_location: environment/agents
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001, GATE-003, GATE-006]
+    contradicts: []
+  - id: EVID-006
+    claim: current_registered_and_required_PE_peer_bindings_are_known
+    source_type: repository_inspection
+    source_location: environment/agents/PEER_RUNTIME_BINDINGS.yaml
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports: [GATE-001, GATE-006]
+    contradicts: []
+  - id: EVID-007
+    claim: baseline_validation_and_conformance_results_are_recorded_before_mutation
+    source_type: test_result
+    source_location: repository_local_validation
+    collection_method: local_validation
+    freshness: collect_at_admission
+    producer: verifier
+    supports: [GATE-001, GATE-007]
+    contradicts: []
+decisions:
+  - id: DEC-001
+    question: What is the immutable Program Execution egress for this campaign?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          Exactly CAMPAIGN_SOURCE.yaml plus a machine-generated
+          source-integrity-receipt.json.
+  - id: DEC-002
+    question: What is the desktop source of required agent secret values?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          Infisical is the source of declared desktop agent secret values;
+          .env.local is not a required dependency.
+  - id: DEC-003
+    question: What proves an autonomous PE worker is ready?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          A fresh canonical Session Readiness Receipt produced by the shared
+          session runtime and validated by PE Gate 0.
+  - id: DEC-004
+    question: Is hydration status mandatory model context?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          Machine hydration receipt is mandatory; human status display is optional;
+          diagnostic telemetry is excluded from model context.
+  - id: DEC-005
+    question: How is session continuity retrieved?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          Continuity uses exact latest ResumeCapsule/checkpoint identity;
+          lessons and historical knowledge remain semantic retrieval.
+  - id: DEC-006
+    question: Where does dependency-light Graphiti transport live?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          Stdlib MCP transport is internal to the canonical Graphiti client;
+          hydration does not create a second memory front door.
+  - id: DEC-007
+    question: Can secret values or derived fingerprints enter receipts or model memory?
+    authority_id: AUTH-001
+    status: accepted
+    selected_option_id: OPTION-A
+    blocking_task_ids: []
+    required_evidence_ids: []
+    options:
+      - id: OPTION-A
+        description: >-
+          No. Receipts record provider, capability, state and provenance only.
+unknowns:
+  - id: UNK-001
+    statement: >-
+      Exact existing Infisical project, environment, path and CLI authentication
+      conventions for Cursor-Governance must be bound from current repository
+      tooling and authenticated local state without exposing values.
+    owner: AUTH-004
+    status: open
+    blocking_task_ids: [TASK-003]
+    resolution_method: >-
+      Inspect ops/secrets and current Infisical metadata; execute redacted identity
+      and key-name-only capability probes.
+    resolution_evidence_ids: [EVID-004]
+  - id: UNK-002
+    statement: >-
+      Exact peers and surfaces required for autonomous equivalence must come from
+      the current runtime binding registry rather than a hard-coded peer list.
+    owner: AUTH-005
+    status: open
+    blocking_task_ids: [TASK-006]
+    resolution_method: >-
+      Resolve current registered and required peers from canonical runtime bindings.
+    resolution_evidence_ids: [EVID-006]
+  - id: UNK-003
+    statement: >-
+      Current main or execution branch may or may not already contain the pending
+      Graphiti hydration remediation and must be inspected before implementation.
+    owner: AUTH-003
+    status: open
+    blocking_task_ids: [TASK-004, TASK-005]
+    resolution_method: >-
+      Diff active execution revision against current memory client, hydration and
+      close-session implementation before mutation.
+    resolution_evidence_ids: [EVID-003]
+  - id: UNK-004
+    statement: >-
+      Cursor desktop's optimal secret injection/materialization mechanism must be
+      resolved from the current Cursor adapter while preserving the canonical
+      runtime resolver and avoiding .env.local.
+    owner: AUTH-004
+    status: open
+    blocking_task_ids: [TASK-003]
+    resolution_method: >-
+      Inspect the current Cursor adapter/MCP launch contract and select the thinnest
+      host-specific renderer or runtime injection path.
+    resolution_evidence_ids: [EVID-005]
+risks:
+  - id: RISK-001
+    statement: Secret material may leak through logs, exceptions, receipts, test fixtures or model context.
+    tier: T1
+    likelihood: possible
+    impact: critical
+    owner: AUTH-004
+    mitigations:
+      - allowlist secret names before retrieval
+      - never log or serialize values
+      - redact subprocess output
+      - negative-test receipt and context artifacts for secret leakage
+  - id: RISK-002
+    statement: A fallback may falsely report a fully healthy session.
+    tier: T1
+    likelihood: possible
+    impact: critical
+    owner: AUTH-002
+    mitigations:
+      - explicit per-lane states
+      - provenance and freshness on every fallback
+      - fail autonomous PE admission when required policy is unsatisfied
+  - id: RISK-003
+    statement: Cross-peer adapter drift may produce materially different cognitive state.
+    tier: T1
+    likelihood: possible
+    impact: material
+    owner: AUTH-005
+    mitigations:
+      - canonical context manifest
+      - semantic context digest
+      - fixture-based parity conformance across required peers
+  - id: RISK-004
+    statement: Session boot may become slow enough to damage interactive usability.
+    tier: T2
+    likelihood: possible
+    impact: material
+    owner: AUTH-002
+    mitigations:
+      - parallel typed reads
+      - exact continuity lookup
+      - stale-while-revalidate cache
+      - progressive hydration
+      - boot latency telemetry
+  - id: RISK-005
+    statement: Async checkpoint or distillation retries may duplicate durable memory.
+    tier: T2
+    likelihood: possible
+    impact: material
+    owner: AUTH-003
+    mitigations:
+      - deterministic event identity
+      - idempotent projection
+      - retry and crash-boundary fault tests
+waivers: []
+prohibited_paths:
+  - id: DNB-001
+    statement: Do not make .env.local a required session or secret source.
+    rationale: Fresh clones must self-bootstrap from canonical providers.
+  - id: DNB-002
+    statement: Do not duplicate boot, hydration, context or autonomy brains inside provider adapters.
+    rationale: Provider adapters are transport/presentation projections only.
+  - id: DNB-003
+    statement: Do not create a second direct Graphiti HTTP/MCP memory client from hydration.
+    rationale: One canonical memory client boundary prevents semantic and transport drift.
+  - id: DNB-004
+    statement: Do not place secret values or fingerprints in logs, receipts, model context, Graphiti or Git.
+    rationale: Provenance does not require disclosure of secret material.
+  - id: DNB-005
+    statement: Do not attempt to pull GitHub Actions organization secret values onto desktop hosts.
+    rationale: Desktop credentials use desktop-capable providers; Actions secrets remain job-scoped.
+  - id: DNB-006
+    statement: Do not let Graphiti memory override Program Controller state or active Program claims.
+    rationale: PE durable typed state is execution authority.
+  - id: DNB-007
+    statement: Do not admit autonomous PE without a fresh valid Session Readiness Receipt.
+    rationale: Autonomous execution requires machine-proven cognitive and capability readiness.
+  - id: DNB-008
+    statement: Do not infer active repository identity from arbitrary child checkout presence.
+    rationale: Filesystem presence is not task authority.
+  - id: DNB-009
+    statement: Do not make inline Graphiti writes the normal session-close persistence path.
+    rationale: Session continuity and distillation must be failure-isolated from the interactive close path.
+  - id: DNB-010
+    statement: Do not place mutable Program or session runtime state inside repository worktrees.
+    rationale: Runtime state remains under $HOME/.l9.
+workstreams:
+  - id: WS-01
+    name: baseline_and_authority_lock
+    owner: AUTH-002
+    objective: Bind current state, resolve blocking unknowns and preserve rollback evidence.
+  - id: WS-02
+    name: canonical_session_runtime
+    owner: AUTH-002
+    objective: Implement session contracts, receipts, readiness and context compilation substrate.
+  - id: WS-03
+    name: environment_and_secret_runtime
+    owner: AUTH-004
+    objective: Implement canonical secret/environment resolution and clone-safe Infisical materialization.
+  - id: WS-04
+    name: memory_and_continuity_runtime
+    owner: AUTH-003
+    objective: Converge hydration, exact continuity and asynchronous durable memory flow.
+  - id: WS-05
+    name: peer_execution_admission
+    owner: AUTH-005
+    objective: Gate PE autonomy on canonical readiness and prove semantic parity across peers.
+  - id: WS-06
+    name: conformance_and_closeout
+    owner: AUTH-006
+    objective: Fault-inject, independently verify, reconcile documentation and produce handoff evidence.
+dependency_edges:
+  - from: TASK-001
+    to: TASK-002
+  - from: TASK-001
+    to: TASK-003
+  - from: TASK-001
+    to: TASK-004
+  - from: TASK-002
+    to: TASK-004
+  - from: TASK-003
+    to: TASK-006
+  - from: TASK-004
+    to: TASK-005
+  - from: TASK-004
+    to: TASK-006
+  - from: TASK-005
+    to: TASK-006
+  - from: TASK-006
+    to: TASK-007
+waves:
+  - id: W0
+    name: baseline_lock
+    task_ids: [TASK-001]
+    predecessor_wave_ids: []
+    exit_gate_ids: [GATE-001]
+  - id: W1
+    name: runtime_foundations
+    task_ids: [TASK-002, TASK-003]
+    predecessor_wave_ids: [W0]
+    exit_gate_ids: [GATE-002, GATE-003]
+  - id: W2
+    name: hydration_and_continuity
+    task_ids: [TASK-004, TASK-005]
+    predecessor_wave_ids: [W1]
+    exit_gate_ids: [GATE-004, GATE-005]
+  - id: W3
+    name: autonomous_peer_admission
+    task_ids: [TASK-006]
+    predecessor_wave_ids: [W2]
+    exit_gate_ids: [GATE-006]
+  - id: W4
+    name: verification_and_closeout
+    task_ids: [TASK-007]
+    predecessor_wave_ids: [W3]
+    exit_gate_ids: [GATE-007]
+tasks:
+  - id: TASK-001
+    title: Lock current runtime, memory, secret and PE state
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Collect fresh current-state evidence, resolve the declared blocking unknowns
+      and establish rollback-safe baselines before code mutation.
+    authority_basis_ids: [AUTH-002, AUTH-003, AUTH-004, AUTH-005]
+    required_decision_ids: [DEC-001, DEC-002, DEC-003, DEC-004, DEC-005, DEC-006, DEC-007]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001, EVID-002, EVID-003, EVID-004, EVID-005, EVID-006, EVID-007]
+    actions:
+      - inspect_current_session_start_and_activation_paths
+      - inspect_current_PE_runtime_bindings_and_thin_adapter_contracts
+      - inspect_current_Graphiti_read_hydration_close_and_distillation_paths
+      - inspect_current_secret_and_Infisical_tooling_without_secret_value_output
+      - inspect_current_Claude_Cursor_web_mobile_and_desktop_adapters
+      - resolve_UNK_001_through_UNK_004
+      - capture_baseline_conformance_and_test_results
+    acceptance:
+      - id: AC-001
+        statement: >-
+          All blocking current-state unknowns are evidence-bound, baselines are
+          recorded and no secret value was disclosed during admission.
+        required_evidence_types: [inspection, test_result]
+    negative_cases:
+      - mutation_before_baseline_lock
+      - secret_value_in_collected_evidence
+      - assumed_peer_list_instead_of_registry_resolution
+      - assumed_Graphiti_patch_state
+    rollback:
+      strategy: no_repo_mutation_expected_discard_runtime_evidence_and_recollect
+      trigger: evidence_or_authority_conflict
+      validation: Repository remains at Program Lock base.
+    risk:
+      tier: T0
+      reversibility: fully_reversible
+      blast_radius: inspection_only
+    authorization_ceiling:
+      inspect: true
+      local_write: false
+      commit: false
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids: [GATE-001]
+  - id: TASK-002
+    title: Implement canonical session boot, receipts and readiness core
+    definition_status: blocked
+    workstream_id: WS-02
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Create one stdlib-safe session boot/admission core producing canonical
+      environment, hydration, context and session-readiness receipts plus optional
+      human status projections.
+    authority_basis_ids: [AUTH-002]
+    required_decision_ids: [DEC-003, DEC-004, DEC-007]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001, EVID-002]
+    actions:
+      - define_and_validate_session_boot_contract
+      - define_runtime_environment_hydration_context_and_readiness_receipts
+      - implement_shared_ensure_ready_entrypoint
+      - implement_receipt_digest_freshness_and_hydration_epoch_chain
+      - implement_compact_and_verbose_status_renderer_from_receipts_only
+      - exclude_operator_telemetry_from_model_context
+      - make_critical_boot_path_stdlib_safe
+      - add_precompact_reconnect_dispatch_and_lock_refresh_reentry_contract
+    acceptance:
+      - id: AC-002
+        statement: >-
+          The same canonical boot core can be called by native SessionStart and PE,
+          produces schema-valid digest-bound receipts, and operates when pydantic and
+          PyYAML are unavailable.
+        required_evidence_types: [test_result, diff]
+    negative_cases:
+      - receipt_missing_on_success
+      - provider_adapter_authors_readiness
+      - diagnostic_JSON_in_model_context
+      - expired_receipt_accepted
+      - third_party_import_kills_boot
+    rollback:
+      strategy: revert_session_runtime_diff_and_restore_existing_hook_behavior
+      trigger: blocking_validation_failure
+      validation: Existing session bootstrap remains functional.
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: session_boot
+    authorization_ceiling: &local_code_ceiling
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids: [GATE-002]
+  - id: TASK-003
+    title: Implement Infisical-backed clone-safe runtime environment resolution
+    definition_status: blocked
+    workstream_id: WS-03
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Make fresh desktop clones automatically resolve only declared required
+      credentials from approved providers and materialize host-required private
+      configuration without .env.local or manual secret copying.
+    authority_basis_ids: [AUTH-004]
+    required_decision_ids: [DEC-002, DEC-007]
+    blocking_unknown_ids: [UNK-001, UNK-004]
+    input_evidence_ids: [EVID-004, EVID-005]
+    actions:
+      - implement_canonical_runtime_secret_and_environment_policy
+      - resolve_desktop_agent_secret_values_from_authenticated_Infisical
+      - allowlist_key_names_before_secret_retrieval
+      - generate_or_merge_Claude_project_local_settings_atomically
+      - preserve_unmanaged_Claude_local_settings
+      - enforce_private_file_permissions_and_gitignore
+      - resolve_Cursor_desktop_through_same_canonical_resolver
+      - retain_mobile_and_web_explicit_process_environment_input
+      - use_gh_authenticated_credential_store_for_local_GitHub_capability
+      - use_GitHub_Actions_secrets_and_OIDC_inside_authorized_jobs
+      - prefer_AWS_SSO_or_credential_process_on_desktop
+      - implement_safe_existing_materialization_fallback_with_live_probe
+      - emit_runtime_environment_receipt_without_secret_values_or_fingerprints
+    acceptance:
+      - id: AC-003
+        statement: >-
+          A fresh-clone desktop fixture with authenticated Infisical identity
+          self-materializes required Claude/Cursor runtime capability, no .env.local
+          is needed, mobile process-env input remains supported, and secret leak scans pass.
+        required_evidence_types: [test_result, diff]
+    negative_cases:
+      - env_local_required
+      - entire_Infisical_folder_exported_without_allowlist
+      - secret_value_logged
+      - secret_value_or_hash_in_receipt
+      - unrelated_settings_local_content_overwritten
+      - GitHub_org_secret_value_pull_attempted_on_desktop
+      - stale_local_materialization_reported_as_primary_healthy_source
+    rollback:
+      strategy: >-
+        restore_preexisting_unmanaged_local_settings_and_revert_runtime_resolver_changes
+      trigger: credential_probe_or_secret_containment_failure
+      validation: No secret material is left in tracked files or runtime logs.
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: local_credentials_and_agent_startup
+    authorization_ceiling: *local_code_ceiling
+    completion_gate_ids: [GATE-003]
+  - id: TASK-004
+    title: Implement typed hydration compiler and exact ResumeCapsule continuity
+    definition_status: blocked
+    workstream_id: WS-04
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Replace flat fact concatenation with deterministic authority lanes, exact
+      continuity, semantic knowledge selection, progressive retrieval and
+      token-aware context compilation.
+    authority_basis_ids: [AUTH-003, AUTH-002]
+    required_decision_ids: [DEC-004, DEC-005, DEC-006]
+    blocking_unknown_ids: [UNK-003]
+    input_evidence_ids: [EVID-003]
+    actions:
+      - place_stdlib_MCP_transport_beneath_canonical_Graphiti_client
+      - implement_ResumeCapsule_v2_exact_latest_checkpoint_resolution
+      - implement_program_continuity_repo_workspace_governance_and_capability_lanes
+      - prevent_noncontinuity_lanes_from_selecting_active_resume
+      - prohibit_child_checkout_presence_from_implying_active_repo
+      - implement_explicit_PASS_EMPTY_SKIPPED_FALLBACK_DEGRADED_FAILED_BLOCKED_states
+      - implement_candidate_dedupe_staleness_authority_and_value_per_token_scoring
+      - implement_progressive_H0_H1_H2_H3_hydration
+      - implement_configurable_token_budget_packer
+      - implement_stale_while_revalidate_compiled_capsule_cache
+      - emit_machine_HydrationReceipt_and_separate_compact_model_projection
+    acceptance:
+      - id: AC-004
+        statement: >-
+          Session hydration distinguishes successful empty results from failures,
+          resumes only authoritative active-repo continuity, exposes every fallback,
+          compiles within configured token budget and works without pydantic/PyYAML.
+        required_evidence_types: [test_result, diff]
+    negative_cases:
+      - wrong_repo_PICKUP_selected
+      - readonly_scope_skips_read
+      - Graphiti_timeout_reported_as_EMPTY
+      - governance_memory_overrides_program_state
+      - cache_fallback_without_age_or_source
+      - context_budget_filled_with_low_value_memory
+      - second_memory_front_door_created
+    rollback:
+      strategy: restore_previous_hydration_compiler_while_retaining_receipt_evidence
+      trigger: resume_correctness_or_context_parity_failure
+      validation: Prior hydration path reproduces baseline behavior.
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: memory_hydration
+    authorization_ceiling: *local_code_ceiling
+    completion_gate_ids: [GATE-004]
+  - id: TASK-005
+    title: Separate fast continuity checkpointing from slow memory cognition
+    definition_status: blocked
+    workstream_id: WS-04
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Make next-session continuity durable and low-latency without inline LLM
+      writes while retaining asynchronous durable distillation for lessons,
+      decisions and insights.
+    authority_basis_ids: [AUTH-003]
+    required_decision_ids: [DEC-005]
+    blocking_unknown_ids: [UNK-003]
+    input_evidence_ids: [EVID-003]
+    actions:
+      - implement_machine_readable_session_working_state_journal
+      - make_session_close_durable_enqueue_the_normal_write_boundary
+      - implement_fast_deterministic_checkpoint_projection
+      - separate_slow_LLM_distillation_and_promotion
+      - bind_job_checkpoint_and_promotion_ids_deterministically
+      - make_retry_effectively_idempotent
+      - preserve_enqueue_failure_as_retryable_not_closed_success
+      - define_and_test_close_to_next_session_continuity_freshness_SLO
+    acceptance:
+      - id: AC-005
+        statement: >-
+          A successfully closed session becomes resumable through the fast
+          checkpoint path within the declared freshness SLO; distillation may lag
+          independently; queue retries do not duplicate durable memory.
+        required_evidence_types: [test_result, diff]
+    negative_cases:
+      - six_hour_batch_required_for_next_session_resume
+      - failed_enqueue_marked_closed
+      - crash_after_memory_write_duplicates_episode
+      - transcript_tail_is_only_authoritative_working_state
+      - live_inline_Graphiti_write_required_for_normal_close
+    rollback:
+      strategy: restore_previous_close_path_behind_explicit_transition_flag
+      trigger: continuity_loss_or_queue_integrity_failure
+      validation: No queued or durable memory evidence is silently discarded.
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: session_continuity_and_memory_write_pipeline
+    authorization_ceiling: *local_code_ceiling
+    completion_gate_ids: [GATE-005]
+  - id: TASK-006
+    title: Gate autonomous PE on canonical session readiness and prove peer parity
+    definition_status: blocked
+    workstream_id: WS-05
+    wave_id: W3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Add PE Gate 0 so interactive hooks and autonomous workers converge on the
+      same canonical readiness semantics, context manifest and authority state
+      across every required registered peer.
+    authority_basis_ids: [AUTH-005, AUTH-002]
+    required_decision_ids: [DEC-003, DEC-004, DEC-007]
+    blocking_unknown_ids: [UNK-002]
+    input_evidence_ids: [EVID-002, EVID-005, EVID-006]
+    actions:
+      - add_session_readiness_as_PE_gate_zero
+      - call_shared_ensure_ready_when_native_hook_is_absent_or_stale
+      - bind_context_autonomy_governance_and_capability_digests_to_admission
+      - discover_required_peers_from_runtime_bindings
+      - compile_provider_neutral_context_manifest
+      - prove_semantic_context_digest_parity_across_required_peers
+      - preserve_registry_authority_differences_per_peer
+      - block_missing_required_capability_without_hidden_emulation
+      - rehydrate_on_PE_dispatch_compaction_reconnect_and_Program_Lock_refresh
+    acceptance:
+      - id: AC-006
+        statement: >-
+          Every required registered peer either proves READY_PE_AUTONOMOUS from
+          the same canonical semantic inputs or returns an explicit machine-readable
+          BLOCKED reason; adapters cannot mint or override readiness.
+        required_evidence_types: [conformance_result, test_result, diff]
+    negative_cases:
+      - autonomous_dispatch_without_session_receipt
+      - stale_receipt_accepted
+      - provider_adapter_changes_memory_selection
+      - provider_specific_program_state
+      - unsupported_capability_emulated
+      - context_digest_differs_for_equivalent_canonical_fixture
+    rollback:
+      strategy: disable_gate_zero_enforcement_only_after_preserving_all_failed_conformance_evidence
+      trigger: systemic_PE_admission_regression
+      validation: Existing PE binding and controller gates remain intact.
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: autonomous_peer_execution
+    authorization_ceiling: *local_code_ceiling
+    completion_gate_ids: [GATE-006]
+  - id: TASK-007
+    title: Execute fault-injection conformance and controller closeout
+    definition_status: blocked
+    workstream_id: WS-06
+    wave_id: W4
+    target_id: TARGET-002
+    execution_kind: program_control
+    objective: >-
+      Independently prove the complete session runtime under healthy and degraded
+      conditions, reconcile canonical documentation and export the controller handoff.
+    authority_basis_ids: [AUTH-006, AUTH-001]
+    required_decision_ids: [DEC-001, DEC-002, DEC-003, DEC-004, DEC-005, DEC-006, DEC-007]
+    blocking_unknown_ids: []
+    input_evidence_ids: [EVID-001, EVID-002, EVID-003, EVID-004, EVID-005, EVID-006, EVID-007]
+    actions:
+      - test_no_pydantic
+      - test_no_PyYAML
+      - test_no_virtualenv
+      - test_Graphiti_timeout_401_and_malformed_response
+      - test_Infisical_unavailable_and_stale_local_fallback
+      - test_corrupt_local_Claude_settings
+      - test_ambiguous_repository
+      - test_wrong_memory_scope
+      - test_expired_session_receipt
+      - test_provider_unavailable_and_capability_drift
+      - test_stale_Program_Lock
+      - test_checkpoint_worker_crash_boundaries
+      - test_context_budget_and_semantic_parity
+      - scan_all_receipts_logs_context_and_fixtures_for_secret_material
+      - reconcile_CANONICAL_LAW_memory_PE_and_pipeline_documentation
+      - export_controller_handoff_receipt
+      - request_program_owner_terminal_verdict
+    acceptance:
+      - id: AC-007
+        statement: >-
+          All blocking gates pass under independent verification, negative paths
+          return explicit expected machine states, no secret material appears in
+          artifacts, and the Controller Handoff Receipt is evidence-complete.
+        required_evidence_types: [conformance_result, test_result, receipt]
+    negative_cases:
+      - healthy_only_test_matrix
+      - secret_leak_scan_missing
+      - controller_self_declares_terminal_verdict
+      - documentation_describes_old_memory_or_secret_authority
+      - peer_surface_omitted_without_explicit_NOT_APPLICABLE_reason
+    rollback:
+      strategy: restore_last_gate_passed_revision_and_preserve_append_only_receipts
+      trigger: final_conformance_or_secret_containment_failure
+      validation: Failed state and rollback evidence remain auditable.
+    risk:
+      tier: T0
+      reversibility: fully_reversible
+      blast_radius: program_closeout
+    authorization_ceiling:
+      inspect: true
+      local_write: false
+      commit: false
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids: [GATE-007]
+gates:
+  - id: GATE-001
+    name: current_state_and_authority_locked
+    gate_type: entry
+    blocking: true
+    owner_authority_id: AUTH-002
+    task_ids: [TASK-001]
+    required_evidence_ids: [EVID-001, EVID-002, EVID-003, EVID-004, EVID-005, EVID-006, EVID-007]
+    pass_criteria:
+      - All blocking unknowns have evidence-bound resolution.
+      - Baseline revisions and tests are recorded.
+      - No secret value was disclosed during evidence collection.
+    failure_effect: Block all implementation waves.
+  - id: GATE-002
+    name: canonical_session_runtime_ready
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-002
+    task_ids: [TASK-002]
+    required_evidence_ids: []
+    pass_criteria:
+      - Shared boot and ensure_ready path produces valid receipts.
+      - Critical boot remains usable without pydantic or PyYAML.
+      - Human status is a receipt projection and does not enter model context.
+    failure_effect: Block hydration and autonomous PE integration.
+  - id: GATE-003
+    name: clone_safe_secret_runtime_ready
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-004
+    task_ids: [TASK-003]
+    required_evidence_ids: [EVID-004, EVID-005]
+    pass_criteria:
+      - Fresh desktop clone self-materializes declared required agent secrets from Infisical.
+      - .env.local is not required.
+      - Mobile/Web explicit process-env bootstrap remains supported.
+      - GitHub and cloud credentials use surface-appropriate providers.
+      - No secret values or fingerprints appear in receipts or logs.
+    failure_effect: Block autonomous PE admission rollout.
+  - id: GATE-004
+    name: hydration_compiler_ready
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-003
+    task_ids: [TASK-004]
+    required_evidence_ids: [EVID-003]
+    pass_criteria:
+      - Exact active-repo continuity is separated from semantic knowledge.
+      - Every hydration lane reports an explicit machine state.
+      - Context compilation respects configured budget.
+      - Fallback provenance and freshness are visible.
+      - Only the canonical Graphiti client owns MCP transport.
+    failure_effect: Block continuity cutover and PE session admission.
+  - id: GATE-005
+    name: continuity_write_pipeline_ready
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-003
+    task_ids: [TASK-005]
+    required_evidence_ids: [EVID-003]
+    pass_criteria:
+      - Fast checkpoint continuity meets defined freshness SLO.
+      - Slow distillation is not on the interactive close critical path.
+      - Retry/crash tests demonstrate effective idempotency.
+      - Failed enqueue remains retryable and never becomes false successful close.
+    failure_effect: Block autonomous session continuity cutover.
+  - id: GATE-006
+    name: autonomous_peer_session_parity_ready
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-005
+    task_ids: [TASK-006]
+    required_evidence_ids: [EVID-002, EVID-005, EVID-006]
+    pass_criteria:
+      - PE Gate 0 requires a fresh canonical Session Readiness Receipt.
+      - Every required registered peer proves equivalent semantic context for the canonical fixture.
+      - Missing capabilities fail explicitly rather than through hidden emulation.
+      - Provider-specific authority remains bounded by canonical registry policy.
+    failure_effect: Autonomous PE remains blocked on affected surfaces.
+  - id: GATE-007
+    name: session_runtime_program_converged
+    gate_type: convergence
+    blocking: true
+    owner_authority_id: AUTH-006
+    task_ids: [TASK-007]
+    required_evidence_ids: [EVID-007]
+    pass_criteria:
+      - Full positive and negative conformance matrix passes.
+      - Secret containment scans pass.
+      - SessionStart, PE dispatch and rehydration paths use the same canonical runtime.
+      - Documentation and executable contracts agree.
+      - Controller Handoff Receipt is schema-valid and evidence-complete.
+      - Controller recommends but does not declare the owner terminal verdict.
+    failure_effect: Program terminal verdict remains INCONCLUSIVE.
+observability:
+  program_progress_fields:
+    - session_readiness_decision
+    - hydration_lane_states
+    - hydration_epoch
+    - fallback_count
+    - context_selected_tokens
+    - context_manifest_digest
+    - runtime_environment_capability_states
+    - secret_provider_provenance
+    - resume_capsule_age
+    - boot_duration_ms
+    - autonomous_PE_admission
+    - cross_peer_semantic_parity
+cutover_and_rollback:
+  preconditions:
+    - GATE-002_PASS
+    - GATE-003_PASS
+    - GATE-004_PASS
+    - GATE-005_PASS
+    - GATE-006_PASS
+    - secret_containment_scan_PASS
+  rollout:
+    - enable_shadow_receipt_generation_before_enforcement
+    - compare_old_and_new_boot_behavior_on_supported_surfaces
+    - cut_native_session_hooks_to_shared_boot_core
+    - enable_PE_gate_zero_after_surface_parity_PASS
+    - retain_explicit_bounded_rollback_path_until_GATED_closeout
+  rollback_rules:
+    - restore_last_gate_passed_repo_revision
+    - preserve_controller_and_attempt_receipts
+    - preserve_generated_user_local_settings_unmanaged_fields
+    - never_rewrite_append_only_evidence
+    - never_restore_a_path_that_requires_secret_leakage_or_false_readiness
+scheduler:
+  objective_order:
+    - lock_current_state_and_authority
+    - establish_shared_session_and_secret_foundations
+    - establish_correct_hydration_and_continuity
+    - prove_autonomous_peer_parity
+    - execute_negative_path_conformance
+    - close_out_with_complete_evidence
+  one_writer_per_repository: true
+  prioritize_reversible_local_work: true
+  preserve_independent_verification: true

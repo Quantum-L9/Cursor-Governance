@@ -403,7 +403,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "f098e858d11e07528ce5d0a52588b61535607612762675ec851aeb3e2e6c26f4"
+      "sha256": "bb4ed47203f21736e0260f7035bcf66798991a6f271a764c22416fbc6491d33a"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -411,7 +411,7 @@
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "6bfdfbc654b6bc7943f85bd97f29ce59e0008bdc732336d696ecc785e43ec2e4"
+      "sha256": "c20b36da7591f8affbc9cf306dc6e5bef8ca66a33f630bb7987e8458b9d0b58c"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -423,7 +423,7 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "b5869199051b6ca79aadc0aaffbcdcd6c1dba7e6932a9c6ff1c173752d3c2289"
+      "sha256": "12c54433a48b9d48ded1f51be776d7d0999374a1af1f89d2f3e91cfa30877a3b"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
@@ -596,6 +596,14 @@
     {
       "path": "campaigns/scripts/test_close_campaign.py",
       "sha256": "121b10c566dbf4ace506bc0252948f7d56d113643256071969493112b9ec8efc"
+    },
+    {
+      "path": "campaigns/session-runtime-hydration-convergence-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "fb515ef0a82ebe5d388f80116641466e07b9c5bd4898c06abb3f8ed23282174b"
+    },
+    {
+      "path": "campaigns/session-runtime-hydration-convergence-v1/source-integrity-receipt.json",
+      "sha256": "90218ded733e4a5844daffe15468bfe36ef15a6b060fadde4eb29e0eb4d0c79c"
     },
     {
       "path": "compiler/README.md",
