@@ -85,7 +85,9 @@ RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 
 # `make pr`, tolerating flags and env prefixes: `PR_REMEDIATE=0 make pr`,
 # `make -C /path pr`, `make pr WS=...`.
-MAKE_PR_PATTERN = re.compile(r"\bmake\b(?:\s+-\S+(?:\s+\S+)?|\s+[A-Z_][A-Z0-9_]*=\S+)*\s+pr\b", re.I)
+MAKE_PR_PATTERN = re.compile(
+    r"\bmake\b(?:\s+-\S+(?:\s+\S+)?|\s+[A-Z_][A-Z0-9_]*=\S+)*\s+pr\b", re.I
+)
 
 PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
 
