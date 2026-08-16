@@ -276,6 +276,73 @@ def check_dependency_policy(failures: list[str]) -> None:
         print("  OK: no adapter script re-declares a governed dependency pin")
 
 
+def check_publish_path_alignment(failures: list[str]) -> None:
+    """The permission layer must agree with the enforcement layer.
+
+    ``permissions.allow`` is what an agent reads as "approved, no prompt". If it
+    lists an action ``ops/autonomy/local_execution_gate.py`` denies, the agent is
+    actively taught to attempt something that will be blocked a layer later —
+    which is exactly how a raw ``git push`` and an MCP ``create_pull_request``
+    got attempted on this repo. Being impossible is not enough; the agent must
+    not be told it is permitted.
+
+    So: every publish-bypass form must be absent from allow AND present in deny.
+    """
+    path = HERE / "settings.template.json"
+    if not path.is_file():
+        return
+    try:
+        settings = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        _fail(f"settings.template.json unreadable: {exc}", failures)
+        return
+
+    permissions = settings.get("permissions") or {}
+    allow = [str(entry) for entry in permissions.get("allow", [])]
+    deny = [str(entry) for entry in permissions.get("deny", [])]
+
+    # Keep in step with local_execution_gate: RAW_PUBLISH_PATTERNS + DENY_MCP_TOOLS.
+    forbidden = {
+        "Bash(git push:*)": ("git push", ("git push",)),
+        "Bash(gh pr create:*)": ("gh pr create", ("gh pr create",)),
+        "Bash(gh pr edit:*)": ("gh pr edit", ("gh pr edit",)),
+        "Bash(make push:*)": ("make push", ("make push",)),
+        "mcp__github__create_pull_request": ("create_pull_request", ("create_pull_request",)),
+        "mcp__github__push_files": ("push_files", ("push_files",)),
+    }
+
+    problems = 0
+    for canonical, (label, needles) in forbidden.items():
+        leaked = [
+            entry for entry in allow if any(needle in entry for needle in needles)
+        ]
+        if leaked:
+            _fail(
+                f"permissions.allow lists `{leaked[0]}`, which the publish-path gate denies "
+                f"({label}) — an agent reads this as approved and will attempt it",
+                failures,
+            )
+            problems += 1
+        if canonical not in deny:
+            _fail(
+                f"permissions.deny is missing `{canonical}` — the gate denies it, so the "
+                "permission layer must say so too",
+                failures,
+            )
+            problems += 1
+
+    if "Bash(make pr:*)" not in allow:
+        _fail(
+            "permissions.allow must include `Bash(make pr:*)` — the sanctioned publish "
+            "path has to be the frictionless one, or the agent looks for another way",
+            failures,
+        )
+        problems += 1
+
+    if not problems:
+        print("  OK: permission layer agrees with the publish-path gate")
+
+
 def check_memory_identity_distinct(failures: list[str]) -> None:
     """Claude Code's memory identity must differ from Cursor's (`cursor_agent`).
 
@@ -365,6 +432,7 @@ def main() -> int:
     check_mcp_uses_env_refs(failures)
     check_setup_linux_sandbox_hygiene(failures)
     check_dependency_policy(failures)
+    check_publish_path_alignment(failures)
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
     check_memory_enforcement(failures)
