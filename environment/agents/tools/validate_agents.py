@@ -187,17 +187,23 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
                 f"{envf.name}: GRAPHITI_MCP_URL='{got}' "
                 f"expected '{expected_full}' (cloud Graphiti path)",
             )
-    if not tok_m:
-        err("A2", f"{envf.name}: missing GRAPHITI_MCP_TOKEN")
-    elif (
-        "REPLACE" not in tok_m.group(1) and "${" not in tok_m.group(1) and "<" not in tok_m.group(1)
-    ):
-        # allow placeholders only in committed examples
-        val = tok_m.group(1).strip()
-        if val and not val.startswith("REPLACE") and "YOUR_" not in val and not val.startswith("<"):
-            # still OK if clearly placeholder-like; warn only for hex-looking secrets
-            if len(val) >= 32 and all(c.isalnum() or c in "-_" for c in val):
-                err("A2", f"{envf.name}: GRAPHITI_MCP_TOKEN must be REPLACE_WITH_* placeholder")
+    # A2 (inverted by the zero-static-secret contract, §12/S3): the bearer must
+    # be ABSENT from an agent surface example, not present-as-a-placeholder.
+    #
+    # This rule used to require GRAPHITI_MCP_TOKEN and merely police its shape.
+    # That encoded the old posture — every surface carried a bearer, and review
+    # only checked it was not a live one. A placeholder in a committed example is
+    # an instruction to paste a real token into a model-controlled environment,
+    # which is exactly what the capability plane removes. Memory now resolves
+    # through the brokered graphiti.* capabilities, so a token here is a
+    # violation regardless of its value.
+    if tok_m:
+        err(
+            "A2",
+            f"{envf.name}: GRAPHITI_MCP_TOKEN must be ABSENT from a model-controlled "
+            "surface; memory resolves through the brokered graphiti.* capabilities "
+            "(contract S3/§12)",
+        )
 
 
 def _check_mcp_no_loopback_default(key: str, adir: Path) -> None:

@@ -2,7 +2,10 @@
 # Run repo-portable pre-commit hooks on changed files only (not --all-files).
 # Full-tree: make precommit / nightly CI.
 # sync-generated-artifacts is SKIPPED here — run_pr_gate heals with WARN+continue.
-# On a local governance clone, do NOT skip symlinks-check (activation must be live).
+# On a local Cursor governance clone, do NOT skip symlinks-check (activation must
+# be live). symlinks-check asserts Cursor desktop wiring (~/.cursor/plugins/local,
+# .cursor-commands, .cursor/plans), so it only means something on the cursor
+# surface — see the skip conditions below.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -34,7 +37,18 @@ cd "$WS"
 
 # Always skip sync in make pr path (heal happens in run_pr_gate).
 SKIP_LIST="sync-generated-artifacts"
-if [[ -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" || ! -f "$WS/rules/RULES-MANIFEST.yaml" ]]; then
+# symlinks-check asserts Cursor desktop activation. Skip it in CI, on a partial
+# clone, and on any non-cursor surface: a headless adapter surface (claude-code,
+# codex, …) can hold a FULL governance clone while having no Cursor install at
+# all, so "full clone" alone does not imply "a Cursor machine". Without this the
+# hook fails on wiring the surface is not supposed to have, and `make pr` — the
+# only sanctioned route to GitHub — is unreachable there.
+# PAIRED PREDICATE: run_pr_gate.sh gates check_governance_wiring.sh on the same
+# surface test. Both assert Cursor desktop wiring; change them together.
+SURFACE="${L9_GOVERNANCE_SURFACE:-}"
+if [[ -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" \
+   || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" || ! -f "$WS/rules/RULES-MANIFEST.yaml" \
+   || ( -n "$SURFACE" && "$SURFACE" != "cursor" ) ]]; then
   SKIP_LIST="${SKIP_LIST},symlinks-check"
 fi
 SKIP="$SKIP_LIST" pre-commit run --files "${files[@]}"
