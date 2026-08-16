@@ -11,8 +11,8 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 | Rule | Value |
 |---|---|
 | Publish path | `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + PR) |
-| Remediation | forbidden |
-| Merge | forbidden (human `L9_MERGE_AUTHORIZED` only) |
+| Remediation | campaign may converge to green + merge-ready; `/l9-pr-remediation` merges |
+| Merge | campaign forbidden; `/l9-pr-remediation` authorized after green + mergeable |
 | PR base | the campaign integration branch — **not** `main` |
 | Mixing | do not land campaign commits on unrelated feature branches |
 | PR title | `[{campaign_id}] {metadata.title}` via `scripts/campaign_pr_copy.py` |

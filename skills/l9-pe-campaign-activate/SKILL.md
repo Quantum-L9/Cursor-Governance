@@ -9,8 +9,8 @@ metadata:
   tags: [l9, program-execution, campaign, compiler, activate, merge]
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-08-15
+  version: 1.1.0
+  updated: 2026-08-16
 ---
 
 # PE Campaign Activate
@@ -24,6 +24,11 @@ L4 local execution, campaign-branch PR, `l9-pr-remediation` Converge, then
 
 Invoking this skill **is** merge authorization for the single campaign PR this
 run opens. It is not merge authorization for any other PR.
+
+Invoking **`/l9-pr-remediation`** separately authorizes ordinary merge of all
+open PRs in the target repo after they are green and mergeable. Receipt writer
+SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
+[scripts/authorize_campaign_merge.py](scripts/authorize_campaign_merge.py).
 
 ## Core Contract
 

@@ -3,7 +3,7 @@
 # SSOT companion: ops/autonomy/surface_profile.yaml → campaign_execution
 schema: l9.program-execution.campaign-execution-policy.v1
 schema_version: 1.0.0
-updated: "2026-08-15"
+updated: "2026-08-16"
 closeout:
   required: true
   last_step: true
@@ -17,13 +17,17 @@ publish:
   required_command: PR_REMEDIATE=0 make pr
   require_makefile_checkers: true
   raw_gh_pr_create: forbidden
-  # Operator default 2026-08-15: remediate the open PR until CI is green and
-  # the PR is mergeable (bounded cycles), then HALT before merge. Merge stays
-  # human-only (L9_MERGE_AUTHORIZED or one-shot merge-authorization.json).
+  # Campaigns publish via make pr and MUST end green + merge-ready.
+  # They do not merge. Invoking /l9-pr-remediation authorizes merge of
+  # every open PR in the target repo after Converge.
   remediate: true
   remediate_max_cycles: 5
   halt_before_merge: true
   merge: false
+  remediations:
+    skill: l9-pr-remediation
+    merge: authorized_on_skill_invocation
+    scope: all_open_prs_in_target_repo
   open_pr_against_main: false
   mix_with_other_feature_branches: false
 

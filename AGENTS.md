@@ -684,3 +684,20 @@ Authoritative corrections for Program Execution campaigns and default `make pr`:
    PRs against `main`. Do **not** mix campaign work onto other feature branches.
 4. Branch map and order: `environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml`.
    Profile SSOT: `ops/autonomy/surface_profile.yaml` → `campaign_execution`.
+
+<!-- PR_REMEDIATION_AUTHORIZES_MERGE_V1 -->
+## /l9-pr-remediation authorizes merge (2026-08-16) — supersedes campaign no-merge for remediations
+
+Authoritative corrections (do not treat older “do not merge / Human only
+`L9_MERGE_AUTHORIZED`” bullets as blocking this skill):
+
+1. Campaigns and `make pr` still end at **green + merge-ready**. They do
+   not merge. An L4 release receipt still does not authorize merge.
+2. Invoking **`/l9-pr-remediation`** (Converge) **is** merge authorization
+   for **all open PRs** in the target repo. Write
+   `python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open`,
+   converge each PR, then `gh pr merge --squash --repo` oldest first.
+3. `ops/autonomy/merge_gate.py` allows that ordinary merge after the
+   receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
+   `--admin` stay denied.
+4. `/pr` remains Diagnose-only (no merge).
