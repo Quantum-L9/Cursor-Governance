@@ -18,6 +18,10 @@ dependencies = [
     # Program Execution System core (environment/program-execution/core) validators
     # and controller runtime import Draft202012Validator.
     "jsonschema>=4.22,<5",
+    # ops/secrets/broker_identity.py verifies ES256 session assertions against the
+    # issuer JWKS. Explicit rather than adding PyJWT: the broker checks exactly the
+    # claims the capability contract names, and pins alg itself.
+    "cryptography>=42,<51",
 ]
 
 [project.optional-dependencies]
