@@ -493,3 +493,11 @@ CLEAN_REMOTE ?= 1
 clean workspace-clean:
 	CLEAN_MODE="$(CLEAN_MODE)" CLEAN_REMOTE="$(CLEAN_REMOTE)" PR_BASE="$(PR_BASE)" \
 	WS="$(WS)" bash "$(CURDIR)/ops/scripts/run_workspace_clean.sh"
+
+.PHONY: wip-hygiene wip-inventory
+## Dated WIP corpus on main: file loose drops, inventory, high-evidence prune.
+wip-hygiene:
+	python3 ops/scripts/wip_corpus.py hygiene --root "$(CURDIR)"
+
+wip-inventory:
+	python3 ops/scripts/wip_corpus.py inventory --root "$(CURDIR)"
