@@ -33,7 +33,9 @@ python3 ops/autonomy/l4_local.py authorize-release
 PR_REMEDIATE=0 make pr
 ```
 
-6. Do **not** run `l9-pr-remediation`, spawn a remediation poll worker, or merge.
+6. Do **not** merge from the campaign / `make pr` path. Campaign end state
+   is green + merge-ready. Merge only after the user invokes
+   `/l9-pr-remediation` (see `rules/48-make-pr-remediation.mdc`).
 7. Program Execution campaigns: land work on `campaign/<campaign_id>` and set
    `PR_BASE` to that branch. Do **not** open campaign PRs against `main`.
    Do **not** mix campaign commits onto unrelated feature branches.
@@ -50,6 +52,6 @@ PR_REMEDIATE=0 make pr
 - Mid-execution remote mutation
 - Skipping post-exec kernels before first push/PR
 - Inventing "wait for push approval" contracts that recreate pacing stalls
-- Merging any PR (including after program/plan Build)
-- Spawning `l9-pr-remediation` after `make pr`
+- Merging from the campaign / `make pr` path (merge is `/l9-pr-remediation`)
+- Force-push, admin-merge, or hard-reset
 - Opening campaign PRs against `main`

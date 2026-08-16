@@ -8,6 +8,11 @@ history instead of trusting a backfilled entry here.
 ## [Unreleased]
 
 ### Changed
+- **Merge authority:** campaigns / `make pr` still end green + merge-ready
+  and do not merge. Invoking `/l9-pr-remediation` authorizes ordinary
+  `gh pr merge` for all open PRs in the target repo after Converge.
+  Receipt SSOT: `ops/autonomy/authorize_merge.py`. Gate:
+  `ops/autonomy/merge_gate.py` (force-push / admin-merge never waived).
 - **IDE class:** `eslint_owned_repos` is empty. Website-Bot and SEO-Bot
   classify as `biome_default` unless the eslint-without-biome heuristic
   matches. Named-exception tests assert both product names are not

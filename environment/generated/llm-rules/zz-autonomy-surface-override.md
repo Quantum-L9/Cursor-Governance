@@ -14,9 +14,10 @@ AND `L9_AUTONOMY_ENABLED=true`:
    with **no mid-execution push** → finish program/contract → run
    `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
    `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
-   then push + PR). After the PR is open: remediate until CI is green and
-   the PR is mergeable (bounded cycles), then HALT before merge. Do
-   **not** merge.
+   then push + PR). Campaign/make-pr end state is green + merge-ready.
+   Invoking `/l9-pr-remediation` then remediates **and merges** all open
+   PRs in the target repo (bottom-up). Do **not** merge from the campaign
+   path alone.
 2a. `make pr` is the **only** route to GitHub — a PATH rule, not a timing
    rule. Raw `git push`, `gh pr create`, `gh pr edit`, `make push` and the
    MCP `create_pull_request` / `push_files` tools are denied at **every**
@@ -48,10 +49,10 @@ AND `L9_AUTONOMY_ENABLED=true`:
   isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
   `L9_WORKTREE_ISOLATION=0`.
-- Post-push: `PR_REMEDIATE=0 make pr`, then remediate-until-green-and-mergeable
-  (bounded cycles), then HALT before merge. No merge unless the human sets
-  `L9_MERGE_AUTHORIZED` or writes a one-shot
-  `~/.l9/autonomy/merge-authorization.json` entry.
+- Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+  only after `/l9-pr-remediation` writes
+  `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
+  mergeable. Force-push / admin-merge stay forbidden.
 - Stacked PRs: when a PR is already open for the workstream, the next PR
   bases on the open PR's head (bottom-up merge order). Rebase and conflict
   resolution are forbidden; one feature branch per program.
