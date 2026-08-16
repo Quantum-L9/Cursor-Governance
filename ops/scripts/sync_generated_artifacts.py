@@ -19,41 +19,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
+from lib.dirtiness import GENERATED_PATH_PREFIXES, is_generated_path  # noqa: F401
 
 SCRIPTS = Path(__file__).resolve().parent
 
 #: The governance repository itself. `--root` defaults here, but the PR gate
 #: also runs this script against consumer workspaces via `make pr WS=…`.
 GOVERNANCE_ROOT = SCRIPTS.parents[1]
-
-GENERATED_PATH_PREFIXES = (
-    "rules/RULES-MANIFEST.",
-    "environment/generated/llm-rules/",
-    "ops/generated/skill-registry.json",
-    "environment/agents/adapters/claude-code/settings.template.json",
-    "commands/COMMANDS_MANIFEST.yaml",
-    "skills/AUTONOMY_MANIFEST.yaml",
-    "environment/program-execution/core/MANIFEST.yaml",
-    "environment/program-execution/MANIFEST.json",
-)
-
-
-def is_generated_path(rel: str) -> bool:
-    if any(
-        rel.startswith(prefix) or rel == prefix.rstrip(".") for prefix in GENERATED_PATH_PREFIXES
-    ):
-        return True
-    # Orphan heal may set disable-model-invocation on skill frontmatter.
-    if re.match(r"^skills/[^/]+/SKILL\.md$", rel):
-        return True
-    return False
 
 
 def write_text_if_changed(path: Path, content: str) -> bool:
