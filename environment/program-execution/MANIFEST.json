@@ -403,15 +403,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "ffeff1dc7eb8e87e200e6ef255b65559ea3fd1a1dce96b7fa7f078338f7059c1"
+      "sha256": "581aaaa52f9d2e047a1ad7cddc197ef21c144e5a5b897147368cc6243693f2e4"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
+      "sha256": "4d452aabfc0bbd6679483f1661c4427c2b0a301d581a9a79b1622297d6a6fc82"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "c20b36da7591f8affbc9cf306dc6e5bef8ca66a33f630bb7987e8458b9d0b58c"
+      "sha256": "431e7e3bf192fe6e7305ea73d354fc855066df79eea7b9e08ffe024182f601ec"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -588,6 +588,14 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
+    },
+    {
+      "path": "campaigns/pe-runtime-readiness-hardening/CAMPAIGN_SOURCE.yaml",
+      "sha256": "096b6f35e9a9537c751ae307caa0c3bc02d7ccdbd79a054315c65198084d2ac9"
+    },
+    {
+      "path": "campaigns/pe-runtime-readiness-hardening/source-integrity-receipt.json",
+      "sha256": "87d12ac87ae9b555d89d7cb97460499c8d25edb7cac6b92ebb81366ac7bc6e85"
     },
     {
       "path": "campaigns/scripts/close_campaign.py",
@@ -1355,7 +1363,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "6d4cd10d899f9501fe3a90c69fbbbbf23901265f8d815dba3cbebf75a494b1f1"
+      "sha256": "c954dd185b6e480cae3a55aff20637291aafc04d245a527111e807d53792d115"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

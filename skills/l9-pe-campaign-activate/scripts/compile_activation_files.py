@@ -143,6 +143,10 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
                     {
                         "id": f"AC-{index:03d}",
                         "statement": (f"{task_title} is complete and locally verified."),
+                        # Required by the blueprint task-card schema; a seed that
+                        # omits it compiles to a Blueprint that fails template
+                        # validation, so the campaign could never be admitted.
+                        "required_evidence_types": ["inspection", "test_result"],
                     }
                 ],
                 "negative_cases": ["scope_expansion", "remote_mutation_before_release"],
@@ -334,6 +338,23 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         "waves": waves,
         "tasks": tasks,
         "gates": gates,
+        # Without at least one evidence requirement the PE compiler has no
+        # evidence id to bind SOURCE_TRACEABILITY to and falls back to a gate id,
+        # which the blueprint validator rejects as an unresolved reference. The
+        # campaign source itself is the governing evidence every gate rests on.
+        "evidence_requirements": [
+            {
+                "id": "EVID-001",
+                "claim": f"{campaign_id}_source_intent_and_repository_baseline_are_known",
+                "source_type": "repository_inspection",
+                "source_location": repository_id,
+                "collection_method": "read_only_inspection",
+                "freshness": "collect_at_admission",
+                "producer": "controller",
+                "supports": [gate["id"] for gate in gates],
+                "contradicts": [],
+            }
+        ],
     }
 
 

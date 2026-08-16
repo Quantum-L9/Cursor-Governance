@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 import yaml
 from helpers import (
     cleanup_worktree,
+    establish_runtime_readiness,
     make_blueprint,
     make_repo,
     prepare_attempt,
@@ -19,6 +20,7 @@ class WaivedGateTest(unittest.TestCase):
     def test_explicit_active_evidence_backed_waiver_satisfies_not_applicable_gate(self):
         with TemporaryDirectory() as raw:
             temp = Path(raw)
+            establish_runtime_readiness(temp)
             bp = make_blueprint(temp / "blueprint")
             waivers = yaml.safe_load((bp / "WAIVER_REGISTER.yaml").read_text())
             waivers["waivers"] = [

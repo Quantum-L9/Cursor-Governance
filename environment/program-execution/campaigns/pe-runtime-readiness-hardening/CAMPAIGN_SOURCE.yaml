@@ -1,0 +1,543 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+metadata:
+  campaign_id: pe-runtime-readiness-hardening
+  title: Make Program Execution Runtime-Ready Before Execution
+  version: 1.0.0
+  created_at: '2026-08-16T06:56:48Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: environment/program-execution/campaigns/pe-runtime-readiness-hardening/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/pe-runtime-readiness-hardening
+  worktree_root: $HOME/.l9/program-worktrees/pe-runtime-readiness-hardening
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+operator_directive:
+  objective: Make the Cursor governance environment reliably enter Program Execution with
+    a truthful runtime readiness state, authoritative Graphiti session and phase-lock identity,
+    and state-aware PE preflight so the next PE reaches useful execution without predictable
+    bootstrap, revision, lock, schema, or controller-state failures being discovered through
+    trial and error.
+  mode: controlled_autonomous_until_material_boundary
+  policy_profile: quantum-l9.safe-autonomy.v1
+  prohibited_actions:
+  - force_push
+  - admin_merge
+  - deploy
+  - weaken_validators
+  - delete_tests_for_pass
+program:
+  id: pe-runtime-readiness-hardening
+  name: Make Program Execution Runtime-Ready Before Execution
+  version: 1.0.0
+  owner: Igor Beylin
+  definition_status: draft
+  snapshot_at: '2026-08-16'
+  objective: Make the Cursor governance environment reliably enter Program Execution with
+    a truthful runtime readiness state, authoritative Graphiti session and phase-lock identity,
+    and state-aware PE preflight so the next PE reaches useful execution without predictable
+    bootstrap, revision, lock, schema, or controller-state failures being discovered through
+    trial and error.
+  problem_statement: The environment runtime is substantially wired, but several remaining
+    seams can still allow Program Execution to begin from an invalid or ambiguous state. Runtime
+    readiness does not yet fully describe the installed and generated components actually
+    in use, PE can proceed from a DEGRADED readiness receipt, PE preflight does not prove
+    the required phase lock is held for the active session and state root, and the clean-startup
+    integration coverage does not exercise the complete real bootstrap-to-PE runtime path.
+    These gaps can defer predictable failures until the first governed mutation instead of
+    rejecting or repairing invalid state before execution begins.
+  target_state: A fresh Cursor session uses the authoritative shared environment bootstrap,
+    emits a runtime readiness receipt that identifies the actual governance, runtime, generated-environment,
+    adapter, skill, workspace, session, and memory state in use, and permits mutating PE execution
+    only when that receipt is READY. PE preflight verifies the authoritative Graphiti phase
+    lock when required and returns the exact next legal operation and required arguments.
+    A clean-runtime end-to-end test proves the real startup path can bootstrap, establish
+    session and lock state, reconcile the repository, enter PE EXECUTING, and record a schema-valid
+    attempt without exploratory failures.
+  scope:
+    include:
+    - environment
+    exclude:
+    - new repositories
+    - force_push
+    - admin_merge
+    - deploy
+    - production migration
+  contracts:
+    pair: program-execution-system.v2
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - latest_explicit_operator_instruction
+  - accepted_program_definition
+  - implementation
+  - UNKNOWN
+  operating_rules:
+  - one_authority_per_responsibility
+  - mutable_runtime_state_remains_outside_git
+  - no_silent_scope_expansion
+  - worker_claim_is_not_verification
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE
+targets:
+- id: TARGET-001
+  name: Quantum-L9/Cursor-Governance
+  kind: git_repository
+  authority_owner: Quantum-L9/Cursor-Governance
+  execution_mode: repo_local
+  repository_id: Quantum-L9/Cursor-Governance
+  source_of_truth: environment
+  environments:
+  - local
+  - ci
+  mutability: reversible
+  expected_revision: UNKNOWN
+  adapter: git
+authorities:
+- id: AUTH-001
+  responsibility: campaign_owner
+  owner: Igor Beylin
+workstreams:
+- id: WS-01
+  name: Make Program Execution Runtime-Ready Before Execution
+  owner: AUTH-001
+  objective: Make the Cursor governance environment reliably enter Program Execution with
+    a truthful runtime readiness state, authoritative Graphiti session and phase-lock identity,
+    and state-aware PE preflight so the next PE reaches useful execution without predictable
+    bootstrap, revision, lock, schema, or controller-state failures being discovered through
+    trial and error.
+dependency_edges:
+- from: TASK-001
+  to: TASK-002
+- from: TASK-002
+  to: TASK-003
+- from: TASK-003
+  to: TASK-004
+- from: TASK-004
+  to: TASK-005
+- from: TASK-005
+  to: TASK-006
+waves:
+- id: W0
+  name: admission_and_first_ready_task
+  task_ids:
+  - TASK-001
+  predecessor_wave_ids: []
+  exit_gate_ids:
+  - GATE-001
+- id: W1
+  name: remaining_tasks
+  task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  - TASK-006
+  predecessor_wave_ids:
+  - W0
+  exit_gate_ids:
+  - GATE-002
+  - GATE-003
+  - GATE-004
+  - GATE-005
+  - GATE-006
+tasks:
+- id: TASK-001
+  title: Lock and verify the current runtime baseline
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Record the bound repository revision and trace the actual Cursor startup, shared
+    bootstrap, runtime readiness, Graphiti lock, and PE preflight paths before editing. Confirm
+    the observed remaining defects against the current revision so no already-correct behavior
+    is replaced or duplicated.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - implement_task_001
+  - edit_only_declared_paths
+  acceptance:
+  - id: AC-001
+    statement: Lock and verify the current runtime baseline is complete and locally verified.
+    required_evidence_types:
+    - inspection
+    - test_result
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: Make runtime readiness authoritative
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Make the runtime readiness receipt describe the actual installed and generated
+    runtime components in use, including governance and runtime revisions or digests, generated
+    environment, adapters, skills, workspace, session identity, and memory state root. Required
+    unresolved identity or compatibility state must prevent READY status rather than being
+    merely informational.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - implement_task_002
+  - edit_only_declared_paths
+  acceptance:
+  - id: AC-002
+    statement: Make runtime readiness authoritative is complete and locally verified.
+    required_evidence_types:
+    - inspection
+    - test_result
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-003
+  title: Require READY for mutating Program Execution
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Change Program Execution admission and preflight so mutating execution requires
+    an authoritative runtime readiness receipt with overall status READY. DEGRADED and NOT_READY
+    states must stop execution with actionable, structured diagnostics while preserving read-only
+    diagnostic operations.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - implement_task_003
+  - edit_only_declared_paths
+  acceptance:
+  - id: AC-003
+    statement: Require READY for mutating Program Execution is complete and locally verified.
+    required_evidence_types:
+    - inspection
+    - test_result
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+- id: TASK-004
+  title: Verify the authoritative Graphiti phase lock in PE preflight
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Connect PE preflight to the canonical Graphiti lock state so any operation requiring
+    governed mutation proves that the active session holds the required granted lock for the
+    same repository or workspace identity, session ID, namespace, and memory state root. Do
+    not duplicate lock logic or weaken the mutation gate.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - implement_task_004
+  - edit_only_declared_paths
+  acceptance:
+  - id: AC-004
+    statement: Verify the authoritative Graphiti phase lock in PE preflight is complete and
+      locally verified.
+    required_evidence_types:
+    - inspection
+    - test_result
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-004
+- id: TASK-005
+  title: Prove the real fresh-session path end to end
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Add or strengthen runtime integration coverage that invokes the real shared or
+    Cursor bootstrap, lets bootstrap generate the readiness receipt, establishes Graphiti
+    session and phase-lock state through the real entrypoints, passes the governed mutation
+    precheck, reconciles the target repository, drives Program Execution through EXECUTING,
+    and records one schema-valid attempt or evidence result without exploratory command failures.
+    Include a negative stale or incompatible runtime case.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - implement_task_005
+  - edit_only_declared_paths
+  acceptance:
+  - id: AC-005
+    statement: Prove the real fresh-session path end to end is complete and locally verified.
+    required_evidence_types:
+    - inspection
+    - test_result
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-005
+- id: TASK-006
+  title: Validate the repaired execution path
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Run the focused environment, Graphiti, bootstrap, and Program Execution tests
+    followed by the relevant broader suites. Confirm runtime wiring is exercised through actual
+    entrypoints, safety gates remain enforced, no parallel framework or duplicate authority
+    was introduced, and the next PE can determine and execute its valid path without predictable
+    failed commands.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - implement_task_006
+  - edit_only_declared_paths
+  acceptance:
+  - id: AC-006
+    statement: Validate the repaired execution path is complete and locally verified.
+    required_evidence_types:
+    - inspection
+    - test_result
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-006
+gates:
+- id: GATE-001
+  name: task-001_complete
+  gate_type: entry
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-001
+  required_evidence_ids: []
+  pass_criteria:
+  - Lock and verify the current runtime baseline acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-002
+  name: task-002_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-002
+  required_evidence_ids: []
+  pass_criteria:
+  - Make runtime readiness authoritative acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-003
+  name: task-003_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-003
+  required_evidence_ids: []
+  pass_criteria:
+  - Require READY for mutating Program Execution acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-004
+  name: task-004_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-004
+  required_evidence_ids: []
+  pass_criteria:
+  - Verify the authoritative Graphiti phase lock in PE preflight acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-005
+  name: task-005_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-005
+  required_evidence_ids: []
+  pass_criteria:
+  - Prove the real fresh-session path end to end acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-006
+  name: task-006_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-006
+  required_evidence_ids: []
+  pass_criteria:
+  - Validate the repaired execution path acceptance is met.
+  failure_effect: block_successor_tasks
+evidence_requirements:
+- id: EVID-001
+  claim: pe-runtime-readiness-hardening_source_intent_and_repository_baseline_are_known
+  source_type: repository_inspection
+  source_location: Quantum-L9/Cursor-Governance
+  collection_method: read_only_inspection
+  freshness: collect_at_admission
+  producer: controller
+  supports:
+  - GATE-001
+  - GATE-002
+  - GATE-003
+  - GATE-004
+  - GATE-005
+  - GATE-006
+  contradicts: []

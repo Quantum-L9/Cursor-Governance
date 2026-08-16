@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .admission import check_admission, resolve_receipt_workspace, resolve_surface
 from .contracts import (
     ContractError,
     draft_source_contract,
@@ -67,7 +68,10 @@ def parser() -> argparse.ArgumentParser:
     cmd = sub.add_parser("preflight")
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--task-id")
-    cmd.add_argument("--surface", default="cursor")
+    # Default to the surface this session actually runs under — the same value
+    # admission resolves and the shared bootstrap wrote the receipt under.
+    # A fixed "cursor" default looks up a receipt no other surface ever writes.
+    cmd.add_argument("--surface", default=resolve_surface())
     cmd.add_argument("--receipt-workspace", type=Path)
 
     cmd = sub.add_parser("draft-contract")
@@ -228,6 +232,19 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None, *, template_root: Path) -> int:
     args = parser().parse_args(argv)
+
+    # Runtime admission precedes every mutating command. Read-only diagnostics
+    # (status/next/preflight/validate) stay reachable so a blocked operator can
+    # still see why. See pec/admission.py.
+    refusal = check_admission(
+        args.command,
+        surface=resolve_surface(),
+        workspace=resolve_receipt_workspace(),
+    )
+    if refusal is not None:
+        print_json(refusal)
+        return 3
+
     try:
         if args.command == "bootstrap":
             value = bootstrap(

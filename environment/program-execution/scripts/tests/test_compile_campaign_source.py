@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,60 @@ PE_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
 EXPECTED_DIGEST = "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010"
 PEC_CLI = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+
+
+REPO = PE_ROOT.parents[1]
+
+
+def _ready_runtime(tmp: Path) -> dict[str, str]:
+    """Establish the READY runtime receipt ``pec bootstrap`` is admitted against.
+
+    Mutating Controller commands require an ``l9.agents.runtime-readiness.v1``
+    receipt (``pec/admission.py``). Writing one through its own writer, into a
+    runtime root under ``tmp``, exercises the gate exactly as a session does
+    instead of stepping around it. Returns the environment the ``pec``
+    subprocesses must inherit for the receipt to resolve.
+    """
+    sys.path.insert(0, str(REPO / "ops" / "scripts"))
+    from write_runtime_readiness_receipt import main as write_receipt
+
+    surface = "cursor"
+    workspace = tmp / "session-workspace"
+    (workspace / ".l9" / "memory").mkdir(parents=True, exist_ok=True)
+    env = {
+        **os.environ,
+        "L9_RUNTIME_ROOT": str(tmp / "l9"),
+        "L9_GOVERNANCE_SURFACE": surface,
+        "L9_PE_RECEIPT_WORKSPACE": str(workspace),
+    }
+    previous = {key: os.environ.get(key) for key in ("L9_RUNTIME_ROOT",)}
+    os.environ["L9_RUNTIME_ROOT"] = env["L9_RUNTIME_ROOT"]
+    try:
+        rc = write_receipt(
+            [
+                "--surface",
+                surface,
+                "--workspace",
+                str(workspace),
+                "--governance",
+                str(REPO),
+                "--governance-revision",
+                "a" * 40,
+                "--runtime-script-revision",
+                "a" * 40,
+                "--session-id",
+                "compile-campaign-source-test",
+            ]
+        )
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+    if rc != 0:
+        raise AssertionError(f"readiness receipt writer exit {rc}")
+    return env
 
 
 def _load(name: str, path: Path):
@@ -105,6 +160,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertTrue((target / "ACCEPTANCE_RECEIPT.yaml").is_file())
 
             workspace = tmp / "runtime"
+            env = _ready_runtime(tmp)
             subprocess.run(
                 [
                     sys.executable,
@@ -118,12 +174,14 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                env=env,
             )
             validated = subprocess.run(
                 [sys.executable, str(PEC_CLI), "validate", "--workspace", str(workspace)],
                 check=False,
                 capture_output=True,
                 text=True,
+                env=env,
             )
             self.assertEqual(validated.returncode, 0, validated.stderr)
             self.assertEqual(json.loads(validated.stdout)["status"], "PASS")

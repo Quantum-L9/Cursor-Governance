@@ -93,6 +93,12 @@ campaigns:
     parallel_with:
       - l9-ecosystem-fix-plan
 
+  - id: pe-runtime-readiness-hardening
+    integration_branch: campaign/pe-runtime-readiness-hardening
+    pr_base: campaign/pe-runtime-readiness-hardening
+    execute_order: 6
+    lane: compiled
+
 owner:
   authority_id: AUTH-001
   terminal_verdict: CONVERGED

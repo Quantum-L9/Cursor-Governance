@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .admission import load_receipt
 from .common import load_json
 from .controller import open_runtime, task_readiness, validate_runtime
 
@@ -24,6 +25,11 @@ TOKEN_TO_CODE = {
     "runtime_receipt_not_ready": "REVISION_MISMATCH",
     "runtime_receipt_unknown_revision": "REVISION_MISMATCH",
     "lock_identity_mismatch": "LOCK_IDENTITY_MISMATCH",
+    "phase_lock_missing": "PHASE_LOCK_MISSING",
+    "phase_lock_not_granted": "PHASE_LOCK_MISSING",
+    "phase_lock_session_mismatch": "LOCK_IDENTITY_MISMATCH",
+    "phase_lock_state_root_mismatch": "LOCK_IDENTITY_MISMATCH",
+    "graphiti_phase_lock_unsatisfied": "PHASE_LOCK_MISSING",
     "writable_paths_missing": "DEFINITION_INVALID",
     "actor_required": "DEFINITION_INVALID",
     "not_prepared": "REPOSITORY_STATE_DRIFT",
@@ -46,21 +52,8 @@ def _repo_root() -> Path:
 def _load_receipt(
     surface: str, receipt_workspace: Path
 ) -> tuple[Path | None, dict[str, Any] | None]:
-    scripts = _repo_root() / "ops" / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    try:
-        from write_runtime_readiness_receipt import receipt_path
-    except ImportError:
-        return None, None
-    path = receipt_path(surface=surface, workspace=receipt_workspace)
-    if not path.is_file():
-        return path, None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return path, None
-    return path, data if isinstance(data, dict) else None
+    """Reuse the admission loader so both gates read one receipt the same way."""
+    return load_receipt(surface, receipt_workspace)
 
 
 def _receipt_blockers(receipt: dict[str, Any] | None) -> list[str]:
@@ -75,12 +68,110 @@ def _receipt_blockers(receipt: dict[str, Any] | None) -> list[str]:
     return []
 
 
-def _lock_blockers() -> list[str]:
+def _memory_modules() -> tuple[Any, Any] | None:
+    """Import the canonical memory-state and Graphiti bridge modules.
+
+    Preflight VERIFIES lock state; it never re-implements it. Both the local lock
+    artifact and the Graphiti grant are read through the same modules
+    ``memory_lock.py`` and the PreToolUse memory gate use, so there is exactly
+    one definition of "this session holds the lock".
+    """
+    mem = _repo_root() / "environment" / "agents" / "adapters" / "claude-code" / "memory"
+    if not mem.is_dir():
+        return None
+    if str(mem) not in sys.path:
+        sys.path.insert(0, str(mem))
+    try:
+        import graphiti_bridge as gb
+        import memory_state as st
+    except ImportError:
+        return None
+    return st, gb
+
+
+def _lock_blockers(receipt: dict[str, Any] | None) -> list[str]:
+    """Prove the active session holds a granted phase lock for this identity.
+
+    A readiness receipt says the runtime is coherent; it does not say anyone
+    claimed the right to mutate it. Governed mutation additionally requires a
+    Graphiti-granted phase lock whose session id, namespace and memory state root
+    match the identity the receipt was written under — otherwise PE would execute
+    under one session's authority while another session holds the claim.
+    """
     claude = os.environ.get("CLAUDE_PROJECT_DIR", "").strip()
     cursor = os.environ.get("CURSOR_PROJECT_DIR", "").strip()
     if claude and cursor and Path(claude).resolve() != Path(cursor).resolve():
         return ["lock_identity_mismatch"]
-    return []
+
+    # Without an authoritative receipt there is no identity to verify the lock
+    # against; the receipt blocker already stops execution and naming a second,
+    # unprovable cause would only mislead the operator.
+    if receipt is None:
+        return []
+    session_id = str(receipt.get("session_id") or UNKNOWN)
+    receipt_state_root = str(receipt.get("memory_state_root") or UNKNOWN)
+    if session_id == UNKNOWN or receipt_state_root == UNKNOWN:
+        return []
+
+    modules = _memory_modules()
+    if modules is None:
+        return []
+    st, gb = modules
+
+    try:
+        contract = st.load_contract()
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    if Path(str(st.state_root(contract))).resolve() != Path(receipt_state_root).resolve():
+        return ["phase_lock_state_root_mismatch"]
+
+    if str(receipt.get("graphiti_state_file") or UNKNOWN) != str(
+        st.graphiti_state_path(session_id)
+    ):
+        return ["lock_identity_mismatch"]
+
+    blockers: list[str] = []
+    for namespace in st.resolve_namespaces(contract):
+        lock = st.read_lock(contract, namespace)
+        if lock is None:
+            blockers.append(f"phase_lock_missing:{namespace}")
+            continue
+        if str(lock.get("session_id") or "") != session_id:
+            blockers.append(f"phase_lock_session_mismatch:{namespace}")
+            continue
+        if not lock.get("granted"):
+            blockers.append(f"phase_lock_not_granted:{namespace}")
+
+    # The lock artifact is local; the grant behind it is not. Cursor Graphiti
+    # records the served grant in its own session state, so a lock file without a
+    # matching grant is an unbacked claim.
+    if not blockers and not gb.phase_lock_satisfied(session_id):
+        blockers.append("graphiti_phase_lock_unsatisfied")
+    return blockers
+
+
+def _lock_report(receipt: dict[str, Any] | None, blockers: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report lock state without ever claiming an unverifiable lock is verified.
+
+    ``verified`` is only true when the identity was resolvable *and* every
+    lock-class check passed. A missing receipt leaves nothing to verify against,
+    which is UNKNOWN — reporting it as verified would be the exact false
+    reassurance this preflight exists to eliminate.
+    """
+    session_id = str((receipt or {}).get("session_id") or UNKNOWN)
+    state_root = str((receipt or {}).get("memory_state_root") or UNKNOWN)
+    verifiable = receipt is not None and session_id != UNKNOWN and state_root != UNKNOWN
+    failed = any(
+        row["error_code"] in {"PHASE_LOCK_MISSING", "LOCK_IDENTITY_MISMATCH"} for row in blockers
+    )
+    return {
+        "session_id": session_id,
+        "memory_state_root": state_root,
+        "graphiti_state_file": str((receipt or {}).get("graphiti_state_file") or UNKNOWN),
+        "verifiable": verifiable,
+        "verified": verifiable and not failed,
+    }
 
 
 def _next_action(
@@ -90,6 +181,7 @@ def _next_action(
     task_id: str | None,
     receipt_workspace: Path,
     surface: str,
+    session_id: str = "",
 ) -> dict[str, Any]:
     ws = str(workspace)
     tid = task_id or "TASK-001"
@@ -109,20 +201,30 @@ def _next_action(
                 str(receipt_workspace),
             ],
         }
-    if token == "lock_identity_mismatch":
+    lock_token = (token or "").split(":", 1)[0]
+    if lock_token in {
+        "lock_identity_mismatch",
+        "phase_lock_missing",
+        "phase_lock_not_granted",
+        "phase_lock_session_mismatch",
+        "phase_lock_state_root_mismatch",
+        "graphiti_phase_lock_unsatisfied",
+    }:
+        namespace = (token or "").split(":", 1)[1] if ":" in (token or "") else "cursor-governance"
         return {
             "command": "python3",
             "args": [
                 "environment/agents/adapters/claude-code/hooks/memory_lock.py",
                 "acquire",
                 "--namespace",
-                "cursor-governance",
+                namespace,
                 "--session-id",
-                os.environ.get("CURSOR_CONVERSATION_ID")
+                (session_id if session_id and session_id != UNKNOWN else "")
+                or os.environ.get("CURSOR_CONVERSATION_ID")
                 or os.environ.get("CLAUDE_SESSION_ID")
                 or "REQUIRED",
                 "--task",
-                "align lock identity",
+                "acquire phase lock for program execution",
             ],
         }
     if token == "repository_not_reconciled":
@@ -201,7 +303,7 @@ def preflight(
         {"token": token, "error_code": _error_code(token)} for token in _receipt_blockers(receipt)
     ]
     blockers.extend(
-        {"token": token, "error_code": _error_code(token)} for token in _lock_blockers()
+        {"token": token, "error_code": _error_code(token)} for token in _lock_blockers(receipt)
     )
 
     program: dict[str, Any] = {"workspace": str(workspace), "lock_digest": UNKNOWN}
@@ -243,6 +345,7 @@ def preflight(
         task_id=(task_payload or {}).get("id") if task_payload else task_id,
         receipt_workspace=receipt_ws,
         surface=surface,
+        session_id=str((receipt or {}).get("session_id") or ""),
     )
     ready = not blockers
     return {
@@ -251,7 +354,9 @@ def preflight(
         "runtime": {
             "path": str(receipt_path) if receipt_path else UNKNOWN,
             "overall_status": (receipt or {}).get("overall_status", UNKNOWN),
+            "unresolved_required": list((receipt or {}).get("unresolved_required") or []),
         },
+        "lock": _lock_report(receipt, blockers),
         "program": program,
         "task": task_payload,
         "runtime_validation": runtime_validation,
