@@ -498,23 +498,89 @@ def default_admit(blueprint: Path, *, revision: str) -> dict[str, Any]:
     return {"collected": collected, "accepted": accepted}
 
 
-def default_arm(
-    workspace: Path,
-    campaign_id: str,
-    *,
-    repository_id: str,
-    target_path: Path,
-) -> dict[str, Any]:
-    refuse_hash_campaign_id(campaign_id)
-    reconciled = default_reconcile(workspace, repository_id, target_path)
-    contract = workspace / "runtime" / f"{FIRST_TASK_ID}.source.json"
+def locked_tasks(workspace: Path) -> list[dict[str, Any]]:
+    lock_path = workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file():
+        raise CampaignError(f"program lock missing: {lock_path}")
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    tasks = [
+        item for item in (lock.get("tasks") or []) if isinstance(item, dict) and item.get("id")
+    ]
+    tasks.sort(key=lambda item: str(item["id"]))
+    return tasks
+
+
+def pec_branch(wave_id: str, task_id: str) -> str:
+    return f"pec/{wave_id.lower()}/{task_id.lower()}"
+
+
+def refuse_unstacked_pr_base(pr_base: str) -> None:
+    name = pr_base.rsplit("/", 1)[-1]
+    if name in {"main", "master"}:
+        raise CampaignError(f"PRs must stack; refuse PR_BASE={pr_base}")
+
+
+def build_pr_stack(campaign_id: str, tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    integration = f"campaign/{campaign_id}"
+    stack: list[dict[str, str]] = []
+    previous = integration
+    for task in tasks:
+        task_id = str(task["id"])
+        branch = pec_branch(str(task.get("wave_id") or "W0"), task_id)
+        stack.append(
+            {
+                "task_id": task_id,
+                "title": str(task.get("title") or task_id),
+                "branch": branch,
+                "pr_base": previous,
+            }
+        )
+        previous = branch
+    return {
+        "schema": "l9.program-execution.pr-stack.v1",
+        "campaign_id": campaign_id,
+        "integration_branch": integration,
+        "forbid_pr_base": ["main", "master", "origin/main"],
+        "stack": stack,
+    }
+
+
+def write_pr_stack(workspace: Path, stack: dict[str, Any]) -> Path:
+    path = workspace / "runtime" / "STACK.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(stack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def ensure_integration_branch(target_path: Path, campaign_id: str) -> str:
+    branch = f"campaign/{campaign_id}"
+    exists = run_cmd(
+        ["git", "-C", str(target_path), "rev-parse", "--verify", branch],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if exists.returncode != 0:
+        created = run_cmd(
+            ["git", "-C", str(target_path), "branch", branch, "HEAD"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if created.returncode != 0:
+            raise CampaignError(
+                f"cannot create {branch}: {(created.stderr or created.stdout).strip()}"
+            )
+    return branch
+
+
+def register_task_contract(workspace: Path, task_id: str) -> Path:
+    contract = workspace / "runtime" / f"{task_id}.source.json"
     contract.parent.mkdir(parents=True, exist_ok=True)
     draft = run_cmd(
         [
             sys.executable,
             str(PEC),
             "draft-contract",
-            FIRST_TASK_ID,
+            task_id,
             "--workspace",
             str(workspace),
             "--output",
@@ -523,13 +589,15 @@ def default_arm(
         timeout=PEC_TIMEOUT_S,
     )
     if draft.returncode != 0:
-        raise CampaignError(f"pec draft-contract failed: {(draft.stderr or draft.stdout).strip()}")
+        raise CampaignError(
+            f"pec draft-contract {task_id} failed: {(draft.stderr or draft.stdout).strip()}"
+        )
     register = run_cmd(
         [
             sys.executable,
             str(PEC),
             "register-contract",
-            FIRST_TASK_ID,
+            task_id,
             "--workspace",
             str(workspace),
             "--file",
@@ -540,9 +608,27 @@ def default_arm(
         timeout=PEC_TIMEOUT_S,
     )
     if register.returncode != 0:
-        raise CampaignError(
-            f"pec register-contract failed: {(register.stderr or register.stdout).strip()}"
-        )
+        detail = (register.stderr or register.stdout).strip()
+        raise CampaignError(f"pec register-contract {task_id} failed: {detail}")
+    return contract
+
+
+def default_arm(
+    workspace: Path,
+    campaign_id: str,
+    *,
+    repository_id: str,
+    target_path: Path,
+) -> dict[str, Any]:
+    refuse_hash_campaign_id(campaign_id)
+    ensure_integration_branch(target_path, campaign_id)
+    reconciled = default_reconcile(workspace, repository_id, target_path)
+    tasks = locked_tasks(workspace)
+    if not tasks or str(tasks[0]["id"]) != FIRST_TASK_ID:
+        raise CampaignError("program lock is missing TASK-001")
+    contracts: list[str] = []
+    for task in tasks:
+        contracts.append(str(register_task_contract(workspace, str(task["id"]))))
     claim = run_cmd(
         [
             sys.executable,
@@ -558,17 +644,22 @@ def default_arm(
     )
     if claim.returncode != 0:
         raise CampaignError(f"pec claim failed: {(claim.stderr or claim.stdout).strip()}")
+    stack = build_pr_stack(campaign_id, tasks)
+    write_pr_stack(workspace, stack)
     return {
         "task_id": FIRST_TASK_ID,
-        "contract": str(contract),
+        "armed_task_ids": [str(task["id"]) for task in tasks],
+        "contracts": contracts,
         "claim": (claim.stdout or "").strip(),
         "reconcile": reconciled,
+        "stack": stack,
     }
 
 
 def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
     env = os.environ.copy()
     env["PR_BASE"] = f"origin/campaign/{campaign_id}"
+    refuse_unstacked_pr_base(env["PR_BASE"])
     env["PR_REMEDIATE"] = "0"
     env["OPEN_PR"] = "1"
     result = run_cmd(["make", "pr"], timeout=MAKE_PR_TIMEOUT_S, cwd=worktree, env=env)
@@ -810,6 +901,8 @@ def write_launch_pointer(
         "only_pec_workspace": True,
         "claimed_task": FIRST_TASK_ID,
         "execution_card": str(workspace / "runtime" / f"{FIRST_TASK_ID}.md"),
+        "pr_stack": str(workspace / "runtime" / "STACK.json"),
+        "forbid_pr_base_main": True,
         "load_operator_brief": False,
         "max_task_minutes": TASK_BUDGET_MINUTES,
         "reconcile_required": True,
@@ -817,10 +910,10 @@ def write_launch_pointer(
         "autonomy_packets_not_required": True,
         "refuse_hash_program": True,
         "next": (
-            f"Read {workspace}/runtime/{FIRST_TASK_ID}.md only. "
+            f"Read {workspace}/runtime/{FIRST_TASK_ID}.md and STACK.json. "
             f"Execute {FIRST_TASK_ID} on {target_worktree} within "
-            f"{TASK_BUDGET_MINUTES} minutes. Do not open the operator memo. "
-            "Do not attach to pe-<hash>. Do not write the dirty primary. "
+            f"{TASK_BUDGET_MINUTES} minutes. Stack every PR on the previous "
+            "task branch. Never PR_BASE=main. Do not open the operator memo. "
             "If blocked, stop and report; do not sit."
         ),
     }
@@ -841,23 +934,54 @@ def write_execution_card(
     campaign_id: str,
     target_worktree: str,
     title: str,
+    task_id: str = FIRST_TASK_ID,
+    pr_base: str = "",
+    branch: str = "",
 ) -> Path:
-    path = workspace / "runtime" / f"{FIRST_TASK_ID}.md"
+    path = workspace / "runtime" / f"{task_id}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
+    base = pr_base or f"campaign/{campaign_id}"
+    refuse_unstacked_pr_base(base)
+    head = branch or pec_branch("W0", task_id)
     path.write_text(
         (
-            f"# {FIRST_TASK_ID}\n\n"
+            f"# {task_id}\n\n"
             f"Campaign: `{campaign_id}`\n"
             f"Do: {title}\n"
             f"Where: `{target_worktree}`\n"
+            f"Branch: `{head}`\n"
+            f"PR_BASE: `{base}` — never main\n"
             f"Pec: `{workspace}`\n"
             f"Budget: {TASK_BUDGET_MINUTES} minutes. If blocked, stop and report.\n\n"
             "MUST NOT open the operator memo, attach to pe-<hash>, "
-            "write the dirty primary, or forge operator_ack.\n"
+            "write the dirty primary, forge operator_ack, or open a PR onto main.\n"
         ),
         encoding="utf-8",
     )
     return path
+
+
+def write_stack_cards(
+    workspace: Path,
+    *,
+    campaign_id: str,
+    target_worktree: str,
+    stack: dict[str, Any],
+) -> list[Path]:
+    written: list[Path] = []
+    for item in stack.get("stack") or []:
+        written.append(
+            write_execution_card(
+                workspace,
+                campaign_id=campaign_id,
+                target_worktree=target_worktree,
+                title=str(item.get("title") or item["task_id"]),
+                task_id=str(item["task_id"]),
+                pr_base=str(item["pr_base"]),
+                branch=str(item["branch"]),
+            )
+        )
+    return written
 
 
 def default_program_blockers(campaign_id: str) -> list[str]:
@@ -1032,12 +1156,21 @@ def run_campaign(
             repository_id=repository_id,
             target_path=target_path,
         )
-    write_execution_card(
-        Path(report.pec_workspace),
-        campaign_id=campaign_id,
-        target_worktree=target_worktree,
-        title=first_task_title(seed),
-    )
+    stack_path = Path(report.pec_workspace) / "runtime" / "STACK.json"
+    if stack_path.is_file():
+        write_stack_cards(
+            Path(report.pec_workspace),
+            campaign_id=campaign_id,
+            target_worktree=target_worktree,
+            stack=json.loads(stack_path.read_text(encoding="utf-8")),
+        )
+    else:
+        write_execution_card(
+            Path(report.pec_workspace),
+            campaign_id=campaign_id,
+            target_worktree=target_worktree,
+            title=first_task_title(seed),
+        )
     write_launch_pointer(
         Path(report.pec_workspace),
         campaign_id=campaign_id,

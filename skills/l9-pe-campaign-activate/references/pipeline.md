@@ -31,8 +31,9 @@ L4 as a substitute. Order inside the runner:
 5. `collect_evidence.py` EVID-001 → `accept_blueprint.py`
 6. `pec bootstrap` **without** `--admission-draft`
 7. clean target checkout at `$HOME/.l9/program-worktrees/<id>` + `pec reconcile`
-8. `pec draft-contract` + `register-contract` + `claim` TASK-001
-9. host PR → merge-if-green
+8. `pec draft-contract` + `register-contract` for **every** task, `claim` TASK-001
+9. write `STACK.json` — each task PR bases on the previous task branch, never main
+10. host PR onto `campaign/<id>` → merge-if-green
 
 `program-execution.intent.v1` and `pe-<hash>` workspaces are refused.
 `--admission-draft` is not a live path. Host-only merge is not program close.
@@ -114,10 +115,11 @@ timestamp. `program_deploying` stays false until that ack.
 
 ## 5. Execute the claimed task
 
-Read `$HOME/.l9/programs/<id>/runtime/TASK-001.md` only (15 minutes).
-Execute **only** `claimed_task` on `target_worktree`. Do not open the
-operator memo. Do not start L4, the intent compiler, or a second pec
-workspace. If blocked, stop and report.
+Read `$HOME/.l9/programs/<id>/runtime/TASK-001.md` and `STACK.json`
+(15 minutes). Execute the claimed task on `target_worktree`. Open the PR
+with `PR_BASE` from the stack row — never `main`. Later tasks stay
+contract-armed; claim them only after the predecessor is complete, still
+stacking onto that predecessor branch. Do not open the operator memo.
 
 ## 6. Publish
 

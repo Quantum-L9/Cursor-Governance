@@ -65,8 +65,10 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
    the blueprint, bootstraps pec **without** `--admission-draft`, reconciles
    a clean target checkout, drafts and claims TASK-001, then opens/merges
    the host PR when green. A leftover pec workspace is quarantined.
-2. Read **only** `$HOME/.l9/programs/<id>/runtime/TASK-001.md` (15 minutes).
-   Do not open the operator memo. Do not attach to `pe-<hash>`. If blocked,
+   Every later task is contract-registered; only TASK-001 is claimed.
+2. Read **only** `$HOME/.l9/programs/<id>/runtime/TASK-001.md` and
+   `STACK.json` (15 minutes). Open each task PR onto the previous task
+   branch. Never `PR_BASE=main`. Do not open the operator memo. If blocked,
    stop and report.
 3. Converge the campaign PR with `l9-pr-remediation` until required checks are
    green and the PR is mergeable.
@@ -79,7 +81,8 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 
 - Emit only the allowed file set. Delete any extra file you created by mistake.
 - Keep `CAMPAIGN_SOURCE.yaml` schema-valid and PE-compiler-admissible.
-- Land work on `campaign/<campaign_id>`. Never open this campaign's PR against `main`.
+- Land work on `campaign/<campaign_id>`. Stack each task PR on the previous
+  task branch from `STACK.json`. Never open a campaign PR against `main`.
 - Use `make pr` (not raw `gh pr create`).
 - Merge only after remediation is complete on the observed head SHA.
 - Write the one-shot merge authorization file before `gh pr merge` so

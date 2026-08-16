@@ -433,10 +433,34 @@ class RunCampaignTests(unittest.TestCase):
             self.assertFalse(payload.get("admission_draft"))
             task = next(item for item in payload["tasks"] if item["id"] == "TASK-001")
             self.assertEqual(task["runtime_state"], "LEASED")
+            task_two = next(item for item in payload["tasks"] if item["id"] == "TASK-002")
+            self.assertNotEqual(task_two["runtime_state"], "LEASED")
+            self.assertTrue((workspace / "runtime" / "TASK-002.source.json").is_file())
+            stack = json.loads((workspace / "runtime" / "STACK.json").read_text(encoding="utf-8"))
+            self.assertEqual(stack["integration_branch"], "campaign/demo-activate-v1")
+            self.assertEqual(stack["stack"][0]["pr_base"], "campaign/demo-activate-v1")
+            self.assertEqual(stack["stack"][1]["pr_base"], "pec/w0/task-001")
+            self.assertNotIn("main", stack["stack"][0]["pr_base"])
             card = (workspace / "runtime" / "TASK-001.md").read_text(encoding="utf-8")
             self.assertIn("Budget: 15 minutes", card)
+            self.assertIn("never main", card)
             self.assertNotIn("PE- Memory", card)
-            self.assertLess(len(card.splitlines()), 16)
+            self.assertLess(len(card.splitlines()), 18)
+            self.assertTrue((workspace / "runtime" / "TASK-002.md").is_file())
+
+    def test_pr_stack_never_uses_main(self) -> None:
+        stack = self.mod.build_pr_stack(
+            "demo-activate-v1",
+            [
+                {"id": "TASK-001", "title": "First", "wave_id": "W0"},
+                {"id": "TASK-002", "title": "Second", "wave_id": "W1"},
+            ],
+        )
+        bases = [item["pr_base"] for item in stack["stack"]]
+        self.assertEqual(bases, ["campaign/demo-activate-v1", "pec/w0/task-001"])
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self.mod.refuse_unstacked_pr_base("origin/main")
+        self.assertIn("stack", str(ctx.exception))
 
     def test_run_cmd_times_out(self) -> None:
         with self.assertRaises(self.mod.CampaignError) as ctx:
