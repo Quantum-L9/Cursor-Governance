@@ -1,0 +1,13 @@
+schema: l9.wip.corpus.config.v1
+date_bucket: M-D-YY
+date_bucket_pattern: '^[0-9]{1,2}-[0-9]{1,2}-[0-9]{2}$'
+skip_dir_names:
+  - Legal Defense
+secret_globs:
+  - '*oauth*.json'
+  - '*credentials*.json'
+  - '*client_secret*.json'
+inventory_schema: l9.wip.inventory.v1
+receipt_schema: l9.wip.prune_receipt.v1
+inventory_path: WIP/INVENTORY.yaml
+receipts_dir: WIP/_receipts
