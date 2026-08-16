@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "l9-repo-template-control-plane-ready-v1",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "3da0cb5bb5b9cbc7f23c2e5d7219ebd40aa3c5bd83740d5d07e9b632d0645a47",
+  "bytes": 31397,
+  "pack_recorded_digest": "3da0cb5bb5b9cbc7f23c2e5d7219ebd40aa3c5bd83740d5d07e9b632d0645a47",
+  "pack_recorded_bytes": 31397,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-16T02:41:22Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}

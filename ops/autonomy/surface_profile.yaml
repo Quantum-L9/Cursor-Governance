@@ -117,6 +117,8 @@ campaign_execution:
       integration_branch: campaign/l9-devpack-program-execution-hardening
     l9-ecosystem-fix-plan:
       integration_branch: campaign/l9-ecosystem-fix-plan
+    l9-repo-template-control-plane-ready-v1:
+      integration_branch: campaign/l9-repo-template-control-plane-ready-v1
 
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
