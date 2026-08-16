@@ -198,7 +198,9 @@ def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
     if status != "accepted":
         return [
             "bootstrap requires an accepted Blueprint; "
-            f"found definition_status={status}; use --admission-draft"
+            f"found definition_status={status}; "
+            "live campaigns use make campaign INTENT= "
+            "(do not pass --admission-draft)"
         ]
     if _complete_pair(blueprint):
         return _validate_blueprint(blueprint, "instantiated")

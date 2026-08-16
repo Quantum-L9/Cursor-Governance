@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from .contracts import (
@@ -50,7 +51,7 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument(
         "--admission-draft",
         action="store_true",
-        help="Lock a draft Blueprint without marking tasks ready",
+        help="test-only inspect path; live campaigns use make campaign INTENT=",
     )
 
     cmd = sub.add_parser("validate")
@@ -231,6 +232,11 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
     args = parser().parse_args(argv)
     try:
         if args.command == "bootstrap":
+            if args.admission_draft and os.environ.get("L9_ALLOW_ADMISSION_DRAFT") != "1":
+                raise ControllerError(
+                    "--admission-draft is not a live campaign path; "
+                    'use make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md>'
+                )
             value = bootstrap(
                 args.workspace,
                 args.blueprint,

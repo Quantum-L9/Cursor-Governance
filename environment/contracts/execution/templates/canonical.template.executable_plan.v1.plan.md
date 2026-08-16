@@ -64,36 +64,31 @@ Program leases are authoritative. Autonomy leases are subordinate and **must not
 
 ### Pipeline steps
 
-1. **Attach** [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md).
-2. **Project this plan → Blueprint artifacts** (instantiate under `$HOME/.l9/programs/<program_id>/` — never mutate sealed `environment/program-execution/core/` templates in place):
-
-   | Plan section | PE Blueprint / Controller artifact |
-   |--------------|-------------------------------------|
-   | metadata / objective | `PROGRAM.yaml` / program identity |
-   | immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
-   | execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
-   | execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
-   | capability_preflight | Controller reconcile + gate probes before claim |
-   | property_evidence_matrix | Task Card `validation` / evidence catalog refs |
-   | rollback | Task Card `rollback` + recovery receipts |
-   | convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
-
-3. **Validate + bootstrap Controller** (from controller template RUNBOOK):
+Live execution is one command. Do not hand-run pec, L4, or inner compile
+scripts from this template.
 
 ```bash
-# from instantiated controller workspace (paths illustrative)
-python scripts/pec.py bootstrap --workspace "$HOME/.l9/programs/<program_id>/runtime" \
-  --blueprint "$HOME/.l9/programs/<program_id>/blueprint"
-python scripts/pec.py reconcile --workspace … --repository <repository_id>=$(pwd)
-python scripts/pec.py status --workspace …
-python scripts/pec.py next --workspace …
+make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
 ```
 
-4. **Admit exact task scope** — draft/register Source Contract ⊂ Task Card ceiling; then `claim` → `prepare` → `render-contract`. Worker receives **only** Rendered Contract + Worker Brief + worktree.
-5. **Map Program task → autonomy campaign** via `environment/program-execution/integrations/autonomy-control-plane/` (`map_program_contract` / bridge). Set each mutating Task Card `autonomy_action_id` (e.g. `pes.<wave>.<task>`).
-6. **Orchestrate under [@autonomy](commands/autonomy.md)** — load `l9-bounded-autonomy` Protocols A–D; campaign authorization **packet** aligned to Program Lock digest + declared branches/PRs (see AUTONOMY_BRIDGE vocabulary). Spawn ready `work` Tasks / background `poll` Tasks; main continues (no `AwaitShell` on poll).
-7. **L4 local autonomy** inside the Program lease: local commits only until `ops/autonomy/l4_local.py authorize-release` → scoped push/PR → `l9-pr-remediation` Converge. Launching this plan through PE+`/autonomy` **or** clicking Build **is** merge authorization for this stack after green+mergeable (bottom-up older PRs first).
-8. **Record + verify + handoff** — `pec.py record-attempt` → `verify` → `export-handoff`. Controller recommends; program owner accepts terminal verdict. Graphiti PICKUP on close (Protocol D) — observability only, never competing task claim.
+`run_campaign.py` projects the plan into Blueprint artifacts under
+`$HOME/.l9/programs/<id>/`, admits the lock, executes every task, stacks
+PRs, and closes into `campaigns/COMPLETED/<id>/`. Never mutate sealed
+`environment/program-execution/core/` templates in place.
+
+| Plan section | Runner-owned Blueprint / Controller artifact |
+|--------------|-------------------------------------|
+| metadata / objective | `PROGRAM.yaml` / program identity |
+| immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
+| execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
+| execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
+| capability_preflight | Controller reconcile + gate probes before claim |
+| property_evidence_matrix | Task Card `validation` / evidence catalog refs |
+| rollback | Task Card `rollback` + recovery receipts |
+| convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
+
+If the runner exits nonzero, stop and report. Do not continue with
+`pec.py bootstrap`, `claim`, `record-attempt`, or a second scheduler.
 
 ### Adapter routing (from `registry/EXECUTION_ROUTING_POLICY.yaml`)
 

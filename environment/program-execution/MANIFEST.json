@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "ARCHITECTURE.md",
-      "sha256": "bb29f3a85d6cec867d34dde552b702cb482fc7b2f0bc5725cc0210e54e5eea87"
+      "sha256": "6073797ea03e38b431f51e490ebcfcd121f3ac657a0abe42fea0b2f845fa0c18"
     },
     {
       "path": "COMPATIBILITY.yaml",
@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "3eb27481468554f42d3da995ddcf4befba56abb12980fee35ad289200c15538d"
+      "sha256": "6b9035afaf696854a35ba6a8d4a77b567bce1640c6d493c9ec7ad3b40235cce2"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -1343,7 +1343,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "cac5d488611cad63bf7b95437974449efad91840a4309c84f09c47a13b38590e"
+      "sha256": "631d80f77adf086331fbd4f72d1348c54ad094dd4646b8618f4de280e4a43337"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1362,12 +1362,16 @@
       "sha256": "ead6054e3c6332980b8083cedc4cf296355d1ef681248d3b247035fd650c8144"
     },
     {
+      "path": "scripts/tests/test_campaign_tunnel_airtight.py",
+      "sha256": "0b8ef143f8f36c50479eec082b76f105407dcdee02513bc06c13033366c8c19f"
+    },
+    {
       "path": "scripts/tests/test_compile_campaign_source.py",
       "sha256": "9d4c79d59c20e014f633c90019c3792c0ef76ec3923ee15f0c1367c0d1dfdff1"
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "a94728f445efd8525922b8b6a087b52c2c72956eb35b0586ea2ac9270701e9b7"
+      "sha256": "2434785531575a134b9ee5510f60b346a0ce1b1983261982a9d93a65505cbd6b"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

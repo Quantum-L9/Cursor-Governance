@@ -12,6 +12,10 @@ updated: 2026-08-16
 
 # Authorized merge after remediation
 
+Do not use this file as a campaign front door. Start and finish the
+campaign with `make campaign INTENT=`. These commands apply only to
+STACK.json PRs the runner already opened.
+
 Purpose: this skill's merge step. Standing campaign policy still says
 `merge: false` for ordinary agents. Invoking **this skill** is the operator
 act that authorizes merge of **one** PR.

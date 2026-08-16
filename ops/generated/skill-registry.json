@@ -954,7 +954,7 @@
     },
     {
       "composition_role": "general",
-      "description": "compile only the files required to activate a program execution campaign, run the pe compile/bootstrap/execute pipeline with maximum autonomy, remediate the campaign pr, and merge after remediation is complete. use when the user asks to activate a campaign, compile campaign source, emit campaign seeds, or run a pe campaign through compile, bootstrap, pr, remediate, and merge.",
+      "description": "invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
@@ -1153,5 +1153,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "3778cde8edb9016341fef8e63dcf8128ff2b0dc023f663c0526fc311819795ed",
-  "source_skill_corpus_sha256": "8e6fa4fee630deb41ba97221ef0bfaf61efedd20d31b462d2c66612f115ebe75"
+  "source_skill_corpus_sha256": "73f461d728336a58566da9bb1bdbf504edbefc6e28864dad538256a4a9260fbb"
 }

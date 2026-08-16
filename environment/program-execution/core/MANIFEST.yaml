@@ -228,8 +228,8 @@ files:
   sha256: 5f61529b813d694d4790fccb85f6bd6ffbac112df748ec9816f41305459540b6
   bytes: 1346
 - path: program-execution-controller-template/RUNBOOK.md
-  sha256: 1235dd9c2cb3bcd366ff9e60efba3f959fdea424b57792c9cb3c5c7ff1294a62
-  bytes: 4661
+  sha256: 7be85d75e6e42bd975d1d7a35f1521d1475503e9499cc8b035710a44bdc9ca79
+  bytes: 4947
 - path: program-execution-controller-template/SECURITY.md
   sha256: 1bb8ae37d783ba450dbaafb779dfdcae5c2ac474ff72cbcdf1b08c5398fc4f2e
   bytes: 958
@@ -345,8 +345,8 @@ files:
   sha256: 1a7d73ea1a26192fd2c4036ce8ca253b153a5ec913db25a111a8f55aafae42bb
   bytes: 7118
 - path: program-execution-controller-template/scripts/pec/cli.py
-  sha256: fcc0684baeaeb11f2293c07145a1ff51d254c32f22a831d23dfbf29badcbf892
-  bytes: 15289
+  sha256: 4b461b69867fc00d7633a92bbd6c10b08544310de4b85342eed36c3bba5a4650
+  bytes: 15619
 - path: program-execution-controller-template/scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
   bytes: 2419
@@ -354,8 +354,8 @@ files:
   sha256: 45e0a931399dc4015b18557362289d45495689e69d1925aa9b9bf2210e0bc5e9
   bytes: 14343
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 305002456b4f204555d7e36f047a81f21d7f25ebbca52e069c5c3fd4dcdbc299
-  bytes: 71429
+  sha256: 473de7cad4a377ee60e3968f273ea6e013a056d0cfeb0cf8fa5115dccaa04602
+  bytes: 71510
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -384,8 +384,8 @@ files:
   sha256: 9af0d1fff94883ede8b15a109f76d591ea84f092c26edc80c8bf5e1e71abced4
   bytes: 1018
 - path: program-execution-controller-template/scripts/tests/test_bootstrap_admission.py
-  sha256: f0006c1d40ac7d409a58f6cd39a9a351e24a0ee4dcdb3738e619aba775791e5a
-  bytes: 2505
+  sha256: b480c969090f1b58c7b6f60934947749e09c14cf59a0a08faac8c92dcba51a72
+  bytes: 3420
 - path: program-execution-controller-template/scripts/tests/test_campaign_status.py
   sha256: 8b0531577ad3013259051c90706d5fec624b7a47ee19da4be56b60c55061ba85
   bytes: 4419
@@ -544,4 +544,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 179
-  total_bytes: 546925
+  total_bytes: 548537

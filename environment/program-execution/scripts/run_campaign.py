@@ -145,6 +145,8 @@ def run_cmd(
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    child_env = os.environ.copy() if env is None else dict(env)
+    child_env.setdefault("L9_CAMPAIGN_TUNNEL", "1")
     try:
         return subprocess.run(
             cmd,
@@ -153,7 +155,7 @@ def run_cmd(
             text=True,
             timeout=timeout,
             cwd=str(cwd) if cwd is not None else None,
-            env=env,
+            env=child_env,
         )
     except subprocess.TimeoutExpired as exc:
         raise CampaignError(f"timed out after {timeout}s: {' '.join(cmd[:6])}") from exc
@@ -400,8 +402,8 @@ def default_validate_blueprint(target: Path) -> list[str]:
 
 
 def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
-    def _run(*, admission_draft: bool) -> subprocess.CompletedProcess[str]:
-        cmd = [
+    first = run_cmd(
+        [
             sys.executable,
             str(PEC),
             "bootstrap",
@@ -409,18 +411,15 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
             str(workspace),
             "--blueprint",
             str(blueprint),
-        ]
-        if admission_draft:
-            cmd.append("--admission-draft")
-        return run_cmd(cmd, timeout=PEC_TIMEOUT_S)
-
-    first = _run(admission_draft=False)
+        ],
+        timeout=PEC_TIMEOUT_S,
+    )
     combined = (first.stderr + "\n" + first.stdout).strip()
     if first.returncode == 0:
         return {"ok": True, "draft": False, "output": combined}
     raise CampaignError(
-        "pec bootstrap failed without --admission-draft; "
-        "collect_evidence + accept_blueprint must precede lock: " + combined
+        "pec bootstrap failed; make campaign must accept the blueprint "
+        "before lock: " + combined
     )
 
 
@@ -1685,9 +1684,22 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def refuse_live_until_shortcut(until: str) -> None:
+    resolved = UNTIL_ALIASES.get(until, until)
+    if resolved == "close":
+        return
+    if os.environ.get("L9_CAMPAIGN_UNTIL_DEBUG") == "1":
+        return
+    raise CampaignError(
+        "CAMPAIGN_UNTIL is not a live campaign path; make campaign runs "
+        "through close. Set L9_CAMPAIGN_UNTIL_DEBUG=1 only for runner tests."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        refuse_live_until_shortcut(args.until)
         report = run_campaign(
             args.intent.resolve(),
             until=args.until,

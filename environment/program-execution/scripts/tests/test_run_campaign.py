@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -111,6 +113,17 @@ class RunCampaignTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.mod = _load("run_campaign_under_test", SCRIPT)
         cls.activate = _load("compile_activation_under_test", ACTIVATE)
+
+    def test_cli_refuses_until_shortcut(self) -> None:
+        self.mod.refuse_live_until_shortcut("close")
+        self.mod.refuse_live_until_shortcut("merge")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("L9_CAMPAIGN_UNTIL_DEBUG", None)
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.refuse_live_until_shortcut("activate")
+            self.assertIn("CAMPAIGN_UNTIL is not a live campaign path", str(ctx.exception))
+        with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
+            self.mod.refuse_live_until_shortcut("activate")
 
     def test_rejects_intent_v1(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

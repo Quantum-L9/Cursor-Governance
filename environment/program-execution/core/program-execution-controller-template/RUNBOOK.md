@@ -1,5 +1,14 @@
 # Controller Runbook
 
+Live campaigns use one front door. This runbook is pec template internals
+and unit-test sequencing, not an operator or agent campaign path.
+
+```bash
+make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+```
+
+Do not copy the commands below to activate a campaign.
+
 ## 0. Compile the campaign source and admit the Blueprint
 
 Ordering is load-bearing. The compiler self-validates its output (template
