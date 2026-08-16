@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-16T21:51:48Z'
+generated_utc: '2026-08-16T23:12:13Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:b250c292b63bf0554bbbbe0165b4a6300f2abc1d571b5c8c2c16296d265c9a94
+source_tree_digest: sha256:de8355f8808e849dd742c2de9d0a3951645070f5fca0f73ec010c895a444928e
 summary:
   total_mdc_files: 63
   always_apply_true: 27
@@ -217,8 +217,8 @@ rules:
 - file: 15-work-tracking.mdc
   id: l9.rule.15.work.tracking
   id_source: explicit
-  version: 1.0.0
-  description: Use when touching TODO.md, WIP/, current_work/, or deciding where in-flight work lives.
+  version: 2.0.0
+  description: WIP/ is a dated tracked corpus on main; TODO.md is the agent task queue.
   scope: global
   domain: general
   activation: agent_requested
@@ -227,8 +227,8 @@ rules:
   globs: null
   first_heading: Work tracking
   has_yaml_frontmatter: true
-  line_count: 17
-  content_digest: sha256:4a5143808f79dd176faf104f80e93c55a8fc7f5baafb77353033666ce317f79d
+  line_count: 38
+  content_digest: sha256:79c9306f7061019a8acacb6d58a367ec416d12da909a0fef49a573a86b41dbf3
   authority: canonical_global
   context_cost: minimal
   deprecated: false

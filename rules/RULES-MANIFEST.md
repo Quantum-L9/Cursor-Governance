@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-16T21:51:48Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-16T23:12:13Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -27,7 +27,7 @@ Generated: `2026-08-16T21:51:48Z`. Source: `rules/*.mdc`.
 | `08-vps-ops.mdc` | `l9.rule.08.vps.ops` | global | git | agent_requested | 192 | `8ca195f6994d` |
 | `09-execute-as-instructed.mdc` | `l9.rule.09.execute.as.instructed` | global | general | always | 48 | `13d3fb355837` |
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | agent_requested | 182 | `bb98eadfc112` |
-| `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 17 | `4a5143808f79` |
+| `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 38 | `79c9306f7061` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | agent_requested | 190 | `fa976f39b458` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 65 | `d683a886480c` |
 | `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 95 | `e62389dfd475` |

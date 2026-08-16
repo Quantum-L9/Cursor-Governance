@@ -3,4 +3,5 @@
 rules/RULES-MANIFEST.json
 rules/RULES-MANIFEST.md
 
-WIP/
+# Private case files — never in agent context.
+WIP/Legal Defense/

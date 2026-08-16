@@ -56,13 +56,17 @@ jobs:
           fi
           echo "ok: current_work/ absent"
 
-      - name: WIP is cursorignored
+      - name: WIP Legal Defense stays cursorignored
         run: |
-          if [ -d WIP ] && ! grep -qE '^WIP/?$' .cursorignore 2>/dev/null; then
-            echo "::error::WIP/ exists but is not listed in .cursorignore"
+          if [ -d WIP ] && ! grep -qE '^WIP/Legal Defense/?$' .cursorignore 2>/dev/null; then
+            echo "::error::WIP/Legal Defense/ must stay listed in .cursorignore"
             exit 1
           fi
-          echo "ok: WIP/ boundary intact"
+          if grep -qE '^WIP/?$' .cursorignore 2>/dev/null; then
+            echo "::error::do not blanket-ignore WIP/ — it is a dated tracked corpus"
+            exit 1
+          fi
+          echo "ok: WIP corpus visible; Legal Defense ignored"
 
       - name: Full hygiene check
         run: |
