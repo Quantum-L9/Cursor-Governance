@@ -64,7 +64,9 @@ class PipelineAssemblyFillTest(unittest.TestCase):
             )
             prepare_attempt(temp, workspace, output="docs/result.txt")
             verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
-            self.assertEqual(verification["kernel_verdict"], "INCOMPLETE", verification.get("gates"))
+            self.assertEqual(
+                verification["kernel_verdict"], "INCOMPLETE", verification.get("gates")
+            )
             self.assertEqual(verification["verdict"], "FAILED")
             self.assertEqual(verification["gates"]["validation"], "INCOMPLETE")
             cleanup_worktree(repo, workspace)

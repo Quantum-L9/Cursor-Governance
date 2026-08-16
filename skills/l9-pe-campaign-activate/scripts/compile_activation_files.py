@@ -107,12 +107,16 @@ def refuse_stub_intent(intent: dict[str, Any]) -> None:
     for index, item in enumerate(intent.get("tasks") or [], start=1):
         if not isinstance(item, dict):
             raise CompileError(f"task {index} must be a mapping")
-        actions = [str(action).strip() for action in (item.get("actions") or []) if str(action).strip()]
+        actions = [
+            str(action).strip() for action in (item.get("actions") or []) if str(action).strip()
+        ]
         if not actions:
             raise CompileError(f"task {index}: empty actions; refuse invented implement_task stub")
         if any(STUB_ACTION_RE.match(action) for action in actions):
             raise CompileError(f"task {index}: implement_task_* stub actions are refused")
-        consumers = [str(value).strip() for value in (item.get("consumers") or []) if str(value).strip()]
+        consumers = [
+            str(value).strip() for value in (item.get("consumers") or []) if str(value).strip()
+        ]
         entrypoints = [
             str(value).strip() for value in (item.get("entrypoints") or []) if str(value).strip()
         ]
@@ -159,7 +163,9 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         task_id = str(item.get("id") or _task_id(index))
         gate_id = _gate_id(index)
         paths = [str(path) for path in (item.get("paths") or []) if path]
-        actions = [str(action).strip() for action in (item.get("actions") or []) if str(action).strip()]
+        actions = [
+            str(action).strip() for action in (item.get("actions") or []) if str(action).strip()
+        ]
         if not actions:
             raise CompileError(
                 f"task {task_id}: refuse empty actions; will not invent implement_task stubs"
@@ -184,9 +190,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         for row in acceptance:
             statement = str((row or {}).get("statement") or row or "")
             if STUB_ACCEPTANCE_RE.search(statement):
-                raise CompileError(
-                    f"task {task_id}: refuse title-plus-locally-verified acceptance"
-                )
+                raise CompileError(f"task {task_id}: refuse title-plus-locally-verified acceptance")
         nugget_id = str(item.get("nugget_id") or "").strip()
         if not nugget_id:
             raise CompileError(f"task {task_id}: ready task requires nugget_id")

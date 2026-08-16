@@ -40,7 +40,9 @@ class ExtractNuggetsTests(unittest.TestCase):
             payload = json.loads(Path(result["path"]).read_text(encoding="utf-8"))
             self.assertEqual(payload["schema"], "l9.program-execution.nuggets.v1")
             self.assertEqual(result["seed"]["tasks"][0]["nugget_id"], "NUG-001")
-            self.assertTrue(any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"]))
+            self.assertTrue(
+                any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
+            )
             self.assertTrue(result["stack_cited"])
 
     def test_hollow_seed_stays_partial(self) -> None:

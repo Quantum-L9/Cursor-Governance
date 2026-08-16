@@ -49,7 +49,9 @@ def extract_nuggets(
     campaign_id = str(seed.get("campaign_id") or primed_campaign_dir.name).strip()
     if not campaign_id:
         raise NuggetError("campaign_id required")
-    stack_proof = Path(stack_proof_path) if stack_proof_path else primed_campaign_dir / "stack-proof.json"
+    stack_proof = (
+        Path(stack_proof_path) if stack_proof_path else primed_campaign_dir / "stack-proof.json"
+    )
     if not stack_proof.is_file():
         parent_proof = primed_campaign_dir.parent / campaign_id / "stack-proof.json"
         if parent_proof.is_file():

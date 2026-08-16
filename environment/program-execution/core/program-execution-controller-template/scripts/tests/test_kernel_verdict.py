@@ -13,8 +13,6 @@ from helpers import (
     prepare_attempt,
     register_contract,
     run_cli,
-    source_contract,
-    write_json,
 )
 
 
@@ -46,7 +44,9 @@ class KernelVerdictTest(unittest.TestCase):
                 str(temp / "TASK-001.source.json"),
             )
             self.assertEqual(
-                json.loads(Path(drafted["path"]).read_text(encoding="utf-8"))["validation_commands"],
+                json.loads(Path(drafted["path"]).read_text(encoding="utf-8"))[
+                    "validation_commands"
+                ],
                 [],
             )
             run_cli(

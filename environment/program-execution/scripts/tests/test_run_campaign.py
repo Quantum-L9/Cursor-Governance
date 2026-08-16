@@ -782,7 +782,9 @@ class RunCampaignTests(unittest.TestCase):
             nuggets = l9 / "primed" / "demo-activate-v1" / "nuggets.json"
             self.assertTrue(nuggets.is_file())
             payload = json.loads(nuggets.read_text(encoding="utf-8"))
-            self.assertTrue(any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"]))
+            self.assertTrue(
+                any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
+            )
 
     def test_incomplete_skips_change(self) -> None:
         decision = self.mod.dispatch_kernel_change(

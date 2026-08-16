@@ -199,7 +199,9 @@ def draft_source_contract(
         "remote_mutation": "denied",
         "stop_conditions": ["stop_on_program_contract_scope_authority_or_base_state_drift"],
         "rollback": rollback,
-        "kernel_profile": str(source.get("kernel_profile") or task.get("kernel_profile") or "BUILD"),
+        "kernel_profile": str(
+            source.get("kernel_profile") or task.get("kernel_profile") or "BUILD"
+        ),
     }
     payload = validate_source_contract(payload, task)
     write_json(output, payload)
