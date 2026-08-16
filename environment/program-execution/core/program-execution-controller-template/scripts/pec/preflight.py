@@ -181,6 +181,8 @@ def _extra_task_blockers(db: Any, task: dict[str, Any]) -> list[str]:
             ):
                 extra.append("writable_paths_missing")
         except (OSError, json.JSONDecodeError, TypeError):
+            # Unreadable or invalid source contract must not abort preflight;
+            # task_readiness already reports source_contract_invalid when needed.
             pass
     return extra
 

@@ -103,7 +103,7 @@ files:
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
 - path: scripts/pec/preflight.py
-  sha256: 7a83307ee9d94f31a6105b30b7c192dc9f6f4845393b97570ba8a2ba604c016d
+  sha256: 899874dafca632b12ae65b8635d438a37f7d10e86450a6b9b14ab92d7c7400f5
 - path: scripts/pec/replan.py
   sha256: 6c7df55ab9aa8566f88a4eb65bdbbe2ad1091f3c72bcca634de1cb325f21349a
 - path: scripts/pec/state.py
