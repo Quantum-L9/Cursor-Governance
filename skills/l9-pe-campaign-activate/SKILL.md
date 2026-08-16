@@ -41,7 +41,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 | Pipeline | [references/pipeline.md](references/pipeline.md) |
 | Merge | [references/merge-authority.md](references/merge-authority.md) |
 | Isolation | new worktree from `origin/main`; never the dirty primary clone |
-| Publish | `PR_BASE=origin/campaign/<id> make pr` (Makefile checkers) |
+| Publish | runner pushes `campaign/<id>` before execute; task PRs stack on that remote base |
 | Remediate | `l9-pr-remediation` Converge, max 5 cycles, then merge that PR |
 | Forbidden extras | README, handoff, `INTENT.yaml`, `CONTRACT_SOURCE.md`, `PROGRAM_SOURCE.md`, alignment overlays |
 

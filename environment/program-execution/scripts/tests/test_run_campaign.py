@@ -181,6 +181,58 @@ class RunCampaignTests(unittest.TestCase):
                 self.mod.refuse_write_to_dirty_primary(primary, primary)
             self.assertIn("dirty primary", str(ctx.exception))
 
+    def test_require_remote_campaign_branch_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.require_remote_campaign_branch(root, "demo-activate-v1")
+            self.assertIn("remote campaign/demo-activate-v1 missing", str(ctx.exception))
+
+    def test_pushes_campaign_branch_before_execute(self) -> None:
+        order: list[str] = []
+
+        def emit(intent: Path, repo_root: Path) -> dict[str, object]:
+            campaign = repo_root / "environment/program-execution/campaigns/demo-activate-v1"
+            campaign.mkdir(parents=True, exist_ok=True)
+            (campaign / "CAMPAIGN_SOURCE.yaml").write_text("schema: x\n", encoding="utf-8")
+            (campaign / "source-integrity-receipt.json").write_text("{}\n", encoding="utf-8")
+            return {"wrote": ["CAMPAIGN_SOURCE.yaml"]}
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "root"
+            root.mkdir()
+            _dump(root / "intent.yaml", ACTIVATE_SEED)
+            self.mod.run_campaign(
+                root / "intent.yaml",
+                until="execute",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=emit,
+                    compile_source=lambda source, target: None,
+                    validate_blueprint=lambda target: [],
+                    admit=lambda blueprint: {},
+                    pec_bootstrap=lambda workspace, blueprint: {
+                        "ok": True,
+                        "draft": False,
+                        "output": "ok",
+                    },
+                    arm=lambda workspace, campaign_id: None,
+                    push_integration=lambda worktree, campaign_id: order.append("push"),
+                    execute=lambda workspace, campaign_id: order.append("execute") or {},
+                    make_pr=lambda worktree, campaign_id: {
+                        "number": 1,
+                        "url": "https://example.test/1",
+                    },
+                    close=lambda workspace, campaign_id: order.append("close") or {},
+                ),
+            )
+        self.assertEqual(order[:2], ["push", "execute"])
+
     def test_write_and_commit_output_refuses_stub(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

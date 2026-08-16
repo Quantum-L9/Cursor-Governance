@@ -34,9 +34,9 @@ Order inside `run_campaign.py` only (not an operator checklist):
 | blueprint | compile + template validate |
 | admit | EVID-001 on reconciled target HEAD; accept blueprint |
 | bootstrap | pec bootstrap with no draft flag; quarantine leftovers |
-| arm | draft/register every task; claim TASK-001; STACK.json |
-| execute | pec prepare worktree; write/commit/verify/complete; claim next |
-| pr | stacked task PRs; never `PR_BASE=main` |
+| arm | draft/register every task; claim TASK-001; STACK.json; push `campaign/<id>` to GitHub before execute |
+| execute | pec prepare worktree; write/commit/verify/complete; claim next; task PRs require remote `campaign/<id>` |
+| pr | stacked task PRs; never `PR_BASE=main`; host `make pr` after execute |
 | close | pec close + host ledger + `campaigns/COMPLETED/<id>/` |
 
 `program-execution.intent.v1` and `pe-<hash>` workspaces are refused.

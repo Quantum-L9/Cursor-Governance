@@ -82,6 +82,7 @@ class Hooks:
     execute: Callable[[Path, str], dict[str, Any]] | None = None
     close: Callable[[Path, str], dict[str, Any]] | None = None
     make_pr: Callable[[Path, str], dict[str, Any]] | None = None
+    push_integration: Callable[[Path, str], None] | None = None
     open_task_pr: Callable[[Path, str, dict[str, Any]], dict[str, Any]] | None = None
     pr_status: Callable[[str, int | None], dict[str, Any]] | None = None
     authorize_and_merge: Callable[[str, int], dict[str, Any]] | None = None
@@ -1205,6 +1206,7 @@ def maybe_open_task_pr(
     if hooks.make_pr is not None:
         return None
     refuse_unstacked_pr_base(str(item.get("pr_base") or ""))
+    require_remote_campaign_branch(worktree, campaign_id)
     github = f"https://github.com/{HOST_REPO_DEFAULT}.git"
     run_cmd(
         ["git", "-C", str(worktree), "remote", "get-url", "github"],
@@ -1381,6 +1383,55 @@ def commit_host_emit(worktree: Path, campaign_id: str) -> None:
         raise CampaignError(f"emit commit failed: {(commit.stderr or commit.stdout).strip()}")
 
 
+def github_push_remote(worktree: Path, repository_id: str = HOST_REPO_DEFAULT) -> str:
+    listed = run_cmd(
+        ["git", "-C", str(worktree), "remote"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    remotes = (listed.stdout or "").split()
+    origin = run_cmd(
+        ["git", "-C", str(worktree), "remote", "get-url", "origin"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    url = (origin.stdout or "").strip()
+    if url.startswith("https://github.com/") or url.startswith("git@github.com:"):
+        return "origin"
+    github = f"https://github.com/{repository_id}.git"
+    if "github" not in remotes:
+        added = run_cmd(
+            ["git", "-C", str(worktree), "remote", "add", "github", github],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if added.returncode != 0:
+            raise CampaignError(
+                f"cannot add github remote: {(added.stderr or added.stdout).strip()}"
+            )
+    return "github"
+
+
+def require_remote_campaign_branch(worktree: Path, campaign_id: str) -> None:
+    branch = f"campaign/{campaign_id}"
+    for remote in ("github", "origin"):
+        check = run_cmd(
+            ["git", "-C", str(worktree), "rev-parse", "--verify", f"{remote}/{branch}"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if check.returncode == 0:
+            return
+        listed = run_cmd(
+            ["git", "-C", str(worktree), "ls-remote", "--heads", remote, branch],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if listed.returncode == 0 and branch in (listed.stdout or ""):
+            return
+    raise CampaignError(f"remote {branch} missing; push campaign branch before task PRs")
+
+
 def push_integration_branch(worktree: Path, campaign_id: str) -> None:
     if not is_git_repo(worktree):
         raise CampaignError("host worktree is not a git checkout; cannot push campaign branch")
@@ -1392,20 +1443,15 @@ def push_integration_branch(worktree: Path, campaign_id: str) -> None:
     )
     if exists.returncode != 0:
         raise CampaignError(f"local {branch} missing; cannot set PR_BASE=origin/{branch}")
+    remote = github_push_remote(worktree)
     pushed = run_cmd(
-        ["git", "-C", str(worktree), "push", "-u", "origin", branch],
+        ["git", "-C", str(worktree), "push", "-u", remote, branch],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
     if pushed.returncode != 0:
         raise CampaignError(f"cannot push {branch}: {(pushed.stderr or pushed.stdout).strip()}")
-    remote = run_cmd(
-        ["git", "-C", str(worktree), "rev-parse", "--verify", f"origin/{branch}"],
-        timeout=GIT_TIMEOUT_S,
-        env=git_env(),
-    )
-    if remote.returncode != 0:
-        raise CampaignError(f"remote {branch} missing after push")
+    require_remote_campaign_branch(worktree, campaign_id)
 
 
 def default_close(
@@ -1663,6 +1709,13 @@ def run_campaign(
     )
     report.program_blockers = default_program_blockers(campaign_id, armed=True)
     report.stages_completed.append("arm")
+    if should_run(until, "execute"):
+        pusher = hooks.push_integration
+        if pusher is None and hooks.make_pr is None:
+            pusher = push_integration_branch
+        if pusher is not None:
+            log(f"push {campaign_id} integration branch before execute")
+            pusher(write_root, campaign_id)
     if not should_run(until, "execute"):
         return report
 
