@@ -1,8 +1,7 @@
 ---
 id: l9.rule.15.work.tracking
-version: 1.0.0
-description: Use when touching TODO.md, WIP/, current_work/, or deciding where in-flight
-  work lives.
+version: 2.0.0
+description: WIP/ is a dated tracked corpus on main; TODO.md is the agent task queue.
 scope: global
 activation: agent_requested
 authority: canonical_global
@@ -11,7 +10,29 @@ alwaysApply: false
 
 # Work tracking
 
-- Never read or write `WIP/`. It is human-owned scratch. `.cursorignore` lists `WIP/`.
-- Maintain `TODO.md` as the agent task queue. One task per line. Status prefix required: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked.
+`WIP/` is a first-class dated corpus on `main`. It is committed, inventoried,
+and pruned only when high-evidence shows the same bytes already live outside
+`WIP/`. Git history is the undo.
+
+## MUST
+
+- Prefer new drops under `WIP/<M-D-YY>/<topic>/` (example: `WIP/8-16-26/`).
+- Named series (`WIP/CG/`, packs) are allowed; inventory marks `kind: series`.
+- Run `make wip-hygiene` (or `python3 ops/scripts/wip_corpus.py hygiene`) to
+  file loose root files, refresh `WIP/INVENTORY.yaml`, and prune landed copies.
+- Stage `WIP/**` with **explicit pathspecs only** (rule 49). Never `git add -A`.
+- Maintain `TODO.md` as the agent task queue. One task per line. Status prefix
+  required: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked.
 - Include a Linear identifier when work spans sessions.
-- `current_work/` is retired. Do not recreate it. Migrate leftovers to `WIP/` (human) or `TODO.md` (agent).
+
+## MUST NOT
+
+- Park `WIP/**` under `/tmp` or `.l9/scratch-hold/` to clean `make pr`.
+- Recreate `current_work/` (retired). Leftovers go to `WIP/` or `TODO.md`.
+- Track or stage `WIP/Legal Defense/` or credential-shaped WIP globs
+  (`*oauth*.json`, `*credentials*.json`, `*client_secret*.json`).
+- Prune unique or unmatched WIP. Auto-prune requires same sha256 on a tracked
+  non-WIP path, or an explicit `landed:` inventory marker, plus a receipt
+  under `WIP/_receipts/`.
+- Treat `l9-git-work-preserve` as this contract — that skill inventories git
+  refs/stashes and still never auto-deletes branches.

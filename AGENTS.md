@@ -701,3 +701,22 @@ Authoritative corrections (do not treat older “do not merge / Human only
    receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
    `--admin` stay denied.
 4. `/pr` remains Diagnose-only (no merge).
+
+<!-- WIP_CORPUS_ON_MAIN_V1 -->
+## WIP corpus on main (2026-08-16) — supersedes “agents never touch WIP”
+
+Authoritative corrections (do not treat older “never read or write WIP” or
+`current_work/` bullets as SSOT):
+
+1. `WIP/` is a **dated tracked corpus on `main`**. Prefer
+   `WIP/<M-D-YY>/<topic>/`. Named series (`WIP/CG/`) stay and are inventoried.
+2. Agents **may** read/write WIP for hygiene, filing loose root notes, and
+   high-evidence prune (`make wip-hygiene` / `ops/scripts/wip_corpus.py`).
+3. Auto-prune only when a WIP file’s sha256 matches a tracked **non-WIP**
+   path, or inventory has an explicit `landed:` marker. Unique WIP is kept.
+   Receipts live in `WIP/_receipts/`. Git history is the undo.
+4. Do **not** park WIP under `/tmp` or `.l9/scratch-hold/`. Stage with
+   pathspecs only (rule 49). `WIP/Legal Defense/` and credential globs stay
+   untracked. Scanner excludes of `WIP/**` stay in place.
+5. `TODO.md` remains the agent task queue. `l9-git-work-preserve` still
+   inventories git refs/stashes and never auto-deletes branches.

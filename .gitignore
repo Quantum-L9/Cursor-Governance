@@ -76,9 +76,9 @@ __pycache__/
 .claude/rules/
 .claude/rules
 
-# ── WIP/ is git-tracked human scratch; agents do not read or write it ──────
+# ── WIP/ is a dated tracked corpus on main (hygiene via ops/scripts/wip_corpus.py)
 # Do NOT add a blanket `WIP/` gitignore — the tree stays commit-eligible.
-# Agents are kept out via .cursorignore (`WIP/`) + rules/15-work-tracking.mdc.
+# Agents may inventory, file loose drops, and high-evidence prune (rule 15).
 # Scanners already exclude WIP/ via tool configs, not git.
 # Only credential-shaped filenames under WIP are denylisted (2026-07-21: a
 # session-end sync hook nearly staged a live Google OAuth client secret from

@@ -76,8 +76,10 @@ ci = pathlib.Path(".cursorignore")
 if pathlib.Path("WIP").is_dir():
     if not ci.exists():
         errs.append("WIP/ exists but .cursorignore is missing")
-    elif not re.search(r"^WIP/?$", ci.read_text(encoding="utf-8"), re.M):
-        errs.append("WIP/ exists but is not listed in .cursorignore")
+    elif not re.search(r"^WIP/Legal Defense/?$", ci.read_text(encoding="utf-8"), re.M):
+        errs.append("WIP/Legal Defense/ must stay listed in .cursorignore")
+    elif re.search(r"^WIP/?$", ci.read_text(encoding="utf-8"), re.M):
+        errs.append("do not blanket-ignore WIP/ — it is a dated tracked corpus")
 
 if not pathlib.Path("TODO.md").exists():
     warns.append("TODO.md missing - it is the agent task queue")
