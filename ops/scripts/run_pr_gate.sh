@@ -218,7 +218,15 @@ fi
 
 echo "--- pytest ---"
 if grep -Eq '\.py$' "$changed_file"; then
-  bash "$SCRIPT_DIR/run_pytest_suites.sh" --tb=short -q
+  # Changed-files gate: only collect the secrets capability suite when that
+  # plane changed. Full-tree remains make pr-full / nightly. Avoids a host
+  # miniconda cryptography ABI break aborting unrelated PE/ops PRs.
+  pytest_args=(--tb=short -q)
+  if ! grep -Eq '^(tests/ops/secrets/|ops/secrets/)' "$changed_file"; then
+    pytest_args+=(--ignore=tests/ops/secrets)
+    echo "OK: skip secrets capability suite (ops/secrets unchanged)"
+  fi
+  bash "$SCRIPT_DIR/run_pytest_suites.sh" "${pytest_args[@]}"
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
