@@ -26,11 +26,11 @@ CLI / Desktop            make claude-install ───────────�
 ```
 
 `install.sh` owns everything surface-neutral: the locked toolchain, the settings
-triad, skill discovery, the MCP front door, local git excludes, and the
-readiness preflight. The surface callers own only what their surface uniquely
-needs — for the cloud that is `gh`, credentials, cloning governance, and the
-consumer repo's own language toolchain. **Add adapter behaviour to
-`install.sh`, not to a caller**, or the surfaces drift apart again.
+triad, skill discovery, the LLM rules projection, the MCP front door, local git
+excludes, and the readiness preflight. The surface callers own only what their
+surface uniquely needs — for the cloud that is `gh`, credentials, cloning
+governance, and the consumer repo's own language toolchain. **Add adapter
+behaviour to `install.sh`, not to a caller**, or the surfaces drift apart again.
 
 `make claude-install-check` reports drift read-only, writing nothing.
 

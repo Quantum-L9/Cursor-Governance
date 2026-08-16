@@ -10,8 +10,9 @@
 #   CLI / Desktop          : make claude-install    ->               install.sh
 #
 # Everything surface-neutral lives here and nowhere else: the locked toolchain,
-# the settings triad, skill discovery, the MCP front door, local git excludes,
-# and the readiness preflight. Add adapter wiring HERE, not in a surface caller.
+# the settings triad, skill discovery, the LLM rules projection, the MCP front
+# door, local git excludes, and the readiness preflight. Add adapter wiring
+# HERE, not in a surface caller.
 #
 # This script never clones governance and never touches credentials — acquiring
 # the SSOT and authenticating are the caller's job, because they differ per
@@ -131,6 +132,30 @@ if [ -f "$RECONCILE_SKILLS" ]; then
     || warn "skill reconciliation reported drift or a local name conflict"
 else
   warn "missing ops/scripts/reconcile_claude_l9_skills.py"
+fi
+
+# --- 3b) LLM rules projection ----------------------------------------------
+# The generated rules (rules/*.mdc -> environment/generated/llm-rules) are the
+# static governance layer every peer loads: Cursor via the l9-governance plugin,
+# Claude CLI via setup_workspace_symlinks.sh. The cloud path reaches only this
+# installer, so project + reconcile here too — web/mobile sessions get the same
+# generated-rule mount as their CLI and Cursor peers. Both scripts import yaml,
+# so run them on the locked interpreter, not the sandbox's system python3.
+log "LLM rules projection"
+PROJECT_RULES="$GOV_DIR/ops/scripts/project_llm_rules.py"
+RECONCILE_RULES="$GOV_DIR/ops/scripts/reconcile_llm_rule_adapters.py"
+if [ -f "$PROJECT_RULES" ] && [ -f "$RECONCILE_RULES" ]; then
+  if [ "$CHECK" = "1" ]; then
+    "$GOV_PY" "$RECONCILE_RULES" --root "$GOV_DIR" --workspace "$WORKSPACE" --check --quiet \
+      || warn "LLM rules adapter reconcile reported drift"
+  else
+    "$GOV_PY" "$PROJECT_RULES" --root "$GOV_DIR" --quiet \
+      || warn "llm-rules projection failed (non-blocking)"
+    "$GOV_PY" "$RECONCILE_RULES" --root "$GOV_DIR" --workspace "$WORKSPACE" --quiet \
+      || warn "LLM rules adapter reconcile failed (non-blocking)"
+  fi
+else
+  warn "missing ops/scripts/project_llm_rules.py or reconcile_llm_rule_adapters.py"
 fi
 
 # --- 4) Memory MCP front door ----------------------------------------------

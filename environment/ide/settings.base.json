@@ -7,6 +7,16 @@
     "**/.venv": true,
     "**/node_modules": true,
     "**/.ruff_cache": true,
-    "**/__pycache__": true
+    "**/__pycache__": true,
+    "**/.cursor-commands": true
+  },
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/node_modules/**": true,
+    "**/.ruff_cache/**": true,
+    "**/__pycache__/**": true,
+    "**/WIP/**": true,
+    "**/current_work/**": true,
+    "**/.cursor-commands/**": true
   }
 }

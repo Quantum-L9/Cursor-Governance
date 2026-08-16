@@ -209,8 +209,8 @@ def render_ownership(class_name: str) -> dict[str, object]:
         tool = tools[tool_name]
         on_save = entry.get("on_save") or {}
         block: dict[str, object] = {"editor.defaultFormatter": tool["format_extension"]}
-        if on_save.get("format"):
-            block["editor.formatOnSave"] = True
+        if "format" in on_save:
+            block["editor.formatOnSave"] = bool(on_save["format"])
         actions = {
             tool.get("code_actions", {})[action]: mode
             for action, mode in on_save.items()

@@ -70,6 +70,14 @@ check "ruff owns python" 'charliermarsh.ruff' "$(python3 -c '
 import json,sys; print(json.load(open(sys.argv[1]))["[python]"]["editor.defaultFormatter"])' "$WS/.vscode/settings.json")"
 check "ruff nativeServer on" '"on"' "$(json_get "$WS/.vscode/settings.json" 'ruff.nativeServer')"
 check "ruff importStrategy fromEnvironment" '"fromEnvironment"' "$(json_get "$WS/.vscode/settings.json" 'ruff.importStrategy')"
+check "prettier owns markdown" '{"editor.defaultFormatter":"esbenp.prettier-vscode","editor.formatOnSave":false}' "$(json_get "$WS/.vscode/settings.json" '[markdown]')"
+check "python terminal uses env file" 'true' "$(json_get "$WS/.vscode/settings.json" 'python.terminal.useEnvFile')"
+check "pyright diagnosticMode openFilesOnly" '"openFilesOnly"' "$(json_get "$WS/.vscode/settings.json" 'cursorpyright.analysis.diagnosticMode')"
+check "pyright excludes cursor-commands symlink" "yes" "$(python3 -c '
+import json,sys
+ex=json.load(open(sys.argv[1])).get("cursorpyright.analysis.exclude") or []
+print("yes" if "**/.cursor-commands" in ex else "no")
+' "$WS/.vscode/settings.json")"
 
 echo "=== product repos are not hard-classified eslint_owned ==="
 WS="$FIXTURE_ROOT/Website-Bot"
