@@ -24,7 +24,7 @@ profile owns. Reconciled by `ops/scripts/install_ide_profile.sh`.
 | `extensions.core.json` | Extensions installed in every governed workspace |
 | `extensions.eslint_owned.json` | Extra extensions for ESLint-owned workspaces (adds Prettier) |
 | `settings.base.json` | Editor hygiene keys applied everywhere |
-| `settings.python.json` | Python type-check mode (Pyright basic) — no formatter keys |
+| `settings.python.json` | Python type-check mode (Pyright basic) and terminal `.env` injection — no formatter keys |
 | `settings.node.json` | Superseded by `policy.json`; kept for reference, read by nothing |
 | `exceptions.yaml` | Repos and heuristics that classify a workspace as `eslint_owned` |
 
@@ -45,10 +45,10 @@ nothing. That is how `eslint_owned` gets no JS/TS formatter key.
 
 ## Workspace classes
 
-| Class | JS/TS formatter | Python formatter |
-|---|---|---|
-| `biome_default` | Biome (JS/TS/JSON); built-in JSON language features (JSONC) | Ruff (governance) |
-| `eslint_owned` | none written — repo's ESLint/Prettier config wins | Ruff (governance) |
+| Class | JS/TS formatter | Python formatter | Markdown formatter |
+|---|---|---|---|
+| `biome_default` | Biome (JS/TS/JSON); built-in JSON language features (JSONC) | Ruff (governance) | Prettier (format-on-save off) |
+| `eslint_owned` | none written — repo's ESLint/Prettier config wins | Ruff (governance) | Prettier (format-on-save off) |
 
 Classification order (first match wins): workspace basename matches
 `eslint_owned_repos` → any path segment matches → `eslint.config.*`/`.eslintrc*`

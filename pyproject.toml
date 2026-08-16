@@ -175,3 +175,35 @@ addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-o
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+# Cursor Pyright / basedpyright. This clone's `.cursor-commands` symlink points at
+# the full ~/.cursor-governance tree; without include/exclude the language server
+# enumerates that second clone plus WIP/ and hangs ("workspace source files …
+# longer than 10 seconds"). Keep this list aligned with [tool.ruff] / [tool.mypy].
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
+include = [
+    "conftest.py",
+    "ops",
+    "environment",
+    "skills",
+    "tools",
+    "workflows",
+]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/_archived",
+    "**/_archive",
+    "**/generated",
+    "WIP",
+    "current_work",
+    "C_GOV_FILES",
+    ".cursor-commands",
+    ".cursor",
+    ".claude",
+    ".venv",
+]

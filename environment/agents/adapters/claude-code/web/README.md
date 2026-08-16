@@ -39,7 +39,8 @@ behaviour to `install.sh`, not to a caller**, or the surfaces drift apart again.
 ### Dependencies and tool versions
 
 `uv.lock` in this repo is the only source of interpreter and dependency
-versions. `install.sh` applies it through the existing wrapper,
+versions. The shared bootstrap (`ops/scripts/bootstrap_agent_environment.sh`,
+called by `install.sh`) applies it through the existing wrapper,
 `ops/scripts/ensure_uv_environment.sh` (`uv sync --locked --extra dev`,
 fingerprint-cached so a re-run is a no-op). It never installs a package by
 name, and `validate_claude_env.py` fails any adapter script that tries.
