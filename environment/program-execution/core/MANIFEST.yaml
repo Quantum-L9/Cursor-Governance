@@ -354,8 +354,8 @@ files:
   sha256: 45e0a931399dc4015b18557362289d45495689e69d1925aa9b9bf2210e0bc5e9
   bytes: 14343
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 2a22db7dff9bedba729139217e6138df88bda6287a91cea58c918a149a6acc85
-  bytes: 71444
+  sha256: 305002456b4f204555d7e36f047a81f21d7f25ebbca52e069c5c3fd4dcdbc299
+  bytes: 71429
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -411,8 +411,8 @@ files:
   sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
   bytes: 7564
 - path: program-execution-controller-template/scripts/tests/test_pipeline_assembly_fill.py
-  sha256: 39f75f5e7169649aec4baaea4789da412c66e2a7e2841ac08ced795726645930
-  bytes: 11235
+  sha256: 928f08f9cdd25f45270c879d7677a2ddb3712f8d6785f69796e0ba134d3fe9fc
+  bytes: 11205
 - path: program-execution-controller-template/scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
   bytes: 5992
@@ -544,4 +544,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 179
-  total_bytes: 546970
+  total_bytes: 546925
