@@ -29,7 +29,7 @@ import os
 import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 _HERE = Path(__file__).resolve().parent
@@ -83,11 +83,47 @@ RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bmake\s+push\b", re.I), "make push"),
 )
 
-# `make pr`, tolerating flags and env prefixes: `PR_REMEDIATE=0 make pr`,
-# `make -C /path pr`, `make pr WS=...`.
-MAKE_PR_PATTERN = re.compile(
-    r"\bmake\b(?:\s+-\S+(?:\s+\S+)?|\s+[A-Z_][A-Z0-9_]*=\S+)*\s+pr\b", re.I
+# A leading `VAR=value` shell assignment. Anchored and non-nested: linear time.
+ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+# `make` options that consume a following argument, so that argument is never
+# mistaken for the goal (`make -C /path pr`).
+_MAKE_OPTS_WITH_ARG = frozenset(
+    {"-C", "-f", "-j", "-l", "-o", "-W", "--directory", "--file", "--makefile", "--jobs"}
 )
+
+
+def is_make_pr(segment: str) -> bool:
+    """True when this segment invokes `make pr` — the sanctioned publish path.
+
+    Deliberately a token scan, not a regex. Matching the real forms
+    (``PR_REMEDIATE=0 make pr``, ``make -C /path pr``, ``make pr WS=…``) needs
+    alternation under repetition, which is precisely the shape that backtracks
+    exponentially (CodeQL py/redos, flagged on PR #168). This gate runs on every
+    shell command an agent issues, so a hostile or merely long argument list must
+    not be able to stall it: this scan is linear in the token count.
+
+    Only the goal matters. ``make pr-check`` is not a publish (it never pushes)
+    and correctly returns False.
+    """
+    tokens = segment.split()
+    index = 0
+    while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
+        index += 1
+    if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
+        return False
+    index += 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _MAKE_OPTS_WITH_ARG:
+            index += 2
+            continue
+        if token.startswith("-") or ENV_ASSIGN_RE.match(token):
+            index += 1
+            continue
+        return token == "pr"
+    return False
+
 
 PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
 
@@ -119,7 +155,7 @@ def command_bypasses_publish_path(command: str) -> str | None:
         segments.append(segment)
         segments.extend(wrapper_subcommands(segment))
     for segment in segments:
-        if MAKE_PR_PATTERN.search(segment):
+        if is_make_pr(segment):
             continue
         head = segment_head(segment)
         if head not in {"git", "gh", "make"}:

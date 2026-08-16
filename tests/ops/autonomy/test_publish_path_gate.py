@@ -62,6 +62,46 @@ def test_inert_commands_are_not_reported(command: str) -> None:
     assert gate.command_bypasses_publish_path(command) is None
 
 
+MAKE_PR_FORMS = [
+    "make pr",
+    "PR_REMEDIATE=0 make pr",
+    "make -C /root/.cursor-governance pr",
+    "make pr WS=/home/user/Cursor-Governance",
+    "make -j 4 pr",
+    "/usr/bin/make pr",
+]
+
+NOT_MAKE_PR = ["make push", "make test", "make pr-check", "git push origin main", ""]
+
+
+@pytest.mark.parametrize("command", MAKE_PR_FORMS)
+def test_is_make_pr_accepts_real_invocations(command: str) -> None:
+    assert gate.is_make_pr(command) is True
+
+
+@pytest.mark.parametrize("command", NOT_MAKE_PR)
+def test_is_make_pr_rejects_other_goals(command: str) -> None:
+    """`make pr-check` runs the gate but never pushes, so it is not the publish path."""
+    assert gate.is_make_pr(command) is False
+
+
+def test_publish_matcher_is_linear_not_exponential() -> None:
+    """Regression: CodeQL py/redos on PR #168.
+
+    The matcher runs inside a PreToolUse gate on every shell command, so input
+    that merely *looks* like flags must not be able to stall it. The original
+    regex took ~9.8 s at n=18 and ~455 s at n=22 on this input; a linear scan
+    stays in microseconds. The bound is loose enough not to flake on a busy
+    runner but far below any exponential curve.
+    """
+    import time
+
+    evil = "make" + " -! -!" * 22 + " X"
+    start = time.perf_counter()
+    assert gate.is_make_pr(evil) is False
+    assert time.perf_counter() - start < 1.0
+
+
 def test_heredoc_body_is_data_not_a_push() -> None:
     command = "cat <<'EOF'\ngit push origin main\nEOF"
     assert gate.command_bypasses_publish_path(command) is None
