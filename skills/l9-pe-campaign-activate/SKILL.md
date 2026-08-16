@@ -62,10 +62,12 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
    ```
 
    That runner assigns the id, emits the file set, collects EVID-001, accepts
-   the blueprint, bootstraps pec **without** `--admission-draft`, drafts and
-   claims TASK-001, then opens/merges the host PR when green.
+   the blueprint, bootstraps pec **without** `--admission-draft`, reconciles
+   a clean target checkout, drafts and claims TASK-001, then opens/merges
+   the host PR when green. A leftover pec workspace is quarantined.
 2. Execute **only** the claimed TASK-001 on the worktree in
    `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`. Do not attach to `pe-<hash>`.
+   Do not reload the operator memo as the campaign.
 3. Converge the campaign PR with `l9-pr-remediation` until required checks are
    green and the PR is mergeable.
 4. Authorize and merge **that PR only**
@@ -116,6 +118,7 @@ Before claiming the campaign is activated:
 - [ ] `validate_blueprint --mode template` PASS
 - [ ] campaign id present in allowlist, execution policy, surface profile, and status ledger
 - [ ] `make campaign` left host `lifecycle: in_progress` and pec `runtime_status: active`
+- [ ] pec `admission_draft` is false and TASK-001 `runtime_state` is `LEASED`
 - [ ] `PHASE0_USER_CONFIG.yaml` `operator_ack.acknowledged_at` is still null unless Igor acknowledged it
 - [ ] campaign PR is green + mergeable, then merged
 - [ ] `CAMPAIGN_STATUS.yaml` closed (`complete`) after merge

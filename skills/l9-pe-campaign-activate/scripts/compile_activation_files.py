@@ -143,6 +143,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
                     {
                         "id": f"AC-{index:03d}",
                         "statement": (f"{task_title} is complete and locally verified."),
+                        "required_evidence_types": ["inspection"],
                     }
                 ],
                 "negative_cases": ["scope_expansion", "remote_mutation_before_release"],

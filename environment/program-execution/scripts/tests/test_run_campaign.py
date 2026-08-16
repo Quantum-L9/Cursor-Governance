@@ -368,6 +368,69 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(launch["campaign_id"], "demo-activate-v1")
             self.assertTrue(launch["only_pec_workspace"])
             self.assertEqual(launch["claimed_task"], "TASK-001")
+            self.assertTrue(launch["reconcile_required"])
+
+    def test_quarantine_moves_occupied_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            occupied = Path(raw) / "programs" / "demo-activate-v1"
+            occupied.mkdir(parents=True)
+            leftover = occupied / "runtime" / "state.sqlite"
+            leftover.parent.mkdir(parents=True)
+            leftover.write_text("stale\n", encoding="utf-8")
+            moved = self.mod.quarantine_occupied(occupied)
+            self.assertIsNotNone(moved)
+            self.assertFalse(occupied.exists())
+            self.assertTrue((moved / "runtime" / "state.sqlite").is_file())
+
+    def test_refuses_dirty_target_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            dest = Path(raw) / "target"
+            dest.mkdir()
+            _git_init(dest)
+            (dest / "dirty.txt").write_text("no\n", encoding="utf-8")
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.default_ensure_target_checkout(dest, "Quantum-L9/Cursor-Governance")
+            self.assertIn("dirty", str(ctx.exception))
+
+    def test_real_admit_bootstrap_reconcile_claims_task_001(self) -> None:
+        """No mocks on the live tunnel: leftover pec dir cannot block claim."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            leftover = l9 / "programs" / "demo-activate-v1" / "runtime"
+            leftover.mkdir(parents=True)
+            (leftover / "state.sqlite").write_text("stale-draft\n", encoding="utf-8")
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="arm",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(compile_activation=self.activate.compile_activation),
+            )
+            self.assertEqual(
+                report.stages_completed,
+                ["activate", "blueprint", "admit", "bootstrap", "arm"],
+            )
+            workspace = l9 / "programs" / "demo-activate-v1"
+            self.assertTrue((workspace / "runtime" / "state.sqlite").is_file())
+            stale_dirs = list((l9 / "programs" / "stale").glob("demo-activate-v1-*"))
+            self.assertEqual(len(stale_dirs), 1)
+            pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+            status = subprocess.run(
+                [sys.executable, str(pec), "status", "--workspace", str(workspace)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(status.returncode, 0, status.stderr)
+            payload = json.loads(status.stdout)
+            self.assertFalse(payload.get("admission_draft"))
+            task = next(item for item in payload["tasks"] if item["id"] == "TASK-001")
+            self.assertEqual(task["runtime_state"], "LEASED")
 
 
 if __name__ == "__main__":

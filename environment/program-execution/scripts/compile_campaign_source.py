@@ -183,6 +183,21 @@ def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _task_output_location(item: dict[str, Any]) -> str:
+    """Writable path for pec draft-contract. `receipts/` is a controller internal."""
+    for output in item.get("outputs") or []:
+        if not isinstance(output, dict):
+            continue
+        location = str(output.get("location") or "").strip()
+        if location and not location.startswith("receipts/"):
+            return location
+    for path in item.get("paths") or []:
+        text = str(path).strip()
+        if text and not text.startswith("receipts/"):
+            return text
+    return f"docs/program-execution/{item['id']}.md"
+
+
 def _phase0_gate(
     prog: dict[str, Any], tasks: list[dict[str, Any]], waves: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -670,7 +685,7 @@ def compile_source(
                     {
                         "id": f"OUT-{suffix}",
                         "type": "receipt",
-                        "location": f"receipts/{item['id']}",
+                        "location": _task_output_location(item),
                         "required": True,
                     }
                 ],

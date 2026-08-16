@@ -30,8 +30,9 @@ L4 as a substitute. Order inside the runner:
 4. `compile_campaign_source.py` (allowlist from the emit worktree)
 5. `collect_evidence.py` EVID-001 → `accept_blueprint.py`
 6. `pec bootstrap` **without** `--admission-draft`
-7. `pec draft-contract` + `register-contract` + `claim` TASK-001
-8. host PR → merge-if-green
+7. clean target checkout at `$HOME/.l9/program-worktrees/<id>` + `pec reconcile`
+8. `pec draft-contract` + `register-contract` + `claim` TASK-001
+9. host PR → merge-if-green
 
 `program-execution.intent.v1` and `pe-<hash>` workspaces are refused.
 `--admission-draft` is not a live path. Host-only merge is not program close.
@@ -88,38 +89,34 @@ python3 environment/program-execution/core/program-execution-controller-template
 `make campaign` collects EVID-001 and accepts the blueprint **before**
 bootstrap. Live bootstrap must succeed without `--admission-draft`. If it
 does not, the runner exits 2. Do not retry with `--admission-draft`.
+A leftover `$HOME/.l9/programs/<id>` from a stopped run is quarantined
+under `programs/stale/` so the next launch starts empty.
 
-After arm, `LAUNCH.json` names the only legal pec workspace and TASK-001.
-Execute that task on `$HOME/.l9/program-worktrees/<id>`. Do not attach to a
-`pe-<intent-hash>` workspace. Autonomy packets are not a second scheduler.
+After arm, `LAUNCH.json` names the only legal pec workspace and TASK-001
+must be `LEASED`. Execute that claimed task on
+`$HOME/.l9/program-worktrees/<id>`. Do not attach to a `pe-<intent-hash>`
+workspace. Autonomy packets are not a second scheduler. Do not load the
+operator memo as the program.
 
 `make campaign` must mark the campaign **active** on invoke: host
 `CAMPAIGN_STATUS.yaml` `lifecycle: in_progress`, execution-policy row
-`lifecycle: in_progress`, pec `runtime_status: active` (even after
-draft-honest bootstrap), and `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`.
+`lifecycle: in_progress`, pec `runtime_status: active`, and
+`$HOME/.l9/programs/<id>/runtime/LAUNCH.json`.
 `CAMPAIGN_SOURCE.yaml` `metadata.status` stays `operator_intake`. Leaving
 those surfaces at `planned` / `operator_intake` after invoke is a defect —
-agents will treat the campaign as idle.
+agents will treat the campaign as idle. `pec next` returning `ready: []`
+because `admission_draft` or `source_contract_incomplete` is a runner bug.
 
 `PHASE0_USER_CONFIG.yaml` `operator_ack.acknowledged_at` is a real human
 acknowledgment from Igor Beylin. `make campaign` fills the name and leaves
 `acknowledged_at: null`. Agents must stop and ask; do not forge the
 timestamp. `program_deploying` stays false until that ack.
 
-## 5. L4 execute
+## 5. Execute the claimed task
 
-```bash
-python3 ops/autonomy/l4_local.py begin --contract-id "<id>"
-# execute ready tasks locally; local commits only; no mid-execution push
-```
-
-Then kernels, then release:
-
-```bash
-# kernels/Recursive Alignment.md then kernels/Validate & Repair.md
-python3 ops/autonomy/l4_local.py record-kernels
-python3 ops/autonomy/l4_local.py authorize-release
-```
+Read `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`. Execute **only**
+`claimed_task` (TASK-001) on `target_worktree`. Do not start L4, the
+intent compiler, or a second pec workspace as a substitute front door.
 
 ## 6. Publish
 

@@ -2,8 +2,8 @@
 """Operator front door for PE campaign activation.
 
 Sealed stages: isolate → emit → blueprint → collect → accept →
-pec bootstrap (no draft) → contract/claim TASK-001 → host PR →
-merge-if-green.
+pec bootstrap (no draft) → pec reconcile → contract/claim TASK-001 →
+host PR → merge-if-green.
 
 program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 """
@@ -383,6 +383,86 @@ def _load_script(name: str, path: Path) -> Any:
     return module
 
 
+def quarantine_occupied(path: Path) -> Path | None:
+    """Move a leftover runtime dir aside so pec bootstrap can start empty.
+
+    A stopped campaign leaves `$L9_ROOT/programs/<id>` occupied. The next
+    `make campaign` for that id must not attach to the draft workspace.
+    """
+    path = path.resolve()
+    if not path.exists():
+        return None
+    if path.is_dir() and not any(path.iterdir()):
+        return None
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    dest = path.parent / "stale" / f"{path.name}-{stamp}"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    path.rename(dest)
+    log(f"quarantine occupied {path} → {dest}")
+    return dest
+
+
+def is_git_repo(path: Path) -> bool:
+    return (path / ".git").exists() or (path / ".git").is_file()
+
+
+def default_ensure_target_checkout(
+    dest: Path, repository_id: str, *, donor: Path | None = None
+) -> Path:
+    dest = dest.resolve()
+    if dest.exists() and is_git_repo(dest):
+        if is_dirty(dest):
+            raise CampaignError(
+                f"target checkout is dirty: {dest}; make campaign will not attach to a dirty target"
+            )
+        return dest
+    if dest.exists():
+        raise CampaignError(f"target path exists and is not a git checkout: {dest}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if donor is not None and is_git_repo(donor):
+        clone = subprocess.run(
+            ["git", "clone", "--local", str(donor.resolve()), str(dest)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if clone.returncode == 0:
+            return dest
+    url = f"https://github.com/{repository_id}.git"
+    clone = subprocess.run(
+        ["git", "clone", "--branch", "main", url, str(dest)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if clone.returncode != 0:
+        raise CampaignError(
+            f"cannot checkout {repository_id} at {dest}: {(clone.stderr or clone.stdout).strip()}"
+        )
+    return dest
+
+
+def default_reconcile(workspace: Path, repository_id: str, target_path: Path) -> dict[str, Any]:
+    mapping = f"{repository_id}={target_path}"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PEC),
+            "reconcile",
+            "--workspace",
+            str(workspace),
+            "--repository",
+            mapping,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise CampaignError(f"pec reconcile failed: {(result.stderr or result.stdout).strip()}")
+    return {"ok": True, "mapping": mapping, "output": (result.stdout or "").strip()}
+
+
 def default_admit(blueprint: Path, *, revision: str) -> dict[str, Any]:
     collect = _load_script("collect_evidence", COLLECT_EVIDENCE)
     accept = _load_script("accept_blueprint", ACCEPT_BLUEPRINT)
@@ -399,8 +479,15 @@ def default_admit(blueprint: Path, *, revision: str) -> dict[str, Any]:
     return {"collected": collected, "accepted": accepted}
 
 
-def default_arm(workspace: Path, campaign_id: str) -> dict[str, Any]:
+def default_arm(
+    workspace: Path,
+    campaign_id: str,
+    *,
+    repository_id: str,
+    target_path: Path,
+) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
+    reconciled = default_reconcile(workspace, repository_id, target_path)
     contract = workspace / "runtime" / f"{FIRST_TASK_ID}.source.json"
     contract.parent.mkdir(parents=True, exist_ok=True)
     draft = subprocess.run(
@@ -462,6 +549,7 @@ def default_arm(workspace: Path, campaign_id: str) -> dict[str, Any]:
         "task_id": FIRST_TASK_ID,
         "contract": str(contract),
         "claim": (claim.stdout or "").strip(),
+        "reconcile": reconciled,
     }
 
 
@@ -653,6 +741,14 @@ def annotate_phase0_without_forging_ack(blueprint: Path) -> None:
         "program_deploying stays false until that ack."
     )
     dump_yaml(path, data)
+    ops = _load_script("blueprint_ops", PE_ROOT / "scripts/blueprint_ops.py")
+    compiled_from = "make-campaign"
+    manifest = blueprint / "MANIFEST.yaml"
+    if manifest.is_file():
+        existing = load_yaml(manifest)
+        if isinstance(existing, dict) and existing.get("compiled_from"):
+            compiled_from = str(existing["compiled_from"])
+    ops.write_manifest(blueprint, compiled_from)
 
 
 def activate_pec_runtime(
@@ -713,6 +809,7 @@ def write_launch_pointer(
         "forge_operator_ack": False,
         "only_pec_workspace": True,
         "claimed_task": FIRST_TASK_ID,
+        "reconcile_required": True,
         "pec_ready_empty_is_expected": False,
         "autonomy_packets_not_required": True,
         "refuse_hash_program": True,
@@ -859,6 +956,7 @@ def run_campaign(
         )
         return report
 
+    quarantine_occupied(Path(report.pec_workspace))
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_result = pec(Path(report.pec_workspace), blueprint)
     if pec_result.get("draft"):
@@ -886,10 +984,18 @@ def run_campaign(
         return report
 
     log(f"arm {FIRST_TASK_ID}")
+    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    target_path = Path(target_worktree)
     if hooks.arm is not None:
         hooks.arm(Path(report.pec_workspace), campaign_id)
     else:
-        default_arm(Path(report.pec_workspace), campaign_id)
+        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+        default_arm(
+            Path(report.pec_workspace),
+            campaign_id,
+            repository_id=repository_id,
+            target_path=target_path,
+        )
     write_launch_pointer(
         Path(report.pec_workspace),
         campaign_id=campaign_id,
