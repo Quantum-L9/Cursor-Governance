@@ -1,21 +1,24 @@
 <!-- L9_META
 l9_schema: 1
 origin: skill-hardening GMP-SKILL-HARDEN-001
-tags: [ci, plasticos, pr-check, makefile]
+tags: [ci, plasticos, makefile]
 status: active
 /L9_META -->
 
 # PlasticOS CI Adapter
 
-Load when `AGENTS.md` or `make pr-check` exists in the repo.
+Load when a consumer PlasticOS repo still exposes a historical `pr-check` target. Cursor-Governance shipping is `make pr`.
 
 ## Local gate (authoritative)
 
+Cursor-Governance:
+
 ```bash
-make pr-check
+OPEN_PR=0 make pr
 ```
 
-Runs: ruff, XML, module wiring, circular deps, Odoo 19 patterns, semgrep, pytest (pure-python tier).
+Historical PlasticOS consumers may still expose `pr-check` as a local alias.
+That name is not a Cursor-Governance shipping command.
 
 ## GitHub Actions (`ci.yml` blocking jobs)
 
@@ -28,11 +31,10 @@ Runs: ruff, XML, module wiring, circular deps, Odoo 19 patterns, semgrep, pytest
 ## Push workflow
 
 ```bash
-make push          # pr-check then push
-make push pr=1     # push + open PR into Staging
+make pr
 ```
 
-Never raw `git push` — see rule 70-github-api-commit.
+Never raw `git push`. On failure: diagnose → fix → `make pr`.
 
 ## Multi-job triage
 

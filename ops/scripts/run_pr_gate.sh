@@ -34,7 +34,9 @@ _scratch_hold_status() {
   fi
 }
 
-_scratch_hold_restore
+if [[ "${L9_PR_GATE_SELFTEST:-0}" != "1" ]]; then
+  _scratch_hold_restore
+fi
 
 # Repo-write lock held for the whole gate. pre-commit blames "files were
 # modified by this hook" on whichever hook was running when the tree changed
@@ -42,6 +44,8 @@ _scratch_hold_restore
 # must not write during the run. Advisory: a missed lock warns, never blocks.
 # shellcheck source=lib/repo_write_lock.sh
 . "$GOV_ROOT/ops/scripts/lib/repo_write_lock.sh"
+# shellcheck source=lib/pr_gate_trace.sh
+. "$SCRIPT_DIR/lib/pr_gate_trace.sh"
 export L9_REPO_WRITE_LOCK_LABEL="make-pr-gate"
 if repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}"; then
   echo "repo-write lock: held for this gate run"
@@ -52,15 +56,19 @@ fi
 # Always-run governance contract surface: cheap, changed-file-INDEPENDENT.
 # A Markdown/YAML/config-only mutation must never bypass the checks that prove
 # its semantics (P2-12). These validate the governance repo (GOV_ROOT).
-echo "=== governance contract surface (always-run) ==="
-if [[ -f "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py"
-fi
-if [[ -f "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py"
-fi
-if [[ -f "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
+# L9_PR_GATE_SELFTEST skips this block so execution-count tests isolate the
+# one-pass resolve + pre-commit DAG.
+if [[ "${L9_PR_GATE_SELFTEST:-0}" != "1" ]]; then
+  echo "=== governance contract surface (always-run) ==="
+  if [[ -f "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py" ]]; then
+    python3 "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py"
+  fi
+  if [[ -f "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py" ]]; then
+    python3 "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py"
+  fi
+  if [[ -f "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py" ]]; then
+    python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
+  fi
 fi
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
@@ -68,8 +76,7 @@ echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / night
 status_before="$(mktemp)"
 changed_file="$(mktemp)"
 precommit_log="$(mktemp)"
-py_list="$(mktemp)"
-trap 'rm -f "$status_before" "$changed_file" "$precommit_log" "$py_list"; repo_write_lock_release' EXIT
+trap 'rm -f "$status_before" "$changed_file" "$precommit_log"; repo_write_lock_release' EXIT
 git status --porcelain >"$status_before"
 
 # Two dirtiness domains, deliberately reported apart:
@@ -81,6 +88,13 @@ _tracked_diff_digest() {
   git diff --no-ext-diff --no-textconv --ignore-submodules | cksum | awk '{print $1}'
 }
 tracked_before="$(_tracked_diff_digest)"
+
+# One-pass DAG: resolve the changed-file set once, then hand that list to
+# pre-commit. Ruff, ruff-format, and sync-generated-artifacts are owned by
+# .pre-commit-config.yaml and must not re-run in this outer gate.
+PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
+  >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
+export L9_PR_CHANGED_FILE="$changed_file"
 
 # shellcheck source=lib/precommit_log.sh
 . "$GOV_ROOT/ops/scripts/lib/precommit_log.sh"
@@ -175,19 +189,9 @@ if ! _gate_classify_dirtiness "pre-commit"; then
   fi
 fi
 
-PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
-  >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
-
-echo "--- ruff (changed Python) ---"
-py_count=0
-grep -E '\.(py|pyi)$' "$changed_file" >"$py_list" || true
-py_count="$(grep -c . "$py_list" || true)"
-if [[ "${py_count:-0}" -eq 0 ]]; then
-  echo "OK: no changed Python files for ruff"
-else
-  echo "ruff (changed): ${py_count} file(s)"
-  xargs uv run --no-build ruff check <"$py_list"
-  xargs uv run --no-build ruff format --check <"$py_list"
+if [[ "${L9_PR_GATE_SELFTEST:-0}" == "1" ]]; then
+  echo "RESULT: PASS — one-pass selftest (resolve + pre-commit once)"
+  exit 0
 fi
 
 echo "--- uv lock ---"
@@ -206,20 +210,6 @@ if grep -Eq '\.py$' "$changed_file"; then
   bash "$SCRIPT_DIR/run_pytest_suites.sh" --tb=short -q
 else
   echo "OK: skip pytest (no changed Python files)"
-fi
-
-echo "--- sync-generated-artifacts ---"
-python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
-  --root "$WS" \
-  --changed-file "$changed_file" \
-  --check
-if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
-  if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
-    bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" || true
-  fi
-  echo "FAIL: unexpected non-generated dirtiness after sync"
-  git status --short
-  exit 1
 fi
 
 echo "--- skill-activation ---"

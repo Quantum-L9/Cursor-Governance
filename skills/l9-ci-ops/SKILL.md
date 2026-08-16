@@ -1,13 +1,13 @@
 ---
 name: l9-ci-ops
-description: ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.
+description: ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr fails, or adding an enforceable ci gate.
 paths: ".github/workflows/**, Makefile, .pre-commit-config.yaml"
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, ci, github-actions, pr-check, policy, triage]
+  tags: [l9, ci, github-actions, make-pr, policy, triage]
   owner: igor_beylin
   status: active
   version: 2.0.0
@@ -32,7 +32,7 @@ Operate CI/CD for the current repo: check pipeline status, fix failing gates, en
 ## Authority Order
 
 1. User request and failing log excerpt / run ID.
-2. Repo ground truth: `.github/workflows/ci.yml`, `Makefile` (`pr-check`), `AGENTS.md` CI section if present.
+2. Repo ground truth: `.github/workflows/ci.yml`, `Makefile` (`make pr`), `AGENTS.md` CI section if present.
 3. This skill's references.
 4. `Unknown` — do not invent gate tables.
 
@@ -40,7 +40,7 @@ Operate CI/CD for the current repo: check pipeline status, fix failing gates, en
 
 1. **Detect repo** — PlasticOS loads [plasticos-ci-adapter.md](references/plasticos-ci-adapter.md); else read `ci.yml` + README.
 2. **Route mode** — status | fix | gates | ci-policy per Core Contract.
-3. **Fix path** — identify → categorize → fix → `make pr-check` (PlasticOS) or repo-equivalent → `make push` (never raw `git push` on PlasticOS).
+3. **Fix path** — identify → categorize → fix → `make pr` (Cursor-Governance) or the consumer repo's equivalent. On failure: diagnose → fix → `make pr`.
 4. **Policy path** — define → mechanism → scope → register → STOP (no code fixes).
 
 ## Resource Map
@@ -48,12 +48,12 @@ Operate CI/CD for the current repo: check pipeline status, fix failing gates, en
 - [references/ci-fix-workflow.md](references/ci-fix-workflow.md) — status, fix, output format.
 - [references/ci-policy-authoring.md](references/ci-policy-authoring.md) — regression policy authoring (no code fixes).
 - [references/parallel-ci-triage.md](references/parallel-ci-triage.md) — parallel subagents for independent job failures.
-- [references/plasticos-ci-adapter.md](references/plasticos-ci-adapter.md) — `make pr-check`, tier jobs, push workflow.
+- [references/plasticos-ci-adapter.md](references/plasticos-ci-adapter.md) — consumer-repo CI adapter (historical `pr-check` name).
 - [references/workflow-governance.md](references/workflow-governance.md) — validation chain ordering: schema → credentials → environment → consistency.
 
 ## Validation
 
-Before declaring fix complete: local command matching the failed gate MUST pass. On PlasticOS: `make pr-check` MUST pass before `make push`.
+Before declaring fix complete: local command matching the failed gate MUST pass. On Cursor-Governance: `make pr` (or `OPEN_PR=0 make pr`) MUST pass.
 
 ## Failure Handling
 

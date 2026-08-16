@@ -79,7 +79,7 @@ local_verify_commands:
 
 Also check:
 - `package.json` scripts section for `lint`, `typecheck`, `test`, `build`, `validate`
-- `Makefile` for `pr-check` or `ci` targets
+- `Makefile` for `pr` or `ci` targets
 - Any `pre-commit` hooks in `.husky/` or `.git/hooks/`
 
 ## Fix Strategies by Type

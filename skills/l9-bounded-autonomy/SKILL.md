@@ -39,7 +39,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 1. Create a **campaign authorization packet** via `/autonomy` or explicit user campaign phrase before remediation pushes.
 2. Build Phase-0 action graph (`id`, `depends_on`, `mutation`, `lock_keys`, `isolation_key`, `kind`).
 3. **MUST** launch all ready independent `work` Tasks in one message (Protocol A).
-4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push**. After local finish → run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr`. Do **not** remediate. Do **not** merge. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`.
+4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push**. After local finish → run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release` → `make pr`. On failure: diagnose → fix → `make pr`. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`. `PR_AUTOMERGE=1` may merge only that exact green mergeable PR head.
 5. Do **not** spawn `l9-pr-remediation` poll workers unless a human set `PR_REMEDIATE=1`.
 6. Do **not** merge from `/autonomy` or the campaign path. Merge only after
    `/l9-pr-remediation` writes `ops/autonomy/authorize_merge.py --all-open`

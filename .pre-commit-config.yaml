@@ -39,8 +39,8 @@ repos:
         pass_filenames: false
         files: '(^|/)(package\.json|package-lock\.json)$'
 
-      # Commit-time heal. make pr SKIPs this hook and runs sync in run_pr_gate
-      # with WARN+continue so digest churn never blocks the PR gate.
+      # Authoritative generated-artifact owner. make pr runs this hook once via
+      # pre-commit and does not re-execute sync in the outer gate.
       - id: sync-generated-artifacts
         name: Sync generated manifests, registries, and overrides
         entry: python3 ops/scripts/sync_generated_artifacts.py --force

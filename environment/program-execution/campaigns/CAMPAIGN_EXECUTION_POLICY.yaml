@@ -14,7 +14,7 @@ closeout:
   leaving_in_progress_after_merge_or_converged: defect
 
 publish:
-  required_command: PR_REMEDIATE=0 make pr
+  required_command: make pr
   require_makefile_checkers: true
   raw_gh_pr_create: forbidden
   # Campaigns publish via make pr and MUST end green + merge-ready.
@@ -92,6 +92,15 @@ campaigns:
     lane: session_runtime
     parallel_with:
       - l9-ecosystem-fix-plan
+  - id: level3-make-pr-single-path
+    integration_branch: campaign/level3-make-pr-single-path
+    pr_base: campaign/level3-make-pr-single-path
+    execute_order: 6
+    lane: makefile
+    publish_model: four_commit_one_pr
+    publish_command: PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr
+    mid_execution_push: false
+    merge: exact_pr_exact_head
 
 owner:
   authority_id: AUTH-001

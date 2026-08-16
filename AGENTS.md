@@ -701,3 +701,17 @@ Authoritative corrections (do not treat older “do not merge / Human only
    receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
    `--admin` stay denied.
 4. `/pr` remains Diagnose-only (no merge).
+
+<!-- LEVEL3_MAKE_PR_SINGLE_PATH_V1 -->
+## Level-3 make pr is the sole shipping command (2026-08-16)
+
+Authoritative corrections (do not treat older `pr-check` / `PR_REMEDIATE=0 make pr`
+shipping bullets above as live):
+
+1. There is no `pr-check` target. Gate-only form is `OPEN_PR=0 make pr`.
+2. The sole shipping command is `make pr`. On failure: diagnose → fix → `make pr`.
+3. `PR_AUTOMERGE=1` may merge only the exact green mergeable PR head observed
+   by that `make pr` invocation. `PR_AUTOMERGE=0` remains the opt-out.
+4. Standing unbounded merge, force-push, admin-merge, raw `git push`, and
+   raw `gh pr create` / `gh pr merge` remain forbidden.
+5. Do not run a preliminary full gate and then `make pr` on an unchanged tree.

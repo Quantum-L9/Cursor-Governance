@@ -30,3 +30,6 @@ campaigns:
   - id: l9-ecosystem-fix-plan
     lifecycle: planned
     notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
+  - id: level3-make-pr-single-path
+    lifecycle: planned
+    notes: four-commit one-PR gold-standard activation set; not yet executed

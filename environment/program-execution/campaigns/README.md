@@ -10,7 +10,7 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 
 | Rule | Value |
 |---|---|
-| Publish path | `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + PR) |
+| Publish path | `make pr` (Makefile checkers, then push + PR; `PR_AUTOMERGE=1` is exact-head only) |
 | Remediation | campaign may converge to green + merge-ready; `/l9-pr-remediation` merges |
 | Merge | campaign forbidden; `/l9-pr-remediation` authorized after green + mergeable |
 | PR base | the campaign integration branch — **not** `main` |
@@ -27,6 +27,7 @@ SSOT: `CAMPAIGN_EXECUTION_POLICY.yaml` + `ops/autonomy/surface_profile.yaml`
 | `l9-devpack-program-execution-hardening` | `campaign/l9-devpack-program-execution-hardening` | 3 (harden same module) | **complete** (PR #150) |
 | `l9-ecosystem-fix-plan` | `campaign/l9-ecosystem-fix-plan` | 4 (`IB-Odoo_19`) | planned — **next** (Odoo host [PR #153](https://github.com/cryptoxdog/IB-Odoo_19/pull/153)) |
 | `session-runtime-hydration-convergence-v1` | `campaign/session-runtime-hydration-convergence-v1` | 5 (session runtime; this repo) | planned |
+| `level3-make-pr-single-path` | `campaign/level3-make-pr-single-path` | 6 (makefile; this repo) | planned |
 
 Owner (AUTH-001) terminal verdict on 2026-08-14: **CONVERGED**. Locked campaign
 YAML ceilings are `commit/push/pull_request: true` and `merge: false`. This
@@ -35,5 +36,5 @@ verdict expands authorization; it does not claim engineering waves completed.
 Stacked work inside a campaign:
 
 ```bash
-PR_BASE=origin/campaign/<campaign_id> PR_REMEDIATE=0 make pr
+PR_BASE=origin/campaign/<campaign_id> make pr
 ```

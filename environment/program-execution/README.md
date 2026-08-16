@@ -15,7 +15,7 @@ and model providers connect through one shared Peer Execution Core.
 - `conformance/`: fail-closed architecture and behavioral checks.
 - `campaigns/`: immutable campaign seeds plus landing policy
   (`CAMPAIGN_EXECUTION_POLICY.yaml` — one integration branch per campaign;
-  `PR_REMEDIATE=0 make pr`; no remediate; no merge; no PRs against `main`).
+  `make pr`; `PR_AUTOMERGE=1` is exact-PR exact-head only; no PRs against `main`).
 
 Canonical peer topology lives only in
 `environment/agents/PEER_RUNTIME_BINDINGS.yaml`:

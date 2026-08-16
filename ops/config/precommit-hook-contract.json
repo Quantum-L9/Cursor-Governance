@@ -35,7 +35,7 @@
         "environment/program-execution/MANIFEST.json",
         "skills/"
       ],
-      "note": "SKIPped on the make pr path; run_pr_gate.sh heals separately. Prefixes mirror GENERATED_PATH_PREFIXES in ops/scripts/sync_generated_artifacts.py."
+      "note": "Authoritative generated-artifact owner on make pr and commit. Prefixes mirror GENERATED_PATH_PREFIXES in ops/scripts/sync_generated_artifacts.py."
     },
     "rules-check": {
       "mode": "read_only",

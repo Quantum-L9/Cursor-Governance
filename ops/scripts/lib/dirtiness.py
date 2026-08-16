@@ -10,7 +10,7 @@ Keeping the prefixes in one place stops the two answers from drifting apart.
 from __future__ import annotations
 
 import json
-import sys
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -26,6 +26,29 @@ SCRATCH_PREFIXES = (
 
 _BARE_SCRATCH = {prefix.rstrip("/") for prefix in SCRATCH_PREFIXES}
 
+# Allowlist SSOT. sync_generated_artifacts.py re-exports these names.
+# Stdlib only — classify/attribute subprocesses must not require PyYAML.
+GENERATED_PATH_PREFIXES = (
+    "rules/RULES-MANIFEST.",
+    "environment/generated/llm-rules/",
+    "ops/generated/skill-registry.json",
+    "environment/agents/adapters/claude-code/settings.template.json",
+    "commands/COMMANDS_MANIFEST.yaml",
+    "skills/AUTONOMY_MANIFEST.yaml",
+    "environment/program-execution/core/MANIFEST.yaml",
+    "environment/program-execution/MANIFEST.json",
+)
+
+
+def is_generated_path(rel: str) -> bool:
+    if any(
+        rel.startswith(prefix) or rel == prefix.rstrip(".") for prefix in GENERATED_PATH_PREFIXES
+    ):
+        return True
+    if re.match(r"^skills/[^/]+/SKILL\.md$", rel):
+        return True
+    return False
+
 
 def normalize(path: str) -> str:
     normalized = path.replace("\\", "/").strip()
@@ -39,17 +62,6 @@ def is_scratch_path(path: str) -> bool:
     if normalized in _BARE_SCRATCH:
         return True
     return any(normalized.startswith(prefix) for prefix in SCRATCH_PREFIXES)
-
-
-def _load_is_generated_path():
-    # Resolve the allowlist next to this file, not under the tree being
-    # measured: the measured tree may be a consumer repo or a test fixture.
-    scripts = str(Path(__file__).resolve().parent.parent)
-    if scripts not in sys.path:
-        sys.path.insert(0, scripts)
-    from sync_generated_artifacts import is_generated_path  # noqa: PLC0415
-
-    return is_generated_path
 
 
 @lru_cache(maxsize=8)
@@ -76,7 +88,7 @@ def classify_path(root: Path, path: str) -> str:
     normalized = normalize(path)
     if is_scratch_path(normalized):
         return "scratch"
-    if _load_is_generated_path()(normalized):
+    if is_generated_path(normalized):
         return "generated"
     if normalized in protected_root_files(root):
         return "protected"

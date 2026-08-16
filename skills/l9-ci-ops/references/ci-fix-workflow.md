@@ -38,7 +38,7 @@ If `gh` unavailable, use pasted log from UI.
 
 ### 3. Fix and verify
 
-Run the **same command** the CI job ran, locally. PlasticOS: `make pr-check`.
+Run the **same command** the CI job ran, locally. Cursor-Governance: `make pr`. Historical PlasticOS consumers may still name a `pr-check` target.
 
 ### 4. Push (PlasticOS)
 

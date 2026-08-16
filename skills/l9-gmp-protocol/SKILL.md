@@ -49,7 +49,7 @@ Because ground truth (2) outranks the canonical docs (4), follow the repo's actu
 2. **Phase 1 — Baseline.** For each TODO confirm file exists, anchor resolves uniquely, no protected path is targeted, dependency chain is acyclic. Status: READY | PARTIAL | BLOCKED. Proceed only on READY (or explicit human override).
 3. **Phase 2 — Implement.** Apply only READY TODOs, line-anchored and minimal. No edits outside the locked plan. Keep imports/standards intact. Record file + line ranges per TODO.
 4. **Phase 3 — Enforce.** Add only the guards/tests/ACL/observability the TODO requires. Never weaken existing checks. Skip cleanly if the change needs none.
-5. **Phase 4 — Validate.** Run the repo gates that apply: `make pr-check` (lint, XML, wiring, circular deps, Odoo 19 patterns), `python -m py_compile`, targeted tests. Record pass/fail; failures block.
+5. **Phase 4 — Validate.** Run the repo gates that apply: `OPEN_PR=0 make pr` (or `make pr` to publish), `python -m py_compile`, targeted tests. Record pass/fail; failures block. On failure: diagnose → fix → `make pr`.
 6. **Phase 5 — Recursive verify.** Diff actual changes against the locked plan: only planned files changed, line ranges match, protected systems untouched, no scope creep. Status: VERIFIED | DISCREPANCY_FOUND.
 7. **Phase 6 — Finalize.** Write the evidence report to `reports/GMP-Report-{NNN}-{slug}.md` and end with the verbatim final declaration.
 
@@ -80,7 +80,7 @@ A GMP run is complete only when:
 - Phase 0 plan is locked, fully specified, and unambiguous.
 - Baseline reported READY (or documented override) before any implementation.
 - Only locked-plan files were modified (Phase 5 VERIFIED, no drift).
-- Applicable repo gates passed (`make pr-check` / py_compile / targeted tests).
+- Applicable repo gates passed (`make pr` / py_compile / targeted tests).
 - Evidence report exists in `reports/` with all required sections and the verbatim final declaration.
 
 ## Failure Handling

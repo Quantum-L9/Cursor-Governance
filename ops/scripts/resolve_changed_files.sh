@@ -15,6 +15,11 @@
 #   WS / cwd  repository root
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/pr_gate_trace.sh
+. "$SCRIPT_DIR/lib/pr_gate_trace.sh"
+pr_gate_trace "resolve_changed_files"
+
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
 BASE_REF="${PR_BASE:-}"

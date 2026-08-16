@@ -86,7 +86,7 @@ python3 ops/autonomy/l4_local.py authorize-release
 ## 6. Publish
 
 ```bash
-PR_BASE=origin/campaign/<id> PR_REMEDIATE=0 make pr
+PR_BASE=origin/campaign/<id> make pr
 ```
 
 If the integration branch does not exist yet, create
