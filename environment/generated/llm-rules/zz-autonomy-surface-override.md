@@ -17,6 +17,15 @@ AND `L9_AUTONOMY_ENABLED=true`:
    then push + PR). After the PR is open: remediate until CI is green and
    the PR is mergeable (bounded cycles), then HALT before merge. Do
    **not** merge.
+2a. `make pr` is the **only** route to GitHub — a PATH rule, not a timing
+   rule. Raw `git push`, `gh pr create`, `gh pr edit`, `make push` and the
+   MCP `create_pull_request` / `push_files` tools are denied at **every**
+   phase, including after release_authorized, because they skip the
+   Makefile checkers the receipt was granted on. Authorization to publish
+   is not permission to publish a different way. When `make pr` fails, fix
+   what it reported or state the blocker — never route around it.
+   Enforced by `ops/autonomy/local_execution_gate.py`; the adapter
+   permission deny-lists must agree with it.
 3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
 4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
    campaign PRs against `main`. Do not mix with other feature branches.
