@@ -13,15 +13,19 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from .blueprint import BlueprintError, verify_program_lock, write_program_lock
-from .common import digest_object, load_json, load_yaml, parse_time, run_git, utc_now, write_json
+from .common import (
+    ControllerError,
+    digest_object,
+    load_json,
+    load_yaml,
+    parse_time,
+    run_git,
+    utc_now,
+    write_json,
+)
 from .contracts import ContractError, path_allowed, validate_source_contract
 from .ledger import EventLedger
 from .state import StateDB
-
-
-class ControllerError(RuntimeError):
-    pass
-
 
 CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
 SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
