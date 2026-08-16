@@ -1,6 +1,7 @@
 .PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: repo-write-lock-test precommit-hook-contract
+.PHONY: capability-contract-validate capability-check capability-broker-preflight
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -35,6 +36,7 @@ PR_REMEDIATE ?= 1
 
 help:
 	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
@@ -283,6 +285,9 @@ pr-check:
 	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
 		bash ops/scripts/run_pr_gate.sh
 
+# Additive prerequisite — do not rewrite the pr-check recipe line above.
+pr-check: capability-contract-validate
+
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
 ## Requires a feature branch with commits ahead of PR_BASE.
@@ -344,6 +349,24 @@ REF ?= openclaw-igorbot/github#token
 secrets-check:
 	@$(MAKE) venv
 	$(CURDIR)/.venv/bin/python ops/secrets/resolve_secret.py --ref "$(REF)" --check
+
+## Validate the zero-static-secret capability contract: no credential may be
+## assigned in an agent surface environment, and no LLM-facing code may reach for
+## raw secret material unless explicitly marked trusted-operator-only.
+capability-contract-validate:
+	python3 ops/secrets/validate_capability_contract.py
+
+## Report which named capabilities this surface can use. Never resolves a secret.
+##   make capability-check REQUIRE=sonar.read_issues,graphiti.query
+REQUIRE ?=
+capability-check:
+	@bash ops/secrets/bootstrap_agent_env.sh --check \
+		--surface "$${L9_GOVERNANCE_SURFACE:-unknown}" \
+		$(if $(REQUIRE),--require-capabilities "$(REQUIRE)",)
+
+## Broker posture (trusted side): boundary isolation + workload identity.
+capability-broker-preflight:
+	python3 ops/secrets/capability_broker.py preflight
 
 ## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
 ## After this: playwright install

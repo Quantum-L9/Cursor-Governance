@@ -1,29 +1,45 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Canonical secret bootstrap for EVERY agent surface.
+# Canonical capability bootstrap for EVERY agent surface.
 #
 # Surface-agnostic by construction. Claude Code, Codex, Gemini, Manus, the
 # generic adapter, Cursor and CI all call this identical script; none of them
-# owns a private copy of the bootstrap, and none of them keeps its own secret
-# inventory. ops/secrets is the SSOT (CANONICAL_LAW §14).
+# owns a private copy, and none keeps its own secret inventory. ops/secrets is
+# the SSOT (CANONICAL_LAW §14).
 #
-#   <adapter installer>  ->  ops/secrets/bootstrap_agent_env.sh  ->  ops/secrets/*
+#   <adapter installer>  ->  ops/secrets/bootstrap_agent_env.sh  ->  capability plane
 #
-# Credential precedence (see l9-aws-secrets, references/infisical-protocol.md):
-#   1. INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET already in the environment
-#      — the path for sandboxes with no AWS CLI (Claude Code cloud, Manus, CI).
-#   2. AWS ref openclaw-igorbot/infisical-cursor-governance — the documented
-#      chicken-egg bootstrap, used wherever the AWS CLI is configured.
+# WHAT CHANGED, AND WHY IT CANNOT CHANGE BACK
 #
-# Values are never printed, logged, or written to a receipt. `--check` asks the
-# provider for names only. Adding a surface must never mean adding a secret to
-# an adapter env file: register it in ops/secrets and resolve it here.
+# This script used to hydrate raw secrets into the agent's environment, taking
+# INFISICAL_CLIENT_SECRET from the surface or falling back to an AWS-resolved
+# Universal Auth credential. Both paths are gone for model-controlled surfaces.
+# The reasoning is simple and not negotiable: everything an LLM can execute can
+# read that LLM's environment, filesystem and child processes. A secret placed
+# there is a secret the model possesses, regardless of how carefully the code
+# around it is written. So the model is given CAPABILITY NAMES and the broker
+# keeps the credentials.
+#
+#   old:  surface -> Infisical -> export SONAR_TOKEN -> model-controlled process
+#   new:  surface -> named capability -> broker -> Infisical -> upstream
+#
+# Execution classes (ops/secrets/surface_trust.py decides, not this script):
+#
+#   model-controlled   claude-code, codex, gemini, manus, cursor, generic, and
+#                      EVERY unregistered surface. Capabilities only. `--export`
+#                      is denied. No AWS read. No INFISICAL_CLIENT_SECRET read.
+#   trusted-operator   an explicit `--surface operator` from a runtime with no
+#                      model-control markers. Retains raw resolution for humans.
+#
+# Trust is never inferred from the absence of a known surface id: an unknown
+# surface is model-controlled, so a new adapter cannot acquire secret access by
+# forgetting to register (contract R2).
 #
 # Usage:
-#   bootstrap_agent_env.sh --check [--require A,B] [--surface <id>]
-#   eval "$(bootstrap_agent_env.sh --export SONAR_TOKEN,SEMGREP_APP_TOKEN)"
+#   bootstrap_agent_env.sh --check --surface <id> [--require-capabilities a,b]
+#   bootstrap_agent_env.sh --surface operator --export SONAR_TOKEN   # humans only
 #
-# Exit 0 when every required name is available, 1 otherwise. Callers decide
+# Exit 0 when every required capability is ENABLED, 1 otherwise. Callers decide
 # whether that is fatal; an adapter should degrade and report, not abort.
 # ---------------------------------------------------------------------------
 set -uo pipefail
@@ -32,7 +48,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GOV_ROOT="$(cd "$HERE/../.." && pwd)"
 
 MODE="--check"
-REQUIRE=""
+REQUIRE_CAPS=""
 EXPORT_NAMES=""
 SURFACE="${L9_GOVERNANCE_SURFACE:-unknown}"
 
@@ -40,62 +56,80 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --check)   MODE="--check"; shift ;;
     --export)  MODE="--export"; EXPORT_NAMES="${2:?--export needs names}"; shift 2 ;;
-    --require) REQUIRE="${2:?--require needs names}"; shift 2 ;;
-    --surface) SURFACE="${2:?--surface needs an id}"; shift 2 ;;
-    -h|--help) sed -n '2,29p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    --require-capabilities) REQUIRE_CAPS="${2:?--require-capabilities needs ids}"; shift 2 ;;
+    # Accepted so existing callers keep working, but a list of SECRET names is
+    # no longer a meaningful request from an agent. Point at the replacement
+    # rather than silently doing something different from what was asked.
+    --require)
+      echo "bootstrap_agent_env: --require names secrets; use --require-capabilities" >&2
+      echo "  (e.g. --require-capabilities sonar.read_issues,semgrep.appsec_scan)" >&2
+      shift 2 ;;
+    # An EMPTY value is accepted deliberately and classified as unknown, which
+    # denies. Erroring out instead would exit non-zero for the wrong reason and
+    # make `--surface ""` look like a broken invocation rather than a refusal.
+    --surface) SURFACE="${2?--surface needs an id}"; shift 2 ;;
+    -h|--help) sed -n '2,46p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "bootstrap_agent_env: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done
 
 # Locked interpreter when present — same rule every other governance entrypoint
-# uses, so the provider client runs on the pinned Python rather than whatever
-# system python3 happens to be.
+# uses, so the capability client runs on the pinned Python.
 PY="$GOV_ROOT/.venv/bin/python3"
 [ -x "$PY" ] || PY="python3"
 
-HYDRATE="$HERE/hydrate_infisical.py"
-if [ ! -f "$HYDRATE" ]; then
-  echo "bootstrap_agent_env: missing $HYDRATE" >&2
+CLIENT="$HERE/capability_client.py"
+if [ ! -f "$CLIENT" ]; then
+  echo "bootstrap_agent_env: missing $CLIENT" >&2
   exit 1
 fi
 
-# Fill in Universal Auth from AWS when the environment did not supply it and the
-# AWS CLI is available. resolve_secret.py is the canonical AWS resolver; its
-# stdout is captured into this process only and never echoed.
-if [ -z "${INFISICAL_CLIENT_ID:-}" ] || [ -z "${INFISICAL_CLIENT_SECRET:-}" ]; then
-  if command -v aws >/dev/null 2>&1 && [ -f "$HERE/resolve_secret.py" ]; then
-    for field in client_id client_secret project_id; do
-      value="$("$PY" "$HERE/resolve_secret.py" \
-        --ref "openclaw-igorbot/infisical-cursor-governance#${field}" 2>/dev/null)" || value=""
-      [ -n "$value" ] || continue
-      case "$field" in
-        client_id)     export INFISICAL_CLIENT_ID="$value" ;;
-        client_secret) export INFISICAL_CLIENT_SECRET="$value" ;;
-        project_id)    export INFISICAL_PROJECT_ID="$value" ;;
-      esac
-    done
-    unset value
-  fi
-fi
+# --- Trust classification ---------------------------------------------------
+# One authority for this decision, shared with the Python side. The shell never
+# second-guesses it and never carries its own allow-list.
+TRUST="$("$PY" -c "
+import sys
+sys.path.insert(0, '$HERE')
+from surface_trust import classify
+t = classify('$SURFACE')
+print(t.trust_class)
+" 2>/dev/null)" || TRUST="model-controlled"
+[ -n "$TRUST" ] || TRUST="model-controlled"
 
+# --- Raw export: denied on every model-controlled surface --------------------
 if [ "$MODE" = "--export" ]; then
-  exec "$PY" "$HYDRATE" --export "$EXPORT_NAMES"
+  if [ "$TRUST" != "trusted-operator" ]; then
+    echo "DENIED: raw secret export is prohibited on model-controlled surfaces" >&2
+    echo "  surface='${SURFACE}' trust='${TRUST}'" >&2
+    echo "  Request a named capability instead:" >&2
+    echo "    bootstrap_agent_env.sh --check --surface ${SURFACE} --require-capabilities <ids>" >&2
+    echo "  Registered capabilities: ops/secrets/capabilities.yaml" >&2
+    exit 3
+  fi
+  # Trusted operator path. hydrate_infisical.py enforces the SAME boundary
+  # independently — this is not the only gate, so bypassing the shell buys
+  # nothing.
+  exec "$PY" "$HERE/hydrate_infisical.py" --surface "$SURFACE" --export "$EXPORT_NAMES"
 fi
 
-echo "secret bootstrap: surface=${SURFACE} provider=infisical (ops/secrets SSOT)"
-if [ -n "$REQUIRE" ]; then
-  "$PY" "$HYDRATE" --check --require "$REQUIRE"
+echo "capability bootstrap: surface=${SURFACE} trust=${TRUST} plane=l9-capability-broker (ops/secrets SSOT)"
+
+if [ -n "$REQUIRE_CAPS" ]; then
+  "$PY" "$CLIENT" --check --require "$REQUIRE_CAPS"
 else
-  "$PY" "$HYDRATE" --check
+  "$PY" "$CLIENT" --check
 fi
 rc=$?
 
 if [ "$rc" -ne 0 ]; then
-  # Every ref below is registered and provisioned in
-  # ops/secrets/openclaw-igorbot.registry.yaml — a failure here is delivery,
-  # not a missing secret, so point at delivery rather than asking for new ones.
-  echo "secret bootstrap: DEGRADED — provider unreachable for surface '${SURFACE}'" >&2
-  echo "  supply INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET to this surface," >&2
-  echo "  or configure the AWS CLI so openclaw-igorbot/infisical-cursor-governance resolves." >&2
+  # A capability that is not ENABLED is a DELIVERY problem — the broker is
+  # unreachable, or this platform issues no session identity the broker can
+  # verify. It is never a reason to ask a human to paste a credential into the
+  # agent environment; that is the exact posture this file removed.
+  echo "capability bootstrap: DEGRADED — capability plane incomplete for surface '${SURFACE}'" >&2
+  echo "  configure L9_CAPABILITY_BROKER_URL to a trusted L9 broker, and run that broker" >&2
+  echo "  with a workload identity (Kubernetes Auth / SPIFFE / OIDC) to Infisical." >&2
+  echo "  Do NOT paste INFISICAL_CLIENT_SECRET, SONAR_TOKEN, SEMGREP_APP_TOKEN or a" >&2
+  echo "  Graphiti bearer into this surface — raw secrets are prohibited here." >&2
 fi
 exit "$rc"

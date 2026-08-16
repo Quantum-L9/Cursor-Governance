@@ -163,7 +163,20 @@ run_bandit() {
 }
 
 # ── semgrep ────────────────────────────────────────────────────────────────
+# LOCAL COMMUNITY EDITION ONLY. CE needs no credential, and this gate must never
+# acquire one: an authenticated run from a model-controlled process would ship
+# findings to the vendor under a token the model can read.
+#
+# SEMGREP_APP_TOKEN is therefore scrubbed from the child environment rather than
+# merely "not set" — an inherited token would otherwise silently upgrade this to
+# an authenticated scan. Authenticated Semgrep AppSec runs through the
+# `semgrep.appsec_scan` capability, inside the trusted worker (contract §14).
+#
+# Nothing else about this checker's PASS/FAIL/SKIP behaviour changes here; that
+# semantic is a separate governance concern (contract §27).
 run_semgrep() {
+  local SEMGREP_APP_TOKEN=""
+  unset SEMGREP_APP_TOKEN
   local -a targets=()
   local f
   for f in "${CHANGED[@]}"; do

@@ -64,39 +64,73 @@ Breakglass is human/ops only: `L9_PUBLISH_PATH_OVERRIDE=<reason>`. It must never
 be set in a surface environment file, and it does not bypass L4 — an
 unauthorized workspace still denies.
 
-## Secret carrier
+## Capability carrier
 
-`ops/secrets/` is the SSOT inventory for every surface. Adapters resolve through
-it and keep no inventory of their own.
+> **Agent surfaces never receive raw secret material. Agent adapters request
+> named capabilities from the canonical shared capability plane. Secret
+> resolution occurs only beyond the model-controlled trust boundary.**
+
+This doctrine binds every present and future adapter. It replaces the former
+"secret carrier" model, under which a surface held `INFISICAL_CLIENT_SECRET`,
+could fall back to AWS, and hydrated downstream tokens with
+`eval "$(... --export ...)"`. All three are now prohibited on model-controlled
+surfaces.
+
+The reasoning is not about trusting a particular model. Everything an LLM can
+execute can read that LLM's environment, filesystem, process arguments and
+child-process environment. A secret placed there is a secret the model
+possesses, however careful the surrounding code is. So the architecture removes
+raw-secret *possession* rather than discouraging raw-secret *use*.
+
+```text
+agent surface ──(named capability)──▶ L9 broker ──(workload identity)──▶ Infisical ──▶ upstream
+              ◀──(sanitized result)──┘        [trust boundary]
+```
+
+`ops/secrets/` remains the SSOT inventory. `ops/secrets/capabilities.yaml` maps
+capability ids onto refs already registered there — it is a mapping, never a
+second inventory.
 
 The bootstrap is shared, not per-surface. Every adapter calls the identical
 entrypoint and passes its own surface id:
 
 ```bash
 bash ops/secrets/bootstrap_agent_env.sh --check --surface <surface-id> \
-  --require SONAR_TOKEN,SEMGREP_APP_TOKEN
-eval "$(bash ops/secrets/bootstrap_agent_env.sh --export SONAR_TOKEN)"
+  --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
 ```
 
-Credential precedence is fixed by that script: `INFISICAL_CLIENT_ID` /
-`INFISICAL_CLIENT_SECRET` from the surface environment first (for sandboxes with
-no AWS CLI), otherwise the AWS bootstrap ref
-`openclaw-igorbot/infisical-cursor-governance`.
+### Execution classes
+
+| Class | Surfaces | Raw secrets |
+|---|---|---|
+| `model-controlled` | `claude-code`, `codex`, `gemini`, `manus`, `cursor`, `generic`, **and every unregistered id** | Denied |
+| `trusted-operator` | explicit `operator` / `broker` / `trusted-worker`, only from a runtime with no model-control markers | Permitted |
+
+Trust is never inferred from the absence of a known surface id. An unknown
+surface is model-controlled, so a new adapter cannot acquire secret access by
+failing to register. An `operator` claim raised from inside a model runtime is
+refused — a shell the model can spawn cannot promote itself.
 
 Rules binding on every surface, present and future:
 
-- An adapter environment file carries **bootstrap credentials only**. Adding a
-  capability means registering its secret in `ops/secrets` — never appending a
-  downstream token to an adapter env file.
-- No adapter implements its own resolver, vault path, or bootstrap script. A
-  surface-specific copy of this bootstrap is a contract violation.
-- Values never reach git, logs, receipts, or chat. `--check` reports names and
-  availability only.
-- A provider that cannot be reached is **DEGRADED, reported, and non-fatal** —
-  adapters degrade and continue rather than aborting the session.
-- Refs in `openclaw-igorbot.registry.yaml` marked `provisioned: true` exist.
-  A failure to resolve one is a *delivery* problem for that surface; do not ask
-  a human to mint a replacement secret (`l9-aws-secrets`, CANONICAL_LAW §14).
+- An adapter environment file carries **no credentials at all**. Adding an
+  integration means registering a capability in `ops/secrets/capabilities.yaml`
+  against an existing ref — never appending a token to an adapter env file.
+- `--export` is **denied** on every model-controlled and unregistered surface,
+  by the shell bootstrap and independently by `hydrate_infisical.py`, so
+  bypassing one gate buys nothing.
+- No adapter implements its own resolver, vault path, broker, or bootstrap
+  script. A surface-specific copy is a contract violation.
+- There is **no generic raw-secret API**. `get_secret(name)`, `GET /secret/<name>`
+  and `--print-secret` do not exist for model-controlled callers, and the broker
+  serves no route that returns secret material.
+- Values never reach git, logs, receipts, or chat. `--check` reports capability
+  names and status only.
+- A broker that cannot be reached is **DEGRADED, reported, and non-fatal** —
+  adapters degrade and continue rather than aborting the session. An outage is
+  never reported as a passing check.
+- A capability that cannot be delivered is a *delivery* problem. Do not ask a
+  human to paste a credential into a surface environment to work around it.
 
 ## Executable peer carrier
 
