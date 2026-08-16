@@ -140,9 +140,7 @@ class CompileActivationTests(unittest.TestCase):
             self.assertEqual(src["metadata"]["status"], "operator_intake")
             self.assertEqual(src["program"]["definition_status"], "draft")
             receipt = json.loads(
-                source_path.with_name("source-integrity-receipt.json").read_text(
-                    encoding="utf-8"
-                )
+                source_path.with_name("source-integrity-receipt.json").read_text(encoding="utf-8")
             )
             self.assertTrue(receipt["digest_matches_pack"])
             self.assertEqual(receipt["bytes"], source_path.stat().st_size)
@@ -151,9 +149,7 @@ class CompileActivationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = _repo(Path(raw))
             compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
-            second = compile_activation(
-                root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z"
-            )
+            second = compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             self.assertEqual(second["patched"], [])
             allow = (
                 root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
@@ -171,10 +167,7 @@ class CompileActivationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = _repo(Path(raw))
             compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
-            extra = (
-                root
-                / "environment/program-execution/campaigns/demo-activate-v1/README.md"
-            )
+            extra = root / "environment/program-execution/campaigns/demo-activate-v1/README.md"
             extra.write_text("nope\n", encoding="utf-8")
             with self.assertRaises(CompileError):
                 compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
