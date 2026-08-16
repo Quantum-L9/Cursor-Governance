@@ -35,6 +35,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 | Item | Value |
 |---|---|
 | Emit set | exactly the files in [references/file-set.md](references/file-set.md) |
+| Stack proof | runner-owned `$HOME/.l9/primed/<id>/stack-proof.json` before emit/blueprint |
 | Brief IR | [scripts/compile_brief.py](scripts/compile_brief.py) — memo `.md` → activate seed |
 | Compiler | [scripts/compile_activation_files.py](scripts/compile_activation_files.py) |
 | Pipeline | [references/pipeline.md](references/pipeline.md) |

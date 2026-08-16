@@ -78,6 +78,41 @@ def _load(name: str, path: Path):
     return module
 
 
+def _write_task_output(worktree: Path, rel: str, title: str) -> str:
+    path = worktree / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"{Path(rel).stem} implemented for tests: {title}\n" + ("x" * 48) + "\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "-C", str(worktree), "add", "--", rel], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
+        check=True,
+        capture_output=True,
+    )
+    sha = subprocess.run(
+        ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return sha.stdout.strip()
+
+
+def _stack_ok(seed, primed_dir):
+    path = Path(primed_dir) / str(seed["campaign_id"]) / "stack-proof.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    receipt = {
+        "schema": "l9.program-execution.stack-proof.v1",
+        "status": "pass",
+        "tools": [],
+        "path": str(path),
+    }
+    path.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
+    return receipt
+
+
 def _dump(path: Path, value: object) -> None:
     path.write_text(yaml.safe_dump(value, sort_keys=False), encoding="utf-8")
 
@@ -146,6 +181,14 @@ class RunCampaignTests(unittest.TestCase):
                 self.mod.refuse_write_to_dirty_primary(primary, primary)
             self.assertIn("dirty primary", str(ctx.exception))
 
+    def test_write_and_commit_output_refuses_stub(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.write_and_commit_output(root, "docs/program-execution/TASK-001.md", "x")
+            self.assertIn("refuse stub", str(ctx.exception))
+
     def test_until_activate_emits_allowed_set(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw))
@@ -157,12 +200,15 @@ class RunCampaignTests(unittest.TestCase):
                 primary=other_primary,
                 repo_root=root,
                 l9_root=Path(raw) / "l9",
-                hooks=self.mod.Hooks(compile_activation=self.activate.compile_activation),
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, compile_activation=self.activate.compile_activation),
             )
             campaign_dir = root / "environment/program-execution/campaigns/demo-activate-v1"
             names = {path.name for path in campaign_dir.iterdir() if path.is_file()}
             self.assertEqual(names, self.mod.ALLOWED_CAMPAIGN_FILES)
             self.assertEqual(report.stages_completed, ["activate"])
+            self.assertTrue(
+                (Path(raw) / "l9" / "primed" / "demo-activate-v1" / "stack-proof.json").is_file()
+            )
             self.assertNotIn("INTENT.yaml", names)
             ledger = yaml.safe_load(
                 (root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").read_text(
@@ -238,7 +284,7 @@ class RunCampaignTests(unittest.TestCase):
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=Path(raw) / "l9",
-                    hooks=self.mod.Hooks(
+                    hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
                         validate_blueprint=lambda target: [],
@@ -286,7 +332,7 @@ class RunCampaignTests(unittest.TestCase):
                 primary=other_primary,
                 repo_root=root,
                 l9_root=Path(raw) / "l9",
-                hooks=self.mod.Hooks(compile_activation=self.activate.compile_activation),
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, compile_activation=self.activate.compile_activation),
             )
             self.assertEqual(report.campaign_id, "pe-memory")
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"
@@ -324,7 +370,7 @@ class RunCampaignTests(unittest.TestCase):
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=Path(raw) / "l9",
-                    hooks=self.mod.Hooks(
+                    hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
                         validate_blueprint=lambda target: [],
@@ -359,7 +405,7 @@ class RunCampaignTests(unittest.TestCase):
                 primary=Path(raw) / "primary",
                 repo_root=root,
                 l9_root=l9,
-                hooks=self.mod.Hooks(
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
                     compile_activation=emit,
                     compile_source=lambda source, target: calls.append("compile") or None,
                     validate_blueprint=lambda target: calls.append("validate") or [],
@@ -427,7 +473,7 @@ class RunCampaignTests(unittest.TestCase):
                 primary=Path(raw) / "primary",
                 repo_root=root,
                 l9_root=l9,
-                hooks=self.mod.Hooks(compile_activation=self.activate.compile_activation),
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, compile_activation=self.activate.compile_activation),
             )
             self.assertEqual(
                 report.stages_completed,
@@ -581,7 +627,7 @@ class RunCampaignTests(unittest.TestCase):
                 primary=Path(raw) / "primary",
                 repo_root=root,
                 l9_root=l9,
-                hooks=self.mod.Hooks(
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
                     compile_activation=self.activate.compile_activation,
                     make_pr=lambda worktree, campaign_id: (
                         opened.append(campaign_id) or {"number": 7, "url": "https://example.test/7"}

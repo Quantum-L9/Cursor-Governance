@@ -240,12 +240,47 @@ def _phase0_gate(
     }
 
 
+def _bind_stack_proof(src: dict[str, Any], stack_proof: Path | None) -> dict[str, Any]:
+    if stack_proof is None:
+        raise CompileError("stack-proof receipt is required before compile")
+    proof_mod = importlib.util.spec_from_file_location(
+        "context7_stack_proof", _SCRIPT_DIR / "context7_stack_proof.py"
+    )
+    if proof_mod is None or proof_mod.loader is None:
+        raise CompileError("cannot load context7_stack_proof")
+    module = importlib.util.module_from_spec(proof_mod)
+    proof_mod.loader.exec_module(module)
+    receipt = module.load_receipt(stack_proof)
+    inferred = module.infer_tools(
+        {
+            "campaign_id": src["metadata"]["campaign_id"],
+            "objective": src.get("program", {}).get("objective") or src.get("objective") or "",
+            "problem_statement": src.get("program", {}).get("problem_statement") or "",
+            "tasks": src.get("tasks") or [],
+        }
+    )
+    errors = module.validate_receipt(receipt, inferred)
+    seed_like = {
+        "campaign_id": src["metadata"]["campaign_id"],
+        "objective": str(src.get("program", {}).get("objective") or src.get("objective") or ""),
+        "problem_statement": str(
+            src.get("program", {}).get("problem_statement") or src.get("problem_statement") or ""
+        ),
+        "tasks": src.get("tasks") or [],
+    }
+    errors.extend(module.seed_contradicts(seed_like, receipt))
+    if errors:
+        raise CompileError("stack-proof bind failed: " + "; ".join(errors))
+    return receipt
+
+
 def compile_source(
     source: Path,
     target: Path,
     *,
     stamp: str | None = None,
     allowlist_path: Path | None = None,
+    stack_proof: Path | None = None,
 ) -> dict[str, Any]:
     source = source.resolve()
     target = target.resolve()
@@ -259,6 +294,7 @@ def compile_source(
     allowed = load_allowlist(allowlist_path)
     if campaign_id not in allowed:
         raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
+    stack_receipt = _bind_stack_proof(src, stack_proof)
     warnings = _semantic_precheck(src)
     now = stamp or utc_now()
     ensure_instantiated(target, src, now)
@@ -836,7 +872,25 @@ def compile_source(
                     "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
                     "authority_class": "governing",
                     "evidence_id": evidence[0]["id"],
-                    "claims": ["Campaign source is the immutable operator intent."],
+                    "claims": [
+                        "Campaign source is the immutable operator intent.",
+                        "Stack-proof receipt bound before compile.",
+                    ],
+                    "stack_proof": {
+                        "path": str(stack_proof),
+                        "status": stack_receipt.get("status"),
+                        "tools": [
+                            item.get("name")
+                            for item in (stack_receipt.get("tools") or [])
+                            if isinstance(item, dict)
+                        ],
+                        "constraints": [
+                            constraint
+                            for item in (stack_receipt.get("tools") or [])
+                            if isinstance(item, dict)
+                            for constraint in (item.get("constraints") or [])
+                        ],
+                    },
                     "target_ids": [first_target],
                     "workstream_ids": [item["id"] for item in workstreams],
                     "task_ids": [item["id"] for item in tasks],
@@ -898,9 +952,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--target", required=True, type=Path)
     parser.add_argument("--allowlist", type=Path, default=None)
+    parser.add_argument("--stack-proof", type=Path, default=None)
     args = parser.parse_args(argv)
     try:
-        result = compile_source(args.source, args.target, allowlist_path=args.allowlist)
+        result = compile_source(
+            args.source,
+            args.target,
+            allowlist_path=args.allowlist,
+            stack_proof=args.stack_proof,
+        )
     except CompileError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1

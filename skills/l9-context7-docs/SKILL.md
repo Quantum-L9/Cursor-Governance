@@ -8,8 +8,8 @@ metadata:
   tags: [l9, context7, documentation, libraries, frameworks, sdk, api, current_docs]
   owner: igor_beylin
   status: active
-  version: 1.1.1
-  updated: 2026-06-06
+  version: 1.2.0
+  updated: 2026-08-16
 ---
 
 # Context7 Documentation Grounding
@@ -65,17 +65,18 @@ Use this skill when any of these are true:
 
 Skip this skill when:
 
-- The task is purely about local repo code with no external API or dependency behavior.
-- The relevant source of truth is a repo rule, local file, or project invariant rather than upstream docs.
 - The query would require sending secrets, credentials, personal data, private source code, or proprietary payloads to Context7.
+
+Do **not** skip for upstream API payloads, MCP tools, package installs, or Docker. Those are not "purely local repo code".
 
 ## Context7 MCP Flow
 
 Before calling any MCP tool, read its descriptor/schema from the MCP descriptor files.
 
-Available server:
+Available servers (use the one this surface exposes):
 
-- `user-Context7`
+- `context7` — Claude Code plugin (`mcp__context7__*` or `mcp__plugin_context7_context7__*`)
+- `user-Context7` — Cursor MCP
 
 Tools:
 
@@ -144,11 +145,11 @@ Key constraints:
 Applied in: {file or implementation area}
 ```
 
-If Context7 has no useful match, say so once and continue with repo-grounded evidence.
+If Context7 has no useful match, GET the official docs page and extract constraints. If that also misses, stop (Unknown). Do not invent fields.
 
 ## Resource Map
 
-No `references/` folder — MCP flow and output discipline live in this file. Read MCP tool descriptors from `user-Context7` before calling `resolve-library-id` or `query-docs`.
+No `references/` folder — MCP flow and output discipline live in this file. Read MCP tool descriptors from `context7` or `user-Context7` before calling `resolve-library-id` or `query-docs`.
 
 ## Validation
 
@@ -156,7 +157,7 @@ MCP tool schemas MUST be read before first call. Queries MUST NOT include secret
 
 ## Failure Handling
 
-- No library match after 3 resolve attempts → say once; continue repo-grounded.
+- No library match after 3 resolve attempts → GET official docs; still miss → stop (Unknown).
 - Ambiguous library/version → ask user or pick closest match with stated uncertainty.
-- Pure local/Odoo task → skip Context7 per repo precedence rules.
-- MCP unavailable → note once; rely on repo rules and official docs URLs if known.
+- MCP unavailable → GET official docs; still miss → stop (Unknown).
+- Secrets must never go in Context7 queries.

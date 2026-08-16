@@ -909,12 +909,34 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         db.close()
 
 
+def _require_stack_proof_reentry(workspace: Path, extra_text: str) -> None:
+    proof_path = (
+        Path(__file__).resolve().parents[4] / "scripts" / "context7_stack_proof.py"
+    )
+    if not proof_path.is_file():
+        raise ControllerError("context7_stack_proof.py missing; refuse start")
+    spec = importlib.util.spec_from_file_location("context7_stack_proof", proof_path)
+    if spec is None or spec.loader is None:
+        raise ControllerError("cannot load context7_stack_proof")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    status = read_campaign_status(workspace) or {}
+    campaign_id = str(status.get("campaign_id") or "").strip()
+    if not campaign_id:
+        raise ControllerError("campaign_id missing; cannot re-entry stack-proof")
+    try:
+        module.require_existing_receipt(campaign_id, extra_text)
+    except module.StackProofError as exc:
+        raise ControllerError(str(exc)) from exc
+
+
 def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         task = db.task(task_id)
         if task is None or task["runtime_state"] != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
+        _require_stack_proof_reentry(workspace, str(task_id))
         _refuse_operator_memo_cwd(workspace)
         ensure_campaign_active(workspace, actor, db, ledger)
         db.transition_task(task_id, "EXECUTING")

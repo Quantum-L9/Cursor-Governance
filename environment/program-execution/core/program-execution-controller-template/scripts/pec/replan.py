@@ -9,7 +9,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from .common import digest_object, load_json, utc_now, write_json
-from .controller import ControllerError, _runtime_config, open_runtime
+from .controller import ControllerError, _require_stack_proof_reentry, _runtime_config, open_runtime
 
 FORBIDDEN = {
     "objective",
@@ -200,6 +200,9 @@ def activate(workspace: Path, revision_id: str, *, actor: str) -> dict[str, Any]
         revision["rejected_reason"] = "previous_plan_revision_mismatch"
         write_json(path, revision)
         raise ControllerError("stale revision; previous plan preserved")
+    extra = " ".join(str(item) for item in (revision.get("affected_future_task_ids") or []))
+    extra += " " + json.dumps(revision.get("delta") or {}, sort_keys=True)
+    _require_stack_proof_reentry(workspace, extra)
     revision["status"] = "activated"
     revision["activated_at"] = utc_now()
     body = {k: v for k, v in revision.items() if k != "revision_digest"}

@@ -29,6 +29,7 @@ Order inside `run_campaign.py` only (not an operator checklist):
 
 | Stage | Runner owns |
 |---|---|
+| stack-proof | infer API/MCP/install/Docker; Context7 then official GET; write `$HOME/.l9/primed/<id>/stack-proof.json`; refuse on miss. Runs before emit, including `until=activate`. |
 | activate | brief IR or activate YAML; isolate worktrees; emit file set |
 | blueprint | compile + template validate |
 | admit | EVID-001 on reconciled target HEAD; accept blueprint |
