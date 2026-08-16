@@ -4,16 +4,22 @@
 Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
-Escape hatches (human only):
+Ordinary `gh pr merge` is allowed only when:
+
   L9_MERGE_AUTHORIZED=<nonempty reason string>          # session env
-  ~/.l9/autonomy/merge-authorization.json               # one-shot file channel
-    {"authorizations": [{"repo": "org/repo", "pr": 53,
+  ~/.l9/autonomy/merge-authorization.json               # receipt file
+    {"authorizations": [{"repo": "org/repo", "pr": "*" | 53,
+                          "source": "l9-pr-remediation",
                           "expires_at": <unix-seconds>, "reason": "..."}]}
     Overridable for tests via L9_MERGE_AUTHORIZATION_FILE. An entry matches
-    when repo and pr match the target and expires_at is in the future; a
-    blank entry or expired entry authorizes nothing (fail closed).
-  An L4 release receipt does NOT authorize merge (campaign_execution /
-  post_push.merge_requires=never).
+    when repo matches and pr is "*" (all open PRs in that repo) or the
+    exact PR number, and expires_at is in the future.
+
+Invoking /l9-pr-remediation writes that receipt via
+ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
+An L4 release receipt does NOT authorize merge.
+
+Never waived: force-push, hard-reset, git clean -fd, admin-merge.
 """
 
 from __future__ import annotations
@@ -38,12 +44,24 @@ DENY_TOOL_NAMES = {
 }
 
 MERGE_BASH = re.compile(r"\bgh\s+pr\s+merge\b", re.I)
+ADMIN_MERGE_BASH = re.compile(r"\bgh\s+pr\s+merge\b.*--admin\b", re.I)
+FORCE_PUSH_BASH = re.compile(r"\bgit\s+push\s+.*(--force|-f)\b", re.I)
+HARD_RESET_BASH = re.compile(r"\bgit\s+reset\s+--hard\b", re.I)
+CLEAN_FD_BASH = re.compile(r"\bgit\s+clean\s+-fd\b", re.I)
+REPO_SCOPE = {"*", "all", "ALL"}
 
-DENY_BASH_PATTERNS = (
-    MERGE_BASH,
-    re.compile(r"\bgit\s+push\s+.*(--force|-f)\b", re.I),
-    re.compile(r"\bgit\s+reset\s+--hard\b", re.I),
-    re.compile(r"\bgit\s+clean\s+-fd\b", re.I),
+NEVER_WAIVE_REASON = (
+    "Autonomy Surface Profile never waives force-push, hard-reset, "
+    "destructive clean, or admin-merge."
+)
+
+MERGE_DENY_REASON = (
+    "Autonomy Surface Profile forbids merge until /l9-pr-remediation is "
+    "invoked (or L9_MERGE_AUTHORIZED=<reason>). Campaigns and make pr end "
+    "at green + merge-ready. Write the receipt with "
+    "python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open "
+    "--reason 'l9-pr-remediation invoked', then gh pr merge --squash "
+    "(no --admin) for each green mergeable PR, oldest first."
 )
 
 
@@ -71,7 +89,7 @@ def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str,
 
 
 def _file_authorizes(repo: str, pr: str) -> bool:
-    """True when a fresh, matching one-shot authorization entry exists."""
+    """True when a fresh matching repo-scoped or PR-scoped authorization exists."""
     path = _auth_file_path()
     if not path.is_file():
         return False
@@ -89,12 +107,39 @@ def _file_authorizes(repo: str, pr: str) -> bool:
             continue
         entry_repo = str(entry.get("repo") or "")
         entry_pr = str(entry.get("pr") or entry.get("number") or "")
-        if not entry_repo and not entry_pr:
+        if not entry_repo:
             continue
-        if entry_repo and repo and entry_repo != repo:
+        if repo and entry_repo != repo:
             continue
-        if entry_pr and pr and entry_pr != pr:
+        if not repo:
             continue
+        if entry_pr in REPO_SCOPE:
+            return True
+        if pr and entry_pr == pr:
+            return True
+    return False
+
+
+def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
+    if os.environ.get("L9_MERGE_AUTHORIZED", "").strip():
+        return True
+    repo, pr = _target_from_input(tool_name, tool_input)
+    return _file_authorizes(repo, pr)
+
+
+def _never_waive_command(command: str) -> bool:
+    return bool(
+        FORCE_PUSH_BASH.search(command)
+        or HARD_RESET_BASH.search(command)
+        or CLEAN_FD_BASH.search(command)
+        or ADMIN_MERGE_BASH.search(command)
+    )
+
+
+def _never_waive_tool(tool_name: str, tool_input: dict[str, Any]) -> bool:
+    if tool_name in DENY_TOOL_NAMES and bool(
+        tool_input.get("admin") or tool_input.get("admin_override")
+    ):
         return True
     return False
 
@@ -121,31 +166,25 @@ def evaluate(
     root: Path | None = None,
 ) -> str | None:
     """Return deny reason or None if allowed to proceed (no decision)."""
-    if os.environ.get("L9_MERGE_AUTHORIZED", "").strip():
-        return None
-    repo, pr = _target_from_input(tool_name, tool_input)
-    if _file_authorizes(repo, pr):
-        return None
-
     del root  # signature kept for hook callers
 
-    if tool_name in DENY_TOOL_NAMES:
-        return (
-            "Autonomy Surface Profile forbids merge_pull_request. "
-            "Do not remediate or merge. Human only: L9_MERGE_AUTHORIZED=<reason>."
-        )
+    if _never_waive_tool(tool_name, tool_input):
+        return NEVER_WAIVE_REASON
 
     if tool_name in {"Bash", "bash", "Shell", "shell"}:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
-        for pattern in DENY_BASH_PATTERNS:
-            if pattern.search(command):
-                return (
-                    "Autonomy Surface Profile forbids merge/force/hard-reset via "
-                    "shell. Agents must use PR_REMEDIATE=0 make pr and must not "
-                    "merge. Human only: L9_MERGE_AUTHORIZED=<reason>, or a "
-                    "one-shot entry in ~/.l9/autonomy/merge-authorization.json "
-                    "matching this repo and PR with a future expires_at."
-                )
+        if _never_waive_command(command):
+            return NEVER_WAIVE_REASON
+        if MERGE_BASH.search(command):
+            if _merge_authorized(tool_name, tool_input):
+                return None
+            return MERGE_DENY_REASON
+        return None
+
+    if tool_name in DENY_TOOL_NAMES:
+        if _merge_authorized(tool_name, tool_input):
+            return None
+        return MERGE_DENY_REASON
     return None
 
 

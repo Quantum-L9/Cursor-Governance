@@ -580,3 +580,16 @@ Supersedes §6.1 remediation row, §6.2 post-push merge phrasing, and §6.2.1
    `PR_BASE` to that branch. Opening those PRs against `main` is forbidden.
 4. SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`) and
    `environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml`.
+
+<!-- PR_REMEDIATION_AUTHORIZES_MERGE_V1 -->
+## 6.2.3 /l9-pr-remediation authorizes merge (2026-08-16)
+
+Supersedes §6.2.2 “MUST NOT … merge” for the remediations skill only:
+
+1. Campaign / `make pr` path still does not merge. End state is green +
+   merge-ready PRs on the campaign integration branch.
+2. Invoking `/l9-pr-remediation` writes
+   `ops/autonomy/authorize_merge.py --all-open` and then merges every
+   green mergeable open PR in the target repo (bottom-up, no `--admin`).
+3. Mechanical gate: `ops/autonomy/merge_gate.py`. Force-push / hard-reset /
+   admin-merge remain never-waived.

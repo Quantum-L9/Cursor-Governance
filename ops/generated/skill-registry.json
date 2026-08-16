@@ -62,12 +62,10 @@
         "hint_allowed": true,
         "id": "pr_remediation_until_green",
         "negative_signals": [
-          "merge the pr",
-          "merge this pr",
           "admin merge",
           "force push"
         ],
-        "note": "Auto-authorized remediate-until-green for an OPEN PR under a campaign/PE packet: bounded cycles (surface_profile.remediation.max_cycles), then HALT before merge. Merge/force-push/scope-widening remain human-only; merge uses L9_MERGE_AUTHORIZED or the one-shot merge-authorization.json file channel.\n",
+        "note": "Invoking /l9-pr-remediation authorizes ordinary merge of all open PRs in the target repo after Converge (green + mergeable, bottom-up). Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -77,7 +75,9 @@
           "get the pr green",
           "make the pr mergeable",
           "resolve review threads",
-          "babysit the pr"
+          "babysit the pr",
+          "/l9-pr-remediation",
+          "merge failing prs"
         ],
         "primary": "l9-pr-remediation",
         "signal_weight": 8,
@@ -959,7 +959,7 @@
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
-      "reason": "compiles the minimum PE campaign file set and runs compile/bootstrap/PR remediation through authorized merge \u2014 high blast radius, explicit only; invoking the skill is merge authority for that one campaign PR after remediation is complete",
+      "reason": "compiles the minimum PE campaign file set and runs compile/bootstrap/PR through make pr to green + merge-ready \u2014 high blast radius, explicit only; invoking the skill is merge authority for that one campaign PR after remediation is complete. Fleet merge of other open PRs is /l9-pr-remediation.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -987,12 +987,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge a github pr \u2014 read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.",
+      "description": "diagnose or converge github prs \u2014 read-only status/review, or remediate ci/review/scanner/debt to green then merge all open prs in the target repo. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "Diagnose remains hint-routeable; remediation is auto-authorized only as remediate-until-green-and-mergeable under a campaign/PE packet (surface_profile.remediation: max_cycles 5, then HALT before merge). Merge, force-push, and scope widening stay human-only.",
+      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable and then merges them (ordinary squash). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1152,6 +1152,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "dfd5fc2fd365eb917a0fc074a38466b8919b7b958a7ca393cc309b8c442a45b9",
-  "source_skill_corpus_sha256": "885d286c5d4f5323d33f5b577ce12922e19528b4fca379e166625e96ef1e98d4"
+  "source_manifest_sha256": "3778cde8edb9016341fef8e63dcf8128ff2b0dc023f663c0526fc311819795ed",
+  "source_skill_corpus_sha256": "87e0d53d734fda81ab7fdd339ed1d052c14ec24170029876da9f37f11d83caea"
 }

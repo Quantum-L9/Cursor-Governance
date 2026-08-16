@@ -116,6 +116,9 @@ commands:
 - slash: /l9-plan
   file: commands/l9-plan.md
   enabled: true
+- slash: /l9-pr-remediation
+  file: commands/l9-pr-remediation.md
+  enabled: true
 - slash: /lcto
   file: commands/lcto.md
   enabled: true
