@@ -1,6 +1,6 @@
 ---
 name: l9-pr-remediation
-description: diagnose or converge a github pr — read-only status/review/merge-advise, or concurrently remediate ci failures, review comments, sonarcloud, codeql, and baseline lint/type/test/build debt with root-cause fixes, local verify, one commit per cycle, short-poll confirmation, and review replies. use when reviewing pr readiness or merge blockers, or when a pr is failing, review-blocked, scanner-red, or the user asks to fix, remediate, babysit, or converge a pr.
+description: diagnose or converge github prs — read-only status/review, or remediate ci/review/scanner/debt to green then merge all open prs in the target repo. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -9,32 +9,32 @@ metadata:
   tags: [l9, pr, ci, code-review, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github]
   owner: igor_beylin
   status: active
-  version: 3.1.0
-  updated: 2026-08-07
+  version: 3.2.0
+  updated: 2026-08-16
 ---
 
 # PR Remediation
 
 ## Purpose
 
-One pack, two intents: **Diagnose** (read-only readiness) or **Converge** (mutate to green). No packaging theater. Converge remains one path, max depth.
+One pack, two intents: **Diagnose** (read-only readiness) or **Converge** (failing → green → merged). No packaging theater. Converge remains one path, max depth.
 
 | Intent | Mutates | Triggers | Behavior |
 |--------|---------|----------|----------|
-| **Diagnose** | no | review / readiness / blockers / `/pr` / “ready to merge?” | Fetch PR+reviews+CI; slim verdict; optional review angles; YNP; **never** commit/push |
-| **Converge** | yes | fix / remediate / babysit / make-pr poll / autonomy packet | Hot path below; **never** merges (law 12) |
+| **Diagnose** | no | review / readiness / blockers / `/pr` / “ready to merge?” | Fetch PR+reviews+CI; slim verdict; optional review angles; YNP; **never** commit/push/merge |
+| **Converge** | yes | `/l9-pr-remediation` / fix / remediate / babysit / merge failing PRs | Hot path below; **then merge** every green mergeable open PR |
 
-**Merge** is not a third intent — it is a **Diagnose exit** after explicit user confirm (`gh pr merge` only; never unpack diffs). Load [references/merge-advise.md](references/merge-advise.md).
+Invoking this skill (or `/l9-pr-remediation`) **is** merge authorization for **all open PRs** in the target repo. Campaigns and `make pr` only publish green merge-ready PRs; they do not merge. Load [references/merge-advise.md](references/merge-advise.md).
 
 ### Intent precedence (hard)
 
-1. If mutate language is present (`fix`, `remediate`, `babysit`, `push`, make-pr handoff, autonomy packet) → **Converge** (Diagnose may run as cycle-0 status inside Converge, but must not stop at advise-only).
+1. If `/l9-pr-remediation` or mutate language is present (`fix`, `remediate`, `babysit`, `push`, `merge` failing PRs, autonomy packet) → **Converge** (Diagnose may run as cycle-0 status inside Converge, but must not stop at advise-only).
 2. Else if review/readiness/blockers/`/pr` → **Diagnose** only.
 3. Ambiguous mixed ask without mutate verbs → **Diagnose**; ask one question before Converge.
 
 ## Target
 
-Resolve `{owner}/{repo}#{pr}` (or open a remediation PR on the current branch when Converge points at baseline debt/alerts with no PR yet). Stay on that PR until diagnosed, converged, or blocked.
+All **open** PRs in the target `{owner}/{repo}` (bottom-up by `createdAt`). A single `{owner}/{repo}#{pr}` argument still starts there, then continues through the remaining open PRs. If no PR exists and Converge points at baseline debt/alerts: open a PR, then continue.
 
 ## Diagnose
 
@@ -84,12 +84,20 @@ No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
 9. **Validate suggestions against current code.** Comment snippets are not ground truth.
 10. **No gate weakening / suppressions.** No `NOSONAR`, blanket noqa/type-ignore/eslint-disable, CodeQL dismissals/exclusions, skipped tests, or lowered thresholds. Narrow documented suppression only for a *proven* false positive where a code fix is less safe.
 11. **Every thread answered.** Reply Fixed / Deferred / Acknowledged / Disagreed. Resolve when done; leave true human-decision threads open with the decision named.
-12. **Never** force-push, rewrite history, expose tokens, merge, or touch out-of-scope PRs.
+12. **Never** force-push, rewrite history, expose tokens, or `--admin` merge. Ordinary `gh pr merge --squash` **is required** after Converge on each green mergeable open PR in the target repo.
 13. **Scanner closure is remote.** Local fix ≠ Sonar/CodeQL closed until the exact head SHA is green remotely (`PENDING_REMOTE_ANALYSIS` otherwise). Fetch scripts are read-only; never mutate remote issue/alert state.
 
 ## Hot Path (Converge)
 
-0. **Resolve PR + resume.** Identify repo/PR/branch. Reuse prior cycle markers if present (`Remediation-Cycle:` trailer, `<!-- l9-remediation:... -->` replies). If no PR and the user wants baseline debt/alerts fixed: create branch, remediate, open PR, continue on that PR — same path.
+0. **Authorize + resolve.** Write the repo-scoped receipt, then list open PRs oldest first:
+
+```bash
+python3 ops/autonomy/authorize_merge.py --repo {owner}/{repo} --all-open \
+  --reason "l9-pr-remediation invoked"
+gh pr list --repo {owner}/{repo} --state open --json number,createdAt,mergeable,statusCheckRollup
+```
+
+Reuse prior cycle markers if present (`Remediation-Cycle:` trailer, `<!-- l9-remediation:... -->` replies). If no PR and the user wants baseline debt/alerts fixed: create branch, remediate, open PR, continue.
 1. **Discover gates (read-only).** Parse workflows + package/Make scripts into a local verify list. Do not edit CI surfaces.
 2. **Ingest all signals in parallel.**
    - CI failed logs + annotations
@@ -103,16 +111,24 @@ No tarballs, run-report schemas, issue-file bundles, or exemplary packaging.
 5. **Local verify (blocking).** Every local gate green. On fail: fix and re-run all. ≤5 iterations.
 6. **Commit + push once.** Conventional message; trailer `Remediation-Cycle: {repo}#{pr}/cycle-{N}`.
 7. **Reply.** Canonical replies; resolve completed threads. [references/review-replies.md](references/review-replies.md)
-8. **Short-poll + decide.** [references/convergence-loop.md](references/convergence-loop.md). If green and no new actionable signals → converge. If new codebase work and cycles < 3 → next cycle. If only CI-pipeline / human blockers remain → stop early (more cycles cannot help).
+8. **Short-poll + decide.** [references/convergence-loop.md](references/convergence-loop.md). If green and no new actionable signals → merge that PR, then the next older-to-newer open PR. If new codebase work and cycles < 3 → next cycle. If only CI-pipeline / human blockers remain → stop early (more cycles cannot help; do not merge that PR).
+9. **Merge.** For each PR that is green + mergeable, with no unanswered codebase review threads:
+
+```bash
+gh pr merge {n} --repo {owner}/{repo} --squash --delete-branch
+```
+
+Never `--admin`. Never unpack diffs. Oldest `createdAt` first.
 
 ## Done When (Converge)
 
-On the final observed head SHA:
+On the final observed head SHA of each open PR, then after merge:
 
-- required checks success (or only recorded CI-pipeline blockers remain)
+- required checks success (or only recorded CI-pipeline blockers remain — those PRs stay unmerged)
 - no merge conflict; review not requesting changes from unaddressed codebase items
 - no unanswered actionable review threads
 - Sonar/CodeQL/debt: confirmed codebase root causes fixed; remote scanner closure claimed only when observed
+- green mergeable PRs are **merged**
 - worktree clean
 - status names remaining CI-pipeline and human blockers (if any)
 
@@ -170,4 +186,4 @@ ci_pipeline_policy: note_and_skip  # never edit; no issue-file packaging
 Verdict · blockers · warnings · key review concerns · YNP
 
 ### Converge
-Cycles run · head SHA · CI result · fixed clusters · remaining codebase / CI-pipeline / human blockers · scanner pending-remote if any.
+Cycles run · head SHA · CI result · fixed clusters · PRs merged · remaining open PRs · remaining codebase / CI-pipeline / human blockers · scanner pending-remote if any.

@@ -1,7 +1,7 @@
 ---
 id: l9.rule.48.make.pr.remediation
-version: 1.1.0
-description: After make pr opens a PR, remediate until green + mergeable, then halt before merge (stacked bottom-up PRs, no rebase)
+version: 1.2.0
+description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge of all open PRs
 scope: global
 domain: general
 activation: always
@@ -9,7 +9,7 @@ authority: canonical_global
 alwaysApply: true
 ---
 
-# make pr → checkers + PR open → remediate-until-green → HALT before merge
+# make pr → green merge-ready; /l9-pr-remediation → merge
 
 Default publish path is `PR_REMEDIATE=0 make pr` (Autonomy Surface Profile
 `campaign_execution` / `l4_local_autonomy.post_push`).
@@ -20,12 +20,22 @@ Agents MUST:
 2. Pass `PR_REMEDIATE=0` (this is now the script default).
 3. For Program Execution campaigns, set `PR_BASE` to
    `origin/campaign/<campaign_id>` — never open those PRs against `main`.
-4. After the PR is open: remediate with `l9-pr-remediation` until CI is green
-   and the PR is mergeable (bounded: `surface_profile.remediation.max_cycles`),
-   resolving review threads — then **HALT before merge**.
-5. **Not** merge. Merge is human-only: `L9_MERGE_AUTHORIZED=<reason>` or a
-   one-shot entry in `~/.l9/autonomy/merge-authorization.json`
-   (`ops/autonomy/merge_gate.py` enforces both channels).
+4. Campaign / `make pr` end state: every published PR is **green and
+   merge-ready**. Do **not** merge from that path.
+5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
+   with Converge intent): merge **is** authorized for **all open PRs** in
+   the target repo. Write the receipt, converge each PR, then merge
+   bottom-up:
+
+```bash
+python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open \
+  --reason "l9-pr-remediation invoked"
+gh pr merge <n> --repo <owner/name> --squash --delete-branch
+```
+
+`ops/autonomy/merge_gate.py` allows ordinary `gh pr merge` after that
+receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
+`--admin` stay denied.
 
 Stacked PRs (operator default 2026-08-15):
 
@@ -39,8 +49,8 @@ Stacked PRs (operator default 2026-08-15):
 
 If a human explicitly sets `PR_REMEDIATE=1` and `make pr` writes
 `.l9/pr/pr-remediation-handoff.json` plus `L9_AGENT_REQUIRED`, follow that
-human override only. The standing agent contract is remediate-until-green,
-then halt; merge stays human.
+human override. Standing campaign contract is green + merge-ready, no merge.
+`/l9-pr-remediation` is the merge path.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),
 that counts as explicit approval for the push + PR open performed by

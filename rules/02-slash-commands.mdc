@@ -93,6 +93,7 @@ When a command needs generator scripts:
 | `/migrate` | `commands/migrate.md` | Autonomous code migration |
 | `/l9-plan` | `commands/l9-plan.md` | Create PE+autonomy execution plan (`l9-plan` skill) |
 | `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
+| `/l9-pr-remediation` | `commands/l9-pr-remediation.md` | Converge all open PRs to green, then merge |
 | `/probe` | `commands/probe.md` | Import & wiring verification (safe) |
 | `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
 | `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |

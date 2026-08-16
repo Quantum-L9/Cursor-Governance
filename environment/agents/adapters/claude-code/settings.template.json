@@ -18,9 +18,10 @@
     "ops/autonomy/local_execution_gate.py, and validate_claude_env.py fails when it does not.",
     "An allow entry here is what an agent reads as 'approved, no prompt' \u2014 so listing a",
     "forbidden action here teaches the agent to attempt it and get denied a layer later.",
-    "Autonomous merge is deliberately OFF: merge_pull_request is omitted from allow so a human",
-    "still approves every merge (see L9_AUTONOMY_AUTONOMOUS_MERGE=false). Force pushes, hard",
-    "resets, destructive cleanup, and admin-merge overrides are denied outright."
+    "Standing autonomous merge is OFF (L9_AUTONOMY_AUTONOMOUS_MERGE=false). Campaigns",
+    "and make pr do not merge. /l9-pr-remediation writes ops/autonomy/authorize_merge.py",
+    "and merge_gate.py then allows ordinary gh pr merge. Force pushes, hard resets,",
+    "destructive cleanup, and admin-merge overrides are denied outright."
   ],
   "hooks": {
     "SessionStart": [

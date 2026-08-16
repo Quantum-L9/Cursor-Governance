@@ -140,7 +140,7 @@ def _auth_file(
     tmp_path: Path,
     *,
     repo: str = "Quantum-L9/SEO-Bot",
-    pr: int = 53,
+    pr: int | str = 53,
     expires_at: float | None = None,
     extra: str = "",
 ) -> Path:
@@ -204,6 +204,71 @@ def test_human_file_authorization_malformed_denies(tmp_path: Path) -> None:
             "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
         },
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_repo_scope_authorization_allows_any_pr_in_repo(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, pr="*")
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "gh pr merge 99 --repo Quantum-L9/SEO-Bot --squash",
+            },
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_repo_scope_authorization_wrong_repo_denies(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, pr="*")
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "gh pr merge 99 --repo Quantum-L9/Website-Bot"},
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_repo_scope_authorization_requires_repo_on_command(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, pr="*")
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "gh pr merge 99 --squash"},
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_authorization_never_waives_admin_merge(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, pr="*")
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --admin",
+            },
+        },
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_env_authorization_never_waives_force_push() -> None:
+    code, out, err = _run(
+        {"tool_name": "Bash", "tool_input": {"command": "git push --force origin HEAD"}},
+        env={"L9_MERGE_AUTHORIZED": "human approved merge of #1"},
     )
     assert code == 0, err
     assert "deny" in out

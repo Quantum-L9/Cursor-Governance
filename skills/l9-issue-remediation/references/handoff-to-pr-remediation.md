@@ -12,7 +12,8 @@ updated: 2026-08-11
 
 # Handoff to l9-pr-remediation
 
-This skill **never merges**. When unblock requires a green PR:
+This skill **never merges**. When unblock requires a green PR, hand off to
+`l9-pr-remediation` Converge — that skill remediates and merges:
 
 ## When to hand off
 

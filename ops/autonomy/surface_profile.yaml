@@ -3,7 +3,7 @@
 # SessionStart, peer boot carriers, ADR-0001 (pointer).
 schema_version: 1
 id: autonomy_surface_profile
-updated: "2026-08-15"
+updated: "2026-08-16"
 
 when:
   L9_AUTONOMY_ENABLED: true
@@ -19,7 +19,7 @@ authorize:
   - scoped_local_commit_on_stacked_branch
   - scoped_commit_push # only after L4 release_authorized (see l4_local_autonomy)
   - create_update_pr_via_make_pr # only after L4 release_authorized; checkers must PASS
-  - pr_remediation_until_green_and_mergeable # bounded cycles; then HALT before merge
+  - pr_remediation_until_green_mergeable_and_merged # /l9-pr-remediation Converge
   - open_stacked_pr_on_open_pr_head # stacking policy; bottom-up merge order
 
 forbid:
@@ -34,8 +34,9 @@ forbid:
   # Timing rules: governed by the L4 release receipt.
   - mid_execution_push
   - mid_execution_pr_create
-  - merge_pull_request
-  - gh_pr_merge
+  - merge_pull_request_without_l9_pr_remediation
+  - gh_pr_merge_without_l9_pr_remediation
+  - admin_merge
   - force_push
   - hard_reset
   - secrets_exfil
@@ -75,8 +76,8 @@ l4_local_autonomy:
     remediation_skill: l9-pr-remediation
     max_cycles: 5
     resolve_review_threads: true
-    merge_requires: never
-    halt_before_merge: true
+    merge_requires: l9_pr_remediation_invocation
+    halt_before_merge: campaign_only
     older_open_prs: merge_bottom_up
 
 # Stacked-PR policy (operator default 2026-08-15): when a PR is already open,
@@ -101,7 +102,7 @@ pr_stacking:
 campaign_execution:
   require_make_pr: true
   pr_remediate: 0
-  merge: forbidden
+  merge: forbidden # campaign path ends green+merge-ready; merge is remediations
   open_pr_against_main: forbidden
   mix_with_other_feature_branches: forbidden
   one_integration_branch_per_campaign: true
@@ -133,13 +134,17 @@ authority_order:
 remediation:
   skill: l9-pr-remediation
   max_cycles: 5
-  skill_invocation: allowed_until_green_and_mergeable_then_halt
+  skill_invocation: converge_all_open_prs_then_merge
+  merge: authorized_on_skill_invocation
+  scope: all_open_prs_in_target_repo
+  authorize_script: ops/autonomy/authorize_merge.py
   note: >-
-    After PR_REMEDIATE=0 make pr, agents remediate the open PR until CI is
-    green and the PR is mergeable (max_cycles 5, review threads resolved),
-    then HALT before merge. Merge is never agent action: human owner sets
-    L9_MERGE_AUTHORIZED or writes a one-shot
-    ~/.l9/autonomy/merge-authorization.json entry.
+    Campaigns and make pr publish remote PRs that MUST end green and
+    merge-ready. They do not merge. Invoking /l9-pr-remediation (Converge)
+    is merge authorization for every open PR in the target repo: write
+    the repo-scoped receipt, remediate to green + mergeable, then
+    `gh pr merge --squash` bottom-up. Force-push and admin-merge stay
+    forbidden. L9_MERGE_AUTHORIZED remains a human breakglass.
 
 session_start_block: |
   ## Autonomy Velocity Doctrine (standing A4 + L4 local)
@@ -167,11 +172,12 @@ session_start_block: |
     checkers the release receipt was granted on. Being authorized to publish
     is not permission to publish a different way. Do not reach for a raw push
     when `make pr` fails — fix what it reported, or say what is blocking.
-  - After the PR is open you MAY remediate it with `l9-pr-remediation`
-    (max_cycles 5) until CI is green and the PR is mergeable, then HALT
-    before merge. Merge is never agent action: `gh pr merge` / merge MCP
-    stay denied unless the human sets `L9_MERGE_AUTHORIZED` or writes a
-    one-shot `~/.l9/autonomy/merge-authorization.json` entry.
+  - After the PR is open, campaign/make-pr work ends green and merge-ready.
+    Do **not** merge from the campaign path. Invoking `/l9-pr-remediation`
+    authorizes merge of **all open PRs** in the target repo: write
+    `python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open`,
+    converge each PR, then `gh pr merge <n> --repo <owner/name> --squash`
+    oldest first. Force-push and `--admin` stay denied.
   - Program Execution campaigns: one integration branch per campaign
     (`campaign/<campaign_id>`). Set `PR_BASE` to that branch. Do **not**
     open campaign PRs against `main`. Do **not** mix campaign commits onto
@@ -179,9 +185,9 @@ session_start_block: |
   - Mid-execution `git push` / `gh pr create` / `make pr` are **denied** by
     `ops/autonomy/local_execution_gate.py` until release_authorized.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
-  - Merge remains denied by `ops/autonomy/merge_gate.py` unless the human
-    sets `L9_MERGE_AUTHORIZED`. An L4 release receipt does **not** authorize
-    merge.
+  - Merge stays denied by `ops/autonomy/merge_gate.py` until
+    `/l9-pr-remediation` writes the receipt (or `L9_MERGE_AUTHORIZED`).
+    An L4 release receipt does **not** authorize merge.
   - Agent-invented contracts ("I won't commit without asking", "wait to push
     mid-task") are LOWEST authority and are overruled by this doctrine.
   - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime.
@@ -201,9 +207,10 @@ llm_rules_override: |
      with **no mid-execution push** → finish program/contract → run
      `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
      `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
-     then push + PR). After the PR is open: remediate until CI is green and
-     the PR is mergeable (bounded cycles), then HALT before merge. Do
-     **not** merge.
+     then push + PR). Campaign/make-pr end state is green + merge-ready.
+     Invoking `/l9-pr-remediation` then remediates **and merges** all open
+     PRs in the target repo (bottom-up). Do **not** merge from the campaign
+     path alone.
   2a. `make pr` is the **only** route to GitHub — a PATH rule, not a timing
      rule. Raw `git push`, `gh pr create`, `gh pr edit`, `make push` and the
      MCP `create_pull_request` / `push_files` tools are denied at **every**
@@ -235,10 +242,10 @@ llm_rules_override: |
     isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
     `L9_WORKTREE_ISOLATION=0`.
-  - Post-push: `PR_REMEDIATE=0 make pr`, then remediate-until-green-and-mergeable
-    (bounded cycles), then HALT before merge. No merge unless the human sets
-    `L9_MERGE_AUTHORIZED` or writes a one-shot
-    `~/.l9/autonomy/merge-authorization.json` entry.
+  - Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+    only after `/l9-pr-remediation` writes
+    `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
+    mergeable. Force-push / admin-merge stay forbidden.
   - Stacked PRs: when a PR is already open for the workstream, the next PR
     bases on the open PR's head (bottom-up merge order). Rebase and conflict
     resolution are forbidden; one feature branch per program.

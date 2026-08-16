@@ -40,7 +40,8 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | `/use-harvest` | Deploy harvested artifacts via plan |
 | `/wire` | Governance wiring or component wire-up |
 | `/confirm-wiring` | Verify full wiring |
-| `/pr` | PR analysis, gaps, merge blockers |
+| `/pr` | PR analysis, gaps, merge blockers (Diagnose only) |
+| `/l9-pr-remediation` | Converge all open PRs to green, then merge |
 | `/gap-analysis` | Gaps vs target state |
 | `/inspect` | External code gate before import |
 | `/index` | Export repo indexes |

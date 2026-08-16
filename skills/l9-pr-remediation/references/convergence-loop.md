@@ -46,7 +46,7 @@ This means: after push, CI SHOULD pass. Polling is to confirm and to catch envir
 │  3. Check for new review comments                        │
 │  4. Evaluate convergence gate                            │
 │                                                          │
-│  → converged: STOP + report                              │
+│  → converged: MERGE (ordinary squash) then next open PR  │
 │  → not converged (new comments): loop (if cycles < max)  │
 │  → CI failed unexpectedly: investigate delta, fix, loop  │
 │  → max cycles: STOP + partial report                     │
@@ -167,14 +167,14 @@ deferred_items:
 protocol_violations:
   - "None" | list of any batch/verify violations that occurred
 
-minimum_safe_next_action: "merge" | "manual review of deferred items" | "run another cycle manually"
+minimum_safe_next_action: "merged" | "manual review of deferred items" | "run another cycle manually"
 ```
 
 ## Stop Conditions
 
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
-- CI passes AND no new actionable codebase signals → emit `converged`
+- CI passes AND no new actionable codebase signals → emit `converged` and **merge** that PR (`gh pr merge --squash --repo`), then continue older-to-newer open PRs
 - Only `CI_PIPELINE` / `HUMAN` blockers remain → emit `partial` early (more cycles cannot help)
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`

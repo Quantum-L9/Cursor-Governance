@@ -403,7 +403,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "31667e5967c0cd61b205506bb30c16856312aff721dcd6dbb52e0e276505f6bc"
+      "sha256": "581aaaa52f9d2e047a1ad7cddc197ef21c144e5a5b897147368cc6243693f2e4"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -423,7 +423,7 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "12c54433a48b9d48ded1f51be776d7d0999374a1af1f89d2f3e91cfa30877a3b"
+      "sha256": "efe890639bfe98adb3f54897935703139c99a6d09a52e7a95ad17e4ec63f21dc"
     },
     {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",

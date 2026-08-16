@@ -29,6 +29,10 @@ import yaml
 
 SCRIPTS = Path(__file__).resolve().parent
 
+#: The governance repository itself. `--root` defaults here, but the PR gate
+#: also runs this script against consumer workspaces via `make pr WS=…`.
+GOVERNANCE_ROOT = SCRIPTS.parents[1]
+
 GENERATED_PATH_PREFIXES = (
     "rules/RULES-MANIFEST.",
     "environment/generated/llm-rules/",
@@ -433,6 +437,15 @@ def sync(
 
 def validate_after_sync(root: Path) -> list[str]:
     errors: list[str] = []
+    # These four validators check governance-owned generated artifacts:
+    # rules/RULES-MANIFEST.*, ops/config/llm_rules_projection.yaml,
+    # skills/AUTONOMY_MANIFEST.yaml, and commands/COMMANDS_MANIFEST.yaml.
+    # A consumer workspace reached through `make pr WS=…` owns none of them, so
+    # running these there reports a missing manifest as a gate failure for a
+    # repository that was never supposed to have one. Governance keeps the full
+    # check; a consumer workspace is validated by its own native gate instead.
+    if root.resolve() != GOVERNANCE_ROOT:
+        return errors
     checks = [
         [sys.executable, str(SCRIPTS / "validate_rules_manifest.py"), "--root", str(root)],
         [

@@ -94,10 +94,10 @@ tiers:
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
     reason: >-
-      Diagnose remains hint-routeable; remediation is auto-authorized only as
-      remediate-until-green-and-mergeable under a campaign/PE packet
-      (surface_profile.remediation: max_cycles 5, then HALT before merge).
-      Merge, force-push, and scope widening stay human-only.
+      Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge
+      remediates all open PRs in the target repo to green + mergeable and
+      then merges them (ordinary squash). Campaigns/make pr stay no-merge.
+      Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
     reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
   - skill: l9-bounded-autonomy
@@ -105,9 +105,9 @@ tiers:
   - skill: l9-pe-campaign-activate
     reason: >-
       compiles the minimum PE campaign file set and runs compile/bootstrap/PR
-      remediation through authorized merge — high blast radius, explicit only;
+      through make pr to green + merge-ready — high blast radius, explicit only;
       invoking the skill is merge authority for that one campaign PR after
-      remediation is complete
+      remediation is complete. Fleet merge of other open PRs is /l9-pr-remediation.
   - skill: l9-cli-optimization
     reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
   - skill: l9-e2e-blocker-resolution
@@ -244,13 +244,13 @@ claude_routing:
     - make the pr mergeable
     - resolve review threads
     - babysit the pr
+    - /l9-pr-remediation
+    - merge failing prs
     negative_signals:
-    - merge the pr
-    - merge this pr
     - admin merge
     - force push
     supporting: []
-    note: 'Auto-authorized remediate-until-green for an OPEN PR under a campaign/PE packet: bounded cycles (surface_profile.remediation.max_cycles), then HALT before merge. Merge/force-push/scope-widening remain human-only; merge uses L9_MERGE_AUTHORIZED or the one-shot merge-authorization.json file channel.
+    note: 'Invoking /l9-pr-remediation authorizes ordinary merge of all open PRs in the target repo after Converge (green + mergeable, bottom-up). Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
 
       '
   - id: issue_remediation

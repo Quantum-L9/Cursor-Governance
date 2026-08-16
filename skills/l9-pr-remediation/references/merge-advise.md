@@ -7,10 +7,10 @@ tags: [pr, merge, diagnose, git]
 owner: igor_beylin
 status: active
 version: 1.0.0
-updated: 2026-08-07
+updated: 2026-08-16
 /L9_META -->
 
-# Merge advise (Diagnose exit)
+# Merge (Diagnose advise vs Converge action)
 
 **CRITICAL:** Adoption = merge via git. NEVER manually write PR files from a diff.
 
@@ -23,8 +23,16 @@ Violation: Manual file write from PR diff = CRITICAL — revert and re-merge via
 
 ## When
 
-Only after **Diagnose** presents a verdict and the user explicitly confirms merge.
-**Converge never merges** (skill law 12).
+- **Diagnose (`/pr`):** advise only. Merge after the user explicitly confirms.
+- **Converge (`/l9-pr-remediation`):** merge is authorized. After each PR is
+  green + mergeable, merge it. Do all open PRs in the target repo, oldest first.
+
+Write the receipt before the first `gh pr merge`:
+
+```bash
+python3 ops/autonomy/authorize_merge.py --repo {owner}/{repo} --all-open \
+  --reason "l9-pr-remediation invoked"
+```
 
 ## Preferred — GitHub merge
 
@@ -52,4 +60,6 @@ PlasticOS: use `make push` instead of raw `git push` when that workflow applies.
 
 - `git apply` / hand-copy from `gh pr diff` to adopt the PR
 - Force-push to main
+- `--admin` / bypass rules
 - Merge without user confirm during Diagnose
+- Merge a red or conflicted PR
