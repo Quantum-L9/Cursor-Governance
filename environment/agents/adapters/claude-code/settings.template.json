@@ -195,6 +195,7 @@
     "l9-issue-remediation": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
     "l9-mac-storage-triage": "user-invocable-only",
+    "l9-pe-campaign-activate": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
