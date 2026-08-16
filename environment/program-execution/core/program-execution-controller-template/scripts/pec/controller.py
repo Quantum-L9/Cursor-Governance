@@ -4,6 +4,7 @@ import datetime as dt
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import uuid
 from pathlib import Path
@@ -238,6 +239,11 @@ def bootstrap(
         lock = write_program_lock(blueprint, workspace / "runtime" / "program-lock.json")
     except BlueprintError as exc:
         raise ControllerError(str(exc)) from exc
+    program_id = str((lock.get("program") or {}).get("id") or "")
+    if re.fullmatch(r"pe-[0-9a-f]{8,}", program_id):
+        raise ControllerError(
+            f"{program_id} is a program-execution.intent.v1 hash id; pec bootstrap refuses it"
+        )
     controller_definition = load_yaml(template_root / "CONTROLLER.yaml")["controller"]
     if controller_definition["contracts"]["blueprint"] != lock["blueprint_contract"]:
         raise ControllerError("Controller and Blueprint contract versions are incompatible")
@@ -411,6 +417,70 @@ def _evidence_valid(db: StateDB, evidence_id: str) -> bool:
     if expires_at and parse_time(expires_at) <= dt.datetime.now(dt.UTC):
         return False
     return True
+
+
+ACTIVE_RUNTIME_STATES = {
+    "LEASED",
+    "PREPARED",
+    "CONTRACTED",
+    "EXECUTING",
+    "SUBMITTED",
+    "VERIFYING",
+    "PASSED_LOCAL",
+}
+
+
+def _current_work(tasks: list[dict[str, Any]]) -> dict[str, str] | None:
+    for task in tasks:
+        state = str(task.get("runtime_state") or "")
+        if state in ACTIVE_RUNTIME_STATES:
+            return {"task_id": str(task["id"]), "runtime_state": state}
+    return None
+
+
+def _lease_base_sha(workspace: Path, repo: dict[str, Any], task_id: str) -> str:
+    repo_path = Path(repo["local_path"])
+    stack_path = workspace / "runtime" / "STACK.json"
+    if not stack_path.is_file():
+        return str(repo["head_sha"])
+    stack = load_json(stack_path)
+    item = next(
+        (row for row in (stack.get("stack") or []) if row.get("task_id") == task_id),
+        None,
+    )
+    if item is None:
+        return str(repo["head_sha"])
+    pr_base = str(item.get("pr_base") or "")
+    if not pr_base:
+        return str(repo["head_sha"])
+    resolved = run_git(repo_path, "rev-parse", "--verify", pr_base, check=False)
+    if resolved.returncode != 0:
+        raise ControllerError(f"STACK.json pr_base {pr_base} is not a git ref")
+    sha = resolved.stdout.strip()
+    main = run_git(repo_path, "rev-parse", "--verify", "origin/main", check=False)
+    if main.returncode != 0:
+        main = run_git(repo_path, "rev-parse", "--verify", "main", check=False)
+    if pr_base.startswith("pec/") and main.returncode == 0 and sha == main.stdout.strip():
+        raise ControllerError(
+            f"refuse lease.base_sha equal to origin/main; predecessor {pr_base} has no commit"
+        )
+    return sha
+
+
+def _refuse_operator_memo_cwd(workspace: Path) -> None:
+    launch_path = workspace / "runtime" / "LAUNCH.json"
+    if not launch_path.is_file():
+        return
+    launch = load_json(launch_path)
+    if launch.get("load_operator_brief") is not False:
+        return
+    brief = launch.get("operator_brief") or launch.get("brief_path")
+    if not brief:
+        return
+    cwd = Path.cwd().resolve()
+    memo = Path(str(brief)).expanduser().resolve()
+    if cwd == memo or cwd == memo.parent:
+        raise ControllerError("pec start refuses operator memo as working context")
 
 
 def _gate_satisfied(db: StateDB, gate: dict[str, Any]) -> bool:
@@ -631,6 +701,7 @@ def status(workspace: Path) -> dict[str, Any]:
             "program_digest": db.get_meta("program_digest"),
             "global_halt": db.get_meta("global_halt", False),
             "plan_revision": plan_revision,
+            "current": _current_work(tasks),
             "definition_status": definition_status,
             "admission_draft": admission_draft,
             "campaign_status": read_campaign_status(workspace)
@@ -707,6 +778,7 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
         return {
             "ready": ready,
             "blocked": blocked,
+            "current": _current_work(db.tasks()),
             "runtime_split_children": children,
             "definition_status": "draft" if admission_draft else None,
             "admission_draft": admission_draft,
@@ -715,7 +787,13 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
         db.close()
 
 
-def claim_task(workspace: Path, task_id: str, holder: str, ttl_hours: int = 8) -> dict[str, Any]:
+def claim_task(
+    workspace: Path,
+    task_id: str,
+    holder: str,
+    ttl_hours: int = 8,
+    ttl_minutes: int | None = None,
+) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         task = db.task(task_id)
@@ -733,19 +811,21 @@ def claim_task(workspace: Path, task_id: str, holder: str, ttl_hours: int = 8) -
         repo = db.repository(task["repository_id"])
         assert repo is not None
         issued = dt.datetime.now(dt.UTC).replace(microsecond=0)
+        minutes = ttl_minutes if ttl_minutes is not None else ttl_hours * 60
         lease_id = f"lease-{uuid.uuid4().hex[:16]}"
         branch = f"pec/{task['wave_id'].lower()}/{task_id.lower()}"
+        base_sha = _lease_base_sha(workspace, repo, task_id)
         lease = {
             "lease_id": lease_id,
             "task_id": task_id,
             "repository_id": task["repository_id"],
             "holder": holder,
-            "base_sha": repo["head_sha"],
+            "base_sha": base_sha,
             "branch": branch,
             "worktree": None,
             "contract_digest": None,
             "issued_at": issued.isoformat(),
-            "expires_at": (issued + dt.timedelta(hours=ttl_hours)).isoformat(),
+            "expires_at": (issued + dt.timedelta(minutes=minutes)).isoformat(),
         }
         try:
             db.create_lease(lease)
@@ -754,7 +834,7 @@ def claim_task(workspace: Path, task_id: str, holder: str, ttl_hours: int = 8) -
                 f"repository already has an active writer lease: {task['repository_id']}"
             ) from exc
         db.update_task(
-            task_id, base_sha=repo["head_sha"], branch=branch, lease_id=lease_id, last_error=None
+            task_id, base_sha=base_sha, branch=branch, lease_id=lease_id, last_error=None
         )
         db.transition_task(task_id, "LEASED")
         ledger.append("TASK_LEASED", holder, lease)
@@ -776,9 +856,17 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if repo is None:
             raise ControllerError("repository not reconciled")
         repo_path = Path(repo["local_path"])
-        current_head = run_git(repo_path, "rev-parse", "HEAD").stdout.strip()
         current_dirty = bool(run_git(repo_path, "status", "--porcelain").stdout.strip())
-        if current_head != lease["base_sha"] or current_dirty:
+        if current_dirty:
+            db.transition_task(task_id, "STALE", last_error="repository_state_changed")
+            raise ControllerError("repository state changed after reconciliation")
+        stacked = (workspace / "runtime" / "STACK.json").is_file()
+        current_head = run_git(repo_path, "rev-parse", "HEAD").stdout.strip()
+        has_base = run_git(repo_path, "cat-file", "-t", lease["base_sha"], check=False)
+        if has_base.returncode != 0 or has_base.stdout.strip() != "commit":
+            db.transition_task(task_id, "STALE", last_error="lease_base_missing")
+            raise ControllerError("lease base_sha is not a commit in the repository")
+        if not stacked and current_head != lease["base_sha"]:
             db.transition_task(task_id, "STALE", last_error="repository_state_changed")
             raise ControllerError("repository state changed after reconciliation")
         worktree = workspace / "worktrees" / task_id
@@ -825,6 +913,7 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
         task = db.task(task_id)
         if task is None or task["runtime_state"] != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
+        _refuse_operator_memo_cwd(workspace)
         ensure_campaign_active(workspace, actor, db, ledger)
         db.transition_task(task_id, "EXECUTING")
         ledger.append(
@@ -1050,21 +1139,33 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             )
             claimed_results = receipt.get("validation_results") or []
             claimed_commands = [item.get("command") for item in claimed_results]
+            required_commands = contract.get("validation_commands") or []
             gates["worker_validation_claim"] = (
                 "PASS"
-                if claimed_commands == contract.get("validation_commands")
+                if claimed_commands == required_commands
                 and all(item.get("status") == "PASS" for item in claimed_results)
                 else "FAIL"
             )
-            validations = [
-                _run_validation(command, worktree)
-                for command in contract.get("validation_commands") or []
-            ]
-            gates["validation"] = (
-                "PASS"
-                if validations and all(item["status"] == "PASS" for item in validations)
-                else "FAIL"
-            )
+            if required_commands:
+                validations = [_run_validation(command, worktree) for command in required_commands]
+                gates["validation"] = (
+                    "PASS"
+                    if validations and all(item["status"] == "PASS" for item in validations)
+                    else "FAIL"
+                )
+            else:
+                outputs = [
+                    str(item.get("location") or "")
+                    for item in (task.get("source") or {}).get("outputs") or []
+                    if item.get("location")
+                ]
+                if not outputs:
+                    outputs = [str(path) for path in (contract.get("writable_paths") or []) if path]
+                gates["validation"] = (
+                    "PASS"
+                    if outputs and all((worktree / path).is_file() for path in outputs)
+                    else "FAIL"
+                )
             candidate_sha = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
         gates["residual_unknowns"] = (
             "PASS" if not (receipt.get("residual_unknowns") or []) else "BLOCKED"

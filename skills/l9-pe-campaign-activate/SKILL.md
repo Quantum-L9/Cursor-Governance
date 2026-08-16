@@ -63,19 +63,20 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 
    That runner assigns the id, emits the file set, collects EVID-001, accepts
    the blueprint, bootstraps pec **without** `--admission-draft`, reconciles
-   a clean target checkout, drafts and claims TASK-001, then opens/merges
-   the host PR when green. A leftover pec workspace is quarantined.
-   Every later task is contract-registered; only TASK-001 is claimed.
-2. Read **only** `$HOME/.l9/programs/<id>/runtime/TASK-001.md` and
-   `STACK.json` (15 minutes). Open each task PR onto the previous task
+   a clean target checkout, drafts every task, claims TASK-001, executes every
+   task in the pec prepare worktree, opens stacked task PRs, then closes pec
+   and moves `campaigns/<id>/` to `campaigns/COMPLETED/<id>/`.
+   A leftover pec or blueprint workspace is quarantined.
+2. Live SSOT is `$HOME/.l9/programs/<id>/runtime/LAUNCH.json` plus the 15-minute
+   task cards and `STACK.json`. Open each task PR onto the previous task
    branch. Never `PR_BASE=main`. Do not open the operator memo. If blocked,
    stop and report.
-3. Converge the campaign PR with `l9-pr-remediation` until required checks are
-   green and the PR is mergeable.
-4. Authorize and merge **that PR only**
+3. Converge only PRs recorded on `STACK.json` with `l9-pr-remediation` until
+   required checks are green and each recorded PR is mergeable.
+4. Authorize and merge **those recorded PRs only**
    ([references/merge-authority.md](references/merge-authority.md)).
-5. Close the live ledger: `pec close` and
-   `python3 environment/program-execution/campaigns/scripts/close_campaign.py close`.
+5. Close is one stage: `pec close`, then
+   `close_campaign.py close`, then move to `campaigns/COMPLETED/<id>/`.
 
 ## MUST
 

@@ -33,22 +33,26 @@ L4 as a substitute. Order inside the runner:
 7. clean target checkout at `$HOME/.l9/program-worktrees/<id>` + `pec reconcile`
 8. `pec draft-contract` + `register-contract` for **every** task, `claim` TASK-001
 9. write `STACK.json` — each task PR bases on the previous task branch, never main
-10. host PR onto `campaign/<id>` → merge-if-green
+10. execute every task in the pec prepare worktree (`$L9/programs/<id>/worktrees/TASK-00N`)
+11. stacked task PRs, then `pec close` + host ledger close + move to `campaigns/COMPLETED/<id>/`
 
 `program-execution.intent.v1` and `pe-<hash>` workspaces are refused.
 `--admission-draft` is not a live path. Host-only merge is not program close.
+`make campaign` is the Phase 0 admission act; `acknowledged_at` stays null and
+`program_deploying` stays false.
 
 ## 0. Isolate
 
-```bash
-git fetch origin main
-git worktree add -b campaign/<id> \
-  "$HOME/.l9/program-worktrees/<id>" origin/main
-```
+Three trees, one write checkout:
 
-If the seed must land in this governance clone, use
-`feat/<id>` or `campaign/<id>` off `origin/main`. Never `git switch` on a
-dirty shared checkout.
+| Tree | Path | Role |
+|---|---|---|
+| Host isolate | `$L9/gov-worktrees/<id>` on `feat/<id>` | emit files only |
+| Target | `$L9/program-worktrees/<id>` | reconcile + campaign/<id> |
+| Write tree | `$L9/programs/<id>/worktrees/TASK-00N` | pec prepare mutation checkout |
+
+`LAUNCH.json` names all three. Never mutate the dirty primary. Never treat
+`--single-branch main` as the only history once stacking is required.
 
 ## 1. Emit files
 

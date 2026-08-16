@@ -87,6 +87,7 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument("--workspace", required=True, type=Path)
     cmd.add_argument("--holder", required=True)
     cmd.add_argument("--ttl-hours", type=int, default=8)
+    cmd.add_argument("--ttl-minutes", type=int, default=None)
 
     cmd = sub.add_parser("prepare")
     cmd.add_argument("task_id")
@@ -286,7 +287,13 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             finally:
                 db.close()
         elif args.command == "claim":
-            value = claim_task(args.workspace, args.task_id, args.holder, args.ttl_hours)
+            value = claim_task(
+                args.workspace,
+                args.task_id,
+                args.holder,
+                args.ttl_hours,
+                ttl_minutes=args.ttl_minutes,
+            )
         elif args.command == "prepare":
             value = prepare_worktree(args.workspace, args.task_id)
         elif args.command == "render-contract":

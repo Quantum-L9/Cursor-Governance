@@ -16,9 +16,10 @@ Purpose: this skill's merge step. Standing campaign policy still says
 `merge: false` for ordinary agents. Invoking **this skill** is the operator
 act that authorizes merge of **one** PR.
 
-Invoking **`/l9-pr-remediation`** is a separate operator act that authorizes
-ordinary merge of **all open PRs** in the target repo after they are green
-and mergeable. Receipt SSOT: `ops/autonomy/authorize_merge.py`.
+Invoking **`/l9-pr-remediation`** from `make campaign` authorizes merge of
+**stacked PRs opened by this run** (`STACK.json` `pr_number` values) after
+they are green and mergeable. It does not authorize
+`all_open_prs_in_target_repo`. Receipt SSOT: `ops/autonomy/authorize_merge.py`.
 
 ## When merge is allowed
 

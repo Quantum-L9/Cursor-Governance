@@ -5,10 +5,11 @@ Policy SSOT: ops/autonomy/surface_profile.yaml → pr_stacking +
 environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml → pr_stacking.
 
 Usage:
+  stack_pr.py base --stack /path/to/STACK.json
+      Print the next PR base from STACK.json. Never prints main.
   stack_pr.py base --repo org/repo [--prefix <branch-prefix>]
-      Print the base ref for the next PR: the head ref of the newest open PR
-      whose head branch matches the prefix, else "main" (or the repo default
-      branch).
+      Print the base ref for the next PR from STACK.json ($L9_ROOT +
+      $CAMPAIGN_ID) or the newest open stacked PR. Fallback to main is exit 2.
 
   stack_pr.py order --repo org/repo [--prefix <branch-prefix>]
       Print open PRs in bottom-up merge order: base-first, then PRs whose base
@@ -21,8 +22,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
@@ -57,13 +60,62 @@ def open_prs(repo: str, prefix: str) -> list[dict[str, Any]]:
     )
 
 
+def refuse_unstacked_base(base: str) -> None:
+    name = str(base).rsplit("/", 1)[-1]
+    if name in {"main", "master"}:
+        print(f"stack_pr: refuse unstacked PR_BASE={base}", file=sys.stderr)
+        raise SystemExit(2)
+
+
+def stack_path_from_env() -> Path | None:
+    if os.environ.get("STACK_JSON"):
+        path = Path(os.environ["STACK_JSON"])
+        return path if path.is_file() else None
+    l9 = os.environ.get("L9_ROOT")
+    campaign_id = os.environ.get("CAMPAIGN_ID")
+    if not l9 or not campaign_id:
+        return None
+    path = Path(l9) / "programs" / campaign_id / "runtime" / "STACK.json"
+    return path if path.is_file() else None
+
+
+def base_from_stack(path: Path) -> str:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    stack = [item for item in (data.get("stack") or []) if isinstance(item, dict)]
+    if not stack:
+        print(f"stack_pr: {path} has an empty stack", file=sys.stderr)
+        raise SystemExit(2)
+    last_opened = None
+    for item in stack:
+        if item.get("pr_number"):
+            last_opened = item
+    if last_opened and last_opened.get("branch"):
+        return str(last_opened["branch"])
+    return str(stack[0].get("pr_base") or "")
+
+
 def cmd_base(args: argparse.Namespace) -> int:
+    stack_file = Path(args.stack) if args.stack else stack_path_from_env()
+    if stack_file is not None:
+        if not stack_file.is_file():
+            print(f"stack_pr: STACK.json missing: {stack_file}", file=sys.stderr)
+            return 2
+        base = base_from_stack(stack_file)
+        if not base:
+            print("stack_pr: STACK.json has no pr_base", file=sys.stderr)
+            return 2
+        refuse_unstacked_base(base)
+        print(base)
+        return 0
+    if not args.repo:
+        print("stack_pr: STACK.json required; refuse default_branch fallback", file=sys.stderr)
+        return 2
     prs = open_prs(args.repo, args.prefix)
     if not prs:
-        repo_meta = _gh(f"repos/{args.repo}", "--jq", ".default_branch")
-        print(repo_meta)
-        return 0
+        print("stack_pr: STACK.json required; refuse default_branch fallback", file=sys.stderr)
+        return 2
     newest = sorted(prs, key=lambda p: int(p["number"]))[-1]
+    refuse_unstacked_base(str(newest["head"]))
     print(newest["head"])
     return 0
 
@@ -106,8 +158,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_base = sub.add_parser("base")
-    p_base.add_argument("--repo", required=True)
+    p_base.add_argument("--repo", default="")
     p_base.add_argument("--prefix", default="")
+    p_base.add_argument("--stack", default="", help="Path to pec runtime STACK.json")
     p_order = sub.add_parser("order")
     p_order.add_argument("--repo", required=True)
     p_order.add_argument("--prefix", default="")
