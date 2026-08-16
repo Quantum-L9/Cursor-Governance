@@ -114,6 +114,8 @@ jobs:
             environment/program-execution/conformance/test_campaign_source_schema.py
           uv run --frozen --no-build python -m unittest \
             environment/program-execution/scripts/tests/test_compile_campaign_source.py
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
       - name: Program Execution thin providers
         env:
           PYTHONDONTWRITEBYTECODE: "1"

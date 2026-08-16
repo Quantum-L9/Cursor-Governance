@@ -71,6 +71,14 @@ campaign:
 	  --intent "$(INTENT)" \
 	  --until "$(or $(CAMPAIGN_UNTIL),merge)"
 
+.PHONY: campaign-stack-base
+## Print the next campaign PR base from $L9_ROOT/programs/$CAMPAIGN_ID/runtime/STACK.json.
+## Never falls back to main. CAMPAIGN_ID= required.
+campaign-stack-base:
+	@test -n "$(CAMPAIGN_ID)" || (echo "CAMPAIGN_ID= is required" >&2; exit 2)
+	python3 ops/scripts/stack_pr.py base --stack \
+	  "$(or $(L9_ROOT),$(HOME)/.l9)/programs/$(CAMPAIGN_ID)/runtime/STACK.json"
+
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
 	uv sync --locked --extra dev

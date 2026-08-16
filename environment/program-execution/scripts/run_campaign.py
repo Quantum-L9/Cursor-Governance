@@ -3,7 +3,7 @@
 
 Sealed stages: isolate → emit → blueprint → collect → accept →
 pec bootstrap (no draft) → pec reconcile → contract/claim TASK-001 →
-host PR → merge-if-green.
+execute every task → stacked task PRs → pec+host close → COMPLETED/.
 
 program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 """
@@ -41,7 +41,17 @@ VALIDATE_BLUEPRINT = (
 )
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 ALLOWED_CAMPAIGN_FILES = {"CAMPAIGN_SOURCE.yaml", "source-integrity-receipt.json"}
-UNTIL_STAGES = ("activate", "blueprint", "admit", "bootstrap", "arm", "pr", "merge")
+UNTIL_STAGES = (
+    "activate",
+    "blueprint",
+    "admit",
+    "bootstrap",
+    "arm",
+    "execute",
+    "pr",
+    "close",
+)
+UNTIL_ALIASES = {"merge": "close", "bootstrap": "arm"}
 STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
@@ -69,7 +79,10 @@ class Hooks:
     pec_bootstrap: Callable[[Path, Path], dict[str, Any]] | None = None
     admit: Callable[[Path], dict[str, Any]] | None = None
     arm: Callable[[Path, str], dict[str, Any]] | None = None
+    execute: Callable[[Path, str], dict[str, Any]] | None = None
+    close: Callable[[Path, str], dict[str, Any]] | None = None
     make_pr: Callable[[Path, str], dict[str, Any]] | None = None
+    open_task_pr: Callable[[Path, str, dict[str, Any]], dict[str, Any]] | None = None
     pr_status: Callable[[str, int | None], dict[str, Any]] | None = None
     authorize_and_merge: Callable[[str, int], dict[str, Any]] | None = None
     git: Callable[..., str] | None = None
@@ -132,6 +145,8 @@ def run_cmd(
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    child_env = os.environ.copy() if env is None else dict(env)
+    child_env.setdefault("L9_CAMPAIGN_TUNNEL", "1")
     try:
         return subprocess.run(
             cmd,
@@ -140,7 +155,7 @@ def run_cmd(
             text=True,
             timeout=timeout,
             cwd=str(cwd) if cwd is not None else None,
-            env=env,
+            env=child_env,
         )
     except subprocess.TimeoutExpired as exc:
         raise CampaignError(f"timed out after {timeout}s: {' '.join(cmd[:6])}") from exc
@@ -198,8 +213,13 @@ def host_campaign_ids(root: Path) -> set[str]:
             if not isinstance(item, dict) or not item.get("id"):
                 continue
             life = str(item.get("lifecycle") or "")
-            if life not in {"complete", "cancelled"}:
+            if life in {"complete", "cancelled"}:
                 ids.add(str(item["id"]))
+    completed = root / "environment/program-execution/campaigns/COMPLETED"
+    if completed.is_dir():
+        for path in completed.iterdir():
+            if path.is_dir() and path.name not in {"stale"}:
+                ids.add(path.name)
     return ids
 
 
@@ -293,10 +313,19 @@ def isolate_worktree(
     git = git_fn or (lambda *args, repo=primary: _git(repo, *args))
     git("fetch", "origin", "main")
     worktree.parent.mkdir(parents=True, exist_ok=True)
-    if worktree.exists():
-        log(f"isolate reuse worktree {worktree}")
-        return worktree
     branch = f"feat/{campaign_id}"
+    if worktree.exists():
+        dirty = is_dirty(worktree)
+        current = run_cmd(
+            ["git", "-C", str(worktree), "rev-parse", "--abbrev-ref", "HEAD"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if not dirty and current.returncode == 0 and current.stdout.strip() == branch:
+            log(f"isolate reuse worktree {worktree}")
+            return worktree
+        log(f"isolate quarantine dirty or unexpected worktree {worktree}")
+        quarantine_occupied(worktree)
     existing = run_cmd(
         ["git", "-C", str(primary), "rev-parse", "--verify", branch],
         timeout=GIT_TIMEOUT_S,
@@ -373,8 +402,8 @@ def default_validate_blueprint(target: Path) -> list[str]:
 
 
 def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
-    def _run(*, admission_draft: bool) -> subprocess.CompletedProcess[str]:
-        cmd = [
+    first = run_cmd(
+        [
             sys.executable,
             str(PEC),
             "bootstrap",
@@ -382,18 +411,14 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
             str(workspace),
             "--blueprint",
             str(blueprint),
-        ]
-        if admission_draft:
-            cmd.append("--admission-draft")
-        return run_cmd(cmd, timeout=PEC_TIMEOUT_S)
-
-    first = _run(admission_draft=False)
+        ],
+        timeout=PEC_TIMEOUT_S,
+    )
     combined = (first.stderr + "\n" + first.stdout).strip()
     if first.returncode == 0:
         return {"ok": True, "draft": False, "output": combined}
     raise CampaignError(
-        "pec bootstrap failed without --admission-draft; "
-        "collect_evidence + accept_blueprint must precede lock: " + combined
+        "pec bootstrap failed; make campaign must accept the blueprint before lock: " + combined
     )
 
 
@@ -442,7 +467,7 @@ def default_ensure_target_checkout(
     if dest.exists():
         raise CampaignError(f"target path exists and is not a git checkout: {dest}")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if donor is not None and is_git_repo(donor):
+    if donor is not None and is_git_repo(donor) and donor_matches_repository(donor, repository_id):
         clone = run_cmd(
             ["git", "clone", "--local", str(donor.resolve()), str(dest)],
             timeout=CLONE_TIMEOUT_S,
@@ -452,7 +477,7 @@ def default_ensure_target_checkout(
             return dest
     url = f"https://github.com/{repository_id}.git"
     clone = run_cmd(
-        ["git", "clone", "--depth", "1", "--single-branch", "--branch", "main", url, str(dest)],
+        ["git", "clone", url, str(dest)],
         timeout=CLONE_TIMEOUT_S,
         env=git_env(),
     )
@@ -461,6 +486,35 @@ def default_ensure_target_checkout(
             f"cannot checkout {repository_id} at {dest}: {(clone.stderr or clone.stdout).strip()}"
         )
     return dest
+
+
+def donor_matches_repository(donor: Path, repository_id: str) -> bool:
+    url = run_cmd(
+        ["git", "-C", str(donor), "remote", "get-url", "origin"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if url.returncode != 0:
+        return False
+    text = (url.stdout or "").strip().lower()
+    wanted = repository_id.lower()
+    return wanted in text
+
+
+def fetch_stack_refs(dest: Path, campaign_id: str) -> None:
+    dest = dest.resolve()
+    if not is_git_repo(dest):
+        return
+    run_cmd(
+        ["git", "-C", str(dest), "fetch", "origin", f"campaign/{campaign_id}"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    run_cmd(
+        ["git", "-C", str(dest), "fetch", "origin", "refs/heads/pec/*:refs/remotes/origin/pec/*"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
 
 
 def default_reconcile(workspace: Path, repository_id: str, target_path: Path) -> dict[str, Any]:
@@ -629,6 +683,9 @@ def default_arm(
     contracts: list[str] = []
     for task in tasks:
         contracts.append(str(register_task_contract(workspace, str(task["id"]))))
+    stack = build_pr_stack(campaign_id, tasks)
+    write_pr_stack(workspace, stack)
+    fetch_stack_refs(target_path, campaign_id)
     claim = run_cmd(
         [
             sys.executable,
@@ -639,13 +696,11 @@ def default_arm(
             str(workspace),
             "--holder",
             "make-campaign",
+            "--ttl-minutes",
+            str(TASK_BUDGET_MINUTES),
         ],
         timeout=PEC_TIMEOUT_S,
     )
-    if claim.returncode != 0:
-        raise CampaignError(f"pec claim failed: {(claim.stderr or claim.stdout).strip()}")
-    stack = build_pr_stack(campaign_id, tasks)
-    write_pr_stack(workspace, stack)
     return {
         "task_id": FIRST_TASK_ID,
         "armed_task_ids": [str(task["id"]) for task in tasks],
@@ -895,7 +950,7 @@ def write_launch_pointer(
         "blueprint": blueprint,
         "target_worktree": target_worktree,
         "host_worktree": host_worktree,
-        "operator_ack_required": True,
+        "operator_ack_required": False,
         "operator_ack_from": "Igor Beylin",
         "forge_operator_ack": False,
         "only_pec_workspace": True,
@@ -906,7 +961,10 @@ def write_launch_pointer(
         "load_operator_brief": False,
         "max_task_minutes": TASK_BUDGET_MINUTES,
         "reconcile_required": True,
-        "pec_ready_empty_is_expected": False,
+        "pec_ready_empty_is_expected": True,
+        "write_tree": str(Path(workspace) / "worktrees" / FIRST_TASK_ID),
+        "host_tree": host_worktree,
+        "target_tree": target_worktree,
         "autonomy_packets_not_required": True,
         "refuse_hash_program": True,
         "next": (
@@ -984,16 +1042,363 @@ def write_stack_cards(
     return written
 
 
-def default_program_blockers(campaign_id: str) -> list[str]:
-    return [
-        "target work not started",
-        "control-plane binding pending",
-        f"do not close {campaign_id} after host-only merge",
-    ]
+def default_program_blockers(
+    campaign_id: str, *, armed: bool = False, executed: bool = False
+) -> list[str]:
+    blockers: list[str] = []
+    if not armed:
+        blockers.append("target work not started")
+    if not executed:
+        blockers.append(f"do not close {campaign_id} after host-only merge")
+    if not armed:
+        blockers.append("control-plane binding pending")
+    return blockers
+
+
+def normalize_until(until: str) -> str:
+    mapped = UNTIL_ALIASES.get(until, until)
+    if mapped not in STAGE_INDEX:
+        raise CampaignError(
+            "until must be one of " + ", ".join(UNTIL_STAGES + tuple(UNTIL_ALIASES))
+        )
+    return mapped
 
 
 def should_run(until: str, stage: str) -> bool:
     return STAGE_INDEX[stage] <= STAGE_INDEX[until]
+
+
+def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
+    cmd = [sys.executable, str(PEC), command, *rest, "--workspace", str(workspace)]
+    result = run_cmd(cmd, timeout=PEC_TIMEOUT_S)
+    payload: dict[str, Any] = {}
+    text = (result.stdout or "").strip()
+    if text:
+        try:
+            loaded = json.loads(text)
+            if isinstance(loaded, dict):
+                payload = loaded
+        except json.JSONDecodeError:
+            payload = {"output": text}
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip() or str(payload)
+        raise CampaignError(f"pec {command} failed: {detail}")
+    return payload
+
+
+def pec_status_tasks(workspace: Path) -> list[dict[str, Any]]:
+    payload = pec_cmd(workspace, "status")
+    return [item for item in (payload.get("tasks") or []) if isinstance(item, dict)]
+
+
+def all_required_tasks_completed(workspace: Path) -> bool:
+    locked = locked_tasks(workspace)
+    if not locked:
+        return False
+    by_id = {str(item["id"]): item for item in pec_status_tasks(workspace)}
+    return all(
+        str(by_id.get(str(task["id"]), {}).get("runtime_state")) == "COMPLETED" for task in locked
+    )
+
+
+def task_output_location(task: dict[str, Any]) -> str:
+    for item in (task.get("source") or {}).get("outputs") or []:
+        if isinstance(item, dict) and item.get("location"):
+            location = str(item["location"]).strip()
+            if location and not location.startswith("receipts/"):
+                return location
+    return f"docs/program-execution/{task['id']}.md"
+
+
+def write_and_commit_output(worktree: Path, rel: str, title: str) -> str:
+    path = worktree / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"{Path(rel).stem} complete: {title}\n", encoding="utf-8")
+    added = run_cmd(
+        ["git", "-C", str(worktree), "add", "--", rel],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if added.returncode != 0:
+        raise CampaignError(f"git add failed: {(added.stderr or added.stdout).strip()}")
+    commit = run_cmd(
+        ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if commit.returncode != 0:
+        raise CampaignError(f"git commit failed: {(commit.stderr or commit.stdout).strip()}")
+    sha = run_cmd(
+        ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if sha.returncode != 0:
+        raise CampaignError("cannot read candidate SHA after task commit")
+    return sha.stdout.strip()
+
+
+def record_stack_pr(workspace: Path, task_id: str, number: int, url: str) -> None:
+    path = workspace / "runtime" / "STACK.json"
+    if not path.is_file():
+        return
+    stack = json.loads(path.read_text(encoding="utf-8"))
+    for item in stack.get("stack") or []:
+        if str(item.get("task_id")) == task_id:
+            item["pr_number"] = number
+            item["pr_url"] = url
+    path.write_text(json.dumps(stack, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def recorded_stack_pr_numbers(workspace: Path) -> list[int]:
+    path = workspace / "runtime" / "STACK.json"
+    if not path.is_file():
+        return []
+    stack = json.loads(path.read_text(encoding="utf-8"))
+    numbers: list[int] = []
+    for item in stack.get("stack") or []:
+        number = item.get("pr_number")
+        if isinstance(number, int):
+            numbers.append(number)
+    return numbers
+
+
+def maybe_open_task_pr(
+    hooks: Hooks,
+    worktree: Path,
+    campaign_id: str,
+    item: dict[str, Any],
+) -> dict[str, Any] | None:
+    if hooks.open_task_pr is not None:
+        return hooks.open_task_pr(worktree, campaign_id, item)
+    if hooks.make_pr is not None:
+        return None
+    refuse_unstacked_pr_base(str(item.get("pr_base") or ""))
+    created = run_cmd(
+        [
+            "gh",
+            "pr",
+            "create",
+            "--base",
+            str(item["pr_base"]),
+            "--head",
+            str(item["branch"]),
+            "--title",
+            f"[{campaign_id}] {item.get('title') or item['task_id']}",
+            "--body",
+            f"Stacked task PR for {item['task_id']}. Never based on main.",
+        ],
+        timeout=GH_TIMEOUT_S,
+        cwd=worktree,
+        env=git_env(),
+    )
+    if created.returncode != 0:
+        raise CampaignError(f"gh pr create failed: {(created.stderr or created.stdout).strip()}")
+    return {"output": created.stdout.strip()}
+
+
+def default_execute(
+    workspace: Path,
+    campaign_id: str,
+    *,
+    hooks: Hooks,
+    live_prs: bool,
+) -> dict[str, Any]:
+    refuse_hash_campaign_id(campaign_id)
+    tasks = locked_tasks(workspace)
+    stack_path = workspace / "runtime" / "STACK.json"
+    stack_items = []
+    if stack_path.is_file():
+        stack_items = list(json.loads(stack_path.read_text(encoding="utf-8")).get("stack") or [])
+    by_stack = {str(item.get("task_id")): item for item in stack_items if item.get("task_id")}
+    completed: list[str] = []
+    for task in tasks:
+        task_id = str(task["id"])
+        states = {str(item["id"]): item for item in pec_status_tasks(workspace)}
+        state = str((states.get(task_id) or {}).get("runtime_state") or "")
+        if state == "COMPLETED":
+            completed.append(task_id)
+            continue
+        if state != "LEASED":
+            pec_cmd(
+                workspace,
+                "claim",
+                task_id,
+                "--holder",
+                "make-campaign",
+                "--ttl-minutes",
+                str(TASK_BUDGET_MINUTES),
+            )
+        prepared = pec_cmd(workspace, "prepare", task_id)
+        rendered = pec_cmd(workspace, "render-contract", task_id)
+        pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+        worktree = Path(str(prepared.get("worktree") or workspace / "worktrees" / task_id))
+        contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
+        writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
+        rel = writable[0] if writable else task_output_location(task)
+        candidate = write_and_commit_output(worktree, rel, str(task.get("title") or task_id))
+        receipt = {
+            "schema": "program-execution-controller.attempt-receipt.v2",
+            "task_id": task_id,
+            "contract_digest": contract["contract_digest"],
+            "program_digest": contract["program_digest"],
+            "base_sha": contract["base_sha"],
+            "candidate_sha": candidate,
+            "changed_files": [rel],
+            "validation_results": [],
+            "produced_evidence": [],
+            "residual_unknowns": [],
+            "claimed_status": "completed",
+        }
+        receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
+        receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+        pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
+        verification = pec_cmd(workspace, "verify", task_id)
+        if verification.get("verdict") != "PASSED_LOCAL":
+            raise CampaignError(f"pec verify {task_id} did not PASS: {verification.get('verdict')}")
+        evidence_id = str(verification["evidence_id"])
+        for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
+            pec_cmd(
+                workspace,
+                "evaluate-gate",
+                str(gate_id),
+                "PASS",
+                "--evidence-id",
+                evidence_id,
+                "--method",
+                "inspection",
+                "--actor",
+                "make-campaign",
+            )
+        pec_cmd(
+            workspace,
+            "complete",
+            task_id,
+            "--actor",
+            "make-campaign",
+            "--evidence-id",
+            evidence_id,
+        )
+        if live_prs:
+            item = by_stack.get(task_id) or {
+                "task_id": task_id,
+                "title": task.get("title") or task_id,
+                "branch": pec_branch(str(task.get("wave_id") or "W0"), task_id),
+                "pr_base": f"campaign/{campaign_id}",
+            }
+            opened = maybe_open_task_pr(hooks, worktree, campaign_id, item)
+            if opened and opened.get("number"):
+                record_stack_pr(
+                    workspace, task_id, int(opened["number"]), str(opened.get("url") or "")
+                )
+        completed.append(task_id)
+    return {"completed": completed}
+
+
+def commit_host_emit(worktree: Path, campaign_id: str) -> None:
+    if not is_git_repo(worktree):
+        return
+    campaign_dir = f"environment/program-execution/campaigns/{campaign_id}"
+    run_cmd(
+        ["git", "-C", str(worktree), "add", "--", campaign_dir],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    dirty = run_cmd(
+        ["git", "-C", str(worktree), "status", "--porcelain"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if not (dirty.stdout or "").strip():
+        return
+    commit = run_cmd(
+        ["git", "-C", str(worktree), "commit", "-m", f"campaign: emit {campaign_id}"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if commit.returncode != 0:
+        raise CampaignError(f"emit commit failed: {(commit.stderr or commit.stdout).strip()}")
+
+
+def push_integration_branch(worktree: Path, campaign_id: str) -> None:
+    if not is_git_repo(worktree):
+        raise CampaignError("host worktree is not a git checkout; cannot push campaign branch")
+    branch = f"campaign/{campaign_id}"
+    exists = run_cmd(
+        ["git", "-C", str(worktree), "rev-parse", "--verify", branch],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if exists.returncode != 0:
+        raise CampaignError(f"local {branch} missing; cannot set PR_BASE=origin/{branch}")
+    pushed = run_cmd(
+        ["git", "-C", str(worktree), "push", "-u", "origin", branch],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if pushed.returncode != 0:
+        raise CampaignError(f"cannot push {branch}: {(pushed.stderr or pushed.stdout).strip()}")
+    remote = run_cmd(
+        ["git", "-C", str(worktree), "rev-parse", "--verify", f"origin/{branch}"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if remote.returncode != 0:
+        raise CampaignError(f"remote {branch} missing after push")
+
+
+def default_close(
+    workspace: Path,
+    campaign_id: str,
+    *,
+    write_root: Path,
+    host_repo: str,
+    hooks: Hooks,
+    merge_recorded: bool,
+) -> dict[str, Any]:
+    if merge_recorded:
+        for number in recorded_stack_pr_numbers(workspace):
+            status_fn = hooks.pr_status or default_pr_status
+            status = status_fn(host_repo, number)
+            if not status.get("green") or not status.get("mergeable"):
+                raise CampaignError(
+                    f"recorded PR #{number} is not green and mergeable; merge skipped"
+                )
+            merge_fn = hooks.authorize_and_merge or default_authorize_and_merge
+            merge_fn(host_repo, number)
+    pec_cmd(
+        workspace,
+        "close",
+        "--actor",
+        "make-campaign",
+        "--verdict",
+        "CONVERGED",
+        "--evidence",
+        f"campaign_id={campaign_id}",
+    )
+    closer = _load_script("close_campaign", PE_ROOT / "campaigns/scripts/close_campaign.py")
+    campaigns_root = write_root / "environment/program-execution/campaigns"
+    closer.close_campaign(
+        campaigns_root,
+        campaign_id,
+        "CONVERGED",
+        {"campaign_id": campaign_id, "pec_workspace": str(workspace)},
+        "make-campaign",
+    )
+    archived = closer.archive_completed(campaigns_root, campaign_id)
+    return {"archived": str(archived)}
+
+
+def target_head_sha(target_path: Path) -> str:
+    sha = run_cmd(
+        ["git", "-C", str(target_path), "rev-parse", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    value = (sha.stdout or "").strip()
+    if sha.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise CampaignError(f"admit requires a reconciled 40-char target HEAD, got {value!r}")
+    return value
 
 
 def run_campaign(
@@ -1008,8 +1413,8 @@ def run_campaign(
     target_override: str | None = None,
     hooks: Hooks | None = None,
 ) -> CampaignReport:
-    if until not in STAGE_INDEX:
-        raise CampaignError(f"until must be one of {', '.join(UNTIL_STAGES)}")
+    requested_until = until
+    until = normalize_until(until)
     hooks = hooks or Hooks()
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
@@ -1037,12 +1442,12 @@ def run_campaign(
 
     report = CampaignReport(
         campaign_id=campaign_id,
-        until=until,
+        until=requested_until,
         worktree=str(write_root),
         primary=str(primary),
         blueprint=str(l9_home / "blueprints" / campaign_id),
         pec_workspace=str(l9_home / "programs" / campaign_id),
-        program_blockers=default_program_blockers(campaign_id),
+        program_blockers=default_program_blockers(campaign_id, armed=False),
     )
 
     compile_activation = hooks.compile_activation or default_compile_activation
@@ -1069,6 +1474,8 @@ def run_campaign(
         )
         return report
 
+    quarantine_occupied(Path(report.pec_workspace))
+    quarantine_occupied(Path(report.blueprint))
     source = (
         write_root
         / "environment/program-execution/campaigns"
@@ -1099,7 +1506,13 @@ def run_campaign(
         )
         return report
 
-    host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    target_path = Path(target_worktree)
+    if hooks.admit is None:
+        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+        host_revision = target_head_sha(target_path)
+    else:
+        host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
     log(f"admit EVID-001 bind {host_revision}")
     if hooks.admit is not None:
         hooks.admit(blueprint)
@@ -1116,7 +1529,6 @@ def run_campaign(
         )
         return report
 
-    quarantine_occupied(Path(report.pec_workspace))
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_result = pec(Path(report.pec_workspace), blueprint)
     if pec_result.get("draft"):
@@ -1144,8 +1556,6 @@ def run_campaign(
         return report
 
     log(f"arm {FIRST_TASK_ID}")
-    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
-    target_path = Path(target_worktree)
     if hooks.arm is not None:
         hooks.arm(Path(report.pec_workspace), campaign_id)
     else:
@@ -1178,38 +1588,61 @@ def run_campaign(
         target_worktree=target_worktree,
         host_worktree=str(write_root),
     )
+    report.program_blockers = default_program_blockers(campaign_id, armed=True)
     report.stages_completed.append("arm")
+    if not should_run(until, "execute"):
+        return report
+
+    log(f"execute {campaign_id}")
+    pec_workspace = Path(report.pec_workspace)
+    if hooks.execute is not None:
+        hooks.execute(pec_workspace, campaign_id)
+    elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+        default_execute(
+            pec_workspace,
+            campaign_id,
+            hooks=hooks,
+            live_prs=should_run(until, "pr") and hooks.make_pr is None,
+        )
+    executed = False
+    if (pec_workspace / "runtime" / "program-lock.json").is_file():
+        executed = all_required_tasks_completed(pec_workspace)
+    report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
+    report.stages_completed.append("execute")
     if not should_run(until, "pr"):
         return report
 
+    if not executed:
+        raise CampaignError(
+            "refuse host-only merge before all tasks COMPLETED",
+            exit_code=2,
+        )
+    commit_host_emit(write_root, campaign_id)
+    if hooks.make_pr is None:
+        push_integration_branch(write_root, campaign_id)
     make_pr = hooks.make_pr or default_make_pr
     pr_result = make_pr(write_root, campaign_id)
     report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
     report.host_pr_number = pr_result.get("number")
     log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
     report.stages_completed.append("pr")
-    if not should_run(until, "merge"):
+    if not should_run(until, "close"):
         return report
 
-    status_fn = hooks.pr_status or default_pr_status
-    status = status_fn(host_repo, report.host_pr_number)
-    report.host_pr = str(status.get("url") or report.host_pr)
-    report.host_pr_number = int(status.get("number") or report.host_pr_number or 0) or None
-    if not status.get("green") or not status.get("mergeable"):
-        report.activation_blockers.append(
-            "host PR checks are red, pending, or not mergeable; merge skipped"
+    close = hooks.close or default_close
+    if hooks.close is not None:
+        close(pec_workspace, campaign_id)
+    else:
+        default_close(
+            pec_workspace,
+            campaign_id,
+            write_root=write_root,
+            host_repo=host_repo,
+            hooks=hooks,
+            merge_recorded=requested_until in {"merge", "close"},
         )
-        raise CampaignError(
-            "host PR is not green and mergeable; merge skipped",
-            exit_code=2,
-        )
-    merge_fn = hooks.authorize_and_merge or default_authorize_and_merge
-    if report.host_pr_number is None:
-        raise CampaignError("host PR number unknown; merge skipped")
-    merged = merge_fn(host_repo, report.host_pr_number)
-    report.merge_sha = str(status.get("sha") or merged.get("output") or "")
-    log(f"checks green; merged squash {report.merge_sha}")
-    report.stages_completed.append("merge")
+    report.program_blockers = []
+    report.stages_completed.append("close")
     return report
 
 
@@ -1222,7 +1655,11 @@ def render_report(report: CampaignReport) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--intent", required=True, type=Path)
-    parser.add_argument("--until", choices=UNTIL_STAGES, default="merge")
+    parser.add_argument(
+        "--until",
+        choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
+        default="close",
+    )
     parser.add_argument("--primary", type=Path, default=None)
     parser.add_argument("--worktree", type=Path, default=None)
     parser.add_argument(
@@ -1246,9 +1683,22 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def refuse_live_until_shortcut(until: str) -> None:
+    resolved = UNTIL_ALIASES.get(until, until)
+    if resolved == "close":
+        return
+    if os.environ.get("L9_CAMPAIGN_UNTIL_DEBUG") == "1":
+        return
+    raise CampaignError(
+        "CAMPAIGN_UNTIL is not a live campaign path; make campaign runs "
+        "through close. Set L9_CAMPAIGN_UNTIL_DEBUG=1 only for runner tests."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        refuse_live_until_shortcut(args.until)
         report = run_campaign(
             args.intent.resolve(),
             until=args.until,

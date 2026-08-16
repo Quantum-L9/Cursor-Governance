@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from close_campaign import close_campaign, next_campaign
+from close_campaign import archive_completed, close_campaign, next_campaign
 
 
 class CloseCampaignTest(unittest.TestCase):
@@ -30,6 +30,24 @@ class CloseCampaignTest(unittest.TestCase):
             )
             self.assertEqual(closed["lifecycle"], "complete")
             self.assertTrue((root / "alpha" / "handoff" / "CLOSEOUT.yaml").is_file())
+            self.assertEqual(next_campaign(root)["id"], "beta")
+
+    def test_archive_moves_to_completed_and_next_skips(self) -> None:
+        with TemporaryDirectory() as raw:
+            root = self._root(Path(raw))
+            (root / "alpha").mkdir()
+            (root / "alpha" / "CAMPAIGN_SOURCE.yaml").write_text("schema: x\n", encoding="utf-8")
+            close_campaign(
+                root,
+                "alpha",
+                "CONVERGED",
+                {"pull_request": "https://example.test/1"},
+                "AUTH-001",
+            )
+            archived = archive_completed(root, "alpha")
+            self.assertEqual(archived, root / "COMPLETED" / "alpha")
+            self.assertFalse((root / "alpha").exists())
+            self.assertTrue((archived / "CAMPAIGN_SOURCE.yaml").is_file())
             self.assertEqual(next_campaign(root)["id"], "beta")
 
 

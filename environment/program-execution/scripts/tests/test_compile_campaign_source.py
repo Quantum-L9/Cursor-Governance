@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -141,6 +142,8 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertTrue((target / "ACCEPTANCE_RECEIPT.yaml").is_file())
 
             workspace = tmp / "runtime"
+            pec_env = os.environ.copy()
+            pec_env.setdefault("L9_ALLOW_PEC_DIRECT", "1")
             subprocess.run(
                 [
                     sys.executable,
@@ -154,6 +157,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                env=pec_env,
             )
             validated = subprocess.run(
                 [sys.executable, str(PEC_CLI), "validate", "--workspace", str(workspace)],

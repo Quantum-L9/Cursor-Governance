@@ -527,6 +527,42 @@
       },
       {
         "hint_allowed": true,
+        "id": "pe_campaign_activate",
+        "negative_signals": [
+          "bounded autonomy",
+          "background pr poll",
+          "/autonomy",
+          "campaign authorization"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Recommendation names make campaign INTENT=; it does not grant pec, compile, or merge authority. Invoking the skill is merge authority for that one campaign after the runner reaches close.\n",
+        "positive_signals": [
+          "make campaign",
+          "make campaign INTENT",
+          "activate a campaign",
+          "run a pe campaign",
+          "campaign INTENT",
+          "take this brief through completed",
+          "/l9-pe-campaign-activate",
+          "compile campaign source"
+        ],
+        "primary": "l9-pe-campaign-activate",
+        "required_any": [
+          "make campaign",
+          "campaign INTENT",
+          "activate a campaign",
+          "activate the campaign",
+          "activate campaign",
+          "pe campaign",
+          "/l9-pe-campaign-activate",
+          "compile campaign source"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "hint_allowed": true,
         "id": "ui_operator",
         "note": "explicit_only + hint_allowed \u2014 Read/attach only; human approve required for console.py --mode run. Recommendation grants no mutation authority.\n",
         "positive_signals": [
@@ -954,12 +990,12 @@
     },
     {
       "composition_role": "general",
-      "description": "compile only the files required to activate a program execution campaign, run the pe compile/bootstrap/execute pipeline with maximum autonomy, remediate the campaign pr, and merge after remediation is complete. use when the user asks to activate a campaign, compile campaign source, emit campaign seeds, or run a pe campaign through compile, bootstrap, pr, remediate, and merge.",
+      "description": "invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
-      "reason": "compiles the minimum PE campaign file set and runs compile/bootstrap/PR through make pr to green + merge-ready \u2014 high blast radius, explicit only; invoking the skill is merge authority for that one campaign PR after remediation is complete. Fleet merge of other open PRs is /l9-pr-remediation.",
+      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1152,6 +1188,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "3778cde8edb9016341fef8e63dcf8128ff2b0dc023f663c0526fc311819795ed",
-  "source_skill_corpus_sha256": "359705c5ebf6e26d3a13cb9a4563c46eb63b1f1a5e51aa3c2f8833c0d9643751"
+  "source_manifest_sha256": "653f3e203c26c8dbdddb9a9cbfeec55aa18819f5f18553094a378ce8af8d3a1b",
+  "source_skill_corpus_sha256": "73f461d728336a58566da9bb1bdbf504edbefc6e28864dad538256a4a9260fbb"
 }
