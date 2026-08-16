@@ -28,9 +28,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import urllib.error
 import urllib.parse
-import sys
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
@@ -103,7 +103,7 @@ class BrokerTransport:
 
     CAPABILITY = "sonar.read_issues"
 
-    def __init__(self, client: "CapabilityClient") -> None:
+    def __init__(self, client: CapabilityClient) -> None:
         self.client = client
 
     @property
@@ -123,7 +123,9 @@ class BrokerTransport:
             raise SystemExit(f"BLOCKED: brokered SonarCloud {path} failed: {exc}") from exc
 
 
-def build_transport(base_url: str, surface: str | None = None) -> DirectTransport | BrokerTransport:
+def build_transport(
+    base_url: str, surface: str | None = None
+) -> DirectTransport | BrokerTransport:
     """Pick the transport from the caller's trust class, not from a flag.
 
     A model-controlled surface gets the broker or nothing. It never falls back to
@@ -185,7 +187,7 @@ def _scope_params(branch: str | None, pull_request: str | None) -> dict[str, str
 
 
 def fetch_issues(
-    transport: "DirectTransport | BrokerTransport",
+    transport: DirectTransport | BrokerTransport,
     project: str,
     organization: str,
     scope: dict[str, str],
@@ -213,7 +215,7 @@ def fetch_issues(
 
 
 def fetch_rules(
-    transport: "DirectTransport | BrokerTransport", rule_keys: list[str], organization: str
+    transport: DirectTransport | BrokerTransport, rule_keys: list[str], organization: str
 ) -> dict:
     rules: dict[str, dict] = {}
     for rule_key in sorted(set(rule_keys)):
@@ -309,7 +311,7 @@ def main() -> int:
     print(
         f"snapshot: {output_path} status={snapshot['status']} "
         f"issues={issues_result['retrieved']}/{issues_result['total']} "
-        f"rules={len(rules)} authenticated={bool(token)}"
+        f"rules={len(rules)} authenticated={transport.authenticated}"
     )
     if not issues_result["complete"]:
         print("BLOCKED: incomplete pagination — retrieved count does not equal API total")

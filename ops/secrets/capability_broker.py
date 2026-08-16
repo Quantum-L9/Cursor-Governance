@@ -56,10 +56,11 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
@@ -267,7 +268,9 @@ class SecretProvider:
             with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
                 payload = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError) as exc:
-            raise BrokerError(503, f"secret resolution failed for a registered ref: {type(exc).__name__}") from exc
+            raise BrokerError(
+                503, f"secret resolution failed for a registered ref: {type(exc).__name__}"
+            ) from exc
         value = (payload.get("secret") or {}).get("secretValue")
         if not value:
             raise BrokerError(503, "registered ref resolved empty")
@@ -365,7 +368,8 @@ def _semgrep_findings(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _mcp_envelope(payload: dict[str, Any]) -> dict[str, Any]:
     """MCP responses pass through by shape, with auth-bearing envelope keys dropped."""
-    return {key: value for key, value in payload.items() if key in ("jsonrpc", "id", "result", "error")}
+    allowed = ("jsonrpc", "id", "result", "error")
+    return {key: value for key, value in payload.items() if key in allowed}
 
 
 def _github_pr_view(payload: Any) -> Any:
@@ -418,7 +422,7 @@ class Broker:
         self.identity = workload_identity(self.env)
         self.expected_org = (self.env.get("L9_BROKER_EXPECTED_ORG") or "").strip() or None
         self.jwks = broker_identity.JWKSCache(
-            (self.env.get("L9_BROKER_JWKS_URL") or broker_identity.DEFAULT_JWKS_URL)
+            self.env.get("L9_BROKER_JWKS_URL") or broker_identity.DEFAULT_JWKS_URL
         )
         self._provider: SecretProvider | None = None
         self.audit: list[dict[str, Any]] = []
@@ -483,7 +487,13 @@ class Broker:
             raise BrokerError(502, "upstream response exceeded the declared limit")
         return scrub(spec, json.loads(raw.decode("utf-8")), values)
 
-    def _record(self, claims: broker_identity.SessionClaims, capability: str, decision: str, detail: str) -> None:
+    def _record(
+        self,
+        claims: broker_identity.SessionClaims,
+        capability: str,
+        decision: str,
+        detail: str,
+    ) -> None:
         """Audit exactly what contract §5 lists. The assertion itself is never stored."""
         entry = dict(claims.audit_record())
         entry.update(
@@ -537,7 +547,9 @@ class _Handler(BaseHTTPRequestHandler):
         sys.stderr.write(f"broker {self.address_string()} {fmt % args}\n")
 
 
-def preflight(audience: str | None, env: dict[str, str] | None = None) -> tuple[int, dict[str, Any]]:
+def preflight(
+    audience: str | None, env: dict[str, str] | None = None
+) -> tuple[int, dict[str, Any]]:
     """Report posture without serving. Used by tests and by operators."""
     source = os.environ if env is None else env
     posture = boundary_posture(source)

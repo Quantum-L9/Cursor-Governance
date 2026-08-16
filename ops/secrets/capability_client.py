@@ -176,7 +176,9 @@ class CapabilityClient:
         ok, detail = self._probe()
         if not ok:
             return CapabilityStatus(capability, DEGRADED, detail)
-        return CapabilityStatus(capability, ENABLED, f"broker {self.url} via {self.identity.method}")
+        return CapabilityStatus(
+            capability, ENABLED, f"broker {self.url} via {self.identity.method}"
+        )
 
     def _probe(self) -> tuple[bool, str]:
         """Ask the broker whether it is alive. Returns no secret-derived data."""
@@ -227,7 +229,9 @@ class CapabilityClient:
             detail = exc.read().decode("utf-8", "replace")[:400]
             raise RuntimeError(f"broker denied '{capability}' (HTTP {exc.code}): {detail}") from exc
         except (urllib.error.URLError, OSError, TimeoutError) as exc:
-            raise RuntimeError(f"broker unreachable for '{capability}': {type(exc).__name__}") from exc
+            raise RuntimeError(
+                f"broker unreachable for '{capability}': {type(exc).__name__}"
+            ) from exc
 
         if len(body) > spec.max_response_bytes:
             raise RuntimeError(f"broker response for '{capability}' exceeded declared limit")

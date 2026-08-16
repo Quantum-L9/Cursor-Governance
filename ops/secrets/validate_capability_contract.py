@@ -126,7 +126,8 @@ def _skip(path: Path) -> bool:
 def scan_env_examples(repo: Path) -> list[Violation]:
     """Rule 1 — no credential assignments in any adapter environment example."""
     violations: list[Violation] = []
-    for path in sorted((repo / "environment" / "agents" / "adapters").rglob("*environment.env.example")):
+    adapters = repo / "environment" / "agents" / "adapters"
+    for path in sorted(adapters.rglob("*environment.env.example")):
         if _skip(path.relative_to(repo)):
             continue
         rel = str(path.relative_to(repo))
