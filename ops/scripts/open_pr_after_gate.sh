@@ -105,8 +105,56 @@ fi
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
 git push -u origin HEAD
 
+# `gh pr view/create/repo view --json` go through GitHub's GraphQL endpoint,
+# which some environments do not serve (restricted proxies, REST-scoped tokens).
+# `make pr` is the ONLY sanctioned publish path, so it must not depend on an
+# endpoint that can be switched off — every GraphQL call below keeps a REST
+# fallback via `gh api repos/...`. GraphQL stays primary so behaviour is
+# unchanged wherever it works.
+resolve_repo_slug() {
+  local slug url
+  slug="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || true)"
+  if [[ -n "$slug" ]]; then
+    printf '%s' "$slug"
+    return 0
+  fi
+  url="$(git remote get-url origin 2>/dev/null || true)"
+  url="${url%.git}"
+  case "$url" in
+    git@*:*) printf '%s' "${url#*:}" ;;
+    http://*|https://*) printf '%s' "$url" | sed -E 's#^https?://[^/]+/##' ;;
+    *) printf '' ;;
+  esac
+}
+
+# Read a field out of a GitHub REST pull-request payload on stdin. `[]` (no
+# open PR for this head) yields an empty string rather than an error.
+_pr_field() {
+  python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except (json.JSONDecodeError, ValueError):
+    sys.exit(0)
+if isinstance(data, list):
+    data = data[0] if data else {}
+value = data.get(sys.argv[1], "") if isinstance(data, dict) else ""
+print(value if value is not None else "")
+' "$1" 2>/dev/null || true
+}
+
+repo="$(resolve_repo_slug)"
+owner="${repo%/*}"
+name="${repo#*/}"
+
 pr_url="$(gh pr view --json url -q .url 2>/dev/null || true)"
 pr_number="$(gh pr view --json number -q .number 2>/dev/null || true)"
+
+if [[ -z "$pr_url" && -n "$owner" && -n "$name" ]]; then
+  _existing="$(gh api "repos/${owner}/${name}/pulls?head=${owner}:${branch}&state=open" 2>/dev/null || true)"
+  pr_url="$(printf '%s' "$_existing" | _pr_field html_url)"
+  pr_number="$(printf '%s' "$_existing" | _pr_field number)"
+fi
 
 if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   title="$(git log "${PR_BASE}..HEAD" --format='%s' --reverse | head -1)"
@@ -179,16 +227,36 @@ EOF
   # branch" in worktree/CI contexts where upstream tracking is not visible
   # (2026-08-15 factory repair).
   head_branch="$(git rev-parse --abbrev-ref HEAD)"
-  pr_url="$(gh pr create --head "$head_branch" --base "$BASE_REF" --title "$title" --body "$body")"
-  pr_number="$(gh pr view --json number -q .number)"
+  if pr_url="$(gh pr create --head "$head_branch" --base "$BASE_REF" \
+      --title "$title" --body "$body" 2>/dev/null)" && [[ -n "$pr_url" ]]; then
+    pr_number="$(gh pr view --json number -q .number 2>/dev/null || true)"
+  else
+    # GraphQL unavailable — open the PR over REST instead of failing the gate.
+    if [[ -z "$owner" || -z "$name" ]]; then
+      echo "ERROR: cannot resolve owner/repo to open a PR over REST" >&2
+      exit 1
+    fi
+    echo "NOTE: gh pr create unavailable; opening via REST repos/${owner}/${name}/pulls"
+    _created="$(gh api -X POST "repos/${owner}/${name}/pulls" \
+      -f title="$title" -f head="$head_branch" -f base="$BASE_REF" -f body="$body" \
+      2>/dev/null || true)"
+    pr_url="$(printf '%s' "$_created" | _pr_field html_url)"
+    pr_number="$(printf '%s' "$_created" | _pr_field number)"
+    if [[ -z "$pr_url" ]]; then
+      echo "ERROR: PR creation failed over both GraphQL and REST" >&2
+      exit 1
+    fi
+  fi
   echo "Opened: $pr_url"
 else
   echo "PR already open: $pr_url"
 fi
 
-repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
-owner="${repo%/*}"
-name="${repo#*/}"
+# owner/name already resolved above via resolve_repo_slug (GraphQL, then remote).
+if [[ -z "$owner" || -z "$name" ]]; then
+  echo "WARN: could not resolve owner/repo — skipping PR subscription"
+  exit 0
+fi
 
 echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
 if gh api -X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription" \
