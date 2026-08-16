@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Compatibility wrapper — SSOT is ops/autonomy/authorize_merge.py.
 
-Campaigns themselves do not merge. Invoking /l9-pr-remediation writes a
-repo-scoped receipt and then merges every green, mergeable open PR.
+This skill authorizes merge of one campaign PR. Invoking /l9-pr-remediation
+writes a repo-scoped receipt (`pr: "*"`) for every green, mergeable open PR.
 """
 
 from __future__ import annotations

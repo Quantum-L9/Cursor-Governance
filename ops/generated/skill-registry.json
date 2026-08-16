@@ -954,12 +954,12 @@
     },
     {
       "composition_role": "general",
-      "description": "activate a program execution campaign through make pr to a green merge-ready campaign PR. merge is not this skill \u2014 invoke /l9-pr-remediation after the campaign if PRs are still open.",
+      "description": "compile only the files required to activate a program execution campaign, run the pe compile/bootstrap/execute pipeline with maximum autonomy, remediate the campaign pr, and merge after remediation is complete. use when the user asks to activate a campaign, compile campaign source, emit campaign seeds, or run a pe campaign through compile, bootstrap, pr, remediate, and merge.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
-      "reason": "Campaign compile/activate through make pr to green + merge-ready. Does not merge; /l9-pr-remediation is the merge path.",
+      "reason": "compiles the minimum PE campaign file set and runs compile/bootstrap/PR through make pr to green + merge-ready \u2014 high blast radius, explicit only; invoking the skill is merge authority for that one campaign PR after remediation is complete. Fleet merge of other open PRs is /l9-pr-remediation.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1152,6 +1152,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "ed77073b0405194be0958d9ba4656059ad5b75c0d0de2f05b8b6b36e943723f3",
-  "source_skill_corpus_sha256": "a6e7639571db805d41fca91c1887d28778f26e7292ae98c8f9d9d74cbab08881"
+  "source_manifest_sha256": "3778cde8edb9016341fef8e63dcf8128ff2b0dc023f663c0526fc311819795ed",
+  "source_skill_corpus_sha256": "87e0d53d734fda81ab7fdd339ed1d052c14ec24170029876da9f37f11d83caea"
 }

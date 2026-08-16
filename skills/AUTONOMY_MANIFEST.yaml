@@ -98,14 +98,16 @@ tiers:
       remediates all open PRs in the target repo to green + mergeable and
       then merges them (ordinary squash). Campaigns/make pr stay no-merge.
       Force-push and admin-merge stay forbidden.
-  - skill: l9-pe-campaign-activate
-    reason: >-
-      Campaign compile/activate through make pr to green + merge-ready.
-      Does not merge; /l9-pr-remediation is the merge path.
   - skill: l9-issue-remediation
     reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
   - skill: l9-bounded-autonomy
     reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
+  - skill: l9-pe-campaign-activate
+    reason: >-
+      compiles the minimum PE campaign file set and runs compile/bootstrap/PR
+      through make pr to green + merge-ready — high blast radius, explicit only;
+      invoking the skill is merge authority for that one campaign PR after
+      remediation is complete. Fleet merge of other open PRs is /l9-pr-remediation.
   - skill: l9-cli-optimization
     reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
   - skill: l9-e2e-blocker-resolution

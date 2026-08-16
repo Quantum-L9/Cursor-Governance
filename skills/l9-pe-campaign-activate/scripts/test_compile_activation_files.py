@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""Tests for the PE campaign activation compiler.
+
+Metadata:
+  parent: l9-pe-campaign-activate
+  layer: script
+  role: test
+  version: 1.0.0
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from authorize_campaign_merge import write_authorization  # noqa: E402
+from compile_activation_files import (  # noqa: E402
+    ALLOWED_CAMPAIGN_FILES,
+    FORBIDDEN_CAMPAIGN_FILES,
+    CompileError,
+    compile_activation,
+    dump_yaml,
+)
+
+HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
+schema_version: 1.0.0
+campaign_ids:
+  - bounded-replanning-v1
+"""
+
+HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
+campaigns:
+  - id: bounded-replanning-v1
+    integration_branch: campaign/bounded-replanning-v1
+    pr_base: campaign/bounded-replanning-v1
+    execute_order: 1
+    lane: pe_host
+
+owner:
+  authority_id: AUTH-001
+"""
+
+HOST_PROFILE = """campaign_execution:
+  merge: forbidden
+  campaigns:
+    bounded-replanning-v1:
+      integration_branch: campaign/bounded-replanning-v1
+
+authority_order:
+  - CANONICAL_LAW.campaign_execution_pr_no_merge
+"""
+
+HOST_STATUS = """schema: l9.program-execution.campaign-status-ledger.v1
+updated: "2026-08-15T00:00:00Z"
+campaigns:
+  - id: bounded-replanning-v1
+    lifecycle: complete
+"""
+
+INTENT = {
+    "campaign_id": "demo-activate-v1",
+    "title": "Demo Activate",
+    "objective": "Activate a proper PE campaign from the minimum file set.",
+    "tasks": [
+        {"title": "Lock current state", "objective": "Record baseline."},
+        {"title": "Implement change", "objective": "Edit declared paths only."},
+    ],
+}
+
+
+def _repo(tmp: Path) -> Path:
+    (tmp / "environment/program-execution/campaigns").mkdir(parents=True)
+    (tmp / "ops/autonomy").mkdir(parents=True)
+    (tmp / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml").write_text(
+        HOST_ALLOWLIST, encoding="utf-8"
+    )
+    (tmp / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml").write_text(
+        HOST_POLICY, encoding="utf-8"
+    )
+    (tmp / "ops/autonomy/surface_profile.yaml").write_text(HOST_PROFILE, encoding="utf-8")
+    (tmp / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").write_text(
+        HOST_STATUS, encoding="utf-8"
+    )
+    intent = tmp / "intent.yaml"
+    dump_yaml(intent, INTENT)
+    return tmp
+
+
+class CompileActivationTests(unittest.TestCase):
+    def test_emits_only_allowed_campaign_files(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            result = compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            campaign_dir = root / "environment/program-execution/campaigns/demo-activate-v1"
+            names = {path.name for path in campaign_dir.iterdir() if path.is_file()}
+            self.assertEqual(names, ALLOWED_CAMPAIGN_FILES)
+            self.assertTrue(FORBIDDEN_CAMPAIGN_FILES.isdisjoint(names))
+            self.assertEqual(
+                result["wrote"],
+                [
+                    "environment/program-execution/campaigns/demo-activate-v1/CAMPAIGN_SOURCE.yaml",
+                    "environment/program-execution/campaigns/demo-activate-v1/source-integrity-receipt.json",
+                ],
+            )
+            self.assertEqual(
+                set(result["patched"]),
+                {
+                    "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
+                    "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+                    "ops/autonomy/surface_profile.yaml",
+                    "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml",
+                },
+            )
+
+    def test_source_is_schema_and_compiler_admissible(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            source_path = (
+                root
+                / "environment/program-execution/campaigns/demo-activate-v1/CAMPAIGN_SOURCE.yaml"
+            )
+            pe_root = Path(__file__).resolve().parents[3] / "environment" / "program-execution"
+            sys.path.insert(0, str(pe_root / "scripts"))
+            from compile_campaign_source import (  # noqa: PLC0415
+                _semantic_precheck,
+                load_yaml,
+                validate_campaign_source,
+            )
+
+            src = load_yaml(source_path)
+            self.assertEqual(validate_campaign_source(src), [])
+            self.assertEqual(_semantic_precheck(src), [])
+            self.assertEqual(src["metadata"]["status"], "operator_intake")
+            self.assertEqual(src["program"]["definition_status"], "draft")
+            receipt = json.loads(
+                source_path.with_name("source-integrity-receipt.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(receipt["digest_matches_pack"])
+            self.assertEqual(receipt["bytes"], source_path.stat().st_size)
+
+    def test_idempotent_host_patches(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            second = compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            self.assertEqual(second["patched"], [])
+            allow = (
+                root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
+            ).read_text(encoding="utf-8")
+            self.assertEqual(allow.count("demo-activate-v1"), 1)
+
+    def test_rejects_bad_id(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            dump_yaml(root / "intent.yaml", {**INTENT, "campaign_id": "Bad_ID"})
+            with self.assertRaises(CompileError):
+                compile_activation(root / "intent.yaml", root)
+
+    def test_rejects_forbidden_extra(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            extra = root / "environment/program-execution/campaigns/demo-activate-v1/README.md"
+            extra.write_text("nope\n", encoding="utf-8")
+            with self.assertRaises(CompileError):
+                compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+
+
+class AuthorizeMergeTests(unittest.TestCase):
+    def test_writes_scoped_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "merge-authorization.json"
+            entry = write_authorization(
+                repo="Quantum-L9/Cursor-Governance",
+                pr="42",
+                reason="l9-pe-campaign-activate remediation complete",
+                path=path,
+                now=1_000_000,
+                ttl_seconds=100,
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(entry["pr"], 42)
+            self.assertEqual(entry["expires_at"], 1_000_100)
+            self.assertEqual(len(payload["authorizations"]), 1)
+
+    def test_replaces_same_pr(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "merge-authorization.json"
+            write_authorization(
+                repo="Quantum-L9/Cursor-Governance",
+                pr="42",
+                reason="first",
+                path=path,
+                now=1,
+            )
+            write_authorization(
+                repo="Quantum-L9/Cursor-Governance",
+                pr="42",
+                reason="second",
+                path=path,
+                now=2,
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(len(payload["authorizations"]), 1)
+            self.assertEqual(payload["authorizations"][0]["reason"], "second")
+
+
+if __name__ == "__main__":
+    raise SystemExit(unittest.main())
