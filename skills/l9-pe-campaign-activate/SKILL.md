@@ -55,34 +55,22 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 
 ## Compact Workflow
 
-1. Take a memo `.md` or activate YAML
-   ([references/source-contract.md](references/source-contract.md)).
-   `make campaign INTENT=<file>` assigns the id from a memo filename.
-2. Open an exclusive worktree from `origin/main`. Do not mutate a dirty shared clone.
-3. Emit the file set:
+1. One command. No other front door.
 
    ```bash
-   python3 skills/l9-pe-campaign-activate/scripts/compile_activation_files.py \
-     --intent <intent.yaml> --repo-root "$(pwd)"
+   make -C "$HOME/.cursor-governance" campaign INTENT=/path/to/brief.md
    ```
 
-4. Run the PE pipeline in [references/pipeline.md](references/pipeline.md):
-   allowlist compile → template validate → pec bootstrap (draft-honest) →
-   L4 execute ready tasks → kernels → `authorize-release`.
-5. Publish: `PR_BASE=origin/campaign/<id> make pr`.
-6. Converge that PR with `l9-pr-remediation` until required checks are green
-   and the PR is mergeable.
-7. Authorize and merge **that PR only**
-   ([references/merge-authority.md](references/merge-authority.md)):
-
-   ```bash
-   python3 skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py \
-     --repo <owner/repo> --pr <n> \
-     --reason "l9-pe-campaign-activate remediation complete"
-   gh pr merge <n> --squash --delete-branch
-   ```
-
-8. Close the live ledger: `pec close` and
+   That runner assigns the id, emits the file set, collects EVID-001, accepts
+   the blueprint, bootstraps pec **without** `--admission-draft`, drafts and
+   claims TASK-001, then opens/merges the host PR when green.
+2. Execute **only** the claimed TASK-001 on the worktree in
+   `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`. Do not attach to `pe-<hash>`.
+3. Converge the campaign PR with `l9-pr-remediation` until required checks are
+   green and the PR is mergeable.
+4. Authorize and merge **that PR only**
+   ([references/merge-authority.md](references/merge-authority.md)).
+5. Close the live ledger: `pec close` and
    `python3 environment/program-execution/campaigns/scripts/close_campaign.py close`.
 
 ## MUST
@@ -98,7 +86,9 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 ## MUST NOT
 
 - Emit README, handoff receipts, `INTENT.yaml`, contract/program prose, or alignment YAML
+- Run `program-execution intent` or bootstrap a `pe-<hash>` workspace
 - Mix this campaign onto another feature branch or the primary dirty clone
+- Use `pec --admission-draft` as a live campaign path
 - Force-push, admin-merge, hard-reset, or merge a different PR
 - Set `program.definition_status: accepted` without evidence
 - Weaken tests, skip hooks, or rewrite `CAMPAIGN_SOURCE.yaml` after the receipt is bound

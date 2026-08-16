@@ -24,9 +24,11 @@ then `-v2` on collision). You do not write a campaign id or a PE schema.
 The brief compiler (`scripts/compile_brief.py`) extracts:
 
 - tasks from numbered `Release A — …` blocks, else a `Program ordering` list
-- objective from the paragraph after `It is:` / final judgment
+- objective from `It is:` under Final architectural judgment (not an earlier `It is:`)
 - `problem_statement` = the full memo
-- target = first `owner/repo`, else `Quantum-L9/Cursor-Governance` (`TARGET=` override)
+- target = github-shaped `owner/repo` (hyphen or `github.com/…`), else
+  `Quantum-L9/Cursor-Governance` (`TARGET=` override). Slash-noise like
+  `MCP/API` is not a repo.
 
 It fails closed if there are no numbered work items. It does not invent tasks.
 Generated seed lands in `$HOME/.l9/primed/<id>.activate.yaml`, never as

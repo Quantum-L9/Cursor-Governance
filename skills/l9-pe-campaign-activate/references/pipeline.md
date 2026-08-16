@@ -15,13 +15,26 @@ updated: 2026-08-15
 Purpose: run the in-repo Program Execution path after the file set exists.
 Do not invent a second compiler or a second controller.
 
-Operator front door: `make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>`.
-A memo is compiled to an activate seed first (`compile_brief.py`); then this
-pipeline runs. That target calls `environment/program-execution/scripts/run_campaign.py`
-through host-PR merge-if-green. This skill remains the contract; the Make
-target does not replace it. `program-execution.intent.v1` is not an activate
-seed or a memo. The recipe does not implement target-repo tasks, remediate red
-CI, or close the campaign ledger after a host-only merge.
+Operator front door — the only path:
+
+```bash
+make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+```
+
+`run_campaign.py` is the tunnel. Do not call pec, the intent compiler, or
+L4 as a substitute. Order inside the runner:
+
+1. `compile_brief.py` (memo) or activate YAML passthrough
+2. isolate worktrees from `origin/main`
+3. `compile_activation_files.py` → `CAMPAIGN_SOURCE` + receipt
+4. `compile_campaign_source.py` (allowlist from the emit worktree)
+5. `collect_evidence.py` EVID-001 → `accept_blueprint.py`
+6. `pec bootstrap` **without** `--admission-draft`
+7. `pec draft-contract` + `register-contract` + `claim` TASK-001
+8. host PR → merge-if-green
+
+`program-execution.intent.v1` and `pe-<hash>` workspaces are refused.
+`--admission-draft` is not a live path. Host-only merge is not program close.
 
 ## 0. Isolate
 
@@ -72,18 +85,13 @@ python3 environment/program-execution/core/program-execution-controller-template
   --blueprint "$HOME/.l9/blueprints/<id>"
 ```
 
-Default bootstrap refuses an unvalidated draft lock. That is expected for a
-new seed. Use `--admission-draft` only to inspect. Continue L4 execution on
-`campaign/<id>` either way. Do not claim Program Lock accepted.
+`make campaign` collects EVID-001 and accepts the blueprint **before**
+bootstrap. Live bootstrap must succeed without `--admission-draft`. If it
+does not, the runner exits 2. Do not retry with `--admission-draft`.
 
-`pec next` under `--admission-draft` returns `ready: []` with an
-`admission_draft` blocker on every task, including W0. That is inspect-only,
-not an authority stop and not a reason to wait. Unknowns empty and
-`autonomy_plane.campaign_packets_present: false` are also not blockers —
-the Program Controller is authoritative; autonomy packets are not a second
-scheduler. Execute TASK-001 on
-`$HOME/.l9/program-worktrees/<id>` after `l4_local.py begin`. Do not attach
-to a `pe-<intent-hash>` workspace created from `program-execution.intent.v1`.
+After arm, `LAUNCH.json` names the only legal pec workspace and TASK-001.
+Execute that task on `$HOME/.l9/program-worktrees/<id>`. Do not attach to a
+`pe-<intent-hash>` workspace. Autonomy packets are not a second scheduler.
 
 `make campaign` must mark the campaign **active** on invoke: host
 `CAMPAIGN_STATUS.yaml` `lifecycle: in_progress`, execution-policy row

@@ -619,7 +619,7 @@
     },
     {
       "path": "compiler/cli.py",
-      "sha256": "9ef741686383dd264cec1511ff4c5c7f328ea2376d23626c775ac789ac017f7f"
+      "sha256": "e5d5f3c9c2fe08a1e040d0fbd8a19acfab5bec5ce8ac6cba045b2d754415e5df"
     },
     {
       "path": "compiler/fixtures/implementation-prescribing-intent.yaml",
@@ -679,7 +679,7 @@
     },
     {
       "path": "compiler/tests/test_cli.py",
-      "sha256": "0612456f0338a9f84754b58e8a7e8cbf51f6cc2fdd93b0045ef2bdadfd863800"
+      "sha256": "00b38f906ac3447de37c9e0c9ce6e7ec858b9ca552dad1b4d4856e388336e9f0"
     },
     {
       "path": "compiler/tests/test_intent_schema.py",
@@ -1303,7 +1303,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "71b1b010952379d3d54f7c2214296120346bb316a4e545d9dcaa2b012b99718a"
+      "sha256": "8e3dcd83c45a1bcc52d3d064c9d0e12ca1e922b372b60d1908e821a584e8c441"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1339,7 +1339,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "3ca36f083e7312a2f4841a4f51a4b3b0b5d184559ec34a763b2b3cabca4a7392"
+      "sha256": "c15a0d285058a69005de6dd42909e06718c331eb340a52e055b878ac9bad3ed4"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1363,7 +1363,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "b23cc631f96d1e9ea33281efca95ee0cffa2ad6974b5f24c721e68434e392fe7"
+      "sha256": "b87f6513f96b1d94340efc2f825ebfb52032cb6341ec46c178e76676f035bbda"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

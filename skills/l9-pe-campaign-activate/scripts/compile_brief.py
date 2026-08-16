@@ -145,20 +145,18 @@ def extract_tasks(text: str) -> list[dict[str, str]]:
 
 
 def extract_objective(text: str) -> str:
-    match = IT_IS_RE.search(text)
-    if match:
-        paragraph = " ".join(match.group(1).split())
+    judgment = re.search(r"Final architectural judgment\s*(.+)$", text, re.I | re.S)
+    if judgment:
+        match = IT_IS_RE.search(judgment.group(1))
+        if match:
+            paragraph = " ".join(match.group(1).split())
+            if paragraph:
+                return paragraph
+    matches = list(IT_IS_RE.finditer(text))
+    if matches:
+        paragraph = " ".join(matches[-1].group(1).split())
         if paragraph:
             return paragraph
-    judgment = re.search(
-        r"Final architectural judgment\s*(.+)$",
-        text,
-        re.I | re.S,
-    )
-    if judgment:
-        paragraph = " ".join(judgment.group(1).split())
-        if paragraph:
-            return paragraph[:2000]
     raise BriefError("memo has no extractable objective (no 'It is:' / final judgment)")
 
 
@@ -169,12 +167,30 @@ def extract_owner(text: str) -> str:
     return DEFAULT_OWNER
 
 
+def _is_github_repo(value: str) -> bool:
+    if value.count("/") != 1 or value.startswith("http"):
+        return False
+    owner, repo = value.split("/", 1)
+    if not re.match(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}$", owner):
+        return False
+    if not re.match(r"^[A-Za-z0-9._-]+$", repo):
+        return False
+    return "-" in owner or "-" in repo
+
+
 def extract_target(text: str, override: str | None = None) -> str:
     if override:
         return override.strip()
+    hosted = re.search(
+        r"github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)",
+        text,
+        re.I,
+    )
+    if hosted and _is_github_repo(hosted.group(1)):
+        return hosted.group(1)
     for match in REPO_RE.finditer(text):
         value = match.group(1)
-        if value.count("/") == 1 and not value.startswith("http"):
+        if _is_github_repo(value):
             return value
     return DEFAULT_TARGET
 
@@ -242,6 +258,7 @@ def compile_brief(
     brief_path: Path,
     *,
     output: Path | None = None,
+    primed_dir: Path | None = None,
     existing_ids: set[str] | None = None,
     target_override: str | None = None,
 ) -> dict[str, Any]:
@@ -260,7 +277,9 @@ def compile_brief(
             existing_ids=existing_ids,
             target_override=target_override,
         )
-    target = output or (Path.home() / ".l9/primed" / f"{seed['campaign_id']}.activate.yaml")
+    target = output or (
+        (primed_dir or (Path.home() / ".l9/primed")) / f"{seed['campaign_id']}.activate.yaml"
+    )
     dump_seed(target, seed)
     return {"seed": seed, "output": str(target)}
 

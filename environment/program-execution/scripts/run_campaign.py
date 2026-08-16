@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Operator front door for PE campaign activation.
 
-Deterministic stages: isolate → emit → blueprint → template validate →
-pec bootstrap → host PR → merge-if-green → blocker report.
+Sealed stages: isolate → emit → blueprint → collect → accept →
+pec bootstrap (no draft) → contract/claim TASK-001 → host PR →
+merge-if-green.
 
-Does not implement target-repo tasks, remediate red CI, or close the
-campaign ledger after a host-only merge.
+program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -33,14 +34,18 @@ ACTIVATE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_act
 AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
 BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
+COLLECT_EVIDENCE = PE_ROOT / "scripts/collect_evidence.py"
+ACCEPT_BLUEPRINT = PE_ROOT / "scripts/accept_blueprint.py"
 VALIDATE_BLUEPRINT = (
     PE_ROOT / "core/program-execution-blueprint-template/scripts/validate_blueprint.py"
 )
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 ALLOWED_CAMPAIGN_FILES = {"CAMPAIGN_SOURCE.yaml", "source-integrity-receipt.json"}
-UNTIL_STAGES = ("activate", "blueprint", "bootstrap", "pr", "merge")
+UNTIL_STAGES = ("activate", "blueprint", "admit", "bootstrap", "arm", "pr", "merge")
 STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
+HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
+FIRST_TASK_ID = "TASK-001"
 
 
 class CampaignError(RuntimeError):
@@ -55,6 +60,8 @@ class Hooks:
     compile_source: Callable[[Path, Path], None] | None = None
     validate_blueprint: Callable[[Path], list[str]] | None = None
     pec_bootstrap: Callable[[Path, Path], dict[str, Any]] | None = None
+    admit: Callable[[Path], dict[str, Any]] | None = None
+    arm: Callable[[Path, str], dict[str, Any]] | None = None
     make_pr: Callable[[Path, str], dict[str, Any]] | None = None
     pr_status: Callable[[str, int | None], dict[str, Any]] | None = None
     authorize_and_merge: Callable[[str, int], dict[str, Any]] | None = None
@@ -165,6 +172,7 @@ def resolve_operator_intent(
     *,
     host_root: Path,
     target_override: str | None = None,
+    primed_dir: Path | None = None,
 ) -> Path:
     """Return an activate-seed path. Memos are compiled; YAML seeds pass through."""
     raw: Any = None
@@ -194,6 +202,7 @@ def resolve_operator_intent(
     try:
         result = module.compile_brief(
             path,
+            primed_dir=primed_dir,
             existing_ids=host_campaign_ids(host_root),
             target_override=target_override,
         )
@@ -293,9 +302,29 @@ def default_compile_activation(intent: Path, repo_root: Path) -> dict[str, Any]:
     return module.compile_activation(intent, repo_root)
 
 
-def default_compile_source(source: Path, target: Path) -> None:
+def refuse_hash_campaign_id(campaign_id: str) -> None:
+    if HASH_PROGRAM_RE.match(campaign_id):
+        raise CampaignError(
+            f"{campaign_id} is a program-execution.intent.v1 hash id; "
+            "operator campaigns use make campaign INTENT= only"
+        )
+
+
+def default_compile_source(
+    source: Path, target: Path, *, allowlist_path: Path | None = None
+) -> None:
+    cmd = [
+        sys.executable,
+        str(COMPILE_SOURCE),
+        "--source",
+        str(source),
+        "--target",
+        str(target),
+    ]
+    if allowlist_path is not None:
+        cmd.extend(["--allowlist", str(allowlist_path)])
     result = subprocess.run(
-        [sys.executable, str(COMPILE_SOURCE), "--source", str(source), "--target", str(target)],
+        cmd,
         check=False,
         capture_output=True,
         text=True,
@@ -339,15 +368,101 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
     combined = (first.stderr + "\n" + first.stdout).strip()
     if first.returncode == 0:
         return {"ok": True, "draft": False, "output": combined}
-    if "admission-draft" in combined or "definition_status=draft" in combined:
-        second = _run(admission_draft=True)
-        note = "pec bootstrap draft-honest (lock not accepted)"
-        if second.returncode != 0:
-            raise CampaignError(
-                f"pec --admission-draft failed: {(second.stderr or second.stdout).strip()}"
-            )
-        return {"ok": True, "draft": True, "output": note}
-    raise CampaignError(f"pec bootstrap failed: {combined}")
+    raise CampaignError(
+        "pec bootstrap failed without --admission-draft; "
+        "collect_evidence + accept_blueprint must precede lock: " + combined
+    )
+
+
+def _load_script(name: str, path: Path) -> Any:
+    loader = importlib.util.spec_from_file_location(name, path)
+    if loader is None or loader.loader is None:
+        raise CampaignError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(loader)
+    loader.loader.exec_module(module)
+    return module
+
+
+def default_admit(blueprint: Path, *, revision: str) -> dict[str, Any]:
+    collect = _load_script("collect_evidence", COLLECT_EVIDENCE)
+    accept = _load_script("accept_blueprint", ACCEPT_BLUEPRINT)
+    collected = collect.collect_evidence(
+        blueprint,
+        evidence_id="EVID-001",
+        revision=revision,
+        digest=None,
+        notes="make campaign admission bind",
+        producer="make-campaign",
+        expires_at=None,
+    )
+    accepted = accept.accept_blueprint(blueprint, actor="make-campaign", evidence_ids=["EVID-001"])
+    return {"collected": collected, "accepted": accepted}
+
+
+def default_arm(workspace: Path, campaign_id: str) -> dict[str, Any]:
+    refuse_hash_campaign_id(campaign_id)
+    contract = workspace / "runtime" / f"{FIRST_TASK_ID}.source.json"
+    contract.parent.mkdir(parents=True, exist_ok=True)
+    draft = subprocess.run(
+        [
+            sys.executable,
+            str(PEC),
+            "draft-contract",
+            FIRST_TASK_ID,
+            "--workspace",
+            str(workspace),
+            "--output",
+            str(contract),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if draft.returncode != 0:
+        raise CampaignError(f"pec draft-contract failed: {(draft.stderr or draft.stdout).strip()}")
+    register = subprocess.run(
+        [
+            sys.executable,
+            str(PEC),
+            "register-contract",
+            FIRST_TASK_ID,
+            "--workspace",
+            str(workspace),
+            "--file",
+            str(contract),
+            "--actor",
+            "make-campaign",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if register.returncode != 0:
+        raise CampaignError(
+            f"pec register-contract failed: {(register.stderr or register.stdout).strip()}"
+        )
+    claim = subprocess.run(
+        [
+            sys.executable,
+            str(PEC),
+            "claim",
+            FIRST_TASK_ID,
+            "--workspace",
+            str(workspace),
+            "--holder",
+            "make-campaign",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if claim.returncode != 0:
+        raise CampaignError(f"pec claim failed: {(claim.stderr or claim.stdout).strip()}")
+    return {
+        "task_id": FIRST_TASK_ID,
+        "contract": str(contract),
+        "claim": (claim.stdout or "").strip(),
+    }
 
 
 def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
@@ -596,10 +711,15 @@ def write_launch_pointer(
         "operator_ack_required": True,
         "operator_ack_from": "Igor Beylin",
         "forge_operator_ack": False,
-        "pec_ready_empty_is_expected": True,
+        "only_pec_workspace": True,
+        "claimed_task": FIRST_TASK_ID,
+        "pec_ready_empty_is_expected": False,
         "autonomy_packets_not_required": True,
+        "refuse_hash_program": True,
         "next": (
-            "Campaign is active. Execute TASK-001 on the target worktree. "
+            f"Only path: pec workspace {workspace} campaign_id={campaign_id}. "
+            f"Execute {FIRST_TASK_ID} on {target_worktree}. "
+            "Do not attach to pe-<hash>. Do not write the dirty primary. "
             "Stop and ask Igor for PHASE0 operator_ack; do not forge acknowledged_at."
         ),
     }
@@ -626,6 +746,7 @@ def run_campaign(
     primary: Path | None = None,
     worktree: Path | None = None,
     repo_root: Path | None = None,
+    l9_root: Path | None = None,
     host_repo: str = HOST_REPO_DEFAULT,
     target_override: str | None = None,
     hooks: Hooks | None = None,
@@ -635,17 +756,20 @@ def run_campaign(
     hooks = hooks or Hooks()
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
+    l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
     resolved_intent = resolve_operator_intent(
         intent_path,
         host_root=host_root,
         target_override=target_override or os.environ.get("TARGET"),
+        primed_dir=l9_home / "primed",
     )
     seed = load_activate_seed(resolved_intent)
     campaign_id = str(seed["campaign_id"]).strip()
+    refuse_hash_campaign_id(campaign_id)
     if repo_root is not None:
         write_root = repo_root.resolve()
     else:
-        write_root = (worktree or (Path.home() / ".l9/gov-worktrees" / campaign_id)).resolve()
+        write_root = (worktree or (l9_home / "gov-worktrees" / campaign_id)).resolve()
         write_root = isolate_worktree(
             primary,
             campaign_id,
@@ -659,8 +783,8 @@ def run_campaign(
         until=until,
         worktree=str(write_root),
         primary=str(primary),
-        blueprint=str(Path.home() / ".l9/blueprints" / campaign_id),
-        pec_workspace=str(Path.home() / ".l9/programs" / campaign_id),
+        blueprint=str(l9_home / "blueprints" / campaign_id),
+        pec_workspace=str(l9_home / "programs" / campaign_id),
         program_blockers=default_program_blockers(campaign_id),
     )
 
@@ -668,7 +792,7 @@ def run_campaign(
     log(f"emit {campaign_id} into {write_root}")
     compile_activation(resolved_intent, write_root)
     assert_allowed_campaign_dir(write_root, campaign_id)
-    target_worktree = str(Path.home() / ".l9/program-worktrees" / campaign_id)
+    target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
         write_root,
         campaign_id,
@@ -695,9 +819,12 @@ def run_campaign(
         / "CAMPAIGN_SOURCE.yaml"
     )
     blueprint = Path(report.blueprint)
-    compile_source = hooks.compile_source or default_compile_source
     log(f"blueprint {blueprint}")
-    compile_source(source, blueprint)
+    allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
+    if hooks.compile_source is not None:
+        hooks.compile_source(source, blueprint)
+    else:
+        default_compile_source(source, blueprint, allowlist_path=allowlist)
     annotate_phase0_without_forging_ack(blueprint)
     validate = hooks.validate_blueprint or default_validate_blueprint
     errors = validate(blueprint)
@@ -705,6 +832,23 @@ def run_campaign(
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
     report.stages_completed.append("blueprint")
+    if not should_run(until, "admit"):
+        write_launch_pointer(
+            Path(report.pec_workspace),
+            campaign_id=campaign_id,
+            blueprint=report.blueprint,
+            target_worktree=target_worktree,
+            host_worktree=str(write_root),
+        )
+        return report
+
+    host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    log(f"admit EVID-001 bind {host_revision}")
+    if hooks.admit is not None:
+        hooks.admit(blueprint)
+    else:
+        default_admit(blueprint, revision=host_revision)
+    report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
             Path(report.pec_workspace),
@@ -717,11 +861,10 @@ def run_campaign(
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_result = pec(Path(report.pec_workspace), blueprint)
-    report.pec_note = str(pec_result.get("output") or "")
     if pec_result.get("draft"):
-        log("pec bootstrap draft-honest (lock not accepted)")
-    else:
-        log("pec bootstrap ok")
+        raise CampaignError("pec --admission-draft is not a live campaign path")
+    report.pec_note = str(pec_result.get("output") or "")
+    log("pec bootstrap ok")
     pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
     log(f"pec runtime_status={pec_status.get('runtime_status')}")
     mark_host_campaign_active(
@@ -739,6 +882,22 @@ def run_campaign(
         host_worktree=str(write_root),
     )
     report.stages_completed.append("bootstrap")
+    if not should_run(until, "arm"):
+        return report
+
+    log(f"arm {FIRST_TASK_ID}")
+    if hooks.arm is not None:
+        hooks.arm(Path(report.pec_workspace), campaign_id)
+    else:
+        default_arm(Path(report.pec_workspace), campaign_id)
+    write_launch_pointer(
+        Path(report.pec_workspace),
+        campaign_id=campaign_id,
+        blueprint=report.blueprint,
+        target_worktree=target_worktree,
+        host_worktree=str(write_root),
+    )
+    report.stages_completed.append("arm")
     if not should_run(until, "pr"):
         return report
 
@@ -791,6 +950,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Write into this checkout and skip isolate (tests / already-isolated worktree)",
     )
+    parser.add_argument(
+        "--l9-root",
+        type=Path,
+        default=None,
+        help="Runtime root for blueprints/programs/worktrees (default $HOME/.l9)",
+    )
     parser.add_argument("--host-repo", default=HOST_REPO_DEFAULT)
     parser.add_argument(
         "--target",
@@ -809,6 +974,7 @@ def main(argv: list[str] | None = None) -> int:
             primary=args.primary,
             worktree=args.worktree,
             repo_root=args.repo_root,
+            l9_root=args.l9_root,
             host_repo=args.host_repo,
             target_override=args.target,
         )

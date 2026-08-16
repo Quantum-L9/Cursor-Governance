@@ -143,6 +143,7 @@ class RunCampaignTests(unittest.TestCase):
                 until="activate",
                 primary=other_primary,
                 repo_root=root,
+                l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(compile_activation=self.activate.compile_activation),
             )
             campaign_dir = root / "environment/program-execution/campaigns/demo-activate-v1"
@@ -223,15 +224,18 @@ class RunCampaignTests(unittest.TestCase):
                     until="merge",
                     primary=Path(raw) / "primary",
                     repo_root=root,
+                    l9_root=Path(raw) / "l9",
                     hooks=self.mod.Hooks(
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
                         validate_blueprint=lambda target: [],
+                        admit=lambda blueprint: {"accepted": True},
                         pec_bootstrap=lambda workspace, blueprint: {
                             "ok": True,
-                            "draft": True,
-                            "output": "draft-honest",
+                            "draft": False,
+                            "output": "lock",
                         },
+                        arm=lambda workspace, campaign_id: {"task_id": "TASK-001"},
                         make_pr=lambda worktree, campaign_id: {
                             "number": 99,
                             "url": "https://example.test/99",
@@ -268,6 +272,7 @@ class RunCampaignTests(unittest.TestCase):
                 until="activate",
                 primary=other_primary,
                 repo_root=root,
+                l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(compile_activation=self.activate.compile_activation),
             )
             self.assertEqual(report.campaign_id, "pe-memory")
@@ -279,6 +284,90 @@ class RunCampaignTests(unittest.TestCase):
                 (campaign_dir / "CAMPAIGN_SOURCE.yaml").read_text(encoding="utf-8")
             )
             self.assertEqual(len(source["tasks"]), 7)
+            self.assertEqual(source["metadata"]["intended_host"], "Quantum-L9/Cursor-Governance")
+
+    def test_refuses_hash_campaign_id(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self.mod.refuse_hash_campaign_id("pe-8c9f6de43b25")
+        self.assertIn("intent.v1", str(ctx.exception))
+
+    def test_draft_bootstrap_is_not_a_live_path(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "root"
+            root.mkdir()
+            _dump(root / "intent.yaml", ACTIVATE_SEED)
+
+            def emit(intent: Path, repo_root: Path) -> dict[str, object]:
+                campaign = repo_root / "environment/program-execution/campaigns/demo-activate-v1"
+                campaign.mkdir(parents=True, exist_ok=True)
+                (campaign / "CAMPAIGN_SOURCE.yaml").write_text("schema: x\n", encoding="utf-8")
+                (campaign / "source-integrity-receipt.json").write_text("{}\n", encoding="utf-8")
+                return {"wrote": ["CAMPAIGN_SOURCE.yaml"]}
+
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="bootstrap",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=Path(raw) / "l9",
+                    hooks=self.mod.Hooks(
+                        compile_activation=emit,
+                        compile_source=lambda source, target: None,
+                        validate_blueprint=lambda target: [],
+                        admit=lambda blueprint: {},
+                        pec_bootstrap=lambda workspace, blueprint: {
+                            "ok": True,
+                            "draft": True,
+                            "output": "draft-honest",
+                        },
+                    ),
+                )
+            self.assertIn("admission-draft", str(ctx.exception))
+
+    def test_until_arm_records_tunnel_stages(self) -> None:
+        calls: list[str] = []
+
+        def emit(intent: Path, repo_root: Path) -> dict[str, object]:
+            campaign = repo_root / "environment/program-execution/campaigns/demo-activate-v1"
+            campaign.mkdir(parents=True, exist_ok=True)
+            (campaign / "CAMPAIGN_SOURCE.yaml").write_text("schema: x\n", encoding="utf-8")
+            (campaign / "source-integrity-receipt.json").write_text("{}\n", encoding="utf-8")
+            return {"wrote": ["CAMPAIGN_SOURCE.yaml"]}
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "root"
+            root.mkdir()
+            _dump(root / "intent.yaml", ACTIVATE_SEED)
+            l9 = Path(raw) / "l9"
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="arm",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    compile_activation=emit,
+                    compile_source=lambda source, target: calls.append("compile") or None,
+                    validate_blueprint=lambda target: calls.append("validate") or [],
+                    admit=lambda blueprint: calls.append("admit") or {},
+                    pec_bootstrap=lambda workspace, blueprint: (
+                        calls.append("bootstrap") or {"ok": True, "draft": False, "output": "ok"}
+                    ),
+                    arm=lambda workspace, campaign_id: calls.append("arm") or {},
+                ),
+            )
+            self.assertEqual(
+                report.stages_completed,
+                ["activate", "blueprint", "admit", "bootstrap", "arm"],
+            )
+            self.assertEqual(calls, ["compile", "validate", "admit", "bootstrap", "arm"])
+            launch = json.loads(
+                (l9 / "programs/demo-activate-v1/runtime/LAUNCH.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(launch["campaign_id"], "demo-activate-v1")
+            self.assertTrue(launch["only_pec_workspace"])
+            self.assertEqual(launch["claimed_task"], "TASK-001")
 
 
 if __name__ == "__main__":

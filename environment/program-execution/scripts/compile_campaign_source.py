@@ -67,8 +67,8 @@ def validate_campaign_source(data: dict[str, Any]) -> list[str]:
     ]
 
 
-def load_allowlist() -> set[str]:
-    raw = load_yaml(ALLOWLIST_PATH)
+def load_allowlist(path: Path | None = None) -> set[str]:
+    raw = load_yaml(path or ALLOWLIST_PATH)
     ids = raw.get("campaign_ids") if isinstance(raw, dict) else None
     if not isinstance(ids, list) or not ids:
         raise CompileError("COMPILE_ALLOWLIST.yaml has no campaign_ids")
@@ -230,6 +230,7 @@ def compile_source(
     target: Path,
     *,
     stamp: str | None = None,
+    allowlist_path: Path | None = None,
 ) -> dict[str, Any]:
     source = source.resolve()
     target = target.resolve()
@@ -240,7 +241,7 @@ def compile_source(
     if schema_errors:
         raise CompileError("campaign source schema: " + "; ".join(schema_errors))
     campaign_id = src["metadata"]["campaign_id"]
-    allowed = load_allowlist()
+    allowed = load_allowlist(allowlist_path)
     if campaign_id not in allowed:
         raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
     warnings = _semantic_precheck(src)
@@ -881,9 +882,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="compile_campaign_source")
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--target", required=True, type=Path)
+    parser.add_argument("--allowlist", type=Path, default=None)
     args = parser.parse_args(argv)
     try:
-        result = compile_source(args.source, args.target)
+        result = compile_source(args.source, args.target, allowlist_path=args.allowlist)
     except CompileError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1

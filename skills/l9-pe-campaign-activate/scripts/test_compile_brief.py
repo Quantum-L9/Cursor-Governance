@@ -47,6 +47,8 @@ class CompileBriefTests(unittest.TestCase):
         )
         self.assertIn("l9-graphiti-memory", seed["objective"])
         self.assertIn("Collapse every agent-facing memory lifecycle", seed["objective"])
+        self.assertNotIn("older complete memory lifecycle", seed["objective"])
+        self.assertEqual(seed["target"]["repository_id"], "Quantum-L9/Cursor-Governance")
         self.assertEqual(seed["problem_statement"], text)
         self.assertEqual(seed["owner"], "Igor Beylin")
 
