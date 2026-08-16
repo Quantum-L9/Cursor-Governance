@@ -1023,7 +1023,7 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 read-only status/review, or remediate ci/review/scanner/debt to green then merge all open prs in the target repo. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 census every ci/human/bot/copilot/github-code-quality signal, plan, then one makefile+pre-commit-validated commit and merge. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
@@ -1189,5 +1189,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "653f3e203c26c8dbdddb9a9cbfeec55aa18819f5f18553094a378ce8af8d3a1b",
-  "source_skill_corpus_sha256": "73f461d728336a58566da9bb1bdbf504edbefc6e28864dad538256a4a9260fbb"
+  "source_skill_corpus_sha256": "c00667e9fd4acadc8f0a2839e8320e7a34591da0ebf3d70b1bd19b7739bf11cf"
 }
