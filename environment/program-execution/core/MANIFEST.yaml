@@ -351,8 +351,8 @@ files:
   sha256: 871aa8a77da5abcdfd1ee29156b2df42085a09bcf119ad209bc755142a6ad2f1
   bytes: 2467
 - path: program-execution-controller-template/scripts/pec/contracts.py
-  sha256: e88e35d4b01c4a0216d08f4b8994447361aee51eef948114176ed12daa23973e
-  bytes: 15017
+  sha256: f89ab2a8a0679e8def662d82661cf4c16988604e5f2ea2fe3c6c406ad857d76e
+  bytes: 15039
 - path: program-execution-controller-template/scripts/pec/controller.py
   sha256: ed9068ca8ce9dd84034d10064644518f7883cd48d67a60a5d9bbf3d3084ef4ab
   bytes: 76420
@@ -402,8 +402,8 @@ files:
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
   bytes: 2083
 - path: program-execution-controller-template/scripts/tests/test_kernel_verdict.py
-  sha256: 58fd6df31ddb514b51b835be627cc573c692b2f47eaa2f8babe8a131f151c353
-  bytes: 5167
+  sha256: d78b7f00d8180c5c0b00b1bdf10441b39106c9de883e87586030194539143fc6
+  bytes: 5168
 - path: program-execution-controller-template/scripts/tests/test_leases_and_approval.py
   sha256: 0c6b15be5b8830d11fa8b84bcee0dc00261250319e8021c0b5220c63f82de14a
   bytes: 967
@@ -414,8 +414,8 @@ files:
   sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
   bytes: 7564
 - path: program-execution-controller-template/scripts/tests/test_pipeline_assembly_fill.py
-  sha256: 6f6a4dee2727bc736da7a72df2f95b7dba12cb4e48e5b0965d9156c422f8622c
-  bytes: 11424
+  sha256: 049b123332df14b8c666532411b7086a3bfeff6396fd89e792b88c555ab3c549
+  bytes: 11454
 - path: program-execution-controller-template/scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
   bytes: 5992
@@ -547,4 +547,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 180
-  total_bytes: 563049
+  total_bytes: 563102

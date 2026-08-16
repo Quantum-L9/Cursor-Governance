@@ -1,250 +1,169 @@
 schema: program-execution-controller.manifest.v2
 schema_version: 2.0.0
-artifact: program-execution-controller
+template: program-execution-controller
 files:
 - path: ARCHITECTURE.md
   sha256: 2e9c4fd4d6acd9c3aeb216743a94aaaf53170cb5b6e557102ea0d9b2ec964c3b
-  bytes: 1340
 - path: CHANGELOG.md
   sha256: 75d0dcee919bcac97b5085f66d8918baafe9e13e8cd45275bc55b4fd02974347
-  bytes: 847
 - path: CONTROLLER.yaml
   sha256: 47f7a1cad192f3753578f25317966815b227eb57c62b034604f2e6611a67d17d
-  bytes: 1067
 - path: DESIGN_RATIONALE.md
   sha256: 67eafa779bb9294b2bee546b2b65a5b1aa22d2f86ae093a7fa38cb8f393c9aa9
-  bytes: 776
 - path: INSTANTIATION_GUIDE.md
   sha256: 316267122d28e85c8478c8a42d4ea82b63b78c728df680a0278afe30f8c7ebf3
-  bytes: 576
 - path: README.md
   sha256: 5f61529b813d694d4790fccb85f6bd6ffbac112df748ec9816f41305459540b6
-  bytes: 1346
 - path: RUNBOOK.md
   sha256: 7be85d75e6e42bd975d1d7a35f1521d1475503e9499cc8b035710a44bdc9ca79
-  bytes: 4947
 - path: SECURITY.md
   sha256: 1bb8ae37d783ba450dbaafb779dfdcae5c2ac474ff72cbcdf1b08c5398fc4f2e
-  bytes: 958
 - path: TEMPLATE_VARIABLES.yaml
   sha256: a5dcbe7ae8ad7a7082e82ad7e5179933d29da6581bebcf38917ac68a09dc47d0
-  bytes: 321
 - path: VALIDATION.md
   sha256: c959e05aac38544b882f174dea085ff5cf827edd84fcc780525716de48512ea8
-  bytes: 1498
 - path: policy/authority.yaml
   sha256: db71b0c919817ce37ad1a1b7c9f9a9b57efeeee4a4aec2ad8e0de7a4a5cb2dea
-  bytes: 510
 - path: policy/autonomy.yaml
   sha256: 632fffda27dbf46e1a81733b29225d7729bda4fc840b3886a1fc088198e1bf35
-  bytes: 1667
 - path: policy/evidence.yaml
   sha256: 1c2c29eeb2990e765f8561fc0593b2c9d737016aa44f2b22c7cc537ff3ff805c
-  bytes: 459
 - path: policy/parallelism.yaml
   sha256: 7f5cce35f8f53ca01498a001c4b92486997848763f741128eedfca83e474a4a8
-  bytes: 819
 - path: policy/remote-actions.yaml
   sha256: 6ec60ea6135ed408e0288917cf73db8ed23b6af2d299903c20e724560a011197
-  bytes: 537
 - path: policy/risk-tiers.yaml
   sha256: 99bde611c460d0986377c5f64e7773221f203bf5e9e62bc4cb6355d1c3371f92
-  bytes: 727
 - path: policy/stop-conditions.yaml
   sha256: 928e35ff2e76015fea913f86b43fd9f271c67cd7aedbc2f1ce77a52485572561
-  bytes: 2039
 - path: policy/waivers.yaml
   sha256: 1ad9c11bb1400280b352d17c607c870698bc236159bb78da7006bfb1a0496e9a
-  bytes: 339
 - path: references/APPROVALS_WAIVERS_AND_HANDOFF.md
   sha256: b1302b5a53ae2507701febb1c226aba2e26da79dc3ca88b928487da837afc659
-  bytes: 404
 - path: references/AUTHORITY_AND_RISK.md
   sha256: f81205b91059939a2f70be2f97ec131f0a257f86f3171158e47fdade0def6c7a
-  bytes: 531
 - path: references/AUTONOMY_BRIDGE.md
   sha256: 888788784ff76f67e4ed0e455229a687be70ca3fa75a8cb82d7eac103855bac6
-  bytes: 2087
 - path: references/BLUEPRINT_MAPPING.md
   sha256: cdc2a94d49820a61cfc32e4b83f5e03b04343cc9c484342e9f6a0708c87c6652
-  bytes: 1230
 - path: references/CONTRACTS_AND_SCOPE.md
   sha256: 832393c499d932dc7ae6c7185494dc7765003697d1cd869788e7b734ccdc9752
-  bytes: 673
 - path: references/NEGATIVE_TEST_MATRIX.md
   sha256: 3899583675c42a17e5ed6150be9d663dc100fc1b531feeea3a47414011bdfebe
-  bytes: 628
 - path: references/RECOVERY.md
   sha256: ce5edfed9211f436133cd06951f88978de12238f78d44d3398497d303c8323df
-  bytes: 522
 - path: references/REMOTE_ACTIONS.md
   sha256: f5588d14120e9c561a1446a33f7cf1c2b6df155aca0d25228434eaf92526cee7
-  bytes: 376
 - path: references/SCHEDULER_AND_LEASES.md
   sha256: e42f5aa4018d0bf8bc0cb94f93663afdeb45a7424ca3d19890504867aaeb5df7
-  bytes: 611
 - path: references/STATE_MACHINE.md
   sha256: 17775a22232f2957625f97095aedc1ba6df7b931d8567c6d1553004627218bc2
-  bytes: 1024
 - path: references/VERIFICATION_AND_RECEIPTS.md
   sha256: 94e4329c9de0a8c4dc2d0a507be66e08fef296744c5916f51bcb297c7b098352
-  bytes: 556
 - path: references/WORKER_ADAPTER.md
   sha256: 587b94c5a8f534abc218bee0b480d27ae95d6cab2c7cc33c0b0eef8539903df8
-  bytes: 376
 - path: schemas/approval.schema.json
   sha256: 38e2c4985a9d9ea38617b69ce760fc499d116e2ff4825792c218321c4b52d1f8
-  bytes: 2382
 - path: schemas/attempt-receipt.schema.json
   sha256: d76c7b1bd5811139a97781b0d87a87b66fe7f990d6dc58399d495aec83bcf434
-  bytes: 2313
 - path: schemas/controller.schema.json
   sha256: 459c52227d15492ab18b3b1801fa360b86ff8e0b1a10dddc5e6b934c9b4c2f41
-  bytes: 2355
 - path: schemas/event.schema.json
   sha256: c3d5f22dc4d746585eaf45a4428a446bb25956626243bf94d3ff2f375f2bac8f
-  bytes: 844
 - path: schemas/gate-evaluation.schema.json
   sha256: 7aded64e0720289753f37cabdc9789f146a67cc2b06e131bf7d0ebccf67bf4b4
-  bytes: 1582
 - path: schemas/handoff-receipt.schema.json
   sha256: 9ddd5c591093a6b5099dfc67f5e43d527e5c18f638b5e72141f2a474d0471455
-  bytes: 3939
 - path: schemas/program-lock.schema.json
   sha256: bebc5ba411df775dc7a483834a16d0a4d6daaa7b0987c7da65aeba6e68e0082d
-  bytes: 2630
 - path: schemas/repository-registration.schema.json
   sha256: c71c33aa73f8382311cbc5d71fd5e597f5d0b45f9e9ec798be8a3e189a123643
-  bytes: 958
 - path: schemas/source-contract.schema.json
   sha256: d94fcfb7d8353ddde119c04a918310eb9ea053c004dfee64f3900b24da6bc592
-  bytes: 2666
 - path: schemas/task-contract.schema.json
   sha256: ee581bf533d59a04402901ebdfc7d673918bcbc32fbfe1a9943029671b64fbea
-  bytes: 3700
 - path: schemas/verification-receipt.schema.json
-  sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
-  bytes: 2078
+  sha256: c11832210052974f9ec8b31d1b63e36087fb35b5d5385bbec993a55307c5d21e
 - path: schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
-  bytes: 1221
 - path: scripts/instantiate.py
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
-  bytes: 2977
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
-  bytes: 52
 - path: scripts/pec/blueprint.py
   sha256: 1a7d73ea1a26192fd2c4036ce8ca253b153a5ec913db25a111a8f55aafae42bb
-  bytes: 7118
 - path: scripts/pec/cli.py
   sha256: 5de57a83955527fdd06cacf2be57601b9a38a9682bd108e61f0af0d7dc461d5a
-  bytes: 16943
 - path: scripts/pec/common.py
   sha256: 871aa8a77da5abcdfd1ee29156b2df42085a09bcf119ad209bc755142a6ad2f1
-  bytes: 2467
 - path: scripts/pec/contracts.py
-  sha256: 45e0a931399dc4015b18557362289d45495689e69d1925aa9b9bf2210e0bc5e9
-  bytes: 14343
+  sha256: f89ab2a8a0679e8def662d82661cf4c16988604e5f2ea2fe3c6c406ad857d76e
 - path: scripts/pec/controller.py
-  sha256: 678afa0e50d7c6f7716923497a715e8c21495505f7ed9f2dceb51cbf8ab61e81
-  bytes: 72528
+  sha256: ed9068ca8ce9dd84034d10064644518f7883cd48d67a60a5d9bbf3d3084ef4ab
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
-  bytes: 2284
 - path: scripts/pec/preflight.py
   sha256: 899874dafca632b12ae65b8635d438a37f7d10e86450a6b9b14ab92d7c7400f5
-  bytes: 9392
 - path: scripts/pec/replan.py
   sha256: cf1c947f1a138695dc8b8d6dc17398fb864a58f0512471fa8454fcb9c40c7fff
-  bytes: 14495
 - path: scripts/pec/state.py
   sha256: 56782e09c6e9a4c5b534a0fd331da02efb8e4930d4d7a65f57217c1d68ddbd2b
-  bytes: 23430
 - path: scripts/pec.py
   sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
-  bytes: 180
 - path: scripts/run_negative_tests.py
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
-  bytes: 1227
 - path: scripts/tests/helpers.py
   sha256: e1401ed452b6e4c98a2fed7e0e664a8357c38bf910dd320236a831205f85d5c7
-  bytes: 24315
 - path: scripts/tests/test_approval.py
   sha256: fe0af2376fe8d861074474c1f586a9a7c1f8abc06c85aadc320bb6d35e09f1bb
-  bytes: 2367
 - path: scripts/tests/test_authority_inflation.py
   sha256: 9af0d1fff94883ede8b15a109f76d591ea84f092c26edc80c8bf5e1e71abced4
-  bytes: 1018
 - path: scripts/tests/test_bootstrap_admission.py
   sha256: b480c969090f1b58c7b6f60934947749e09c14cf59a0a08faac8c92dcba51a72
-  bytes: 3420
 - path: scripts/tests/test_campaign_status.py
   sha256: 8b0531577ad3013259051c90706d5fec624b7a47ee19da4be56b60c55061ba85
-  bytes: 4419
 - path: scripts/tests/test_changed_files.py
   sha256: 1de461c7d7d3a79519657f926c1e10a42990b264e5e9d9468c6797479ea836df
-  bytes: 1191
 - path: scripts/tests/test_controller_success.py
   sha256: 77fd8817dbeb512ef455dc72acb1a82d9de173c5b835e652aacae848911fa78f
-  bytes: 1983
 - path: scripts/tests/test_decision_unknown.py
   sha256: 1534779aa307ad0c4c22f856e6fcc8993fc231695c150d87238e15c03bb3ac2e
-  bytes: 1537
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
-  bytes: 2083
+- path: scripts/tests/test_kernel_verdict.py
+  sha256: d78b7f00d8180c5c0b00b1bdf10441b39106c9de883e87586030194539143fc6
 - path: scripts/tests/test_leases_and_approval.py
   sha256: 0c6b15be5b8830d11fa8b84bcee0dc00261250319e8021c0b5220c63f82de14a
-  bytes: 967
 - path: scripts/tests/test_ledger_tamper.py
   sha256: c471659035072ed2ba5e22c7fbb2ea75c13e6aae6751e1e176c9a066e027f5a0
-  bytes: 733
 - path: scripts/tests/test_pe_clean_startup.py
   sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
-  bytes: 7564
 - path: scripts/tests/test_pipeline_assembly_fill.py
-  sha256: 8d4dae20973c2479d7e1eb95a7abf5eefb091536c3fcaf421520aca8469d7b3a
-  bytes: 11343
+  sha256: 049b123332df14b8c666532411b7086a3bfeff6396fd89e792b88c555ab3c549
 - path: scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
-  bytes: 5992
 - path: scripts/tests/test_program_control.py
   sha256: dbe6434dcfb45ee7316483027219020d549ae825cd2fa6bb9da085e6567b4ba0
-  bytes: 1936
 - path: scripts/tests/test_program_lock_drift.py
   sha256: 94db34782cf1ff822ac99d779b9b4ad35e617d804c250457e6e65455fb6ccf6c
-  bytes: 882
 - path: scripts/tests/test_program_lock_schema.py
   sha256: b1666159c9fabafe648a7e61f0cd05d8809a78b702ff2d39f4a4ed8813dea005
-  bytes: 1314
 - path: scripts/tests/test_recovery.py
   sha256: 6a1ee7d5145edc6a942639256fa785baa74fa50dac9a8492ec2412302f014c02
-  bytes: 1045
 - path: scripts/tests/test_scope.py
   sha256: 25df4fca8992212c17f6ed5a925b37708d1b4f8bf91d1f8fac45651aee6dae82
-  bytes: 558
 - path: scripts/tests/test_source_contract_placeholder.py
   sha256: a51020a3b8e516611bae2962f658876fe364604ff96e2a9c72e33a54b1a9595c
-  bytes: 3299
 - path: scripts/tests/test_state_transition.py
   sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
-  bytes: 1649
 - path: scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
-  bytes: 1882
 - path: scripts/tests/test_waived_gate.py
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
-  bytes: 2866
 - path: scripts/tests/test_wave_dependency.py
   sha256: 86f42e5a3d23a6a5e2c4087cdc6116160ac6d5e109629d7a67dbc1f9e03b88c7
-  bytes: 2609
 - path: scripts/validate_controller.py
   sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
-  bytes: 9638
 integrity:
   algorithm: sha256
   self_excluded: true
-summary:
-  file_count: 80
-  total_bytes: 320505

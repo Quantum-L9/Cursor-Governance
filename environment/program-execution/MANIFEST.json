@@ -1383,7 +1383,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "7e9d5ca8d91d4a3b59a73b44fa5881602f2479315b226c07a4997ea3a90a7004"
+      "sha256": "732162e8abd388bb1111cc2a3f8371e65359f40e4cfcf33de3d935259a9e95ad"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
