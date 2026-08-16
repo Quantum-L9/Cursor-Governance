@@ -403,15 +403,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "f098e858d11e07528ce5d0a52588b61535607612762675ec851aeb3e2e6c26f4"
+      "sha256": "704dc2af084fae7654c24f8252566695c2354c67ea1a29e09a80a92fd66f867b"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
+      "sha256": "cf036e3600e5cf32a05d62289114144b36ce4ac63348071b02a0667fb7d12e3d"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "6bfdfbc654b6bc7943f85bd97f29ce59e0008bdc732336d696ecc785e43ec2e4"
+      "sha256": "80baec7245b64efb84d7711bcbaa98591b16633931fc556fd0f295218979e123"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -588,6 +588,14 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
+    },
+    {
+      "path": "campaigns/l9-repo-template-control-plane-ready-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "3da0cb5bb5b9cbc7f23c2e5d7219ebd40aa3c5bd83740d5d07e9b632d0645a47"
+    },
+    {
+      "path": "campaigns/l9-repo-template-control-plane-ready-v1/source-integrity-receipt.json",
+      "sha256": "6d91f115c7336073247751c727e1aa49471f21d7c30c31256f4070175252cb71"
     },
     {
       "path": "campaigns/scripts/close_campaign.py",
