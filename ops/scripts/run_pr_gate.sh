@@ -196,8 +196,13 @@ if [[ "${py_count:-0}" -eq 0 ]]; then
   echo "OK: no changed Python files for ruff"
 else
   echo "ruff (changed): ${py_count} file(s)"
-  xargs uv run --no-build ruff check <"$py_list"
-  xargs uv run --no-build ruff format --check <"$py_list"
+  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
+    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" check <"$py_list"
+    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" format --check <"$py_list"
+  else
+    xargs uv run --no-build ruff check <"$py_list"
+    xargs uv run --no-build ruff format --check <"$py_list"
+  fi
 fi
 
 echo "--- uv lock ---"
@@ -308,7 +313,11 @@ echo "--- security ---"
 bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
-  uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
+  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" ]]; then
+    "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" . --show-error-codes --pretty --ignore-missing-imports
+  else
+    uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
+  fi
 else
   echo "mypy: advisory on PR gate (set PR_MYPY_STRICT=1 to fail; full check is make lint / nightly)"
 fi
