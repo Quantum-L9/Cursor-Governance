@@ -150,7 +150,7 @@ a code fix would be less safe — the same standard the SonarCloud signal uses.
    latest `origin/main`; open the PR against `main` with baseline + after evidence;
    subscribe to the PR.
 7. **Converge** — hand to the normal CI + review-reply loop until required checks are
-   green and no unresolved Copilot/review threads remain.
+   green and no unanswered code-review agent (`github-code-quality[bot]`, Copilot) or other review threads remain.
 
 ## Required artifacts
 
@@ -169,7 +169,7 @@ Emit these alongside the usual gate artifacts so the work is auditable:
 
 - `GREEN_CLEAN_REVIEW_RESOLVED` — all in-scope pre-existing errors resolved; applicable
   Ruff/mypy/ESLint/tsc/tests/build green; all required PR checks green; no unresolved
-  Copilot or blocking review threads; branch clean; PR **not merged**.
+  code-review agent (`github-code-quality[bot]`, Copilot) or blocking review threads; branch clean; PR **not merged**.
 - `GREEN_WITH_EXPLICIT_NON_BLOCKING_DEBT` — required checks green and remaining debt is
   out-of-scope or explicitly accepted, with no hidden failures.
 - `PARTIALLY_REMEDIATED` — some confirmed debt fixed, required errors/reviews remain.

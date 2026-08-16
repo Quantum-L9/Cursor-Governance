@@ -6,8 +6,8 @@ role: ownership_boundary
 tags: [pr, ownership, codebase, ci-pipeline]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-08-06
+version: 3.1.0
+updated: 2026-08-16
 /L9_META -->
 
 # Ownership Boundary
@@ -41,11 +41,15 @@ Needs product, architecture, legal, or security-exception judgment.
 
 **Action:** name the decision, leave the thread open, finish all independent codebase work.
 
+## Code-review agents
+
+Validated `github-code-quality[bot]` / Copilot findings that are real source defects are **CODEBASE**. They are review comments, not a separate scanner class and not skippable chatter. See [code-review-agents.md](code-review-agents.md).
+
 ## FALSE_POSITIVE
 
 Current evidence disproves the signal on the evaluated head.
 
-**Action:** reply with evidence; resolve when appropriate.
+**Action:** reply with evidence; resolve when appropriate. Code-review agent false positives still require a Disagreed reply — do not drop the thread.
 
 ## Decision Test
 

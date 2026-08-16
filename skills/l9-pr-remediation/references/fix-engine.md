@@ -6,8 +6,8 @@ role: fix_engine
 tags: [pr, fix, code, methodology, local-verify, batch]
 owner: igor_beylin
 status: active
-version: 3.1.0
-updated: 2026-08-13
+version: 3.3.0
+updated: 2026-08-16
 /L9_META -->
 
 # Fix Engine
@@ -23,7 +23,8 @@ Apply fixes for classified **codebase** findings. Independent clusters run concu
 - MUST understand the surrounding context (imports, types, dependencies).
 - MUST NOT change code unrelated to the finding.
 - MUST NOT introduce new warnings or errors.
-- MUST NOT commit or push until ALL codebase fixes for the cycle are applied AND local verify passes.
+- MUST NOT edit until the [remediation plan](remediation-plan.md) has a disposition for every census finding.
+- MUST NOT commit or push until ALL planned codebase fixes are applied AND Makefile + every pre-commit hook (when present) passed.
 - MUST use the smallest diff that resolves the finding.
 - MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
@@ -77,10 +78,11 @@ local_verify_commands:
     source: ".github/workflows/build-and-validate.yml:step:Verify env"
 ```
 
-Also check:
+Also check (these outrank ad-hoc command lists when present):
+- `Makefile` targets: `agent-check`, `pr-check`, `check`, `ci`, `validate`, `test`
+- `.pre-commit-config.yaml` — record **every** hook `id`; `pre-commit run --all-files` is mandatory
 - `package.json` scripts section for `lint`, `typecheck`, `test`, `build`, `validate`
-- `Makefile` for `pr-check` or `ci` targets
-- Any `pre-commit` hooks in `.husky/` or `.git/hooks/`
+- Any additional hooks in `.husky/` or `.git/hooks/` (must still run; never `--no-verify`)
 
 ## Fix Strategies by Type
 
@@ -139,25 +141,29 @@ NEVER delete a failing test unless the feature it tests was intentionally remove
 
 ### Review Comment Fixes
 
-1. **Suggestion block**: Apply the exact suggestion if it's correct.
+1. **Suggestion block**: Apply the exact suggestion if it's correct on current source.
 2. **Bug report**: Read the code, confirm the bug, apply minimal fix.
 3. **Property/name correction**: Verify against type definitions, then rename.
 4. **Missing null check**: Add the guard.
 5. **Performance suggestion**: Apply only if clearly correct and low-risk.
+6. **Code-review agent** (`github-code-quality[bot]`, Copilot): inspect the cited code first. Autofix patches are suggestions — apply only when validated. Invalid or already-fixed findings get a Disagreed / Acknowledged reply, not a silent skip. See [code-review-agents.md](code-review-agents.md).
 
 ## Local Verification Protocol (BLOCKING GATE)
 
-After applying ALL fixes for a cycle, run EVERY command from the local verify command list:
+After applying ALL planned fixes, run the verify stack in [remediation-plan.md](remediation-plan.md). Do not commit on a subset.
 
 ```bash
-# Run ALL gates — do NOT stop at first failure
+# 1) Every hook in .pre-commit-config.yaml (required when the file exists)
+pre-commit run --all-files
+
+# 2) Makefile primary gate (required when Makefile exists)
+make agent-check   # or pr-check | check | ci | validate — first discovered
+
+# 3) Leftover workflow run: commands not covered by (1) or (2)
+# Example leftovers only — do not use these as a substitute for make/pre-commit:
 npx tsc --noEmit
 npx eslint . --max-warnings 0
 npx vitest run
-npm run build
-npm run pipeline:dry
-node scripts/verify-launch-env.mjs --ci
-# ... every other gate discovered in Gate Discovery
 ```
 
 ### Verification Rules
@@ -180,38 +186,41 @@ node scripts/verify-launch-env.mjs --ci
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│  WITHIN A SINGLE CYCLE:                                  │
+│  ONE-AND-DONE:                                           │
 │                                                          │
-│  1. Apply fix for finding-1                              │
-│  2. Apply fix for finding-2                              │
-│  3. Apply fix for finding-N                              │
-│  4. Run ALL local verify gates                           │
-│  5. Fix any new failures from step 4                     │
-│  6. Re-run ALL local verify gates                        │
-│  7. Repeat 5-6 until green                               │
-│  8. git add -A && git commit (ONE commit)                │
-│  9. git push (ONE push)                                  │
+│  0. Census + plan (no edits)                             │
+│  1. Apply fix for every planned cluster                  │
+│  2. pre-commit run --all-files  (all hook ids)           │
+│  3. make <primary-gate>                                  │
+│  4. Fix any new failures from 2-3                        │
+│  5. Re-run 2-3 until green                               │
+│  6. git commit (ONE commit, hooks ON)                    │
+│  7. git push (ONE push)                                  │
 │                                                          │
+│  ❌ NEVER: edit before the plan is complete              │
 │  ❌ NEVER: commit after each fix                         │
-│  ❌ NEVER: push without local verify green               │
-│  ❌ NEVER: push multiple times per cycle                 │
+│  ❌ NEVER: push to see what CI says                      │
+│  ❌ NEVER: git commit --no-verify                        │
+│  ❌ NEVER: skip a pre-commit hook or Makefile target     │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## Commit Convention
 
-Each remediation cycle produces exactly ONE commit:
+The success path produces exactly ONE commit for the PR:
 
 ```
-fix(pr-remediation): cycle {N} — resolve {count} findings
+fix(pr-remediation): resolve {count} findings
 
 Fixes:
 - {finding-id}: {one-line description}
 - {finding-id}: {one-line description}
 
-Local verify: all {N} gates passed
+Local verify: make {target} + pre-commit ({hook ids}) passed
 Deferred:
 - {finding-id}: {reason}
+
+Remediation-Cycle: {repo}#{pr}/cycle-1
 ```
 
 ## Rollback Protocol

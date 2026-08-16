@@ -6,7 +6,7 @@ role: merge_advise
 tags: [pr, merge, diagnose, git]
 owner: igor_beylin
 status: active
-version: 1.0.0
+version: 1.1.0
 updated: 2026-08-16
 /L9_META -->
 
@@ -25,7 +25,9 @@ Violation: Manual file write from PR diff = CRITICAL — revert and re-merge via
 
 - **Diagnose (`/pr`):** advise only. Merge after the user explicitly confirms.
 - **Converge (`/l9-pr-remediation`):** merge is authorized. After each PR is
-  green + mergeable, merge it. Do all open PRs in the target repo, oldest first.
+  green + mergeable, with no unanswered codebase or code-review agent threads
+  (`github-code-quality[bot]`, Copilot), merge it. Do all open PRs in the
+  target repo, oldest first.
 
 Write the receipt before the first `gh pr merge`:
 
