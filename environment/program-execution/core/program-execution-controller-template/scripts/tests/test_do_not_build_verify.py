@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 import yaml
 from helpers import (
     cleanup_worktree,
+    establish_runtime_readiness,
     make_blueprint,
     make_repo,
     prepare_attempt,
@@ -19,6 +20,7 @@ class DoNotBuildVerifyTest(unittest.TestCase):
     def test_verify_fails_when_changed_path_is_prohibited(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
+            establish_runtime_readiness(temp)
             blueprint = temp / "blueprint"
             make_blueprint(blueprint)
             dnb_path = blueprint / "DO_NOT_BUILD.yaml"

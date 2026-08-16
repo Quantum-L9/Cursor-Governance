@@ -5,13 +5,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import yaml
-from helpers import make_blueprint, run_cli
+from helpers import establish_runtime_readiness, make_blueprint, run_cli
 
 
 class BootstrapAdmissionTest(unittest.TestCase):
     def test_draft_blueprint_is_rejected_without_flag(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
+            establish_runtime_readiness(temp)
             blueprint = make_blueprint(temp / "blueprint")
             program_path = blueprint / "PROGRAM.yaml"
             program = yaml.safe_load(program_path.read_text(encoding="utf-8"))
@@ -33,6 +34,7 @@ class BootstrapAdmissionTest(unittest.TestCase):
     def test_admission_draft_does_not_mark_tasks_ready(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
+            establish_runtime_readiness(temp)
             blueprint = make_blueprint(temp / "blueprint")
             program_path = blueprint / "PROGRAM.yaml"
             program = yaml.safe_load(program_path.read_text(encoding="utf-8"))

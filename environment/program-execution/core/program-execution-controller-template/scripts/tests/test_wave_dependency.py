@@ -5,13 +5,20 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import yaml
-from helpers import make_blueprint, make_repo, register_contract, run_cli
+from helpers import (
+    establish_runtime_readiness,
+    make_blueprint,
+    make_repo,
+    register_contract,
+    run_cli,
+)
 
 
 class WaveDependencyTest(unittest.TestCase):
     def test_successor_wave_cannot_start_before_predecessor_completion_and_exit_gate(self):
         with TemporaryDirectory() as raw:
             temp = Path(raw)
+            establish_runtime_readiness(temp)
             bp = make_blueprint(temp / "blueprint", two_tasks=True)
             waves = yaml.safe_load((bp / "EXECUTION_WAVES.yaml").read_text())
             waves["waves"] = [

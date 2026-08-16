@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,125 @@ import yaml
 
 CONTROLLER_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = CONTROLLER_ROOT / "scripts"
+REPO = Path(__file__).resolve().parents[6]
+
+READINESS_SHA = "a" * 40
+READINESS_SESSION = "controller-test-session"
+
+
+def session_workspace(temp: Path) -> Path:
+    """The workspace the session's readiness receipt and memory state hang off."""
+    return temp / "session-workspace"
+
+
+def establish_runtime_readiness(
+    temp: Path,
+    *,
+    session_id: str = READINESS_SESSION,
+    governance_revision: str = READINESS_SHA,
+    runtime_script_revision: str = READINESS_SHA,
+    degraded_count: int = 0,
+) -> dict[str, Any]:
+    """Give this test the READY session receipt mutating commands require.
+
+    Mutating ``pec`` commands are admitted only against an
+    ``l9.agents.runtime-readiness.v1`` receipt (see ``pec/admission.py``), so the
+    suite establishes one the way a real session does rather than bypassing the
+    gate. The session workspace is deliberately *not* the fixture git repo: the
+    receipt admission resolves belongs to the session (``CLAUDE_PROJECT_DIR``),
+    while ``preflight --receipt-workspace`` stays an independent argument that
+    tests still exercise against the repo. ``L9_RUNTIME_ROOT`` keeps everything
+    out of the developer's real ``~/.l9``, and ``.l9/memory`` is created because
+    the receipt reports NOT_READY until the memory state root resolves.
+    """
+    sys.path.insert(0, str(REPO / "ops" / "scripts"))
+    from write_runtime_readiness_receipt import main as write_receipt
+    from write_runtime_readiness_receipt import receipt_path
+
+    workspace = session_workspace(temp)
+    (workspace / ".l9" / "memory").mkdir(parents=True, exist_ok=True)
+    (temp / "home").mkdir(parents=True, exist_ok=True)
+    # HOME is redirected so the Graphiti session-state file and the runtime root
+    # this fixture creates land under the temp dir, never the developer's real
+    # ~/.cursor or ~/.l9.
+    os.environ["HOME"] = str(temp / "home")
+    os.environ["L9_RUNTIME_ROOT"] = str(temp / "l9")
+    os.environ["L9_PE_RECEIPT_WORKSPACE"] = str(workspace)
+    os.environ["CLAUDE_PROJECT_DIR"] = str(workspace)
+    os.environ["CURSOR_PROJECT_DIR"] = str(workspace)
+    rc = write_receipt(
+        [
+            "--surface",
+            surface(),
+            "--workspace",
+            str(workspace),
+            "--governance",
+            str(REPO),
+            "--governance-revision",
+            governance_revision,
+            "--runtime-script-revision",
+            runtime_script_revision,
+            "--session-id",
+            session_id,
+            "--degraded-count",
+            str(degraded_count),
+        ]
+    )
+    if rc != 0:
+        raise AssertionError(f"readiness receipt writer exit {rc}")
+    receipt = json.loads(
+        receipt_path(surface=surface(), workspace=workspace).read_text(encoding="utf-8")
+    )
+    expected = "READY" if degraded_count == 0 else "DEGRADED"
+    if receipt["overall_status"] != expected:
+        raise AssertionError(f"fixture runtime is {receipt['overall_status']}, want {expected}")
+    return receipt
+
+
+def surface() -> str:
+    return os.environ.get("L9_GOVERNANCE_SURFACE", "").strip() or "cursor"
+
+
+def establish_phase_lock(
+    *,
+    session_id: str = READINESS_SESSION,
+    granted: bool = True,
+    graphiti_satisfied: bool = True,
+) -> dict[str, Any]:
+    """Put the canonical phase-lock state in place for every declared namespace.
+
+    Governed mutation requires a Graphiti-granted phase lock, so preflight
+    verifies two artifacts that ``memory_lock.py acquire`` produces together: the
+    local lock file (written through ``memory_state``, the same module the CLI
+    and the PreToolUse gate use) and the Cursor Graphiti session state recording
+    the served grant. Both are written here through the canonical helpers rather
+    than by hand, so the fixture cannot drift from the real acquire path.
+
+    ``granted`` / ``graphiti_satisfied`` exist so negative cases can withhold
+    exactly one of the two and assert the specific blocker.
+    """
+    mem = REPO / "environment" / "agents" / "adapters" / "claude-code" / "memory"
+    sys.path.insert(0, str(mem))
+    import memory_state as st
+
+    contract = st.load_contract()
+    written: list[str] = []
+    for namespace in st.resolve_namespaces(contract):
+        st.write_receipt(contract, session_id, {"namespaces": [namespace]})
+        path = st.write_lock(contract, namespace, session_id, st.task_signature(namespace))
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["transport"] = "cursor-graphiti-phase-lock"
+        body["granted"] = granted
+        path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        written.append(namespace)
+
+    state = st.graphiti_state_path(session_id)
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(
+        json.dumps({"memory_satisfied_for": ["gmp:phase_lock"] if graphiti_satisfied else []}),
+        encoding="utf-8",
+    )
+    return {"namespaces": written, "graphiti_state_file": str(state), "session_id": session_id}
 
 
 def write_yaml(path: Path, value: Any) -> None:
@@ -599,6 +719,7 @@ def write_json(path: Path, value: Any) -> Path:
 
 
 def bootstrap_repo(temp: Path, **blueprint_options: Any) -> tuple[Path, Path, Path]:
+    establish_runtime_readiness(temp)
     blueprint = make_blueprint(temp / "blueprint", **blueprint_options)
     repo = make_repo(temp / "repo")
     workspace = temp / "runtime"
