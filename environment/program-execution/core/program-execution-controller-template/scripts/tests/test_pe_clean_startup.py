@@ -84,9 +84,7 @@ class CleanStartupTests(unittest.TestCase):
                 input=json.dumps(
                     {
                         "tool_name": "Edit",
-                        "tool_input": {
-                            "file_path": "environment/agents/adapters/claude-code/x.py"
-                        },
+                        "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
                         "session_id": session_id,
                     }
                 ),

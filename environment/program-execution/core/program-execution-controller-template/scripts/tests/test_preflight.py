@@ -83,9 +83,7 @@ class PreflightTests(unittest.TestCase):
                 str(repo),
             )
             self.assertFalse(result["ready"])
-            self.assertIn(
-                "runtime_receipt_not_ready", [row["token"] for row in result["blockers"]]
-            )
+            self.assertIn("runtime_receipt_not_ready", [row["token"] for row in result["blockers"]])
             self.assertEqual(result["blockers"][0]["error_code"], "REVISION_MISMATCH")
 
     def test_source_contract_incomplete_names_draft(self) -> None:

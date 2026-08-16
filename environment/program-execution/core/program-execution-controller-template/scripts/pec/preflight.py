@@ -196,8 +196,7 @@ def preflight(
     receipt_ws = (receipt_workspace or Path.cwd()).resolve()
     receipt_path, receipt = _load_receipt(surface, receipt_ws)
     blockers = [
-        {"token": token, "error_code": _error_code(token)}
-        for token in _receipt_blockers(receipt)
+        {"token": token, "error_code": _error_code(token)} for token in _receipt_blockers(receipt)
     ]
     blockers.extend(
         {"token": token, "error_code": _error_code(token)} for token in _lock_blockers()
