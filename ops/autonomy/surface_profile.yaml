@@ -118,6 +118,8 @@ campaign_execution:
       integration_branch: campaign/l9-devpack-program-execution-hardening
     l9-ecosystem-fix-plan:
       integration_branch: campaign/l9-ecosystem-fix-plan
+    adr-identity-integrity-v1:
+      integration_branch: campaign/adr-identity-integrity-v1
 
 authority_order:
   - CANONICAL_LAW.autonomy_velocity

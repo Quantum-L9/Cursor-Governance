@@ -2,6 +2,7 @@
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: repo-write-lock-test precommit-hook-contract
 .PHONY: capability-contract-validate capability-check capability-broker-preflight
+.PHONY: adr-identity-validate
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -287,6 +288,10 @@ pr-check:
 
 # Additive prerequisite — do not rewrite the pr-check recipe line above.
 pr-check: capability-contract-validate
+pr-check: adr-identity-validate
+
+adr-identity-validate:
+	python3 ops/scripts/validate_adr_identity.py
 
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).

@@ -107,13 +107,29 @@ We chose **PostgreSQL** because:
 
 ## File Naming
 
+Canonical namespace: `docs/decisions/ADR-NNNN-slug.md`. The filename
+number and the H1 number MUST match. Numeric ids are globally unique.
+
 ```
 docs/decisions/
-├── 001-use-postgresql.md
-├── 002-adopt-trpc-over-rest.md
-├── 003-switch-to-pnpm.md
+├── ADR-0001-claude-code-bounded-concurrent-autonomy.md
+├── ADR-0002-memory-enforcement-contract.md
 └── template.md
 ```
+
+## Identity integrity (fail-closed)
+
+Before creating an ADR:
+
+1. Inventory `docs/decisions/ADR-NNNN-*.md`.
+2. If any numeric id is duplicated, STOP. Do not alias or reuse the collided number.
+3. Allocate `max(existing)+1` only. Do not skip numbers.
+4. Write the H1 as `# ADR-NNNN: …` using that same number.
+5. Run `python3 ops/scripts/validate_adr_identity.py` and keep it PASS.
+
+Active machine contracts MUST use the exact repo-relative ADR path, never a
+bare `ADR-NNNN` token. Historical `CAMPAIGN_SOURCE.yaml` files are evidence,
+not rewrite targets.
 
 ## Tips
 
