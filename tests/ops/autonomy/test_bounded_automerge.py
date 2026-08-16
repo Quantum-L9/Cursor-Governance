@@ -114,7 +114,9 @@ def test_merge_if_allowed_does_not_merge_when_denied() -> None:
     assert merged == []
 
 
-def test_pr_automerge_env_alone_does_not_authorize_merge_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pr_automerge_env_alone_does_not_authorize_merge_gate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("PR_AUTOMERGE", "1")
     monkeypatch.delenv("L9_MERGE_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_MERGE_AUTHORIZATION_FILE", "/tmp/does-not-exist-merge-auth.json")
@@ -125,7 +127,9 @@ def test_pr_automerge_env_alone_does_not_authorize_merge_gate(monkeypatch: pytes
     assert reason is not None
 
 
-def test_exact_head_receipt_allows_matching_merge(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_exact_head_receipt_allows_matching_merge(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     auth = tmp_path / "merge-authorization.json"
     merge_if_allowed(
         repo="Quantum-L9/Cursor-Governance",
@@ -146,7 +150,9 @@ def test_exact_head_receipt_allows_matching_merge(tmp_path: Path, monkeypatch: p
     assert reason is None
 
 
-def test_exact_head_receipt_denies_other_head(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_exact_head_receipt_denies_other_head(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     auth = tmp_path / "merge-authorization.json"
     merge_if_allowed(
         repo="Quantum-L9/Cursor-Governance",

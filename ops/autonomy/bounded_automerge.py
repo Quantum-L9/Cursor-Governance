@@ -21,8 +21,9 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from authorize_merge import auth_path, write_authorization
 
@@ -170,9 +171,7 @@ def merge_if_allowed(
     }
     if not allowed:
         return result
-    write_exact_head_authorization(
-        repo=repo, pr=pr, head_sha=observed_head, path=auth_file
-    )
+    write_exact_head_authorization(repo=repo, pr=pr, head_sha=observed_head, path=auth_file)
     if merge_fn is None:
         merge_fn = _gh_squash_merge
     merge_fn(repo, pr)
