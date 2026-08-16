@@ -65,6 +65,7 @@ REQUIRED = [
     "scripts/pec/ledger.py",
     "scripts/pec/state.py",
     "scripts/pec/cli.py",
+    "scripts/pec/preflight.py",
 ]
 PLACEHOLDER = re.compile(r"\{\{[A-Z0-9_]+\}\}")
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
