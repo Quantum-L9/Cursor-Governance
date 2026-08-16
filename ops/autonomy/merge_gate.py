@@ -9,14 +9,17 @@ Ordinary `gh pr merge` is allowed only when:
   L9_MERGE_AUTHORIZED=<nonempty reason string>          # session env
   ~/.l9/autonomy/merge-authorization.json               # receipt file
     {"authorizations": [{"repo": "org/repo", "pr": "*" | 53,
-                          "source": "l9-pr-remediation",
+                          "source": "l9-pr-remediation" | "pr_automerge",
+                          "head_sha": "<optional exact head>",
                           "expires_at": <unix-seconds>, "reason": "..."}]}
     Overridable for tests via L9_MERGE_AUTHORIZATION_FILE. An entry matches
     when repo matches and pr is "*" (all open PRs in that repo) or the
-    exact PR number, and expires_at is in the future.
+    exact PR number, and expires_at is in the future. A `pr_automerge`
+    entry also requires the observed head (L9_MERGE_HEAD_SHA) to match.
 
-Invoking /l9-pr-remediation writes that receipt via
-ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
+`PR_AUTOMERGE=1` is not a general merge permission. It only lets
+`make pr` attempt an exact-PR exact-head merge after
+ops/autonomy/bounded_automerge.py proves the PR is green and mergeable.
 An L4 release receipt does NOT authorize merge.
 
 Never waived: force-push, hard-reset, git clean -fd, admin-merge.
@@ -88,7 +91,14 @@ def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str,
     return repo, pr
 
 
-def _file_authorizes(repo: str, pr: str) -> bool:
+def _observed_head(tool_input: dict[str, Any]) -> str:
+    env_head = os.environ.get("L9_MERGE_HEAD_SHA", "").strip()
+    if env_head:
+        return env_head
+    return str(tool_input.get("head_sha") or tool_input.get("head") or "").strip()
+
+
+def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
     """True when a fresh matching repo-scoped or PR-scoped authorization exists."""
     path = _auth_file_path()
     if not path.is_file():
@@ -113,6 +123,9 @@ def _file_authorizes(repo: str, pr: str) -> bool:
             continue
         if not repo:
             continue
+        entry_head = str(entry.get("head_sha") or "").strip()
+        if entry_head and entry_head != head_sha:
+            continue
         if entry_pr in REPO_SCOPE:
             return True
         if pr and entry_pr == pr:
@@ -123,8 +136,9 @@ def _file_authorizes(repo: str, pr: str) -> bool:
 def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
     if os.environ.get("L9_MERGE_AUTHORIZED", "").strip():
         return True
+    # PR_AUTOMERGE=1 alone is not merge authority.
     repo, pr = _target_from_input(tool_name, tool_input)
-    return _file_authorizes(repo, pr)
+    return _file_authorizes(repo, pr, _observed_head(tool_input))
 
 
 def _never_waive_command(command: str) -> bool:

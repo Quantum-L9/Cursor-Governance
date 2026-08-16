@@ -20,6 +20,7 @@ authorize:
   - scoped_commit_push # only after L4 release_authorized (see l4_local_autonomy)
   - create_update_pr_via_make_pr # only after L4 release_authorized; checkers must PASS
   - pr_remediation_until_green_mergeable_and_merged # /l9-pr-remediation Converge
+  - bounded_exact_pr_exact_head_automerge # PR_AUTOMERGE=1 make pr only
   - open_stacked_pr_on_open_pr_head # stacking policy; bottom-up merge order
 
 forbid:
@@ -118,6 +119,10 @@ campaign_execution:
       integration_branch: campaign/l9-devpack-program-execution-hardening
     l9-ecosystem-fix-plan:
       integration_branch: campaign/l9-ecosystem-fix-plan
+    level3-make-pr-single-path:
+      integration_branch: campaign/level3-make-pr-single-path
+      publish_model: four_commit_one_pr
+      publish_command: PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr
 
 authority_order:
   - CANONICAL_LAW.autonomy_velocity

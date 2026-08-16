@@ -4,6 +4,17 @@
   "execution_authority": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
   "autonomy_maturity": "M4_ASSURANCE_GOVERNED",
   "autonomous_merge": false,
+  "bounded_automerge": {
+    "enabled_by": "PR_AUTOMERGE=1",
+    "opt_out": "PR_AUTOMERGE=0",
+    "scope": "exact_pr_exact_head",
+    "require_green_required_checks": true,
+    "require_mergeable": true,
+    "require_not_draft": true,
+    "require_no_blocking_review": true,
+    "force_push": false,
+    "admin_merge": false
+  },
   "remediation": {
     "skill": "l9-pr-remediation",
     "loop": "read CI failures and review-bot comments, apply scoped fixes, push to the PR branch, wait for re-run, repeat until CI is green and no actionable comments remain",

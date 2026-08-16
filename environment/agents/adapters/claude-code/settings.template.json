@@ -11,17 +11,18 @@
     "writes (branch/worktree/commit), CI inspection (gh run/pr checks), read-only GitHub",
     "queries, PR monitoring (subscribe/unsubscribe), and `make pr` \u2014 so completed work",
     "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
-    "PUBLISH PATH: `PR_REMEDIATE=0 make pr` is the ONLY sanctioned route to GitHub. It runs",
+    "PUBLISH PATH: `make pr` is the ONLY sanctioned route to GitHub. It runs",
     "the Makefile checkers, then pushes and opens the PR. Raw `git push`, `gh pr create`,",
     "`gh pr edit` and the MCP create_pull_request/push_files tools are in deny BECAUSE they",
     "skip those checkers. This allow/deny split is not advisory: it must agree with",
     "ops/autonomy/local_execution_gate.py, and validate_claude_env.py fails when it does not.",
     "An allow entry here is what an agent reads as 'approved, no prompt' \u2014 so listing a",
     "forbidden action here teaches the agent to attempt it and get denied a layer later.",
-    "Standing autonomous merge is OFF (L9_AUTONOMY_AUTONOMOUS_MERGE=false). Campaigns",
-    "and make pr do not merge. /l9-pr-remediation writes ops/autonomy/authorize_merge.py",
-    "and merge_gate.py then allows ordinary gh pr merge. Force pushes, hard resets,",
-    "destructive cleanup, and admin-merge overrides are denied outright."
+    "Standing autonomous merge is OFF (L9_AUTONOMY_AUTONOMOUS_MERGE=false).",
+    "PR_AUTOMERGE=1 may merge only the exact green mergeable PR head observed by",
+    "that make pr invocation. PR_AUTOMERGE=0 remains the opt-out. Bare gh pr merge",
+    "is not a general permission. Force pushes, hard resets, destructive cleanup,",
+    "and admin-merge overrides are denied outright."
   ],
   "hooks": {
     "SessionStart": [

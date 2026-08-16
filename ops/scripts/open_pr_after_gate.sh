@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# After a successful local PR gate: push, open/reuse PR, subscribe, emit remediation handoff.
-# Invoked by `make pr` (any capitalization). Skip open: OPEN_PR=0. Skip remediate: PR_REMEDIATE=0.
-# Gate-only: `make pr-check`.
+# After a successful local PR gate: push, open/reuse PR, subscribe, optionally
+# remediate and bounded-automerge this exact PR head.
+# Invoked by `make pr` (any capitalization). Skip open: OPEN_PR=0.
+# Skip remediate: PR_REMEDIATE=0. Skip merge: PR_AUTOMERGE=0.
+# Gate-only: OPEN_PR=0 make pr.
 set -euo pipefail
 
 WS="${1:-${WS:-$(pwd)}}"
@@ -9,6 +11,7 @@ WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"
 BASE_REF="${PR_BASE#origin/}"
 PR_REMEDIATE="${PR_REMEDIATE:-0}"
+PR_AUTOMERGE="${PR_AUTOMERGE:-0}"
 GOV_ROOT="${GOV_ROOT:-}"
 if [[ -z "$GOV_ROOT" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -203,7 +206,7 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
         git log "${PR_BASE}..HEAD" --format='- %s' --reverse
         echo ""
         echo "## Test plan"
-        echo "- [x] \`make pr-check\` (local changed-files gate) PASS before open"
+        echo "- [x] \`make pr\` local changed-files gate PASS before open"
         echo "- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)"
         echo "- [ ] CI green; agent PR remediation subscribed after open"
       }
@@ -217,7 +220,7 @@ ${campaign_body:+$campaign_body
 $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 
 ## Test plan
-- [x] \`make pr-check\` (local changed-files gate) PASS before open
+- [x] \`make pr\` local changed-files gate PASS before open
 - [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)
 - [ ] CI green; agent PR remediation subscribed after open
 EOF
@@ -282,6 +285,10 @@ l9_emit_pr_assignment() {
 handoff_path="$handoff_dir/pr-remediation-handoff.json"
 packet_id="make-pr-${pr_number}-$(date -u +%Y%m%dT%H%M%SZ)"
 created_by="${USER:-agent}"
+bounded_automerge_json="False"
+if [[ "$PR_AUTOMERGE" == "1" ]]; then
+  bounded_automerge_json="True"
+fi
 
 python3 - "$handoff_path" <<PY
 import json, sys
@@ -293,6 +300,7 @@ doc = {
     "authority": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
     "profile": "pr-convergence",
     "autonomous_merge": False,
+    "bounded_automerge": ${bounded_automerge_json},
     "skill": "l9-pr-remediation",
     "max_cycles": 3,
     "pr_number": int("${pr_number}"),
@@ -311,7 +319,26 @@ print(f"Handoff written: {path}")
 PY
 l9_emit_pr_assignment || true
 
-if [[ "$PR_REMEDIATE" == "1" ]]; then
+merged=0
+if [[ "$PR_AUTOMERGE" == "1" ]]; then
+  echo "--- bounded automerge (exact PR + exact head) ---"
+  observed_head="$(git rev-parse HEAD)"
+  export PR_AUTOMERGE L9_MERGE_HEAD_SHA="$observed_head"
+  if python3 "$GOV_ROOT/ops/autonomy/bounded_automerge.py" \
+    --repo "$repo" --pr "$pr_number" --head "$observed_head" --merge; then
+    merged=1
+    echo "RESULT: PASS — PR #$pr_number merged at $observed_head"
+  else
+    echo "NOTE: bounded automerge deferred — PR remains open. Diagnose, fix, re-run make pr."
+  fi
+fi
+
+if [[ "$PR_AUTOMERGE" == "1" ]]; then
+  echo "PR_AUTOMERGE=1 — this make pr invocation owns remediation/merge; no second worker"
+  if [[ "$merged" != "1" ]]; then
+    echo "RESULT: PASS — PR open + subscribed; merge deferred until green+mergeable exact head"
+  fi
+elif [[ "$PR_REMEDIATE" == "1" ]]; then
   cat <<EOF
 
 === L9_AGENT_REQUIRED ===
