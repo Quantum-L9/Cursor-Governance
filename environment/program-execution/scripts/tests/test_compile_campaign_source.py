@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -56,6 +57,42 @@ class CompileCampaignSourceTests(unittest.TestCase):
             errors = self.validator.validate(target, "template")
             self.assertEqual(errors, [], msg="\n".join(errors))
 
+    def test_empty_evidence_requirements_still_template_valid(self) -> None:
+        """Activate seeds omit evidence_requirements; GATE-* must not become SRC evidence."""
+        synthesized = self.compiler._admission_evidence({"metadata": {"intended_host": "org/repo"}})
+        self.assertEqual(synthesized[0]["id"], "EVID-001")
+        existing = self.compiler._admission_evidence(
+            {"evidence_requirements": [{"id": "EVID-009", "claim": "kept"}]}
+        )
+        self.assertEqual(existing[0]["id"], "EVID-009")
+
+        activate_source = (
+            Path.home()
+            / ".l9/gov-worktrees/l9-ci-core-org-runtime-v1"
+            / "environment/program-execution/campaigns"
+            / "l9-ci-core-org-runtime-v1"
+            / "CAMPAIGN_SOURCE.yaml"
+        )
+        if not activate_source.is_file():
+            return
+        with tempfile.TemporaryDirectory() as raw:
+            source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            data = yaml.safe_load(activate_source.read_text(encoding="utf-8"))
+            data["metadata"]["campaign_id"] = "bounded-replanning-v1"
+            data["program"]["id"] = "bounded-replanning-v1"
+            data["evidence_requirements"] = []
+            source.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            self.compiler.compile_source(source, target)
+            catalog = yaml.safe_load((target / "EVIDENCE_CATALOG.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(catalog["evidence"][0]["id"], "EVID-001")
+            trace = yaml.safe_load(
+                (target / "SOURCE_TRACEABILITY.yaml").read_text(encoding="utf-8")
+            )
+            self.assertEqual(trace["sources"][0]["evidence_id"], "EVID-001")
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
+
     def test_unknown_campaign_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
@@ -105,6 +142,8 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertTrue((target / "ACCEPTANCE_RECEIPT.yaml").is_file())
 
             workspace = tmp / "runtime"
+            pec_env = os.environ.copy()
+            pec_env.setdefault("L9_ALLOW_PEC_DIRECT", "1")
             subprocess.run(
                 [
                     sys.executable,
@@ -118,6 +157,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                env=pec_env,
             )
             validated = subprocess.run(
                 [sys.executable, str(PEC_CLI), "validate", "--workspace", str(workspace)],

@@ -158,22 +158,17 @@ def _failed_execution_status(provider_status: object) -> str:
 
 
 def _abort_controller(workspace: Path, task_id: str, actor: str, reason: str) -> dict[str, Any]:
-    try:
-        return _pec(
-            workspace,
-            "abort-execution",
-            task_id,
-            "--reason",
-            reason,
-            "--actor",
-            actor,
-        )
-    except Exception as exc:
-        return {
-            "status": "ABORT_FAILED",
-            "error_type": type(exc).__name__,
-            "message": str(exc),
-        }
+    return {
+        "status": "ABORT_NOT_REGISTERED",
+        "task_id": task_id,
+        "actor": actor,
+        "reason": reason,
+        "workspace": str(workspace),
+        "note": (
+            "pec abort-execution is not a controller command; "
+            "make campaign execute uses pec via run_campaign only"
+        ),
+    }
 
 
 def execute(args: argparse.Namespace) -> dict[str, Any]:

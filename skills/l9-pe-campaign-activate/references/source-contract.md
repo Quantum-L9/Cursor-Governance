@@ -15,10 +15,29 @@ updated: 2026-08-15
 Purpose: minimum inputs this skill accepts, and the seed fields it must emit
 so `compile_campaign_source.py` can succeed.
 
-## Intent file (agent or operator)
+## Operator input (memo or activate YAML)
+
+Preferred: a free-form program memo (`.md`). `make campaign INTENT=brief.md`
+assigns `campaign_id` from the filename slug (`PE- Memory.md` → `pe-memory`,
+then `-v2` on collision). You do not write a campaign id or a PE schema.
+
+The brief compiler (`scripts/compile_brief.py`) extracts:
+
+- tasks from numbered `Release A — …` blocks, else a `Program ordering` list
+- objective from `It is:` under Final architectural judgment (not an earlier `It is:`)
+- `problem_statement` = the full memo
+- target = github-shaped `owner/repo` (hyphen or `github.com/…`), else
+  `Quantum-L9/Cursor-Governance` (`TARGET=` override). Slash-noise like
+  `MCP/API` is not a repo.
+
+It fails closed if there are no numbered work items. It does not invent tasks.
+Generated seed lands in `$HOME/.l9/primed/<id>.activate.yaml`, never as
+`INTENT.yaml` under `campaigns/<id>/`.
+
+Optional power-user activate YAML (passthrough):
 
 ```yaml
-campaign_id: kebab-case-id          # required, [a-z0-9][a-z0-9-]{2,62}
+campaign_id: kebab-case-id          # required only for this YAML form
 title: Human title                  # required
 objective: One paragraph            # required
 owner: Igor Beylin                  # default Igor Beylin

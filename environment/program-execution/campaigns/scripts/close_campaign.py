@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ LIFECYCLES = {"planned", "in_progress", "complete", "cancelled"}
 TERMINAL_VERDICTS = {"CONVERGED", "CONVERGED_WITH_NON_BLOCKING_RISKS", "NOT_CONVERGED"}
 LEDGER_NAME = "CAMPAIGN_STATUS.yaml"
 POLICY_NAME = "CAMPAIGN_EXECUTION_POLICY.yaml"
+COMPLETED_DIR = "COMPLETED"
 
 
 def _utc_now() -> str:
@@ -83,6 +85,8 @@ def next_campaign(root: Path) -> dict[str, Any] | None:
     for item in ordered:
         cid = str(item["id"])
         life = str((ledger.get(cid) or {}).get("lifecycle") or "planned")
+        if (root / COMPLETED_DIR / cid).is_dir():
+            continue
         if life not in {"complete", "cancelled"}:
             return {
                 "id": cid,
@@ -135,6 +139,18 @@ def close_campaign(
     return record
 
 
+def archive_completed(root: Path, campaign_id: str) -> Path:
+    src = root / campaign_id
+    dest = root / COMPLETED_DIR / campaign_id
+    if not src.is_dir():
+        raise SystemExit(f"campaign directory missing: {src}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        raise SystemExit(f"COMPLETED already has {campaign_id}")
+    shutil.move(str(src), str(dest))
+    return dest
+
+
 def cmd_close(args: argparse.Namespace) -> int:
     evidence = {}
     for item in args.evidence:
@@ -149,6 +165,7 @@ def cmd_close(args: argparse.Namespace) -> int:
         evidence,
         args.actor,
     )
+    archive_completed(campaigns_root(args.root), args.id)
     print(json.dumps(record, indent=2, sort_keys=True))
     return 0
 

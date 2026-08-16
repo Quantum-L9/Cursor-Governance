@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "ARCHITECTURE.md",
-      "sha256": "bb29f3a85d6cec867d34dde552b702cb482fc7b2f0bc5725cc0210e54e5eea87"
+      "sha256": "6073797ea03e38b431f51e490ebcfcd121f3ac657a0abe42fea0b2f845fa0c18"
     },
     {
       "path": "COMPATIBILITY.yaml",
@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "3eb27481468554f42d3da995ddcf4befba56abb12980fee35ad289200c15538d"
+      "sha256": "6b9035afaf696854a35ba6a8d4a77b567bce1640c6d493c9ec7ad3b40235cce2"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -402,8 +402,12 @@
       "sha256": "60c462e69c3461bb3f0352960b307088a5a1d5302baa771b0533c0fe0bbd8dea"
     },
     {
+      "path": "audits/pipeline-assembly-audit.v1.yaml",
+      "sha256": "cbb2021d6098bb9f1eb2258f7f720986a846a927fc7c38ad067d245f7651c64d"
+    },
+    {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "ffeff1dc7eb8e87e200e6ef255b65559ea3fd1a1dce96b7fa7f078338f7059c1"
+      "sha256": "f42114abc9fd85c422c2705ddaa6cf9ad730ec282ca4308067955ff6784e1eea"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -591,11 +595,11 @@
     },
     {
       "path": "campaigns/scripts/close_campaign.py",
-      "sha256": "3fcc5222468ca66cc2d620b732a2d1c047b5933084e8fbe90a0b8caf1d51a1cd"
+      "sha256": "e3494a39f11c5dc59faba0747fda0f3c14c57b13439c8200e9b9a66fc4074ba6"
     },
     {
       "path": "campaigns/scripts/test_close_campaign.py",
-      "sha256": "121b10c566dbf4ace506bc0252948f7d56d113643256071969493112b9ec8efc"
+      "sha256": "f42bcf86dc6698d64ad9c29a487ea4d21dfbc40379b84f9bdf1e4d5a20ac0dad"
     },
     {
       "path": "campaigns/session-runtime-hydration-convergence-v1/CAMPAIGN_SOURCE.yaml",
@@ -619,7 +623,7 @@
     },
     {
       "path": "compiler/cli.py",
-      "sha256": "9ef741686383dd264cec1511ff4c5c7f328ea2376d23626c775ac789ac017f7f"
+      "sha256": "e5d5f3c9c2fe08a1e040d0fbd8a19acfab5bec5ce8ac6cba045b2d754415e5df"
     },
     {
       "path": "compiler/fixtures/implementation-prescribing-intent.yaml",
@@ -679,7 +683,7 @@
     },
     {
       "path": "compiler/tests/test_cli.py",
-      "sha256": "0612456f0338a9f84754b58e8a7e8cbf51f6cc2fdd93b0045ef2bdadfd863800"
+      "sha256": "00b38f906ac3447de37c9e0c9ce6e7ec858b9ca552dad1b4d4856e388336e9f0"
     },
     {
       "path": "compiler/tests/test_intent_schema.py",
@@ -1303,7 +1307,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "2caae543362f2cb29d80275552d4f484d9e1237345647d05da05269b0311b368"
+      "sha256": "8ef99b96ef17a107357031285c09f0dbb825811df5f9c05df506ae7b5d8d32e6"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1338,6 +1342,10 @@
       "sha256": "ddbb14180a275a296f24146befa4ba8450188c1f2917adff3ae8d5e65aa12e90"
     },
     {
+      "path": "scripts/run_campaign.py",
+      "sha256": "3676748024d51722031fad12f01af2a631a1a41e638db9034a49c8871c3e5884"
+    },
+    {
       "path": "scripts/run_conformance.py",
       "sha256": "780cb453680a1e0f48cb7016306068c44b45a435c0bd2cd5fdda7285091cd159"
     },
@@ -1347,15 +1355,23 @@
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
-      "sha256": "0e7d61be182b1c33cf500cc21e6c0d5efcb1c3154560ca3d573ddbe4518419b5"
+      "sha256": "97bf8d24162cb842645eae0ff471f24a4da6f831ffad9de20fa3b81030983d2d"
     },
     {
       "path": "scripts/tests/test_campaign_pr_copy.py",
       "sha256": "ead6054e3c6332980b8083cedc4cf296355d1ef681248d3b247035fd650c8144"
     },
     {
+      "path": "scripts/tests/test_campaign_tunnel_airtight.py",
+      "sha256": "fe8ec03594daa5219d0c062eed022a7b087c5a8adac90d02593e8192ceb62c0c"
+    },
+    {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "6d4cd10d899f9501fe3a90c69fbbbbf23901265f8d815dba3cbebf75a494b1f1"
+      "sha256": "a779cedf57819ba448cb6ed4166b72a81019fc13721ac628e3b15c0e30f181dc"
+    },
+    {
+      "path": "scripts/tests/test_run_campaign.py",
+      "sha256": "2434785531575a134b9ee5510f60b346a0ce1b1983261982a9d93a65505cbd6b"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

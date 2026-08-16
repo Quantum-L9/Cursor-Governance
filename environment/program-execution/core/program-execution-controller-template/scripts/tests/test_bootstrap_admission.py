@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import yaml
 from helpers import make_blueprint, run_cli
@@ -29,6 +31,24 @@ class BootstrapAdmissionTest(unittest.TestCase):
                 expect=2,
             )
             self.assertIn("admission-draft", result["error"])
+            self.assertIn("make campaign", result["error"])
+
+    def test_admission_draft_flag_refused_without_allow_env(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            blueprint = make_blueprint(temp / "blueprint")
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("L9_ALLOW_ADMISSION_DRAFT", None)
+                result = run_cli(
+                    "bootstrap",
+                    "--workspace",
+                    str(temp / "runtime"),
+                    "--blueprint",
+                    str(blueprint),
+                    "--admission-draft",
+                    expect=2,
+                )
+            self.assertIn("not a live campaign path", result["error"])
 
     def test_admission_draft_does_not_mark_tasks_ready(self) -> None:
         with TemporaryDirectory() as raw:
@@ -41,14 +61,15 @@ class BootstrapAdmissionTest(unittest.TestCase):
                 yaml.safe_dump(program, sort_keys=False),
                 encoding="utf-8",
             )
-            boot = run_cli(
-                "bootstrap",
-                "--workspace",
-                str(temp / "runtime"),
-                "--blueprint",
-                str(blueprint),
-                "--admission-draft",
-            )
+            with patch.dict(os.environ, {"L9_ALLOW_ADMISSION_DRAFT": "1"}):
+                boot = run_cli(
+                    "bootstrap",
+                    "--workspace",
+                    str(temp / "runtime"),
+                    "--blueprint",
+                    str(blueprint),
+                    "--admission-draft",
+                )
             self.assertEqual(boot["definition_status"], "draft")
             status = run_cli("status", "--workspace", str(temp / "runtime"))
             self.assertEqual(status["definition_status"], "draft")

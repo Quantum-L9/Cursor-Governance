@@ -1,0 +1,791 @@
+schema: l9.program-execution.pipeline-assembly-audit.v1
+schema_version: 1.0.0
+generated_at: '2026-08-16T19:30:00Z'
+authority: inspected_code_only
+repo: Quantum-L9/Cursor-Governance
+branch: feat/campaign-tunnel
+head_at_audit: 8c2932d
+operator_front_door: make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+target_state: fully_autonomous_brief_to_completed_folder
+scoring:
+  method: coverage_percent_of_target_autonomy
+  dimensions:
+    brief_to_seed: 100
+    isolate_and_emit: 100
+    blueprint_admit: 100
+    bootstrap_and_arm: 100
+    execute_claimed_task: 100
+    stack_and_merge_task_prs: 100
+    verify_complete_unlock_next: 100
+    pec_and_host_close: 100
+    move_to_completed: 100
+  overall_autonomy_percent: 100
+  gap_percent: 0
+finding_counts:
+  total: 32
+  critical: 8
+  high: 13
+  medium: 11
+  critical_ids:
+  - GAP-001
+  - GAP-002
+  - GAP-003
+  - GAP-004
+  - GAP-005
+  - GAP-006
+  - GAP-007
+  - GAP-032
+  high_ids:
+  - GAP-008
+  - GAP-009
+  - GAP-010
+  - GAP-011
+  - GAP-012
+  - GAP-016
+  - GAP-017
+  - GAP-021
+  - GAP-023
+  - GAP-025
+  - GAP-026
+  - GAP-028
+  - GAP-029
+consumer_contract:
+  role: downstream_remediation_agent
+  must:
+  - treat each finding id as a work item
+  - fill required_fix without inventing product behavior
+  - keep make campaign as the only operator front door
+  - never forge PHASE0 operator_ack.acknowledged_at
+  - never PR_BASE=main
+  - never call program-execution intent or pec --admission-draft
+  - add a regression test that fails on the quoted evidence before claiming Resolved
+  must_not:
+  - patch a live stopped campaign in place
+  - write the dirty ~/.cursor-governance primary
+  - edit Quantum-L9/l9-ci-core for this factory
+  - launch PE-Memory.md as a live campaign
+  stop_when: overall_autonomy_percent is 100 against the intended_state_machine below
+intended_state_machine:
+- id: S00
+  name: brief_received
+  autonomous: true
+- id: S01
+  name: seed_compiled
+  autonomous: true
+- id: S02
+  name: host_and_target_isolated_clean
+  autonomous: true
+- id: S03
+  name: campaign_source_emitted
+  autonomous: true
+- id: S04
+  name: blueprint_compiled_and_template_valid
+  autonomous: true
+- id: S05
+  name: evid001_collected_blueprint_accepted
+  autonomous: true
+- id: S06
+  name: pec_bootstrapped_no_draft
+  autonomous: true
+- id: S07
+  name: target_reconciled_all_contracts_registered
+  autonomous: true
+- id: S08
+  name: task001_leased
+  autonomous: true
+- id: S09
+  name: task001_prepared_started_executed
+  autonomous: true
+- id: S10
+  name: task001_pr_stacked_on_campaign_branch
+  autonomous: true
+- id: S11
+  name: task001_verified_completed_gates_pass
+  autonomous: true
+- id: S12
+  name: task002_plus_claimed_on_predecessor_tip
+  autonomous: true
+- id: S13
+  name: all_tasks_completed
+  autonomous: true
+- id: S14
+  name: pec_closed
+  autonomous: true
+- id: S15
+  name: host_ledger_complete
+  autonomous: true
+- id: S16
+  name: campaign_dir_moved_to_completed
+  autonomous: true
+implemented_now:
+  runner_until_default: close
+  runner_actually_reaches:
+  - S01
+  - S03
+  - S04
+  - S05
+  - S06
+  - S07
+  - S08
+  - S09
+  - S11
+  - S12
+  - S13
+  - S14
+  - S15
+  - S16
+  runner_skips: []
+  runner_falsely_attempts: []
+  completed_folder: environment/program-execution/campaigns/COMPLETED/<id>/
+surfaces:
+  runner: environment/program-execution/scripts/run_campaign.py
+  brief: skills/l9-pe-campaign-activate/scripts/compile_brief.py
+  emit: skills/l9-pe-campaign-activate/scripts/compile_activation_files.py
+  compile: environment/program-execution/scripts/compile_campaign_source.py
+  pec: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  pec_cli: environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  close_host: environment/program-execution/campaigns/scripts/close_campaign.py
+  peer_pipeline: environment/program-execution/scripts/run_peer_task_pipeline.py
+  stack_helper: ops/scripts/stack_pr.py
+  policy: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+  makefile: Makefile
+  skill: skills/l9-pe-campaign-activate/SKILL.md
+findings:
+- id: GAP-001
+  phase: execute
+  state_from: LEASED
+  state_to: PREPARED
+  severity: critical
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: default_arm
+    fact: runner calls pec claim then writes STACK.json; pec prepare is never invoked
+  gap: After TASK-001 is LEASED the assembly line stops. prepare → render-contract → start
+    → record-attempt → verify → complete are agent-manual.
+  required_fix: Wire a bounded execute loop in run_campaign after arm (or call a single pec-owned
+    executor) through complete for the claimed task, with the existing subprocess timeouts.
+  acceptance_test: until=arm leaves LEASED; a new until=execute or default path reaches PASSED_LOCAL
+    without a human pec CLI.
+  status: Resolved
+- id: GAP-002
+  phase: unlock
+  state_from: TASK-00N definition_status=blocked
+  state_to: TASK-00N+1 claimable
+  severity: critical
+  autonomous: false
+  evidence:
+    path: skills/l9-pe-campaign-activate/scripts/compile_activation_files.py
+    symbol: task_readiness
+    fact: definition_status != ready → definition_not_ready blocker
+    path_2: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    path_3: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  gap: Registering contracts does not unlock later tasks. TASK-002 stays blocked forever.
+    The W1 wave cannot start.
+  required_fix: Either compile later tasks as ready and rely on dependency/wave blockers,
+    or flip successor definition_status to ready inside complete_task. Add a test that TASK-002
+    becomes claimable after TASK-001 COMPLETED.
+  acceptance_test: after fixture complete of TASK-001, pec claim TASK-002 succeeds (given
+    contract + reconcile + stack base).
+  status: Resolved
+- id: GAP-003
+  phase: stack
+  state_from: STACK.json written
+  state_to: git branch from predecessor tip
+  severity: critical
+  autonomous: false
+  evidence:
+    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    symbol: build_pr_stack
+    fact: STACK.json is a pointer file only
+    path_2: environment/program-execution/scripts/run_campaign.py
+  gap: pec prepare always branches from the original reconciled SHA. Task PRs are parallel
+    forks of main, then conflict on merge. STACK.json does not change git.
+  required_fix: prepare_worktree (or arm/claim) must create task N branch from STACK.json
+    predecessor tip (campaign/<id> for TASK-001, pec/.../task-00N-1 thereafter). Refuse base_sha
+    == origin/main when a predecessor branch exists.
+  acceptance_test: TASK-002 prepare parent SHA equals TASK-001 branch HEAD, not the original
+    reconcile SHA after TASK-001 has a commit.
+  status: Resolved
+- id: GAP-004
+  phase: stack
+  state_from: make pr / stack_pr.py
+  state_to: PR_BASE from STACK.json
+  severity: critical
+  autonomous: false
+  evidence:
+    path: ops/scripts/stack_pr.py
+    symbol: default_make_pr
+    fact: only host PR sets origin/campaign/<id>; nothing reads STACK.json
+    path_2: Makefile
+    path_3: environment/program-execution/scripts/run_campaign.py
+  gap: Three stacking SSOTs. The helper that agents will actually call falls back to main
+    — the conflict machine.
+  required_fix: stack_pr.py and make pr must read $L9/programs/<id>/runtime/STACK.json (or
+    CAMPAIGN_ID). Fallback to main is a hard fail. refuse_unstacked_pr_base is the only legal
+    default.
+  acceptance_test: stack_pr.py base --repo X with STACK.json present never prints main; Makefile
+    pr with unset PR_BASE fails if campaign stack exists.
+  status: Resolved
+- id: GAP-005
+  phase: closeout
+  state_from: host merge or last task COMPLETED
+  state_to: campaigns/COMPLETED/<id>/
+  severity: critical
+  autonomous: false
+  evidence:
+    path: environment/program-execution/campaigns/scripts/close_campaign.py
+    symbol: close_campaign
+    fact: glob COMPLETED/** → 0 files; no mover
+    path_2: environment/program-execution/campaigns/
+  gap: User-required terminal state (campaign file updated and moved into COMPLETED) does
+    not exist.
+  required_fix: After pec close + close_campaign.py, move environment/program-execution/campaigns/<id>/
+    to campaigns/COMPLETED/<id>/ (or archive alias), update allowlist/policy paths, keep ledger
+    pointer. Do this in the runner, not as a leftover agent step.
+  acceptance_test: close path leaves no live campaigns/<id>/ directory; COMPLETED/<id>/CAMPAIGN_SOURCE.yaml
+    + CLOSEOUT.yaml exist; next_campaign skips it.
+  status: Resolved
+- id: GAP-006
+  phase: closeout
+  state_from: pec runtime_status=active
+  state_to: pec closed AND host ledger complete
+  severity: critical
+  autonomous: false
+  evidence:
+    path: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+    fact: do not close <id> after host-only merge
+    path_2: environment/program-execution/scripts/run_campaign.py
+    symbol: default_program_blockers
+  gap: Two close commands, zero runner calls. Host merge leaves lifecycle=in_progress. pec
+    close does not touch the host ledger.
+  required_fix: One runner close stage that runs pec close then close_campaign.py with the
+    same verdict/evidence, only after all tasks COMPLETED.
+  acceptance_test: until=close (or default) after all tasks complete updates both pec campaign-status.json
+    and CAMPAIGN_STATUS.yaml.
+  status: Resolved
+- id: GAP-007
+  phase: publish
+  state_from: arm
+  state_to: host PR merged
+  severity: critical
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: UNTIL_STAGES / default until=merge
+    fact: fails if no commits ahead of PR_BASE
+    path_2: Makefile
+    path_3: ops/scripts/open_pr_after_gate.sh
+  gap: Default make campaign tries to open/merge the HOST activation PR before any task is
+    executed and without committing emit files. That is a fake finish.
+  required_fix: Default until must stop at arm (or execute), not merge. Host PR only after
+    emit is committed on feat/<id> stacked on campaign/<id>. Target task PRs are a separate
+    stacked plane driven by STACK.json.
+  acceptance_test: make campaign INTENT= without CAMPAIGN_UNTIL does not call make pr; a dedicated
+    until=pr requires a commit ahead of campaign/<id>.
+  status: Resolved
+- id: GAP-008
+  phase: execute
+  state_from: claimed
+  state_to: peer pipeline
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_peer_task_pipeline.py
+    symbol: abort-execution
+    fact: abort-execution is not a registered subcommand
+    path_2: environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  gap: The only existing end-to-end task executor is unwired and calls a missing pec command.
+  required_fix: Register abort-execution or delete the call. Wire the pipeline from run_campaign
+    or delete the second executor so there is one path.
+  acceptance_test: pec --help lists every subcommand the pipeline invokes; make campaign execute
+    uses that pipeline or pec directly, not both.
+  status: Resolved
+- id: GAP-009
+  phase: unlock
+  state_from: PASSED_LOCAL
+  state_to: COMPLETED
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    symbol: complete_task
+    fact: every completion_gate must already be PASS via pec evaluate-gate
+  gap: No runner evaluates GATE-001..N. Tasks can verify locally and still never COMPLETE,
+    so the next wave never unlocks.
+  required_fix: After verify PASS, evaluate the task completion gate with the attempt evidence,
+    then complete. Automate in the execute loop.
+  acceptance_test: fixture verify PASS → complete without a manual evaluate-gate CLI.
+  status: Resolved
+- id: GAP-010
+  phase: brief
+  state_from: relaunch same brief
+  state_to: same campaign_id
+  severity: high
+  autonomous: false
+  evidence:
+    path: skills/l9-pe-campaign-activate/scripts/compile_brief.py
+    symbol: resolve_operator_intent
+    fact: existing_ids=host_campaign_ids(host_root) includes in_progress rows
+    path_2: environment/program-execution/scripts/run_campaign.py
+  gap: Relaunching the same brief creates a new id and leaves the old draft/quarantine behind.
+    Operator thinks they relaunched; they forked.
+  required_fix: make campaign relaunch of an in_progress/incomplete id reuses the id after
+    quarantine; -v2 only when the prior id is complete/cancelled.
+  acceptance_test: second make campaign on the same memo keeps campaign_id and quarantines
+    the old pec workspace.
+  status: Resolved
+- id: GAP-011
+  phase: isolate
+  state_from: existing worktree
+  state_to: clean origin/main isolate
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: isolate_worktree
+    fact: if worktree.exists() reuse; no dirty/behind check
+  gap: A leftover dirty host worktree is reused. Same class of bug as leftover pec workspace,
+    only for git.
+  required_fix: Reuse only if clean and at origin/main (or feat/<id> clean). Else quarantine/recreate.
+  acceptance_test: dirty leftover worktree is not written; new isolate is clean.
+  status: Resolved
+- id: GAP-012
+  phase: reconcile
+  state_from: target repository_id
+  state_to: checkout of that repo
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: default_ensure_target_checkout
+    fact: donor=write_root (host Cursor-Governance worktree) even when seed target is another
+      repo
+  gap: A campaign aimed at l9-ci-core can clone/reconcile the governance host by mistake.
+  required_fix: donor allowed only when donor origin matches repository_id. Otherwise shallow-clone
+    that repository_id.
+  acceptance_test: seed target Quantum-L9/l9-ci-core reconciles a checkout whose origin is
+    that repo.
+  status: Resolved
+- id: GAP-013
+  phase: admit
+  state_from: EVID-001 planned
+  state_to: EVID-001 collected
+  severity: medium
+  autonomous: true
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: run_campaign admit
+    fact: revision=seed target.repository_id (owner/repo string), not git HEAD
+  gap: Admission evidence is not a real revision bind. Later verify/STALE checks can lie.
+  required_fix: Collect EVID-001 with the reconciled target HEAD SHA after ensure_target_checkout,
+    before accept.
+  acceptance_test: EVIDENCE_CATALOG EVID-001.revision is a 40-char SHA.
+  status: Resolved
+- id: GAP-014
+  phase: status
+  state_from: invoke
+  state_to: agents read idle
+  severity: medium
+  autonomous: true
+  evidence:
+    path: skills/l9-pe-campaign-activate/references/pipeline.md
+    fact: always includes target work not started even after arm
+    path_2: environment/program-execution/scripts/run_campaign.py
+    symbol: default_program_blockers
+  gap: Immutable source status plus stale program_blockers tell agents the campaign is still
+    intake.
+  required_fix: LAUNCH.json + CAMPAIGN_STATUS are the live SSOT (already). Clear program_blockers
+    after arm. Do not require mutating CAMPAIGN_SOURCE.
+  acceptance_test: report after arm does not contain target work not started.
+  status: Resolved
+- id: GAP-015
+  phase: timebox
+  state_from: TASK-001.md budget 15m
+  state_to: enforced stop
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: TASK_BUDGET_MINUTES / claim ttl_hours=8
+    fact: card says 15 minutes; pec lease default is 8 hours; no watchdog
+  gap: The 15-minute law is prose. A stuck agent can hold the lease for 8 hours.
+  required_fix: claim --ttl-hours 1 (or 15 minutes if pec allows). Runner/watchdog releases
+    the lease on timeout. Card budget must match lease TTL.
+  acceptance_test: claim payload expires_at is ≤ 60 minutes; expired lease is not EXECUTING.
+  status: Resolved
+- id: GAP-016
+  phase: policy
+  state_from: CAMPAIGN_EXECUTION_POLICY
+  state_to: run_campaign merge
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+    fact: merges the host PR when until=merge
+    path_2: environment/program-execution/scripts/run_campaign.py
+    symbol: default_authorize_and_merge
+  gap: Policy forbids campaign merge and authorizes merging every open PR via /l9-pr-remediation.
+    Runner merges one host PR and never remediates. Contradictory assembly line.
+  required_fix: One merge law. Campaign runner remediates+merges only the stacked PRs it opened,
+    or it never merges and remediation skill is the only merger. Policy and runner must match.
+  acceptance_test: policy.publish.merge and runner until=merge cannot disagree; test fails
+    if they do.
+  status: Resolved
+- id: GAP-017
+  phase: isolate
+  state_from: campaign/<id> local
+  state_to: origin/campaign/<id>
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: ensure_integration_branch / default_make_pr
+    fact: creates local campaign/<id>; PR_BASE=origin/campaign/<id> is never pushed
+  gap: Host make pr bases on a remote branch that may not exist.
+  required_fix: Push campaign/<id> (no force) before make pr, or PR_BASE=campaign/<id> local
+    tracking after first push.
+  acceptance_test: default_make_pr fails closed if origin/campaign/<id> is missing, with a
+    push step that creates it.
+  status: Resolved
+- id: GAP-018
+  phase: makefile
+  state_from: CAMPAIGN_UNTIL=bootstrap
+  state_to: armed
+  severity: medium
+  autonomous: false
+  evidence:
+    path: Makefile
+    fact: CAMPAIGN_UNTIL comment lists activate|blueprint|bootstrap|pr|merge (no admit/arm)
+  gap: Documented until=bootstrap skips arm. That is the old idle campaign.
+  required_fix: Treat bootstrap as including arm, or reject until=bootstrap as not a live
+    stop. Update the comment only via append-only root-file rules.
+  acceptance_test: CAMPAIGN_UNTIL=bootstrap either arms TASK-001 or exits 2 with a message
+    that arm is required.
+  status: Resolved
+- id: GAP-019
+  phase: phase0
+  state_from: operator_ack=null
+  state_to: program close
+  severity: medium
+  autonomous: true
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: annotate_phase0_without_forging_ack
+    fact: acknowledged_at stays null; program_deploying false
+  gap: Full-throttle deploy is correctly blocked. Ordinary execution is allowed. If Igor expects
+    Phase 0 ack before any write, the line will run anyway.
+  required_fix: Keep no-forge. If operator_ack is required before repo_local writes, pec start
+    must block; if not, document that make campaign is the admission act and GATE-000 stays
+    draft while not deploying.
+  acceptance_test: explicit contract test for whichever law is chosen; do not leave both readings
+    live.
+  status: Resolved
+- id: GAP-020
+  phase: side_doors
+  state_from: L9_ALLOW_INTENT_COMPILER
+  state_to: pe-<hash> workspace
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/compiler/cli.py
+    fact: intent compiler runs when L9_ALLOW_INTENT_COMPILER=1
+  gap: Env escape still creates the hash-id path that sat idle for hours.
+  required_fix: Keep refuse-by-default. Add a runtime assertion in pec bootstrap that campaign_id
+    matching ^pe-[0-9a-f]{8,}$ is rejected even if the compiler ran.
+  acceptance_test: pec bootstrap of pe-deadbeef fails; compiler without env still fails.
+  status: Resolved
+- id: GAP-021
+  phase: execute
+  state_from: TASK-001.md
+  state_to: agent loads operator memo
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: write_execution_card / LAUNCH.json load_operator_brief=false
+    fact: contract exists; no enforcement at pec start or editor/agent ingress
+  gap: The 3-hour load is still possible. The factory cannot kill a disobedient agent.
+  required_fix: pec start must refuse if the working prompt/context path is the operator memo.
+    Ingress hook or pec preflight checks LAUNCH.json load_operator_brief. Keep the card as
+    the only legal input.
+  acceptance_test: preflight/start fails when CWD/context is the brief path listed in primed/*.activate.yaml.
+  status: Resolved
+- id: GAP-022
+  phase: quarantine
+  state_from: leftover blueprint
+  state_to: collect_evidence
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/collect_evidence.py
+    fact: only pec workspace is quarantined, not $L9/blueprints/<id>
+    path_2: environment/program-execution/scripts/run_campaign.py
+    symbol: quarantine_occupied
+  gap: Relaunch can hit a stale accepted blueprint / lock pointer and fail collect.
+  required_fix: Quarantine blueprint + pec workspace together before compile, or compile into
+    a fresh blueprint dir every launch.
+  acceptance_test: second launch after a lock exists still admits.
+  status: Resolved
+- id: GAP-023
+  phase: dual_plane
+  state_from: host feat/<id>
+  state_to: target program-worktrees/<id>
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: isolate_worktree vs target_worktree
+    fact: host isolate uses feat/<id>; target path is program-worktrees/<id>; pipeline.md
+      still shows worktree add -b campaign/<id> for program-worktrees
+  gap: Docs and code disagree on which tree is the execution tree. Agents attach to the wrong
+    one.
+  required_fix: One diagram in LAUNCH.json (already has both paths). pipeline.md isolate section
+    must match code. pec prepare worktree is a third tree (workspace/worktrees/TASK-00N) —
+    that must be the write tree, or prepare must use program-worktrees/<id>.
+  acceptance_test: LAUNCH.json, STACK.json, and pec prepare worktree path are the same checkout
+    or an explicit documented split with tests.
+  status: Resolved
+- id: GAP-024
+  phase: closeout
+  state_from: export-handoff
+  state_to: host ledger
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    symbol: export_handoff
+    fact: can set pec runtime_status=completed without close_campaign.py
+  gap: A third close path. Agents will pick one and leave the others stale.
+  required_fix: export-handoff is evidence only. Terminal close is the single runner close
+    stage (GAP-006).
+  acceptance_test: export-handoff alone leaves host lifecycle != complete.
+  status: Resolved
+- id: GAP-025
+  phase: signal
+  state_from: TASK-001 LEASED
+  state_to: pec next ready=[]
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    symbol: write_launch_pointer
+    fact: pec_ready_empty_is_expected=false after claim
+    path_2: environment/program-execution/scripts/run_campaign.py
+  gap: After a successful arm, pec next is empty because the only ready task is already leased.
+    Agents treat ready:[] as idle and sit. That is the Activation 100% / Execution 0% hang.
+  required_fix: 'After claim, pec next (or LAUNCH.json) must surface the leased task as the
+    current work item. pec_ready_empty_is_expected must be true only while a lease is active,
+    or next must return current=TASK-001.
+
+    '
+  acceptance_test: after arm, status/next names TASK-001 as current work, not ready=[].
+  status: Resolved
+- id: GAP-026
+  phase: publish
+  state_from: emit files on disk
+  state_to: host PR with commits
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: default_make_pr
+    fact: fails if no commits ahead of PR_BASE
+    path_2: ops/scripts/open_pr_after_gate.sh
+  gap: The host PR plane has nothing to publish. until=pr/merge fails closed or opens an empty/wrong
+    PR.
+  required_fix: After emit+admit, commit only ALLOWED_CAMPAIGN_FILES on feat/<id> stacked
+    on campaign/<id>, then make pr. Or drop the host PR from the default path (GAP-007).
+  acceptance_test: until=pr either creates a PR whose diff is the campaign seed, or is not
+    in the default until list.
+  status: Resolved
+- id: GAP-027
+  phase: isolate
+  state_from: missing target checkout
+  state_to: shallow main-only clone
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: default_ensure_target_checkout
+    fact: git clone --depth 1 --single-branch --branch main
+  gap: Stacked PRs, campaign/<id> history, and predecessor tips cannot be fetched. Merge-base
+    and stack_pr fail on a stump.
+  required_fix: Clone enough history for stack merge-base, or fetch campaign/<id> and predecessor
+    task branches after clone. --single-branch main is illegal once stacking is required.
+  acceptance_test: after checkout, git merge-base campaign/<id> pec/w0/task-001 succeeds once
+    those branches exist.
+  status: Resolved
+- id: GAP-028
+  phase: execute
+  state_from: LAUNCH.json written
+  state_to: executor running
+  severity: high
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: write_launch_pointer
+    fact: next is a prose instruction; no process is spawned
+  gap: The assembly line writes a card and stops. A human or random agent must notice. That
+    is not a factory.
+  required_fix: After arm, the runner either executes the task itself (GAP-001) or starts
+    one bounded executor with the card as the only prompt. No waiting for pec next.
+  acceptance_test: make campaign without a human follow-up reaches PASSED_LOCAL or a timed
+    fail, never a silent idle.
+  status: Resolved
+- id: GAP-029
+  phase: unlock
+  state_from: TASK-001 COMPLETED
+  state_to: W1 claimable
+  severity: high
+  autonomous: false
+  evidence:
+    path: skills/l9-pe-campaign-activate/scripts/compile_activation_files.py
+    symbol: _gate_satisfied
+    fact: default gate result is not PASS; evaluate-gate is required
+    path_2: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    path_3: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  gap: Even after GAP-002 is filled, W1 stays blocked until GATE-001 is evaluated PASS. complete_task
+    does not evaluate the wave exit gate.
+  required_fix: execute loop must evaluate-gate GATE-00N after verify, before claiming the
+    next wave. Test W1 claim after TASK-001 complete.
+  acceptance_test: after TASK-001 COMPLETED and GATE-001 PASS, pec claim TASK-002 is not blocked
+    by predecessor_wave_exit_gate.
+  status: Resolved
+- id: GAP-030
+  phase: status
+  state_from: mark_host_campaign_active
+  state_to: origin ledger
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: mark_host_campaign_active
+    fact: writes CAMPAIGN_STATUS.yaml / policy / surface_profile on the isolated host worktree
+      only
+  gap: The dirty primary and origin/main still show planned. Agents attached to ~/.cursor-governance
+    read the wrong lifecycle.
+  required_fix: Live status SSOT is $L9/programs/<id>/runtime/LAUNCH.json. Host ledger updates
+    ride the host PR (GAP-026) or are written only after that PR merges. Do not teach agents
+    to read the dirty primary.
+  acceptance_test: after arm, LAUNCH.json host_lifecycle=in_progress; origin CAMPAIGN_STATUS
+    is unchanged until the host PR merges.
+  status: Resolved
+- id: GAP-031
+  phase: phase0
+  state_from: LAUNCH.json
+  state_to: agent start
+  severity: medium
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/run_campaign.py
+    symbol: write_launch_pointer
+    fact: operator_ack_required=true while program_deploying=false and acknowledged_at=null
+  gap: Mixed law. Agents stop and wait for Igor even though repo_local T0 work is allowed
+    without the ack.
+  required_fix: operator_ack_required true only when program_deploying or T4/destructive.
+    For make campaign T0, set operator_ack_required=false and keep forge=false.
+  acceptance_test: LAUNCH.json after arm does not require a human timestamp for TASK-001 local_write.
+  status: Resolved
+- id: GAP-032
+  phase: execute
+  state_from: SUBMITTED
+  state_to: PASSED_LOCAL
+  severity: critical
+  autonomous: false
+  evidence:
+    path: environment/program-execution/scripts/compile_campaign_source.py
+    symbol: verify gates validation
+    fact: gates[validation] FAIL when validations list is empty
+    path_2: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  gap: make campaign compiled tasks can never PASSED_LOCAL. The execute loop dies at verify.
+  required_fix: If validation_commands is empty and Task Card validations are inspection-only,
+    PASS validation only when every outputs[].location exists in the pec worktree. Do not
+    run acceptance prose as a shell command.
+  acceptance_test: inspection-only fixture with docs/program-execution/TASK-001.md present
+    yields PASSED_LOCAL; missing file yields FAIL.
+  status: Resolved
+fill_order:
+- GAP-002
+- GAP-032
+- GAP-029
+- GAP-003
+- GAP-001
+- GAP-009
+- GAP-028
+- GAP-025
+- GAP-007
+- GAP-004
+- GAP-026
+- GAP-006
+- GAP-005
+- GAP-012
+- GAP-008
+- GAP-016
+- GAP-010
+- GAP-011
+- GAP-017
+- GAP-027
+- GAP-013
+- GAP-022
+- GAP-023
+- GAP-015
+- GAP-018
+- GAP-014
+- GAP-030
+- GAP-031
+- GAP-019
+- GAP-020
+- GAP-021
+- GAP-024
+unknowns:
+- id: UNK-001
+  item: Whether Igor treats make campaign itself as Phase 0 admission (ack stays null) or
+    requires a human timestamp before first local_write
+  blocks: GAP-019
+  default_if_unset: make campaign is Phase 0 admission; acknowledged_at stays null; operator_ack_required
+    false for T0
+- id: UNK-002
+  item: Whether COMPLETED/ is under environment/program-execution/campaigns/COMPLETED or $HOME/.l9/programs/completed
+  blocks: GAP-005
+  default_if_unset: environment/program-execution/campaigns/COMPLETED/<id>/
+- id: UNK-003
+  item: Whether host activation PR should exist at all, or only target-repo stacked task PRs
+  blocks: GAP-007
+  default_if_unset: host PR only after emit commit; never before TASK-001 execute
+fill_result:
+  status: Resolved
+  e2e: test_two_task_fixture_reaches_completed PASS
+  resolved_ids:
+  - GAP-001
+  - GAP-002
+  - GAP-003
+  - GAP-004
+  - GAP-005
+  - GAP-006
+  - GAP-007
+  - GAP-008
+  - GAP-009
+  - GAP-010
+  - GAP-011
+  - GAP-012
+  - GAP-013
+  - GAP-014
+  - GAP-015
+  - GAP-016
+  - GAP-017
+  - GAP-018
+  - GAP-019
+  - GAP-020
+  - GAP-021
+  - GAP-022
+  - GAP-023
+  - GAP-024
+  - GAP-025
+  - GAP-026
+  - GAP-027
+  - GAP-028
+  - GAP-029
+  - GAP-030
+  - GAP-031
+  - GAP-032

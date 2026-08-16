@@ -33,34 +33,20 @@ The binding law is registered at
 
 Mutable runtime belongs under `$HOME/.l9/`, never this source tree.
 
-## Campaign compile then validate then bootstrap
+## Campaign front door
 
-Campaign seeds are an unbound dialect until compiled. The in-repo path is:
+The only live campaign path is:
 
-1. Validate `CAMPAIGN_SOURCE.yaml` against
-   `core/shared/schemas/campaign-source.schema.json`.
-2. Compile only ids listed in `campaigns/COMPILE_ALLOWLIST.yaml`:
+```bash
+make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+```
 
-   ```bash
-   python3 environment/program-execution/scripts/compile_campaign_source.py \
-     --source environment/program-execution/campaigns/<id>/CAMPAIGN_SOURCE.yaml \
-     --target "$HOME/.l9/blueprints/<id>"
-   ```
-
-3. `validate_blueprint --mode template` must PASS. Instantiated mode stays
-   FAIL while `definition_status=draft` or evidence is `planned`.
-4. `pec bootstrap` refuses an unvalidated draft lock. Use
-   `--admission-draft` only to inspect a draft; `pec next` then returns
-   `ready: []` and status prints `definition_status=draft`.
-   Default bootstrap and the first `claim`/`start` write
-   `runtime/campaign-status.json` with `runtime_status=active`.
-   `--admission-draft` leaves `runtime_status=operator_intake`.
-   Closeout is required: `pec close` or a terminal `export-handoff`
-   (`CONVERGED` / `NOT_CONVERGED`) sets `runtime_status=completed`.
-   Mirror that in `campaigns/CAMPAIGN_STATUS.yaml` so the next agent
-   does not restart a finished campaign.
-   Campaign `make pr` uses `scripts/campaign_pr_copy.py` so the title is
-   `[{campaign_id}] {metadata.title}`, not the GitHub branch default.
+`run_campaign.py` compiles allowlisted seeds, admits the Blueprint, boots
+pec without a draft flag, executes every task, stacks PRs, and closes into
+`campaigns/COMPLETED/<id>/`. Do not call `compile_campaign_source.py`,
+`pec bootstrap`, or `program-execution intent` as a substitute.
+`--admission-draft` is not a live path (`L9_ALLOW_ADMISSION_DRAFT=1` is
+controller unit tests only). Host-only merge is not program close.
 
 `git` and `git_repo_adapter` are campaign target tokens only. pec
 reconcile binds `repository_id` to a local path. They are not worker

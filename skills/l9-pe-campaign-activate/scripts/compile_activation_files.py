@@ -128,7 +128,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
             {
                 "id": task_id,
                 "title": task_title,
-                "definition_status": "ready" if index == 1 else "blocked",
+                "definition_status": "ready",
                 "workstream_id": "WS-01",
                 "wave_id": "W0" if index == 1 else "W1",
                 "target_id": "TARGET-001",
@@ -143,6 +143,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
                     {
                         "id": f"AC-{index:03d}",
                         "statement": (f"{task_title} is complete and locally verified."),
+                        "required_evidence_types": ["inspection"],
                     }
                 ],
                 "negative_cases": ["scope_expansion", "remote_mutation_before_release"],
@@ -334,6 +335,19 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         "waves": waves,
         "tasks": tasks,
         "gates": gates,
+        "evidence_requirements": [
+            {
+                "id": "EVID-001",
+                "claim": "exact_target_origin_main_revision_and_worktree_state_are_known",
+                "source_type": "repository_inspection",
+                "source_location": repository_id,
+                "collection_method": "read_only_inspection",
+                "freshness": "collect_at_admission",
+                "producer": "controller",
+                "supports": ["TASK-001"],
+                "contradicts": [],
+            }
+        ],
     }
 
 

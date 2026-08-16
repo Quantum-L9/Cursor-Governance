@@ -28,6 +28,9 @@ def test_is_generated_path_allowlist() -> None:
     assert is_generated_path("commands/COMMANDS_MANIFEST.yaml")
     assert is_generated_path("skills/AUTONOMY_MANIFEST.yaml")
     assert is_generated_path("skills/l9-demo/SKILL.md")
+    assert is_generated_path(
+        "environment/agents/adapters/claude-code/generated/skill-registry.json"
+    )
     assert not is_generated_path("ops/scripts/run_pr_gate.sh")
     assert not is_generated_path("skills/l9-demo/references/x.md")
 

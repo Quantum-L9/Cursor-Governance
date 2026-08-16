@@ -39,6 +39,7 @@ help:
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
+	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
@@ -58,6 +59,25 @@ start:
 	@cd "$(WS)" && CURSOR_PROJECT_DIR="$(WS)" L9_BOOTSTRAP_SYNC=1 \
 		bash "$(CURDIR)/ops/hooks/session_start_bootstrap.sh" \
 		| python3 "$(CURDIR)/ops/scripts/render_bootstrap_context.py"
+
+.PHONY: campaign
+## Activate a PE campaign from a memo .md or an activate YAML.
+## INTENT= required (brief.md or seed.yaml). No campaign_id required for memos.
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|pr|merge (default merge).
+## Does not implement target-repo tasks or close the ledger after a host-only merge.
+campaign:
+	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
+	python3 environment/program-execution/scripts/run_campaign.py \
+	  --intent "$(INTENT)" \
+	  --until "$(or $(CAMPAIGN_UNTIL),merge)"
+
+.PHONY: campaign-stack-base
+## Print the next campaign PR base from $L9_ROOT/programs/$CAMPAIGN_ID/runtime/STACK.json.
+## Never falls back to main. CAMPAIGN_ID= required.
+campaign-stack-base:
+	@test -n "$(CAMPAIGN_ID)" || (echo "CAMPAIGN_ID= is required" >&2; exit 2)
+	python3 ops/scripts/stack_pr.py base --stack \
+	  "$(or $(L9_ROOT),$(HOME)/.l9)/programs/$(CAMPAIGN_ID)/runtime/STACK.json"
 
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
@@ -453,6 +473,12 @@ program-execution-campaign-schema:
 program-execution-campaign-compile:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
 		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py
+
+.PHONY: program-execution-campaign-brief
+program-execution-campaign-brief:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
+		$(PE_ROOT)/scripts/tests/test_run_campaign.py \
+		$(CURDIR)/skills/l9-pe-campaign-activate/scripts/test_compile_brief.py
 
 program-execution-controller-tests:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover \

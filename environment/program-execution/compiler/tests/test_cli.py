@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from compiler.blueprint_validate import validate
 from compiler.cli import run
+
+os.environ["L9_ALLOW_INTENT_COMPILER"] = "1"
 
 
 def _fixture_repo(tmp_path: Path, *, with_git: bool = True) -> Path:
@@ -32,6 +35,17 @@ def _fixture_repo(tmp_path: Path, *, with_git: bool = True) -> Path:
             check=True,
         )
     return repo
+
+
+def test_operator_path_refuses_intent_compiler_by_default(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    monkeypatch.delenv("L9_ALLOW_INTENT_COMPILER", raising=False)
+    code = run(["intent", "Make repo X achieve Y.", "--output", str(tmp_path / "bp")])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "make" in captured.err
+    assert "campaign INTENT=" in captured.err
 
 
 def test_happy_path_no_questionnaire(tmp_path: Path, capsys) -> None:
