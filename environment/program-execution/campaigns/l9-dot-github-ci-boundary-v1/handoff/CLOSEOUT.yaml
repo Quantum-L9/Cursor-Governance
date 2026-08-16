@@ -1,0 +1,9 @@
+schema: l9.program-execution.campaign-closeout.v1
+id: l9-dot-github-ci-boundary-v1
+lifecycle: complete
+closed_at: '2026-08-16T05:34:40Z'
+verdict: CONVERGED_WITH_NON_BLOCKING_RISKS
+evidence:
+  pull_request: https://github.com/Quantum-L9/.github/pull/49
+  merge_sha: ed7445f75c79c2c865c6f172bc1e5dd3640282e4
+closed_by: AUTH-001

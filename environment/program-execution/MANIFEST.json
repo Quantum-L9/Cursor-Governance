@@ -403,15 +403,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "f098e858d11e07528ce5d0a52588b61535607612762675ec851aeb3e2e6c26f4"
+      "sha256": "03456bb945dbf5b7cdf12e73596eb23891ed41192546faf0a8c6bf24cfddd569"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
+      "sha256": "fe5fea0da70e1157efc69d7a86d9a5d134f0891716eea9bc12beee849d4a81ba"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "6bfdfbc654b6bc7943f85bd97f29ce59e0008bdc732336d696ecc785e43ec2e4"
+      "sha256": "ba5bcddff96394dd9226b58daaaa7ec59e6e2a73c709a803576bd15477ea75ce"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -524,6 +524,14 @@
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/source-integrity-receipt.json",
       "sha256": "429013d3ef711d967d385b757cd65d4e938dbf38109b1b0927779c935bae6e3a"
+    },
+    {
+      "path": "campaigns/l9-dot-github-ci-boundary-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "7cdaf6574e82e75388b9a1d64c8f9af458dd795a9bc84f257ece55ac2f493864"
+    },
+    {
+      "path": "campaigns/l9-dot-github-ci-boundary-v1/source-integrity-receipt.json",
+      "sha256": "f38cef5a0e1b63ab71ea445b645834908bbb94077c036cb80ba887ec1c8925ba"
     },
     {
       "path": "campaigns/l9-ecosystem-fix-plan/AUTH-001-SUPERSESSION.yaml",
