@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "pe-runtime-readiness-hardening",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "096b6f35e9a9537c751ae307caa0c3bc02d7ccdbd79a054315c65198084d2ac9",
+  "bytes": 17333,
+  "pack_recorded_digest": "096b6f35e9a9537c751ae307caa0c3bc02d7ccdbd79a054315c65198084d2ac9",
+  "pack_recorded_bytes": 17333,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-16T06:56:48Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}
