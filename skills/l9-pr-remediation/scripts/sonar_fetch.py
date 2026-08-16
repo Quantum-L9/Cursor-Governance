@@ -123,9 +123,7 @@ class BrokerTransport:
             raise SystemExit(f"BLOCKED: brokered SonarCloud {path} failed: {exc}") from exc
 
 
-def build_transport(
-    base_url: str, surface: str | None = None
-) -> DirectTransport | BrokerTransport:
+def build_transport(base_url: str, surface: str | None = None) -> DirectTransport | BrokerTransport:
     """Pick the transport from the caller's trust class, not from a flag.
 
     A model-controlled surface gets the broker or nothing. It never falls back to

@@ -14,7 +14,6 @@ Bootstrap: openclaw-igorbot/infisical-cursor (Universal Auth).
 # the broker's boundary self-check. The marker declares that status for review;
 # it is not a bypass, and it does not disable those runtime guards.
 
-
 from __future__ import annotations
 
 import argparse

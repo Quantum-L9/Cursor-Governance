@@ -163,8 +163,7 @@ def require_trusted(surface: str | None = None, env: dict[str, str] | None = Non
     trust = classify(surface, env)
     if not trust.raw_secret_allowed:
         raise PermissionError(
-            f"DENIED: raw secret export is prohibited on model-controlled surfaces "
-            f"({trust.reason})"
+            f"DENIED: raw secret export is prohibited on model-controlled surfaces ({trust.reason})"
         )
     return trust
 

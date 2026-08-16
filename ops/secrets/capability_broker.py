@@ -44,7 +44,6 @@ Run:
 # the broker's boundary self-check. The marker declares that status for review;
 # it is not a bypass, and it does not disable those runtime guards.
 
-
 from __future__ import annotations
 
 import argparse
@@ -227,9 +226,9 @@ class SecretProvider:
             "spiffe-jwt-svid": "/api/v1/auth/jwt-auth/login",
             "oidc-workload-identity": "/api/v1/auth/oidc-auth/login",
         }[self.identity.method]
-        body = urllib.parse.urlencode(
-            {"identityId": self.identity.identity_id, "jwt": jwt}
-        ).encode("ascii")
+        body = urllib.parse.urlencode({"identityId": self.identity.identity_id, "jwt": jwt}).encode(
+            "ascii"
+        )
         request = urllib.request.Request(
             f"{host}{route}",
             data=body,
@@ -336,8 +335,17 @@ def _sonar_issue_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
             {
                 key: issue.get(key)
                 for key in (
-                    "key", "rule", "severity", "component", "line", "message",
-                    "type", "status", "effort", "textRange", "flows",
+                    "key",
+                    "rule",
+                    "severity",
+                    "component",
+                    "line",
+                    "message",
+                    "type",
+                    "status",
+                    "effort",
+                    "textRange",
+                    "flows",
                 )
             }
             for issue in payload.get("issues") or []
@@ -357,8 +365,14 @@ def _semgrep_findings(payload: dict[str, Any]) -> dict[str, Any]:
             {
                 key: finding.get(key)
                 for key in (
-                    "id", "rule_name", "severity", "confidence", "path", "line",
-                    "message", "state",
+                    "id",
+                    "rule_name",
+                    "severity",
+                    "confidence",
+                    "path",
+                    "line",
+                    "message",
+                    "state",
                 )
             }
             for finding in payload.get("findings") or []
@@ -374,8 +388,19 @@ def _mcp_envelope(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _github_pr_view(payload: Any) -> Any:
     keys = (
-        "number", "state", "title", "draft", "mergeable", "mergeable_state",
-        "head", "base", "html_url", "check_runs", "total_count", "conclusion", "body",
+        "number",
+        "state",
+        "title",
+        "draft",
+        "mergeable",
+        "mergeable_state",
+        "head",
+        "base",
+        "html_url",
+        "check_runs",
+        "total_count",
+        "conclusion",
+        "body",
     )
     if isinstance(payload, list):
         return [{k: item.get(k) for k in keys if k in item} for item in payload]

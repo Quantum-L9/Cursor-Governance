@@ -56,9 +56,7 @@ class CapabilitySpec:
 
     def caller_params(self) -> tuple[str, ...]:
         """Params the caller MAY supply. Everything else is broker-derived."""
-        return tuple(
-            name for name, rule in self.params.items() if rule.get("source") == "caller"
-        )
+        return tuple(name for name, rule in self.params.items() if rule.get("source") == "caller")
 
     def allows(self, method: str, path: str) -> bool:
         """Fixed upstream contract check. No wildcards, no prefix matching."""

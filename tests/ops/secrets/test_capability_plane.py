@@ -63,9 +63,18 @@ def test_raw_export_denied_on_every_untrusted_surface(surface: str) -> None:
     inferred from the absence of a known id.
     """
     result = subprocess.run(  # noqa: S603
-        ["bash", str(SECRETS_DIR / "bootstrap_agent_env.sh"),
-         "--surface", surface, "--export", "SONAR_TOKEN"],
-        capture_output=True, text=True, cwd=REPO_ROOT, timeout=120,
+        [
+            "bash",
+            str(SECRETS_DIR / "bootstrap_agent_env.sh"),
+            "--surface",
+            surface,
+            "--export",
+            "SONAR_TOKEN",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        timeout=120,
     )
     assert result.returncode == 3, result.stderr
     assert "DENIED: raw secret export is prohibited" in result.stderr
@@ -90,9 +99,17 @@ def test_value_path_is_guarded_against_direct_import() -> None:
     import hydrate_infisical as hi
 
     with pytest.raises(PermissionError, match="DENIED"):
-        hi.fetch_values({"host": "h", "client_id": "c", "client_secret": "s",
-                         "project_id": "p", "environment": "prod", "secret_path": "/"},
-                        surface="claude-code")
+        hi.fetch_values(
+            {
+                "host": "h",
+                "client_id": "c",
+                "client_secret": "s",
+                "project_id": "p",
+                "environment": "prod",
+                "secret_path": "/",
+            },
+            surface="claude-code",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +141,10 @@ def test_capability_registry_declares_no_secret_values() -> None:
     registry = load_registry()
     raw = (SECRETS_DIR / "capabilities.yaml").read_text(encoding="utf-8")
     assert registry.secret_refs() <= {
-        "SONAR_TOKEN", "SEMGREP_APP_TOKEN", "GRAPHITI_MCP_TOKEN", "GH_TOKEN",
+        "SONAR_TOKEN",
+        "SEMGREP_APP_TOKEN",
+        "GRAPHITI_MCP_TOKEN",
+        "GH_TOKEN",
     }
     # A registry is a mapping of names, never a store of values.
     for marker in ("BEGIN PRIVATE KEY", "Bearer ey", "sqp_", "github_pat_"):
@@ -140,8 +160,12 @@ def test_caller_cannot_override_host_or_credential() -> None:
     """The caller may influence only registry-declared params (SSRF defence)."""
     spec = load_registry().get("sonar.read_issues")
     assert spec is not None
-    for hostile in ({"host": "evil.example"}, {"Authorization": "Bearer x"},
-                    {"secret_name": "SONAR_TOKEN"}, {"organization": "attacker-org"}):
+    for hostile in (
+        {"host": "evil.example"},
+        {"Authorization": "Bearer x"},
+        {"secret_name": "SONAR_TOKEN"},
+        {"organization": "attacker-org"},
+    ):
         with pytest.raises(cb.BrokerError) as excinfo:
             cb.validate_params(spec, hostile)
         assert excinfo.value.status == 400
@@ -165,7 +189,8 @@ def test_caller_params_are_validated() -> None:
     spec = load_registry().get("sonar.read_issues")
     assert spec is not None
     assert cb.validate_params(spec, {"branch": "main", "ps": "100"}) == {
-        "branch": "main", "ps": "100"
+        "branch": "main",
+        "ps": "100",
     }
     for bad in ({"ps": "not-a-number"}, {"ps": "99999"}, {"branch": "a b;rm -rf /"}):
         with pytest.raises(cb.BrokerError):
@@ -289,16 +314,16 @@ def test_bad_claims_are_rejected(overrides: dict, expected: str) -> None:
     """T5 — wrong issuer / wrong pool / wrong role / expired / no session."""
     token, key = _sign(_valid_claims(**overrides))
     with pytest.raises(broker_identity.IdentityError, match=expected):
-        broker_identity.verify(
-            token, expected_audience="ccpool_l9-prod", jwks=_StubJWKS(key)
-        )
+        broker_identity.verify(token, expected_audience="ccpool_l9-prod", jwks=_StubJWKS(key))
 
 
 def test_wrong_organization_is_rejected() -> None:
     token, key = _sign(_valid_claims())
     with pytest.raises(broker_identity.IdentityError, match="organization"):
         broker_identity.verify(
-            token, expected_audience="ccpool_l9-prod", expected_org="other-org",
+            token,
+            expected_audience="ccpool_l9-prod",
+            expected_org="other-org",
             jwks=_StubJWKS(key),
         )
 
@@ -309,9 +334,7 @@ def test_bad_signature_is_rejected() -> None:
     token, _ = _sign(_valid_claims())
     other = ec.generate_private_key(ec.SECP256R1())
     with pytest.raises(broker_identity.IdentityError, match="signature"):
-        broker_identity.verify(
-            token, expected_audience="ccpool_l9-prod", jwks=_StubJWKS(other)
-        )
+        broker_identity.verify(token, expected_audience="ccpool_l9-prod", jwks=_StubJWKS(other))
 
 
 @pytest.mark.parametrize("alg", ["none", "HS256", "RS256"])
@@ -319,9 +342,7 @@ def test_algorithm_confusion_is_rejected(alg: str) -> None:
     """`alg: none` and HMAC confusion must fail before any key work."""
     token, key = _sign(_valid_claims(), alg=alg)
     with pytest.raises(broker_identity.IdentityError, match="algorithm"):
-        broker_identity.verify(
-            token, expected_audience="ccpool_l9-prod", jwks=_StubJWKS(key)
-        )
+        broker_identity.verify(token, expected_audience="ccpool_l9-prod", jwks=_StubJWKS(key))
 
 
 @pytest.mark.parametrize("token", ["", "not.a.jwt.at.all", "onlyonesegment", "a.b"])
@@ -345,9 +366,12 @@ def test_broker_cannot_be_configured_to_accept_any_audience() -> None:
 def test_session_a_assertion_is_useless_against_another_pool() -> None:
     """Session A's valid assertion must not authorize against pool B."""
     token, key = _sign(_valid_claims(aud=["ccpool_env-a"]))
-    assert broker_identity.verify(
-        token, expected_audience="ccpool_env-a", jwks=_StubJWKS(key)
-    ).session_id == "sess-1"
+    assert (
+        broker_identity.verify(
+            token, expected_audience="ccpool_env-a", jwks=_StubJWKS(key)
+        ).session_id
+        == "sess-1"
+    )
     with pytest.raises(broker_identity.IdentityError, match="audience"):
         broker_identity.verify(token, expected_audience="ccpool_env-b", jwks=_StubJWKS(key))
 
@@ -396,9 +420,17 @@ def test_missing_broker_degrades_and_fails_the_requirement() -> None:
 
 def test_required_capability_check_is_nonzero_when_not_enabled() -> None:
     result = subprocess.run(  # noqa: S603
-        [sys.executable, str(SECRETS_DIR / "capability_client.py"),
-         "--check", "--require", "sonar.read_issues"],
-        capture_output=True, text=True, cwd=REPO_ROOT, timeout=120,
+        [
+            sys.executable,
+            str(SECRETS_DIR / "capability_client.py"),
+            "--check",
+            "--require",
+            "sonar.read_issues",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        timeout=120,
         env={**os.environ, "L9_CAPABILITY_BROKER_URL": ""},
     )
     assert result.returncode == 1
