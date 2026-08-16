@@ -407,7 +407,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "fe5fea0da70e1157efc69d7a86d9a5d134f0891716eea9bc12beee849d4a81ba"
+      "sha256": "f817fcded3e88765eb6a15a43a5db5df763421b1bb71c241a5965870f32d89c3"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
@@ -528,6 +528,10 @@
     {
       "path": "campaigns/l9-dot-github-ci-boundary-v1/CAMPAIGN_SOURCE.yaml",
       "sha256": "7cdaf6574e82e75388b9a1d64c8f9af458dd795a9bc84f257ece55ac2f493864"
+    },
+    {
+      "path": "campaigns/l9-dot-github-ci-boundary-v1/handoff/CLOSEOUT.yaml",
+      "sha256": "d0048209aa6ba507e463cfa68aa4eddc917227ff2624d08d93e1eaa1c4567bea"
     },
     {
       "path": "campaigns/l9-dot-github-ci-boundary-v1/source-integrity-receipt.json",
