@@ -148,12 +148,35 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
     }
 
 
-def draft_source_contract(db: StateDB, task_id: str, output: Path) -> Path:
+def _task_source_from_lock(workspace: Path, task_id: str) -> dict[str, Any]:
+    lock_path = workspace / "runtime" / "program-lock.json"
+    lock = load_json(lock_path)
+    for item in lock.get("tasks") or []:
+        if item.get("id") == task_id:
+            source = item.get("source")
+            return source if isinstance(source, dict) else {}
+    return {}
+
+
+def draft_source_contract(
+    db: StateDB, task_id: str, output: Path, *, workspace: Path | None = None
+) -> Path:
     task = db.task(task_id)
     if task is None:
         raise ContractError(f"unknown task: {task_id}")
     if task["execution_kind"] != "repo_local" or not task.get("repository_id"):
         raise ContractError("task does not use a repository Source Contract")
+    source = _task_source_from_lock(workspace, task_id) if workspace is not None else {}
+    rollback = str((source.get("rollback") or {}).get("strategy") or "").strip()
+    if not rollback or "REPLACE_WITH" in rollback:
+        raise ContractError(
+            "DEFINITION_INVALID: source.rollback.strategy missing or contains REPLACE_WITH"
+        )
+    writable = [
+        str(item.get("location"))
+        for item in (source.get("outputs") or [])
+        if isinstance(item, dict) and item.get("location")
+    ]
     requested = [
         action
         for action, allowed in task["authorization_ceiling"].items()
@@ -167,15 +190,16 @@ def draft_source_contract(db: StateDB, task_id: str, output: Path) -> Path:
         "objective": task["objective"],
         "requested_actions": requested or ["inspect"],
         "acceptance_obligation_ids": task["required_acceptance"],
-        "writable_paths": [],
+        "writable_paths": writable,
         "validation_commands": task["required_validation_commands"],
         "required_gate_ids": task["completion_gates"],
         "required_evidence_ids": task["required_evidence"],
         "risk_tier": task["risk_tier"],
         "remote_mutation": "denied",
         "stop_conditions": ["stop_on_program_contract_scope_authority_or_base_state_drift"],
-        "rollback": "REPLACE_WITH_EXACT_ROLLBACK_OR_RECOVERY",
+        "rollback": rollback,
     }
+    payload = validate_source_contract(payload, task)
     write_json(output, payload)
     return output
 

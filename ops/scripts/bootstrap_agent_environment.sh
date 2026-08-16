@@ -389,4 +389,14 @@ if [ "$DEGRADED" -gt 0 ]; then
 else
   log "Agent environment ready — surface=$SURFACE governance=$GOV_DIR"
 fi
+
+# Runtime readiness receipt — last-write-wins; never prints secret values.
+if [ -f "$GOV_DIR/ops/scripts/write_runtime_readiness_receipt.py" ]; then
+  "$GOV_PY" "$GOV_DIR/ops/scripts/write_runtime_readiness_receipt.py" \
+    --surface "$SURFACE" \
+    --workspace "$WORKSPACE" \
+    --governance "$GOV_DIR" \
+    --degraded-count "$DEGRADED" \
+    >/dev/null 2>&1 || warn "runtime readiness receipt write failed"
+fi
 exit 0

@@ -93,15 +93,17 @@ files:
 - path: scripts/pec/blueprint.py
   sha256: 1a7d73ea1a26192fd2c4036ce8ca253b153a5ec913db25a111a8f55aafae42bb
 - path: scripts/pec/cli.py
-  sha256: 9a4cc6486bfc491685d0220da3a20370301754886c73f890f47750358bbdd30a
+  sha256: 1e4f00b38eb738aad8d1e448e0c610a8dd9f7718cd83127c4422336b272d28ef
 - path: scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
 - path: scripts/pec/contracts.py
-  sha256: ad2fd6c8006c9bc24b4b43c0814b8afd9ea62fe13b2a966aec39cbf008eeb8bf
+  sha256: 45e0a931399dc4015b18557362289d45495689e69d1925aa9b9bf2210e0bc5e9
 - path: scripts/pec/controller.py
   sha256: 380ce8213d77a6e972953cbb4f28c10a92b5cc3f0118f78d3a6c4a0b9659136a
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
+- path: scripts/pec/preflight.py
+  sha256: 899874dafca632b12ae65b8635d438a37f7d10e86450a6b9b14ab92d7c7400f5
 - path: scripts/pec/replan.py
   sha256: 6c7df55ab9aa8566f88a4eb65bdbbe2ad1091f3c72bcca634de1cb325f21349a
 - path: scripts/pec/state.py
@@ -132,6 +134,10 @@ files:
   sha256: 0c6b15be5b8830d11fa8b84bcee0dc00261250319e8021c0b5220c63f82de14a
 - path: scripts/tests/test_ledger_tamper.py
   sha256: c471659035072ed2ba5e22c7fbb2ea75c13e6aae6751e1e176c9a066e027f5a0
+- path: scripts/tests/test_pe_clean_startup.py
+  sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
+- path: scripts/tests/test_preflight.py
+  sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
 - path: scripts/tests/test_program_control.py
   sha256: dbe6434dcfb45ee7316483027219020d549ae825cd2fa6bb9da085e6567b4ba0
 - path: scripts/tests/test_program_lock_drift.py
@@ -143,7 +149,7 @@ files:
 - path: scripts/tests/test_scope.py
   sha256: 25df4fca8992212c17f6ed5a925b37708d1b4f8bf91d1f8fac45651aee6dae82
 - path: scripts/tests/test_source_contract_placeholder.py
-  sha256: 563e575266c92977c52a4447109a0c6df6c7c087a2b942fe5db567d76d978098
+  sha256: a51020a3b8e516611bae2962f658876fe364604ff96e2a9c72e33a54b1a9595c
 - path: scripts/tests/test_state_transition.py
   sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
 - path: scripts/tests/test_verify_committed_work.py
@@ -153,7 +159,7 @@ files:
 - path: scripts/tests/test_wave_dependency.py
   sha256: 86f42e5a3d23a6a5e2c4087cdc6116160ac6d5e109629d7a67dbc1f9e03b88c7
 - path: scripts/validate_controller.py
-  sha256: 501ea8b226f1b81d8fbeb3904a06512ac04386f80cc274e3056cf378d63024ff
+  sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
 integrity:
   algorithm: sha256
   self_excluded: true

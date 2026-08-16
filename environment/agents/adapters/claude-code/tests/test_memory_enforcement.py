@@ -167,6 +167,8 @@ class MemoryGateTests(unittest.TestCase):
                 "cursor-governance",
                 "--task",
                 "enforcement self-test",
+                "--session-id",
+                self.session,
             ],
             capture_output=True,
             text=True,
@@ -195,6 +197,7 @@ class WorkspaceRootTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self._prev_project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
+        self._prev_cursor_dir = os.environ.get("CURSOR_PROJECT_DIR")
         self._prev_cwd = os.getcwd()
         self.root = Path(tempfile.mkdtemp()).resolve()
         (self.root / ".l9" / "memory").mkdir(parents=True)
@@ -207,6 +210,10 @@ class WorkspaceRootTests(unittest.TestCase):
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
         else:
             os.environ["CLAUDE_PROJECT_DIR"] = self._prev_project_dir
+        if self._prev_cursor_dir is None:
+            os.environ.pop("CURSOR_PROJECT_DIR", None)
+        else:
+            os.environ["CURSOR_PROJECT_DIR"] = self._prev_cursor_dir
 
     def test_env_var_wins(self) -> None:
         os.environ["CLAUDE_PROJECT_DIR"] = str(self.root / "explicit")
@@ -220,11 +227,130 @@ class WorkspaceRootTests(unittest.TestCase):
         # here resolves the same state root the gate uses at the session root.
         self.assertEqual(st.workspace_root(), self.root)
 
+    def test_cursor_project_dir_used_when_claude_unset(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        os.environ["CURSOR_PROJECT_DIR"] = str(self.root / "cursor-explicit")
+        os.chdir(self.subdir)
+        self.assertEqual(st.workspace_root(), (self.root / "cursor-explicit").resolve())
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+
     def test_falls_back_to_cwd_when_no_l9_memory_ancestor(self) -> None:
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
         bare = Path(tempfile.mkdtemp()).resolve()
         os.chdir(bare)
         self.assertEqual(st.workspace_root(), bare)
+
+
+class LockGateIdentityTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.workspace = Path(tempfile.mkdtemp()).resolve()
+        self.session = "real-uuid"
+        self.env = {**os.environ, "CLAUDE_PROJECT_DIR": str(self.workspace)}
+        self._prev = os.environ.get("CLAUDE_PROJECT_DIR")
+        os.environ["CLAUDE_PROJECT_DIR"] = str(self.workspace)
+        self.contract = st.load_contract()
+
+    def tearDown(self) -> None:
+        if self._prev is None:
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        else:
+            os.environ["CLAUDE_PROJECT_DIR"] = self._prev
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+
+    def _stamp_lock(self, session_id: str) -> None:
+        st.write_receipt(self.contract, session_id, {"namespaces": ["cursor-governance"]})
+        st.write_lock(self.contract, "cursor-governance", session_id, "sig")
+        path = st.lock_path(self.contract, "cursor-governance")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["transport"] = "cursor-graphiti-phase-lock"
+        data["granted"] = True
+        path.write_text(json.dumps(data) + "\n", encoding="utf-8")
+
+    def test_gate_denies_lock_with_wrong_session_id(self) -> None:
+        st.write_receipt(self.contract, self.session, {"namespaces": ["cursor-governance"]})
+        self._stamp_lock("unknown-session")
+        out, _ = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
+                "session_id": self.session,
+            },
+            self.env,
+        )
+        self.assertTrue(is_deny(out))
+        self.assertIn("LOCK_IDENTITY_MISMATCH", out)
+        self.assertIn("unknown-session", out)
+        self.assertIn(self.session, out)
+
+    def test_gate_denies_divergent_project_dirs(self) -> None:
+        other = Path(tempfile.mkdtemp()).resolve()
+        self._stamp_lock(self.session)
+        out, _ = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
+                "session_id": self.session,
+            },
+            {**self.env, "CURSOR_PROJECT_DIR": str(other)},
+        )
+        self.assertTrue(is_deny(out))
+        self.assertIn("LOCK_IDENTITY_MISMATCH", out)
+        self.assertIn(str(self.workspace), out)
+        self.assertIn(str(other), out)
+
+    def test_matching_lock_allows_authority_edit(self) -> None:
+        self._stamp_lock(self.session)
+        out, _ = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
+                "session_id": self.session,
+            },
+            self.env,
+        )
+        self.assertFalse(is_deny(out), out)
+
+    def test_bridge_overwrites_stale_conversation_id(self) -> None:
+        sys.path.insert(0, str(MEM))
+        import graphiti_bridge as gb
+
+        env = gb.bind_session_env({"CURSOR_CONVERSATION_ID": "default"}, "abc")
+        self.assertEqual(env["CURSOR_CONVERSATION_ID"], "abc")
+
+    def test_phase_lock_satisfied_ignores_default_json(self) -> None:
+        sys.path.insert(0, str(MEM))
+        import graphiti_bridge as gb
+
+        home = Path(tempfile.mkdtemp())
+        state = home / ".cursor" / "graphiti-state"
+        state.mkdir(parents=True)
+        (state / "default.json").write_text(
+            json.dumps({"memory_satisfied_for": ["gmp:phase_lock"]}),
+            encoding="utf-8",
+        )
+        prev_home = os.environ.get("HOME")
+        os.environ["HOME"] = str(home)
+        try:
+            self.assertFalse(gb.phase_lock_satisfied("abc"))
+        finally:
+            if prev_home is None:
+                os.environ.pop("HOME", None)
+            else:
+                os.environ["HOME"] = prev_home
+
+    def test_lock_status_reports_session_and_path(self) -> None:
+        self._stamp_lock(self.session)
+        proc = subprocess.run(
+            [sys.executable, str(LOCK), "status"],
+            capture_output=True,
+            text=True,
+            env=self.env,
+            timeout=15,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn(self.session, proc.stdout)
+        self.assertIn("lock_path", proc.stdout)
 
 
 if __name__ == "__main__":
