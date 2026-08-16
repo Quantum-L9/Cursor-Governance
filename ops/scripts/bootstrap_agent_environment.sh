@@ -170,6 +170,39 @@ if [ -f "$WORKSPACE/.pre-commit-config.yaml" ] && ! command -v pre-commit >/dev/
   fi
 fi
 
+# --- 2.5) Publish-path enforcement (verified, not assumed) ------------------
+# `make pr` is the only sanctioned way to reach GitHub. That is enforced by
+# ops/autonomy/local_execution_gate.py, which both the Claude PreToolUse hook
+# and the Cursor beforeShellExecution hook route through. A policy nobody
+# probes is a policy that silently stops working, so PROVE it here: feed the
+# gate a raw `git push` and require a deny, and feed it `make pr` and require
+# an allow. A surface where this cannot be proven is reported DEGRADED.
+log "Publish-path enforcement"
+GATE="$GOV_DIR/ops/autonomy/local_execution_gate.py"
+if [ -f "$GATE" ]; then
+  _gate_decision() {
+    printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" \
+      | "$GOV_PY" "$GATE" claude 2>/dev/null \
+      | grep -q '"permissionDecision": *"deny"' && echo deny || echo allow
+  }
+  deny_raw="$(_gate_decision 'git push origin main')"
+  allow_make="$(_gate_decision 'make pr')"
+  if [ "$deny_raw" = "deny" ] && [ "$allow_make" = "allow" ]; then
+    say "publish path ENFORCED: raw 'git push' denied, 'make pr' allowed"
+  else
+    warn "publish path NOT ENFORCED (raw push=$deny_raw, make pr=$allow_make)"
+    warn "  agents on surface '$SURFACE' could reach GitHub without the Makefile checkers"
+    DEGRADED=$((DEGRADED + 1))
+  fi
+  if [ -n "${L9_PUBLISH_PATH_OVERRIDE:-}" ]; then
+    warn "L9_PUBLISH_PATH_OVERRIDE is set — publish-path enforcement is BYPASSED"
+    warn "  this is a human/ops breakglass; it must not be set in a surface environment"
+  fi
+else
+  warn "missing ops/autonomy/local_execution_gate.py — publish path UNENFORCED"
+  DEGRADED=$((DEGRADED + 1))
+fi
+
 # --- 3) Secret bootstrap ----------------------------------------------------
 # Delegated to the shared secret bootstrap; no surface keeps an inventory.
 log "Canonical secret bootstrap"

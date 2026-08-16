@@ -1,0 +1,106 @@
+"""Publish-path enforcement: `make pr` is the only sanctioned route to GitHub.
+
+L4 governs *when* remote work may happen; this governs *how*. A raw `git push`
+or `gh pr create` skips the Makefile checkers entirely, so it stays denied even
+when the workspace is release_authorized.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+AUTONOMY = REPO_ROOT / "ops" / "autonomy"
+if str(AUTONOMY) not in sys.path:
+    sys.path.insert(0, str(AUTONOMY))
+
+import local_execution_gate as gate  # noqa: E402
+
+BYPASSES = [
+    ("git push origin main", "git push"),
+    ("git push -u origin HEAD", "git push"),
+    ("gh pr create --title t --body b", "gh pr create"),
+    ("gh pr edit 12 --body b", "gh pr edit"),
+    ("make push", "make push"),
+    ("cd /tmp/repo && git push origin main", "git push"),
+    ("bash -c 'git push origin main'", "git push"),
+]
+
+SANCTIONED = [
+    "make pr",
+    "PR_REMEDIATE=0 make pr",
+    "make -C /root/.cursor-governance pr",
+    "make pr WS=/home/user/Cursor-Governance",
+    "PR_REMEDIATE=0 PR_BASE=main make pr",
+]
+
+INERT = [
+    "git status",
+    "git log --oneline -5",
+    "echo 'git push origin main'",
+    "grep -rn 'gh pr create' ops/",
+    "make test",
+]
+
+
+@pytest.mark.parametrize(("command", "expected"), BYPASSES)
+def test_raw_publish_is_reported(command: str, expected: str) -> None:
+    assert gate.command_bypasses_publish_path(command) == expected
+
+
+@pytest.mark.parametrize("command", SANCTIONED)
+def test_make_pr_is_never_reported(command: str) -> None:
+    assert gate.command_bypasses_publish_path(command) is None
+
+
+@pytest.mark.parametrize("command", INERT)
+def test_inert_commands_are_not_reported(command: str) -> None:
+    """Quoted text and read-only commands are data, never a publish attempt."""
+    assert gate.command_bypasses_publish_path(command) is None
+
+
+def test_heredoc_body_is_data_not_a_push() -> None:
+    command = "cat <<'EOF'\ngit push origin main\nEOF"
+    assert gate.command_bypasses_publish_path(command) is None
+
+
+def test_release_authorized_does_not_permit_a_raw_push(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The core invariant: L4 authorization is not a licence to skip the checkers."""
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+
+    reason = gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path)
+    assert reason is not None
+    assert "make pr" in reason
+
+    # ...while the sanctioned path is untouched by this rule.
+    assert gate.evaluate("Bash", {"command": "PR_REMEDIATE=0 make pr"}, root=tmp_path) is None
+
+
+def test_mcp_push_tools_denied_even_when_release_authorized(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    for tool in ("mcp__github__create_pull_request", "mcp__github__push_files"):
+        reason = gate.evaluate(tool, {}, root=tmp_path)
+        assert reason is not None, tool
+        assert "make pr" in reason
+
+
+def test_human_override_restores_prior_behaviour(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Breakglass is human/ops only, and hands control back to the L4 check."""
+    monkeypatch.setenv(gate.PUBLISH_PATH_OVERRIDE_ENV, "incident-1234")
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) is None
+
+    # Override does not bypass L4 itself — an unauthorized workspace still denies.
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) == "L4 denied"

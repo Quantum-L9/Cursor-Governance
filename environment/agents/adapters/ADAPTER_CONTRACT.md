@@ -34,6 +34,36 @@ Authentication uses `GRAPHITI_MCP_TOKEN`. Writer identity is separate and comes
 from `agent_registry.yaml` through `USER_ID`, `L9_MEMORY_AGENT_ID`, and
 `L9_MEMORY_SOURCE`. Surface adapters never invent a second `agent_id`.
 
+## Publish path
+
+`PR_REMEDIATE=0 make pr` is the only sanctioned way any surface reaches GitHub.
+It runs the Makefile checkers, then pushes and opens the PR through
+`ops/scripts/open_pr_after_gate.sh`.
+
+This is **mechanically enforced**, not a convention. `ops/autonomy/local_execution_gate.py`
+denies raw `git push`, `gh pr create`, `gh pr edit`, `make push`, and the MCP
+`create_pull_request` / `push_files` tools — on every surface, through the
+Claude PreToolUse hook and the Cursor `beforeShellExecution` hook alike.
+
+L4 and the publish path are different questions and are enforced separately:
+
+| Question | Owner |
+|---|---|
+| *When* may this workspace reach a remote at all? | L4 release receipt |
+| *How* must it reach GitHub when it may? | publish-path enforcement |
+
+Being `release_authorized` therefore does **not** permit a raw push — that would
+skip the checkers the receipt was granted on the strength of.
+
+`ops/scripts/bootstrap_agent_environment.sh` proves the rule is live on each
+surface at startup: it feeds the gate a raw `git push` and requires a deny, and
+`make pr` and requires an allow. A surface where that cannot be proven is
+reported DEGRADED rather than assumed safe.
+
+Breakglass is human/ops only: `L9_PUBLISH_PATH_OVERRIDE=<reason>`. It must never
+be set in a surface environment file, and it does not bypass L4 — an
+unauthorized workspace still denies.
+
 ## Secret carrier
 
 `ops/secrets/` is the SSOT inventory for every surface. Adapters resolve through
