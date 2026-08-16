@@ -63,6 +63,11 @@ def peer_readiness_root() -> Path:
     return (agent_runtime_root() / "readiness").resolve()
 
 
+def runtime_readiness_root() -> Path:
+    """Session/runtime bootstrap receipt root (sibling of peer readiness)."""
+    return (peer_readiness_root() / "runtime").resolve()
+
+
 def generated_data_root() -> Path:
     return (runtime_root() / "generated-data").resolve()
 

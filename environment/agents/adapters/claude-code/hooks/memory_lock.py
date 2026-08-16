@@ -35,13 +35,12 @@ def _current_session_id(contract: dict) -> str | None:
 
 def command_acquire(args: argparse.Namespace) -> int:
     contract = st.load_contract()
-    # --session-id pins the lock to one session; without it the newest fresh
-    # receipt wins — which can be ANOTHER live session on a shared machine.
-    session_id = args.session_id or _current_session_id(contract)
-    if not session_id:
+    try:
+        session_id = st.resolve_session_id(cli_arg=args.session_id)
+    except ValueError:
         print(
-            "no fresh SessionStart receipt; memory prefetch must run before locking "
-            "(or pass --session-id explicitly)",
+            "session_id required: pass --session-id (lock/gate paths must not default "
+            "to unknown-session)",
             file=sys.stderr,
         )
         return 3
@@ -103,9 +102,25 @@ def command_acquire(args: argparse.Namespace) -> int:
 
 def command_status(_args: argparse.Namespace) -> int:
     contract = st.load_contract()
+    rows = []
     for namespace in st.resolve_namespaces(contract):
         lock = st.read_lock(contract, namespace)
-        print(f"{namespace}: {'held' if lock else 'none'}")
+        lock_session = str((lock or {}).get("session_id") or "")
+        identity = st.identity_snapshot(contract, lock_session or "UNKNOWN")
+        rows.append(
+            {
+                "namespace": namespace,
+                "held": bool(lock),
+                "session_id": lock_session or None,
+                "lock_path": str(st.lock_path(contract, namespace)),
+                "workspace_root": identity["workspace_root"],
+                "memory_state_root": identity["memory_state_root"],
+                "graphiti_state_file": identity["graphiti_state_file"],
+                "transport": (lock or {}).get("transport"),
+                "granted": (lock or {}).get("granted"),
+            }
+        )
+    print(json.dumps({"locks": rows}, indent=2, sort_keys=True))
     return 0
 
 
