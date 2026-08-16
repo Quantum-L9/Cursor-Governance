@@ -46,7 +46,6 @@ from pathlib import Path
 from typing import Any
 import yaml
 from build_doctrine_census import (
-    CENSUS_VERSION,
     build_census,
 )
 from extract_doctrine import (

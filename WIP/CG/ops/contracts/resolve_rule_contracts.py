@@ -17,7 +17,6 @@ if str(ADAPTERS) not in sys.path:
 from cursor_rules import (  # noqa: E402
     RuleBinding,
     binding_contract_refs,
-    discover_rule_bindings,
     load_yaml_unique,
     stable_digest,
 )

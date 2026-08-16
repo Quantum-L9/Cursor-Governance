@@ -28,7 +28,7 @@ from resolve_rule_contracts import (  # noqa: E402
 )
 GENERATED_MARKER = "<!-- GENERATED FILE — DO NOT EDIT -->"
 PROVENANCE_RE = re.compile(
-    r"`$begin:math:display$\(\?P\<contract\>\[A\-Z\]\[A\-Z0\-9\_\.\]\+\)\:\(\?P\<clause\>\[A\-Za\-z0\-9\_\.\-\]\+\)$end:math:display$`"
+    r"`(?P<contract>[A-Z][A-Z0-9_.]+):(?P<clause>[A-Za-z0-9_.-]+)`"
 )
 HARD_GUIDANCE_RE = re.compile(
     r"\b(?:MUST(?:\s+NOT)?|NEVER|PROHIBITED|FORBIDDEN|"

@@ -817,7 +817,11 @@ def _matched_tokens(
     return sorted(set(tokens)), score
 def _strip_markdown_for_analysis(text: str) -> str:
     value = re.sub(r"<!--.*?-->", " ", text, flags=re.S)
-    value = re.sub(r"$begin:math:display$\(\[\^$end:math:display$]+)\]$begin:math:text$\[\^\)\]\+$end:math:text$", r"\1", value)
+    value = re.sub(
+        r"\$begin:math:display\$\(\[\^\$end:math:display\$]+)\]\$begin:math:text\$\[\^\)\]\+\$end:math:text\$",
+        r"\1",
+        value,
+    )
     value = re.sub(r"`([^`]+)`", r"\1", value)
     value = re.sub(r"[*_~]+", "", value)
     return normalize_space(value)

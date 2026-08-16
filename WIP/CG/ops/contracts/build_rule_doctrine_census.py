@@ -3,8 +3,6 @@
 from __future__ import annotations
 import argparse
 import copy
-import json
-import subprocess
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -31,7 +29,6 @@ from extract_doctrine import (  # noqa: E402
     iter_markdown_blocks,
     repository_identity,
     serialize_output,
-    sha256_text,
 )
 CENSUS_SCHEMA = "l9.rule-doctrine-census/v1"
 BASELINE_SCHEMA = "l9.rule-doctrine-ratchet-baseline/v1"
