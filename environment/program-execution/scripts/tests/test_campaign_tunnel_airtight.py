@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+import os
 import re
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -51,6 +55,77 @@ class CampaignTunnelAirtightTests(unittest.TestCase):
                 r"make(?:\s+-C\s+\"\$HOME/\.cursor-governance\")?\s+campaign INTENT=",
                 f"{path.name} must name the live front door",
             )
+
+    def test_pec_mutation_refuses_without_tunnel_env(self) -> None:
+        pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+        env = os.environ.copy()
+        env.pop("L9_CAMPAIGN_TUNNEL", None)
+        env.pop("L9_ALLOW_PEC_DIRECT", None)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(pec),
+                "claim",
+                "TASK-001",
+                "--workspace",
+                "/tmp/l9-unused-campaign-workspace",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(completed.returncode, 2, completed.stdout + completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertIn("not a live campaign front door", payload["error"])
+        self.assertIn("campaign INTENT=", payload["error"])
+
+    def test_pec_status_stays_inspectable_without_tunnel_env(self) -> None:
+        pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+        env = os.environ.copy()
+        env.pop("L9_CAMPAIGN_TUNNEL", None)
+        env.pop("L9_ALLOW_PEC_DIRECT", None)
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(pec),
+                "status",
+                "--workspace",
+                "/tmp/l9-unused-campaign-workspace",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        payload = json.loads(completed.stdout)
+        self.assertNotIn("not a live campaign front door", payload.get("error", ""))
+
+    def test_campaign_tunnel_env_is_enough_for_pec_mutation(self) -> None:
+        pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+        env = os.environ.copy()
+        env.pop("L9_ALLOW_PEC_DIRECT", None)
+        env["L9_CAMPAIGN_TUNNEL"] = "1"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(pec),
+                "claim",
+                "TASK-001",
+                "--workspace",
+                "/tmp/l9-unused-campaign-workspace",
+                "--holder",
+                "worker",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(completed.returncode, 2, completed.stdout + completed.stderr)
+        payload = json.loads(completed.stdout)
+        self.assertNotIn("not a live campaign front door", payload["error"])
+        self.assertIn("not bootstrapped", payload["error"])
 
 
 if __name__ == "__main__":

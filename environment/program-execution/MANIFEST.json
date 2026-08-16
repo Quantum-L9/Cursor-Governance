@@ -1363,11 +1363,11 @@
     },
     {
       "path": "scripts/tests/test_campaign_tunnel_airtight.py",
-      "sha256": "0b8ef143f8f36c50479eec082b76f105407dcdee02513bc06c13033366c8c19f"
+      "sha256": "fe8ec03594daa5219d0c062eed022a7b087c5a8adac90d02593e8192ceb62c0c"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "9d4c79d59c20e014f633c90019c3792c0ef76ec3923ee15f0c1367c0d1dfdff1"
+      "sha256": "a779cedf57819ba448cb6ed4166b72a81019fc13721ac628e3b15c0e30f181dc"
     },
     {
       "path": "scripts/tests/test_run_campaign.py",

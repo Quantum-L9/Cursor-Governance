@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -241,6 +242,8 @@ class PipelineAssemblyFillTest(unittest.TestCase):
             import subprocess
             import sys
 
+            pec_env = os.environ.copy()
+            pec_env.setdefault("L9_ALLOW_PEC_DIRECT", "1")
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -257,6 +260,7 @@ class PipelineAssemblyFillTest(unittest.TestCase):
                 capture_output=True,
                 check=False,
                 timeout=45,
+                env=pec_env,
             )
             self.assertEqual(completed.returncode, 2, completed.stdout + completed.stderr)
             self.assertIn("operator memo", completed.stdout)

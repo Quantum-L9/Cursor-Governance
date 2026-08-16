@@ -93,7 +93,7 @@ files:
 - path: scripts/pec/blueprint.py
   sha256: 1a7d73ea1a26192fd2c4036ce8ca253b153a5ec913db25a111a8f55aafae42bb
 - path: scripts/pec/cli.py
-  sha256: 4b461b69867fc00d7633a92bbd6c10b08544310de4b85342eed36c3bba5a4650
+  sha256: 5de57a83955527fdd06cacf2be57601b9a38a9682bd108e61f0af0d7dc461d5a
 - path: scripts/pec/common.py
   sha256: abbdcb549d156ebdf7ead35c112fd07e540f3f35f1a90d60988d994e9cba3098
 - path: scripts/pec/contracts.py
@@ -113,7 +113,7 @@ files:
 - path: scripts/run_negative_tests.py
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
 - path: scripts/tests/helpers.py
-  sha256: b6c0ce83b0daff274742f87e6926643f11f01ee1a4f0f8cd8d0a0c08256418d1
+  sha256: e1401ed452b6e4c98a2fed7e0e664a8357c38bf910dd320236a831205f85d5c7
 - path: scripts/tests/test_approval.py
   sha256: fe0af2376fe8d861074474c1f586a9a7c1f8abc06c85aadc320bb6d35e09f1bb
 - path: scripts/tests/test_authority_inflation.py
@@ -137,7 +137,7 @@ files:
 - path: scripts/tests/test_pe_clean_startup.py
   sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
 - path: scripts/tests/test_pipeline_assembly_fill.py
-  sha256: 928f08f9cdd25f45270c879d7677a2ddb3712f8d6785f69796e0ba134d3fe9fc
+  sha256: 8d4dae20973c2479d7e1eb95a7abf5eefb091536c3fcaf421520aca8469d7b3a
 - path: scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
 - path: scripts/tests/test_program_control.py

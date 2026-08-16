@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 
 from .contracts import (
@@ -228,9 +229,63 @@ def parser() -> argparse.ArgumentParser:
     return p
 
 
+_TUNNEL_COMMANDS = frozenset(
+    {
+        "bootstrap",
+        "reconcile",
+        "draft-contract",
+        "register-contract",
+        "claim",
+        "prepare",
+        "render-contract",
+        "start",
+        "record-attempt",
+        "verify",
+        "complete",
+        "release-lease",
+        "recover",
+        "add-approval",
+        "set-decision",
+        "set-unknown",
+        "evaluate-gate",
+        "halt",
+        "resume",
+        "export-handoff",
+        "close",
+        "replan-propose",
+        "replan-verify",
+        "replan-activate",
+        "replan-reject",
+        "project-replan",
+    }
+)
+
+
+def peek_command(argv: list[str] | None) -> str:
+    tokens = sys.argv[1:] if argv is None else list(argv)
+    for token in tokens:
+        if not token.startswith("-"):
+            return token
+    return ""
+
+
+def require_campaign_tunnel(command: str) -> None:
+    if command not in _TUNNEL_COMMANDS:
+        return
+    if os.environ.get("L9_CAMPAIGN_TUNNEL") == "1":
+        return
+    if os.environ.get("L9_ALLOW_PEC_DIRECT") == "1":
+        return
+    raise ControllerError(
+        f"pec {command} is not a live campaign front door; "
+        'use make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md>'
+    )
+
+
 def main(argv: list[str] | None = None, *, template_root: Path) -> int:
-    args = parser().parse_args(argv)
     try:
+        require_campaign_tunnel(peek_command(argv))
+        args = parser().parse_args(argv)
         if args.command == "bootstrap":
             if args.admission_draft and os.environ.get("L9_ALLOW_ADMISSION_DRAFT") != "1":
                 raise ControllerError(
