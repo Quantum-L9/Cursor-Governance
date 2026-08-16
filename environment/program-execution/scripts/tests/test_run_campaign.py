@@ -369,6 +369,8 @@ class RunCampaignTests(unittest.TestCase):
             self.assertTrue(launch["only_pec_workspace"])
             self.assertEqual(launch["claimed_task"], "TASK-001")
             self.assertTrue(launch["reconcile_required"])
+            self.assertFalse(launch["load_operator_brief"])
+            self.assertEqual(launch["max_task_minutes"], 15)
 
     def test_quarantine_moves_occupied_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -431,6 +433,15 @@ class RunCampaignTests(unittest.TestCase):
             self.assertFalse(payload.get("admission_draft"))
             task = next(item for item in payload["tasks"] if item["id"] == "TASK-001")
             self.assertEqual(task["runtime_state"], "LEASED")
+            card = (workspace / "runtime" / "TASK-001.md").read_text(encoding="utf-8")
+            self.assertIn("Budget: 15 minutes", card)
+            self.assertNotIn("PE- Memory", card)
+            self.assertLess(len(card.splitlines()), 16)
+
+    def test_run_cmd_times_out(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self.mod.run_cmd([sys.executable, "-c", "import time; time.sleep(5)"], timeout=1)
+        self.assertIn("timed out after 1s", str(ctx.exception))
 
 
 if __name__ == "__main__":

@@ -46,6 +46,13 @@ STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 FIRST_TASK_ID = "TASK-001"
+GIT_TIMEOUT_S = 45
+PEC_TIMEOUT_S = 30
+CLONE_TIMEOUT_S = 90
+GH_TIMEOUT_S = 45
+MAKE_PR_TIMEOUT_S = 180
+COMPILE_TIMEOUT_S = 60
+TASK_BUDGET_MINUTES = 15
 
 
 class CampaignError(RuntimeError):
@@ -108,6 +115,35 @@ def utc_now() -> str:
 
 def log(message: str) -> None:
     print(f"campaign: {message}", flush=True)
+
+
+def git_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_ASKPASS"] = "echo"
+    env["GCM_INTERACTIVE"] = "never"
+    return env
+
+
+def run_cmd(
+    cmd: list[str],
+    *,
+    timeout: int,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=str(cwd) if cwd is not None else None,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise CampaignError(f"timed out after {timeout}s: {' '.join(cmd[:6])}") from exc
 
 
 def load_yaml(path: Path) -> Any:
@@ -216,11 +252,10 @@ def resolve_operator_intent(
 def is_dirty(repo: Path) -> bool:
     if not (repo / ".git").exists() and not (repo / ".git").is_file():
         return False
-    result = subprocess.run(
+    result = run_cmd(
         ["git", "-C", str(repo), "status", "--porcelain"],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
     )
     return bool(result.stdout.strip())
 
@@ -236,11 +271,10 @@ def refuse_write_to_dirty_primary(primary: Path, write_root: Path) -> None:
 
 
 def _git(repo: Path, *args: str) -> str:
-    result = subprocess.run(
+    result = run_cmd(
         ["git", "-C", str(repo), *args],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
     )
     if result.returncode != 0:
         raise CampaignError(
@@ -263,29 +297,26 @@ def isolate_worktree(
         log(f"isolate reuse worktree {worktree}")
         return worktree
     branch = f"feat/{campaign_id}"
-    existing = subprocess.run(
+    existing = run_cmd(
         ["git", "-C", str(primary), "rev-parse", "--verify", branch],
-        capture_output=True,
-        text=True,
-        check=False,
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
     )
     if existing.returncode == 0:
         git("worktree", "add", str(worktree), branch)
     else:
         git("worktree", "add", "-b", branch, str(worktree), "origin/main")
     campaign_branch = f"campaign/{campaign_id}"
-    has_campaign = subprocess.run(
+    has_campaign = run_cmd(
         ["git", "-C", str(worktree), "rev-parse", "--verify", f"origin/{campaign_branch}"],
-        capture_output=True,
-        text=True,
-        check=False,
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
     )
     if has_campaign.returncode != 0:
-        local = subprocess.run(
+        local = run_cmd(
             ["git", "-C", str(worktree), "rev-parse", "--verify", campaign_branch],
-            capture_output=True,
-            text=True,
-            check=False,
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
         )
         if local.returncode != 0:
             _git(worktree, "branch", campaign_branch, "origin/main")
@@ -323,13 +354,7 @@ def default_compile_source(
     ]
     if allowlist_path is not None:
         cmd.extend(["--allowlist", str(allowlist_path)])
-    result = subprocess.run(
-        cmd,
-        check=False,
-        capture_output=True,
-        text=True,
-        cwd=str(GOV_ROOT),
-    )
+    result = run_cmd(cmd, timeout=COMPILE_TIMEOUT_S, cwd=GOV_ROOT)
     if result.returncode != 0:
         raise CampaignError(
             f"compile_campaign_source failed: {result.stderr.strip() or result.stdout.strip()}"
@@ -337,11 +362,9 @@ def default_compile_source(
 
 
 def default_validate_blueprint(target: Path) -> list[str]:
-    result = subprocess.run(
+    result = run_cmd(
         [sys.executable, str(VALIDATE_BLUEPRINT), str(target), "--mode", "template"],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=PEC_TIMEOUT_S,
     )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip()
@@ -362,7 +385,7 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
         ]
         if admission_draft:
             cmd.append("--admission-draft")
-        return subprocess.run(cmd, check=False, capture_output=True, text=True)
+        return run_cmd(cmd, timeout=PEC_TIMEOUT_S)
 
     first = _run(admission_draft=False)
     combined = (first.stderr + "\n" + first.stdout).strip()
@@ -420,20 +443,18 @@ def default_ensure_target_checkout(
         raise CampaignError(f"target path exists and is not a git checkout: {dest}")
     dest.parent.mkdir(parents=True, exist_ok=True)
     if donor is not None and is_git_repo(donor):
-        clone = subprocess.run(
+        clone = run_cmd(
             ["git", "clone", "--local", str(donor.resolve()), str(dest)],
-            check=False,
-            capture_output=True,
-            text=True,
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
         )
         if clone.returncode == 0:
             return dest
     url = f"https://github.com/{repository_id}.git"
-    clone = subprocess.run(
-        ["git", "clone", "--branch", "main", url, str(dest)],
-        check=False,
-        capture_output=True,
-        text=True,
+    clone = run_cmd(
+        ["git", "clone", "--depth", "1", "--single-branch", "--branch", "main", url, str(dest)],
+        timeout=CLONE_TIMEOUT_S,
+        env=git_env(),
     )
     if clone.returncode != 0:
         raise CampaignError(
@@ -444,7 +465,7 @@ def default_ensure_target_checkout(
 
 def default_reconcile(workspace: Path, repository_id: str, target_path: Path) -> dict[str, Any]:
     mapping = f"{repository_id}={target_path}"
-    result = subprocess.run(
+    result = run_cmd(
         [
             sys.executable,
             str(PEC),
@@ -454,9 +475,7 @@ def default_reconcile(workspace: Path, repository_id: str, target_path: Path) ->
             "--repository",
             mapping,
         ],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=PEC_TIMEOUT_S,
     )
     if result.returncode != 0:
         raise CampaignError(f"pec reconcile failed: {(result.stderr or result.stdout).strip()}")
@@ -490,7 +509,7 @@ def default_arm(
     reconciled = default_reconcile(workspace, repository_id, target_path)
     contract = workspace / "runtime" / f"{FIRST_TASK_ID}.source.json"
     contract.parent.mkdir(parents=True, exist_ok=True)
-    draft = subprocess.run(
+    draft = run_cmd(
         [
             sys.executable,
             str(PEC),
@@ -501,13 +520,11 @@ def default_arm(
             "--output",
             str(contract),
         ],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=PEC_TIMEOUT_S,
     )
     if draft.returncode != 0:
         raise CampaignError(f"pec draft-contract failed: {(draft.stderr or draft.stdout).strip()}")
-    register = subprocess.run(
+    register = run_cmd(
         [
             sys.executable,
             str(PEC),
@@ -520,15 +537,13 @@ def default_arm(
             "--actor",
             "make-campaign",
         ],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=PEC_TIMEOUT_S,
     )
     if register.returncode != 0:
         raise CampaignError(
             f"pec register-contract failed: {(register.stderr or register.stdout).strip()}"
         )
-    claim = subprocess.run(
+    claim = run_cmd(
         [
             sys.executable,
             str(PEC),
@@ -539,9 +554,7 @@ def default_arm(
             "--holder",
             "make-campaign",
         ],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=PEC_TIMEOUT_S,
     )
     if claim.returncode != 0:
         raise CampaignError(f"pec claim failed: {(claim.stderr or claim.stdout).strip()}")
@@ -558,14 +571,7 @@ def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
     env["PR_BASE"] = f"origin/campaign/{campaign_id}"
     env["PR_REMEDIATE"] = "0"
     env["OPEN_PR"] = "1"
-    result = subprocess.run(
-        ["make", "pr"],
-        cwd=str(worktree),
-        check=False,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    result = run_cmd(["make", "pr"], timeout=MAKE_PR_TIMEOUT_S, cwd=worktree, env=env)
     output = (result.stdout + "\n" + result.stderr).strip()
     if result.returncode != 0:
         raise CampaignError(f"make pr failed: {output}")
@@ -577,15 +583,13 @@ def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
     cmd = ["gh", "pr", "view", "--repo", host_repo, "--json", fields]
     if number is not None:
         cmd.insert(3, str(number))
-    view = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    view = run_cmd(cmd, timeout=GH_TIMEOUT_S)
     if view.returncode != 0:
         raise CampaignError(f"gh pr view failed: {view.stderr.strip()}")
     data = json.loads(view.stdout)
-    checks = subprocess.run(
+    checks = run_cmd(
         ["gh", "pr", "checks", str(data["number"]), "--repo", host_repo],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=GH_TIMEOUT_S,
     )
     check_text = (checks.stdout + "\n" + checks.stderr).lower()
     green = checks.returncode == 0 and "fail" not in check_text and "pending" not in check_text
@@ -601,7 +605,7 @@ def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
 
 
 def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
-    auth = subprocess.run(
+    auth = run_cmd(
         [
             sys.executable,
             str(AUTHORIZE_SCRIPT),
@@ -612,17 +616,13 @@ def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
             "--reason",
             "l9-pe-campaign-activate remediation complete",
         ],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=GH_TIMEOUT_S,
     )
     if auth.returncode != 0:
         raise CampaignError(f"authorize_campaign_merge failed: {auth.stderr.strip()}")
-    merge = subprocess.run(
+    merge = run_cmd(
         ["gh", "pr", "merge", str(number), "--repo", host_repo, "--squash", "--delete-branch"],
-        check=False,
-        capture_output=True,
-        text=True,
+        timeout=GH_TIMEOUT_S,
     )
     if merge.returncode != 0:
         raise CampaignError(f"gh pr merge failed: {merge.stderr.strip()}")
@@ -809,18 +809,54 @@ def write_launch_pointer(
         "forge_operator_ack": False,
         "only_pec_workspace": True,
         "claimed_task": FIRST_TASK_ID,
+        "execution_card": str(workspace / "runtime" / f"{FIRST_TASK_ID}.md"),
+        "load_operator_brief": False,
+        "max_task_minutes": TASK_BUDGET_MINUTES,
         "reconcile_required": True,
         "pec_ready_empty_is_expected": False,
         "autonomy_packets_not_required": True,
         "refuse_hash_program": True,
         "next": (
-            f"Only path: pec workspace {workspace} campaign_id={campaign_id}. "
-            f"Execute {FIRST_TASK_ID} on {target_worktree}. "
+            f"Read {workspace}/runtime/{FIRST_TASK_ID}.md only. "
+            f"Execute {FIRST_TASK_ID} on {target_worktree} within "
+            f"{TASK_BUDGET_MINUTES} minutes. Do not open the operator memo. "
             "Do not attach to pe-<hash>. Do not write the dirty primary. "
-            "Stop and ask Igor for PHASE0 operator_ack; do not forge acknowledged_at."
+            "If blocked, stop and report; do not sit."
         ),
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def first_task_title(seed: dict[str, Any]) -> str:
+    tasks = seed.get("tasks") or []
+    if tasks and isinstance(tasks[0], dict):
+        return str(tasks[0].get("title") or tasks[0].get("objective") or FIRST_TASK_ID).strip()
+    return FIRST_TASK_ID
+
+
+def write_execution_card(
+    workspace: Path,
+    *,
+    campaign_id: str,
+    target_worktree: str,
+    title: str,
+) -> Path:
+    path = workspace / "runtime" / f"{FIRST_TASK_ID}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        (
+            f"# {FIRST_TASK_ID}\n\n"
+            f"Campaign: `{campaign_id}`\n"
+            f"Do: {title}\n"
+            f"Where: `{target_worktree}`\n"
+            f"Pec: `{workspace}`\n"
+            f"Budget: {TASK_BUDGET_MINUTES} minutes. If blocked, stop and report.\n\n"
+            "MUST NOT open the operator memo, attach to pe-<hash>, "
+            "write the dirty primary, or forge operator_ack.\n"
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -996,6 +1032,12 @@ def run_campaign(
             repository_id=repository_id,
             target_path=target_path,
         )
+    write_execution_card(
+        Path(report.pec_workspace),
+        campaign_id=campaign_id,
+        target_worktree=target_worktree,
+        title=first_task_title(seed),
+    )
     write_launch_pointer(
         Path(report.pec_workspace),
         campaign_id=campaign_id,

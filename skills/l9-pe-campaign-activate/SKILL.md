@@ -65,9 +65,9 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
    the blueprint, bootstraps pec **without** `--admission-draft`, reconciles
    a clean target checkout, drafts and claims TASK-001, then opens/merges
    the host PR when green. A leftover pec workspace is quarantined.
-2. Execute **only** the claimed TASK-001 on the worktree in
-   `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`. Do not attach to `pe-<hash>`.
-   Do not reload the operator memo as the campaign.
+2. Read **only** `$HOME/.l9/programs/<id>/runtime/TASK-001.md` (15 minutes).
+   Do not open the operator memo. Do not attach to `pe-<hash>`. If blocked,
+   stop and report.
 3. Converge the campaign PR with `l9-pr-remediation` until required checks are
    green and the PR is mergeable.
 4. Authorize and merge **that PR only**

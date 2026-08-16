@@ -114,9 +114,10 @@ timestamp. `program_deploying` stays false until that ack.
 
 ## 5. Execute the claimed task
 
-Read `$HOME/.l9/programs/<id>/runtime/LAUNCH.json`. Execute **only**
-`claimed_task` (TASK-001) on `target_worktree`. Do not start L4, the
-intent compiler, or a second pec workspace as a substitute front door.
+Read `$HOME/.l9/programs/<id>/runtime/TASK-001.md` only (15 minutes).
+Execute **only** `claimed_task` on `target_worktree`. Do not open the
+operator memo. Do not start L4, the intent compiler, or a second pec
+workspace. If blocked, stop and report.
 
 ## 6. Publish
 
