@@ -1141,14 +1141,10 @@ def task_output_location(task: dict[str, Any]) -> str:
 def write_and_commit_output(worktree: Path, rel: str, title: str) -> str:
     path = worktree / rel
     if not path.is_file():
-        raise CampaignError(
-            f"refuse stub output for {rel}; implement the task in {worktree} first"
-        )
+        raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     existing = path.read_text(encoding="utf-8")
     if existing.strip() == f"{Path(rel).stem} complete: {title}" or len(existing.strip()) < 40:
-        raise CampaignError(
-            f"refuse stub output for {rel}; implement the task in {worktree} first"
-        )
+        raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     added = run_cmd(
         ["git", "-C", str(worktree), "add", "--", rel],
         timeout=GIT_TIMEOUT_S,

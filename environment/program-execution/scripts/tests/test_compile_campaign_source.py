@@ -30,8 +30,7 @@ def _pass_proof(
                 "schema": "l9.program-execution.stack-proof.v1",
                 "campaign_id": campaign_id,
                 "status": "pass",
-                "tools": tools
-                or [],
+                "tools": tools or [],
                 "fetched_at": "2026-08-16T00:00:00Z",
                 "validator": {"ok": True, "errors": []},
             }
@@ -147,9 +146,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
                         "tools": [
                             {
                                 "name": "DataForSEO",
-                                "constraints": [
-                                    "language_name must be the full English name"
-                                ],
+                                "constraints": ["language_name must be the full English name"],
                                 "fetch_evidence": {
                                     "http_status": 200,
                                     "bytes": 80,

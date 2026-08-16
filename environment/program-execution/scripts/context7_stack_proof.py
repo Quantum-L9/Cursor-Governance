@@ -17,9 +17,10 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 SCHEMA = "l9.program-execution.stack-proof.v1"
 CONTEXT7_SEARCH = "https://context7.com/api/v2/libs/search"
@@ -149,7 +150,12 @@ def extract_constraints(text: str) -> list[str]:
             continue
         if SECRET_RE.search(line):
             continue
-        if re.search(r"\b(must|required|do not|never|one of|enum|language_name|language_code)\b", line, re.I):
+        if re.search(
+            r"\b(must|required|do not|never|one of|enum|"
+            r"language_name|language_code)\b",
+            line,
+            re.I,
+        ):
             constraints.append(line[:240])
         if len(constraints) >= 8:
             break
@@ -187,9 +193,7 @@ def context7_fetch(
     library_id = str(first.get("id") or "")
     if not library_id:
         return None
-    ctx_params = urllib.parse.urlencode(
-        {"libraryId": library_id, "query": query, "type": "json"}
-    )
+    ctx_params = urllib.parse.urlencode({"libraryId": library_id, "query": query, "type": "json"})
     ctx_status, ctx_body = fetch(f"{CONTEXT7_CONTEXT}?{ctx_params}", _headers())
     if ctx_status != 200 or not ctx_body.strip():
         return None
@@ -435,9 +439,7 @@ def require_existing_receipt(
     covered = {str(item.get("name", "")).lower() for item in receipt.get("tools") or []}
     missing = [tool["name"] for tool in inferred if tool["name"].lower() not in covered]
     if missing:
-        raise StackProofError(
-            "re-entry stack-proof required for new tools: " + ", ".join(missing)
-        )
+        raise StackProofError("re-entry stack-proof required for new tools: " + ", ".join(missing))
     errors = validate_receipt(receipt, [t for t in inferred if t["name"].lower() in covered])
     if receipt.get("status") != "pass" or errors:
         raise StackProofError("existing stack-proof is not valid for re-entry")

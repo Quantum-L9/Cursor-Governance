@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
-import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
 
-HOOK = (
-    Path(__file__).resolve().parents[1] / "hooks" / "context7_stack_pretool.py"
-)
+HOOK = Path(__file__).resolve().parents[1] / "hooks" / "context7_stack_pretool.py"
 
 
 def _load():
@@ -32,10 +28,6 @@ class Context7StackPretoolTests(unittest.TestCase):
             "session_id": "sess-none",
             "tool_input": {"file_path": "CAMPAIGN_SOURCE.yaml", "new_string": "x"},
         }
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            code = self.mod.main.__wrapped__ if hasattr(self.mod.main, "__wrapped__") else None
-        # Call the deny helper through the same decision path.
         blob = self.mod._payload_paths(payload)
         self.assertTrue(self.mod.STACK_NAME_RE.search(blob))
         self.assertFalse(self.mod._session_called_context7("sess-none"))

@@ -200,7 +200,11 @@ class RunCampaignTests(unittest.TestCase):
                 primary=other_primary,
                 repo_root=root,
                 l9_root=Path(raw) / "l9",
-                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, compile_activation=self.activate.compile_activation),
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                ),
             )
             campaign_dir = root / "environment/program-execution/campaigns/demo-activate-v1"
             names = {path.name for path in campaign_dir.iterdir() if path.is_file()}
@@ -284,7 +288,9 @@ class RunCampaignTests(unittest.TestCase):
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=Path(raw) / "l9",
-                    hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
                         validate_blueprint=lambda target: [],
@@ -332,7 +338,11 @@ class RunCampaignTests(unittest.TestCase):
                 primary=other_primary,
                 repo_root=root,
                 l9_root=Path(raw) / "l9",
-                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, compile_activation=self.activate.compile_activation),
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                ),
             )
             self.assertEqual(report.campaign_id, "pe-memory")
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"
@@ -370,7 +380,9 @@ class RunCampaignTests(unittest.TestCase):
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=Path(raw) / "l9",
-                    hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
                         validate_blueprint=lambda target: [],
@@ -405,7 +417,9 @@ class RunCampaignTests(unittest.TestCase):
                 primary=Path(raw) / "primary",
                 repo_root=root,
                 l9_root=l9,
-                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
                     compile_activation=emit,
                     compile_source=lambda source, target: calls.append("compile") or None,
                     validate_blueprint=lambda target: calls.append("validate") or [],
@@ -473,7 +487,11 @@ class RunCampaignTests(unittest.TestCase):
                 primary=Path(raw) / "primary",
                 repo_root=root,
                 l9_root=l9,
-                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, compile_activation=self.activate.compile_activation),
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                ),
             )
             self.assertEqual(
                 report.stages_completed,
@@ -627,7 +645,9 @@ class RunCampaignTests(unittest.TestCase):
                 primary=Path(raw) / "primary",
                 repo_root=root,
                 l9_root=l9,
-                hooks=self.mod.Hooks(context7_stack=_stack_ok, write_task_output=_write_task_output, 
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
                     make_pr=lambda worktree, campaign_id: (
                         opened.append(campaign_id) or {"number": 7, "url": "https://example.test/7"}

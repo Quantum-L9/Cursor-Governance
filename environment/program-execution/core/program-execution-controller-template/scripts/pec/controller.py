@@ -910,9 +910,7 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
 
 
 def _require_stack_proof_reentry(workspace: Path, extra_text: str) -> None:
-    proof_path = (
-        Path(__file__).resolve().parents[4] / "scripts" / "context7_stack_proof.py"
-    )
+    proof_path = Path(__file__).resolve().parents[4] / "scripts" / "context7_stack_proof.py"
     if not proof_path.is_file():
         raise ControllerError("context7_stack_proof.py missing; refuse start")
     spec = importlib.util.spec_from_file_location("context7_stack_proof", proof_path)
