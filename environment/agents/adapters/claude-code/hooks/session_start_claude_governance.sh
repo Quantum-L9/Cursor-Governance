@@ -46,6 +46,20 @@ emit() {
 }
 
 WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
+
+# The SessionStart event on stdin carries the session id. It is the only place
+# this surface exposes it: the shared bootstrap runs before a session exists and
+# cannot know it, so without this step every Claude Code session's readiness
+# receipt records session.identity as UNKNOWN — and Program Execution refuses to
+# mutate from a runtime it cannot attribute. Read it defensively; a hook must
+# never block on stdin, and must never write to stdout except the final JSON.
+EVENT=""
+if [ ! -t 0 ]; then
+  EVENT=$(timeout 2 cat 2>/dev/null || true)
+fi
+SESSION_ID=$(printf '%s' "$EVENT" \
+  | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+
 LINES=()
 LINES+=("L9 Governance — Claude Code session")
 LINES+=("workspace: $WORKSPACE")
@@ -96,6 +110,26 @@ if GOV=$(resolve_governance_dir); then
     [ -n "$AUTONOMY_CONTEXT" ] && LINES+=("--- bounded autonomy ---" "$AUTONOMY_CONTEXT")
   else
     LINES+=("bounded autonomy: runtime unavailable; continue under base governance")
+  fi
+
+  # --- Runtime readiness: stamp this session's identity onto the receipt ------
+  # Restamp only: the bootstrap's observed degraded tally and revisions carry
+  # over verbatim, so this resolves WHO is executing without ever upgrading a
+  # degraded runtime to READY.
+  RECEIPT_WRITER="$GOV/ops/scripts/write_runtime_readiness_receipt.py"
+  if [ -n "$SESSION_ID" ] && [ -f "$RECEIPT_WRITER" ]; then
+    if "$PY" "$RECEIPT_WRITER" \
+      --surface "${L9_GOVERNANCE_SURFACE:-claude-code}" \
+      --workspace "$WORKSPACE" \
+      --governance "$GOV" \
+      --session-id "$SESSION_ID" \
+      --restamp-session >/dev/null 2>&1; then
+      LINES+=("runtime readiness: session identity recorded ($SESSION_ID)")
+    else
+      LINES+=("runtime readiness: identity stamp failed — PE will refuse mutating execution")
+    fi
+  elif [ -z "$SESSION_ID" ]; then
+    LINES+=("runtime readiness: no session id in SessionStart event — PE mutation stays blocked")
   fi
 
   # Skill-router readiness hint
