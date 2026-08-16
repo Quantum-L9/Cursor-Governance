@@ -70,19 +70,25 @@ echo "=== Repo: ONE GlobalCommands entry ==="
 # itself. Consumer repos (WORKSPACE != GC) still require the real symlink.
 WORKSPACE_REAL=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE'))")
 GC_REAL=$(python3 -c "import os; print(os.path.realpath('$GC'))")
-if [ "$WORKSPACE_REAL" = "$GC_REAL" ]; then
+if is_l9_isolate_workspace "$WORKSPACE"; then
+  pass "isolate under \$HOME/.l9 — consumer .cursor-commands / .cursor/plans / .cursor/governance not required"
+elif [ "$WORKSPACE_REAL" = "$GC_REAL" ]; then
   pass "workspace is GlobalCommands root itself — self-referential .cursor-commands symlink not required"
 else
   link_check "$WORKSPACE/.cursor-commands" "$GC" ".cursor-commands"
 fi
 
-if [ -e "$WORKSPACE/.cursor/governance/GlobalCommands" ]; then
+if is_l9_isolate_workspace "$WORKSPACE"; then
+  pass "isolate — skip consumer .cursor/governance layout"
+elif [ -e "$WORKSPACE/.cursor/governance/GlobalCommands" ]; then
   fail ".cursor/governance/GlobalCommands must not exist (use .cursor-commands only)"
 else
   pass "no .cursor/governance/GlobalCommands"
 fi
 
-if [ -L "$WORKSPACE/.cursor/governance" ]; then
+if is_l9_isolate_workspace "$WORKSPACE"; then
+  :
+elif [ -L "$WORKSPACE/.cursor/governance" ]; then
   fail ".cursor/governance must be a local directory, not a symlink to Dropbox root"
 elif [ -d "$WORKSPACE/.cursor/governance" ]; then
   pass ".cursor/governance/ is local directory"
@@ -93,7 +99,11 @@ fi
 
 # Machine Cursor plans — workspace convenience symlink (not governance SSOT).
 mkdir -p "$HOME/.cursor/plans"
-link_check "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
+if is_l9_isolate_workspace "$WORKSPACE"; then
+  pass "isolate — skip consumer .cursor/plans symlink"
+else
+  link_check "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
+fi
 
 echo ""
 echo "=== Repo .cursor/ anti-duplication ==="
@@ -128,11 +138,11 @@ for s in l9-structured-reasoning l9-skill-compiler l9-wire-skill-into-repo l9-up
 done
 
 echo ""
-echo "=== sessionEnd hook (full gate: check_governance_wiring.sh) ==="
-if bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WORKSPACE"; then
-  pass "governance wiring + sessionEnd hook active"
+echo "=== machine hooks (sessionEnd + Graphiti; not consumer repo symlinks) ==="
+if bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WORKSPACE"; then
+  pass "machine sessionEnd + Graphiti wiring"
 else
-  fail "governance wiring or sessionEnd hook incomplete — run setup_workspace_symlinks.sh / /wire governance"
+  fail "machine sessionEnd or Graphiti wiring incomplete"
 fi
 
 echo ""

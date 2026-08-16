@@ -18,6 +18,29 @@ EXPECTED_DIGEST = "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae
 PEC_CLI = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 
 
+def _pass_proof(
+    path: Path,
+    campaign_id: str = "bounded-replanning-v1",
+    tools: list | None = None,
+) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "l9.program-execution.stack-proof.v1",
+                "campaign_id": campaign_id,
+                "status": "pass",
+                "tools": tools or [],
+                "fetched_at": "2026-08-16T00:00:00Z",
+                "validator": {"ok": True, "errors": []},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -45,7 +68,8 @@ class CompileCampaignSourceTests(unittest.TestCase):
     def test_compile_forces_program_control_local_write_false(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             target = Path(raw) / "blueprint"
-            self.compiler.compile_source(SOURCE, target)
+            proof = _pass_proof(Path(raw) / "stack-proof.json")
+            self.compiler.compile_source(SOURCE, target, stack_proof=proof)
             digest = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
             self.assertEqual(digest, EXPECTED_DIGEST)
             tasks = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))[
@@ -83,7 +107,24 @@ class CompileCampaignSourceTests(unittest.TestCase):
             data["evidence_requirements"] = []
             source.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
             target = Path(raw) / "blueprint"
-            self.compiler.compile_source(source, target)
+            self.compiler.compile_source(
+                source,
+                target,
+                stack_proof=_pass_proof(
+                    Path(raw) / "stack-proof.json",
+                    tools=[
+                        {
+                            "name": "upstream-api",
+                            "constraints": ["language_name must be the full English name"],
+                            "fetch_evidence": {
+                                "http_status": 200,
+                                "bytes": 80,
+                                "digest": "sha256:abc",
+                            },
+                        }
+                    ],
+                ),
+            )
             catalog = yaml.safe_load((target / "EVIDENCE_CATALOG.yaml").read_text(encoding="utf-8"))
             self.assertEqual(catalog["evidence"][0]["id"], "EVID-001")
             trace = yaml.safe_load(
@@ -92,6 +133,38 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertEqual(trace["sources"][0]["evidence_id"], "EVID-001")
             errors = self.validator.validate(target, "template")
             self.assertEqual(errors, [], msg="\n".join(errors))
+
+    def test_poison_language_name_refuses_compile(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            proof = Path(raw) / "stack-proof.json"
+            proof.write_text(
+                json.dumps(
+                    {
+                        "schema": "l9.program-execution.stack-proof.v1",
+                        "campaign_id": "bounded-replanning-v1",
+                        "status": "pass",
+                        "tools": [
+                            {
+                                "name": "DataForSEO",
+                                "constraints": ["language_name must be the full English name"],
+                                "fetch_evidence": {
+                                    "http_status": 200,
+                                    "bytes": 80,
+                                    "digest": "sha256:abc",
+                                },
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            data = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+            data["program"]["objective"] += ' language_name: "en"'
+            source.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self.compiler.compile_source(source, Path(raw) / "out", stack_proof=proof)
+            self.assertIn("language_name", str(ctx.exception))
 
     def test_unknown_campaign_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -105,7 +178,11 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 encoding="utf-8",
             )
             with self.assertRaises(self.compiler.CompileError):
-                self.compiler.compile_source(source, Path(raw) / "out")
+                self.compiler.compile_source(
+                    source,
+                    Path(raw) / "out",
+                    stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
+                )
 
     def test_decisions_without_options_fail_loudly(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -114,7 +191,11 @@ class CompileCampaignSourceTests(unittest.TestCase):
             data["decisions"][0].pop("options")
             source.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
             with self.assertRaises(self.compiler.CompileError) as ctx:
-                self.compiler.compile_source(source, Path(raw) / "out")
+                self.compiler.compile_source(
+                    source,
+                    Path(raw) / "out",
+                    stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
+                )
             self.assertIn("options", str(ctx.exception))
 
     def test_full_admission_loop_compile_collect_accept_bootstrap(self) -> None:
@@ -122,7 +203,9 @@ class CompileCampaignSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
             target = tmp / "blueprint"
-            self.compiler.compile_source(SOURCE, target)  # self-validates template mode
+            self.compiler.compile_source(
+                SOURCE, target, stack_proof=_pass_proof(tmp / "stack-proof.json")
+            )  # self-validates template mode
 
             collect = _load("collect_evidence_test", PE_ROOT / "scripts/collect_evidence.py")
             collected = collect.collect_evidence(

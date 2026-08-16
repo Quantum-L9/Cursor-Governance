@@ -15,6 +15,8 @@ def skill_from_payload(payload: dict[str, Any]) -> tuple[str, str]:
     if event == "UserPromptExpansion":
         return str(payload.get("command_name", "")), "user"
     tool_name = str(payload.get("tool_name", ""))
+    if event == "PreToolUse" and "context7" in tool_name.lower():
+        return tool_name, "mcp"
     if event == "PreToolUse" and tool_name == "Skill":
         tool_input = payload.get("tool_input", {})
         if isinstance(tool_input, dict):

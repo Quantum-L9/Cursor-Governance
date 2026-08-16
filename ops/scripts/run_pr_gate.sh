@@ -3,6 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=resolve_governance_paths.sh
+source "$SCRIPT_DIR/resolve_governance_paths.sh"
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
@@ -12,6 +14,14 @@ PR_MYPY_STRICT="${PR_MYPY_STRICT:-0}"
 
 cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
+
+# Isolates are not a uv project. Bind PATH/UV_PROJECT to the donor or
+# $HOME/.cursor-governance locked venv before any uv run/sync.
+_isolate_venv_existed=0
+if is_l9_isolate_workspace "$WS"; then
+  [[ -d "$WS/.venv" ]] && _isolate_venv_existed=1
+  bind_isolate_toolchain "$WS" "$HOME/.cursor-governance"
+fi
 
 # The governance generators and validators target the project interpreter
 # (3.11+, `from datetime import UTC`). A bare `python3` can be the system 3.9,
@@ -186,8 +196,13 @@ if [[ "${py_count:-0}" -eq 0 ]]; then
   echo "OK: no changed Python files for ruff"
 else
   echo "ruff (changed): ${py_count} file(s)"
-  xargs uv run --no-build ruff check <"$py_list"
-  xargs uv run --no-build ruff format --check <"$py_list"
+  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
+    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" check <"$py_list"
+    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" format --check <"$py_list"
+  else
+    xargs uv run --no-build ruff check <"$py_list"
+    xargs uv run --no-build ruff format --check <"$py_list"
+  fi
 fi
 
 echo "--- uv lock ---"
@@ -203,7 +218,15 @@ fi
 
 echo "--- pytest ---"
 if grep -Eq '\.py$' "$changed_file"; then
-  bash "$SCRIPT_DIR/run_pytest_suites.sh" --tb=short -q
+  # Changed-files gate: only collect the secrets capability suite when that
+  # plane changed. Full-tree remains make pr-full / nightly. Avoids a host
+  # miniconda cryptography ABI break aborting unrelated PE/ops PRs.
+  pytest_args=(--tb=short -q)
+  if ! grep -Eq '^(tests/ops/secrets/|ops/secrets/)' "$changed_file"; then
+    pytest_args+=(--ignore=tests/ops/secrets)
+    echo "OK: skip secrets capability suite (ops/secrets unchanged)"
+  fi
+  bash "$SCRIPT_DIR/run_pytest_suites.sh" "${pytest_args[@]}"
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
@@ -272,15 +295,23 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   # surface — so the proxy silently became true for headless adapters. Gate the
   # desktop-wiring assertion on the surface id instead. The reconcile checks above
   # stay unconditional: they are surface-independent and must keep running here.
-  # PAIRED PREDICATE: run_pr_precommit.sh skips the symlinks-check hook on the same
-  # surface test. Both assert Cursor desktop wiring; change them together.
-  if [[ -z "${L9_GOVERNANCE_SURFACE:-}" || "${L9_GOVERNANCE_SURFACE}" == "cursor" ]]; then
-    if ! bash "$GOV_ROOT/ops/scripts/check_governance_wiring.sh" "$WS"; then
-      echo "FAIL: governance wiring incomplete — run: bash ops/scripts/setup_workspace_symlinks.sh"
-      exit 1
+  # PAIRED PREDICATE: run_pr_precommit.sh skips symlinks-check the same way.
+  # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
+  if should_skip_consumer_symlink_checks "$WS"; then
+    if is_l9_isolate_workspace "$WS"; then
+      if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WS"; then
+        echo "FAIL: machine sessionEnd or Graphiti wiring incomplete"
+        exit 1
+      fi
+      echo "OK: skip consumer workspace wiring (isolate under \$HOME/.l9)"
+    else
+      echo "OK: skip Cursor desktop wiring (CI, partial clone, or surface=${L9_GOVERNANCE_SURFACE:-unset})"
     fi
   else
-    echo "OK: skip Cursor desktop wiring (surface=${L9_GOVERNANCE_SURFACE}, not cursor)"
+    if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"; then
+      echo "FAIL: governance wiring incomplete"
+      exit 1
+    fi
   fi
 else
   echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
@@ -290,9 +321,18 @@ echo "--- security ---"
 bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
-  uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
+  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" ]]; then
+    "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" . --show-error-codes --pretty --ignore-missing-imports
+  else
+    uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
+  fi
 else
   echo "mypy: advisory on PR gate (set PR_MYPY_STRICT=1 to fail; full check is make lint / nightly)"
+fi
+
+if is_l9_isolate_workspace "$WS" && [[ -d "$WS/.venv" && "$_isolate_venv_existed" -eq 0 ]]; then
+  echo "FAIL: isolate must not create $WS/.venv; use ${GOV_TOOLCHAIN_ROOT:-$HOME/.cursor-governance}"
+  exit 1
 fi
 
 _scratch_hold_restore

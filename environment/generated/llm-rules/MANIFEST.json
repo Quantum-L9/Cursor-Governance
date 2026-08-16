@@ -105,9 +105,9 @@
       "alias": null,
       "class": "always",
       "output": "22-context7-auto-invoke.md",
-      "output_sha256": "db295057a5e6f1d9bd1242114d974841033200535f55ea4249115a2c95b006e1",
+      "output_sha256": "28eb6480d7256a604f25e0c395f14750ad50cf3622af1a825bd6099814ca7f18",
       "source": "rules/22-context7-auto-invoke.mdc",
-      "source_sha256": "a64ab8418b70384f982a52abf74236555915022fe8bc831aaeec475d863fae39",
+      "source_sha256": "d683a886480c6b7004a8ac26a89477f5461491e45605a0b4517def51ca40ad70",
       "stem": "22-context7-auto-invoke"
     },
     {
@@ -587,5 +587,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 64
   },
-  "tree_sha256": "deefb7139974e07f9e430706c3ac829ed2fbd7946e40174f43778c8c21ee9b41"
+  "tree_sha256": "d412864030a4bac09aba6ae42477ea65887fbf44b7040ea17dd17aeea0e4a295"
 }

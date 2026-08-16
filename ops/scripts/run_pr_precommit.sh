@@ -9,6 +9,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=resolve_governance_paths.sh
+source "$SCRIPT_DIR/resolve_governance_paths.sh"
 WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-}"
@@ -43,12 +45,9 @@ SKIP_LIST="sync-generated-artifacts"
 # all, so "full clone" alone does not imply "a Cursor machine". Without this the
 # hook fails on wiring the surface is not supposed to have, and `make pr` — the
 # only sanctioned route to GitHub — is unreachable there.
-# PAIRED PREDICATE: run_pr_gate.sh gates check_governance_wiring.sh on the same
-# surface test. Both assert Cursor desktop wiring; change them together.
-SURFACE="${L9_GOVERNANCE_SURFACE:-}"
-if [[ -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" \
-   || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" || ! -f "$WS/rules/RULES-MANIFEST.yaml" \
-   || ( -n "$SURFACE" && "$SURFACE" != "cursor" ) ]]; then
+# PAIRED PREDICATE: run_pr_gate.sh skips consumer --workspace the same way.
+# Isolates under $HOME/.l9 are git checkouts, not Cursor consumer workspaces.
+if should_skip_consumer_symlink_checks "$WS"; then
   SKIP_LIST="${SKIP_LIST},symlinks-check"
 fi
 SKIP="$SKIP_LIST" pre-commit run --files "${files[@]}"

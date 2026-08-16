@@ -35,12 +35,13 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 | Item | Value |
 |---|---|
 | Emit set | exactly the files in [references/file-set.md](references/file-set.md) |
+| Stack proof | runner-owned `$HOME/.l9/primed/<id>/stack-proof.json` before emit/blueprint |
 | Brief IR | [scripts/compile_brief.py](scripts/compile_brief.py) — memo `.md` → activate seed |
 | Compiler | [scripts/compile_activation_files.py](scripts/compile_activation_files.py) |
 | Pipeline | [references/pipeline.md](references/pipeline.md) |
 | Merge | [references/merge-authority.md](references/merge-authority.md) |
 | Isolation | new worktree from `origin/main`; never the dirty primary clone |
-| Publish | `PR_BASE=origin/campaign/<id> make pr` (Makefile checkers) |
+| Publish | runner pushes `campaign/<id>` before execute; task PRs stack on that remote base |
 | Remediate | `l9-pr-remediation` Converge, max 5 cycles, then merge that PR |
 | Forbidden extras | README, handoff, `INTENT.yaml`, `CONTRACT_SOURCE.md`, `PROGRAM_SOURCE.md`, alignment overlays |
 

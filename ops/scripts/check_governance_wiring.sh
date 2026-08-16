@@ -1,17 +1,48 @@
 #!/usr/bin/env bash
-# Verify repo governance symlinks + sessionEnd backup hook.
-# Exit 0 = PASS. Exit 1 = FAIL (run /wire governance).
+# Verify consumer repo symlinks (--workspace) and machine sessionEnd/Graphiti
+# (--machine). Default is both. Isolates skip --workspace.
+# Exit 0 = PASS. Exit 1 = FAIL with a class-specific RESULT line.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 
-WORKSPACE="${1:-$(pwd)}"
+CHECK_WORKSPACE=0
+CHECK_MACHINE=0
+POSITIONAL=()
+for arg in "$@"; do
+  case "$arg" in
+    --workspace) CHECK_WORKSPACE=1 ;;
+    --machine) CHECK_MACHINE=1 ;;
+    --*)
+      echo "ERROR: unknown flag $arg (expected --workspace and/or --machine)" >&2
+      exit 2
+      ;;
+    *) POSITIONAL+=("$arg") ;;
+  esac
+done
+if [ "$CHECK_WORKSPACE" -eq 0 ] && [ "$CHECK_MACHINE" -eq 0 ]; then
+  CHECK_WORKSPACE=1
+  CHECK_MACHINE=1
+fi
+WORKSPACE="${POSITIONAL[0]:-$(pwd)}"
 FAIL=0
+FAIL_CONSUMER=0
+FAIL_SESSIONEND=0
+FAIL_GRAPHITI=0
+CURRENT_FAIL_CLASS=wiring
 
 pass() { echo "  OK: $1"; }
-fail() { echo "  FAIL: $1"; FAIL=1; }
+fail() {
+  echo "  FAIL: $1"
+  FAIL=1
+  case "$CURRENT_FAIL_CLASS" in
+    consumer) FAIL_CONSUMER=1 ;;
+    sessionend) FAIL_SESSIONEND=1 ;;
+    graphiti) FAIL_GRAPHITI=1 ;;
+  esac
+}
 warn() { echo "  WARN: $1"; }
 
 resolve_governance_paths_or_exit
@@ -34,6 +65,15 @@ echo "  GlobalCommands:  $GC"
 echo "  Workspace:       $WORKSPACE"
 echo ""
 
+if is_l9_isolate_workspace "$WORKSPACE"; then
+  if [ "$CHECK_WORKSPACE" -eq 1 ]; then
+    echo "OK: skip consumer workspace wiring (isolate under \$HOME/.l9)"
+  fi
+  CHECK_WORKSPACE=0
+fi
+
+if [ "$CHECK_WORKSPACE" -eq 1 ]; then
+CURRENT_FAIL_CLASS=consumer
 echo "=== Repo symlinks ==="
 WS_REAL=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE'))")
 GC_REAL=$(python3 -c "import os; print(os.path.realpath('$GC'))")
@@ -187,7 +227,10 @@ if [ "$WS_REAL" != "$GC_REAL" ] && [ -f "$WORKSPACE/commands/plan.md" ] && [ -f 
 else
   pass "slash-command drift check skipped (same clone or plan.md absent)"
 fi
+fi
 
+if [ "$CHECK_MACHINE" -eq 1 ]; then
+CURRENT_FAIL_CLASS=sessionend
 echo ""
 echo "=== sessionEnd governance backup hook ==="
 if [ ! -f "$HOOK_SRC" ]; then
@@ -232,6 +275,7 @@ PY
   fi
 fi
 
+CURRENT_FAIL_CLASS=graphiti
 echo ""
 echo "=== Graphiti memory (GLOBAL-001) ==="
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
@@ -305,26 +349,23 @@ else
   echo "  WARN: IDE profile not yet applied — run: bash \"\$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh\" \"$WORKSPACE\""
 fi
 
+fi
+
 echo ""
 if [ $FAIL -eq 0 ]; then
-  echo "RESULT: PASS — governance wiring + sessionEnd hook active"
+  echo "RESULT: PASS — governance wiring"
   exit 0
 fi
-
-echo "RESULT: FAIL — run /wire governance"
+if [ "$FAIL_CONSUMER" -eq 1 ]; then
+  echo "RESULT: FAIL — consumer workspace wiring"
+fi
+if [ "$FAIL_SESSIONEND" -eq 1 ]; then
+  echo "RESULT: FAIL — sessionEnd hook incomplete"
+fi
+if [ "$FAIL_GRAPHITI" -eq 1 ]; then
+  echo "RESULT: FAIL — Graphiti wiring"
+fi
+if [ "$FAIL_CONSUMER" -eq 0 ] && [ "$FAIL_SESSIONEND" -eq 0 ] && [ "$FAIL_GRAPHITI" -eq 0 ]; then
+  echo "RESULT: FAIL — governance wiring"
+fi
 exit 1
-
-if [ -f "$WORKSPACE/environment/agents/PEER_RUNTIME_BINDINGS.yaml" ] || [ -f "$GC/environment/agents/PEER_RUNTIME_BINDINGS.yaml" ]; then
-  pass "peer runtime bindings present"
-else
-  echo "  WARN: PEER_RUNTIME_BINDINGS.yaml absent in workspace/SSOT"
-fi
-if [ -f "$WORKSPACE/environment/agents/deployment/reconcile.py" ] || [ -f "$GC/environment/agents/deployment/reconcile.py" ]; then
-  pass "deployment reconciler present"
-fi
-if [ -f "$WORKSPACE/environment/agents/results/gateway.py" ] || [ -f "$GC/environment/agents/results/gateway.py" ]; then
-  pass "result gateway present"
-fi
-if [ -f "$WORKSPACE/environment/agents/generated-data/ingress/ingest.py" ] || [ -f "$GC/environment/agents/generated-data/ingress/ingest.py" ]; then
-  pass "generated-data ingress present"
-fi
