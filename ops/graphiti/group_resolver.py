@@ -18,6 +18,37 @@ def load_registry() -> dict[str, Any]:
         return yaml.safe_load(handle) or {}
 
 
+def _git_toplevel(cwd: Path) -> Path | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return Path(result.stdout.strip()).resolve()
+    except (OSError, subprocess.TimeoutExpired):
+        # Best-effort probe: any git/OS failure (git absent, cwd outside a repo,
+        # timeout, permission error) is treated as "not resolvable from cwd" so
+        # the caller falls back to a different resolution strategy.
+        return None
+    return None
+
+
+def _child_git_roots(cwd: Path) -> list[Path]:
+    """Immediate child directories that are git work trees."""
+    roots: list[Path] = []
+    try:
+        for child in cwd.iterdir():
+            if child.is_dir() and (child / ".git").exists():
+                roots.append(child.resolve())
+    except OSError:
+        return []
+    return roots
+
+
 def _git_remote_url(cwd: Path) -> str | None:
     try:
         result = subprocess.run(
@@ -64,6 +95,15 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
     cwd = (cwd or Path.cwd()).resolve()
 
     unique = _repo_matches(registry, cwd)
+    if not unique:
+        toplevel = _git_toplevel(cwd)
+        if toplevel is not None and toplevel != cwd:
+            unique = _repo_matches(registry, toplevel)
+    if not unique:
+        child_hits: list[str] = []
+        for root in _child_git_roots(cwd):
+            child_hits.extend(_repo_matches(registry, root))
+        unique = sorted(set(child_hits))
 
     override = explicit or os.environ.get("GRAPHITI_GROUP_ID", "").strip() or None
     if override:

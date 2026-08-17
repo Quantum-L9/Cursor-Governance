@@ -386,6 +386,19 @@ def _mcp_envelope(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if key in allowed}
 
 
+def _github_packages_meta(payload: Any) -> Any:
+    keys = ("name", "description", "dist-tags", "versions", "time", "error")
+    if isinstance(payload, list):
+        return [
+            {k: item.get(k) for k in keys if k in item}
+            for item in payload
+            if isinstance(item, dict)
+        ]
+    if not isinstance(payload, dict):
+        return {}
+    return {k: payload.get(k) for k in keys if k in payload}
+
+
 def _github_pr_view(payload: Any) -> Any:
     keys = (
         "number",
@@ -412,6 +425,7 @@ SANITIZERS: dict[str, Callable[[Any], Any]] = {
     "semgrep_findings": _semgrep_findings,
     "mcp_envelope": _mcp_envelope,
     "github_pr_view": _github_pr_view,
+    "github_packages_meta": _github_packages_meta,
 }
 
 
