@@ -9,7 +9,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "graphiti"))
 
-from graphiti_memory_client import _fresh_conflicts  # noqa: E402
+from graphiti_memory_client import _conflicts_in_scope, _fresh_conflicts  # noqa: E402
 
 
 def _edge(**overrides):
@@ -55,6 +55,19 @@ def test_drops_expired_numeric_edges() -> None:
     ]
     out = _fresh_conflicts(data, now=now)
     assert {e["uuid"] for e in out} == {"kept"}
+
+
+def test_conflicts_in_scope_drops_other_group_and_offtree_paths(tmp_path: Path) -> None:
+    root = tmp_path / "Cursor-Governance"
+    root.mkdir()
+    data = [
+        _edge(uuid="same-group"),
+        _edge(uuid="other-group", group_id="seo-bot"),
+        _edge(uuid="off-tree", path="/tmp/unrelated/file.py"),
+        _edge(uuid="rel-path", path="ops/secrets/authed_npm.sh"),
+    ]
+    out = _conflicts_in_scope(data, "cursor-governance", root=root)
+    assert {e["uuid"] for e in out} == {"same-group", "rel-path"}
 
 
 def test_preserves_non_dict_entries() -> None:

@@ -40,7 +40,6 @@ Do not create any other file in this directory.
 | `$HOME/.l9/programs/<id>` | Controller workspace |
 | `$HOME/.l9/program-worktrees/<id>` | exclusive worktree |
 | `$HOME/.l9/primed/<id>/stack-proof.json` | runner-owned stack-doc receipt (not a campaign emit file) |
-| `$HOME/.l9/primed/<id>/nuggets.json` | PLAN-window nuggets (not a campaign git file); stack nuggets cite `stack-proof.json` |
 | `campaign/<id>` | integration branch |
 
 ## Forbidden (never emit)

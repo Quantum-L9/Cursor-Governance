@@ -588,3 +588,8 @@ wip-hygiene:
 
 wip-inventory:
 	$(PYTHON) ops/scripts/wip_corpus.py inventory --root "$(CURDIR)"
+
+# PUSH_ONLY=1 make pr: gate + L4 + push; skip gh pr create (open_pr_after_gate.sh).
+# OPEN_PR=0 make pr remains gate-only (script is not invoked). Do not rewrite the
+# existing pr recipe — GNU Make 3.81 exports PUSH_ONLY from the invoking env.
+PUSH_ONLY ?= 0
