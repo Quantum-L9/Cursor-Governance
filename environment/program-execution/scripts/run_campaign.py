@@ -1454,6 +1454,23 @@ def write_and_commit_output(
     )
     if added.returncode != 0:
         raise CampaignError(f"git add failed: {(added.stderr or added.stdout).strip()}")
+    staged = run_cmd(
+        ["git", "-C", str(worktree), "diff", "--cached", "--quiet"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if staged.returncode == 0:
+        # Every declared file already holds the work at this base, so there is
+        # nothing to commit. That is not an error: the task's own validation
+        # command decides whether it is done, not the presence of a new commit.
+        head = run_cmd(
+            ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if head.returncode != 0:
+            raise CampaignError("cannot read candidate SHA for an already-satisfied task")
+        return head.stdout.strip()
     commit = run_cmd(
         ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
         timeout=GIT_TIMEOUT_S,

@@ -411,11 +411,11 @@
   },
   {
    "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-   "sha256": "524798811ab08b71d359892ad68c502ebf8662576c974757e6f8db0ac5561d89"
+   "sha256": "fc5e3adc6843d4c3f9a380810105ee35c59e8657bd1ff91a7cb8b60c3898cc51"
   },
   {
    "path": "campaigns/CAMPAIGN_STATUS.yaml",
-   "sha256": "12841128840442b03241f9e3dad6e697ec47474655038f05abede2dd5c56e0d3"
+   "sha256": "cdd7e50e1b09902f61e3b874a1410d729b210c4162559a5b3ab658b2314810e9"
   },
   {
    "path": "campaigns/COMPILE_ALLOWLIST.yaml",
@@ -1351,7 +1351,7 @@
   },
   {
    "path": "scripts/run_campaign.py",
-   "sha256": "4809269a8e07d38addf4b535b6e905dfa3a3a54788e87dac1360286309fdb957"
+   "sha256": "1d8bf0e661e7e9b9f7b7e5c69ad12b430887a5f48778eac12290246e6d3dff8d"
   },
   {
    "path": "scripts/run_conformance.py",
@@ -1383,7 +1383,7 @@
   },
   {
    "path": "scripts/tests/test_run_campaign.py",
-   "sha256": "5fd8c8c83bc44ce98d6b933f80029fa6ad29210eadd63098bf9027866a49b397"
+   "sha256": "307d1470fca1482a11f379b7b1cd2bc07af657a13d1fc005f16f0981ff52a8bd"
   },
   {
    "path": "scripts/validate_execution_adapters.py",

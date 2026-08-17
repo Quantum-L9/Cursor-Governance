@@ -1029,6 +1029,30 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(block["integration_branch"], "campaign/demo-activate-v1")
             self.assertEqual(profile_doc["authority_order"], ["CANONICAL_LAW"])
 
+    def test_already_satisfied_task_keeps_head_instead_of_failing(self) -> None:
+        """A task whose declared files already hold the work has nothing to commit."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            (root / "done.md").write_text(
+                "this deliverable already exists at the campaign base commit\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "-C", str(root), "add", "done.md"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "-m", "base"], check=True, capture_output=True
+            )
+            head = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            self.assertEqual(
+                self.mod.write_and_commit_output(root, "done.md", "Title", writable=["done.md"]),
+                head,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
