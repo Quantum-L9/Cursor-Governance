@@ -36,6 +36,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 |---|---|
 | Emit set | exactly the files in [references/file-set.md](references/file-set.md) |
 | Stack proof | runner-owned `$HOME/.l9/primed/<id>/stack-proof.json` before emit/blueprint |
+| PLAN window | after stack-proof, before emit: [scripts/extract_nuggets.py](scripts/extract_nuggets.py) writes primed `nuggets.json`; compile refuses stub seeds and unsealed `plan_status` |
 | Brief IR | [scripts/compile_brief.py](scripts/compile_brief.py) — memo `.md` → activate seed |
 | Compiler | [scripts/compile_activation_files.py](scripts/compile_activation_files.py) |
 | Pipeline | [references/pipeline.md](references/pipeline.md) |
