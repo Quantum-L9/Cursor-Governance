@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-blueprint.do-not-build.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "prohibited_primary_paths",
+    "allowed_experiments"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-blueprint.do-not-build.v2"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "prohibited_primary_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path_or_pattern": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "detection": {
+            "type": "string"
+          },
+          "exception_authority": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "allowed_experiments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiry": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

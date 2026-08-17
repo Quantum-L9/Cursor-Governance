@@ -1,0 +1,42 @@
+schema: program-execution-blueprint.phase0-user-config.v2
+schema_version: 2.0.0
+phase: 0
+definition_status: draft
+program_deploying: false
+autonomy:
+  default: maximum_within_ceiling
+  profile: bounded_local_execution
+  authority: A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
+  autonomous_merge: false
+  max_parallel_workers: 1
+  max_mutation_lanes: 1
+  remediation_skill: l9-pr-remediation
+adapter_status: absent
+blocking_inventory:
+  true_blocking: []
+  advisory_or_disabled: []
+stop_conditions_reviewed: false
+approvals_preauthorized: []
+open_business_decisions: []
+alignment:
+  uv_lock_check: pending
+  toolchain_pin_lockstep: pending
+  make_pr_gate_required: true
+  targets_inventoried: []
+campaign_authorization_packet:
+  packet_id: null
+  declared_repos: []
+  declared_prs: []
+  declared_branches: []
+  declared_ops: []
+kill_switch:
+  path: .l9/autonomy/revoke
+  operator_action: touch_revoke_and_runtime_suspend
+  auto_file_watch_enforced: false
+resource_hygiene_ack: false
+operator_ack:
+  name: igor_beylin
+  acknowledged_at: null
+completeness:
+  phase0_complete: false
+notes: Complete Phase 0 before Wave 0 mutation / long-running autonomy (LL-002).

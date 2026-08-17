@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-blueprint.execution-waves.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "promotion_rule",
+    "waves"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-blueprint.execution-waves.v2"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "promotion_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "waves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sequence": {
+            "type": "integer"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workstream_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "entry_gate_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exit_gate_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rollback_boundary": {
+            "type": "string"
+          },
+          "definition_status": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

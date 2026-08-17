@@ -23,13 +23,13 @@ if is_l9_isolate_workspace "$WS"; then
   bind_isolate_toolchain "$WS" "$HOME/.cursor-governance"
 fi
 
-# The governance generators and validators target the project interpreter
-# (3.11+, `from datetime import UTC`). A bare `python3` can be the system 3.9,
-# in which case the sync step aborts the gate with an import traceback and no
-# verdict. Prefer the project venv when it exists.
-if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
-  export PATH="$GOV_ROOT/.venv/bin:$PATH"
-fi
+# The governance generators and validators target the locked project interpreter
+# (3.12+, `from datetime import UTC`). A bare `python3` can be Homebrew/system
+# and lack yaml/pydantic/jsonschema. Fail closed — never fall through.
+bash "$GOV_ROOT/ops/scripts/ensure_gov_python.sh" "$GOV_ROOT"
+export PATH="$GOV_ROOT/.venv/bin:$PATH"
+export UV_PROJECT_ENVIRONMENT="$GOV_ROOT/.venv"
+export UV_LOCKED=1
 
 # Never-lose: restore open/legacy holds around the gate; fail closed if still open.
 _scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
@@ -303,10 +303,17 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   fi
   # PAIRED PREDICATE: run_pr_precommit.sh skips symlinks-check the same way.
   # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
-  if should_skip_consumer_symlink_checks "$WS"; then
+  WS_KIND="$(classify_workspace_kind "$WS")"
+  if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
+    if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"; then
+      echo "FAIL: governance wiring incomplete — see FAIL lines above"
+      exit 1
+    fi
+    echo "OK: ssot-family workspace ($WS_KIND) — consumer links not required"
+  elif should_skip_consumer_symlink_checks "$WS"; then
     if is_l9_isolate_workspace "$WS"; then
       if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WS"; then
-        echo "FAIL: machine sessionEnd or Graphiti wiring incomplete"
+        echo "FAIL: check_governance_wiring.sh failed — see FAIL lines above"
         exit 1
       fi
       echo "OK: skip consumer workspace wiring (isolate under \$HOME/.l9)"
@@ -315,7 +322,7 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     fi
   else
     if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"; then
-      echo "FAIL: governance wiring incomplete"
+      echo "FAIL: governance wiring incomplete — see FAIL lines above"
       exit 1
     fi
   fi

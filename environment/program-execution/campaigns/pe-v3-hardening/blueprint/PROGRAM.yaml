@@ -1,0 +1,62 @@
+schema: program-execution-blueprint.program.v2
+schema_version: 2.0.0
+program:
+  id: pe-v3-hardening
+  name: Program Execution v3 Hardening
+  version: 3.0.0
+  owner: igor_beylin
+  definition_status: draft
+  snapshot_at: '2026-08-17T12:14:43+00:00'
+  objective: Build v3 where no authority-bearing transition depends on a semantic fact lacking one immutable identity,
+    one canonical meaning, one authorized principal, and one executable proof path. Deliver baseline characterization
+    and counterexample registry.
+  problem_statement: Current v2 PE allows semantic drift (compiler drops retry_policy), mutable identities (dirty
+    candidate becomes HEAD), cross-claim evidence substitution, actor-string authority, and caller-supplied gate
+    PASS. Baseline characterization (S0) freezes v2 at 0db3fed, creates executable counterexample registry, and
+    proves exact current behavior before v3 rebuild.
+  target_state: 'Stage S0 complete: baseline frozen at 0db3fed, orchestrator detached, counterexample registry with
+    executable xfail tests for every v2 gap, baseline integrity report with digest manifest, all gates PASS, ready
+    for S1 semantic conservation work.'
+  scope:
+    include:
+    - environment/program-execution/core
+    - environment/program-execution/scripts
+    - environment/program-execution/conformance
+    - environment/program-execution/tests
+    - baseline freeze at 0db3fed
+    - counterexample registry
+    - baseline integrity manifest
+    exclude:
+    - environment/program-execution/campaigns
+    - ops/autonomy
+    - .github/workflows
+    - remote repository mutation
+    - merge
+    - publish
+    - deploy
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - latest_explicit_operator_instruction
+  - accepted_program_decision
+  - approved_task_card
+  - repository_local_governance
+  - implementation
+  - documentation
+  operating_rules:
+  - baseline_is_immutable_at_0db3fed
+  - orchestrator_frozen_separately
+  - counterexamples_reproduce_as_xfail_tests
+  - no_implementation_behavior_changed
+  - all_pe_files_digest_manifested
+  - gate_001_required_for_s1
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE

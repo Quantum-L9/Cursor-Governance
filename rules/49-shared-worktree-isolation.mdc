@@ -42,6 +42,12 @@ wiping untracked in-flight fix files.
    `$HOME/.cursor-governance`, remember `.cursor-commands` → SSOT: `/plan`
    loads SSOT until your change is merged + SSOT activated (or you sync the
    command file into the SSOT clone deliberately).
+7. **`make pr` from a gov worktree / second clone of this repo must not
+   require consumer wiring.** Those checkouts are `ssot_checkout` (identity
+   files, not `$HOME/.l9/gov-worktrees/` alone). Do not fail the gate on
+   missing `.cursor-commands`, `.cursor/plans`, `.cursor/governance`, or an
+   IDE profile stamp. Machine hooks stay fail-closed. Classifier:
+   `ops/scripts/lib/workspace_kind.sh`.
 
 ## Automated writers: the repo-write lock
 
