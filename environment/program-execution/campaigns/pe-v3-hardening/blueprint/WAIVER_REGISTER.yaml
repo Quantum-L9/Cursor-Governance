@@ -1,0 +1,6 @@
+schema: program-execution-blueprint.waiver-register.v2
+schema_version: 2.0.0
+policy:
+  implicit_waivers_forbidden: true
+  expired_waiver_non_passing: true
+waivers: []

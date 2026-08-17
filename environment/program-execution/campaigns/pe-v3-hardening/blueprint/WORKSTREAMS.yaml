@@ -1,0 +1,27 @@
+schema: program-execution-blueprint.workstreams.v2
+schema_version: 2.0.0
+workstreams:
+- id: WS-01
+  name: baseline_characterization
+  objective: Freeze v2 baseline and characterize current PE behavior through executable counterexamples
+  owner: igor_beylin
+  target_ids:
+  - TARGET-001
+  scope:
+    include:
+    - Freeze v2 baseline and characterize current PE behavior through executable counterexamples
+    exclude:
+    - remote mutation
+    - merge
+    - deploy
+  inputs:
+  - CAMPAIGN_SOURCE.yaml
+  outputs:
+  - task receipts
+  - gate evidence
+  entry_gate_ids: []
+  exit_gate_ids:
+  - GATE-001
+  - GATE-002
+  rollback_boundary: Discard unaccepted generated artifacts; no remote mutation.
+  definition_status: active

@@ -1,0 +1,46 @@
+schema: program-execution-blueprint.risk-register.v2
+schema_version: 2.0.0
+risks:
+- id: RISK-001
+  risk: Bootstrap paradox - repairing PE using PE
+  severity: high
+  likelihood: medium
+  owner: igor_beylin
+  trigger: Bootstrap paradox - repairing PE using PE
+  preventive_controls:
+  - Freeze v2 orchestrator at 0db3fed
+  - Target plane becomes v3
+  - Separate activation campaign
+  contingency:
+  - halt_named_subgraph
+  - preserve_previous_valid_plan
+  related_tasks:
+  - TASK-001
+  - TASK-002
+  - TASK-003
+  related_gates:
+  - GATE-001
+  - GATE-002
+  acceptance_decision_id: null
+  status: open
+- id: RISK-002
+  risk: Counterexample tests may not cover all v2 gaps
+  severity: low
+  likelihood: medium
+  owner: igor_beylin
+  trigger: Counterexample tests may not cover all v2 gaps
+  preventive_controls:
+  - Stage S0 establishes reproducible baseline
+  - Later stages add coverage as gaps discovered
+  contingency:
+  - halt_named_subgraph
+  - preserve_previous_valid_plan
+  related_tasks:
+  - TASK-001
+  - TASK-002
+  - TASK-003
+  related_gates:
+  - GATE-001
+  - GATE-002
+  acceptance_decision_id: null
+  status: open

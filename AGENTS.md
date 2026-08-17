@@ -722,3 +722,44 @@ Authoritative corrections (do not treat older “never read or write WIP” or
    untracked. Scanner excludes of `WIP/**` stay in place.
 5. `TODO.md` remains the agent task queue. `l9-git-work-preserve` still
    inventories git refs/stashes and never auto-deletes branches.
+
+<!-- MAKE_LOCKED_VENV_V1 -->
+## Makefile locked interpreter (2026-08-17) — supersedes bare `python3` in §2.2 / §2.3 / §6
+
+Authoritative corrections (do not treat older `python3 …` bullets as the
+Make/toolchain interpreter):
+
+1. `Makefile` recipes MUST call `$(PYTHON)` / `$(RUFF)` / `$(MYPY)` —
+   `$(CURDIR)/.venv/bin/{python,ruff,mypy}` from `pyproject.toml` + `uv.lock`
+   (`make venv` → `uv sync --locked --extra dev`). macOS `/usr/bin/make` is
+   GNU Make 3.81 and does **not** export `export PATH :=` into recipe shells,
+   so prepending `.venv/bin` does not bind recipe `python3`.
+2. `make gov-python` is an auto-prereq of every goal except `help` / `venv`.
+   It runs `ops/scripts/ensure_gov_python.sh`: fingerprint-cached locked sync,
+   then fail-closes unless `sys.prefix` is `.venv` and `yaml`, `pydantic`,
+   `jsonschema`, `structlog`, `cryptography`, and `langgraph` import.
+3. `make pr` / `make test` / `make campaign` must not fall through to
+   Homebrew or system `python3`. `ops/scripts/run_pr_gate.sh` and
+   `ops/scripts/run_pytest_suites.sh` call the same probe.
+4. Manual Graphiti / secrets / L4 commands in older bullets that say `python3`
+   MUST use `"$HOME/.cursor-governance/.venv/bin/python"` (or a `make` target
+   so `$(PYTHON)` expands). `ModuleNotFoundError: No module named 'yaml'`
+   means the wrong interpreter.
+5. Do not `uv pip install` past the lockfile for the default toolchain.
+<!-- SSOT_CHECKOUT_MAKE_PR_V1 -->
+## SSOT-family make pr (2026-08-17) — gov worktrees are not consumers
+
+Authoritative corrections (do not treat older “every workspace needs
+`.cursor-commands`” bullets as applying to a checkout of this repo):
+
+1. Workspace kinds (`ops/scripts/lib/workspace_kind.sh`): `ssot`,
+   `ssot_checkout`, `consumer`. Identity files, not `$HOME/.l9/gov-worktrees/`
+   path prefix.
+2. `ssot` = live `$HOME/.cursor-governance`. No `.cursor-commands` self-alias.
+3. `ssot_checkout` = worktree or second clone of this repo. `make pr` /
+   `symlinks-check` must not require consumer IDE wiring
+   (`.cursor-commands`, `.cursor/plans`, `.cursor/governance`, IDE stamp).
+4. Machine-global hooks (sessionEnd, plugin, Graphiti) stay fail-closed.
+   Consumer repos are unchanged.
+5. Do not “fix” a gov worktree by running `setup_workspace_symlinks.sh` just
+   to pass `make pr`. That is the wrong category.
