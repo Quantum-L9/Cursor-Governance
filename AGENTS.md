@@ -722,3 +722,21 @@ Authoritative corrections (do not treat older “never read or write WIP” or
    untracked. Scanner excludes of `WIP/**` stay in place.
 5. `TODO.md` remains the agent task queue. `l9-git-work-preserve` still
    inventories git refs/stashes and never auto-deletes branches.
+
+<!-- SSOT_CHECKOUT_MAKE_PR_V1 -->
+## SSOT-family make pr (2026-08-17) — gov worktrees are not consumers
+
+Authoritative corrections (do not treat older “every workspace needs
+`.cursor-commands`” bullets as applying to a checkout of this repo):
+
+1. Workspace kinds (`ops/scripts/lib/workspace_kind.sh`): `ssot`,
+   `ssot_checkout`, `consumer`. Identity files, not `$HOME/.l9/gov-worktrees/`
+   path prefix.
+2. `ssot` = live `$HOME/.cursor-governance`. No `.cursor-commands` self-alias.
+3. `ssot_checkout` = worktree or second clone of this repo. `make pr` /
+   `symlinks-check` must not require consumer IDE wiring
+   (`.cursor-commands`, `.cursor/plans`, `.cursor/governance`, IDE stamp).
+4. Machine-global hooks (sessionEnd, plugin, Graphiti) stay fail-closed.
+   Consumer repos are unchanged.
+5. Do not “fix” a gov worktree by running `setup_workspace_symlinks.sh` just
+   to pass `make pr`. That is the wrong category.

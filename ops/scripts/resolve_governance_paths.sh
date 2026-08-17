@@ -35,6 +35,14 @@ resolve_governance_paths_or_exit() {
   exit 1
 }
 
+# ssot | ssot_checkout | consumer — identity files, not $HOME/.l9 path prefix.
+# shellcheck source=lib/workspace_kind.sh
+_WK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$_WK_DIR/lib/workspace_kind.sh" ]; then
+  # shellcheck source=lib/workspace_kind.sh
+  source "$_WK_DIR/lib/workspace_kind.sh"
+fi
+
 # PE/gov isolates are git checkouts, not Cursor consumer workspaces.
 # $HOME/.l9/gov-worktrees/<id> and $HOME/.l9/programs/<id>[/worktrees/...]
 is_l9_isolate_workspace() {
