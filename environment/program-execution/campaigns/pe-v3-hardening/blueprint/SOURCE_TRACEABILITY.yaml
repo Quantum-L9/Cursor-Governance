@@ -1,0 +1,35 @@
+schema: program-execution-blueprint.source-traceability.v2
+schema_version: 2.0.0
+authority_classes:
+- governing
+- supporting
+- contradicting
+- example
+- historical
+- inferred
+sources:
+- id: SRC-001
+  source: environment/program-execution/campaigns/pe-v3-hardening/CAMPAIGN_SOURCE.yaml
+  revision: sha256
+  authority_class: governing
+  evidence_id: EVID-001
+  claims:
+  - Campaign source is the immutable operator intent.
+  - Stack-proof receipt bound before compile.
+  stack_proof:
+    path: /Users/macm2/.l9/primed/pe-v3-hardening/stack-proof.json
+    status: pass
+    tools: []
+    constraints: []
+  target_ids:
+  - TARGET-001
+  workstream_ids:
+  - WS-01
+  task_ids:
+  - TASK-001
+  - TASK-002
+  - TASK-003
+  gate_ids:
+  - GATE-001
+  - GATE-002
+  status: active

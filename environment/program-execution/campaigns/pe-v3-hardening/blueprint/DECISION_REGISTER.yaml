@@ -1,0 +1,4 @@
+schema: program-execution-blueprint.decision-register.v2
+schema_version: 2.0.0
+policy: No blocked decision may be silently defaulted.
+decisions: []

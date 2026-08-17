@@ -1,0 +1,44 @@
+schema: program-execution-blueprint.execution-waves.v2
+schema_version: 2.0.0
+promotion_rule: A wave starts only when prior waves and blocking entry gates pass.
+waves:
+- id: W0
+  name: baseline_freeze
+  sequence: 0
+  depends_on: []
+  workstream_ids:
+  - WS-01
+  task_ids:
+  - TASK-001
+  entry_gate_ids: []
+  exit_gate_ids:
+  - GATE-001
+  rollback_boundary: Restore worktree to Program Lock base; preserve receipts.
+  definition_status: active
+- id: W1
+  name: counterexample_registry
+  sequence: 1
+  depends_on:
+  - W0
+  workstream_ids:
+  - WS-01
+  task_ids:
+  - TASK-002
+  entry_gate_ids: []
+  exit_gate_ids: []
+  rollback_boundary: Restore worktree to Program Lock base; preserve receipts.
+  definition_status: active
+- id: W2
+  name: baseline_integrity_report
+  sequence: 2
+  depends_on:
+  - W1
+  workstream_ids:
+  - WS-01
+  task_ids:
+  - TASK-003
+  entry_gate_ids: []
+  exit_gate_ids:
+  - GATE-002
+  rollback_boundary: Restore worktree to Program Lock base; preserve receipts.
+  definition_status: active

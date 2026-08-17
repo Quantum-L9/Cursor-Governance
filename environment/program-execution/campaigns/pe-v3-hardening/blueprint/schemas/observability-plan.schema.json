@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-blueprint.observability-plan.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "signals",
+    "incident_routing"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution-blueprint.observability-plan.v2"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "source_target_id": {
+            "type": "string"
+          },
+          "collection_method": {
+            "type": "string"
+          },
+          "expected_range": {
+            "type": "string"
+          },
+          "alert_condition": {
+            "type": "string"
+          },
+          "retention": {
+            "type": "string"
+          },
+          "related_gate_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "incident_routing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

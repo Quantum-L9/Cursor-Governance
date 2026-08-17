@@ -1,0 +1,36 @@
+schema: program-execution-blueprint.evidence-catalog.v2
+schema_version: 2.0.0
+evidence:
+- id: EVID-001
+  type: inspection
+  source: Quantum-L9/Cursor-Governance
+  revision: UNKNOWN
+  digest: null
+  method: read_only_inspection
+  environment: planning
+  producer: controller
+  produced_at: '2026-08-17T12:14:43+00:00'
+  expires_at: null
+  result: INFORMATIONAL
+  status: planned
+  supports:
+  - GATE-001
+  contradicts: []
+  notes: Baseline commit frozen at 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+- id: EVID-002
+  type: test_result
+  source: environment/program-execution/conformance
+  revision: UNKNOWN
+  digest: null
+  method: run_counterexample_tests
+  environment: planning
+  producer: controller
+  produced_at: '2026-08-17T12:14:43+00:00'
+  expires_at: null
+  result: INFORMATIONAL
+  status: planned
+  supports:
+  - GATE-001
+  - GATE-002
+  contradicts: []
+  notes: Counterexample registry complete with executable xfail tests

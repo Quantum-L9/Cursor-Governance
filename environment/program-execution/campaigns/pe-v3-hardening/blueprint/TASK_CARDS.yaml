@@ -1,0 +1,213 @@
+schema: program-execution-blueprint.task-cards.v2
+schema_version: 2.0.0
+tasks:
+- id: TASK-001
+  title: Freeze baseline commit and orchestrator
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Freeze baseline commit 0db3fed and orchestrator checkout. Create baseline manifest covering environment/program-execution/core,
+    scripts, conformance, campaigns.
+  authority_basis_ids:
+  - AUTH-002
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  actions:
+  - freeze_baseline_commit_0db3fed
+  - detach_orchestrator_at_baseline
+  - create_baseline_manifest
+  - verify_no_implementation_behavior_changed
+  outputs:
+  - id: OUT-001
+    type: receipt
+    location: docs/program-execution/TASK-001.md
+    required: true
+  acceptance:
+  - id: AC-001
+    statement: Baseline commit frozen at 0db3fedf697b263a3b8bd9ea8ce40113f999b67d.
+    required_evidence_types:
+    - inspection
+  - id: AC-002
+    statement: Orchestrator detached immutably at baseline.
+    required_evidence_types:
+    - inspection
+  - id: AC-003
+    statement: Baseline manifest complete for all PE surfaces.
+    required_evidence_types:
+    - test_result
+  validation:
+  - id: VAL-001
+    method: inspection
+    command_or_inspection: Baseline commit frozen at 0db3fedf697b263a3b8bd9ea8ce40113f999b67d.
+    environment: planning
+    expected_result: PASS
+  negative_cases:
+  - baseline_commit_mismatch
+  - orchestrator_not_detached
+  - incomplete_manifest
+  rollback:
+    strategy: discard_unaccepted_artifacts
+    trigger: admission_failure
+    validation: no_implementation_mutation
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: program_definition
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: Create counterexample registry with xfail tests
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Create machine-readable counterexample registry. Each counterexample gets an executable test marked
+    xfail (strict) for known v2 gaps. Exit S0 when registry reproduces every vulnerability.
+  authority_basis_ids:
+  - AUTH-002
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids:
+  - EVID-001
+  actions:
+  - create_counterexample_registry_schema
+  - implement_compiler_semantic_loss_tests
+  - implement_candidate_identity_tests
+  - implement_evidence_admissibility_tests
+  - implement_authority_binding_tests
+  - mark_all_as_xfail_strict
+  outputs:
+  - id: OUT-002
+    type: receipt
+    location: docs/program-execution/TASK-002.md
+    required: true
+  acceptance:
+  - id: AC-004
+    statement: All counterexamples have IDs (CE-COMPILER-001, CE-CANDIDATE-001, etc.).
+    required_evidence_types:
+    - inspection
+  - id: AC-005
+    statement: All counterexamples reproduce as xfail tests.
+    required_evidence_types:
+    - test_result
+  - id: AC-006
+    statement: Registry is machine-readable YAML or JSON.
+    required_evidence_types:
+    - inspection
+  validation:
+  - id: VAL-002
+    method: inspection
+    command_or_inspection: All counterexamples have IDs (CE-COMPILER-001, CE-CANDIDATE-001, etc.).
+    environment: local
+    expected_result: PASS
+  negative_cases:
+  - counterexample_missing_id
+  - test_not_xfail
+  - registry_not_machine_readable
+  rollback:
+    strategy: restore_to_baseline
+    trigger: test_failure
+    validation: baseline_tests_pass
+  risk:
+    tier: T1
+    reversibility: reversible
+    blast_radius: conformance_tests
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: false
+    pull_request: false
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-003
+  title: Baseline integrity and evidence report
+  definition_status: blocked
+  workstream_id: WS-01
+  wave_id: W2
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Produce baseline integrity report with digest manifest for all PE surfaces. Verify no implementation
+    behavior changed during baseline freeze.
+  authority_basis_ids:
+  - AUTH-002
+  - AUTH-003
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids:
+  - EVID-001
+  - EVID-002
+  actions:
+  - digest_manifest_all_pe_files
+  - verify_baseline_tests_unchanged
+  - write_integrity_report
+  - validate_gate_001
+  outputs:
+  - id: OUT-003
+    type: receipt
+    location: docs/program-execution/TASK-003.md
+    required: true
+  acceptance:
+  - id: AC-007
+    statement: All PE files digest-manifested.
+    required_evidence_types:
+    - inspection
+  - id: AC-008
+    statement: No implementation behavior changed.
+    required_evidence_types:
+    - test_result
+  - id: AC-009
+    statement: GATE-001 passes.
+    required_evidence_types:
+    - inspection
+  validation:
+  - id: VAL-003
+    method: inspection
+    command_or_inspection: All PE files digest-manifested.
+    environment: local
+    expected_result: PASS
+  negative_cases:
+  - missing_file_in_manifest
+  - behavior_changed
+  - gate_001_fail
+  rollback:
+    strategy: restore_to_baseline
+    trigger: integrity_failure
+    validation: baseline_integrity_valid
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: program_artifacts
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
