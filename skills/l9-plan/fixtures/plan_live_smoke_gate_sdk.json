@@ -5,7 +5,7 @@
   "objective": "Plan a docs+test alignment fix for GateClient timeout behavior without changing transport hash semantics",
   "success_criteria": [
     "pytest -q tests touching Gate client PASS",
-    "make pr-check PASS with no transport-hash drift",
+    "make pr PASS with no transport-hash drift",
     "AGENTS.md Gate-only egress language unchanged or explicitly N/A"
   ],
   "scope": {
@@ -34,7 +34,7 @@
     },
     {
       "id": "P2",
-      "command_or_action": "make pr-check",
+      "command_or_action": "make pr",
       "pass_criteria": "baseline recorded",
       "status": "unknown"
     }
@@ -169,7 +169,7 @@
   "unknowns": [
     {
       "id": "U1",
-      "question": "Is current baseline make pr-check green?",
+      "question": "Is current baseline make pr green?",
       "decision_effect": "affects pre-validation status",
       "resolution": "probe"
     }
@@ -183,7 +183,7 @@
     },
     {
       "id": "V2",
-      "command": "make pr-check",
+      "command": "make pr",
       "pass_criteria": "PASS; no commit/push",
       "status": "pending"
     }
@@ -214,7 +214,7 @@
     ],
     "validation_commands": [
       "pytest -q",
-      "make pr-check"
+      "make pr"
     ]
   },
   "depth": "deep",

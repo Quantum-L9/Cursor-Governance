@@ -19,6 +19,7 @@ Escape hatches (human / ops only):
   L9_GIT_RESET_AUTHORIZED=<reason>
   L9_WORKTREE_ISOLATION=0
   L9_GIT_CLEAN_AUTHORIZED=<reason>
+  L9_WORKTREE_ADD_AUTHORIZED=<reason>
 """
 
 from __future__ import annotations
@@ -136,6 +137,49 @@ _TMP_HOLD_CREATE = re.compile(
 _SCRATCH_HOLD_PARK_WIP = re.compile(r"scratch_hold\.py\s+park\b[^\n]*\bWIP\b", re.I)
 
 
+def _is_wired_worktree_wrapper(command: str) -> bool:
+    return "worktree_add_wired.sh" in command
+
+
+def _is_raw_worktree_add(command: str) -> bool:
+    """True for ``git worktree add`` including ``git -C <path> worktree add``."""
+    words = segment_words(command)
+    if not words:
+        return False
+    index = 0
+    while index < len(words) and "=" in words[index] and not words[index].startswith(("-", "/")):
+        index += 1
+    if index >= len(words) or words[index] != "git":
+        return False
+    index += 1
+    while index < len(words):
+        word = words[index]
+        if word in {"-C", "--git-dir", "--work-tree"}:
+            index += 2
+            continue
+        if word.startswith("--git-dir=") or word.startswith("--work-tree="):
+            index += 1
+            continue
+        if word.startswith("-") and word not in {"worktree"}:
+            index += 1
+            continue
+        break
+    return index + 1 < len(words) and words[index] == "worktree" and words[index + 1] == "add"
+
+
+def _deny_raw_worktree_add(command: str) -> str | None:
+    if _authorized("L9_WORKTREE_ADD_AUTHORIZED") or _is_wired_worktree_wrapper(command):
+        return None
+    if _is_raw_worktree_add(command):
+        return (
+            "shared-worktree isolation: raw git worktree add denied — "
+            "the new folder has no .cursor links. Use "
+            "ops/scripts/worktree_add_wired.sh or set "
+            "L9_WORKTREE_ADD_AUTHORIZED=<reason>."
+        )
+    return None
+
+
 def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
     # Subcommand-position checks: only argv[1] can trigger revert/reset, so a
     # commit message like `git commit -m "mention git revert"` never matches.
@@ -249,6 +293,12 @@ def command_violates_worktree_isolation(command: str, *, root: Path | None = Non
         reason = _deny_shared_git(segment, dirty=dirty)
         if reason:
             return reason
+        reason = _deny_raw_worktree_add(segment)
+        if reason:
+            return reason
+    reason = _deny_raw_worktree_add(sanitized)
+    if reason:
+        return reason
     if _is_diff_name_pipe_add(sanitized) and not _authorized("L9_GIT_BROAD_ADD_AUTHORIZED"):
         return (
             "shared-worktree isolation: piping name-only diff into staging "

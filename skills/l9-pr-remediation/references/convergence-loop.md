@@ -6,15 +6,17 @@ role: convergence_loop
 tags: [pr, convergence, loop, polling, ci, local-verify]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-08-06
+version: 3.2.0
+updated: 2026-08-16
 /L9_META -->
 
 # Convergence Loop
 
 ## Purpose
 
-After pushing fixes (which have ALREADY passed local verification), short-poll CI to confirm, check for new reviews, then decide: converge, next cycle, or early stop.
+After pushing the **single** planned commit (which has ALREADY passed Makefile + pre-commit + leftover local verify), short-poll CI to confirm, check for new reviews, then decide: converge, exceptional next cycle, or early stop.
+
+A second cycle is **not** the normal path. It is only for signals that did not exist at census time. See [remediation-plan.md](remediation-plan.md).
 
 ## Key Principle: Local-First Verification
 
@@ -32,7 +34,7 @@ This means: after push, CI SHOULD pass. Polling is to confirm and to catch envir
 ┌─────────────────────────────────────────────────────────┐
 │              REMEDIATION CYCLE                            │
 │                                                          │
-│  ingest → classify → fix ALL → local verify (GATE) →    │
+│  census → plan (GATE) → fix ALL → make+pre-commit (GATE) │
 │  commit (ONE) → push (ONE)                               │
 │                                                          │
 └──────────────────────┬───────────────────────────────────┘
@@ -46,9 +48,11 @@ This means: after push, CI SHOULD pass. Polling is to confirm and to catch envir
 │  3. Check for new review comments                        │
 │  4. Evaluate convergence gate                            │
 │                                                          │
-│  → converged: MERGE (ordinary squash) then next open PR  │
-│  → not converged (new comments): loop (if cycles < max)  │
-│  → CI failed unexpectedly: investigate delta, fix, loop  │
+│  → this PR green: do not merge; continue REMEDIATE_ALL   │
+│  → set ready for MERGE_TRAIN after FIRST_MERGE_GATE      │
+│  → new post-push comments only: re-census NEW, one more  │
+│  → CI failed on env delta: investigate, one more commit  │
+│  → skipped census / unrun local gate: protocol failure   │
 │  → max cycles: STOP + partial report                     │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -103,6 +107,8 @@ Convergence is reached when ALL conditions are true:
 |-----------|-------------|
 | CI status is `success` | `gh run view --json conclusion` → `"success"` |
 | No new unresolved review comments | Compare comment count/timestamps before and after push |
+| All review threads resolved | GraphQL `isResolved: false` count is 0 (any author) |
+| All code-review agent threads answered | Every `github-code-quality[bot]` / Copilot thread has a canonical reply ([code-review-agents.md](code-review-agents.md)) |
 | All blocking findings resolved | Internal tracking: all `blocking` findings have status `fixed` |
 | All actionable findings resolved or deferred | Internal tracking |
 
@@ -174,8 +180,9 @@ minimum_safe_next_action: "merged" | "manual review of deferred items" | "run an
 
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
-- CI passes AND no new actionable codebase signals → emit `converged` and **merge** that PR (`gh pr merge --squash --repo`), then continue older-to-newer open PRs
-- Only `CI_PIPELINE` / `HUMAN` blockers remain → emit `partial` early (more cycles cannot help)
+- CI passes AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN.
+- Only `CI_PIPELINE` / `HUMAN` / `ENVIRONMENT` blockers remain → emit `partial` early (more cycles cannot help); do not merge that PR
+- Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`
 - User sends a stop signal → emit `partial` with current state
@@ -185,11 +192,15 @@ MUST stop the loop when:
 Defaults (overridable by user):
 
 ```yaml
-max_cycles: 3
+max_cycles: 3                  # safety valve; success path is 1 commit
+one_and_done: true
 poll_interval_seconds: 15
 max_wait_per_cycle_minutes: 8
 max_local_verify_iterations: 5
 auto_fix_nits: true           # clear one-line nits; skip only true product forks
-skip_bot_discussions: true     # skip non-actionable bot chatter
+skip_bot_discussions: true     # skip non-actionable chatter from non-CRA bots only; NEVER skip github-code-quality or Copilot
 parallel_clusters: true        # always parallelize independent clusters
+forbid_no_verify: true
+require_precommit_all_hooks: true
+prefer_makefile: true
 ```

@@ -79,7 +79,29 @@
           "FAIL",
           "BLOCKED",
           "STALE",
-          "UNKNOWN"
+          "UNKNOWN",
+          "INCOMPLETE"
+        ]
+      }
+    },
+    "kernel_verdict": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "INCOMPLETE"
+      ]
+    },
+    "dod_gates": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "PASS",
+          "FAIL",
+          "BLOCKED",
+          "STALE",
+          "UNKNOWN",
+          "INCOMPLETE",
+          "NOT_APPLICABLE"
         ]
       }
     },
