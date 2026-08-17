@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # After a successful local PR gate: push, open/reuse PR, subscribe, emit remediation handoff.
 # Invoked by `make pr` (any capitalization). Skip open: OPEN_PR=0. Skip remediate: PR_REMEDIATE=0.
-# Do not run a separate gate-only pass before `make pr`.
+# Gate-only: `make pr-check`.
 set -euo pipefail
 
 WS="${1:-${WS:-$(pwd)}}"
@@ -208,7 +208,7 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
         git log "${PR_BASE}..HEAD" --format='- %s' --reverse
         echo ""
         echo "## Test plan"
-        echo "- [x] \`make pr\` (local changed-files gate then open) PASS"
+        echo "- [x] \`make pr-check\` (local changed-files gate) PASS before open"
         echo "- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)"
         echo "- [ ] CI green; agent PR remediation subscribed after open"
       }
@@ -222,7 +222,7 @@ ${campaign_body:+$campaign_body
 $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 
 ## Test plan
-- [x] \`make pr\` (local changed-files gate then open) PASS
+- [x] \`make pr-check\` (local changed-files gate) PASS before open
 - [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)
 - [ ] CI green; agent PR remediation subscribed after open
 EOF
