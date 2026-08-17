@@ -15,7 +15,7 @@ def test_actor_string_insufficient():
     v2 Issue: Approval schema accepts approved_by as any nonempty string.
     Controller records it as ledger actor. No principal context, authority grant,
     or expiry enforcement.
-    
+
     v3 Requirement: PrincipalContext with principal_id, principal_type, authority_grant_ids.
     Actor string is display metadata only, never authority.
     """
@@ -24,10 +24,10 @@ def test_actor_string_insufficient():
         "approved_by": "random_string",
         "action": "destructive_operation",
     }
-    
+
     # Try to perform privileged operation
     authorized = check_authority(approval)
-    
+
     # v2 FAILS: accepts string
     assert not authorized, "Actor string should not confer authority"
 
@@ -40,7 +40,7 @@ def test_nondelegable_authority_enforced():
     """
     v2 Issue: Campaign source has may_delegate: false, but runtime doesn't
     enforce it. Generic authority string can be passed down.
-    
+
     v3 Requirement: Authority grant immutable. If may_delegate: false,
     no delegation chain accepted.
     """
@@ -50,13 +50,13 @@ def test_nondelegable_authority_enforced():
         "responsibility": "terminal_verdict",
         "may_delegate": False,
     }
-    
+
     # Someone tries to delegate
     delegated = {
         "parent_grant": "GRANT-001",
         "delegated_to": "someone_else",
     }
-    
+
     # v2 FAILS: delegation accepted
     valid = validate_delegation(authority, delegated)
     assert not valid, "Nondelegable authority cannot be delegated"

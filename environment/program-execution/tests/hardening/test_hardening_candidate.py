@@ -14,7 +14,7 @@ def test_dirty_candidate_immutable_identity():
     """
     v2 Issue: Task worktree can be dirty. Verification Receipt carries nullable
     candidate_sha. Dirty content has no immutable identity separate from HEAD.
-    
+
     v3 Requirement: Dirty candidate must get immutable snapshot identity via
     git write-tree technique before verification.
     """
@@ -23,10 +23,10 @@ def test_dirty_candidate_immutable_identity():
         "worktree": "dirty",
         "uncommitted_changes": ["file.py"],
     }
-    
+
     # Submit for verification
     submission = submit_candidate(task_state)
-    
+
     # v2 FAILS: candidate_sha is None or HEAD, not immutable snapshot
     assert submission["candidate_identity"]["snapshot_commit_sha"] is not None
     assert submission["candidate_identity"]["tree_sha"] is not None
@@ -41,20 +41,20 @@ def test_candidate_immutable_after_submission():
     """
     v2 Issue: Worker submits from mutable worktree. Verifier verifies the
     same mutable worktree. Content can change between submission and verification.
-    
+
     v3 Requirement: Submission freezes immutable snapshot S. Verifier verifies
     S in fresh isolated worktree, not worker's mutable worktree.
     """
     # Submit candidate
     submitted = submit_candidate({"content": "version1"})
     submitted_tree_sha = submitted["tree_sha"]
-    
+
     # Worker modifies worktree after submission (v2 allows this)
     modify_worktree({"content": "version2"})
-    
+
     # Verify
     verified = verify_candidate(submitted["candidate_id"])
-    
+
     # v2 FAILS: verified tree != submitted tree
     assert verified["tree_sha"] == submitted_tree_sha
 
