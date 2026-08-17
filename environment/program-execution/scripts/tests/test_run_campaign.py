@@ -706,6 +706,57 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual(len(stale), 1)
             self.assertTrue((stale[0] / "dirty.txt").is_file())
 
+    def test_isolate_wires_new_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            primary = Path(raw) / "primary"
+            worktree = Path(raw) / "wt"
+            primary.mkdir()
+            _git_init(primary)
+            subprocess.run(
+                ["git", "-C", str(primary), "branch", "-M", "main"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "branch", "feat/demo-activate-v1"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "update-ref", "refs/remotes/origin/main", "HEAD"],
+                check=True,
+                capture_output=True,
+            )
+            wired: list[Path] = []
+
+            def fake_git(*args: str) -> str:
+                if args[:2] == ("fetch", "origin"):
+                    return ""
+                if args[:2] == ("worktree", "add"):
+                    subprocess.run(
+                        ["git", "-C", str(primary), *args],
+                        check=True,
+                        capture_output=True,
+                    )
+                    return ""
+                raise AssertionError(args)
+
+            original = self.mod.ensure_workspace_wired
+
+            def spy(workspace: Path) -> None:
+                wired.append(workspace)
+
+            self.mod.ensure_workspace_wired = spy  # type: ignore[method-assign]
+            try:
+                got = self.mod.isolate_worktree(
+                    primary, "demo-activate-v1", worktree, git_fn=fake_git
+                )
+            finally:
+                self.mod.ensure_workspace_wired = original  # type: ignore[method-assign]
+            self.assertEqual(got, worktree)
+            self.assertEqual(wired, [worktree])
+            self.assertTrue(worktree.is_dir())
+
     def test_policy_remediation_scope_is_stacked_only(self) -> None:
         policy = yaml.safe_load(
             (PE_ROOT / "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml").read_text(encoding="utf-8")

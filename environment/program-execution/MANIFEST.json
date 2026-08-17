@@ -1403,7 +1403,7 @@
     },
     {
       "path": "peer_execution/autonomy/tests/test_worker_lane.py",
-      "sha256": "e233421e7115364341f5e6a060332cc1ac1f734df69ee37e4039b6fd2fb0511f"
+      "sha256": "e8487c960e9e11430f13010df4568ef8b7c44d1aad8ff11274b2c9121ddace88"
     },
     {
       "path": "peer_execution/autonomy/validate_autonomy.py",
@@ -1411,7 +1411,7 @@
     },
     {
       "path": "peer_execution/autonomy/worker_lane.py",
-      "sha256": "5e60f6be2fbb55b03421bbddb7bfbce94320ee616aa79a307b36c4337e0e0995"
+      "sha256": "772be67f10e7fb4300f7d7d1fe1c01f180ab7ab74a7a9c8577e2a8387a2e502a"
     },
     {
       "path": "peer_execution/base.py",
@@ -1619,7 +1619,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "756d24bdfbaba2f492e673d551180ce9651b68b23fd3a5c0a4d32ec324be56e8"
+      "sha256": "8771cecbd5db3d5dd08b89f7a5d69a6fd701bb6c4e63b88a0f7c30bd1370dfa3"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1655,7 +1655,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "307d1470fca1482a11f379b7b1cd2bc07af657a13d1fc005f16f0981ff52a8bd"
+      "sha256": "246201d0ec8f25d19f376c4cb00735686d72fc252f09deb6c32e38932caab7b1"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

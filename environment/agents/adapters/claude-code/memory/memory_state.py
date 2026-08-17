@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -30,26 +31,43 @@ def load_contract() -> dict[str, Any]:
     return json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
 
+def _git_toplevel(start: Path) -> Path | None:
+    """Active git toplevel, or None if start is not inside a work tree."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return Path(result.stdout.strip()).resolve()
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return None
+
+
 def workspace_root() -> Path:
     """Resolve the session workspace root that anchors ``.l9/memory``.
 
-    ``CLAUDE_PROJECT_DIR`` (injected by the Claude Code harness for hooks and the
-    PreToolUse gate) always wins. When it is unset — e.g. the ``memory_lock.py``
-    CLI invoked from a Bash tool after ``cd`` into a repo subdirectory — fall back
-    to walking up from the cwd to the nearest ancestor that already carries a
-    ``.l9/memory`` tree. This keeps the CLI's receipt/lock/task-signature anchor
-    identical to the gate's, so a lock acquired from a subdir is honored by the
-    gate (and vice versa) instead of silently pointing at a different state root.
-    If no ancestor has ``.l9/memory``, preserve the prior behavior (cwd).
+    ``CLAUDE_PROJECT_DIR`` / ``CURSOR_PROJECT_DIR`` (harness project dir) always
+    wins. When unset, if both a workspace and a nested repo carry ``.l9/memory``,
+    use the *outermost* ancestor so a lock acquired from a subrepo is visible to
+    the gate. If no ancestor has ``.l9/memory``, use the active git toplevel,
+    else cwd.
     """
     for key in ("CLAUDE_PROJECT_DIR", "CURSOR_PROJECT_DIR"):
         env = os.environ.get(key)
         if env:
             return Path(env).resolve()
     cwd = Path.cwd().resolve()
-    for base in (cwd, *cwd.parents):
-        if (base / ".l9" / "memory").is_dir():
-            return base
+    found: list[Path] = [base for base in (cwd, *cwd.parents) if (base / ".l9" / "memory").is_dir()]
+    if found:
+        return found[-1]
+    toplevel = _git_toplevel(cwd)
+    if toplevel is not None:
+        return toplevel
     return cwd
 
 

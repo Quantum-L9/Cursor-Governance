@@ -310,6 +310,16 @@ def _git(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def ensure_workspace_wired(workspace: Path) -> None:
+    """Wire gitignored .cursor links after worktree create/reuse. Not sessionStart."""
+    script = GOV_ROOT / "ops/scripts/ensure_workspace_wired.sh"
+    if not script.is_file() or not workspace.is_dir():
+        return
+    env = os.environ.copy()
+    env["L9_WIRE_LINKS_ONLY"] = "1"
+    run_cmd(["bash", str(script), str(workspace)], timeout=60, env=env)
+
+
 def isolate_worktree(
     primary: Path,
     campaign_id: str,
@@ -330,6 +340,7 @@ def isolate_worktree(
         )
         if not dirty and current.returncode == 0 and current.stdout.strip() == branch:
             log(f"isolate reuse worktree {worktree}")
+            ensure_workspace_wired(worktree)
             return worktree
         log(f"isolate quarantine dirty or unexpected worktree {worktree}")
         quarantine_occupied(worktree)
@@ -357,6 +368,7 @@ def isolate_worktree(
         if local.returncode != 0:
             _git(worktree, "branch", campaign_branch, "origin/main")
     log(f"isolate worktree {worktree}")
+    ensure_workspace_wired(worktree)
     return worktree
 
 
@@ -1647,6 +1659,7 @@ def default_execute(
                 rendered = {"contract": str(contract_path)}
             if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED"}:
                 pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+        ensure_workspace_wired(worktree)
         contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
         writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
         if not writable:

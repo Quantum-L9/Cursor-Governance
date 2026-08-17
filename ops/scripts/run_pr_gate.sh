@@ -196,13 +196,16 @@ if [[ "${py_count:-0}" -eq 0 ]]; then
   echo "OK: no changed Python files for ruff"
 else
   echo "ruff (changed): ${py_count} file(s)"
-  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
-    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" check <"$py_list"
-    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" format --check <"$py_list"
-  else
-    xargs uv run --no-build ruff check <"$py_list"
-    xargs uv run --no-build ruff format --check <"$py_list"
+  _ruff="$GOV_ROOT/.venv/bin/ruff"
+  if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
+    _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
   fi
+  if [[ ! -x "$_ruff" ]]; then
+    echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)"
+    exit 1
+  fi
+  xargs "$_ruff" check <"$py_list"
+  xargs "$_ruff" format --check <"$py_list"
 fi
 
 echo "--- uv lock ---"
@@ -295,6 +298,12 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   # surface — so the proxy silently became true for headless adapters. Gate the
   # desktop-wiring assertion on the surface id instead. The reconcile checks above
   # stay unconditional: they are surface-independent and must keep running here.
+  # Heal missing gitignored .cursor links under the existing make-pr lock.
+  # Not sessionStart — reconcilers skip while this lock is held.
+  if [[ -x "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" ]]; then
+    L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" \
+      || echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
+  fi
   # PAIRED PREDICATE: run_pr_precommit.sh skips symlinks-check the same way.
   # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
   WS_KIND="$(classify_workspace_kind "$WS")"
@@ -328,11 +337,15 @@ echo "--- security ---"
 bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
-  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" ]]; then
-    "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" . --show-error-codes --pretty --ignore-missing-imports
-  else
-    uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
+  _mypy="$GOV_ROOT/.venv/bin/mypy"
+  if [[ ! -x "$_mypy" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" ]]; then
+    _mypy="$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy"
   fi
+  if [[ ! -x "$_mypy" ]]; then
+    echo "FAIL: locked mypy missing at $GOV_ROOT/.venv/bin/mypy (run: make venv)"
+    exit 1
+  fi
+  "$_mypy" . --show-error-codes --pretty --ignore-missing-imports
 else
   echo "mypy: advisory on PR gate (set PR_MYPY_STRICT=1 to fail; full check is make lint / nightly)"
 fi
