@@ -211,7 +211,7 @@ One paragraph: residual defect or feature; system bound; non-negotiable preserve
 |----|----------|---------------|-------|----------|
 | SP-01 | Baseline still matches locked SHA at start | `repository_state` | `git rev-parse HEAD` == locked SHA | true |
 | SP-02 | Declared behavior/structure holds after mutation | `runtime_behavior` \| `structural` \| `filesystem` | exact command + expected marker (not exit-0 alone) | true |
-| SP-03 | Quality gate / PR gate PASS on changed files | `quality_gate` | e.g. `make pr` → PASS | true |
+| SP-03 | Quality gate / PR gate PASS on changed files | `quality_gate` | e.g. `make pr-check` → PASS | true |
 
 `evidence_type` ∈ `filesystem` \| `runtime_behavior` \| `structural` \| `quality_gate` \| `repository_state` \| `network_observation` \| `proof_receipt` \| `human_confirmation`
 
@@ -391,7 +391,7 @@ Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-
 |-------------|---------------|---------------|--------|---------|-------------------|--------|
 | EV-SP-01 | SP-01 | `repository_state_evidence` | rev-parse compare | `git rev-parse HEAD` | locked SHA | `not_run` |
 | EV-SP-02 | SP-02 | `property_evidence` \| `structural_evidence` \| `runtime_behavior_evidence` | … | … | marker / structure | `not_run` |
-| EV-SP-03 | SP-03 | `quality_gate_evidence` | pr | `make pr` | PASS | `not_run` |
+| EV-SP-03 | SP-03 | `quality_gate_evidence` | pr-check | `make pr-check` | PASS | `not_run` |
 
 ## Stress and disconfirm
 

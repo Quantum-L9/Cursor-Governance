@@ -214,7 +214,7 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
         git log "${PR_BASE}..HEAD" --format='- %s' --reverse
         echo ""
         echo "## Test plan"
-        echo "- [x] \`make pr\` (local changed-files gate then open) PASS"
+        echo "- [x] \`make pr-check\` (local changed-files gate) PASS before open"
         echo "- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)"
         echo "- [ ] CI green; agent PR remediation subscribed after open"
       }
@@ -228,7 +228,7 @@ ${campaign_body:+$campaign_body
 $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 
 ## Test plan
-- [x] \`make pr\` (local changed-files gate then open) PASS
+- [x] \`make pr-check\` (local changed-files gate) PASS before open
 - [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)
 - [ ] CI green; agent PR remediation subscribed after open
 EOF
