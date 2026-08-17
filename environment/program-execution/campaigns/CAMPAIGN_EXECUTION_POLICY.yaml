@@ -92,6 +92,16 @@ campaigns:
     lane: session_runtime
     parallel_with:
       - l9-ecosystem-fix-plan
+  - id: pe-v3-hardening
+    integration_branch: campaign/pe-v3-hardening
+    pr_base: campaign/pe-v3-hardening
+    execute_order: 6
+    lane: pe_core
+    role: major_version_hardening
+    depends_on:
+      - bounded-replanning-v1
+      - cc-pe-intent-compiler-v1
+      - l9-devpack-program-execution-hardening
 
 owner:
   authority_id: AUTH-001

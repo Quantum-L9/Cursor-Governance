@@ -5,3 +5,7 @@ schema_version: 1.0.0
 campaign_ids:
   - bounded-replanning-v1
   - session-runtime-hydration-convergence-v1
+  - cc-pe-intent-compiler-v1
+  - l9-devpack-program-execution-hardening
+  - l9-ecosystem-fix-plan
+  - pe-v3-hardening
