@@ -1407,7 +1407,7 @@
     },
     {
       "path": "peer_execution/autonomy/worker_lane.py",
-      "sha256": "8ef7e262194ae824464b736ac5305adfa5e0a239ae5ea071cd2843a3aac75620"
+      "sha256": "772be67f10e7fb4300f7d7d1fe1c01f180ab7ab74a7a9c8577e2a8387a2e502a"
     },
     {
       "path": "peer_execution/base.py",
