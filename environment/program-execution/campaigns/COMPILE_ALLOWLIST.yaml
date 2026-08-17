@@ -5,4 +5,3 @@ schema_version: 1.0.0
 campaign_ids:
   - bounded-replanning-v1
   - session-runtime-hydration-convergence-v1
-  - pe-kernel-bind

@@ -79,6 +79,45 @@ campaign-stack-base:
 	python3 ops/scripts/stack_pr.py base --stack \
 	  "$(or $(L9_ROOT),$(HOME)/.l9)/programs/$(CAMPAIGN_ID)/runtime/STACK.json"
 
+.PHONY: campaign-materialize campaign-drive campaign-reset
+## Temporary replay helpers. Not the live campaign path.
+## Copy a task's declared writable paths from REF into its pec worktree.
+campaign-materialize:
+	@test -n "$(CAMPAIGN_ID)" || (echo "CAMPAIGN_ID= is required" >&2; exit 2)
+	@test -n "$(TASK)" || (echo "TASK= is required" >&2; exit 2)
+	@test -n "$(REF)" || (echo "REF= is required" >&2; exit 2)
+	python3 environment/program-execution/scripts/replay_campaign.py materialize \
+	  --workspace "$(or $(L9_ROOT),$(HOME)/.l9)/programs/$(CAMPAIGN_ID)" \
+	  --task "$(TASK)" \
+	  --target "$(or $(TARGET),$(or $(L9_ROOT),$(HOME)/.l9)/program-worktrees/$(CAMPAIGN_ID))" \
+	  --ref "$(REF)" \
+	  $(if $(HOLD_BACK),--hold-back "$(HOLD_BACK)")
+
+## Drive execute by materializing each incomplete task from REF, then re-running.
+campaign-drive:
+	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
+	@test -n "$(CAMPAIGN_ID)" || (echo "CAMPAIGN_ID= is required" >&2; exit 2)
+	python3 environment/program-execution/scripts/replay_campaign.py drive \
+	  --intent "$(INTENT)" \
+	  --isolate "$(CURDIR)" \
+	  --workspace "$(or $(L9_ROOT),$(HOME)/.l9)/programs/$(CAMPAIGN_ID)" \
+	  --target "$(or $(TARGET),$(or $(L9_ROOT),$(HOME)/.l9)/program-worktrees/$(CAMPAIGN_ID))" \
+	  $(if $(REF),--ref "$(REF)") \
+	  $(if $(HOLD_BACK),--hold-back "$(HOLD_BACK)")
+
+## Retire the live pec runtime, rewind the target to BASE, and re-arm.
+campaign-reset:
+	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
+	@test -n "$(CAMPAIGN_ID)" || (echo "CAMPAIGN_ID= is required" >&2; exit 2)
+	@test -n "$(BASE)" || (echo "BASE= commit SHA is required" >&2; exit 2)
+	python3 environment/program-execution/scripts/replay_campaign.py reset \
+	  --campaign-id "$(CAMPAIGN_ID)" \
+	  --isolate "$(CURDIR)" \
+	  --target "$(or $(TARGET),$(or $(L9_ROOT),$(HOME)/.l9)/program-worktrees/$(CAMPAIGN_ID))" \
+	  --base "$(BASE)" \
+	  --intent "$(INTENT)" \
+	  --l9-root "$(or $(L9_ROOT),$(HOME)/.l9)"
+
 ## Recreate the pinned .venv from uv.lock (interpreter + deps, incl. dev extras). Same as sessionStart hook.
 venv:
 	uv sync --locked --extra dev
@@ -478,6 +517,7 @@ program-execution-campaign-compile:
 program-execution-campaign-brief:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) python3 -B -m unittest \
 		$(PE_ROOT)/scripts/tests/test_run_campaign.py \
+		$(PE_ROOT)/scripts/tests/test_replay_campaign.py \
 		$(CURDIR)/skills/l9-pe-campaign-activate/scripts/test_compile_brief.py
 
 program-execution-controller-tests:

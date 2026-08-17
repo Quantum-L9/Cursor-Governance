@@ -30,10 +30,3 @@ campaigns:
   - id: l9-ecosystem-fix-plan
     lifecycle: planned
     notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
-  - id: pe-kernel-bind
-    lifecycle: in_progress
-    notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; agents must stop and ask, never forge it
-    launched_by: make campaign
-    pec_workspace: /Users/macm2/.l9/programs/pe-kernel-bind
-    blueprint: /Users/macm2/.l9/blueprints/pe-kernel-bind
-    worktree: /Users/macm2/.l9/program-worktrees/pe-kernel-bind

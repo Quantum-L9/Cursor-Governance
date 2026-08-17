@@ -411,15 +411,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "1e6745f3975f6fb35fde49dc1af21d8785031c8936cddef02bf73b1a05fe08d2"
+      "sha256": "7135ada1de7a9e567f89aa3331c40f3fb166c0921425032981e0b985091ce1ad"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "10739dfefbfaa5a8f6426885a56970befd9a9b70f1a28c4984a4e20d52d17a45"
+      "sha256": "b5cd2f99c19486f9a446659934c024b8422fc7166c26dc880fac682652e8c73d"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "8b08c4c827e473161aca2e031a41cbb289237de5e18fec7a8c026b2830e21fb3"
+      "sha256": "c20b36da7591f8affbc9cf306dc6e5bef8ca66a33f630bb7987e8458b9d0b58c"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -596,14 +596,6 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
-    },
-    {
-      "path": "campaigns/pe-kernel-bind/CAMPAIGN_SOURCE.yaml",
-      "sha256": "0e684aee54a7f58aee4d1e963a984b06596cb5cc194e7ecde5ba2aefbf3fec77"
-    },
-    {
-      "path": "campaigns/pe-kernel-bind/source-integrity-receipt.json",
-      "sha256": "0c680102b6bb55b55d2b752261bf03b3c6867baff46c6dc9fdd8f71c297a21e7"
     },
     {
       "path": "campaigns/scripts/close_campaign.py",
@@ -1354,6 +1346,10 @@
       "sha256": "fcdb2618af4a2881ca47835174edc253caff145c19bc7578af2fc521c7dbc0cc"
     },
     {
+      "path": "scripts/replay_campaign.py",
+      "sha256": "255beb91cdc446c33df9fe558b10af05ab1e6c4c95c51b8e074f3e69d39bc143"
+    },
+    {
       "path": "scripts/router.py",
       "sha256": "ddbb14180a275a296f24146befa4ba8450188c1f2917adff3ae8d5e65aa12e90"
     },
@@ -1388,6 +1384,10 @@
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
       "sha256": "2fba804a87e897217cb652e61e4f71381e29995483f748f0bb6ebfe36fd22886"
+    },
+    {
+      "path": "scripts/tests/test_replay_campaign.py",
+      "sha256": "e240e0932292d7c4e2310b407cc492f50115de76e078f8cc796c73b1f10a41b7"
     },
     {
       "path": "scripts/tests/test_run_campaign.py",

@@ -93,14 +93,6 @@ campaigns:
     parallel_with:
       - l9-ecosystem-fix-plan
 
-  - id: pe-kernel-bind
-    integration_branch: campaign/pe-kernel-bind
-    pr_base: campaign/pe-kernel-bind
-    execute_order: 6
-    lane: compiled
-
-    lifecycle: in_progress
-    launched_by: make campaign
 owner:
   authority_id: AUTH-001
   terminal_verdict: CONVERGED
