@@ -476,8 +476,7 @@ def check_session_lifecycle_parity(failures: list[str]) -> None:
             )
     if "/ops/hooks/" not in blob:
         _fail(
-            "SessionEnd must reference the shared ops/hooks/ closers, not an "
-            "adapter-local copy",
+            "SessionEnd must reference the shared ops/hooks/ closers, not an adapter-local copy",
             failures,
         )
     print("  OK: session lifecycle parity — SessionEnd wired to shared closers")
