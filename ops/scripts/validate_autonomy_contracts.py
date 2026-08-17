@@ -19,9 +19,30 @@ REQUIRED_ARTIFACT_IDS = frozenset(
 )
 
 
+LEGACY_CLAUDE_AUTONOMY = "environment/agents/adapters/claude-code/autonomy"
+SHARED_PEER_AUTONOMY = "environment/program-execution/peer_execution/autonomy/"
+
+
 def _exists(root: Path, rel: str) -> bool:
     path = root / rel
     return path.is_dir() if rel.endswith("/") else path.is_file() or path.is_dir()
+
+
+def _provider_autonomy_residue_errors(root: Path) -> list[str]:
+    """Fail closed on any provider adapter autonomy/ tree, including __pycache__ residue."""
+    errors: list[str] = []
+    hint = f"delete leftover including __pycache__; runtime is {SHARED_PEER_AUTONOMY.rstrip('/')}"
+    adapters = root / "environment/agents/adapters"
+    if adapters.is_dir():
+        for hit in adapters.glob("*/autonomy"):
+            if hit.exists():
+                errors.append(
+                    f"provider-owned autonomy runtime forbidden: {hit.relative_to(root)} ({hint})"
+                )
+    old = root / LEGACY_CLAUDE_AUTONOMY
+    if old.exists():
+        errors.append(f"legacy Claude-owned autonomy runtime path still exists ({hint})")
+    return errors
 
 
 def validate(root: Path) -> list[str]:
@@ -80,7 +101,7 @@ def validate(root: Path) -> list[str]:
                 if not rel or not (root / rel).is_file():
                     errors.append(f"{aid}: missing {key} path: {rel}")
         if aid == "peer-execution-bounded-autonomy-runtime":
-            if canon != "environment/program-execution/peer_execution/autonomy/":
+            if canon != SHARED_PEER_AUTONOMY:
                 errors.append(f"{aid}: canonical_path must be Peer Execution owned")
             if entry.get("owns_program_state") is not False:
                 errors.append(f"{aid}: owns_program_state must be false")
@@ -89,14 +110,7 @@ def validate(root: Path) -> list[str]:
         errors.append(f"MANIFEST missing required artifact_ids: {missing_ids}")
     for hit in (root / "skills").glob("**/surface_profile.yaml"):
         errors.append(f"forbidden second SSOT: {hit.relative_to(root)}")
-    adapters = root / "environment/agents/adapters"
-    if adapters.is_dir():
-        for hit in adapters.glob("*/autonomy"):
-            if hit.is_dir():
-                errors.append(f"provider-owned autonomy runtime forbidden: {hit.relative_to(root)}")
-    old = root / "environment/agents/adapters/claude-code/autonomy"
-    if old.exists():
-        errors.append("legacy Claude-owned autonomy runtime path still exists")
+    errors.extend(_provider_autonomy_residue_errors(root))
     readme = root / "environment/contracts/autonomy/README.md"
     if not readme.is_file():
         errors.append("missing environment/contracts/autonomy/README.md")

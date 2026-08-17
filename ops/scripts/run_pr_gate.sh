@@ -196,13 +196,16 @@ if [[ "${py_count:-0}" -eq 0 ]]; then
   echo "OK: no changed Python files for ruff"
 else
   echo "ruff (changed): ${py_count} file(s)"
-  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
-    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" check <"$py_list"
-    xargs "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" format --check <"$py_list"
-  else
-    xargs uv run --no-build ruff check <"$py_list"
-    xargs uv run --no-build ruff format --check <"$py_list"
+  _ruff="$GOV_ROOT/.venv/bin/ruff"
+  if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
+    _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
   fi
+  if [[ ! -x "$_ruff" ]]; then
+    echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)"
+    exit 1
+  fi
+  xargs "$_ruff" check <"$py_list"
+  xargs "$_ruff" format --check <"$py_list"
 fi
 
 echo "--- uv lock ---"
@@ -334,11 +337,15 @@ echo "--- security ---"
 bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
-  if [[ -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" ]]; then
-    "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" . --show-error-codes --pretty --ignore-missing-imports
-  else
-    uv run --no-build mypy . --show-error-codes --pretty --ignore-missing-imports
+  _mypy="$GOV_ROOT/.venv/bin/mypy"
+  if [[ ! -x "$_mypy" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy" ]]; then
+    _mypy="$GOV_TOOLCHAIN_ROOT/.venv/bin/mypy"
   fi
+  if [[ ! -x "$_mypy" ]]; then
+    echo "FAIL: locked mypy missing at $GOV_ROOT/.venv/bin/mypy (run: make venv)"
+    exit 1
+  fi
+  "$_mypy" . --show-error-codes --pretty --ignore-missing-imports
 else
   echo "mypy: advisory on PR gate (set PR_MYPY_STRICT=1 to fail; full check is make lint / nightly)"
 fi

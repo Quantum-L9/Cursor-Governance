@@ -764,6 +764,7 @@ Make/toolchain interpreter):
    so `$(PYTHON)` expands). `ModuleNotFoundError: No module named 'yaml'`
    means the wrong interpreter.
 5. Do not `uv pip install` past the lockfile for the default toolchain.
+
 <!-- SSOT_CHECKOUT_MAKE_PR_V1 -->
 ## SSOT-family make pr (2026-08-17) — gov worktrees are not consumers
 
