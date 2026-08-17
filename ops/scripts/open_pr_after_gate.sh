@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # After a successful local PR gate: push, open/reuse PR, subscribe, emit remediation handoff.
 # Invoked by `make pr` (any capitalization). Skip open: OPEN_PR=0. Skip remediate: PR_REMEDIATE=0.
+# PUSH_ONLY=1: still run L4 + push (make pr checkers already ran); do not open a PR.
 # Do not run a separate gate-only pass before `make pr`.
 set -euo pipefail
 
@@ -110,6 +111,11 @@ fi
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
 git push -u origin HEAD
 
+if [[ "${PUSH_ONLY:-0}" == "1" ]]; then
+  echo "PUSH_ONLY=1 — pushed '$branch'; skipped GitHub PR open"
+  exit 0
+fi
+
 # `gh pr view/create/repo view --json` go through GitHub's GraphQL endpoint,
 # which some environments do not serve (restricted proxies, REST-scoped tokens).
 # `make pr` is the ONLY sanctioned publish path, so it must not depend on an
@@ -208,7 +214,7 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
         git log "${PR_BASE}..HEAD" --format='- %s' --reverse
         echo ""
         echo "## Test plan"
-        echo "- [x] \`make pr\` (local changed-files gate then open) PASS"
+        echo "- [x] \`make pr-check\` (local changed-files gate) PASS before open"
         echo "- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)"
         echo "- [ ] CI green; agent PR remediation subscribed after open"
       }
@@ -222,7 +228,7 @@ ${campaign_body:+$campaign_body
 $(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
 
 ## Test plan
-- [x] \`make pr\` (local changed-files gate then open) PASS
+- [x] \`make pr-check\` (local changed-files gate) PASS before open
 - [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)
 - [ ] CI green; agent PR remediation subscribed after open
 EOF

@@ -93,6 +93,6 @@ may_modify / must_not_modify / preserved_contracts / validation_commands
 ## Gate rules
 
 - Every plan must validate via `scripts/validate_plan_document.py`.
-- Code-editing plans must include `make pr` in final_validation.
+- Code-editing plans must include `make pr-check` in final_validation.
 - Never weaken scanners to obtain PASS.
 - Do not push or open a PR from plan mode.
