@@ -1,0 +1,27 @@
+schema: program-execution-blueprint.current-state-delta.v2
+schema_version: 2.0.0
+snapshot_at: '2026-08-17T12:14:43+00:00'
+freshness_policy:
+  maximum_age: admission_window
+  stale_result: BLOCKED
+sources:
+- source_id: SRC-001
+  evidence_id: EVID-001
+  revision: UNKNOWN
+  freshness: collect_at_admission
+- source_id: SRC-002
+  evidence_id: EVID-002
+  revision: UNKNOWN
+  freshness: collect_at_admission
+deltas:
+- id: DELTA-001
+  target_id: TARGET-001
+  expected_state: Native Blueprint compiled
+  observed_state: Campaign source registered
+  classification: UNKNOWN
+  impact: Admission remains blocking
+  required_action: Collect planned evidence
+  evidence_ids:
+  - EVID-001
+  - EVID-002
+next_blocking_action: Collect admission evidence.

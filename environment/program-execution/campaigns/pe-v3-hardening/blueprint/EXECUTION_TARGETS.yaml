@@ -1,0 +1,15 @@
+schema: program-execution-blueprint.execution-targets.v2
+schema_version: 2.0.0
+targets:
+- id: TARGET-001
+  name: Cursor-Governance PE v3 Core
+  kind: git_repository
+  authority_owner: Quantum-L9/Cursor-Governance
+  execution_mode: repo_local
+  adapter: git
+  repository_id: Quantum-L9/Cursor-Governance
+  source_of_truth: environment/program-execution
+  environments:
+  - local
+  mutability: reversible
+  expected_revision: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d

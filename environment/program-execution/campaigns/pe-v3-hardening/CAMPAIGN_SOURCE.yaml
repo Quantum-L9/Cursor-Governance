@@ -1,0 +1,476 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+
+metadata:
+  campaign_id: pe-v3-hardening
+  title: Program Execution v3 Hardening - Immutable Authority Chain
+  version: 1.0.0
+  created_at: '2026-08-17T11:00:00Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: environment/program-execution/campaigns/pe-v3-hardening/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/pe-v3-hardening
+  worktree_root: $HOME/.l9/program-worktrees/pe-v3-hardening
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  required_host_surfaces:
+    - environment/program-execution/core
+    - environment/program-execution/adapters
+    - environment/program-execution/conformance
+    - environment/program-execution/registry
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - instantiate_native_blueprint_and_controller
+    - compile_source_into_complete_native_blueprint
+    - validate_blueprint_in_template_mode
+    - accept_blueprint_after_authority_and_placeholder_resolution
+    - validate_blueprint_in_instantiated_mode
+    - validate_controller_in_instantiated_mode
+    - block_on_unresolved_target_binding_unknown
+    - export_admission_handoff_receipt
+    - obtain_program_owner_terminal_verdict
+  authority_boundaries:
+    campaign_source_owns: operator_intent_and_campaign_semantics
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_runtime_state_and_gate_results
+    adapters_own: host_translation_and_execution_receipts
+    activation_prompt_owns: launch_mechanics_only
+
+operator_directive:
+  objective: >-
+    Reconstruct Program Execution around immutable authority chain: operator intent
+    through semantic compilation, accepted program, exact repository generation,
+    immutable candidate, independent verification, scoped evidence, authorized promotion,
+    evidence-computed gates, verified rollback, advisory handoff, to authenticated owner verdict.
+  mode: controlled_autonomous_until_material_boundary
+  auto_continue:
+    - read_only_inspection
+    - blueprint_materialization
+    - reversible_repo_local_work
+    - local_validation
+    - independent_verification
+    - read_only_remote_observation
+  pause_only_for:
+    - missing_or_conflicting_semantic_authority
+    - material_scope_expansion
+    - unresolved_blocking_unknown
+    - failed_blocking_gate
+    - security_or_secret_boundary
+    - exact_remote_mutation_approval
+
+program:
+  id: pe-v3-hardening
+  name: Program Execution v3 Hardening
+  version: 3.0.0
+  owner: igor_beylin
+  definition_status: accepted
+  snapshot_at: '2026-08-17'
+  target_repository_id: Quantum-L9/Cursor-Governance
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  objective: >-
+    Build v3 where no authority-bearing transition depends on a semantic fact lacking
+    one immutable identity, one canonical meaning, one authorized principal, and
+    one executable proof path. Deliver baseline characterization and counterexample registry.
+  problem_statement: >-
+    Current v2 PE allows semantic drift (compiler drops retry_policy), mutable identities
+    (dirty candidate becomes HEAD), cross-claim evidence substitution, actor-string authority,
+    and caller-supplied gate PASS. Baseline characterization (S0) freezes v2 at 0db3fed,
+    creates executable counterexample registry, and proves exact current behavior before v3 rebuild.
+  target_state: >-
+    Stage S0 complete: baseline frozen at 0db3fed, orchestrator detached, counterexample registry
+    with executable xfail tests for every v2 gap, baseline integrity report with digest manifest,
+    all gates PASS, ready for S1 semantic conservation work.
+  scope:
+    include:
+      - environment/program-execution/core
+      - environment/program-execution/scripts
+      - environment/program-execution/conformance
+      - environment/program-execution/tests
+      - baseline freeze at 0db3fed
+      - counterexample registry
+      - baseline integrity manifest
+    exclude:
+      - environment/program-execution/campaigns
+      - ops/autonomy
+      - .github/workflows
+      - remote repository mutation
+      - merge
+      - publish
+      - deploy
+  authority_order:
+    - applicable_safety_legal_security_requirements
+    - cursor_governance_canonical_law
+    - program_execution_interface_contract
+    - latest_explicit_operator_instruction
+    - accepted_program_decision
+    - approved_task_card
+    - repository_local_governance
+    - implementation
+    - documentation
+  operating_rules:
+    - baseline_is_immutable_at_0db3fed
+    - orchestrator_frozen_separately
+    - counterexamples_reproduce_as_xfail_tests
+    - no_implementation_behavior_changed
+    - all_pe_files_digest_manifested
+    - gate_001_required_for_s1
+  terminal_verdicts:
+    - CONVERGED
+    - CONVERGED_WITH_NON_BLOCKING_RISKS
+    - NOT_CONVERGED
+    - INCONCLUSIVE
+
+targets:
+  - id: TARGET-001
+    name: Cursor-Governance PE v3 Core
+    kind: git_repository
+    authority_owner: Quantum-L9/Cursor-Governance
+    execution_mode: repo_local
+    adapter: git
+    repository_id: Quantum-L9/Cursor-Governance
+    source_of_truth: environment/program-execution
+    environments:
+      - local
+    mutability: reversible
+    expected_revision: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+
+authorities:
+  - id: AUTH-001
+    responsibility: program_terminal_verdict
+    owner: igor_beylin
+    scope:
+      - whole_program
+  - id: AUTH-002
+    responsibility: stage_zero_baseline_characterization
+    owner: igor_beylin
+    scope:
+      - baseline_freeze
+      - counterexample_registry
+  - id: AUTH-003
+    responsibility: controller_verification
+    owner: controller
+    scope:
+      - candidate_verification
+      - gate_evaluation
+
+decisions: []
+unknowns: []
+
+gates:
+  - id: GATE-001
+    name: Baseline characterized
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Baseline commit frozen at 0db3fed
+      - Orchestrator checkout detached immutably
+      - Counterexample registry complete with executable xfail tests
+      - Baseline manifest covers all PE surfaces
+    failure_effect: BLOCKED
+    required_evidence_ids:
+      - EVID-001
+      - EVID-002
+  - id: GATE-002
+    name: Program closeout
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-001
+    pass_criteria:
+      - All tasks COMPLETED
+      - All gates PASS
+      - Baseline characterized
+    failure_effect: NOT_CONVERGED
+    required_evidence_ids:
+      - EVID-001
+      - EVID-002
+
+evidence_requirements:
+  - id: EVID-001
+    claim: Baseline commit frozen at 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+    source_type: repository_inspection
+    source_location: Quantum-L9/Cursor-Governance
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports:
+      - GATE-001
+    contradicts: []
+  - id: EVID-002
+    claim: Counterexample registry complete with executable xfail tests
+    source_type: test_result
+    source_location: environment/program-execution/conformance
+    collection_method: run_counterexample_tests
+    freshness: collect_before_gate
+    producer: controller
+    supports:
+      - GATE-001
+      - GATE-002
+    contradicts: []
+
+workstreams:
+  - id: WS-01
+    name: baseline_characterization
+    objective: Freeze v2 baseline and characterize current PE behavior through executable counterexamples
+    owner: igor_beylin
+    target_id: TARGET-001
+
+dependency_edges:
+  - from: TASK-001
+    to: TASK-002
+  - from: TASK-002
+    to: TASK-003
+
+waves:
+  - id: W0
+    name: baseline_freeze
+    task_ids:
+      - TASK-001
+    predecessor_wave_ids: []
+    exit_gate_ids:
+      - GATE-001
+  - id: W1
+    name: counterexample_registry
+    task_ids:
+      - TASK-002
+    predecessor_wave_ids:
+      - W0
+    exit_gate_ids: []
+  - id: W2
+    name: baseline_integrity_report
+    task_ids:
+      - TASK-003
+    predecessor_wave_ids:
+      - W1
+    exit_gate_ids:
+      - GATE-002
+
+tasks:
+  - id: TASK-001
+    title: Freeze baseline commit and orchestrator
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Freeze baseline commit 0db3fed and orchestrator checkout. Create baseline manifest
+      covering environment/program-execution/core, scripts, conformance, campaigns.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    actions:
+      - freeze_baseline_commit_0db3fed
+      - detach_orchestrator_at_baseline
+      - create_baseline_manifest
+      - verify_no_implementation_behavior_changed
+    acceptance:
+      - id: AC-001
+        statement: >-
+          Baseline commit frozen at 0db3fedf697b263a3b8bd9ea8ce40113f999b67d.
+        required_evidence_types:
+          - inspection
+      - id: AC-002
+        statement: >-
+          Orchestrator detached immutably at baseline.
+        required_evidence_types:
+          - inspection
+      - id: AC-003
+        statement: >-
+          Baseline manifest complete for all PE surfaces.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - baseline_commit_mismatch
+      - orchestrator_not_detached
+      - incomplete_manifest
+    rollback:
+      strategy: discard_unaccepted_artifacts
+      trigger: admission_failure
+      validation: no_implementation_mutation
+    risk:
+      tier: T0
+      reversibility: fully_reversible
+      blast_radius: program_definition
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-001
+
+  - id: TASK-002
+    title: Create counterexample registry with xfail tests
+    definition_status: blocked
+    workstream_id: WS-01
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Create machine-readable counterexample registry. Each counterexample gets an
+      executable test marked xfail (strict) for known v2 gaps. Exit S0 when registry
+      reproduces every vulnerability.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-001
+    actions:
+      - create_counterexample_registry_schema
+      - implement_compiler_semantic_loss_tests
+      - implement_candidate_identity_tests
+      - implement_evidence_admissibility_tests
+      - implement_authority_binding_tests
+      - mark_all_as_xfail_strict
+    acceptance:
+      - id: AC-004
+        statement: >-
+          All counterexamples have IDs (CE-COMPILER-001, CE-CANDIDATE-001, etc.).
+        required_evidence_types:
+          - inspection
+      - id: AC-005
+        statement: >-
+          All counterexamples reproduce as xfail tests.
+        required_evidence_types:
+          - test_result
+      - id: AC-006
+        statement: >-
+          Registry is machine-readable YAML or JSON.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - counterexample_missing_id
+      - test_not_xfail
+      - registry_not_machine_readable
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: conformance_tests
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-001
+
+  - id: TASK-003
+    title: Baseline integrity and evidence report
+    definition_status: blocked
+    workstream_id: WS-01
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Produce baseline integrity report with digest manifest for all PE surfaces.
+      Verify no implementation behavior changed during baseline freeze.
+    authority_basis_ids:
+      - AUTH-002
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-001
+      - EVID-002
+    actions:
+      - digest_manifest_all_pe_files
+      - verify_baseline_tests_unchanged
+      - write_integrity_report
+      - validate_gate_001
+    acceptance:
+      - id: AC-007
+        statement: >-
+          All PE files digest-manifested.
+        required_evidence_types:
+          - inspection
+      - id: AC-008
+        statement: >-
+          No implementation behavior changed.
+        required_evidence_types:
+          - test_result
+      - id: AC-009
+        statement: >-
+          GATE-001 passes.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - missing_file_in_manifest
+      - behavior_changed
+      - gate_001_fail
+    rollback:
+      strategy: restore_to_baseline
+      trigger: integrity_failure
+      validation: baseline_integrity_valid
+    risk:
+      tier: T0
+      reversibility: fully_reversible
+      blast_radius: program_artifacts
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: true
+      pull_request: true
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-002
+
+risks:
+  - id: RISK-001
+    statement: Bootstrap paradox - repairing PE using PE
+    owner: igor_beylin
+    likelihood: possible
+    impact: material
+    mitigations:
+      - Freeze v2 orchestrator at 0db3fed
+      - Target plane becomes v3
+      - Separate activation campaign
+    acceptance_status: accepted
+  - id: RISK-002
+    statement: Counterexample tests may not cover all v2 gaps
+    owner: igor_beylin
+    likelihood: possible
+    impact: low
+    mitigations:
+      - Stage S0 establishes reproducible baseline
+      - Later stages add coverage as gaps discovered
+    acceptance_status: accepted
