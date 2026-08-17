@@ -53,7 +53,7 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 
 1. **Doctrine check** — load [references/planning-doctrine.md](references/planning-doctrine.md). Do not omit mandatory gates for efficiency.
 2. **Classify depth** — run `python3 scripts/route_plan.py` (or apply [references/plan-router.yaml](references/plan-router.yaml)). Classifier may only **escalate** obligations; baseline gates always apply.
-3. **Pre-Validate** — bind target; inventory baseline; for code in scope on governed workspaces name `make pr-check` (**no commit, no push**). KERNEL pack / PE overlay landings: new branch from `origin/main` without asking (`AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`; `rules/46-kernel-pack-new-branch.mdc`).
+3. **Pre-Validate** — bind target; inventory baseline; for code in scope on governed workspaces name `make pr` as the sole shipping command (run it after implementation, not as a preliminary gate-only pass). KERNEL pack / PE overlay landings: new branch from `origin/main` without asking (`AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`; `rules/46-kernel-pack-new-branch.mdc`).
 4. **Gather** — objective, scope in/out, falsifiable success criteria. Ambiguity → STOP and ask. Current-vs-new-branch for KERNEL/pack landings is **not** ambiguity.
 5. **Decompose** — TODOs with files (or blocker), deps, leverage ranks, GMP-lockable fields when known; map todos to PE Task Card / wave ids.
 6. **Stress-test + leverage** — mandatory; see [references/plan-stress-test.md](references/plan-stress-test.md) and [references/first-order-leverage.md](references/first-order-leverage.md).

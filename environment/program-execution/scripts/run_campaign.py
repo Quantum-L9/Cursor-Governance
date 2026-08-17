@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -31,6 +32,7 @@ except ImportError:  # pragma: no cover
 PE_ROOT = Path(__file__).resolve().parents[1]
 GOV_ROOT = PE_ROOT.parents[1]
 ACTIVATE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+NUGGET_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/extract_nuggets.py"
 AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
 BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
@@ -56,6 +58,7 @@ STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 FIRST_TASK_ID = "TASK-001"
+VALIDATION_TIMEOUT_S = 300
 GIT_TIMEOUT_S = 45
 PEC_TIMEOUT_S = 30
 CLONE_TIMEOUT_S = 90
@@ -89,6 +92,7 @@ class Hooks:
     git: Callable[..., str] | None = None
     context7_stack: Callable[[dict[str, Any], Path], dict[str, Any]] | None = None
     write_task_output: Callable[[Path, str, str], str] | None = None
+    plan_window: Callable[[dict[str, Any], Path, Path], dict[str, Any]] | None = None
 
 
 @dataclass
@@ -365,6 +369,58 @@ def default_compile_activation(intent: Path, repo_root: Path) -> dict[str, Any]:
     return module.compile_activation(intent, repo_root)
 
 
+def default_plan_window(
+    seed: dict[str, Any], primed_dir: Path, stack_proof_path: Path
+) -> dict[str, Any]:
+    loader = importlib.util.spec_from_file_location("extract_nuggets", NUGGET_SCRIPT)
+    if loader is None or loader.loader is None:
+        raise CampaignError(f"cannot load {NUGGET_SCRIPT}")
+    module = importlib.util.module_from_spec(loader)
+    loader.loader.exec_module(module)
+    return module.project_plan_window(seed, primed_dir, stack_proof_path)
+
+
+def dispatch_kernel_change(verification: dict[str, Any]) -> dict[str, Any]:
+    kernel = str(verification.get("kernel_verdict") or "").strip()
+    gates = verification.get("gates") or {}
+    failed = [name for name, value in gates.items() if value == "FAIL"]
+    if kernel == "INCOMPLETE":
+        return {
+            "action": "skip_change",
+            "reason": "INCOMPLETE does not enter CHANGE",
+            "diagnosed": False,
+        }
+    if kernel != "FAIL":
+        return {"action": "none", "diagnosed": False}
+    if not failed:
+        return {
+            "action": "refuse",
+            "reason": "Diagnose First: refuse mutate-before-diagnosis",
+            "diagnosed": False,
+        }
+    return {
+        "action": "change",
+        "reason": "Diagnose First",
+        "diagnosed": True,
+        "failed_gates": failed,
+        "kernel_profile": "CHANGE",
+    }
+
+
+def apply_fail_change(
+    verification: dict[str, Any],
+    rewrite: Callable[[], Any],
+    reverify: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    decision = dispatch_kernel_change(verification)
+    if decision["action"] != "change":
+        return decision
+    rewrite()
+    verified = reverify()
+    decision["reverify"] = verified
+    return decision
+
+
 def default_context7_stack(seed: dict[str, Any], primed_dir: Path) -> dict[str, Any]:
     # Live path never honors a skip env. Tests inject Hooks.context7_stack.
     module = _load_script("context7_stack_proof", PE_ROOT / "scripts/context7_stack_proof.py")
@@ -472,6 +528,87 @@ def is_git_repo(path: Path) -> bool:
     return (path / ".git").exists() or (path / ".git").is_file()
 
 
+def is_linked_worktree(path: Path) -> bool:
+    return (path / ".git").is_file()
+
+
+def is_shallow_repo(path: Path) -> bool:
+    result = run_cmd(
+        ["git", "-C", str(path), "rev-parse", "--is-shallow-repository"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    return result.returncode == 0 and (result.stdout or "").strip() == "true"
+
+
+def may_clone_local(donor: Path) -> bool:
+    """`clone --local` from a linked worktree or a shallow repo yields a hollow store."""
+    return is_git_repo(donor) and not is_linked_worktree(donor) and not is_shallow_repo(donor)
+
+
+def history_walkable(path: Path) -> bool:
+    """True when HEAD exists and every parent it records is present as an object.
+
+    A genuine root commit records no parent and is walkable. A clone taken from
+    a worktree of a shallow repo records a parent SHA whose object it does not
+    have, which is what makes the pec verify base_sha gate exit 128.
+    """
+    head = run_cmd(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    sha = (head.stdout or "").strip()
+    if head.returncode != 0 or not sha:
+        return False
+    shown = run_cmd(
+        ["git", "-C", str(path), "cat-file", "-p", sha],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if shown.returncode != 0:
+        return False
+    parents = [
+        line.split()[1] for line in (shown.stdout or "").splitlines() if line.startswith("parent ")
+    ]
+    for parent in parents:
+        typed = run_cmd(
+            ["git", "-C", str(path), "cat-file", "-t", parent],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if typed.returncode != 0 or (typed.stdout or "").strip() != "commit":
+            return False
+    return True
+
+
+def ensure_target_history(dest: Path, repository_id: str) -> None:
+    """Fail closed unless the target can walk its own history before pec verify."""
+    dest = dest.resolve()
+    if history_walkable(dest) and not is_shallow_repo(dest):
+        return
+    origin = f"https://github.com/{repository_id}.git"
+    run_cmd(
+        ["git", "-C", str(dest), "remote", "set-url", "origin", origin],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if is_shallow_repo(dest):
+        run_cmd(
+            ["git", "-C", str(dest), "fetch", "--unshallow", "origin"],
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
+        )
+    if not history_walkable(dest):
+        run_cmd(
+            ["git", "-C", str(dest), "fetch", "origin", "--deepen=128"],
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
+        )
+    if not history_walkable(dest):
+        raise CampaignError(f"target checkout {dest} cannot walk its parents; refuse hollow clone")
+
+
 def default_ensure_target_checkout(
     dest: Path, repository_id: str, *, donor: Path | None = None
 ) -> Path:
@@ -481,11 +618,16 @@ def default_ensure_target_checkout(
             raise CampaignError(
                 f"target checkout is dirty: {dest}; make campaign will not attach to a dirty target"
             )
+        ensure_target_history(dest, repository_id)
         return dest
     if dest.exists():
         raise CampaignError(f"target path exists and is not a git checkout: {dest}")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if donor is not None and is_git_repo(donor) and donor_matches_repository(donor, repository_id):
+    if (
+        donor is not None
+        and may_clone_local(donor)
+        and donor_matches_repository(donor, repository_id)
+    ):
         clone = run_cmd(
             ["git", "clone", "--local", str(donor.resolve()), str(dest)],
             timeout=CLONE_TIMEOUT_S,
@@ -503,7 +645,9 @@ def default_ensure_target_checkout(
                 timeout=GIT_TIMEOUT_S,
                 env=git_env(),
             )
-            return dest
+            if history_walkable(dest):
+                return dest
+            shutil.rmtree(dest)
     url = f"https://github.com/{repository_id}.git"
     clone = run_cmd(
         ["git", "clone", url, str(dest)],
@@ -824,6 +968,92 @@ OPERATOR_ACK_NOTE = (
 ACTIVE_NOTE = "launched by make campaign; pec runtime_status=active; " + OPERATOR_ACK_NOTE
 
 
+def yaml_scalar(value: str) -> str:
+    """Quote only when a plain scalar would change meaning."""
+    raw = str(value)
+    if not raw:
+        return '""'
+    if raw.strip() != raw or raw[0] in "'\"[{&*!|>%@`" or ": " in raw or " #" in raw:
+        return json.dumps(raw)
+    if raw.endswith(":") or ":" in raw and not raw.startswith("http"):
+        return json.dumps(raw)
+    return raw
+
+
+def block_bounds(lines: list[str], start: int) -> tuple[int, int]:
+    """Return (child_indent, end) for the block opened by lines[start]."""
+    opener = lines[start]
+    indent = len(opener) - len(opener.lstrip())
+    if opener.lstrip().startswith("- "):
+        indent += 2
+    child_indent = None
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        current = len(line) - len(line.lstrip())
+        if current < indent or (current == indent and line.lstrip().startswith("- ")):
+            end = index
+            break
+        if child_indent is None:
+            child_indent = current
+    return (child_indent if child_indent is not None else indent + 2, end)
+
+
+def set_block_fields(lines: list[str], start: int, updates: dict[str, str]) -> list[str]:
+    """Set key: value inside one YAML block, preserving comments and layout."""
+    child_indent, end = block_bounds(lines, start)
+    pad = " " * child_indent
+    for key, value in updates.items():
+        rendered = f"{pad}{key}: {yaml_scalar(value)}"
+        for index in range(start, end):
+            stripped = lines[index].lstrip("- ").lstrip()
+            if stripped.startswith(f"{key}:"):
+                if index == start:
+                    head = lines[index][: len(lines[index]) - len(lines[index].lstrip())]
+                    lines[index] = f"{head}- {key}: {yaml_scalar(value)}"
+                else:
+                    lines[index] = rendered
+                break
+        else:
+            lines.insert(end, rendered)
+            end += 1
+    return lines
+
+
+def find_entry(lines: list[str], campaign_id: str) -> int | None:
+    """Index of `- id: <campaign_id>` or `<campaign_id>:` in a campaigns block."""
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped in {f"- id: {campaign_id}", f"{campaign_id}:"}:
+            return index
+    return None
+
+
+def patch_yaml_text(path: Path, mutate: Callable[[list[str]], list[str] | None]) -> None:
+    """Rewrite a governance YAML by line, never by load and dump.
+
+    load_yaml then dump_yaml drops every comment in these files, and
+    ops/autonomy/surface_profile.yaml tells its consumers not to fork its
+    prose. Status edits are single scalars, so edit the lines in place.
+    """
+    lines = path.read_text(encoding="utf-8").splitlines()
+    updated = mutate(lines)
+    if updated is None:
+        return
+    path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+
+
+def set_top_scalar(lines: list[str], key: str, value: str) -> None:
+    rendered = f"{key}: {yaml_scalar(value)}"
+    for index, line in enumerate(lines):
+        if line.startswith(f"{key}:"):
+            lines[index] = rendered
+            return
+    lines.insert(0, rendered)
+
+
 def mark_host_campaign_active(
     worktree: Path,
     campaign_id: str,
@@ -834,60 +1064,69 @@ def mark_host_campaign_active(
 ) -> None:
     """Promote every host status surface agents read from planned/dust to active."""
     now = utc_now()
-    path = worktree / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
-    if path.is_file():
-        raw = load_yaml(path) or {}
-        campaigns = list(raw.get("campaigns") or [])
-        found = False
-        for item in campaigns:
-            if isinstance(item, dict) and str(item.get("id")) == campaign_id:
-                if str(item.get("lifecycle") or "") not in {"complete", "cancelled"}:
-                    item["lifecycle"] = "in_progress"
-                    item["started_at"] = item.get("started_at") or now
-                    item["launched_by"] = "make campaign"
-                    item["pec_workspace"] = pec_workspace
-                    item["blueprint"] = blueprint
-                    item["worktree"] = target_worktree
-                    item["notes"] = ACTIVE_NOTE
-                found = True
-        if not found:
-            campaigns.append(
-                {
-                    "id": campaign_id,
-                    "lifecycle": "in_progress",
-                    "started_at": now,
-                    "launched_by": "make campaign",
-                    "pec_workspace": pec_workspace,
-                    "blueprint": blueprint,
-                    "worktree": target_worktree,
-                    "notes": ACTIVE_NOTE,
-                }
-            )
-        raw["schema"] = raw.get("schema") or "l9.program-execution.campaign-status-ledger.v1"
-        raw["updated"] = now
-        raw["campaigns"] = campaigns
-        dump_yaml(path, raw)
+
+    status_path = worktree / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+    if status_path.is_file():
+
+        def patch_status(lines: list[str]) -> list[str]:
+            set_top_scalar(lines, "updated", now)
+            index = find_entry(lines, campaign_id)
+            fields = {
+                "lifecycle": "in_progress",
+                "started_at": now,
+                "launched_by": "make campaign",
+                "pec_workspace": pec_workspace,
+                "blueprint": blueprint,
+                "worktree": target_worktree,
+                "notes": ACTIVE_NOTE,
+            }
+            if index is None:
+                for position, line in enumerate(lines):
+                    if line.startswith("campaigns:"):
+                        _, end = block_bounds(lines, position)
+                        entry = [f"  - id: {campaign_id}"] + [
+                            f"    {key}: {yaml_scalar(value)}" for key, value in fields.items()
+                        ]
+                        lines[end:end] = entry
+                        break
+                return lines
+            _, end = block_bounds(lines, index)
+            for position in range(index, end):
+                if lines[position].strip() in {"lifecycle: complete", "lifecycle: cancelled"}:
+                    return lines
+            fields.pop("started_at")
+            return set_block_fields(lines, index, fields)
+
+        patch_yaml_text(status_path, patch_status)
 
     policy_path = (
         worktree / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
     )
     if policy_path.is_file():
-        policy = load_yaml(policy_path) or {}
-        for item in list(policy.get("campaigns") or []):
-            if isinstance(item, dict) and str(item.get("id")) == campaign_id:
-                item["lifecycle"] = "in_progress"
-                item["launched_by"] = "make campaign"
-        policy["updated"] = now
-        dump_yaml(policy_path, policy)
+
+        def patch_policy(lines: list[str]) -> list[str]:
+            set_top_scalar(lines, "updated", now)
+            index = find_entry(lines, campaign_id)
+            if index is None:
+                return lines
+            return set_block_fields(
+                lines, index, {"lifecycle": "in_progress", "launched_by": "make campaign"}
+            )
+
+        patch_yaml_text(policy_path, patch_policy)
 
     profile_path = worktree / "ops/autonomy/surface_profile.yaml"
     if profile_path.is_file():
-        profile = load_yaml(profile_path) or {}
-        block = ((profile.get("campaign_execution") or {}).get("campaigns") or {}).get(campaign_id)
-        if isinstance(block, dict):
-            block["lifecycle"] = "in_progress"
-            block["launched_by"] = "make campaign"
-            dump_yaml(profile_path, profile)
+
+        def patch_profile(lines: list[str]) -> list[str] | None:
+            index = find_entry(lines, campaign_id)
+            if index is None:
+                return None
+            return set_block_fields(
+                lines, index, {"lifecycle": "in_progress", "launched_by": "make campaign"}
+            )
+
+        patch_yaml_text(profile_path, patch_profile)
 
 
 def annotate_phase0_without_forging_ack(blueprint: Path) -> None:
@@ -1130,29 +1369,128 @@ def all_required_tasks_completed(workspace: Path) -> bool:
     )
 
 
-def task_output_location(task: dict[str, Any]) -> str:
+def task_output_locations(task: dict[str, Any]) -> list[str]:
+    locations: list[str] = []
     for item in (task.get("source") or {}).get("outputs") or []:
         if isinstance(item, dict) and item.get("location"):
             location = str(item["location"]).strip()
-            if location and not location.startswith("receipts/"):
-                return location
-    return f"docs/program-execution/{task['id']}.md"
+            if location and not location.startswith("receipts/") and location not in locations:
+                locations.append(location)
+    if not locations:
+        locations.append(f"docs/program-execution/{task['id']}.md")
+    return locations
 
 
-def write_and_commit_output(worktree: Path, rel: str, title: str) -> str:
-    path = worktree / rel
+def task_output_location(task: dict[str, Any]) -> str:
+    return task_output_locations(task)[0]
+
+
+def is_stub_output(path: Path, title: str) -> bool:
     if not path.is_file():
-        raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
+        return True
     existing = path.read_text(encoding="utf-8")
-    if existing.strip() == f"{Path(rel).stem} complete: {title}" or len(existing.strip()) < 40:
+    return existing.strip() == f"{path.stem} complete: {title}" or len(existing.strip()) < 40
+
+
+def resumable_workspace(workspace: Path) -> bool:
+    """True when $L9_ROOT/programs/<id> is a live pec runtime, not a draft leftover."""
+    launch_path = workspace / "runtime" / "LAUNCH.json"
+    if not launch_path.is_file() or not (workspace / "runtime" / "program-lock.json").is_file():
+        return False
+    try:
+        launch = json.loads(launch_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    return (
+        str(launch.get("runtime_status") or "") == "active"
+        and str(launch.get("host_lifecycle") or "") == "in_progress"
+        and bool(str(launch.get("campaign_id") or "").strip())
+    )
+
+
+def committed_changed_files(worktree: Path, base_sha: str, candidate_sha: str) -> list[str]:
+    """Claim the diff git actually recorded, not the paths the task declared.
+
+    pec verify compares the receipt against `git diff base..candidate`
+    (`changed_files_exact`, `scope`). Claiming every declared writable path is a
+    false claim for a task whose deliverables already existed at the base, and
+    the honest answer for that task is an empty diff.
+    """
+    if base_sha == candidate_sha:
+        return []
+    diff = run_cmd(
+        ["git", "-C", str(worktree), "diff", "--name-only", f"{base_sha}..{candidate_sha}"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if diff.returncode != 0:
+        raise CampaignError(f"cannot read the committed diff: {(diff.stderr or '').strip()}")
+    return [line.strip() for line in diff.stdout.splitlines() if line.strip()]
+
+
+def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[str, Any]]:
+    """Run the contract's validation commands and report what actually happened.
+
+    pec verify re-runs these commands itself and compares them against the
+    attempt receipt (`worker_validation_claim`). Submitting an empty
+    `validation_results` while the contract declares commands is a false claim,
+    so the worker runs them first and records the real exit codes.
+    """
+    results: list[dict[str, Any]] = []
+    for command in commands:
+        completed = subprocess.run(  # noqa: S602 - contract-declared command, same as pec verify
+            ["bash", "-lc", command],
+            cwd=str(worktree),
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=VALIDATION_TIMEOUT_S,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        )
+        tail = ((completed.stdout or "") + (completed.stderr or "")).strip()[-2000:]
+        results.append(
+            {
+                "command": command,
+                "status": "PASS" if completed.returncode == 0 else "FAIL",
+                "exit_code": completed.returncode,
+                "evidence": tail or None,
+            }
+        )
+    return results
+
+
+def write_and_commit_output(
+    worktree: Path, rel: str, title: str, writable: list[str] | None = None
+) -> str:
+    """Commit every declared writable file that holds real work, not one stub."""
+    declared = list(dict.fromkeys([*(writable or []), rel]))
+    to_add = [item for item in declared if item and not is_stub_output(worktree / item, title)]
+    if not to_add:
         raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     added = run_cmd(
-        ["git", "-C", str(worktree), "add", "--", rel],
+        ["git", "-C", str(worktree), "add", "--", *to_add],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
     if added.returncode != 0:
         raise CampaignError(f"git add failed: {(added.stderr or added.stdout).strip()}")
+    staged = run_cmd(
+        ["git", "-C", str(worktree), "diff", "--cached", "--quiet"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if staged.returncode == 0:
+        # Every declared file already holds the work at this base, so there is
+        # nothing to commit. That is not an error: the task's own validation
+        # command decides whether it is done, not the presence of a new commit.
+        head = run_cmd(
+            ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if head.returncode != 0:
+            raise CampaignError("cannot read candidate SHA for an already-satisfied task")
+        return head.stdout.strip()
     commit = run_cmd(
         ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
         timeout=GIT_TIMEOUT_S,
@@ -1281,42 +1619,95 @@ def default_execute(
         if state == "COMPLETED":
             completed.append(task_id)
             continue
-        if state != "LEASED":
-            pec_cmd(
-                workspace,
-                "claim",
-                task_id,
-                "--holder",
-                "make-campaign",
-                "--ttl-minutes",
-                str(TASK_BUDGET_MINUTES),
-            )
-        prepared = pec_cmd(workspace, "prepare", task_id)
-        rendered = pec_cmd(workspace, "render-contract", task_id)
-        pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
-        worktree = Path(str(prepared.get("worktree") or workspace / "worktrees" / task_id))
+        contract_path = workspace / "contracts" / "rendered" / f"{task_id}.json"
+        worktree = workspace / "worktrees" / task_id
+        already_submitted = state == "SUBMITTED"
+        if already_submitted:
+            if not contract_path.is_file():
+                raise CampaignError(f"{task_id} is SUBMITTED without a Rendered Contract")
+            rendered = {"contract": str(contract_path)}
+        else:
+            if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
+                pec_cmd(
+                    workspace,
+                    "claim",
+                    task_id,
+                    "--holder",
+                    "make-campaign",
+                    "--ttl-minutes",
+                    str(TASK_BUDGET_MINUTES),
+                )
+                state = "LEASED"
+            if state == "LEASED":
+                prepared = pec_cmd(workspace, "prepare", task_id)
+                worktree = Path(str(prepared.get("worktree") or worktree))
+            if state in {"LEASED", "PREPARED"} or not contract_path.is_file():
+                rendered = pec_cmd(workspace, "render-contract", task_id)
+            else:
+                rendered = {"contract": str(contract_path)}
+            if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED"}:
+                pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
         writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
-        rel = writable[0] if writable else task_output_location(task)
+        if not writable:
+            writable = task_output_locations(task)
+        rel = writable[0]
+        title = str(task.get("title") or task_id)
         writer = hooks.write_task_output or write_and_commit_output
-        candidate = writer(worktree, rel, str(task.get("title") or task_id))
-        receipt = {
-            "schema": "program-execution-controller.attempt-receipt.v2",
-            "task_id": task_id,
-            "contract_digest": contract["contract_digest"],
-            "program_digest": contract["program_digest"],
-            "base_sha": contract["base_sha"],
-            "candidate_sha": candidate,
-            "changed_files": [rel],
-            "validation_results": [],
-            "produced_evidence": [],
-            "residual_unknowns": [],
-            "claimed_status": "completed",
-        }
-        receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
-        receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-        pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
+
+        def rewrite_output(
+            worktree: Path = worktree,
+            rel: str = rel,
+            title: str = title,
+            writable: list[str] = writable,
+        ) -> str:
+            if hooks.write_task_output is None:
+                return write_and_commit_output(worktree, rel, title, writable=writable)
+            return writer(worktree, rel, title)
+
+        if not already_submitted:
+            candidate = rewrite_output()
+            changed = committed_changed_files(worktree, contract["base_sha"], candidate)
+            declared_commands = [
+                str(command) for command in (contract.get("validation_commands") or []) if command
+            ]
+            validation_results = run_declared_validations(worktree, declared_commands)
+            receipt = {
+                "schema": "program-execution-controller.attempt-receipt.v2",
+                "task_id": task_id,
+                "contract_digest": contract["contract_digest"],
+                "program_digest": contract["program_digest"],
+                "base_sha": contract["base_sha"],
+                "candidate_sha": candidate,
+                "changed_files": changed,
+                "validation_results": validation_results,
+                "produced_evidence": [],
+                "residual_unknowns": [],
+                "claimed_status": "completed",
+            }
+            receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
+            receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+            pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
         verification = pec_cmd(workspace, "verify", task_id)
+        decision = dispatch_kernel_change(verification)
+        if decision["action"] == "skip_change":
+            raise CampaignError(
+                f"pec verify {task_id} INCOMPLETE: skip CHANGE ({decision['reason']})"
+            )
+        if decision["action"] == "refuse":
+            raise CampaignError(f"Diagnose First: {decision['reason']}")
+        if decision["action"] == "change":
+            apply_fail_change(
+                verification,
+                rewrite=rewrite_output,
+                reverify=lambda: pec_cmd(workspace, "verify", task_id),
+            )
+            verification = pec_cmd(workspace, "verify", task_id)
+            if verification.get("kernel_verdict") != "PASS":
+                raise CampaignError(
+                    f"pec verify {task_id} after CHANGE did not PASS: "
+                    f"{verification.get('kernel_verdict') or verification.get('verdict')}"
+                )
         if verification.get("verdict") != "PASSED_LOCAL":
             raise CampaignError(f"pec verify {task_id} did not PASS: {verification.get('verdict')}")
         evidence_id = str(verification["evidence_id"])
@@ -1508,6 +1899,105 @@ def target_head_sha(target_path: Path) -> str:
     return value
 
 
+def resume_live_campaign(
+    *,
+    campaign_id: str,
+    seed: dict[str, Any],
+    requested_until: str,
+    until: str,
+    primary: Path,
+    repo_root: Path | None,
+    l9_home: Path,
+    host_repo: str,
+    hooks: Hooks,
+) -> CampaignReport:
+    """Continue an armed campaign instead of quarantining its live pec workspace.
+
+    Re-running make campaign for an id whose runtime is active used to move
+    $L9_ROOT/programs/<id> aside, stranding the leased worktree and every
+    recorded attempt. An active LAUNCH.json means execute, not re-arm.
+    """
+    pec_workspace = l9_home / "programs" / campaign_id
+    launch = json.loads((pec_workspace / "runtime" / "LAUNCH.json").read_text(encoding="utf-8"))
+    if str(launch.get("campaign_id") or "").strip() != campaign_id:
+        raise CampaignError(
+            f"LAUNCH.json campaign_id {launch.get('campaign_id')!r} is not {campaign_id}"
+        )
+    host = str(launch.get("host_worktree") or launch.get("host_tree") or "")
+    if repo_root is not None:
+        write_root = repo_root.resolve()
+    elif host:
+        write_root = Path(host).resolve()
+    else:
+        raise CampaignError(f"resume {campaign_id}: LAUNCH.json has no host worktree")
+    refuse_write_to_dirty_primary(primary, write_root)
+    target_worktree = str(launch.get("target_worktree") or launch.get("target_tree") or "")
+    report = CampaignReport(
+        campaign_id=campaign_id,
+        until=requested_until,
+        worktree=str(write_root),
+        primary=str(primary),
+        blueprint=str(launch.get("blueprint") or (l9_home / "blueprints" / campaign_id)),
+        pec_workspace=str(pec_workspace),
+        program_blockers=default_program_blockers(campaign_id, armed=True),
+    )
+    log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
+    report.stages_completed.append("resume")
+    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    target_path = Path(target_worktree) if target_worktree else None
+    if target_path is not None and target_path.exists() and is_git_repo(target_path):
+        if is_dirty(target_path):
+            raise CampaignError(
+                f"target checkout is dirty: {target_path}; "
+                "make campaign will not attach to a dirty target"
+            )
+        ensure_target_history(target_path, repository_id)
+    log(f"execute {campaign_id}")
+    if hooks.execute is not None:
+        hooks.execute(pec_workspace, campaign_id)
+    elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+        default_execute(
+            pec_workspace,
+            campaign_id,
+            hooks=hooks,
+            live_prs=should_run(until, "pr") and hooks.make_pr is None,
+        )
+    executed = False
+    if (pec_workspace / "runtime" / "program-lock.json").is_file():
+        executed = all_required_tasks_completed(pec_workspace)
+    report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
+    report.stages_completed.append("execute")
+    if not should_run(until, "pr"):
+        return report
+    if not executed:
+        raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
+    commit_host_emit(write_root, campaign_id)
+    if hooks.make_pr is None:
+        push_integration_branch(write_root, campaign_id)
+    make_pr = hooks.make_pr or default_make_pr
+    pr_result = make_pr(write_root, campaign_id)
+    report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
+    report.host_pr_number = pr_result.get("number")
+    log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
+    report.stages_completed.append("pr")
+    if not should_run(until, "close"):
+        return report
+    if hooks.close is not None:
+        hooks.close(pec_workspace, campaign_id)
+    else:
+        default_close(
+            pec_workspace,
+            campaign_id,
+            write_root=write_root,
+            host_repo=host_repo,
+            hooks=hooks,
+            merge_recorded=requested_until in {"merge", "close"},
+        )
+    report.program_blockers = []
+    report.stages_completed.append("close")
+    return report
+
+
 def run_campaign(
     intent_path: Path,
     *,
@@ -1535,6 +2025,18 @@ def run_campaign(
     seed = load_activate_seed(resolved_intent)
     campaign_id = str(seed["campaign_id"]).strip()
     refuse_hash_campaign_id(campaign_id)
+    if should_run(until, "execute") and resumable_workspace(l9_home / "programs" / campaign_id):
+        return resume_live_campaign(
+            campaign_id=campaign_id,
+            seed=seed,
+            requested_until=requested_until,
+            until=until,
+            primary=primary,
+            repo_root=repo_root,
+            l9_home=l9_home,
+            host_repo=host_repo,
+            hooks=hooks,
+        )
     primed_root = l9_home / "primed"
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")
@@ -1565,8 +2067,21 @@ def run_campaign(
     )
 
     compile_activation = hooks.compile_activation or default_compile_activation
+    plan_fn = hooks.plan_window or default_plan_window
+    log(f"plan-window {campaign_id}")
+    plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+    projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
+    if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
+        if hooks.compile_activation is None:
+            raise CampaignError(
+                f"plan_status {plan_receipt.get('plan_status')!r} is not Ready or "
+                "ConditionallyReady; refuse seal"
+            )
     log(f"emit {campaign_id} into {write_root}")
-    compile_activation(resolved_intent, write_root)
+    compile_activation(
+        projected_intent if projected_intent.is_file() else resolved_intent,
+        write_root,
+    )
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(

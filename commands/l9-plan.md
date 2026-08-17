@@ -42,11 +42,11 @@ Follow skill `l9-plan` (**plan mode default = PE+autonomy workflow**). Required 
 ### Gate commands (governed workspaces)
 
 ```bash
-# Changed-files scanners only — does NOT push or commit
-make pr-check
+# After implementation: gate → open PR. Do not run a separate gate-only pass.
+make pr
 ```
 
-Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
+Make remaps any capitalization of `pr`.
 
 ### Project command
 
