@@ -40,4 +40,28 @@ export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-78643
 
 echo "Claude Code -> ${ANTHROPIC_BASE_URL} (${ANTHROPIC_MODEL})"
 cd "$ROOT"
-exec claude "$@"
+
+# The Cursor plugin launches this wrapper with a minimal PATH that lacks
+# Homebrew/nvm dirs, so resolve the claude binary explicitly.
+CLAUDE_BIN="${CLAUDE_BIN:-}"
+if [[ -z "$CLAUDE_BIN" ]]; then
+  for candidate in \
+    "$(command -v claude 2>/dev/null || true)" \
+    /opt/homebrew/bin/claude \
+    "$HOME"/.nvm/versions/node/*/bin/claude \
+    "$HOME/.local/bin/claude" \
+    /usr/local/bin/claude; do
+    if [[ -n "$candidate" && -x "$candidate" ]]; then
+      CLAUDE_BIN="$candidate"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$CLAUDE_BIN" || ! -x "$CLAUDE_BIN" ]]; then
+  echo "ERROR: claude binary not found or not executable (CLAUDE_BIN='${CLAUDE_BIN:-}'). Install Claude Code or fix CLAUDE_BIN." >&2
+  exit 127
+fi
+
+echo "claude binary: ${CLAUDE_BIN}"
+exec "$CLAUDE_BIN" "$@"
