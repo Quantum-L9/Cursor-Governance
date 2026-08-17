@@ -168,6 +168,34 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("PASS", result.stdout)
 
+    def test_https_remote_slug_resolves_from_url_alone(self) -> None:
+        """Regression: https:// remote URLs must parse owner/name without any
+        gh repo view call (GraphQL can be down — live run exposed this)."""
+        bare, work, env = _init_world()
+        _run(["git", "remote", "set-url", "origin", f"https://github.com/{SLUG}.git"], work, env)
+        _run(["git", "checkout", "-q", "-b", "feat-ours"], work, env)
+        (work / "ours.txt").write_text("x\n", encoding="utf-8")
+        _commit(work, env, "ours")
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={})
+        gate_env = fake.env(env)
+        gate_env["FAKE_SLUG"] = ""  # repo view would yield nothing — URL parse must carry it
+        result = _gate(work, gate_env)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("PASS", result.stdout)
+        self.assertNotIn("cannot resolve owner/repo", result.stdout)
+
+    def test_empty_pr_overlap_env_defaults_to_block(self) -> None:
+        fake = FakeGh(
+            Path(tempfile.mkdtemp(prefix="l9-gh-")),
+            pulls="1\tfeat-theirs\tmain\n",
+            files={"1": "shared.txt\n"},
+        )
+        bare, work, env = self._world_with_their_pr(fake, self._conflict_their)
+        result = _gate(work, fake.env(env), extra_env={"PR_OVERLAP": ""})
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("BLOCK", result.stdout)
+        self.assertNotIn("unknown PR_OVERLAP", result.stdout)
+
     def test_generated_only_overlap_passes(self) -> None:
         bare, work, env = _init_world()
         gen = "ops/generated/skill-registry.json"

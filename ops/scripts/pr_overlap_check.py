@@ -82,13 +82,17 @@ def resolve_repo_slug(repo: Path) -> str | None:
     url = git(repo, "config", "--get", "remote.origin.url").stdout.strip()
     if url:
         clean = url[:-4] if url.endswith(".git") else url
-        after = clean.split("@", 1)[-1]
-        if ":" in after.split("/", 1)[0]:
-            after = after.split(":", 1)[1]  # scp-like: git@host:owner/name
-        else:
-            parts = after.rstrip("/").split("/")
-            if len(parts) >= 3 and "://" in clean:
+        if "://" in clean:
+            parts = clean.split("://", 1)[1].rstrip("/").split("/")
+            if len(parts) >= 3:  # scheme://host/owner/name
                 after = "/".join(parts[-2:])
+            else:
+                after = ""
+        else:
+            # scp-like: git@host:owner/name (check @ before the colon split)
+            after = clean.split("@", 1)[-1]
+            if ":" in after.split("/", 1)[0]:
+                after = after.split(":", 1)[1]
         if after.count("/") == 1 and after and " " not in after:
             return after
     result = gh("repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner")
@@ -193,7 +197,7 @@ def main() -> int:
     parser.add_argument("--base", default="origin/main", help="PR base ref (PR_BASE)")
     args = parser.parse_args()
 
-    mode = os.environ.get("PR_OVERLAP", "block").strip().lower()
+    mode = os.environ.get("PR_OVERLAP", "block").strip().lower() or "block"
     auto_stack = os.environ.get("PR_STACK", "").strip().lower() == "auto"
 
     if mode == "ignore":
