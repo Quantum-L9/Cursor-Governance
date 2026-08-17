@@ -135,6 +135,20 @@ On the final observed head SHA of each open PR, then after the train (or a docum
 - worktree clean
 - status names remaining blockers and the six timing counters
 
+## Generated-artifact merge contract (PR_OVERLAP_GUARDRAIL_V1)
+
+- After any merge that touched generated paths — or whenever
+  `.l9/pr/regen-required.txt` is non-empty (written by the `merge=l9-generated`
+  driver) — run `python3 ops/scripts/sync_generated_artifacts.py --force`,
+  stage, and commit before opening or updating a PR. A merge is not complete
+  while the marker lists paths.
+- Same-agent overlapping work routes into the existing open PR branch (one
+  commit, one PR) instead of opening a sibling PR against main. The pre-open
+  overlap gate (`ops/scripts/pr_overlap_check.py`, run by `make pr`) blocks
+  sibling PRs that would textually conflict; generated paths are exempt
+  because regeneration heals them.
+- See `rules/53-pr-overlap-guardrail.mdc`.
+
 ## Resource Map
 
 ### Diagnose

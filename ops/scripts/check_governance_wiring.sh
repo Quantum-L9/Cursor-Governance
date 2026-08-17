@@ -287,6 +287,26 @@ if [ "$WS_REAL" != "$GC_REAL" ] && [ -f "$WORKSPACE/commands/plan.md" ] && [ -f 
 else
   pass "slash-command drift check skipped (same clone or plan.md absent)"
 fi
+
+# Generated-artifact merge driver: git config is per-clone and untracked, so
+# register idempotently every session (PR_OVERLAP_GUARDRAIL_V1). Attribute
+# presence is expected on governance clones only — consumer repos legitimately
+# have no merge=l9-generated entries.
+echo ""
+echo "=== git merge drivers (generated artifacts) ==="
+if [ ! -x "$SCRIPT_DIR/ensure_git_merge_drivers.sh" ]; then
+  warn "ensure_git_merge_drivers.sh missing — merge.l9-generated not registered (text-merge fallback)"
+elif [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
+  if bash "$SCRIPT_DIR/ensure_git_merge_drivers.sh" "$WORKSPACE" --check-attributes >/dev/null 2>&1; then
+    pass "merge.l9-generated driver registered ($WORKSPACE)"
+  else
+    warn "merge.l9-generated driver registration failed — generated merges fall back to text merge"
+  fi
+elif bash "$SCRIPT_DIR/ensure_git_merge_drivers.sh" "$WORKSPACE" >/dev/null 2>&1; then
+  pass "merge.l9-generated driver registered ($WORKSPACE)"
+else
+  warn "merge.l9-generated driver registration failed — generated merges fall back to text merge"
+fi
 fi
 
 if [ "$CHECK_MACHINE" -eq 1 ]; then

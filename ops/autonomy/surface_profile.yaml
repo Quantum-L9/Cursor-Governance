@@ -92,6 +92,12 @@ pr_stacking:
   single_feature_branch_per_program: true
   exclusive_worktree_lease_per_agent: true
   helper: ops/scripts/stack_pr.py
+  pr_overlap:
+    mode_default: block # PR_OVERLAP env: block | warn | ignore
+    exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
+    probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
+    auto_stack_env: PR_STACK # opt-in auto: stack on the open PR head (never main)
+    gate: ops/scripts/pr_overlap_check.py
   phases:
     executing: deny_remote
     kernels_recorded: deny_remote

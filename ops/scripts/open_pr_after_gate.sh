@@ -108,6 +108,28 @@ if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
   fi
 fi
 
+# PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1) — fail-closed pre-push check
+# against already-open PRs. Absent on older governance tips (consumer repos):
+# skip silently. gh/network loss fails open with a WARN inside the gate; a
+# detected non-generated textual conflict blocks. PR_STACK=auto re-resolves
+# the base to the overlapping open PR's head (never main).
+_OVERLAP_GATE="$GOV_ROOT/ops/scripts/pr_overlap_check.py"
+if [[ -f "$_OVERLAP_GATE" ]]; then
+  echo "--- PR overlap gate (PR_OVERLAP=${PR_OVERLAP:-block}) ---"
+  if ! _overlap_out="$(python3 "$_OVERLAP_GATE" --workspace "$WS" --base "$PR_BASE" 2>&1)"; then
+    printf '%s\n' "$_overlap_out"
+    echo "FAIL: PR overlap gate blocked push (PR_OVERLAP=${PR_OVERLAP:-block})"
+    exit 1
+  fi
+  printf '%s\n' "$_overlap_out"
+  _stack_base="$(printf '%s\n' "$_overlap_out" | sed -n 's/^STACK_BASE=//p' | tail -1)"
+  if [[ -n "$_stack_base" ]]; then
+    PR_BASE="origin/$_stack_base"
+    BASE_REF="$_stack_base"
+    echo "NOTE: stacked base re-resolved to open PR head (PR_STACK=auto): $PR_BASE"
+  fi
+fi
+
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
 git push -u origin HEAD
 
