@@ -667,6 +667,46 @@ def cmd_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _conflicts_in_scope(data: list[Any], group_id: str, root: Path | None = None) -> list[Any]:
+    """Keep conflict facts for this group_id; drop other-group or off-tree paths."""
+    workspace = (root or Path.cwd()).resolve()
+    needles = {group_id.lower(), workspace.name.lower()}
+    scoped: list[Any] = []
+    for item in data:
+        if not isinstance(item, dict):
+            scoped.append(item)
+            continue
+        fact_group = str(item.get("group_id") or item.get("groupId") or "").strip()
+        if fact_group and fact_group != group_id:
+            continue
+        paths: list[str] = []
+        for key in ("path", "file", "file_path", "paths"):
+            value = item.get(key)
+            if isinstance(value, str) and value.strip():
+                paths.append(value)
+            elif isinstance(value, list):
+                paths.extend(str(part) for part in value if part)
+        if paths:
+            keep = False
+            for raw in paths:
+                lowered = raw.lower()
+                if any(n in lowered for n in needles):
+                    keep = True
+                    break
+                try:
+                    Path(raw).resolve().relative_to(workspace)
+                    keep = True
+                    break
+                except ValueError:
+                    if not raw.startswith("/"):
+                        keep = True
+                        break
+            if not keep:
+                continue
+        scoped.append(item)
+    return scoped
+
+
 def _fresh_conflicts(data: list[Any], now: datetime | None = None) -> list[Any]:
     """Drop conflict edges whose expired_at / invalid_at timestamps are past.
 
@@ -707,6 +747,7 @@ def cmd_conflicts(_args: argparse.Namespace) -> int:
     data = _search_group("conflicts_with", group_id, limit=20)
     if not getattr(_args, "include_expired", False):
         data = _fresh_conflicts(data)
+    data = _conflicts_in_scope(data, group_id)
     print(json.dumps({"group_id": group_id, "conflicts": data}, indent=2))
     return 0
 

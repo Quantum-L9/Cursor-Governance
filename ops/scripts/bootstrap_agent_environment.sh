@@ -21,8 +21,11 @@
 # vendor, it belongs in that adapter. If you are about to add something to an
 # adapter that every agent would need, it belongs HERE.
 #
-# Contract: FAIL-OPEN. A degraded component is reported and counted, never
-# fatal — a session must still start. Exit is 0 unless arguments are invalid.
+# Contract: FAIL-OPEN for optional components. Locked-interpreter imports
+# (pydantic / yaml) are FAIL-CLOSED — a missing .venv must not silently
+# degrade into system python3. Other degraded components are reported and
+# counted; exit is 0 unless arguments are invalid or the locked venv cannot
+# import the gate modules.
 #
 # Usage:
 #   bootstrap_agent_environment.sh --surface <id> [--governance <dir>]
@@ -348,9 +351,13 @@ fi
 
 # --- 6) Readiness preflight (report only; never blocks) ---------------------
 log "Readiness preflight"
-"$GOV_PY" -c 'import pydantic, yaml, jsonschema' 2>/dev/null \
+if ! "$GOV_PY" -c 'import pydantic, yaml' 2>/dev/null; then
+  warn "locked .venv cannot import pydantic/yaml — fail-closed (do not fall through to system python3)"
+  exit 1
+fi
+"$GOV_PY" -c 'import jsonschema' 2>/dev/null \
   && say "gates importable: pydantic + pyyaml + jsonschema (locked env)" \
-  || { warn "gate imports FAILING — phase-lock and governed writes will be denied"
+  || { warn "jsonschema import FAILING — phase-lock and governed writes will be denied"
        DEGRADED=$((DEGRADED + 1)); }
 
 if [ "${USER_ID:-}" = "cursor_agent" ] && [ "$SURFACE" != "cursor" ]; then

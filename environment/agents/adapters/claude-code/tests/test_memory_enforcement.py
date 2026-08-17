@@ -234,6 +234,15 @@ class WorkspaceRootTests(unittest.TestCase):
         self.assertEqual(st.workspace_root(), (self.root / "cursor-explicit").resolve())
         os.environ.pop("CURSOR_PROJECT_DIR", None)
 
+    def test_outermost_l9_memory_when_subrepo_also_has_state(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+        nested_state = self.subdir / ".l9" / "memory"
+        nested_state.mkdir(parents=True)
+        os.chdir(self.subdir)
+        # Both workspace and subrepo have .l9/memory — one state root (workspace).
+        self.assertEqual(st.workspace_root(), self.root)
+
     def test_falls_back_to_cwd_when_no_l9_memory_ancestor(self) -> None:
         os.environ.pop("CLAUDE_PROJECT_DIR", None)
         bare = Path(tempfile.mkdtemp()).resolve()

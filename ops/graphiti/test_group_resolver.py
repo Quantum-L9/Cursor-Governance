@@ -135,6 +135,16 @@ def test_path_hint_exact_segment_match_succeeds():
     assert result == {"group_id": "ib-odoo-19", "method": "registry", "readonly": False}
 
 
+def test_child_git_repo_does_not_collapse_to_workspace(tmp_path: Path):
+    workspace = tmp_path / "home-user"
+    child = workspace / "Cursor-Governance"
+    child.mkdir(parents=True)
+    (child / ".git").mkdir()
+    result = group_resolver.resolve_group_id(workspace)
+    assert result["group_id"] == "cursor-governance"
+    assert result["readonly"] is False
+
+
 def test_no_match_falls_back_readonly_workspace():
     result = group_resolver.resolve_group_id(Path("/tmp/unrelated"))
     assert result["group_id"] == "igor-workspace"
