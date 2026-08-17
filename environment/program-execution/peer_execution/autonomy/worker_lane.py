@@ -77,7 +77,26 @@ class GitWorktreeLane:
                 text=True,
                 env=env,
             )
+        self._wire_consumer_links()
         return self.path
+
+    def _wire_consumer_links(self) -> None:
+        """Always write the three consumer links. CI has no ~/.cursor-governance,
+        so ensure_workspace_wired.sh no-ops; dangling symlinks still satisfy make pr.
+        """
+        gc = Path.home() / ".cursor-governance"
+        plans = Path.home() / ".cursor" / "plans"
+        commands = self.path / ".cursor-commands"
+        if not commands.exists() and not commands.is_symlink():
+            commands.symlink_to(gc)
+        gov = self.path / ".cursor" / "governance"
+        gov.mkdir(parents=True, exist_ok=True)
+        law_link = gov / "CANONICAL_LAW.md"
+        if not law_link.exists() and not law_link.is_symlink():
+            law_link.symlink_to(gc / "CANONICAL_LAW.md")
+        plans_link = self.path / ".cursor" / "plans"
+        if not plans_link.exists() and not plans_link.is_symlink():
+            plans_link.symlink_to(plans)
 
     def run(self, argv: Sequence[str], *, timeout: int = 900) -> CommandResult:
         if not self.path.is_dir():
