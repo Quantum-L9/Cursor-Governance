@@ -1,0 +1,105 @@
+# Closes H-07: the governance repo must govern itself.
+name: governance-self-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  governance-self-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pyyaml
+
+      - name: ORG_INVARIANTS.yaml parses
+        run: |
+          python3 - <<'PY'
+          import sys, yaml
+          try:
+              d = yaml.safe_load(open("ORG_INVARIANTS.yaml"))
+          except Exception as e:
+              sys.exit("ORG_INVARIANTS.yaml failed to parse: %s" % e)
+          if not d:
+              sys.exit("ORG_INVARIANTS.yaml is empty")
+          print("ok: parsed, %d top-level key(s)" % len(d))
+          PY
+
+      - name: Governance SSOT files present
+        run: |
+          missing=0
+          for fp in CANONICAL_LAW.md ORG_INVARIANTS.yaml AGENTS.md CODEOWNERS SECURITY.md; do
+            if [ ! -f "$fp" ]; then echo "::error::missing $fp"; missing=1; fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+          echo "ok: governance SSOT present"
+
+      - name: Manifest freshness (YAML is the only authored source)
+        run: |
+          y=rules/RULES-MANIFEST.yaml
+          [ -f "$y" ] || { echo "::error::$y missing"; exit 1; }
+          for gen in rules/RULES-MANIFEST.json rules/RULES-MANIFEST.md; do
+            if [ -f "$gen" ] && [ "$gen" -ot "$y" ]; then
+              echo "::warning::$gen is older than $y - regenerate"
+            fi
+          done
+          echo "ok: manifest source check complete"
+
+      - name: Rules budget gate
+        run: |
+          if [ -f tools/check_rules_standard.py ]; then
+            python3 tools/check_rules_standard.py
+          else
+            echo "::warning::rules gate not installed yet (see rules-normalization-pack)"
+          fi
+
+      - name: Skills standard gate
+        run: |
+          if [ -f tools/check_skills_standard.py ]; then
+            python3 tools/check_skills_standard.py
+          else
+            echo "::warning::skills gate not installed yet (see skills-normalization-pack)"
+          fi
+
+      - name: MCP config allowlist
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          allowed = {"linear", "supabase", "vercel", "context7", "github", "graphiti"}
+          for path in (".mcp.json", ".cursor/mcp.json"):
+              if not os.path.exists(path):
+                  continue
+              try:
+                  servers = json.load(open(path)).get("mcpServers", {})
+              except Exception as e:
+                  sys.exit("%s invalid JSON: %s" % (path, e))
+              unknown = sorted(set(servers) - allowed)
+              if unknown:
+                  sys.exit("%s declares non-allowlisted MCP server(s): %s"
+                           % (path, ", ".join(unknown)))
+              print("ok: %s -> %s" % (path, ", ".join(sorted(servers)) or "none"))
+          PY
+
+      - name: Secrets never in tracked config
+        run: |
+          pat='lin_api_|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}'
+          if git grep -InE "$pat" -- . ':!*.example' ':!*.template' ':!**/*-pack/**'; then
+            echo "::error::credential pattern found in tracked files"
+            exit 1
+          fi
+          echo "ok: no credential patterns"

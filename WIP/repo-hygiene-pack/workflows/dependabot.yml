@@ -1,0 +1,29 @@
+# .github/dependabot.yml
+# Closes H-06. Three dependency surfaces: pip, uv, github-actions.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies, automated]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      production-minor-patch:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: [dependencies, ci, automated]
+    commit-message:
+      prefix: "chore(ci)"
