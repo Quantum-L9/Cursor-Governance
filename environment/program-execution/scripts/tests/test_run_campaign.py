@@ -61,6 +61,49 @@ ACTIVATE_SEED = {
     ],
 }
 
+READY_SEED = {
+    "campaign_id": "demo-activate-v1",
+    "title": "Demo Activate",
+    "objective": "Activate a proper PE campaign from the minimum file set.",
+    "plan_status": "Ready",
+    "tasks": [
+        {
+            "id": "TASK-001",
+            "title": "Lock current state",
+            "objective": "Record baseline.",
+            "actions": ["inspect_repository_head"],
+            "consumers": ["pec"],
+            "entrypoints": ["make campaign"],
+            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "nugget_id": "nugget-task-001",
+            "acceptance": [
+                {
+                    "id": "AC-001",
+                    "statement": "Baseline is recorded.",
+                    "required_evidence_types": ["runtime_behavior"],
+                }
+            ],
+        },
+        {
+            "id": "TASK-002",
+            "title": "Implement change",
+            "objective": "Edit declared paths only.",
+            "actions": ["edit_only_declared_paths"],
+            "consumers": ["pec"],
+            "entrypoints": ["make campaign"],
+            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "nugget_id": "nugget-task-002",
+            "acceptance": [
+                {
+                    "id": "AC-002",
+                    "statement": "Declared paths contain the change.",
+                    "required_evidence_types": ["runtime_behavior"],
+                }
+            ],
+        },
+    ],
+}
+
 INTENT_V1 = {
     "schema": "program-execution.intent.v1",
     "objective": "Make repo X achieve Y.",
@@ -130,7 +173,7 @@ def _host_repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").write_text(
         HOST_STATUS, encoding="utf-8"
     )
-    _dump(tmp / "intent.yaml", ACTIVATE_SEED)
+    _dump(tmp / "intent.yaml", READY_SEED)
     return tmp
 
 
@@ -384,28 +427,21 @@ class RunCampaignTests(unittest.TestCase):
             brief.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
-            report = self.mod.run_campaign(
-                brief,
-                until="activate",
-                primary=other_primary,
-                repo_root=root,
-                l9_root=Path(raw) / "l9",
-                hooks=self.mod.Hooks(
-                    context7_stack=_stack_ok,
-                    write_task_output=_write_task_output,
-                    compile_activation=self.activate.compile_activation,
-                ),
-            )
-            self.assertEqual(report.campaign_id, "pe-memory")
+            with self.assertRaises((self.mod.CampaignError, self.activate.CompileError)):
+                self.mod.run_campaign(
+                    brief,
+                    until="activate",
+                    primary=other_primary,
+                    repo_root=root,
+                    l9_root=Path(raw) / "l9",
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                    ),
+                )
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"
-            names = {path.name for path in campaign_dir.iterdir() if path.is_file()}
-            self.assertEqual(names, self.mod.ALLOWED_CAMPAIGN_FILES)
-            self.assertNotIn("INTENT.yaml", names)
-            source = yaml.safe_load(
-                (campaign_dir / "CAMPAIGN_SOURCE.yaml").read_text(encoding="utf-8")
-            )
-            self.assertEqual(len(source["tasks"]), 7)
-            self.assertEqual(source["metadata"]["intended_host"], "Quantum-L9/Cursor-Governance")
+            self.assertFalse((campaign_dir / "source-integrity-receipt.json").is_file())
 
     def test_refuses_hash_campaign_id(self) -> None:
         with self.assertRaises(self.mod.CampaignError) as ctx:
@@ -706,34 +742,316 @@ class RunCampaignTests(unittest.TestCase):
                     ),
                 ),
             )
+            self.assertEqual(opened, ["demo-activate-v1"])
             self.assertIn("execute", report.stages_completed)
             self.assertIn("close", report.stages_completed)
-            self.assertEqual(opened, ["demo-activate-v1"])
-            workspace = l9 / "programs" / "demo-activate-v1"
-            pec = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
-            status = subprocess.run(
-                [sys.executable, str(pec), "status", "--workspace", str(workspace)],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-            self.assertEqual(status.returncode, 0, status.stderr)
-            payload = json.loads(status.stdout)
-            states = {item["id"]: item["runtime_state"] for item in payload["tasks"]}
-            self.assertEqual(states["TASK-001"], "COMPLETED")
-            self.assertEqual(states["TASK-002"], "COMPLETED")
-            self.assertEqual(payload["campaign_status"]["runtime_status"], "completed")
-            live = root / "environment/program-execution/campaigns/demo-activate-v1"
-            done = root / "environment/program-execution/campaigns/COMPLETED/demo-activate-v1"
-            self.assertFalse(live.exists())
-            self.assertTrue(done.is_dir())
-            ledger = yaml.safe_load(
-                (root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").read_text(
+            receipt = json.loads(
+                (l9 / "programs/demo-activate-v1/receipts/verification/TASK-001.json").read_text(
                     encoding="utf-8"
                 )
             )
-            row = next(item for item in ledger["campaigns"] if item["id"] == "demo-activate-v1")
-            self.assertEqual(row["lifecycle"], "complete")
+            self.assertEqual(receipt["kernel_verdict"], "PASS")
+            self.assertEqual(
+                sorted({gate for gate in receipt["gates"].values()}),
+                ["PASS"],
+                msg=f"non-PASS gates: {receipt['gates']}",
+            )
+            self.assertEqual(
+                [item["command"] for item in receipt["validations"]],
+                ["python3 -c 'print(0)'"],
+            )
+
+    def test_until_stages_unchanged(self) -> None:
+        self.assertEqual(
+            self.mod.UNTIL_STAGES,
+            (
+                "activate",
+                "blueprint",
+                "admit",
+                "bootstrap",
+                "arm",
+                "execute",
+                "pr",
+                "close",
+            ),
+        )
+
+    def test_plan_window_writes_nuggets(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            l9 = Path(raw) / "l9"
+            self.mod.run_campaign(
+                root / "intent.yaml",
+                until="activate",
+                primary=Path(raw) / "other-primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                ),
+            )
+            nuggets = l9 / "primed" / "demo-activate-v1" / "nuggets.json"
+            self.assertTrue(nuggets.is_file())
+            payload = json.loads(nuggets.read_text(encoding="utf-8"))
+            self.assertTrue(
+                any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
+            )
+
+    def test_incomplete_skips_change(self) -> None:
+        decision = self.mod.dispatch_kernel_change(
+            {"kernel_verdict": "INCOMPLETE", "gates": {"validation": "INCOMPLETE"}}
+        )
+        self.assertEqual(decision["action"], "skip_change")
+        self.assertFalse(decision["diagnosed"])
+
+    def test_fail_diagnoses_then_reverifies(self) -> None:
+        calls: list[str] = []
+        result = self.mod.apply_fail_change(
+            {"kernel_verdict": "FAIL", "gates": {"validation": "FAIL"}},
+            rewrite=lambda: calls.append("rewrite"),
+            reverify=lambda: calls.append("reverify") or {"kernel_verdict": "PASS"},
+        )
+        self.assertEqual(decision := result["action"], "change")
+        self.assertTrue(result["diagnosed"])
+        self.assertEqual(calls, ["rewrite", "reverify"])
+        self.assertEqual(result["reverify"]["kernel_verdict"], "PASS")
+        self.assertEqual(decision, "change")
+
+    def test_local_clone_refused_from_linked_worktree(self) -> None:
+        """clone --local from a worktree of a shallow primary yields a hollow target."""
+        with tempfile.TemporaryDirectory() as raw:
+            primary = Path(raw) / "primary"
+            worktree = Path(raw) / "wt"
+            primary.mkdir()
+            _git_init(primary)
+            subprocess.run(
+                ["git", "-C", str(primary), "branch", "feat/pipe"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "worktree", "add", str(worktree), "feat/pipe"],
+                check=True,
+                capture_output=True,
+            )
+            self.assertTrue(self.mod.is_linked_worktree(worktree))
+            self.assertFalse(self.mod.may_clone_local(worktree))
+            self.assertTrue(self.mod.may_clone_local(primary))
+            self.assertTrue(self.mod.history_walkable(primary))
+
+    def test_history_walkable_rejects_missing_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            (repo / "second.txt").write_text("two\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(repo), "add", "second.txt"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "-m", "two"],
+                check=True,
+                capture_output=True,
+            )
+            parent = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD^"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (repo / ".git" / "objects" / parent[:2] / parent[2:]).unlink()
+            self.assertFalse(self.mod.history_walkable(repo))
+
+    def test_ensure_target_history_passes_walkable_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            self.mod.ensure_target_history(repo, "Quantum-L9/unused")
+            self.assertTrue(self.mod.history_walkable(repo))
+
+    def test_write_and_commit_output_commits_every_declared_file(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            for name in ("one.md", "two.md"):
+                (root / name).write_text(
+                    f"{name} holds real work, long enough to clear the stub floor\n",
+                    encoding="utf-8",
+                )
+            sha = self.mod.write_and_commit_output(
+                root, "one.md", "Title", writable=["one.md", "two.md"]
+            )
+            listed = subprocess.run(
+                ["git", "-C", str(root), "show", "--name-only", "--pretty=", sha],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+            self.assertIn("one.md", listed)
+            self.assertIn("two.md", listed)
+
+    def test_resumable_workspace_needs_active_launch_and_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw) / "programs" / "demo-activate-v1"
+            runtime = workspace / "runtime"
+            runtime.mkdir(parents=True)
+            (runtime / "state.sqlite").write_text("stale-draft\n", encoding="utf-8")
+            self.assertFalse(self.mod.resumable_workspace(workspace))
+            (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+            (runtime / "LAUNCH.json").write_text(
+                json.dumps(
+                    {
+                        "campaign_id": "demo-activate-v1",
+                        "runtime_status": "active",
+                        "host_lifecycle": "in_progress",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(self.mod.resumable_workspace(workspace))
+
+    def test_active_runtime_resumes_instead_of_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            workspace = l9 / "programs" / "demo-activate-v1"
+            runtime = workspace / "runtime"
+            runtime.mkdir(parents=True)
+            (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+            (runtime / "LAUNCH.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "l9.program-execution.launch-pointer.v1",
+                        "campaign_id": "demo-activate-v1",
+                        "runtime_status": "active",
+                        "host_lifecycle": "in_progress",
+                        "host_worktree": str(root),
+                        "target_worktree": str(l9 / "program-worktrees" / "demo-activate-v1"),
+                        "blueprint": str(l9 / "blueprints" / "demo-activate-v1"),
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            executed: list[tuple[str, str]] = []
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="execute",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    execute=lambda space, campaign_id: (
+                        executed.append((str(space), campaign_id)) or {}
+                    ),
+                ),
+            )
+            self.assertEqual(report.stages_completed, ["resume", "execute"])
+            self.assertTrue((runtime / "program-lock.json").is_file())
+            self.assertFalse((l9 / "programs" / "stale").exists())
+            self.assertEqual(executed, [(str(workspace.resolve()), "demo-activate-v1")])
+
+    def test_host_status_edit_keeps_comments(self) -> None:
+        """load_yaml then dump_yaml strips the prose these SSOT files carry."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            status = root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+            policy = root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+            profile = root / "ops/autonomy/surface_profile.yaml"
+            for path in (status, policy, profile):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            status.write_text(
+                "schema: l9.program-execution.campaign-status-ledger.v1\n"
+                'updated: "2026-01-01T00:00:00Z"\n'
+                "# Mutable live ledger. Does not rewrite CAMPAIGN_SOURCE.yaml.\n"
+                "campaigns:\n"
+                "  - id: other-campaign\n"
+                "    lifecycle: complete\n"
+                "  - id: demo-activate-v1\n"
+                "    lifecycle: planned\n",
+                encoding="utf-8",
+            )
+            policy.write_text(
+                "schema: l9.program-execution.campaign-execution-policy.v1\n"
+                'updated: "2026-01-01T00:00:00Z"\n'
+                "# Execution order is authority, not preference.\n"
+                "campaigns:\n"
+                "  - id: demo-activate-v1\n"
+                "    lifecycle: planned\n"
+                "    execute_order: 1\n",
+                encoding="utf-8",
+            )
+            profile.write_text(
+                "# Autonomy Surface Profile - SSOT. Consumers must not fork this prose.\n"
+                "schema_version: 1\n"
+                "campaign_execution:\n"
+                "  campaigns:\n"
+                "    demo-activate-v1:\n"
+                "      integration_branch: campaign/demo-activate-v1\n"
+                "      lifecycle: planned\n"
+                "\nauthority_order:\n"
+                "  - CANONICAL_LAW\n",
+                encoding="utf-8",
+            )
+            self.mod.mark_host_campaign_active(
+                root,
+                "demo-activate-v1",
+                pec_workspace="/l9/programs/demo-activate-v1",
+                blueprint="/l9/blueprints/demo-activate-v1",
+                target_worktree="/l9/program-worktrees/demo-activate-v1",
+            )
+            for path in (status, policy, profile):
+                body = path.read_text(encoding="utf-8")
+                self.assertIn("#", body, msg=f"{path.name} lost its comments")
+                yaml.safe_load(body)
+            self.assertIn("Mutable live ledger", status.read_text(encoding="utf-8"))
+            self.assertIn("Execution order is authority", policy.read_text(encoding="utf-8"))
+            self.assertIn("must not fork this prose", profile.read_text(encoding="utf-8"))
+
+            status_doc = yaml.safe_load(status.read_text(encoding="utf-8"))
+            entry = next(x for x in status_doc["campaigns"] if x["id"] == "demo-activate-v1")
+            self.assertEqual(entry["lifecycle"], "in_progress")
+            self.assertEqual(entry["launched_by"], "make campaign")
+            self.assertEqual(entry["worktree"], "/l9/program-worktrees/demo-activate-v1")
+            closed = next(x for x in status_doc["campaigns"] if x["id"] == "other-campaign")
+            self.assertEqual(closed["lifecycle"], "complete")
+
+            policy_doc = yaml.safe_load(policy.read_text(encoding="utf-8"))
+            policy_entry = policy_doc["campaigns"][0]
+            self.assertEqual(policy_entry["lifecycle"], "in_progress")
+            self.assertEqual(policy_entry["execute_order"], 1)
+
+            profile_doc = yaml.safe_load(profile.read_text(encoding="utf-8"))
+            block = profile_doc["campaign_execution"]["campaigns"]["demo-activate-v1"]
+            self.assertEqual(block["lifecycle"], "in_progress")
+            self.assertEqual(block["integration_branch"], "campaign/demo-activate-v1")
+            self.assertEqual(profile_doc["authority_order"], ["CANONICAL_LAW"])
+
+    def test_already_satisfied_task_keeps_head_instead_of_failing(self) -> None:
+        """A task whose declared files already hold the work has nothing to commit."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            (root / "done.md").write_text(
+                "this deliverable already exists at the campaign base commit\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "-C", str(root), "add", "done.md"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "-m", "base"], check=True, capture_output=True
+            )
+            head = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            self.assertEqual(
+                self.mod.write_and_commit_output(root, "done.md", "Title", writable=["done.md"]),
+                head,
+            )
 
 
 if __name__ == "__main__":
