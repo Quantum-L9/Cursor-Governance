@@ -28,15 +28,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Analysis toolchain — exact pins must match requirements.txt and l9-ci-sdk
-# (sdk wins over l9-ci-core on disagreement). See AGENTS.md § toolchain.
+# Analysis toolchain — ruff/mypy/pytest match Core install-consumer-ci pins.
 dev = [
-    "ruff==0.16.2",
+    "ruff==0.16.1",
     "mypy==2.3.0",
     "types-PyYAML==6.0.12.20260724",
     # jsonschema ships no inline types; the Program Execution validators
     # (environment/program-execution/core) type-check against Draft202012Validator.
-    # Pinned to the live l9-ci-sdk requirements-ci.txt stub version (sdk wins).
+    # Pinned to the live l9-ci-sdk requirements-ci.txt stub version.
     "types-jsonschema==4.26.0.20260518",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",

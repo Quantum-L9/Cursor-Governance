@@ -6,8 +6,9 @@
 # before `make pr` / pre-commit / lint. Runtime app deps stay in pyproject.toml.
 #
 # Authority (binding):
-#   When Quantum-L9/l9-ci-sdk and Quantum-L9/l9-ci-core disagree on a version,
-#   l9-ci-sdk WINS. Core pins are used only for tools the SDK does not pin.
+#   ruff / mypy / pytest match Quantum-L9/l9-ci-core
+#   .github/actions/install-consumer-ci/requirements-consumer-ci.txt.
+#   Other analysis tools follow l9-ci-sdk when it pins them.
 #
 # Sources (checked against main):
 #   SDK  requirements-ci.txt / pyproject [project.optional-dependencies].ci
@@ -35,8 +36,8 @@
 #   SONAR_TOKEN         sonar-scanner / SonarLint connected mode only
 # =============================================================================
 
-# --- l9-ci-sdk wins (exact pins from requirements-ci.txt / pyproject ci) ------
-ruff==0.16.2
+# --- Core-owned consumer CI toolchain (exact pins) ---------------------------
+ruff==0.16.1
 mypy==2.3.0
 types-PyYAML==6.0.12.20260724
 types-jsonschema==4.26.0.20260518
