@@ -122,6 +122,7 @@ def test_counters() -> None:
         "repeated_command_count",
     ):
         _need(SKILL, key, "SKILL.md")
+        _need(REFS["run-contract.md"], key, "run-contract.md")
 
 
 def main() -> None:

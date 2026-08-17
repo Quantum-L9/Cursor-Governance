@@ -41,7 +41,7 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 
 3. **Optional policy** — if present, load `config/policies/pr_merge_policy.yaml`, `config/policies/protected_files.yaml`, `.github/pr_review_config.yaml` for size/protected notes. Skip with `Unknown` when absent.
 4. **Optional angles** — when user asks for focused review, load [review-angles.md](review-angles.md).
-5. **Synthesize blockers** — from unresolved reviews (humans + all bots + code-review agents), failing checks + failed-job logs, protected files, merge conflicts. For Converge, this list is the census that the remediation plan must cover 1:1.
+5. **Synthesize blockers** — from unresolved reviews (humans + all bots + code-review agents), failing checks + failed-job logs, protected files, merge conflicts. Also list file-overlap across other open PRs (advisory). For Converge, after `RUN_CONTRACT`, ingest only the PR about to be edited.
 6. **Present inline** — format below. Load `l9-ynp` for yes/no/proceed when useful.
 7. **Merge** — only after explicit user confirm; load [merge-advise.md](merge-advise.md). Diagnose itself does not merge.
 
@@ -63,6 +63,9 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 
 ### Protected Surface (if policy present)
 - `{path}` — {note}
+
+### Overlap (advisory)
+- {shared files / generated outputs with other open PRs, or none}
 
 ### Merge Blockers ({count})
 | # | Blocker | Source | Severity | Resolution |

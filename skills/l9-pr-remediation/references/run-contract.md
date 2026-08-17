@@ -160,4 +160,15 @@ run_contract:
     order: [192]
     first_merge_gate: ready
   blockers: []
+  counters:
+    time_to_first_useful_action: UNKNOWN
+    blocked_command_attempts: 0
+    environment_repair_count: 0
+    ci_run_count: 0
+    merge_conflict_count: 0
+    repeated_command_count: 0
 ```
+
+## Observability
+
+Carry the six counters in `RUN_CONTRACT` and copy them into Final Status. No extra script. Increment `environment_repair_count` only on fingerprint invalidation. A green SHA does not increment `ci_run_count` again.
