@@ -5,7 +5,7 @@ metadata:
   campaign_id: pe-kernel-bind
   title: Bind control-plane kernels onto PE campaign transitions
   version: 1.0.0
-  created_at: '2026-08-17T13:43:05Z'
+  created_at: '2026-08-17T13:44:33Z'
   status: operator_intake
   owner: Igor Beylin
   intended_host: Quantum-L9/Cursor-Governance
@@ -456,7 +456,8 @@ tasks:
   validation:
   - id: VAL-005
     method: command
-    command_or_inspection: python3 -m unittest environment/program-execution/core/program-execution-controller-template/scripts/tests/test_state_transition.py
+    command_or_inspection: cd environment/program-execution/core/program-execution-controller-template/scripts/tests
+      && python3 -m unittest test_state_transition.py
     expected_result: PASS
   actions:
   - add_kernel_verdict_field
@@ -521,7 +522,8 @@ tasks:
   validation:
   - id: VAL-006
     method: command
-    command_or_inspection: python3 -m unittest environment/program-execution/core/program-execution-controller-template/scripts/tests/test_waived_gate.py
+    command_or_inspection: cd environment/program-execution/core/program-execution-controller-template/scripts/tests
+      && python3 -m unittest test_waived_gate.py
     expected_result: PASS
   actions:
   - require_dod_gates_on_complete
@@ -575,6 +577,7 @@ tasks:
   input_evidence_ids: []
   paths:
   - environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py
+  - environment/program-execution/core/program-execution-controller-template/schemas/task-contract.schema.json
   - environment/program-execution/scripts/run_campaign.py
   - environment/program-execution/scripts/tests/test_run_campaign.py
   nugget_id: NUG-007
@@ -644,6 +647,8 @@ tasks:
   - skills/l9-pe-campaign-activate/references/file-set.md
   - skills/l9-pe-campaign-activate/SKILL.md
   - environment/program-execution/MANIFEST.json
+  - environment/program-execution/core/MANIFEST.yaml
+  - environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml
   - environment/program-execution/scripts/tests/test_run_campaign.py
   nugget_id: NUG-008
   kernel_profile: BUILD
