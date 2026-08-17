@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -65,6 +66,17 @@ class GitWorktreeLane:
         result = self._git(args)
         if result.returncode != 0:
             raise RuntimeError(f"git worktree add failed: {result.stderr.strip()}")
+        script = Path(__file__).resolve().parents[4] / "ops/scripts/ensure_workspace_wired.sh"
+        if script.is_file():
+            env = os.environ.copy()
+            env["L9_WIRE_LINKS_ONLY"] = "1"
+            subprocess.run(
+                ["bash", str(script), str(self.path)],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
         return self.path
 
     def run(self, argv: Sequence[str], *, timeout: int = 900) -> CommandResult:

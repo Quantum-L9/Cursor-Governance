@@ -42,9 +42,12 @@ class WorkerLaneTests(unittest.TestCase):
             )
             path = lane.create()
             self.assertTrue(path.is_dir())
+            self.assertTrue((path / ".cursor-commands").is_symlink())
+            self.assertTrue((path / ".cursor/plans").is_symlink())
+            self.assertTrue((path / ".cursor/governance/CANONICAL_LAW.md").is_symlink())
             result = lane.run(["git", "status", "--short"])
             self.assertEqual(result.returncode, 0)
-            lane.remove()
+            lane.remove(force=True)
             self.assertFalse(path.exists())
 
 

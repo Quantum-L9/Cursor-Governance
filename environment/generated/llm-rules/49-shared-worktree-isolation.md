@@ -18,8 +18,10 @@ wiping untracked in-flight fix files.
 ## MUST
 
 1. **One mutating agent per worktree.** Parallel contracts use
-   `git worktree add <path> -b <branch>` (or a separate clone). Do not share the
-   primary Cursor-Governance checkout for concurrent mutation.
+   `bash ops/scripts/worktree_add_wired.sh -b <branch> <path>` (or a separate
+   clone). Raw `git worktree add` is denied: the new folder has no gitignored
+   `.cursor` links. Escape: `L9_WORKTREE_ADD_AUTHORIZED=<reason>`. Do not share
+   the primary Cursor-Governance checkout for concurrent mutation.
 2. **Stage only paths you authored this session** — explicit pathspecs.
 3. **Never** `git diff --name-only | … git add`, `git add -A`, `git add .`,
    or `git add -u` without pathspecs on a shared clone.
