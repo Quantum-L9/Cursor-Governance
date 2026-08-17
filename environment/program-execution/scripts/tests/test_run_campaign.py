@@ -940,6 +940,82 @@ class RunCampaignTests(unittest.TestCase):
             self.assertFalse((l9 / "programs" / "stale").exists())
             self.assertEqual(executed, [(str(workspace.resolve()), "demo-activate-v1")])
 
+    def test_host_status_edit_keeps_comments(self) -> None:
+        """load_yaml then dump_yaml strips the prose these SSOT files carry."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            status = root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+            policy = root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+            profile = root / "ops/autonomy/surface_profile.yaml"
+            for path in (status, policy, profile):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            status.write_text(
+                "schema: l9.program-execution.campaign-status-ledger.v1\n"
+                'updated: "2026-01-01T00:00:00Z"\n'
+                "# Mutable live ledger. Does not rewrite CAMPAIGN_SOURCE.yaml.\n"
+                "campaigns:\n"
+                "  - id: other-campaign\n"
+                "    lifecycle: complete\n"
+                "  - id: demo-activate-v1\n"
+                "    lifecycle: planned\n",
+                encoding="utf-8",
+            )
+            policy.write_text(
+                "schema: l9.program-execution.campaign-execution-policy.v1\n"
+                'updated: "2026-01-01T00:00:00Z"\n'
+                "# Execution order is authority, not preference.\n"
+                "campaigns:\n"
+                "  - id: demo-activate-v1\n"
+                "    lifecycle: planned\n"
+                "    execute_order: 1\n",
+                encoding="utf-8",
+            )
+            profile.write_text(
+                "# Autonomy Surface Profile - SSOT. Consumers must not fork this prose.\n"
+                "schema_version: 1\n"
+                "campaign_execution:\n"
+                "  campaigns:\n"
+                "    demo-activate-v1:\n"
+                "      integration_branch: campaign/demo-activate-v1\n"
+                "      lifecycle: planned\n"
+                "\nauthority_order:\n"
+                "  - CANONICAL_LAW\n",
+                encoding="utf-8",
+            )
+            self.mod.mark_host_campaign_active(
+                root,
+                "demo-activate-v1",
+                pec_workspace="/l9/programs/demo-activate-v1",
+                blueprint="/l9/blueprints/demo-activate-v1",
+                target_worktree="/l9/program-worktrees/demo-activate-v1",
+            )
+            for path in (status, policy, profile):
+                body = path.read_text(encoding="utf-8")
+                self.assertIn("#", body, msg=f"{path.name} lost its comments")
+                yaml.safe_load(body)
+            self.assertIn("Mutable live ledger", status.read_text(encoding="utf-8"))
+            self.assertIn("Execution order is authority", policy.read_text(encoding="utf-8"))
+            self.assertIn("must not fork this prose", profile.read_text(encoding="utf-8"))
+
+            status_doc = yaml.safe_load(status.read_text(encoding="utf-8"))
+            entry = next(x for x in status_doc["campaigns"] if x["id"] == "demo-activate-v1")
+            self.assertEqual(entry["lifecycle"], "in_progress")
+            self.assertEqual(entry["launched_by"], "make campaign")
+            self.assertEqual(entry["worktree"], "/l9/program-worktrees/demo-activate-v1")
+            closed = next(x for x in status_doc["campaigns"] if x["id"] == "other-campaign")
+            self.assertEqual(closed["lifecycle"], "complete")
+
+            policy_doc = yaml.safe_load(policy.read_text(encoding="utf-8"))
+            policy_entry = policy_doc["campaigns"][0]
+            self.assertEqual(policy_entry["lifecycle"], "in_progress")
+            self.assertEqual(policy_entry["execute_order"], 1)
+
+            profile_doc = yaml.safe_load(profile.read_text(encoding="utf-8"))
+            block = profile_doc["campaign_execution"]["campaigns"]["demo-activate-v1"]
+            self.assertEqual(block["lifecycle"], "in_progress")
+            self.assertEqual(block["integration_branch"], "campaign/demo-activate-v1")
+            self.assertEqual(profile_doc["authority_order"], ["CANONICAL_LAW"])
+
 
 if __name__ == "__main__":
     unittest.main()

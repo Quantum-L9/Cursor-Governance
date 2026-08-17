@@ -967,6 +967,92 @@ OPERATOR_ACK_NOTE = (
 ACTIVE_NOTE = "launched by make campaign; pec runtime_status=active; " + OPERATOR_ACK_NOTE
 
 
+def yaml_scalar(value: str) -> str:
+    """Quote only when a plain scalar would change meaning."""
+    raw = str(value)
+    if not raw:
+        return '""'
+    if raw.strip() != raw or raw[0] in "'\"[{&*!|>%@`" or ": " in raw or " #" in raw:
+        return json.dumps(raw)
+    if raw.endswith(":") or ":" in raw and not raw.startswith("http"):
+        return json.dumps(raw)
+    return raw
+
+
+def block_bounds(lines: list[str], start: int) -> tuple[int, int]:
+    """Return (child_indent, end) for the block opened by lines[start]."""
+    opener = lines[start]
+    indent = len(opener) - len(opener.lstrip())
+    if opener.lstrip().startswith("- "):
+        indent += 2
+    child_indent = None
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        line = lines[index]
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        current = len(line) - len(line.lstrip())
+        if current < indent or (current == indent and line.lstrip().startswith("- ")):
+            end = index
+            break
+        if child_indent is None:
+            child_indent = current
+    return (child_indent if child_indent is not None else indent + 2, end)
+
+
+def set_block_fields(lines: list[str], start: int, updates: dict[str, str]) -> list[str]:
+    """Set key: value inside one YAML block, preserving comments and layout."""
+    child_indent, end = block_bounds(lines, start)
+    pad = " " * child_indent
+    for key, value in updates.items():
+        rendered = f"{pad}{key}: {yaml_scalar(value)}"
+        for index in range(start, end):
+            stripped = lines[index].lstrip("- ").lstrip()
+            if stripped.startswith(f"{key}:"):
+                if index == start:
+                    head = lines[index][: len(lines[index]) - len(lines[index].lstrip())]
+                    lines[index] = f"{head}- {key}: {yaml_scalar(value)}"
+                else:
+                    lines[index] = rendered
+                break
+        else:
+            lines.insert(end, rendered)
+            end += 1
+    return lines
+
+
+def find_entry(lines: list[str], campaign_id: str) -> int | None:
+    """Index of `- id: <campaign_id>` or `<campaign_id>:` in a campaigns block."""
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped in {f"- id: {campaign_id}", f"{campaign_id}:"}:
+            return index
+    return None
+
+
+def patch_yaml_text(path: Path, mutate: Callable[[list[str]], list[str] | None]) -> None:
+    """Rewrite a governance YAML by line, never by load and dump.
+
+    load_yaml then dump_yaml drops every comment in these files, and
+    ops/autonomy/surface_profile.yaml tells its consumers not to fork its
+    prose. Status edits are single scalars, so edit the lines in place.
+    """
+    lines = path.read_text(encoding="utf-8").splitlines()
+    updated = mutate(lines)
+    if updated is None:
+        return
+    path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+
+
+def set_top_scalar(lines: list[str], key: str, value: str) -> None:
+    rendered = f"{key}: {yaml_scalar(value)}"
+    for index, line in enumerate(lines):
+        if line.startswith(f"{key}:"):
+            lines[index] = rendered
+            return
+    lines.insert(0, rendered)
+
+
 def mark_host_campaign_active(
     worktree: Path,
     campaign_id: str,
@@ -977,60 +1063,69 @@ def mark_host_campaign_active(
 ) -> None:
     """Promote every host status surface agents read from planned/dust to active."""
     now = utc_now()
-    path = worktree / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
-    if path.is_file():
-        raw = load_yaml(path) or {}
-        campaigns = list(raw.get("campaigns") or [])
-        found = False
-        for item in campaigns:
-            if isinstance(item, dict) and str(item.get("id")) == campaign_id:
-                if str(item.get("lifecycle") or "") not in {"complete", "cancelled"}:
-                    item["lifecycle"] = "in_progress"
-                    item["started_at"] = item.get("started_at") or now
-                    item["launched_by"] = "make campaign"
-                    item["pec_workspace"] = pec_workspace
-                    item["blueprint"] = blueprint
-                    item["worktree"] = target_worktree
-                    item["notes"] = ACTIVE_NOTE
-                found = True
-        if not found:
-            campaigns.append(
-                {
-                    "id": campaign_id,
-                    "lifecycle": "in_progress",
-                    "started_at": now,
-                    "launched_by": "make campaign",
-                    "pec_workspace": pec_workspace,
-                    "blueprint": blueprint,
-                    "worktree": target_worktree,
-                    "notes": ACTIVE_NOTE,
-                }
-            )
-        raw["schema"] = raw.get("schema") or "l9.program-execution.campaign-status-ledger.v1"
-        raw["updated"] = now
-        raw["campaigns"] = campaigns
-        dump_yaml(path, raw)
+
+    status_path = worktree / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+    if status_path.is_file():
+
+        def patch_status(lines: list[str]) -> list[str]:
+            set_top_scalar(lines, "updated", now)
+            index = find_entry(lines, campaign_id)
+            fields = {
+                "lifecycle": "in_progress",
+                "started_at": now,
+                "launched_by": "make campaign",
+                "pec_workspace": pec_workspace,
+                "blueprint": blueprint,
+                "worktree": target_worktree,
+                "notes": ACTIVE_NOTE,
+            }
+            if index is None:
+                for position, line in enumerate(lines):
+                    if line.startswith("campaigns:"):
+                        _, end = block_bounds(lines, position)
+                        entry = [f"  - id: {campaign_id}"] + [
+                            f"    {key}: {yaml_scalar(value)}" for key, value in fields.items()
+                        ]
+                        lines[end:end] = entry
+                        break
+                return lines
+            _, end = block_bounds(lines, index)
+            for position in range(index, end):
+                if lines[position].strip() in {"lifecycle: complete", "lifecycle: cancelled"}:
+                    return lines
+            fields.pop("started_at")
+            return set_block_fields(lines, index, fields)
+
+        patch_yaml_text(status_path, patch_status)
 
     policy_path = (
         worktree / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
     )
     if policy_path.is_file():
-        policy = load_yaml(policy_path) or {}
-        for item in list(policy.get("campaigns") or []):
-            if isinstance(item, dict) and str(item.get("id")) == campaign_id:
-                item["lifecycle"] = "in_progress"
-                item["launched_by"] = "make campaign"
-        policy["updated"] = now
-        dump_yaml(policy_path, policy)
+
+        def patch_policy(lines: list[str]) -> list[str]:
+            set_top_scalar(lines, "updated", now)
+            index = find_entry(lines, campaign_id)
+            if index is None:
+                return lines
+            return set_block_fields(
+                lines, index, {"lifecycle": "in_progress", "launched_by": "make campaign"}
+            )
+
+        patch_yaml_text(policy_path, patch_policy)
 
     profile_path = worktree / "ops/autonomy/surface_profile.yaml"
     if profile_path.is_file():
-        profile = load_yaml(profile_path) or {}
-        block = ((profile.get("campaign_execution") or {}).get("campaigns") or {}).get(campaign_id)
-        if isinstance(block, dict):
-            block["lifecycle"] = "in_progress"
-            block["launched_by"] = "make campaign"
-            dump_yaml(profile_path, profile)
+
+        def patch_profile(lines: list[str]) -> list[str] | None:
+            index = find_entry(lines, campaign_id)
+            if index is None:
+                return None
+            return set_block_fields(
+                lines, index, {"lifecycle": "in_progress", "launched_by": "make campaign"}
+            )
+
+        patch_yaml_text(profile_path, patch_profile)
 
 
 def annotate_phase0_without_forging_ack(blueprint: Path) -> None:

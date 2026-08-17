@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "pe-kernel-bind",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "ea15557678e7954c90902b7a3d503d276bd041e3e0bff45a7894efdb41e0f592",
+  "bytes": 25833,
+  "pack_recorded_digest": "ea15557678e7954c90902b7a3d503d276bd041e3e0bff45a7894efdb41e0f592",
+  "pack_recorded_bytes": 25833,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-17T13:12:27Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}
