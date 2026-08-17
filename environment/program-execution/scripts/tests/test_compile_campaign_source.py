@@ -251,6 +251,115 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertEqual(validated.returncode, 0, validated.stderr)
             self.assertEqual(json.loads(validated.stdout)["status"], "PASS")
 
+    def test_every_declared_path_becomes_an_output(self) -> None:
+        """The sealed contract must carry all writable paths, not just the first."""
+        self.assertEqual(
+            self.compiler._task_output_locations(
+                {
+                    "id": "TASK-001",
+                    "paths": [
+                        "environment/contracts/execution/adr/ADR-0023.md",
+                        "docs/decisions/ADR-0023.md",
+                    ],
+                }
+            ),
+            [
+                "environment/contracts/execution/adr/ADR-0023.md",
+                "docs/decisions/ADR-0023.md",
+            ],
+        )
+        self.assertEqual(
+            self.compiler._task_output_locations(
+                {
+                    "id": "TASK-002",
+                    "outputs": [{"location": "receipts/internal.json"}, {"location": "a.md"}],
+                    "paths": ["a.md", "b.md"],
+                }
+            ),
+            ["a.md", "b.md"],
+        )
+        self.assertEqual(
+            self.compiler._task_output_locations({"id": "TASK-009"}),
+            ["docs/program-execution/TASK-009.md"],
+        )
+
+    def test_compiled_task_cards_keep_multi_path_outputs(self) -> None:
+        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        task = source["tasks"][0]
+        task["paths"] = ["docs/one.md", "docs/two.md"]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            self.compiler.compile_source(
+                path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+            )
+            cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+            compiled = next(item for item in cards["tasks"] if item["id"] == task["id"])
+            self.assertEqual(
+                [output["location"] for output in compiled["outputs"]],
+                ["docs/one.md", "docs/two.md"],
+            )
+            self.assertEqual(len({output["id"] for output in compiled["outputs"]}), 2)
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
+
+    def test_declared_validation_commands_reach_the_task_card(self) -> None:
+        """Flattening to inspection dropped the command and verify ran nothing."""
+        entries = self.compiler._task_validations(
+            {
+                "id": "TASK-001",
+                "acceptance": [{"statement": "unused fallback"}],
+                "validation": [
+                    {
+                        "id": "VAL-001",
+                        "method": "command",
+                        "command_or_inspection": "python3 -m unittest tests/test_x.py",
+                        "expected_result": "PASS",
+                    }
+                ],
+            },
+            "001",
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["method"], "command")
+        self.assertEqual(entries[0]["command_or_inspection"], "python3 -m unittest tests/test_x.py")
+        self.assertEqual(entries[0]["environment"], "local")
+
+    def test_validation_falls_back_to_acceptance_when_undeclared(self) -> None:
+        entries = self.compiler._task_validations(
+            {"id": "TASK-001", "acceptance": [{"statement": "the deliverable exists"}]}, "001"
+        )
+        self.assertEqual(entries[0]["method"], "inspection")
+        self.assertEqual(entries[0]["command_or_inspection"], "the deliverable exists")
+
+    def test_compiled_blueprint_requires_the_declared_command(self) -> None:
+        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        task = source["tasks"][0]
+        task["validation"] = [
+            {
+                "id": "VAL-001",
+                "method": "command",
+                "command_or_inspection": "python3 -m unittest discover tests",
+                "expected_result": "PASS",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            self.compiler.compile_source(
+                path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+            )
+            cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+            compiled = next(item for item in cards["tasks"] if item["id"] == task["id"])
+            self.assertEqual(
+                [entry["command_or_inspection"] for entry in compiled["validation"]],
+                ["python3 -m unittest discover tests"],
+            )
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
+
 
 if __name__ == "__main__":
     unittest.main()

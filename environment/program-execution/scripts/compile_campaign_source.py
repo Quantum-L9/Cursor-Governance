@@ -147,11 +147,16 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
                 "fix the source"
             )
         for entry in task.get("validation") or []:
-            if entry.get("method") == "command":
+            if (
+                isinstance(entry, dict)
+                and not str(
+                    entry.get("command_or_inspection") or entry.get("command") or ""
+                ).strip()
+            ):
                 warnings.append(
-                    f"task {task['id']!r} validation {entry.get('id')!r} uses method 'command'; "
-                    "compiled Task Cards remap validations to method 'inspection' — required "
-                    "shell commands come from the worker Source Contract, not the campaign source"
+                    f"task {task['id']!r} validation {entry.get('id')!r} declares no command or "
+                    "inspection; it cannot reach the Rendered Contract and pec verify will have "
+                    "nothing to run"
                 )
     return warnings
 
@@ -183,19 +188,79 @@ def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _task_output_location(item: dict[str, Any]) -> str:
-    """Writable path for pec draft-contract. `receipts/` is a controller internal."""
-    for output in item.get("outputs") or []:
-        if not isinstance(output, dict):
+VALIDATION_METHODS = frozenset(
+    {"command", "inspection", "command_and_inspection", "external_adapter"}
+)
+
+
+def _task_validations(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]:
+    """Carry the seed's validation entries into the Task Card unchanged.
+
+    Flattening every entry to ``method: inspection`` dropped the seed's shell
+    commands, so the Blueprint carried no ``required_validation_commands``, the
+    Rendered Contract carried none, and pec verify returned INCOMPLETE for every
+    task with nothing to run. The Task Cards schema admits ``command``, so pass
+    the declared command through and keep the acceptance statement only as the
+    fallback for a task that declared no validation.
+    """
+    entries: list[dict[str, Any]] = []
+    for position, raw in enumerate(item.get("validation") or [], start=1):
+        if not isinstance(raw, dict):
             continue
-        location = str(output.get("location") or "").strip()
-        if location and not location.startswith("receipts/"):
-            return location
+        command = str(raw.get("command_or_inspection") or raw.get("command") or "").strip()
+        if not command:
+            continue
+        method = str(raw.get("method") or "").strip()
+        if method not in VALIDATION_METHODS:
+            method = "command"
+        entries.append(
+            {
+                "id": str(raw.get("id") or "").strip() or f"VAL-{suffix}-{position:02d}",
+                "method": method,
+                "command_or_inspection": command,
+                "environment": str(raw.get("environment") or "").strip() or "local",
+                "expected_result": "PASS",
+            }
+        )
+    if not entries:
+        entries.append(
+            {
+                "id": f"VAL-{suffix}",
+                "method": "inspection",
+                "command_or_inspection": str(item["acceptance"][0]["statement"]).strip(),
+                "environment": ("planning" if item["id"] == "TASK-001" else "local"),
+                "expected_result": "PASS",
+            }
+        )
+    return entries
+
+
+def _task_output_locations(item: dict[str, Any]) -> list[str]:
+    """Every declared writable path for pec draft-contract.
+
+    `receipts/` is a controller internal, never a worker output. The
+    inspection fallback applies only when the task declared no paths.
+    """
+    locations: list[str] = []
+
+    def add(raw: object) -> None:
+        text = str(raw or "").strip()
+        if text and not text.startswith("receipts/") and text not in locations:
+            locations.append(text)
+
+    for output in item.get("outputs") or []:
+        if isinstance(output, dict):
+            add(output.get("location"))
     for path in item.get("paths") or []:
-        text = str(path).strip()
-        if text and not text.startswith("receipts/"):
-            return text
-    return f"docs/program-execution/{item['id']}.md"
+        add(path)
+    if not locations:
+        locations.append(f"docs/program-execution/{item['id']}.md")
+    return locations
+
+
+def _task_output_location(item: dict[str, Any]) -> str:
+    """First declared writable path. Contracts use _task_output_locations."""
+    return _task_output_locations(item)[0]
 
 
 def _phase0_gate(
@@ -702,6 +767,7 @@ def compile_source(
         if item.get("execution_kind") == "program_control":
             ceiling["local_write"] = False
         suffix = item["id"].split("-")[-1]
+        output_locations = _task_output_locations(item)
         compiled_tasks.append(
             {
                 "id": item["id"],
@@ -719,22 +785,19 @@ def compile_source(
                 "actions": item["actions"],
                 "outputs": [
                     {
-                        "id": f"OUT-{suffix}",
+                        "id": (
+                            f"OUT-{suffix}"
+                            if len(output_locations) == 1
+                            else f"OUT-{suffix}-{position:02d}"
+                        ),
                         "type": "receipt",
-                        "location": _task_output_location(item),
+                        "location": location,
                         "required": True,
                     }
+                    for position, location in enumerate(output_locations, start=1)
                 ],
                 "acceptance": item["acceptance"],
-                "validation": [
-                    {
-                        "id": f"VAL-{suffix}",
-                        "method": "inspection",
-                        "command_or_inspection": str(item["acceptance"][0]["statement"]).strip(),
-                        "environment": ("planning" if item["id"] == "TASK-001" else "local"),
-                        "expected_result": "PASS",
-                    }
-                ],
+                "validation": _task_validations(item, suffix),
                 "negative_cases": item["negative_cases"],
                 "rollback": item["rollback"],
                 "risk": item["risk"],
