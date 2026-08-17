@@ -31,15 +31,14 @@ def _exists(root: Path, rel: str) -> bool:
 def _provider_autonomy_residue_errors(root: Path) -> list[str]:
     """Fail closed on any provider adapter autonomy/ tree, including __pycache__ residue."""
     errors: list[str] = []
-    hint = (
-        "delete leftover including __pycache__; runtime is "
-        f"{SHARED_PEER_AUTONOMY.rstrip('/')}"
-    )
+    hint = f"delete leftover including __pycache__; runtime is {SHARED_PEER_AUTONOMY.rstrip('/')}"
     adapters = root / "environment/agents/adapters"
     if adapters.is_dir():
         for hit in adapters.glob("*/autonomy"):
             if hit.exists():
-                errors.append(f"provider-owned autonomy runtime forbidden: {hit.relative_to(root)} ({hint})")
+                errors.append(
+                    f"provider-owned autonomy runtime forbidden: {hit.relative_to(root)} ({hint})"
+                )
     old = root / LEGACY_CLAUDE_AUTONOMY
     if old.exists():
         errors.append(f"legacy Claude-owned autonomy runtime path still exists ({hint})")
