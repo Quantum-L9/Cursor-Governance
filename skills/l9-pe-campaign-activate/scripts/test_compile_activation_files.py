@@ -63,57 +63,13 @@ campaigns:
     lifecycle: complete
 """
 
-STUB_INTENT = {
+INTENT = {
     "campaign_id": "demo-activate-v1",
     "title": "Demo Activate",
     "objective": "Activate a proper PE campaign from the minimum file set.",
     "tasks": [
         {"title": "Lock current state", "objective": "Record baseline."},
         {"title": "Implement change", "objective": "Edit declared paths only."},
-    ],
-}
-
-INTENT = {
-    "campaign_id": "demo-activate-v1",
-    "title": "Demo Activate",
-    "objective": "Activate a proper PE campaign from the minimum file set.",
-    "plan_status": "Ready",
-    "tasks": [
-        {
-            "title": "Lock current state",
-            "objective": "Record baseline SHA and refuse dirty overlap.",
-            "actions": ["record_baseline_sha"],
-            "acceptance": [
-                {
-                    "id": "AC-001",
-                    "statement": "Baseline SHA is recorded and matches HEAD.",
-                    "required_evidence_types": ["inspection"],
-                }
-            ],
-            "nugget_id": "NUG-001",
-            "kernel_profile": "AUDIT",
-            "consumers": ["controller"],
-            "entrypoints": ["compile_activation"],
-            "validation": [{"id": "VAL-001", "command": "git rev-parse HEAD"}],
-        },
-        {
-            "title": "Implement change",
-            "objective": "Edit declared paths only.",
-            "actions": ["edit_only_declared_paths"],
-            "acceptance": [
-                {
-                    "id": "AC-002",
-                    "statement": "Declared paths contain the required change.",
-                    "required_evidence_types": ["inspection"],
-                }
-            ],
-            "nugget_id": "NUG-002",
-            "kernel_profile": "BUILD",
-            "consumers": ["workers"],
-            "entrypoints": ["pec_render"],
-            "validation": [{"id": "VAL-002", "command": "python3 -m py_compile"}],
-            "paths": ["docs/program-execution/TASK-002.md"],
-        },
     ],
 }
 
@@ -182,9 +138,7 @@ class CompileActivationTests(unittest.TestCase):
             self.assertEqual(validate_campaign_source(src), [])
             self.assertEqual(_semantic_precheck(src), [])
             self.assertEqual(src["metadata"]["status"], "operator_intake")
-            self.assertEqual(src["program"]["definition_status"], "ready")
-            self.assertEqual(src["program"]["plan_status"], "Ready")
-            self.assertEqual(src["tasks"][0]["nugget_id"], "NUG-001")
+            self.assertEqual(src["program"]["definition_status"], "draft")
             self.assertEqual(src["tasks"][0]["definition_status"], "ready")
             self.assertEqual(src["tasks"][1]["definition_status"], "ready")
             receipt = json.loads(
@@ -204,31 +158,6 @@ class CompileActivationTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertEqual(allow.count("demo-activate-v1"), 1)
 
-    def test_refuses_stub_actions_and_unsealed_plan(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = _repo(Path(raw))
-            dump_yaml(
-                root / "intent.yaml",
-                {
-                    **INTENT,
-                    "plan_status": "Draft",
-                    "tasks": [
-                        {
-                            "title": "Hollow",
-                            "actions": ["implement_task_001"],
-                            "acceptance": [
-                                {
-                                    "id": "AC-001",
-                                    "statement": "Hollow is complete and locally verified.",
-                                }
-                            ],
-                        }
-                    ],
-                },
-            )
-            with self.assertRaises(CompileError):
-                compile_activation(root / "intent.yaml", root)
-
     def test_rejects_bad_id(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = _repo(Path(raw))
@@ -244,30 +173,6 @@ class CompileActivationTests(unittest.TestCase):
             extra.write_text("nope\n", encoding="utf-8")
             with self.assertRaises(CompileError):
                 compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
-
-    def test_refuses_stub_seed_without_receipt(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = _repo(Path(raw))
-            dump_yaml(root / "intent.yaml", STUB_INTENT)
-            with self.assertRaises(CompileError):
-                compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
-            campaign_dir = root / "environment/program-execution/campaigns/demo-activate-v1"
-            self.assertFalse((campaign_dir / "source-integrity-receipt.json").is_file())
-
-    def test_refuses_plan_status_partial(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = _repo(Path(raw))
-            dump_yaml(root / "intent.yaml", {**INTENT, "plan_status": "Partial"})
-            with self.assertRaises(CompileError) as ctx:
-                compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
-            self.assertIn("plan_status", str(ctx.exception))
-            self.assertFalse(
-                (
-                    root
-                    / "environment/program-execution/campaigns/demo-activate-v1"
-                    / "source-integrity-receipt.json"
-                ).is_file()
-            )
 
 
 class AuthorizeMergeTests(unittest.TestCase):

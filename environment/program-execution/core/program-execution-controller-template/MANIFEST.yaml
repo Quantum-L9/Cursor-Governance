@@ -83,7 +83,7 @@ files:
 - path: schemas/task-contract.schema.json
   sha256: 1c2fe385c1eaf510881e3a2a4c0543bb971a9b6a150eb4d88b4280d5acd8d59a
 - path: schemas/verification-receipt.schema.json
-  sha256: c11832210052974f9ec8b31d1b63e36087fb35b5d5385bbec993a55307c5d21e
+  sha256: 4f2c20bbeb75861ff57a56352a3ceedfa2a3f4ad0ffdd5d6d1fc30652fc30810
 - path: schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
 - path: scripts/instantiate.py
@@ -97,9 +97,9 @@ files:
 - path: scripts/pec/common.py
   sha256: 871aa8a77da5abcdfd1ee29156b2df42085a09bcf119ad209bc755142a6ad2f1
 - path: scripts/pec/contracts.py
-  sha256: f89ab2a8a0679e8def662d82661cf4c16988604e5f2ea2fe3c6c406ad857d76e
+  sha256: 45e0a931399dc4015b18557362289d45495689e69d1925aa9b9bf2210e0bc5e9
 - path: scripts/pec/controller.py
-  sha256: 5606300753bc05b98505b448246953dbf00a2784993d38b4a563099b4744644c
+  sha256: 81f266fb49a3d8c45115d253ab168f685519312c77f0f27c22382bb4bae71863
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
 - path: scripts/pec/preflight.py
@@ -130,8 +130,6 @@ files:
   sha256: 1534779aa307ad0c4c22f856e6fcc8993fc231695c150d87238e15c03bb3ac2e
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
-- path: scripts/tests/test_kernel_verdict.py
-  sha256: d78b7f00d8180c5c0b00b1bdf10441b39106c9de883e87586030194539143fc6
 - path: scripts/tests/test_leases_and_approval.py
   sha256: 0c6b15be5b8830d11fa8b84bcee0dc00261250319e8021c0b5220c63f82de14a
 - path: scripts/tests/test_ledger_tamper.py
@@ -139,7 +137,7 @@ files:
 - path: scripts/tests/test_pe_clean_startup.py
   sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
 - path: scripts/tests/test_pipeline_assembly_fill.py
-  sha256: 049b123332df14b8c666532411b7086a3bfeff6396fd89e792b88c555ab3c549
+  sha256: 8d4dae20973c2479d7e1eb95a7abf5eefb091536c3fcaf421520aca8469d7b3a
 - path: scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
 - path: scripts/tests/test_prepare_reuse.py

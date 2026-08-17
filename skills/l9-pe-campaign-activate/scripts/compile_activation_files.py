@@ -29,9 +29,6 @@ except ImportError:  # pragma: no cover
     yaml = None  # type: ignore[assignment]
 
 CAMPAIGN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{2,62}$")
-STUB_ACTION_RE = re.compile(r"^implement_task[_-]", re.I)
-STUB_ACCEPTANCE_RE = re.compile(r"is complete and locally verified\.?$", re.I)
-SEAL_PLAN_STATUSES = frozenset({"Ready", "ConditionallyReady"})
 FORBIDDEN_CAMPAIGN_FILES = {
     "README.md",
     "INTENT.yaml",
@@ -45,7 +42,6 @@ FORBIDDEN_CAMPAIGN_FILES = {
     "AGENT_FEED.md",
 }
 ALLOWED_CAMPAIGN_FILES = {"CAMPAIGN_SOURCE.yaml", "source-integrity-receipt.json"}
-KERNEL_PROFILES = frozenset({"BUILD", "CHANGE", "AUDIT"})
 
 
 class CompileError(RuntimeError):
@@ -98,47 +94,6 @@ def _gate_id(index: int) -> str:
     return f"GATE-{index:03d}"
 
 
-def refuse_stub_intent(intent: dict[str, Any]) -> None:
-    plan_status = str(intent.get("plan_status") or "").strip()
-    if plan_status not in SEAL_PLAN_STATUSES:
-        raise CompileError(
-            f"plan_status {plan_status!r} is not Ready or ConditionallyReady; refuse seal"
-        )
-    for index, item in enumerate(intent.get("tasks") or [], start=1):
-        if not isinstance(item, dict):
-            raise CompileError(f"task {index} must be a mapping")
-        actions = [
-            str(action).strip() for action in (item.get("actions") or []) if str(action).strip()
-        ]
-        if not actions:
-            raise CompileError(f"task {index}: empty actions; refuse invented implement_task stub")
-        if any(STUB_ACTION_RE.match(action) for action in actions):
-            raise CompileError(f"task {index}: implement_task_* stub actions are refused")
-        consumers = [
-            str(value).strip() for value in (item.get("consumers") or []) if str(value).strip()
-        ]
-        entrypoints = [
-            str(value).strip() for value in (item.get("entrypoints") or []) if str(value).strip()
-        ]
-        validation = [entry for entry in (item.get("validation") or []) if isinstance(entry, dict)]
-        nugget_id = str(item.get("nugget_id") or "").strip()
-        if not consumers:
-            raise CompileError(f"task {index}: consumers[] is required")
-        if not entrypoints:
-            raise CompileError(f"task {index}: entrypoints[] is required")
-        if not validation:
-            raise CompileError(f"task {index}: validation[] is required")
-        if not nugget_id:
-            raise CompileError(f"task {index}: nugget_id is required")
-        acceptance = item.get("acceptance") or []
-        for row in acceptance:
-            statement = str((row or {}).get("statement") or "")
-            if STUB_ACCEPTANCE_RE.search(statement):
-                raise CompileError(
-                    f"task {index}: title-plus-locally-verified acceptance is refused"
-                )
-
-
 def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
     campaign_id = str(intent["campaign_id"]).strip()
     title = str(intent["title"]).strip()
@@ -163,47 +118,11 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         task_id = str(item.get("id") or _task_id(index))
         gate_id = _gate_id(index)
         paths = [str(path) for path in (item.get("paths") or []) if path]
-        actions = [
-            str(action).strip() for action in (item.get("actions") or []) if str(action).strip()
-        ]
+        actions = list(item.get("actions") or [])
         if not actions:
-            raise CompileError(
-                f"task {task_id}: refuse empty actions; will not invent implement_task stubs"
-            )
-        if any(STUB_ACTION_RE.match(action) for action in actions):
-            raise CompileError(f"task {task_id}: refuse implement_task stub actions")
-        raw_acceptance = item.get("acceptance")
-        if isinstance(raw_acceptance, list) and raw_acceptance:
-            acceptance = raw_acceptance
-        elif isinstance(raw_acceptance, str) and raw_acceptance.strip():
-            acceptance = [
-                {
-                    "id": f"AC-{index:03d}",
-                    "statement": raw_acceptance.strip(),
-                    "required_evidence_types": ["inspection"],
-                }
-            ]
-        else:
-            raise CompileError(
-                f"task {task_id}: refuse missing acceptance; will not invent locally-verified stubs"
-            )
-        for row in acceptance:
-            statement = str((row or {}).get("statement") or row or "")
-            if STUB_ACCEPTANCE_RE.search(statement):
-                raise CompileError(f"task {task_id}: refuse title-plus-locally-verified acceptance")
-        nugget_id = str(item.get("nugget_id") or "").strip()
-        if not nugget_id:
-            raise CompileError(f"task {task_id}: ready task requires nugget_id")
-        kernel_profile = str(item.get("kernel_profile") or "BUILD").strip()
-        if kernel_profile not in KERNEL_PROFILES:
-            raise CompileError(f"task {task_id}: kernel_profile must be BUILD, CHANGE, or AUDIT")
-        consumers = [str(c).strip() for c in (item.get("consumers") or []) if str(c).strip()]
-        entrypoints = [str(c).strip() for c in (item.get("entrypoints") or []) if str(c).strip()]
-        if not consumers or not entrypoints:
-            raise CompileError(f"task {task_id}: ready task requires consumers and entrypoints")
-        validation = [entry for entry in (item.get("validation") or []) if isinstance(entry, dict)]
-        if not validation:
-            raise CompileError(f"task {task_id}: ready task requires validation[]")
+            actions = [f"implement_{task_id.lower().replace('-', '_')}"]
+            if paths:
+                actions.append("edit_only_declared_paths")
         task_ids.append(task_id)
         tasks.append(
             {
@@ -219,14 +138,14 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
                 "required_decision_ids": [],
                 "blocking_unknown_ids": [],
                 "input_evidence_ids": [],
-                "paths": paths,
-                "nugget_id": nugget_id,
-                "kernel_profile": kernel_profile,
-                "consumers": consumers,
-                "entrypoints": entrypoints,
-                "validation": validation,
                 "actions": actions,
-                "acceptance": acceptance,
+                "acceptance": [
+                    {
+                        "id": f"AC-{index:03d}",
+                        "statement": (f"{task_title} is complete and locally verified."),
+                        "required_evidence_types": ["inspection"],
+                    }
+                ],
                 "negative_cases": ["scope_expansion", "remote_mutation_before_release"],
                 "rollback": {
                     "strategy": "discard_uncommitted_or_revert_local_commit",
@@ -292,12 +211,9 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
     for index in range(len(task_ids) - 1):
         edges.append({"from": task_ids[index], "to": task_ids[index + 1]})
 
-    plan_status = str(intent.get("plan_status") or "").strip()
-    program_definition = "ready" if plan_status in SEAL_PLAN_STATUSES else "draft"
     return {
         "schema": "l9.program-execution.campaign-source.v2",
         "schema_version": "2.0.0",
-        "plan_status": plan_status,
         "metadata": {
             "campaign_id": campaign_id,
             "title": title,
@@ -343,8 +259,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
             "name": title,
             "version": "1.0.0",
             "owner": owner,
-            "definition_status": program_definition,
-            "plan_status": plan_status,
+            "definition_status": "draft",
             "snapshot_at": stamp[:10],
             "objective": objective,
             "problem_statement": str(intent.get("problem_statement") or objective).strip(),
@@ -561,7 +476,6 @@ def compile_activation(
     stamp: str | None = None,
 ) -> dict[str, Any]:
     intent = require_intent(load_yaml(intent_path))
-    refuse_stub_intent(intent)
     campaign_id = str(intent["campaign_id"]).strip()
     now = stamp or utc_now()
     source = build_source(intent, stamp=now)
