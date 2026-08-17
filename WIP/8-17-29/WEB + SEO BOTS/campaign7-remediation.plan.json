@@ -1,0 +1,586 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Campaign 7-SEO blocker remediation",
+  "objective": "Clear every error, issue, and blocker recorded during Campaign 7-SEO execution so that (a) SEO-Bot's own assurance gates pass on main, (b) the governed commit/publish path works without manual repair, and (c) the real producer seam proof can execute and raise SEO_BUILD_INTELLIGENCE_INTEGRITY from FAIL to PASS.",
+  "code_in_scope": true,
+  "success_criteria": [
+    "npm ci completes in the session container with no 403 from npm.pkg.github.com.",
+    "Infisical universal-auth login returns an accessToken, and DATAFORSEO_LOGIN/PASSWORD, PERPLEXITY_API_KEY, OPENROUTER_API_KEY, DATABASE_URL, REDIS_URL all hydrate.",
+    "A fresh session can run `git commit` without hand-installing pydantic/pyyaml into the governance venv.",
+    "memory_lock.py acquire writes a lock that memory_gate.py finds on the first attempt, from any cwd inside the workspace.",
+    "npm run manifest:check exits 0 on SEO-Bot main.",
+    "npm run verify:assurance reports preflight PASS and Overall PASS on SEO-Bot main.",
+    "Typecheck, tests, and build pass against the declared @quantum-l9/llm-router version, not a locally built substitute.",
+    "producer-seam-proof.ts runs against real DataForSEO + real llm-router and emits a receipt whose validateIntegrityReceipt verdict is PASS or BLOCKED_ON_CONSUMER_PCC."
+  ],
+  "scope": {
+    "in": [
+      "GitHub Packages read access for the @quantum-l9 scope in the session environment.",
+      "Infisical machine-identity repair for the SEO-Bot secret path.",
+      "Governance container venv dependencies (pydantic, pyyaml).",
+      "Cursor-Governance defects: lock state-root resolution, conflict-detector scoping, push-only publish mode.",
+      "SEO-Bot pre-existing assurance failures: manifest ownership, MANIFEST.json, packageManager field, env-contract checker regex, CLIENT_SITE_* naming drift.",
+      "llm-router pin reconciliation (1.1.2 declared vs 1.1.3 available).",
+      "Execution of the real producer seam proof and emission of the integrity receipt."
+    ],
+    "out": [
+      "Any change to the build-intelligence producer logic delivered on PR #56 — that work is complete and green.",
+      "Website-Bot and LLM-Router source changes (contract-forbidden).",
+      "The .vscode/settings.json and extensions.json contents themselves — only their manifest ownership is in scope.",
+      "Retuning the donor qualification thresholds (>=2 queries / rank <=10); a separate decision if live data argues against them.",
+      "The full Website-Bot Golden E2E."
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "PV1",
+      "command_or_action": "git -C /home/user/SEO-Bot rev-parse HEAD && git status --porcelain",
+      "pass_criteria": "HEAD is 4aeecc5 (or later on claude/seo-bot-producer-convergence-iib4zx) and the worktree is clean.",
+      "status": "passed"
+    },
+    {
+      "id": "PV2",
+      "command_or_action": "npm ci --no-audit --no-fund in /home/user/SEO-Bot",
+      "pass_criteria": "Exits 0. Currently FAILS: 403 Permission permission_denied on @quantum-l9/llm-router.",
+      "status": "failed"
+    },
+    {
+      "id": "PV3",
+      "command_or_action": "curl -X POST https://app.infisical.com/api/v1/auth/universal-auth/login with INFISICAL_CLIENT_ID/_SECRET",
+      "pass_criteria": "HTTP 200 with accessToken. Currently FAILS: HTTP 401.",
+      "status": "failed"
+    },
+    {
+      "id": "PV4",
+      "command_or_action": "npm run manifest:check in /home/user/SEO-Bot",
+      "pass_criteria": "Exits 0. Currently FAILS: 'Unowned repository path: .vscode/extensions.json'. Confirmed pre-existing by stashing the entire campaign change and re-running.",
+      "status": "failed"
+    },
+    {
+      "id": "PV5",
+      "command_or_action": "npm run verify:assurance in /home/user/SEO-Bot",
+      "pass_criteria": "Overall PASS. Currently FAILS: preflight FAIL on package-manager, required-files, env-contract; all eight downstream gates BLOCKED. Confirmed pre-existing on a stashed baseline.",
+      "status": "failed"
+    },
+    {
+      "id": "PV6",
+      "command_or_action": "Remove the local node_modules stand-ins for @quantum-l9/* before re-validating, so no result is attributable to a substitute package.",
+      "pass_criteria": "node_modules/@quantum-l9/* is registry-installed, and bot-interop resolves to the published 1.1.0 rather than Website-Bot/packages/bot-interop.",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Grant GitHub Packages read for the @quantum-l9 scope to the session environment: either add packages:read to the Claude GitHub App installation on the Quantum-L9 org, or provision a PAT with read:packages exposed as NODE_AUTH_TOKEN. .npmrc already reads ${NODE_AUTH_TOKEN}, so no repo change is required.",
+      "files": [
+        "BLOCKER: org/App permissions or environment secret configuration — outside every in-scope repo"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "shared_root_cause": "RC1",
+      "blocker": "Requires an org admin or environment owner. No agent-side fix exists."
+    },
+    {
+      "id": "T2",
+      "task": "Repair the Infisical machine identity: confirm the universal-auth identity behind INFISICAL_CLIENT_ID is active, attached to the project in INFISICAL_PROJECT_ID, and has read on the SEO-Bot secret path. Set INFISICAL_ENVIRONMENT (currently unset) if the identity is environment-scoped.",
+      "files": [
+        "BLOCKER: Infisical console + environment variable configuration"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 2,
+      "shared_root_cause": "RC1",
+      "blocker": "Requires Infisical project admin."
+    },
+    {
+      "id": "T3",
+      "task": "Bake pydantic and pyyaml into the governance venv so the Graphiti front door works on a cold session. The venv is Python 3.12 with no pip while system python3 is 3.11, so a naive `pip install pydantic` installs an incompatible ABI. Pin the install to cp312 wheels.",
+      "files": [
+        "BLOCKER: container image / governance bootstrap that creates /root/.cursor-governance/.venv",
+        "reference command: python3 -m pip install --target /root/.cursor-governance/.venv/lib/python3.12/site-packages --python-version 3.12 --only-binary=:all: pydantic pyyaml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 3,
+      "shared_root_cause": "RC2",
+      "blocker": "Owned by whoever builds the session image; the in-session install does not persist."
+    },
+    {
+      "id": "T4",
+      "task": "Make memory_lock.py resolve the same state root as memory_gate.py. Today acquire derives the root from cwd while the gate derives it from the workspace root (/home/user), so acquiring from inside a subrepo writes to <subrepo>/.l9/memory and the gate never sees the lock — and the denial message just repeats 'acquire the lock'. Either resolve identically, or print the written path and warn on mismatch.",
+      "files": [
+        "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/hooks/memory_lock.py",
+        "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/memory/memory_state.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T3"
+      ],
+      "leverage_rank": 4,
+      "shared_root_cause": "RC2",
+      "operation": "Replace"
+    },
+    {
+      "id": "T5",
+      "task": "Scope the Graphiti phase-lock conflict detector to the target repository and paths. It currently keyword-matches the word 'conflict' across all memory, so it surfaced facts about issue #166, PR 152, and unrelated Cursor-Governance rebases and blocked an SEO-Bot lock. Forcing past false positives trains agents to always use --force, which defeats the control.",
+      "files": [
+        "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+        "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/hooks/memory_lock.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T3"
+      ],
+      "leverage_rank": 5,
+      "shared_root_cause": "RC2",
+      "operation": "Replace"
+    },
+    {
+      "id": "T6",
+      "task": "Add a push-only mode to the sanctioned publish path. OPEN_PR=0 currently skips the whole script including `git push -u origin HEAD` (line 106), and raw git push is denied at every phase, so 'push the branch without opening a PR' is unreachable. Introduce PUSH_ONLY=1 (or move the push above the OPEN_PR guard) so branch-only delivery is possible without side-effect PR creation.",
+      "files": [
+        "Quantum-L9/Cursor-Governance: ops/scripts/open_pr_after_gate.sh (push at line 106; gh pr create at line 230)"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 6,
+      "shared_root_cause": "RC3",
+      "operation": "Replace"
+    },
+    {
+      "id": "T7",
+      "task": "Add a .vscode/** ownership rule to manifest/ownership.yaml. The `*` rule compiles to [^/]* and cannot cross a path separator, so .vscode/extensions.json and .vscode/settings.json match no rule and resolveOwnership throws. Suggested owner: agent-operations, classification: configuration.",
+      "files": [
+        "Quantum-L9/SEO-Bot: manifest/ownership.yaml"
+      ],
+      "anchor": "rules[] array, alongside the existing .claude/** rule",
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 7,
+      "shared_root_cause": "RC4",
+      "operation": "Replace"
+    },
+    {
+      "id": "T8",
+      "task": "Generate and commit MANIFEST.json. preflight.required-files lists both MANIFEST.json and MANIFEST.md; MANIFEST.md is present and tracked, MANIFEST.json is absent and not gitignored. buildManifest currently throws before it can emit either, so T7 must land first.",
+      "files": [
+        "Quantum-L9/SEO-Bot: MANIFEST.json (generated by npm run manifest:generate)"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T7"
+      ],
+      "leverage_rank": 8,
+      "shared_root_cause": "RC4",
+      "operation": "Create"
+    },
+    {
+      "id": "T9",
+      "task": "Add \"packageManager\": \"npm@10.9.7\" to package.json. preflight.package-manager (gate-registry.ts:150) asserts (packageJson.packageManager ?? \"\").startsWith(\"npm@10.\") and the field does not exist, so the assertion reads actual:null and fails. The installed npm is already 10.9.7 — this is a declaration gap, not a version mismatch.",
+      "files": [
+        "Quantum-L9/SEO-Bot: package.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 9,
+      "shared_root_cause": "RC4",
+      "operation": "Replace"
+    },
+    {
+      "id": "T10",
+      "task": "Fix the env-contract schema-key regex. gate-registry.ts:171 uses /^\\s{2}([A-Z][A-Z0-9_]+):\\s*z\\./gm, which requires `z.` with no newline between. TRUST_PROXY is declared as `TRUST_PROXY: z` then `.string()` on the next line, so the checker cannot see it and reports it as an unexplained example key. Changing z\\. to z\\s*\\. recovers 48 keys instead of 47; TRUST_PROXY is the only key affected, so the fix introduces no new missingFromExample entries. Verified empirically.",
+      "files": [
+        "Quantum-L9/SEO-Bot: scripts/validation/gate-registry.ts:171"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 10,
+      "shared_root_cause": "RC5",
+      "operation": "Replace"
+    },
+    {
+      "id": "T11",
+      "task": "Resolve the CLIENT_SITE_* naming drift. .env.example documents CLIENT_SITE_GITHUB_TOKEN and CLIENT_SITE_VERCEL_DEPLOY_HOOK, but site-deployment.ts:156 reads process.env.GITHUB_TOKEN and site-deployment.ts:143 reads VERCEL_DEPLOY_HOOK. The documented names are read by nothing in src/ or scripts/. Recommended default (U1): rename the .env.example keys to the names the code actually reads, and add both to the infrastructureOnly set in gate-registry.ts since they are consumed via process.env rather than the Zod schema.",
+      "files": [
+        "Quantum-L9/SEO-Bot: .env.example",
+        "Quantum-L9/SEO-Bot: scripts/validation/gate-registry.ts:175-191 (infrastructureOnly set)"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 11,
+      "shared_root_cause": "RC5",
+      "operation": "Replace"
+    },
+    {
+      "id": "T12",
+      "task": "Re-run the full assurance profile and confirm every previously-blocked gate now executes and passes: npm run manifest:check then npm run verify:assurance.",
+      "files": [
+        "Quantum-L9/SEO-Bot: validation/runs/ (generated evidence, gitignored)"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T8",
+        "T9",
+        "T10",
+        "T11"
+      ],
+      "leverage_rank": 12,
+      "shared_root_cause": "RC4"
+    },
+    {
+      "id": "T13",
+      "task": "Reconcile the llm-router pin. package.json pins 1.1.2 but only 1.1.3 exists in the local LLM-Router repo, so campaign typecheck ran against an undeclared version. Once the registry is reachable, install the declared 1.1.2 and re-run typecheck + tests; if 1.1.3 is the intended fleet version, bump the pin and lockfile deliberately in its own commit.",
+      "files": [
+        "Quantum-L9/SEO-Bot: package.json",
+        "Quantum-L9/SEO-Bot: package-lock.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "leverage_rank": 13,
+      "shared_root_cause": "RC1"
+    },
+    {
+      "id": "T14",
+      "task": "Execute the real producer seam proof and emit the integrity receipt: npx tsx scripts/build-intelligence/producer-seam-proof.ts --config <safe-haven-seam.json> [--page-content-contract <exact-consumer-pcc.json>]. Requires real DataForSEO credentials, a real llm-router, and registry-installed bot-interop. Without an exact Website-Bot-produced PageContentContract the receipt correctly records BLOCKED_ON_CONSUMER_PCC rather than fabricating one.",
+      "files": [
+        "Quantum-L9/SEO-Bot: scripts/build-intelligence/producer-seam-proof.ts (already shipped)",
+        "NEW: a seam-proof config file supplying client_id, build_id, market, seed_queries, routes, business_facts",
+        "OUTPUT: reports/seo-build-intelligence-receipt.json"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T13"
+      ],
+      "leverage_rank": 14,
+      "shared_root_cause": "RC1"
+    },
+    {
+      "id": "T15",
+      "task": "Obtain an exact Website-Bot-produced PageContentContract artifact so seam-proof STEP 3 can run and the receipt can reach PASS rather than BLOCKED_ON_CONSUMER_PCC. Export one from a Website-Bot redesign run; do not hand-author it.",
+      "files": [
+        "BLOCKER: requires a Website-Bot execution environment, which Campaign 7-SEO forbade this campaign from touching"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T14"
+      ],
+      "leverage_rank": 15,
+      "shared_root_cause": "RC6",
+      "blocker": "Cross-repo dependency on the consumer side; not producible by SEO-Bot."
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T13",
+    "T14",
+    "T15"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Environment can install and authenticate: npm ci exits 0 and Infisical hydrates real credentials.",
+      "unlocks": "Native gate runs, honest version validation, and any real seam proof. Nothing downstream is provable without it."
+    },
+    {
+      "id": "M2",
+      "outcome": "Governed commit and publish path works cold: no hand-installed venv packages, lock found first try, branch-only push available.",
+      "unlocks": "Every future campaign in this constellation stops spending its first hour on tooling repair."
+    },
+    {
+      "id": "M3",
+      "outcome": "SEO-Bot assurance is green on main: manifest:check and verify:assurance both pass.",
+      "unlocks": "Gate results become meaningful signal instead of a known-red baseline that hides real regressions."
+    },
+    {
+      "id": "M4",
+      "outcome": "Real seam proof executed; SeoBuildIntelligenceIntegrityReceipt emitted and validated.",
+      "unlocks": "SEO_BUILD_INTELLIGENCE_INTEGRITY moves off FAIL, and the Website-Bot Golden E2E becomes defensible."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "npm ci exits 0 with @quantum-l9/bot-interop and @quantum-l9/llm-router resolved from npm.pkg.github.com, and the local node_modules stand-ins removed.",
+      "no_go_action": "Stop. Every remaining verification claim would be attributable to a substitute package rather than the real dependency. Report PRIVATE_REGISTRY_UNREACHABLE and do not assert validation results."
+    },
+    {
+      "id": "C2",
+      "after": "T2",
+      "evidence_required": "Infisical login returns 200 and DATAFORSEO_LOGIN/DATAFORSEO_PASSWORD are present in the process environment.",
+      "no_go_action": "Stop before T14. Do not substitute a mock provider or a fixture landscape — the seam proof forbids it by design. Record the receipt as FAIL with the exact reason."
+    },
+    {
+      "id": "C3",
+      "after": "T7",
+      "evidence_required": "npm run manifest:check exits 0.",
+      "no_go_action": "Do not attempt T8 — buildManifest throws before emitting MANIFEST.json, so a generate run cannot succeed."
+    },
+    {
+      "id": "C4",
+      "after": "T12",
+      "evidence_required": "verify:assurance summary shows preflight PASS and no gate in BLOCKED state.",
+      "no_go_action": "Do not weaken or delete an assertion to reach green. Report which assertion still fails and why; a green gate obtained by loosening the gate is worthless."
+    },
+    {
+      "id": "C5",
+      "after": "T14",
+      "evidence_required": "Receipt exists with selected_donor_count == 10, evidence_complete true, ranking_llm_calls 0, and validateIntegrityReceipt verdict PASS or BLOCKED_ON_CONSUMER_PCC.",
+      "no_go_action": "If the verdict is FAIL, do NOT run the Website-Bot Golden E2E. Triage using the receipt's violations array, which names each failed invariant."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "Quantum-L9/SEO-Bot: MANIFEST.json + MANIFEST.md",
+      "action": "update",
+      "todo_ids": [
+        "T8"
+      ],
+      "reason": "New producer modules and test files were added on PR #56; the inventory must reflect them once buildManifest can run."
+    },
+    {
+      "surface": "Quantum-L9/SEO-Bot: .env.example",
+      "action": "update",
+      "todo_ids": [
+        "T11"
+      ],
+      "reason": "Two documented keys use names the code never reads, which misleads any operator provisioning a deployment."
+    },
+    {
+      "surface": "Quantum-L9/SEO-Bot: AGENTS.md / VALIDATION.md",
+      "action": "n_a",
+      "todo_ids": [],
+      "reason": "No command surface or validation policy changes; only gate-internal regex and declaration fixes."
+    },
+    {
+      "surface": "Quantum-L9/Cursor-Governance: Autonomy Surface Profile",
+      "action": "update",
+      "todo_ids": [
+        "T6"
+      ],
+      "reason": "If a push-only mode lands, the doctrine text stating make pr is the only route needs the new mode documented, or agents will keep opening side-effect PRs."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is the 403 really a scope problem, or is @quantum-l9 published somewhere other than GitHub Packages? Evidence for scope: the error is 'token does not match expected scopes' on npm.pkg.github.com, and .npmrc explicitly maps the scope to that registry. A 404 would have suggested a wrong registry; a 403 with that message is an authorization verdict.",
+      "Could the assurance failures actually have been caused by the campaign change? Disproved directly: stashing the entire change (including untracked files) and re-running produced byte-identical failures.",
+      "Is TRUST_PROXY genuinely a false positive rather than a real contract gap? Verified by running both regexes over src/core/config.ts: 47 keys vs 48, with TRUST_PROXY the sole difference, and TRUST_PROXY is already present in .env.example.",
+      "Does adding a .vscode/** ownership rule risk a multi-rule collision? resolveOwnership throws on more than one match. .vscode/** does not overlap .claude/** or the root * rule, which cannot cross a separator — but T7 must be verified by running manifest:check, not by inspection.",
+      "Will the seam proof pass once credentials exist, or will it expose that the exact-10 invariant is unsatisfiable in the target market? Genuinely unknown. That is the point of running it, and a COMPETITIVE_EVIDENCE_INCOMPLETE result would be a real finding about the market or the thresholds, not a defect to code around.",
+      "Is the qualification threshold (>=2 queries OR rank <=10) too strict for a thin local market? Unproven either way without live SERP data. If it blocks a legitimate cohort, the honest response is a threshold decision recorded as an ADR, never a silent relaxation of the exact-10 rule."
+    ],
+    "assumed_false_ifs": [
+      "IF the GitHub App cannot be granted packages:read by policy, THEN T1 needs a PAT-based NODE_AUTH_TOKEN in the environment config instead, and T13/T14 stay blocked until one exists.",
+      "IF the Infisical identity is intentionally not authorized for ephemeral cloud sessions, THEN T2 becomes 'inject DataForSEO and provider keys directly as environment variables for the seam-proof run', and the Infisical path is out of scope.",
+      "IF CLIENT_SITE_* are consumed by an external deploy system under those exact names, THEN T11 inverts: keep the .env.example names and add them to infrastructureOnly, rather than renaming. U1 must be answered before T11 is implemented.",
+      "IF .vscode/ is meant to be untracked entirely, THEN T7 becomes 'git rm --cached .vscode/* and gitignore it', which also clears manifest:check — a different fix with the same outcome.",
+      "IF an exact consumer PageContentContract cannot be obtained, THEN M4 tops out at BLOCKED_ON_CONSUMER_PCC and the final line is SEO_BOT_READY_FOR_WEBSITE_BOT_PCC_SEAM, not SEO_BOT_READY_FOR_REAL_GOLDEN_E2E."
+    ],
+    "blast_radius": "T7-T12 touch only SEO-Bot assurance configuration and a validation-script regex; they cannot change producer runtime behavior, and the 377-test suite plus typecheck guard that. T9 (packageManager) is the one item that can affect installs — a wrong value causes Corepack to refuse to run npm, so it must be verified with a real npm ci. T4-T6 touch shared governance tooling used by every repo in the constellation: a regression there blocks commits fleet-wide, so each needs its own PR and a cold-session smoke test. T13 can shift resolved dependency versions across the whole runtime. T1-T3 are configuration-only and reversible.",
+    "rollback": "T7-T11 are single-file edits on a dedicated branch: revert the commit, and manifest:check/verify:assurance return to their known-red baseline with no runtime impact. T8's MANIFEST.json is generated and regenerable from ownership.yaml. T9: delete the packageManager field. T13: restore package.json and package-lock.json from git and re-run npm ci. T4-T6 land as separate Cursor-Governance PRs so any one can be reverted without disturbing the others; keep the documented in-session workaround (targeted cp312 pip install, acquire the lock from the workspace root) as the fallback until each is confirmed on a cold session. T1-T3 revert by removing the granted permission or secret. Nothing in this plan touches PR #56's producer code, so no rollback can regress the delivered campaign."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T7",
+      "T3",
+      "T10",
+      "T9",
+      "T6"
+    ],
+    "shared_causes": [
+      "RC1 — No credential path into the container. One missing token scope and one broken machine identity are why npm ci, native gate runs, honest version validation, and the entire seam proof all failed. T1 and T2 are the highest-leverage items in the plan by a wide margin: everything labelled 'could not be proven' traces to them.",
+      "RC2 — Governance tooling is not cold-start ready. Missing venv packages, a lock written to a different state root than the gate reads, and a keyword-matching conflict detector combined to block the first commit attempt entirely. Each is small; together they cost the most wall-clock of any issue in the campaign.",
+      "RC3 — The publish path conflates push with PR creation, so 'deliver a branch' is unreachable and PR #56 was opened as a side effect of the only permitted push.",
+      "RC4 — SEO-Bot's assurance baseline is red on main, so the gates carry no signal. One unowned path (.vscode) cascades into manifest:check, MANIFEST.json generation, and preflight.required-files.",
+      "RC5 — The env-contract checker has a regex that cannot parse multi-line Zod declarations, and .env.example documents keys under names the code does not read. One is a checker bug, one is real drift; both surface as the same failing assertion.",
+      "RC6 — The final producer leg depends on a consumer-produced artifact, so SEO-Bot cannot reach PASS alone by construction."
+    ],
+    "deletions_or_consolidations": [
+      "Delete, do not extend, the local node_modules stand-ins for @quantum-l9/graphiti-memory-client and @quantum-l9/infisical-config once T1 lands. They exist only because the registry was unreachable and they can mask real type errors in src/services/memory.ts and src/core/secrets.ts.",
+      "Consolidate T7-T11 into a single 'repo assurance baseline' PR, separate from PR #56. Five one-line fixes to one subsystem reviewed together beats five PRs, and mixing them into the producer-convergence PR would muddy its review surface.",
+      "Do not add a new gate for the .vscode ownership hole — the existing manifest:check already catches it. The fix is a policy entry, not new machinery.",
+      "T4 and T5 both live in the lock front door; land them together in one Cursor-Governance PR rather than sequencing two reviews of the same files."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Granting packages:read broadens what the session token can read across the whole org, not just the nine in-scope repos.",
+      "mitigation": "Prefer a scoped PAT held as an environment secret over widening the shared App installation, so the grant expires and is auditable independently."
+    },
+    {
+      "risk": "T9 sets packageManager, which activates Corepack. A value that does not match the installed npm makes Corepack refuse to run and breaks every install.",
+      "mitigation": "Pin the exact installed version (npm@10.9.7), then prove it with a clean npm ci in CI before merging, not just locally."
+    },
+    {
+      "risk": "T11 renames documented env keys. If an external deploy system reads CLIENT_SITE_*, renaming silently breaks deployment.",
+      "mitigation": "Resolve U1 before implementing. Grep the deploy workflows and the Vercel/GitHub project settings for the literal names first; if found, invert the fix and extend infrastructureOnly instead."
+    },
+    {
+      "risk": "T4-T6 modify tooling that gates commits for every repo in the constellation; a regression blocks the whole fleet.",
+      "mitigation": "One PR per concern, each validated on a genuinely cold session, and keep the manual workaround documented until the cold-session run is green."
+    },
+    {
+      "risk": "The real seam proof may fail on the exact-10 invariant in the target market, creating pressure to relax the invariant to obtain a green receipt.",
+      "mitigation": "The invariant is the deliverable, not the obstacle. A short cohort is a finding about the market or the thresholds; any threshold change goes through an ADR with the live SERP evidence attached."
+    },
+    {
+      "risk": "Fixing the assurance baseline turns a known-red gate green, which could mask a regression that was previously invisible behind BLOCKED.",
+      "mitigation": "Land T7-T12 on their own PR and record the first fully-green run as the new baseline before any further producer work merges."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Are CLIENT_SITE_GITHUB_TOKEN and CLIENT_SITE_VERCEL_DEPLOY_HOOK consumed by anything outside this repo, or are they stale names? They appear in .env.example only; site-deployment.ts reads GITHUB_TOKEN and VERCEL_DEPLOY_HOOK.  HOW TO RESOLVE: Grep the deploy workflows, Vercel project env, and GitHub Actions secrets for the literal names before implementing T11. Ask the repo owner if inconclusive.",
+      "decision_effect": "Determines whether T11 renames the .env.example keys to match the code, or keeps them and extends the checker's infrastructureOnly set. Wrong choice silently breaks a deploy path.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Is 1.1.2 or 1.1.3 the intended fleet version of @quantum-l9/llm-router? SEO-Bot and Website-Bot both pin 1.1.2; the LLM-Router repo HEAD is 1.1.3.  HOW TO RESOLVE: Check whether 1.1.3 was published to GitHub Packages and whether any consumer declares it, once the registry is readable.",
+      "decision_effect": "Determines whether T13 is a verification step against 1.1.2 or a coordinated constellation-wide pin bump.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Should .vscode/ be tracked at all? T7 assumes yes and adds an ownership rule; the alternative is untracking it, which also clears manifest:check.  HOW TO RESOLVE: Repo owner decision. Note that .vscode/.l9-ide-desired-hash and .l9-agentdocs-hash are already gitignored, which implies the directory is intentionally tracked with specific exclusions.",
+      "decision_effect": "Two different fixes with the same gate outcome but different effects on developer onboarding.",
+      "resolution": "ask"
+    },
+    {
+      "id": "U4",
+      "question": "Does an exact Website-Bot-produced PageContentContract artifact already exist somewhere retrievable, or must one be generated by a Website-Bot run?  HOW TO RESOLVE: Ask the Website-Bot owner for an exported artifact from a prior redesign run. Do not hand-author one — the seam proof rejects fabricated contracts by design.",
+      "decision_effect": "Decides whether M4 can reach PASS or tops out at BLOCKED_ON_CONSUMER_PCC.",
+      "resolution": "ask"
+    },
+    {
+      "id": "U5",
+      "question": "Are the donor qualification thresholds (>=2 distinct queries OR best rank <=10) appropriate for the real target markets?  HOW TO RESOLVE: Answerable only from live SERP data. Record the qualification_ledger from the first real seam run and review the UNKNOWN entries against the thresholds.",
+      "decision_effect": "If too strict, real cohorts fail closed and builds stall; if too loose, uncorroborated domains become donors.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV1",
+      "command": "npm ci --no-audit --no-fund",
+      "pass_criteria": "Exits 0; node_modules/@quantum-l9/* resolved from the registry with no local file: substitutes.",
+      "status": "pending"
+    },
+    {
+      "id": "FV2",
+      "command": "npm run typecheck && npm run lint && npx vitest run && npm run build",
+      "pass_criteria": "Typecheck clean, lint exit 0, 377+ tests pass, build emits dist/index.js — all against registry-installed dependencies.",
+      "status": "pending"
+    },
+    {
+      "id": "FV3",
+      "command": "npm run manifest:check",
+      "pass_criteria": "Exits 0 with no unowned path.",
+      "status": "pending"
+    },
+    {
+      "id": "FV4",
+      "command": "npm run verify:assurance",
+      "pass_criteria": "preflight PASS, no gate BLOCKED, Overall PASS.",
+      "status": "pending"
+    },
+    {
+      "id": "FV5",
+      "command": "make pr-check",
+      "pass_criteria": "PASS, with the governance gate satisfied on a cold session and no hand-installed venv packages.",
+      "status": "pending"
+    },
+    {
+      "id": "FV6",
+      "command": "npx tsx scripts/build-intelligence/producer-seam-proof.ts --config <seam.json>",
+      "pass_criteria": "Receipt written; selected_donor_count == 10; evidence_complete true; ranking_llm_calls 0; verdict PASS or BLOCKED_ON_CONSUMER_PCC with an exact recorded reason.",
+      "status": "pending"
+    },
+    {
+      "id": "FV7",
+      "command": "git status --porcelain --untracked-files=all",
+      "pass_criteria": "Empty output on every touched repo.",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "blocked",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3",
+      "U4",
+      "U5"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "T1, T2, T3, and T15 are all external-authority blockers with no agent-side fix: a GitHub Packages scope grant, an Infisical machine-identity repair, a container-image dependency change, and a consumer-produced artifact. T7-T12 are implementable now and would clear the SEO-Bot assurance baseline (M3) independently, but M1 and M4 cannot be reached from inside this session, so the plan is delivered blocked rather than converged."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "Quantum-L9/SEO-Bot: manifest/ownership.yaml",
+      "Quantum-L9/SEO-Bot: MANIFEST.json",
+      "Quantum-L9/SEO-Bot: package.json (packageManager field; llm-router pin only under U2)",
+      "Quantum-L9/SEO-Bot: package-lock.json (only as a consequence of a deliberate pin change)",
+      "Quantum-L9/SEO-Bot: scripts/validation/gate-registry.ts (schema-key regex, infrastructureOnly set)",
+      "Quantum-L9/SEO-Bot: .env.example",
+      "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/hooks/memory_lock.py",
+      "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/memory/memory_state.py",
+      "Quantum-L9/Cursor-Governance: environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+      "Quantum-L9/Cursor-Governance: ops/scripts/open_pr_after_gate.sh"
+    ],
+    "must_not_modify": [
+      "Quantum-L9/Website-Bot: any path (Campaign 7-SEO forbids it; WEBSITE_BOT_CONTRACT_BLOCKER applies)",
+      "Quantum-L9/LLM-Router: any path (LLM_ROUTER_CONTRACT_BLOCKER applies)",
+      "Quantum-L9/SEO-Bot: src/build-intelligence/** (delivered and green on PR #56; not part of this remediation)",
+      "Quantum-L9/SEO-Bot: src/api/build-intelligence.ts, src/services/dataforseo.ts",
+      "Any validation assertion rewritten to be more permissive in order to reach green",
+      "The exactly-ten donor invariant, the zero-LLM ranking rule, and the one-repair-per-route bound"
+    ],
+    "preserved_contracts": [
+      "l9.website-intelligence/v1 artifact protocol and the shared @quantum-l9/bot-interop schemas — no local divergent copies",
+      "The three build-intelligence endpoints and their strict request schemas (no provider/model/temperature leakage)",
+      "Fail-closed producer semantics: no fabricated success on provider failure, no partial cohort sealed as complete",
+      "All LLM traffic through @quantum-l9/llm-router; zero direct provider calls",
+      "Exact ArtifactRef lineage on both downstream legs"
+    ],
+    "validation_commands": [
+      "npm ci --no-audit --no-fund",
+      "npm run typecheck",
+      "npm run lint",
+      "npx vitest run",
+      "npm run build",
+      "npm run manifest:check",
+      "npm run verify:assurance",
+      "make pr-check",
+      "npx tsx scripts/build-intelligence/producer-seam-proof.ts --config <seam.json>"
+    ]
+  }
+}
