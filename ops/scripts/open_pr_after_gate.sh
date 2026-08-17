@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # After a successful local PR gate: push, open/reuse PR, subscribe, emit remediation handoff.
 # Invoked by `make pr` (any capitalization). Skip open: OPEN_PR=0. Skip remediate: PR_REMEDIATE=0.
+# PUSH_ONLY=1: still run L4 + push (make pr checkers already ran); do not open a PR.
 # Do not run a separate gate-only pass before `make pr`.
 set -euo pipefail
 
@@ -109,6 +110,11 @@ fi
 
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
 git push -u origin HEAD
+
+if [[ "${PUSH_ONLY:-0}" == "1" ]]; then
+  echo "PUSH_ONLY=1 — pushed '$branch'; skipped GitHub PR open"
+  exit 0
+fi
 
 # `gh pr view/create/repo view --json` go through GitHub's GraphQL endpoint,
 # which some environments do not serve (restricted proxies, REST-scoped tokens).
