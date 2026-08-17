@@ -1,0 +1,18 @@
+schema: program-execution-blueprint.observability-plan.v2
+schema_version: 2.0.0
+signals:
+- id: OBS-001
+  name: progress
+  owner: AUTH-002
+  source_target_id: TARGET-001
+  collection_method: controller_projection
+  expected_range: defined
+  alert_condition: missing_or_stale
+  retention: program_lifetime
+  related_gate_ids:
+  - GATE-001
+  status: planned
+incident_routing:
+- condition: blocking_signal_breach
+  owner: igor_beylin
+  action: pause_affected_wave_and_preserve_evidence

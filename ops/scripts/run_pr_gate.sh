@@ -300,10 +300,17 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   # stay unconditional: they are surface-independent and must keep running here.
   # PAIRED PREDICATE: run_pr_precommit.sh skips symlinks-check the same way.
   # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
-  if should_skip_consumer_symlink_checks "$WS"; then
+  WS_KIND="$(classify_workspace_kind "$WS")"
+  if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
+    if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"; then
+      echo "FAIL: governance wiring incomplete — see FAIL lines above"
+      exit 1
+    fi
+    echo "OK: ssot-family workspace ($WS_KIND) — consumer links not required"
+  elif should_skip_consumer_symlink_checks "$WS"; then
     if is_l9_isolate_workspace "$WS"; then
       if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WS"; then
-        echo "FAIL: machine sessionEnd or Graphiti wiring incomplete"
+        echo "FAIL: check_governance_wiring.sh failed — see FAIL lines above"
         exit 1
       fi
       echo "OK: skip consumer workspace wiring (isolate under \$HOME/.l9)"
@@ -312,7 +319,7 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     fi
   else
     if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"; then
-      echo "FAIL: governance wiring incomplete"
+      echo "FAIL: governance wiring incomplete — see FAIL lines above"
       exit 1
     fi
   fi

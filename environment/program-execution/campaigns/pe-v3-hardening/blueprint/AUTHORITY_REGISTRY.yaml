@@ -1,0 +1,61 @@
+schema: program-execution-blueprint.authority-registry.v2
+schema_version: 2.0.0
+policy:
+  one_owner_per_responsibility: true
+  projection_does_not_transfer_authority: true
+  unresolved_conflict_result: BLOCKED
+responsibilities:
+- id: AUTH-001
+  responsibility: program_terminal_verdict
+  owner_target_id: TARGET-001
+  source_of_truth: igor_beylin
+  consumers:
+  - controller
+  - workers
+  - verifiers
+  allowed_roles:
+  - authority
+  prohibited_owner_target_ids: []
+  enforcement:
+  - schema
+  - tests
+  - controller_import
+  validation_gate_ids:
+  - GATE-001
+  definition_status: active
+- id: AUTH-002
+  responsibility: stage_zero_baseline_characterization
+  owner_target_id: TARGET-001
+  source_of_truth: igor_beylin
+  consumers:
+  - controller
+  - workers
+  - verifiers
+  allowed_roles:
+  - authority
+  prohibited_owner_target_ids: []
+  enforcement:
+  - schema
+  - tests
+  - controller_import
+  validation_gate_ids:
+  - GATE-001
+  definition_status: active
+- id: AUTH-003
+  responsibility: controller_verification
+  owner_target_id: TARGET-001
+  source_of_truth: controller
+  consumers:
+  - controller
+  - workers
+  - verifiers
+  allowed_roles:
+  - authority
+  prohibited_owner_target_ids: []
+  enforcement:
+  - schema
+  - tests
+  - controller_import
+  validation_gate_ids:
+  - GATE-001
+  definition_status: active
