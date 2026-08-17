@@ -5,7 +5,7 @@ metadata:
   campaign_id: pe-kernel-bind
   title: Bind control-plane kernels onto PE campaign transitions
   version: 1.0.0
-  created_at: '2026-08-17T13:46:10Z'
+  created_at: '2026-08-17T13:49:05Z'
   status: operator_intake
   owner: Igor Beylin
   intended_host: Quantum-L9/Cursor-Governance
@@ -306,6 +306,8 @@ tasks:
   input_evidence_ids: []
   paths:
   - environment/program-execution/core/shared/schemas/campaign-source.schema.json
+  - environment/program-execution/scripts/compile_campaign_source.py
+  - environment/program-execution/scripts/tests/test_compile_campaign_source.py
   - skills/l9-pe-campaign-activate/scripts/compile_activation_files.py
   - skills/l9-pe-campaign-activate/scripts/test_compile_activation_files.py
   nugget_id: NUG-003
@@ -445,7 +447,12 @@ tasks:
   paths:
   - environment/program-execution/core/program-execution-controller-template/schemas/verification-receipt.schema.json
   - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+  - environment/program-execution/core/program-execution-controller-template/references/STATE_MACHINE.md
   - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_state_transition.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_kernel_verdict.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_prepare_reuse.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_pipeline_assembly_fill.py
   nugget_id: NUG-005
   kernel_profile: BUILD
   consumers:
