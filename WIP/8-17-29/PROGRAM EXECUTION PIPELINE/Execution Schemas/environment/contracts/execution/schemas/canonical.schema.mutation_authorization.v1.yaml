@@ -1,0 +1,159 @@
+schema_id: canonical.schema.mutation_authorization.v1
+schema_name: Canonical Mutation Authorization Schema
+schema_class: canonical_execution_contract_schema
+schema_family: l9_execution_architecture
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.mutation_authorization.v1.yaml
+purpose:
+  primary: 'Define explicit, bounded authorization for filesystem, repository, database, external-system, or other state mutations
+    performed under an execution contract or execution packet.
+
+    '
+  output_level: schema_not_instance
+  intended_use:
+  - authorize_writes
+  - constrain_mutation_scope
+  - bind_approval_to_execution
+  - expire_write_authority
+  not_for:
+  - transport_routing
+  - read_only_execution
+  - blanket_admin_authority
+ontology:
+  parent_type: execution_authorization_schema
+  specialized_type: mutation_authorization_schema
+  instance_type_generated_by_this_schema: mutation_authorization
+required_sections:
+  identity:
+    required: true
+    fields:
+      authorization_id:
+        type: string
+        required: true
+      execution_contract_ref:
+        type: ref
+        required: true
+      execution_packet_ref:
+        type: ref
+        required: false
+      issued_at:
+        type: datetime
+        required: true
+      expires_at:
+        type: datetime_or_null
+        required: false
+  authority:
+    required: true
+    fields:
+      issued_by:
+        type: string
+        required: true
+      authorization_type:
+        enum:
+        - filesystem_write
+        - filesystem_delete
+        - repository_write
+        - database_write
+        - external_state_write
+        - release_write
+        - custom
+        required: true
+      scope_allow:
+        type: list
+        required: true
+      scope_deny:
+        type: list
+        required: true
+      max_operations:
+        type: integer_or_null
+        required: false
+      reversible_required:
+        type: boolean
+        required: true
+  preconditions:
+    required: true
+    fields:
+      baseline_verified:
+        type: boolean
+        required: true
+      capability_preflight_ref:
+        type: ref
+        required: true
+      blockers_empty:
+        type: boolean
+        required: true
+      approval_receipt_ref:
+        type: ref
+        required: false
+  constraints:
+    required: true
+    fields:
+      idempotency_requirement:
+        type: string
+        required: true
+      rollback_ref:
+        type: ref
+        required: true
+      evidence_required:
+        type: boolean
+        required: true
+      no_scope_expansion:
+        const: true
+  state:
+    required: true
+    fields:
+      status:
+        enum:
+        - draft
+        - active
+        - exhausted
+        - expired
+        - revoked
+        - completed
+        required: true
+      operations_used:
+        type: integer
+        required: true
+      evidence_refs:
+        type: list_string
+        required: true
+validation_rules:
+- id: MUT-AUTH-001
+  severity: blocker
+  rule: Mutation authorization must reference a whole execution contract.
+- id: MUT-AUTH-002
+  severity: blocker
+  rule: Authorization scope must be a subset of execution contract authority.
+- id: MUT-AUTH-003
+  severity: blocker
+  rule: Active authorization requires verified baseline and passed required capability preflight.
+- id: MUT-AUTH-004
+  severity: blocker
+  rule: Expired, revoked, or exhausted authorization cannot permit mutation.
+- id: MUT-AUTH-005
+  severity: blocker
+  rule: Every mutation requires evidence when evidence_required is true.
+derivation_targets:
+  can_generate:
+  - mutation_authorization
+  - write_authority_receipt
+  - mutation_scope_map
+anti_drift_rules:
+- Do not treat mutation authorization as general execution authority.
+- Do not let packets widen authorization scope.
+- Do not silently renew expired authorization.
+- Do not authorize irreversible mutation without explicit declaration and rollback policy.
+minimum_viable_instance_requirements:
+  required:
+  - identity
+  - authority
+  - preconditions
+  - constraints
+  - state
+schema_dependency_direction:
+  depends_on:
+  - canonical.schema.capability_preflight.v1
+  - canonical.schema.rollback_contract.v1
+  cycle_policy: schema_dependency_graph_must_be_acyclic
