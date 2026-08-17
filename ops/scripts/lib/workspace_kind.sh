@@ -18,9 +18,18 @@ is_governance_identity_tree() {
 }
 
 # Echoes: ssot | ssot_checkout | consumer
+# Never use GOV_ROOT here: callers (run_pr_gate.sh) overwrite it to the
+# workspace under test, which would mis-classify a worktree as ssot.
 classify_workspace_kind() {
   local ws="${1:-}"
-  local gc="${GLOBAL_COMMANDS:-${GOV_ROOT:-$HOME/.cursor-governance}}"
+  local gc="${GLOBAL_COMMANDS:-}"
+  if [ -z "$gc" ]; then
+    if declare -F resolve_governance_paths >/dev/null 2>&1 && resolve_governance_paths; then
+      gc="$GLOBAL_COMMANDS"
+    else
+      gc="$HOME/.cursor-governance"
+    fi
+  fi
   if [ -z "$ws" ]; then
     echo "consumer"
     return 0

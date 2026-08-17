@@ -55,6 +55,11 @@ ISO="$HOME/.l9/gov-worktrees/_kind-class-test-$$"
 mkdir -p "$ISO"
 [ "$(classify_workspace_kind "$ISO")" = "consumer" ] \
   || fail_now "empty ~/.l9 isolate without identity files must not be ssot_checkout"
+# run_pr_gate.sh overwrites GOV_ROOT to the workspace; that must not flip kind.
+GOV_ROOT="$CHECKOUT"
+[ "$(classify_workspace_kind "$CHECKOUT")" = "ssot_checkout" ] \
+  || fail_now "overwritten GOV_ROOT must not classify a second clone as ssot"
+unset GOV_ROOT
 pass "classifier ssot / ssot_checkout / consumer"
 
 out="$(bash "$OPS_DIR/check_governance_wiring.sh" --workspace "$CHECKOUT" 2>&1 || true)"
