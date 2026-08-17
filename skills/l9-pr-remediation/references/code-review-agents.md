@@ -38,7 +38,7 @@ For each unresolved thread or issue comment from a member:
 
 1. **Ingest.** Capture id, thread id, path, line, body, severity label if present, suggestion block if present. Do not pre-filter on "actionable body", `nit:`, Note severity, or coverage/overview wording.
 2. **Inspect.** Read the cited file and surrounding current source. Comment snippets and autofix patches are not ground truth ([SKILL.md](../SKILL.md) Law 9).
-3. **Analyze.** Classify ownership (`CODEBASE` / `CI_PIPELINE` / `HUMAN` / `FALSE_POSITIVE`) then validity: confirmed defect, already fixed, false positive, or human decision.
+3. **Analyze.** Classify ownership (`CODEBASE` / `CI_PIPELINE` / `ENVIRONMENT` / `HUMAN` / `FALSE_POSITIVE`) then validity: confirmed defect, already fixed, false positive, or human decision.
 4. **Fix if validated.** Confirmed `CODEBASE` findings enter this cycle's concurrent batch. Apply an autofix only after it is correct on current source. Do not weaken gates or suppress to close the thread.
 5. **Reply always.** Every member comment gets a canonical reply (Fixed / Deferred / Acknowledged / Disagreed) per [review-replies.md](review-replies.md). Volume is not an exemption.
 
@@ -82,12 +82,11 @@ Check-run annotations from a Code Quality check are extra evidence, not a substi
 
 ## Merge gate
 
-A PR is not mergeable under Converge while any member thread is:
+CRA membership does **not** define the GitHub merge gate. Converge must not squash-merge while **any** GraphQL `reviewThreads` node has `isResolved: false` — any author, including `github-advanced-security` / CodeQL re-files after a push.
 
-- unresolved, and
-- missing a canonical `<!-- l9-remediation:... -->` reply
+A CRA member thread also still needs a canonical `<!-- l9-remediation:... -->` reply.
 
-Diagnose must list unanswered member comments as review blockers. Converge must not squash-merge until they are answered.
+Diagnose must list unanswered member comments as review blockers.
 
 ## Completeness check
 

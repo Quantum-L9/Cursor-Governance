@@ -15,7 +15,7 @@ updated: 2026-08-16
 Read-only PR readiness. **Never** commit, push, or edit the worktree for fixes.
 **Forbidden:** alignment %, gap matrix, deep-eval scores, repo-index theater, babysit loops.
 
-When Converge loads this file it is the **census** half of [remediation-plan.md](remediation-plan.md): every CI failure, human review, bot, Copilot, and `github-code-quality[bot]` comment must be listed before any patch. Diagnose-only still presents the slim verdict below and stops.
+When Converge loads this file it is the **per-PR ingest** half of [remediation-plan.md](remediation-plan.md) after [run-contract.md](run-contract.md). Diagnose-only still presents the slim verdict below, plus an overlap advisory across open PRs, and stops. Never merge.
 
 ## Usage
 

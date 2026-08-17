@@ -22,8 +22,9 @@ Classify each ingested finding by **ownership first**, then severity and fix str
 |-------|-------|--------|
 | **CODEBASE** | yes | Fix in the concurrent batch |
 | **CI_PIPELINE** | no | Note in status; continue other clusters |
-| **HUMAN** | no | Name the decision; continue other clusters |
-| **FALSE_POSITIVE** | no | Reply with evidence |
+| **ENVIRONMENT** | no | Venv preflight once; export UV_PYTHON; continue other clusters |
+| **HUMAN** | no | Reply + resolve; do not merge that PR; continue other clusters |
+| **FALSE_POSITIVE** | no | Reply with evidence; resolve |
 
 See [ownership-boundary.md](ownership-boundary.md). Unknown ownership → do not edit that cluster.
 

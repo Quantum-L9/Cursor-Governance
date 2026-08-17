@@ -248,7 +248,7 @@ Each reply creates specific downstream value:
 Before proceeding to convergence check:
 - [ ] Every unresolved thread has a reply posted
 - [ ] Every `github-code-quality[bot]` / Copilot thread has a canonical reply
-- [ ] Every thread is resolved (via GraphQL mutation), except open HUMAN decisions
+- [ ] Every thread is resolved (via GraphQL mutation), including HUMAN (do not merge that PR until decided)
 - [ ] Every deferred item has a linked issue
 - [ ] Batch summary comment posted on the PR
 - [ ] Reply count matches finding count

@@ -25,6 +25,8 @@ fail-closed protocol (identity binding, pagination, root-cause clustering, minim
 contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule) lives in
 [sonarcloud-remediation.md](sonarcloud-remediation.md). Deterministic retrieval:
 
+Lazy: run only when Sonar is configured **and** the check is failing or blocking. Write `--output` under `$PWD` (never `/tmp`). Path-blocked fetch does not block Converge when that check is green.
+
 ```bash
 python scripts/sonar_fetch.py \
   --project "$(sed -n 's/^sonar.projectKey=//p' sonar-project.properties)" \

@@ -6,7 +6,7 @@ role: merge_advise
 tags: [pr, merge, diagnose, git]
 owner: igor_beylin
 status: active
-version: 1.1.0
+version: 2.0.0
 updated: 2026-08-16
 /L9_META -->
 
@@ -24,10 +24,11 @@ Violation: Manual file write from PR diff = CRITICAL — revert and re-merge via
 ## When
 
 - **Diagnose (`/pr`):** advise only. Merge after the user explicitly confirms.
-- **Converge (`/l9-pr-remediation`):** merge is authorized. After each PR is
-  green + mergeable, with no unanswered codebase or code-review agent threads
-  (`github-code-quality[bot]`, Copilot), merge it. Do all open PRs in the
-  target repo, oldest first.
+- **Converge (`/l9-pr-remediation`):** merge is authorized only after
+  FIRST_MERGE_GATE (full open-PR inventory, overlap matrix, remediations
+  published). Then MERGE_TRAIN. Do not merge the first green PR. Do not
+  default to createdAt order. Zero unresolved `reviewThreads` (any author)
+  immediately before each squash.
 
 Write the receipt before the first `gh pr merge`:
 
@@ -51,12 +52,13 @@ git checkout pr-{number}-branch
 git rebase origin/main
 git checkout main
 git merge pr-{number}-branch --no-edit -m "{commit_message}"
-git push origin main
+# publish via the cached sanctioned target — never raw git push
+# this host: PR_REMEDIATE=0 make pr
 git branch -d pr-{number}-branch
 git stash pop
 ```
 
-PlasticOS: use `make push` instead of raw `git push` when that workflow applies.
+If Makefile `pr` exists, publish is `PR_REMEDIATE=0 make pr`. Never raw `git push`.
 
 ## Forbidden
 
@@ -65,3 +67,5 @@ PlasticOS: use `make push` instead of raw `git push` when that workflow applies.
 - `--admin` / bypass rules
 - Merge without user confirm during Diagnose
 - Merge a red or conflicted PR
+- Merge before FIRST_MERGE_GATE
+- Raw `git push` when Makefile `pr` exists

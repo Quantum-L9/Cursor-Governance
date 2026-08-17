@@ -80,7 +80,7 @@ local_verify_commands:
 
 Also check (these outrank ad-hoc command lists when present):
 - `Makefile` targets: `agent-check`, `pr-check`, `check`, `ci`, `validate`, `test`
-- `.pre-commit-config.yaml` — record **every** hook `id`; `pre-commit run --all-files` is mandatory
+- `.pre-commit-config.yaml` — record hook ids that cover cited/planned paths; all-files pre-commit is not the default
 - `package.json` scripts section for `lint`, `typecheck`, `test`, `build`, `validate`
 - Any additional hooks in `.husky/` or `.git/hooks/` (must still run; never `--no-verify`)
 
@@ -153,17 +153,11 @@ NEVER delete a failing test unless the feature it tests was intentionally remove
 After applying ALL planned fixes, run the verify stack in [remediation-plan.md](remediation-plan.md). Do not commit on a subset.
 
 ```bash
-# 1) Every hook in .pre-commit-config.yaml (required when the file exists)
-pre-commit run --all-files
+# 1) Makefile primary gate with cached UV_PYTHON (required when Makefile exists)
+make pr-check   # or agent-check | check | ci | validate — first discovered
 
-# 2) Makefile primary gate (required when Makefile exists)
-make agent-check   # or pr-check | check | ci | validate — first discovered
-
-# 3) Leftover workflow run: commands not covered by (1) or (2)
-# Example leftovers only — do not use these as a substitute for make/pre-commit:
-npx tsc --noEmit
-npx eslint . --max-warnings 0
-npx vitest run
+# 2) Cited/planned paths (even if the default toolchain excludes them)
+# 3) Leftover workflow run: commands not covered by (1)
 ```
 
 ### Verification Rules
@@ -188,20 +182,22 @@ npx vitest run
 ┌─────────────────────────────────────────────────────────┐
 │  ONE-AND-DONE:                                           │
 │                                                          │
-│  0. Census + plan (no edits)                             │
-│  1. Apply fix for every planned cluster                  │
-│  2. pre-commit run --all-files  (all hook ids)           │
-│  3. make <primary-gate>                                  │
+│  0. RUN_CONTRACT + this PR's plan (no edits)             │
+│  1. Apply fix for every planned cluster + companions     │
+│  2. make <primary-gate> with cached UV_PYTHON            │
+│  3. Verify cited/planned paths                           │
 │  4. Fix any new failures from 2-3                        │
 │  5. Re-run 2-3 until green                               │
-│  6. git commit (ONE commit, hooks ON)                    │
-│  7. git push (ONE push)                                  │
+│  6. git add <planned files only>; git commit (hooks ON)  │
+│  7. sanctioned publish (ONE) — PR_REMEDIATE=0 make pr    │
 │                                                          │
 │  ❌ NEVER: edit before the plan is complete              │
 │  ❌ NEVER: commit after each fix                         │
-│  ❌ NEVER: push to see what CI says                      │
+│  ❌ NEVER: publish to see what CI says                   │
 │  ❌ NEVER: git commit --no-verify                        │
-│  ❌ NEVER: skip a pre-commit hook or Makefile target     │
+│  ❌ NEVER: raw git push when Makefile pr exists          │
+│  ❌ NEVER: git add -u / -A or git reset --hard           │
+│  ❌ NEVER: merge this PR because it is now green         │
 └─────────────────────────────────────────────────────────┘
 ```
 

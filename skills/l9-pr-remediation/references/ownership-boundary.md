@@ -35,11 +35,17 @@ Read-only surfaces (never edit here):
 
 **Action:** cite evidence in the cycle status. Do not edit. Do not emit issue-file bundles or tarballs. Continue every independent codebase cluster.
 
+## ENVIRONMENT
+
+Interpreter, arch, ABI, or venv failure (cryptography native-ext import, Rosetta miniconda on arm64, broken SSOT `.venv`). Not a source defect.
+
+**Action:** run the venv preflight once ([run-contract.md](run-contract.md)). Export `UV_PYTHON`. Do not edit source. Do not unpin lock pins. Do not symlink a failing SSOT venv. Continue every independent codebase cluster.
+
 ## HUMAN
 
 Needs product, architecture, legal, or security-exception judgment.
 
-**Action:** name the decision, leave the thread open, finish all independent codebase work.
+**Action:** name the decision in the reply (linked issue if Deferred), resolve the thread, finish all independent codebase work. **Do not merge that PR** until the human decision exists. GitHub conversation resolution is a merge blocker — do not leave `isResolved: false`.
 
 ## Code-review agents
 

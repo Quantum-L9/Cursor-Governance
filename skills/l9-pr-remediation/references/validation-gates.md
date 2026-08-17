@@ -66,15 +66,15 @@ execution_plan:
   estimated_files: ["{file_path}", ...]
   local_verify_commands: ["{command}", ...]
   makefile_targets: ["{target}", ...]
-  precommit_hooks: ["{hook-id}", ...]
+  cited_paths: ["{file_path}", ...]
 ```
 
 Validation:
-- [ ] Census covers CI + humans + bots + code-review agents (no surface skipped)
+- [ ] This PR's ingest covers failed CI + humans + bots + code-review agents (lazy scanners)
 - [ ] Every finding has `id`, `source`, `ownership`, `disposition`, `evidence` ([remediation-plan.md](remediation-plan.md))
 - [ ] `total >= 1` (if 0 findings, nothing to fix — skip to convergence)
 - [ ] `cycle_scope` is non-empty (at least one finding to fix) **or** all dispositions are reply/defer/note
-- [ ] `precommit_hooks` lists every `id` in `.pre-commit-config.yaml` when that file exists
+- [ ] `cited_paths` lists every finding path (verified even if the default toolchain excludes it)
 - [ ] `makefile_targets` lists the discovered make gate when a Makefile exists
 - [ ] No file edits have been made yet
 
@@ -125,8 +125,8 @@ local_verify_log:
 
 Validation:
 - [ ] `all_green: true` (every gate exit code is 0)
-- [ ] `pre-commit run --all-files` ran when `.pre-commit-config.yaml` exists; every hook id appears in results
-- [ ] Makefile primary target ran when a Makefile exists
+- [ ] Makefile primary target ran when a Makefile exists (cached UV_PYTHON)
+- [ ] cited/planned paths were checked even if the default toolchain excludes them
 - [ ] `gates_run == gate_registry.total_gates` (no gates skipped)
 - [ ] `iteration <= 5` (max local verify attempts not exceeded)
 - [ ] Every gate from the registry appears in results
@@ -182,7 +182,7 @@ reply_record:
 Validation:
 - [ ] `threads_replied == threads_total` (every thread got a reply)
 - [ ] Every `github-code-quality[bot]` / Copilot thread is in that reply set ([code-review-agents.md](code-review-agents.md))
-- [ ] `threads_resolved == threads_total` (every thread resolved, except open HUMAN decisions)
+- [ ] `threads_resolved == threads_total` (every thread resolved, any author; HUMAN still resolved)
 - [ ] `issues_created >= deferred_count` (every deferred item has an issue)
 - [ ] `batch_summary_posted: true`
 - [ ] Every reply follows canonical format (Format A/B/C/D)
@@ -196,7 +196,7 @@ If at ANY point the agent:
 - Makes more than 1 push per cycle → **VIOLATION: multi-push**
 - Commits per-finding or pushes to probe CI → **VIOLATION: not-one-and-done**
 - Edits before the plan gate → **VIOLATION: patch-before-plan**
-- Skips Makefile or a `.pre-commit-config.yaml` hook, or uses `--no-verify` → **VIOLATION: skipped-local-verify**
+- Skips the Makefile primary gate, cited-path verify, or uses `--no-verify` → **VIOLATION: skipped-local-verify**
 - Skips Gate A (no gate registry built) → **VIOLATION: blind-fixing**
 - Leaves threads unresolved after Step 7.5 → **VIOLATION: silent-fix**
 

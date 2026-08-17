@@ -40,6 +40,7 @@ Use `scripts/sonar_fetch.py` (stdlib, secret-safe) to produce `sonarcloud-issues
 python scripts/sonar_fetch.py \
   --project Quantum-L9_Cursor-Governance --organization quantum-l9 \
   --pull-request 64 --output sonarcloud-issues-before.json
+  # --output must stay under $PWD; never /tmp
 # branch analysis instead of a PR: --branch main
 ```
 

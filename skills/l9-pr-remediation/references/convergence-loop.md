@@ -48,7 +48,8 @@ This means: after push, CI SHOULD pass. Polling is to confirm and to catch envir
 │  3. Check for new review comments                        │
 │  4. Evaluate convergence gate                            │
 │                                                          │
-│  → converged: MERGE (ordinary squash) then next open PR  │
+│  → this PR green: do not merge; continue REMEDIATE_ALL   │
+│  → set ready for MERGE_TRAIN after FIRST_MERGE_GATE      │
 │  → new post-push comments only: re-census NEW, one more  │
 │  → CI failed on env delta: investigate, one more commit  │
 │  → skipped census / unrun local gate: protocol failure   │
@@ -106,6 +107,7 @@ Convergence is reached when ALL conditions are true:
 |-----------|-------------|
 | CI status is `success` | `gh run view --json conclusion` → `"success"` |
 | No new unresolved review comments | Compare comment count/timestamps before and after push |
+| All review threads resolved | GraphQL `isResolved: false` count is 0 (any author) |
 | All code-review agent threads answered | Every `github-code-quality[bot]` / Copilot thread has a canonical reply ([code-review-agents.md](code-review-agents.md)) |
 | All blocking findings resolved | Internal tracking: all `blocking` findings have status `fixed` |
 | All actionable findings resolved or deferred | Internal tracking |
@@ -178,8 +180,9 @@ minimum_safe_next_action: "merged" | "manual review of deferred items" | "run an
 
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
-- CI passes AND no new actionable codebase signals → emit `converged` and **merge** that PR (`gh pr merge --squash --repo`), then continue older-to-newer open PRs
-- Only `CI_PIPELINE` / `HUMAN` blockers remain → emit `partial` early (more cycles cannot help)
+- CI passes AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN.
+- Only `CI_PIPELINE` / `HUMAN` / `ENVIRONMENT` blockers remain → emit `partial` early (more cycles cannot help); do not merge that PR
+- Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`
 - User sends a stop signal → emit `partial` with current state
