@@ -1408,6 +1408,26 @@ def resumable_workspace(workspace: Path) -> bool:
     )
 
 
+def committed_changed_files(worktree: Path, base_sha: str, candidate_sha: str) -> list[str]:
+    """Claim the diff git actually recorded, not the paths the task declared.
+
+    pec verify compares the receipt against `git diff base..candidate`
+    (`changed_files_exact`, `scope`). Claiming every declared writable path is a
+    false claim for a task whose deliverables already existed at the base, and
+    the honest answer for that task is an empty diff.
+    """
+    if base_sha == candidate_sha:
+        return []
+    diff = run_cmd(
+        ["git", "-C", str(worktree), "diff", "--name-only", f"{base_sha}..{candidate_sha}"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if diff.returncode != 0:
+        raise CampaignError(f"cannot read the committed diff: {(diff.stderr or '').strip()}")
+    return [line.strip() for line in diff.stdout.splitlines() if line.strip()]
+
+
 def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[str, Any]]:
     """Run the contract's validation commands and report what actually happened.
 
@@ -1647,7 +1667,7 @@ def default_execute(
 
         if not already_submitted:
             candidate = rewrite_output()
-            changed = [item for item in writable if not is_stub_output(worktree / item, title)]
+            changed = committed_changed_files(worktree, contract["base_sha"], candidate)
             declared_commands = [
                 str(command) for command in (contract.get("validation_commands") or []) if command
             ]
@@ -1659,7 +1679,7 @@ def default_execute(
                 "program_digest": contract["program_digest"],
                 "base_sha": contract["base_sha"],
                 "candidate_sha": candidate,
-                "changed_files": changed or [rel],
+                "changed_files": changed,
                 "validation_results": validation_results,
                 "produced_evidence": [],
                 "residual_unknowns": [],
