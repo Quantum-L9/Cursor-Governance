@@ -1311,7 +1311,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "7e06770d9a66aa1663d88a398ea952f5948588d07ab4c590a5a698bc4a6d82d9"
+      "sha256": "1e3992a782091d0d5bfba67a69ecb85be46755adb9a90c4e4e1e484a1b3054f9"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -1351,7 +1351,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "5e327504c25a5418e9277dc89fb7e9dc1f0461ea2312d7dfd68bfc8c9314e4ae"
+      "sha256": "28eee17bb5a996e5f2d47e18f76e1816972256c616eaaf343bd4fee9b551487a"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1375,7 +1375,7 @@
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "c471f86295b73fb91a2316a26161a477987e9dcb75fadbf84bacb841d1ff55ee"
+      "sha256": "d200d0f932431753175501cc3bd780387cada6a45e53ff8b5177c8a17ab26854"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
@@ -1383,7 +1383,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "732162e8abd388bb1111cc2a3f8371e65359f40e4cfcf33de3d935259a9e95ad"
+      "sha256": "713508d9643862d515f499fd074b427a5150eaf9fdee2de42c53032ed9ee685d"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

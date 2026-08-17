@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -526,6 +527,87 @@ def is_git_repo(path: Path) -> bool:
     return (path / ".git").exists() or (path / ".git").is_file()
 
 
+def is_linked_worktree(path: Path) -> bool:
+    return (path / ".git").is_file()
+
+
+def is_shallow_repo(path: Path) -> bool:
+    result = run_cmd(
+        ["git", "-C", str(path), "rev-parse", "--is-shallow-repository"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    return result.returncode == 0 and (result.stdout or "").strip() == "true"
+
+
+def may_clone_local(donor: Path) -> bool:
+    """`clone --local` from a linked worktree or a shallow repo yields a hollow store."""
+    return is_git_repo(donor) and not is_linked_worktree(donor) and not is_shallow_repo(donor)
+
+
+def history_walkable(path: Path) -> bool:
+    """True when HEAD exists and every parent it records is present as an object.
+
+    A genuine root commit records no parent and is walkable. A clone taken from
+    a worktree of a shallow repo records a parent SHA whose object it does not
+    have, which is what makes the pec verify base_sha gate exit 128.
+    """
+    head = run_cmd(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    sha = (head.stdout or "").strip()
+    if head.returncode != 0 or not sha:
+        return False
+    shown = run_cmd(
+        ["git", "-C", str(path), "cat-file", "-p", sha],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if shown.returncode != 0:
+        return False
+    parents = [
+        line.split()[1] for line in (shown.stdout or "").splitlines() if line.startswith("parent ")
+    ]
+    for parent in parents:
+        typed = run_cmd(
+            ["git", "-C", str(path), "cat-file", "-t", parent],
+            timeout=GIT_TIMEOUT_S,
+            env=git_env(),
+        )
+        if typed.returncode != 0 or (typed.stdout or "").strip() != "commit":
+            return False
+    return True
+
+
+def ensure_target_history(dest: Path, repository_id: str) -> None:
+    """Fail closed unless the target can walk its own history before pec verify."""
+    dest = dest.resolve()
+    if history_walkable(dest) and not is_shallow_repo(dest):
+        return
+    origin = f"https://github.com/{repository_id}.git"
+    run_cmd(
+        ["git", "-C", str(dest), "remote", "set-url", "origin", origin],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if is_shallow_repo(dest):
+        run_cmd(
+            ["git", "-C", str(dest), "fetch", "--unshallow", "origin"],
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
+        )
+    if not history_walkable(dest):
+        run_cmd(
+            ["git", "-C", str(dest), "fetch", "origin", "--deepen=128"],
+            timeout=CLONE_TIMEOUT_S,
+            env=git_env(),
+        )
+    if not history_walkable(dest):
+        raise CampaignError(f"target checkout {dest} cannot walk its parents; refuse hollow clone")
+
+
 def default_ensure_target_checkout(
     dest: Path, repository_id: str, *, donor: Path | None = None
 ) -> Path:
@@ -535,11 +617,16 @@ def default_ensure_target_checkout(
             raise CampaignError(
                 f"target checkout is dirty: {dest}; make campaign will not attach to a dirty target"
             )
+        ensure_target_history(dest, repository_id)
         return dest
     if dest.exists():
         raise CampaignError(f"target path exists and is not a git checkout: {dest}")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if donor is not None and is_git_repo(donor) and donor_matches_repository(donor, repository_id):
+    if (
+        donor is not None
+        and may_clone_local(donor)
+        and donor_matches_repository(donor, repository_id)
+    ):
         clone = run_cmd(
             ["git", "clone", "--local", str(donor.resolve()), str(dest)],
             timeout=CLONE_TIMEOUT_S,
@@ -557,7 +644,9 @@ def default_ensure_target_checkout(
                 timeout=GIT_TIMEOUT_S,
                 env=git_env(),
             )
-            return dest
+            if history_walkable(dest):
+                return dest
+            shutil.rmtree(dest)
     url = f"https://github.com/{repository_id}.git"
     clone = run_cmd(
         ["git", "clone", url, str(dest)],
@@ -1184,24 +1273,55 @@ def all_required_tasks_completed(workspace: Path) -> bool:
     )
 
 
-def task_output_location(task: dict[str, Any]) -> str:
+def task_output_locations(task: dict[str, Any]) -> list[str]:
+    locations: list[str] = []
     for item in (task.get("source") or {}).get("outputs") or []:
         if isinstance(item, dict) and item.get("location"):
             location = str(item["location"]).strip()
-            if location and not location.startswith("receipts/"):
-                return location
-    return f"docs/program-execution/{task['id']}.md"
+            if location and not location.startswith("receipts/") and location not in locations:
+                locations.append(location)
+    if not locations:
+        locations.append(f"docs/program-execution/{task['id']}.md")
+    return locations
 
 
-def write_and_commit_output(worktree: Path, rel: str, title: str) -> str:
-    path = worktree / rel
+def task_output_location(task: dict[str, Any]) -> str:
+    return task_output_locations(task)[0]
+
+
+def is_stub_output(path: Path, title: str) -> bool:
     if not path.is_file():
-        raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
+        return True
     existing = path.read_text(encoding="utf-8")
-    if existing.strip() == f"{Path(rel).stem} complete: {title}" or len(existing.strip()) < 40:
+    return existing.strip() == f"{path.stem} complete: {title}" or len(existing.strip()) < 40
+
+
+def resumable_workspace(workspace: Path) -> bool:
+    """True when $L9_ROOT/programs/<id> is a live pec runtime, not a draft leftover."""
+    launch_path = workspace / "runtime" / "LAUNCH.json"
+    if not launch_path.is_file() or not (workspace / "runtime" / "program-lock.json").is_file():
+        return False
+    try:
+        launch = json.loads(launch_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    return (
+        str(launch.get("runtime_status") or "") == "active"
+        and str(launch.get("host_lifecycle") or "") == "in_progress"
+        and bool(str(launch.get("campaign_id") or "").strip())
+    )
+
+
+def write_and_commit_output(
+    worktree: Path, rel: str, title: str, writable: list[str] | None = None
+) -> str:
+    """Commit every declared writable file that holds real work, not one stub."""
+    declared = list(dict.fromkeys([*(writable or []), rel]))
+    to_add = [item for item in declared if item and not is_stub_output(worktree / item, title)]
+    if not to_add:
         raise CampaignError(f"refuse stub output for {rel}; implement the task in {worktree} first")
     added = run_cmd(
-        ["git", "-C", str(worktree), "add", "--", rel],
+        ["git", "-C", str(worktree), "add", "--", *to_add],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
@@ -1335,41 +1455,71 @@ def default_execute(
         if state == "COMPLETED":
             completed.append(task_id)
             continue
-        if state != "LEASED":
-            pec_cmd(
-                workspace,
-                "claim",
-                task_id,
-                "--holder",
-                "make-campaign",
-                "--ttl-minutes",
-                str(TASK_BUDGET_MINUTES),
-            )
-        prepared = pec_cmd(workspace, "prepare", task_id)
-        rendered = pec_cmd(workspace, "render-contract", task_id)
-        pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
-        worktree = Path(str(prepared.get("worktree") or workspace / "worktrees" / task_id))
+        contract_path = workspace / "contracts" / "rendered" / f"{task_id}.json"
+        worktree = workspace / "worktrees" / task_id
+        already_submitted = state == "SUBMITTED"
+        if already_submitted:
+            if not contract_path.is_file():
+                raise CampaignError(f"{task_id} is SUBMITTED without a Rendered Contract")
+            rendered = {"contract": str(contract_path)}
+        else:
+            if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
+                pec_cmd(
+                    workspace,
+                    "claim",
+                    task_id,
+                    "--holder",
+                    "make-campaign",
+                    "--ttl-minutes",
+                    str(TASK_BUDGET_MINUTES),
+                )
+                state = "LEASED"
+            if state == "LEASED":
+                prepared = pec_cmd(workspace, "prepare", task_id)
+                worktree = Path(str(prepared.get("worktree") or worktree))
+            if state in {"LEASED", "PREPARED"} or not contract_path.is_file():
+                rendered = pec_cmd(workspace, "render-contract", task_id)
+            else:
+                rendered = {"contract": str(contract_path)}
+            if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED"}:
+                pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
         writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
-        rel = writable[0] if writable else task_output_location(task)
+        if not writable:
+            writable = task_output_locations(task)
+        rel = writable[0]
+        title = str(task.get("title") or task_id)
         writer = hooks.write_task_output or write_and_commit_output
-        candidate = writer(worktree, rel, str(task.get("title") or task_id))
-        receipt = {
-            "schema": "program-execution-controller.attempt-receipt.v2",
-            "task_id": task_id,
-            "contract_digest": contract["contract_digest"],
-            "program_digest": contract["program_digest"],
-            "base_sha": contract["base_sha"],
-            "candidate_sha": candidate,
-            "changed_files": [rel],
-            "validation_results": [],
-            "produced_evidence": [],
-            "residual_unknowns": [],
-            "claimed_status": "completed",
-        }
-        receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
-        receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-        pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
+
+        def rewrite_output(
+            worktree: Path = worktree,
+            rel: str = rel,
+            title: str = title,
+            writable: list[str] = writable,
+        ) -> str:
+            if hooks.write_task_output is None:
+                return write_and_commit_output(worktree, rel, title, writable=writable)
+            return writer(worktree, rel, title)
+
+        if not already_submitted:
+            candidate = rewrite_output()
+            changed = [item for item in writable if not is_stub_output(worktree / item, title)]
+            receipt = {
+                "schema": "program-execution-controller.attempt-receipt.v2",
+                "task_id": task_id,
+                "contract_digest": contract["contract_digest"],
+                "program_digest": contract["program_digest"],
+                "base_sha": contract["base_sha"],
+                "candidate_sha": candidate,
+                "changed_files": changed or [rel],
+                "validation_results": [],
+                "produced_evidence": [],
+                "residual_unknowns": [],
+                "claimed_status": "completed",
+            }
+            receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
+            receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+            pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
         verification = pec_cmd(workspace, "verify", task_id)
         decision = dispatch_kernel_change(verification)
         if decision["action"] == "skip_change":
@@ -1381,7 +1531,7 @@ def default_execute(
         if decision["action"] == "change":
             apply_fail_change(
                 verification,
-                rewrite=lambda: writer(worktree, rel, str(task.get("title") or task_id)),
+                rewrite=rewrite_output,
                 reverify=lambda: pec_cmd(workspace, "verify", task_id),
             )
             verification = pec_cmd(workspace, "verify", task_id)
@@ -1581,6 +1731,105 @@ def target_head_sha(target_path: Path) -> str:
     return value
 
 
+def resume_live_campaign(
+    *,
+    campaign_id: str,
+    seed: dict[str, Any],
+    requested_until: str,
+    until: str,
+    primary: Path,
+    repo_root: Path | None,
+    l9_home: Path,
+    host_repo: str,
+    hooks: Hooks,
+) -> CampaignReport:
+    """Continue an armed campaign instead of quarantining its live pec workspace.
+
+    Re-running make campaign for an id whose runtime is active used to move
+    $L9_ROOT/programs/<id> aside, stranding the leased worktree and every
+    recorded attempt. An active LAUNCH.json means execute, not re-arm.
+    """
+    pec_workspace = l9_home / "programs" / campaign_id
+    launch = json.loads((pec_workspace / "runtime" / "LAUNCH.json").read_text(encoding="utf-8"))
+    if str(launch.get("campaign_id") or "").strip() != campaign_id:
+        raise CampaignError(
+            f"LAUNCH.json campaign_id {launch.get('campaign_id')!r} is not {campaign_id}"
+        )
+    host = str(launch.get("host_worktree") or launch.get("host_tree") or "")
+    if repo_root is not None:
+        write_root = repo_root.resolve()
+    elif host:
+        write_root = Path(host).resolve()
+    else:
+        raise CampaignError(f"resume {campaign_id}: LAUNCH.json has no host worktree")
+    refuse_write_to_dirty_primary(primary, write_root)
+    target_worktree = str(launch.get("target_worktree") or launch.get("target_tree") or "")
+    report = CampaignReport(
+        campaign_id=campaign_id,
+        until=requested_until,
+        worktree=str(write_root),
+        primary=str(primary),
+        blueprint=str(launch.get("blueprint") or (l9_home / "blueprints" / campaign_id)),
+        pec_workspace=str(pec_workspace),
+        program_blockers=default_program_blockers(campaign_id, armed=True),
+    )
+    log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
+    report.stages_completed.append("resume")
+    repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    target_path = Path(target_worktree) if target_worktree else None
+    if target_path is not None and target_path.exists() and is_git_repo(target_path):
+        if is_dirty(target_path):
+            raise CampaignError(
+                f"target checkout is dirty: {target_path}; "
+                "make campaign will not attach to a dirty target"
+            )
+        ensure_target_history(target_path, repository_id)
+    log(f"execute {campaign_id}")
+    if hooks.execute is not None:
+        hooks.execute(pec_workspace, campaign_id)
+    elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+        default_execute(
+            pec_workspace,
+            campaign_id,
+            hooks=hooks,
+            live_prs=should_run(until, "pr") and hooks.make_pr is None,
+        )
+    executed = False
+    if (pec_workspace / "runtime" / "program-lock.json").is_file():
+        executed = all_required_tasks_completed(pec_workspace)
+    report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
+    report.stages_completed.append("execute")
+    if not should_run(until, "pr"):
+        return report
+    if not executed:
+        raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
+    commit_host_emit(write_root, campaign_id)
+    if hooks.make_pr is None:
+        push_integration_branch(write_root, campaign_id)
+    make_pr = hooks.make_pr or default_make_pr
+    pr_result = make_pr(write_root, campaign_id)
+    report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
+    report.host_pr_number = pr_result.get("number")
+    log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
+    report.stages_completed.append("pr")
+    if not should_run(until, "close"):
+        return report
+    if hooks.close is not None:
+        hooks.close(pec_workspace, campaign_id)
+    else:
+        default_close(
+            pec_workspace,
+            campaign_id,
+            write_root=write_root,
+            host_repo=host_repo,
+            hooks=hooks,
+            merge_recorded=requested_until in {"merge", "close"},
+        )
+    report.program_blockers = []
+    report.stages_completed.append("close")
+    return report
+
+
 def run_campaign(
     intent_path: Path,
     *,
@@ -1608,6 +1857,18 @@ def run_campaign(
     seed = load_activate_seed(resolved_intent)
     campaign_id = str(seed["campaign_id"]).strip()
     refuse_hash_campaign_id(campaign_id)
+    if should_run(until, "execute") and resumable_workspace(l9_home / "programs" / campaign_id):
+        return resume_live_campaign(
+            campaign_id=campaign_id,
+            seed=seed,
+            requested_until=requested_until,
+            until=until,
+            primary=primary,
+            repo_root=repo_root,
+            l9_home=l9_home,
+            host_repo=host_repo,
+            hooks=hooks,
+        )
     primed_root = l9_home / "primed"
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")

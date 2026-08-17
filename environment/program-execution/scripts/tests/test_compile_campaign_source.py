@@ -251,6 +251,59 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertEqual(validated.returncode, 0, validated.stderr)
             self.assertEqual(json.loads(validated.stdout)["status"], "PASS")
 
+    def test_every_declared_path_becomes_an_output(self) -> None:
+        """The sealed contract must carry all writable paths, not just the first."""
+        self.assertEqual(
+            self.compiler._task_output_locations(
+                {
+                    "id": "TASK-001",
+                    "paths": [
+                        "environment/contracts/execution/adr/ADR-0023.md",
+                        "docs/decisions/ADR-0023.md",
+                    ],
+                }
+            ),
+            [
+                "environment/contracts/execution/adr/ADR-0023.md",
+                "docs/decisions/ADR-0023.md",
+            ],
+        )
+        self.assertEqual(
+            self.compiler._task_output_locations(
+                {
+                    "id": "TASK-002",
+                    "outputs": [{"location": "receipts/internal.json"}, {"location": "a.md"}],
+                    "paths": ["a.md", "b.md"],
+                }
+            ),
+            ["a.md", "b.md"],
+        )
+        self.assertEqual(
+            self.compiler._task_output_locations({"id": "TASK-009"}),
+            ["docs/program-execution/TASK-009.md"],
+        )
+
+    def test_compiled_task_cards_keep_multi_path_outputs(self) -> None:
+        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        task = source["tasks"][0]
+        task["paths"] = ["docs/one.md", "docs/two.md"]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            self.compiler.compile_source(
+                path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+            )
+            cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+            compiled = next(item for item in cards["tasks"] if item["id"] == task["id"])
+            self.assertEqual(
+                [output["location"] for output in compiled["outputs"]],
+                ["docs/one.md", "docs/two.md"],
+            )
+            self.assertEqual(len({output["id"] for output in compiled["outputs"]}), 2)
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
+
 
 if __name__ == "__main__":
     unittest.main()

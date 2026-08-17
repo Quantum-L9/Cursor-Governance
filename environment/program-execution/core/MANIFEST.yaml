@@ -291,8 +291,8 @@ files:
   sha256: e42f5aa4018d0bf8bc0cb94f93663afdeb45a7424ca3d19890504867aaeb5df7
   bytes: 611
 - path: program-execution-controller-template/references/STATE_MACHINE.md
-  sha256: 17775a22232f2957625f97095aedc1ba6df7b931d8567c6d1553004627218bc2
-  bytes: 1024
+  sha256: 87b0b292667c477e5918c6d651db0ca1aaeb3253cf690f6fb6e62b049d28e0bb
+  bytes: 1088
 - path: program-execution-controller-template/references/VERIFICATION_AND_RECEIPTS.md
   sha256: 94e4329c9de0a8c4dc2d0a507be66e08fef296744c5916f51bcb297c7b098352
   bytes: 556
@@ -354,8 +354,8 @@ files:
   sha256: f89ab2a8a0679e8def662d82661cf4c16988604e5f2ea2fe3c6c406ad857d76e
   bytes: 15039
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: ed9068ca8ce9dd84034d10064644518f7883cd48d67a60a5d9bbf3d3084ef4ab
-  bytes: 76420
+  sha256: 5606300753bc05b98505b448246953dbf00a2784993d38b4a563099b4744644c
+  bytes: 77595
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -366,8 +366,8 @@ files:
   sha256: cf1c947f1a138695dc8b8d6dc17398fb864a58f0512471fa8454fcb9c40c7fff
   bytes: 14495
 - path: program-execution-controller-template/scripts/pec/state.py
-  sha256: 56782e09c6e9a4c5b534a0fd331da02efb8e4930d4d7a65f57217c1d68ddbd2b
-  bytes: 23430
+  sha256: a52609cdff558ecda0ef69b316b22a041d1de2b6f8dbff098ee9c04dccd7995e
+  bytes: 23456
 - path: program-execution-controller-template/scripts/pec.py
   sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
   bytes: 180
@@ -419,6 +419,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_preflight.py
   sha256: d3ecd4c701fe9053fb23baa9f9565f728100d61a4e3c78ae42e41dbed801ecf5
   bytes: 5992
+- path: program-execution-controller-template/scripts/tests/test_prepare_reuse.py
+  sha256: c4e3c473a499679b22235e9bf8e1d13e990e6cee37f6ca7c63d433b44a14efa0
+  bytes: 2128
 - path: program-execution-controller-template/scripts/tests/test_program_control.py
   sha256: dbe6434dcfb45ee7316483027219020d549ae825cd2fa6bb9da085e6567b4ba0
   bytes: 1936
@@ -546,5 +549,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 180
-  total_bytes: 563102
+  file_count: 181
+  total_bytes: 566495

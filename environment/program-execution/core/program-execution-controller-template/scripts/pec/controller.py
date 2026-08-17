@@ -877,20 +877,24 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
             db.transition_task(task_id, "STALE", last_error="repository_state_changed")
             raise ControllerError("repository state changed after reconciliation")
         worktree = workspace / "worktrees" / task_id
+        reused = False
         if worktree.exists():
-            raise ControllerError(f"worktree already exists: {worktree}")
-        result = run_git(
-            repo_path,
-            "worktree",
-            "add",
-            "-b",
-            lease["branch"],
-            str(worktree),
-            lease["base_sha"],
-            check=False,
-        )
-        if result.returncode != 0:
-            raise ControllerError(f"failed to create worktree: {result.stderr.strip()}")
+            if not _worktree_matches_lease(worktree, lease, repo_path):
+                raise ControllerError(f"worktree already exists: {worktree}")
+            reused = True
+        else:
+            result = run_git(
+                repo_path,
+                "worktree",
+                "add",
+                "-b",
+                lease["branch"],
+                str(worktree),
+                lease["base_sha"],
+                check=False,
+            )
+            if result.returncode != 0:
+                raise ControllerError(f"failed to create worktree: {result.stderr.strip()}")
         db.update_lease(lease["lease_id"], worktree=str(worktree))
         db.update_task(task_id, worktree=str(worktree))
         db.transition_task(task_id, "PREPARED")
@@ -902,6 +906,7 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
                 "lease_id": lease["lease_id"],
                 "worktree": str(worktree),
                 "base_sha": lease["base_sha"],
+                "reused": reused,
             },
         )
         return {
@@ -909,6 +914,7 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
             "worktree": str(worktree),
             "branch": lease["branch"],
             "base_sha": lease["base_sha"],
+            "reused": reused,
         }
     finally:
         db.close()
@@ -933,11 +939,28 @@ def _require_stack_proof_reentry(workspace: Path, extra_text: str) -> None:
         raise ControllerError(str(exc)) from exc
 
 
+def _worktree_matches_lease(worktree: Path, lease: dict[str, Any], repo_path: Path) -> bool:
+    """Reuse a leftover task worktree only while it still belongs to this lease."""
+    if not ((worktree / ".git").exists() or (worktree / ".git").is_file()):
+        return False
+    listed = run_git(repo_path, "worktree", "list", "--porcelain", check=False)
+    if listed.returncode != 0:
+        return False
+    text = listed.stdout or ""
+    if not any(candidate in text for candidate in {str(worktree), str(worktree.resolve())}):
+        return False
+    branch = run_git(worktree, "rev-parse", "--abbrev-ref", "HEAD", check=False)
+    return branch.returncode == 0 and branch.stdout.strip() == str(lease.get("branch") or "")
+
+
 def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         task = db.task(task_id)
-        if task is None or task["runtime_state"] != "CONTRACTED":
+        if task is None:
+            raise ControllerError(f"unknown task: {task_id}")
+        retrying = task["runtime_state"] == "FAILED" and bool(task.get("rendered_contract_path"))
+        if not retrying and task["runtime_state"] != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
         _require_stack_proof_reentry(workspace, str(task_id))
         _refuse_operator_memo_cwd(workspace)
@@ -959,7 +982,7 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         task = db.task(task_id)
         if task is None or not task.get("rendered_contract_path"):
             raise ControllerError("Rendered Contract required")
-        if task["runtime_state"] not in {"CONTRACTED", "EXECUTING"}:
+        if task["runtime_state"] not in {"CONTRACTED", "EXECUTING", "FAILED"}:
             raise ControllerError(f"task cannot submit from state {task['runtime_state']}")
         receipt = load_json(receipt_source)
         _validate_schema(workspace, "attempt-receipt.schema.json", receipt)

@@ -806,6 +806,140 @@ class RunCampaignTests(unittest.TestCase):
         self.assertEqual(result["reverify"]["kernel_verdict"], "PASS")
         self.assertEqual(decision, "change")
 
+    def test_local_clone_refused_from_linked_worktree(self) -> None:
+        """clone --local from a worktree of a shallow primary yields a hollow target."""
+        with tempfile.TemporaryDirectory() as raw:
+            primary = Path(raw) / "primary"
+            worktree = Path(raw) / "wt"
+            primary.mkdir()
+            _git_init(primary)
+            subprocess.run(
+                ["git", "-C", str(primary), "branch", "feat/pipe"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(primary), "worktree", "add", str(worktree), "feat/pipe"],
+                check=True,
+                capture_output=True,
+            )
+            self.assertTrue(self.mod.is_linked_worktree(worktree))
+            self.assertFalse(self.mod.may_clone_local(worktree))
+            self.assertTrue(self.mod.may_clone_local(primary))
+            self.assertTrue(self.mod.history_walkable(primary))
+
+    def test_history_walkable_rejects_missing_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            (repo / "second.txt").write_text("two\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(repo), "add", "second.txt"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "-m", "two"],
+                check=True,
+                capture_output=True,
+            )
+            parent = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD^"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (repo / ".git" / "objects" / parent[:2] / parent[2:]).unlink()
+            self.assertFalse(self.mod.history_walkable(repo))
+
+    def test_ensure_target_history_passes_walkable_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            repo = Path(raw) / "repo"
+            repo.mkdir()
+            _git_init(repo)
+            self.mod.ensure_target_history(repo, "Quantum-L9/unused")
+            self.assertTrue(self.mod.history_walkable(repo))
+
+    def test_write_and_commit_output_commits_every_declared_file(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            for name in ("one.md", "two.md"):
+                (root / name).write_text(
+                    f"{name} holds real work, long enough to clear the stub floor\n",
+                    encoding="utf-8",
+                )
+            sha = self.mod.write_and_commit_output(
+                root, "one.md", "Title", writable=["one.md", "two.md"]
+            )
+            listed = subprocess.run(
+                ["git", "-C", str(root), "show", "--name-only", "--pretty=", sha],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+            self.assertIn("one.md", listed)
+            self.assertIn("two.md", listed)
+
+    def test_resumable_workspace_needs_active_launch_and_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw) / "programs" / "demo-activate-v1"
+            runtime = workspace / "runtime"
+            runtime.mkdir(parents=True)
+            (runtime / "state.sqlite").write_text("stale-draft\n", encoding="utf-8")
+            self.assertFalse(self.mod.resumable_workspace(workspace))
+            (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+            (runtime / "LAUNCH.json").write_text(
+                json.dumps(
+                    {
+                        "campaign_id": "demo-activate-v1",
+                        "runtime_status": "active",
+                        "host_lifecycle": "in_progress",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(self.mod.resumable_workspace(workspace))
+
+    def test_active_runtime_resumes_instead_of_quarantine(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            workspace = l9 / "programs" / "demo-activate-v1"
+            runtime = workspace / "runtime"
+            runtime.mkdir(parents=True)
+            (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+            (runtime / "LAUNCH.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "l9.program-execution.launch-pointer.v1",
+                        "campaign_id": "demo-activate-v1",
+                        "runtime_status": "active",
+                        "host_lifecycle": "in_progress",
+                        "host_worktree": str(root),
+                        "target_worktree": str(l9 / "program-worktrees" / "demo-activate-v1"),
+                        "blueprint": str(l9 / "blueprints" / "demo-activate-v1"),
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            executed: list[tuple[str, str]] = []
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="execute",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    execute=lambda space, campaign_id: (
+                        executed.append((str(space), campaign_id)) or {}
+                    ),
+                ),
+            )
+            self.assertEqual(report.stages_completed, ["resume", "execute"])
+            self.assertTrue((runtime / "program-lock.json").is_file())
+            self.assertFalse((l9 / "programs" / "stale").exists())
+            self.assertEqual(executed, [(str(workspace.resolve()), "demo-activate-v1")])
+
 
 if __name__ == "__main__":
     unittest.main()

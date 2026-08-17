@@ -183,19 +183,32 @@ def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _task_output_location(item: dict[str, Any]) -> str:
-    """Writable path for pec draft-contract. `receipts/` is a controller internal."""
+def _task_output_locations(item: dict[str, Any]) -> list[str]:
+    """Every declared writable path for pec draft-contract.
+
+    `receipts/` is a controller internal, never a worker output. The
+    inspection fallback applies only when the task declared no paths.
+    """
+    locations: list[str] = []
+
+    def add(raw: object) -> None:
+        text = str(raw or "").strip()
+        if text and not text.startswith("receipts/") and text not in locations:
+            locations.append(text)
+
     for output in item.get("outputs") or []:
-        if not isinstance(output, dict):
-            continue
-        location = str(output.get("location") or "").strip()
-        if location and not location.startswith("receipts/"):
-            return location
+        if isinstance(output, dict):
+            add(output.get("location"))
     for path in item.get("paths") or []:
-        text = str(path).strip()
-        if text and not text.startswith("receipts/"):
-            return text
-    return f"docs/program-execution/{item['id']}.md"
+        add(path)
+    if not locations:
+        locations.append(f"docs/program-execution/{item['id']}.md")
+    return locations
+
+
+def _task_output_location(item: dict[str, Any]) -> str:
+    """First declared writable path. Contracts use _task_output_locations."""
+    return _task_output_locations(item)[0]
 
 
 def _phase0_gate(
@@ -702,6 +715,7 @@ def compile_source(
         if item.get("execution_kind") == "program_control":
             ceiling["local_write"] = False
         suffix = item["id"].split("-")[-1]
+        output_locations = _task_output_locations(item)
         compiled_tasks.append(
             {
                 "id": item["id"],
@@ -719,11 +733,16 @@ def compile_source(
                 "actions": item["actions"],
                 "outputs": [
                     {
-                        "id": f"OUT-{suffix}",
+                        "id": (
+                            f"OUT-{suffix}"
+                            if len(output_locations) == 1
+                            else f"OUT-{suffix}-{position:02d}"
+                        ),
                         "type": "receipt",
-                        "location": _task_output_location(item),
+                        "location": location,
                         "required": True,
                     }
+                    for position, location in enumerate(output_locations, start=1)
                 ],
                 "acceptance": item["acceptance"],
                 "validation": [
