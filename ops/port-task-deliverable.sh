@@ -85,6 +85,55 @@ for rel in contract.get("writable_paths") or []:
     destination.write_text(content, encoding="utf-8")
     ported.append(rel)
 
+if task_id == "TASK-008":
+    # A manifest records the tree it ships with, so regenerate it here rather
+    # than copying one that hashes a different tree.
+    import hashlib
+
+    import yaml
+
+    pe_root = worktree / "environment/program-execution"
+    manifest_json = pe_root / "MANIFEST.json"
+    document = json.loads(manifest_json.read_text(encoding="utf-8"))
+    for entry in document["files"]:
+        entry["sha256"] = hashlib.sha256((pe_root / entry["path"]).read_bytes()).hexdigest()
+    manifest_json.write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+
+    for manifest_yaml in (
+        pe_root / "core/program-execution-controller-template/MANIFEST.yaml",
+        pe_root / "core/MANIFEST.yaml",
+    ):
+        root = manifest_yaml.parent
+        document = yaml.safe_load(manifest_yaml.read_text(encoding="utf-8"))
+        carries_bytes = any("bytes" in entry for entry in (document.get("files") or []))
+        files = []
+        for path in sorted(root.rglob("*")):
+            if (
+                not path.is_file()
+                or path.name == "MANIFEST.yaml"
+                or "__pycache__" in path.parts
+                or path.suffix == ".pyc"
+            ):
+                continue
+            entry = {
+                "path": path.relative_to(root).as_posix(),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            if carries_bytes:
+                entry["bytes"] = path.stat().st_size
+            files.append(entry)
+        document["files"] = files
+        summary = document.get("summary")
+        if isinstance(summary, dict):
+            if "file_count" in summary:
+                summary["file_count"] = len(files)
+            if "total_bytes" in summary:
+                summary["total_bytes"] = sum(entry.get("bytes", 0) for entry in files)
+        manifest_yaml.write_text(
+            yaml.safe_dump(document, sort_keys=False, width=120), encoding="utf-8"
+        )
+    print("  regenerated the manifests against this worktree")
+
 print(f"ported {len(ported)} file(s) into {worktree.name}")
 for rel in ported:
     print("  +", rel)

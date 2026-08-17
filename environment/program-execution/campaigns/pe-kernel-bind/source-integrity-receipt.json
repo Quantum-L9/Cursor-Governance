@@ -3,12 +3,12 @@
   "campaign_id": "pe-kernel-bind",
   "source_file": "CAMPAIGN_SOURCE.yaml",
   "digest_algorithm": "sha256",
-  "digest": "dd04a041feee0c49d9cbb870810d474281f6dc3cfca03a7b96232fc5694f9abd",
+  "digest": "3470a093d01e37b4ba84d55b8cfc366ee8d6b49fad4428c4edb5188b70c04740",
   "bytes": 26274,
-  "pack_recorded_digest": "dd04a041feee0c49d9cbb870810d474281f6dc3cfca03a7b96232fc5694f9abd",
+  "pack_recorded_digest": "3470a093d01e37b4ba84d55b8cfc366ee8d6b49fad4428c4edb5188b70c04740",
   "pack_recorded_bytes": 26274,
   "digest_matches_pack": true,
-  "collected_at": "2026-08-17T13:44:33Z",
+  "collected_at": "2026-08-17T13:46:10Z",
   "collection_method": "l9-pe-campaign-activate-compile",
   "producer": "l9-pe-campaign-activate"
 }
