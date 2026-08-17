@@ -327,8 +327,8 @@ files:
   sha256: d94fcfb7d8353ddde119c04a918310eb9ea053c004dfee64f3900b24da6bc592
   bytes: 2666
 - path: program-execution-controller-template/schemas/task-contract.schema.json
-  sha256: ee581bf533d59a04402901ebdfc7d673918bcbc32fbfe1a9943029671b64fbea
-  bytes: 3700
+  sha256: 1c2fe385c1eaf510881e3a2a4c0543bb971a9b6a150eb4d88b4280d5acd8d59a
+  bytes: 3806
 - path: program-execution-controller-template/schemas/verification-receipt.schema.json
   sha256: c11832210052974f9ec8b31d1b63e36087fb35b5d5385bbec993a55307c5d21e
   bytes: 2476
@@ -550,4 +550,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 181
-  total_bytes: 566495
+  total_bytes: 566601

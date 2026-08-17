@@ -81,7 +81,7 @@ files:
 - path: schemas/source-contract.schema.json
   sha256: d94fcfb7d8353ddde119c04a918310eb9ea053c004dfee64f3900b24da6bc592
 - path: schemas/task-contract.schema.json
-  sha256: ee581bf533d59a04402901ebdfc7d673918bcbc32fbfe1a9943029671b64fbea
+  sha256: 1c2fe385c1eaf510881e3a2a4c0543bb971a9b6a150eb4d88b4280d5acd8d59a
 - path: schemas/verification-receipt.schema.json
   sha256: c11832210052974f9ec8b31d1b63e36087fb35b5d5385bbec993a55307c5d21e
 - path: schemas/waiver.schema.json

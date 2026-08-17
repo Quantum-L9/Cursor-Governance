@@ -411,11 +411,11 @@
   },
   {
    "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-   "sha256": "f42114abc9fd85c422c2705ddaa6cf9ad730ec282ca4308067955ff6784e1eea"
+   "sha256": "524798811ab08b71d359892ad68c502ebf8662576c974757e6f8db0ac5561d89"
   },
   {
    "path": "campaigns/CAMPAIGN_STATUS.yaml",
-   "sha256": "bb02775d9bda2da0f5fce0d3be063c54c1ead50cd409ecf12bf14f2cc76fe42c"
+   "sha256": "12841128840442b03241f9e3dad6e697ec47474655038f05abede2dd5c56e0d3"
   },
   {
    "path": "campaigns/COMPILE_ALLOWLIST.yaml",
@@ -1311,7 +1311,7 @@
   },
   {
    "path": "scripts/compile_campaign_source.py",
-   "sha256": "1e3992a782091d0d5bfba67a69ecb85be46755adb9a90c4e4e1e484a1b3054f9"
+   "sha256": "24fd459c52d8a0aff8f40a40325b1a94c1e2e2f01572f7fa8f6c6b291e0168a3"
   },
   {
    "path": "scripts/context7_stack_proof.py",
@@ -1351,7 +1351,7 @@
   },
   {
    "path": "scripts/run_campaign.py",
-   "sha256": "f46da29b039bb44100fc37a2ffa2bed93df80c24a71a444a1b8dad6047fa97c1"
+   "sha256": "4809269a8e07d38addf4b535b6e905dfa3a3a54788e87dac1360286309fdb957"
   },
   {
    "path": "scripts/run_conformance.py",
@@ -1375,7 +1375,7 @@
   },
   {
    "path": "scripts/tests/test_compile_campaign_source.py",
-   "sha256": "d200d0f932431753175501cc3bd780387cada6a45e53ff8b5177c8a17ab26854"
+   "sha256": "e640ac3a14eb49845e3cc08a8c5838f256ac537395e946ae31d65459ad860538"
   },
   {
    "path": "scripts/tests/test_context7_stack_proof.py",
@@ -1383,7 +1383,7 @@
   },
   {
    "path": "scripts/tests/test_run_campaign.py",
-   "sha256": "97982f8f59647efdf15a548a5b4456de17a81c13fd7c48af65aca5e5ace032f2"
+   "sha256": "5fd8c8c83bc44ce98d6b933f80029fa6ad29210eadd63098bf9027866a49b397"
   },
   {
    "path": "scripts/validate_execution_adapters.py",

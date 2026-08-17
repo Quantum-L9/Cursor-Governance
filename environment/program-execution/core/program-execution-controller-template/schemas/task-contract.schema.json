@@ -95,6 +95,13 @@
         "minLength": 1
       }
     },
+    "kernel_profile": {
+      "enum": [
+        "BUILD",
+        "CHANGE",
+        "AUDIT"
+      ]
+    },
     "required_gate_ids": {
       "type": "array",
       "minItems": 1,

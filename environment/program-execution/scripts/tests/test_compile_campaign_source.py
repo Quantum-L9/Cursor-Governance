@@ -304,6 +304,62 @@ class CompileCampaignSourceTests(unittest.TestCase):
             errors = self.validator.validate(target, "template")
             self.assertEqual(errors, [], msg="\n".join(errors))
 
+    def test_declared_validation_commands_reach_the_task_card(self) -> None:
+        """Flattening to inspection dropped the command and verify ran nothing."""
+        entries = self.compiler._task_validations(
+            {
+                "id": "TASK-001",
+                "acceptance": [{"statement": "unused fallback"}],
+                "validation": [
+                    {
+                        "id": "VAL-001",
+                        "method": "command",
+                        "command_or_inspection": "python3 -m unittest tests/test_x.py",
+                        "expected_result": "PASS",
+                    }
+                ],
+            },
+            "001",
+        )
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["method"], "command")
+        self.assertEqual(entries[0]["command_or_inspection"], "python3 -m unittest tests/test_x.py")
+        self.assertEqual(entries[0]["environment"], "local")
+
+    def test_validation_falls_back_to_acceptance_when_undeclared(self) -> None:
+        entries = self.compiler._task_validations(
+            {"id": "TASK-001", "acceptance": [{"statement": "the deliverable exists"}]}, "001"
+        )
+        self.assertEqual(entries[0]["method"], "inspection")
+        self.assertEqual(entries[0]["command_or_inspection"], "the deliverable exists")
+
+    def test_compiled_blueprint_requires_the_declared_command(self) -> None:
+        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        task = source["tasks"][0]
+        task["validation"] = [
+            {
+                "id": "VAL-001",
+                "method": "command",
+                "command_or_inspection": "python3 -m unittest discover tests",
+                "expected_result": "PASS",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            self.compiler.compile_source(
+                path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+            )
+            cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+            compiled = next(item for item in cards["tasks"] if item["id"] == task["id"])
+            self.assertEqual(
+                [entry["command_or_inspection"] for entry in compiled["validation"]],
+                ["python3 -m unittest discover tests"],
+            )
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
+
 
 if __name__ == "__main__":
     unittest.main()

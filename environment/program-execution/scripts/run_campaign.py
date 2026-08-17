@@ -58,6 +58,7 @@ STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 FIRST_TASK_ID = "TASK-001"
+VALIDATION_TIMEOUT_S = 300
 GIT_TIMEOUT_S = 45
 PEC_TIMEOUT_S = 30
 CLONE_TIMEOUT_S = 90
@@ -1407,6 +1408,37 @@ def resumable_workspace(workspace: Path) -> bool:
     )
 
 
+def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[str, Any]]:
+    """Run the contract's validation commands and report what actually happened.
+
+    pec verify re-runs these commands itself and compares them against the
+    attempt receipt (`worker_validation_claim`). Submitting an empty
+    `validation_results` while the contract declares commands is a false claim,
+    so the worker runs them first and records the real exit codes.
+    """
+    results: list[dict[str, Any]] = []
+    for command in commands:
+        completed = subprocess.run(  # noqa: S602 - contract-declared command, same as pec verify
+            ["bash", "-lc", command],
+            cwd=str(worktree),
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=VALIDATION_TIMEOUT_S,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        )
+        tail = ((completed.stdout or "") + (completed.stderr or "")).strip()[-2000:]
+        results.append(
+            {
+                "command": command,
+                "status": "PASS" if completed.returncode == 0 else "FAIL",
+                "exit_code": completed.returncode,
+                "evidence": tail or None,
+            }
+        )
+    return results
+
+
 def write_and_commit_output(
     worktree: Path, rel: str, title: str, writable: list[str] | None = None
 ) -> str:
@@ -1599,6 +1631,10 @@ def default_execute(
         if not already_submitted:
             candidate = rewrite_output()
             changed = [item for item in writable if not is_stub_output(worktree / item, title)]
+            declared_commands = [
+                str(command) for command in (contract.get("validation_commands") or []) if command
+            ]
+            validation_results = run_declared_validations(worktree, declared_commands)
             receipt = {
                 "schema": "program-execution-controller.attempt-receipt.v2",
                 "task_id": task_id,
@@ -1607,7 +1643,7 @@ def default_execute(
                 "base_sha": contract["base_sha"],
                 "candidate_sha": candidate,
                 "changed_files": changed or [rel],
-                "validation_results": [],
+                "validation_results": validation_results,
                 "produced_evidence": [],
                 "residual_unknowns": [],
                 "claimed_status": "completed",

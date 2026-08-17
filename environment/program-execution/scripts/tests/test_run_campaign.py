@@ -727,26 +727,39 @@ class RunCampaignTests(unittest.TestCase):
             target = l9 / "program-worktrees" / "demo-activate-v1"
             target.mkdir(parents=True)
             _git_init(target)
-            with self.assertRaises(self.mod.CampaignError) as ctx:
-                self.mod.run_campaign(
-                    root / "intent.yaml",
-                    until="close",
-                    primary=Path(raw) / "primary",
-                    repo_root=root,
-                    l9_root=l9,
-                    hooks=self.mod.Hooks(
-                        context7_stack=_stack_ok,
-                        write_task_output=_write_task_output,
-                        compile_activation=self.activate.compile_activation,
-                        make_pr=lambda worktree, campaign_id: (
-                            opened.append(campaign_id)
-                            or {"number": 7, "url": "https://example.test/7"}
-                        ),
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="close",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                    make_pr=lambda worktree, campaign_id: (
+                        opened.append(campaign_id) or {"number": 7, "url": "https://example.test/7"}
                     ),
+                ),
+            )
+            self.assertEqual(opened, ["demo-activate-v1"])
+            self.assertIn("execute", report.stages_completed)
+            self.assertIn("close", report.stages_completed)
+            receipt = json.loads(
+                (l9 / "programs/demo-activate-v1/receipts/verification/TASK-001.json").read_text(
+                    encoding="utf-8"
                 )
-            self.assertIn("INCOMPLETE", str(ctx.exception))
-            self.assertIn("skip CHANGE", str(ctx.exception))
-            self.assertEqual(opened, [])
+            )
+            self.assertEqual(receipt["kernel_verdict"], "PASS")
+            self.assertEqual(
+                sorted({gate for gate in receipt["gates"].values()}),
+                ["PASS"],
+                msg=f"non-PASS gates: {receipt['gates']}",
+            )
+            self.assertEqual(
+                [item["command"] for item in receipt["validations"]],
+                ["python3 -c 'print(0)'"],
+            )
 
     def test_until_stages_unchanged(self) -> None:
         self.assertEqual(
