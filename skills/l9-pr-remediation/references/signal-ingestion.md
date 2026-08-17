@@ -6,8 +6,8 @@ role: signal_ingestion
 tags: [pr, ci, review, ingestion, github-api, gate-discovery]
 owner: igor_beylin
 status: active
-version: 2.0.0
-updated: 2026-06-18
+version: 2.2.0
+updated: 2026-08-16
 /L9_META -->
 
 # Signal Ingestion
@@ -24,6 +24,8 @@ the structured issue set from the API and confirm it against current source. The
 fail-closed protocol (identity binding, pagination, root-cause clustering, minimal-fix
 contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule) lives in
 [sonarcloud-remediation.md](sonarcloud-remediation.md). Deterministic retrieval:
+
+Lazy: run only when Sonar is configured **and** the check is failing or blocking. Write `--output` under `$PWD` (never `/tmp`). Path-blocked fetch does not block Converge when that check is green.
 
 ```bash
 python scripts/sonar_fetch.py \
@@ -84,7 +86,14 @@ Also check `package.json` scripts for additional gates:
 cat package.json | grep -A1 '"scripts"'
 ```
 
-This gate registry is used by the fix-engine for local verification.
+**Makefile + pre-commit (required when present)** — these are the primary local-verify surfaces, not optional extras. Record every Makefile gate target (`agent-check`, `pr-check`, `check`, `ci`, `validate`, `test`) and **every** hook `id` in `.pre-commit-config.yaml`. See [remediation-plan.md](remediation-plan.md).
+
+```bash
+test -f Makefile && make -qp 2>/dev/null | awk -F: '/^[a-zA-Z0-9][^$#\/\t=]*:([^=]|$)/ {print $1}' | sort -u
+test -f .pre-commit-config.yaml && grep -E '^[[:space:]]+- id:' .pre-commit-config.yaml
+```
+
+This gate registry is used by the fix-engine for local verification. A census that lists CI failures but omits Makefile/pre-commit hooks is incomplete.
 
 ## CI Signal Ingestion
 
@@ -130,7 +139,7 @@ Extract from logs:
 gh api /repos/{owner}/{repo}/pulls/{pr_number}/reviews --jq '.[] | {id, user: .user.login, state, body}'
 ```
 
-Filter for `state: "CHANGES_REQUESTED"` or `state: "COMMENTED"` with actionable body.
+Keep `state: "CHANGES_REQUESTED"`. Keep `state: "COMMENTED"` when the body is actionable **or** the author is a [code-review agent](code-review-agents.md) (`github-code-quality[bot]`, Copilot). Do not drop Code Quality / Copilot reviews for lacking an "actionable" phrase.
 
 ### Step 2: Get inline (diff) comments
 
@@ -165,7 +174,7 @@ gh api graphql -f query='
 ' -f owner={owner} -f repo={repo} -F pr={pr_number}
 ```
 
-Only process threads where `isResolved: false`.
+Only process threads where `isResolved: false`. If the first comment author is a code-review agent, keep the thread even when the body looks like a Note, nit, coverage overview, or discussion.
 
 ## Unified Finding Format
 
@@ -175,7 +184,8 @@ Normalize all signals into:
 findings:
   - id: "ci-1"
     source: ci | review_inline | review_general
-    author: "github-actions" | "gemini-code-assist" | "coderabbitai" | "{human}"
+    author: "github-code-quality" | "copilot" | "github-actions" | "gemini-code-assist" | "coderabbitai" | "{human}"
+    reviewer_class: code_review_agent | bot | human | ci
     severity: blocking | actionable | discussion | deferred
     file: "src/index.ts"  # null for general comments
     line: 42              # null for general comments
@@ -187,12 +197,19 @@ findings:
 
 ## Bot Detection
 
-Identify review bots by login:
-- `gemini-code-assist[bot]` → Gemini
-- `coderabbitai[bot]` → CodeRabbit
-- `github-actions[bot]` → CI (should already be in CI signals)
-- `copilot[bot]` → GitHub Copilot
-- All others → human reviewer
+Identify reviewers by login (strip a trailing `[bot]` before matching):
+
+**Code-review agents** — full inspect / validate / fix-if-valid / reply-all. See [code-review-agents.md](code-review-agents.md). Never classify these as skippable chatter or as `human`.
+- `github-code-quality[bot]` → GitHub Code Quality (`reviewer_class: code_review_agent`)
+- `copilot[bot]` → GitHub Copilot code review (`reviewer_class: code_review_agent`)
+- `copilot-pull-request-reviewer[bot]` → GitHub Copilot code review (`reviewer_class: code_review_agent`)
+
+**Other bots**
+- `gemini-code-assist[bot]` → Gemini (`reviewer_class: bot`)
+- `coderabbitai[bot]` → CodeRabbit (`reviewer_class: bot`)
+- `github-actions[bot]` → CI (should already be in CI signals; `reviewer_class: ci`)
+
+**Everyone else** → human reviewer (`reviewer_class: human`)
 
 ## Deduplication
 
@@ -202,8 +219,11 @@ When a review comment references the same file+line as a CI error, merge into on
 
 After ingestion, verify:
 - [ ] All workflow files read and gates registered
+- [ ] Makefile primary target recorded when a Makefile exists
+- [ ] Every `.pre-commit-config.yaml` hook `id` recorded when the file exists
 - [ ] All CI failures mapped to a gate in the registry
 - [ ] All unresolved review threads captured
 - [ ] All inline suggestions captured with file+line
-- [ ] Bot vs human attribution correct
+- [ ] Every `github-code-quality[bot]` / Copilot comment ingested (no actionable-body drop)
+- [ ] Code-review agent vs other-bot vs human attribution correct
 - [ ] Duplicates merged

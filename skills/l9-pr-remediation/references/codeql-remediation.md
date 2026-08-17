@@ -168,7 +168,7 @@ prohibited.
    (no exploit secrets), baseline vs after counts, and root-cause evidence; subscribe.
 8. **Converge** — hand to the CI + review-reply loop; **requery CodeQL alerts for the
    exact head SHA** each cycle until the CodeQL check is green with no active in-scope
-   alerts and no unresolved Copilot/review threads.
+   alerts and no unanswered code-review agent (`github-code-quality[bot]`, Copilot) or other review threads.
 
 ## Required artifacts
 
@@ -187,7 +187,7 @@ prohibited.
 
 - `GREEN_CODEQL_CLEAN_REVIEW_RESOLVED` — all confirmed in-scope alerts resolved; coverage
   gaps fixed; exact PR head SHA analyzed; CodeQL check green; no new in-scope alerts;
-  tests + build pass; all required checks green; no unresolved Copilot/review threads;
+  tests + build pass; all required checks green; no unanswered code-review agent (`github-code-quality[bot]`, Copilot) or other review threads;
   branch clean; PR **not merged**.
 - `GREEN_WITH_EXPLICIT_ACCEPTED_RISKS` — required checks green and remaining alerts are
   proven false positives or explicitly accepted with authority and evidence; no hidden

@@ -6,8 +6,8 @@ role: validation_gates
 tags: [pr, validation, enforcement, checkpoints, artifacts]
 owner: igor_beylin
 status: active
-version: 3.0.0
-updated: 2026-08-06
+version: 3.2.0
+updated: 2026-08-16
 /L9_META -->
 
 # Validation Gates (Enforcement Layer)
@@ -65,13 +65,20 @@ execution_plan:
   cycle_scope: ["{finding-id}", ...]
   estimated_files: ["{file_path}", ...]
   local_verify_commands: ["{command}", ...]
+  makefile_targets: ["{target}", ...]
+  cited_paths: ["{file_path}", ...]
 ```
 
 Validation:
+- [ ] This PR's ingest covers failed CI + humans + bots + code-review agents (lazy scanners)
+- [ ] Every finding has `id`, `source`, `ownership`, `disposition`, `evidence` ([remediation-plan.md](remediation-plan.md))
 - [ ] `total >= 1` (if 0 findings, nothing to fix — skip to convergence)
-- [ ] `cycle_scope` is non-empty (at least one finding to fix)
-- [ ] `local_verify_commands` matches gate registry (all gates included)
-- [ ] Every finding has an `id`, `source`, `severity`, and `message`
+- [ ] `cycle_scope` is non-empty (at least one finding to fix) **or** all dispositions are reply/defer/note
+- [ ] `cited_paths` lists every finding path (verified even if the default toolchain excludes it)
+- [ ] `makefile_targets` lists the discovered make gate when a Makefile exists
+- [ ] No file edits have been made yet
+
+**STOP if:** Plan is incomplete — do not patch.
 
 **STOP if:** Total findings is 0 AND CI is green → already converged, emit report.
 
@@ -118,9 +125,12 @@ local_verify_log:
 
 Validation:
 - [ ] `all_green: true` (every gate exit code is 0)
+- [ ] Makefile primary target ran when a Makefile exists (cached UV_PYTHON)
+- [ ] cited/planned paths were checked even if the default toolchain excludes them
 - [ ] `gates_run == gate_registry.total_gates` (no gates skipped)
 - [ ] `iteration <= 5` (max local verify attempts not exceeded)
 - [ ] Every gate from the registry appears in results
+- [ ] Commit will not use `--no-verify`
 
 **STOP if:** `all_green: false` after iteration 5 → defer problematic findings, re-run verify on remaining.
 **STOP if:** `gates_run < gate_registry.total_gates` → missing gates, re-run ALL.
@@ -171,7 +181,8 @@ reply_record:
 
 Validation:
 - [ ] `threads_replied == threads_total` (every thread got a reply)
-- [ ] `threads_resolved == threads_total` (every thread resolved)
+- [ ] Every `github-code-quality[bot]` / Copilot thread is in that reply set ([code-review-agents.md](code-review-agents.md))
+- [ ] `threads_resolved == threads_total` (every thread resolved, any author; HUMAN still resolved)
 - [ ] `issues_created >= deferred_count` (every deferred item has an issue)
 - [ ] `batch_summary_posted: true`
 - [ ] Every reply follows canonical format (Format A/B/C/D)
@@ -183,6 +194,9 @@ Validation:
 If at ANY point the agent:
 - Pushes without Gate D artifact showing `all_green: true` → **VIOLATION: push-before-verify**
 - Makes more than 1 push per cycle → **VIOLATION: multi-push**
+- Commits per-finding or pushes to probe CI → **VIOLATION: not-one-and-done**
+- Edits before the plan gate → **VIOLATION: patch-before-plan**
+- Skips the Makefile primary gate, cited-path verify, or uses `--no-verify` → **VIOLATION: skipped-local-verify**
 - Skips Gate A (no gate registry built) → **VIOLATION: blind-fixing**
 - Leaves threads unresolved after Step 7.5 → **VIOLATION: silent-fix**
 

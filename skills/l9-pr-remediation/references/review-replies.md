@@ -6,8 +6,8 @@ role: review_replies
 tags: [pr, review, replies, threads, resolution, leverage]
 owner: igor_beylin
 status: active
-version: 2.1.0
-updated: 2026-06-18
+version: 2.2.0
+updated: 2026-08-16
 /L9_META -->
 
 # Review Reply Protocol
@@ -18,7 +18,7 @@ After pushing fixes, reply to every review thread with a canonical response that
 
 ## Non-Negotiable Rules
 
-1. **Every thread gets a reply.** No silent fixes. No ignored comments.
+1. **Every thread gets a reply.** No silent fixes. No ignored comments. This includes every [code-review agent](code-review-agents.md) thread (`github-code-quality[bot]`, Copilot) — volume, Note severity, and `skip_bot_discussions` are not exemptions.
 2. **Replies follow canonical format.** No freeform prose — structured responses only.
 3. **Resolve threads after replying.** Unresolved threads block merge perception.
 4. **Deferred items get linked issues.** Never defer without creating a trackable artifact.
@@ -230,7 +230,7 @@ Each reply creates specific downstream value:
 |-----------|----------|
 | **Fixed** | Searchable commit-to-comment link; future grep finds the decision |
 | **Deferred** | Backlog item with full context; prioritizable; traceable |
-| **Acknowledged** | Bot training signal (CodeRabbit learns); knowledge captured |
+| **Acknowledged** | Bot training signal (Code Quality / Copilot / CodeRabbit); knowledge captured |
 | **Disagreed** | Bot training signal (reduces future false positives); documents intentional design |
 | **Batch summary** | Release note fragment; audit trail; merge confidence signal |
 
@@ -247,7 +247,8 @@ Each reply creates specific downstream value:
 
 Before proceeding to convergence check:
 - [ ] Every unresolved thread has a reply posted
-- [ ] Every thread is resolved (via GraphQL mutation)
+- [ ] Every `github-code-quality[bot]` / Copilot thread has a canonical reply
+- [ ] Every thread is resolved (via GraphQL mutation), including HUMAN (do not merge that PR until decided)
 - [ ] Every deferred item has a linked issue
 - [ ] Batch summary comment posted on the PR
 - [ ] Reply count matches finding count
