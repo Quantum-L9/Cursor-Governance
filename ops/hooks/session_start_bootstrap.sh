@@ -177,7 +177,7 @@ GC="$GLOBAL_COMMANDS"
 SHARED_BOOTSTRAP="$GC/ops/scripts/bootstrap_agent_environment.sh"
 if [ -f "$SHARED_BOOTSTRAP" ]; then
   bash "$SHARED_BOOTSTRAP" \
-    --surface cursor \
+    --surface "${L9_GOVERNANCE_SURFACE:-cursor}" \
     --governance "$GC" \
     --workspace "${REPO:-$PWD}" \
     --quiet || true

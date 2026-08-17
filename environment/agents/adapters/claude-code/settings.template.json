@@ -4,19 +4,19 @@
     "Committable .claude/settings.json for an L9 consumer repo. Copy to .claude/settings.json",
     "and commit it: on Claude Code Web/Mobile only git-tracked files survive the clone, so a",
     "committed settings.json is what makes governance boot with no manual step. On the CLI the",
-    "same file is picked up locally. Keep secrets OUT of this file \u2014 they belong in the account",
+    "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
     "environment (web/environment.env.example) or user-scope config, never in a repo.",
     "Field/event names track the Claude Code release; see https://code.claude.com/docs.",
     "permissions.allow lets the bounded-autonomy runtime complete work end to end: scoped git",
     "writes (branch/worktree/commit), CI inspection (gh run/pr checks), read-only GitHub",
-    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` \u2014 so completed work",
+    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` — so completed work",
     "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
     "PUBLISH PATH: `PR_REMEDIATE=0 make pr` is the ONLY sanctioned route to GitHub. It runs",
     "the Makefile checkers, then pushes and opens the PR. Raw `git push`, `gh pr create`,",
     "`gh pr edit` and the MCP create_pull_request/push_files tools are in deny BECAUSE they",
     "skip those checkers. This allow/deny split is not advisory: it must agree with",
     "ops/autonomy/local_execution_gate.py, and validate_claude_env.py fails when it does not.",
-    "An allow entry here is what an agent reads as 'approved, no prompt' \u2014 so listing a",
+    "An allow entry here is what an agent reads as 'approved, no prompt' — so listing a",
     "forbidden action here teaches the agent to attempt it and get denied a layer later.",
     "Standing autonomous merge is OFF (L9_AUTONOMY_AUTONOMOUS_MERGE=false). Campaigns",
     "and make pr do not merge. /l9-pr-remediation writes ops/autonomy/authorize_merge.py",
@@ -40,13 +40,18 @@
         ]
       }
     ],
-    "Stop": [
+    "SessionEnd": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_writeback.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
-            "timeout": 20
+            "command": "bash -c 'f=\"$HOME/.cursor-governance/ops/hooks/graphiti-session-end.sh\"; [ -f \"$f\" ] && exec bash \"$f\" || exit 0'",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'f=\"$HOME/.cursor-governance/ops/hooks/session_end_governance_backup.sh\"; [ -f \"$f\" ] && exec bash \"$f\" || exit 0'",
+            "timeout": 30
           }
         ]
       }
@@ -57,6 +62,17 @@
           {
             "type": "command",
             "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/user_prompt_skill_router.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
             "timeout": 5
           }
         ]
@@ -109,13 +125,13 @@
         ]
       }
     ],
-    "UserPromptExpansion": [
+    "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
-            "timeout": 5
+            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_writeback.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "timeout": 20
           }
         ]
       }

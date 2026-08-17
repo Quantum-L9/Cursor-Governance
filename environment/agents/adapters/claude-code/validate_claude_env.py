@@ -433,6 +433,56 @@ def check_memory_enforcement(failures: list[str]) -> None:
         )
 
 
+def check_session_lifecycle_parity(failures: list[str]) -> None:
+    """Both surfaces must close a session, not just open one.
+
+    Cursor registers sessionEnd (PICKUP write + governance backup) in
+    ops/hooks/hooks.json.template. The Claude adapter declared SessionStart and
+    no SessionEnd at all, so no Claude session ever wrote a PICKUP and every
+    subsequent hydrate came back "empty PICKUP search". Nothing caught it: every
+    other check here is structural, and a missing lifecycle event is invisible
+    to file-existence and JSON-validity tests.
+
+    Parity is asserted against the shared closers in ops/hooks/ — the same
+    scripts Cursor runs. A Claude-private reimplementation would satisfy the
+    letter of this check and defeat its purpose, so the script names are pinned.
+    """
+    path = HERE / "settings.template.json"
+    if not path.is_file():
+        return
+    try:
+        settings = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        _fail(f"settings.template.json unreadable: {exc}", failures)
+        return
+
+    hooks = settings.get("hooks") or {}
+    if "SessionEnd" not in hooks:
+        _fail(
+            "settings.template.json declares no SessionEnd hook — a Claude session "
+            "cannot write a Graphiti PICKUP, so every later hydrate starts empty "
+            "(Cursor registers sessionEnd in ops/hooks/hooks.json.template)",
+            failures,
+        )
+        return
+
+    blob = json.dumps(hooks["SessionEnd"])
+    for script in ("graphiti-session-end.sh", "session_end_governance_backup.sh"):
+        if script not in blob:
+            _fail(
+                f"SessionEnd must invoke the shared closer ops/hooks/{script}; "
+                "adapters must not fork a private session-close path",
+                failures,
+            )
+    if "/ops/hooks/" not in blob:
+        _fail(
+            "SessionEnd must reference the shared ops/hooks/ closers, not an "
+            "adapter-local copy",
+            failures,
+        )
+    print("  OK: session lifecycle parity — SessionEnd wired to shared closers")
+
+
 def main() -> int:
     print("=== Claude Code environment — structural validation ===")
     print(f"  root: {HERE}\n")
@@ -447,6 +497,7 @@ def main() -> int:
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
     check_memory_enforcement(failures)
+    check_session_lifecycle_parity(failures)
     print()
     if failures:
         print(f"RESULT: FAIL — {len(failures)} issue(s)")

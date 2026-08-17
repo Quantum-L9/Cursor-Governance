@@ -143,8 +143,11 @@ fi
 # An unset GRAPHITI_MCP_TOKEN is a common root cause of a DEGRADED SessionStart
 # hydrate ("empty PICKUP search"), so name it here rather than at prompt time.
 if [ -z "${GRAPHITI_MCP_TOKEN:-}" ]; then
-  warn "GRAPHITI_MCP_TOKEN unset — Graphiti hydrate/phase-lock/write will run DEGRADED."
-  warn "  Set it in the variables field; allowlist memory.quantumaipartners.com."
+  note "memory front door: $GRAPHITI_MCP_URL (no bearer here — expected posture)"
+  note "  web/environment.env.example (S3/S7) forbids pasting a bearer into the"
+  note "  variables field: that environment is model-readable. The token belongs"
+  note "  behind the capability broker (L9_CAPABILITY_BROKER_URL). Broker unset =="
+  note "  DEGRADED capabilities — the honest posture, not a defect to paste around."
 else
   note "memory front door: $GRAPHITI_MCP_URL (bearer present)"
 fi

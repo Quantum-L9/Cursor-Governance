@@ -12,6 +12,11 @@ fi
 if [ -n "${CURSOR_SUBAGENT_ASSIGNMENT_JSON:-}" ]; then
   ROOT="$(cd "$HOOK_DIR/../.." && pwd)"
   if [ -x "$ROOT/.venv/bin/python3" ]; then PY="$ROOT/.venv/bin/python3"; else PY="$(command -v python3)"; fi
-  echo "$CURSOR_SUBAGENT_ASSIGNMENT_JSON" | "$PY" -m environment.agents.lifecycle.compose_start
+  # `python -m` resolves the package from cwd, which is the IDE's cwd here, not
+  # $ROOT — so this raised ModuleNotFoundError on every invocation. Pin both,
+  # matching graphiti-session-end.sh.
+  echo "$CURSOR_SUBAGENT_ASSIGNMENT_JSON" \
+    | ( cd "$ROOT" && PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+        "$PY" -m environment.agents.lifecycle.compose_start )
 fi
 exit 0

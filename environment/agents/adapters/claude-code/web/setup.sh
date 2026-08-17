@@ -126,6 +126,43 @@ else
   fi
 fi
 
+# 3b) Resolve the consumer workspace BEFORE anything is wired.
+#     Steps 4-7 all derive from cwd, and this script used to trust whatever cwd
+#     the platform handed it. On Claude Code cloud that cwd is the workspace
+#     PARENT, not the repository, so the adapter triad (.claude/, .mcp.json,
+#     skills), the workspace venv and the pre-commit hooks were all installed
+#     beside the repo instead of inside it. Resolve explicitly, then cd, so the
+#     "cwd == consumer workspace" assumption is true rather than hoped for.
+#     Falls through to $PWD unchanged when the platform already gets it right,
+#     so a correct host sees no behavior change.
+resolve_workspace() {
+  local cand found="" n=0 d
+  if [ -n "${CLAUDE_PROJECT_DIR:-}" ] \
+     && cand="$(git -C "$CLAUDE_PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null)" \
+     && [ -n "$cand" ]; then
+    printf '%s' "$cand"; return 0
+  fi
+  if cand="$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null)" && [ -n "$cand" ]; then
+    printf '%s' "$cand"; return 0
+  fi
+  # Exactly one git repo directly beneath cwd; never the governance clone itself.
+  for d in "$PWD"/*/; do
+    d="${d%/}"
+    [ -d "$d/.git" ] || continue
+    [ "$(cd "$d" && pwd -P)" = "$(cd "$GOV_DIR" 2>/dev/null && pwd -P)" ] && continue
+    found="$d"; n=$((n + 1))
+  done
+  if [ "$n" -eq 1 ]; then printf '%s' "$found"; return 0; fi
+  [ "$n" -gt 1 ] && echo "WARN: $n candidate repos under $PWD — refusing to guess; using $PWD" >&2
+  printf '%s' "$PWD"
+}
+
+WORKSPACE_DIR="$(resolve_workspace)"
+if [ "$WORKSPACE_DIR" != "$PWD" ]; then
+  log "Workspace resolved to $WORKSPACE_DIR (setup cwd was $PWD)"
+  cd "$WORKSPACE_DIR" || echo "WARN: cannot cd to $WORKSPACE_DIR — wiring $PWD instead"
+fi
+
 # 4) THE adapter install — identical call on CLI, Desktop, Web and Mobile.
 #    Locked toolchain from uv.lock, settings triad, skills, MCP front door,
 #    git excludes, preflight. Do not reimplement any of that here.

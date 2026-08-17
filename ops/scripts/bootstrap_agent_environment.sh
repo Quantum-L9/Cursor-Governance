@@ -274,19 +274,37 @@ fi
 log "Canonical capability bootstrap"
 CAP_BOOTSTRAP="$GOV_DIR/ops/secrets/bootstrap_agent_env.sh"
 if [ -f "$CAP_BOOTSTRAP" ]; then
-  bash "$CAP_BOOTSTRAP" --check --surface "$SURFACE" \
-    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query 2>&1 \
-    || warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
+  # An unavailable capability plane IS a degraded component. It previously only
+  # warned, so DEGRADED was driven entirely by the leaked-secret loop below and
+  # the readiness receipt could report healthy while Sonar/Semgrep/Graphiti were
+  # all unreachable. Count it, so the receipt reflects the session's real state.
+  if ! bash "$CAP_BOOTSTRAP" --check --surface "$SURFACE" \
+    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query >&2; then
+    warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
+    DEGRADED=$((DEGRADED + 1))
+  fi
 else
   warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical capability resolution"
+  DEGRADED=$((DEGRADED + 1))
 fi
 
 # A surface that still carries raw downstream secrets has not been migrated.
 # Report it loudly here: this is the check that would have caught the old
 # posture, and it must fail visibly rather than be quietly tolerated.
+# A cloud host may inject a NON-credential placeholder under a credential name
+# (Anthropic uses the literal `proxy-injected`; see web/environment.env.example).
+# Reporting that as a leaked secret is a false positive that inflates the
+# degraded count and trains readers to ignore this check. Match the sentinel
+# exactly — anything else is still treated as a real credential.
+_is_placeholder() {
+  case "$1" in
+    proxy-injected|unset|changeme|placeholder|none) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN INFISICAL_CLIENT_SECRET \
               INFISICAL_TOKEN GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY; do
-  if [ -n "${!leaked:-}" ]; then
+  if [ -n "${!leaked:-}" ] && ! _is_placeholder "${!leaked}"; then
     warn "$leaked is present in this model-controlled surface — PROHIBITED (contract S2/S3)"
     warn "  remove it from the surface environment; capabilities replace it"
     DEGRADED=$((DEGRADED + 1))
@@ -384,10 +402,10 @@ done
 # L4 phase is read-only here: never begin a phase or authorize a release from a
 # bootstrap. Mid-execution push/PR stay denied until kernels are recorded.
 if [ -f "$GOV_DIR/ops/autonomy/l4_local.py" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
-  ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/autonomy/l4_local.py" status 2>/dev/null ) \
+  ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/autonomy/l4_local.py" status 2>/dev/null >&2 ) \
     || say "L4 phase: not begun (push/PR denied until authorize-release)"
   if [ "$CHECK" != "1" ] && [ -f "$GOV_DIR/ops/scripts/scratch_hold.py" ]; then
-    ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/scripts/scratch_hold.py" restore --all 2>/dev/null ) || true
+    ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/scripts/scratch_hold.py" restore --all 2>/dev/null >&2 ) || true
   fi
 fi
 

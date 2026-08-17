@@ -35,7 +35,13 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
         text = HOOK.read_text(encoding="utf-8")
         live = _live_path(text)
         self.assertIn("bootstrap_agent_environment.sh", live)
-        self.assertIn("--surface cursor", live)
+        # The surface is env-driven so an adapter session (claude-code) is not
+        # mislabelled as cursor by the shared bootstrap and its readiness
+        # receipt. Cursor stays the default, so this hook's own behavior is
+        # unchanged. Assert BOTH halves: the env var and the cursor fallback.
+        self.assertIn("--surface", live)
+        self.assertIn("L9_GOVERNANCE_SURFACE:-cursor", live)
+        self.assertNotIn("--surface cursor ", live)
         self.assertNotIn("l9_session_runtime_probe", live)
 
     def test_hook_does_not_reimplement_shared_concerns(self) -> None:

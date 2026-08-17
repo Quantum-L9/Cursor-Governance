@@ -50,7 +50,7 @@ current=""
 [ -f "$STATE_FILE" ] && current="$(cat "$STATE_FILE")"
 
 if [ "$current" = "$expected" ] && [ -x "$GOV_ROOT/.venv/bin/python3" ]; then
-  echo "UV: cached locked environment"
+  echo "UV: cached locked environment" >&2
   exit 0
 fi
 
@@ -73,4 +73,4 @@ mkdir -p "$(dirname "$STATE_FILE")"
 tmp="${STATE_FILE}.tmp.$$"
 printf '%s\n' "$expected" > "$tmp"
 mv "$tmp" "$STATE_FILE"
-echo "UV: synchronized locked environment"
+echo "UV: synchronized locked environment" >&2
