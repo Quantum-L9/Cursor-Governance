@@ -30,7 +30,10 @@ def _git_toplevel(cwd: Path) -> Path | None:
         if result.returncode == 0 and result.stdout.strip():
             return Path(result.stdout.strip()).resolve()
     except (OSError, subprocess.TimeoutExpired):
-        pass
+        # Best-effort probe: any git/OS failure (git absent, cwd outside a repo,
+        # timeout, permission error) is treated as "not resolvable from cwd" so
+        # the caller falls back to a different resolution strategy.
+        return None
     return None
 
 
