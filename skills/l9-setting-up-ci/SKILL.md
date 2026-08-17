@@ -57,6 +57,8 @@ locked Biome contract. They do **not** invent `.github/workflows/ci.yml`,
 - Do not mass-run `biome check --write .` unless the operator asked.
 - Do not hand-author `.vscode/settings.json` (Cursor-Governance IDE profile owns it).
 - Do not put secrets in workflow YAML.
+- Do not copy Core pin files into the consumer or write `ruff==` / `mypy==` /
+  `pytest==` literals in workflows. Call `install-consumer-ci@v2`.
 
 ## Steps
 
@@ -108,7 +110,10 @@ bash /tmp/l9-ci-core/presets/typescript/stamp.sh "$(pwd)"
 `biome.json` / `.editorconfig` are kept.
 
 For Python hygiene, copy `presets/python/.github/workflows/l9-lint-test.yml`
-(or the pack equivalent) instead of inventing ruff steps.
+(or the pack equivalent) and keep
+`uses: Quantum-L9/l9-ci-core/.github/actions/install-consumer-ci@v2`.
+Do not copy `requirements-consumer-ci.txt` and do not invent ruff/mypy/pytest
+versions.
 
 ### 4. Wire package scripts (JS/TS only, only if replacing ESLint)
 

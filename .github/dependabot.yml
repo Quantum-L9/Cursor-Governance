@@ -29,6 +29,10 @@ updates:
     labels: ["type:task", "deps"]
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: ruff
+      - dependency-name: mypy
+      - dependency-name: pytest
     groups:
       python-minor-patch:
         patterns: ["*"]
