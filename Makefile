@@ -373,7 +373,7 @@ pr-check: capability-contract-validate
 ## OPEN_PR=0 → gate only. PR_REMEDIATE=0 → open+subscribe without agent spawn marker.
 pr: pr-check
 	@if [ "$(OPEN_PR)" = "1" ]; then \
-		PR_BASE="$(PR_BASE)" PR_REMEDIATE="$(PR_REMEDIATE)" GOV_ROOT="$(CURDIR)" \
+		PR_BASE="$(PR_BASE)" PR_REMEDIATE="$(PR_REMEDIATE)" PR_OVERLAP="$(PR_OVERLAP)" PR_STACK="$(PR_STACK)" GOV_ROOT="$(CURDIR)" \
 			bash ops/scripts/open_pr_after_gate.sh "$(WS)"; \
 	else \
 		echo "OPEN_PR=0 — skipped GitHub PR open (gate already PASS)"; \

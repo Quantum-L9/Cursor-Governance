@@ -12,3 +12,22 @@ governance-health-report.json linguist-generated=true
 
 # Shell scripts must always execute regardless of checkout platform.
 *.sh text eol=lf
+
+# Generated artifacts: conflicting text merges self-resolve via keep-ours +
+# post-merge regeneration (sync_generated_artifacts.py --force). The driver is
+# registered per-clone by ops/scripts/ensure_git_merge_drivers.sh; see
+# rules/53-pr-overlap-guardrail.mdc. Attributes without a registered driver
+# fall back to normal text merge — safe, just unresolved.
+#
+# skills/AUTONOMY_MANIFEST.yaml is intentionally NOT attributed: it is the
+# hand-authored routing SSOT (only orphan-heal mutates it), and regeneration
+# cannot restore hand-authored tier edits a keep-ours merge would drop (U3
+# probe of the PR Conflict Guardrails plan).
+rules/RULES-MANIFEST.* merge=l9-generated
+environment/generated/llm-rules/** merge=l9-generated
+ops/generated/skill-registry.json merge=l9-generated
+environment/agents/adapters/claude-code/generated/skill-registry.json merge=l9-generated
+environment/agents/adapters/claude-code/settings.template.json merge=l9-generated
+commands/COMMANDS_MANIFEST.yaml merge=l9-generated
+environment/program-execution/core/MANIFEST.yaml merge=l9-generated
+environment/program-execution/MANIFEST.json merge=l9-generated

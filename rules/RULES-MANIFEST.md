@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-17T15:43:22Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-17T17:21:03Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **63** |
-| `alwaysApply: true` | **27** |
+| Total MDC files | **64** |
+| `alwaysApply: true` | **28** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **63** |
+| Explicit stable IDs | **64** |
 | Derived compatibility IDs | **0** |
 | Deprecated rules | **0** |
 
@@ -45,6 +45,7 @@ Generated: `2026-08-17T15:43:22Z`. Source: `rules/*.mdc`.
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
+| `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 76 | `d715d26e5161` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |

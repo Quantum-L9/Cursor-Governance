@@ -782,3 +782,38 @@ Authoritative corrections (do not treat older “every workspace needs
    Consumer repos are unchanged.
 5. Do not “fix” a gov worktree by running `setup_workspace_symlinks.sh` just
    to pass `make pr`. That is the wrong category.
+
+<!-- PR_OVERLAP_GUARDRAIL_V1 -->
+## PR overlap guardrail (V1)
+
+Append-only law for the publish path — extends §6 additively, supersedes
+nothing. SSOT: `rules/53-pr-overlap-guardrail.mdc`; policy keys live under
+`pr_stacking.pr_overlap` in `ops/autonomy/surface_profile.yaml`.
+
+1. `make pr` (the only sanctioned path to GitHub) runs
+   `ops/scripts/pr_overlap_check.py` between the L4 release check and
+   `git push`. It blocks pre-push when the branch textually conflicts with an
+   already-open PR, naming the PR number, head branch, and files.
+2. Env knobs: `PR_OVERLAP=block` (default) | `warn` | `ignore` (justification
+   required); `PR_STACK=auto` re-resolves the PR base to the overlapping open
+   PR's head instead of blocking (never main). Ambiguous sibling chains still
+   block with routing instructions.
+3. On overlap, prefer in order: (1) commit into the same-agent open PR branch,
+   (2) stack via `PR_STACK=auto` / `PR_BASE=origin/<open-pr-head>`,
+   (3) `PR_OVERLAP=ignore` with stated justification.
+4. Generated artifacts (`GENERATED_PATH_PREFIXES` in
+   `ops/scripts/sync_generated_artifacts.py`; `--print-generated-prefixes`
+   prints the live list) are exempt from overlap blocking and merge via
+   `merge=l9-generated`: the driver keeps ours and marks the path in
+   `.l9/pr/regen-required.txt`. The driver is registered per-clone by
+   `ops/scripts/ensure_git_merge_drivers.sh`, wired into
+   `check_governance_wiring.sh`. `skills/AUTONOMY_MANIFEST.yaml` is
+   intentionally NOT attributed — the authored routing SSOT must keep a
+   normal text merge.
+5. Regen obligation: after any merge touching generated paths, or while
+   `.l9/pr/regen-required.txt` is non-empty, run
+   `python3 ops/scripts/sync_generated_artifacts.py --force`, stage, and
+   commit before opening or updating a PR.
+6. Fail-open on missing telemetry (gh unavailable / api failure) so network
+   loss never bricks the publish path; fail-closed on a detected
+   non-generated textual conflict.

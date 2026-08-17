@@ -507,6 +507,12 @@ def main() -> int:
         help="Optional file listing repo-relative changed paths (one per line)",
     )
     parser.add_argument("--force", action="store_true", help="Sync all covered artifacts")
+    parser.add_argument(
+        "--print-generated-prefixes",
+        action="store_true",
+        help="Print GENERATED_PATH_PREFIXES one per line and exit (single SSOT for "
+        "merge-driver attributes and overlap-gate exemptions)",
+    )
     parser.add_argument("--check", action="store_true", help="Validate after sync")
     parser.add_argument("--json", action="store_true", help="Print machine-readable result")
     parser.add_argument(
@@ -517,6 +523,10 @@ def main() -> int:
     )
     args = parser.parse_args()
     root = args.root.resolve()
+
+    if args.print_generated_prefixes:
+        print("\n".join(GENERATED_PATH_PREFIXES))
+        return 0
 
     changed: set[str] | None = None
     if args.changed_file and args.changed_file.is_file():
