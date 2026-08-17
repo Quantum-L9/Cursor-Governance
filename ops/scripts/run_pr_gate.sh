@@ -295,6 +295,12 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   # surface — so the proxy silently became true for headless adapters. Gate the
   # desktop-wiring assertion on the surface id instead. The reconcile checks above
   # stay unconditional: they are surface-independent and must keep running here.
+  # Heal missing gitignored .cursor links under the existing make-pr lock.
+  # Not sessionStart — reconcilers skip while this lock is held.
+  if [[ -x "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" ]]; then
+    L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" \
+      || echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
+  fi
   # PAIRED PREDICATE: run_pr_precommit.sh skips symlinks-check the same way.
   # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
   WS_KIND="$(classify_workspace_kind "$WS")"

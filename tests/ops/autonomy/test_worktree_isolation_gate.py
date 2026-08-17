@@ -19,6 +19,7 @@ def _clear_iso(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_GIT_REVERT_AUTHORIZED", raising=False)
     monkeypatch.delenv("L9_GIT_BROAD_ADD_AUTHORIZED", raising=False)
     monkeypatch.delenv("L9_GIT_CLEAN_AUTHORIZED", raising=False)
+    monkeypatch.delenv("L9_WORKTREE_ADD_AUTHORIZED", raising=False)
 
 
 _GR = "git" + " " + "revert"
@@ -102,6 +103,36 @@ def test_denies_tmp_hold_mkdir(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_iso(monkeypatch)
     monkeypatch.delenv("L9_WORKTREE_ISOLATION", raising=False)
     assert command_violates_worktree_isolation("mkdir -p /tmp/cg-untracked-hold-final") is not None
+
+
+def test_denies_raw_git_worktree_add(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_iso(monkeypatch)
+    for cmd in (
+        "git worktree add /tmp/wt origin/main",
+        "git -C /tmp/repo worktree add -b feat/x /tmp/wt",
+        "bash -c 'git worktree add /tmp/wt'",
+    ):
+        reason = command_violates_worktree_isolation(cmd)
+        assert reason is not None, cmd
+        assert "worktree add" in reason
+
+
+def test_allows_worktree_add_wrapper(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_iso(monkeypatch)
+    cmd = "bash ops/scripts/worktree_add_wired.sh -b feat/x /tmp/wt origin/main"
+    assert command_violates_worktree_isolation(cmd) is None
+
+
+def test_allows_worktree_add_with_escape(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_iso(monkeypatch)
+    monkeypatch.setenv("L9_WORKTREE_ADD_AUTHORIZED", "legacy caller")
+    assert command_violates_worktree_isolation("git worktree add /tmp/wt") is None
+
+
+def test_allows_worktree_list_and_remove(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_iso(monkeypatch)
+    assert command_violates_worktree_isolation("git worktree list") is None
+    assert command_violates_worktree_isolation("git worktree remove /tmp/wt") is None
 
 
 def test_denies_scratch_hold_park_wip(monkeypatch: pytest.MonkeyPatch) -> None:
