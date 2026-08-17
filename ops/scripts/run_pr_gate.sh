@@ -23,13 +23,13 @@ if is_l9_isolate_workspace "$WS"; then
   bind_isolate_toolchain "$WS" "$HOME/.cursor-governance"
 fi
 
-# The governance generators and validators target the project interpreter
-# (3.11+, `from datetime import UTC`). A bare `python3` can be the system 3.9,
-# in which case the sync step aborts the gate with an import traceback and no
-# verdict. Prefer the project venv when it exists.
-if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
-  export PATH="$GOV_ROOT/.venv/bin:$PATH"
-fi
+# The governance generators and validators target the locked project interpreter
+# (3.12+, `from datetime import UTC`). A bare `python3` can be Homebrew/system
+# and lack yaml/pydantic/jsonschema. Fail closed — never fall through.
+bash "$GOV_ROOT/ops/scripts/ensure_gov_python.sh" "$GOV_ROOT"
+export PATH="$GOV_ROOT/.venv/bin:$PATH"
+export UV_PROJECT_ENVIRONMENT="$GOV_ROOT/.venv"
+export UV_LOCKED=1
 
 # Never-lose: restore open/legacy holds around the gate; fail closed if still open.
 _scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
