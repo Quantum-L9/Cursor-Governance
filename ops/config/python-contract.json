@@ -11,6 +11,7 @@
     "pydantic": "pydantic",
     "structlog": "structlog",
     "langgraph": "langgraph",
+    "cryptography": "cryptography",
     "pytest": "pytest",
     "xdist": "pytest-xdist",
     "pytest_timeout": "pytest-timeout"
