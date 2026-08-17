@@ -3,7 +3,7 @@
 # SSOT companion: ops/autonomy/surface_profile.yaml → campaign_execution
 schema: l9.program-execution.campaign-execution-policy.v1
 schema_version: 1.0.0
-updated: "2026-08-17T13:20:17Z"
+updated: "2026-08-17T13:32:23Z"
 closeout:
   required: true
   last_step: true

@@ -1,5 +1,5 @@
 schema: l9.program-execution.campaign-status-ledger.v1
-updated: "2026-08-17T13:20:17Z"
+updated: "2026-08-17T13:32:23Z"
 # Mutable live ledger. Does not rewrite CAMPAIGN_SOURCE.yaml.
 # Agents MUST close a campaign here before starting the next execute_order.
 campaigns:

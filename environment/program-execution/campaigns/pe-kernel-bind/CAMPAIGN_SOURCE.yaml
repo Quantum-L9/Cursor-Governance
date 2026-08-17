@@ -5,7 +5,7 @@ metadata:
   campaign_id: pe-kernel-bind
   title: Bind control-plane kernels onto PE campaign transitions
   version: 1.0.0
-  created_at: '2026-08-17T13:20:15Z'
+  created_at: '2026-08-17T13:32:22Z'
   status: operator_intake
   owner: Igor Beylin
   intended_host: Quantum-L9/Cursor-Governance
