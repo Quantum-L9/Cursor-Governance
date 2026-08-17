@@ -106,6 +106,24 @@ Cursor session start with no manual step:
    prefetch
 10. Emits one combined `additional_context` JSON blob back to Cursor
 
+### 2.1.1 Worktree create ⇒ wire (not sessionStart)
+
+`sessionStart` fires when Cursor opens a session in a folder. It does **not**
+fire when an agent runs `git worktree add`. New worktrees start without
+gitignored `.cursor/` / `.vscode/` links.
+
+After creating a worktree, wire that path once:
+
+```bash
+bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
+# or, if the worktree already exists:
+bash "$HOME/.cursor-governance/ops/scripts/ensure_workspace_wired.sh" /path/to/wt
+```
+
+`make pr` heals missing links under its repo-write lock, then fail-closes on
+`check_governance_wiring.sh`. A later branch on the same folder does not need
+another wire. Do not treat `/start-session` as a per-branch ritual.
+
 ### 2.2 Manual / on-demand commands
 
 To re-run the **entire** sequence above against the current repo — same script,
@@ -746,6 +764,7 @@ Make/toolchain interpreter):
    so `$(PYTHON)` expands). `ModuleNotFoundError: No module named 'yaml'`
    means the wrong interpreter.
 5. Do not `uv pip install` past the lockfile for the default toolchain.
+
 <!-- SSOT_CHECKOUT_MAKE_PR_V1 -->
 ## SSOT-family make pr (2026-08-17) — gov worktrees are not consumers
 

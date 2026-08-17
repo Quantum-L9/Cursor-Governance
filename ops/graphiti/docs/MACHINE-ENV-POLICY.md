@@ -56,6 +56,8 @@ git clone ...
 cd repo
 bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
 # OR: open in Cursor — sessionStart bootstrap auto-wires symlinks
+# New git worktree (agent/shell): do not use raw git worktree add
+bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
 ```
 
 Graphiti env is inherited from the Mac — not recreated per clone.

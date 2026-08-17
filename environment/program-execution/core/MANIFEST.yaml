@@ -1,6 +1,6 @@
-schema: program-execution-core.manifest.v1
+schema: program-execution-system.manifest.v2
 schema_version: 2.0.0
-artifact: program-execution-core
+artifact: program-execution-system-v2.0.0
 files:
 - path: ALIGNMENT_REPORT.md
   sha256: 870a5574e5a47cd7abec14f153ccdf2f66ea9d928889a08b94fc4ab5f1b59d0a
