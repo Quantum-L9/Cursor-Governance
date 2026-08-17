@@ -1,0 +1,151 @@
+schema: l9.program-execution.counterexamples.v1
+schema_version: 1.0.0
+baseline_commit: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+generated_at: '2026-08-17T12:20:00Z'
+
+counterexamples:
+  - id: CE-COMPILER-001
+    invariant: semantic_conservation
+    description: Compiler drops retry_policy after compilation
+    current_outcome: retry_policy_absent_after_compilation
+    required_outcome: semantic_equivalence
+    test_file: test_hardening_compiler.py
+    test_function: test_retry_policy_preserved
+    severity: high
+    
+  - id: CE-COMPILER-002
+    invariant: semantic_conservation
+    description: first_target misbinds workstream/authority/traceability
+    current_outcome: wrong_target_binding
+    required_outcome: exact_target_binding
+    test_file: test_hardening_compiler.py
+    test_function: test_first_target_binding
+    severity: high
+    
+  - id: CE-CANDIDATE-001
+    invariant: immutable_candidate_identity
+    description: Dirty worktree verified with HEAD as candidate
+    current_outcome: dirty_tree_verified_with_HEAD
+    required_outcome: immutable_snapshot_identity
+    test_file: test_hardening_candidate.py
+    test_function: test_dirty_candidate_immutable_identity
+    severity: critical
+    
+  - id: CE-CANDIDATE-002
+    invariant: candidate_toctou_protection
+    description: Submitted state changes before verify
+    current_outcome: mutable_candidate_between_submit_verify
+    required_outcome: frozen_candidate_verified
+    test_file: test_hardening_candidate.py
+    test_function: test_candidate_immutable_after_submission
+    severity: critical
+    
+  - id: CE-EVIDENCE-001
+    invariant: claim_scoped_admissibility
+    description: Unrelated evidence can satisfy another claim
+    current_outcome: cross_claim_evidence_substitution
+    required_outcome: reject
+    test_file: test_hardening_evidence.py
+    test_function: test_evidence_claim_scoped
+    severity: critical
+    
+  - id: CE-EVIDENCE-002
+    invariant: evidence_polarity_matters
+    description: FAIL evidence can satisfy positive obligation
+    current_outcome: fail_evidence_satisfies_pass_claim
+    required_outcome: reject
+    test_file: test_hardening_evidence.py
+    test_function: test_fail_evidence_rejected_for_positive_claim
+    severity: high
+    
+  - id: CE-EVIDENCE-003
+    invariant: evidence_immutability
+    description: Old verification artifact overwritten by retry
+    current_outcome: verification_receipt_replaced
+    required_outcome: append_only_artifacts
+    test_file: test_hardening_evidence.py
+    test_function: test_evidence_artifacts_immutable
+    severity: high
+    
+  - id: CE-AUTHORITY-001
+    invariant: principal_based_authority
+    description: Arbitrary approved_by string unlocks authority operation
+    current_outcome: actor_string_grants_authority
+    required_outcome: principal_context_required
+    test_file: test_hardening_authority.py
+    test_function: test_actor_string_insufficient
+    severity: critical
+    
+  - id: CE-AUTHORITY-002
+    invariant: nondelegable_authority
+    description: Nondelegable authority can be projected
+    current_outcome: delegation_chain_accepted
+    required_outcome: reject
+    test_file: test_hardening_authority.py
+    test_function: test_nondelegable_authority_enforced
+    severity: high
+    
+  - id: CE-GATE-001
+    invariant: computed_gate_results
+    description: Caller supplies PASS/method/evidence to gate evaluation
+    current_outcome: caller_supplied_pass_accepted
+    required_outcome: controller_computes_result
+    test_file: test_hardening_gates.py
+    test_function: test_gate_result_computed_not_supplied
+    severity: critical
+    
+  - id: CE-REPOSITORY-001
+    invariant: generation_genealogy
+    description: Reconcile advances baseline while lease uses old generation
+    current_outcome: concurrent_generation_advance
+    required_outcome: lease_fenced_generation
+    test_file: test_hardening_repository.py
+    test_function: test_generation_advance_fenced_by_lease
+    severity: high
+    
+  - id: CE-LEASE-001
+    invariant: temporal_authority_enforcement
+    description: Expired lease remains usable at use boundaries
+    current_outcome: expired_lease_accepted
+    required_outcome: reject_at_every_boundary
+    test_file: test_hardening_leases.py
+    test_function: test_expired_lease_rejected
+    severity: critical
+    
+  - id: CE-REPLAN-001
+    invariant: authorized_work_immutability
+    description: Active task can become affected "future" task
+    current_outcome: replan_changes_inflight_task
+    required_outcome: reject
+    test_file: test_hardening_replan.py
+    test_function: test_replan_cannot_affect_inflight
+    severity: high
+    
+  - id: CE-CLOSEOUT-001
+    invariant: owner_terminal_authority
+    description: Controller handoff recommendation can drive completion
+    current_outcome: handoff_completes_program
+    required_outcome: owner_verdict_required
+    test_file: test_hardening_closeout.py
+    test_function: test_controller_cannot_terminalize
+    severity: critical
+    
+  - id: CE-CLOSEOUT-002
+    invariant: inconclusive_is_terminal
+    description: INCONCLUSIVE produced but rejected as terminal
+    current_outcome: inconclusive_rejected
+    required_outcome: inconclusive_terminalizes_execution
+    test_file: test_hardening_closeout.py
+    test_function: test_inconclusive_is_terminal_verdict
+    severity: medium
+
+summary:
+  total_counterexamples: 15
+  critical: 7
+  high: 6
+  medium: 1
+  low: 1
+  test_files: 8
+  
+status: registry_complete
+verification: all_counterexamples_reproduce_as_xfail_tests

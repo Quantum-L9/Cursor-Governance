@@ -1,18 +1,80 @@
 #!/usr/bin/env bash
-# Verify repo governance symlinks + sessionEnd backup hook.
-# Exit 0 = PASS. Exit 1 = FAIL (run /wire governance).
+# Verify consumer repo symlinks (--workspace) and machine sessionEnd/Graphiti
+# (--machine). Default is both. ssot / ssot_checkout skip consumer-link
+# requirements. Empty $HOME/.l9 isolates (no identity files) skip --workspace.
+# Exit 0 = PASS. Exit 1 = FAIL with a class-specific RESULT line.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 
-WORKSPACE="${1:-$(pwd)}"
+CHECK_WORKSPACE=0
+CHECK_MACHINE=0
+POSITIONAL=()
+for arg in "$@"; do
+  case "$arg" in
+    --workspace) CHECK_WORKSPACE=1 ;;
+    --machine) CHECK_MACHINE=1 ;;
+    --*)
+      echo "ERROR: unknown flag $arg (expected --workspace and/or --machine)" >&2
+      exit 2
+      ;;
+    *) POSITIONAL+=("$arg") ;;
+  esac
+done
+if [ "$CHECK_WORKSPACE" -eq 0 ] && [ "$CHECK_MACHINE" -eq 0 ]; then
+  CHECK_WORKSPACE=1
+  CHECK_MACHINE=1
+fi
+WORKSPACE="${POSITIONAL[0]:-$(pwd)}"
 FAIL=0
+FAIL_CONSUMER=0
+FAIL_SESSIONEND=0
+FAIL_GRAPHITI=0
+CURRENT_FAIL_CLASS=wiring
+
+WARN_FILE="$(mktemp)"
+trap 'rm -f "$WARN_FILE"' EXIT
 
 pass() { echo "  OK: $1"; }
-fail() { echo "  FAIL: $1"; FAIL=1; }
-warn() { echo "  WARN: $1"; }
+fail() {
+  echo "  FAIL: $1"
+  FAIL=1
+  case "$CURRENT_FAIL_CLASS" in
+    consumer) FAIL_CONSUMER=1 ;;
+    sessionend) FAIL_SESSIONEND=1 ;;
+    graphiti) FAIL_GRAPHITI=1 ;;
+  esac
+}
+warn() { echo "$1" >> "$WARN_FILE"; }
+
+emit_result() {
+  echo ""
+  if [ "$FAIL" -eq 0 ]; then
+    echo "RESULT: PASS — governance wiring"
+  else
+    if [ "$FAIL_CONSUMER" -eq 1 ]; then
+      echo "RESULT: FAIL — consumer workspace wiring"
+    fi
+    if [ "$FAIL_SESSIONEND" -eq 1 ]; then
+      echo "RESULT: FAIL — sessionEnd hook incomplete"
+    fi
+    if [ "$FAIL_GRAPHITI" -eq 1 ]; then
+      echo "RESULT: FAIL — Graphiti wiring"
+    fi
+    if [ "$FAIL_CONSUMER" -eq 0 ] && [ "$FAIL_SESSIONEND" -eq 0 ] && [ "$FAIL_GRAPHITI" -eq 0 ]; then
+      echo "RESULT: FAIL — governance wiring"
+    fi
+  fi
+  if [ -s "$WARN_FILE" ]; then
+    echo ""
+    echo "=== non-blocking ==="
+    while IFS= read -r w; do
+      echo "  WARN: $w"
+    done < "$WARN_FILE"
+  fi
+}
 
 resolve_governance_paths_or_exit
 GC="$GLOBAL_COMMANDS"
@@ -28,21 +90,47 @@ HOOK_LINK="$HOME/.cursor/hooks/governance-backup.sh"
 HOOKS_JSON="$HOME/.cursor/hooks.json"
 EXPECTED_CMD="./hooks/governance-backup.sh"
 
+WS_KIND="$(classify_workspace_kind "$WORKSPACE")"
+
 echo "=== Governance wiring check ==="
 echo "  Governance root: $GOV_ROOT"
 echo "  GlobalCommands:  $GC"
 echo "  Workspace:       $WORKSPACE"
+echo "  Workspace kind:  $WS_KIND"
 echo ""
 
+# Empty $HOME/.l9 isolates (no identity files) are not consumer workspaces.
+# ssot_checkout (identity tree, including gov worktrees) keeps workspace checks
+# with consumer-link requirements relaxed.
+if is_l9_isolate_workspace "$WORKSPACE" && [ "$WS_KIND" != "ssot_checkout" ] && [ "$WS_KIND" != "ssot" ]; then
+  if [ "$CHECK_WORKSPACE" -eq 1 ]; then
+    echo "OK: skip consumer workspace wiring (isolate under \$HOME/.l9)"
+  fi
+  CHECK_WORKSPACE=0
+fi
+
+if [ "$CHECK_WORKSPACE" -eq 1 ]; then
+CURRENT_FAIL_CLASS=consumer
 echo "=== Repo symlinks ==="
 WS_REAL=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE'))")
 GC_REAL=$(python3 -c "import os; print(os.path.realpath('$GC'))")
-if [ "$WS_REAL" = "$GC_REAL" ]; then
+if [ "$WS_KIND" = "ssot" ]; then
   # SSOT must not self-alias — .cursor-commands is not required (and must be absent).
   if [ -e "$WORKSPACE/.cursor-commands" ] || [ -L "$WORKSPACE/.cursor-commands" ]; then
     fail "SSOT self-alias present at $WORKSPACE/.cursor-commands (remove; SSOT must not link to itself)"
   else
     pass "SSOT workspace — .cursor-commands self-alias absent"
+  fi
+elif [ "$WS_KIND" = "ssot_checkout" ]; then
+  pass "ssot_checkout — consumer .cursor-commands / .cursor/plans / .cursor/governance not required"
+  if [ -L "$WORKSPACE/.cursor-commands" ] || [ -e "$WORKSPACE/.cursor-commands" ]; then
+    rt=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE/.cursor-commands'))")
+    re="$GC_REAL"
+    if [ "$rt" = "$re" ]; then
+      pass ".cursor-commands -> $re (optional)"
+    else
+      fail ".cursor-commands points to $rt (expected $re / SSOT)"
+    fi
   fi
 elif [ ! -L "$WORKSPACE/.cursor-commands" ]; then
   fail ".cursor-commands missing or not a symlink ($WORKSPACE/.cursor-commands)"
@@ -58,7 +146,9 @@ fi
 
 # Machine Cursor plans — workspace convenience symlink (not governance SSOT).
 mkdir -p "$HOME/.cursor/plans" 2>/dev/null || true
-if [ ! -L "$WORKSPACE/.cursor/plans" ]; then
+if [ "$WS_KIND" = "ssot_checkout" ] || [ "$WS_KIND" = "ssot" ]; then
+  pass "ssot-family — .cursor/plans not required"
+elif [ ! -L "$WORKSPACE/.cursor/plans" ]; then
   fail ".cursor/plans missing or not a symlink (expected -> \$HOME/.cursor/plans)"
 else
   rt=$(python3 -c "import os; print(os.path.realpath('$WORKSPACE/.cursor/plans'))")
@@ -76,7 +166,9 @@ else
   pass "no .cursor/governance/GlobalCommands"
 fi
 
-if [ -L "$WORKSPACE/.cursor/governance" ]; then
+if [ "$WS_KIND" = "ssot_checkout" ] || [ "$WS_KIND" = "ssot" ]; then
+  pass "ssot-family — .cursor/governance consumer layout not required"
+elif [ -L "$WORKSPACE/.cursor/governance" ]; then
   fail ".cursor/governance must be a local directory, not a symlink"
 elif [ -d "$WORKSPACE/.cursor/governance" ]; then
   law="$WORKSPACE/.cursor/governance/CANONICAL_LAW.md"
@@ -112,6 +204,8 @@ else
   ssot_branch=$(git -C "$GC" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   if [ "$ssot_branch" = "$SSOT_BRANCH_EXPECTED" ]; then
     pass "SSOT on branch $SSOT_BRANCH_EXPECTED"
+  elif [ "$WS_KIND" = "ssot_checkout" ]; then
+    warn "SSOT checked out on '$ssot_branch', expected '$SSOT_BRANCH_EXPECTED' (ssot_checkout: not a gate)"
   else
     fail "SSOT checked out on '$ssot_branch', expected '$SSOT_BRANCH_EXPECTED' (fix: git -C \"$GC\" checkout $SSOT_BRANCH_EXPECTED)"
   fi
@@ -125,9 +219,13 @@ else
 
   ahead=$(git -C "$GC" rev-list --count "origin/$SSOT_BRANCH_EXPECTED..HEAD" 2>/dev/null || echo "")
   if [ -z "$ahead" ]; then
-    echo "  WARN: no cached origin/$SSOT_BRANCH_EXPECTED ref in SSOT clone — run git -C \"$GC\" fetch origin"
+    warn "no cached origin/$SSOT_BRANCH_EXPECTED ref in SSOT clone — run git -C \"$GC\" fetch origin"
   elif [ "$ahead" -gt 0 ]; then
-    fail "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED — review before they linger (see git -C \"$GC\" log origin/$SSOT_BRANCH_EXPECTED..HEAD)"
+    if [ "$WS_KIND" = "ssot_checkout" ]; then
+      warn "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED (ssot_checkout: not a gate)"
+    else
+      fail "SSOT has $ahead unpushed commit(s) ahead of origin/$SSOT_BRANCH_EXPECTED — review before they linger (see git -C \"$GC\" log origin/$SSOT_BRANCH_EXPECTED..HEAD)"
+    fi
   else
     pass "SSOT has no unpushed commits ahead of origin/$SSOT_BRANCH_EXPECTED (last fetched)"
   fi
@@ -158,6 +256,8 @@ print(int(time.time() - ts))
   ORIGIN_SHA="$(git -C "$GC" rev-parse "origin/$SSOT_BRANCH_EXPECTED" 2>/dev/null || echo "")"
   if [ -n "$HEAD_SHA" ] && [ -n "$ORIGIN_SHA" ] && [ "$HEAD_SHA" = "$ORIGIN_SHA" ]; then
     pass "SSOT HEAD == origin/$SSOT_BRANCH_EXPECTED (${HEAD_SHA:0:7})"
+  elif [ "$WS_KIND" = "ssot_checkout" ]; then
+    warn "SSOT HEAD ${HEAD_SHA:0:7} != origin/$SSOT_BRANCH_EXPECTED ${ORIGIN_SHA:0:7} (ssot_checkout: not a gate)"
   elif [ -z "$ORIGIN_SHA" ]; then
     fail "SSOT missing origin/$SSOT_BRANCH_EXPECTED ref — fetch failed or offline (HEAD=${HEAD_SHA:0:7})"
   else
@@ -187,7 +287,10 @@ if [ "$WS_REAL" != "$GC_REAL" ] && [ -f "$WORKSPACE/commands/plan.md" ] && [ -f 
 else
   pass "slash-command drift check skipped (same clone or plan.md absent)"
 fi
+fi
 
+if [ "$CHECK_MACHINE" -eq 1 ]; then
+CURRENT_FAIL_CLASS=sessionend
 echo ""
 echo "=== sessionEnd governance backup hook ==="
 if [ ! -f "$HOOK_SRC" ]; then
@@ -232,6 +335,7 @@ PY
   fi
 fi
 
+CURRENT_FAIL_CLASS=graphiti
 echo ""
 echo "=== Graphiti memory (GLOBAL-001) ==="
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
@@ -252,7 +356,7 @@ if [ -f "$GRAPHITI_CLI" ]; then
   if [ -f "$HOME/.cursor/graphiti.env" ]; then
     pass "~/.cursor/graphiti.env exists"
   else
-    echo "  WARN: ~/.cursor/graphiti.env missing (copy graphiti.env.example)"
+    warn "~/.cursor/graphiti.env missing (copy graphiti.env.example)"
   fi
   # The bootstrap hook delegates to the memory orchestrator internally, so either
   # entry in sessionStart satisfies the wiring (setup retires the orchestrator-only entry).
@@ -289,42 +393,26 @@ else
 fi
 
 if [ -d "$WORKSPACE/memory-bank" ]; then
-  echo "  WARN: memory-bank/ still present — deprecated; remove after Graphiti migrate (do not scaffold)"
+  warn "memory-bank/ still present — deprecated; remove after Graphiti migrate (do not scaffold)"
 else
   pass "memory-bank/ absent (retired)"
 fi
 
 # IDE profile is a convenience layer, never a gate — warn only, never fail.
 if [ ! -x "$GC/ops/scripts/install_ide_profile.sh" ]; then
-  echo "  WARN: install_ide_profile.sh missing — IDE profile not managed"
+  warn "install_ide_profile.sh missing — IDE profile not managed"
 elif [ -f "$WORKSPACE/.vscode/.l9-ide-desired-hash" ]; then
   pass "IDE profile applied ($(python3 -c '
 import json,sys
 print(json.load(open(sys.argv[1])).get("class", "unknown"))' "$WORKSPACE/.vscode/.l9-ide-desired-hash" 2>/dev/null || echo unknown))"
 else
-  echo "  WARN: IDE profile not yet applied — run: bash \"\$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh\" \"$WORKSPACE\""
+  warn "IDE profile not yet applied — run: bash \"\$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh\" \"$WORKSPACE\""
 fi
 
-echo ""
-if [ $FAIL -eq 0 ]; then
-  echo "RESULT: PASS — governance wiring + sessionEnd hook active"
+fi
+
+emit_result
+if [ "$FAIL" -eq 0 ]; then
   exit 0
 fi
-
-echo "RESULT: FAIL — run /wire governance"
 exit 1
-
-if [ -f "$WORKSPACE/environment/agents/PEER_RUNTIME_BINDINGS.yaml" ] || [ -f "$GC/environment/agents/PEER_RUNTIME_BINDINGS.yaml" ]; then
-  pass "peer runtime bindings present"
-else
-  echo "  WARN: PEER_RUNTIME_BINDINGS.yaml absent in workspace/SSOT"
-fi
-if [ -f "$WORKSPACE/environment/agents/deployment/reconcile.py" ] || [ -f "$GC/environment/agents/deployment/reconcile.py" ]; then
-  pass "deployment reconciler present"
-fi
-if [ -f "$WORKSPACE/environment/agents/results/gateway.py" ] || [ -f "$GC/environment/agents/results/gateway.py" ]; then
-  pass "result gateway present"
-fi
-if [ -f "$WORKSPACE/environment/agents/generated-data/ingress/ingest.py" ] || [ -f "$GC/environment/agents/generated-data/ingress/ingest.py" ]; then
-  pass "generated-data ingress present"
-fi

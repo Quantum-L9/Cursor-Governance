@@ -47,6 +47,7 @@ REQUIRED_FILES: tuple[str, ...] = (
     "adapters/claude-code.md",
     "hooks/user_prompt_skill_router.py",
     "hooks/skill_usage_logger.py",
+    "hooks/context7_stack_pretool.py",
     "tests/test_skill_reconciliation.py",
     "tests/test_cursor_skill_router.py",
     "validate_skill_activation.py",
@@ -336,6 +337,18 @@ def check_publish_path_alignment(failures: list[str]) -> None:
             failures,
         )
         problems += 1
+
+    required_context7 = (
+        "mcp__context7__resolve-library-id",
+        "mcp__context7__query-docs",
+    )
+    for entry in required_context7:
+        if entry not in allow:
+            _fail(
+                f"permissions.allow must include `{entry}` so Claude can self-serve Context7",
+                failures,
+            )
+            problems += 1
 
     if not problems:
         print("  OK: permission layer agrees with the publish-path gate")

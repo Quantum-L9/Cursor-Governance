@@ -12,6 +12,10 @@ from typing import Any
 import yaml
 
 
+class ControllerError(RuntimeError):
+    pass
+
+
 def utc_now() -> str:
     return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
 

@@ -1,0 +1,11 @@
+schema: program-execution-blueprint.do-not-build.v2
+schema_version: 2.0.0
+prohibited_primary_paths: []
+allowed_experiments:
+- id: EXP-001
+  scope: Isolated $HOME/.l9/programs/pe-v3-hardening only
+  constraints:
+  - must_not_become_production_authority
+  - must_be_disposable
+  - must_be_labeled_experimental
+  expiry: '2026-08-17T12:14:43+00:00'

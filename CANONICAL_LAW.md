@@ -593,3 +593,24 @@ Supersedes §6.2.2 “MUST NOT … merge” for the remediations skill only:
    green mergeable open PR in the target repo (bottom-up, no `--admin`).
 3. Mechanical gate: `ops/autonomy/merge_gate.py`. Force-push / hard-reset /
    admin-merge remain never-waived.
+
+<!-- SSOT_CHECKOUT_CONSUMER_WIRING_V1 -->
+## 1.1 SSOT-family checkouts are not consumers (2026-08-17)
+
+Append-only clarification of §1. Do not treat a checkout of this repository
+as a product consumer that must present `.cursor-commands`.
+
+1. `.cursor-commands` → `$HOME/.cursor-governance` is the **consumer** entry.
+2. Workspace kinds (`ops/scripts/lib/workspace_kind.sh`):
+   - `ssot` — `realpath(workspace) == realpath($HOME/.cursor-governance)`.
+     `.cursor-commands` must be absent (no self-alias).
+   - `ssot_checkout` — this repo’s identity files at the workspace root
+     (`CANONICAL_LAW.md`, `skills/AUTONOMY_MANIFEST.yaml`,
+     `rules/RULES-MANIFEST.yaml`, `ops/scripts/check_governance_wiring.sh`)
+     and the path is not the live SSOT. Worktrees and second clones qualify.
+     Do **not** key off `$HOME/.l9/gov-worktrees/` alone.
+   - `consumer` — everything else. Missing `.cursor-commands` still fails.
+3. `make pr` / `symlinks-check` on `ssot` or `ssot_checkout` must not require
+   `.cursor-commands`, `.cursor/plans`, `.cursor/governance`, or an IDE
+   profile stamp. Machine-global hooks stay fail-closed. SSOT tip / dirty /
+   unpushed is WARN-only on `ssot_checkout`.

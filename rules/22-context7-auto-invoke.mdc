@@ -1,8 +1,8 @@
 ---
 id: l9.rule.22.context7.auto.invoke
-version: 1.0.0
-description: "Auto-invoke Context7 MCP before coding on external libraries \u2014\
-  \ FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools."
+version: 1.1.0
+description: "Auto-invoke Context7 MCP before coding on external libraries —\
+  FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools, APIs, MCP, install, Docker."
 scope: global
 activation: always
 authority: canonical_global
@@ -11,7 +11,11 @@ alwaysApply: true
 
 # Context7 Auto-Invoke (External Docs)
 
-**MCP server:** `user-Context7` · **Skill:** `@.cursor-commands/skills/l9-context7-docs/`
+**MCP servers:** `context7` (Claude Code plugin) **and** `user-Context7` (Cursor).
+**Skill:** `@.cursor-commands/skills/l9-context7-docs/`
+
+Call whichever server this surface exposes. Do not treat a missing allow-list
+entry as permission to skip.
 
 ## Mandatory — call Context7 before first implementation
 
@@ -23,22 +27,26 @@ When the task touches any item below, **read MCP tool schemas**, then call `reso
 | **Neo4j** | Cypher, Python driver, graph sync/scoring | `Neo4j Python Driver`, `Neo4j` |
 | **pytest** | fixtures, markers, parametrize, asyncio, plugins | `pytest`, `pytest-asyncio` |
 | **GitHub Actions / gh** | workflow syntax, actions, expressions, `gh` CLI | `GitHub Actions`, `actions/checkout` |
+| **API / MCP / install / Docker** | vendor payloads, MCP tools, package install, Compose | official product name |
 | **New software** | unfamiliar SDK, platform, plugin, MCP server, CLI tool | official product name |
 | **Dev tooling** | Docker Compose, pre-commit, ruff, semgrep, MCP SDK | tool's official name |
 
 Also invoke when: version-specific API, migration syntax, deprecated patterns, or errors suggesting stale/wrong API shape.
 
+Upstream API field names, MCP tool schemas, install commands, and Docker
+images are **not** "local repo code". A payload such as `language_name: "en"`
+is an upstream contract and requires Context7 (then official docs GET).
+
 ## Verify before codegen
 
 - Before calling a third-party library function, verify the symbol exists in the project's installed version (`package.json`, `pyproject.toml`, `go.mod`, etc.).
-- If unverified after Context7 + local search, mark the line `# VERIFY: <lib>.<symbol> against version X` and surface uncertainty in the response.
+- If Context7 misses, GET the official docs page. If that also misses, stop (Unknown). Do not invent fields.
 - Never invent function signatures, parameter names, or return types — propose adding the dependency (with version) before writing code that depends on it.
 
 ## Skip Context7
 
-- Task is purely local repo code with no external API/dependency behavior.
-- Repo rules, invariants, or local files are the SSOT (e.g. Odoo module patterns).
 - Secrets, credentials, proprietary payloads must never go in Context7 queries.
+- Do **not** skip because the edit is "just config" or "purely local" when an API, MCP tool, install, or Docker image is involved.
 
 ## MCP flow (max 3 calls each)
 

@@ -1,0 +1,23 @@
+schema: program-execution-blueprint.cutover-and-rollback.v2
+schema_version: 2.0.0
+cutover:
+  required_gate_ids:
+  - GATE-001
+  - GATE-002
+  approval_action: publish_or_release
+  steps:
+  - accepted_blueprint
+  abort_conditions:
+  - blocking_gate_failure
+  - parity_failure
+  observation_window: until_handoff
+rollback:
+  trigger_conditions:
+  - blocking_gate_failure
+  - authority_containment_failure
+  steps:
+  - preserve_failed_replan_evidence
+  data_reconciliation: append_only_receipts_never_rewritten
+  validation:
+  - prior_evidence_unchanged
+  owner: AUTH-001

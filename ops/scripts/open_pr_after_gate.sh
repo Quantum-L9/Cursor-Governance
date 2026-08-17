@@ -9,10 +9,15 @@ WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"
 BASE_REF="${PR_BASE#origin/}"
 PR_REMEDIATE="${PR_REMEDIATE:-0}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=resolve_governance_paths.sh
+source "$SCRIPT_DIR/resolve_governance_paths.sh"
 GOV_ROOT="${GOV_ROOT:-}"
 if [[ -z "$GOV_ROOT" ]]; then
-  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
   GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+if is_l9_isolate_workspace "$WS"; then
+  bind_isolate_toolchain "$WS" "$HOME/.cursor-governance"
 fi
 
 cd "$WS"
