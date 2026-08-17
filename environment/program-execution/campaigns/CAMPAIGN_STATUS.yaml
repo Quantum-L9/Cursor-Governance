@@ -1,5 +1,5 @@
 schema: l9.program-execution.campaign-status-ledger.v1
-updated: "2026-08-15T00:56:57Z"
+updated: "2026-08-17T13:20:17Z"
 # Mutable live ledger. Does not rewrite CAMPAIGN_SOURCE.yaml.
 # Agents MUST close a campaign here before starting the next execute_order.
 campaigns:
@@ -30,3 +30,10 @@ campaigns:
   - id: l9-ecosystem-fix-plan
     lifecycle: planned
     notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
+  - id: pe-kernel-bind
+    lifecycle: in_progress
+    notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; agents must stop and ask, never forge it
+    launched_by: make campaign
+    pec_workspace: /Users/macm2/.l9/programs/pe-kernel-bind
+    blueprint: /Users/macm2/.l9/blueprints/pe-kernel-bind
+    worktree: /Users/macm2/.l9/program-worktrees/pe-kernel-bind
