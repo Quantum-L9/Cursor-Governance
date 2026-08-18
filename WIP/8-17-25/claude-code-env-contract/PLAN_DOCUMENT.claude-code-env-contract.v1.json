@@ -169,6 +169,7 @@
       "ops/secrets/capability_broker.py",
       "ops/secrets/capability_client.py",
       "ops/secrets/capabilities.yaml (comments only)",
+      "ops/secrets/validate_capability_contract.py + ops/secrets tests (GH_TOKEN=proxy-injected contract migration; U3)",
       "ops/scripts/setup_claude_code_plugins.sh (comment/help text only)",
       "Makefile (claude-env recipe only, with ALLOW-ROOT-DELETION marker)",
       "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml (additive campaign entry)",

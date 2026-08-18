@@ -107,18 +107,28 @@ the account environment makes the bypass permanent for every session.
    executes the canonical `setup.sh` from it, so edits to `setup.sh` on `main`
    propagate to every new session with **no re-paste**. (Pasting `setup.sh`
    directly still works — it's the same logic — but you own keeping it in sync.)
-   Either way it is idempotent, auto-detects Python vs Node, clones governance to
-   `$HOME/.cursor-governance`, provisions `pre-commit` (the `make pr` gate,
-   CANONICAL_LAW §12), and then delegates all adapter wiring to `../install.sh`
-   — the same installer CLI and Desktop use (see "One adapter" above).
-4. **Per-repo (git-tracked, recommended)** — in each consumer repo commit the
-   `.claude/` triad so the SessionStart hook boots governance from the clone (see
-   the parent `README.md` §4). Committing is preferred: it is explicit, reviewable,
-   and identical on CLI. **Not strictly required for Mobile/Web**, though —
-   `install.sh` reconciles the `.claude/` triad from the governance clone into the
-   workspace when a repo has not committed it, so every mobile chat self-activates
-   either way. Reconciliation preserves consumer-local keys and never clobbers
-   what the repo already committed.
+   Either way it is **machine-level provisioning only**: it installs `gh`,
+   clones/refreshes governance at `$HOME/.cursor-governance`, establishes the
+   locked governance venv (via the shared bootstrap inside `../install.sh`),
+   and delegates all adapter wiring to `../install.sh` — the same installer CLI
+   and Desktop use (see "One adapter" above). It does **not** install consumer
+   repository dependencies and does **not** warm `pre-commit`: the account
+   environment is cached (~7 days) and does not re-run per session, so that
+   per-repository work lives in the committed SessionStart path
+   (`hooks/session_deps_cloud.sh`, invoked by the SessionStart hook on every
+   session and resume).
+4. **Per-repo (git-tracked, REQUIRED)** — in each governed consumer repo commit
+   the `.claude/` triad (`.claude/settings.json` + `.claude/hooks/`) so the
+   SessionStart hook boots governance from the clone (see the parent `README.md`
+   §4). Committed wiring is **required** for Web/Mobile, not optional: cloud
+   SessionStart hooks come from project files or managed settings, and
+   machine-level `~/.claude` hooks do not follow you into Anthropic cloud
+   sessions. The account Setup script cannot reliably repair missing per-repo
+   wiring because it is environment provisioning and may be cached for ~7 days
+   without re-running. `install.sh` reconciliation remains as a repair fallback
+   when a repo has not committed the triad — it preserves consumer-local keys
+   and never clobbers what the repo already committed — but a governed repo
+   should treat missing committed wiring as drift, not a supported posture.
 
 ## Verify (in a fresh session after saving)
 
