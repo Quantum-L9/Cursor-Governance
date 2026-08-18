@@ -87,8 +87,9 @@ def validate_source_contract(contract: dict[str, Any], task: dict[str, Any]) -> 
         "stop_conditions",
         "rollback",
     }
+    allowed = required | {"kernel_profile", "consumers", "entrypoints"}
     missing = sorted(required - set(contract))
-    unknown = sorted(set(contract) - required)
+    unknown = sorted(set(contract) - allowed)
     if missing:
         raise ContractError(f"missing source-contract fields: {missing}")
     if unknown:
@@ -198,6 +199,9 @@ def draft_source_contract(
         "remote_mutation": "denied",
         "stop_conditions": ["stop_on_program_contract_scope_authority_or_base_state_drift"],
         "rollback": rollback,
+        "kernel_profile": str(
+            source.get("kernel_profile") or task.get("kernel_profile") or "BUILD"
+        ),
     }
     payload = validate_source_contract(payload, task)
     write_json(output, payload)
@@ -291,6 +295,8 @@ def render_contract(
                 "",
                 f"Objective: {rendered['objective']}",
                 "",
+                f"kernel_profile: {rendered.get('kernel_profile') or 'BUILD'}",
+                "",
                 f"Target: `{rendered['target_id']}` / `{rendered['repository_id']}`",
                 f"Worktree: `{rendered['worktree']}`",
                 f"Base SHA: `{rendered['base_sha']}`",
@@ -322,6 +328,19 @@ def render_contract(
         + "\n",
         encoding="utf-8",
     )
+    forbidden = (
+        "AUDIT.md",
+        "PLAN.md",
+        "BUILD.md",
+        "CHANGE.md",
+        "VALIDATION.md",
+        "DEFINITION_OF_DONE.md",
+        "RELEASE.md",
+    )
+    brief_text = brief.read_text(encoding="utf-8")
+    hit = [name for name in forbidden if name in brief_text]
+    if hit:
+        raise ContractError(f"worker brief names kernel files {hit}; ADR-0024 forbids that")
     db.update_task(
         task_id,
         rendered_contract_path=str(target),

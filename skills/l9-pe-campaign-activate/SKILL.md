@@ -36,6 +36,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 |---|---|
 | Emit set | exactly the files in [references/file-set.md](references/file-set.md) |
 | Stack proof | runner-owned `$HOME/.l9/primed/<id>/stack-proof.json` before emit/blueprint |
+| PLAN window | after stack-proof, before emit: skill `l9-pe-nuggets` writes primed `nuggets.json`; compile refuses stub seeds and unsealed `plan_status` |
 | Brief IR | [scripts/compile_brief.py](scripts/compile_brief.py) — memo `.md` → activate seed |
 | Compiler | [scripts/compile_activation_files.py](scripts/compile_activation_files.py) |
 | Pipeline | [references/pipeline.md](references/pipeline.md) |
@@ -105,6 +106,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 - [references/merge-authority.md](references/merge-authority.md) — post-remediation merge
 - [scripts/compile_brief.py](scripts/compile_brief.py)
 - [scripts/compile_activation_files.py](scripts/compile_activation_files.py)
+- PLAN window owner: `skills/l9-pe-nuggets/` (not this pack)
 - [scripts/authorize_campaign_merge.py](scripts/authorize_campaign_merge.py)
 - [scripts/test_compile_brief.py](scripts/test_compile_brief.py)
 - [scripts/test_compile_activation_files.py](scripts/test_compile_activation_files.py)
