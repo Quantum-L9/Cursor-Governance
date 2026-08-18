@@ -59,6 +59,27 @@ STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 FIRST_TASK_ID = "TASK-001"
+PE_MODE_ENV = "L9_PE_MODE"
+PREPARATION_STAGES = (
+    "stack_proof",
+    "isolate",
+    "plan_window",
+    "emit",
+    "compile",
+    "validate_blueprint",
+    "launchability",
+    "admission_evidence",
+    "accept",
+    "bootstrap",
+    "arm",
+)
+
+
+def fast_mode(explicit: bool | None = None) -> bool:
+    """Fast mode relaxes preparation ceremony, never an authority boundary."""
+    if explicit is not None:
+        return explicit
+    return os.environ.get(PE_MODE_ENV, "").strip().lower() == "fast"
 VALIDATION_TIMEOUT_S = 300
 GIT_TIMEOUT_S = 45
 PEC_TIMEOUT_S = 30
@@ -111,9 +132,15 @@ class CampaignReport:
     activation_blockers: list[str] = field(default_factory=list)
     program_blockers: list[str] = field(default_factory=list)
     stages_completed: list[str] = field(default_factory=list)
+    mode: str = "standard"
+    timings: dict[str, Any] = field(default_factory=dict)
+    launchability: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "mode": self.mode,
+            "timings": dict(self.timings),
+            "launchability": dict(self.launchability),
             "campaign_id": self.campaign_id,
             "until": self.until,
             "worktree": self.worktree,
@@ -1486,6 +1513,103 @@ def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[s
     ]
 
 
+def render_progress(
+    pec_workspace: Path,
+    *,
+    campaign_id: str,
+    timer: Any,
+    timing: Any,
+    published: str,
+) -> str:
+    """Report preparation, execution, verification and publish as separate axes.
+
+    A completed preparation checklist is not a completed campaign, and reporting
+    one number for both is how "100%" came to mean "zero tasks executed".
+    """
+    try:
+        tasks = pec_status_tasks(pec_workspace)
+    except CampaignError:
+        tasks = []
+    elapsed = timer.by_phase(
+        {"preparation": PREPARATION_STAGES, "execution": ("execute",)}
+    )
+    report = timing.progress(
+        tasks,
+        campaign_id=campaign_id,
+        preparation="COMPLETE",
+        published=published,
+        timings=elapsed,
+    )
+    path = pec_workspace / "runtime" / "PROGRESS.json"
+    if path.parent.is_dir():
+        path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return timing.format_progress(report)
+
+
+def check_launchability(
+    blueprint: Path,
+    repo_root: Path,
+    *,
+    fast: bool,
+    campaign_id: str,
+) -> dict[str, Any]:
+    """Refuse to bootstrap a campaign that cannot possibly execute.
+
+    Cheap, and deliberately not a correctness proof: it only catches the
+    conditions that make execution impossible, so they surface here instead of
+    as an INCOMPLETE verdict or a post-bootstrap restart cycle.
+    """
+    module = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
+    tasks = module.blueprint_tasks(blueprint)
+    if not tasks:
+        return {"launchable": True, "task_count": 0, "findings": [], "skipped": "no_task_cards"}
+    report = module.check_tasks(tasks, repo_root, infer=fast)
+    receipt = blueprint / "launchability-report.json"
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    log(module.format_report(report))
+    if not report["launchable"]:
+        detail = "; ".join(
+            f"{item['task_id']}: {item['code']} — {item['remedy']}" for item in report["blockers"]
+        )
+        raise CampaignError(
+            f"{campaign_id} is not launchable: {len(report['blockers'])} blocker(s) would make "
+            f"execution impossible after bootstrap. {detail}. "
+            f"Full report: {receipt}"
+        )
+    return report
+
+
+def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
+    """Measure the mechanical facts admission needs instead of asking for them.
+
+    Repository SHA, branch, and cleanliness are machine-measurable. Requiring an
+    operator to type them is how the evidence ended up missing until after
+    bootstrap had already frozen the blueprint and forbidden collecting it.
+    """
+    measured: dict[str, Any] = {"local_path": str(target_path)}
+    if not is_git_repo(target_path):
+        measured["available"] = False
+        return measured
+    for key, args in (
+        ("revision", ("rev-parse", "HEAD")),
+        ("branch", ("rev-parse", "--abbrev-ref", "HEAD")),
+        ("tree", ("rev-parse", "HEAD^{tree}")),
+    ):
+        result = run_cmd(
+            ["git", "-C", str(target_path), *args], timeout=GIT_TIMEOUT_S, env=git_env()
+        )
+        measured[key] = result.stdout.strip() if result.returncode == 0 else ""
+    dirty = run_cmd(
+        ["git", "-C", str(target_path), "status", "--porcelain"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    measured["clean"] = dirty.returncode == 0 and not dirty.stdout.strip()
+    measured["available"] = bool(measured.get("revision"))
+    return measured
+
+
 def run_worker_handoff(
     workspace: Path,
     task: dict[str, Any],
@@ -2094,10 +2218,14 @@ def run_campaign(
     host_repo: str = HOST_REPO_DEFAULT,
     target_override: str | None = None,
     hooks: Hooks | None = None,
+    fast: bool | None = None,
 ) -> CampaignReport:
     requested_until = until
     until = normalize_until(until)
     hooks = hooks or Hooks()
+    fast = fast_mode(fast)
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = timing.StageTimer()
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
@@ -2123,22 +2251,35 @@ def run_campaign(
             hooks=hooks,
         )
     primed_root = l9_home / "primed"
+    cache = timing.StageCache(primed_root / campaign_id, enabled=fast)
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")
-    stack_receipt = stack_fn(seed, primed_root)
+    with timer.stage("stack_proof") as entry:
+        # Network-backed research is the single most expensive preparation stage
+        # and the one most likely to be retried; keyed on the seed, a retry that
+        # changed nothing reuses the receipt instead of re-priming.
+        stack_key = timing.fingerprint(seed)
+        cached_stack = cache.get("stack_proof", stack_key)
+        if cached_stack is not None and Path(str(cached_stack.get("path") or "")).is_file():
+            stack_receipt = cached_stack
+            entry["cached"] = True
+        else:
+            stack_receipt = stack_fn(seed, primed_root)
+            cache.put("stack_proof", stack_key, stack_receipt)
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))
     )
-    if repo_root is not None:
-        write_root = repo_root.resolve()
-    else:
-        write_root = (worktree or (l9_home / "gov-worktrees" / campaign_id)).resolve()
-        write_root = isolate_worktree(
-            primary,
-            campaign_id,
-            write_root,
-            git_fn=hooks.git,
-        ).resolve()
+    with timer.stage("isolate"):
+        if repo_root is not None:
+            write_root = repo_root.resolve()
+        else:
+            write_root = (worktree or (l9_home / "gov-worktrees" / campaign_id)).resolve()
+            write_root = isolate_worktree(
+                primary,
+                campaign_id,
+                write_root,
+                git_fn=hooks.git,
+            ).resolve()
     refuse_write_to_dirty_primary(primary, write_root)
 
     report = CampaignReport(
@@ -2149,6 +2290,7 @@ def run_campaign(
         blueprint=str(l9_home / "blueprints" / campaign_id),
         pec_workspace=str(l9_home / "programs" / campaign_id),
         program_blockers=default_program_blockers(campaign_id, armed=False),
+        mode="fast" if fast else "standard",
     )
 
     compile_activation = hooks.compile_activation or default_compile_activation
@@ -2199,21 +2341,27 @@ def run_campaign(
     blueprint = Path(report.blueprint)
     log(f"blueprint {blueprint}")
     allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
-    if hooks.compile_source is not None:
-        hooks.compile_source(source, blueprint)
-    else:
-        default_compile_source(
-            source,
-            blueprint,
-            allowlist_path=allowlist,
-            stack_proof=stack_proof_path,
-        )
-    annotate_phase0_without_forging_ack(blueprint)
-    validate = hooks.validate_blueprint or default_validate_blueprint
-    errors = validate(blueprint)
+    with timer.stage("compile"):
+        if hooks.compile_source is not None:
+            hooks.compile_source(source, blueprint)
+        else:
+            default_compile_source(
+                source,
+                blueprint,
+                allowlist_path=allowlist,
+                stack_proof=stack_proof_path,
+            )
+        annotate_phase0_without_forging_ack(blueprint)
+    with timer.stage("validate_blueprint"):
+        validate = hooks.validate_blueprint or default_validate_blueprint
+        errors = validate(blueprint)
     if errors:
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
+    with timer.stage("launchability"):
+        report.launchability = check_launchability(
+            blueprint, write_root, fast=fast, campaign_id=campaign_id
+        )
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(
@@ -2227,16 +2375,28 @@ def run_campaign(
 
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
     target_path = Path(target_worktree)
-    if hooks.admit is None:
-        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
-        host_revision = target_head_sha(target_path)
-    else:
-        host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
+    with timer.stage("admission_evidence") as entry:
+        if hooks.admit is None:
+            default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+            measured = measure_admission_evidence(target_path)
+            entry["detail"] = measured
+            if not measured.get("available"):
+                raise CampaignError(
+                    f"cannot measure admission evidence for {campaign_id}: {target_path} is not a "
+                    "readable git checkout, so repository revision cannot be bound before "
+                    "bootstrap freezes the blueprint. Expected: a target checkout at that path. "
+                    "Suggested next action: remove the path and re-run so it is re-cloned. "
+                    "Retry is safe."
+                )
+            host_revision = str(measured["revision"])
+        else:
+            host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
     log(f"admit EVID-001 bind {host_revision}")
-    if hooks.admit is not None:
-        hooks.admit(blueprint)
-    else:
-        default_admit(blueprint, revision=host_revision)
+    with timer.stage("accept"):
+        if hooks.admit is not None:
+            hooks.admit(blueprint)
+        else:
+            default_admit(blueprint, revision=host_revision)
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
@@ -2249,9 +2409,14 @@ def run_campaign(
         return report
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
-    pec_result = pec(Path(report.pec_workspace), blueprint)
+    with timer.stage("bootstrap"):
+        pec_result = pec(Path(report.pec_workspace), blueprint)
     if pec_result.get("draft"):
         raise CampaignError("pec --admission-draft is not a live campaign path")
+    # Bootstrap requires an empty workspace, so timings only start persisting
+    # once the runtime directory legitimately exists.
+    timer.workspace = Path(report.pec_workspace)
+    timer.flush()
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
     pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
@@ -2275,16 +2440,23 @@ def run_campaign(
         return report
 
     log(f"arm {FIRST_TASK_ID}")
-    if hooks.arm is not None:
-        hooks.arm(Path(report.pec_workspace), campaign_id)
-    else:
-        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
-        default_arm(
-            Path(report.pec_workspace),
-            campaign_id,
-            repository_id=repository_id,
-            target_path=target_path,
-        )
+    with timer.stage("arm"):
+        if hooks.arm is not None:
+            hooks.arm(Path(report.pec_workspace), campaign_id)
+        else:
+            default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+            default_arm(
+                Path(report.pec_workspace),
+                campaign_id,
+                repository_id=repository_id,
+                target_path=target_path,
+            )
+    report.timings = timer.report()
+    log(
+        "preparation ready: first task executable after "
+        f"{timing.format_duration(sum(timer.by_phase({'prep': PREPARATION_STAGES}).values()))}"
+    )
+    log(timer.format())
     stack_path = Path(report.pec_workspace) / "runtime" / "STACK.json"
     if stack_path.is_file():
         write_stack_cards(
@@ -2321,18 +2493,29 @@ def run_campaign(
 
     log(f"execute {campaign_id}")
     pec_workspace = Path(report.pec_workspace)
-    if hooks.execute is not None:
-        hooks.execute(pec_workspace, campaign_id)
-    elif (pec_workspace / "runtime" / "program-lock.json").is_file():
-        default_execute(
-            pec_workspace,
-            campaign_id,
-            hooks=hooks,
-            live_prs=should_run(until, "pr") and hooks.make_pr is None,
-        )
+    with timer.stage("execute"):
+        if hooks.execute is not None:
+            hooks.execute(pec_workspace, campaign_id)
+        elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+            default_execute(
+                pec_workspace,
+                campaign_id,
+                hooks=hooks,
+                live_prs=should_run(until, "pr") and hooks.make_pr is None,
+            )
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
+    report.timings = timer.report()
+    log(
+        render_progress(
+            pec_workspace,
+            campaign_id=campaign_id,
+            timer=timer,
+            timing=timing,
+            published="PENDING" if should_run(until, "pr") else "NOT STARTED",
+        )
+    )
     report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
     report.stages_completed.append("execute")
     if not should_run(until, "pr"):
@@ -2406,6 +2589,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional owner/repo override when INTENT is a memo",
     )
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        default=None,
+        help=(
+            "Relax preparation ceremony: infer validations, reuse unchanged preparation "
+            "artifacts, validate per task during execution. Safety boundaries are unchanged "
+            f"(equivalent to {PE_MODE_ENV}=fast)"
+        ),
+    )
     return parser
 
 
@@ -2434,6 +2627,7 @@ def main(argv: list[str] | None = None) -> int:
             l9_root=args.l9_root,
             host_repo=args.host_repo,
             target_override=args.target,
+            fast=args.fast,
         )
     except CampaignError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
