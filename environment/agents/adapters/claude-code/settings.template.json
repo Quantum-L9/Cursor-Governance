@@ -4,19 +4,19 @@
     "Committable .claude/settings.json for an L9 consumer repo. Copy to .claude/settings.json",
     "and commit it: on Claude Code Web/Mobile only git-tracked files survive the clone, so a",
     "committed settings.json is what makes governance boot with no manual step. On the CLI the",
-    "same file is picked up locally. Keep secrets OUT of this file \u2014 they belong in the account",
+    "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
     "environment (web/environment.env.example) or user-scope config, never in a repo.",
     "Field/event names track the Claude Code release; see https://code.claude.com/docs.",
     "permissions.allow lets the bounded-autonomy runtime complete work end to end: scoped git",
     "writes (branch/worktree/commit), CI inspection (gh run/pr checks), read-only GitHub",
-    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` \u2014 so completed work",
+    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` — so completed work",
     "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
     "PUBLISH PATH: `PR_REMEDIATE=0 make pr` is the ONLY sanctioned route to GitHub. It runs",
     "the Makefile checkers, then pushes and opens the PR. Raw `git push`, `gh pr create`,",
     "`gh pr edit` and the MCP create_pull_request/push_files tools are in deny BECAUSE they",
     "skip those checkers. This allow/deny split is not advisory: it must agree with",
     "ops/autonomy/local_execution_gate.py, and validate_claude_env.py fails when it does not.",
-    "An allow entry here is what an agent reads as 'approved, no prompt' \u2014 so listing a",
+    "An allow entry here is what an agent reads as 'approved, no prompt' — so listing a",
     "forbidden action here teaches the agent to attempt it and get denied a layer later.",
     "Standing autonomous merge is ON (L9_AUTONOMY_AUTONOMOUS_MERGE=true).",
     "merge_gate.py reads that flag and allows ordinary squash merge after remediation.",
@@ -197,13 +197,15 @@
     "L9_AUTONOMY_PROFILE": "pr-convergence",
     "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
     "L9_AUTONOMY_REMEDIATION_SKILL": "l9-pr-remediation",
-    "L9_AUTONOMY_MAX_PARALLEL": "4",
-    "L9_AUTONOMY_MAX_MUTATION_LANES": "2",
+    "L9_AUTONOMY_MAX_PARALLEL": "480",
+    "L9_AUTONOMY_MAX_MUTATION_LANES": "128",
     "L9_AUTONOMY_STATE_DIR": ".l9/autonomy",
     "L9_DISCOVER_BEFORE_ASK": "true",
     "L9_REQUIRE_EXACT_SHA_GREEN": "true",
     "L9_PROACTIVE_SKILLS": "true",
-    "L9_SKILL_USAGE_LOGGING": "true"
+    "L9_SKILL_USAGE_LOGGING": "true",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "480",
+    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3"
   },
   "skillOverrides": {
     "l9-bounded-autonomy": "user-invocable-only",
@@ -233,5 +235,6 @@
     "l9-setting-up-terraform": "user-invocable-only",
     "l9-ui-operator": "user-invocable-only",
     "l9-update-command": "user-invocable-only"
-  }
+  },
+  "workflowSizeGuideline": "unrestricted"
 }

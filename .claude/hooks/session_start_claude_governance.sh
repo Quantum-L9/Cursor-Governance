@@ -147,6 +147,24 @@ if GOV=$(resolve_governance_dir); then
     LINES+=("bounded autonomy: runtime unavailable; continue under base governance")
   fi
 
+  # --- Claude execution profile (surface personality; fail-open) -----------
+  # Claude is the unleashed surface, Cursor is the constrained one. Resolve which
+  # applies from the runtime — CLAUDE_CODE_REMOTE=true is the cloud discriminator
+  # — never from model identity, and name anything that would silently re-impose
+  # a ceiling (L9 lane caps, Claude Code's own subagent limits, workflow sizing).
+  EXECUTION_PROFILE="$GOV/ops/autonomy/execution_profile.py"
+  if [ -f "$EXECUTION_PROFILE" ] && command -v "$PY" >/dev/null 2>&1; then
+    PROFILE_TEXT=$("$PY" "$EXECUTION_PROFILE" --root "$GOV" --workspace "$WORKSPACE" 2>/dev/null || true)
+    if [ -n "$PROFILE_TEXT" ]; then
+      LINES+=("--- claude execution profile ---")
+      while IFS= read -r line || [ -n "$line" ]; do
+        LINES+=("$line")
+      done <<< "$PROFILE_TEXT"
+    else
+      LINES+=("claude execution profile: unresolved; continue under base governance")
+    fi
+  fi
+
   # Skill-router readiness hint
   if [ -f "$GOV/ops/generated/skill-registry.json" ]; then
     LINES+=("skill-router: ops/generated/skill-registry.json ready (UserPromptSubmit)")

@@ -47,6 +47,19 @@ forbid:
   - pr_against_main_for_campaign_work
   - mix_campaign_work_onto_unrelated_feature_branch
 
+# Surface execution personality — Claude unleashed, Cursor constrained.
+# Values live in ops/autonomy/claude-execution-profiles.json (stdlib-readable at
+# SessionStart); resolver: ops/autonomy/execution_profile.py. Do not fork the
+# numbers here.
+claude_execution_profiles:
+  policy: ops/autonomy/claude-execution-profiles.json
+  resolver: ops/autonomy/execution_profile.py
+  surfaces: [cursor, claude_local, claude_cloud]
+  cloud_discriminator: CLAUDE_CODE_REMOTE=true
+  claude_default: maximum_velocity
+  cursor_default: constrained
+  enforced_by: environment/agents/adapters/claude-code/validate_claude_env.py
+
 # L4 Local Autonomy — standing doctrine (all surfaces; mechanically gated).
 # Default ON (L9_L4_LOCAL_AUTONOMY=1). Brain: ops/autonomy/l4_local.py +
 # ops/autonomy/local_execution_gate.py.

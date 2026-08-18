@@ -25,7 +25,15 @@ HOOKS_SRC_REL = Path("environment/agents/adapters/claude-code/hooks")
 SESSION_START_NAME = "session_start_claude_governance.sh"
 
 # Keys taken wholly from the template when reconciling managed settings.
-MANAGED_TOP_LEVEL = ("hooks", "permissions", "skillOverrides", "env")
+# workflowSizeGuideline is managed: the Claude surface policy is "size the
+# workflow to the task", and a personal `medium` would silently cap fan-out.
+MANAGED_TOP_LEVEL = (
+    "hooks",
+    "permissions",
+    "skillOverrides",
+    "env",
+    "workflowSizeGuideline",
+)
 
 # Copied into every .claude/hooks/ install (consumer + gov committed tree).
 CONSUMER_HOOK_FILES = (
