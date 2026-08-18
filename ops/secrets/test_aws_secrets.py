@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -202,6 +203,144 @@ class ResolveSecretTests(unittest.TestCase):
             resolve.split_id("openclaw-igorbot/github#token"),
             ("openclaw-igorbot/github", "token"),
         )
+
+
+class RawResolutionTrustBoundaryTests(unittest.TestCase):
+    """F-05 — raw resolution is trusted-operator-only; --check stays open.
+
+    No live AWS access: ``fetch_secret_string`` is always mocked, and the denial
+    cases additionally assert it was never reached. The fixture value below is a
+    synthetic placeholder, never a credential, and every case asserts it does not
+    reach any output stream.
+    """
+
+    FAKE_VALUE = "PLACEHOLDER_NOT_A_CREDENTIAL_0000"
+    REF = "openclaw-igorbot/github#token"
+
+    #: A model-controlled surface with no operator claim.
+    MODEL_ENV = {"L9_GOVERNANCE_SURFACE": "claude-code"}
+    #: An operator claim raised from inside a model runtime — must be refused.
+    ESCALATION_ENV = {"L9_GOVERNANCE_SURFACE": "operator", "CLAUDECODE": "1"}
+    #: A genuine operator shell: operator id, no model-runtime markers.
+    TRUSTED_ENV = {"L9_GOVERNANCE_SURFACE": "operator"}
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.registry_path = Path(self.tmp.name) / "registry.yaml"
+        self.registry_path.write_text(
+            "schema_version: '1.0.0'\n"
+            "namespace: openclaw-igorbot\n"
+            "region_default: us-east-1\n"
+            "source: {authority: cursor-governance}\n"
+            "secrets:\n"
+            "  - secret_id: openclaw-igorbot/github\n"
+            "    enabled: true\n"
+            "    region: us-east-1\n"
+            "    provisioned: true\n"
+            "    origin: aws_sm\n"
+            "    keys:\n"
+            "      - json_key: token\n",
+            encoding="utf-8",
+        )
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def _run_cli(self, env: dict[str, str], *extra: str) -> tuple[int, str, str, Any, Any]:
+        """Run main() under a simulated surface with the provider fully mocked."""
+        argv = ["--ref", self.REF, "--registry", str(self.registry_path), *extra]
+        with mock.patch.dict(os.environ, env, clear=True):
+            with mock.patch.object(
+                resolve,
+                "fetch_secret_string",
+                return_value=(json.dumps({"token": self.FAKE_VALUE}), None),
+            ) as fetch:
+                with mock.patch.object(resolve, "_emit_secret_value") as emit:
+                    with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                        with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+                            rc = resolve.main(argv)
+                            return rc, out.getvalue(), err.getvalue(), fetch, emit
+
+    def _assert_no_value_escaped(self, stdout: str, stderr: str, emit: Any) -> None:
+        # _emit_secret_value writes to raw fd 1, so a captured-stdout assertion
+        # alone would pass vacuously. Assert the emitter itself was never called.
+        emit.assert_not_called()
+        self.assertNotIn(self.FAKE_VALUE, stdout)
+        self.assertNotIn(self.FAKE_VALUE, stderr)
+
+    # --- A: model-controlled raw resolution is refused -----------------------
+
+    def test_model_controlled_raw_resolution_is_denied(self) -> None:
+        rc, stdout, stderr, fetch, emit = self._run_cli(self.MODEL_ENV)
+        self.assertEqual(rc, 1)
+        # Refusal happens before retrieval, not after.
+        fetch.assert_not_called()
+        self._assert_no_value_escaped(stdout, stderr, emit)
+        # Attributable to the trust boundary, not to AWS availability.
+        self.assertIn("DENIED", stderr)
+        self.assertIn("model-controlled", stderr)
+        self.assertNotIn("AWS_CLI_NOT_FOUND", stderr)
+
+    def test_operator_claim_from_model_runtime_is_refused(self) -> None:
+        rc, stdout, stderr, fetch, emit = self._run_cli(self.ESCALATION_ENV)
+        self.assertEqual(rc, 1)
+        fetch.assert_not_called()
+        self._assert_no_value_escaped(stdout, stderr, emit)
+        self.assertIn("claim refused", stderr)
+
+    def test_value_path_is_guarded_against_direct_import(self) -> None:
+        """The boundary holds for callers that skip the CLI entirely."""
+        with mock.patch.dict(os.environ, self.MODEL_ENV, clear=True):
+            with mock.patch.object(resolve, "fetch_secret_string") as fetch:
+                with self.assertRaises(PermissionError):
+                    resolve.resolve_ref(self.REF, "us-east-1")
+        fetch.assert_not_called()
+
+    # --- B: --check stays available to model-controlled surfaces -------------
+
+    def test_check_remains_permitted_on_model_controlled_surface(self) -> None:
+        rc, stdout, stderr, fetch, emit = self._run_cli(self.MODEL_ENV, "--check")
+        self.assertEqual(rc, 0)
+        self.assertIn("OK", stdout)
+        # Status probing is allowed to reach the provider; emitting is not.
+        fetch.assert_called_once()
+        self._assert_no_value_escaped(stdout, stderr, emit)
+        self.assertNotIn("DENIED", stderr)
+
+    def test_probe_ref_needs_no_trust(self) -> None:
+        with mock.patch.dict(os.environ, self.MODEL_ENV, clear=True):
+            with mock.patch.object(
+                resolve,
+                "fetch_secret_string",
+                return_value=(json.dumps({"token": self.FAKE_VALUE}), None),
+            ):
+                self.assertIsNone(resolve.probe_ref(self.REF, "us-east-1"))
+
+    # --- C: trusted raw resolution keeps its existing behavior ---------------
+
+    def test_trusted_operator_raw_resolution_still_works(self) -> None:
+        rc, stdout, stderr, fetch, emit = self._run_cli(self.TRUSTED_ENV)
+        self.assertEqual(rc, 0)
+        fetch.assert_called_once()
+        emit.assert_called_once_with(self.FAKE_VALUE)
+        self.assertNotIn("DENIED", stderr)
+        self.assertEqual(stdout, "")
+
+    def test_trusted_operator_provider_error_is_unchanged(self) -> None:
+        with mock.patch.dict(os.environ, self.TRUSTED_ENV, clear=True):
+            with mock.patch.object(
+                resolve, "fetch_secret_string", return_value=(None, "AWS_CLI_NOT_FOUND")
+            ):
+                with mock.patch.object(resolve, "_emit_secret_value") as emit:
+                    with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+                        rc = resolve.main(
+                            ["--ref", self.REF, "--registry", str(self.registry_path)]
+                        )
+                        stderr = err.getvalue()
+        self.assertEqual(rc, 1)
+        emit.assert_not_called()
+        self.assertIn("FAIL", stderr)
+        self.assertNotIn("DENIED", stderr)
 
 
 class PortAwsToInfisicalTests(unittest.TestCase):

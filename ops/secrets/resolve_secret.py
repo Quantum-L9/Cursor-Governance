@@ -9,6 +9,15 @@ Never writes a resolved secret value to stderr or logs.
   --check   verify resolution; print OK/FAIL + ref only; exit 0/1
   --ref     single ref to resolve (required)
   default   print value to stdout only (for programmatic capture)
+
+TRUST BOUNDARY. The two modes are not equally available. ``--check`` is a status
+probe that returns no secret material, so it stays reachable from every surface.
+Raw resolution is trusted-operator-only and is guarded by
+:func:`surface_trust.require_trusted`, which refuses any caller running inside a
+model-controlled runtime — including one that sets ``L9_GOVERNANCE_SURFACE`` to
+an operator id while Claude's or Cursor's own environment markers are visible.
+There is no flag, argument or environment variable here that relaxes that; the
+single authority is ``ops/secrets/surface_trust.py``.
 """
 
 from __future__ import annotations
@@ -22,6 +31,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from surface_trust import require_trusted  # noqa: E402
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -29,7 +44,6 @@ except ImportError:  # pragma: no cover
 
 AWS_REGION_DEFAULT = "us-east-1"
 AWS_CALL_TIMEOUT_SECONDS = 6
-HERE = Path(__file__).resolve().parent
 DEFAULT_REGISTRY = HERE / "openclaw-igorbot.registry.yaml"
 
 
@@ -171,12 +185,20 @@ def fetch_secret_string(
     return value, None
 
 
-def resolve_ref(
+def _resolve_ref_unguarded(
     ref_id: str,
     region: str,
     *,
     runner: Any = subprocess.run,
 ) -> tuple[str | None, str | None]:
+    """Internal resolution. NOT a public door — it returns secret material.
+
+    Two callers exist and they are not equivalent: :func:`probe_ref` discards the
+    value and returns a status code, so it needs no trust check; :func:`resolve_ref`
+    hands the value back, so it is guarded. Keeping the trust check off this
+    function is what lets ``--check`` remain available to model-controlled
+    surfaces without opening the value path to them.
+    """
     secret_id, field = split_id(ref_id)
     raw_value, fetch_error = fetch_secret_string(secret_id, region, runner=runner)
     if fetch_error is not None:
@@ -193,6 +215,23 @@ def resolve_ref(
     return str(parsed[field]), None
 
 
+def resolve_ref(
+    ref_id: str,
+    region: str,
+    *,
+    runner: Any = subprocess.run,
+    surface: str | None = None,
+) -> tuple[str | None, str | None]:
+    """Resolve a ref to its VALUE. Guarded — the guard is why this wrapper exists.
+
+    A caller inside a model-controlled runtime raises ``PermissionError`` here
+    even if it reached this module by direct import rather than through the CLI.
+    The boundary is enforced at the value path, not only at the entrypoint.
+    """
+    require_trusted(surface)
+    return _resolve_ref_unguarded(ref_id, region, runner=runner)
+
+
 def probe_ref(
     ref_id: str,
     region: str,
@@ -200,7 +239,7 @@ def probe_ref(
     runner: Any = subprocess.run,
 ) -> str | None:
     """Return a canonical error code, or None on success. Never returns secret material."""
-    _value, error = resolve_ref(ref_id, region, runner=runner)
+    _value, error = _resolve_ref_unguarded(ref_id, region, runner=runner)
     del _value
     if error is None:
         return None
@@ -237,6 +276,17 @@ def main(argv: list[str] | None = None) -> int:
     if not ref_id:
         _err("empty --ref")
         return 2
+
+    if not args.check:
+        # Trust boundary first. A model-controlled caller is refused before the
+        # registry is read and before any provider call is made, so it learns
+        # nothing about inventory contents either. resolve_ref() repeats the
+        # guard for callers that import the value path directly.
+        try:
+            require_trusted()
+        except PermissionError as exc:
+            _err(str(exc))
+            return 1
 
     registry = load_registry(args.registry)
     if not args.allow_unregistered and not ref_registered(registry, ref_id):
