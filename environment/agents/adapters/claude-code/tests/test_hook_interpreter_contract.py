@@ -20,6 +20,7 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -33,7 +34,6 @@ ADAPTER = REPO / "environment" / "agents" / "adapters" / "claude-code"
 TEMPLATE = ADAPTER / "settings.template.json"
 GENERATED = REPO / ".claude" / "settings.json"
 HOOKS = ADAPTER / "hooks"
-LAUNCHER = HOOKS / "run_governance_hook.sh"
 MEMORY = ADAPTER / "memory"
 
 
@@ -49,61 +49,145 @@ def _python_hook_commands(settings: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 class HookInterpreterBindingTests(unittest.TestCase):
-    """No governance hook may depend on ambient PATH selection of python3."""
+    """No governance hook may depend on ambient PATH selection of python3.
+
+    These assert against the RECONCILED settings, not the template. The template
+    is the source, but what actually runs is the generated file, and a contract
+    proven only on the source is not proven.
+    """
 
     def setUp(self) -> None:
-        self.template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+        if not GENERATED.is_file():
+            self.skipTest("no reconciled .claude/settings.json in this checkout")
+        self.settings = json.loads(GENERATED.read_text(encoding="utf-8"))
+        self.commands = _python_hook_commands(self.settings)
+        self.assertGreater(len(self.commands), 0, "settings declare no python hooks")
 
-    def test_launcher_exists_and_is_executable(self) -> None:
-        self.assertTrue(LAUNCHER.is_file(), "missing hooks/run_governance_hook.sh")
-        self.assertTrue(os.access(LAUNCHER, os.X_OK), "launcher is not executable")
-
-    def test_no_template_hook_execs_bare_python3(self) -> None:
+    def test_no_deployed_hook_execs_ambient_python(self) -> None:
         offenders = [
             (event, command)
-            for event, command in _python_hook_commands(self.template)
+            for event, command in self.commands
             if re.search(r"\bexec\s+python3?\b", command)
         ]
         self.assertEqual(offenders, [], f"hooks still using PATH python3: {offenders}")
 
-    def test_every_python_hook_routes_through_the_launcher(self) -> None:
-        commands = _python_hook_commands(self.template)
-        self.assertGreater(len(commands), 0, "template declares no python hooks")
-        for event, command in commands:
-            with self.subTest(event=event, command=command[:60]):
-                self.assertIn("run_governance_hook.sh", command)
+    def test_hook_commands_share_one_shape(self) -> None:
+        """Generated from one template constant, so drift is a defect."""
+        shapes = {
+            re.sub(r"[A-Za-z0-9_]+\.py", "HOOK", command) for _event, command in self.commands
+        }
+        self.assertEqual(len(shapes), 1, f"per-hook drift: {len(shapes)} distinct shapes")
 
-    def test_generated_settings_match_the_template_contract(self) -> None:
-        """.claude/settings.json is generated; it must carry the same binding."""
-        if not GENERATED.is_file():
-            self.skipTest("no generated .claude/settings.json in this checkout")
-        generated = json.loads(GENERATED.read_text(encoding="utf-8"))
-        for event, command in _python_hook_commands(generated):
+    def test_commands_are_self_contained(self) -> None:
+        """settings.json is copied into consumer repos, so a command must not
+        depend on a helper file the governance clone may not carry yet: that
+        failure mode is silent, which is the defect F-13 removes."""
+        for event, command in self.commands:
             with self.subTest(event=event):
-                self.assertIn("run_governance_hook.sh", command)
-                self.assertNotRegex(command, r"\bexec\s+python3?\b")
+                self.assertNotIn("run_governance_hook", command)
+                self.assertIn(".venv/bin/python", command)
 
-    def test_launcher_selects_the_locked_interpreter(self) -> None:
-        """Direct evidence from the real command path, not merely that it exists."""
-        probe = HOOKS / "_interpreter_probe.py"
-        probe.write_text(
-            "import sys\nprint(sys.executable)\n",
-            encoding="utf-8",
+    # --- the decisive acceptance test ------------------------------------
+
+    def _synthetic_home(self, tmp: Path, *, with_venv: bool) -> tuple[Path, Path]:
+        """A governance clone carrying only what the hook command addresses."""
+        gov = tmp / ".cursor-governance"
+        hooks = gov / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
+        hooks.mkdir(parents=True)
+        probe = hooks / "_interpreter_probe.py"
+        probe.write_text("import sys\nprint(sys.executable)\n", encoding="utf-8")
+        marker = tmp / "locked" / "bin"
+        if with_venv:
+            (gov / ".venv" / "bin").mkdir(parents=True)
+            marker.mkdir(parents=True)
+            locked = marker / "python3"
+            locked.symlink_to(sys.executable)
+            (gov / ".venv" / "bin" / "python3").symlink_to(locked)
+        return gov, marker / "python3"
+
+    def _argv(self, command: str) -> list[str]:
+        """Deployed commands are `bash -c '<script>'`; split them to argv and run
+        that directly. No interposed shell, so the test executes exactly what
+        Claude Code executes."""
+        return shlex.split(command)
+
+    def _probe_command(self, command: str) -> str:
+        command = re.sub(r"hooks/[A-Za-z0-9_]+\.py", "hooks/_interpreter_probe.py", command)
+        return re.sub(
+            r"[A-Za-z0-9_]+\.py did NOT run", "_interpreter_probe.py did NOT run", command
         )
-        try:
+
+    def test_every_deployed_hook_executes_on_the_locked_interpreter(self) -> None:
+        ambient = subprocess.run(
+            ["python3", "-c", "import sys; print(sys.executable)"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            _gov, locked = self._synthetic_home(home, with_venv=True)
+            for event, command in self.commands:
+                with self.subTest(event=event, hook=command[-40:]):
+                    proc = subprocess.run(
+                        self._argv(self._probe_command(command)),
+                        capture_output=True,
+                        text=True,
+                        timeout=120,
+                        env={**os.environ, "HOME": str(home)},
+                        check=False,
+                    )
+                    chosen = proc.stdout.strip()
+                    self.assertTrue(chosen, f"hook produced no interpreter: {proc.stderr}")
+                    self.assertEqual(
+                        Path(chosen).resolve(),
+                        Path(locked).resolve(),
+                        "hook did not run on the governance-locked interpreter",
+                    )
+                    if ambient:
+                        self.assertNotEqual(
+                            Path(chosen).resolve(),
+                            Path(ambient).resolve(),
+                            "hook ran on ambient system python3",
+                        )
+
+    def test_missing_locked_interpreter_never_falls_back_to_ambient(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            self._synthetic_home(home, with_venv=False)
+            event, command = self.commands[0]
             proc = subprocess.run(
-                ["bash", str(LAUNCHER), probe.name],
+                self._argv(self._probe_command(command)),
                 capture_output=True,
                 text=True,
                 timeout=120,
+                env={**os.environ, "HOME": str(home)},
                 check=False,
             )
-        finally:
-            probe.unlink(missing_ok=True)
-        chosen = proc.stdout.strip()
-        self.assertTrue(chosen, f"launcher produced no interpreter; stderr={proc.stderr}")
-        self.assertIn(".venv", chosen, f"launcher did not select a locked venv: {chosen}")
-        self.assertNotEqual(chosen, sys.executable.replace("/usr/local", "/usr/local"))
+        # No interpreter ran at all - nothing on stdout.
+        self.assertEqual(proc.stdout.strip(), "", f"{event}: something executed the hook anyway")
+        # The failure is observable, not silent.
+        self.assertIn("locked governance interpreter missing", proc.stderr)
+        self.assertIn("did NOT run", proc.stderr)
+        # Existing hook exit policy is preserved: never block the session.
+        self.assertEqual(proc.returncode, 0)
+
+    def test_absent_governance_clone_stays_quiet(self) -> None:
+        """A machine with no governance at all keeps the original contract."""
+        with tempfile.TemporaryDirectory() as tmp:
+            _event, command = self.commands[0]
+            proc = subprocess.run(
+                self._argv(command),
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env={**os.environ, "HOME": tmp},
+                check=False,
+            )
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(proc.stdout.strip(), "")
+        self.assertEqual(proc.stderr.strip(), "")
 
     def test_locked_interpreter_satisfies_writeback_dependencies(self) -> None:
         """Section 5.5 - prove the imports the F-13 path actually needs."""
@@ -125,22 +209,6 @@ class HookInterpreterBindingTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(proc.returncode, 0, f"locked interpreter import failed: {proc.stderr}")
-
-    def test_launcher_reports_rather_than_silently_using_system_python(self) -> None:
-        """A missing locked venv must say so, not fall through to python3."""
-        with tempfile.TemporaryDirectory() as home:
-            proc = subprocess.run(
-                ["bash", str(LAUNCHER), "memory_writeback.py"],
-                capture_output=True,
-                text=True,
-                timeout=120,
-                env={**os.environ, "HOME": home},
-                input="{}",
-                check=False,
-            )
-        self.assertEqual(proc.returncode, 0, "hook contract is fail-open on exit code")
-        self.assertIn("locked governance interpreter not found", proc.stderr)
-        self.assertIn("did NOT run", proc.stderr)
 
 
 def _load_writeback() -> Any:
