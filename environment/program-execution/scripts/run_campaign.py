@@ -42,6 +42,7 @@ VALIDATE_BLUEPRINT = (
     PE_ROOT / "core/program-execution-blueprint-template/scripts/validate_blueprint.py"
 )
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
+PEC_SCRIPTS = PEC.parent
 ALLOWED_CAMPAIGN_FILES = {"CAMPAIGN_SOURCE.yaml", "source-integrity-receipt.json"}
 UNTIL_STAGES = (
     "activate",
@@ -172,6 +173,18 @@ def load_yaml(path: Path) -> Any:
     if yaml is None:
         raise CampaignError("PyYAML required")
     return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def load_pec_module(name: str) -> Any:
+    """Import a `pec.*` module in-process so both sides share one implementation.
+
+    The controller normally runs as a subprocess, but validation-environment and
+    workspace-recovery logic must be identical on the campaign side; copying it
+    is how the two drifted apart in the first place.
+    """
+    if str(PEC_SCRIPTS) not in sys.path:
+        sys.path.insert(0, str(PEC_SCRIPTS))
+    return importlib.import_module(f"pec.{name}")
 
 
 def dump_yaml(path: Path, value: Any) -> None:
@@ -417,6 +430,16 @@ def dispatch_kernel_change(verification: dict[str, Any]) -> dict[str, Any]:
         "failed_gates": failed,
         "kernel_profile": "CHANGE",
     }
+
+
+def failed_gates(verification: dict[str, Any]) -> list[str]:
+    gates = verification.get("gates") or {}
+    return sorted(name for name, value in gates.items() if value == "FAIL")
+
+
+def incomplete_gates(verification: dict[str, Any]) -> list[str]:
+    gates = verification.get("gates") or {}
+    return sorted(name for name, value in gates.items() if value in {"INCOMPLETE", "BLOCKED"})
 
 
 def apply_fail_change(
@@ -1447,28 +1470,50 @@ def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[s
     attempt receipt (`worker_validation_claim`). Submitting an empty
     `validation_results` while the contract declares commands is a false claim,
     so the worker runs them first and records the real exit codes.
+
+    Both sides go through `pec.exec_env`, so the interpreter the worker used is
+    the interpreter the controller re-runs the command with.
     """
-    results: list[dict[str, Any]] = []
-    for command in commands:
-        completed = subprocess.run(  # noqa: S602 - contract-declared command, same as pec verify
-            ["bash", "-lc", command],
-            cwd=str(worktree),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=VALIDATION_TIMEOUT_S,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+    exec_env_mod = load_pec_module("exec_env")
+    resolved = exec_env_mod.resolve_exec_env(worktree)
+    return [
+        exec_env_mod.to_attempt_result(
+            exec_env_mod.run_validation_command(
+                command, worktree, exec_env=resolved, timeout=VALIDATION_TIMEOUT_S
+            )
         )
-        tail = ((completed.stdout or "") + (completed.stderr or "")).strip()[-2000:]
-        results.append(
-            {
-                "command": command,
-                "status": "PASS" if completed.returncode == 0 else "FAIL",
-                "exit_code": completed.returncode,
-                "evidence": tail or None,
-            }
-        )
-    return results
+        for command in commands
+    ]
+
+
+def run_worker_handoff(
+    workspace: Path,
+    task: dict[str, Any],
+    contract: dict[str, Any],
+    worktree: Path,
+    *,
+    hooks: Hooks,
+) -> dict[str, Any]:
+    """Give an implementation task to a worker before anything verifies it.
+
+    An implementation task that reaches verification with an untouched worktree
+    is an execution-path defect, not a task failure, so it is refused here with
+    the reason rather than certified as complete downstream.
+    """
+    if hooks.write_task_output is not None:
+        # A test or embedding harness owns the write step; no worker is involved.
+        return {"invoked": False, "changed": False, "reason": "hook_owns_write"}
+    worker = _load_script("pe_worker", PE_ROOT / "scripts/pe_worker.py")
+    if worker.is_inspection_only(task):
+        return {"invoked": False, "changed": False, "reason": "inspection_only"}
+    outcome = worker.invoke_worker(task, contract, worktree, workspace=workspace)
+    if not outcome.changed:
+        raise CampaignError(worker.unexecuted_task_message(task, outcome, worktree))
+    log(
+        f"worker {task.get('id')} {outcome.reason} in {outcome.duration_s:.1f}s "
+        f"(exit={outcome.exit_code})"
+    )
+    return outcome.to_dict()
 
 
 def write_and_commit_output(
@@ -1678,7 +1723,13 @@ def default_execute(
                 return write_and_commit_output(worktree, rel, title, writable=writable)
             return writer(worktree, rel, title)
 
-        if not already_submitted:
+        def submit_attempt(
+            worktree: Path = worktree,
+            contract: dict[str, Any] = contract,
+            task_id: str = task_id,
+            task: dict[str, Any] = task,
+        ) -> None:
+            run_worker_handoff(workspace, task, contract, worktree, hooks=hooks)
             candidate = rewrite_output()
             changed = committed_changed_files(worktree, contract["base_sha"], candidate)
             declared_commands = [
@@ -1701,28 +1752,49 @@ def default_execute(
             receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
             receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
             pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
+
+        def repair_attempt(task_id: str = task_id) -> None:
+            """Take a FAILED verdict back to SUBMITTED as a new attempt.
+
+            A verdict is final for the attempt that earned it. Repair therefore
+            re-enters execution and submits fresh work rather than asking the
+            controller to verify the same attempt a second time.
+            """
+            pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+            submit_attempt()
+
+        if not already_submitted:
+            submit_attempt()
         verification = pec_cmd(workspace, "verify", task_id)
         decision = dispatch_kernel_change(verification)
         if decision["action"] == "skip_change":
             raise CampaignError(
-                f"pec verify {task_id} INCOMPLETE: skip CHANGE ({decision['reason']})"
+                f"pec verify {task_id} INCOMPLETE: skip CHANGE ({decision['reason']}); "
+                f"gates={json.dumps(incomplete_gates(verification), sort_keys=True)}. "
+                "An INCOMPLETE verdict means the controller could not judge the attempt, "
+                "usually because the contract declares no runnable validation command. "
+                "Declare validation_commands for the task, or run with --fast to infer them."
             )
         if decision["action"] == "refuse":
             raise CampaignError(f"Diagnose First: {decision['reason']}")
         if decision["action"] == "change":
-            apply_fail_change(
+            applied = apply_fail_change(
                 verification,
-                rewrite=rewrite_output,
+                rewrite=repair_attempt,
                 reverify=lambda: pec_cmd(workspace, "verify", task_id),
             )
-            verification = pec_cmd(workspace, "verify", task_id)
+            verification = applied.get("reverify") or verification
             if verification.get("kernel_verdict") != "PASS":
                 raise CampaignError(
                     f"pec verify {task_id} after CHANGE did not PASS: "
-                    f"{verification.get('kernel_verdict') or verification.get('verdict')}"
+                    f"{verification.get('kernel_verdict') or verification.get('verdict')}; "
+                    f"failed gates={decision.get('failed_gates')}"
                 )
         if verification.get("verdict") != "PASSED_LOCAL":
-            raise CampaignError(f"pec verify {task_id} did not PASS: {verification.get('verdict')}")
+            raise CampaignError(
+                f"pec verify {task_id} did not PASS: {verification.get('verdict')}; "
+                f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}"
+            )
         evidence_id = str(verification["evidence_id"])
         for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
             pec_cmd(
