@@ -3,15 +3,22 @@
 # L9 Claude Code — cloud sandbox provisioning (Web · Mobile · --cloud)
 #
 # THIN SURFACE CALLER. This file owns only what Anthropic's ephemeral Linux
-# sandbox uniquely needs — a GitHub CLI, credentials, the governance clone, and
-# the workspace's own language toolchain. Every piece of adapter wiring lives in
-# the one shared installer and is delegated to it:
+# sandbox uniquely needs as MACHINE-LEVEL provisioning — a GitHub CLI, the
+# governance clone, and the adapter install. Every piece of adapter wiring
+# lives in the one shared installer and is delegated to it:
 #
 #   ../install.sh   <- locked toolchain, settings triad, skills, MCP, preflight
 #
-# CLI and Desktop reach that same installer through `make claude-install`. If
-# you are adding adapter behaviour, add it to install.sh so both surfaces get
-# it; add here only if it is genuinely cloud-sandbox-specific.
+# The account Setup script is environment provisioning: Anthropic caches the
+# environment after the first successful run and does NOT re-run it on every
+# session. Mutable per-session work — governance refresh and the consumer
+# workspace's own language toolchain — therefore lives in the committed
+# SessionStart path (hooks/session_start_claude_governance.sh ->
+# hooks/session_deps_cloud.sh), which runs on every session and resume.
+#
+# CLI and Desktop reach install.sh through `make claude-install`. If you are
+# adding adapter behaviour, add it to install.sh so both surfaces get it;
+# add here only if it is genuinely cloud-sandbox-specific.
 #
 # NOT the script you paste. Paste web/setup.bootstrap.sh into
 # claude.ai/code -> environment -> Setup script; it clones this repo and execs
@@ -136,66 +143,20 @@ fi
 ADAPTER_INSTALL="$GOV_DIR/environment/agents/adapters/claude-code/install.sh"
 if [ -f "$ADAPTER_INSTALL" ]; then
   bash "$ADAPTER_INSTALL" --governance "$GOV_DIR" --workspace "$(pwd)"
+  adapter_rc=$?
+  echo "NOTE: adapter install exited $adapter_rc (see ~/.l9/claude/bootstrap-state.json)"
 else
   echo "WARN: missing environment/agents/adapters/claude-code/install.sh — adapter NOT wired"
 fi
 
-# 5) The CONSUMER workspace's own language toolchain.
-#    Distinct from step 4: that installs the governance repo's locked env from
-#    its uv.lock; this installs whatever the repo you are working in declares.
-#    A workspace that ships uv.lock gets the locked path too; otherwise fall
-#    back to its pyproject/package.json. Never pin versions here — the
-#    workspace's own manifest is its source of truth.
-if [ -f uv.lock ] && have uv; then
-  log "Workspace toolchain (uv.lock)"
-  uv sync --locked --extra dev 2>/dev/null || uv sync --locked 2>/dev/null \
-    || echo "WARN: workspace uv sync --locked failed"
-elif [ -f pyproject.toml ] || ls ./*.py >/dev/null 2>&1; then
-  log "Workspace toolchain (pip)"
-  python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
-  if [ -f pyproject.toml ]; then
-    # NOTE: `--only-binary :all:` is deliberately NOT paired with `-e .` — an
-    # editable install must build from source, so that combination can never
-    # succeed. Flat-layout multi-package repos cannot be installed editable at
-    # all; for those the fallback below is the expected path.
-    pip install --prefer-binary -e '.[dev,server]' 2>/dev/null \
-      || pip install --prefer-binary -e '.[dev]' 2>/dev/null \
-      || pip install --prefer-binary -r requirements.txt 2>/dev/null \
-      || pip install --only-binary :all: ruff mypy pytest build 2>/dev/null || true
-  else
-    pip install --only-binary :all: ruff mypy pytest 2>/dev/null || true
-  fi
-fi
-if [ -f package.json ]; then
-  log "Workspace toolchain (Node)"
-  if have pnpm; then pnpm install --ignore-scripts || true
-  elif have npm; then npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts || true
-  fi
-fi
+# NOT here: the consumer workspace's own language toolchain (uv/pip/npm) and
+# pre-commit warm. This account Setup script is environment provisioning and
+# may be cached for ~7 days; project dependencies are per-repository work and
+# belong in the committed SessionStart path
+# (hooks/session_start_claude_governance.sh -> hooks/session_deps_cloud.sh),
+# which runs on every session and resume.
 
-# 6) pre-commit — REQUIRED by CANONICAL_LAW §12 (mandatory `make pr` gate).
-#    `make pr` shells out to pre-commit, so it must be on PATH by default in
-#    every L9 workspace, independent of language. Trigger is the presence of a
-#    committed .pre-commit-config.yaml (the exact condition that needs it).
-#    Warm the hook environments so the first `make pr` does not pay cold-start.
-#    Needs pypi.org (the package) + github.com (hook repos) egress — both are in
-#    the baseline Custom allowlist; Full covers them too (see network-policy.md).
-if [ -f .pre-commit-config.yaml ]; then
-  log "pre-commit (CANONICAL_LAW §12 — make pr gate)"
-  if ! have pre-commit; then
-    pip install --only-binary :all: pre-commit 2>/dev/null \
-      || python3 -m pip install pre-commit 2>/dev/null \
-      || echo "WARN: pre-commit install failed — 'make pr' will fail until installed (allowlist pypi.org)"
-  fi
-  if have pre-commit; then
-    pre-commit install --install-hooks 2>/dev/null \
-      || pre-commit install-hooks 2>/dev/null \
-      || echo "WARN: pre-commit hook warm-up failed — first 'make pr' will fetch hook repos (allowlist github.com)"
-    pre-commit --version 2>/dev/null || true
-  fi
-fi
-
-# 7) Versions for the setup log.
+# 5) Versions for the setup log.
 log "Tool versions"
 have gh      && gh --version | head -1        || true
 have uv      && echo "uv:     $(uv --version)" || echo "uv:     (missing — uv.lock cannot be applied)"

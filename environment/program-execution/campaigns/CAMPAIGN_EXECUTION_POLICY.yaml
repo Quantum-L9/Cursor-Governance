@@ -102,6 +102,12 @@ campaigns:
       - bounded-replanning-v1
       - cc-pe-intent-compiler-v1
       - l9-devpack-program-execution-hardening
+  - id: claude-code-env-contract-v1
+    integration_branch: campaign/claude-code-env-contract-v1
+    pr_base: campaign/claude-code-env-contract-v1
+    execute_order: 7
+    lane: claude_env
+    role: build
 
 owner:
   authority_id: AUTH-001

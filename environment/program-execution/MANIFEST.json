@@ -411,7 +411,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "c7696eba1ac34a8cd0c1e82280dd9d1cca03cf0b4139c6b42b30aea81629ccb0"
+      "sha256": "a3c3fb19f7d528707da6752108575321398058eb229af1a94eeb9d31baa6fd8a"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
