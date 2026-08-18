@@ -205,7 +205,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
                 str(interpreter),
                 "-c",
                 "import sys; sys.path.insert(0, sys.argv[1]); "
-                "from ops.graphiti.hydration.close_session import close_session",
+                + "from ops.graphiti.hydration.close_session import close_session",
                 str(gov),
             ],
             capture_output=True,
