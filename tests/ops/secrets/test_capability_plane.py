@@ -155,6 +155,9 @@ def test_capability_registry_declares_no_secret_values() -> None:
         "SEMGREP_APP_TOKEN",
         "GRAPHITI_MCP_TOKEN",
         "GH_TOKEN",
+        "GITHUB_TOKEN",
+        "CONTEXT7_API_KEY",
+        "GITGUARDIAN_API_KEY",
     }
     # A registry is a mapping of names, never a store of values.
     for marker in ("BEGIN PRIVATE KEY", "Bearer ey", "sqp_", "github_pat_"):
