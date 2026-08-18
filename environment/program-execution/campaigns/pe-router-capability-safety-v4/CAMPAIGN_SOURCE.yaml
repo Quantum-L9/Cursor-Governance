@@ -1,0 +1,622 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+plan_status: Ready
+metadata:
+  campaign_id: pe-router-capability-safety-v4
+  title: PE Router Capability Safety
+  version: 1.0.0
+  created_at: '2026-08-18T10:21:53Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/LLM-Router
+  intended_drop_path: environment/program-execution/campaigns/pe-router-capability-safety-v4/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/pe-router-capability-safety-v4
+  worktree_root: $HOME/.l9/program-worktrees/pe-router-capability-safety-v4
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+operator_directive:
+  objective: The Router must never silently lose a requested capability. One canonical resolver
+    derives search and vision truth, unsupported combinations and vision-without-images fail
+    closed with explicit codes before any provider call, every routing decision reports its
+    capability truth for audit, the required routing matrix is locked by regression tests,
+    and the package version advances to the next unoccupied patch with a packed artifact proven
+    against both consumer bots before any publish.
+  mode: controlled_autonomous_until_material_boundary
+  policy_profile: quantum-l9.safe-autonomy.v1
+  prohibited_actions:
+  - force_push
+  - admin_merge
+  - deploy
+  - weaken_validators
+  - delete_tests_for_pass
+program:
+  id: pe-router-capability-safety-v4
+  name: PE Router Capability Safety
+  version: 1.0.0
+  owner: Igor Beylin
+  definition_status: ready
+  plan_status: Ready
+  snapshot_at: '2026-08-18'
+  objective: The Router must never silently lose a requested capability. One canonical resolver
+    derives search and vision truth, unsupported combinations and vision-without-images fail
+    closed with explicit codes before any provider call, every routing decision reports its
+    capability truth for audit, the required routing matrix is locked by regression tests,
+    and the package version advances to the next unoccupied patch with a packed artifact proven
+    against both consumer bots before any publish.
+  problem_statement: The Router must never silently lose a requested capability. One canonical
+    resolver derives search and vision truth, unsupported combinations and vision-without-images
+    fail closed with explicit codes before any provider call, every routing decision reports
+    its capability truth for audit, the required routing matrix is locked by regression tests,
+    and the package version advances to the next unoccupied patch with a packed artifact proven
+    against both consumer bots before any publish.
+  target_state: The Router must never silently lose a requested capability. One canonical
+    resolver derives search and vision truth, unsupported combinations and vision-without-images
+    fail closed with explicit codes before any provider call, every routing decision reports
+    its capability truth for audit, the required routing matrix is locked by regression tests,
+    and the package version advances to the next unoccupied patch with a packed artifact proven
+    against both consumer bots before any publish.
+  scope:
+    include:
+    - repository_origin_main
+    exclude:
+    - new repositories
+    - force_push
+    - admin_merge
+    - deploy
+    - production migration
+  contracts:
+    pair: program-execution-system.v2
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - latest_explicit_operator_instruction
+  - accepted_program_definition
+  - implementation
+  - UNKNOWN
+  operating_rules:
+  - one_authority_per_responsibility
+  - mutable_runtime_state_remains_outside_git
+  - no_silent_scope_expansion
+  - worker_claim_is_not_verification
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE
+targets:
+- id: TARGET-001
+  name: Quantum-L9/LLM-Router
+  kind: git_repository
+  authority_owner: Quantum-L9/LLM-Router
+  execution_mode: repo_local
+  repository_id: Quantum-L9/LLM-Router
+  source_of_truth: repository_origin_main
+  environments:
+  - local
+  - ci
+  mutability: reversible
+  expected_revision: UNKNOWN
+  adapter: git
+authorities:
+- id: AUTH-001
+  responsibility: campaign_owner
+  owner: Igor Beylin
+workstreams:
+- id: WS-01
+  name: PE Router Capability Safety
+  owner: AUTH-001
+  objective: The Router must never silently lose a requested capability. One canonical resolver
+    derives search and vision truth, unsupported combinations and vision-without-images fail
+    closed with explicit codes before any provider call, every routing decision reports its
+    capability truth for audit, the required routing matrix is locked by regression tests,
+    and the package version advances to the next unoccupied patch with a packed artifact proven
+    against both consumer bots before any publish.
+dependency_edges:
+- from: TASK-001
+  to: TASK-002
+- from: TASK-002
+  to: TASK-003
+- from: TASK-003
+  to: TASK-004
+- from: TASK-004
+  to: TASK-005
+waves:
+- id: W0
+  name: admission_and_first_ready_task
+  task_ids:
+  - TASK-001
+  predecessor_wave_ids: []
+  exit_gate_ids:
+  - GATE-001
+- id: W1
+  name: remaining_tasks
+  task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  predecessor_wave_ids:
+  - W0
+  exit_gate_ids:
+  - GATE-002
+  - GATE-003
+  - GATE-004
+  - GATE-005
+tasks:
+- id: TASK-001
+  title: Canonical capability resolver
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Add one canonical resolver, resolveCapabilities(task), returning searchRequired
+    (reusing requiresSearchProvider), searchPolicySource (EXPLICIT when requiresSearch is
+    an explicit boolean, else TASK_DEFAULT), and visionRequired (task.type is in the vision-task
+    set: VISUAL_QA, SCREENSHOT_ANALYSIS, LAYOUT_VALIDATION). Existing search-policy behavior
+    and tests stay unchanged; the resolver unifies search and vision truth into one place
+    consumed by resolveRoute.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/matrices/capabilities.ts
+  - src/types.ts
+  - src/index.ts
+  - tests/capabilities.test.ts
+  - docs/program-execution/TASK-001.md
+  nugget_id: NUG-001
+  kernel_profile: BUILD
+  consumers:
+  - resolveRoute dispatch
+  - routing decision construction
+  - getCallLog audit
+  entrypoints:
+  - src/index.ts
+  - src/matrices/search-policy.ts
+  - src/types.ts
+  validation:
+  - check: npm run verify:types
+    command: npm run verify:types
+    evidence: command exit code 0 on the finished tree
+  - check: npm test
+    command: npm test
+    evidence: command exit code 0 on the finished tree
+  - check: npm run lint
+    command: npm run lint
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Define ResolvedCapabilities (searchRequired, searchPolicySource, visionRequired)
+  - Implement resolveCapabilities reusing requiresSearchProvider
+  - Derive searchPolicySource EXPLICIT vs TASK_DEFAULT from the explicit boolean
+  - Derive visionRequired from the VISION_TASKS set (VISUAL_QA, SCREENSHOT_ANALYSIS, LAYOUT_VALIDATION)
+  - Wire resolveCapabilities into resolveRoute
+  acceptance:
+  - id: AC-cano-NUG-001
+    statement: resolveCapabilities derives searchRequired, searchPolicySource, and visionRequired
+      from one canonical resolver consumed by resolveRoute, existing search-policy tests stay
+      green
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: Fail unsupported capability combinations
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Before routing, assert supported capabilities: visionRequired plus searchRequired
+    fails with UNSUPPORTED_CAPABILITY_COMBINATION; images.length greater than 0 on a non-vision
+    task type fails with UNSUPPORTED_CAPABILITY_COMBINATION (images are only consumed by the
+    vision branch); a vision task with no images fails with VISION_INPUT_REQUIRED. Route via
+    the resolved capabilities: searchRequired to Perplexity, visionRequired to the OpenRouter
+    vision branch, else the general route. Add the dispatch invariant assertions: searchRequired
+    implies provider is Perplexity, visionRequired implies provider is OpenRouter, and a non-search
+    route never lands on Perplexity, unless a future explicit provider-capability contract
+    changes that.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/matrices/capabilities.ts
+  - src/matrices/search-policy.ts
+  - src/index.ts
+  - tests/routing-matrix.test.ts
+  - docs/program-execution/TASK-002.md
+  - tests/search-policy-dispatch.test.ts
+  nugget_id: NUG-002
+  kernel_profile: BUILD
+  consumers:
+  - route() dispatch
+  - dispatchProvider
+  - Perplexity dispatch
+  - OpenRouter vision branch
+  entrypoints:
+  - src/index.ts
+  - src/matrices/search-policy.ts
+  - src/vision/index.js
+  validation:
+  - check: npm test -- routing-matrix.test.ts
+    command: npm test -- routing-matrix.test.ts
+    evidence: command exit code 0 on the finished tree
+  - check: npm run verify:types
+    command: npm run verify:types
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add assertSupportedCapabilities raising UNSUPPORTED_CAPABILITY_COMBINATION for vision+search
+  - Reject images.length > 0 on non-vision task types with UNSUPPORTED_CAPABILITY_COMBINATION
+  - Fail a visual task without images with VISION_INPUT_REQUIRED
+  - 'Route via resolved capabilities: searchRequired to Perplexity, visionRequired to vision
+    branch, else general'
+  - Add dispatch invariant asserts before provider invocation
+  acceptance:
+  - id: AC-fail-NUG-002
+    statement: unsupported vision+search and images-on-non-vision combinations fail with UNSUPPORTED_CAPABILITY_COMBINATION,
+      a vision task without images fails with VISION_INPUT_REQUIRED, and the dispatch invariant
+      holds before any provider call
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-003
+  title: Capability truth in RoutingDecision
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Extend RoutingDecision and RoutingResolution so every decision reports visionRequired
+    alongside the existing searchRequired and searchPolicySource, so audits can prove SEO_CONTENT_BLUEPRINT
+    runs with searchRequired=false, searchPolicySource=EXPLICIT, provider=openrouter without
+    inferring policy from the model name. Keep the existing enum shape and audit fields from
+    the merged search-policy work intact.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/types.ts
+  - src/index.ts
+  - tests/search-policy.test.ts
+  - tests/router-execution.test.ts
+  - docs/program-execution/TASK-003.md
+  - tests/search-policy-dispatch.test.ts
+  - tests/routing-matrix.test.ts
+  nugget_id: NUG-003
+  kernel_profile: BUILD
+  consumers:
+  - getCallLog audit
+  - routing decisions
+  - downstream consumers of RoutingDecision
+  entrypoints:
+  - src/types.ts
+  - src/index.ts
+  validation:
+  - check: npm run verify:types
+    command: npm run verify:types
+    evidence: command exit code 0 on the finished tree
+  - check: npm test -- search-policy.test.ts router-execution.test.ts
+    command: npm test -- search-policy.test.ts router-execution.test.ts
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add visionRequired to RoutingResolution and RoutingDecision
+  - Populate capability fields from resolveCapabilities
+  - Keep the SearchPolicySource enum shape from the merged search-policy work
+  - Update decision construction call sites
+  acceptance:
+  - id: AC-capa-NUG-003
+    statement: every RoutingDecision and RoutingResolution reports searchRequired, searchPolicySource,
+      and visionRequired so SEO_CONTENT_BLUEPRINT audits as searchRequired=false, searchPolicySource=EXPLICIT,
+      provider=openrouter
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+- id: TASK-004
+  title: Required routing matrix regression tests
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Add regression tests covering the required matrix: STRATEGIC_REASONING with
+    requiresSearch false routes general, with true routes search; COMPETITOR_RESEARCH with
+    undefined routes search, with false routes general; SCREENSHOT_ANALYSIS with image and
+    false routes vision, with image and true fails unsupported combination, with no images
+    fails vision input required; CONTENT_GENERATION with images fails unsupported combination;
+    VISUAL_QA with multiple images and false routes vision. All existing tests must stay green.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - tests/routing-matrix.test.ts
+  - docs/program-execution/TASK-004.md
+  nugget_id: NUG-004
+  kernel_profile: BUILD
+  consumers:
+  - tests/routing-matrix.test.ts
+  entrypoints:
+  - tests/routing-matrix.test.ts
+  validation:
+  - check: npm test
+    command: npm test
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Cover STRATEGIC_REASONING with requiresSearch false -> general and true -> search
+  - Cover COMPETITOR_RESEARCH undefined -> search and false -> general
+  - Cover SCREENSHOT_ANALYSIS image+false -> vision, image+true -> unsupported, no images
+    -> vision input required
+  - Cover CONTENT_GENERATION with images -> unsupported combination
+  - Cover VISUAL_QA with multiple images and false -> vision
+  acceptance:
+  - id: AC-requ-NUG-004
+    statement: 'the required routing matrix cases pass: strategic reasoning with and without
+      search, competitor research default and explicit, screenshot analysis with image/search
+      variants, content generation with images refused, visual QA with multiple images routed
+      to vision'
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-004
+- id: TASK-005
+  title: Bump version to the next unoccupied patch
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Verify the package registry state before assuming a version: expect 1.1.4 on
+    top of published 1.1.3; if occupied, use the next unoccupied patch. Update the manifest
+    and lockfile to the exact version, run the full verify:all gate (build, types, declarations,
+    lint, boundary lint, tests, audit, package smoke). Then prove the release artifact locally:
+    npm pack, and install the tarball into disposable copies of Website-Bot and SEO-Bot running
+    their typecheck and relevant tests. Record the proof. Do not publish the registry release
+    in this campaign — the version tag push is a separate operator step after the ephemeral
+    consumer proofs pass.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - package.json
+  - package-lock.json
+  - scripts/verify-package.mjs
+  - docs/program-execution/TASK-005.md
+  nugget_id: NUG-005
+  kernel_profile: BUILD
+  consumers:
+  - package.json
+  - package-lock.json
+  - consumer repos via packed tarball
+  entrypoints:
+  - package.json
+  - scripts/verify-package.mjs
+  validation:
+  - check: full verify gate
+    command: npm run verify:all
+    evidence: command exit code 0 on the finished tree
+  - check: package smoke on the packed tarball
+    command: npm run verify:package
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Verify registry state for the next unoccupied patch after published 1.1.3 (expect 1.1.4)
+  - Bump package manifest and lockfile to the exact version
+  - Run the full verify:all gate
+  - npm pack and install the tarball into disposable Website-Bot and SEO-Bot copies running
+    typecheck and relevant tests
+  - Record the proof; do not publish the registry release in this campaign
+  acceptance:
+  - id: AC-bump-NUG-005
+    statement: package manifest and lockfile carry the exact next unoccupied patch after 1.1.3,
+      verify:all passes, the packed tarball installs and passes typecheck and relevant tests
+      in disposable Website-Bot and SEO-Bot copies, and no registry publish happens in this
+      campaign
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-005
+gates:
+- id: GATE-001
+  name: task-001_complete
+  gate_type: entry
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-001
+  required_evidence_ids: []
+  pass_criteria:
+  - Canonical capability resolver acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-002
+  name: task-002_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-002
+  required_evidence_ids: []
+  pass_criteria:
+  - Fail unsupported capability combinations acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-003
+  name: task-003_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-003
+  required_evidence_ids: []
+  pass_criteria:
+  - Capability truth in RoutingDecision acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-004
+  name: task-004_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-004
+  required_evidence_ids: []
+  pass_criteria:
+  - Required routing matrix regression tests acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-005
+  name: task-005_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-005
+  required_evidence_ids: []
+  pass_criteria:
+  - Bump version to the next unoccupied patch acceptance is met.
+  failure_effect: block_successor_tasks
+evidence_requirements:
+- id: EVID-001
+  claim: exact_target_origin_main_revision_and_worktree_state_are_known
+  source_type: repository_inspection
+  source_location: Quantum-L9/LLM-Router
+  collection_method: read_only_inspection
+  freshness: collect_at_admission
+  producer: controller
+  supports:
+  - TASK-001
+  contradicts: []
