@@ -53,8 +53,13 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-log()  { [ "$QUIET" = "1" ] || printf '\n=== %s ===\n' "$*"; }
-say()  { [ "$QUIET" = "1" ] || printf '%s\n' "$*"; }
+# Every one of these is a HUMAN diagnostic, so all three write to stderr. This
+# script's stdout belongs to whatever machine payload the caller is composing —
+# for sessionStart that is a single JSON document (F-08). Making the channel
+# structural rather than conditional means a caller that forgets --quiet cannot
+# corrupt the payload; --quiet now controls verbosity only, not correctness.
+log()  { [ "$QUIET" = "1" ] || printf '\n=== %s ===\n' "$*" >&2; }
+say()  { [ "$QUIET" = "1" ] || printf '%s\n' "$*" >&2; }
 warn() { printf 'agent-bootstrap WARN: %s\n' "$*" >&2; }
 
 # An unexpanded literal '$HOME' arrives from .env-format environment fields on
@@ -74,6 +79,8 @@ fi
 say "agent bootstrap: surface=$SURFACE governance=$GOV_DIR workspace=$WORKSPACE"
 
 DEGRADED=0
+#: Publish-path diagnostic: ENFORCED | NOT_ENFORCED | PROBE_ERROR (F-09).
+PUBLISH_PATH_STATE="PROBE_ERROR"
 
 # --- 1) Locked toolchain ----------------------------------------------------
 # uv.lock is the SSOT for interpreter and dependency versions;
@@ -216,47 +223,98 @@ fi
 log "Publish-path enforcement"
 GATE="$GOV_DIR/ops/autonomy/local_execution_gate.py"
 if [ -f "$GATE" ]; then
-  # Empty output == allowed; otherwise the permissionDecisionReason text.
-  _gate_deny_reason() {
-    printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" \
-      | "$GOV_PY" "$GATE" claude 2>/dev/null \
-      | grep -o '"permissionDecisionReason": *"[^"]*"' \
-      | head -1
+  # Three states, never two. The old probe read "no deny text" as ALLOW, so a
+  # crashed probe was indistinguishable from a disabled gate and reported the
+  # gate OFF while it was on (F-09). Absence of a denial is not permission.
+  #
+  #   DENY        gate returned a valid denial       -> ENFORCED
+  #   ALLOW       gate returned cleanly, no denial   -> NOT_ENFORCED
+  #   PROBE_ERROR probe could not reach a verdict    -> PROBE_ERROR (never ALLOW)
+  #
+  # The synthetic event carries `cwd`, because the gate resolves a workspace
+  # before evaluating policy. Without it the gate falls back to process cwd and
+  # a non-repository cwd made every probe crash — the probe was accidentally
+  # testing malformed-input handling instead of policy (F-09/§10).
+  _gate_probe() {
+    _gp_out=""
+    _gp_rc=0
+    _gp_out="$(
+      printf '{"tool_name":"Bash","tool_input":{"command":"%s"},"cwd":"%s"}' "$1" "$WORKSPACE" \
+        | "$GOV_PY" "$GATE" claude 2>/dev/null
+    )" || _gp_rc=$?
+
+    if [ "$_gp_rc" -ne 0 ]; then
+      printf 'PROBE_ERROR:gate exited %s\n' "$_gp_rc"
+      return 0
+    fi
+    if [ -z "$_gp_out" ]; then
+      # Clean exit, no payload: the gate's documented "allowed" encoding.
+      printf 'ALLOW:\n'
+      return 0
+    fi
+    case "$_gp_out" in
+      *'"permissionDecision"'*'"deny"'*)
+        printf 'DENY:%s\n' "$(printf '%s' "$_gp_out" \
+          | grep -o '"permissionDecisionReason": *"[^"]*"' | head -1)"
+        ;;
+      *)
+        printf 'PROBE_ERROR:gate returned a response with no decision\n'
+        ;;
+    esac
   }
-  # ops/autonomy/local_execution_gate.py:137 — the path-rule denial marker.
+
+  # ops/autonomy/local_execution_gate.py — the path-rule denial marker.
   PATH_RULE_MARKER='Publish path'
-  raw_reason="$(_gate_deny_reason 'git push origin main')"
-  make_reason="$(_gate_deny_reason 'make pr')"
+  raw_probe="$(_gate_probe 'git push origin main')"
+  make_probe="$(_gate_probe 'make pr')"
+  raw_state="${raw_probe%%:*}"
+  make_state="${make_probe%%:*}"
 
-  raw_blocked_by_path=0
-  case "$raw_reason" in *"$PATH_RULE_MARKER"*) raw_blocked_by_path=1 ;; esac
-  make_blocked_by_path=0
-  case "$make_reason" in *"$PATH_RULE_MARKER"*) make_blocked_by_path=1 ;; esac
-
-  if [ "$raw_blocked_by_path" = "1" ] && [ "$make_blocked_by_path" = "0" ]; then
-    if [ -n "$make_reason" ]; then
-      say "publish path ENFORCED: raw 'git push' denied; 'make pr' is the open route"
-      say "  (currently phase-gated by L4 until authorize-release — expected, not a fault)"
-    else
-      say "publish path ENFORCED: raw 'git push' denied, 'make pr' allowed"
-    fi
-  else
-    if [ "$raw_blocked_by_path" = "0" ]; then
-      warn "publish path NOT ENFORCED: raw 'git push' is not denied by the path rule"
-      warn "  agents on surface '$SURFACE' could reach GitHub without the Makefile checkers"
-    fi
-    if [ "$make_blocked_by_path" = "1" ]; then
-      warn "publish path BROKEN: 'make pr' is denied by the path rule itself"
-      warn "  the only sanctioned route to GitHub is closed on surface '$SURFACE'"
-    fi
+  # A probe failure on EITHER call means the diagnostic is unusable. Reporting
+  # ENFORCED or NOT_ENFORCED from it would be a fabricated verdict.
+  if [ "$raw_state" = "PROBE_ERROR" ] || [ "$make_state" = "PROBE_ERROR" ]; then
+    PUBLISH_PATH_STATE="PROBE_ERROR"
+    warn "publish path PROBE_ERROR: the enforcement self-test could not reach a verdict"
+    [ "$raw_state" = "PROBE_ERROR" ] && warn "  raw push probe: ${raw_probe#PROBE_ERROR:}"
+    [ "$make_state" = "PROBE_ERROR" ] && warn "  make pr probe: ${make_probe#PROBE_ERROR:}"
+    warn "  this is NOT a statement that the gate is off — enforcement is unverified"
     DEGRADED=$((DEGRADED + 1))
+  else
+    raw_blocked_by_path=0
+    case "$raw_probe" in *"$PATH_RULE_MARKER"*) raw_blocked_by_path=1 ;; esac
+    make_blocked_by_path=0
+    case "$make_probe" in *"$PATH_RULE_MARKER"*) make_blocked_by_path=1 ;; esac
+
+    if [ "$raw_blocked_by_path" = "1" ] && [ "$make_blocked_by_path" = "0" ]; then
+      PUBLISH_PATH_STATE="ENFORCED"
+      if [ "$make_state" = "DENY" ]; then
+        say "publish path ENFORCED: raw 'git push' denied; 'make pr' is the open route"
+        say "  (currently phase-gated by L4 until authorize-release — expected, not a fault)"
+      else
+        say "publish path ENFORCED: raw 'git push' denied, 'make pr' allowed"
+      fi
+    else
+      PUBLISH_PATH_STATE="NOT_ENFORCED"
+      if [ "$raw_blocked_by_path" = "0" ]; then
+        warn "publish path NOT ENFORCED: raw 'git push' is not denied by the path rule"
+        warn "  agents on surface '$SURFACE' could reach GitHub without the Makefile checkers"
+      fi
+      if [ "$make_blocked_by_path" = "1" ]; then
+        warn "publish path BROKEN: 'make pr' is denied by the path rule itself"
+        warn "  the only sanctioned route to GitHub is closed on surface '$SURFACE'"
+      fi
+      DEGRADED=$((DEGRADED + 1))
+    fi
   fi
+  say "publish_path_gate=$PUBLISH_PATH_STATE"
   if [ -n "${L9_PUBLISH_PATH_OVERRIDE:-}" ]; then
     warn "L9_PUBLISH_PATH_OVERRIDE is set — publish-path enforcement is BYPASSED"
     warn "  this is a human/ops breakglass; it must not be set in a surface environment"
   fi
 else
-  warn "missing ops/autonomy/local_execution_gate.py — publish path UNENFORCED"
+  PUBLISH_PATH_STATE="PROBE_ERROR"
+  warn "missing ops/autonomy/local_execution_gate.py — publish path UNVERIFIABLE"
+  say "publish_path_gate=$PUBLISH_PATH_STATE"
   DEGRADED=$((DEGRADED + 1))
 fi
 
@@ -274,8 +332,11 @@ fi
 log "Canonical capability bootstrap"
 CAP_BOOTSTRAP="$GOV_DIR/ops/secrets/bootstrap_agent_env.sh"
 if [ -f "$CAP_BOOTSTRAP" ]; then
+  # `2>&1` used to fold this report into stdout, which is the sessionStart JSON
+  # payload upstream. `>&2` redirects stdout to stderr; the script's own stderr
+  # already lands there, so both streams stay diagnostic (F-08).
   bash "$CAP_BOOTSTRAP" --check --surface "$SURFACE" \
-    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query 2>&1 \
+    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query >&2 \
     || warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
 else
   warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical capability resolution"
@@ -384,10 +445,15 @@ done
 # L4 phase is read-only here: never begin a phase or authorize a release from a
 # bootstrap. Mid-execution push/PR stay denied until kernels are recorded.
 if [ -f "$GOV_DIR/ops/autonomy/l4_local.py" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
-  ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/autonomy/l4_local.py" status 2>/dev/null ) \
+  # Both of these print their own report on stdout — l4_local emits a whole JSON
+  # document, which would make the chain's stdout TWO JSON documents and break
+  # the renderer just as surely as a warning line would (F-08). Neither is a
+  # machine result for this chain, so both go to stderr.
+  ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/autonomy/l4_local.py" status 2>/dev/null >&2 ) \
     || say "L4 phase: not begun (push/PR denied until authorize-release)"
   if [ "$CHECK" != "1" ] && [ -f "$GOV_DIR/ops/scripts/scratch_hold.py" ]; then
-    ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/scripts/scratch_hold.py" restore --all 2>/dev/null ) || true
+    ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/scripts/scratch_hold.py" restore --all \
+        2>/dev/null >&2 ) || true
   fi
 fi
 
