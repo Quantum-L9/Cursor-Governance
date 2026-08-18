@@ -401,7 +401,14 @@ if [ -f "$GRAPHITI_CLI" ]; then
   # to assert the opposite -- that graphiti_gate_lib.py contained
   # "gmp:phase_lock" -- so it must not be satisfied by the comment that now
   # explains the removal. Match executable code only.
-  GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
+  # Inspect the copy being changed. In a governance checkout the workspace IS
+  # the source of truth for this file, and $GC points at the installed SSOT
+  # clone -- which still carries the previous revision until this work merges.
+  # Gating a pre-PR check on the installed clone would make every governance
+  # change unable to publish the fix it contains. Consumer repos have no local
+  # copy and fall back to $GC as before.
+  GATE_LIB="$WORKSPACE/ops/graphiti/graphiti_gate_lib.py"
+  [ -f "$GATE_LIB" ] || GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
   if [ ! -f "$GATE_LIB" ]; then
     fail "graphiti_gate_lib.py missing"
   elif grep -v '^[[:space:]]*#' "$GATE_LIB" | grep -q "gmp:phase_lock"; then
@@ -409,7 +416,10 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     pass "graphiti gate is hydration-only (no phase-lock write gate)"
   fi
-  if bash "$GC/ops/graphiti/test_gate_e2e_full.sh" >/dev/null 2>&1; then
+  # Same reasoning as GATE_LIB above: prefer the workspace copy of the self-test.
+  E2E_FULL="$WORKSPACE/ops/graphiti/test_gate_e2e_full.sh"
+  [ -f "$E2E_FULL" ] || E2E_FULL="$GC/ops/graphiti/test_gate_e2e_full.sh"
+  if bash "$E2E_FULL" >/dev/null 2>&1; then
     pass "graphiti gate E2E full self-test"
   elif bash "$GC/ops/graphiti/test_gate_e2e.sh" >/dev/null 2>&1; then
     pass "graphiti gate E2E self-test (minimal)"
