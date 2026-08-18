@@ -598,6 +598,14 @@
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
     },
     {
+      "path": "campaigns/pe-seo-bot-build-intelligence-hardening-v2/CAMPAIGN_SOURCE.yaml",
+      "sha256": "fec4ebe9c23bc3219146b8fcb624406c8c34d3305fea56be1e61c899759b2347"
+    },
+    {
+      "path": "campaigns/pe-seo-bot-build-intelligence-hardening-v2/source-integrity-receipt.json",
+      "sha256": "c51d1e4b7d1f15c486a1791258b3fbd1ca908244adce8873ecea55e0fdb419af"
+    },
+    {
       "path": "campaigns/pe-v3-hardening/CAMPAIGN_SOURCE.yaml",
       "sha256": "1772601aaed746ace53463586950621b8dfcd709766e155222e726fe74ba859f"
     },
