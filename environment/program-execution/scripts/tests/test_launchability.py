@@ -50,9 +50,7 @@ def _task(**overrides):
 class LaunchabilityTest(unittest.TestCase):
     def test_controller_verified_task_with_no_validation_is_a_blocker(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
-            report = launchability.check_tasks(
-                [_task(outputs=[])], Path(raw), infer=True
-            )
+            report = launchability.check_tasks([_task(outputs=[])], Path(raw), infer=True)
             self.assertFalse(report["launchable"])
             codes = {item["code"] for item in report["blockers"]}
             self.assertIn("verification_deadlock", codes)
@@ -74,9 +72,7 @@ class LaunchabilityTest(unittest.TestCase):
 
     def test_declared_validation_overrides_inference(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
-            task = _task(
-                validation=[{"method": "command", "command_or_inspection": "make check"}]
-            )
+            task = _task(validation=[{"method": "command", "command_or_inspection": "make check"}])
             report = launchability.check_tasks([task], Path(raw), infer=True)
             self.assertTrue(report["launchable"])
             self.assertNotIn("TASK-001", report["synthesized_validations"])

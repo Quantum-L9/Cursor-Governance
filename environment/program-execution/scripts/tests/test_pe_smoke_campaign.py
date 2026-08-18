@@ -123,9 +123,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
     def test_two_task_campaign_executes_end_to_end_through_a_real_worker(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
-            with unittest.mock.patch.dict(
-                "os.environ", {"L9_PE_WORKER_CMD": _worker_command(tmp)}
-            ):
+            with unittest.mock.patch.dict("os.environ", {"L9_PE_WORKER_CMD": _worker_command(tmp)}):
                 report, l9, elapsed = self._run_smoke(tmp)
 
             self.assertIn("execute", report.stages_completed)

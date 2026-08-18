@@ -80,6 +80,8 @@ def fast_mode(explicit: bool | None = None) -> bool:
     if explicit is not None:
         return explicit
     return os.environ.get(PE_MODE_ENV, "").strip().lower() == "fast"
+
+
 VALIDATION_TIMEOUT_S = 300
 GIT_TIMEOUT_S = 45
 PEC_TIMEOUT_S = 30
@@ -1540,9 +1542,7 @@ def render_progress(
         tasks = pec_status_tasks(pec_workspace)
     except CampaignError:
         tasks = []
-    elapsed = timer.by_phase(
-        {"preparation": PREPARATION_STAGES, "execution": ("execute",)}
-    )
+    elapsed = timer.by_phase({"preparation": PREPARATION_STAGES, "execution": ("execute",)})
     report = timing.progress(
         tasks,
         campaign_id=campaign_id,
