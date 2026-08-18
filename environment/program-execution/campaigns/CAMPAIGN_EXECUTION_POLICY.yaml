@@ -3,7 +3,7 @@
 # SSOT companion: ops/autonomy/surface_profile.yaml → campaign_execution
 schema: l9.program-execution.campaign-execution-policy.v1
 schema_version: 1.0.0
-updated: "2026-08-18T13:26:54Z"
+updated: "2026-08-18T10:21:55Z"
 closeout:
   required: true
   last_step: true
@@ -103,9 +103,9 @@ campaigns:
       - cc-pe-intent-compiler-v1
       - l9-devpack-program-execution-hardening
 
-  - id: pe-seo-bot-build-intelligence-hardening
-    integration_branch: campaign/pe-seo-bot-build-intelligence-hardening
-    pr_base: campaign/pe-seo-bot-build-intelligence-hardening
+  - id: pe-router-capability-safety-v4
+    integration_branch: campaign/pe-router-capability-safety-v4
+    pr_base: campaign/pe-router-capability-safety-v4
     execute_order: 7
     lane: compiled
 
