@@ -113,8 +113,21 @@ class MemoryGateTests(unittest.TestCase):
         )
         self.assertTrue(is_deny(out), "authority edit requires a phase-lock, not just prefetch")
 
-    def test_denies_git_push_without_lock(self) -> None:
-        self._write_receipt()
+    def test_allows_git_push_without_lock(self) -> None:
+        """``git``/``gh`` commands are exempt from the memory gate.
+
+        Per ``ops/autonomy/git_execution_exemption`` (and the sibling proofs in
+        ``tests/ops/autonomy/test_git_execution_exemption.py``), a raw
+        ``git push`` no longer needs a phase-lock to *execute*. Policy still
+        prefers the ``make pr`` publish path, and the MCP GitHub tools plus
+        ``make push`` remain governed by the gate — but the shell executables
+        themselves are unconditionally exempt, even without a lock and even
+        without a receipt. This test locks that invariant in from the memory
+        gate's own perspective.
+        """
+        # Deliberately no receipt and no lock: the exemption must not depend on
+        # either. (Contrast with ``test_denies_authority_edit_without_lock``
+        # above, which still denies an Edit tool call in the same state.)
         out, _ = run_gate(
             {
                 "tool_name": "Bash",
@@ -123,7 +136,11 @@ class MemoryGateTests(unittest.TestCase):
             },
             self.env,
         )
-        self.assertTrue(is_deny(out))
+        self.assertFalse(
+            is_deny(out),
+            "git/gh commands are exempt from the memory gate; deny would"
+            " reintroduce the split-brain this PR removed",
+        )
 
     def test_enforcement_off_is_not_a_side_door(self) -> None:
         """L9_MEMORY_ENFORCEMENT=off must not bypass the gate — admin breakglass only."""
