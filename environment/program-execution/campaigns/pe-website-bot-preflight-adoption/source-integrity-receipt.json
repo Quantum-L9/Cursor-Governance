@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "pe-website-bot-preflight-adoption",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "a5c5afa9181dc3fbaabed3936d6f86c181083a225d8ba68bba28d13de198cf05",
+  "bytes": 16015,
+  "pack_recorded_digest": "a5c5afa9181dc3fbaabed3936d6f86c181083a225d8ba68bba28d13de198cf05",
+  "pack_recorded_bytes": 16015,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-18T18:55:51Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}

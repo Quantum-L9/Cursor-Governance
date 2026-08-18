@@ -1,0 +1,435 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+plan_status: Ready
+metadata:
+  campaign_id: pe-website-bot-preflight-adoption
+  title: PE Website-Bot Preflight Adoption
+  version: 1.0.0
+  created_at: '2026-08-18T18:55:51Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/Website-Bot
+  intended_drop_path: environment/program-execution/campaigns/pe-website-bot-preflight-adoption/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/pe-website-bot-preflight-adoption
+  worktree_root: $HOME/.l9/program-worktrees/pe-website-bot-preflight-adoption
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+operator_directive:
+  objective: Website-Bot speaks to SEO-Bot over one explicit machine-auth seam, pins the exact
+    promoted Router patch shared with SEO-Bot, and gates its expensive REDESIGN pipeline behind
+    an authenticated preflight that turns 20-minutes-in failures into 3-second failures —
+    so the cross-repo seam and the Golden E2E only run when every control plane is actually
+    ready.
+  mode: controlled_autonomous_until_material_boundary
+  policy_profile: quantum-l9.safe-autonomy.v1
+  prohibited_actions:
+  - force_push
+  - admin_merge
+  - deploy
+  - weaken_validators
+  - delete_tests_for_pass
+program:
+  id: pe-website-bot-preflight-adoption
+  name: PE Website-Bot Preflight Adoption
+  version: 1.0.0
+  owner: Igor Beylin
+  definition_status: ready
+  plan_status: Ready
+  snapshot_at: '2026-08-18'
+  objective: Website-Bot speaks to SEO-Bot over one explicit machine-auth seam, pins the exact
+    promoted Router patch shared with SEO-Bot, and gates its expensive REDESIGN pipeline behind
+    an authenticated preflight that turns 20-minutes-in failures into 3-second failures —
+    so the cross-repo seam and the Golden E2E only run when every control plane is actually
+    ready.
+  problem_statement: Website-Bot speaks to SEO-Bot over one explicit machine-auth seam, pins
+    the exact promoted Router patch shared with SEO-Bot, and gates its expensive REDESIGN
+    pipeline behind an authenticated preflight that turns 20-minutes-in failures into 3-second
+    failures — so the cross-repo seam and the Golden E2E only run when every control plane
+    is actually ready.
+  target_state: Website-Bot speaks to SEO-Bot over one explicit machine-auth seam, pins the
+    exact promoted Router patch shared with SEO-Bot, and gates its expensive REDESIGN pipeline
+    behind an authenticated preflight that turns 20-minutes-in failures into 3-second failures
+    — so the cross-repo seam and the Golden E2E only run when every control plane is actually
+    ready.
+  scope:
+    include:
+    - repository_origin_main
+    exclude:
+    - new repositories
+    - force_push
+    - admin_merge
+    - deploy
+    - production migration
+  contracts:
+    pair: program-execution-system.v2
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - latest_explicit_operator_instruction
+  - accepted_program_definition
+  - implementation
+  - UNKNOWN
+  operating_rules:
+  - one_authority_per_responsibility
+  - mutable_runtime_state_remains_outside_git
+  - no_silent_scope_expansion
+  - worker_claim_is_not_verification
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE
+targets:
+- id: TARGET-001
+  name: Quantum-L9/Website-Bot
+  kind: git_repository
+  authority_owner: Quantum-L9/Website-Bot
+  execution_mode: repo_local
+  repository_id: Quantum-L9/Website-Bot
+  source_of_truth: repository_origin_main
+  environments:
+  - local
+  - ci
+  mutability: reversible
+  expected_revision: UNKNOWN
+  adapter: git
+authorities:
+- id: AUTH-001
+  responsibility: campaign_owner
+  owner: Igor Beylin
+workstreams:
+- id: WS-01
+  name: PE Website-Bot Preflight Adoption
+  owner: AUTH-001
+  objective: Website-Bot speaks to SEO-Bot over one explicit machine-auth seam, pins the exact
+    promoted Router patch shared with SEO-Bot, and gates its expensive REDESIGN pipeline behind
+    an authenticated preflight that turns 20-minutes-in failures into 3-second failures —
+    so the cross-repo seam and the Golden E2E only run when every control plane is actually
+    ready.
+dependency_edges:
+- from: TASK-001
+  to: TASK-002
+- from: TASK-002
+  to: TASK-003
+waves:
+- id: W0
+  name: admission_and_first_ready_task
+  task_ids:
+  - TASK-001
+  predecessor_wave_ids: []
+  exit_gate_ids:
+  - GATE-001
+- id: W1
+  name: remaining_tasks
+  task_ids:
+  - TASK-002
+  - TASK-003
+  predecessor_wave_ids:
+  - W0
+  exit_gate_ids:
+  - GATE-002
+  - GATE-003
+tasks:
+- id: TASK-001
+  title: Adopt the exact Router patch version
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Update the manifest and lockfile to pin the exact promoted Router patch version
+    (no caret, no latest, no star), run npm ci, and prove the installed dependency with npm
+    ls @quantum-l9/llm-router. Run npm run typecheck, npm run llm:wiring, and the relevant
+    redesign and intelligence tests. The final invariant is: Website-Bot Router version equals
+    SEO-Bot Router version equals the promoted Router patch.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - package.json
+  - package-lock.json
+  - docs/program-execution/TASK-001.md
+  nugget_id: NUG-001
+  kernel_profile: BUILD
+  consumers:
+  - package.json
+  - package-lock.json
+  - src/pipeline runtime
+  entrypoints:
+  - package.json
+  validation:
+  - check: npm ls @quantum-l9/llm-router
+    command: npm ls @quantum-l9/llm-router
+    evidence: command exit code 0 on the finished tree
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  - check: redesign and intelligence unit tests
+    command: node --import tsx --test tests/unit/seo-build-intelligence-port.test.ts tests/unit/redesign-content-authority.test.ts
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Pin the exact promoted Router patch version (1.3.0) in package.json and the lockfile (no
+    caret, latest, or star)
+  - Run npm ci and prove the installed dependency with npm ls @quantum-l9/llm-router
+  - Run typecheck plus the redesign and intelligence unit tests
+  acceptance:
+  - id: AC-adop-NUG-001
+    statement: npm ls @quantum-l9/llm-router proves the installed exact promoted patch and
+      typecheck plus the redesign and intelligence tests pass
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: Machine-auth client contract
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'The real intelligence clients instantiate with SEO_BOT_URL and SEO_BOT_API_KEY
+    for both Competitive Intelligence and Redesign Content Authority, while SEO-Bot protects
+    build-intelligence routes with operator auth. With the SEO-Bot machine-auth contract in
+    place, make the client code and its security contract agree: SEO_BOT_API_KEY is the machine
+    API credential for Website-Bot to SEO-Bot build-intelligence calls, the operator dashboard
+    key is never used by the client, and any misleading HTTP-client comment is corrected so
+    code and security contract match. Add or update tests proving the client sends machine
+    credentials to build-intelligence routes and fails closed when the key is absent.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/intelligence/SeoBuildIntelligenceHttpClient.ts
+  - src/stages/CompetitiveIntelligenceStage.ts
+  - src/stages/RedesignContentAuthorityStage.ts
+  - tests/unit/seo-build-intelligence-port.test.ts
+  - tests/unit/redesign-content-authority.test.ts
+  - docs/program-execution/TASK-002.md
+  nugget_id: NUG-002
+  kernel_profile: BUILD
+  consumers:
+  - src/intelligence/SeoBuildIntelligenceHttpClient.ts
+  - src/stages/CompetitiveIntelligenceStage.ts
+  - src/stages/RedesignContentAuthorityStage.ts
+  - tests/unit/seo-build-intelligence-port.test.ts
+  entrypoints:
+  - src/intelligence/SeoBuildIntelligenceHttpClient.ts
+  validation:
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  - check: machine-auth client tests
+    command: node --import tsx --test tests/unit/seo-build-intelligence-port.test.ts tests/unit/redesign-content-authority.test.ts
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Correct the misleading HTTP-client comment so code and security contract match (SEO_BOT_API_KEY
+    is the machine credential for build-intelligence calls; the operator dashboard key is
+    never used by the client)
+  - Fail closed when SEO_BOT_URL or SEO_BOT_API_KEY is absent instead of sending empty-credential
+    requests
+  - Add or update tests proving the client sends machine credentials to build-intelligence
+    routes and fails closed when the key is absent
+  acceptance:
+  - id: AC-auth-NUG-002
+    statement: the client authenticates with the SEO_BOT_API_KEY machine credential on build-intelligence
+      routes, never the operator key, and fails closed when the key is absent
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-003
+  title: Authenticated REDESIGN preflight
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'The REDESIGN preflight must call the health route plus the build-intelligence
+    preflight route before the expensive pipeline begins, so a missing configuration fails
+    in seconds instead of minutes. Verify: network reachable, machine auth works, required
+    API capabilities exist (competitive_landscape, seo_content_blueprint, structured_content),
+    bot-interop compatible, Router version equals the promoted Router patch, DataForSEO configuration
+    present, and LLM configuration present. Map failures to the failure codes SEO_BOT_UNREACHABLE,
+    SEO_BOT_AUTH_FAILED, SEO_BOT_CAPABILITY_MISMATCH, and SEO_BOT_ROUTER_VERSION_MISMATCH,
+    with fail-closed behavior on any preflight failure. Add tests covering each failure code
+    path and the happy path.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/stages/RedesignContentAuthorityStage.ts
+  - src/intelligence/SeoBuildIntelligencePort.ts
+  - src/intelligence/SeoBuildIntelligenceHttpClient.ts
+  - src/pipeline/BuildError.ts
+  - tests/unit/seo-build-intelligence-port.test.ts
+  - tests/unit/redesign-content-authority.test.ts
+  - docs/program-execution/TASK-003.md
+  nugget_id: NUG-003
+  kernel_profile: BUILD
+  consumers:
+  - src/stages/RedesignContentAuthorityStage.ts
+  - src/intelligence/SeoBuildIntelligencePort.ts
+  - src/intelligence/SeoBuildIntelligenceHttpClient.ts
+  - src/pipeline/BuildError.ts
+  - tests/unit/redesign-content-authority.test.ts
+  - tests/unit/seo-build-intelligence-port.test.ts
+  entrypoints:
+  - src/stages/RedesignContentAuthorityStage.ts
+  validation:
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  - check: preflight tests
+    command: node --import tsx --test tests/unit/seo-build-intelligence-port.test.ts tests/unit/redesign-content-authority.test.ts
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add a REDESIGN preflight that calls the SEO-Bot health route and the build-intelligence
+    preflight route before the expensive pipeline begins
+  - Verify network reachability, machine auth, required API capabilities (competitive_landscape,
+    seo_content_blueprint, structured_content), bot-interop compatibility, Router version
+    equality with the promoted patch, DataForSEO configuration, and LLM configuration
+  - Map failures to SEO_BOT_UNREACHABLE, SEO_BOT_AUTH_FAILED, SEO_BOT_CAPABILITY_MISMATCH,
+    and SEO_BOT_ROUTER_VERSION_MISMATCH and fail closed on any preflight failure
+  - Add tests covering each failure code path and the happy path
+  acceptance:
+  - id: AC-pref-NUG-003
+    statement: the REDESIGN pipeline runs the authenticated preflight first, every failure
+      maps to one of the four SEO_BOT_* codes, and every failure path fails closed with tests
+      covering each code and the happy path
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+gates:
+- id: GATE-001
+  name: task-001_complete
+  gate_type: entry
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-001
+  required_evidence_ids: []
+  pass_criteria:
+  - Adopt the exact Router patch version acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-002
+  name: task-002_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-002
+  required_evidence_ids: []
+  pass_criteria:
+  - Machine-auth client contract acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-003
+  name: task-003_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-003
+  required_evidence_ids: []
+  pass_criteria:
+  - Authenticated REDESIGN preflight acceptance is met.
+  failure_effect: block_successor_tasks
+evidence_requirements:
+- id: EVID-001
+  claim: exact_target_origin_main_revision_and_worktree_state_are_known
+  source_type: repository_inspection
+  source_location: Quantum-L9/Website-Bot
+  collection_method: read_only_inspection
+  freshness: collect_at_admission
+  producer: controller
+  supports:
+  - TASK-001
+  contradicts: []
