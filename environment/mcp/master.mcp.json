@@ -1,0 +1,72 @@
+{
+  "_comment": [
+    "MASTER MCP configuration for all L9 surfaces — capability broker architecture",
+    "Authority: ~/.cursor-governance/environment/mcp/master.mcp.json",
+    "Consumers:",
+    "  - Cursor: ~/.cursor/mcp.json (symlink)",
+    "  - Claude Code CLI: ~/.claude/mcp.json (symlink)",
+    "  - Claude Code Web/Mobile: .mcp.json in each repo (env-var refs only)",
+    "",
+    "Credential-bearing MCPs reach upstream APIs through the L9 capability broker.",
+    "The broker holds secrets; this surface holds only capability IDs and a workload JWT.",
+    "Set L9_CAPABILITY_BROKER_URL to http://localhost:8787 (CLI) or the cloud broker URL.",
+    "",
+    "No-credential MCPs (Playwright, public repos) run locally as before."
+  ],
+  "mcpServers": {
+    "n8n-workflows Docs": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://gitmcp.io/Zie619/n8n-workflows"
+      ]
+    },
+    "GitHub": {
+      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
+      "headers": {
+        "X-Capability-Id": "github.mcp"
+      },
+      "timeout": 30000
+    },
+    "Context7": {
+      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
+      "headers": {
+        "X-Capability-Id": "context7.mcp"
+      },
+      "timeout": 30000
+    },
+    "Semgrep": {
+      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
+      "headers": {
+        "X-Capability-Id": "semgrep.mcp"
+      },
+      "timeout": 30000
+    },
+    "GitGuardian": {
+      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
+      "headers": {
+        "X-Capability-Id": "gitguardian.mcp"
+      },
+      "timeout": 30000
+    },
+    "Playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "firecrawl-mcp": {
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
+      }
+    },
+    "Tavily Expert": {
+      "url": "${TAVILY_MCP_URL}"
+    },
+    "graphiti-memory": {
+      "url": "http://127.0.0.1:8100/mcp",
+      "timeout": 120000,
+      "alwaysLoad": true
+    }
+  }
+}
