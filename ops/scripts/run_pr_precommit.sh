@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Run repo-portable pre-commit hooks on changed files only (not --all-files).
-# Full-tree: make precommit / nightly CI.
+# INTERNAL leaf of `make pr-check` / `run_pr_gate.sh`.
+# Runs the hook catalog in .pre-commit-config.yaml on changed files only.
+# This is not a public gate and not a git commit hook. Full-tree of the same
+# catalog is INTERNAL `make precommit` (nightly / make pr-full).
 # sync-generated-artifacts is SKIPPED here — run_pr_gate heals with WARN+continue.
 # On a local Cursor governance clone, do NOT skip symlinks-check (activation must
 # be live). symlinks-check asserts Cursor desktop wiring (~/.cursor/plugins/local,
@@ -15,11 +17,8 @@ WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-}"
 
-command -v pre-commit >/dev/null 2>&1 || {
-  echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install" >&2
-  exit 1
-}
-
+# Resolve first. An empty list is PASS without the pre-commit CLI — CI Test
+# Suite does not install it, and this repo does not use a git commit hook.
 if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
   tmp="$PR_CHANGED_FILE"
 else
@@ -33,6 +32,14 @@ if [[ ! -s "$tmp" ]]; then
   echo "OK: no changed files for pre-commit"
   exit 0
 fi
+
+command -v pre-commit >/dev/null 2>&1 || {
+  echo "FAIL: pre-commit CLI missing (INTERNAL leaf of make pr-check)." >&2
+  echo "      Install the framework: pipx install pre-commit" >&2
+  echo "      Do not run 'pre-commit install' — this repo has no git commit hook." >&2
+  echo "      Public quality gate: make pr-check" >&2
+  exit 1
+}
 
 files=()
 while IFS= read -r f; do

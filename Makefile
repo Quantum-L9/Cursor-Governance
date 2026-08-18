@@ -301,11 +301,14 @@ path-lint:
 legacy-doctrine-residue:
 	$(PYTHON) ops/scripts/validate_legacy_doctrine_residue.py
 
+## INTERNAL: full-tree of the same hook catalog `make pr-check` already runs
+## on changed files. Not a public gate. Git `pre-commit install` is not required.
 ## Full-tree pre-commit (nightly / intentional). Not used by `make pr`.
 precommit:
-	@command -v pre-commit >/dev/null 2>&1 || { echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; exit 1; }
+	@command -v pre-commit >/dev/null 2>&1 || { echo "FAIL: pre-commit CLI missing (INTERNAL leaf of make pr-check). pipx install pre-commit — do not run pre-commit install"; exit 1; }
 	pre-commit run --all-files
 
+## INTERNAL leaf of `make pr-check` (changed-files hook catalog).
 ## Changed-files pre-commit for PR velocity.
 ## Skips machine-local symlinks-check unless WS is a local governance SSOT clone
 ## (skills/AUTONOMY_MANIFEST.yaml + rules/RULES-MANIFEST.yaml present).

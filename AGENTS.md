@@ -842,3 +842,25 @@ Authoritative corrections (do not treat older `l4_local.py begin && record-kerne
    gate on an unchanged tree (`pr-check && make pr` reuses the receipt).
 6. `make pr` runs INTERNAL `pr-preflight` (branch, commits-ahead, L4 receipt)
    then `pr-check` (receipt skip if unchanged) then `open_pr_after_gate.sh`.
+
+<!-- PRECOMMIT_IS_PR_CHECK_LEAF_V1 -->
+## pre-commit is a leaf of `make pr-check` (2026-08-17)
+
+Authoritative corrections (do not treat older `pre-commit install` / `make
+precommit` bullets as a parallel public gate):
+
+1. **Public quality gate is `make pr-check`.** It already runs the hook catalog
+   in `.pre-commit-config.yaml` on changed files via
+   `ops/scripts/run_pr_precommit.sh`, then locked ruff / security / pytest.
+2. **This repo does not use a git commit hook.** `core.hooksPath` is unset and
+   `.git/hooks/pre-commit` is not the shipping path. Do not run
+   `pre-commit install`. Do not tell operators that commits are gated that way.
+3. **`make precommit` and `precommit-repo` are INTERNAL.** Full-tree of the same
+   catalog (`--all-files`) for nightly / `make pr-full`. Agents do not invoke
+   them instead of `pr-check`.
+4. **CI Lint is `uv run ruff`, not the pre-commit CLI.** CI Test Suite must not
+   require `pre-commit` on PATH. An empty changed-file list is PASS without the
+   binary.
+5. Pin lockstep remains: `.pre-commit-config.yaml` ruff `rev` matches
+   `requirements.txt` / locked `.venv` ruff. Dual ruff (catalog + gate) is
+   owned by `pr-check`; do not add a third runner.

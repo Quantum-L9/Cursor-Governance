@@ -189,10 +189,36 @@ def test_precommit_reuses_changed_file(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     listed = tmp_path / "changed.txt"
     listed.write_text("", encoding="utf-8")
+    # CI Test Suite has no pre-commit CLI. Empty list must PASS without it.
+    slim_path = "/usr/bin:/bin"
     proc = _run(
         ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)],
         cwd=repo,
-        env={"WS": str(repo), "PR_BASE": "main", "PR_CHANGED_FILE": str(listed)},
+        env={
+            "WS": str(repo),
+            "PR_BASE": "main",
+            "PR_CHANGED_FILE": str(listed),
+            "PATH": slim_path,
+        },
     )
     assert proc.returncode == 0, proc.stderr
     assert "no changed files for pre-commit" in proc.stdout
+
+
+def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    listed = tmp_path / "changed.txt"
+    listed.write_text("a.txt\n", encoding="utf-8")
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)],
+        cwd=repo,
+        env={
+            "WS": str(repo),
+            "PR_BASE": "main",
+            "PR_CHANGED_FILE": str(listed),
+            "PATH": "/usr/bin:/bin",
+        },
+    )
+    assert proc.returncode == 1
+    assert "INTERNAL leaf of make pr-check" in proc.stderr
+    assert "Do not run 'pre-commit install'" in proc.stderr
