@@ -1,0 +1,11 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "pe-v3-control-plane-convergence",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "f11e155d59425e9c188323a05981b76a4f3a2ae3169e6546ee97b63ef00dd0c2",
+  "bytes": 110564,
+  "collected_at": "2026-08-18T04:00:00Z",
+  "collection_method": "prep-hand-authored",
+  "producer": "campaign-prep"
+}
