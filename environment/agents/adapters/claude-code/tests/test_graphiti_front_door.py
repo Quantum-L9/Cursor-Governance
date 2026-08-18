@@ -54,9 +54,9 @@ class FrontDoorTests(unittest.TestCase):
         # phase-lock is accepted). What must not exist is code that acquires,
         # checks, or forces one -- so match invocation forms, not the word.
         forbidden = (
-            '"phase-lock"',        # CLI subcommand argument
+            '"phase-lock"',  # CLI subcommand argument
             "'phase-lock'",
-            "gmp:phase_lock",      # satisfied-marker lookup
+            "gmp:phase_lock",  # satisfied-marker lookup
             "phase_lock_satisfied",
             "gb.phase_lock",
             "write_lock",
@@ -65,9 +65,7 @@ class FrontDoorTests(unittest.TestCase):
         )
         for path in HOOKS.glob("*.py"):
             src = path.read_text(encoding="utf-8")
-            code = "\n".join(
-                line for line in src.splitlines() if not line.strip().startswith("#")
-            )
+            code = "\n".join(line for line in src.splitlines() if not line.strip().startswith("#"))
             for bad in forbidden:
                 self.assertNotIn(bad, code, f"{path.name}: {bad}")
 

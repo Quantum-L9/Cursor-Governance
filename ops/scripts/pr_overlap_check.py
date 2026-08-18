@@ -193,11 +193,37 @@ def pr_files(slug: str, number: int) -> list[str] | None:
     return [line for line in result.stdout.splitlines() if line]
 
 
+_DEEPENED: set[str] = set()
+
+
+def ensure_probe_history(repo: Path) -> None:
+    """Unshallow a shallow clone once, so the merge probe has a common ancestor.
+
+    Cloud sessions hand agents a shallow clone. The probe then dies with
+    "refusing to merge unrelated histories", is reported unavailable, and every
+    filename overlap blocks -- so the merge analysis invariant E5 requires would
+    never actually run where agents actually run. Deepening costs a few seconds
+    and is idempotent per process.
+    """
+    key = str(repo)
+    if key in _DEEPENED:
+        return
+    _DEEPENED.add(key)
+    if git(repo, "rev-parse", "--is-shallow-repository").stdout.strip() != "true":
+        return
+    result = git(repo, "fetch", "--quiet", "--unshallow", "origin")
+    if result.returncode == 0:
+        print("NOTE: deepened shallow clone so the textual merge probe can run")
+    else:
+        print("WARN: could not unshallow the clone — textual probe may be unavailable")
+
+
 def merge_tree_conflicts(repo: Path, pr_number: int) -> list[str] | None:
     """Fetch pull/<N>/head and probe with git merge-tree --write-tree (needs
     git >= 2.38). Returns conflicting paths, [] for a clean merge, or None when
     the probe is unavailable (fetch/unsupported git) — callers degrade to
     filename-overlap blocking."""
+    ensure_probe_history(repo)
     fetch = git(repo, "fetch", "--quiet", "origin", f"pull/{pr_number}/head")
     if fetch.returncode != 0:
         return None
@@ -313,7 +339,25 @@ def main() -> int:
             entry["note"] = "textual probe unavailable (fetch or merge-tree failed)"
             blockers[number] = entry
             continue
-        real = sorted({path for path in conflicts if not is_generated_prefix_path(path)})
+        # A conflict in a file this branch never touched cannot be caused by
+        # publishing this branch: it is the other PR's conflict with main, and
+        # integration is serialized through main anyway. Counting it here blocks
+        # an agent for a collision that is not its own -- the same
+        # false-positive class as treating same-file overlap as a collision.
+        changed_set = set(changed)
+        real = sorted(
+            {
+                path
+                for path in conflicts
+                if not is_generated_prefix_path(path) and path in changed_set
+            }
+        )
+        foreign = sorted(set(conflicts) - changed_set)
+        if foreign and not real:
+            print(
+                f"NOTE: PR #{number} conflicts with main in {len(foreign)} file(s) this branch "
+                "does not touch — not this branch's collision"
+            )
         if real:
             entry["conflicts"] = real
             blockers[number] = entry

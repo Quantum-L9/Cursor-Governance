@@ -241,6 +241,54 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertIn("PR_STACK=auto", result.stdout)
         self.assertIn("PR_OVERLAP=ignore", result.stdout)
 
+    def test_conflict_outside_our_changed_files_does_not_block(self) -> None:
+        """A conflict in a file this branch never touched is not this branch's.
+
+        Their PR conflicts with main in other.txt while both PRs also touch
+        shared.txt disjointly. Publishing our branch cannot cause their
+        other.txt conflict -- each PR merges into main separately -- so the gate
+        must report it and proceed rather than blocking us for their collision.
+        """
+        fake = FakeGh(
+            Path(tempfile.mkdtemp(prefix="l9-gh-")),
+            pulls="1\tfeat-theirs\tmain\n",
+            files={"1": "shared.txt\nother.txt\n"},
+        )
+        bare, work, env = _init_world()
+
+        # main gains other.txt, then moves it on -- their branch will diverge.
+        (work / "other.txt").write_text("alpha\n", encoding="utf-8")
+        _commit(work, env, "add other")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+
+        def their_change(repo: Path) -> None:
+            (repo / "shared.txt").write_text(
+                SHARED_BASE.replace("line4", "line4-theirs"), encoding="utf-8"
+            )
+            (repo / "other.txt").write_text("theirs\n", encoding="utf-8")
+
+        sha = _branch_from(work, env, "main", "feat-theirs", their_change)
+        subprocess.run(
+            ["git", "update-ref", "refs/pull/1/head", sha], cwd=bare, env=env, check=True
+        )
+
+        # main moves other.txt again, so their PR now conflicts with main there.
+        _run(["git", "checkout", "-q", "main"], work, env)
+        (work / "other.txt").write_text("omega\n", encoding="utf-8")
+        _commit(work, env, "move other")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+
+        # our branch touches shared.txt only, disjointly from theirs
+        _run(["git", "checkout", "-q", "-b", "feat-ours"], work, env)
+        (work / "shared.txt").write_text(
+            SHARED_BASE.replace("line2", "line2-ours"), encoding="utf-8"
+        )
+        _commit(work, env, "ours")
+
+        result = _gate(work, fake.env(env))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("does not touch", result.stdout)
+
     def test_disjoint_hunks_pass_with_note(self) -> None:
         fake = FakeGh(
             Path(tempfile.mkdtemp(prefix="l9-gh-")),
