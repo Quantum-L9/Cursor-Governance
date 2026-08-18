@@ -161,5 +161,50 @@ fi
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
 LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / phase-lock / write); no L9_MEMORY_HTTP side door; memory-bank retired")
 
+# --- L9 Claude environment status (from the installer receipt) --------------
+# The canonical installer writes ~/.l9/claude/bootstrap-state.json
+# (schema l9.claude-bootstrap.v1). Project it compactly so the model — and the
+# operator on mobile — sees what is actually available instead of discovering
+# bootstrap breakage when a later memory or publish operation fails.
+emit_bootstrap_status() {
+  local receipt="$HOME/.l9/claude/bootstrap-state.json"
+  if [ ! -f "$receipt" ]; then
+    LINES+=("L9 Claude environment: bootstrap receipt absent — run 'make claude-install' once")
+    return 0
+  fi
+  local py="$1"
+  if [ -n "$py" ] && command -v "$py" >/dev/null 2>&1; then
+    local block
+    block=$(CLAUDE_CODE_REMOTE="${CLAUDE_CODE_REMOTE:-false}" "$py" -c 'import json,sys,os
+try:
+    d = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(1)
+remote = os.environ.get("CLAUDE_CODE_REMOTE") == "true"
+print("surface: %s" % d.get("surface", "?"))
+print("execution: %s" % ("anthropic-cloud" if remote else "local"))
+print("governance: %s" % (d.get("governance_revision", "?")[:8] or "?"))
+print("bootstrap: %s" % d.get("shared_bootstrap", "?"))
+print("settings: %s" % d.get("settings", "?"))
+print("capability broker: %s" % d.get("capabilities", "?"))
+print("memory: %s%s" % (d.get("memory", "?"),
+    " — no broker-authenticated cloud identity" if d.get("memory") == "DEGRADED" else ""))
+print("skills: %s" % d.get("skills", "?"))
+print("rules: %s" % d.get("rules", "?"))
+' "$receipt" 2>/dev/null || true)
+    if [ -n "$block" ]; then
+      LINES+=("--- L9 Claude environment ---")
+      while IFS= read -r line || [ -n "$line" ]; do
+        LINES+=("$line")
+      done <<< "$block"
+      return 0
+    fi
+  fi
+  LINES+=("L9 Claude environment: receipt unreadable — see $receipt")
+}
+
+# PY was resolved above for the autonomy profile block; reuse it.
+emit_bootstrap_status "$PY"
+
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"
