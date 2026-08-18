@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass
@@ -111,12 +112,20 @@ def worker_argv(command: str, *, task_id: str, worktree: Path, brief: Path) -> l
 
     Placeholders keep the operator's command shape intact instead of imposing a
     calling convention: {task_id}, {worktree}, {brief}.
+
+    The template is split into argv *before* substitution, so a value carrying
+    quotes or spaces stays one argument instead of becoming extra ones.
     """
-    expanded = command.format(task_id=task_id, worktree=str(worktree), brief=str(brief))
-    argv = shlex.split(expanded)
+    fields = {"task_id": task_id, "worktree": str(worktree), "brief": str(brief)}
+    argv = [token.format(**fields) for token in shlex.split(command)]
     if not argv:
         raise WorkerError(f"{WORKER_COMMAND_ENV} expands to an empty command: {command!r}")
-    return argv
+    resolved = shutil.which(argv[0], path=os.environ.get("PATH"))
+    if resolved is None:
+        raise WorkerError(
+            f"{WORKER_COMMAND_ENV} names a worker that is not executable on PATH: {argv[0]!r}"
+        )
+    return [resolved, *argv[1:]]
 
 
 def invoke_worker(
@@ -161,7 +170,11 @@ def invoke_worker(
     before = worktree_fingerprint(worktree)
     started = time.monotonic()
     try:
-        completed = subprocess.run(  # noqa: S603 - operator-configured worker, argv form
+        # nosemgrep: dangerous-subprocess-use-tainted-env-args - argv form, no
+        # shell; argv[0] is PATH-resolved and interpolated values cannot split
+        # into extra arguments. The command itself is operator configuration:
+        # whoever sets it already controls this process.
+        completed = subprocess.run(  # noqa: S603
             argv,
             cwd=str(worktree),
             text=True,
