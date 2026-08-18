@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "pe-seo-bot-build-intelligence-hardening",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "536a6a7b5871f06f59cd321de25b348df5ad92d8cfa8f4736a0718d62c620b01",
+  "bytes": 29638,
+  "pack_recorded_digest": "536a6a7b5871f06f59cd321de25b348df5ad92d8cfa8f4736a0718d62c620b01",
+  "pack_recorded_bytes": 29638,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-18T13:26:53Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}
