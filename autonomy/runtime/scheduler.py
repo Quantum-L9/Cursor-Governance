@@ -25,6 +25,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from autonomy.runtime.claims import claims_collide
 from autonomy.runtime.store import RuntimeStore
 from autonomy.runtime.timeutil import utc_now_text
 from autonomy.runtime.types import ScheduledAction, SchedulingCycle
@@ -421,17 +422,22 @@ class Scheduler:
         claims: Sequence[Mapping[str, Any]],
         held: Mapping[str, list[tuple[str, bool]]],
     ) -> bool:
-        """Mirror ClaimRegistry.assert_available so admission matches leasing.
+        """Pre-filter admission with the registry's own compatibility rule.
 
         Claim keys are opaque identifiers: two actions collide when they name
-        the same key and either side is exclusive or a write. The registry
-        re-checks this transactionally at lease time and remains authoritative.
+        the same key and `claims_collide` says so. The registry re-checks this
+        transactionally at lease time and remains authoritative.
         """
 
         for claim in claims:
             key, mode, exclusive = self._claim_shape(claim)
             for existing_mode, existing_exclusive in held.get(key, ()):
-                if exclusive or existing_exclusive or "write" in {mode, existing_mode}:
+                if claims_collide(
+                    mode=mode,
+                    exclusive=exclusive,
+                    other_mode=existing_mode,
+                    other_exclusive=existing_exclusive,
+                ):
                     return True
         return False
 

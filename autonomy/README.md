@@ -347,9 +347,15 @@ Concurrency never expands authority.
 | Claims | claim registry | Mutation collision prevention |
 
 `fill_policy: saturate` (the default) means the scheduler admits **every**
-remaining legal action until one of those bounds is hit. `min_concurrency` and
-`target_concurrency` are descriptive under saturation — the scheduler never
-manufactures or promotes work to reach a floor.
+remaining legal action until one of those bounds is hit.
+
+Behavioral global fields: `provider_concurrency_ceiling`,
+`reserved_control_slots`, `fill_policy`, `adaptive_backpressure`. Descriptive
+fields, kept because they document intent: `target_total_concurrency`,
+`force_parallel_ready_actions`, `backfill`, `mutation_parallelism`,
+`read_parallelism`, and per-class `target_concurrency` / `min_concurrency` —
+saturation already admits everything legal, and the scheduler never manufactures
+or promotes work to reach a floor.
 
 ## Caller batch limits cannot serialize the swarm
 
@@ -376,9 +382,10 @@ mutate-a     claim repo:shared        ┐
 mutate-b     claim repo:shared        ┴─ one admitted, one stays READY
 ```
 
-The scheduler pre-filters using the same rule the claim registry enforces
-(same key, and either side exclusive or a write), and `ClaimRegistry` re-checks
-transactionally when the lease is issued — it remains authoritative.
+`autonomy.runtime.claims.claims_collide` is the single compatibility rule:
+the registry enforces it transactionally at lease time (and stays
+authoritative), the scheduler pre-filters admission with it, and the linter uses
+it to tell a real ordering constraint from a serialization-only edge.
 
 **Known limitation:** claim keys are opaque identifiers, so `repo:addons/auth`
 and `repo:addons/auth/security.py` do **not** collide. Overlapping scopes must
@@ -439,9 +446,19 @@ never flagged.
 `autonomy.adapters.claude_code.adapter.BACKGROUND_ROLES` runs every
 parallel-safe analytical role in the background: `context_compiler`, `recon`,
 `synthesis`, `verifier`, `reviewer`, `failure_classifier`, `poller`, `sentinel`,
-`evidence_writer`. Mutation roles stay in the foreground. Leases, mandatory
-hooks, claims, and `L9_DIRECT_TOOL_ACCESS=0` / `L9_AUTONOMOUS_MERGE=0` are
-identical either way.
+`evidence_writer`.
+
+Mutation roles (`MUTATION_ROLES`) are foreground by default and background on
+request:
+
+```python
+build_claude_task(deployment, background_mutation_roles=True)
+```
+
+That flag only decides whether one orchestrating session detaches its writers —
+the scheduler already admits non-conflicting mutations concurrently either way.
+Leases, mandatory hooks, heartbeats, claims, and `L9_DIRECT_TOOL_ACCESS=0` /
+`L9_AUTONOMOUS_MERGE=0` are identical in both modes.
 
 ## Editing policies
 

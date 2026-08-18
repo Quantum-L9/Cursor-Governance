@@ -12,6 +12,7 @@ from autonomy.models import (
     DeploymentManifest,
     Role,
 )
+from autonomy.runtime.claims import claims_collide
 
 
 @dataclass(frozen=True)
@@ -443,14 +444,19 @@ class GraphLinter:
 
 
 def _claims_conflict(left: Action, right: Action) -> bool:
-    """Mirror the claim registry: same key, and either side exclusive/write."""
+    """Whether two actions contend for the same resource key."""
 
     right_claims = {claim.key: claim for claim in right.claims}
     for claim in left.claims:
         other = right_claims.get(claim.key)
         if other is None:
             continue
-        if claim.exclusive or other.exclusive or "write" in {claim.mode, other.mode}:
+        if claims_collide(
+            mode=claim.mode,
+            exclusive=claim.exclusive,
+            other_mode=other.mode,
+            other_exclusive=other.exclusive,
+        ):
             return True
     return False
 

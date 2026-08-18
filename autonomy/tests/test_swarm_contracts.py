@@ -10,7 +10,11 @@ from __future__ import annotations
 
 import unittest
 
-from autonomy.adapters.claude_code.adapter import BACKGROUND_ROLES, build_claude_task
+from autonomy.adapters.claude_code.adapter import (
+    BACKGROUND_ROLES,
+    MUTATION_ROLES,
+    build_claude_task,
+)
 from autonomy.compiler.graph_compiler import compile_graph
 from autonomy.errors import GraphValidationError
 from autonomy.models import CampaignAuthorization, DeploymentManifest
@@ -238,9 +242,22 @@ class BackgroundRoleTests(unittest.TestCase):
                 msg=f"{role} must not be serialized in the foreground",
             )
 
-    def test_mutation_roles_stay_in_the_foreground(self) -> None:
-        for role in ("executor", "remediator"):
+    def test_mutation_roles_stay_in_the_foreground_by_default(self) -> None:
+        for role in MUTATION_ROLES:
             self.assertFalse(build_claude_task(self.deployment(role))["run_in_background"])
+
+    def test_mutation_background_execution_is_opt_in(self) -> None:
+        for role in MUTATION_ROLES:
+            task = build_claude_task(
+                self.deployment(role),
+                background_mutation_roles=True,
+            )
+            self.assertTrue(task["run_in_background"])
+            # Detaching the task must not relax any enforcement surface.
+            self.assertEqual(task["environment"]["L9_DIRECT_TOOL_ACCESS"], "0")
+            self.assertEqual(task["environment"]["L9_AUTONOMOUS_MERGE"], "0")
+            self.assertTrue(task["hooks"]["pre_tool_use"]["fail_closed"])
+            self.assertTrue(task["hooks"]["heartbeat"]["required"])
 
     def test_background_execution_never_relaxes_enforcement(self) -> None:
         task = build_claude_task(self.deployment("recon"))
