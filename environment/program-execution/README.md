@@ -58,3 +58,49 @@ BLOCKED. Claude probes stay BLOCKED when the `claude` executable is
 absent. DeepSeek is not a Program Execution provider.
 
 Claude `backend_mode` and `model_hint` are probe evidence only.
+
+## Fast path (execution productivity)
+
+A campaign must start producing implementation work in minutes, not hours.
+Preparation is bounded and, on a provisioned local repository, is expected to
+reach the first executable task in well under 5 minutes.
+
+```bash
+make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md> CAMPAIGN_ARGS=--fast
+# or, equivalently
+L9_PE_MODE=fast make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md>
+```
+
+Fast mode relaxes **ceremony only**. Merge authority, publish authority,
+writable-path restrictions, dependency correctness and controller verification
+before completion are unchanged.
+
+| Surface | What it does |
+|---|---|
+| `scripts/launchability.py` | Pre-bootstrap check that execution is possible at all; infers a validation command from repository convention when a task declares none |
+| `scripts/pe_worker.py` | Worker handoff — renders the task brief and invokes `L9_PE_WORKER_CMD` so implementation tasks reach a worker before verification |
+| `scripts/pe_timing.py` | Stage timings (`runtime/TIMINGS.json`), fingerprint-keyed reuse of preparation, and separated progress dimensions (`runtime/PROGRESS.json`) |
+| `pec/exec_env.py` | One resolved interpreter for worker-side and controller-side validation |
+| `pec/workspace_reset.py` | `pec fresh-workspace` — idempotent recovery of task worktrees, registrations, branches and leases |
+
+### Worker configuration
+
+`L9_PE_WORKER_CMD` is a command template expanded with `{task_id}`,
+`{worktree}` and `{brief}`; the same values also arrive as `L9_PE_TASK_ID`,
+`L9_PE_WORKTREE`, `L9_PE_BRIEF` and `L9_PE_CONTRACT`. An implementation task
+that reaches verification with an unmodified worktree fails as an
+execution-path defect rather than verifying zero implementation. Tasks whose
+`execution_kind` is an inspection kind (`analysis`, `inspection`, `decision`,
+`program_control`, `review`) are exempt.
+
+### Health check
+
+```bash
+make -C "$HOME/.cursor-governance" pe-smoke
+```
+
+The two-task smoke campaign runs a real worker end to end — compile →
+launchability → admission → bootstrap → claim → worker handoff → modification
+→ validation → verify → complete → dependency advance → TASK-002 — and then
+again after a simulated interruption and reset. Run it first whenever a
+campaign "prepares forever but never writes code".

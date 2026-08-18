@@ -95,7 +95,8 @@ campaign:
 	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
 	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
 	  --intent "$(INTENT)" \
-	  --until "$(or $(CAMPAIGN_UNTIL),merge)"
+	  --until "$(or $(CAMPAIGN_UNTIL),merge)" \
+	  $(CAMPAIGN_ARGS)
 
 .PHONY: campaign-stack-base
 ## Print the next campaign PR base from $L9_ROOT/programs/$CAMPAIGN_ID/runtime/STACK.json.
