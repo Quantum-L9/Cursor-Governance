@@ -170,12 +170,11 @@ def invoke_worker(
     before = worktree_fingerprint(worktree)
     started = time.monotonic()
     try:
-        # nosemgrep: dangerous-subprocess-use-tainted-env-args - argv form, no
-        # shell; argv[0] is PATH-resolved and interpolated values cannot split
-        # into extra arguments. The command itself is operator configuration:
-        # whoever sets it already controls this process.
+        # argv form, no shell; argv[0] is PATH-resolved and interpolated values
+        # cannot split into extra arguments. The command itself is operator
+        # configuration: whoever sets it already controls this process.
         completed = subprocess.run(  # noqa: S603
-            argv,
+            argv,  # nosemgrep: dangerous-subprocess-use-tainted-env-args
             cwd=str(worktree),
             text=True,
             capture_output=True,
