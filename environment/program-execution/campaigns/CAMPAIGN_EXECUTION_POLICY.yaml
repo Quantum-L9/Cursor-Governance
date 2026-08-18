@@ -102,6 +102,13 @@ campaigns:
       - bounded-replanning-v1
       - cc-pe-intent-compiler-v1
       - l9-devpack-program-execution-hardening
+  - id: pe-seo-bot-build-intelligence-hardening-v2
+    integration_branch: campaign/pe-seo-bot-build-intelligence-hardening-v2
+    pr_base: campaign/pe-seo-bot-build-intelligence-hardening-v2
+    execute_order: 8
+    lane: compiled
+    lifecycle: in_progress
+    launched_by: make campaign
 
 owner:
   authority_id: AUTH-001
