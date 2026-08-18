@@ -20,10 +20,14 @@ command -v pre-commit >/dev/null 2>&1 || {
   exit 1
 }
 
-tmp="$(mktemp)"
-trap 'rm -f "$tmp"' EXIT
-PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
-  >"$tmp" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
+if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
+  tmp="$PR_CHANGED_FILE"
+else
+  tmp="$(mktemp)"
+  trap 'rm -f "$tmp"' EXIT
+  PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
+    >"$tmp" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
+fi
 
 if [[ ! -s "$tmp" ]]; then
   echo "OK: no changed files for pre-commit"

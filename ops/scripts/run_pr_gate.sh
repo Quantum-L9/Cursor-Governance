@@ -15,6 +15,33 @@ PR_MYPY_STRICT="${PR_MYPY_STRICT:-0}"
 cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
 
+_GATE_RECEIPT="$WS/.l9/pr/gate-receipt.json"
+_gate_state_digest() {
+  local head porcelain
+  head="$(git rev-parse HEAD 2>/dev/null || echo none)"
+  porcelain="$(git status --porcelain | cksum | awk '{print $1}')"
+  printf '%s %s %s' "$head" "$porcelain" "$PR_BASE"
+}
+_gate_receipt_matches() {
+  [[ -f "$_GATE_RECEIPT" ]] || return 1
+  python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
+import json, sys
+path, current = sys.argv[1], sys.argv[2]
+try:
+    doc = json.loads(open(path, encoding="utf-8").read())
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1)
+want = f"{doc.get('head', '')} {doc.get('worktree_digest', '')} {doc.get('pr_base', '')}"
+raise SystemExit(0 if want == current else 1)
+PY
+}
+
+if _gate_receipt_matches; then
+  echo "OK: gate receipt matches unchanged state — skipping full validation"
+  echo "RESULT: PASS — local PR gate clean (receipt reuse)"
+  exit 0
+fi
+
 # Isolates are not a uv project. Bind PATH/UV_PROJECT to the donor or
 # $HOME/.cursor-governance locked venv before any uv run/sync.
 _isolate_venv_existed=0
@@ -58,6 +85,7 @@ if repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}"; then
 else
   echo "WARN: $(repo_write_lock_skip_note "$WS") — continuing; concurrent writes may be misattributed"
 fi
+trap 'repo_write_lock_release' EXIT
 
 # Always-run governance contract surface: cheap, changed-file-INDEPENDENT.
 # A Markdown/YAML/config-only mutation must never bypass the checks that prove
@@ -81,6 +109,29 @@ precommit_log="$(mktemp)"
 py_list="$(mktemp)"
 trap 'rm -f "$status_before" "$changed_file" "$precommit_log" "$py_list"; repo_write_lock_release' EXIT
 git status --porcelain >"$status_before"
+
+_gate_write_receipt() {
+  mkdir -p "$WS/.l9/pr"
+  python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
+import json, sys
+from datetime import datetime, timezone
+
+path = sys.argv[1]
+head, digest, pr_base = sys.argv[2].split(" ", 2)
+doc = {
+    "schema": "l9.pr_gate_receipt.v1",
+    "head": head,
+    "worktree_digest": digest,
+    "pr_base": pr_base,
+    "passed_at": datetime.now(timezone.utc)
+    .replace(microsecond=0)
+    .isoformat()
+    .replace("+00:00", "Z"),
+}
+open(path, "w", encoding="utf-8").write(json.dumps(doc, indent=2) + "\n")
+print(f"gate receipt written: {path}")
+PY
+}
 
 # Two dirtiness domains, deliberately reported apart:
 #   tracked   — git diff, exactly what pre-commit compares (run.py _get_diff)
@@ -126,11 +177,21 @@ _gate_classify_dirtiness() {
 _gate_run_precommit() {
   local rc=0
   set +e
-  bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
+  PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
   rc="${PIPESTATUS[0]}"
   set -e
   return "$rc"
 }
+
+# Resolve once, before pre-commit. Soft-empty: nothing to gate is PASS.
+PR_ALLOW_EMPTY=1 PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
+  >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
+if [[ ! -s "$changed_file" ]]; then
+  echo "OK: nothing to gate vs $PR_BASE (no committed or working-tree changes outside scratch)"
+  _gate_write_receipt
+  echo "RESULT: PASS — local PR gate clean (nothing to gate)"
+  exit 0
+fi
 
 _gate_run_precommit && precommit_rc=0 || precommit_rc=$?
 
@@ -184,9 +245,6 @@ if ! _gate_classify_dirtiness "pre-commit"; then
     exit 1
   fi
 fi
-
-PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
-  >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
 
 echo "--- ruff (changed Python) ---"
 py_count=0
@@ -361,4 +419,5 @@ if ! _scratch_hold_status; then
   exit 1
 fi
 
+_gate_write_receipt
 echo "RESULT: PASS — local PR gate clean (changed files only)"

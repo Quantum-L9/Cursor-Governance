@@ -817,3 +817,28 @@ nothing. SSOT: `rules/53-pr-overlap-guardrail.mdc`; policy keys live under
 6. Fail-open on missing telemetry (gh unavailable / api failure) so network
    loss never bricks the publish path; fail-closed on a detected
    non-generated textual conflict.
+
+<!-- PR_LIFECYCLE_CAPABILITY_GRAPH_V1 -->
+## make improve / pr-check / pr (2026-08-17) — capability graph + failure loop
+
+Authoritative corrections (do not treat older `l4_local.py begin && record-kernels
+&& authorize-release` bullets as the happy path):
+
+1. Makefile is a capability graph. **PUBLIC** verbs: `improve`, `pr-check`, `pr`.
+   **INTERNAL** leaf: `pr-preflight` (do not invoke as a shipping command).
+2. `make improve` composes the existing `l4-begin` / `l4-record-kernels` /
+   `l4-authorize` wrappers. Apply `kernels/Recursive Alignment.md` then
+   `kernels/Validate & Repair.md`, commit revisions, then
+   `make improve IMPROVE_RECORD=1`.
+3. `make pr-check` is quality only (lint/ruff/pytest/security). No L4. An empty
+   changeset vs `PR_BASE` is PASS (`OK: nothing to gate`). A PASS writes
+   `.l9/pr/gate-receipt.json`. The same HEAD + worktree + `PR_BASE` is not
+   re-gated.
+4. Single path to GitHub = **mutation** (push / PR create / update / merge).
+   `improve` and `pr-check` do not publish. Raw `git push` / `gh pr create`
+   remain leaves of `make pr` only.
+5. Failure loop: diagnose → fix → (`make improve` if kernels apply) →
+   `make pr-check` → `make pr` **once** to publish. Do not run a second full
+   gate on an unchanged tree (`pr-check && make pr` reuses the receipt).
+6. `make pr` runs INTERNAL `pr-preflight` (branch, commits-ahead, L4 receipt)
+   then `pr-check` (receipt skip if unchanged) then `open_pr_after_gate.sh`.
