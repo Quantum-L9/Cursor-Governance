@@ -418,7 +418,7 @@ if ! "$GOV_PY" -c 'import pydantic, yaml' 2>/dev/null; then
 fi
 "$GOV_PY" -c 'import jsonschema' 2>/dev/null \
   && say "gates importable: pydantic + pyyaml + jsonschema (locked env)" \
-  || { warn "jsonschema import FAILING — phase-lock and governed writes will be denied"
+  || { warn "jsonschema import FAILING — governed writes will be denied"
        DEGRADED=$((DEGRADED + 1)); }
 
 if [ "${USER_ID:-}" = "cursor_agent" ] && [ "$SURFACE" != "cursor" ]; then

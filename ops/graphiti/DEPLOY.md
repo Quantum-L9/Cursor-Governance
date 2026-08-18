@@ -52,7 +52,7 @@ python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py resolve
 
 ```bash
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py bootstrap --dry-run --group-id sandbox-test
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py phase-lock
+python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts
 bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 ```
 
