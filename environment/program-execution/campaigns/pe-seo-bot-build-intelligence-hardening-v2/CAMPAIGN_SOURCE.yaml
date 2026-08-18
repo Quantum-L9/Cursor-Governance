@@ -1,0 +1,766 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+plan_status: Ready
+metadata:
+  campaign_id: pe-seo-bot-build-intelligence-hardening-v2
+  title: PE SEO-Bot Build Intelligence Hardening
+  version: 1.0.0
+  created_at: '2026-08-18T16:15:07Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/SEO-Bot
+  intended_drop_path: environment/program-execution/campaigns/pe-seo-bot-build-intelligence-hardening-v2/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/pe-seo-bot-build-intelligence-hardening-v2
+  worktree_root: $HOME/.l9/program-worktrees/pe-seo-bot-build-intelligence-hardening-v2
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+operator_directive:
+  objective: SEO-Bot becomes a least-privilege machine-auth surface with a 3-second authenticated
+    preflight instead of 20-minute late failures, a bounded billable-aware DataForSEO retry,
+    a full-site SEO blueprint produced by deterministic batching with one sealed artifact
+    that never accepts partial route coverage, and structured content generated under an exact
+    prompt contract with one true repair per route — each stage proven by regression tests
+    before the cross-repo seam runs.
+  mode: controlled_autonomous_until_material_boundary
+  policy_profile: quantum-l9.safe-autonomy.v1
+  prohibited_actions:
+  - force_push
+  - admin_merge
+  - deploy
+  - weaken_validators
+  - delete_tests_for_pass
+program:
+  id: pe-seo-bot-build-intelligence-hardening-v2
+  name: PE SEO-Bot Build Intelligence Hardening
+  version: 1.0.0
+  owner: Igor Beylin
+  definition_status: ready
+  plan_status: Ready
+  snapshot_at: '2026-08-18'
+  objective: SEO-Bot becomes a least-privilege machine-auth surface with a 3-second authenticated
+    preflight instead of 20-minute late failures, a bounded billable-aware DataForSEO retry,
+    a full-site SEO blueprint produced by deterministic batching with one sealed artifact
+    that never accepts partial route coverage, and structured content generated under an exact
+    prompt contract with one true repair per route — each stage proven by regression tests
+    before the cross-repo seam runs.
+  problem_statement: SEO-Bot becomes a least-privilege machine-auth surface with a 3-second
+    authenticated preflight instead of 20-minute late failures, a bounded billable-aware DataForSEO
+    retry, a full-site SEO blueprint produced by deterministic batching with one sealed artifact
+    that never accepts partial route coverage, and structured content generated under an exact
+    prompt contract with one true repair per route — each stage proven by regression tests
+    before the cross-repo seam runs.
+  target_state: SEO-Bot becomes a least-privilege machine-auth surface with a 3-second authenticated
+    preflight instead of 20-minute late failures, a bounded billable-aware DataForSEO retry,
+    a full-site SEO blueprint produced by deterministic batching with one sealed artifact
+    that never accepts partial route coverage, and structured content generated under an exact
+    prompt contract with one true repair per route — each stage proven by regression tests
+    before the cross-repo seam runs.
+  scope:
+    include:
+    - repository_origin_main
+    exclude:
+    - new repositories
+    - force_push
+    - admin_merge
+    - deploy
+    - production migration
+  contracts:
+    pair: program-execution-system.v2
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - latest_explicit_operator_instruction
+  - accepted_program_definition
+  - implementation
+  - UNKNOWN
+  operating_rules:
+  - one_authority_per_responsibility
+  - mutable_runtime_state_remains_outside_git
+  - no_silent_scope_expansion
+  - worker_claim_is_not_verification
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE
+targets:
+- id: TARGET-001
+  name: Quantum-L9/SEO-Bot
+  kind: git_repository
+  authority_owner: Quantum-L9/SEO-Bot
+  execution_mode: repo_local
+  repository_id: Quantum-L9/SEO-Bot
+  source_of_truth: repository_origin_main
+  environments:
+  - local
+  - ci
+  mutability: reversible
+  expected_revision: UNKNOWN
+  adapter: git
+authorities:
+- id: AUTH-001
+  responsibility: campaign_owner
+  owner: Igor Beylin
+workstreams:
+- id: WS-01
+  name: PE SEO-Bot Build Intelligence Hardening
+  owner: AUTH-001
+  objective: SEO-Bot becomes a least-privilege machine-auth surface with a 3-second authenticated
+    preflight instead of 20-minute late failures, a bounded billable-aware DataForSEO retry,
+    a full-site SEO blueprint produced by deterministic batching with one sealed artifact
+    that never accepts partial route coverage, and structured content generated under an exact
+    prompt contract with one true repair per route — each stage proven by regression tests
+    before the cross-repo seam runs.
+dependency_edges:
+- from: TASK-001
+  to: TASK-002
+- from: TASK-002
+  to: TASK-003
+- from: TASK-003
+  to: TASK-004
+- from: TASK-004
+  to: TASK-005
+- from: TASK-005
+  to: TASK-006
+waves:
+- id: W0
+  name: admission_and_first_ready_task
+  task_ids:
+  - TASK-001
+  predecessor_wave_ids: []
+  exit_gate_ids:
+  - GATE-001
+- id: W1
+  name: remaining_tasks
+  task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  - TASK-006
+  predecessor_wave_ids:
+  - W0
+  exit_gate_ids:
+  - GATE-002
+  - GATE-003
+  - GATE-004
+  - GATE-005
+  - GATE-006
+tasks:
+- id: TASK-001
+  title: Adopt the exact Router patch version
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Update the manifest and lockfile to pin the exact promoted Router patch version
+    (no caret, no latest, no star), run npm ci, and prove the installed dependency with npm
+    ls @quantum-l9/llm-router. Run the LLM policy tests, build-intelligence tests, and verify:all
+    as applicable. The final invariant is: SEO-Bot Router version equals Website-Bot Router
+    version equals the promoted Router patch.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - package.json
+  - package-lock.json
+  - docs/program-execution/TASK-001.md
+  nugget_id: NUG-001
+  kernel_profile: BUILD
+  consumers:
+  - package.json
+  - package-lock.json
+  entrypoints:
+  - package.json
+  validation:
+  - check: npm ls @quantum-l9/llm-router
+    command: npm ls @quantum-l9/llm-router
+    evidence: command exit code 0 on the finished tree
+  - check: npm test
+    command: npm test
+    evidence: command exit code 0 on the finished tree
+  - check: npm run verify:all
+    command: npm run verify:all
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Pin the exact promoted Router patch version in the manifest and lockfile (no caret, latest,
+    or star)
+  - Run npm ci
+  - Prove the installed dependency with npm ls @quantum-l9/llm-router
+  - Run LLM policy tests, build-intelligence tests, and verify:all
+  acceptance:
+  - id: AC-adop-NUG-001
+    statement: npm ls @quantum-l9/llm-router proves the installed exact promoted patch and
+      the LLM policy and build-intelligence test suites pass
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: Machine-auth contract for build intelligence
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Fix the auth mismatch: build-intelligence routes are protected by OPERATOR_API_KEY
+    today while Website-Bot authenticates with SEO_BOT_API_KEY. Make build intelligence a
+    machine-auth surface: the build-intelligence route namespace requires SEO_BOT_API_KEY,
+    the client register route requires SEO_BOT_API_KEY, other protected operator routes require
+    OPERATOR_API_KEY, and health stays public. Do not exempt build-intelligence routes from
+    authentication — they get their own machine-key validation. Fail closed when no machine
+    key is configured. Add the required auth tests: valid machine key accepted, invalid machine
+    key 401, no configured machine key fails closed, operator key only rejected (unless an
+    explicit dual-authority policy is chosen and documented), dashboard with machine key rejected,
+    dashboard with operator key accepted.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/api/security.ts
+  - src/api/index.ts
+  - docs/program-execution/TASK-002.md
+  - tests/api/security.test.ts
+  - tests/api/build-intelligence.test.ts
+  - tests/api/index.test.ts
+  - tests/api/dashboard.test.ts
+  nugget_id: NUG-002
+  kernel_profile: BUILD
+  consumers:
+  - src/api/security.ts middleware
+  - src/api/index.ts route wiring
+  - Website-Bot SeoBuildIntelligenceHttpClient (remote consumer)
+  entrypoints:
+  - src/api/security.ts
+  - src/api/index.ts
+  validation:
+  - check: npm test -- auth tests
+    command: npm test -- auth tests
+    evidence: command exit code 0 on the finished tree
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Route build-intelligence namespace auth to SEO_BOT_API_KEY machine validation
+  - Route client register auth to SEO_BOT_API_KEY
+  - Keep other protected operator routes on OPERATOR_API_KEY and health public
+  - Fail closed when no machine key is configured
+  - Add the required auth tests (valid/invalid key, unconfigured, operator-key-only, dashboard+key
+    matrix)
+  acceptance:
+  - id: AC-mach-NUG-002
+    statement: build-intelligence and client-register routes accept only a valid machine key,
+      fail closed when unconfigured, and operator routes still require the operator key per
+      the auth test matrix
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-003
+  title: Authenticated build-intelligence preflight
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'Add a machine-authenticated preflight route under the build-intelligence namespace,
+    making no LLM call and no DataForSEO paid call. It returns only non-secret readiness metadata:
+    status, service, version, bot_interop_version, llm_router_version, capabilities (competitive_landscape,
+    seo_content_blueprint, structured_content), and configuration (dataforseo_configured,
+    llm_provider_configured). Never return key values. Add tests for the readiness states
+    and for auth failures on the preflight route.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/api/build-intelligence.ts
+  - src/api/index.ts
+  - docs/program-execution/TASK-003.md
+  - tests/api/build-intelligence.test.ts
+  nugget_id: NUG-003
+  kernel_profile: BUILD
+  consumers:
+  - src/api/build-intelligence.ts
+  - Website-Bot REDESIGN preflight caller (future consumer)
+  entrypoints:
+  - src/api/build-intelligence.ts
+  - src/api/index.ts
+  validation:
+  - check: npm test -- preflight tests
+    command: npm test -- preflight tests
+    evidence: command exit code 0 on the finished tree
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add GET preflight route under the build-intelligence namespace with machine auth
+  - Return only non-secret readiness metadata (status, service, version, bot_interop_version,
+    llm_router_version, capabilities, configuration)
+  - Make no LLM call and no DataForSEO paid call
+  - Add tests for readiness states and auth failures
+  acceptance:
+  - id: AC-auth-NUG-003
+    statement: the preflight route answers with non-secret readiness metadata without any
+      LLM or DataForSEO call, and returns 401 without a valid machine key
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+- id: TASK-004
+  title: Bounded DataForSEO transient retry
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'The current client makes one Axios request with a 30-second timeout and maps
+    transport failures straight to DATAFORSEO_UNAVAILABLE. Add a bounded retry: one initial
+    attempt plus at most one retry, retrying only transient transport or provider conditions
+    (429, 502, 503, 504, connection reset or establishment failure, bounded timeout where
+    policy permits). Never retry 400, 401, 403, invalid credentials, task-level DataForSEO
+    errors, malformed provider results, SERP_EVIDENCE_INVALID, or deterministic validation
+    errors. Keep the delay small: about 500 ms, honoring Retry-After capped at about 2 seconds.
+    Record endpoint, attempt, HTTP status or error class, and retry flag — never credentials
+    or auth headers. Record provider_attempts in CompetitiveLandscape evidence since DataForSEO
+    requests are billable. Do not add retries around SEO-Bot LLM-producing HTTP endpoints
+    from Website-Bot yet.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/services/dataforseo.ts
+  - src/build-intelligence/competitive-landscape.ts
+  - docs/program-execution/TASK-004.md
+  - tests/services/dataforseo.test.ts
+  - tests/services/dataforseo-serp-integrity.test.ts
+  nugget_id: NUG-004
+  kernel_profile: BUILD
+  consumers:
+  - src/services/dataforseo.ts
+  - src/build-intelligence/competitive-landscape.ts evidence
+  entrypoints:
+  - src/services/dataforseo.ts
+  validation:
+  - check: npm test -- dataforseo tests
+    command: npm test -- dataforseo tests
+    evidence: command exit code 0 on the finished tree
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add one initial attempt plus at most one retry for transient conditions only (429, 502,
+    503, 504, connection reset or establishment failure)
+  - Never retry 4xx, invalid credentials, task-level errors, malformed results, or deterministic
+    validation errors
+  - Use about 500 ms delay honoring Retry-After capped at about 2 seconds
+  - Record endpoint, attempt, status or error class, and retry flag without credentials
+  - Record provider_attempts in CompetitiveLandscape evidence
+  acceptance:
+  - id: AC-boun-NUG-004
+    statement: exactly one retry occurs only for transient transport or provider conditions,
+      attempts and statuses are recorded without credentials, and provider_attempts appears
+      in CompetitiveLandscape evidence
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-004
+- id: TASK-005
+  title: Two-phase full-site SEO blueprint batching
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'createSEOContentBlueprint currently puts the entire request.routes array into
+    one prompt and one strategize call. Keep the final artifact as one SEOContentBlueprint
+    but produce it in two phases. Phase A generates a compact GlobalRouteIntent plan for all
+    routes (route_id, primary_query, primary_intent, journey_stage) in one small call, validated
+    for exact route count, exact route IDs, no missing or extra routes, and no duplicate normalized
+    primary_query unless explicitly allowed. Phase B splits routes into deterministic batches
+    of 4 (hard constant, the LLM never chooses batching); every batch prompt carries market,
+    query portfolio, selected donors, normalized donor evidence, the all-route index (route_id,
+    path, purpose), the global route intent plan, the current batch full route records, business
+    facts, SEO config, and the output contract. Split reconciliation authorities: output route
+    IDs must equal batch route IDs exactly, internal-link targets must belong to the all-route
+    ID set, route identity is reasserted from the request, and primary query and top-level
+    intent are reasserted from the global intent plan. After all batches pass, merge deterministically
+    in request order and run a whole-site semantic validator: same route count, exact order
+    and paths, no duplicate route IDs, no unknown internal-link targets, no self-links, no
+    duplicate requirement IDs, all target slots valid, no unintended duplicate primary queries.
+    Only then seal the single artifact. A batch that fails its one bounded repair raises SEO_CONTENT_BLUEPRINT_BATCH_INVALID
+    and fails the whole artifact — never seal a partial route set as success. Preserve the
+    existing route-identity and ContentSlot vocabulary validation rather than creating parallel
+    schemas. Add the regression suite: 1, 4, 5, 8, 29, and 40 routes; batch malformed; batch
+    missing a route; batch returning another batch route; cross-batch internal link; unknown
+    internal-link target; duplicate primary query; batch repair succeeds; batch repair fails.
+    Acceptance for Safe Haven: requested 29, produced 29, batch coverage 29/29, missing 0,
+    extra 0, artifact lineage exact CompetitiveLandscape.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/build-intelligence/seo-content-blueprint.ts
+  - src/api/build-intelligence.ts
+  - docs/program-execution/TASK-005.md
+  - tests/build-intelligence/seo-content-blueprint.test.ts
+  - tests/build-intelligence/interop-parity.test.ts
+  nugget_id: NUG-005
+  kernel_profile: BUILD
+  consumers:
+  - src/build-intelligence/seo-content-blueprint.ts
+  - src/api/build-intelligence.ts route handler
+  entrypoints:
+  - src/build-intelligence/seo-content-blueprint.ts
+  - src/api/build-intelligence.ts
+  validation:
+  - check: npm test -- blueprint tests incl. 29-route acceptance
+    command: npm test -- blueprint tests incl. 29-route acceptance
+    evidence: command exit code 0 on the finished tree
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add Phase A GlobalRouteIntent compact plan generation for all routes with exact count
+    and ID validation
+  - Split routes into deterministic batches of 4 with the all-route index in every batch prompt
+  - 'Split reconciliation authorities: output route IDs equal batch route IDs, internal-link
+    targets within all-route IDs, identity and strategy reasserted from request and global
+    plan'
+  - Merge deterministically in request order and run the whole-site semantic validator before
+    sealing
+  - Raise SEO_CONTENT_BLUEPRINT_BATCH_INVALID on failed batch repair; never seal partial coverage
+  - 'Add the regression suite: 1/4/5/8/29/40 routes plus batch failure and repair cases'
+  acceptance:
+  - id: AC-two--NUG-005
+    statement: a 29-route request yields one sealed SEOContentBlueprint with 29 routes in
+      exact order and exact paths, batch coverage 29/29, missing 0, extra 0, artifact lineage
+      matching the exact CompetitiveLandscape, and a failed batch repair fails the whole artifact
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-005
+- id: TASK-006
+  title: StructuredContent schema reliability and one-repair budget
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: 'The runtime validator is strict but the generation prompt only says produce
+    one section object per contract section_id and never teaches the blocks union, which produces
+    content: "..." instead of blocks: [...]. Add one reusable prompt contract adjacent to
+    the runtime schema guard spelling the exact shape: route_id, path, metadata (title, description),
+    sections (section_id, optional eyebrow, heading, subheading, blocks of kind paragraph
+    with text, bullets with items, steps with items, or quote with text and optional attribution,
+    optional cta with label and action), faqs, internal_links, and schema_content_inputs.
+    Explicitly describe each block variant and state the forbidden field aliases: content,
+    body, copy, html, paragraphs — section prose must exist exclusively inside blocks. The
+    Zod schema remains final authority. Fix the repair-budget bug: executePolicyJson performs
+    one internal JSON/schema repair, and the structured-content layer can call generateRoute
+    again after semantic failure, so one route can consume up to four generation calls. Extend
+    the LLM utility with a schemaRepairAttempts option (0 or 1, default 1 so existing callers
+    do not change) and have StructuredContentPackage call it with 0 so the structured-content
+    orchestrator owns the one total repair. The correct sequence is: generation one, JSON
+    parse plus schema validation, content validation; any failure enters one route repair
+    whose prompt carries exact failure evidence (schema_failures with path and message, failed_requirements,
+    unsupported_claims) and the exact output contract again; the repaired output passes full
+    validation or the route fails terminally. Maximum two generation LLM calls per route and
+    one repair per route, with no hidden nested repair. Evidence must count actual calls:
+    route_count, generation_llm_calls, semantic_validation_llm_calls, repair_attempts, schema_failure_count,
+    repaired_route_ids, with repair_attempts at most route_count and at most one per route.
+    Do not add a permissive content-to-blocks converter — bad model output stays visible and
+    repairable, never silently normalized. Add the regression cases: section uses content
+    instead of blocks, missing blocks, blocks is a string, unknown block kind, paragraph missing
+    text, bullets missing items, extra section, missing section, wrong section ID, wrong route
+    ID, malformed metadata, unsupported factual claim, first malformed then repair valid,
+    first malformed then repair malformed, semantic failure then repair valid, semantic failure
+    then repair still fails.'
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - src/build-intelligence/structured-content.ts
+  - src/services/llm.ts
+  - src/build-intelligence/schema-guards.ts
+  - docs/program-execution/TASK-006.md
+  - tests/build-intelligence/structured-content.test.ts
+  - tests/services/llm.test.ts
+  - tests/services/llm-parse.test.ts
+  nugget_id: NUG-006
+  kernel_profile: BUILD
+  consumers:
+  - src/build-intelligence/structured-content.ts
+  - src/services/llm.ts executePolicyJson
+  - src/build-intelligence/schema-guards.ts
+  entrypoints:
+  - src/build-intelligence/structured-content.ts
+  - src/services/llm.ts
+  validation:
+  - check: npm test -- structured content tests
+    command: npm test -- structured content tests
+    evidence: command exit code 0 on the finished tree
+  - check: npm run typecheck
+    command: npm run typecheck
+    evidence: command exit code 0 on the finished tree
+  actions:
+  - Add STRUCTURED_CONTENT_OUTPUT_CONTRACT with the exact blocks union and forbidden aliases
+    (content, body, copy, html, paragraphs)
+  - Add schemaRepairAttempts option (0 or 1, default 1) to executePolicyJson
+  - Have the structured-content orchestrator pass 0 and own the one total repair
+  - Put exact failure evidence in the repair prompt (schema_failures, failed_requirements,
+    unsupported_claims) plus the output contract
+  - Count actual calls in evidence and enforce max two generation calls and one repair per
+    route
+  - Add the regression cases including content-instead-of-blocks and repair-valid/repair-fails
+    pairs
+  acceptance:
+  - id: AC-stru-NUG-006
+    statement: generated sections conform to the blocks-only contract, forbidden aliases are
+      never accepted, at most two generation calls and one repair occur per route, and evidence
+      counts actual calls
+    required_evidence_types:
+    - test_results
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-006
+gates:
+- id: GATE-001
+  name: task-001_complete
+  gate_type: entry
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-001
+  required_evidence_ids: []
+  pass_criteria:
+  - Adopt the exact Router patch version acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-002
+  name: task-002_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-002
+  required_evidence_ids: []
+  pass_criteria:
+  - Machine-auth contract for build intelligence acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-003
+  name: task-003_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-003
+  required_evidence_ids: []
+  pass_criteria:
+  - Authenticated build-intelligence preflight acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-004
+  name: task-004_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-004
+  required_evidence_ids: []
+  pass_criteria:
+  - Bounded DataForSEO transient retry acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-005
+  name: task-005_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-005
+  required_evidence_ids: []
+  pass_criteria:
+  - Two-phase full-site SEO blueprint batching acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-006
+  name: task-006_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-006
+  required_evidence_ids: []
+  pass_criteria:
+  - StructuredContent schema reliability and one-repair budget acceptance is met.
+  failure_effect: block_successor_tasks
+evidence_requirements:
+- id: EVID-001
+  claim: exact_target_origin_main_revision_and_worktree_state_are_known
+  source_type: repository_inspection
+  source_location: Quantum-L9/SEO-Bot
+  collection_method: read_only_inspection
+  freshness: collect_at_admission
+  producer: controller
+  supports:
+  - TASK-001
+  contradicts: []
