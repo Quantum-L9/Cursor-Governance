@@ -132,6 +132,10 @@ RAW="$(
   } | awk 'NF' | sort -u
 )"
 if [[ -z "$RAW" ]]; then
+  if [[ "${PR_ALLOW_EMPTY:-0}" = "1" ]]; then
+    echo "SOURCE:empty" >&2
+    exit 0
+  fi
   echo "ERROR: resolved empty change set against $BASE (nothing to gate)" >&2
   exit 1
 fi

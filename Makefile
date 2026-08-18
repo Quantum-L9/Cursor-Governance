@@ -1,5 +1,6 @@
 .PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
+.PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
 .PHONY: capability-contract-validate capability-check capability-broker-preflight
 
@@ -33,6 +34,10 @@ OPEN_PR ?= 1
 # When 1 (default), after open: GitHub-subscribe + emit L9_AGENT_REQUIRED so the
 # agent spawns background l9-pr-remediation (poll_worker). PR_REMEDIATE=0 to skip.
 PR_REMEDIATE ?= 1
+
+# make improve IMPROVE_RECORD=1 records kernels + authorize-release after the
+# agent applied Recursive Alignment and Validate & Repair.
+IMPROVE_RECORD ?= 0
 
 # Locked interpreter: pyproject.toml + uv.lock (`make venv`).
 # macOS /usr/bin/make is GNU Make 3.81 — it does not export `export VAR :=`
@@ -245,6 +250,18 @@ l4-record-kernels:
 l4-authorize:
 	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" authorize-release
 
+# PUBLIC: kernel revision phase. Composes l4-begin / l4-record-kernels / l4-authorize.
+# INTERNAL leaves stay callable; agents use make improve.
+improve:
+	IMPROVE_RECORD="$(IMPROVE_RECORD)" CONTRACT_ID="$(CONTRACT_ID)" \
+	PR_BASE="$(PR_BASE)" WS="$(WS)" \
+		bash ops/scripts/run_improve.sh
+
+# INTERNAL: read-only publish predicates (branch, commits-ahead, L4 receipt).
+pr-preflight:
+	PR_BASE="$(PR_BASE)" WS="$(WS)" \
+		bash ops/scripts/pr_preflight.sh "$(WS)"
+
 
 ## Validate the multi-agent environment pack: registry naming law, identity uniqueness,
 ## role catalog, adapter consistency, no committed secrets
@@ -284,11 +301,14 @@ path-lint:
 legacy-doctrine-residue:
 	$(PYTHON) ops/scripts/validate_legacy_doctrine_residue.py
 
+## INTERNAL: full-tree of the same hook catalog `make pr-check` already runs
+## on changed files. Not a public gate. Git `pre-commit install` is not required.
 ## Full-tree pre-commit (nightly / intentional). Not used by `make pr`.
 precommit:
-	@command -v pre-commit >/dev/null 2>&1 || { echo "pre-commit not installed. Run: pip install pre-commit && pre-commit install"; exit 1; }
+	@command -v pre-commit >/dev/null 2>&1 || { echo "FAIL: pre-commit CLI missing (INTERNAL leaf of make pr-check). pipx install pre-commit — do not run pre-commit install"; exit 1; }
 	pre-commit run --all-files
 
+## INTERNAL leaf of `make pr-check` (changed-files hook catalog).
 ## Changed-files pre-commit for PR velocity.
 ## Skips machine-local symlinks-check unless WS is a local governance SSOT clone
 ## (skills/AUTONOMY_MANIFEST.yaml + rules/RULES-MANIFEST.yaml present).
@@ -371,7 +391,7 @@ pr-check: capability-contract-validate
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
 ## Requires a feature branch with commits ahead of PR_BASE.
 ## OPEN_PR=0 → gate only. PR_REMEDIATE=0 → open+subscribe without agent spawn marker.
-pr: pr-check
+pr: pr-preflight pr-check
 	@if [ "$(OPEN_PR)" = "1" ]; then \
 		PR_OVERLAP="$(PR_OVERLAP)" PR_STACK="$(PR_STACK)" \
 		PR_BASE="$(PR_BASE)" PR_REMEDIATE="$(PR_REMEDIATE)" GOV_ROOT="$(CURDIR)" \

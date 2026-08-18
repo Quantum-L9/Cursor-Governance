@@ -81,3 +81,22 @@ A hook declared `read_only` in `ops/config/precommit-hook-contract.json` that
 shows no delta on replay is exonerated — look for a concurrent writer in the
 repo-write lock ledger instead. `L9_GATE_STRICT_LEGACY=1` restores the old
 abort-on-any-non-zero behavior.
+
+
+## Failure loop and gate receipt (2026-08-17)
+
+Do **not** treat `make pr-check && make pr` as two full gates. `pr-check`
+writes `.l9/pr/gate-receipt.json`; `make pr` reuses it when HEAD, the
+worktree porcelain digest, and `PR_BASE` are unchanged.
+
+Happy path:
+
+```bash
+make improve
+# apply kernels; commit revisions
+make improve IMPROVE_RECORD=1
+make pr-check
+make pr
+```
+
+`pr-check` is PUBLIC quality. GitHub mutation stays `make pr` only.

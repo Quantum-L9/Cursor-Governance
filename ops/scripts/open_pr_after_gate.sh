@@ -98,12 +98,11 @@ if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
   echo "--- L4 local autonomy remote check ---"
   if ! python3 "$L4_CLI" --workspace "$WS" check-remote; then
     echo "FAIL: L4 blocks push/PR until kernels + authorize-release."
-    echo "  1) Finish program/contract locally on stacked branch (no mid-exec push)"
-    echo "  2) Run kernels/Recursive Alignment.md then kernels/Validate & Repair.md"
-    echo "  3) python3 ops/autonomy/l4_local.py begin   # if not already"
-    echo "  4) python3 ops/autonomy/l4_local.py record-kernels"
-    echo "  5) python3 ops/autonomy/l4_local.py authorize-release"
-    echo "  6) re-run make pr"
+    echo "      pr-preflight should have caught this — drift if you reached here via make pr."
+    echo "  1) make improve"
+    echo "  2) Apply kernels/Recursive Alignment.md then kernels/Validate & Repair.md"
+    echo "  3) make improve IMPROVE_RECORD=1"
+    echo "  4) make pr-check && make pr"
     exit 1
   fi
 fi
