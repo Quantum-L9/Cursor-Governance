@@ -50,7 +50,7 @@ context**, **reach shared memory** — without a human wiring step.
 | Discover L9 skills | `~/.claude/skills/` fed by `setup_claude_code_plugins.sh` (user scope, machine-wide) | governance cloned by `web/setup.sh`; skills referenced from the clone |
 | Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
 | Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate + local_execution_gate PreToolUse | same Profile; standing A4 + L4 local (no mid-exec push); human merge |
-| Reach shared memory | `mcp.template.json` → user-scope MCP server | committed `.mcp.json` (env-refs only) + `L9_MEMORY_*` from the account environment |
+| Reach shared memory | `mcp.template.json` → brokered `graphiti-memory` server (`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`, no bearer) | same committed `.mcp.json`; `L9_MEMORY_*` identity from the account environment |
 
 ### Proactive L9 skill discovery and routing
 
@@ -73,6 +73,23 @@ removes only entries recorded in its managed-state file. Claude `.claude/rules`
 is a directory symlink to `environment/generated/llm-rules/` (projected from
 `rules/*.mdc` — never hand-edit; never mount raw `.mdc`). Validate with
 `make claude-skills-check`.
+
+### Memory transport — brokered, and honest when degraded
+
+The MCP template points `graphiti-memory` at the L9 capability broker
+(`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`). The broker speaks the MCP
+handshake (`initialize` / `tools/list` / `tools/call`) and maps its bounded
+memory tools onto the registered capabilities — `search_memory` →
+`graphiti.query`, `write_governed` → `graphiti.write_governed` — so the
+Graphiti bearer stays on the trusted side and never reaches a
+model-controlled surface.
+
+A session without a verifiable platform identity (ordinary Anthropic-hosted
+cloud today) gets an honest 401 from the broker: the MCP server is reported
+unavailable and memory runs **DEGRADED — broker identity unavailable**. That
+is the truthful posture, surfaced by the SessionStart status block. The fix
+is broker identity delivery, never pasting `GRAPHITI_MCP_TOKEN` into an
+environment.
 
 ### Memory identity — distinct from Cursor, shared graph
 
@@ -104,11 +121,12 @@ second place to drift.
 | `render.claude.json` | all | Rendering map: how `policy.json` reaches Claude Code (peer of `render.cursor.json`). IDE-neutral policy never changes for it. |
 | `settings.template.json` | all | Committable `.claude/settings.json` for a consumer repo: SessionStart hook + conservative permission + env defaults. |
 | `hooks/session_start_claude_governance.sh` | all | Mobile-safe SessionStart bootstrap. Git-only, **no `~/.cursor` dependency**. Emits Claude Code `additionalContext` JSON. |
-| `mcp.template.json` | all | Shared HTTP memory MCP block. Env-references only — **never a token**. |
+| `mcp.template.json` | all | Shared memory MCP block — brokered `${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`. **Never a token, never a bearer.** |
 | `web/README.md` | Web · Mobile | Install guide for the account environment (the Network / Env / Setup triad). |
 | `web/network-policy.md` | Web · Mobile | Network-access decision (Full vs Custom allowlist) with the concrete allowlist. |
-| `web/environment.env.example` | Web · Mobile | Environment-variables template. Placeholders only — secrets go in the UI, never a repo. |
-| `web/setup.sh` | Web · Mobile | Setup-script template. Idempotent, language-auto-detecting: `gh`, toolchain, governance clone, memory. |
+| `web/environment.env.example` | Web · Mobile | Environment-variables template. No credentials, no GH token — the platform proxy injects. |
+| `web/setup.sh` | Web · Mobile | Setup-script template. Machine-level provisioning only: `gh`, governance clone, adapter install. |
+| `hooks/session_deps_cloud.sh` | Web · Mobile | Cloud-only SessionStart dependency helper (consumer workspace toolchain + pre-commit warm), fingerprint-cached. |
 | `adapters/claude-code.md` | all | Agent adapter: where skills install, how they are invoked, write-authority boundary. |
 | `validate_claude_env.py` | — | Structural validator: JSON parses, no secrets committed, templates present. `make claude-env`. |
 
