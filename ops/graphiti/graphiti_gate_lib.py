@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Graphiti write gate logic for Cursor hooks."""
+"""Graphiti write gate logic for Cursor hooks.
+
+``git``/``gh`` shell commands never reach the state checks below: memory
+prefetch freshness and GMP phase-lock state are inputs to *policy*, not to
+whether git may execute. See ``ops/autonomy/git_execution_exemption``.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,14 @@ import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+_AUTONOMY = Path(__file__).resolve().parent.parent / "autonomy"
+if str(_AUTONOMY) not in sys.path:
+    sys.path.insert(0, str(_AUTONOMY))
+
+from git_execution_exemption import payload_is_git_or_gh  # noqa: E402
+
+ALLOW = {"permission": "allow"}
 
 
 def load_state(conv_id: str) -> dict:
@@ -69,6 +82,8 @@ READ_ONLY_TOOLS = frozenset(
 
 
 def pre_tool_use(payload: str) -> dict:
+    if payload_is_git_or_gh(payload):
+        return dict(ALLOW)
     if not gates_enabled():
         return {"permission": "allow"}
     data = json.loads(payload) if payload.strip() else {}
@@ -98,6 +113,8 @@ def pre_tool_use(payload: str) -> dict:
 
 
 def shell_gate(payload: str) -> dict:
+    if payload_is_git_or_gh(payload):
+        return dict(ALLOW)
     if not gates_enabled():
         return {"permission": "allow"}
     data = json.loads(payload) if payload.strip() else {}
@@ -131,6 +148,11 @@ def subagent_gate(payload: str) -> dict:
 def main() -> int:
     mode = sys.argv[1]
     payload = sys.stdin.read()
+    # Ahead of dispatch, so neither a state check nor a handler fault (which the
+    # runner converts into a denial when gates are enabled) can block git/gh.
+    if payload_is_git_or_gh(payload):
+        print(json.dumps(ALLOW))
+        return 0
     handlers = {
         "pre_tool_use": pre_tool_use,
         "shell": shell_gate,

@@ -73,6 +73,20 @@ class PreservedPolicyBehaviourTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_prohibited_publish_is_still_denied(self) -> None:
+        """`make push` reaches GitHub without the checkers and is not git/gh."""
+        proc = _run(
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "make push"},
+                "cwd": str(self.repo),
+            }
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(_decision(proc.stdout), "deny")
+        self.assertIn("Publish path", proc.stdout)
+
+    def test_git_is_exempt_from_the_publish_denial(self) -> None:
+        """Policy still prefers `make pr`; the gate does not enforce it on git."""
         proc = _run(
             {
                 "tool_name": "Bash",
@@ -81,8 +95,7 @@ class PreservedPolicyBehaviourTests(unittest.TestCase):
             }
         )
         self.assertEqual(proc.returncode, 0)
-        self.assertEqual(_decision(proc.stdout), "deny")
-        self.assertIn("Publish path", proc.stdout)
+        self.assertIsNone(_decision(proc.stdout))
 
     def test_ordinary_command_is_still_allowed(self) -> None:
         proc = _run(
@@ -100,13 +113,15 @@ class FailClosedTests(unittest.TestCase):
     """Every internal fault denies, with a valid hook response."""
 
     def test_workspace_resolution_failure_denies(self) -> None:
-        """The live regression: no cwd, and process cwd is not a git work tree."""
+        """The live regression: no cwd, and process cwd is not a git work tree.
+
+        Exercised with `make push`: a git/gh command is exempt from evaluation
+        entirely, so it can no longer reach — or need — this failure path.
+        """
         with tempfile.TemporaryDirectory() as non_repo:
             proc = subprocess.run(
                 [sys.executable, str(GATE_PATH), "claude"],
-                input=json.dumps(
-                    {"tool_name": "Bash", "tool_input": {"command": "git push origin main"}}
-                ),
+                input=json.dumps({"tool_name": "Bash", "tool_input": {"command": "make push"}}),
                 capture_output=True,
                 text=True,
                 cwd=non_repo,
@@ -144,7 +159,7 @@ class FailClosedTests(unittest.TestCase):
 
     def test_cursor_shell_entrypoint_also_fails_closed(self) -> None:
         with mock.patch.object(gate, "effective_root", side_effect=RuntimeError("root boom")):
-            with mock.patch("sys.stdin", new=_StringStdin({"command": "git push origin main"})):
+            with mock.patch("sys.stdin", new=_StringStdin({"command": "make push"})):
                 with mock.patch("sys.stdout", new=_Capture()) as out:
                     with mock.patch("sys.stderr", new=_Capture()):
                         rc = gate.main_cursor_shell()
