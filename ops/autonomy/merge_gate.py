@@ -4,8 +4,9 @@
 Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
-Ordinary `gh pr merge` is allowed only when:
+Ordinary `gh pr merge` is allowed when any of these is true:
 
+  L9_AUTONOMY_AUTONOMOUS_MERGE=true|1|yes|on            # standing owner flag
   L9_MERGE_AUTHORIZED=<nonempty reason string>          # session env
   ~/.l9/autonomy/merge-authorization.json               # receipt file
     {"authorizations": [{"repo": "org/repo", "pr": "*" | 53,
@@ -17,9 +18,32 @@ Ordinary `gh pr merge` is allowed only when:
 
 Invoking /l9-pr-remediation writes that receipt via
 ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
-An L4 release receipt does NOT authorize merge.
+An L4 release receipt does NOT authorize merge. Agents still merge only
+after green + mergeable + review threads resolved (oldest first).
 
 Never waived: force-push, hard-reset, git clean -fd, admin-merge.
+
+Stack safety
+------------
+Squash and rebase merges replace the head branch's commits with a new commit
+that shares no ancestry with them. Any open PR based on that head therefore
+loses its merge base: it rewinds to the pre-merge tip, where files the merged
+PR deleted still exist. Git then reads "child preserved the file" and "child
+never touched the file" as the same snapshot and resolves delete-wins with no
+conflict, silently dropping the child's content.
+
+So an authorized merge is additionally denied when the head branch is the base
+of an open PR and the method is squash/rebase (or unspecified). Merge with
+--merge, or land the children bottom-up first. Probe order:
+
+  L9_STACK_CHECK_BYPASS=<reason>   # skip the probe (human breakglass)
+  L9_STACK_PROBE_FILE              # JSON {"owner/name#12": {"children": [13]}}
+  gh pr view / gh pr list          # live probe, fail-closed on error
+
+L9_MERGE_AUTHORIZED (session env, human-set per merge) also skips the probe. A
+receipt written by an agent does not, and neither does the standing
+L9_AUTONOMY_AUTONOMOUS_MERGE flag -- unattended merging is exactly when an
+orphaned child PR would go unnoticed.
 """
 
 from __future__ import annotations
@@ -27,6 +51,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -50,19 +76,151 @@ HARD_RESET_BASH = re.compile(r"\bgit\s+reset\s+--hard\b", re.I)
 CLEAN_FD_BASH = re.compile(r"\bgit\s+clean\s+-fd\b", re.I)
 REPO_SCOPE = {"*", "all", "ALL"}
 
+SQUASH_FLAG = re.compile(r"--squash\b", re.I)
+REBASE_FLAG = re.compile(r"--rebase\b", re.I)
+MERGE_COMMIT_FLAG = re.compile(r"--merge\b", re.I)
+
+# Methods that rewrite the head's commits and orphan any PR based on it.
+ANCESTRY_BREAKING = {"squash", "rebase", "unspecified"}
+
+GH_TIMEOUT_SECONDS = 20
+
 NEVER_WAIVE_REASON = (
     "Autonomy Surface Profile never waives force-push, hard-reset, "
     "destructive clean, or admin-merge."
 )
 
 MERGE_DENY_REASON = (
-    "Autonomy Surface Profile forbids merge until /l9-pr-remediation is "
-    "invoked (or L9_MERGE_AUTHORIZED=<reason>). Campaigns and make pr end "
-    "at green + merge-ready. Write the receipt with "
-    "python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open "
-    "--reason 'l9-pr-remediation invoked', then gh pr merge --squash "
-    "(no --admin) for each green mergeable PR, oldest first."
+    "Autonomy Surface Profile forbids merge until L9_AUTONOMY_AUTONOMOUS_MERGE "
+    "is true, /l9-pr-remediation is invoked, or L9_MERGE_AUTHORIZED=<reason>. "
+    "Campaigns and make pr end at green + merge-ready. Then "
+    "gh pr merge --squash (no --admin) for each green mergeable PR, oldest first."
 )
+
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def _autonomous_merge_enabled() -> bool:
+    return os.environ.get("L9_AUTONOMY_AUTONOMOUS_MERGE", "").strip().lower() in _TRUTHY
+
+
+def _stack_deny_reason(pr: str, head: str, children: list[int], method: str) -> str:
+    kids = ", ".join(f"#{c}" for c in children)
+    shown = method if method != "unspecified" else "the default method (unspecified)"
+    return (
+        f"Stack safety: PR #{pr} head '{head}' is the base of open PR(s) {kids}, and "
+        f"{shown} rewrites that head's commits. The child would lose its merge base and "
+        "silently drop any file this PR deletes (delete-wins, no conflict). "
+        f"Either merge {kids} first (bottom-up), retarget them to the base branch, or "
+        "merge this PR with --merge to preserve ancestry. "
+        "Human breakglass: L9_STACK_CHECK_BYPASS=<reason>."
+    )
+
+
+def _stack_unknown_reason(pr: str, repo: str, detail: str) -> str:
+    target = f"{repo}#{pr}" if repo else f"#{pr}"
+    return (
+        f"Stack safety: cannot determine whether {target} is the base of an open PR "
+        f"({detail}). A squash/rebase merge of a stacked head silently destroys the "
+        "child PR's content, so this is fail-closed. Verify with "
+        f"`gh pr list --repo <owner/name> --state open --base <head-branch>`, then "
+        "re-run with --merge, or set L9_STACK_CHECK_BYPASS=<reason>."
+    )
+
+
+def _merge_method(command: str) -> str:
+    """Merge method named on a `gh pr merge` command line."""
+    if SQUASH_FLAG.search(command):
+        return "squash"
+    if REBASE_FLAG.search(command):
+        return "rebase"
+    if MERGE_COMMIT_FLAG.search(command):
+        return "merge"
+    return "unspecified"
+
+
+def _gh_json(args: list[str]) -> Any:
+    """Run a gh command returning JSON. Raises RuntimeError with a short detail."""
+    if not shutil.which("gh"):
+        raise RuntimeError("gh not on PATH")
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["gh", *args],
+            capture_output=True,
+            text=True,
+            timeout=GH_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError(f"gh failed: {exc}") from exc
+    if proc.returncode != 0:
+        raise RuntimeError((proc.stderr or "gh returned non-zero").strip().splitlines()[-1][:200])
+    try:
+        return json.loads(proc.stdout or "null")
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"gh emitted non-JSON: {exc}") from exc
+
+
+def _probe_file_entry(repo: str, pr: str) -> dict[str, Any] | None:
+    """Injected probe result, so the gate is deterministic offline and in tests."""
+    override = os.environ.get("L9_STACK_PROBE_FILE", "").strip()
+    if not override:
+        return None
+    try:
+        payload = json.loads(Path(override).expanduser().read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise RuntimeError(f"unreadable L9_STACK_PROBE_FILE ({exc})") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("L9_STACK_PROBE_FILE is not a JSON object")
+    entry = payload.get(f"{repo}#{pr}") if repo else None
+    if entry is None:
+        entry = payload.get(f"#{pr}", payload.get("default"))
+    if entry is None:
+        return {"head": "", "children": []}
+    if not isinstance(entry, dict):
+        raise RuntimeError("L9_STACK_PROBE_FILE entry is not a JSON object")
+    return entry
+
+
+def _stacked_children(repo: str, pr: str) -> tuple[str, list[int]]:
+    """Return (head branch, open PR numbers based on it). Raises RuntimeError if unknown."""
+    entry = _probe_file_entry(repo, pr)
+    if entry is not None:
+        children = [int(c) for c in entry.get("children") or []]
+        return str(entry.get("head") or ""), children
+
+    if not repo:
+        raise RuntimeError("no --repo on the command and no probe file")
+    view = _gh_json(["pr", "view", pr, "--repo", repo, "--json", "headRefName"])
+    head = str((view or {}).get("headRefName") or "")
+    if not head:
+        raise RuntimeError("gh did not report a head branch")
+    listing = _gh_json(
+        ["pr", "list", "--repo", repo, "--state", "open", "--base", head, "--json", "number"]
+    )
+    children = [int(item["number"]) for item in (listing or []) if "number" in item]
+    return head, [c for c in children if str(c) != pr]
+
+
+def _stack_safety_reason(command: str, tool_name: str, tool_input: dict[str, Any]) -> str | None:
+    """Deny reason when this merge would orphan an open child PR, else None."""
+    if os.environ.get("L9_STACK_CHECK_BYPASS", "").strip():
+        return None
+    repo, pr = _target_from_input(tool_name, tool_input)
+    if not pr:
+        return None
+    method = _merge_method(command)
+    try:
+        head, children = _stacked_children(repo, pr)
+    except RuntimeError as exc:
+        if method in ANCESTRY_BREAKING:
+            return _stack_unknown_reason(pr, repo, str(exc))
+        return None
+    if not children:
+        return None
+    if method in ANCESTRY_BREAKING:
+        return _stack_deny_reason(pr, head or "<unknown>", children, method)
+    return None
 
 
 def _auth_file_path() -> Path:
@@ -120,8 +278,19 @@ def _file_authorizes(repo: str, pr: str) -> bool:
     return False
 
 
+def _human_breakglass() -> bool:
+    """L9_MERGE_AUTHORIZED is human-set; it accepts the stack risk explicitly."""
+    return bool(os.environ.get("L9_MERGE_AUTHORIZED", "").strip())
+
+
 def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
-    if os.environ.get("L9_MERGE_AUTHORIZED", "").strip():
+    # Authority only. Stack safety is evaluated separately in evaluate(), so a
+    # standing autonomous-merge flag grants the merge without also waiving the
+    # check against orphaning an open child PR -- unattended merging is exactly
+    # when that failure would go unnoticed.
+    if _autonomous_merge_enabled():
+        return True
+    if _human_breakglass():
         return True
     repo, pr = _target_from_input(tool_name, tool_input)
     return _file_authorizes(repo, pr)
@@ -176,15 +345,21 @@ def evaluate(
         if _never_waive_command(command):
             return NEVER_WAIVE_REASON
         if MERGE_BASH.search(command):
-            if _merge_authorized(tool_name, tool_input):
+            if not _merge_authorized(tool_name, tool_input):
+                return MERGE_DENY_REASON
+            if _human_breakglass():
                 return None
-            return MERGE_DENY_REASON
+            return _stack_safety_reason(command, tool_name, tool_input)
         return None
 
     if tool_name in DENY_TOOL_NAMES:
-        if _merge_authorized(tool_name, tool_input):
+        if not _merge_authorized(tool_name, tool_input):
+            return MERGE_DENY_REASON
+        if _human_breakglass():
             return None
-        return MERGE_DENY_REASON
+        method = str(tool_input.get("merge_method") or tool_input.get("method") or "")
+        pseudo = f"gh pr merge --{method.lower()}" if method else "gh pr merge"
+        return _stack_safety_reason(pseudo, tool_name, tool_input)
     return None
 
 

@@ -1,6 +1,6 @@
 # Protocol C — Join and merge gate
 
-Mirrors `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` `merge_gate` and join barrier. Cursor reports eligibility; humans merge.
+Mirrors `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` `merge_gate` and join barrier. After `/l9-pr-remediation` reaches green + mergeable + resolved threads, ordinary squash merge is authorized (`L9_AUTONOMY_AUTONOMOUS_MERGE=true`).
 
 ## Join barrier
 
@@ -26,11 +26,11 @@ Copy from profile — all required for “merge_eligible”:
 - [ ] Branch protection satisfied
 - [ ] Proof bundle / evidence note attached (what changed, cycles used, remaining risks)
 
-## Human merge only
+## Autonomous ordinary merge after remediation
 
-- `autonomous_merge: false` always in this SOP.
-- Never run `gh pr merge` (or MCP merge) unless the user explicitly approved merge in this conversation.
-- After checklist: stop and ask the human to merge (or decline).
+- `autonomous_merge: true` in `pr-convergence.json`. `merge_gate.py` reads `L9_AUTONOMY_AUTONOMOUS_MERGE`.
+- After this checklist: `gh pr merge --squash` oldest first. Never `--admin`, never force-push.
+- Campaigns and `make pr` still stop at green + merge-ready. They do not merge.
 
 ## Forbidden at join/merge
 

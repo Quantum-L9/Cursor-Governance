@@ -90,3 +90,13 @@ Profile; Cursor is unchanged. See CANONICAL_LAW §6.1.
 ## 2026-08-13 supersession note
 
 Shared bounded-autonomy runtime home moves to `environment/program-execution/peer_execution/autonomy/` (see ADR-0017 and ADR-0021). This ADR keeps its title and historical Claude Code concurrent-autonomy decision. Do not retitle this file.
+
+## 2026-08-17 supersession — autonomous merge enabled
+
+Distribution-owner sign-off: `L9_AUTONOMY_AUTONOMOUS_MERGE=true` is the standing
+Claude Code default. `ops/autonomy/merge_gate.py` reads that flag and allows
+ordinary `gh pr merge --squash`. Force-push, hard-reset, destructive clean, and
+`--admin` stay denied. Campaigns and `make pr` still do not merge. Agents still
+merge only after `/l9-pr-remediation` reaches green + mergeable + resolved
+review threads, oldest first. PE campaign packets still must not declare
+`autonomous_merge` (`COMPATIBILITY.yaml`).

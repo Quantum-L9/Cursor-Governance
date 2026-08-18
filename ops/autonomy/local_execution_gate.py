@@ -302,6 +302,73 @@ def main_claude() -> int:
     return 0
 
 
+_LEADING_CD = re.compile(r"^\s*cd\s+(?P<path>\"[^\"]+\"|'[^']+'|[^\s;&|]+)")
+
+
+def _git_out(cwd: Path, *args: str) -> str:
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["git", "-C", str(cwd), *args],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+
+def _common_dir(cwd: Path) -> Path | None:
+    """Shared .git directory, identical across every worktree of one repository.
+
+    `--git-common-dir` is reported relative to git's own cwd, which `-C` pins to
+    `cwd`, so a relative answer must be resolved against `cwd` and not the
+    interpreter's working directory.
+    """
+    out = _git_out(cwd, "rev-parse", "--git-common-dir")
+    if not out:
+        return None
+    path = Path(out)
+    if not path.is_absolute():
+        path = cwd / path
+    try:
+        return path.resolve()
+    except OSError:
+        return None
+
+
+def effective_root(command: str, root: Path) -> Path:
+    """The checkout the command will actually run in.
+
+    Cursor's beforeShellExecution reports the *project root*, not the shell's
+    cwd. Rule 49 tells every agent to work in a linked worktree, so a command
+    that begins by cd-ing into one would otherwise be judged against the wrong
+    checkout -- wrong branch, wrong L4 receipt -- and no worktree could ever
+    publish.
+
+    Only a worktree of the *same* repository is accepted, verified by comparing
+    `git rev-parse --git-common-dir`. A cd into an unrelated repository leaves
+    the root untouched, so this cannot be used to escape the gate.
+    """
+    match = _LEADING_CD.match(command)
+    if not match:
+        return root
+    raw = match.group("path").strip("\"'")
+    try:
+        candidate = Path(os.path.expandvars(raw)).expanduser()
+    except (OSError, ValueError):
+        return root
+    if not candidate.is_absolute() or not candidate.is_dir():
+        return root
+
+    if _common_dir(root) is None or _common_dir(root) != _common_dir(candidate):
+        return root
+
+    toplevel = _git_out(candidate, "rev-parse", "--show-toplevel")
+    return Path(toplevel) if toplevel else root
+
+
 def main_cursor_shell() -> int:
     try:
         event = json.load(sys.stdin)
@@ -310,7 +377,7 @@ def main_cursor_shell() -> int:
     if not isinstance(event, dict):
         return _emit_cursor("allow")
     command = str(event.get("command") or event.get("full_command") or "")
-    root = workspace_from_event(event)
+    root = effective_root(command, workspace_from_event(event))
     iso = command_violates_worktree_isolation(command, root=root)
     if iso:
         return _emit_cursor("deny", iso)
