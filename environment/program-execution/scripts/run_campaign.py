@@ -18,7 +18,8 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +29,12 @@ try:
     import yaml
 except ImportError:  # pragma: no cover
     yaml = None  # type: ignore[assignment]
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+import pe_trace  # noqa: E402 - sibling module, imported after the sys.path guard
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 GOV_ROOT = PE_ROOT.parents[1]
@@ -69,9 +76,12 @@ TASK_BUDGET_MINUTES = 15
 
 
 class CampaignError(RuntimeError):
-    def __init__(self, message: str, *, exit_code: int = 2) -> None:
+    def __init__(self, message: str, *, exit_code: int = 2, error_code: str | None = None) -> None:
         super().__init__(message)
         self.exit_code = exit_code
+        # Telemetry aggregates failures by code; without one every campaign
+        # failure collapses into the single label "CampaignError".
+        self.error_code = error_code
 
 
 @dataclass
@@ -135,6 +145,85 @@ def utc_now() -> str:
 
 def log(message: str) -> None:
     print(f"campaign: {message}", flush=True)
+
+
+@contextmanager
+def traced(
+    trace: pe_trace.ExecutionTrace | None,
+    category: str,
+    operation: str,
+    **kwargs: Any,
+) -> Iterator[dict[str, Any]]:
+    """trace.span() when a trace is present, otherwise a no-op.
+
+    Telemetry is additive: a stage that is handed no trace runs exactly as
+    it did before, and never fails because tracing is unavailable.
+    """
+    if trace is None:
+        yield {}
+        return
+    with trace.span(category, operation, **kwargs) as carrier:
+        yield carrier
+
+
+def emit(
+    trace: pe_trace.ExecutionTrace | None,
+    event_type: str,
+    category: str,
+    operation: str,
+    **kwargs: Any,
+) -> None:
+    if trace is not None:
+        trace.event(event_type, category, operation, **kwargs)
+
+
+@contextmanager
+def trace_stepped_aside(trace: pe_trace.ExecutionTrace | None, workspace: Path) -> Iterator[None]:
+    """Hold telemetry outside `workspace` while pec bootstrap rebuilds it."""
+    if trace is None:
+        yield
+        return
+    staging = workspace.parent / f".{workspace.name}.trace-staging"
+    with trace.stepped_aside(staging):
+        yield
+
+
+def blueprint_fingerprint(blueprint: Path) -> str:
+    """SHA-256 over the compiled Blueprint pair.
+
+    Blueprint validation and pec bootstrap both consume this directory, so
+    two runs over an unchanged Blueprint share a fingerprint and the
+    harvester can count the repeat.
+
+    MANIFEST.yaml is skipped: it is nothing but a per-file sha256 index of
+    the very files hashed here, taken before emission timestamps are
+    normalised away. Including it would add no information and would make
+    every recompilation look like a different input.
+    """
+    try:
+        files = sorted(
+            item for item in blueprint.rglob("*") if item.is_file() and item.name != "MANIFEST.yaml"
+        )
+    except OSError:
+        return pe_trace.fingerprint(str(blueprint), "<unreadable>")
+    return pe_trace.fingerprint(
+        *[part for item in files for part in (str(item.relative_to(blueprint)), item)]
+    )
+
+
+def auto_harvest(trace: pe_trace.ExecutionTrace | None) -> None:
+    """Write run-summary.{json,md} beside the events on the way out.
+
+    A harvest failure must never replace the campaign result that is
+    already on its way to the operator, so every error is a warning here.
+    """
+    if trace is None or trace.path is None:
+        return
+    workspace = trace.path.parent.parent
+    try:
+        pe_trace.harvest_and_write(workspace)
+    except Exception as exc:  # noqa: BLE001 - telemetry never masks the run
+        print(f"pe-trace: harvest failed for {workspace}: {exc}", file=sys.stderr)
 
 
 def git_env() -> dict[str, str]:
@@ -326,6 +415,7 @@ def isolate_worktree(
     worktree: Path,
     *,
     git_fn: Callable[..., str] | None = None,
+    trace: pe_trace.ExecutionTrace | None = None,
 ) -> Path:
     git = git_fn or (lambda *args, repo=primary: _git(repo, *args))
     git("fetch", "origin", "main")
@@ -343,7 +433,7 @@ def isolate_worktree(
             ensure_workspace_wired(worktree)
             return worktree
         log(f"isolate quarantine dirty or unexpected worktree {worktree}")
-        quarantine_occupied(worktree)
+        quarantine_occupied(worktree, trace=trace)
     existing = run_cmd(
         ["git", "-C", str(primary), "rev-parse", "--verify", branch],
         timeout=GIT_TIMEOUT_S,
@@ -517,7 +607,7 @@ def _load_script(name: str, path: Path) -> Any:
     return module
 
 
-def quarantine_occupied(path: Path) -> Path | None:
+def quarantine_occupied(path: Path, *, trace: pe_trace.ExecutionTrace | None = None) -> Path | None:
     """Move a leftover runtime dir aside so pec bootstrap can start empty.
 
     A stopped campaign leaves `$L9_ROOT/programs/<id>` occupied. The next
@@ -526,12 +616,29 @@ def quarantine_occupied(path: Path) -> Path | None:
     path = path.resolve()
     if not path.exists():
         return None
-    if path.is_dir() and not any(path.iterdir()):
+    if path.is_dir() and not any(
+        item.name != pe_trace.TELEMETRY_DIRNAME for item in path.iterdir()
+    ):
+        # Only this run's own telemetry lives here, so nothing was left
+        # behind to quarantine. Tracing must not invent a workspace recycle.
         return None
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     dest = path.parent / "stale" / f"{path.name}-{stamp}"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    path.rename(dest)
+    if trace is not None:
+        with trace.span(
+            "workspace",
+            "workspace_quarantine",
+            metadata={"path": str(path), "destination": str(dest)},
+        ):
+            traced_events = trace.path is not None and trace.path.is_relative_to(path)
+            path.rename(dest)
+            if traced_events:
+                # The events file moved with the workspace; follow it so the
+                # recycle itself stays inside one continuous trace.
+                trace.rehome(dest)
+    else:
+        path.rename(dest)
     log(f"quarantine occupied {path} → {dest}")
     return dest
 
@@ -858,10 +965,12 @@ def default_arm(
     *,
     repository_id: str,
     target_path: Path,
+    trace: pe_trace.ExecutionTrace | None = None,
 ) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
     ensure_integration_branch(target_path, campaign_id)
-    reconciled = default_reconcile(workspace, repository_id, target_path)
+    with traced(trace, "reconcile", "reconcile", metadata={"repository": repository_id}):
+        reconciled = default_reconcile(workspace, repository_id, target_path)
     tasks = locked_tasks(workspace)
     if not tasks or str(tasks[0]["id"]) != FIRST_TASK_ID:
         raise CampaignError("program lock is missing TASK-001")
@@ -1362,7 +1471,10 @@ def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
             payload = {"output": text}
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip() or str(payload)
-        raise CampaignError(f"pec {command} failed: {detail}")
+        raise CampaignError(
+            f"pec {command} failed: {detail}",
+            error_code=f"PEC_{command.upper().replace('-', '_')}_FAILED",
+        )
     return payload
 
 
@@ -1440,7 +1552,89 @@ def committed_changed_files(worktree: Path, base_sha: str, candidate_sha: str) -
     return [line.strip() for line in diff.stdout.splitlines() if line.strip()]
 
 
-def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[str, Any]]:
+def observe_first_write(worktree: Path, changed: list[str]) -> list[str]:
+    """Paths the repository shows as touched, not paths the worker claimed.
+
+    Prefers the committed diff against the contract base, and falls back to
+    the dirty working tree for workers that leave their edits uncommitted.
+
+    Limitation: the runner drives the worker synchronously and has no
+    watcher, so the earliest point at which it can observe a write is after
+    the worker returns. TASK_FIRST_WRITE therefore times the first write the
+    runner can *see*, which is an upper bound on when the write happened.
+    Contract PE-TRACE-001 §12 accepts this in place of a watcher daemon.
+    """
+    if changed:
+        return changed
+    status = run_cmd(
+        ["git", "-C", str(worktree), "status", "--porcelain", "--untracked-files=all"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if status.returncode != 0:
+        return []
+    return [line[3:].strip() for line in status.stdout.splitlines() if line.strip()]
+
+
+def traced_verify(
+    workspace: Path,
+    task_id: str,
+    *,
+    trace: pe_trace.ExecutionTrace | None = None,
+    attempt_number: int | None = None,
+) -> dict[str, Any]:
+    """Run one controller verification and record the attempt.
+
+    Every call site goes through here, so a task verified three times leaves
+    three TASK_VERIFY_STARTED/FINISHED pairs and the repeat is visible
+    without a counter of our own.
+    """
+    emit(
+        trace,
+        "TASK_VERIFY_STARTED",
+        "verification",
+        "pec_verify",
+        status=pe_trace.STATUS_STARTED,
+        task_id=task_id,
+        attempt_number=attempt_number,
+    )
+    with traced(
+        trace,
+        "verification",
+        "pec_verify",
+        task_id=task_id,
+        attempt_number=attempt_number,
+    ) as span:
+        verification = pec_cmd(workspace, "verify", task_id)
+        span["kernel_verdict"] = verification.get("kernel_verdict")
+        span["verdict"] = verification.get("verdict")
+        if verification.get("verdict") != "PASSED_LOCAL":
+            span["error_code"] = str(
+                verification.get("kernel_verdict") or verification.get("verdict") or "UNKNOWN"
+            )
+    emit(
+        trace,
+        "TASK_VERIFY_FINISHED",
+        "verification",
+        "pec_verify_finished",
+        task_id=task_id,
+        attempt_number=attempt_number,
+        metadata={
+            "kernel_verdict": verification.get("kernel_verdict"),
+            "verdict": verification.get("verdict"),
+        },
+    )
+    return verification
+
+
+def run_declared_validations(
+    worktree: Path,
+    commands: list[str],
+    *,
+    trace: pe_trace.ExecutionTrace | None = None,
+    task_id: str | None = None,
+    attempt_number: int | None = None,
+) -> list[dict[str, Any]]:
     """Run the contract's validation commands and report what actually happened.
 
     pec verify re-runs these commands itself and compares them against the
@@ -1450,16 +1644,28 @@ def run_declared_validations(worktree: Path, commands: list[str]) -> list[dict[s
     """
     results: list[dict[str, Any]] = []
     for command in commands:
-        completed = subprocess.run(  # noqa: S602 - contract-declared command, same as pec verify
-            ["bash", "-lc", command],
-            cwd=str(worktree),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=VALIDATION_TIMEOUT_S,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
-        )
-        tail = ((completed.stdout or "") + (completed.stderr or "")).strip()[-2000:]
+        with traced(
+            trace,
+            "validation",
+            "validation_command",
+            task_id=task_id,
+            attempt_number=attempt_number,
+            metadata={"command": command, "resolved_cwd": str(worktree)},
+        ) as span:
+            completed = subprocess.run(  # noqa: S602 - contract-declared command, same as pec verify
+                ["bash", "-lc", command],
+                cwd=str(worktree),
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=VALIDATION_TIMEOUT_S,
+                env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+            )
+            span["exit_code"] = completed.returncode
+            tail = ((completed.stdout or "") + (completed.stderr or "")).strip()[-2000:]
+            if completed.returncode != 0:
+                span["error_code"] = "VALIDATION_COMMAND_FAILED"
+                span["error_message"] = tail
         results.append(
             {
                 "command": command,
@@ -1615,6 +1821,7 @@ def default_execute(
     *,
     hooks: Hooks,
     live_prs: bool,
+    trace: pe_trace.ExecutionTrace | None = None,
 ) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
     tasks = locked_tasks(workspace)
@@ -1624,6 +1831,7 @@ def default_execute(
         stack_items = list(json.loads(stack_path.read_text(encoding="utf-8")).get("stack") or [])
     by_stack = {str(item.get("task_id")): item for item in stack_items if item.get("task_id")}
     completed: list[str] = []
+    first_write_seen: set[str] = set()
     for task in tasks:
         task_id = str(task["id"])
         states = {str(item["id"]): item for item in pec_status_tasks(workspace)}
@@ -1631,6 +1839,14 @@ def default_execute(
         if state == "COMPLETED":
             completed.append(task_id)
             continue
+        emit(
+            trace,
+            "TASK_ELIGIBLE",
+            "task",
+            "task_eligible",
+            task_id=task_id,
+            metadata={"runtime_state": state},
+        )
         contract_path = workspace / "contracts" / "rendered" / f"{task_id}.json"
         worktree = workspace / "worktrees" / task_id
         already_submitted = state == "SUBMITTED"
@@ -1640,26 +1856,38 @@ def default_execute(
             rendered = {"contract": str(contract_path)}
         else:
             if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
-                pec_cmd(
-                    workspace,
-                    "claim",
-                    task_id,
-                    "--holder",
-                    "make-campaign",
-                    "--ttl-minutes",
-                    str(TASK_BUDGET_MINUTES),
-                )
+                with traced(trace, "task_prepare", "pec_claim", task_id=task_id):
+                    pec_cmd(
+                        workspace,
+                        "claim",
+                        task_id,
+                        "--holder",
+                        "make-campaign",
+                        "--ttl-minutes",
+                        str(TASK_BUDGET_MINUTES),
+                    )
                 state = "LEASED"
+            emit(trace, "TASK_SELECTED", "task", "task_selected", task_id=task_id)
             if state == "LEASED":
-                prepared = pec_cmd(workspace, "prepare", task_id)
+                with traced(trace, "task_prepare", "task_worktree_create", task_id=task_id):
+                    prepared = pec_cmd(workspace, "prepare", task_id)
                 worktree = Path(str(prepared.get("worktree") or worktree))
             if state in {"LEASED", "PREPARED"} or not contract_path.is_file():
-                rendered = pec_cmd(workspace, "render-contract", task_id)
+                with traced(trace, "task_prepare", "render_contract", task_id=task_id):
+                    rendered = pec_cmd(workspace, "render-contract", task_id)
             else:
                 rendered = {"contract": str(contract_path)}
             if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED"}:
                 pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         ensure_workspace_wired(worktree)
+        emit(
+            trace,
+            "TASK_WORKTREE_READY",
+            "task",
+            "task_worktree_ready",
+            task_id=task_id,
+            metadata={"worktree": str(worktree)},
+        )
         contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
         writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
         if not writable:
@@ -1678,13 +1906,49 @@ def default_execute(
                 return write_and_commit_output(worktree, rel, title, writable=writable)
             return writer(worktree, rel, title)
 
+        attempt_number: int | None = None
         if not already_submitted:
-            candidate = rewrite_output()
+            emit(trace, "TASK_WORKER_STARTED", "worker", "worker_started", task_id=task_id)
+            with traced(trace, "worker", "worker_write", task_id=task_id):
+                candidate = rewrite_output()
             changed = committed_changed_files(worktree, contract["base_sha"], candidate)
+            observed = observe_first_write(worktree, changed)
+            if observed and task_id not in first_write_seen:
+                first_write_seen.add(task_id)
+                emit(
+                    trace,
+                    "TASK_FIRST_WRITE",
+                    "filesystem_write",
+                    "task_first_write",
+                    task_id=task_id,
+                    metadata={"path": observed[0], "changed_paths": observed[:50]},
+                )
             declared_commands = [
                 str(command) for command in (contract.get("validation_commands") or []) if command
             ]
-            validation_results = run_declared_validations(worktree, declared_commands)
+            emit(
+                trace,
+                "TASK_VALIDATION_STARTED",
+                "validation",
+                "task_validation",
+                status=pe_trace.STATUS_STARTED,
+                task_id=task_id,
+                metadata={"command_count": len(declared_commands)},
+            )
+            validation_results = run_declared_validations(
+                worktree, declared_commands, trace=trace, task_id=task_id
+            )
+            emit(
+                trace,
+                "TASK_VALIDATION_FINISHED",
+                "validation",
+                "task_validation_finished",
+                task_id=task_id,
+                metadata={
+                    "failed": sum(1 for item in validation_results if item["status"] != "PASS"),
+                    "total": len(validation_results),
+                },
+            )
             receipt = {
                 "schema": "program-execution-controller.attempt-receipt.v2",
                 "task_id": task_id,
@@ -1700,8 +1964,14 @@ def default_execute(
             }
             receipt_path = workspace / "runtime" / f"{task_id}.attempt.json"
             receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-            pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
-        verification = pec_cmd(workspace, "verify", task_id)
+            with traced(trace, "commit", "record_attempt", task_id=task_id):
+                recorded = pec_cmd(
+                    workspace, "record-attempt", task_id, "--receipt", str(receipt_path)
+                )
+            # Attempt identity is PEC state, never a counter of our own.
+            if isinstance(recorded.get("attempt"), int):
+                attempt_number = int(recorded["attempt"])
+        verification = traced_verify(workspace, task_id, trace=trace, attempt_number=attempt_number)
         decision = dispatch_kernel_change(verification)
         if decision["action"] == "skip_change":
             raise CampaignError(
@@ -1710,12 +1980,33 @@ def default_execute(
         if decision["action"] == "refuse":
             raise CampaignError(f"Diagnose First: {decision['reason']}")
         if decision["action"] == "change":
-            apply_fail_change(
-                verification,
-                rewrite=rewrite_output,
-                reverify=lambda: pec_cmd(workspace, "verify", task_id),
+            emit(
+                trace,
+                "TASK_CHANGE_STARTED",
+                "retry",
+                "apply_fail_change",
+                status=pe_trace.STATUS_STARTED,
+                task_id=task_id,
+                attempt_number=attempt_number,
+                metadata={"reason": decision["reason"]},
             )
-            verification = pec_cmd(workspace, "verify", task_id)
+            with traced(
+                trace,
+                "retry",
+                "apply_fail_change",
+                task_id=task_id,
+                attempt_number=attempt_number,
+            ):
+                apply_fail_change(
+                    verification,
+                    rewrite=rewrite_output,
+                    reverify=lambda: traced_verify(
+                        workspace, task_id, trace=trace, attempt_number=attempt_number
+                    ),
+                )
+            verification = traced_verify(
+                workspace, task_id, trace=trace, attempt_number=attempt_number
+            )
             if verification.get("kernel_verdict") != "PASS":
                 raise CampaignError(
                     f"pec verify {task_id} after CHANGE did not PASS: "
@@ -1725,18 +2016,26 @@ def default_execute(
             raise CampaignError(f"pec verify {task_id} did not PASS: {verification.get('verdict')}")
         evidence_id = str(verification["evidence_id"])
         for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
-            pec_cmd(
-                workspace,
-                "evaluate-gate",
-                str(gate_id),
-                "PASS",
-                "--evidence-id",
-                evidence_id,
-                "--method",
-                "inspection",
-                "--actor",
-                "make-campaign",
-            )
+            with traced(
+                trace,
+                "gate",
+                "evaluate_gate",
+                task_id=task_id,
+                attempt_number=attempt_number,
+                metadata={"gate_id": str(gate_id)},
+            ):
+                pec_cmd(
+                    workspace,
+                    "evaluate-gate",
+                    str(gate_id),
+                    "PASS",
+                    "--evidence-id",
+                    evidence_id,
+                    "--method",
+                    "inspection",
+                    "--actor",
+                    "make-campaign",
+                )
         pec_cmd(
             workspace,
             "complete",
@@ -1746,6 +2045,15 @@ def default_execute(
             "--evidence-id",
             evidence_id,
         )
+        emit(
+            trace,
+            "TASK_COMPLETED",
+            "task",
+            "task_completed",
+            task_id=task_id,
+            attempt_number=attempt_number,
+            metadata={"evidence_id": evidence_id},
+        )
         if live_prs:
             item = by_stack.get(task_id) or {
                 "task_id": task_id,
@@ -1753,7 +2061,8 @@ def default_execute(
                 "branch": pec_branch(str(task.get("wave_id") or "W0"), task_id),
                 "pr_base": f"campaign/{campaign_id}",
             }
-            opened = maybe_open_task_pr(hooks, worktree, campaign_id, item)
+            with traced(trace, "publish", "open_task_pr", task_id=task_id):
+                opened = maybe_open_task_pr(hooks, worktree, campaign_id, item)
             if opened and opened.get("number"):
                 record_stack_pr(
                     workspace, task_id, int(opened["number"]), str(opened.get("url") or "")
@@ -1923,6 +2232,7 @@ def resume_live_campaign(
     l9_home: Path,
     host_repo: str,
     hooks: Hooks,
+    trace: pe_trace.ExecutionTrace | None = None,
 ) -> CampaignReport:
     """Continue an armed campaign instead of quarantining its live pec workspace.
 
@@ -1964,17 +2274,20 @@ def resume_live_campaign(
                 f"target checkout is dirty: {target_path}; "
                 "make campaign will not attach to a dirty target"
             )
-        ensure_target_history(target_path, repository_id)
+        with traced(trace, "reconcile", "ensure_target_history"):
+            ensure_target_history(target_path, repository_id)
     log(f"execute {campaign_id}")
-    if hooks.execute is not None:
-        hooks.execute(pec_workspace, campaign_id)
-    elif (pec_workspace / "runtime" / "program-lock.json").is_file():
-        default_execute(
-            pec_workspace,
-            campaign_id,
-            hooks=hooks,
-            live_prs=should_run(until, "pr") and hooks.make_pr is None,
-        )
+    with traced(trace, "execute", "execute"):
+        if hooks.execute is not None:
+            hooks.execute(pec_workspace, campaign_id)
+        elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+            default_execute(
+                pec_workspace,
+                campaign_id,
+                hooks=hooks,
+                live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                trace=trace,
+            )
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
@@ -1984,28 +2297,32 @@ def resume_live_campaign(
         return report
     if not executed:
         raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
-    commit_host_emit(write_root, campaign_id)
+    with traced(trace, "commit", "commit_host_emit"):
+        commit_host_emit(write_root, campaign_id)
     if hooks.make_pr is None:
-        push_integration_branch(write_root, campaign_id)
+        with traced(trace, "publish", "push_integration_branch"):
+            push_integration_branch(write_root, campaign_id)
     make_pr = hooks.make_pr or default_make_pr
-    pr_result = make_pr(write_root, campaign_id)
+    with traced(trace, "publish", "make_pr"):
+        pr_result = make_pr(write_root, campaign_id)
     report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
     report.host_pr_number = pr_result.get("number")
     log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
     report.stages_completed.append("pr")
     if not should_run(until, "close"):
         return report
-    if hooks.close is not None:
-        hooks.close(pec_workspace, campaign_id)
-    else:
-        default_close(
-            pec_workspace,
-            campaign_id,
-            write_root=write_root,
-            host_repo=host_repo,
-            hooks=hooks,
-            merge_recorded=requested_until in {"merge", "close"},
-        )
+    with traced(trace, "close", "close"):
+        if hooks.close is not None:
+            hooks.close(pec_workspace, campaign_id)
+        else:
+            default_close(
+                pec_workspace,
+                campaign_id,
+                write_root=write_root,
+                host_repo=host_repo,
+                hooks=hooks,
+                merge_recorded=requested_until in {"merge", "close"},
+            )
     report.program_blockers = []
     report.stages_completed.append("close")
     return report
@@ -2023,21 +2340,75 @@ def run_campaign(
     target_override: str | None = None,
     hooks: Hooks | None = None,
 ) -> CampaignReport:
+    """Run the campaign and leave a forensic execution trace behind it.
+
+    Every invocation gets its own run_id, so a resumed campaign keeps the
+    campaign identity and starts a new run. The trace is unbound until the
+    seed names a campaign: events emitted before that are buffered and
+    flushed into `<pec workspace>/telemetry/events.jsonl` on bind.
+    """
+    trace = pe_trace.ExecutionTrace()
+    try:
+        # Category "campaign" is deliberately outside the §21 time buckets:
+        # this span is the wall clock, and bucketing it would double-count
+        # every stage inside it.
+        with traced(
+            trace,
+            "campaign",
+            "campaign_run",
+            metadata={"until": until, "host_repo": host_repo},
+        ):
+            return _run_campaign_stages(
+                intent_path,
+                until=until,
+                primary=primary,
+                worktree=worktree,
+                repo_root=repo_root,
+                l9_root=l9_root,
+                host_repo=host_repo,
+                target_override=target_override,
+                hooks=hooks,
+                trace=trace,
+            )
+    finally:
+        auto_harvest(trace)
+
+
+def _run_campaign_stages(
+    intent_path: Path,
+    *,
+    until: str = "merge",
+    primary: Path | None = None,
+    worktree: Path | None = None,
+    repo_root: Path | None = None,
+    l9_root: Path | None = None,
+    host_repo: str = HOST_REPO_DEFAULT,
+    target_override: str | None = None,
+    hooks: Hooks | None = None,
+    trace: pe_trace.ExecutionTrace | None = None,
+) -> CampaignReport:
     requested_until = until
     until = normalize_until(until)
     hooks = hooks or Hooks()
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
-    resolved_intent = resolve_operator_intent(
-        intent_path,
-        host_root=host_root,
-        target_override=target_override or os.environ.get("TARGET"),
-        primed_dir=l9_home / "primed",
-    )
-    seed = load_activate_seed(resolved_intent)
-    campaign_id = str(seed["campaign_id"]).strip()
-    refuse_hash_campaign_id(campaign_id)
+    with traced(
+        trace, "input", "input_classification", metadata={"intent": str(intent_path)}
+    ) as classified:
+        resolved_intent = resolve_operator_intent(
+            intent_path,
+            host_root=host_root,
+            target_override=target_override or os.environ.get("TARGET"),
+            primed_dir=l9_home / "primed",
+        )
+        seed = load_activate_seed(resolved_intent)
+        campaign_id = str(seed["campaign_id"]).strip()
+        refuse_hash_campaign_id(campaign_id)
+        classified["campaign_id"] = campaign_id
+        classified["resolved_intent"] = str(resolved_intent)
+    if trace is not None:
+        trace.bind(l9_home / "programs" / campaign_id, campaign_id=campaign_id)
     if should_run(until, "execute") and resumable_workspace(l9_home / "programs" / campaign_id):
         return resume_live_campaign(
             campaign_id=campaign_id,
@@ -2049,11 +2420,13 @@ def run_campaign(
             l9_home=l9_home,
             host_repo=host_repo,
             hooks=hooks,
+            trace=trace,
         )
     primed_root = l9_home / "primed"
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")
-    stack_receipt = stack_fn(seed, primed_root)
+    with traced(trace, "research", "context7_stack_proof"):
+        stack_receipt = stack_fn(seed, primed_root)
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))
     )
@@ -2061,12 +2434,14 @@ def run_campaign(
         write_root = repo_root.resolve()
     else:
         write_root = (worktree or (l9_home / "gov-worktrees" / campaign_id)).resolve()
-        write_root = isolate_worktree(
-            primary,
-            campaign_id,
-            write_root,
-            git_fn=hooks.git,
-        ).resolve()
+        with traced(trace, "workspace", "isolate_worktree"):
+            write_root = isolate_worktree(
+                primary,
+                campaign_id,
+                write_root,
+                git_fn=hooks.git,
+                trace=trace,
+            ).resolve()
     refuse_write_to_dirty_primary(primary, write_root)
 
     report = CampaignReport(
@@ -2082,7 +2457,9 @@ def run_campaign(
     compile_activation = hooks.compile_activation or default_compile_activation
     plan_fn = hooks.plan_window or default_plan_window
     log(f"plan-window {campaign_id}")
-    plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+    with traced(trace, "planning", "plan_window") as planned:
+        plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+        planned["plan_status"] = str(plan_receipt.get("plan_status") or "")
     projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
     if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
         if hooks.compile_activation is None:
@@ -2091,10 +2468,11 @@ def run_campaign(
                 "ConditionallyReady; refuse seal"
             )
     log(f"emit {campaign_id} into {write_root}")
-    compile_activation(
-        projected_intent if projected_intent.is_file() else resolved_intent,
-        write_root,
-    )
+    with traced(trace, "compile", "compile_activation"):
+        compile_activation(
+            projected_intent if projected_intent.is_file() else resolved_intent,
+            write_root,
+        )
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
@@ -2116,8 +2494,8 @@ def run_campaign(
         )
         return report
 
-    quarantine_occupied(Path(report.pec_workspace))
-    quarantine_occupied(Path(report.blueprint))
+    quarantine_occupied(Path(report.pec_workspace), trace=trace)
+    quarantine_occupied(Path(report.blueprint), trace=trace)
     source = (
         write_root
         / "environment/program-execution/campaigns"
@@ -2127,18 +2505,30 @@ def run_campaign(
     blueprint = Path(report.blueprint)
     log(f"blueprint {blueprint}")
     allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
-    if hooks.compile_source is not None:
-        hooks.compile_source(source, blueprint)
-    else:
-        default_compile_source(
-            source,
-            blueprint,
-            allowlist_path=allowlist,
-            stack_proof=stack_proof_path,
-        )
+    compile_input = pe_trace.fingerprint(source, allowlist, stack_proof_path)
+    with traced(trace, "compile", "compile_campaign_source", input_fingerprint=compile_input):
+        if hooks.compile_source is not None:
+            hooks.compile_source(source, blueprint)
+        else:
+            default_compile_source(
+                source,
+                blueprint,
+                allowlist_path=allowlist,
+                stack_proof=stack_proof_path,
+            )
     annotate_phase0_without_forging_ack(blueprint)
     validate = hooks.validate_blueprint or default_validate_blueprint
-    errors = validate(blueprint)
+    with traced(
+        trace,
+        "blueprint",
+        "blueprint_validation",
+        input_fingerprint=blueprint_fingerprint(blueprint),
+    ) as validated:
+        errors = validate(blueprint)
+        validated["error_count"] = len(errors)
+        if errors:
+            validated["error_code"] = "BLUEPRINT_VALIDATION_FAILED"
+            validated["error_message"] = "; ".join(errors)
     if errors:
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
@@ -2156,15 +2546,17 @@ def run_campaign(
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
     target_path = Path(target_worktree)
     if hooks.admit is None:
-        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+        with traced(trace, "workspace", "ensure_target_checkout"):
+            default_ensure_target_checkout(target_path, repository_id, donor=write_root)
         host_revision = target_head_sha(target_path)
     else:
         host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
     log(f"admit EVID-001 bind {host_revision}")
-    if hooks.admit is not None:
-        hooks.admit(blueprint)
-    else:
-        default_admit(blueprint, revision=host_revision)
+    with traced(trace, "acceptance", "acceptance", metadata={"revision": host_revision}):
+        if hooks.admit is not None:
+            hooks.admit(blueprint)
+        else:
+            default_admit(blueprint, revision=host_revision)
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
@@ -2177,12 +2569,23 @@ def run_campaign(
         return report
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
-    pec_result = pec(Path(report.pec_workspace), blueprint)
+    pec_workspace_path = Path(report.pec_workspace)
+    with traced(
+        trace,
+        "bootstrap",
+        "pec_bootstrap",
+        input_fingerprint=blueprint_fingerprint(blueprint),
+    ):
+        with trace_stepped_aside(trace, pec_workspace_path):
+            pec_result = pec(pec_workspace_path, blueprint)
+        if trace is not None:
+            trace.rehome(pec_workspace_path)
     if pec_result.get("draft"):
         raise CampaignError("pec --admission-draft is not a live campaign path")
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
-    pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
+    with traced(trace, "bootstrap", "pec_runtime_activate"):
+        pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
     log(f"pec runtime_status={pec_status.get('runtime_status')}")
     mark_host_campaign_active(
         write_root,
@@ -2203,16 +2606,19 @@ def run_campaign(
         return report
 
     log(f"arm {FIRST_TASK_ID}")
-    if hooks.arm is not None:
-        hooks.arm(Path(report.pec_workspace), campaign_id)
-    else:
-        default_ensure_target_checkout(target_path, repository_id, donor=write_root)
-        default_arm(
-            Path(report.pec_workspace),
-            campaign_id,
-            repository_id=repository_id,
-            target_path=target_path,
-        )
+    with traced(trace, "arm", "arm"):
+        if hooks.arm is not None:
+            hooks.arm(Path(report.pec_workspace), campaign_id)
+        else:
+            with traced(trace, "workspace", "ensure_target_checkout"):
+                default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+            default_arm(
+                Path(report.pec_workspace),
+                campaign_id,
+                repository_id=repository_id,
+                target_path=target_path,
+                trace=trace,
+            )
     stack_path = Path(report.pec_workspace) / "runtime" / "STACK.json"
     if stack_path.is_file():
         write_stack_cards(
@@ -2243,21 +2649,24 @@ def run_campaign(
             pusher = push_integration_branch
         if pusher is not None:
             log(f"push {campaign_id} integration branch before execute")
-            pusher(write_root, campaign_id)
+            with traced(trace, "publish", "push_integration_branch"):
+                pusher(write_root, campaign_id)
     if not should_run(until, "execute"):
         return report
 
     log(f"execute {campaign_id}")
     pec_workspace = Path(report.pec_workspace)
-    if hooks.execute is not None:
-        hooks.execute(pec_workspace, campaign_id)
-    elif (pec_workspace / "runtime" / "program-lock.json").is_file():
-        default_execute(
-            pec_workspace,
-            campaign_id,
-            hooks=hooks,
-            live_prs=should_run(until, "pr") and hooks.make_pr is None,
-        )
+    with traced(trace, "execute", "execute"):
+        if hooks.execute is not None:
+            hooks.execute(pec_workspace, campaign_id)
+        elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+            default_execute(
+                pec_workspace,
+                campaign_id,
+                hooks=hooks,
+                live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                trace=trace,
+            )
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
@@ -2271,11 +2680,14 @@ def run_campaign(
             "refuse host-only merge before all tasks COMPLETED",
             exit_code=2,
         )
-    commit_host_emit(write_root, campaign_id)
+    with traced(trace, "commit", "commit_host_emit"):
+        commit_host_emit(write_root, campaign_id)
     if hooks.make_pr is None:
-        push_integration_branch(write_root, campaign_id)
+        with traced(trace, "publish", "push_integration_branch"):
+            push_integration_branch(write_root, campaign_id)
     make_pr = hooks.make_pr or default_make_pr
-    pr_result = make_pr(write_root, campaign_id)
+    with traced(trace, "publish", "make_pr"):
+        pr_result = make_pr(write_root, campaign_id)
     report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
     report.host_pr_number = pr_result.get("number")
     log(f"PR {report.host_pr or report.host_pr_number or 'opened'}")
@@ -2284,17 +2696,18 @@ def run_campaign(
         return report
 
     close = hooks.close or default_close
-    if hooks.close is not None:
-        close(pec_workspace, campaign_id)
-    else:
-        default_close(
-            pec_workspace,
-            campaign_id,
-            write_root=write_root,
-            host_repo=host_repo,
-            hooks=hooks,
-            merge_recorded=requested_until in {"merge", "close"},
-        )
+    with traced(trace, "close", "close"):
+        if hooks.close is not None:
+            close(pec_workspace, campaign_id)
+        else:
+            default_close(
+                pec_workspace,
+                campaign_id,
+                write_root=write_root,
+                host_repo=host_repo,
+                hooks=hooks,
+                merge_recorded=requested_until in {"merge", "close"},
+            )
     report.program_blockers = []
     report.stages_completed.append("close")
     return report
@@ -2349,8 +2762,48 @@ def refuse_live_until_shortcut(until: str) -> None:
     )
 
 
+def build_trace_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="run_campaign.py trace",
+        description="Harvest the execution trace a campaign run left behind.",
+    )
+    parser.add_argument(
+        "--workspace",
+        required=True,
+        type=Path,
+        help="pec workspace holding telemetry/events.jsonl",
+    )
+    parser.add_argument("--json", action="store_true", help="print the JSON summary")
+    return parser
+
+
+def trace_command(argv: list[str]) -> int:
+    """Harvest telemetry into run-summary.{json,md} and print a digest.
+
+    The caller asked for telemetry here, so unlike campaign execution this
+    path reports a harvest failure instead of warning and continuing.
+    """
+    args = build_trace_parser().parse_args(argv)
+    workspace = args.workspace.resolve()
+    events = workspace / pe_trace.TELEMETRY_DIRNAME / pe_trace.EVENTS_FILENAME
+    if not events.is_file():
+        print(f"FAIL: no execution trace at {events}", file=sys.stderr)
+        return 2
+    summary = pe_trace.harvest_and_write(workspace)
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True))
+    else:
+        print(pe_trace.render_terminal_summary(summary))
+        print(f"wrote {workspace / pe_trace.TELEMETRY_DIRNAME / pe_trace.SUMMARY_JSON_FILENAME}")
+        print(f"wrote {workspace / pe_trace.TELEMETRY_DIRNAME / pe_trace.SUMMARY_MD_FILENAME}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if raw and raw[0] == "trace":
+        return trace_command(raw[1:])
+    args = build_parser().parse_args(raw)
     try:
         refuse_live_until_shortcut(args.until)
         report = run_campaign(
