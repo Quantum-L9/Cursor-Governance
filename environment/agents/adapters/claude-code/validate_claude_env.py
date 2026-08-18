@@ -207,7 +207,10 @@ def check_cross_file_secret_contract(failures: list[str]) -> None:
         for token in ("GRAPHITI_MCP_TOKEN", "INFISICAL_CLIENT_SECRET", "SONAR_TOKEN"):
             match = re.search(rf"^\s*{token}\s*=", env_text, re.MULTILINE)
             if match:
-                _fail(f"environment.env.example assigns {token} — zero static secrets violated", failures)
+                _fail(
+                    f"environment.env.example assigns {token} — zero static secrets violated",
+                    failures,
+                )
         if re.search(r"^\s*GH_TOKEN\s*=", env_text, re.MULTILINE):
             _fail(
                 "environment.env.example assigns GH_TOKEN — the platform proxy "
@@ -222,7 +225,10 @@ def check_cross_file_secret_contract(failures: list[str]) -> None:
         boot_text = bootstrap.read_text(encoding="utf-8")
         for needle in ("export GH_TOKEN", "gh auth login --with-token"):
             if needle in boot_text:
-                _fail(f"web/setup.bootstrap.sh must not {needle.split(' ', 2)[1]} ({needle!r})", failures)
+                _fail(
+                    f"web/setup.bootstrap.sh must not {needle.split(' ', 2)[1]} ({needle!r})",
+                    failures,
+                )
         if not failures:
             print("  OK: setup.bootstrap.sh persists no credential")
 
@@ -231,7 +237,9 @@ def check_cross_file_secret_contract(failures: list[str]) -> None:
         setup_text = setup.read_text(encoding="utf-8")
         for needle in ("GRAPHITI_MCP_TOKEN=", "gh auth login --with-token"):
             if needle in setup_text:
-                _fail(f"web/setup.sh must not require or persist a credential ({needle!r})", failures)
+                _fail(
+                    f"web/setup.sh must not require or persist a credential ({needle!r})", failures
+                )
         if not failures:
             print("  OK: web/setup.sh persists no credential")
 

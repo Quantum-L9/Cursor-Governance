@@ -105,7 +105,9 @@ def test_ping_and_notifications() -> None:
     status, payload = post(StubBroker(), "/mcp/graphiti", rpc("ping", {}, 2))
     assert status == 200
     assert payload["result"] == {}
-    status, _ = post(StubBroker(), "/mcp/graphiti", {"jsonrpc": "2.0", "method": "notifications/initialized"})
+    status, _ = post(
+        StubBroker(), "/mcp/graphiti", {"jsonrpc": "2.0", "method": "notifications/initialized"}
+    )
     assert status == 202
 
 
