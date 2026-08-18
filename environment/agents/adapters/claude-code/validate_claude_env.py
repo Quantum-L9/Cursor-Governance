@@ -264,6 +264,48 @@ def check_cross_file_chain_prohibitions(failures: list[str]) -> None:
         print("  OK: web/README.md documents the zero-static-secret contract")
 
 
+def check_installer_health_contract(failures: list[str]) -> None:
+    """install.sh must be the canonical health-classifying installer.
+
+    * every Python step runs on the locked interpreter ($GOV_PY), never the
+      sandbox's system python3;
+    * a machine-readable receipt (schema l9.claude-bootstrap.v1) is written to
+      ~/.l9/claude/bootstrap-state.json;
+    * there is no unconditional success claim — the final classification line
+      is driven by the health accumulator.
+    """
+    installer = HERE / "install.sh"
+    if not installer.is_file():
+        return
+    text = installer.read_text(encoding="utf-8")
+    if 'schema": "l9.claude-bootstrap.v1"' not in text:
+        _fail(
+            "install.sh must write the l9.claude-bootstrap.v1 receipt "
+            "(~/.l9/claude/bootstrap-state.json)",
+            failures,
+        )
+    if "bootstrap-state.json" not in text:
+        _fail("install.sh must write ~/.l9/claude/bootstrap-state.json", failures)
+    if "downgrade" not in text or "OVERALL=" not in text:
+        _fail(
+            "install.sh must carry the BLOCKED/DEGRADED/READY health accumulator "
+            "(no unconditional adapter-ready claim)",
+            failures,
+        )
+    if 'Claude Code adapter ready"' in text:
+        _fail(
+            "install.sh must not print an unconditional 'adapter ready' — the "
+            "final line states the classification",
+            failures,
+        )
+    # Python reconciliation steps must run on the locked interpreter.
+    for bad in ('python3 "$RECONCILE_SETTINGS"', 'python3 "$RECONCILE_SKILLS"'):
+        if bad in text:
+            _fail(f"install.sh must not run reconciliation on system python3 ({bad})", failures)
+    if not failures:
+        print("  OK: install.sh is a health-classifying installer with a receipt")
+
+
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
     """Web setup must stay GitHub-main / Linux-sandbox shaped (no host-IDE SSOT)."""
     setup = HERE / "web" / "setup.sh"
@@ -570,6 +612,7 @@ def main() -> int:
     check_cross_file_chain_prohibitions(failures)
     check_setup_linux_sandbox_hygiene(failures)
     check_dependency_policy(failures)
+    check_installer_health_contract(failures)
     check_publish_path_alignment(failures)
     check_no_secret_paste_instructions(failures)
     check_memory_identity_distinct(failures)

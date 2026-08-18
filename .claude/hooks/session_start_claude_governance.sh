@@ -50,14 +50,63 @@ LINES=()
 LINES+=("L9 Governance — Claude Code session")
 LINES+=("workspace: $WORKSPACE")
 
+# --- Cloud-only governance refresh (CLAUDE_CODE_REMOTE=true) -----------------
+# Anthropic documents CLAUDE_CODE_REMOTE=true as the supported discriminator
+# for cloud-session-only setup. In cloud, the governance clone is an ephemeral
+# environment artifact: refresh it from origin/main so every session starts on
+# the current tip, and record the exact revision. On a local developer
+# checkout (CLI / Desktop) NEVER reset — inspect and report only.
+CLOUD_REFRESH_LOG="$HOME/.l9/claude/gov-refresh.log"
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  if GOV=$(resolve_governance_dir); then
+    mkdir -p "$(dirname "$CLOUD_REFRESH_LOG")"
+    GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+    GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
+    if git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
+      if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
+        echo "fresh $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+        LINES+=("governance refresh: cloud session — reset ephemeral clone to origin/$GOV_BRANCH")
+      else
+        echo "reset-failed $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+        LINES+=("governance refresh: WARN reset to origin/$GOV_BRANCH failed — reusing clone")
+      fi
+    else
+      echo "fetch-failed $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+      LINES+=("governance refresh: WARN fetch origin/$GOV_BRANCH failed — reusing clone (may be stale)")
+    fi
+    # Per-session, per-repository dependency work (consumer workspace toolchain
+    # + pre-commit warm) moved out of the cached account Setup script.
+    DEPS_HELPER="$GOV/environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh"
+    if [ -f "$DEPS_HELPER" ]; then
+      DEPS_LINE=$(bash "$DEPS_HELPER" --workspace "$WORKSPACE" 2>&1 | tail -1)
+      LINES+=("session deps: ${DEPS_LINE:-unknown}")
+    fi
+  fi
+fi
+
 if GOV=$(resolve_governance_dir); then
   LINES+=("governance SSOT: $GOV (GitHub Quantum-L9/Cursor-Governance)")
   if [ -d "$GOV/.git" ]; then
     br=$(git -C "$GOV" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
     sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
-    LINES+=("governance rev: ${br}@${sha}")
-    if [ "$br" != "main" ] && [ "$br" != "autonomy-surface-parity" ]; then
-      LINES+=("WARN: governance clone is not on main — web/setup.sh should sync origin/main")
+    if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+      # Local/Desktop: this is a developer checkout — SessionStart NEVER resets
+      # it. Report revision and drift against origin/main instead.
+      LINES+=("governance rev: ${br}@${sha} (local checkout — SessionStart never resets it)")
+      if [ "$br" != "main" ]; then
+        LINES+=("WARN: governance checkout is not on main (branch: $br) — drift is expected for in-flight work; report only")
+      fi
+      if git -C "$GOV" fetch --depth 1 origin main >/dev/null 2>&1; then
+        local_sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
+        remote_sha=$(git -C "$GOV" rev-parse --short FETCH_HEAD 2>/dev/null || echo "?")
+        if [ "$local_sha" = "$remote_sha" ]; then
+          LINES+=("governance drift: none (HEAD == origin/main @$local_sha)")
+        else
+          LINES+=("governance drift: local @$local_sha vs origin/main @$remote_sha")
+        fi
+      fi
+    else
+      LINES+=("governance rev: ${br}@${sha}")
     fi
   fi
   LINES+=("authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts")
