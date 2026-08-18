@@ -8,8 +8,14 @@
     "NO CREDENTIALS in this file or in environment.env — the broker authenticates",
     "this session with the platform-issued workload JWT (CLAUDE_SESSION_JWT).",
     "",
-    "Graphiti memory remains direct (separate bearer + Caddy proxy).",
-    "Set L9_CAPABILITY_BROKER_URL in environment.env to the cloud broker URL."
+    "Graphiti memory is brokered too (capability graphiti.query). This template",
+    "carries NO bearer: GRAPHITI_MCP_TOKEN is prohibited in a model-controlled",
+    "surface (contract S3/§12). The URL points at the broker front door",
+    "(L9_CAPABILITY_BROKER_URL), which resolves the Graphiti credential on its",
+    "own side and proxies to memory.quantumaipartners.com/graphiti/mcp.",
+    "When the broker URL is unset this server does not resolve and memory runs",
+    "DEGRADED — the honest posture, not a reason to paste a token back in.",
+    "Set L9_CAPABILITY_BROKER_URL in environment.env to the broker URL."
   ],
   "mcpServers": {
     "GitHub": {
@@ -53,10 +59,8 @@
       "timeout": 30000
     },
     "graphiti-memory": {
-      "url": "${GRAPHITI_MCP_URL}",
-      "headers": {
-        "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
-      },
+      "type": "http",
+      "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
       "timeout": 120000,
       "alwaysLoad": true
     }
