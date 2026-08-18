@@ -1794,8 +1794,11 @@ def default_execute(
     *,
     hooks: Hooks,
     live_prs: bool,
+    timer: Any | None = None,
 ) -> dict[str, Any]:
     refuse_hash_campaign_id(campaign_id)
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = timer if timer is not None else timing.StageTimer(workspace)
     tasks = locked_tasks(workspace)
     stack_path = workspace / "runtime" / "STACK.json"
     stack_items = []
@@ -1863,13 +1866,15 @@ def default_execute(
             task_id: str = task_id,
             task: dict[str, Any] = task,
         ) -> None:
-            run_worker_handoff(workspace, task, contract, worktree, hooks=hooks)
-            candidate = rewrite_output()
+            with timer.stage("task_worker", task_id=task_id):
+                run_worker_handoff(workspace, task, contract, worktree, hooks=hooks)
+                candidate = rewrite_output()
             changed = committed_changed_files(worktree, contract["base_sha"], candidate)
             declared_commands = [
                 str(command) for command in (contract.get("validation_commands") or []) if command
             ]
-            validation_results = run_declared_validations(worktree, declared_commands)
+            with timer.stage("task_validation", task_id=task_id):
+                validation_results = run_declared_validations(worktree, declared_commands)
             receipt = {
                 "schema": "program-execution-controller.attempt-receipt.v2",
                 "task_id": task_id,
@@ -1899,7 +1904,8 @@ def default_execute(
 
         if not already_submitted:
             submit_attempt()
-        verification = pec_cmd(workspace, "verify", task_id)
+        with timer.stage("task_verify", task_id=task_id):
+            verification = pec_cmd(workspace, "verify", task_id)
         decision = dispatch_kernel_change(verification)
         if decision["action"] == "skip_change":
             raise CampaignError(
@@ -2306,7 +2312,8 @@ def run_campaign(
     compile_activation = hooks.compile_activation or default_compile_activation
     plan_fn = hooks.plan_window or default_plan_window
     log(f"plan-window {campaign_id}")
-    plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+    with timer.stage("plan_window"):
+        plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
     projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
     if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
         if hooks.compile_activation is None:
@@ -2315,10 +2322,11 @@ def run_campaign(
                 "ConditionallyReady; refuse seal"
             )
     log(f"emit {campaign_id} into {write_root}")
-    compile_activation(
-        projected_intent if projected_intent.is_file() else resolved_intent,
-        write_root,
-    )
+    with timer.stage("emit"):
+        compile_activation(
+            projected_intent if projected_intent.is_file() else resolved_intent,
+            write_root,
+        )
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
@@ -2512,6 +2520,7 @@ def run_campaign(
                 campaign_id,
                 hooks=hooks,
                 live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                timer=timer,
             )
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
