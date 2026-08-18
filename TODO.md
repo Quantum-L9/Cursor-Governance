@@ -280,3 +280,51 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 ## Publish note
 
 Changes live in the SSOT (`$HOME/.cursor-governance`). Backup via `sessionEnd` hook or `make governance-backup` — not from IB-Odoo_19.
+
+## pre-commit vs `make pr-check` — parked (2026-08-17)
+
+Do **not** edit `.pre-commit-config.yaml` and do **not** change the working
+`Makefile` / `make pr` lifecycle (PR #209) until this is an explicit follow-up.
+Keep shipping through `make improve` → `make pr-check` → `make pr`.
+
+**Findings (microscope, 2026-08-17):**
+
+1. **Git commit hook is not installed.** `core.hooksPath` unset;
+   `.git/hooks/pre-commit` absent. Worktrees share
+   `/Users/macm2/Cursor-Governance/Cursor-Governance/.git/hooks`.
+   `pre-commit install` would write that local untracked file. CI never uses
+   the hook.
+2. **What actually runs lint today**
+   - Local: `make pr-check` → `run_pr_gate.sh` → `run_pr_precommit.sh`
+     (catalog in `.pre-commit-config.yaml` on changed files) **then** locked
+     `.venv` ruff check/format again.
+   - CI Lint: `uv run ruff` in `.github/workflows/l9-lint-test.yml` — not the
+     `pre-commit` CLI.
+   - CI Test Suite: `uv sync --extra dev` + pytest. Dev extra does **not**
+     install the `pre-commit` framework. A unit test that shelled into
+     `run_pr_precommit.sh` failed until empty file-lists PASS without the
+     binary (PR #209).
+3. **Duplication is real, but `pr-check` is not only a ruff clone.**
+
+   | In `.pre-commit-config.yaml` | Re-run after that in `pr-check` | Only in `pr-check` |
+   |---|---|---|
+   | merge-conflict, path-lint, rules, skills, hygiene, ruff, ruff-format | ruff + format (locked venv) | pytest, gitleaks/bandit/semgrep, uv-lock, wiring, gate receipt |
+
+4. **Intended later owner (not this slice):** yaml owns lint; `make pr`
+   stays the publish path; `pr-check` becomes a thin alias (catalog + the
+   non-lint extras). Do not delete `pr-check` until pytest/security/receipt
+   live in the yaml or stay as named extras. Do not teach
+   `pre-commit install` as the shipping gate.
+5. **Other leftover surfaces (leave alone for now):**
+   - `make precommit` / `precommit-repo` — INTERNAL full-tree / changed-files
+     of the same catalog.
+   - `make push: precommit backup` — second path toward GitHub.
+   - Claude web `setup.sh` still mentions `pre-commit install`.
+   - Pin lockstep: catalog ruff `rev` vs locked `.venv` ruff vs CI `uv run ruff`.
+
+- [ ] Later: yaml-owns-lint (drop the second ruff block in `run_pr_gate.sh`)
+      without rewriting `.pre-commit-config.yaml` until that campaign starts.
+- [ ] Later: decide git hook (`pre-commit install`) as optional local
+      convenience only — not CI, not `make pr`.
+- [ ] Later: retire `make push: precommit backup` and Claude `pre-commit install`
+      teaching once the owner is yaml.

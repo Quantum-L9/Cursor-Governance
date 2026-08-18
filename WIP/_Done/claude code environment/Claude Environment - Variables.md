@@ -1,0 +1,175 @@
+# L9 Claude Code cloud environment variables (Web · Mobile · --cloud)
+#
+# 2026-08-17: REPLACE_WITH_* placeholders were removed on purpose.
+# AWS --check (names only, no values printed): github#token and
+# infisical-cursor-governance#{client_id,client_secret,project_id,env,host} = OK.
+# GRAPHITI_MCP_TOKEN is not an AWS secret (Infisical / only).
+# Do not paste GH_TOKEN, GRAPHITI_MCP_TOKEN, SONAR_TOKEN, or Infisical UA
+# into this file or into claude.ai/code. SSOT for what to paste:
+# environment/agents/adapters/claude-code/web/environment.env.example
+#
+# Paste into claude.ai/code -> environment -> Environment variables (.env format).
+# Anthropic stores these in plaintext for anyone who can use the environment,
+# and everything here is readable by the model. THIS FILE THEREFORE CARRIES NO
+# CREDENTIALS AT ALL — no PAT, no Graphiti bearer, no Sonar/Semgrep token, no
+# Infisical client secret, no AWS key (contract S1/S2/S3).
+#
+# There is nothing to paste. If a capability is unavailable, fix its delivery
+# through the capability broker; do not add a secret here to make a check pass.
+# Changes apply to NEW sessions only.
+#
+# THIS FIELD IS LITERAL TEXT — no shell expansion. `FOO=$HOME/x` is stored as the
+# characters `$HOME/x`, not your home directory. Never reference $HOME, $PWD, or
+# any other variable here; paths that need expanding are resolved by setup.sh.
+#
+# Companions: web/setup.bootstrap.sh (Setup script) · web/network-policy.md (Network access)
+
+# --- GitHub: platform proxy, NOT a PAT ----------------------------------------
+# Anthropic-hosted Claude cloud authenticates git and gh through its own
+# injected git proxy. A real PAT here would be a persistent, reusable GitHub
+# credential sitting in a model-controlled environment — exactly what the
+# capability contract removes (S3/S7).
+#
+# Leave this UNSET, or set the literal placeholder below. `proxy-injected` is
+# safe precisely because it is not a credential: it documents the posture and
+# fails loudly if something tries to use it as a token.
+#
+# NEVER replace this with a real PAT to make a check go green. If gh cannot
+# authenticate, that is a platform/proxy problem to fix, not a reason to
+# introduce a static secret.
+GH_TOKEN=proxy-injected
+
+# --- Governance SSOT ----------------------------------------------------------
+# L9_GOVERNANCE_DIR is deliberately ABSENT. The cloud SSOT is always
+# $HOME/.cursor-governance, hard-pinned by setup.sh and the SessionStart hook.
+# Setting it here can only feed consumers an unexpanded literal '$HOME' path.
+L9_GOVERNANCE_REMOTE=https://github.com/Quantum-L9/Cursor-Governance.git
+L9_GOVERNANCE_BRANCH=main
+
+# --- Surface + memory identity (distinct writer, shared group_id) --------------
+# L9_GOVERNANCE_SURFACE must be exactly `claude-code`: the Autonomy Surface
+# Profile allow-list (ops/autonomy/surface_profile.yaml `when:`) and
+# rules/99-no-auto-commit.mdc match on that id. A `claude-code-mobile` variant
+# drops the session out of standing A4 velocity. Web and Mobile share this id.
+L9_GOVERNANCE_SURFACE=claude-code
+USER_ID=claude_code_agent
+L9_MEMORY_AGENT_ID=claude-code
+L9_MEMORY_SOURCE=claude-code
+L9_AGENT_ROLE=implementation-agent
+
+# --- Graphiti memory front door (ADR-0006 / ADR-0007) -------------------------
+# The ONLY memory plane. Same Neo4j as Cursor's tunnel :8100, via C1 Caddy
+# /graphiti/*. Without GRAPHITI_MCP_TOKEN the SessionStart hydrate returns an
+# empty PICKUP and every governed write is denied for want of a phase-lock.
+GRAPHITI_MEMORY_ENABLED=1
+GRAPHITI_WRITE_GATES=1
+GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
+#
+# GRAPHITI_MCP_TOKEN is deliberately ABSENT and must stay that way. The bearer
+# lives on the trusted side of the capability broker; this session reaches
+# memory through the `graphiti.query` / `graphiti.write_governed` capabilities
+# and never holds the credential. Pasting a bearer here re-creates the exact
+# posture this contract removed (S3, §12).
+#
+# GRAPHITI_GROUP_ID is deliberately ABSENT. This account environment is reused
+# across consumer repositories, and group_registry.yaml resolves in the order
+# [explicit_env, git_remote_match, path_hint_match] — so an env value here wins
+# over repo-aware resolution and would file every repo's memory under one group.
+# Transport and auth are environment-level; the namespace is per-repository.
+# Legitimate one-off override: export GRAPHITI_GROUP_ID for that shell only.
+# Declarative posture markers. Enforcement is the PreToolUse memory gate
+# (hooks/memory_gate.py), which fails closed by construction.
+L9_MEMORY_REQUIRED=true
+L9_MEMORY_FAIL_CLOSED=true
+#
+# RETIRED — do NOT set. The HTTP side door was removed by ADR-0006; if these are
+# still in your environment, delete them:
+#   L9_MEMORY_HTTP_URL
+#   L9_MEMORY_CLIENT_TOKEN
+
+# --- Bounded autonomy (A4 + M4; ordinary merge enabled) -----------------------
+# pr-convergence is the only L9_AUTONOMY_PROFILE. There is no higher profile
+# name. L9_AUTONOMY_AUTONOMOUS_MERGE is a real merge_gate.py control: true
+# authorizes ordinary `gh pr merge --squash` (never --admin / force / hard-reset).
+# Still merge only after /l9-pr-remediation: all open PRs green, mergeable,
+# review threads resolved, oldest first. Campaigns and `make pr` do not merge.
+L9_AUTONOMY_ENABLED=true
+L9_AUTONOMY_AUTHORITY=A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
+L9_AUTONOMY_MATURITY=M4_ASSURANCE_GOVERNED
+L9_AUTONOMY_PROFILE=pr-convergence
+L9_AUTONOMY_AUTONOMOUS_MERGE=true
+L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation
+L9_AUTONOMY_MAX_PARALLEL=4
+L9_AUTONOMY_MAX_MUTATION_LANES=2
+L9_AUTONOMY_STATE_DIR=.l9/autonomy
+L9_DISCOVER_BEFORE_ASK=true
+L9_REQUIRE_EXACT_SHA_GREEN=true
+
+# --- L4 local autonomy + worktree isolation (all surfaces; default ON) --------
+# Local commits on a stacked branch are free; push / gh pr create / make pr stay
+# denied by ops/autonomy/local_execution_gate.py until the kernels are recorded
+# and .l9/autonomy/l4-release-receipt.json authorizes release. Both flags are ON
+# by default — set here explicitly so the posture is visible in the environment.
+L9_L4_LOCAL_AUTONOMY=1
+L9_WORKTREE_ISOLATION=1
+
+# --- Publish path (PR_REMEDIATE=0 make pr) ------------------------------------
+# Sole shipping command: `make pr` (checkers run inside that target, then push +
+# open). Do not run `make pr-check` as a separate pass — that name is a Makefile
+# implementation detail, not an agent command (CANONICAL_LAW §12, 2026-08-16).
+# Gate-only: `OPEN_PR=0 make pr`. Remediation is a later l9-pr-remediation step.
+PR_REMEDIATE=0
+# PR_BASE — set ONLY for Program Execution campaign work, to that campaign's
+# integration branch (campaign/<campaign_id>). Campaign PRs must not target main.
+# PR_BASE=campaign/<campaign_id>
+
+# --- Breakglass keys — human/ops only; leave UNSET -----------------------------
+# Listed so they are recognizable, never so they are pasted. Setting any of these
+# in the account environment makes the bypass permanent for every session.
+#   L9_MERGE_AUTHORIZED               merge gate (ops/autonomy/merge_gate.py)
+#   L9_MERGE_AUTHORIZATION_FILE       one-shot ~/.l9/autonomy/merge-authorization.json
+#   L9_LOCAL_PUSH_AUTHORIZED          mid-execution push
+#   L9_GIT_REVERT_AUTHORIZED          worktree isolation: revert
+#   L9_GIT_RESET_AUTHORIZED           worktree isolation: reset
+#   L9_GIT_SWITCH_AUTHORIZED          worktree isolation: branch switch
+#   L9_GIT_BROAD_ADD_AUTHORIZED       worktree isolation: git add -A/./-u
+#   L9_MEMORY_ENFORCEMENT_BREAKGLASS  PreToolUse memory gate
+
+# --- Proactive governance / skill execution -----------------------------------
+L9_PROACTIVE_SKILLS=true
+L9_SKILL_USAGE_LOGGING=true
+
+# --- SonarCloud: credential only, never project identity ----------------------
+# SONAR_PROJECT_KEY / SONAR_ORG_KEY are deliberately ABSENT. They identify ONE
+# repository; this environment is reused across many. install.sh derives them
+# from the active repo's sonar-project.properties and actively unsets them when
+# the repo declares no Sonar project, so Cursor-Governance's identity can never
+# leak into a consumer repo and mis-file its analysis.
+#
+# SONAR_TOKEN is deliberately ABSENT. Authenticated Sonar reads run through the
+# `sonar.read_issues` capability, which resolves the token inside the broker.
+# A token here would be readable by the model; a capability is not.
+
+# --- Canonical capability plane (ops/secrets) ---------------------------------
+# NO CREDENTIALS BELONG IN THIS FILE. Infisical remains the secret SSOT, but a
+# model-controlled surface never authenticates to it. INFISICAL_CLIENT_SECRET,
+# INFISICAL_TOKEN and any AWS credential are PROHIBITED here (S1/S2): a
+# Universal Auth secret in this environment is a master key to the whole
+# inventory, readable by anything the model can run.
+#
+# Instead, point the surface at a trusted L9 capability broker. The broker
+# authenticates to Infisical with a workload identity (Kubernetes Auth, SPIFFE,
+# or workload OIDC) that is mounted only into the broker container.
+#
+# L9_CAPABILITY_BROKER_URL=https://broker.<your-l9-deployment>/l9/capability
+#
+# Leaving it unset is a valid, honest posture: every capability then reports
+# DEGRADED and the session runs without authenticated Sonar/Semgrep/Graphiti.
+# That is strictly better than pasting a credential to turn the check green.
+
+# --- Toolchain hygiene --------------------------------------------------------
+PYTHONDONTWRITEBYTECODE=1
+PIP_DISABLE_PIP_VERSION_CHECK=1
+PYTHONUNBUFFERED=1
+NPM_CONFIG_FUND=false
+NPM_CONFIG_AUDIT=false

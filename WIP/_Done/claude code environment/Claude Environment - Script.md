@@ -1,11 +1,22 @@
 # L9 Claude Code cloud environment variables (Web · Mobile · --cloud)
 #
-# Paste into claude.ai/code -> environment -> Environment variables (.env format).
-# Anthropic stores these in plaintext for anyone who can use the environment —
-# use a dedicated bot PAT + Graphiti bearer; rotate if ever pasted in chat.
-# Changes apply to NEW sessions only.
+# 2026-08-17: REPLACE_WITH_* placeholders were removed on purpose.
+# AWS --check (names only, no values printed): github#token and
+# infisical-cursor-governance#{client_id,client_secret,project_id,env,host} = OK.
+# GRAPHITI_MCP_TOKEN is not an AWS secret (Infisical / only).
+# Do not paste GH_TOKEN, GRAPHITI_MCP_TOKEN, SONAR_TOKEN, or Infisical UA
+# into this file or into claude.ai/code. SSOT for what to paste:
+# environment/agents/adapters/claude-code/web/environment.env.example
 #
-# Replace every REPLACE_WITH_* in the UI. Do not commit live secrets.
+# Paste into claude.ai/code -> environment -> Environment variables (.env format).
+# Anthropic stores these in plaintext for anyone who can use the environment,
+# and everything here is readable by the model. THIS FILE THEREFORE CARRIES NO
+# CREDENTIALS AT ALL — no PAT, no Graphiti bearer, no Sonar/Semgrep token, no
+# Infisical client secret, no AWS key (contract S1/S2/S3).
+#
+# There is nothing to paste. If a capability is unavailable, fix its delivery
+# through the capability broker; do not add a secret here to make a check pass.
+# Changes apply to NEW sessions only.
 #
 # THIS FIELD IS LITERAL TEXT — no shell expansion. `FOO=$HOME/x` is stored as the
 # characters `$HOME/x`, not your home directory. Never reference $HOME, $PWD, or
@@ -13,13 +24,20 @@
 #
 # Companions: web/setup.bootstrap.sh (Setup script) · web/network-policy.md (Network access)
 
-# --- GitHub (required for gh, make pr, PR remediation) ------------------------
-# Dedicated bot-user fine-grained PAT so pushes trigger Actions.
-# SSOT for the value is AWS Secrets Manager (CANONICAL_LAW §14), ref
-# `openclaw-igorbot/github#token` — resolve and paste, do not mint a second PAT.
-# The ref stays in this comment on purpose: its `#` would be read as a
-# start-of-comment by .env parsers, truncating the value to a wrong ref.
-GH_TOKEN=REPLACE_WITH_BOT_USER_FINE_GRAINED_PAT
+# --- GitHub: platform proxy, NOT a PAT ----------------------------------------
+# Anthropic-hosted Claude cloud authenticates git and gh through its own
+# injected git proxy. A real PAT here would be a persistent, reusable GitHub
+# credential sitting in a model-controlled environment — exactly what the
+# capability contract removes (S3/S7).
+#
+# Leave this UNSET, or set the literal placeholder below. `proxy-injected` is
+# safe precisely because it is not a credential: it documents the posture and
+# fails loudly if something tries to use it as a token.
+#
+# NEVER replace this with a real PAT to make a check go green. If gh cannot
+# authenticate, that is a platform/proxy problem to fix, not a reason to
+# introduce a static secret.
+GH_TOKEN=proxy-injected
 
 # --- Governance SSOT ----------------------------------------------------------
 # L9_GOVERNANCE_DIR is deliberately ABSENT. The cloud SSOT is always
@@ -46,7 +64,12 @@ L9_AGENT_ROLE=implementation-agent
 GRAPHITI_MEMORY_ENABLED=1
 GRAPHITI_WRITE_GATES=1
 GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
-GRAPHITI_MCP_TOKEN=REPLACE_WITH_GRAPHITI_MCP_BEARER_TOKEN
+#
+# GRAPHITI_MCP_TOKEN is deliberately ABSENT and must stay that way. The bearer
+# lives on the trusted side of the capability broker; this session reaches
+# memory through the `graphiti.query` / `graphiti.write_governed` capabilities
+# and never holds the credential. Pasting a bearer here re-creates the exact
+# posture this contract removed (S3, §12).
 #
 # GRAPHITI_GROUP_ID is deliberately ABSENT. This account environment is reused
 # across consumer repositories, and group_registry.yaml resolves in the order
@@ -64,12 +87,17 @@ L9_MEMORY_FAIL_CLOSED=true
 #   L9_MEMORY_HTTP_URL
 #   L9_MEMORY_CLIENT_TOKEN
 
-# --- Bounded autonomy (A4 + M4; merge stays human) ----------------------------
+# --- Bounded autonomy (A4 + M4; ordinary merge enabled) -----------------------
+# pr-convergence is the only L9_AUTONOMY_PROFILE. There is no higher profile
+# name. L9_AUTONOMY_AUTONOMOUS_MERGE is a real merge_gate.py control: true
+# authorizes ordinary `gh pr merge --squash` (never --admin / force / hard-reset).
+# Still merge only after /l9-pr-remediation: all open PRs green, mergeable,
+# review threads resolved, oldest first. Campaigns and `make pr` do not merge.
 L9_AUTONOMY_ENABLED=true
 L9_AUTONOMY_AUTHORITY=A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
 L9_AUTONOMY_MATURITY=M4_ASSURANCE_GOVERNED
 L9_AUTONOMY_PROFILE=pr-convergence
-L9_AUTONOMY_AUTONOMOUS_MERGE=false
+L9_AUTONOMY_AUTONOMOUS_MERGE=true
 L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation
 L9_AUTONOMY_MAX_PARALLEL=4
 L9_AUTONOMY_MAX_MUTATION_LANES=2
@@ -86,8 +114,10 @@ L9_L4_LOCAL_AUTONOMY=1
 L9_WORKTREE_ISOLATION=1
 
 # --- Publish path (PR_REMEDIATE=0 make pr) ------------------------------------
-# `make pr` runs the Makefile checkers, then pushes and opens the PR. Remediation
-# is a separate, bounded step via the l9-pr-remediation skill.
+# Sole shipping command: `make pr` (checkers run inside that target, then push +
+# open). Do not run `make pr-check` as a separate pass — that name is a Makefile
+# implementation detail, not an agent command (CANONICAL_LAW §12, 2026-08-16).
+# Gate-only: `OPEN_PR=0 make pr`. Remediation is a later l9-pr-remediation step.
 PR_REMEDIATE=0
 # PR_BASE — set ONLY for Program Execution campaign work, to that campaign's
 # integration branch (campaign/<campaign_id>). Campaign PRs must not target main.
@@ -116,23 +146,26 @@ L9_SKILL_USAGE_LOGGING=true
 # the repo declares no Sonar project, so Cursor-Governance's identity can never
 # leak into a consumer repo and mis-file its analysis.
 #
-# The token is a credential, not identity, so it may live at environment level —
-# but prefer resolving it from the canonical secret provider below (SONAR_TOKEN
-# is already registered there). Set it here only if you are not using Infisical.
-# SONAR_TOKEN=REPLACE_WITH_ROTATED_SONAR_TOKEN
+# SONAR_TOKEN is deliberately ABSENT. Authenticated Sonar reads run through the
+# `sonar.read_issues` capability, which resolves the token inside the broker.
+# A token here would be readable by the model; a capability is not.
 
-# --- Canonical secret provider (ops/secrets) ----------------------------------
-# Bootstrap credentials ONLY. Everything else (SONAR_TOKEN, SEMGREP_APP_TOKEN,
-# and the rest of the openclaw-igorbot inventory) resolves through the provider
-# at run time — do not copy downstream secrets into this field.
-# Universal Auth identity for the Infisical project `cursor-governance`; the
-# machine identity is registered in ops/secrets/infisical-cursor-governance.yaml.
-INFISICAL_CLIENT_ID=REPLACE_WITH_INFISICAL_UA_CLIENT_ID
-INFISICAL_CLIENT_SECRET=REPLACE_WITH_INFISICAL_UA_CLIENT_SECRET
-INFISICAL_PROJECT_ID=REPLACE_WITH_INFISICAL_PROJECT_ID
-INFISICAL_ENV=prod
-INFISICAL_SITE_URL=https://app.infisical.com
-INFISICAL_SECRET_PATH=/
+# --- Canonical capability plane (ops/secrets) ---------------------------------
+# NO CREDENTIALS BELONG IN THIS FILE. Infisical remains the secret SSOT, but a
+# model-controlled surface never authenticates to it. INFISICAL_CLIENT_SECRET,
+# INFISICAL_TOKEN and any AWS credential are PROHIBITED here (S1/S2): a
+# Universal Auth secret in this environment is a master key to the whole
+# inventory, readable by anything the model can run.
+#
+# Instead, point the surface at a trusted L9 capability broker. The broker
+# authenticates to Infisical with a workload identity (Kubernetes Auth, SPIFFE,
+# or workload OIDC) that is mounted only into the broker container.
+#
+# L9_CAPABILITY_BROKER_URL=https://broker.<your-l9-deployment>/l9/capability
+#
+# Leaving it unset is a valid, honest posture: every capability then reports
+# DEGRADED and the session runs without authenticated Sonar/Semgrep/Graphiti.
+# That is strictly better than pasting a credential to turn the check green.
 
 # --- Toolchain hygiene --------------------------------------------------------
 PYTHONDONTWRITEBYTECODE=1

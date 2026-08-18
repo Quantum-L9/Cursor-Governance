@@ -1,6 +1,0 @@
-# APPEND ONLY — do not replace the live file.
-# File: environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml
-# Under campaigns:
-  - id: level3-make-pr-single-path
-    lifecycle: planned
-    notes: four-commit one-PR example; not yet executed

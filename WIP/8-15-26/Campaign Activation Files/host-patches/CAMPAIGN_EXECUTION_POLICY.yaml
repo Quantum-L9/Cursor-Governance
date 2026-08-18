@@ -1,8 +1,0 @@
-# APPEND ONLY — do not replace the live file.
-# File: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
-# Under campaigns:
-  - id: level3-make-pr-single-path
-    integration_branch: campaign/level3-make-pr-single-path
-    pr_base: campaign/level3-make-pr-single-path
-    execute_order: 6
-    lane: makefile

@@ -1,433 +1,515 @@
 schema: l9.wip.inventory.v1
-updated: '2026-08-16T15:40:00Z'
+updated: '2026-08-18T02:03:02Z'
 entries:
-- path: WIP/8-14-26/Web SEO LLM Trio/L9 Website Improvement — Independent Validation
-    Contract Pack.md
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: bb40afc54704c68d4e092b7e6c50559d826a8e655eed60a05a998fd1f2b131e4
-  status: active
-- path: WIP/8-14-26/Web SEO LLM Trio/Program1.md
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: 1ed69216e8a8e43c50bbd491b4350a840baeac8c2baa7c599cf0d083e47cdc7d
-  status: active
-- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/AGENT_FEED.md
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: 91511b2cb9436e18ad790ceb2d454fc4a40f8e1715b4b93190fcc009907bb8fc
-  status: active
-- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/CAMPAIGN_SOURCE.yaml
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: d86592b07012068ac8c28a4140053507cffc3fd67c994e78a7612c6a7408b23a
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/INTENT.yaml
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: d117875c4f70d14682ed08095bd8f03f64dd8b8dc59110f781da6b5156de74a0
-  status: active
-- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/README.md
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: 1cbd4f611139db2711c0ebd1e1e96752f0abad13e6b1243f0e0c4b6a2a1851ef
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/source-integrity-receipt.json
-  kind: dated
-  date_bucket: 8-14-26
-  sha256: 99ef521192c7ff64d6ceb758f6269fdfe3034ba56bb717e6a6f957f7e5736846
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/CAMPAIGN_SOURCE.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/HOST_REGISTRATIONS.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
-  status: active
-- path: WIP/8-15-26/Campaign Activation Files/INTENT.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: e544a0da48f095b78d1bb62bca86ecaa8ed0cda035da8e7b80085428fdd13f53
-  status: active
-- path: WIP/8-15-26/Campaign Activation Files/PE LAUNCH TEMPLATE/HOWTO.md
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: d2b17fcc8809984c78c9e3168ff25d845507375b5f34aa4ad059b1507a4f9f23
-  status: active
-- path: WIP/8-15-26/Campaign Activation Files/PE LAUNCH TEMPLATE/INTENT.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 292b4d49c2f89745fc6c113ce3be840919e3d0b2113406889d35dc935c50ef2e
-  status: active
-- path: WIP/8-15-26/Campaign Activation Files/README.md
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: fb3f5a300f1ee60c2649c53ef87e9a9dba029d68670e42db985652985142259f
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/examples/four-commit-one-pr.host-registrations.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
-  status: active
-- path: WIP/8-15-26/Campaign Activation Files/examples/four-commit-one-pr.intent.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: b9a0e16d7758b9dbf374e0c63a02b84f17d66d350fa6ee5e4a6f7ea6116dc445
-  status: active
-- path: WIP/8-15-26/Campaign Activation Files/host-patches/CAMPAIGN_EXECUTION_POLICY.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 6e88223cb0ad57abaa978028174b8086c18655824cadcb061edb8c1de8ca359f
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/host-patches/CAMPAIGN_STATUS.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 60ff2362d3749e71d3e787efea6df148ededadce5f6dceed8cf8cbdc14696bc5
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/host-patches/COMPILE_ALLOWLIST.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: a062354a12706e122c161d60aef464a7807e48036106c05bd8f5993cae9f938e
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/host-patches/surface_profile.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 4192b47ea1a70601be559d3b5db1cdae9442f9e8cc92ed69c31de750e60747c5
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/level3-make-pr-single-path/CAMPAIGN_SOURCE.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/level3-make-pr-single-path/source-integrity-receipt.json
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/Campaign Activation Files/source-integrity-receipt.json
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/PE-Template.md
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-  status: active
-- path: WIP/8-15-26/PE-github.md
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: d866b6a98e2512ffa6c3bdc904df810d02eb13d83b7f55c645dd8e73d732a05b
-  status: active
-- path: WIP/8-15-26/Untitled
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 152338032dbbd260faee9f7ecbe291068d4a44edf422416649ced39981e0d03e
-  status: active
-- path: WIP/8-15-26/makefile/Makefile-CG.md
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 1dabcd0177354c6550ad9938d3c60c53ffff7222c903c157f376cba3d63c5bf8
-  status: active
-- path: WIP/8-15-26/makefile/pe-activation/CAMPAIGN_SOURCE.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-15-26/makefile/pe-activation/HOST_REGISTRATIONS.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
-  status: active
-- path: WIP/8-15-26/makefile/pe-activation/INTENT.yaml
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: b9a0e16d7758b9dbf374e0c63a02b84f17d66d350fa6ee5e4a6f7ea6116dc445
-  status: active
-- path: WIP/8-15-26/makefile/pe-activation/Makefile PE.md
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: 23c9a55fd404aa4f5feca9a1690fa8d90fcd22eb29573febf3705664b8a35a0f
-  status: active
-- path: WIP/8-15-26/makefile/pe-activation/source-integrity-receipt.json
-  kind: dated
-  date_bucket: 8-15-26
-  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-16-26/Memory output.md
-  kind: dated
-  date_bucket: 8-16-26
-  sha256: 6f5995fbfbc0b6a633dd79ffb5a9b03809abcd9f74968b6d4add7dee8f412538
-  status: active
-- path: WIP/8-16-26/README.md
-  kind: dated
-  date_bucket: 8-16-26
-  sha256: 13c2f027801b5bc2315af0176344f220ba57b77f0b234f505b17fda73961c9ce
-  status: possible-landed
-  note: possible-landed
-- path: WIP/8-16-26/graphiti question.md
-  kind: dated
-  date_bucket: 8-16-26
-  sha256: 708fe9a4cfdd8c634fc5eb16a6cfd58a592e9b661afdcfb907efc7037a60109d
-  status: active
-- path: WIP/8-16-26/session start.md
-  kind: dated
-  date_bucket: 8-16-26
-  sha256: 5761f363c3c8bbd87cf9ce40c151f359c5325bd68de08cd3b26c62e62dddbfd0
-  status: active
-- path: WIP/8-16-26/world.model.md
-  kind: dated
-  date_bucket: 8-16-26
-  sha256: 1f1f92ed413ceb094d29a8e8e3ab91faf81d34dffacae97d7809757cd4be9603
-  status: active
-- path: WIP/CG/Cursor Prompt 2.md
+- path: WIP/CG Contract Evolution/Cursor Prompt 2.md
   kind: series
   date_bucket: null
   sha256: 3a4155ec430904e91c3a435680cdce0000d17f819a603132ae8aa12429115bfe
   status: active
-- path: WIP/CG/Cursor Prompt.md
+- path: WIP/CG Contract Evolution/Cursor Prompt.md
   kind: series
   date_bucket: null
   sha256: 59eaef96b612920134fb6daebc0b78aaac53062f4421d78cd73d105bcd40bed0
   status: active
-- path: WIP/CG/ops/contracts/adapters/cursor_rules.py
+- path: WIP/CG Contract Evolution/ops/contracts/adapters/cursor_rules.py
   kind: series
   date_bucket: null
   sha256: 169b256d0eebf778cc45a6130f7821915605aa0ae54e55350b64d6ea2c29d924
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/build_doctrine_census.py
+- path: WIP/CG Contract Evolution/ops/contracts/build_doctrine_census.py
   kind: series
   date_bucket: null
   sha256: bdcae65a252f322b78dec00a250c83d355b21bb6ee3c1980eca6725da6c5afc8
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/build_rule_doctrine_census.py
+- path: WIP/CG Contract Evolution/ops/contracts/build_rule_doctrine_census.py
   kind: series
   date_bucket: null
-  sha256: 475719de7200089509fc0a9a21d46f23de37c10efbb69d13c9c0ea9f7de4488e
+  sha256: fac140e27b6c646e20bb765ec307f635b6cbc04fdbaf71770463eb56af0f0e8e
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/build_rules.py
+- path: WIP/CG Contract Evolution/ops/contracts/build_rules.py
   kind: series
   date_bucket: null
   sha256: 99dd3a96dd193c60bda641b3bb1b6fcc34da96525bfd0c7bea67c6f3372f63ec
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/cluster_doctrine.py
+- path: WIP/CG Contract Evolution/ops/contracts/cluster_doctrine.py
   kind: series
   date_bucket: null
   sha256: 9517c2f0de4bd11d3a28a40b44ff085a4d6c9dc36c6027af35cccd8ada6cd895
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/detect_hidden_doctrine.py
+- path: WIP/CG Contract Evolution/ops/contracts/detect_hidden_doctrine.py
   kind: series
   date_bucket: null
   sha256: 250afad6eee2f553b4c8f71047657c5d6ddd105cc85d71fa106039c3781e8dd7
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/extract_doctrine.py
+- path: WIP/CG Contract Evolution/ops/contracts/extract_doctrine.py
   kind: series
   date_bucket: null
-  sha256: 635c25b524d8b3d0f19c34e3ba02754d9f2eb855e27b40ad114a3dc008df1d22
+  sha256: 81f5ca7320df887cf3ab60838337f5ffa24aa60700e0ed3a686b6c0022068539
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/render_cursor_rule.py
+- path: WIP/CG Contract Evolution/ops/contracts/render_cursor_rule.py
   kind: series
   date_bucket: null
   sha256: adb7349ac504f1c45cfcf70d657f5403693f8bf69ba8bd29c48fb87cefbf4ff9
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/resolve_rule_contracts.py
+- path: WIP/CG Contract Evolution/ops/contracts/resolve_rule_contracts.py
   kind: series
   date_bucket: null
-  sha256: d4f8a230e05046004b1005213fbc8836f0d6f99cfd1716cfecb8fc65f409d079
+  sha256: 8cb281d70c8b5a1b1f68bebba2965998f92184365d8ad46a740b18c741e3f0e1
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/validate_doctrine_ratchet.py
+- path: WIP/CG Contract Evolution/ops/contracts/validate_doctrine_ratchet.py
   kind: series
   date_bucket: null
-  sha256: 70fcf47e9d1c7bb5e93e6de0a54d37c767864668c29cdd5c9866cd065d3c4661
+  sha256: c88e47863ed65702c65872582fd3016802340d5ba695d3cb6352b77a8713abd3
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/validate_rule_binding.py
+- path: WIP/CG Contract Evolution/ops/contracts/validate_rule_binding.py
   kind: series
   date_bucket: null
   sha256: 9229a16f4b32d4ad4ab02e4cf1d91f456228b8f64a90061abd157dd547638fef
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/contracts/validate_rule_projections.py
+- path: WIP/CG Contract Evolution/ops/contracts/validate_rule_projections.py
   kind: series
   date_bucket: null
-  sha256: 1a07416d2d7b28c2d92948c93c53040fcc2d66df35e93e6a3fa7e6c6396f315d
+  sha256: 501c2a781a1b44940afffc3e9687c3d648c2094110845fd00f661e7a9b084e8f
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/ops/scripts/generate_rules_manifest.py
+- path: WIP/CG Contract Evolution/ops/scripts/generate_rules_manifest.py
   kind: series
   date_bucket: null
   sha256: 8694f895dbc1e0341817cecd956f6668426de3b9263cbbfe14e7cad0ed71e9ad
   status: possible-landed
   note: possible-landed
-- path: WIP/CG/tests/contracts/test_rules_contract_compiler.py
+- path: WIP/CG Contract Evolution/tests/contracts/test_rules_contract_compiler.py
   kind: series
   date_bucket: null
   sha256: 0844e9eb09cfc6e08a885299c1df473c889b0286aae9a0512f9dec71c2d47b0e
   status: possible-landed
   note: possible-landed
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.capability_preflight.v1.yaml
+- path: WIP/Graphiti/Memory output.md
+  kind: series
+  date_bucket: null
+  sha256: 6f5995fbfbc0b6a633dd79ffb5a9b03809abcd9f74968b6d4add7dee8f412538
+  status: active
+- path: WIP/Graphiti/README.md
+  kind: series
+  date_bucket: null
+  sha256: 13c2f027801b5bc2315af0176344f220ba57b77f0b234f505b17fda73961c9ce
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Graphiti/graphiti question.md
+  kind: series
+  date_bucket: null
+  sha256: 708fe9a4cfdd8c634fc5eb16a6cfd58a592e9b661afdcfb907efc7037a60109d
+  status: active
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.capability_preflight.v1.yaml
   kind: series
   date_bucket: null
   sha256: 59c889fe052733aa1f1665066268c5d9549a94a23d67e9f500719751fb4c9630
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.coding_contract.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.coding_contract.v1.yaml
   kind: series
   date_bucket: null
   sha256: 5f2a8d007ac3f3c10f55aa212f2200678209016d143e1c5d7a2039c92002c773
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.convergence_contract.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.convergence_contract.v1.yaml
   kind: series
   date_bucket: null
   sha256: 71c600166fd10e0d66e3d456b460e7a70d9f99e20b3631cf19a18c2c9c8f6f76
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.dependency_topology.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.dependency_topology.v1.yaml
   kind: series
   date_bucket: null
   sha256: 4ad45fcf5c301d57ebd5413b9a932f25fffe3d592059df382f25115502d2cd25
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_contract.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_contract.v1.yaml
   kind: series
   date_bucket: null
   sha256: 312b1b4afb735bb44776ad1bcb6af825195724a71dc5e6547edba7729adcf0e3
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_packet.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_packet.v1.yaml
   kind: series
   date_bucket: null
   sha256: adfe6a77a124135169bfc36fc72728857574c919ea5ff2b57822fd0a20bc84ba
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.mutation_authorization.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.mutation_authorization.v1.yaml
   kind: series
   date_bucket: null
   sha256: 2307130d16fd75e212c0c6daa0555a9e62dcfc4ae55e4e92bdedee1128c98c85
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.plan_document.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.plan_document.v1.yaml
   kind: series
   date_bucket: null
   sha256: 1b0e865489c562fc29addd71cd8049ce26d140c59134943a85a2694f89cf7b00
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.rollback_contract.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.rollback_contract.v1.yaml
   kind: series
   date_bucket: null
   sha256: a141687d850116f2ae7e6c1df018fe50d6b0a35598e24580a31df0e4c1ae51bf
   status: active
-- path: WIP/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.validation_evidence.v1.yaml
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.validation_evidence.v1.yaml
   kind: series
   date_bucket: null
   sha256: f6de735e8c2d254a89b25a7cf63f6de9337624fd4ef4381850a810d493e8e08f
   status: active
-- path: WIP/Execution Schemas/memory lock question.md
+- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/memory lock question.md
   kind: series
   date_bucket: null
   sha256: 6bb81ef33bf95d165dae9fb59e96930ba58c47a4b41160dff5ebd804c032d840
+  status: active
+- path: WIP/PROGRAM EXECUTION PIPELINE/PE LAUNCH TEMPLATE/HOWTO.md
+  kind: series
+  date_bucket: null
+  sha256: d2b17fcc8809984c78c9e3168ff25d845507375b5f34aa4ad059b1507a4f9f23
+  status: active
+- path: WIP/PROGRAM EXECUTION PIPELINE/PE LAUNCH TEMPLATE/INTENT.yaml
+  kind: series
+  date_bucket: null
+  sha256: 292b4d49c2f89745fc6c113ce3be840919e3d0b2113406889d35dc935c50ef2e
+  status: active
+- path: WIP/PROGRAM EXECUTION PIPELINE/PE-PE 1.md
+  kind: series
+  date_bucket: null
+  sha256: cd6da4a9300a9c903bf62e4f428aab445ffa9e33923a20aacef07650dc155874
+  status: active
+- path: WIP/Quantum Animation/00_quantum_animation_system_architecture.yaml
+  kind: series
+  date_bucket: null
+  sha256: 76e4b4e38358eff590b9dd06a4e2f5157fedef23652e6c045f1b44ed8ab70792
+  status: active
+- path: WIP/Quantum Animation/01_quantum_animation_world_model_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: e8bd828596c106c185684d780479fde5399de5b644e80f2ea04fde748aa51013
+  status: active
+- path: WIP/Quantum Animation/02_quantum_polycognitive_runtime_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 64e9bf85ca277a7a56dfee8fd26f9819154b6f9c0e7334af5219230f90d2a5df
+  status: active
+- path: WIP/Quantum Animation/03_quantum_creative_intelligence_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 1c7614045d6a9efb323d1285e8e393b92454d22cfa79effd6578512126f7767b
+  status: active
+- path: WIP/Quantum Animation/04_quantum_audience_product_intelligence_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 6cad1f82ce86cc1436cb0d3d8d56e296d1437dd9affd4ee1efaafe2094626710
+  status: active
+- path: WIP/Quantum Animation/05_quantum_self_model_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 8e0ea61482c4951478611ac0eacd9c795f483c3dec6cebdbc63ad69db4af5b4b
+  status: active
+- path: WIP/Quantum Animation/06_quantum_production_model_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 41ddbf1d48e6e84a06cc83456cb6adad5c244a6f3ad188587b1a9e70078e89b5
+  status: active
+- path: WIP/Quantum Animation/07_quantum_autonomous_qc_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 0561dbc7781da137463b378465c901d043bc719e9a8a9c5f48179bb9c3adec39
+  status: active
+- path: WIP/Quantum Animation/07a_quantum_studio_coherence_kernel_supplement.yaml
+  kind: series
+  date_bucket: null
+  sha256: 74c31a29370fcc93e5d0f4893cf5422a44bb61d27c5c044626e0194b11cfbbe1
+  status: active
+- path: WIP/Quantum Animation/08_quantum_production_engine_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 60aa1d52c6eb4b55e9aded2313665a51ca22bf2f250bc9ea47fa2cdbef085501
+  status: active
+- path: WIP/Quantum Animation/09_quantum_project_provenance_dependency_graph_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 838afcc5cdb7af114ba4ca5b2ae2f96e989ec7ff0c351c3ee10fb3ab241a542e
+  status: active
+- path: WIP/Quantum Animation/10_quantum_canonical_artifact_ir_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 39652e5f1005755d088a22b0aba470ff888b2d29edb5bdea37dc0e7e891f1489
+  status: active
+- path: WIP/Quantum Animation/11_quantum_project_compiler_pipeline_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 1da3b73bd2145479738b7cb5195f09e730a27293ad1755b7911c2faef2cbaa5e
+  status: active
+- path: WIP/Quantum Animation/12_quantum_story_animatic_compiler_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 1f6725bf57cfac113a8d71f24e1d2727eeab3cad662e7d4ff0b52a3218878dc7
+  status: active
+- path: WIP/Quantum Animation/13_quantum_asset_identity_library_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 86b3c9b9d59734249bdc6b6d0876dab2d5ea9bf6adb7d0d4cae9cb69d0e45116
+  status: active
+- path: WIP/Quantum Animation/14_quantum_mvp_runtime_profile_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: aef28174e313556f181c79ce4d5aa98b67cf78fa9f26e4458e80ef048b9d1873
+  status: active
+- path: WIP/Quantum Animation/15_quantum_reference_implementation_contracts_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 4426effd7d20ad8775094444ed087ed61141ce8436420db0a7f778a7a3b3f0de
+  status: active
+- path: WIP/Quantum Animation/16_quantum_end_to_end_mvp_acceptance_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 2834619256556754207213ca22e5561a5c8bdb816ef64b64c6265922fcb61d2b
+  status: active
+- path: WIP/Quantum Animation/17_quantum_viewer_cognition_psychology_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 4b5f0a770782eafa77c6048a881a3215e712c3ae73fd5ed9071ad614dbf13a80
+  status: active
+- path: WIP/Quantum Animation/18_quantum_marketability_proof_of_film_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: e963ada1cf4b3905cb764e680b329103a86137626c9e284b13143a27d16d77a1
+  status: active
+- path: WIP/Quantum Animation/19_quantum_executive_attention_experience_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 6e0dc31d381df1a24ae6a0a6e5487fc74b28bc82c04349d2c2d7974e22fa1ec5
+  status: active
+- path: WIP/Quantum Animation/20_quantum_key_access_security_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: dc7708fe68e6106f15fadfeb87bf0610d3a669c3aa5d1f2ab0d1d494673187e2
+  status: active
+- path: WIP/Quantum Animation/21_quantum_cross_device_presentation_runtime_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 83e80fcc6b3d77a021d16a86acbfc6e9708908578b84b7267d682c1d9e122884
+  status: active
+- path: WIP/Quantum Animation/22_quantum_curated_project_experience_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: e423092bdfa5356ca9c5ebca8fb92a72f60b23902b76e7dd5a72c4972c63ad57
+  status: active
+- path: WIP/Quantum Animation/23_quantum_commercial_offer_conversion_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 63da15e6b8e95db2d2f6b2744d2826155e0b2dc69020dcc5c8dd4c3268b09a50
+  status: active
+- path: WIP/Quantum Animation/24_quantum_executable_agreement_legal_runtime_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 09d6420de2f9e4c5bf445a4def1a4c8418dbb0ce42a8f97a08397d0777170e7c
+  status: active
+- path: WIP/Quantum Animation/25_quantum_payment_work_authorization_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 46cb05a7b5ffe0cb22fc5a8b412df6ef663258db3ad68cb800c3cf77a53b6f1c
+  status: active
+- path: WIP/Quantum Animation/26_quantum_studio_avatar_identity_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 5aab58230817925a2f0dd2f42c23296e1a166563ac4cb667900a5fff106edd52
+  status: active
+- path: WIP/Quantum Animation/27_quantum_client_relationship_reputation_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: e0d12a475d79efe441bc91a93f4c12e2c8210753658e3e46e19399104cd414e7
+  status: active
+- path: WIP/Quantum Animation/28_quantum_production_portal_client_experience_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: d3c444ad879a2d332cf68df7bcd9fe287a90753350b66464779021a9d9f9c657
+  status: active
+- path: WIP/Quantum Animation/29_quantum_opportunity_acquisition_global_market_learning_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: de6ff24b09d90abdae0b64f6f3c4a6c01a0d111fcca92f1236125d86a3a97e9a
+  status: active
+- path: WIP/Quantum Animation/30_quantum_creator_release_final_delivery_build_spec.yaml
+  kind: series
+  date_bucket: null
+  sha256: 444e5f33233b3bf70edf237a16a83a8b68cd3af5f964394b8fae75e7967d7c9b
+  status: active
+- path: WIP/Quantum Animation/90_quantum_animation_studio_roadmap.yaml
+  kind: series
+  date_bucket: null
+  sha256: b6ac8dc1662523e2ddfaf1f2d4b7c8fcc6e641d807ebcbeb9006fe25a7b4fe2d
+  status: active
+- path: WIP/repo-hygiene-pack/AGENT_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: 14d4d4501676222aa250401069a0fa180f549c78fc72a43ad3139db407e0e5fb
+  status: active
+- path: WIP/repo-hygiene-pack/CHECKLIST.md
+  kind: series
+  date_bucket: null
+  sha256: cadc13850972ea6d96ff974a8a79bb69b8ee067ed5b9482dcdc28ec1ee761538
+  status: active
+- path: WIP/repo-hygiene-pack/RB-HK-001.plan.md
+  kind: series
+  date_bucket: null
+  sha256: 357afcd75a16b4cbcc81e1deec384127f48688604089b1a29aea405b37878b00
+  status: active
+- path: WIP/repo-hygiene-pack/RUNBOOK.md
+  kind: series
+  date_bucket: null
+  sha256: 95ea7adb4189406d515a0258385befa122a6459969069ca1f633b2307a33cb71
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: d73a2f374cec506b79bca65d7810dba087d53399d4749de55b3574253cb90380
+  status: active
+- path: WIP/repo-hygiene-pack/scripts/check_repo_hygiene.py
+  kind: series
+  date_bucket: null
+  sha256: 8209b46c58af23ee4b9bfd3598a39f8eb4cc6ff3cc8253a1f760c9cd9d31fa79
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/scripts/cleanup_branches.sh
+  kind: series
+  date_bucket: null
+  sha256: 3a501237ff8f0f0269431fb9ddf7bff3482cc7c0183b77e3a82a69964315232c
+  status: active
+- path: WIP/repo-hygiene-pack/templates/TODO.md
+  kind: series
+  date_bucket: null
+  sha256: 8a584cbe8d017742ad4245ae67e5fe11d24c6f089030da3172452b7ae0160111
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/branch-hygiene.yml
+  kind: series
+  date_bucket: null
+  sha256: 11725dc0b908a12068ef8508afa0085bd906abd8ed5bd83c2d7ea87eaf2c59b7
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/dependabot.yml
+  kind: series
+  date_bucket: null
+  sha256: 4d721600390a972ae5310be80e5551fc1af57a2d94fca1c3e6a88693500b75fb
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/governance-self-check.yml
+  kind: series
+  date_bucket: null
+  sha256: 35472b73f9ccea56e82a8c80cfe051f524cec7b51369ed3fd9302891b676f624
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/repo-hygiene.yml
+  kind: series
+  date_bucket: null
+  sha256: 102f61dbca1460b42725525ac5808e0b57f8a5a6343eaf07273b49ad26b97196
+  status: possible-landed
+  note: possible-landed
+- path: WIP/World Model/world.model.md
+  kind: series
+  date_bucket: null
+  sha256: 1f1f92ed413ceb094d29a8e8e3ab91faf81d34dffacae97d7809757cd4be9603
+  status: active
+- path: WIP/_Done/PE-Template.md
+  kind: series
+  date_bucket: null
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/_Done/PE-github.md
+  kind: series
+  date_bucket: null
+  sha256: d866b6a98e2512ffa6c3bdc904df810d02eb13d83b7f55c645dd8e73d732a05b
+  status: active
+- path: WIP/_Done/WEB + SEO BOTS/CAMPAIGN7-SEO-REMEDIATION-PLAN.md
+  kind: series
+  date_bucket: null
+  sha256: 5eeafb6870e3144f4f03e8ef478548c8633fdd4860fbda8792196def59aa3e12
+  status: active
+- path: WIP/_Done/WEB + SEO BOTS/campaign7-remediation.plan.json
+  kind: series
+  date_bucket: null
+  sha256: cb437084526302f8b8e97dd905d6e5879dbde194af3e1990a5cc57d0f0cba7d9
+  status: active
+- path: WIP/_Done/claude code environment/Claude Environment - Script.md
+  kind: series
+  date_bucket: null
+  sha256: 9c7be12514dbf5d67eb4cb3a2b0afcd3eb2dd4e4189d7b1308a5a9f32ed2cbac
+  status: active
+- path: WIP/_Done/claude code environment/Claude Environment - Variables.md
+  kind: series
+  date_bucket: null
+  sha256: 9c7be12514dbf5d67eb4cb3a2b0afcd3eb2dd4e4189d7b1308a5a9f32ed2cbac
+  status: active
+- path: WIP/_Done/claude code environment/PLAN_DOCUMENT.claude-mobile-unify.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: ffe78b3354b8b3f5f1cec010456d8f4c51c27b4f810e78cf10a72d09bd3338dc
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/.cursor/rules/claude-code-deepseek.mdc
+  kind: series
+  date_bucket: null
+  sha256: bd5c18c5157268098494227592576716c10e39dd2294c607ac9d8193f306c595
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/AGENT_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: eb0d8f1a9fcbc953f27ef2d430cb29aa40c3d3d9971acaa16e25578e70e4e379
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/README.md
+  kind: series
+  date_bucket: null
+  sha256: 1873bf92eb7c0d27ffe7614686056566104b6cf1e00a2c31e77c62fa47eb79c1
+  status: possible-landed
+  note: possible-landed
+- path: WIP/_Done/deepseek-claude-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: 9e58dd9e33417cd658a964aecb20f8a42b89a98bc17163aefd66f28bbafa8e12
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/docs/MERGE-RUNBOOK.md
+  kind: series
+  date_bucket: null
+  sha256: fe826f8cb291830e98c85b1df6a15f8bf2543c6b101098903b4aaa92dc597e9c
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/docs/MOBILE.md
+  kind: series
+  date_bucket: null
+  sha256: c86eec75da4ef9d3d5c8638a7db69a323e8e3ff5c43c49e4c1e236e2e51d86cc
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/docs/TROUBLESHOOTING.md
+  kind: series
+  date_bucket: null
+  sha256: 62d9d7f18c0907f03d8e8511387bdaf1c8e5c6252a33d674d585fee6d8169d5c
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/env.local.example
+  kind: series
+  date_bucket: null
+  sha256: 0f231bf0cb9ef3d84157fafdd6ab5296adda64c53d59f423a53b977af24920a0
+  status: active
+- path: WIP/_Done/deepseek-claude-pack/scripts/claude-deepseek.sh
+  kind: series
+  date_bucket: null
+  sha256: 363b449f0308ef8b5b86b435e3f16ee1fd2f0755ecad36857487cd9abec51d99
+  status: possible-landed
+  note: possible-landed
+- path: WIP/_Done/pr remediation.md
+  kind: series
+  date_bucket: null
+  sha256: 07a9d35d87c67d51a98325e302f6ba9951a1192653455b9be3e0f5be614d3a3e
   status: active
 - path: WIP/_receipts/prune-20260816T154000Z.json
   kind: receipt
   date_bucket: null
   sha256: c19bcc796f1d97e6d543da4b4bdf1b695cbf3763c1b3ee8d3a4c82ca7d39f90c
   status: active
-- path: WIP/claude code environment/CLOUD_SMOKE_RECEIPT.md
-  kind: series
-  date_bucket: null
-  sha256: 4bab187b3596b7e29e24cbea69446ea40af43806f92e638220ac97dd05dc517e
-  status: active
-- path: WIP/claude code environment/PLAN_DOCUMENT.claude-mobile-unify.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: ffe78b3354b8b3f5f1cec010456d8f4c51c27b4f810e78cf10a72d09bd3338dc
-  status: active
-- path: WIP/claude code environment/SYMLINK_EXTINGUISHMENT.md
-  kind: series
-  date_bucket: null
-  sha256: 618397f8b2a71dd2b0f840ba574ca96fc21a6e890ea5316befd2375bf98c327d
-  status: active
-- path: WIP/claude code environment/TOKEN_ROTATION_RECEIPT.md
-  kind: series
-  date_bucket: null
-  sha256: 2e55201184734c4a2b9a82596d2ea9a0b5d665a6a2f472b46bc625b8075f0977
-  status: active
-- path: WIP/claude code environment/network.md
-  kind: series
-  date_bucket: null
-  sha256: 76853ffa5a2543d544727ca538e618d585048398f0c140f302d176a86c573649
-  status: active
-- path: WIP/claude code environment/variables.md
-  kind: series
-  date_bucket: null
-  sha256: fdd58852ce8c56198df672f1e84d42e2c100e43825c5721dd7defec532e66e85
-  status: active
-- path: WIP/deepseek-claude-pack/.cursor/rules/claude-code-deepseek.mdc
-  kind: series
-  date_bucket: null
-  sha256: bd5c18c5157268098494227592576716c10e39dd2294c607ac9d8193f306c595
-  status: active
-- path: WIP/deepseek-claude-pack/AGENT_TASK.md
-  kind: series
-  date_bucket: null
-  sha256: eb0d8f1a9fcbc953f27ef2d430cb29aa40c3d3d9971acaa16e25578e70e4e379
-  status: active
-- path: WIP/deepseek-claude-pack/README.md
-  kind: series
-  date_bucket: null
-  sha256: 1873bf92eb7c0d27ffe7614686056566104b6cf1e00a2c31e77c62fa47eb79c1
-  status: possible-landed
-  note: possible-landed
-- path: WIP/deepseek-claude-pack/START-HERE-PROMPT.md
-  kind: series
-  date_bucket: null
-  sha256: 9e58dd9e33417cd658a964aecb20f8a42b89a98bc17163aefd66f28bbafa8e12
-  status: active
-- path: WIP/deepseek-claude-pack/docs/MERGE-RUNBOOK.md
-  kind: series
-  date_bucket: null
-  sha256: fe826f8cb291830e98c85b1df6a15f8bf2543c6b101098903b4aaa92dc597e9c
-  status: active
-- path: WIP/deepseek-claude-pack/docs/MOBILE.md
-  kind: series
-  date_bucket: null
-  sha256: c86eec75da4ef9d3d5c8638a7db69a323e8e3ff5c43c49e4c1e236e2e51d86cc
-  status: active
-- path: WIP/deepseek-claude-pack/docs/TROUBLESHOOTING.md
-  kind: series
-  date_bucket: null
-  sha256: 62d9d7f18c0907f03d8e8511387bdaf1c8e5c6252a33d674d585fee6d8169d5c
-  status: active
-- path: WIP/deepseek-claude-pack/env.local.example
-  kind: series
-  date_bucket: null
-  sha256: 0f231bf0cb9ef3d84157fafdd6ab5296adda64c53d59f423a53b977af24920a0
-  status: active
-- path: WIP/deepseek-claude-pack/scripts/claude-deepseek.sh
-  kind: series
-  date_bucket: null
-  sha256: 363b449f0308ef8b5b86b435e3f16ee1fd2f0755ecad36857487cd9abec51d99
-  status: possible-landed
-  note: possible-landed
 - path: WIP/housekeeping-pack/AGENT_TASK.md
   kind: series
   date_bucket: null
@@ -889,174 +971,14 @@ entries:
   date_bucket: null
   sha256: b4eba104aeed6a95c728b6012f74225a226ceb9659f633ce491ee8f4206b67ff
   status: active
+- path: WIP/out-of-scope-hold/Untitled
+  kind: series
+  date_bucket: null
+  sha256: 152338032dbbd260faee9f7ecbe291068d4a44edf422416649ced39981e0d03e
+  status: active
 - path: WIP/out-of-scope-hold/governance_activate_fresh.sh
   kind: series
   date_bucket: null
   sha256: 698b2936d056ba2eff8a4b65a4bd98b79e0241054ccdca30d768a31b3612c877
   status: possible-landed
   note: possible-landed
-- path: WIP/quantum_animation_spec_pack_v3/00_quantum_animation_system_architecture.yaml
-  kind: series
-  date_bucket: null
-  sha256: 76e4b4e38358eff590b9dd06a4e2f5157fedef23652e6c045f1b44ed8ab70792
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/01_quantum_animation_world_model_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: e8bd828596c106c185684d780479fde5399de5b644e80f2ea04fde748aa51013
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/02_quantum_polycognitive_runtime_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 64e9bf85ca277a7a56dfee8fd26f9819154b6f9c0e7334af5219230f90d2a5df
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/03_quantum_creative_intelligence_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 1c7614045d6a9efb323d1285e8e393b92454d22cfa79effd6578512126f7767b
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/04_quantum_audience_product_intelligence_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 6cad1f82ce86cc1436cb0d3d8d56e296d1437dd9affd4ee1efaafe2094626710
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/05_quantum_self_model_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 8e0ea61482c4951478611ac0eacd9c795f483c3dec6cebdbc63ad69db4af5b4b
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/06_quantum_production_model_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 41ddbf1d48e6e84a06cc83456cb6adad5c244a6f3ad188587b1a9e70078e89b5
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/07_quantum_autonomous_qc_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 0561dbc7781da137463b378465c901d043bc719e9a8a9c5f48179bb9c3adec39
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/07a_quantum_studio_coherence_kernel_supplement.yaml
-  kind: series
-  date_bucket: null
-  sha256: 74c31a29370fcc93e5d0f4893cf5422a44bb61d27c5c044626e0194b11cfbbe1
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/08_quantum_production_engine_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 60aa1d52c6eb4b55e9aded2313665a51ca22bf2f250bc9ea47fa2cdbef085501
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/09_quantum_project_provenance_dependency_graph_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 838afcc5cdb7af114ba4ca5b2ae2f96e989ec7ff0c351c3ee10fb3ab241a542e
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/10_quantum_canonical_artifact_ir_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 39652e5f1005755d088a22b0aba470ff888b2d29edb5bdea37dc0e7e891f1489
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/11_quantum_project_compiler_pipeline_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 1da3b73bd2145479738b7cb5195f09e730a27293ad1755b7911c2faef2cbaa5e
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/12_quantum_story_animatic_compiler_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 1f6725bf57cfac113a8d71f24e1d2727eeab3cad662e7d4ff0b52a3218878dc7
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/13_quantum_asset_identity_library_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 86b3c9b9d59734249bdc6b6d0876dab2d5ea9bf6adb7d0d4cae9cb69d0e45116
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/14_quantum_mvp_runtime_profile_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: aef28174e313556f181c79ce4d5aa98b67cf78fa9f26e4458e80ef048b9d1873
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/15_quantum_reference_implementation_contracts_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 4426effd7d20ad8775094444ed087ed61141ce8436420db0a7f778a7a3b3f0de
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/16_quantum_end_to_end_mvp_acceptance_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 2834619256556754207213ca22e5561a5c8bdb816ef64b64c6265922fcb61d2b
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/17_quantum_viewer_cognition_psychology_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 4b5f0a770782eafa77c6048a881a3215e712c3ae73fd5ed9071ad614dbf13a80
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/18_quantum_marketability_proof_of_film_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: e963ada1cf4b3905cb764e680b329103a86137626c9e284b13143a27d16d77a1
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/19_quantum_executive_attention_experience_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 6e0dc31d381df1a24ae6a0a6e5487fc74b28bc82c04349d2c2d7974e22fa1ec5
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/20_quantum_key_access_security_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: dc7708fe68e6106f15fadfeb87bf0610d3a669c3aa5d1f2ab0d1d494673187e2
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/21_quantum_cross_device_presentation_runtime_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 83e80fcc6b3d77a021d16a86acbfc6e9708908578b84b7267d682c1d9e122884
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/22_quantum_curated_project_experience_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: e423092bdfa5356ca9c5ebca8fb92a72f60b23902b76e7dd5a72c4972c63ad57
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/23_quantum_commercial_offer_conversion_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 63da15e6b8e95db2d2f6b2744d2826155e0b2dc69020dcc5c8dd4c3268b09a50
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/24_quantum_executable_agreement_legal_runtime_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 09d6420de2f9e4c5bf445a4def1a4c8418dbb0ce42a8f97a08397d0777170e7c
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/25_quantum_payment_work_authorization_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 46cb05a7b5ffe0cb22fc5a8b412df6ef663258db3ad68cb800c3cf77a53b6f1c
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/26_quantum_studio_avatar_identity_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 5aab58230817925a2f0dd2f42c23296e1a166563ac4cb667900a5fff106edd52
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/27_quantum_client_relationship_reputation_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: e0d12a475d79efe441bc91a93f4c12e2c8210753658e3e46e19399104cd414e7
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/28_quantum_production_portal_client_experience_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: d3c444ad879a2d332cf68df7bcd9fe287a90753350b66464779021a9d9f9c657
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/29_quantum_opportunity_acquisition_global_market_learning_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: de6ff24b09d90abdae0b64f6f3c4a6c01a0d111fcca92f1236125d86a3a97e9a
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/30_quantum_creator_release_final_delivery_build_spec.yaml
-  kind: series
-  date_bucket: null
-  sha256: 444e5f33233b3bf70edf237a16a83a8b68cd3af5f964394b8fae75e7967d7c9b
-  status: active
-- path: WIP/quantum_animation_spec_pack_v3/90_quantum_animation_studio_roadmap.yaml
-  kind: series
-  date_bucket: null
-  sha256: b6ac8dc1662523e2ddfaf1f2d4b7c8fcc6e641d807ebcbeb9006fe25a7b4fe2d
-  status: active
