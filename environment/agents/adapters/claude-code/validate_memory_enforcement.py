@@ -79,7 +79,17 @@ def _schema_check(contract: dict, schema: dict, failures: list[str]) -> None:
                 _fail(f"governed rule missing {field}: {rule.get('id', rule)}", failures)
         if rule.get("fail_mode") not in {"closed", "open"}:
             _fail(f"bad fail_mode in {rule.get('id')}", failures)
-        if not set(rule.get("requires", [])) <= {"session_prefetch", "phase_lock"}:
+        # E7: repository-write authority is Git's, never memory state. A
+        # phase_lock precondition here is a contract regression, not an
+        # "unknown" value, so name it explicitly.
+        illegal = set(rule.get("requires", [])) - {"session_prefetch"}
+        if "phase_lock" in illegal:
+            _fail(
+                f"{rule.get('id')} requires 'phase_lock': a Graphiti phase-lock must not "
+                "authorize repository mutation (E7)",
+                failures,
+            )
+        if illegal - {"phase_lock"}:
             _fail(f"unknown precondition in {rule.get('id')}", failures)
     if not failures:
         print("  OK: contract conforms to schema (fallback checks)")
@@ -114,7 +124,10 @@ def _wiring_parity(contract: dict, settings: dict, failures: list[str]) -> None:
 def _scripts_exist(contract: dict, failures: list[str]) -> None:
     scripts = [spec["script"] for spec in contract.get("hooks", {}).values()]
     scripts.append(
-        contract.get("preconditions", {}).get("phase_lock", {}).get("established_by", "").split()[0]
+        contract.get("preconditions", {})
+        .get("session_prefetch", {})
+        .get("established_by", "")
+        .split()[0]
     )
     scripts.append("environment/agents/adapters/claude-code/validate_memory_enforcement.py")
     for rel in filter(None, scripts):

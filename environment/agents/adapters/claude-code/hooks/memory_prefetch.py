@@ -105,9 +105,10 @@ def main() -> int:
             f"(group_id={group_id or 'unknown'}; namespaces {', '.join(namespaces)}). "
             "Rule 03-graphiti-memory; skill l9-graphiti-memory; CANONICAL_LAW §8.",
             compiled.get("additional_context") or "",
-            "Governed writes require a conflict-checked phase-lock via the same front door: "
-            "python3 environment/agents/adapters/claude-code/hooks/memory_lock.py acquire "
-            f'--namespace {namespaces[0]} --task "<change>".',
+            "Governed writes require this hydration only. Repository isolation is a "
+            "dedicated worktree (ops/scripts/agent_worktree_start.sh), history isolation a "
+            "branch off fetched origin/main, and collision safety the publication gate. "
+            "No phase-lock is required or accepted for repository mutation.",
         ]
         _emit("\n".join(lines))
     except Exception as exc:  # fail-open

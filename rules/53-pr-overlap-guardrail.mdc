@@ -32,10 +32,19 @@ filename intersection with `git diff --name-only $PR_BASE...HEAD` →
 `git merge-tree --write-tree` textual probe (git ≥ 2.38) to distinguish
 same-file/disjoint hunks from a real conflict.
 
-Failure policy: fail-open on missing telemetry (gh absent, api failure —
-never brick `make pr` on network loss); fail-open on precision, fail-closed
-on the decision (no probe ⇒ filename overlap still blocks); fail-closed on a
-detected non-generated textual conflict.
+Failure policy: **autonomous publication fails closed on missing telemetry**
+(gh absent, api failure, unresolvable repo identity, unreadable changed files)
+— an undeterminable collision state is not publishable
+(`96-multi-agent-main-bound-execution`, E6). Only the push is blocked; local
+isolated work stays valid. An interactive human run still degrades to a WARN,
+since a person can read it and judge. Override either way with
+`PR_OVERLAP_TELEMETRY=closed|open`. Fail-open on precision, fail-closed on the
+decision (no probe ⇒ filename overlap still blocks); fail-closed on a detected
+non-generated textual conflict.
+
+The gate runs against the base ref that `open_pr_after_gate.sh` fetches
+immediately beforehand, so overlap is judged against the *current* origin/main
+rather than the task's original BASE_SHA (E5).
 
 ## On overlap: preferred order
 

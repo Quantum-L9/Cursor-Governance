@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Local state + contract matching shared by the memory enforcement hooks.
 
-Receipts and locks are small JSON artifacts under `<workspace>/.l9/memory/`.
-Receipts assert that a SessionStart prefetch ran (trust-on-write, low stakes).
-Locks record a server-issued phase-lock keyed by (namespace, task_signature);
-the gate re-verifies locks against the memory server, so a forged lock file
-without a real server claim does not pass. Stdlib only.
+Receipts are small JSON artifacts under `<workspace>/.l9/memory/receipts/`.
+A receipt asserts that a SessionStart prefetch ran (trust-on-write, low stakes)
+and is the *only* memory precondition on a governed write.
+
+There are no lock artifacts. Repository-write authority is Git's: a dedicated
+worktree isolates writers, a branch isolates history, and the publication gate
+detects collisions. Memory state never authorizes, denies, or serializes
+repository mutation (rules/96-multi-agent-main-bound-execution.mdc, E7/E10).
+Stdlib only.
 """
 
 from __future__ import annotations
@@ -166,79 +170,6 @@ def validate_memory_writer(identity: dict[str, str]) -> None:
             raise MemoryWriteDenied(msg)
 
 
-def task_signature(namespace: str) -> str:
-    """Stable per-namespace claim for this workspace (not the session).
-
-    Two agents working the same namespace/workspace collide on purpose; the
-    conflict check is the point. Includes the resolved workspace so distinct
-    checkouts do not share a claim.
-    """
-    seed = f"{namespace}|{workspace_root()}"
-    return "cc-" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:20]
-
-
-# --- receipts ---------------------------------------------------------------
-def receipt_path(contract: dict[str, Any], session_id: str) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "unknown")
-    return state_root(contract) / "receipts" / f"{safe}.json"
-
-
-def write_receipt(contract: dict[str, Any], session_id: str, payload: dict[str, Any]) -> Path:
-    path = receipt_path(contract, session_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    body = {"session_id": session_id, "created_at": time.time(), **payload}
-    path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
-
-
-def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
-    path = receipt_path(contract, session_id)
-    if not path.is_file():
-        return False
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return False
-    ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    return (
-        data.get("session_id") == session_id
-        and (time.time() - float(data.get("created_at", 0))) < ttl
-    )
-
-
-# --- locks ------------------------------------------------------------------
-def lock_path(contract: dict[str, Any], namespace: str) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", namespace)
-    return state_root(contract) / "locks" / f"{safe}.json"
-
-
-def write_lock(contract: dict[str, Any], namespace: str, session_id: str, signature: str) -> Path:
-    path = lock_path(contract, namespace)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    body = {
-        "namespace": namespace,
-        "task_signature": signature,
-        "session_id": session_id,
-        "acquired_at": time.time(),
-    }
-    path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
-
-
-def read_lock(contract: dict[str, Any], namespace: str) -> dict[str, Any] | None:
-    path = lock_path(contract, namespace)
-    if not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    ttl = int(contract.get("state", {}).get("lock_ttl_seconds", 3600))
-    if (time.time() - float(data.get("acquired_at", 0))) >= ttl:
-        return None
-    return data
-
-
 # --- operator break-glass audit --------------------------------------------
 def record_override(contract: dict[str, Any], rule_id: str, reason: str) -> None:
     path = state_root(contract) / "overrides.jsonl"
@@ -246,6 +177,35 @@ def record_override(contract: dict[str, Any], rule_id: str, reason: str) -> None
     event = {"at": time.time(), "event": "breakglass_override", "rule": rule_id, "reason": reason}
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, sort_keys=True) + "\n")
+
+
+# --- precondition validation (E7 fail-closed) --------------------------------
+#: The only precondition a governed write may carry. A contract that names any
+#: other precondition -- notably a Graphiti ``phase_lock`` -- is non-conformant
+#: with the L9 Multi-Agent Main-Bound Execution Contract and must not be honored
+#: silently: the gate raises, and its handler denies with the reason.
+ALLOWED_PRECONDITIONS = frozenset({"session_prefetch"})
+
+
+def validate_requires(rule: dict[str, Any]) -> list[str]:
+    """Return a governed rule's preconditions, rejecting non-conformant ones.
+
+    Raises :class:`ValueError` when the rule requires anything beyond session
+    hydration. Reintroducing ``phase_lock`` as a repository-write precondition
+    therefore fails loudly rather than quietly re-coupling memory state to
+    repository authority.
+    """
+    requires = list(rule.get("requires", []))
+    illegal = [r for r in requires if r not in ALLOWED_PRECONDITIONS]
+    if illegal:
+        msg = (
+            f"non-conformant precondition(s) {illegal} on governed write "
+            f"{rule.get('id', '<unknown>')!r}: repository-write authority comes from Git "
+            "isolation, not memory state (E7). Allowed: "
+            f"{sorted(ALLOWED_PRECONDITIONS)}"
+        )
+        raise ValueError(msg)
+    return requires
 
 
 # --- governed-write classification ------------------------------------------

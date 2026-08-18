@@ -2,8 +2,11 @@
 """Graphiti write gate logic for Cursor hooks.
 
 ``git``/``gh`` shell commands never reach the state checks below: memory
-prefetch freshness and GMP phase-lock state are inputs to *policy*, not to
-whether git may execute. See ``ops/autonomy/git_execution_exemption``.
+prefetch freshness is an input to *policy*, not to whether git may execute. See
+``ops/autonomy/git_execution_exemption``.
+
+The gate checks hydration only. A Graphiti phase-lock is never a repository
+mutex (rules/96-multi-agent-main-bound-execution.mdc, E7).
 """
 
 from __future__ import annotations
@@ -63,10 +66,6 @@ def memory_ok(state: dict, task_sig: str | None = None) -> bool:
     return prefetch_fresh(state) and bool(state.get("prefetch_hash"))
 
 
-def gmp_prompt(text: str) -> bool:
-    return bool(re.search(r"GMP|phase\s*[0-6]|modification lock|TODO plan", text, re.I))
-
-
 READ_ONLY_TOOLS = frozenset(
     {
         "Read",
@@ -92,15 +91,11 @@ def pre_tool_use(payload: str) -> dict:
         return {"permission": "allow"}
     conv = data.get("conversation_id") or data.get("conversationId") or "default"
     state = load_state(str(conv))
-    prompt = json.dumps(data)
-    if gmp_prompt(prompt) and "gmp:phase_lock" not in (state.get("memory_satisfied_for") or []):
-        return {
-            "permission": "deny",
-            "user_message": (
-                "Graphiti gate: GMP requires prefetch + conflicts check (gmp:phase_lock). "
-                "Run graphiti_memory_client.py phase-lock first."
-            ),
-        }
+    # A GMP prompt used to require gmp:phase_lock here. That made a memory
+    # marker into repository-write permission, which the L9 Multi-Agent
+    # Main-Bound Execution Contract forbids (E7): GMP freezes the authorized
+    # edit *scope* (the scope contract), it does not decide which agent owns
+    # the repository. Hydration is the only remaining precondition.
     if memory_ok(state):
         return {"permission": "allow"}
     return {
