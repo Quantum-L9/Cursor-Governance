@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "6b9035afaf696854a35ba6a8d4a77b567bce1640c6d493c9ec7ad3b40235cce2"
+      "sha256": "6be3dda966e4e5a8443869f5690a97cf1f9027e76d86e80e31495329de2a6ce6"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -1575,7 +1575,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "24fd459c52d8a0aff8f40a40325b1a94c1e2e2f01572f7fa8f6c6b291e0168a3"
+      "sha256": "e0556425440443d2ec1a5389121f43b40fb0d5ce4d34d3d3ea4de8901834a504"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -1584,6 +1584,18 @@
     {
       "path": "scripts/generate_manifest.py",
       "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
+    },
+    {
+      "path": "scripts/launchability.py",
+      "sha256": "7b171ec3ccf767e471979ffdff84eda719fb2a2e7813ac8fb19c31dd446f5b9e"
+    },
+    {
+      "path": "scripts/pe_timing.py",
+      "sha256": "9063fe84d5d0672ec4368a5267c67d31d1e1b6cc75cfd8e9540131af4c3c0c5b"
+    },
+    {
+      "path": "scripts/pe_worker.py",
+      "sha256": "b1fad1901fae7bf9480b80a7622a5f3a93fdeea4e02219d0fc9cc88e35906c81"
     },
     {
       "path": "scripts/peer_execution_cli.py",
@@ -1619,7 +1631,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "09793159259d5dadf346c21fa38a9e32f0102628a97e9a70203b3c995910150c"
+      "sha256": "8a97da7c1c39bfe05f6077ff2e3b4aacf42479dfcf3fa1335bc78033e37a9216"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1648,6 +1660,14 @@
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
       "sha256": "2fba804a87e897217cb652e61e4f71381e29995483f748f0bb6ebfe36fd22886"
+    },
+    {
+      "path": "scripts/tests/test_launchability.py",
+      "sha256": "e7c7ed3eb27c3636d04f762325c1eff7792aeb92f1268063d8200509b5c3f499"
+    },
+    {
+      "path": "scripts/tests/test_pe_smoke_campaign.py",
+      "sha256": "8158c7ad56eee80ccde13671794fd1bc230d81b574d6e22a23a04fe029399411"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",
