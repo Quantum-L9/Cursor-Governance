@@ -504,6 +504,13 @@ program-execution-conformance: autonomy-contracts-validate
 program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
 
+# PE execution certification: the two-task smoke campaign runs a real worker
+# end to end, then again after a simulated interruption. This is the health
+# check to run when PE "prepares forever but never writes code".
+.PHONY: pe-smoke
+pe-smoke:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B -m pytest -q 		$(PE_ROOT)/scripts/tests/test_pe_smoke_campaign.py 		$(PE_ROOT)/scripts/tests/test_launchability.py 		$(PE_ROOT)/core/program-execution-controller-template/scripts/tests/test_verify_lifecycle.py 		$(PE_ROOT)/core/program-execution-controller-template/scripts/tests/test_execution_recovery.py
+
 AGENTS_TOOLS := environment/agents/tools
 .PHONY: peer-execution-validate peer-execution-probe peer-execution-conformance
 .PHONY: agents-runtime-bindings-validate

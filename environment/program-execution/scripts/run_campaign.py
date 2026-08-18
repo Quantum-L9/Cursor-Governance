@@ -559,11 +559,21 @@ def default_pec_bootstrap(workspace: Path, blueprint: Path) -> dict[str, Any]:
 
 
 def _load_script(name: str, path: Path) -> Any:
+    cached = sys.modules.get(name)
+    if cached is not None and getattr(cached, "__file__", None) == str(path):
+        return cached
     loader = importlib.util.spec_from_file_location(name, path)
     if loader is None or loader.loader is None:
         raise CampaignError(f"cannot load {path}")
     module = importlib.util.module_from_spec(loader)
-    loader.loader.exec_module(module)
+    # Registered before execution so dataclasses in the loaded module can
+    # resolve their own annotations, which needs the module in sys.modules.
+    sys.modules[name] = module
+    try:
+        loader.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
     return module
 
 

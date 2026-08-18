@@ -20,6 +20,9 @@ from typing import Any
 from .common import run_git
 
 PEC_BRANCH_PREFIX = "pec/"
+# `refs/heads/pec/*` does not fnmatch a nested name like `pec/w0/task-001`;
+# a literal prefix up to a slash does.
+PEC_BRANCH_REFSPEC = "refs/heads/pec"
 
 
 def _registered_worktrees(repo: Path) -> dict[str, str]:
@@ -94,7 +97,7 @@ def task_branches(repo: Path, task_id: str) -> list[str]:
         repo,
         "for-each-ref",
         "--format=%(refname:short)",
-        f"refs/heads/{PEC_BRANCH_PREFIX}*",
+        PEC_BRANCH_REFSPEC,
         check=False,
     )
     if listing.returncode != 0:
@@ -149,7 +152,7 @@ def fresh_execution_workspace(
         repo,
         "for-each-ref",
         "--format=%(refname:short)",
-        f"refs/heads/{PEC_BRANCH_PREFIX}*",
+        PEC_BRANCH_REFSPEC,
         check=False,
     )
     if listing.returncode == 0:
