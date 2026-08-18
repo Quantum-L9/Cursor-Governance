@@ -270,15 +270,41 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("overlap gate skipped", result.stdout)
 
-    def test_gh_unavailable_fails_open(self) -> None:
+    def test_gh_unavailable_denies_autonomous_publication(self) -> None:
+        """E6: no gh means no collision state, and no collision state means no push.
+
+        This gate used to skip itself whenever it could not see GitHub -- switching
+        off at exactly the moment an autonomous agent could overwrite a sibling's
+        work. Under autonomy it now blocks; only the push is affected.
+        """
         bare, work, env = _init_world()
         fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={}, unavailable=True)
-        result = _gate(work, fake.env(env))
-        self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("WARN: gh CLI unavailable", result.stdout)
+        gate_env = {**fake.env(env), "L9_AUTONOMY_ENABLED": "true"}
+        result = _gate(work, gate_env)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("gh CLI unavailable", result.stdout)
+        self.assertIn("publication is denied", result.stdout)
+        self.assertIn("Local work is unaffected", result.stdout)
 
-    def test_gh_api_failure_fails_open(self) -> None:
-        """gh present but the pulls call fails (network loss) — must not brick make pr."""
+    def test_gh_unavailable_may_be_overridden_explicitly(self) -> None:
+        """A human may accept the risk, but must say so."""
+        bare, work, env = _init_world()
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={}, unavailable=True)
+        gate_env = {
+            **fake.env(env),
+            "L9_AUTONOMY_ENABLED": "true",
+            "PR_OVERLAP_TELEMETRY": "open",
+        }
+        result = _gate(work, gate_env)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("PR_OVERLAP_TELEMETRY=open", result.stdout)
+
+    def test_gh_api_failure_denies_autonomous_publication(self) -> None:
+        """gh present but the pulls call fails (network loss).
+
+        The open-PR set is unknown, so overlap is unknown, so publication is
+        denied under autonomy (E6) rather than proceeding blind.
+        """
         shimdir = Path(tempfile.mkdtemp(prefix="l9-gh-"))
         shim = shimdir / "gh"
         shim.write_text(
@@ -292,9 +318,11 @@ class PrOverlapCheckTests(unittest.TestCase):
         bare, work, env = _init_world()
         gate_env = _git_env(str(shimdir))
         gate_env["FAKE_SLUG"] = SLUG
+        gate_env["L9_AUTONOMY_ENABLED"] = "true"
         result = _gate(work, gate_env)
-        self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("WARN: could not list open PRs", result.stdout)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("could not enumerate open PRs", result.stdout)
+        self.assertIn("publication is denied", result.stdout)
 
     def test_auto_stack_single_pr_prints_stack_base(self) -> None:
         fake = FakeGh(
