@@ -123,7 +123,9 @@ campaign_execution:
     l9-devpack-program-execution-hardening:
       integration_branch: campaign/l9-devpack-program-execution-hardening
     l9-ecosystem-fix-plan:
-      integration_branch: campaign/l9-ecosystem-fix-plan
+      integration_branch: campaign/l9-ecosystem-fix-plan    pe-router-capability-safety-v4:
+      integration_branch: campaign/pe-router-capability-safety-v4
+
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
   - CANONICAL_LAW.l4_local_autonomy
