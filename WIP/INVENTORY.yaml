@@ -346,68 +346,68 @@ entries:
   date_bucket: null
   sha256: b6ac8dc1662523e2ddfaf1f2d4b7c8fcc6e641d807ebcbeb9006fe25a7b4fe2d
   status: active
-- path: WIP/Repo Hygiene/AGENT_TASK.md
+- path: WIP/repo-hygiene-pack/AGENT_TASK.md
   kind: series
   date_bucket: null
   sha256: 14d4d4501676222aa250401069a0fa180f549c78fc72a43ad3139db407e0e5fb
   status: active
-- path: WIP/Repo Hygiene/CHECKLIST.md
+- path: WIP/repo-hygiene-pack/CHECKLIST.md
   kind: series
   date_bucket: null
   sha256: cadc13850972ea6d96ff974a8a79bb69b8ee067ed5b9482dcdc28ec1ee761538
   status: active
-- path: WIP/Repo Hygiene/RB-HK-001.plan.md
+- path: WIP/repo-hygiene-pack/RB-HK-001.plan.md
   kind: series
   date_bucket: null
   sha256: 357afcd75a16b4cbcc81e1deec384127f48688604089b1a29aea405b37878b00
   status: active
-- path: WIP/Repo Hygiene/RUNBOOK.md
+- path: WIP/repo-hygiene-pack/RUNBOOK.md
   kind: series
   date_bucket: null
   sha256: 95ea7adb4189406d515a0258385befa122a6459969069ca1f633b2307a33cb71
   status: possible-landed
   note: possible-landed
-- path: WIP/Repo Hygiene/START-HERE-PROMPT.md
+- path: WIP/repo-hygiene-pack/START-HERE-PROMPT.md
   kind: series
   date_bucket: null
   sha256: d73a2f374cec506b79bca65d7810dba087d53399d4749de55b3574253cb90380
   status: active
-- path: WIP/Repo Hygiene/scripts/check_repo_hygiene.py
+- path: WIP/repo-hygiene-pack/scripts/check_repo_hygiene.py
   kind: series
   date_bucket: null
   sha256: 8209b46c58af23ee4b9bfd3598a39f8eb4cc6ff3cc8253a1f760c9cd9d31fa79
   status: possible-landed
   note: possible-landed
-- path: WIP/Repo Hygiene/scripts/cleanup_branches.sh
+- path: WIP/repo-hygiene-pack/scripts/cleanup_branches.sh
   kind: series
   date_bucket: null
   sha256: 3a501237ff8f0f0269431fb9ddf7bff3482cc7c0183b77e3a82a69964315232c
   status: active
-- path: WIP/Repo Hygiene/templates/TODO.md
+- path: WIP/repo-hygiene-pack/templates/TODO.md
   kind: series
   date_bucket: null
   sha256: 8a584cbe8d017742ad4245ae67e5fe11d24c6f089030da3172452b7ae0160111
   status: possible-landed
   note: possible-landed
-- path: WIP/Repo Hygiene/workflows/branch-hygiene.yml
+- path: WIP/repo-hygiene-pack/workflows/branch-hygiene.yml
   kind: series
   date_bucket: null
   sha256: 11725dc0b908a12068ef8508afa0085bd906abd8ed5bd83c2d7ea87eaf2c59b7
   status: possible-landed
   note: possible-landed
-- path: WIP/Repo Hygiene/workflows/dependabot.yml
+- path: WIP/repo-hygiene-pack/workflows/dependabot.yml
   kind: series
   date_bucket: null
   sha256: 4d721600390a972ae5310be80e5551fc1af57a2d94fca1c3e6a88693500b75fb
   status: possible-landed
   note: possible-landed
-- path: WIP/Repo Hygiene/workflows/governance-self-check.yml
+- path: WIP/repo-hygiene-pack/workflows/governance-self-check.yml
   kind: series
   date_bucket: null
   sha256: 35472b73f9ccea56e82a8c80cfe051f524cec7b51369ed3fd9302891b676f624
   status: possible-landed
   note: possible-landed
-- path: WIP/Repo Hygiene/workflows/repo-hygiene.yml
+- path: WIP/repo-hygiene-pack/workflows/repo-hygiene.yml
   kind: series
   date_bucket: null
   sha256: 102f61dbca1460b42725525ac5808e0b57f8a5a6343eaf07273b49ad26b97196
