@@ -342,7 +342,7 @@ Concurrency never expands authority.
 | Provider ceiling | `resource-classes.json` → `global.provider_concurrency_ceiling` | Absolute upstream slot count (500) |
 | Control reservation | `global.reserved_control_slots` | Keeps 20 slots for coordinator/synthesis/retry traffic → 480 worker slots |
 | Class capacity | `classes.<name>.capacity` | Per-workload-family pool |
-| Campaign budgets | campaign `budgets.max_{read,mutation,poll}_agents` | Campaign authority ceiling |
+| Campaign budgets | campaign `budgets.max_{read,mutation,poll}_agents` | Campaign authority ceiling on *concurrent* read / mutation / poll workers |
 | Role cardinality | deployment `required_roles.<role>.max` | Authorization ceiling on concurrent workers of a role |
 | Claims | claim registry | Mutation collision prevention |
 
