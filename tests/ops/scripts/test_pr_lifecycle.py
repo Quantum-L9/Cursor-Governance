@@ -7,8 +7,6 @@ import os
 import subprocess
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 L4 = ROOT / "ops" / "autonomy" / "l4_local.py"
@@ -38,7 +36,9 @@ def _init_repo(tmp_path: Path, *, feature: bool = True) -> Path:
     return repo
 
 
-def _run(args: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run(
+    args: list[str], *, cwd: Path, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     merged = {**os.environ, **(env or {})}
     return subprocess.run(
         args,
