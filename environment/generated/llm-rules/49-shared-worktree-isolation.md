@@ -17,11 +17,17 @@ wiping untracked in-flight fix files.
 
 ## MUST
 
-1. **One mutating agent per worktree.** Parallel contracts use
-   `bash ops/scripts/worktree_add_wired.sh -b <branch> <path>` (or a separate
-   clone). Raw `git worktree add` is denied: the new folder has no gitignored
-   `.cursor` links. Escape: `L9_WORKTREE_ADD_AUTHORIZED=<reason>`. Do not share
-   the primary Cursor-Governance checkout for concurrent mutation.
+1. **One mutating agent per worktree.** The canonical task start is
+   `bash ops/scripts/agent_worktree_start.sh --agent-id <id> --task-id <task>`:
+   it fetches `origin/main`, pins the base SHA, branches
+   `agent/<agent-id>/<task-id>` from it, creates the wired worktree, and records
+   task metadata under `.l9/agent-tasks/` (see
+   `96-multi-agent-main-bound-execution`, E1/E2). For a worktree that is not an
+   agent task start, `bash ops/scripts/worktree_add_wired.sh -b <branch> <path>`
+   (or a separate clone) still applies. Raw `git worktree add` is denied: the
+   new folder has no gitignored `.cursor` links. Escape:
+   `L9_WORKTREE_ADD_AUTHORIZED=<reason>`. Do not share the primary
+   Cursor-Governance checkout for concurrent mutation.
 2. **Stage only paths you authored this session** — explicit pathspecs.
 3. **Never** `git diff --name-only | … git add`, `git add -A`, `git add .`,
    or `git add -u` without pathspecs on a shared clone.
