@@ -395,11 +395,19 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     fail "before-submit-skill-router.py missing under ~/.cursor/hooks"
   fi
+  # The gate must NOT deny on a memory marker: repository-write authority comes
+  # from worktree/branch isolation and the publication gate, never from a
+  # phase-lock (rules/96-multi-agent-main-bound-execution, E7). This check used
+  # to assert the opposite -- that graphiti_gate_lib.py contained
+  # "gmp:phase_lock" -- so it must not be satisfied by the comment that now
+  # explains the removal. Match executable code only.
   GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
-  if [ -f "$GATE_LIB" ] && grep -q "gmp:phase_lock" "$GATE_LIB"; then
-    pass "GMP gate matcher present in graphiti_gate_lib.py"
+  if [ ! -f "$GATE_LIB" ]; then
+    fail "graphiti_gate_lib.py missing"
+  elif grep -v '^[[:space:]]*#' "$GATE_LIB" | grep -q "gmp:phase_lock"; then
+    fail "graphiti_gate_lib.py still gates writes on gmp:phase_lock (E7 violation)"
   else
-    fail "GMP gate matcher missing"
+    pass "graphiti gate is hydration-only (no phase-lock write gate)"
   fi
   if bash "$GC/ops/graphiti/test_gate_e2e_full.sh" >/dev/null 2>&1; then
     pass "graphiti gate E2E full self-test"
