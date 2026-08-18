@@ -18,10 +18,11 @@
     "ops/autonomy/local_execution_gate.py, and validate_claude_env.py fails when it does not.",
     "An allow entry here is what an agent reads as 'approved, no prompt' \u2014 so listing a",
     "forbidden action here teaches the agent to attempt it and get denied a layer later.",
-    "Standing autonomous merge is OFF (L9_AUTONOMY_AUTONOMOUS_MERGE=false). Campaigns",
-    "and make pr do not merge. /l9-pr-remediation writes ops/autonomy/authorize_merge.py",
-    "and merge_gate.py then allows ordinary gh pr merge. Force pushes, hard resets,",
-    "destructive cleanup, and admin-merge overrides are denied outright."
+    "Standing autonomous merge is ON (L9_AUTONOMY_AUTONOMOUS_MERGE=true).",
+    "merge_gate.py reads that flag and allows ordinary squash merge after remediation.",
+    "Campaigns and make pr still do not merge. Merge only after /l9-pr-remediation",
+    "reaches green + mergeable + resolved threads, oldest first. Force pushes,",
+    "hard resets, destructive cleanup, and admin-merge stay denied."
   ],
   "hooks": {
     "SessionStart": [
@@ -137,6 +138,7 @@
       "Bash(git add --:*)",
       "Bash(git commit:*)",
       "Bash(make pr:*)",
+      "Bash(gh pr merge:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr checks:*)",
       "Bash(gh run view:*)",
@@ -193,7 +195,7 @@
     "L9_AUTONOMY_AUTHORITY": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
     "L9_AUTONOMY_MATURITY": "M4_ASSURANCE_GOVERNED",
     "L9_AUTONOMY_PROFILE": "pr-convergence",
-    "L9_AUTONOMY_AUTONOMOUS_MERGE": "false",
+    "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
     "L9_AUTONOMY_REMEDIATION_SKILL": "l9-pr-remediation",
     "L9_AUTONOMY_MAX_PARALLEL": "4",
     "L9_AUTONOMY_MAX_MUTATION_LANES": "2",
