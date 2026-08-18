@@ -53,11 +53,16 @@ fi
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # --- Fingerprint: the workspace's own manifests, plus tool presence ---------
+file_hash() {
+  shasum -a 256 "$1" 2>/dev/null | awk '{print $1}' \
+    || md5sum "$1" 2>/dev/null | awk '{print $1}'
+}
+
 fingerprint() {
   local stamp_input=""
   for f in uv.lock pyproject.toml requirements.txt package.json pnpm-lock.yaml package-lock.yaml .pre-commit-config.yaml; do
     if [ -f "$WORKSPACE/$f" ]; then
-      stamp_input="$stamp_input|$f:$("$BASH" -c "shasum -a 256 '$WORKSPACE/$f' 2>/dev/null || md5sum '$WORKSPACE/$f' 2>/dev/null" | awk '{print $1}')"
+      stamp_input="$stamp_input|$f:$(file_hash "$WORKSPACE/$f")"
     fi
   done
   stamp_input="$stamp_input|uv:$(uv --version 2>/dev/null || echo none)"
