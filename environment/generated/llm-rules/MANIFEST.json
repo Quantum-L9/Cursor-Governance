@@ -204,9 +204,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "baa7e6890cfb3f7c15f04a83fee41c095012f709e0a00c425c45bb3d8bcd22ab",
+      "output_sha256": "a08956be38175955cf2e592005019e04b7433351ec6a44aa0afa558e756d8e1d",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "f1aa4d6e45239772660feb9c2607a6b74ce108f6dcc5bc85c84180d8c766ade4",
+      "source_sha256": "b3c89ed62772069ae5d9ddfc209446bfdf4519ec01bd20b56446ee882780a32e",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -596,5 +596,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 65
   },
-  "tree_sha256": "dba5fa2baa68b1e3f01cb801a47c930d10db0ff35ed88ddbc6497e7a2172e159"
+  "tree_sha256": "c2ab22b77b3880e292dae0a3c65bb773a563185549589e14021702e7b94c5994"
 }
