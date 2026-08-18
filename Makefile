@@ -3,6 +3,7 @@
 .PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
 .PHONY: capability-contract-validate capability-check capability-broker-preflight
+.PHONY: broker-serve
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -467,6 +468,15 @@ capability-check:
 ## Broker posture (trusted side): boundary isolation + workload identity.
 capability-broker-preflight:
 	$(PYTHON) ops/secrets/capability_broker.py preflight
+
+## Run capability broker locally for CLI surfaces.
+## Binds to localhost:8787, authenticates to Infisical via AWS bootstrap.
+## Set L9_CAPABILITY_BROKER_URL=http://localhost:8787 in your shell.
+## For cloud surfaces: deploy to K8s with ops/secrets/k8s/broker-deployment.yaml
+broker-serve:
+	@echo "Starting L9 capability broker on http://localhost:8787"
+	@echo "Set: export L9_CAPABILITY_BROKER_URL=http://localhost:8787"
+	$(PYTHON) ops/secrets/capability_broker.py serve --audience cli_local --port 8787 --bind 127.0.0.1
 
 ## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
 ## After this: playwright install

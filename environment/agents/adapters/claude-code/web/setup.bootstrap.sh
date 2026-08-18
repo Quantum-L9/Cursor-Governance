@@ -67,6 +67,26 @@ for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; d
   fi
 done
 
+# Infisical / capability plane (same contract as ops/scripts/bootstrap_agent_environment.sh).
+# Model-controlled surfaces never hold UA, password, PAT, or downstream tokens.
+# Credentials stay in Infisical behind the broker. A pasted "Infisical password"
+# configuration here is a master key — strip it.
+for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
+              INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
+              GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
+              AWS_SESSION_TOKEN GITHUB_TOKEN; do
+  if [ -n "${!leaked:-}" ]; then
+    warn "$leaked is set — PROHIBITED on this surface (Infisical/capability plane); unsetting"
+    unset "$leaked"
+  fi
+done
+if [ -n "${GH_TOKEN:-}" ] && [ "$GH_TOKEN" != "proxy-injected" ]; then
+  warn "GH_TOKEN is a real credential — PROHIBITED; replacing with the literal proxy-injected"
+fi
+# Variables file contract: never a PAT. Anthropic's git proxy authenticates;
+# this literal is a posture marker, not a credential.
+export GH_TOKEN=proxy-injected
+
 : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 export GRAPHITI_MCP_URL
 
@@ -117,8 +137,15 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
   echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
-  # ADR-0006: keep the retired side door out of every in-session shell.
+  echo "export GH_TOKEN=proxy-injected"
+  if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
+    echo "export L9_CAPABILITY_BROKER_URL=$(printf %q "$L9_CAPABILITY_BROKER_URL")"
+  fi
+  # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
+  echo "unset GRAPHITI_MCP_TOKEN INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
+  echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
+  echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN GITHUB_TOKEN"
 } > "$L9_ENV_FILE"
 
 # NOTE: Sonar project identity is deliberately NOT written here. It is
@@ -139,15 +166,16 @@ else
   note "CLAUDE_ENV_FILE unset — sourcing $L9_ENV_FILE from the shell profile instead"
 fi
 
-# --- 4) Memory front-door readiness (report, never block) ------------------
-# An unset GRAPHITI_MCP_TOKEN is a common root cause of a DEGRADED SessionStart
-# hydrate ("empty PICKUP search"), so name it here rather than at prompt time.
-if [ -z "${GRAPHITI_MCP_TOKEN:-}" ]; then
-  warn "GRAPHITI_MCP_TOKEN unset — Graphiti hydrate/phase-lock/write will run DEGRADED."
-  warn "  Set it in the variables field; allowlist memory.quantumaipartners.com."
+# --- 4) Capability plane readiness (report, never block) -------------------
+# Same check every surface runs after install.sh -> bootstrap_agent_environment.sh.
+# Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA / password to turn this green.
+if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
+  note "capability broker: $L9_CAPABILITY_BROKER_URL (credentials stay on the broker)"
 else
-  note "memory front door: $GRAPHITI_MCP_URL (bearer present)"
+  warn "L9_CAPABILITY_BROKER_URL unset — Sonar/Semgrep/Graphiti capabilities DEGRADED"
+  warn "  Honest posture. Fix broker delivery; do not paste Infisical or Graphiti secrets."
 fi
+note "memory front door URL: $GRAPHITI_MCP_URL (no bearer in this process)"
 
 note "cloud bootstrap complete — governance at $GOV_DIR ($GOV_BRANCH)"
 exit 0

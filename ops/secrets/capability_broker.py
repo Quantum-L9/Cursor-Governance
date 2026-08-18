@@ -420,12 +420,25 @@ def _github_pr_view(payload: Any) -> Any:
     return {k: payload.get(k) for k in keys if k in payload}
 
 
+def _passthrough(payload: Any) -> Any:
+    """Passthrough sanitizer — returns payload unmodified.
+
+    Use for MCP servers where the upstream API response is already sanitized
+    and contains no credential material (e.g., GitHub API returns no secrets,
+    Context7 returns docs, Semgrep returns findings).
+
+    The credential-sweep backstop in scrub() will still catch any leaked values.
+    """
+    return payload
+
+
 SANITIZERS: dict[str, Callable[[Any], Any]] = {
     "sonar_issue_snapshot": _sonar_issue_snapshot,
     "semgrep_findings": _semgrep_findings,
     "mcp_envelope": _mcp_envelope,
     "github_pr_view": _github_pr_view,
     "github_packages_meta": _github_packages_meta,
+    "passthrough": _passthrough,
 }
 
 
@@ -568,6 +581,57 @@ class _Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "no such route; this broker exposes no secret-read API"})
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/mcp":
+            # MCP protocol proxy — transforms MCP JSON-RPC calls into capability invocations
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+
+                # MCP clients send the capability ID in X-Capability-Id header
+                capability_id = self.headers.get("X-Capability-Id")
+                if not capability_id:
+                    self._send(
+                        400,
+                        {
+                            "jsonrpc": "2.0",
+                            "id": body.get("id"),
+                            "error": {"code": -32600, "message": "missing X-Capability-Id header"},
+                        },
+                    )
+                    return
+
+                claims = self.broker.authenticate(self.headers.get("Authorization"))
+
+                # Transform MCP request into capability invocation
+                # MCP sends: {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {...}}
+                result = self.broker.handle(
+                    claims, {"capability": capability_id, "params": body.get("params", {})}
+                )
+
+                # Return in MCP JSON-RPC 2.0 envelope
+                self._send(
+                    200, {"jsonrpc": "2.0", "id": body.get("id"), "result": result["result"]}
+                )
+            except BrokerError as exc:
+                self._send(
+                    exc.status,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": body.get("id") if "body" in locals() else None,
+                        "error": {"code": exc.status, "message": exc.message},
+                    },
+                )
+            except (ValueError, KeyError) as exc:
+                self._send(
+                    400,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": body.get("id") if "body" in locals() else None,
+                        "error": {"code": -32600, "message": f"malformed MCP request: {exc}"},
+                    },
+                )
+            return
+
         if self.path != "/capability":
             self._send(404, {"error": "no such route; this broker exposes no secret-read API"})
             return

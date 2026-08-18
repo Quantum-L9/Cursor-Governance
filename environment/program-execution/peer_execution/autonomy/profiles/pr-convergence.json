@@ -3,11 +3,11 @@
   "version": "1.1.0",
   "execution_authority": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
   "autonomy_maturity": "M4_ASSURANCE_GOVERNED",
-  "autonomous_merge": false,
+  "autonomous_merge": true,
   "remediation": {
     "skill": "l9-pr-remediation",
     "loop": "read CI failures and review-bot comments, apply scoped fixes, push to the PR branch, wait for re-run, repeat until CI is green and no actionable comments remain",
-    "terminal_state": "merge_gate_eligible"
+    "terminal_state": "merged"
   },
   "concurrency_budget": {
     "total_lanes": 4,
@@ -26,10 +26,11 @@
     "update_pull_request",
     "resolve_review_threads",
     "remediate_until_green",
-    "evaluate_merge_gate"
+    "evaluate_merge_gate",
+    "merge_squash_after_green_mergeable"
   ],
   "protected_actions": [
-    "merge_pull_request_after_human_approval",
+    "merge_before_green_or_unresolved_threads",
     "expand_campaign_scope",
     "rotate_credentials",
     "change_branch_protection",

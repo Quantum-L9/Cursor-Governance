@@ -6,7 +6,7 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 
 | Source | Path | Role |
 |---|---|---|
-| ADR-0001 | `docs/decisions/ADR-0001-claude-code-bounded-concurrent-autonomy.md` | Autonomy ON, merge OFF, remediation ON |
+| ADR-0001 | `docs/decisions/ADR-0001-claude-code-bounded-concurrent-autonomy.md` | Autonomy ON, ordinary merge ON after remediation, force/admin OFF |
 | Settings | `environment/agents/adapters/claude-code/settings.template.json` | Allow scoped push/PR create; omit merge; deny force/admin |
 | Profile | `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` | Lanes 4/2, waiting_external, merge_gate |
 | Runtime | `environment/program-execution/peer_execution/autonomy/*.py` | Claude-only machine scheduler (do not rewrite for Cursor) |
@@ -17,8 +17,8 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 
 - **Allow:** scoped local git commits; non-force push + PR create/update **only after L4 release_authorized**.
 - **Deny:** mid-execution push/PR (`ops/autonomy/local_execution_gate.py`), `.env` / `.mcp.json` reads, `rm -rf`, force-push, `reset --hard`, `clean -fd`, `gh pr merge --admin`.
-- **Omitted:** `merge_pull_request` → human merge.
-- **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_AUTONOMOUS_MERGE=false`, `L9_AUTONOMY_MAX_PARALLEL=4`, `L9_AUTONOMY_MAX_MUTATION_LANES=2`, `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`, `L9_L4_LOCAL_AUTONOMY=1` (default).
+- **Allow ordinary merge:** `Bash(gh pr merge:*)` after `/l9-pr-remediation` (green + mergeable + threads resolved). `merge_gate.py` reads `L9_AUTONOMY_AUTONOMOUS_MERGE=true`.
+- **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_AUTONOMOUS_MERGE=true`, `L9_AUTONOMY_MAX_PARALLEL=4`, `L9_AUTONOMY_MAX_MUTATION_LANES=2`, `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`, `L9_L4_LOCAL_AUTONOMY=1` (default).
 
 ## L4 local autonomy (standing)
 

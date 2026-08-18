@@ -285,7 +285,7 @@ fi
 # Report it loudly here: this is the check that would have caught the old
 # posture, and it must fail visibly rather than be quietly tolerated.
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN INFISICAL_CLIENT_SECRET \
-              INFISICAL_TOKEN GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY; do
+              INFISICAL_TOKEN INFISICAL_PASSWORD GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY; do
   if [ -n "${!leaked:-}" ]; then
     warn "$leaked is present in this model-controlled surface — PROHIBITED (contract S2/S3)"
     warn "  remove it from the surface environment; capabilities replace it"

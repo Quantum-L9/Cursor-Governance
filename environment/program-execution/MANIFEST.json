@@ -1351,7 +1351,7 @@
     },
     {
       "path": "peer_execution/autonomy/profiles/pr-convergence.json",
-      "sha256": "927daf5a495064ce603df3d71110efb90566a43a2777c1d907f0d1c5831945ca"
+      "sha256": "2538a9e211d8d8c80835207c38e9e977ad40263311966e5cf4d7eff0d9b480c6"
     },
     {
       "path": "peer_execution/autonomy/readiness.py",

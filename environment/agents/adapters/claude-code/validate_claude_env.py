@@ -354,6 +354,46 @@ def check_publish_path_alignment(failures: list[str]) -> None:
         print("  OK: permission layer agrees with the publish-path gate")
 
 
+def check_no_secret_paste_instructions(failures: list[str]) -> None:
+    """Cloud stub + install guide must not tell operators to paste vault secrets."""
+    banned = (
+        "Set it in the variables field",
+        "GRAPHITI_MCP_TOKEN unset — Graphiti hydrate",
+        "At minimum set `GH_TOKEN`",
+        "replace every\n   `REPLACE_WITH_*`",
+        "memory bearer present",
+    )
+    paths = (
+        HERE / "web" / "setup.bootstrap.sh",
+        HERE / "web" / "README.md",
+        HERE / "web" / "setup.sh",
+    )
+    problems = 0
+    for path in paths:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for needle in banned:
+            if needle in text:
+                _fail(
+                    f"{path.relative_to(HERE)} still instructs pasting a secret ({needle!r})",
+                    failures,
+                )
+                problems += 1
+        if path.name == "setup.bootstrap.sh":
+            if "L9_CAPABILITY_BROKER_URL" not in text:
+                _fail("web/setup.bootstrap.sh must mention L9_CAPABILITY_BROKER_URL", failures)
+                problems += 1
+            if "INFISICAL_PASSWORD" not in text:
+                _fail(
+                    "web/setup.bootstrap.sh must strip INFISICAL_PASSWORD from the surface",
+                    failures,
+                )
+                problems += 1
+    if not problems:
+        print("  OK: cloud stub/README do not instruct pasting Infisical or Graphiti secrets")
+
+
 def check_memory_identity_distinct(failures: list[str]) -> None:
     """Claude Code's memory identity must differ from Cursor's (`cursor_agent`).
 
@@ -444,6 +484,7 @@ def main() -> int:
     check_setup_linux_sandbox_hygiene(failures)
     check_dependency_policy(failures)
     check_publish_path_alignment(failures)
+    check_no_secret_paste_instructions(failures)
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
     check_memory_enforcement(failures)

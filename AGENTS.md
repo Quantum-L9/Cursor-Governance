@@ -864,3 +864,38 @@ precommit` bullets as a parallel public gate):
 5. Pin lockstep remains: `.pre-commit-config.yaml` ruff `rev` matches
    `requirements.txt` / locked `.venv` ruff. Dual ruff (catalog + gate) is
    owned by `pr-check`; do not add a third runner.
+
+<!-- STACK_SAFE_MERGE_AND_AUTO_HYGIENE_V1 -->
+## Stack-safe merge + automatic hygiene (2026-08-17) — supersedes PR_OVERLAP_GUARDRAIL_V1 §3 rung 2
+
+Authoritative additions (do not treat older “`gh pr merge --squash`, oldest
+first” bullets as unconditional, and do not treat `PR_STACK=auto` as a
+generally safe overlap remedy):
+
+1. **Squash/rebase merge is denied when the head branch is the base of an open
+   PR.** The squash commit shares no ancestry with the head's commits, so the
+   child's merge base rewinds to before the parent's deletions; git then reads
+   “child preserved the file” and “child never touched the file” as the same
+   snapshot and drops it with no conflict. Enforced by
+   `ops/autonomy/merge_gate.py` (fail-closed when the stack state cannot be
+   determined). Land the children bottom-up first, retarget them, or merge the
+   parent with `--merge`. Breakglass: `L9_STACK_CHECK_BYPASS=<reason>`.
+2. **Do not split mixed work into a parent that deletes and a child that
+   restores.** That shape has no representation in a three-way merge. Cut two
+   sibling branches from the pre-mix base instead, each purely additive.
+3. **After a parent is squash-merged, never merge `main` into the child.** Use
+   `git rebase --onto origin/main <old-parent-tip> <child>`.
+4. **Local residue is cleaned automatically at `sessionEnd`** by
+   `ops/scripts/repo_hygiene.py` (see `ops/scripts/REPO_HYGIENE.md`). Spent
+   branches, spent worktrees, and stale stashes go without being asked; every
+   delete is preceded by a `refs/l9/preserved/` ref. Dirty worktrees and
+   untracked files are never touched, only reported. Do not ask the human
+   whether there are untracked files — run the report.
+5. **A branch name is never reused after its PR merges.** `repo_hygiene.py`
+   reports that state as `reused_after_merge` and refuses to delete it,
+   because GitHub still calls the branch merged while the newer commits are
+   not in `main`.
+6. **Overlap remedy order is now: commit into the open PR, else wait, else
+   renegotiate scope.** `PR_STACK=auto` creates the exact topology item 1
+   denies at merge time, so it is no longer the second-choice remedy —
+   use it only when the parent will be merged with `--merge`.

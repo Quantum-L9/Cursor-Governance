@@ -21,6 +21,10 @@
       {
         "command": "./hooks/governance-backup.sh",
         "timeout": 120
+      },
+      {
+        "command": "./hooks/session-end-repo-hygiene.sh",
+        "timeout": 90
       }
     ],
     "beforeSubmitPrompt": [
