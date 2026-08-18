@@ -220,6 +220,7 @@ class PublishPathProbeStateTests(BootstrapFixture):
             if line.startswith("publish_path_gate="):
                 return line.split("=", 1)[1].strip()
         self.fail(f"no publish_path_gate state emitted; stderr was:\n{proc.stderr}")
+        raise AssertionError(f"no publish_path_gate state emitted; stderr was:\n{proc.stderr}")
 
     def test_explicit_deny_reports_enforced(self) -> None:
         self.install_gate(GATE_DENY)
