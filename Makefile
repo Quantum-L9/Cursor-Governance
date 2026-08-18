@@ -98,6 +98,12 @@ campaign:
 	  --until "$(or $(CAMPAIGN_UNTIL),merge)" \
 	  $(CAMPAIGN_ARGS)
 
+.PHONY: campaign-check-input
+## Classify a PE campaign input and print its route. Runs no campaign stage. INTENT= required.
+campaign-check-input:
+	@test -n "$(INTENT)" || (echo "INTENT= path to classify is required" >&2; exit 2)
+	$(PYTHON) environment/program-execution/scripts/run_campaign.py --check-input "$(INTENT)"
+
 .PHONY: campaign-stack-base
 ## Print the next campaign PR base from $L9_ROOT/programs/$CAMPAIGN_ID/runtime/STACK.json.
 ## Never falls back to main. CAMPAIGN_ID= required.

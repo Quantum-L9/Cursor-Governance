@@ -59,6 +59,49 @@ absent. DeepSeek is not a Program Execution provider.
 
 Claude `backend_mode` and `model_hint` are probe evidence only.
 
+## Campaign input routing (the front door)
+
+`make campaign INTENT=<path>` classifies the input once, by content and schema
+rather than by file extension, and then either routes it or refuses it. There is
+no third outcome.
+
+| Input | Route |
+|---|---|
+| `l9.program-execution.campaign-source.v2` | straight to `compile_campaign_source` → blueprint → PEC |
+| activate seed (`campaign_id`, `title`, `objective`, `tasks`) | activate → campaign source → blueprint → PEC |
+| brief memo (`.md`) | brief → activate → campaign source → blueprint → PEC |
+| `program-execution.intent.v1` | **rejected** — design-time compiler input, no live adapter |
+| anything else | **rejected** |
+
+A supplied campaign source is written verbatim to the path the compiler reads.
+It is never rebuilt through the activation compiler, because that regenerates it
+from a weaker seed and drops task validations, dependencies, writable paths,
+gates, evidence requirements, and authority data.
+
+Classify without running anything:
+
+```bash
+make campaign-check-input INTENT=/path/to/CAMPAIGN_SOURCE.yaml
+```
+
+### When the front door rejects an input
+
+Rejection happens before any worktree, blueprint, PEC state, or task exists, and
+prints `PE_CAMPAIGN_INPUT_REJECTED` with the detected kind, the reason, the
+supported kinds, `nothing_executed: true`, and the fix.
+
+**That rejection is terminal for the invocation.** An agent that hits it must
+stop and report `CAMPAIGN DID NOT START` with the failing command, the verbatim
+error, the detected input type, why it is unsupported, the precise fix, and
+confirmation that no private workaround was attempted.
+
+Do not respond to a rejection by importing `run_campaign.py` and calling
+`default_execute`, `default_arm`, `default_pec_bootstrap`, or any other
+`default_*` stage function, and do not hand-reconstruct admission or execution.
+Those are private helpers, not an API; composing them skips the routing the
+front door exists to perform. Fix the input, or fix the router. Manual recovery
+requires an explicit operator order.
+
 ## Fast path (execution productivity)
 
 A campaign must start producing implementation work in minutes, not hours.

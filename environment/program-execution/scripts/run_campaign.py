@@ -36,6 +36,7 @@ NUGGET_SCRIPT = GOV_ROOT / "skills/l9-pe-nuggets/scripts/extract_nuggets.py"
 AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
 BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
+CAMPAIGN_INPUT = PE_ROOT / "scripts/campaign_input.py"
 COLLECT_EVIDENCE = PE_ROOT / "scripts/collect_evidence.py"
 ACCEPT_BLUEPRINT = PE_ROOT / "scripts/accept_blueprint.py"
 VALIDATE_BLUEPRINT = (
@@ -226,6 +227,13 @@ def dump_yaml(path: Path, value: Any) -> None:
 
 
 def load_activate_seed(path: Path) -> dict[str, Any]:
+    """Parse an *activate seed*. Only valid after classification says ACTIVATE.
+
+    This is not a general campaign-input parser and must not be used as one: a
+    campaign-source.v2 keeps `campaign_id` under `metadata` and would be
+    rejected here even though it is a supported input. Route through
+    `classify_campaign_input()` first.
+    """
     raw = load_yaml(path)
     if not isinstance(raw, dict):
         raise CampaignError("intent must be a mapping")
@@ -279,7 +287,13 @@ def resolve_operator_intent(
     target_override: str | None = None,
     primed_dir: Path | None = None,
 ) -> Path:
-    """Return an activate-seed path. Memos are compiled; YAML seeds pass through."""
+    """Return an activate-seed path. Memos are compiled; YAML seeds pass through.
+
+    Restricted to the BRIEF and ACTIVATE routes. A campaign-source.v2 never
+    reaches here — it goes straight to the campaign-source compiler so its task
+    definitions, dependencies, validations, gates, and authority data are not
+    rebuilt from a weaker representation.
+    """
     raw: Any = None
     try:
         raw = load_yaml(path)
@@ -412,6 +426,60 @@ def isolate_worktree(
     log(f"isolate worktree {worktree}")
     ensure_workspace_wired(worktree)
     return worktree
+
+
+def campaign_input_module() -> Any:
+    return _load_script("campaign_input", CAMPAIGN_INPUT)
+
+
+def classify_campaign_input(path: Path) -> Any:
+    """Classify the operator's input once, before anything can have side effects.
+
+    Supported kinds return a classification; unsupported kinds raise the
+    terminal refusal. There is deliberately no third outcome — a caller cannot
+    receive "unsupported, but here is a partial route" and improvise the rest.
+    """
+    module = campaign_input_module()
+    found = module.classify(Path(path))
+    if not found.supported:
+        raise module.reject(found)
+    return found
+
+
+def place_campaign_source(source_doc: dict[str, Any], repo_root: Path, campaign_id: str) -> None:
+    """Write a supplied campaign-source.v2 to the path the compiler reads.
+
+    This is the direct route's counterpart to `compile_activation`, minus the
+    generation step: the operator's source is written verbatim rather than
+    rebuilt from a weaker seed, so its tasks, dependencies, validations,
+    writable paths, gates, evidence requirements, and authority data survive
+    intact. Only the host registry bookkeeping is shared with the activate path.
+    """
+    module = _load_script("compile_activation_files", ACTIVATE_SCRIPT)
+    campaign_dir = repo_root / "environment/program-execution/campaigns" / campaign_id
+    campaign_dir.mkdir(parents=True, exist_ok=True)
+    source_path = campaign_dir / "CAMPAIGN_SOURCE.yaml"
+    dump_yaml(source_path, source_doc)
+    module.write_receipt(source_path, campaign_id, stamp=module.utc_now())
+    hosts = (
+        (
+            repo_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
+            module.patch_allowlist,
+        ),
+        (
+            repo_root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+            module.patch_execution_policy,
+        ),
+        (repo_root / "ops/autonomy/surface_profile.yaml", module.patch_surface_profile),
+        (
+            repo_root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml",
+            module.patch_status_ledger,
+        ),
+    )
+    for path, patcher in hosts:
+        if not path.is_file() and path.name != "CAMPAIGN_STATUS.yaml":
+            raise CampaignError(f"missing host file: {path}")
+        patcher(path, campaign_id)
 
 
 def default_compile_activation(intent: Path, repo_root: Path) -> dict[str, Any]:
@@ -2245,14 +2313,28 @@ def run_campaign(
     primary = (primary or Path.home() / ".cursor-governance").resolve()
     host_root = (repo_root or primary).resolve()
     l9_home = (l9_root or Path(os.environ.get("L9_ROOT", Path.home() / ".l9"))).resolve()
-    resolved_intent = resolve_operator_intent(
-        intent_path,
-        host_root=host_root,
-        target_override=target_override or os.environ.get("TARGET"),
-        primed_dir=l9_home / "primed",
-    )
-    seed = load_activate_seed(resolved_intent)
+    # Classify once, before any stage can create a worktree, mutate a blueprint,
+    # or touch PEC state. An unsupported input fails here in milliseconds.
+    kinds = campaign_input_module().CampaignInputKind
+    classification = classify_campaign_input(intent_path)
+    campaign_source_doc: dict[str, Any] | None = None
+    if classification.kind is kinds.CAMPAIGN_SOURCE_V2:
+        campaign_source_doc = classification.document
+        resolved_intent = classification.path
+        seed = campaign_input_module().seed_view(campaign_source_doc or {})
+    else:
+        resolved_intent = resolve_operator_intent(
+            intent_path,
+            host_root=host_root,
+            target_override=target_override or os.environ.get("TARGET"),
+            primed_dir=l9_home / "primed",
+        )
+        seed = load_activate_seed(resolved_intent)
     campaign_id = str(seed["campaign_id"]).strip()
+    if not campaign_id:
+        raise CampaignError(f"campaign input has no campaign_id: {intent_path}")
+    log(f"PE campaign input: {classification.kind.value}")
+    log(f"campaign id: {campaign_id}")
     refuse_hash_campaign_id(campaign_id)
     if should_run(until, "execute") and resumable_workspace(l9_home / "programs" / campaign_id):
         return resume_live_campaign(
@@ -2310,23 +2392,38 @@ def run_campaign(
     )
 
     compile_activation = hooks.compile_activation or default_compile_activation
-    plan_fn = hooks.plan_window or default_plan_window
-    log(f"plan-window {campaign_id}")
-    with timer.stage("plan_window"):
-        plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
-    projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
-    if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
-        if hooks.compile_activation is None:
+    if campaign_source_doc is not None:
+        # A campaign source is already the fully projected artifact the plan
+        # window exists to produce, and it declares its own plan_status. Running
+        # it through projection and the activation compiler would rebuild it
+        # from a weaker representation — the exact loss this route avoids.
+        plan_status = str(campaign_source_doc.get("plan_status") or "")
+        if plan_status not in {"Ready", "ConditionallyReady"}:
             raise CampaignError(
-                f"plan_status {plan_receipt.get('plan_status')!r} is not Ready or "
-                "ConditionallyReady; refuse seal"
+                f"plan_status {plan_status!r} is not Ready or ConditionallyReady; refuse seal"
             )
-    log(f"emit {campaign_id} into {write_root}")
-    with timer.stage("emit"):
-        compile_activation(
-            projected_intent if projected_intent.is_file() else resolved_intent,
-            write_root,
-        )
+        log("compiler: compile_campaign_source (direct, no activation rebuild)")
+        log(f"emit {campaign_id} into {write_root}")
+        with timer.stage("emit"):
+            place_campaign_source(campaign_source_doc, write_root, campaign_id)
+    else:
+        plan_fn = hooks.plan_window or default_plan_window
+        log(f"plan-window {campaign_id}")
+        with timer.stage("plan_window"):
+            plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+        projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
+        if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
+            if hooks.compile_activation is None:
+                raise CampaignError(
+                    f"plan_status {plan_receipt.get('plan_status')!r} is not Ready or "
+                    "ConditionallyReady; refuse seal"
+                )
+        log(f"emit {campaign_id} into {write_root}")
+        with timer.stage("emit"):
+            compile_activation(
+                projected_intent if projected_intent.is_file() else resolved_intent,
+                write_root,
+            )
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
@@ -2582,7 +2679,14 @@ def render_report(report: CampaignReport) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--intent", required=True, type=Path)
+    parser.add_argument("--intent", type=Path, default=None)
+    parser.add_argument(
+        "--check-input",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Classify a campaign input and print its route. Runs no campaign stage.",
+    )
     parser.add_argument(
         "--until",
         choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
@@ -2634,7 +2738,13 @@ def refuse_live_until_shortcut(until: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.check_input is not None:
+        return campaign_input_module().main([str(args.check_input)])
+    if args.intent is None:
+        parser.error("--intent is required (or use --check-input PATH)")
+    module = campaign_input_module()
     try:
         refuse_live_until_shortcut(args.until)
         report = run_campaign(
@@ -2648,6 +2758,11 @@ def main(argv: list[str] | None = None) -> int:
             target_override=args.target,
             fast=args.fast,
         )
+    except module.CampaignInputRejected as exc:
+        # Printed whole and unadorned: this text is meant to be pasted to an
+        # operator, and it already says nothing ran and bypass is forbidden.
+        print(exc.render(), file=sys.stderr)
+        return exc.exit_code
     except CampaignError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return exc.exit_code

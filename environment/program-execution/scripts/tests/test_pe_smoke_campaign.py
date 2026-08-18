@@ -79,6 +79,12 @@ def _pec(workspace: Path, *args: str) -> dict:
     return json.loads(completed.stdout or "{}")
 
 
+def _load_yaml(path: Path) -> dict:
+    import yaml
+
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
 def _branches(repo: Path) -> list[str]:
     listed = subprocess.run(
         ["git", "-C", str(repo), "for-each-ref", "--format=%(refname:short)", "refs/heads/pec"],
@@ -97,9 +103,42 @@ class PeSmokeCampaignTests(unittest.TestCase):
         cls.mod = _load("run_campaign_smoke", SCRIPT)
         cls.activate = _load("compile_activation_smoke", ACTIVATE)
 
-    def _run_smoke(self, raw: Path, *, fast: bool = True, until: str = "close"):
+    def _run_smoke(
+        self,
+        raw: Path,
+        *,
+        fast: bool = True,
+        until: str = "close",
+        campaign_source: bool = False,
+    ):
         root = _host_repo(raw / "host")
         _dump(root / "intent.yaml", READY_SEED)
+        if campaign_source:
+            # The operator hands over the canonical source itself. No activation
+            # hook is supplied, so a route through the activation compiler would
+            # rebuild it from a weaker seed and this run would not be a proof.
+            source = self.activate.build_source(READY_SEED, stamp="2026-01-01T00:00:00Z")
+            source["tasks"][1]["depends_on"] = ["TASK-001"]
+            entry = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(entry, source)
+            l9 = raw / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            started = time.monotonic()
+            report = self.mod.run_campaign(
+                entry,
+                until=until,
+                primary=raw / "primary",
+                repo_root=root,
+                l9_root=l9,
+                fast=fast,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    make_pr=lambda worktree, campaign_id: {"number": 1, "url": "https://x.test/1"},
+                ),
+            )
+            return report, l9, time.monotonic() - started
         l9 = raw / "l9"
         target = l9 / "program-worktrees" / "demo-activate-v1"
         target.mkdir(parents=True)
@@ -119,6 +158,43 @@ class PeSmokeCampaignTests(unittest.TestCase):
             ),
         )
         return report, l9, time.monotonic() - started
+
+    def test_public_campaign_path_reaches_task001_from_a_campaign_source(self) -> None:
+        """The acceptance criterion: `campaign-source.v2` in, executed tasks out.
+
+        Everything here goes through the public `run_campaign` entry point. No
+        `default_execute`, `default_arm`, or `default_pec_bootstrap` is called
+        by the test, because reaching for those is the failure this fixes.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            with unittest.mock.patch.dict("os.environ", {"L9_PE_WORKER_CMD": _worker_command(tmp)}):
+                report, l9, elapsed = self._run_smoke(tmp, campaign_source=True)
+
+            self.assertIn("execute", report.stages_completed)
+            workspace = l9 / "programs/demo-activate-v1"
+            states = {
+                item["id"]: item["runtime_state"] for item in _pec(workspace, "status")["tasks"]
+            }
+            self.assertEqual(states["TASK-001"], "COMPLETED")
+            self.assertEqual(states["TASK-002"], "COMPLETED", msg="dependency did not advance")
+            for task_id in ("TASK-001", "TASK-002"):
+                brief = workspace / "runtime/worker" / f"{task_id}.BRIEF.md"
+                self.assertTrue(brief.is_file(), msg=f"{task_id} never reached a worker")
+            # The source the compiler read must be the operator's, not a rebuild.
+            # A closed campaign is archived under COMPLETED/, so accept either.
+            campaigns = Path(report.worktree) / "environment/program-execution/campaigns"
+            candidates = [
+                campaigns / "demo-activate-v1/CAMPAIGN_SOURCE.yaml",
+                campaigns / "COMPLETED/demo-activate-v1/CAMPAIGN_SOURCE.yaml",
+            ]
+            emitted = next((path for path in candidates if path.is_file()), None)
+            self.assertIsNotNone(emitted, msg=f"no campaign source under {campaigns}")
+            doc = _load_yaml(emitted)
+            self.assertEqual(doc["schema"], "l9.program-execution.campaign-source.v2")
+            task2 = next(item for item in doc["tasks"] if item["id"] == "TASK-002")
+            self.assertEqual(task2["depends_on"], ["TASK-001"])
+            self.assertLess(elapsed, 300)
 
     def test_two_task_campaign_executes_end_to_end_through_a_real_worker(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "6be3dda966e4e5a8443869f5690a97cf1f9027e76d86e80e31495329de2a6ce6"
+      "sha256": "148134f0e5a546249927c78c958d47296ebef7d9ebb168e8ed71c1f10c9468a7"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -1566,6 +1566,10 @@
       "sha256": "c7cae64da3979a31621edf7eb7897a5eacbe8578a2edabd433c023caabe91ba0"
     },
     {
+      "path": "scripts/campaign_input.py",
+      "sha256": "a2c0923e067472e6ea84cf596fa3108b7a7b91a306532fc88bdc0e31853b71bf"
+    },
+    {
       "path": "scripts/campaign_pr_copy.py",
       "sha256": "7796af1594d284f7cb646a0ce0dcb3abe330c4136042096d26cb15508af738c8"
     },
@@ -1631,7 +1635,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "8a97da7c1c39bfe05f6077ff2e3b4aacf42479dfcf3fa1335bc78033e37a9216"
+      "sha256": "25f6655944270799fb3be6418caaeb130db3d2f2ef5f069ded70ade71b325a0b"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1667,7 +1671,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "8158c7ad56eee80ccde13671794fd1bc230d81b574d6e22a23a04fe029399411"
+      "sha256": "0d0913cefd4e49c94c024aef658fdf295767e493c6f150ccce8bc8bd87de7a5a"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",
@@ -1675,7 +1679,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "246201d0ec8f25d19f376c4cb00735686d72fc252f09deb6c32e38932caab7b1"
+      "sha256": "78fc301368960e85ecedb91c639a2a694461a1ad983011885b584d7cb0042034"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
