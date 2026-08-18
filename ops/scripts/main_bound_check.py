@@ -43,6 +43,17 @@ def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _is_campaign_base(base: str) -> bool:
+    """True for a campaign integration branch (campaign/<campaign_id>).
+
+    Campaign execution is a declared workflow, not an ad-hoc deviation: rules 48
+    and 88 require campaign PRs to target campaign/<id> rather than main, so the
+    base name itself carries the declaration.
+    """
+    name = base.removeprefix("origin/")
+    return name.startswith("campaign/") and len(name) > len("campaign/")
+
+
 def _fail(message: str) -> int:
     print(f"BLOCK: {message}")
     return 1
@@ -70,15 +81,26 @@ def main() -> int:
             "Start a task with ops/scripts/agent_worktree_start.sh."
         )
 
-    # E4 — ordinary PRs target main.
+    # E4 — ordinary PRs target main. A non-main base is allowed only when the
+    # exception is declared, never inferred:
+    #   * a campaign integration branch, which CANONICAL_LAW §6.2 / rules 48 and
+    #     88 require campaign PRs to target -- the `campaign/` base IS the
+    #     declaration, so campaign execution keeps working unchanged;
+    #   * PR_STACK=auto, the operator's explicit decision to stack;
+    #   * L9_TASK_BASE_AUTHORIZED, an explicit stated reason.
     if base not in ("origin/main", "main"):
-        if not (base_authorized or stacking):
+        campaign = _is_campaign_base(base)
+        if not (base_authorized or stacking or campaign):
             return _fail(
                 f"PR base is '{base}', not origin/main (E4). Ordinary main-bound execution "
-                "targets main. Stacking on an open PR head requires PR_STACK=auto; a "
-                "campaign base requires L9_TASK_BASE_AUTHORIZED=<reason>."
+                "targets main. Stacking on an open PR head requires PR_STACK=auto; any other "
+                "base requires L9_TASK_BASE_AUTHORIZED=<reason>."
             )
-        why = base_authorized or "PR_STACK=auto"
+        why = (
+            base_authorized
+            or ("campaign integration branch" if campaign else "")
+            or "PR_STACK=auto"
+        )
         print(f"NOTE: non-main PR base '{base}' authorized ({why})")
 
     # E2 — ancestry. The task branch must descend from the base we are about to

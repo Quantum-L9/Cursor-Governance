@@ -149,17 +149,44 @@ def test_non_main_base_requires_explicit_authorization(upstream: Path, tmp_path:
     """E4: ordinary PRs target main; another base is an authorized exception."""
     repo = clone_agent(upstream, tmp_path, "agent_a")
     start_task(repo, "claude", "T1", 3, "line_3 = 'claude'")
-    git_in(repo, "branch", "campaign/x", "origin/main")
+    git_in(repo, "branch", "agent/other/T7", "origin/main")
 
-    denied = run_gate(MAIN_BOUND, repo, "campaign/x")
+    denied = run_gate(MAIN_BOUND, repo, "agent/other/T7")
     assert denied.returncode == 1
     assert "not origin/main (E4)" in denied.stdout
 
     allowed = run_gate(
-        MAIN_BOUND, repo, "campaign/x", L9_TASK_BASE_AUTHORIZED="campaign execution"
+        MAIN_BOUND, repo, "agent/other/T7", L9_TASK_BASE_AUTHORIZED="stacked on sibling"
     )
     assert allowed.returncode == 0, allowed.stdout
     assert "authorized" in allowed.stdout
+
+    stacked = run_gate(MAIN_BOUND, repo, "agent/other/T7", PR_STACK="auto")
+    assert stacked.returncode == 0, stacked.stdout
+
+
+def test_campaign_integration_base_is_self_declaring(upstream: Path, tmp_path: Path) -> None:
+    """E4 exception: campaign PRs target campaign/<id> by standing policy.
+
+    Rules 48 and 88 require campaign execution to open against the campaign
+    integration branch, and that path sets no extra env. The `campaign/` base
+    name is itself the declaration, so campaign publishing keeps working while
+    an arbitrary non-main base still needs a stated reason.
+    """
+    repo = clone_agent(upstream, tmp_path, "agent_a")
+    start_task(repo, "claude", "T1", 3, "line_3 = 'claude'")
+    git_in(repo, "branch", "campaign/2026-08-alpha", "origin/main")
+    git_in(repo, "branch", "feat/unrelated", "origin/main")
+
+    ok = run_gate(MAIN_BOUND, repo, "campaign/2026-08-alpha")
+    assert ok.returncode == 0, ok.stdout
+    assert "campaign integration branch" in ok.stdout
+
+    # A bare "campaign/" prefix is not a campaign id, and an unrelated branch
+    # is still refused without an explicit reason.
+    denied = run_gate(MAIN_BOUND, repo, "feat/unrelated")
+    assert denied.returncode == 1
+    assert "not origin/main (E4)" in denied.stdout
 
 
 def test_rewritten_branch_base_is_blocked(upstream: Path, tmp_path: Path) -> None:
