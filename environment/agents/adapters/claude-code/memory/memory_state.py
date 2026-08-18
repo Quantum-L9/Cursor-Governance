@@ -170,6 +170,35 @@ def validate_memory_writer(identity: dict[str, str]) -> None:
             raise MemoryWriteDenied(msg)
 
 
+# --- receipts ---------------------------------------------------------------
+def receipt_path(contract: dict[str, Any], session_id: str) -> Path:
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "unknown")
+    return state_root(contract) / "receipts" / f"{safe}.json"
+
+
+def write_receipt(contract: dict[str, Any], session_id: str, payload: dict[str, Any]) -> Path:
+    path = receipt_path(contract, session_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = {"session_id": session_id, "created_at": time.time(), **payload}
+    path.write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
+    path = receipt_path(contract, session_id)
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
+    return (
+        data.get("session_id") == session_id
+        and (time.time() - float(data.get("created_at", 0))) < ttl
+    )
+
+
 # --- operator break-glass audit --------------------------------------------
 def record_override(contract: dict[str, Any], rule_id: str, reason: str) -> None:
     path = state_root(contract) / "overrides.jsonl"
