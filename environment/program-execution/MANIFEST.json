@@ -411,15 +411,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "c7696eba1ac34a8cd0c1e82280dd9d1cca03cf0b4139c6b42b30aea81629ccb0"
+      "sha256": "b24b1d99e94b31b270ee7627ae4f9af23cc508e0e1a8258809ad86eee9f837ad"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "b5cd2f99c19486f9a446659934c024b8422fc7166c26dc880fac682652e8c73d"
+      "sha256": "d351d8346f459e23c80231a4962e08bfa71ac6581e6731b59059eaa15f4d9f0b"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "87549230e39361602cf6196ba8ff942939344f08c3fd33577a4496c2243439c7"
+      "sha256": "2e6e7efcb95b6551fef3c8991450b3668bac0cdcea409dce9c7ffb396629ffa2"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -596,6 +596,14 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
+    },
+    {
+      "path": "campaigns/pe-router-capability-safety-v4/CAMPAIGN_SOURCE.yaml",
+      "sha256": "32e2c337c4a363016e1506a7b5646e42437e3df53c91d5c5d972ce90034345b3"
+    },
+    {
+      "path": "campaigns/pe-router-capability-safety-v4/source-integrity-receipt.json",
+      "sha256": "5c27734b36207192d72ac2fddfae91762b7f5fa1fd12c9092c49dec72287bdde"
     },
     {
       "path": "campaigns/pe-v3-hardening/CAMPAIGN_SOURCE.yaml",
