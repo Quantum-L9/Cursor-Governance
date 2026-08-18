@@ -5,6 +5,25 @@ from typing import Any
 
 from autonomy.adapters.protocol import AdapterConfig
 
+# Every parallel-safe analytical role runs in the background so a swarm is not
+# serialized by the foreground task slot. Mutation roles (executor, remediator)
+# stay in the foreground: their lease, hooks, claims, and lifecycle enforcement
+# are unchanged either way, and foreground execution keeps the operator-visible
+# write path attached to the session that owns it.
+BACKGROUND_ROLES = frozenset(
+    {
+        "context_compiler",
+        "recon",
+        "synthesis",
+        "verifier",
+        "reviewer",
+        "failure_classifier",
+        "poller",
+        "sentinel",
+        "evidence_writer",
+    }
+)
+
 
 def load_claude_code_config(payload: Mapping[str, Any]) -> AdapterConfig:
     config = AdapterConfig.from_dict(payload)
@@ -20,13 +39,7 @@ def build_claude_task(deployment: Mapping[str, Any]) -> dict[str, Any]:
         "name": f"l9-{contract['action_id']}",
         "description": contract["objective"],
         "subagent_type": _claude_subagent_type(contract["role"]),
-        "run_in_background": contract["role"]
-        in {
-            "recon",
-            "verifier",
-            "poller",
-            "sentinel",
-        },
+        "run_in_background": contract["role"] in BACKGROUND_ROLES,
         "prompt": _render_prompt(contract),
         "environment": {
             "L9_AUTONOMY_REQUIRED": "1",

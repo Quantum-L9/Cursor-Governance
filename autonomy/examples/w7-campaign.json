@@ -47,9 +47,9 @@
   "budgets": {
     "max_files_changed": 80,
     "max_lines_changed": 6000,
-    "max_mutation_agents": 1,
-    "max_read_agents": 4,
-    "max_poll_agents": 3,
+    "max_mutation_agents": 128,
+    "max_read_agents": 450,
+    "max_poll_agents": 64,
     "max_runtime_minutes": 720,
     "max_tool_failures": 8
   },

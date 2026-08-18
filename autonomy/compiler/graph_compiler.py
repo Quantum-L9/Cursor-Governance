@@ -24,6 +24,7 @@ class CompiledGraph:
         topological_order: list[str],
         reverse_dependencies: Mapping[str, list[str]],
         critical_depth: Mapping[str, int],
+        parallel_layers: list[list[str]],
         source_hashes: Mapping[str, str],
     ) -> None:
         self.graph_id = graph_id
@@ -32,7 +33,20 @@ class CompiledGraph:
         self.topological_order = topological_order
         self.reverse_dependencies = dict(reverse_dependencies)
         self.critical_depth = dict(critical_depth)
+        self.parallel_layers = [list(layer) for layer in parallel_layers]
         self.source_hashes = dict(source_hashes)
+
+    @property
+    def max_parallel_width(self) -> int:
+        """Widest dependency layer: the ceiling on useful concurrency."""
+
+        return max((len(layer) for layer in self.parallel_layers), default=0)
+
+    @property
+    def serial_depth(self) -> int:
+        """Number of dependency layers the graph must traverse in order."""
+
+        return len(self.parallel_layers)
 
     def to_dict(self) -> dict[str, Any]:
         actions_payload: list[dict[str, Any]] = []
@@ -69,6 +83,9 @@ class CompiledGraph:
                 key: list(value) for key, value in self.reverse_dependencies.items()
             },
             "critical_depth": dict(self.critical_depth),
+            "parallel_layers": [list(layer) for layer in self.parallel_layers],
+            "max_parallel_width": self.max_parallel_width,
+            "serial_depth": self.serial_depth,
             "source_hashes": dict(self.source_hashes),
         }
         payload["graph_hash"] = sha256_json(payload)
@@ -97,6 +114,7 @@ def compile_graph(
         topological_order,
         reverse_dependencies,
     )
+    parallel_layers = _parallel_layers(action_by_id, topological_order)
     graph_seed = {
         "campaign_id": campaign.campaign_id,
         "deployment_id": deployment.deployment_id,
@@ -125,6 +143,7 @@ def compile_graph(
         topological_order=topological_order,
         reverse_dependencies=reverse_dependencies,
         critical_depth=critical_depth,
+        parallel_layers=parallel_layers,
         source_hashes={
             "campaign": sha256_json(asdict(campaign)),
             "deployment": sha256_json(
@@ -217,6 +236,30 @@ def _reverse_dependencies(
     for action_id in result:
         result[action_id].sort()
     return result
+
+
+def _parallel_layers(
+    actions: Mapping[str, Action],
+    topological_order: list[str],
+) -> list[list[str]]:
+    """Group actions into the layers that may legally run at the same time.
+
+    An action sits one layer below its deepest dependency, so layer width is
+    the compiled graph's inherent parallelism: independent work must show up as
+    a wide layer, never as a chain. Claim conflicts narrow admission later, at
+    scheduling time, without changing the compiled shape.
+    """
+
+    depth: dict[str, int] = {}
+    for action_id in topological_order:
+        dependencies = actions[action_id].depends_on
+        depth[action_id] = (
+            0 if not dependencies else 1 + max(depth[dependency] for dependency in dependencies)
+        )
+    layers: list[list[str]] = [[] for _ in range(max(depth.values(), default=-1) + 1)]
+    for action_id, level in depth.items():
+        layers[level].append(action_id)
+    return [sorted(layer) for layer in layers]
 
 
 def _critical_depth(

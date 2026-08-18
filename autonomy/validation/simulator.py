@@ -100,6 +100,19 @@ class PipelineSimulator:
             return False
         return True
 
+    def _worker_ceiling(self) -> int:
+        """Global worker slots, mirroring the scheduler's provider accounting."""
+
+        global_policy = self.resource_policy.get("global", {})
+        ceiling = global_policy.get("provider_concurrency_ceiling")
+        if not isinstance(ceiling, int) or ceiling <= 0:
+            return sum(
+                int(config.get("capacity", 0))
+                for config in self.resource_policy["classes"].values()
+            )
+        reserved = max(0, int(global_policy.get("reserved_control_slots", 0)))
+        return max(0, ceiling - reserved)
+
     def _select_by_capacity(
         self,
         ready: list[Mapping[str, Any]],
@@ -108,6 +121,7 @@ class PipelineSimulator:
             resource: int(config["capacity"])
             for resource, config in self.resource_policy["classes"].items()
         }
+        global_remaining = self._worker_ceiling()
         used = Counter()
         claimed_exclusive: set[str] = set()
         claimed_shared: Counter[str] = Counter()
@@ -121,6 +135,8 @@ class PipelineSimulator:
             ),
         )
         for action in ordered:
+            if global_remaining <= 0:
+                break
             resource_class = action["resource_class"]
             if used[resource_class] >= capacities.get(resource_class, 0):
                 continue
@@ -128,6 +144,7 @@ class PipelineSimulator:
                 continue
             selected.append(action)
             used[resource_class] += 1
+            global_remaining -= 1
             for claim in action.get("claims", []):
                 key = claim["key"]
                 exclusive = bool(claim.get("exclusive", claim["mode"] == "write"))
