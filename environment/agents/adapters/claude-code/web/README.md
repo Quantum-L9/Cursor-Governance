@@ -146,14 +146,18 @@ bash "$HOME/.cursor-governance/ops/secrets/bootstrap_agent_env.sh" --check \
 
 ## Shared memory (required for governed Mobile/Web)
 
-Cloud sessions use HTTPS Graphiti reachability to the **same** store as Cursor:
+Cloud sessions reach the **same** Graphiti store as Cursor through the brokered
+front door. `mcp.template.json` points `graphiti-memory` at
+`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti` — the L9 capability broker
+(`graphiti.query`) — and carries **no bearer**: the broker resolves the
+Graphiti credential on its trusted side and proxies to
+`memory.quantumaipartners.com/graphiti/mcp`. This is **not** the retired
+`L9_MEMORY_HTTP_*` side door (ADR-0006).
 
-`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`
-
-(`mcp.template.json` expands `${GRAPHITI_MCP_URL}`. The bearer is **not** in this
-environment — `graphiti.*` capabilities keep it on the broker.)
-This is **not** the retired `L9_MEMORY_HTTP_*` side door (ADR-0006).
-CLI hosts may set `GRAPHITI_MCP_URL=http://127.0.0.1:8100/mcp` via the SSH tunnel.
+**Honest posture when the broker is unreachable or has no authenticated
+identity for this session:** memory reports `DEGRADED` (broker identity
+unavailable). Do **not** paste a Graphiti bearer into the variables field to
+turn that green — the fix is broker delivery, never a static secret.
 
 **Identity (shared graph, distinct author).** `group_id` is shared with Cursor.
 Writing identity is not: `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claude-code`.

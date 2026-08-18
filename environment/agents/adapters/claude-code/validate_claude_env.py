@@ -22,9 +22,10 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-# Graphiti front door is env-sourced (cloud HTTPS or CLI loopback tunnel).
-# Template must reference ${GRAPHITI_MCP_URL}; never register l9-shared-memory.
-GRAPHITI_MCP_URL_ENV_REF = "${GRAPHITI_MCP_URL}"
+# Graphiti front door is brokered: the template points at the L9 capability
+# broker (/mcp/graphiti) and never holds the bearer. Never register
+# l9-shared-memory.
+GRAPHITI_BROKER_URL_ENV_REF = "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti"
 # Scheme prefixes assembled from parts (SonarCloud python:S5332). Detection only.
 _URL_SCHEME_PREFIXES = tuple(f"{scheme}://" for scheme in ("http", "https"))
 
@@ -157,26 +158,110 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
     if not mem:
         _fail("mcp.template.json must define graphiti-memory front door", failures)
         return
-    auth = mem.get("headers", {}).get("Authorization", "")
     url = mem.get("url", "")
-    if "${GRAPHITI_MCP_TOKEN}" in auth and "Bearer" in auth:
-        print("  OK: mcp auth is GRAPHITI_MCP_TOKEN env-reference")
+    if url == GRAPHITI_BROKER_URL_ENV_REF:
+        print("  OK: mcp URL is the brokered front door (${L9_CAPABILITY_BROKER_URL}/mcp/graphiti)")
     else:
         _fail(
-            "mcp.template.json Authorization must be Bearer ${GRAPHITI_MCP_TOKEN}",
+            f"mcp.template.json URL must be {GRAPHITI_BROKER_URL_ENV_REF!r} "
+            "(brokered graphiti.query front door; bearer stays beyond the trust boundary)",
             failures,
         )
-    if url == GRAPHITI_MCP_URL_ENV_REF:
-        print("  OK: mcp URL is GRAPHITI_MCP_URL env-reference (cloud HTTPS or CLI tunnel)")
-    else:
+    if "headers" in mem and mem.get("headers"):
         _fail(
-            f"mcp.template.json URL must be {GRAPHITI_MCP_URL_ENV_REF!r}",
+            "mcp.template.json graphiti-memory must not carry headers — "
+            "the broker authenticates and holds the Graphiti credential",
             failures,
         )
+    else:
+        print("  OK: graphiti-memory carries no headers (no bearer on this surface)")
     raw = (HERE / "mcp.template.json").read_text(encoding="utf-8")
     for banned in ("L9_MEMORY_HTTP_URL", "L9_MEMORY_CLIENT_TOKEN"):
         if banned in raw:
             _fail(f"mcp.template.json must not reference {banned}", failures)
+    # Functional config must never carry the bearer; a prohibition mention in
+    # the _comment block documents the contract and is expected.
+    if "GRAPHITI_MCP_TOKEN" in json.dumps(servers):
+        _fail("mcp.template.json server config must not reference GRAPHITI_MCP_TOKEN", failures)
+    if not failures:
+        print("  OK: mcp.template.json references no memory credential in server config")
+
+
+def check_cross_file_secret_contract(failures: list[str]) -> None:
+    """Zero-static-secret must be one contract across files, not file shapes.
+
+    Chain under test (any link drifting reopens the split-brain the intent
+    identified):
+
+    environment.env.example says zero static secrets
+      <=> web/README says zero static secrets
+      <=> setup.bootstrap.sh asks for none / persists none
+      <=> setup.sh persists none
+      <=> mcp.template requires none
+      <=> shared bootstrap rejects raw secrets
+      <=> this validator enforces all of the above
+    """
+    env_path = HERE / "web" / "environment.env.example"
+    if env_path.is_file():
+        env_text = env_path.read_text(encoding="utf-8")
+        for token in ("GRAPHITI_MCP_TOKEN", "INFISICAL_CLIENT_SECRET", "SONAR_TOKEN"):
+            match = re.search(rf"^\s*{token}\s*=", env_text, re.MULTILINE)
+            if match:
+                _fail(f"environment.env.example assigns {token} — zero static secrets violated", failures)
+        if re.search(r"^\s*GH_TOKEN\s*=", env_text, re.MULTILINE):
+            _fail(
+                "environment.env.example assigns GH_TOKEN — the platform proxy "
+                "injects the credential; the account template exports none",
+                failures,
+            )
+        if not failures:
+            print("  OK: environment.env.example assigns no static credential")
+
+    bootstrap = HERE / "web" / "setup.bootstrap.sh"
+    if bootstrap.is_file():
+        boot_text = bootstrap.read_text(encoding="utf-8")
+        for needle in ("export GH_TOKEN", "gh auth login --with-token"):
+            if needle in boot_text:
+                _fail(f"web/setup.bootstrap.sh must not {needle.split(' ', 2)[1]} ({needle!r})", failures)
+        if not failures:
+            print("  OK: setup.bootstrap.sh persists no credential")
+
+    setup = HERE / "web" / "setup.sh"
+    if setup.is_file():
+        setup_text = setup.read_text(encoding="utf-8")
+        for needle in ("GRAPHITI_MCP_TOKEN=", "gh auth login --with-token"):
+            if needle in setup_text:
+                _fail(f"web/setup.sh must not require or persist a credential ({needle!r})", failures)
+        if not failures:
+            print("  OK: web/setup.sh persists no credential")
+
+    shared = _governance_root() / "ops" / "scripts" / "bootstrap_agent_environment.sh"
+    if shared.is_file():
+        shared_text = shared.read_text(encoding="utf-8")
+        if "GRAPHITI_MCP_TOKEN" not in shared_text:
+            _fail(
+                "shared bootstrap must strip/guard GRAPHITI_MCP_TOKEN "
+                "(raw secrets rejected on every surface)",
+                failures,
+            )
+        else:
+            print("  OK: shared bootstrap rejects raw secrets")
+
+
+def check_cross_file_chain_prohibitions(failures: list[str]) -> None:
+    """The chain above is only as strong as its documentation links: the web
+    README must tell operators the contract, not the pre-migration paste path."""
+    readme = HERE / "web" / "README.md"
+    if not readme.is_file():
+        return
+    text = readme.read_text(encoding="utf-8")
+    for needle in ("Set it in the variables field", "set real GH_TOKEN"):
+        if needle in text:
+            _fail(f"web/README.md instructs the pre-migration paste path ({needle!r})", failures)
+    if "GRAPHITI_MCP_TOKEN" in text and "do not paste" not in text and "never" not in text:
+        _fail("web/README.md mentions GRAPHITI_MCP_TOKEN without the prohibition framing", failures)
+    if not failures:
+        print("  OK: web/README.md documents the zero-static-secret contract")
 
 
 def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
@@ -481,6 +566,8 @@ def main() -> int:
     check_json_parses(failures)
     check_no_secrets(failures)
     check_mcp_uses_env_refs(failures)
+    check_cross_file_secret_contract(failures)
+    check_cross_file_chain_prohibitions(failures)
     check_setup_linux_sandbox_hygiene(failures)
     check_dependency_policy(failures)
     check_publish_path_alignment(failures)
