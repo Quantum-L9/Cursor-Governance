@@ -35,7 +35,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_prefetch.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" memory_prefetch.py || exit 0'",
             "timeout": 25
           }
         ]
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_writeback.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" memory_writeback.py || exit 0'",
             "timeout": 20
           }
         ]
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/user_prompt_skill_router.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" user_prompt_skill_router.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" skill_usage_logger.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -79,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/context7_stack_pretool.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" context7_stack_pretool.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -89,12 +89,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" merge_gate_wrap.py || exit 0'",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" local_execution_gate_wrap.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -104,7 +104,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_gate.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" memory_gate.py || exit 0'",
             "timeout": 12
           }
         ]
@@ -115,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" skill_usage_logger.py || exit 0'",
             "timeout": 5
           }
         ]

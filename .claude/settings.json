@@ -11,7 +11,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_prefetch.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" memory_prefetch.py || exit 0'",
             "timeout": 25
           }
         ]
@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_writeback.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" memory_writeback.py || exit 0'",
             "timeout": 20
           }
         ]
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/user_prompt_skill_router.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" user_prompt_skill_router.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -41,11 +41,21 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Skill",
+        "matcher": "Skill|mcp__context7__.*|mcp__plugin_context7_context7__.*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" skill_usage_logger.py || exit 0'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" context7_stack_pretool.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -55,12 +65,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" merge_gate_wrap.py || exit 0'",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" local_execution_gate_wrap.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -70,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_gate.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" memory_gate.py || exit 0'",
             "timeout": 12
           }
         ]
@@ -81,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$f\" ] && exec python3 \"$f\" || exit 0'",
+            "command": "bash -c 'r=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/run_governance_hook.sh\"; [ -f \"$r\" ] && exec bash \"$r\" skill_usage_logger.py || exit 0'",
             "timeout": 5
           }
         ]
@@ -103,7 +113,8 @@
       "Bash(git worktree:*)",
       "Bash(git add --:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)",
+      "Bash(make pr:*)",
+      "Bash(gh pr merge:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr checks:*)",
       "Bash(gh run view:*)",
@@ -131,15 +142,24 @@
       "mcp__github__search_code",
       "mcp__github__subscribe_pr_activity",
       "mcp__github__unsubscribe_pr_activity",
-      "mcp__github__create_pull_request",
-      "mcp__github__update_pull_request"
+      "mcp__github__update_pull_request",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs"
     ],
     "deny": [
       "Read(./.env)",
       "Read(./.mcp.json)",
       "Bash(rm -rf:*)",
+      "Bash(git push:*)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(make push:*)",
+      "mcp__github__create_pull_request",
+      "mcp__github__push_files",
       "Bash(git reset --hard:*)",
       "Bash(git clean -fd:*)",
       "Bash(gh pr merge --admin:*)"
@@ -151,7 +171,7 @@
     "L9_AUTONOMY_AUTHORITY": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
     "L9_AUTONOMY_MATURITY": "M4_ASSURANCE_GOVERNED",
     "L9_AUTONOMY_PROFILE": "pr-convergence",
-    "L9_AUTONOMY_AUTONOMOUS_MERGE": "false",
+    "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
     "L9_AUTONOMY_REMEDIATION_SKILL": "l9-pr-remediation",
     "L9_AUTONOMY_MAX_PARALLEL": "4",
     "L9_AUTONOMY_MAX_MUTATION_LANES": "2",
@@ -180,6 +200,8 @@
     "l9-issue-remediation": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
     "l9-mac-storage-triage": "user-invocable-only",
+    "l9-pe-campaign-activate": "user-invocable-only",
+    "l9-pe-nuggets": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
