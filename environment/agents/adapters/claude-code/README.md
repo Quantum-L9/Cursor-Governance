@@ -47,7 +47,7 @@ context**, **reach shared memory** — without a human wiring step.
 
 | Need | CLI | Web / Mobile |
 |---|---|---|
-| Discover L9 skills | `~/.claude/skills/` fed by `setup_claude_code_plugins.sh` (user scope, machine-wide) | governance cloned by `web/setup.sh`; skills referenced from the clone |
+| Discover L9 skills | `~/.claude/skills/` fed by `reconcile_claude_l9_skills.py` via `install.sh` (canonical native L9 skills) | governance cloned by `web/setup.sh`; skills referenced from the clone |
 | Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
 | Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate + local_execution_gate PreToolUse | same Profile; standing A4 + L4 local (no mid-exec push); human merge |
 | Reach shared memory | `mcp.template.json` → brokered `graphiti-memory` server (`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`, no bearer) | same committed `.mcp.json`; `L9_MEMORY_*` identity from the account environment |
@@ -73,6 +73,22 @@ removes only entries recorded in its managed-state file. Claude `.claude/rules`
 is a directory symlink to `environment/generated/llm-rules/` (projected from
 `rules/*.mdc` — never hand-edit; never mount raw `.mdc`). Validate with
 `make claude-skills-check`.
+
+### Native skills vs marketplace plugins — ownership split
+
+Two different mechanisms feed Claude Code, and the names must not blur:
+
+- **Canonical L9 native skills** — `install.sh` →
+  `ops/scripts/reconcile_claude_l9_skills.py` (project scope, and the user-scope
+  mirror). This is the mechanism that makes L9 skills available, on every
+  surface including Web/Mobile.
+- **Optional marketplace plugins** — `make claude-plugins` →
+  `ops/scripts/setup_claude_code_plugins.sh`. Installs Claude marketplace
+  packages (hookify, pr-review-toolkit, desktop-commander, context7),
+  including project-scoped plugin mutations. This is an explicit **local /
+  Desktop enhancement** and is **not required for Web/Mobile parity** — Claude
+  mobile does not expose local-only commands such as `/plugin`, and a governed
+  cloud session must not depend on them.
 
 ### Memory transport — brokered, and honest when degraded
 
@@ -186,4 +202,4 @@ make claude-env        # or: python3 environment/agents/adapters/claude-code/val
 - `environment/ide/README.md` — the editor-profile peer (Cursor/VS Code rendering).
 - `CANONICAL_LAW.md` §2 — the IDE adapter model this row registers under.
 - `AGENTS.md` §2 — the Cursor activation contract this mirrors for Claude Code.
-- `ops/scripts/setup_claude_code_plugins.sh` — the CLI-scope plugin/skill reconciler.
+- `ops/scripts/setup_claude_code_plugins.sh` — optional local/Desktop marketplace plugin augmentation (not the L9 skill mechanism).
