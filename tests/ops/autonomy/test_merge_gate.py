@@ -1,4 +1,12 @@
-"""Tests for ops/autonomy/merge_gate.py"""
+"""Tests for ops/autonomy/merge_gate.py
+
+Shell ``git``/``gh`` commands are exempt from execution denial
+(``ops/autonomy/git_execution_exemption.py``), so this gate's remaining
+enforcement surface is the MCP merge tool, which is not a shell command. The
+merge-authorization contract, the never-waive set and the stack-safety probe
+are all pinned there; the first block pins that the shell forms are allowed
+through regardless of governance state.
+"""
 
 from __future__ import annotations
 
@@ -8,11 +16,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 GATE = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "merge_gate.py"
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
 from l4_local import authorize_release, begin, record_kernels  # noqa: E402
+
+MERGE_TOOL = "mcp__github__merge_pull_request"
 
 
 def _run(event: dict, env: dict | None = None) -> tuple[int, str, str]:
@@ -31,110 +43,8 @@ def _run(event: dict, env: dict | None = None) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout, proc.stderr
 
 
-def test_denies_gh_pr_merge_without_receipt(stacked_repo: Path) -> None:
-    code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 12", "cwd": str(stacked_repo)},
-            "cwd": str(stacked_repo),
-        }
-    )
-    assert code == 0, err
-    payload = json.loads(out)
-    assert payload["hookSpecificOutput"]["permissionDecision"] == "deny"
-
-
-def test_denies_force_push() -> None:
-    code, out, err = _run(
-        {"tool_name": "Bash", "tool_input": {"command": "git push --force origin HEAD"}}
-    )
-    assert code == 0, err
-    assert "deny" in out
-
-
-def test_allows_normal_commit() -> None:
-    code, out, err = _run({"tool_name": "Bash", "tool_input": {"command": "git commit -m 'ok'"}})
-    assert code == 0, err
-    assert out.strip() == ""
-
-
-def test_breakglass_allows_merge() -> None:
-    code, out, err = _run(
-        {"tool_name": "Bash", "tool_input": {"command": "gh pr merge 1"}},
-        env={"L9_MERGE_AUTHORIZED": "human approved merge of #1"},
-    )
-    assert code == 0, err
-    assert out.strip() == ""
-
-
-def test_denies_mcp_merge_tool_without_receipt(stacked_repo: Path) -> None:
-    code, out, err = _run(
-        {
-            "tool_name": "mcp__github__merge_pull_request",
-            "tool_input": {"cwd": str(stacked_repo)},
-            "cwd": str(stacked_repo),
-        }
-    )
-    assert code == 0, err
-    assert "deny" in out
-
-
-def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
-    begin(stacked_repo, contract_id="merge-auth-test")
-    record_kernels(stacked_repo)
-    authorize_release(stacked_repo)
-
-    code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": "gh pr merge 99",
-                "cwd": str(stacked_repo),
-            },
-            "cwd": str(stacked_repo),
-        }
-    )
-    assert code == 0, err
-    payload = json.loads(out)
-    assert payload["hookSpecificOutput"]["permissionDecision"] == "deny"
-
-
-def test_l4_release_receipt_still_denies_force(stacked_repo: Path) -> None:
-    begin(stacked_repo, contract_id="merge-force-test")
-    record_kernels(stacked_repo)
-    authorize_release(stacked_repo)
-
-    code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": "git push --force origin HEAD",
-                "cwd": str(stacked_repo),
-            },
-            "cwd": str(stacked_repo),
-        }
-    )
-    assert code == 0, err
-    assert "deny" in out
-
-
-def test_l4_release_receipt_still_denies_admin_merge(stacked_repo: Path) -> None:
-    begin(stacked_repo, contract_id="merge-admin-test")
-    record_kernels(stacked_repo)
-    authorize_release(stacked_repo)
-
-    code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": "gh pr merge 99 --admin",
-                "cwd": str(stacked_repo),
-            },
-            "cwd": str(stacked_repo),
-        }
-    )
-    assert code == 0, err
-    assert "deny" in out
+def _mcp(**tool_input) -> dict:
+    return {"tool_name": MERGE_TOOL, "tool_input": tool_input}
 
 
 def _auth_file(
@@ -163,15 +73,107 @@ def _probe_file(tmp_path: Path, entries: dict[str, dict] | None = None) -> Path:
     return path
 
 
-def test_human_file_authorization_allows_matching_merge(tmp_path: Path) -> None:
-    auth = _auth_file(tmp_path)
+STACKED = {"Quantum-L9/SEO-Bot#53": {"head": "fix/parent", "children": [54]}}
+
+
+# --- Shell git/gh: exempt from this gate --------------------------------------
+#
+# Policy still forbids force-push, hard-reset, destructive clean and
+# admin-merge, and still routes merges through /l9-pr-remediation. None of that
+# is enforced here any more for a shell command.
+
+EXEMPT_SHELL = [
+    "git commit -m 'ok'",
+    "gh pr merge 12",
+    "gh pr merge 12 --squash",
+    "gh pr merge 12 --admin",
+    "git push --force origin HEAD",
+    "git reset --hard HEAD~1",
+    "git clean -fd",
+]
+
+
+@pytest.mark.parametrize("command", EXEMPT_SHELL)
+def test_shell_git_and_gh_are_allowed(command: str) -> None:
+    code, out, err = _run({"tool_name": "Bash", "tool_input": {"command": command}})
+    assert code == 0, err
+    assert out.strip() == "", command
+
+
+def test_shell_merge_allowed_even_with_a_stacked_child(tmp_path: Path) -> None:
+    """Stack safety is a policy warning for shell now, not a block."""
     code, out, err = _run(
         {
             "tool_name": "Bash",
-            "tool_input": {
-                "command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash",
-            },
+            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash"},
         },
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+# --- MCP merge tool: authorization --------------------------------------------
+
+
+def test_denies_mcp_merge_tool_without_receipt(stacked_repo: Path) -> None:
+    code, out, err = _run(
+        {
+            "tool_name": MERGE_TOOL,
+            "tool_input": {"cwd": str(stacked_repo)},
+            "cwd": str(stacked_repo),
+        }
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_breakglass_allows_merge() -> None:
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=1),
+        env={"L9_MERGE_AUTHORIZED": "human approved merge of #1"},
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
+    begin(stacked_repo, contract_id="merge-auth-test")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+
+    code, out, err = _run(
+        {
+            "tool_name": MERGE_TOOL,
+            "tool_input": {"repo": "Quantum-L9/SEO-Bot", "pull_number": 99},
+            "cwd": str(stacked_repo),
+        }
+    )
+    assert code == 0, err
+    payload = json.loads(out)
+    assert payload["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_l4_release_receipt_still_denies_admin_merge(stacked_repo: Path) -> None:
+    begin(stacked_repo, contract_id="merge-admin-test")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+
+    code, out, err = _run(
+        {
+            "tool_name": MERGE_TOOL,
+            "tool_input": {"repo": "Quantum-L9/SEO-Bot", "pull_number": 99, "admin": True},
+            "cwd": str(stacked_repo),
+        }
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_human_file_authorization_allows_matching_merge(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
@@ -186,10 +188,7 @@ def test_human_file_authorization_expired_denies(tmp_path: Path) -> None:
 
     auth = _auth_file(tmp_path, expires_at=time.time() - 60)
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
@@ -199,10 +198,7 @@ def test_human_file_authorization_expired_denies(tmp_path: Path) -> None:
 def test_human_file_authorization_wrong_repo_denies(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path, repo="Quantum-L9/Website-Bot")
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
@@ -212,10 +208,7 @@ def test_human_file_authorization_wrong_repo_denies(tmp_path: Path) -> None:
 def test_human_file_authorization_malformed_denies(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path, extra="{broken")
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot"},
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
@@ -225,12 +218,7 @@ def test_human_file_authorization_malformed_denies(tmp_path: Path) -> None:
 def test_repo_scope_authorization_allows_any_pr_in_repo(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path, pr="*")
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": "gh pr merge 99 --repo Quantum-L9/SEO-Bot --squash",
-            },
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=99, merge_method="squash"),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
@@ -243,23 +231,18 @@ def test_repo_scope_authorization_allows_any_pr_in_repo(tmp_path: Path) -> None:
 def test_repo_scope_authorization_wrong_repo_denies(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path, pr="*")
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 99 --repo Quantum-L9/Website-Bot"},
-        },
+        _mcp(repo="Quantum-L9/Website-Bot", pull_number=99),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
     assert "deny" in out
 
 
-def test_repo_scope_authorization_requires_repo_on_command(tmp_path: Path) -> None:
+def test_repo_scope_authorization_requires_a_known_repo(tmp_path: Path) -> None:
+    """An unidentifiable target cannot match a repo-scoped authorization."""
     auth = _auth_file(tmp_path, pr="*")
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 99 --squash"},
-        },
+        _mcp(pull_number=99, merge_method="squash"),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
@@ -269,21 +252,16 @@ def test_repo_scope_authorization_requires_repo_on_command(tmp_path: Path) -> No
 def test_authorization_never_waives_admin_merge(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path, pr="*")
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --admin",
-            },
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, admin=True),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
     assert "deny" in out
 
 
-def test_env_authorization_never_waives_force_push() -> None:
+def test_env_authorization_never_waives_admin_merge() -> None:
     code, out, err = _run(
-        {"tool_name": "Bash", "tool_input": {"command": "git push --force origin HEAD"}},
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=1, admin=True),
         env={"L9_MERGE_AUTHORIZED": "human approved merge of #1"},
     )
     assert code == 0, err
@@ -294,14 +272,13 @@ def test_env_authorization_never_waives_force_push() -> None:
 #
 # PR 199's head was the base of open PR 200. Squash-merging 199 rewound 200's
 # merge base and deleted, without conflict, three files 199 had removed and 200
-# was carrying forward. These cases pin that shape closed.
+# was carrying forward. These cases pin that shape closed on the tool the gate
+# still governs.
 
-STACKED = {"Quantum-L9/SEO-Bot#53": {"head": "fix/parent", "children": [54]}}
 
-
-def _authorized_merge(tmp_path: Path, command: str, entries: dict) -> tuple[int, str, str]:
+def _authorized_merge(tmp_path: Path, entries: dict, **tool_input) -> tuple[int, str, str]:
     return _run(
-        {"tool_name": "Bash", "tool_input": {"command": command}},
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, **tool_input),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, entries)),
@@ -310,9 +287,7 @@ def _authorized_merge(tmp_path: Path, command: str, entries: dict) -> tuple[int,
 
 
 def test_squash_denied_when_head_is_base_of_open_pr(tmp_path: Path) -> None:
-    code, out, err = _authorized_merge(
-        tmp_path, "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash", STACKED
-    )
+    code, out, err = _authorized_merge(tmp_path, STACKED, merge_method="squash")
     assert code == 0, err
     payload = json.loads(out)
     reason = payload["hookSpecificOutput"]["permissionDecisionReason"]
@@ -321,27 +296,21 @@ def test_squash_denied_when_head_is_base_of_open_pr(tmp_path: Path) -> None:
 
 
 def test_rebase_denied_when_head_is_base_of_open_pr(tmp_path: Path) -> None:
-    code, out, err = _authorized_merge(
-        tmp_path, "gh pr merge 53 --repo Quantum-L9/SEO-Bot --rebase", STACKED
-    )
+    code, out, err = _authorized_merge(tmp_path, STACKED, merge_method="rebase")
     assert code == 0, err
     assert "deny" in out
 
 
 def test_unspecified_method_denied_when_stacked(tmp_path: Path) -> None:
     """The repo default may be squash, so an unnamed method is not provably safe."""
-    code, out, err = _authorized_merge(
-        tmp_path, "gh pr merge 53 --repo Quantum-L9/SEO-Bot", STACKED
-    )
+    code, out, err = _authorized_merge(tmp_path, STACKED)
     assert code == 0, err
     assert "deny" in out
 
 
 def test_merge_commit_allowed_when_stacked(tmp_path: Path) -> None:
     """--merge keeps the head's commits as ancestors, so the child's base survives."""
-    code, out, err = _authorized_merge(
-        tmp_path, "gh pr merge 53 --repo Quantum-L9/SEO-Bot --merge", STACKED
-    )
+    code, out, err = _authorized_merge(tmp_path, STACKED, merge_method="merge")
     assert code == 0, err
     assert out.strip() == ""
 
@@ -349,33 +318,43 @@ def test_merge_commit_allowed_when_stacked(tmp_path: Path) -> None:
 def test_squash_allowed_when_no_open_child(tmp_path: Path) -> None:
     code, out, err = _authorized_merge(
         tmp_path,
-        "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash",
         {"Quantum-L9/SEO-Bot#53": {"head": "fix/parent", "children": []}},
+        merge_method="squash",
     )
     assert code == 0, err
     assert out.strip() == ""
 
 
 def test_unknown_stack_state_fails_closed_for_squash(tmp_path: Path) -> None:
-    """No --repo and no probe entry: cannot prove safety, so deny rather than guess."""
+    """An unreadable probe cannot prove safety, so deny rather than guess."""
     code, out, err = _run(
-        {"tool_name": "Bash", "tool_input": {"command": "gh pr merge 53 --squash"}},
-        env={"L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*"))},
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
+            "L9_STACK_PROBE_FILE": str(tmp_path / "missing-probe.json"),
+        },
     )
     assert code == 0, err
     assert "deny" in out
 
 
-def test_stack_bypass_env_allows_squash(tmp_path: Path) -> None:
-    code, out, err = _authorized_merge(
-        tmp_path, "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash", STACKED
+def test_human_breakglass_skips_the_stack_probe(tmp_path: Path) -> None:
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        env={
+            "L9_MERGE_AUTHORIZED": "human accepted the stack risk",
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
+        },
     )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_stack_bypass_env_allows_squash(tmp_path: Path) -> None:
+    code, out, err = _authorized_merge(tmp_path, STACKED, merge_method="squash")
     assert "deny" in out
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash"},
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
@@ -384,25 +363,6 @@ def test_stack_bypass_env_allows_squash(tmp_path: Path) -> None:
     )
     assert code == 0, err
     assert out.strip() == ""
-
-
-def test_mcp_merge_tool_honours_stack_check(tmp_path: Path) -> None:
-    code, out, err = _run(
-        {
-            "tool_name": "mcp__github__merge_pull_request",
-            "tool_input": {
-                "repo": "Quantum-L9/SEO-Bot",
-                "pull_number": 53,
-                "merge_method": "squash",
-            },
-        },
-        env={
-            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
-            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
-        },
-    )
-    assert code == 0, err
-    assert "deny" in out
 
 
 # --- Standing autonomous-merge flag -------------------------------------------
@@ -414,10 +374,7 @@ def test_mcp_merge_tool_honours_stack_check(tmp_path: Path) -> None:
 
 def test_autonomous_merge_flag_allows_ordinary_merge(tmp_path: Path) -> None:
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 12 --repo Quantum-L9/SEO-Bot --squash"},
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=12, merge_method="squash"),
         env={
             "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
@@ -429,10 +386,7 @@ def test_autonomous_merge_flag_allows_ordinary_merge(tmp_path: Path) -> None:
 
 def test_autonomous_merge_flag_still_denies_stacked_squash(tmp_path: Path) -> None:
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash"},
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
         env={
             "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
@@ -444,19 +398,7 @@ def test_autonomous_merge_flag_still_denies_stacked_squash(tmp_path: Path) -> No
 
 def test_autonomous_merge_flag_never_waives_admin_merge() -> None:
     code, out, err = _run(
-        {
-            "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 12 --repo Quantum-L9/SEO-Bot --admin"},
-        },
-        env={"L9_AUTONOMY_AUTONOMOUS_MERGE": "true"},
-    )
-    assert code == 0, err
-    assert "deny" in out
-
-
-def test_autonomous_merge_flag_never_waives_force_push() -> None:
-    code, out, err = _run(
-        {"tool_name": "Bash", "tool_input": {"command": "git push --force origin HEAD"}},
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=12, admin=True),
         env={"L9_AUTONOMY_AUTONOMOUS_MERGE": "true"},
     )
     assert code == 0, err

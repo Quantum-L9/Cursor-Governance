@@ -152,17 +152,9 @@
       "Read(./.env)",
       "Read(./.mcp.json)",
       "Bash(rm -rf:*)",
-      "Bash(git push:*)",
-      "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(gh pr create:*)",
-      "Bash(gh pr edit:*)",
       "Bash(make push:*)",
       "mcp__github__create_pull_request",
-      "mcp__github__push_files",
-      "Bash(git reset --hard:*)",
-      "Bash(git clean -fd:*)",
-      "Bash(gh pr merge --admin:*)"
+      "mcp__github__push_files"
     ]
   },
   "env": {

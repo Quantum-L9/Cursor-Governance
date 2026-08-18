@@ -67,17 +67,37 @@ def test_allows_explicit_path_add(monkeypatch: pytest.MonkeyPatch) -> None:
     assert command_violates_worktree_isolation("git add -- commands/plan.md") is None
 
 
-def test_evaluate_shell_hits_isolation(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_evaluate_shell_does_not_block_git_on_isolation(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The classifier still reports; the execution gate no longer denies.
+
+    Isolation is policy about how agents should share a worktree. `git` is
+    exempt from execution denial (ops/autonomy/git_execution_exemption.py), so
+    `evaluate` allows the command while `command_violates_worktree_isolation`
+    keeps naming the violation for a policy engine to act on.
+    """
     _clear_iso(monkeypatch)
     monkeypatch.delenv("L9_GIT_REVERT_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    reason = evaluate(
-        "Bash",
-        {"command": _GR + " --no-edit HEAD"},
-        root=stacked_repo,
-    )
+    command = _GR + " --no-edit HEAD"
+
+    reported = command_violates_worktree_isolation(command, root=stacked_repo)
+    assert reported is not None
+    assert "shared-worktree isolation" in reported
+
+    assert evaluate("Bash", {"command": command}, root=stacked_repo) is None
+
+
+def test_evaluate_shell_still_hits_isolation_for_non_git(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Non-git destroyers of foreign work stay denied at the gate."""
+    _clear_iso(monkeypatch)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    reason = evaluate("Bash", {"command": "rm -rf WIP"}, root=stacked_repo)
     assert reason is not None
-    assert "shared-worktree isolation" in reason
+    assert "WIP" in reason
 
 
 def test_isolation_off(monkeypatch: pytest.MonkeyPatch) -> None:

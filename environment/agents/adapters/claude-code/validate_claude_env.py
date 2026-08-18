@@ -413,7 +413,7 @@ def check_dependency_policy(failures: list[str]) -> None:
 
 
 def check_publish_path_alignment(failures: list[str]) -> None:
-    """The permission layer must agree with the enforcement layer.
+    """The permission layer must agree with the enforcement layer, both ways.
 
     ``permissions.allow`` is what an agent reads as "approved, no prompt". If it
     lists an action ``ops/autonomy/local_execution_gate.py`` denies, the agent is
@@ -422,7 +422,15 @@ def check_publish_path_alignment(failures: list[str]) -> None:
     got attempted on this repo. Being impossible is not enough; the agent must
     not be told it is permitted.
 
-    So: every publish-bypass form must be absent from allow AND present in deny.
+    The converse now matters too. ``git`` and ``gh`` are exempt from every
+    governance gate (``ops/autonomy/git_execution_exemption.py``), so a
+    ``Bash(git …)`` / ``Bash(gh …)`` entry in ``permissions.deny`` would block at
+    the permission layer what the enforcement layer deliberately allows — the
+    same split-brain, mirrored. Policy may still discourage those commands; the
+    permission layer must not block them.
+
+    So: every remaining publish-bypass form must be absent from allow AND
+    present in deny, and no git/gh form may appear in deny at all.
     """
     path = HERE / "settings.template.json"
     if not path.is_file():
@@ -437,17 +445,25 @@ def check_publish_path_alignment(failures: list[str]) -> None:
     allow = [str(entry) for entry in permissions.get("allow", [])]
     deny = [str(entry) for entry in permissions.get("deny", [])]
 
-    # Keep in step with local_execution_gate: RAW_PUBLISH_PATTERNS + DENY_MCP_TOOLS.
+    # Keep in step with local_execution_gate: the forms it still denies, i.e.
+    # RAW_PUBLISH_PATTERNS + DENY_MCP_TOOLS minus everything git_execution_exemption
+    # exempts (every `git` / `gh` executable).
     forbidden = {
-        "Bash(git push:*)": ("git push", ("git push",)),
-        "Bash(gh pr create:*)": ("gh pr create", ("gh pr create",)),
-        "Bash(gh pr edit:*)": ("gh pr edit", ("gh pr edit",)),
         "Bash(make push:*)": ("make push", ("make push",)),
         "mcp__github__create_pull_request": ("create_pull_request", ("create_pull_request",)),
         "mcp__github__push_files": ("push_files", ("push_files",)),
     }
 
     problems = 0
+    for entry in [e for e in deny if re.match(r"^Bash\(\s*(?:git|gh)\b", e, re.IGNORECASE)]:
+        _fail(
+            f"permissions.deny lists `{entry}`, but git/gh are exempt from the execution "
+            "gates (ops/autonomy/git_execution_exemption.py) — a deny entry here blocks at "
+            "the permission layer what enforcement deliberately allows. Policy may still "
+            "discourage the command; the permission layer must not block it",
+            failures,
+        )
+        problems += 1
     for canonical, (label, needles) in forbidden.items():
         leaked = [entry for entry in allow if any(needle in entry for needle in needles)]
         if leaked:

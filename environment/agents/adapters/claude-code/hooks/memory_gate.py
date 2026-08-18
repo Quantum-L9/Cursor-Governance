@@ -5,6 +5,12 @@ Operator-only escape hatch (admin key, never agent-settable):
   L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>
 
 There is no ``ENFORCEMENT-off`` side door.
+
+``git``/``gh`` shell commands are exempt: memory prefetch and phase-lock state
+govern *writes to the repository*, and the `git-mutation` rule still describes
+the expected workflow, but an unsatisfied precondition no longer blocks the
+command from executing. See ``ops/autonomy/git_execution_exemption``. Editor
+writes and the MCP GitHub tools are governed exactly as before.
 """
 
 from __future__ import annotations
@@ -17,8 +23,34 @@ from pathlib import Path
 MEM = Path(__file__).resolve().parent.parent / "memory"
 sys.path.insert(0, str(MEM))
 
+# The exemption brain lives under ops/ (CANONICAL_LAW §2.1). This hook always
+# runs out of the governance clone, but accept the canonical $HOME location too
+# so an installed copy still resolves it.
+for _autonomy in (
+    Path(__file__).resolve().parents[5] / "ops" / "autonomy",
+    Path.home() / ".cursor-governance" / "ops" / "autonomy",
+):
+    if _autonomy.is_dir() and str(_autonomy) not in sys.path:
+        sys.path.insert(0, str(_autonomy))
+
 import graphiti_bridge as gb  # noqa: E402
 import memory_state as st  # noqa: E402
+
+try:
+    from git_execution_exemption import event_is_git_or_gh  # noqa: E402
+except ImportError:  # pragma: no cover - exemption module unreachable
+    import re as _re
+
+    _PLAIN_GIT = _re.compile(r"^\s*(?:git|gh)(?:\s+[^\s'\"`$;&|<>()]+)*\s*$")
+
+    def event_is_git_or_gh(tool_name: str, tool_input: object) -> bool:
+        """Narrow fallback: a missing module must not resurrect the denial."""
+        if tool_name not in {"Bash", "bash", "Shell", "shell"}:
+            return False
+        if not isinstance(tool_input, dict):
+            return False
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        return bool(_PLAIN_GIT.match(command))
 
 
 def _deny(reason: str) -> None:
@@ -51,6 +83,12 @@ def main() -> int:
         return 0
     tool_name = str(event.get("tool_name", ""))
     tool_input = event.get("tool_input") or {}
+
+    # Before contract load, classification, and the fail-closed handler: for a
+    # git/gh command, execution permission does not depend on memory state.
+    if event_is_git_or_gh(tool_name, tool_input):
+        return 0
+
     try:
         session_id = st.resolve_session_id(event=event)
     except ValueError:
