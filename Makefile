@@ -2,7 +2,8 @@
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
-.PHONY: capability-contract-validate capability-check capability-broker-preflight broker-serve
+.PHONY: capability-contract-validate capability-check capability-broker-preflight
+.PHONY: broker-serve
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
