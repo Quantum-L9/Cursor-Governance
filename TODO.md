@@ -322,6 +322,8 @@ Keep shipping through `make improve` → `make pr-check` → `make pr`.
    - Claude web `setup.sh` still mentions `pre-commit install`.
    - Pin lockstep: catalog ruff `rev` vs locked `.venv` ruff vs CI `uv run ruff`.
 
+- [x] Hygiene secret-grep skips `WIP/` the same way scratch `current_work/`
+      was never content-scanned (directory remains fail-closed if recreated).
 - [ ] Later: yaml-owns-lint (drop the second ruff block in `run_pr_gate.sh`)
       without rewriting `.pre-commit-config.yaml` until that campaign starts.
 - [ ] Later: decide git hook (`pre-commit install`) as optional local

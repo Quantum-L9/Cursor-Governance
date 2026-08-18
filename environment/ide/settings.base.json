@@ -16,6 +16,7 @@
     "**/.ruff_cache/**": true,
     "**/__pycache__/**": true,
     "**/current_work/**": true,
+    "**/WIP/**": true,
     "**/.cursor-commands/**": true
   }
 }
