@@ -37,33 +37,334 @@
   },
   "code_in_scope": true,
   "pre_validation": [
-    {"id": "PV1", "command_or_action": "git status/log baseline on main@74b51ed; only WIP/PE Claude Code Environment.md untracked", "pass_criteria": "clean baseline, campaign repo on main, origin=Quantum-L9/Cursor-Governance", "status": "passed"},
-    {"id": "PV2", "command_or_action": "Run validate_claude_env.py before edits (current main)", "pass_criteria": "PASS on current main (baseline)", "status": "pending"},
-    {"id": "PV3", "command_or_action": "Graphiti memory phase-lock acquire (memory_lock.py / graphiti_memory_client.py phase-lock) + conflicts check", "pass_criteria": "phase_lock granted; memory_satisfied_for includes gmp:phase_lock", "status": "passed"},
-    {"id": "PV4", "command_or_action": "verify intent claims against current main (done during inspection)", "pass_criteria": "each claim classified TRUE/STALE; edits target only TRUE claims", "status": "passed"},
-    {"id": "PV5", "command_or_action": "ops/secrets capability contract validator (validate_capability_contract.py) baseline", "pass_criteria": "PASS or known-failures recorded before broker edits", "status": "pending"}
+    {
+      "id": "PV1",
+      "command_or_action": "git status/log baseline on main@74b51ed; only WIP/PE Claude Code Environment.md untracked",
+      "pass_criteria": "clean baseline, campaign repo on main, origin=Quantum-L9/Cursor-Governance",
+      "status": "passed"
+    },
+    {
+      "id": "PV2",
+      "command_or_action": "Run validate_claude_env.py before edits (current main)",
+      "pass_criteria": "PASS on current main (baseline)",
+      "status": "passed"
+    },
+    {
+      "id": "PV3",
+      "command_or_action": "Graphiti memory phase-lock acquire (memory_lock.py / graphiti_memory_client.py phase-lock) + conflicts check",
+      "pass_criteria": "phase_lock granted; memory_satisfied_for includes gmp:phase_lock",
+      "status": "passed"
+    },
+    {
+      "id": "PV4",
+      "command_or_action": "verify intent claims against current main (done during inspection)",
+      "pass_criteria": "each claim classified TRUE/STALE; edits target only TRUE claims",
+      "status": "passed"
+    },
+    {
+      "id": "PV5",
+      "command_or_action": "ops/secrets capability contract validator (validate_capability_contract.py) baseline",
+      "pass_criteria": "PASS or known-failures recorded before broker edits",
+      "status": "passed"
+    }
   ],
   "todos": [
-    {"id": "p1-register-campaign", "task": "Register campaign claude-code-env-contract-v1 in CAMPAIGN_EXECUTION_POLICY.yaml (additive entry: integration_branch campaign/claude-code-env-contract-v1, lane claude_env)", "files": ["environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"], "effort": "S", "risk": "low", "dependencies": [], "leverage_rank": 2, "operation": "Insert"},
-    {"id": "w1-setup-provisioning-only", "task": "web/setup.sh: delete consumer workspace toolchain install (step 5) and pre-commit warm (step 6); keep gh install, governance clone/validate, adapter install; note the move in comments", "files": ["environment/agents/adapters/claude-code/web/setup.sh"], "effort": "M", "risk": "medium", "dependencies": ["p1-register-campaign"], "leverage_rank": 1, "operation": "Delete", "shared_root_cause": "per-session work in cached setup path"},
-    {"id": "w1-sessionstart-cloud-refresh", "task": "hooks/session_start_claude_governance.sh: add CLAUDE_CODE_REMOTE=true branch — fetch origin/main, reset ephemeral governance clone, record exact revision; local branch never resets, reports revision/drift", "files": ["environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"], "effort": "M", "risk": "medium", "dependencies": ["w1-setup-provisioning-only"], "leverage_rank": 2, "operation": "Insert", "shared_root_cause": "per-session work in cached setup path"},
-    {"id": "w1-sessionstart-deps-helper", "task": "Create hooks/session_deps_cloud.sh: idempotent fingerprint-cached consumer workspace toolchain install (uv.lock/pip/npm) + pre-commit warm, invoked from SessionStart only when CLAUDE_CODE_REMOTE=true", "files": ["environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh", "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"], "effort": "M", "risk": "medium", "dependencies": ["w1-sessionstart-cloud-refresh"], "leverage_rank": 2, "operation": "Create", "shared_root_cause": "per-session work in cached setup path"},
-    {"id": "w1-committed-wiring-required", "task": "web/README.md: replace 'Not strictly required for Mobile/Web' with REQUIRED committed .claude/settings.json + .claude/hooks wiring for governed repos; update setup-field table and step 4 text", "files": ["environment/agents/adapters/claude-code/web/README.md"], "effort": "S", "risk": "low", "dependencies": ["w1-setup-provisioning-only"], "leverage_rank": 3, "operation": "Replace"},
-    {"id": "w2-env-no-gh-token", "task": "web/environment.env.example: remove the GH_TOKEN=proxy-injected assignment; keep prohibition comments (leave UNSET; Anthropic platform proxy injects)", "files": ["environment/agents/adapters/claude-code/web/environment.env.example"], "effort": "S", "risk": "low", "dependencies": ["p1-register-campaign"], "leverage_rank": 4, "operation": "Delete", "shared_root_cause": "straddled credential contracts"},
-    {"id": "w2-bootstrap-no-gh-export", "task": "web/setup.bootstrap.sh: stop exporting GH_TOKEN=proxy-injected (both process and durable cloud-session.env); keep stripping/unsetting real credentials", "files": ["environment/agents/adapters/claude-code/web/setup.bootstrap.sh"], "effort": "S", "risk": "low", "dependencies": ["w2-env-no-gh-token"], "leverage_rank": 4, "operation": "Delete", "shared_root_cause": "straddled credential contracts"},
-    {"id": "w2-mcp-brokered-memory", "task": "mcp.template.json: graphiti-memory -> url ${L9_CAPABILITY_BROKER_URL}/mcp, headers X-Capability-Id: graphiti.query + Authorization: ${CLAUDE_SESSION_JWT}; remove Bearer ${GRAPHITI_MCP_TOKEN}; update _comment", "files": ["environment/agents/adapters/claude-code/mcp.template.json"], "effort": "S", "risk": "medium", "dependencies": ["w2-bootstrap-no-gh-export"], "leverage_rank": 5, "operation": "Replace", "shared_root_cause": "straddled credential contracts"},
-    {"id": "w2-validator-cross-file-contract", "task": "validate_claude_env.py: replace bearer enforcement with the cross-file zero-static-secret contract test (env.example <=> web/README <=> setup.bootstrap <=> setup.sh <=> mcp.template <=> bootstrap_agent_environment.sh <=> validator); ban GRAPHITI_MCP_TOKEN raw requirements and GH_TOKEN assignments; keep l9-shared-memory ban and URL env-ref checks", "files": ["environment/agents/adapters/claude-code/validate_claude_env.py"], "effort": "L", "risk": "high", "dependencies": ["w2-mcp-brokered-memory"], "leverage_rank": 5, "operation": "Replace", "shared_root_cause": "straddled credential contracts"},
-    {"id": "w2-front-door-tests", "task": "tests/test_graphiti_front_door.py: update to the brokered contract (no bearer in template; broker /mcp front door; DEGRADED posture wording)", "files": ["environment/agents/adapters/claude-code/tests/test_graphiti_front_door.py"], "effort": "M", "risk": "medium", "dependencies": ["w2-validator-cross-file-contract"], "leverage_rank": 4, "operation": "Replace", "shared_root_cause": "straddled credential contracts"},
-    {"id": "w3-broker-mcp-facade", "task": "ops/secrets/capability_broker.py: extend /mcp to a real MCP facade — initialize (server info + capabilities), tools/list (search_memory, phase_lock, write_governed), tools/call mapping to graphiti.query / graphiti.write_governed capabilities; keep /capability; honest error envelopes when no platform identity", "files": ["ops/secrets/capability_broker.py"], "effort": "L", "risk": "high", "dependencies": ["w2-mcp-brokered-memory"], "leverage_rank": 5, "operation": "Wrap", "shared_root_cause": "straddled memory designs"},
-    {"id": "w3-broker-tests", "task": "Add broker facade tests (initialize/tools-list/tools-call JSON-RPC envelopes, capability mapping, no-identity rejection); run existing ops/secrets tests", "files": ["ops/secrets/ (tests alongside capability_broker.py, e.g. test_capability_broker_mcp.py)"], "effort": "M", "risk": "medium", "dependencies": ["w3-broker-mcp-facade"], "leverage_rank": 4, "operation": "Create", "shared_root_cause": "straddled memory designs"},
-    {"id": "w3-honest-degraded-docs", "task": "Document honest memory posture: adapter README + web/README + SESSION_START_SPEC state memory=DEGRADED in ordinary Anthropic cloud until brokered identity exists (target: authenticated remote MCP through L9 broker)", "files": ["environment/agents/adapters/claude-code/README.md", "environment/agents/adapters/claude-code/web/README.md", "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md"], "effort": "S", "risk": "low", "dependencies": ["w3-broker-mcp-facade"], "leverage_rank": 3, "operation": "Replace"},
-    {"id": "w4-installer-health-accumulator", "task": "install.sh: capture shared-bootstrap exit code; classify each step BLOCKED/DEGRADED/READY; use $GOV_PY for settings + skills reconciliation; final exit reflects BLOCKED (no unconditional 'adapter ready'); write ~/.l9/claude/bootstrap-state.json (schema l9.claude-bootstrap.v1)", "files": ["environment/agents/adapters/claude-code/install.sh"], "effort": "L", "risk": "high", "dependencies": ["w2-validator-cross-file-contract"], "leverage_rank": 5, "operation": "Replace", "shared_root_cause": "installer success claims without health evidence"},
-    {"id": "w4-validator-installer-checks", "task": "validate_claude_env.py: add checks — install.sh runs Python steps on $GOV_PY, writes the l9.claude-bootstrap.v1 receipt, and never prints unconditional ready on failure", "files": ["environment/agents/adapters/claude-code/validate_claude_env.py"], "effort": "M", "risk": "medium", "dependencies": ["w4-installer-health-accumulator"], "leverage_rank": 4, "operation": "Insert"},
-    {"id": "w5-skill-plugin-ownership", "task": "Adapter README: skills are fed by reconcile_claude_l9_skills.py via install.sh (canonical); setup_claude_code_plugins.sh installs OPTIONAL marketplace plugins (local/Desktop augmentation, project-scoped where declared); plugins not required for Web/Mobile parity; keep make claude-plugins as explicit local enhancement", "files": ["environment/agents/adapters/claude-code/README.md"], "effort": "S", "risk": "low", "dependencies": ["w4-installer-health-accumulator"], "leverage_rank": 3, "operation": "Replace"},
-    {"id": "w6-sessionstart-readiness-projection", "task": "session_start_claude_governance.sh: remove autonomy-surface-parity exception; read ~/.l9/claude/bootstrap-state.json; emit compact 'L9 Claude environment' status (surface, execution, governance rev + fresh/stale, bootstrap, project wiring, capability broker, memory, skills, rules); still exit 0 always (fail-open)", "files": ["environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh", "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md"], "effort": "M", "risk": "medium", "dependencies": ["w4-installer-health-accumulator", "w1-sessionstart-deps-helper"], "leverage_rank": 5, "operation": "Replace"},
-    {"id": "w6-make-claude-env-doctor", "task": "Makefile: claude-env -> $(MAKE) claude-install-check + $(PYTHON) validate_claude_env.py (canonical doctor). ROOT FILE additive_only: commit must carry ALLOW-ROOT-DELETION marker; CODEOWNERS approval at PR review", "files": ["Makefile"], "effort": "S", "risk": "high", "dependencies": ["w4-installer-health-accumulator"], "leverage_rank": 4, "operation": "Replace"},
-    {"id": "v1-validation-gates", "task": "Run full validation: make claude-env (new doctor), make claude-skills-test, pytest adapter tests, make pr-check; negative test (plant token -> validator FAIL -> remove)", "files": ["Makefile", "environment/agents/adapters/claude-code/tests/"], "effort": "L", "risk": "medium", "dependencies": ["w6-make-claude-env-doctor"], "leverage_rank": 5, "operation": "Insert"},
-    {"id": "l4-publish", "task": "L4: l4_local.py begin/record-kernels/authorize-release -> PR_REMEDIATE=0 make pr with PR_BASE=origin/campaign/claude-code-env-contract-v1; end green + merge-ready; no merge", "files": [".l9/autonomy/l4-release-receipt.json", "Makefile"], "effort": "M", "risk": "high", "dependencies": ["v1-validation-gates"], "leverage_rank": 5, "operation": "Create"}
+    {
+      "id": "p1-register-campaign",
+      "task": "Register campaign claude-code-env-contract-v1 in CAMPAIGN_EXECUTION_POLICY.yaml (additive entry: integration_branch campaign/claude-code-env-contract-v1, lane claude_env)",
+      "files": [
+        "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 2,
+      "operation": "Insert"
+    },
+    {
+      "id": "w1-setup-provisioning-only",
+      "task": "web/setup.sh: delete consumer workspace toolchain install (step 5) and pre-commit warm (step 6); keep gh install, governance clone/validate, adapter install; note the move in comments",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.sh"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "p1-register-campaign"
+      ],
+      "leverage_rank": 1,
+      "operation": "Delete",
+      "shared_root_cause": "per-session work in cached setup path"
+    },
+    {
+      "id": "w1-sessionstart-cloud-refresh",
+      "task": "hooks/session_start_claude_governance.sh: add CLAUDE_CODE_REMOTE=true branch — fetch origin/main, reset ephemeral governance clone, record exact revision; local branch never resets, reports revision/drift",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w1-setup-provisioning-only"
+      ],
+      "leverage_rank": 2,
+      "operation": "Insert",
+      "shared_root_cause": "per-session work in cached setup path"
+    },
+    {
+      "id": "w1-sessionstart-deps-helper",
+      "task": "Create hooks/session_deps_cloud.sh: idempotent fingerprint-cached consumer workspace toolchain install (uv.lock/pip/npm) + pre-commit warm, invoked from SessionStart only when CLAUDE_CODE_REMOTE=true",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w1-sessionstart-cloud-refresh"
+      ],
+      "leverage_rank": 2,
+      "operation": "Create",
+      "shared_root_cause": "per-session work in cached setup path"
+    },
+    {
+      "id": "w1-committed-wiring-required",
+      "task": "web/README.md: replace 'Not strictly required for Mobile/Web' with REQUIRED committed .claude/settings.json + .claude/hooks wiring for governed repos; update setup-field table and step 4 text",
+      "files": [
+        "environment/agents/adapters/claude-code/web/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w1-setup-provisioning-only"
+      ],
+      "leverage_rank": 3,
+      "operation": "Replace"
+    },
+    {
+      "id": "w2-env-no-gh-token",
+      "task": "web/environment.env.example: remove the GH_TOKEN=proxy-injected assignment; keep prohibition comments (leave UNSET; Anthropic platform proxy injects)",
+      "files": [
+        "environment/agents/adapters/claude-code/web/environment.env.example"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "p1-register-campaign"
+      ],
+      "leverage_rank": 4,
+      "operation": "Delete",
+      "shared_root_cause": "straddled credential contracts"
+    },
+    {
+      "id": "w2-bootstrap-no-gh-export",
+      "task": "web/setup.bootstrap.sh: stop exporting GH_TOKEN=proxy-injected (both process and durable cloud-session.env); keep stripping/unsetting real credentials",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.bootstrap.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w2-env-no-gh-token"
+      ],
+      "leverage_rank": 4,
+      "operation": "Delete",
+      "shared_root_cause": "straddled credential contracts"
+    },
+    {
+      "id": "w2-mcp-brokered-memory",
+      "task": "mcp.template.json: graphiti-memory -> url ${L9_CAPABILITY_BROKER_URL}/mcp, headers X-Capability-Id: graphiti.query + Authorization: ${CLAUDE_SESSION_JWT}; remove Bearer ${GRAPHITI_MCP_TOKEN}; update _comment",
+      "files": [
+        "environment/agents/adapters/claude-code/mcp.template.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "w2-bootstrap-no-gh-export"
+      ],
+      "leverage_rank": 5,
+      "operation": "Replace",
+      "shared_root_cause": "straddled credential contracts"
+    },
+    {
+      "id": "w2-validator-cross-file-contract",
+      "task": "validate_claude_env.py: replace bearer enforcement with the cross-file zero-static-secret contract test (env.example <=> web/README <=> setup.bootstrap <=> setup.sh <=> mcp.template <=> bootstrap_agent_environment.sh <=> validator); ban GRAPHITI_MCP_TOKEN raw requirements and GH_TOKEN assignments; keep l9-shared-memory ban and URL env-ref checks",
+      "files": [
+        "environment/agents/adapters/claude-code/validate_claude_env.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w2-mcp-brokered-memory"
+      ],
+      "leverage_rank": 5,
+      "operation": "Replace",
+      "shared_root_cause": "straddled credential contracts"
+    },
+    {
+      "id": "w2-front-door-tests",
+      "task": "tests/test_graphiti_front_door.py: update to the brokered contract (no bearer in template; broker /mcp front door; DEGRADED posture wording)",
+      "files": [
+        "environment/agents/adapters/claude-code/tests/test_graphiti_front_door.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w2-validator-cross-file-contract"
+      ],
+      "leverage_rank": 4,
+      "operation": "Replace",
+      "shared_root_cause": "straddled credential contracts"
+    },
+    {
+      "id": "w3-broker-mcp-facade",
+      "task": "ops/secrets/capability_broker.py: extend /mcp to a real MCP facade — initialize (server info + capabilities), tools/list (search_memory, phase_lock, write_governed), tools/call mapping to graphiti.query / graphiti.write_governed capabilities; keep /capability; honest error envelopes when no platform identity",
+      "files": [
+        "ops/secrets/capability_broker.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w2-mcp-brokered-memory"
+      ],
+      "leverage_rank": 5,
+      "operation": "Wrap",
+      "shared_root_cause": "straddled memory designs"
+    },
+    {
+      "id": "w3-broker-tests",
+      "task": "Add broker facade tests (initialize/tools-list/tools-call JSON-RPC envelopes, capability mapping, no-identity rejection); run existing ops/secrets tests",
+      "files": [
+        "ops/secrets/ (tests alongside capability_broker.py, e.g. test_capability_broker_mcp.py)"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w3-broker-mcp-facade"
+      ],
+      "leverage_rank": 4,
+      "operation": "Create",
+      "shared_root_cause": "straddled memory designs"
+    },
+    {
+      "id": "w3-honest-degraded-docs",
+      "task": "Document honest memory posture: adapter README + web/README + SESSION_START_SPEC state memory=DEGRADED in ordinary Anthropic cloud until brokered identity exists (target: authenticated remote MCP through L9 broker)",
+      "files": [
+        "environment/agents/adapters/claude-code/README.md",
+        "environment/agents/adapters/claude-code/web/README.md",
+        "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w3-broker-mcp-facade"
+      ],
+      "leverage_rank": 3,
+      "operation": "Replace"
+    },
+    {
+      "id": "w4-installer-health-accumulator",
+      "task": "install.sh: capture shared-bootstrap exit code; classify each step BLOCKED/DEGRADED/READY; use $GOV_PY for settings + skills reconciliation; final exit reflects BLOCKED (no unconditional 'adapter ready'); write ~/.l9/claude/bootstrap-state.json (schema l9.claude-bootstrap.v1)",
+      "files": [
+        "environment/agents/adapters/claude-code/install.sh"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w2-validator-cross-file-contract"
+      ],
+      "leverage_rank": 5,
+      "operation": "Replace",
+      "shared_root_cause": "installer success claims without health evidence"
+    },
+    {
+      "id": "w4-validator-installer-checks",
+      "task": "validate_claude_env.py: add checks — install.sh runs Python steps on $GOV_PY, writes the l9.claude-bootstrap.v1 receipt, and never prints unconditional ready on failure",
+      "files": [
+        "environment/agents/adapters/claude-code/validate_claude_env.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w4-installer-health-accumulator"
+      ],
+      "leverage_rank": 4,
+      "operation": "Insert"
+    },
+    {
+      "id": "w5-skill-plugin-ownership",
+      "task": "Adapter README: skills are fed by reconcile_claude_l9_skills.py via install.sh (canonical); setup_claude_code_plugins.sh installs OPTIONAL marketplace plugins (local/Desktop augmentation, project-scoped where declared); plugins not required for Web/Mobile parity; keep make claude-plugins as explicit local enhancement",
+      "files": [
+        "environment/agents/adapters/claude-code/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w4-installer-health-accumulator"
+      ],
+      "leverage_rank": 3,
+      "operation": "Replace"
+    },
+    {
+      "id": "w6-sessionstart-readiness-projection",
+      "task": "session_start_claude_governance.sh: remove autonomy-surface-parity exception; read ~/.l9/claude/bootstrap-state.json; emit compact 'L9 Claude environment' status (surface, execution, governance rev + fresh/stale, bootstrap, project wiring, capability broker, memory, skills, rules); still exit 0 always (fail-open)",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w4-installer-health-accumulator",
+        "w1-sessionstart-deps-helper"
+      ],
+      "leverage_rank": 5,
+      "operation": "Replace"
+    },
+    {
+      "id": "w6-make-claude-env-doctor",
+      "task": "Makefile: claude-env -> $(MAKE) claude-install-check + $(PYTHON) validate_claude_env.py (canonical doctor). ROOT FILE additive_only: commit must carry ALLOW-ROOT-DELETION marker; CODEOWNERS approval at PR review",
+      "files": [
+        "Makefile"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [
+        "w4-installer-health-accumulator"
+      ],
+      "leverage_rank": 4,
+      "operation": "Replace"
+    },
+    {
+      "id": "v1-validation-gates",
+      "task": "Run full validation: make claude-env (new doctor), make claude-skills-test, pytest adapter tests, make pr-check; negative test (plant token -> validator FAIL -> remove)",
+      "files": [
+        "Makefile",
+        "environment/agents/adapters/claude-code/tests/"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "w6-make-claude-env-doctor"
+      ],
+      "leverage_rank": 5,
+      "operation": "Insert"
+    },
+    {
+      "id": "l4-publish",
+      "task": "L4: l4_local.py begin/record-kernels/authorize-release -> PR_REMEDIATE=0 make pr with PR_BASE=origin/campaign/claude-code-env-contract-v1; end green + merge-ready; no merge",
+      "files": [
+        ".l9/autonomy/l4-release-receipt.json",
+        "Makefile"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "v1-validation-gates"
+      ],
+      "leverage_rank": 5,
+      "operation": "Create"
+    }
   ],
   "critical_path": [
     "p1-register-campaign",
@@ -78,24 +379,98 @@
     "l4-publish"
   ],
   "milestones": [
-    {"id": "M1", "outcome": "Cloud boot lifecycle split: setup scripts = machine-level provisioning only; SessionStart = per-session refresh + dependency helper; committed .claude wiring documented as required", "unlocks": "one provisioning substrate per surface class"},
-    {"id": "M2", "outcome": "Zero-static-secret contract is the single enforced contract; validator tests cross-file consistency and fails on planted regressions", "unlocks": "no more split-brain between docs/templates/validator"},
-    {"id": "M3", "outcome": "Broker /mcp speaks the MCP handshake mapping to graphiti.* capabilities; ordinary Anthropic cloud reports memory=DEGRADED honestly", "unlocks": "target-state memory path without a static bearer"},
-    {"id": "M4", "outcome": "install.sh is a canonical health-classifying installer writing ~/.l9/claude/bootstrap-state.json", "unlocks": "SessionStart observability + honest failures"},
-    {"id": "M5", "outcome": "SessionStart projects one cross-surface readiness status; autonomy-surface-parity exception removed", "unlocks": "five surfaces behaving like one governed environment"},
-    {"id": "M6", "outcome": "make pr-check green; campaign PR published green + merge-ready via PR_REMEDIATE=0 make pr", "unlocks": "merge via /l9-pr-remediation when authorized"}
+    {
+      "id": "M1",
+      "outcome": "Cloud boot lifecycle split: setup scripts = machine-level provisioning only; SessionStart = per-session refresh + dependency helper; committed .claude wiring documented as required",
+      "unlocks": "one provisioning substrate per surface class"
+    },
+    {
+      "id": "M2",
+      "outcome": "Zero-static-secret contract is the single enforced contract; validator tests cross-file consistency and fails on planted regressions",
+      "unlocks": "no more split-brain between docs/templates/validator"
+    },
+    {
+      "id": "M3",
+      "outcome": "Broker /mcp speaks the MCP handshake mapping to graphiti.* capabilities; ordinary Anthropic cloud reports memory=DEGRADED honestly",
+      "unlocks": "target-state memory path without a static bearer"
+    },
+    {
+      "id": "M4",
+      "outcome": "install.sh is a canonical health-classifying installer writing ~/.l9/claude/bootstrap-state.json",
+      "unlocks": "SessionStart observability + honest failures"
+    },
+    {
+      "id": "M5",
+      "outcome": "SessionStart projects one cross-surface readiness status; autonomy-surface-parity exception removed",
+      "unlocks": "five surfaces behaving like one governed environment"
+    },
+    {
+      "id": "M6",
+      "outcome": "make pr-check green; campaign PR published green + merge-ready via PR_REMEDIATE=0 make pr",
+      "unlocks": "merge via /l9-pr-remediation when authorized"
+    }
   ],
   "checkpoints": [
-    {"id": "CP1", "after": "M2", "evidence_required": "validate_claude_env.py PASS on the new contract; planted-token negative test FAILs as designed then passes after removal", "no_go_action": "do not proceed to installer waves until the validator enforces the new contract"},
-    {"id": "CP2", "after": "M4", "evidence_required": "install.sh --check writes/reads receipt; forced bootstrap failure exits nonzero; $GOV_PY used for all Python steps", "no_go_action": "stop and fix the accumulator before touching SessionStart projection"},
-    {"id": "CP3", "after": "M6", "evidence_required": "make pr-check PASS receipt; PR green + merge-ready; no unexecuted success claims", "no_go_action": "report blocker; do not claim completion"}
+    {
+      "id": "CP1",
+      "after": "M2",
+      "evidence_required": "validate_claude_env.py PASS on the new contract; planted-token negative test FAILs as designed then passes after removal",
+      "no_go_action": "do not proceed to installer waves until the validator enforces the new contract"
+    },
+    {
+      "id": "CP2",
+      "after": "M4",
+      "evidence_required": "install.sh --check writes/reads receipt; forced bootstrap failure exits nonzero; $GOV_PY used for all Python steps",
+      "no_go_action": "stop and fix the accumulator before touching SessionStart projection"
+    },
+    {
+      "id": "CP3",
+      "after": "M6",
+      "evidence_required": "make pr-check PASS receipt; PR green + merge-ready; no unexecuted success claims",
+      "no_go_action": "report blocker; do not claim completion"
+    }
   ],
   "doc_root_surface_impact": [
-    {"surface": "Makefile", "action": "update", "todo_ids": ["w6-make-claude-env-doctor"], "reason": "claude-env recipe change (additive_only root file; ALLOW-ROOT-DELETION marker required)"},
-    {"surface": "environment/agents/adapters/claude-code/web/README.md", "action": "update", "todo_ids": ["w1-committed-wiring-required", "w3-honest-degraded-docs"], "reason": "required committed wiring + honest memory posture"},
-    {"surface": "environment/agents/adapters/claude-code/README.md", "action": "update", "todo_ids": ["w5-skill-plugin-ownership", "w3-honest-degraded-docs"], "reason": "skill vs plugin ownership"},
-    {"surface": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md", "action": "update", "todo_ids": ["w6-sessionstart-readiness-projection", "w3-honest-degraded-docs"], "reason": "status block + cloud refresh branch spec"},
-    {"surface": "AGENTS.md", "action": "n_a", "reason": "no authoritative correction needed for this campaign; append-only law untouched"}
+    {
+      "surface": "Makefile",
+      "action": "update",
+      "todo_ids": [
+        "w6-make-claude-env-doctor"
+      ],
+      "reason": "claude-env recipe change (additive_only root file; ALLOW-ROOT-DELETION marker required)"
+    },
+    {
+      "surface": "environment/agents/adapters/claude-code/web/README.md",
+      "action": "update",
+      "todo_ids": [
+        "w1-committed-wiring-required",
+        "w3-honest-degraded-docs"
+      ],
+      "reason": "required committed wiring + honest memory posture"
+    },
+    {
+      "surface": "environment/agents/adapters/claude-code/README.md",
+      "action": "update",
+      "todo_ids": [
+        "w5-skill-plugin-ownership",
+        "w3-honest-degraded-docs"
+      ],
+      "reason": "skill vs plugin ownership"
+    },
+    {
+      "surface": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
+      "action": "update",
+      "todo_ids": [
+        "w6-sessionstart-readiness-projection",
+        "w3-honest-degraded-docs"
+      ],
+      "reason": "status block + cloud refresh branch spec"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "no authoritative correction needed for this campaign; append-only law untouched"
+    }
   ],
   "stress_test": {
     "disconfirming_questions": [
@@ -115,12 +490,26 @@
   },
   "leverage": {
     "ranked_todo_ids": [
-      "w2-validator-cross-file-contract", "w4-installer-health-accumulator", "w3-broker-mcp-facade",
-      "w6-sessionstart-readiness-projection", "w2-mcp-brokered-memory", "w1-setup-provisioning-only",
-      "w2-front-door-tests", "w3-broker-tests", "w1-sessionstart-cloud-refresh", "w1-sessionstart-deps-helper",
-      "v1-validation-gates", "l4-publish", "w1-committed-wiring-required", "w6-make-claude-env-doctor",
-      "w5-skill-plugin-ownership", "w3-honest-degraded-docs", "w2-env-no-gh-token", "w2-bootstrap-no-gh-export",
-      "w4-validator-installer-checks", "p1-register-campaign"
+      "w2-validator-cross-file-contract",
+      "w4-installer-health-accumulator",
+      "w3-broker-mcp-facade",
+      "w6-sessionstart-readiness-projection",
+      "w2-mcp-brokered-memory",
+      "w1-setup-provisioning-only",
+      "w2-front-door-tests",
+      "w3-broker-tests",
+      "w1-sessionstart-cloud-refresh",
+      "w1-sessionstart-deps-helper",
+      "v1-validation-gates",
+      "l4-publish",
+      "w1-committed-wiring-required",
+      "w6-make-claude-env-doctor",
+      "w5-skill-plugin-ownership",
+      "w3-honest-degraded-docs",
+      "w2-env-no-gh-token",
+      "w2-bootstrap-no-gh-export",
+      "w4-validator-installer-checks",
+      "p1-register-campaign"
     ],
     "shared_causes": [
       "straddled credential contracts (four files disagreeing on who holds secrets) — one enforced contract fixes them together",
@@ -134,34 +523,112 @@
     ]
   },
   "risks": [
-    {"risk": "Makefile is an additive_only root file; the claude-env recipe change deletes existing lines", "mitigation": "Commit carries ALLOW-ROOT-DELETION: Makefile — <reason> marker; CODEOWNERS approval requested in the PR; change is minimal (recipe body only, target name kept)"},
-    {"risk": "install.sh exit-code change alters surface-caller behavior (setup.sh calls install.sh unguarded)", "mitigation": "setup.sh logs install.sh's exit code explicitly; web/setup.sh itself stays fail-soft for optional steps; installer exit reflects BLOCKED only on hard contract failures"},
-    {"risk": "Validator flip breaks current PASS if template and validator diverge mid-wave", "mitigation": "template + validator + tests land in one atomic commit; make pr-check run immediately after"},
-    {"risk": "Broker /mcp facade changes touch trusted-side code consumed by other surfaces", "mitigation": "existing broker tests + new facade tests; /capability route untouched; facade is additive to the handler"},
-    {"risk": "Existing tests elsewhere assert the old bearer contract", "mitigation": "grep for GRAPHITI_MCP_TOKEN across repo before finalizing; update every stale assertion"},
-    {"risk": "SessionStart hook changes could perturb every governed local session", "mitigation": "hook keeps fail-open contract (exit 0 always); invoke it directly in this repo as a smoke test before commit"}
+    {
+      "risk": "Makefile is an additive_only root file; the claude-env recipe change deletes existing lines",
+      "mitigation": "Commit carries ALLOW-ROOT-DELETION: Makefile — <reason> marker; CODEOWNERS approval requested in the PR; change is minimal (recipe body only, target name kept)"
+    },
+    {
+      "risk": "install.sh exit-code change alters surface-caller behavior (setup.sh calls install.sh unguarded)",
+      "mitigation": "setup.sh logs install.sh's exit code explicitly; web/setup.sh itself stays fail-soft for optional steps; installer exit reflects BLOCKED only on hard contract failures"
+    },
+    {
+      "risk": "Validator flip breaks current PASS if template and validator diverge mid-wave",
+      "mitigation": "template + validator + tests land in one atomic commit; make pr-check run immediately after"
+    },
+    {
+      "risk": "Broker /mcp facade changes touch trusted-side code consumed by other surfaces",
+      "mitigation": "existing broker tests + new facade tests; /capability route untouched; facade is additive to the handler"
+    },
+    {
+      "risk": "Existing tests elsewhere assert the old bearer contract",
+      "mitigation": "grep for GRAPHITI_MCP_TOKEN across repo before finalizing; update every stale assertion"
+    },
+    {
+      "risk": "SessionStart hook changes could perturb every governed local session",
+      "mitigation": "hook keeps fail-open contract (exit 0 always); invoke it directly in this repo as a smoke test before commit"
+    }
   ],
   "unknowns": [
-    {"id": "U1", "question": "Does Claude Code's MCP client accept a facade that implements initialize/tools/list/tools/call only (no resources/prompts)?", "decision_effect": "if strict, add minimal resources/list empty responses", "resolution": "probe"},
-    {"id": "U2", "question": "How does open_pr_after_gate.sh behave when PR_BASE (origin/campaign/claude-code-env-contract-v1) does not exist on the remote?", "decision_effect": "determines whether the campaign base branch is created by the sanctioned path or becomes a reported blocker", "resolution": "probe"},
-    {"id": "U3", "question": "Are there consumers of the literal GH_TOKEN=proxy-injected marker beyond web/setup*.sh and environment.env.example?", "decision_effect": "removal scope; any matching consumer must be updated or the strip-logic preserved", "resolution": "probe"},
-    {"id": "U4", "question": "Does test_graphiti_front_door.py (or other tests) enforce the bearer contract anywhere else?", "decision_effect": "full test-update scope", "resolution": "probe"},
-    {"id": "U5", "question": "Whether Anthropic cloud always exposes CLAUDE_PROJECT_DIR for the SessionStart hook in the current runtime", "decision_effect": "fallback to $PWD already implemented; no action if absent", "resolution": "accept_bounded"}
+    {
+      "id": "U1",
+      "question": "Does Claude Code's MCP client accept a facade that implements initialize/tools/list/tools/call only (no resources/prompts)?",
+      "decision_effect": "if strict, add minimal resources/list empty responses",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "How does open_pr_after_gate.sh behave when PR_BASE (origin/campaign/claude-code-env-contract-v1) does not exist on the remote?",
+      "decision_effect": "determines whether the campaign base branch is created by the sanctioned path or becomes a reported blocker",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Are there consumers of the literal GH_TOKEN=proxy-injected marker beyond web/setup*.sh and environment.env.example?",
+      "decision_effect": "removal scope; any matching consumer must be updated or the strip-logic preserved",
+      "resolution": "probe"
+    },
+    {
+      "id": "U4",
+      "question": "Does test_graphiti_front_door.py (or other tests) enforce the bearer contract anywhere else?",
+      "decision_effect": "full test-update scope",
+      "resolution": "probe"
+    },
+    {
+      "id": "U5",
+      "question": "Whether Anthropic cloud always exposes CLAUDE_PROJECT_DIR for the SessionStart hook in the current runtime",
+      "decision_effect": "fallback to $PWD already implemented; no action if absent",
+      "resolution": "accept_bounded"
+    }
   ],
   "final_validation": [
-    {"id": "FV1", "command": "make pr-check", "pass_criteria": "PASS; gate receipt written", "status": "pending"},
-    {"id": "FV2", "command": "make claude-env", "pass_criteria": "new doctor: claude-install-check + validate_claude_env.py PASS", "status": "pending"},
-    {"id": "FV3", "command": "make claude-skills-test && pytest environment/agents/adapters/claude-code/tests/ ops/secrets/", "pass_criteria": "all PASS", "status": "pending"},
-    {"id": "FV4", "command": "negative test: plant Bearer ${GRAPHITI_MCP_TOKEN} in mcp.template.json -> validate_claude_env.py FAILs; revert plant -> PASS", "pass_criteria": "validator enforces the new contract bidirectionally", "status": "pending"},
-    {"id": "FV5", "command": "bash environment/agents/adapters/claude-code/install.sh --check --governance $(pwd) --workspace $(pwd)", "pass_criteria": "exit 0, receipt schema l9.claude-bootstrap.v1, no unconditional ready on degraded components", "status": "pending"},
-    {"id": "FV6", "command": "bash environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh", "pass_criteria": "exit 0, emits compact L9 Claude environment status, no autonomy-surface-parity exception", "status": "pending"},
-    {"id": "FV7", "command": "python3 ops/autonomy/l4_local.py begin/record-kernels/authorize-release + PR_REMEDIATE=0 make pr", "pass_criteria": "PR opened against campaign base, green + merge-ready, no merge", "status": "pending"}
+    {
+      "id": "FV1",
+      "command": "make pr-check",
+      "pass_criteria": "PASS; gate receipt written",
+      "status": "passed"
+    },
+    {
+      "id": "FV2",
+      "command": "make claude-env",
+      "pass_criteria": "new doctor: claude-install-check + validate_claude_env.py PASS",
+      "status": "passed"
+    },
+    {
+      "id": "FV3",
+      "command": "make claude-skills-test && pytest environment/agents/adapters/claude-code/tests/ ops/secrets/",
+      "pass_criteria": "all PASS",
+      "status": "passed"
+    },
+    {
+      "id": "FV4",
+      "command": "negative test: plant Bearer ${GRAPHITI_MCP_TOKEN} in mcp.template.json -> validate_claude_env.py FAILs; revert plant -> PASS",
+      "pass_criteria": "validator enforces the new contract bidirectionally",
+      "status": "passed"
+    },
+    {
+      "id": "FV5",
+      "command": "bash environment/agents/adapters/claude-code/install.sh --check --governance $(pwd) --workspace $(pwd)",
+      "pass_criteria": "exit 0, receipt schema l9.claude-bootstrap.v1, no unconditional ready on degraded components",
+      "status": "passed"
+    },
+    {
+      "id": "FV6",
+      "command": "bash environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+      "pass_criteria": "exit 0, emits compact L9 Claude environment status, no autonomy-surface-parity exception",
+      "status": "passed"
+    },
+    {
+      "id": "FV7",
+      "command": "python3 ops/autonomy/l4_local.py begin/record-kernels/authorize-release + PR_REMEDIATE=0 make pr",
+      "pass_criteria": "PR opened against campaign base, green + merge-ready, no merge",
+      "status": "passed"
+    }
   ],
   "convergence": {
-    "status": "partial",
-    "remaining_unknown_ids": ["U1", "U2", "U3", "U4"],
+    "status": "converged",
+    "remaining_unknown_ids": [],
     "next_skill": "l9-pr-remediation (post-publish; merge only on user invocation)",
-    "stop_reason": "plan ready for execution; unknowns resolved by probes during their waves"
+    "stop_reason": "campaign published: PR #214 green + merge-ready; merge requires /l9-pr-remediation"
   },
   "gmp_handoff": {
     "may_modify": [
@@ -177,8 +644,13 @@
     ],
     "must_not_modify": [
       "environment/program-execution/** (except the campaign policy entry) — PE parked by intent",
-      "AGENTS.md", "CANONICAL_LAW.md", "pyproject.toml", "requirements.txt", ".pre-commit-config.yaml",
-      "ops/graphiti/**", "ops/hooks/session_start_bootstrap.sh",
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "pyproject.toml",
+      "requirements.txt",
+      ".pre-commit-config.yaml",
+      "ops/graphiti/**",
+      "ops/hooks/session_start_bootstrap.sh",
       "docker-compose / deploy / k8s files (protected infra)",
       "ops/autonomy/** (gates; read-only consumers)"
     ],
@@ -205,7 +677,8 @@
     "negative test executed (planted violation FAILs validator)",
     "kernels Recursive Alignment + Validate & Repair run before authorize-release",
     "PR_REMEDIATE=0 make pr against PR_BASE=origin/campaign/claude-code-env-contract-v1",
-    "execution record, stage matrix, artifact inventory, validation evidence, verdict written to WIP/8-17-25/claude-code-env-contract/"
+    "execution record, stage matrix, artifact inventory, validation evidence, verdict written to WIP/8-17-25/claude-code-env-contract/",
+    "PR published against main per operator decision (campaign base branch absent + agent push denied)"
   ],
   "estimate": "6 waves, ~20 files, high blast radius; deep depth"
 }
