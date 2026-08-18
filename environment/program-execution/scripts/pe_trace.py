@@ -235,6 +235,9 @@ class ExecutionTrace:
             try:
                 current.parent.rmdir()
             except OSError:
+                # Best-effort tidy-up. The directory may be non-empty or
+                # already gone; either way the trace has moved and the run
+                # must not fail over leftover housekeeping.
                 pass
 
     def rehome(self, workspace: Path) -> None:
@@ -260,6 +263,8 @@ class ExecutionTrace:
             try:
                 Path(staging).rmdir()
             except OSError:
+                # The staging directory is a transient holding pen. Failing
+                # to remove it is not a reason to fail the campaign.
                 pass
 
     # -- emission -------------------------------------------------------
@@ -727,12 +732,20 @@ def render_summary_markdown(summary: dict[str, Any]) -> str:
         lines += ["| Task | Retries |", "| --- | ---: |"]
         for task_id, count in sorted(retries.items()):
             lines.append(f"| {task_id} | {count} |")
+    per_task_columns = [
+        "Task",
+        "Eligible to first write",
+        "Implementation",
+        "Validation",
+        "Verification",
+        "Attempts",
+        "Total",
+    ]
     lines += [
         "",
         "## Per-task timings",
         "",
-        "| Task | Eligible to first write | Implementation | Validation | Verification | "
-        "Attempts | Total |",
+        "| " + " | ".join(per_task_columns) + " |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for task_id, task in sorted((summary.get("per_task") or {}).items()):

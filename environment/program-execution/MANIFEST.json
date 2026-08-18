@@ -1587,7 +1587,7 @@
     },
     {
       "path": "scripts/pe_trace.py",
-      "sha256": "894941f7f6ed30b19fe100bffec0e1c3d5443074d7e16f0f33f96b018ff18fc0"
+      "sha256": "11acf7d42467762c4de71810378b5ef467074549eb3eeba3c1f36ff678ea40f5"
     },
     {
       "path": "scripts/peer_execution_cli.py",
@@ -1623,7 +1623,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "2d082d97e4eba661a0173506f8ae577d5e9fb547bb97783c9694d529453688b4"
+      "sha256": "30d29e2a8d721c39ca0504c345c4d30a8fcb95191951bd1ed793b3c1b39e8838"
     },
     {
       "path": "scripts/run_conformance.py",

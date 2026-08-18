@@ -1652,7 +1652,7 @@ def run_declared_validations(
             attempt_number=attempt_number,
             metadata={"command": command, "resolved_cwd": str(worktree)},
         ) as span:
-            completed = subprocess.run(  # noqa: S602 - contract-declared command, same as pec verify
+            completed = subprocess.run(  # noqa: S602 - contract-declared command
                 ["bash", "-lc", command],
                 cwd=str(worktree),
                 text=True,
