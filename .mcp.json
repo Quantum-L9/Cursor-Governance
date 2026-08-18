@@ -18,6 +18,7 @@
   ],
   "mcpServers": {
     "graphiti-memory": {
+      "type": "http",
       "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
       "timeout": 120000,
       "alwaysLoad": true

@@ -13,7 +13,7 @@ field.
 | Field (in the edit dialog) | Paste / set from | Purpose |
 |---|---|---|
 | **Network access** | `network-policy.md` | let the sandbox reach GitHub, registries, scanners |
-| **Environment variables** | `environment.env.example` | credentials + surface/memory/autonomy posture (placeholders → real values in the UI) |
+| **Environment variables** | `environment.env.example` | surface/memory/autonomy posture only — **no credentials** |
 | **Setup script** | `setup.bootstrap.sh` | normalize the environment, clone governance, then exec the canonical `setup.sh` from that clone |
 
 ## One adapter, thin surface callers
@@ -95,9 +95,11 @@ the account environment makes the bypass permanent for every session.
 
 1. **Network access** — pick **Full** (simplest) or **Custom** + the allowlist in
    `network-policy.md`.
-2. **Environment variables** — paste `environment.env.example`, then replace every
-   `REPLACE_WITH_*` **in the UI, not in chat or a repo**. At minimum set `GH_TOKEN`
-   and `GRAPHITI_MCP_TOKEN` (dedicated bot-user PAT + Graphiti bearer).
+2. **Environment variables** — paste `environment.env.example` **as-is**. Do not
+   replace anything with Infisical UA, Infisical password, a PAT, or
+   `GRAPHITI_MCP_TOKEN`. `GH_TOKEN=proxy-injected` is a marker, not a secret.
+   Authenticated work uses the capability broker (`L9_CAPABILITY_BROKER_URL`),
+   which holds Infisical credentials on the trusted side.
 3. **Setup script** — **paste `setup.bootstrap.sh` (recommended), not `setup.sh`.**
    The account field is a *copy*, not a live link to the repo, so pasting the full
    `setup.sh` drifts from the file on every edit until someone re-pastes it. The
@@ -121,19 +123,15 @@ the account environment makes the bypass permanent for every session.
 ## Verify (in a fresh session after saving)
 
 ```bash
-gh auth status                                    # Logged in as <bot-user>
 ls "$HOME/.cursor-governance/CANONICAL_LAW.md"    # governance clone present
 echo "$L9_GOVERNANCE_SURFACE"                     # must print exactly: claude-code
 echo "$L9_GOVERNANCE_DIR"                         # must be an expanded path, not '$HOME/...'
 "$HOME/.cursor-governance/.venv/bin/python3" -c 'import pydantic, yaml, jsonschema'  # locked env
-[ -n "$GRAPHITI_MCP_TOKEN" ] && echo "memory bearer present"
-# Memory = Cursor Graphiti front door only (ADR-0006). Proves the write path:
-python3 "$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/memory_lock.py" \
-  acquire --namespace cursor-governance --task "env smoke"
-# The SessionStart hook should have injected an "L9 Governance — Claude Code session"
-# context block listing the governance clone and available skills. A hydrate line
-# reading DEGRADED with facts_returned=0 almost always means GRAPHITI_MCP_TOKEN is
-# unset, or that the locked .venv above is missing so the gates cannot import.
+# Same capability check every surface runs (names only — no secret values):
+bash "$HOME/.cursor-governance/ops/secrets/bootstrap_agent_env.sh" --check \
+  --surface claude-code --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
+# SessionStart injects "L9 Governance — Claude Code session". DEGRADED hydrate
+# with broker unset is the honest posture — do not paste GRAPHITI_MCP_TOKEN.
 ```
 
 ## Shared memory (required for governed Mobile/Web)
@@ -142,7 +140,8 @@ Cloud sessions use HTTPS Graphiti reachability to the **same** store as Cursor:
 
 `GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`
 
-(`mcp.template.json` expands `${GRAPHITI_MCP_URL}` / `${GRAPHITI_MCP_TOKEN}`).
+(`mcp.template.json` expands `${GRAPHITI_MCP_URL}`. The bearer is **not** in this
+environment — `graphiti.*` capabilities keep it on the broker.)
 This is **not** the retired `L9_MEMORY_HTTP_*` side door (ADR-0006).
 CLI hosts may set `GRAPHITI_MCP_URL=http://127.0.0.1:8100/mcp` via the SSH tunnel.
 
@@ -153,8 +152,7 @@ Writing identity is not: `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claud
 
 ## Security
 
-- Env vars are stored **in plaintext** in the environment config. Use a
-  least-privilege dedicated bot account; rotate any token ever pasted in chat.
-- Never commit `GH_TOKEN` / `GRAPHITI_MCP_TOKEN` / `SONAR_TOKEN` to a repo. A
-  committed `.env` is a leaked secret. `.mcp.json` carries only `${...}`
-  references, never the token itself.
+- Env vars are stored **in plaintext** and are readable by the model. This
+  environment carries **no** Infisical password, UA secret, PAT, or Graphiti bearer.
+- Never commit those names to a repo. `.mcp.json` carries only `${...}`
+  references, never a token.

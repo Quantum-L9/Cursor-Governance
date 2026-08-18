@@ -19,8 +19,9 @@
 # re-paste.
 #
 # Env vars (see web/environment.env.example):
-#   GH_TOKEN                       — required for gh
-#   GRAPHITI_MCP_URL / _TOKEN      — Cursor Graphiti front door (ADR-0006/0007)
+#   GH_TOKEN=proxy-injected        — not a PAT; Anthropic git/gh proxy
+#   GRAPHITI_MCP_URL               — Cursor Graphiti front door URL (no bearer)
+#   L9_CAPABILITY_BROKER_URL       — optional; Infisical stays behind the broker
 #   L9_GOVERNANCE_REMOTE / _BRANCH — default Quantum-L9/Cursor-Governance @ main
 #
 # Governance always lands at $HOME/.cursor-governance (GitHub main).
@@ -49,13 +50,16 @@ if ! have gh; then
   fi
 fi
 
-# 2) Authenticate gh + git with the bot-user PAT so pushes trigger Actions.
-if [ -n "${GH_TOKEN:-}" ] && have gh; then
-  log "Authenticating gh"
-  printf '%s' "$GH_TOKEN" | gh auth login --with-token 2>/dev/null && gh auth setup-git || true
-  gh auth status 2>/dev/null || true
+# 2) gh — platform proxy only. A real PAT here is a contract violation (S3/S7).
+if [ -n "${GH_TOKEN:-}" ] && [ "$GH_TOKEN" != "proxy-injected" ]; then
+  echo "WARN: GH_TOKEN looks like a real credential — PROHIBITED; unsetting"
+  unset GH_TOKEN
+fi
+if have gh; then
+  log "GitHub CLI present (auth is the Anthropic git/gh proxy, not a pasted PAT)"
+  gh auth status 2>/dev/null || echo "NOTE: gh unauthenticated until the platform proxy injects credentials"
 else
-  echo "WARNING: GH_TOKEN unset or gh missing — gh is unauthenticated; CI/review/push skills will not work."
+  echo "WARNING: gh missing — CI/review skills that shell out to gh will not work."
 fi
 
 # 3) Governance SSOT — GitHub main only (Quantum-L9/Cursor-Governance).

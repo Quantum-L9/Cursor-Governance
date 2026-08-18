@@ -27,21 +27,12 @@ SECRETS_DIR = REPO_ROOT / "ops" / "secrets"
 if str(SECRETS_DIR) not in sys.path:
     sys.path.insert(0, str(SECRETS_DIR))
 
+import broker_identity  # noqa: E402
+import capability_broker as cb  # noqa: E402
 import capability_client as cc  # noqa: E402
 import surface_trust  # noqa: E402
 import validate_capability_contract as vcc  # noqa: E402
 from capability_registry import load_registry  # noqa: E402
-
-try:
-    import broker_identity  # noqa: E402
-    import capability_broker as cb  # noqa: E402
-except ImportError as exc:
-    # Isolate UV_PROJECT can bind a sibling checkout whose cryptography wheel
-    # does not load (macOS ABI). CI and a healthy local .venv still import.
-    pytest.skip(
-        f"capability broker imports unavailable: {exc}",
-        allow_module_level=True,
-    )
 
 MODEL_SURFACES = ["claude-code", "codex", "gemini", "manus", "cursor", "generic"]
 UNKNOWN_SURFACES = ["", "unknown", "brand-new-adapter", "OPERATOR-ish", "trusted"]
@@ -53,6 +44,7 @@ FORBIDDEN_ENV_NAMES = (
     "GRAPHITI_MCP_TOKEN",
     "INFISICAL_CLIENT_SECRET",
     "INFISICAL_TOKEN",
+    "INFISICAL_PASSWORD",
     "SONAR_TOKEN",
     "SONARCLOUD_TOKEN",
     "SEMGREP_APP_TOKEN",
@@ -154,7 +146,6 @@ def test_capability_registry_declares_no_secret_values() -> None:
         "SEMGREP_APP_TOKEN",
         "GRAPHITI_MCP_TOKEN",
         "GH_TOKEN",
-        "GITHUB_TOKEN",
     }
     # A registry is a mapping of names, never a store of values.
     for marker in ("BEGIN PRIVATE KEY", "Bearer ey", "sqp_", "github_pat_"):
