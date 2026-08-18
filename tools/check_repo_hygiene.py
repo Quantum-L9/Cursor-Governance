@@ -106,7 +106,11 @@ for cfg in (".mcp.json", ".cursor/mcp.json"):
     else:
         print(f"  {cfg} -> {', '.join(sorted(servers)) or 'none'}")
 
+# Scratch contents are never secret-scanned. current_work/ is retired
+# (directory must stay absent); its old content skip transfers to WIP/.
 skip = (
+    "WIP/",
+    "current_work/",
     "-pack/",
     ".example",
     ".template",
