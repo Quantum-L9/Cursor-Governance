@@ -1,0 +1,3196 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+plan_status: Ready
+
+metadata:
+  campaign_id: pe-v3-control-plane-convergence
+  title: PE v3 Control Plane Convergence - Containment, Semantic Conservation, Exact Identity, Bound Authority
+  version: 1.0.0
+  created_at: '2026-08-18T00:00:00Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: environment/program-execution/campaigns/pe-v3-control-plane-convergence/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/pe-v3-control-plane-convergence
+  worktree_root: $HOME/.l9/program-worktrees/pe-v3-control-plane-convergence
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+  historical_baselines:
+    v2_characterization_baseline: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+    implementation_baseline: 7517f377ab202bf39a351f634eacb9860bc414e0
+
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  required_host_surfaces:
+    - environment/program-execution/core
+    - environment/program-execution/scripts
+    - environment/program-execution/conformance
+    - environment/program-execution/registry
+    - autonomy
+    - ops/autonomy
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - instantiate_native_blueprint_and_controller
+    - compile_source_into_complete_native_blueprint
+    - validate_blueprint_in_template_mode
+    - accept_blueprint_after_authority_and_placeholder_resolution
+    - validate_blueprint_in_instantiated_mode
+    - validate_controller_in_instantiated_mode
+    - block_on_unresolved_target_binding_unknown
+    - export_admission_handoff_receipt
+    - obtain_program_owner_terminal_verdict
+  authority_boundaries:
+    campaign_source_owns: operator_intent_and_campaign_semantics
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_runtime_state_and_gate_results
+    adapters_own: host_translation_and_execution_receipts
+    autonomy_owns: physical_execution_enforcement_only
+    activation_prompt_owns: launch_mechanics_only
+  two_plane_rule:
+    plane_a: pinned_immutable_v2_orchestrator_checkout
+    plane_b: editable_program_execution_implementation
+    rule: plane_a_orchestrates_campaign_plane_b_never_self_modifies_plane_a
+
+operator_directive:
+  objective: >-
+    Reconstruct Program Execution and subordinate Autonomy so that no authority-bearing
+    transition can occur from a caller-supplied semantic label. Every transition must be
+    derived from canonical immutable semantics, exact content identity, admissible
+    claim-scoped proof, current principal authority, and one linearizable state/event commit.
+  cross_plane_law: >-
+    Program Execution is the sole owner of Program semantics, scheduling, verification,
+    convergence and terminal recommendation. Autonomy is a subordinate physical enforcement
+    plane that may narrow a PEC execution grant but may never widen, reinterpret, schedule,
+    gate, promote, merge or terminalize the Program.
+  mode: controlled_autonomous_until_material_boundary
+  auto_continue:
+    - read_only_inspection
+    - blueprint_materialization
+    - reversible_repo_local_work
+    - local_validation
+    - independent_verification
+    - read_only_remote_observation
+  pause_only_for:
+    - missing_or_conflicting_semantic_authority
+    - material_scope_expansion
+    - unresolved_blocking_unknown
+    - failed_blocking_gate
+    - security_or_secret_boundary
+    - exact_remote_mutation_approval
+    - merge_or_landing_authority
+  campaign_execution_law:
+    - one_worker_maximum
+    - one_writer_per_repository
+    - local_mutation_only
+    - local_commits_allowed
+    - no_push_during_execution
+    - no_pr_merge_publish_deploy_from_controller
+    - no_destructive_runtime_migration_until_s8
+    - no_reliance_on_automatic_retry_before_s6
+    - no_reliance_on_v2_gate_pass_for_safety
+    - no_orchestrator_switch_mid_campaign
+    - halt_before_merge
+    - publish_only_through_sanctioned_make_pr_surface
+    - merge_authority_is_external_landing_authority_only
+
+program:
+  id: pe-v3-control-plane-convergence
+  name: PE v3 Control Plane Convergence
+  version: 1.0.0
+  owner: igor_beylin
+  definition_status: accepted
+  snapshot_at: '2026-08-18'
+  target_repository_id: Quantum-L9/Cursor-Governance
+  contracts:
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+    pair: program-execution-system.v2
+  objective: >-
+    Reconstruct Program Execution around four root repairs: semantic conservation,
+    exact identity and genealogy, proof plus principal binding, and linearizable
+    mediation. C0 contains the live front-door authority leaks; S1-S8 rebuild the
+    compiler, runtime, evidence, authority, transactions, gates, closeout, and
+    migration so that v3 receipts mean what the architecture says they mean.
+    End state is activation-ready, not self-activation.
+  problem_statement: >-
+    The live v2 control plane allows the campaign runner to mint then consume merge and
+    terminal authority, task PR creation to bypass the sanctioned publish surface, and
+    Autonomy tool_hook to classify arbitrary shells as test.run with caller-supplied
+    capability labels. Beyond containment, v2 semantics weaken across boundaries:
+    compiler shortcuts drop governing laws, dirty trees are verified as HEAD, evidence
+    IDs substitute across claims, actor strings confer authority, gates accept
+    caller-supplied PASS, and handoff is disconnected from final repository generations.
+  target_state: >-
+    C0 closed: runner cannot merge or close authoritatively, task publishing flows
+    through the sanctioned make pr surface with stacked-PR parameters, and Autonomy
+    classifies physical commands through a fail-closed semantic broker. S1-S8 green:
+    semantic conservation proven by round-trip, immutable candidate and repository
+    generations, claim-scoped evidence admissibility, principal-and-grant authority,
+    linearizable transactions with fencing, derived gates, generation-aware replan and
+    retry, promotion-wired completion, advisory convergence handoff with observed
+    rollback proof and owner verdict receipt, v2-to-v3 migration, full vertical
+    conformance, shadow self-host convergence. Terminal state: activation-ready.
+  scope:
+    include:
+      - environment/program-execution/core
+      - environment/program-execution/scripts
+      - environment/program-execution/compiler
+      - environment/program-execution/conformance
+      - environment/program-execution/campaigns
+      - autonomy/runtime
+      - autonomy/adapters
+      - autonomy/policies
+      - ops/autonomy
+      - ops/scripts/open_pr_after_gate.sh
+      - Makefile
+    exclude:
+      - .github/workflows
+      - docker-compose and deploy infrastructure
+      - remote repository mutation during execution
+      - merge from the campaign path
+      - self-activation of v3 as live control plane
+      - pe-v3-hardening immutable campaign source
+  authority_order:
+    - applicable_safety_legal_security_requirements
+    - cursor_governance_canonical_law
+    - program_execution_interface_contract
+    - latest_explicit_operator_instruction
+    - accepted_program_decision
+    - approved_task_card
+    - repository_local_governance
+    - implementation
+    - documentation
+  operating_rules:
+    - plane_a_never_self_modified_by_plane_b
+    - source_semantics_survive_compilation_or_compile_fails
+    - submitted_candidate_has_immutable_content_identity
+    - verification_targets_the_immutable_snapshot
+    - evidence_is_admissible_only_for_the_exact_claim_subject_and_generation
+    - actor_strings_confer_no_authority
+    - state_transition_and_canonical_event_commit_atomically
+    - expired_or_superseded_authorization_ends_at_use_boundaries
+    - gate_outcome_is_derived_never_caller_asserted
+    - repo_local_completion_implies_promotion
+    - controller_recommends_owner_terminates
+    - legacy_v2_artifacts_never_silently_gain_v3_proof_semantics
+  terminal_verdicts:
+    - CONVERGED
+    - CONVERGED_WITH_NON_BLOCKING_RISKS
+    - NOT_CONVERGED
+    - INCONCLUSIVE
+
+invariants:
+  - id: SEM-001
+    statement: Every governing source law has exactly one canonical executable meaning.
+  - id: SEM-002
+    statement: Projections may repeat presentation, never semantic authority.
+  - id: ID-001
+    statement: Every submitted candidate has immutable content identity.
+  - id: ID-002
+    statement: Submitted, verified, promoted and terminal content are identical or linked by an explicit evidence-backed transformation.
+  - id: GEN-001
+    statement: Every repository baseline is an immutable generation.
+  - id: GEN-002
+    statement: Successor work includes every required predecessor promotion.
+  - id: EVID-001
+    statement: Evidence artifacts are immutable.
+  - id: EVID-002
+    statement: Evidence is admissible only for the exact claim, subject and generation it proves.
+  - id: EVID-003
+    statement: Evidence polarity, producer, method and freshness are semantic.
+  - id: AUTH-001
+    statement: Actor strings confer no authority.
+  - id: AUTH-002
+    statement: Every privileged transition binds a principal and grant.
+  - id: AUTH-003
+    statement: Nondelegable authority cannot be delegated.
+  - id: TXN-001
+    statement: State transition and canonical event are atomic.
+  - id: TXN-002
+    statement: Authority-bearing operations are idempotent and CAS-safe.
+  - id: LEASE-001
+    statement: Expiry or revocation ends authority at use time.
+  - id: LEASE-002
+    statement: A superseded fence can never mutate state.
+  - id: AUTO-001
+    statement: Unknown physical operations fail closed.
+  - id: AUTO-002
+    statement: Every physical operation is semantically classified before capability authorization.
+  - id: AUTO-003
+    statement: PE remains Program scheduler; Autonomy is subordinate execution enforcement.
+  - id: GATE-001
+    statement: Gate outcome is derived, never caller asserted.
+  - id: REPLAN-001
+    statement: In-flight authorization cannot silently change plan revision.
+  - id: RETRY-001
+    statement: The accepted retry policy controls every retry.
+  - id: PROM-001
+    statement: Repo-local COMPLETED means the verified candidate is in the current Program generation.
+  - id: PUB-001
+    statement: Campaign execution cannot self-authorize publish or merge authority.
+  - id: PUB-002
+    statement: Merge is externally authorized and merely observed by PE.
+  - id: HANDOFF-001
+    statement: Final handoff identifies exact final target generations.
+  - id: ROLL-001
+    statement: Rollback proof is observed and bound to that exact final generation.
+  - id: TERM-001
+    statement: Controller recommends terminal outcome but never exercises owner authority.
+  - id: TERM-002
+    statement: INCONCLUSIVE is a valid terminal execution outcome.
+  - id: MIG-001
+    statement: Legacy v2 artifacts never silently gain stronger v3 semantics.
+
+targets:
+  - id: TARGET-001
+    name: Cursor-Governance Implementation Plane
+    kind: git_repository
+    authority_owner: Quantum-L9/Cursor-Governance
+    execution_mode: repo_local
+    adapter: git
+    repository_id: Quantum-L9/Cursor-Governance
+    source_of_truth: environment/program-execution
+    environments:
+      - local
+    mutability: reversible
+    expected_revision: 7517f377ab202bf39a351f634eacb9860bc414e0
+  - id: TARGET-002
+    name: Pinned Orchestrator Plane A
+    kind: git_repository
+    authority_owner: Quantum-L9/Cursor-Governance
+    execution_mode: frozen_detached_checkout
+    adapter: git
+    repository_id: Quantum-L9/Cursor-Governance
+    source_of_truth: environment/program-execution
+    environments:
+      - local
+    mutability: immutable_during_campaign
+    expected_revision: 7517f377ab202bf39a351f634eacb9860bc414e0
+
+authorities:
+  - id: AUTH-001
+    responsibility: program_terminal_verdict
+    owner: igor_beylin
+    scope:
+      - whole_program
+    may_delegate: false
+    required_evidence:
+      - controller_final_handoff_receipt
+  - id: AUTH-002
+    responsibility: containment_wave_authority
+    owner: igor_beylin
+    scope:
+      - baseline_freeze
+      - runner_authority_disarm
+      - publish_surface_extension
+      - command_broker_activation
+  - id: AUTH-003
+    responsibility: controller_verification
+    owner: controller
+    scope:
+      - candidate_verification
+      - gate_evaluation
+      - promotion
+  - id: AUTH-004
+    responsibility: external_landing_and_merge_authority
+    owner: igor_beylin
+    scope:
+      - pr_landing
+      - merge_authorization
+      - activation_decision
+
+decisions: []
+
+unknowns:
+  - id: UNK-001
+    question: Shadow self-host fixture repository identity for S8
+    blocking_task_ids:
+      - TASK-038
+    resolution: bounded_probe_at_s8
+  - id: UNK-002
+    question: Final placement of new v3 runtime modules inside the pec package
+    blocking_task_ids: []
+    resolution: wave_local_decision_bounded_to_pec_package
+
+risks:
+  - id: RISK-001
+    statement: Bootstrap paradox - repairing PE using PE
+    owner: igor_beylin
+    likelihood: possible
+    impact: material
+    mitigations:
+      - Freeze orchestrator Plane A at 7517f377
+      - Implementation lands on Plane B only
+      - Activation is a separate follow-on campaign
+    acceptance_status: accepted
+  - id: RISK-002
+    statement: Machine-global memory phase-lock contention among live sibling sessions
+    owner: igor_beylin
+    likelihood: likely
+    impact: medium
+    mitigations:
+      - Exclusive campaign worktree with one mutating agent
+      - Short acquire-to-commit windows coordinated with siblings
+      - Surface lock contention to operator instead of force-acquiring
+    acceptance_status: accepted
+  - id: RISK-003
+    statement: Root-file and autonomy edits trip additive-only gates
+    owner: igor_beylin
+    likelihood: possible
+    impact: medium
+    mitigations:
+      - Makefile and ops boundary edits carry ALLOW-ROOT-DELETION markers
+      - CODEOWNERS approval requested at PR review
+    acceptance_status: accepted
+  - id: RISK-004
+    statement: Semantic model cannot represent a governing source law
+    owner: igor_beylin
+    likelihood: possible
+    impact: high
+    mitigations:
+      - CompileError instead of warning or silent omission
+      - Operator decision for any unrepresentable law before proceeding
+    acceptance_status: accepted
+
+evidence_requirements:
+  - id: EVID-001
+    claim: Campaign source integrity receipt matches the immutable source
+    source_type: repository_inspection
+    source_location: environment/program-execution/campaigns/pe-v3-control-plane-convergence
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports:
+      - GATE-C0-CONTAINED
+    contradicts: []
+  - id: EVID-002
+    claim: Implementation baseline frozen at 7517f377ab202bf39a351f634eacb9860bc414e0
+    source_type: repository_inspection
+    source_location: Quantum-L9/Cursor-Governance
+    collection_method: read_only_inspection
+    freshness: collect_at_admission
+    producer: controller
+    supports:
+      - GATE-C0-CONTAINED
+    contradicts: []
+  - id: EVID-003
+    claim: Historical v2 counterexample registry from pe-v3-hardening S0 is inherited as input
+    source_type: repository_inspection
+    source_location: environment/program-execution/campaigns/pe-v3-hardening
+    collection_method: read_only_inspection
+    freshness: immutable_historical
+    producer: controller
+    supports:
+      - GATE-S1-SEMANTIC-CONSERVATION
+    contradicts: []
+
+gates:
+  - id: GATE-C0-CONTAINED
+    name: Containment closed and baseline frozen
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Baseline frozen at 7517f377 with orchestrator detached immutably
+      - Runner has no merge, close-authoritative, push, or gh-pr-create path
+      - Task publishing flows through sanctioned make pr surface with stacked-PR parameters
+      - Autonomy command broker denies unknown, caller-capability, and mixed-command bypasses
+      - Containment test list passes with zero regression
+    failure_effect: BLOCKED
+    required_evidence_ids:
+      - EVID-001
+      - EVID-002
+  - id: GATE-S1-SEMANTIC-CONSERVATION
+    name: Semantic conservation proven
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Canonical Semantic Model owns all governing semantics
+      - Round-trip semantic_diff is empty for a fixture covering every governing field
+      - Unrepresentable laws raise CompileError
+      - Acceptance is atomic and receipt-backed
+      - Evidence collection is typed and measured
+    failure_effect: BLOCKED
+    required_evidence_ids:
+      - EVID-003
+  - id: GATE-S2-EXACT-LINEAGE
+    name: Exact lineage and immutable candidates
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Repository generations form an immutable genealogy
+      - Dirty and committed candidates both receive immutable snapshots
+      - Verification targets the snapshot in a fresh verifier environment
+      - Promotion receipts advance generations
+      - Successors base on promoted generations
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-S3-PROOF-ADMISSIBILITY
+    name: Proof admissibility
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Unrelated evidence rejected
+      - FAIL evidence rejected for positive claims
+      - Wrong candidate or target evidence rejected
+      - Expired temporal evidence rejected
+      - Historical immutable proof remains valid
+      - Evidence artifacts are append-only
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-S4-AUTHORITY-BOUND
+    name: Principal and grant authority binding
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Spoofed actor string cannot authorize
+      - Nondelegable authority cannot be delegated
+      - Wrong scope cannot approve
+      - Expired grant cannot authorize
+      - Worker without valid lease and fence fails
+      - Controller cannot act as program owner
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-S5-LINEARIZABLE-RUNTIME
+    name: Linearizable runtime semantics
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - State mutation and canonical event commit atomically
+      - CAS rowcount enforcement on every mutable aggregate
+      - Fencing tokens supersede stale workers
+      - Hard-stop evaluator centralizes safety checks
+      - Crash and concurrency matrix yields only committed or detectably recoverable states
+      - Autonomy submit and revoke have exactly one winner
+      - PE to Autonomy bridge emits grants Autonomy may only narrow
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-S6-EXECUTION-SEMANTICS
+    name: Execution semantics enforcement
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Caller cannot force gate PASS
+      - Validation cannot mutate or escape candidate scope
+      - Replan cannot silently change in-flight task
+      - Corrupt active plan fails closed
+      - Retry policy enforces max attempts and retryability taxonomy
+      - Retry cleanup owns the worktree lifecycle
+      - Promotion is wired into scheduling and completion
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-S7-OWNER-CLOSEOUT
+    name: Owner-bound convergence and closeout
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Controller cannot close the program alone
+      - Spoofed owner cannot close
+      - Handoff recommendation does not alter campaign status
+      - INCONCLUSIVE terminalizes correctly
+      - Final handoff contains exact final generations
+      - Broken ledger blocks closeout
+      - Stale or wrong-candidate rollback proof blocks closeout
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-S8-V3-CONFORMANCE
+    name: Cross-layer adversarial conformance
+    gate_type: completion
+    blocking: true
+    pass_criteria:
+      - Zero hardening xfails remain
+      - All v2 counterexamples blocked
+      - Semantic conservation at one hundred percent
+      - Fault matrix passes
+      - Concurrency tests pass
+      - Migration is repeatable
+      - Legacy evidence cannot privilege-escalate
+      - Shadow campaign converges
+      - Self-host fixture converges
+      - Docs, runbook and schema agree with implementation
+    failure_effect: BLOCKED
+    required_evidence_ids: []
+  - id: GATE-CLOSE
+    name: Program closeout
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-001
+    pass_criteria:
+      - All tasks COMPLETED
+      - All gates PASS
+      - Final handoff identifies exact final target generations
+      - Rollback proof observed and bound to the final generation
+      - Owner verdict receipt signed against the handoff digest
+    failure_effect: NOT_CONVERGED
+    required_evidence_ids: []
+
+workstreams:
+  - id: WS-C0
+    name: containment_and_baseline_freeze
+    objective: Freeze the implementation baseline and close the live front-door authority leaks
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S1
+    name: semantic_conservation
+    objective: Compile through a canonical semantic model with round-trip conservation proof
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S2
+    name: exact_identity_and_genealogy
+    objective: Immutable candidates, repository generations, and promotion
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S3
+    name: proof_admissibility
+    objective: Claim-scoped evidence admissibility with append-only artifacts
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S4
+    name: principal_authority
+    objective: Principal contexts, immutable grants, and bound approvals
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S5
+    name: linearizable_runtime
+    objective: Transactions, events, fencing, Autonomy atomicity, and the PE-Autonomy bridge
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S6
+    name: execution_semantics
+    objective: Derived gates, constrained verifier, generation-aware replan and retry, promotion scheduler
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S7
+    name: owner_closeout
+    objective: Convergence report, final handoff, rollback proof, owner verdict receipt
+    owner: igor_beylin
+    target_id: TARGET-001
+  - id: WS-S8
+    name: conformance_and_migration
+    objective: v2-to-v3 migration, vertical conformance, shadow and self-host proof
+    owner: igor_beylin
+    target_id: TARGET-001
+
+dependency_edges:
+  - from: TASK-001
+    to: TASK-002
+  - from: TASK-002
+    to: TASK-003
+  - from: TASK-003
+    to: TASK-004
+  - from: TASK-004
+    to: TASK-005
+  - from: TASK-005
+    to: TASK-006
+  - from: TASK-006
+    to: TASK-007
+  - from: TASK-007
+    to: TASK-008
+  - from: TASK-008
+    to: TASK-009
+  - from: TASK-009
+    to: TASK-010
+  - from: TASK-010
+    to: TASK-011
+  - from: TASK-011
+    to: TASK-012
+  - from: TASK-012
+    to: TASK-013
+  - from: TASK-013
+    to: TASK-014
+  - from: TASK-014
+    to: TASK-015
+  - from: TASK-015
+    to: TASK-016
+  - from: TASK-016
+    to: TASK-017
+  - from: TASK-017
+    to: TASK-018
+  - from: TASK-018
+    to: TASK-019
+  - from: TASK-019
+    to: TASK-020
+  - from: TASK-020
+    to: TASK-021
+  - from: TASK-021
+    to: TASK-022
+  - from: TASK-022
+    to: TASK-023
+  - from: TASK-023
+    to: TASK-024
+  - from: TASK-024
+    to: TASK-025
+  - from: TASK-025
+    to: TASK-026
+  - from: TASK-026
+    to: TASK-027
+  - from: TASK-027
+    to: TASK-028
+  - from: TASK-028
+    to: TASK-029
+  - from: TASK-029
+    to: TASK-030
+  - from: TASK-030
+    to: TASK-031
+  - from: TASK-031
+    to: TASK-032
+  - from: TASK-032
+    to: TASK-033
+  - from: TASK-033
+    to: TASK-034
+  - from: TASK-034
+    to: TASK-035
+  - from: TASK-035
+    to: TASK-036
+  - from: TASK-036
+    to: TASK-037
+  - from: TASK-037
+    to: TASK-038
+  - from: TASK-038
+    to: TASK-039
+
+waves:
+  - id: C0
+    name: containment_and_baseline_freeze
+    task_ids:
+      - TASK-001
+      - TASK-002
+      - TASK-003
+    predecessor_wave_ids: []
+    exit_gate_ids:
+      - GATE-C0-CONTAINED
+  - id: S1
+    name: semantic_conservation
+    task_ids:
+      - TASK-004
+      - TASK-005
+      - TASK-006
+      - TASK-007
+      - TASK-008
+    predecessor_wave_ids:
+      - C0
+    exit_gate_ids:
+      - GATE-S1-SEMANTIC-CONSERVATION
+  - id: S2
+    name: exact_identity_and_genealogy
+    task_ids:
+      - TASK-009
+      - TASK-010
+      - TASK-011
+      - TASK-012
+    predecessor_wave_ids:
+      - S1
+    exit_gate_ids:
+      - GATE-S2-EXACT-LINEAGE
+  - id: S3
+    name: proof_admissibility
+    task_ids:
+      - TASK-013
+      - TASK-014
+      - TASK-015
+      - TASK-016
+    predecessor_wave_ids:
+      - S2
+    exit_gate_ids:
+      - GATE-S3-PROOF-ADMISSIBILITY
+  - id: S4
+    name: principal_authority
+    task_ids:
+      - TASK-017
+      - TASK-018
+      - TASK-019
+    predecessor_wave_ids:
+      - S3
+    exit_gate_ids:
+      - GATE-S4-AUTHORITY-BOUND
+  - id: S5
+    name: linearizable_runtime
+    task_ids:
+      - TASK-020
+      - TASK-021
+      - TASK-022
+      - TASK-023
+      - TASK-024
+      - TASK-025
+      - TASK-026
+    predecessor_wave_ids:
+      - S4
+    exit_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+  - id: S6
+    name: execution_semantics
+    task_ids:
+      - TASK-027
+      - TASK-028
+      - TASK-029
+      - TASK-030
+      - TASK-031
+    predecessor_wave_ids:
+      - S5
+    exit_gate_ids:
+      - GATE-S6-EXECUTION-SEMANTICS
+  - id: S7
+    name: owner_closeout
+    task_ids:
+      - TASK-032
+      - TASK-033
+      - TASK-034
+      - TASK-035
+    predecessor_wave_ids:
+      - S6
+    exit_gate_ids:
+      - GATE-S7-OWNER-CLOSEOUT
+  - id: S8
+    name: conformance_and_migration
+    task_ids:
+      - TASK-036
+      - TASK-037
+      - TASK-038
+      - TASK-039
+    predecessor_wave_ids:
+      - S7
+    exit_gate_ids:
+      - GATE-S8-V3-CONFORMANCE
+      - GATE-CLOSE
+
+tasks:
+  - id: TASK-001
+    title: Freeze baseline and disarm runner merge and terminal authority
+    definition_status: ready
+    workstream_id: WS-C0
+    wave_id: C0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Freeze the implementation baseline at 7517f377 with a detached immutable
+      orchestrator checkout, then disarm run_campaign.py so it cannot alias merge to
+      close, push task branches, invoke gh pr create, call authorize_campaign_merge.py,
+      run gh pr merge, or declare CONVERGED. Runner lifecycle stops at MERGE_READY.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-002
+    paths:
+      - environment/program-execution/scripts/run_campaign.py
+      - environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+      - skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py
+    actions:
+      - detach_orchestrator_checkout_at_7517f377
+      - remove_until_alias_merge_to_close
+      - remove_runner_push_and_gh_pr_create_paths
+      - remove_runner_merge_authorization_and_gh_pr_merge_paths
+      - rename_runner_closeout_to_prepare_closeout_reach_merge_ready
+      - assert_runner_cannot_mint_merge_authority
+    acceptance:
+      - id: AC-001
+        statement: >-
+          Runner contains no merge, close-authoritative, push, or gh pr create execution path.
+        required_evidence_types:
+          - test_result
+      - id: AC-002
+        statement: >-
+          Runner lifecycle terminates at MERGE_READY with a handoff to the external landing authority.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - merge_alias_survives
+      - runner_push_survives
+      - runner_merge_survives
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: campaign_runner
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-C0-CONTAINED
+
+  - id: TASK-002
+    title: Route task publishing through the sanctioned stacked make pr surface
+    definition_status: blocked
+    workstream_id: WS-C0
+    wave_id: C0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Extend the sanctioned publishing surface so the runner publishes through
+      PR_REMEDIATE=0 make pr with typed stacked-PR parameters instead of raw git push
+      and gh pr create. Keep ops/autonomy/local_execution_gate.py strict; change the
+      publisher, not the policy. No L9_PUBLISH_PATH_OVERRIDE or L9_MERGE_AUTHORIZED
+      as campaign plumbing.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - ops/scripts/open_pr_after_gate.sh
+      - environment/program-execution/scripts/run_campaign.py
+      - Makefile
+    actions:
+      - add_typed_stacked_pr_parameters_to_sanctioned_publish_surface
+      - rewire_runner_publish_through_open_pr_after_gate
+      - keep_local_execution_gate_strict
+      - add_runner_ops_tests_for_sanctioned_publish_only
+    acceptance:
+      - id: AC-003
+        statement: >-
+          Task PR creation flows through the sanctioned make pr surface for both single and stacked PRs.
+        required_evidence_types:
+          - test_result
+      - id: AC-004
+        statement: >-
+          The runner has no raw git push or gh pr create path and cannot mint override authority.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - raw_push_survives
+      - gh_pr_create_survives
+      - override_authority_minted
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: publish_surface
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-C0-CONTAINED
+
+  - id: TASK-003
+    title: Build the fail-closed Autonomy command broker
+    definition_status: blocked
+    workstream_id: WS-C0
+    wave_id: C0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Introduce autonomy/adapters/command_broker.py with CommandIntent and
+      OperationIntent classification. Delete the caller capability override, remove the
+      generic shell to test.run mapping, deny UNKNOWN, require every operation in a
+      mixed command to authorize, recursively classify or deny nested shells, and fail
+      closed on unbounded dynamic operations. Reuse ops/autonomy/command_parse.py
+      segmentation as a helper, not a second divergent parser.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - autonomy/adapters/tool_hook.py
+      - autonomy/adapters/command_broker.py
+      - autonomy/policies/role-capabilities.json
+      - autonomy/policies/operation-aliases.json
+    actions:
+      - delete_caller_capability_override
+      - remove_shell_to_test_run_mapping
+      - deny_unknown_capabilities
+      - authorize_every_operation_in_mixed_commands
+      - recursively_classify_or_deny_nested_shells
+      - fail_closed_on_unbounded_dynamic_operations
+      - add_mandatory_autonomy_adversarial_tests
+    acceptance:
+      - id: AC-005
+        statement: >-
+          Shell git push, gh pr merge, secret read, and test-then-push are denied under a test.run capability.
+        required_evidence_types:
+          - test_result
+      - id: AC-006
+        statement: >-
+          Unknown tools and caller-supplied capability labels are denied, never defaulted to read.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - capability_override_honored
+      - unknown_defaults_to_read
+      - mixed_command_partially_authorized
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: autonomy_adapters
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-C0-CONTAINED
+
+  - id: TASK-004
+    title: Define the canonical semantic model and schema
+    definition_status: blocked
+    workstream_id: WS-S1
+    wave_id: S1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Introduce the CanonicalSemanticModel owning target identity, authority, execution
+      scope, dependencies, blocker edges, retry policy, scheduler limits, evidence
+      policy, acceptance claims, gate definitions, stop conditions, replan and contract
+      reissue triggers, closeout authority, and verdict vocabulary.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-003
+    paths:
+      - environment/program-execution/compiler/semantic_model.py
+      - environment/program-execution/core/shared/schemas/campaign-source.schema.json
+      - environment/program-execution/core/program-execution-blueprint-template/EXECUTION_INDEX.yaml
+    actions:
+      - define_semantic_model_dataclasses
+      - author_program_semantics_schema
+      - extend_campaign_source_schema_with_typed_fields
+      - register_semantic_model_in_execution_index
+    acceptance:
+      - id: AC-007
+        statement: >-
+          The semantic model represents every governing semantic class listed in the campaign source.
+        required_evidence_types:
+          - inspection
+      - id: AC-008
+        statement: >-
+          The semantic model schema validates a fixture containing every governing field.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - semantic_class_unrepresentable
+      - schema_rejects_governing_field
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: compiler_inputs
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S1-SEMANTIC-CONSERVATION
+
+  - id: TASK-005
+    title: Refactor the compiler through the semantic IR
+    definition_status: blocked
+    workstream_id: WS-S1
+    wave_id: S1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Stop compiling CAMPAIGN_SOURCE directly into independent YAML projections.
+      Compile through the CanonicalSemanticModel and derive every Blueprint projection
+      from it. Remove first_target authority shortcuts and preserve retry, scheduler,
+      evidence, authority, and closeout semantics.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/scripts/compile_campaign_source.py
+      - environment/program-execution/scripts/blueprint_ops.py
+      - environment/program-execution/compiler/semantic_model.py
+    actions:
+      - parse_and_validate_source_into_semantic_model
+      - derive_blueprint_projections_from_semantic_model
+      - remove_first_target_semantic_shortcuts
+      - preserve_all_governing_semantics_through_compilation
+    acceptance:
+      - id: AC-009
+        statement: >-
+          Projections are derived from the semantic model and never independently edited into authority.
+        required_evidence_types:
+          - inspection
+      - id: AC-010
+        statement: >-
+          Compilation preserves retry policy, scheduler limits, and closeout authority for a full fixture.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - semantic_shortcut_survives
+      - projection_edited_as_authority
+      - governing_law_dropped
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: compiler
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S1-SEMANTIC-CONSERVATION
+
+  - id: TASK-006
+    title: Add the semantic-conservation validator
+    definition_status: blocked
+    workstream_id: WS-S1
+    wave_id: S1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Prove compilation conserves meaning: for every governing source law,
+      representable and meaning-equal through projection. Unrepresentable laws are
+      CompileError. Round-trip test proves semantic_diff is empty on a fixture with
+      every governing field.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/compiler/semantic_conservation.py
+      - environment/program-execution/core/program-execution-blueprint-template/scripts/validate_blueprint.py
+      - environment/program-execution/compiler/semantic_model.py
+    actions:
+      - implement_semantic_diff_over_round_trip
+      - raise_compile_error_for_unrepresentable_laws
+      - add_conservation_checks_to_blueprint_validation
+    acceptance:
+      - id: AC-011
+        statement: >-
+          Round-trip semantic_diff is empty for a fixture containing every governing field.
+        required_evidence_types:
+          - test_result
+      - id: AC-012
+        statement: >-
+          An unrepresentable governing law produces a compile error, not a warning.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - law_dropped_silently
+      - projection_meaning_drift
+      - warning_instead_of_error
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: compiler_validation
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S1-SEMANTIC-CONSERVATION
+
+  - id: TASK-007
+    title: Make acceptance atomic and receipt-backed
+    definition_status: blocked
+    workstream_id: WS-S1
+    wave_id: S1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Build acceptance in a staging tree, generate the acceptance receipt, regenerate
+      the final manifest, validate the complete accepted bundle, then atomically
+      publish. No accepted status is visible until the entire bundle passes. Bootstrap
+      requires the acceptance receipt bound to program, semantic model, blueprint, and
+      source digests.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/scripts/accept_blueprint.py
+      - environment/program-execution/scripts/blueprint_ops.py
+      - environment/program-execution/core/program-execution-blueprint-template/scripts/validate_blueprint.py
+    actions:
+      - build_acceptance_in_staging_tree
+      - bind_acceptance_receipt_to_exact_bundle_digests
+      - require_acceptance_receipt_in_blueprint_validation
+      - publish_accepted_bundle_atomically
+    acceptance:
+      - id: AC-013
+        statement: >-
+          Acceptance failure leaves no partially accepted status visible anywhere.
+        required_evidence_types:
+          - test_result
+      - id: AC-014
+        statement: >-
+          Bootstrap without a valid acceptance receipt is rejected.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - partial_acceptance_visible
+      - receipt_missing_bootstrap_succeeds
+      - receipt_digest_mismatch_accepted
+    rollback:
+      strategy: discard_unaccepted_artifacts
+      trigger: admission_failure
+      validation: no_partial_acceptance_state
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: admission
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S1-SEMANTIC-CONSERVATION
+
+  - id: TASK-008
+    title: Split overloaded semantic types and collect measured evidence
+    definition_status: blocked
+    workstream_id: WS-S1
+    wave_id: S1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Separate outputs from writable paths, semantic prohibitions from filesystem
+      scope, and validation commands from inspection statements. Replace generic
+      collect_evidence flags with typed collectors that measure repository identity,
+      file digests, test results, and runtime state themselves; caller values become
+      expectations compared against observed reality.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/shared/schemas/campaign-source.schema.json
+      - environment/program-execution/scripts/collect_evidence.py
+      - environment/program-execution/core/program-execution-blueprint-template/schemas
+    actions:
+      - add_typed_execution_scope_writable_paths
+      - split_semantic_prohibitions_from_filesystem_scope
+      - split_command_validation_from_inspection_validation
+      - implement_typed_measured_evidence_collectors
+      - convert_caller_values_to_expected_values
+    acceptance:
+      - id: AC-015
+        statement: >-
+          draft_source_contract consumes only execution_scope.writable_paths and never outputs locations.
+        required_evidence_types:
+          - test_result
+      - id: AC-016
+        statement: >-
+          Collectors compute repository identity and file digests themselves and compare caller values as expectations.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - outputs_used_as_writable_scope
+      - prose_converted_to_glob
+      - caller_supplied_facts_accepted_unmeasured
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: schemas_and_evidence
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S1-SEMANTIC-CONSERVATION
+
+  - id: TASK-009
+    title: Introduce repository generations
+    definition_status: blocked
+    workstream_id: WS-S2
+    wave_id: S2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Replace the mutable repository head_sha with an immutable repository_generations
+      genealogy. Runtime holds current_generation_id only. Reconciliation proves
+      repository identity, remote identity, branch rule, revision rule, cleanliness,
+      and history availability before creating GEN-000.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - add_repository_generations_table
+      - hold_current_generation_id_in_runtime_state
+      - enforce_reconcile_proofs_before_gen_creation
+      - refuse_generation_advance_while_lease_live
+    acceptance:
+      - id: AC-017
+        statement: >-
+          Wrong repository, branch, or revision identity is denied at reconciliation.
+        required_evidence_types:
+          - test_result
+      - id: AC-018
+        statement: >-
+          Generations form a complete immutable genealogy with parent links.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - wrong_repo_identity_reconciles
+      - head_sha_mutation_overwrites_history
+      - reconcile_races_active_lease
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: runtime_state
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S2-EXACT-LINEAGE
+
+  - id: TASK-010
+    title: Implement immutable candidate snapshots
+    definition_status: blocked
+    workstream_id: WS-S2
+    wave_id: S2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      No submission reaches SUBMITTED unless it names an immutable candidate object.
+      Snapshot dirty trees via temporary index, write-tree, and optional commit-tree
+      without advancing the worker branch, and protect the object under an internal
+      ref. Verification targets the snapshot in a fresh verifier environment.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - define_candidate_schema_with_tree_and_snapshot_identity
+      - snapshot_dirty_worktree_into_internal_ref
+      - verify_immutable_snapshot_in_fresh_environment
+      - recheck_candidate_identity_after_validation
+    acceptance:
+      - id: AC-019
+        statement: >-
+          A dirty candidate receives an immutable snapshot identity without branch movement.
+        required_evidence_types:
+          - test_result
+      - id: AC-020
+        statement: >-
+          Submitted candidate content cannot change between submission and verification.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - dirty_tree_verified_as_head
+      - candidate_mutates_before_verify
+      - validator_mutates_verified_candidate
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: verification
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S2-EXACT-LINEAGE
+
+  - id: TASK-011
+    title: Implement promotion receipts and generation advance
+    definition_status: blocked
+    workstream_id: WS-S2
+    wave_id: S2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Add PASSED_LOCAL, PROMOTED, and COMPLETED states for repo-local tasks. A
+      Promotion Receipt names task, candidate, from and to generations, integration
+      branch, and result commit and tree. COMPLETED means the exact independently
+      verified candidate is present in the Program integrated repository generation.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - add_promotion_receipt_schema
+      - transition_passed_local_to_promoted_to_completed
+      - make_completion_imply_promotion_for_repo_local_tasks
+      - link_successor_readiness_to_predecessor_promotion_ancestry
+    acceptance:
+      - id: AC-021
+        statement: >-
+          A completed repo-local task has its verified candidate in the current program generation.
+        required_evidence_types:
+          - test_result
+      - id: AC-022
+        statement: >-
+          A successor cannot become ready when its predecessor promotion is absent from its base generation.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - completion_without_promotion
+      - successor_ready_without_inherited_promotion
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: task_lifecycle
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S2-EXACT-LINEAGE
+
+  - id: TASK-012
+    title: Bind reconciliation, leases, and contracts to generations
+    definition_status: blocked
+    workstream_id: WS-S2
+    wave_id: S2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Leases bind to base_generation_id as the primary authority coordinate. Source
+      Contracts bind baseline generation, semantic model digest, plan revision, and
+      authority grant ids, so a generation advance deterministically invalidates an
+      old contract when policy requires reauthorization.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - replace_lease_base_sha_with_base_generation_id
+      - bind_source_contracts_to_generation_and_plan_revision
+      - invalidate_contracts_on_generation_advance
+    acceptance:
+      - id: AC-023
+        statement: >-
+          Leases are authorized against a generation, not a coincidental SHA mention.
+        required_evidence_types:
+          - test_result
+      - id: AC-024
+        statement: >-
+          A generation advance invalidates a bound Source Contract where policy requires reissue.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - lease_uses_stale_generation
+      - contract_survives_generation_advance
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: contracts
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S2-EXACT-LINEAGE
+
+  - id: TASK-013
+    title: Split evidence requirements from evidence artifacts
+    definition_status: blocked
+    workstream_id: WS-S3
+    wave_id: S3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Evidence Requirement is immutable program definition; Evidence Artifact is an
+      immutable runtime observation bound to requirement, subject, content identity,
+      result polarity, method, producer principal, environment digest, and payload
+      digest. Replace INSERT OR REPLACE with append-only artifacts.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-blueprint-template/schemas
+    actions:
+      - define_evidence_requirement_schema
+      - define_immutable_evidence_artifact_schema
+      - replace_evidence_upsert_with_append_only
+    acceptance:
+      - id: AC-025
+        statement: >-
+          A requirement can accumulate multiple immutable artifacts over time.
+        required_evidence_types:
+          - test_result
+      - id: AC-026
+        statement: >-
+          Existing evidence artifacts can never be overwritten.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - artifact_overwritten
+      - requirement_and_artifact_conflated
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: evidence_store
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S3-PROOF-ADMISSIBILITY
+
+  - id: TASK-014
+    title: Implement claim-scoped evidence admissibility
+    definition_status: blocked
+    workstream_id: WS-S3
+    wave_id: S3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Replace generic evidence validity with admit_evidence over artifact, requirement,
+      claim, authority context, and time, requiring integrity, subject match,
+      candidate and generation match, evidence type, result polarity, method, producer,
+      freshness, authority, and revocation state.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+    actions:
+      - implement_admit_evidence_engine
+      - enforce_result_polarity_semantics
+      - implement_typed_freshness_categories
+      - reject_cross_claim_and_cross_generation_substitution
+    acceptance:
+      - id: AC-027
+        statement: >-
+          Unrelated, failed, wrong-candidate, wrong-target, and expired evidence are rejected for a claim.
+        required_evidence_types:
+          - test_result
+      - id: AC-028
+        statement: >-
+          Immutable historical proof remains valid unless integrity is invalidated.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - failed_evidence_proves_success
+      - cross_claim_substitution
+      - old_generation_evidence_reused_after_rebase
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: evidence_engine
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S3-PROOF-ADMISSIBILITY
+
+  - id: TASK-015
+    title: Make authority artifacts append-only and durably written
+    definition_status: blocked
+    workstream_id: WS-S3
+    wave_id: S3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Convert evidence, approvals, waivers, gate evaluations, decision resolutions,
+      Unknown resolutions, Source and Rendered Contracts, verification receipts, and
+      handoffs to immutable ID-addressed paths with durable write semantics: temp,
+      flush, fsync, atomic rename, fsync directory, and reject-on-existing-digest.
+      Convenience latest pointers are explicitly non-authoritative.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/common.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - add_durable_immutable_write_to_common
+      - migrate_receipt_paths_to_id_addressed_layout
+      - mark_latest_projections_non_authoritative
+    acceptance:
+      - id: AC-029
+        statement: >-
+          Authority artifacts use immutable ID-addressed paths and reject overwrite of existing digests.
+        required_evidence_types:
+          - test_result
+      - id: AC-030
+        statement: >-
+          Old retry artifacts remain retrievable and digest-valid.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - artifact_overwritten_on_retry
+      - latest_projection_treated_as_authoritative
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: artifact_store
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S3-PROOF-ADMISSIBILITY
+
+  - id: TASK-016
+    title: Enforce acceptance claims as executable proof obligations
+    definition_status: blocked
+    workstream_id: WS-S3
+    wave_id: S3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Compile each task acceptance into a formal runtime claim with required evidence
+      types and content binding to the task promoted candidate. complete_task may
+      proceed only when every acceptance claim has admissible evidence.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - environment/program-execution/core/program-execution-blueprint-template/scripts/validate_blueprint.py
+    actions:
+      - compile_acceptance_into_formal_claims
+      - bind_claims_to_promoted_candidate_content
+      - gate_complete_task_on_admissible_claim_evidence
+    acceptance:
+      - id: AC-031
+        statement: >-
+          A task cannot complete while any acceptance claim lacks admissible evidence.
+        required_evidence_types:
+          - test_result
+      - id: AC-032
+        statement: >-
+          Acceptance metadata transport alone never satisfies completion.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - completion_without_claim_evidence
+      - metadata_transport_as_proof
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: acceptance_semantics
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S3-PROOF-ADMISSIBILITY
+
+  - id: TASK-017
+    title: Preserve and import the executable authority registry
+    definition_status: blocked
+    workstream_id: WS-S4
+    wave_id: S4
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Compile campaign authority semantics into runtime authority records with type,
+      scope, delegability, and required evidence. Do not reduce rich source authority
+      to generic allowed_roles.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/compiler/semantic_model.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/blueprint.py
+      - environment/program-execution/core/shared/schemas/campaign-source.schema.json
+    actions:
+      - preserve_authority_type_scope_delegability_evidence_through_s1
+      - compile_authority_records_into_program_lock
+      - reject_generic_role_flattening
+    acceptance:
+      - id: AC-033
+        statement: >-
+          Program Lock carries executable authority records with type, scope, and delegability.
+        required_evidence_types:
+          - inspection
+      - id: AC-034
+        statement: >-
+          Nondelegable authority cannot be projected or impersonated.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - authority_flattened_to_roles
+      - nondelegable_authority_delegated
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: authority_model
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S4-AUTHORITY-BOUND
+
+  - id: TASK-018
+    title: Add principal contexts and immutable grants
+    definition_status: blocked
+    workstream_id: WS-S4
+    wave_id: S4
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Every privileged operation consumes a PrincipalContext with principal id and
+      type, assurance level, and authority grant ids. Grants are immutable and bind
+      principal, authority, actions, scope, issue and expiry. Actor strings remain
+      display metadata and confer zero authority.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+    actions:
+      - add_principal_grant_and_assertion_tables
+      - thread_principal_context_through_cli
+      - enforce_grant_validity_at_every_use_boundary
+    acceptance:
+      - id: AC-035
+        statement: >-
+          A spoofed actor string cannot authorize any privileged operation.
+        required_evidence_types:
+          - test_result
+      - id: AC-036
+        statement: >-
+          An expired grant cannot authorize and revocation is a new immutable event.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - spoofed_actor_authorizes
+      - expired_grant_authorizes
+      - grant_mutated_in_place
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: authorization
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S4-AUTHORITY-BOUND
+
+  - id: TASK-019
+    title: Rebuild approvals, decisions, and unknowns around authority
+    definition_status: blocked
+    workstream_id: WS-S4
+    wave_id: S4
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      T4 and destructive approvals become exact capability grants binding principal,
+      authority, program digest, task, target, repository generation, candidate,
+      permitted capability, recovery evidence, and expiry. Decisions and Unknowns
+      become resolution revisions with the current accepted projection derived.
+      Worker authority comes from lease plus fencing token.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+    actions:
+      - bind_approvals_to_exact_capability_grants
+      - model_decisions_and_unknowns_as_resolution_revisions
+      - derive_worker_authority_from_lease_and_fence
+      - revalidate_temporal_authorization_at_every_boundary
+    acceptance:
+      - id: AC-037
+        statement: >-
+          T4 approval without required recovery evidence fails.
+        required_evidence_types:
+          - test_result
+      - id: AC-038
+        statement: >-
+          A worker without a valid lease and fence has no authority and controller cannot act as program owner.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - approval_without_recovery_evidence
+      - worker_without_lease_authorizes
+      - controller_acts_as_owner
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: approvals_and_decisions
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S4-AUTHORITY-BOUND
+
+  - id: TASK-020
+    title: Add transactional unit of work with canonical events
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      One logical operation gets one database transaction containing hard-stop checks,
+      readiness, lease expiry, generation check, fencing token allocation, lease
+      creation, task transition, and the canonical runtime event. The event table is
+      canonical with no-update and no-delete triggers; JSONL becomes a projection.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/ledger.py
+    actions:
+      - add_runtime_events_table_with_immutability_triggers
+      - wrap_authoritative_transitions_in_single_transactions
+      - make_jsonl_a_projection_of_canonical_events
+    acceptance:
+      - id: AC-039
+        statement: >-
+          State mutation and its canonical event commit together or not at all.
+        required_evidence_types:
+          - test_result
+      - id: AC-040
+        statement: >-
+          Canonical events cannot be updated or deleted after commit.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - state_success_without_event
+      - event_without_state
+      - dual_commit_divergence
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: runtime_state
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-021
+    title: Add CAS state versions and idempotency keys
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Every mutable aggregate gets state_version with compare-and-swap transitions
+      demanding rowcount of one. Every authority-bearing command gets an operation_id
+      idempotency key so retries return the committed result or execute exactly once.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+    actions:
+      - add_state_version_to_mutable_aggregates
+      - enforce_cas_rowcount_on_all_transitions
+      - add_operation_id_idempotency
+    acceptance:
+      - id: AC-041
+        statement: >-
+          Two concurrent claims produce exactly one winner with a detectable conflict for the other.
+        required_evidence_types:
+          - test_result
+      - id: AC-042
+        statement: >-
+          A retried authority-bearing command never duplicates its effect.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - double_claim
+      - duplicate_approval
+      - stale_version_wins
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: runtime_state
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-022
+    title: Add lease fencing and temporal revocation
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Each protected resource gets a monotonically increasing fence. Leases carry the
+      fencing token and every worker-originated mutation must present it. A superseded
+      fence is permanently stale. Expiry is enforced at every use boundary: prepare,
+      render, start, submit, verify, promote, complete.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - add_fence_generation_to_resources
+      - require_fencing_token_on_all_worker_mutations
+      - enforce_expiry_at_every_authority_boundary
+    acceptance:
+      - id: AC-043
+        statement: >-
+          A worker holding a superseded fence can never commit state.
+        required_evidence_types:
+          - test_result
+      - id: AC-044
+        statement: >-
+          An expired lease loses authority immediately at the next use boundary.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - stale_fence_commits
+      - expired_lease_remains_usable
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: leases
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-023
+    title: Centralize the hard-stop safety kernel
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Create one SafetyKernel.evaluate covering Program Lock validity, semantic model
+      validity, ledger validity, global halt, generation currency, lease currency,
+      fence currency, approval currency, principal authority, replan currency, and
+      required stop conditions. Ledger failure fences immediately. Halt permits only
+      read, status, diagnostics, evidence preservation, and recovery.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - implement_safety_kernel_evaluate
+      - route_every_authority_bearing_transition_through_it
+      - implement_halt_semantics_allow_and_deny_lists
+    acceptance:
+      - id: AC-045
+        statement: >-
+          Ledger corruption produces a hard stop with no claim, start, verify, promote, complete, or close.
+        required_evidence_types:
+          - test_result
+      - id: AC-046
+        statement: >-
+          Every declared hard-safety condition is evaluated before every authority-bearing transition.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - ledger_failure_ignored
+      - halt_allows_success_advance
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: runtime_safety
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-024
+    title: Finish Autonomy atomicity, fencing, capacity, and invalidation
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Do not rewrite Autonomy SQLite fundamentals. Finish its operation model:
+      receipt append inside the transaction, one winner for submit versus revoke,
+      fencing tokens, capacity reservation inside lease issuance, atomic campaign
+      suspension, transitive artifact invalidation through an artifact dependency
+      table, and conformance grants with a cheap invariant fingerprint.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - autonomy/runtime/store.py
+      - autonomy/runtime/receipts.py
+      - autonomy/runtime/leases.py
+      - autonomy/runtime/artifacts.py
+      - autonomy/runtime/scheduler.py
+      - autonomy/runtime/engine.py
+      - autonomy/runtime/types.py
+    actions:
+      - add_append_in_transaction_to_receipt_chain
+      - make_submit_and_revoke_single_winner
+      - add_fence_generation_and_capacity_reservation
+      - make_suspension_atomically_revoke_all_leases
+      - add_artifact_dependency_table_with_transitive_invalidation
+      - add_adapter_conformance_fingerprint
+    acceptance:
+      - id: AC-047
+        statement: >-
+          Revoked lease versus submit has exactly one winner and suspension versus issue has exactly one winner.
+        required_evidence_types:
+          - test_result
+      - id: AC-048
+        statement: >-
+          Capacity one cannot issue two leases, stale fences cannot submit, and parent invalidation cascades transitively.
+        required_evidence_types:
+          - test_result
+      - id: AC-049
+        statement: >-
+          Conformance config or hook drift denies the next tool call.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - double_winner_submit_revoke
+      - suspension_race_leases
+      - invalidation_without_cascade
+      - drift_sessions_stay_authorized
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: autonomy_runtime
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-025
+    title: Bridge PE execution grants to Autonomy
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Add the PE to Autonomy execution bridge. PEC emits an execution grant binding
+      program digest, task, rendered contract digest, base generation, principal and
+      grant context, allowed operations, writable paths, validation obligations, and
+      expiry. Autonomy creates exactly one subordinate action and may never widen,
+      reinterpret, schedule, gate, promote, merge, or terminalize the Program.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/integrations/autonomy_execution_bridge.py
+      - environment/program-execution/scripts/run_campaign.py
+      - autonomy/adapters/contract_renderer.py
+    actions:
+      - define_pe_execution_grant_schema
+      - define_pe_execution_result_schema
+      - implement_bridge_emitting_grants_and_collecting_results
+      - remove_autonomy_packets_not_required_from_runner
+    acceptance:
+      - id: AC-050
+        statement: >-
+          Autonomy receives exactly one subordinate action per PEC grant and cannot alter Program readiness or gates.
+        required_evidence_types:
+          - test_result
+      - id: AC-051
+        statement: >-
+          PEC still independently verifies the candidate after Autonomy returns its execution result.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - autonomy_schedules_program
+      - grant_widened_downstream
+      - bridge_bypassed_by_runner
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: pe_autonomy_bridge
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-026
+    title: Build the crash and concurrency recovery suite
+    definition_status: blocked
+    workstream_id: WS-S5
+    wave_id: S5
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Run a deterministic crash and fault matrix at every side-effect boundary plus
+      concurrency tests: two claims, two transitions, two submissions, lease and
+      approval expiry while running, global halt during execution, process death
+      before and after event commit, ledger corruption before claim, reconcile while
+      lease active. Only committed or detectably recoverable states are legal.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/tests
+      - autonomy/runtime
+    actions:
+      - implement_fault_injection_harness
+      - cover_every_authoritative_boundary
+      - assert_committed_or_recoverable_only
+    acceptance:
+      - id: AC-052
+        statement: >-
+          Every injected crash yields a committed or detectably recoverable state, never ambiguous.
+        required_evidence_types:
+          - test_result
+      - id: AC-053
+        statement: >-
+          No state says success while its receipt is absent, and no receipt exists without its state.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - success_state_without_receipt
+      - receipt_without_state
+      - lease_released_artifact_absent
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: test_suite
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S5-LINEARIZABLE-RUNTIME
+
+  - id: TASK-027
+    title: Invert the gate API and type gate methods
+    definition_status: blocked
+    workstream_id: WS-S6
+    wave_id: S6
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Delete the caller-owned gate result. pec evaluate-gate takes the gate id only;
+      the Controller loads the definition, resolves requirements, admits evidence,
+      executes the declared method, derives the result, and persists an immutable
+      GateEvaluationReceipt. Methods are typed: evidence_all, validation_result,
+      repository_generation, schema_validation, manual_attestation, composite_all,
+      composite_any.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - environment/program-execution/scripts/run_campaign.py
+    actions:
+      - remove_caller_supplied_gate_result
+      - implement_gate_engine_with_typed_methods
+      - persist_immutable_gate_evaluation_receipts
+      - identify_attesting_authority_for_manual_attestation
+    acceptance:
+      - id: AC-054
+        statement: >-
+          A caller cannot force a gate PASS or substitute the gate method.
+        required_evidence_types:
+          - test_result
+      - id: AC-055
+        statement: >-
+          Gate outcomes are derived from gate definition and admissible evidence.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - caller_passes_result
+      - method_substituted
+      - prose_treated_as_executable
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: gate_engine
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S6-EXECUTION-SEMANTICS
+
+  - id: TASK-028
+    title: Constrain the verifier and unify path semantics
+    definition_status: blocked
+    workstream_id: WS-S6
+    wave_id: S6
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Replace the unrestricted inherited shell with a typed command specification:
+      argv, cwd, timeout, minimal allowlisted environment, no inherited credentials,
+      no Git prompts, explicit network and write capability. Define one path grammar
+      used by PE and Autonomy, add a proper parser for git status porcelain output,
+      and evaluate renames against their destination path.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - autonomy/runtime/capability_gateway.py
+      - environment/program-execution/scripts/collect_evidence.py
+    actions:
+      - implement_typed_validation_command_runner
+      - strip_credentials_from_verifier_environment
+      - implement_canonical_path_grammar_module
+      - implement_porcelain_changed_path_parser
+      - evaluate_renames_by_destination
+    acceptance:
+      - id: AC-056
+        statement: >-
+          Validation cannot mutate or escape candidate scope and staged rename destination scope is checked.
+        required_evidence_types:
+          - test_result
+      - id: AC-057
+        statement: >-
+          The verifier environment carries no inherited credential and never prompts Git.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - validator_mutates_candidate
+      - rename_source_scope_confusion
+      - credential_leak_into_verifier
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: verification
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S6-EXECUTION-SEMANTICS
+
+  - id: TASK-029
+    title: Make replan generation-aware and fail-closed
+    definition_status: blocked
+    workstream_id: WS-S6
+    wave_id: S6
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Replan activation may directly affect only BLOCKED, ELIGIBLE, FAILED, and STALE
+      tasks. In-flight tasks require explicit revoke, fence release, preserved
+      evidence, a new plan revision, and a new Source Contract. A missing, corrupt, or
+      inconsistent active plan revision is a hard stop, never a fallback to the locked
+      plan.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/replan.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - enforce_replan_state_allowlist
+      - implement_explicit_revoke_and_recontract_flow
+      - hard_stop_on_corrupt_active_plan_revision
+      - remove_fallback_to_locked_plan
+    acceptance:
+      - id: AC-058
+        statement: >-
+          Replan corruption hard stops and never silently changes a running task.
+        required_evidence_types:
+          - test_result
+      - id: AC-059
+        statement: >-
+          A replan affecting in-flight work requires revoke, new plan revision, and new contract.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - replan_changes_running_task
+      - corrupt_plan_falls_back
+      - in_flight_task_silently_replanned
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: replan
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S6-EXECUTION-SEMANTICS
+
+  - id: TASK-030
+    title: Make retry policy executable with automatic cleanup
+    definition_status: blocked
+    workstream_id: WS-S6
+    wave_id: S6
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Carry max_attempts, retryable causes, non-retryable causes, contract reissue
+      triggers, and preserve-every-attempt through S1. Classify failures into a typed
+      taxonomy; scope and authority violations are nonretryable hard safety. Controller
+      owns retry cleanup: recovery artifact, worktree remove and prune, branch
+      lifecycle, fence release, new attempt, and fresh contract when required.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+    actions:
+      - implement_failure_taxonomy_and_retry_policy
+      - make_scope_and_authority_violations_nonretryable
+      - implement_controller_owned_worktree_cleanup
+      - allocate_new_attempt_fence_and_contract_on_retry
+    acceptance:
+      - id: AC-060
+        statement: >-
+          Retryable failures retry within max attempts and nonretryable failures never silently retry.
+        required_evidence_types:
+          - test_result
+      - id: AC-061
+        statement: >-
+          Retry removes the linked worktree safely and preserves every attempt artifact immutably.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - scope_violation_retried
+      - retry_ceiling_exceeded
+      - stale_worktree_left_behind
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: retry_lifecycle
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S6-EXECUTION-SEMANTICS
+
+  - id: TASK-031
+    title: Wire promotion into scheduling and completion
+    definition_status: blocked
+    workstream_id: WS-S6
+    wave_id: S6
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Operationalize promotion in scheduling: verify exact candidate, PASSED_LOCAL,
+      promote into the current integration generation, PROMOTED, completion gate
+      evaluation, COMPLETED, then the next task bases on the new generation. Enforce
+      scheduler max-workers and one-writer semantics as runtime laws.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - autonomy/runtime/scheduler.py
+    actions:
+      - wire_promotion_into_task_completion
+      - base_successor_on_promoted_generation
+      - enforce_scheduler_limits_as_runtime_laws
+    acceptance:
+      - id: AC-062
+        statement: >-
+          Predecessor promoted state is inherited by the successor task base generation.
+        required_evidence_types:
+          - test_result
+      - id: AC-063
+        statement: >-
+          Scheduler max-workers and one-writer semantics are enforced at runtime.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - successor_misses_predecessor_promotion
+      - workers_exceed_limit
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: scheduling
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S6-EXECUTION-SEMANTICS
+
+  - id: TASK-032
+    title: Introduce the provisional convergence report
+    definition_status: blocked
+    workstream_id: WS-S7
+    wave_id: S7
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Split convergence from owner verdict. The Controller emits an advisory
+      Convergence Report with exact current program candidate, task results, gate
+      results, evidence inventory, risks, Unknowns, waivers, rollback proof, ledger
+      root, and recommended verdict. It is admissible evidence for the closeout gate
+      and never terminalizes execution.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - implement_convergence_report_object
+      - emit_report_before_final_task_completion
+      - keep_report_advisory
+    acceptance:
+      - id: AC-064
+        statement: >-
+          The Controller recommendation never alters campaign status.
+        required_evidence_types:
+          - test_result
+      - id: AC-065
+        statement: >-
+          The convergence report contains exact generations, gate evaluations, and rollback proof.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - controller_terminalizes
+      - report_without_generations
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: closeout
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S7-OWNER-CLOSEOUT
+
+  - id: TASK-033
+    title: Define the final handoff with lineage and rollback proof
+    definition_status: blocked
+    workstream_id: WS-S7
+    wave_id: S7
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      The final handoff is an immutable complete closeout artifact containing campaign
+      source, semantic model, accepted Blueprint, and Program Lock digests; per-target
+      generations with commit, tree, remote identity, branch, and promotion chain;
+      per-task candidate, verification, and promotion ids; gates, decisions, Unknowns,
+      waivers, residual risks, rollback proof, and ledger final digest.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+    actions:
+      - define_final_handoff_schema
+      - bind_handoff_to_exact_final_generations
+      - require_observed_rollback_proof_bound_to_final_generation
+    acceptance:
+      - id: AC-066
+        statement: >-
+          A handoff without exact final target generations is insufficient.
+        required_evidence_types:
+          - test_result
+      - id: AC-067
+        statement: >-
+          Stale or wrong-candidate rollback proof blocks closeout.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - handoff_without_generations
+      - rollback_proof_wrong_generation
+      - rollback_proof_prose_only
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: closeout
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S7-OWNER-CLOSEOUT
+
+  - id: TASK-034
+    title: Add the owner verdict receipt and principal enforcement
+    definition_status: blocked
+    workstream_id: WS-S7
+    wave_id: S7
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      complete_campaign accepts a program_verdict_receipt bound to the handoff digest,
+      final program candidate id, verdict, authority, and principal assertion. It
+      recomputes invariants: verdict authority valid, handoff exact, generations exact,
+      ledger valid, rollback proof current, gates satisfied, lock valid, no hard
+      safety stop. Never trust the caller's claimed verdict.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+    actions:
+      - define_program_verdict_receipt
+      - enforce_owner_authority_on_terminal_verdict
+      - recompute_closeout_invariants_in_complete_campaign
+    acceptance:
+      - id: AC-068
+        statement: >-
+          Controller cannot issue the terminal owner verdict and a spoofed owner cannot close.
+        required_evidence_types:
+          - test_result
+      - id: AC-069
+        statement: >-
+          An owner decision bound to a different handoff fails.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - controller_closes_program
+      - spoofed_owner_closes
+      - verdict_bound_to_wrong_handoff
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: closeout
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S7-OWNER-CLOSEOUT
+
+  - id: TASK-035
+    title: Settle INCONCLUSIVE and terminal state semantics
+    definition_status: blocked
+    workstream_id: WS-S7
+    wave_id: S7
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      INCONCLUSIVE means execution terminated without enough evidence to claim
+      convergence or non-convergence safely. It terminalizes the campaign lifecycle
+      but is not a success or failure claim. The CLI terminal vocabulary becomes
+      CONVERGED, CONVERGED_WITH_NON_BLOCKING_RISKS, NOT_CONVERGED, INCONCLUSIVE.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+      - environment/program-execution/core/shared/schemas/campaign-source.schema.json
+    actions:
+      - add_inconclusive_to_terminal_vocabulary
+      - implement_inconclusive_terminalization_semantics
+      - keep_only_converged_verdicts_as_success
+    acceptance:
+      - id: AC-070
+        statement: >-
+          INCONCLUSIVE terminalizes execution without claiming success or failure.
+        required_evidence_types:
+          - test_result
+      - id: AC-071
+        statement: >-
+          Only CONVERGED and CONVERGED_WITH_NON_BLOCKING_RISKS mean successful convergence.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - inconclusive_rejected_as_terminal
+      - inconclusive_counted_as_success
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: closeout
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S7-OWNER-CLOSEOUT
+
+  - id: TASK-036
+    title: Implement v2 to v3 migration
+    definition_status: blocked
+    workstream_id: WS-S8
+    wave_id: S8
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Migration reads v2 and produces a new v3 runtime; it never rewrites v2 in place.
+      v2 evidence, approvals, verifications, and handoffs import as legacy_v2 with
+      requires_reverification where the missing dimension matters. Migration emits a
+      receipt with source runtime digest, Program Lock, DB hash, ledger root, mapping
+      decisions, unmigrated artifacts, reverification obligations, and target digest.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+    actions:
+      - implement_pec_v3_migrate_command
+      - import_legacy_artifacts_as_legacy_v2
+      - emit_migration_receipt
+      - require_reverification_for_strengthened_dimensions
+    acceptance:
+      - id: AC-072
+        statement: >-
+          Migration is repeatable and never mutates v2 historical artifacts.
+        required_evidence_types:
+          - test_result
+      - id: AC-073
+        statement: >-
+          Legacy v2 evidence cannot privilege-escalate into v3 proof.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - legacy_evidence_escalates
+      - v2_rewritten_in_place
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: migration
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S8-V3-CONFORMANCE
+
+  - id: TASK-037
+    title: Run full adversarial vertical conformance with fault injection
+    definition_status: blocked
+    workstream_id: WS-S8
+    wave_id: S8
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Build one synthetic campaign containing every important semantic feature and run
+      the full pipeline from Campaign Source through compile, accept, Program Lock,
+      reconcile, contract, claim, submit, verify, promote, retry and replan, gate,
+      provisional handoff, final handoff, to owner verdict. Inject process death at
+      every transactional boundary and add property and concurrency tests.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/conformance
+      - environment/program-execution/core/program-execution-controller-template/scripts/tests
+    actions:
+      - build_full_feature_synthetic_campaign
+      - run_end_to_end_vertical_conformance
+      - inject_faults_at_every_boundary
+      - add_property_and_concurrency_tests
+    acceptance:
+      - id: AC-074
+        statement: >-
+          Vertical conformance passes with zero hardening xfails and all v2 counterexamples blocked.
+        required_evidence_types:
+          - test_result
+      - id: AC-075
+        statement: >-
+          Restart after every injected fault yields one deterministic state.
+        required_evidence_types:
+          - test_result
+    negative_cases:
+      - hardening_xfail_remains
+      - fault_produces_ambiguous_state
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: conformance_suite
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S8-V3-CONFORMANCE
+
+  - id: TASK-038
+    title: Run shadow and self-host fixture execution
+    definition_status: blocked
+    workstream_id: WS-S8
+    wave_id: S8
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Instantiate the new Controller from a clean checkout and have v3 execute a
+      small non-destructive Program Execution campaign against a fixture repository,
+      then execute a v3 self-host fixture. v3's first real production act must not be
+      upgrading itself. Fixture repository identity is resolved by bounded probe.
+    authority_basis_ids:
+      - AUTH-003
+    required_decision_ids: []
+    blocking_unknown_ids:
+      - UNK-001
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution/conformance
+    actions:
+      - resolve_shadow_fixture_repository_identity
+      - run_shadow_campaign_to_convergence
+      - run_self_host_fixture_to_convergence
+    acceptance:
+      - id: AC-076
+        statement: >-
+          Shadow campaign converges and self-host fixture converges.
+        required_evidence_types:
+          - test_result
+      - id: AC-077
+        statement: >-
+          v3 made no production act before fixture convergence.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - v3_upgrades_itself_first
+      - shadow_diverges
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: fixture_repository
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S8-V3-CONFORMANCE
+
+  - id: TASK-039
+    title: Final documentation, spec, and runtime parity audit
+    definition_status: blocked
+    workstream_id: WS-S8
+    wave_id: S8
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Docs, runbook, and schema must agree with the implementation: semantic model,
+      generations, candidates, promotion, admissibility, principals, transactions,
+      fencing, gates, replan, retry, handoff, rollback, verdicts, and migration. The
+      campaign ends at activation-ready; activation is a separate follow-on campaign.
+    authority_basis_ids:
+      - AUTH-002
+    required_decision_ids: []
+    blocking_unknown_ids: []
+    input_evidence_ids: []
+    paths:
+      - environment/program-execution
+    actions:
+      - audit_docs_runbook_schema_against_implementation
+      - fix_all_parity_drift
+      - record_activation_handoff_notes
+    acceptance:
+      - id: AC-078
+        statement: >-
+          Docs, runbook, and schema agree with implementation on every v3 surface.
+        required_evidence_types:
+          - inspection
+      - id: AC-079
+        statement: >-
+          Campaign ends activation-ready with a separate activation follow-on documented.
+        required_evidence_types:
+          - inspection
+    negative_cases:
+      - docs_describe_v2
+      - schema_disagrees_with_runtime
+    rollback:
+      strategy: restore_to_baseline
+      trigger: test_failure
+      validation: baseline_tests_pass
+    risk:
+      tier: T1
+      reversibility: reversible
+      blast_radius: documentation
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-S8-V3-CONFORMANCE
+      - GATE-CLOSE
