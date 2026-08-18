@@ -81,11 +81,13 @@ for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
   fi
 done
 if [ -n "${GH_TOKEN:-}" ] && [ "$GH_TOKEN" != "proxy-injected" ]; then
-  warn "GH_TOKEN is a real credential — PROHIBITED; replacing with the literal proxy-injected"
+  warn "GH_TOKEN is a real credential — PROHIBITED; unsetting (platform proxy authenticates)"
+  unset GH_TOKEN
 fi
-# Variables file contract: never a PAT. Anthropic's git proxy authenticates;
-# this literal is a posture marker, not a credential.
-export GH_TOKEN=proxy-injected
+# Variables file contract: never a PAT. Anthropic's git proxy authenticates and
+# injects its own credential; this environment exports no GH_TOKEN at all. If a
+# self-hosted deployment supplies a real token under a different trust policy,
+# that is a separate mode and must not be persisted by this cloud bootstrap.
 
 : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 export GRAPHITI_MCP_URL
@@ -137,15 +139,15 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
   echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
-  echo "export GH_TOKEN=proxy-injected"
   if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
     echo "export L9_CAPABILITY_BROKER_URL=$(printf %q "$L9_CAPABILITY_BROKER_URL")"
   fi
+  # No GH_TOKEN export: the platform proxy injects its own credential.
   # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
   echo "unset GRAPHITI_MCP_TOKEN INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
   echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
-  echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN GITHUB_TOKEN"
+  echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN GITHUB_TOKEN GH_TOKEN"
 } > "$L9_ENV_FILE"
 
 # NOTE: Sonar project identity is deliberately NOT written here. It is

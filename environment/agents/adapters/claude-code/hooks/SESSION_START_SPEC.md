@@ -17,12 +17,23 @@
 
 ## Must emit when governance found
 
-1. Governance rev (branch@sha)
+1. Governance rev (branch@sha) — on `CLAUDE_CODE_REMOTE=true` the ephemeral
+   governance clone is refreshed from `origin/main` first (fetch, reset, record
+   exact revision); on local/Desktop the checkout is **never reset** — report
+   revision + drift against origin/main only.
 2. Authority order including Autonomy Surface Profile
 3. Verbatim Profile `session_start_block` via `ops/autonomy/profile_loader.py` (stdlib-only extract; no PyYAML required on SessionStart path)
 4. Read-only autonomy `bootstrap.py` context when available
 5. Skill-router readiness hint (`ops/generated/skill-registry.json`)
-6. Optional `memory-bank/activeContext.md` excerpt
+6. **L9 Claude environment status block** projected from
+   `~/.l9/claude/bootstrap-state.json` (schema `l9.claude-bootstrap.v1`, written
+   by `install.sh`): surface, execution (anthropic-cloud / local), governance
+   rev, bootstrap, settings, capability broker, memory, skills, rules. An
+   absent receipt is stated as such ("run `make claude-install` once"), never
+   invented.
+7. On cloud sessions: a session-deps line from `hooks/session_deps_cloud.sh`
+   (fingerprint-cached consumer workspace toolchain + pre-commit warm; bounded
+   budget, self-detaches to background on expiry).
 
 ## Acceptance
 
@@ -30,8 +41,11 @@
 - exit code 0 even when gov missing
 - When gov present, context contains `Autonomy Velocity Doctrine` (from Profile)
 - Profile block sha256 matches `profile_loader.block_sha256()`
+- When a bootstrap receipt exists, context contains the `L9 Claude environment`
+  block with the receipt's per-step statuses; when absent, the absence is named
 
 ## Non-goals
 
 - Skill scoring / Graphiti client / plugin classify / autonomy scheduler
-- Background governance sync inside the 30s SessionStart budget
+- Blocking a session on a dependency install: the cloud session-deps helper is
+  fingerprint-cached and budget-bounded, and the hook stays fail-open

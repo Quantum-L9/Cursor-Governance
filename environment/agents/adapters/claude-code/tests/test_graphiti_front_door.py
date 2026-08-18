@@ -69,10 +69,27 @@ class FrontDoorTests(unittest.TestCase):
         self.assertNotIn("l9-shared-memory", servers)
         self.assertIn("graphiti-memory", servers)
         url = servers["graphiti-memory"].get("url", "")
-        self.assertEqual(url, "${GRAPHITI_MCP_URL}")
-        auth = servers["graphiti-memory"].get("headers", {}).get("Authorization", "")
-        self.assertIn("${GRAPHITI_MCP_TOKEN}", auth)
-        self.assertIn("Bearer", auth)
+        self.assertEqual(url, "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti")
+
+    def test_mcp_template_holds_no_bearer(self) -> None:
+        """Contract S3/§12: the functional config carries no Graphiti bearer.
+
+        A prohibition mention in the _comment block documents the contract and
+        is expected; the mcpServers config itself must never reference it.
+        """
+        raw = (CLAUDE / "mcp.template.json").read_text(encoding="utf-8")
+        mcp = json.loads(raw)
+        self.assertNotIn("GRAPHITI_MCP_TOKEN", json.dumps(mcp["mcpServers"]))
+        self.assertNotIn("Bearer", raw)
+        mem = mcp["mcpServers"]["graphiti-memory"]
+        self.assertFalse(mem.get("headers"), "graphiti-memory must carry no headers")
+
+    def test_environment_template_exports_no_credentials(self) -> None:
+        """The cloud variables field is plaintext and model-readable: no
+        assignment of any credential name may appear in it."""
+        env = (CLAUDE / "web" / "environment.env.example").read_text(encoding="utf-8")
+        for token in ("GH_TOKEN", "GRAPHITI_MCP_TOKEN", "INFISICAL_CLIENT_SECRET", "SONAR_TOKEN"):
+            self.assertNotRegex(env, rf"^\s*{token}\s*=", f"{token} must not be assigned")
 
 
 if __name__ == "__main__":
