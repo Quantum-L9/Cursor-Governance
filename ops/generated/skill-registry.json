@@ -558,7 +558,34 @@
         ],
         "signal_weight": 8,
         "supporting": [
-          "l9-structured-reasoning"
+          "l9-structured-reasoning",
+          "l9-pe-nuggets"
+        ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "pe_nuggets",
+        "negative_signals": [
+          "make campaign",
+          "activate a campaign"
+        ],
+        "positive_signals": [
+          "extract nuggets",
+          "primed nuggets",
+          "plan_status seal",
+          "stack-proof nuggets"
+        ],
+        "primary": "l9-pe-nuggets",
+        "required_any": [
+          "extract_nuggets",
+          "nuggets.json",
+          "plan window",
+          "PLAN window",
+          "/l9-pe-nuggets"
+        ],
+        "signal_weight": 7,
+        "supporting": [
+          "l9-pe-campaign-activate"
         ]
       },
       {
@@ -1000,6 +1027,17 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "extract primed campaign nuggets.json and seal plan_status after stack-proof. use when the PLAN window runs, make campaign needs nuggets, or extract_nuggets.py is invoked. do not use as a campaign front door (use l9-pe-campaign-activate / make campaign).",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pe-nuggets",
+      "path": "skills/l9-pe-nuggets",
+      "reason": "PLAN-window nugget extraction only; make campaign is the front door",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "create a machine-validated execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes. do not use when the user only wants to execute an already-settled plan or a trivial fully-specified one-line fix.",
       "disable_model_invocation": false,
@@ -1188,6 +1226,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "653f3e203c26c8dbdddb9a9cbfeec55aa18819f5f18553094a378ce8af8d3a1b",
-  "source_skill_corpus_sha256": "f43b8a56d0298500b2381fd24ebc115bf1843cbfe685af9e089c7877b5c0b0b2"
+  "source_manifest_sha256": "f5fa73c19595346ba7d62b62f43e61ac8a4d655cb75e4cb713eae1bf0caa9067",
+  "source_skill_corpus_sha256": "a46d99765d3856bd0f852e1528940b68610eb4e414471e1730997a39de29f34c"
 }

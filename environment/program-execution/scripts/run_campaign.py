@@ -32,6 +32,7 @@ except ImportError:  # pragma: no cover
 PE_ROOT = Path(__file__).resolve().parents[1]
 GOV_ROOT = PE_ROOT.parents[1]
 ACTIVATE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+NUGGET_SCRIPT = GOV_ROOT / "skills/l9-pe-nuggets/scripts/extract_nuggets.py"
 AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
 BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
@@ -91,6 +92,7 @@ class Hooks:
     git: Callable[..., str] | None = None
     context7_stack: Callable[[dict[str, Any], Path], dict[str, Any]] | None = None
     write_task_output: Callable[[Path, str, str], str] | None = None
+    plan_window: Callable[[dict[str, Any], Path, Path], dict[str, Any]] | None = None
 
 
 @dataclass
@@ -377,6 +379,58 @@ def default_compile_activation(intent: Path, repo_root: Path) -> dict[str, Any]:
     module = importlib.util.module_from_spec(loader)
     loader.loader.exec_module(module)
     return module.compile_activation(intent, repo_root)
+
+
+def default_plan_window(
+    seed: dict[str, Any], primed_dir: Path, stack_proof_path: Path
+) -> dict[str, Any]:
+    loader = importlib.util.spec_from_file_location("extract_nuggets", NUGGET_SCRIPT)
+    if loader is None or loader.loader is None:
+        raise CampaignError(f"cannot load {NUGGET_SCRIPT}")
+    module = importlib.util.module_from_spec(loader)
+    loader.loader.exec_module(module)
+    return module.project_plan_window(seed, primed_dir, stack_proof_path)
+
+
+def dispatch_kernel_change(verification: dict[str, Any]) -> dict[str, Any]:
+    kernel = str(verification.get("kernel_verdict") or "").strip()
+    gates = verification.get("gates") or {}
+    failed = [name for name, value in gates.items() if value == "FAIL"]
+    if kernel == "INCOMPLETE":
+        return {
+            "action": "skip_change",
+            "reason": "INCOMPLETE does not enter CHANGE",
+            "diagnosed": False,
+        }
+    if kernel != "FAIL":
+        return {"action": "none", "diagnosed": False}
+    if not failed:
+        return {
+            "action": "refuse",
+            "reason": "Diagnose First: refuse mutate-before-diagnosis",
+            "diagnosed": False,
+        }
+    return {
+        "action": "change",
+        "reason": "Diagnose First",
+        "diagnosed": True,
+        "failed_gates": failed,
+        "kernel_profile": "CHANGE",
+    }
+
+
+def apply_fail_change(
+    verification: dict[str, Any],
+    rewrite: Callable[[], Any],
+    reverify: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    decision = dispatch_kernel_change(verification)
+    if decision["action"] != "change":
+        return decision
+    rewrite()
+    verified = reverify()
+    decision["reverify"] = verified
+    return decision
 
 
 def default_context7_stack(seed: dict[str, Any], primed_dir: Path) -> dict[str, Any]:
@@ -1648,6 +1702,25 @@ def default_execute(
             receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
             pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
         verification = pec_cmd(workspace, "verify", task_id)
+        decision = dispatch_kernel_change(verification)
+        if decision["action"] == "skip_change":
+            raise CampaignError(
+                f"pec verify {task_id} INCOMPLETE: skip CHANGE ({decision['reason']})"
+            )
+        if decision["action"] == "refuse":
+            raise CampaignError(f"Diagnose First: {decision['reason']}")
+        if decision["action"] == "change":
+            apply_fail_change(
+                verification,
+                rewrite=rewrite_output,
+                reverify=lambda: pec_cmd(workspace, "verify", task_id),
+            )
+            verification = pec_cmd(workspace, "verify", task_id)
+            if verification.get("kernel_verdict") != "PASS":
+                raise CampaignError(
+                    f"pec verify {task_id} after CHANGE did not PASS: "
+                    f"{verification.get('kernel_verdict') or verification.get('verdict')}"
+                )
         if verification.get("verdict") != "PASSED_LOCAL":
             raise CampaignError(f"pec verify {task_id} did not PASS: {verification.get('verdict')}")
         evidence_id = str(verification["evidence_id"])
@@ -2007,8 +2080,21 @@ def run_campaign(
     )
 
     compile_activation = hooks.compile_activation or default_compile_activation
+    plan_fn = hooks.plan_window or default_plan_window
+    log(f"plan-window {campaign_id}")
+    plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+    projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
+    if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
+        if hooks.compile_activation is None:
+            raise CampaignError(
+                f"plan_status {plan_receipt.get('plan_status')!r} is not Ready or "
+                "ConditionallyReady; refuse seal"
+            )
     log(f"emit {campaign_id} into {write_root}")
-    compile_activation(resolved_intent, write_root)
+    compile_activation(
+        projected_intent if projected_intent.is_file() else resolved_intent,
+        write_root,
+    )
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(

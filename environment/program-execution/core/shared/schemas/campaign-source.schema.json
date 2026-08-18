@@ -59,6 +59,16 @@
       "type": "object",
       "additionalProperties": true
     },
+    "plan_status": {
+      "type": "string",
+      "enum": [
+        "Ready",
+        "ConditionallyReady",
+        "Partial",
+        "Blocked",
+        "Failed"
+      ]
+    },
     "program": {
       "type": "object",
       "additionalProperties": true,
@@ -205,7 +215,42 @@
       "type": "array",
       "items": {
         "type": "object",
-        "additionalProperties": true
+        "additionalProperties": true,
+        "properties": {
+          "consumers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "entrypoints": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "validation": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "kernel_profile": {
+            "type": "string",
+            "enum": [
+              "BUILD",
+              "CHANGE",
+              "AUDIT"
+            ]
+          },
+          "nugget_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "gates": {

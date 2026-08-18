@@ -108,6 +108,8 @@ tiers:
       Read/attach so agents load that sealed front door; invoking the skill is
       merge authority for the one campaign PR after the runner reaches close.
       Fleet merge of other open PRs is /l9-pr-remediation.
+  - skill: l9-pe-nuggets
+    reason: PLAN-window nugget extraction only; make campaign is the front door
   - skill: l9-cli-optimization
     reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
   - skill: l9-e2e-blocker-resolution
@@ -627,9 +629,30 @@ claude_routing:
     - campaign authorization
     supporting:
     - l9-structured-reasoning
+    - l9-pe-nuggets
     note: 'explicit_only + hint_allowed — Read/attach only. Recommendation names make campaign INTENT=; it does not grant pec, compile, or merge authority. Invoking the skill is merge authority for that one campaign after the runner reaches close.
 
       '
+  - id: pe_nuggets
+    primary: l9-pe-nuggets
+    signal_weight: 7
+    hint_allowed: true
+    required_any:
+    - extract_nuggets
+    - nuggets.json
+    - plan window
+    - PLAN window
+    - /l9-pe-nuggets
+    positive_signals:
+    - extract nuggets
+    - primed nuggets
+    - plan_status seal
+    - stack-proof nuggets
+    negative_signals:
+    - make campaign
+    - activate a campaign
+    supporting:
+    - l9-pe-campaign-activate
   - id: ui_operator
     primary: l9-ui-operator
     signal_weight: 8
