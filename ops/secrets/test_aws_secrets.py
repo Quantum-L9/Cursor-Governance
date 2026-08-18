@@ -7,11 +7,13 @@ import importlib.util
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 import unittest.mock as mock
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 SECRETS = Path(__file__).resolve().parent
@@ -143,25 +145,30 @@ class ResolveSecretTests(unittest.TestCase):
 
     def test_check_ok_never_echoes_value(self) -> None:
         secret_value = "SUPER_SECRET_TOKEN_VALUE_XYZ"
+        # --check is non-value-bearing: it probes metadata, never the value. The
+        # value fetcher is mocked so that a regression which reintroduced it would
+        # be caught by the assert_not_called below rather than silently passing.
         with mock.patch.object(
             resolve,
             "fetch_secret_string",
             return_value=(json.dumps({"token": secret_value}), None),
-        ):
-            with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
-                with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
-                    rc = resolve.main(
-                        [
-                            "--ref",
-                            "openclaw-igorbot/github#token",
-                            "--check",
-                            "--registry",
-                            str(self.registry_path),
-                        ]
-                    )
-                    stdout = out.getvalue()
-                    stderr = err.getvalue()
+        ) as fetch:
+            with mock.patch.object(resolve, "probe_secret_metadata", return_value=None):
+                with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                    with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+                        rc = resolve.main(
+                            [
+                                "--ref",
+                                "openclaw-igorbot/github#token",
+                                "--check",
+                                "--registry",
+                                str(self.registry_path),
+                            ]
+                        )
+                        stdout = out.getvalue()
+                        stderr = err.getvalue()
         self.assertEqual(rc, 0)
+        fetch.assert_not_called()
         self.assertIn("OK", stdout)
         self.assertNotIn("openclaw-igorbot", stdout)
         self.assertNotIn("token", stdout.lower().replace("super_secret_token_value_xyz", ""))
@@ -246,8 +253,12 @@ class RawResolutionTrustBoundaryTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def _run_cli(self, env: dict[str, str], *extra: str) -> tuple[int, str, str, Any, Any]:
-        """Run main() under a simulated surface with the provider fully mocked."""
+    def _run_cli(self, env: dict[str, str], *extra: str) -> tuple[int, str, str, Any, Any, Any]:
+        """Run main() under a simulated surface with BOTH provider paths mocked.
+
+        Returning the value fetcher and the metadata prober separately is what
+        lets each case assert which provider operation actually happened.
+        """
         argv = ["--ref", self.REF, "--registry", str(self.registry_path), *extra]
         with mock.patch.dict(os.environ, env, clear=True):
             with mock.patch.object(
@@ -255,11 +266,21 @@ class RawResolutionTrustBoundaryTests(unittest.TestCase):
                 "fetch_secret_string",
                 return_value=(json.dumps({"token": self.FAKE_VALUE}), None),
             ) as fetch:
-                with mock.patch.object(resolve, "_emit_secret_value") as emit:
-                    with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
-                        with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
-                            rc = resolve.main(argv)
-                            return rc, out.getvalue(), err.getvalue(), fetch, emit
+                with mock.patch.object(
+                    resolve, "probe_secret_metadata", return_value=None
+                ) as probe:
+                    with mock.patch.object(resolve, "_emit_secret_value") as emit:
+                        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                            with mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+                                rc = resolve.main(argv)
+                                return (
+                                    rc,
+                                    out.getvalue(),
+                                    err.getvalue(),
+                                    fetch,
+                                    probe,
+                                    emit,
+                                )
 
     def _assert_no_value_escaped(self, stdout: str, stderr: str, emit: Any) -> None:
         # _emit_secret_value writes to raw fd 1, so a captured-stdout assertion
@@ -271,7 +292,7 @@ class RawResolutionTrustBoundaryTests(unittest.TestCase):
     # --- A: model-controlled raw resolution is refused -----------------------
 
     def test_model_controlled_raw_resolution_is_denied(self) -> None:
-        rc, stdout, stderr, fetch, emit = self._run_cli(self.MODEL_ENV)
+        rc, stdout, stderr, fetch, _probe, emit = self._run_cli(self.MODEL_ENV)
         self.assertEqual(rc, 1)
         # Refusal happens before retrieval, not after.
         fetch.assert_not_called()
@@ -282,7 +303,7 @@ class RawResolutionTrustBoundaryTests(unittest.TestCase):
         self.assertNotIn("AWS_CLI_NOT_FOUND", stderr)
 
     def test_operator_claim_from_model_runtime_is_refused(self) -> None:
-        rc, stdout, stderr, fetch, emit = self._run_cli(self.ESCALATION_ENV)
+        rc, stdout, stderr, fetch, _probe, emit = self._run_cli(self.ESCALATION_ENV)
         self.assertEqual(rc, 1)
         fetch.assert_not_called()
         self._assert_no_value_escaped(stdout, stderr, emit)
@@ -299,30 +320,59 @@ class RawResolutionTrustBoundaryTests(unittest.TestCase):
     # --- B: --check stays available to model-controlled surfaces -------------
 
     def test_check_remains_permitted_on_model_controlled_surface(self) -> None:
-        rc, stdout, stderr, fetch, emit = self._run_cli(self.MODEL_ENV, "--check")
+        """A: --check succeeds and NEVER reaches the value fetcher."""
+        rc, stdout, stderr, fetch, probe, emit = self._run_cli(self.MODEL_ENV, "--check")
         self.assertEqual(rc, 0)
         self.assertIn("OK", stdout)
-        # Status probing is allowed to reach the provider; emitting is not.
-        fetch.assert_called_once()
+        # The whole point of the amendment: no raw secret bytes enter the process.
+        fetch.assert_not_called()
         self._assert_no_value_escaped(stdout, stderr, emit)
         self.assertNotIn("DENIED", stderr)
+        del probe
 
-    def test_probe_ref_needs_no_trust(self) -> None:
+    def test_check_uses_metadata_probe_exactly_once(self) -> None:
+        """B: the reachability answer comes from metadata, not from the value."""
+        _rc, _stdout, _stderr, fetch, probe, _emit = self._run_cli(self.MODEL_ENV, "--check")
+        probe.assert_called_once()
+        fetch.assert_not_called()
+        # The probe is asked about the secret object, never about the field.
+        self.assertEqual(probe.call_args.args[0], "openclaw-igorbot/github")
+
+    def test_probe_ref_needs_no_trust_and_no_value(self) -> None:
         with mock.patch.dict(os.environ, self.MODEL_ENV, clear=True):
             with mock.patch.object(
                 resolve,
                 "fetch_secret_string",
                 return_value=(json.dumps({"token": self.FAKE_VALUE}), None),
-            ):
-                self.assertIsNone(resolve.probe_ref(self.REF, "us-east-1"))
+            ) as fetch:
+                with mock.patch.object(resolve, "probe_secret_metadata", return_value=None):
+                    self.assertIsNone(resolve.probe_ref(self.REF, "us-east-1"))
+        fetch.assert_not_called()
+
+    def test_probe_never_issues_get_secret_value(self) -> None:
+        """The argv actually handed to the provider carries no value operation."""
+        seen: list[list[str]] = []
+
+        def fake_runner(cmd: list[str], **_kwargs: Any) -> Any:
+            seen.append(cmd)
+            return SimpleNamespace(returncode=0, stdout="arn:aws:secretsmanager:x", stderr="")
+
+        with mock.patch.dict(os.environ, self.MODEL_ENV, clear=True):
+            self.assertIsNone(resolve.probe_ref(self.REF, "us-east-1", runner=fake_runner))
+        self.assertEqual(len(seen), 1)
+        self.assertIn("describe-secret", seen[0])
+        self.assertNotIn("get-secret-value", seen[0])
+        self.assertNotIn("SecretString", seen[0])
 
     # --- C: trusted raw resolution keeps its existing behavior ---------------
 
     def test_trusted_operator_raw_resolution_still_works(self) -> None:
-        rc, stdout, stderr, fetch, emit = self._run_cli(self.TRUSTED_ENV)
+        rc, stdout, stderr, fetch, probe, emit = self._run_cli(self.TRUSTED_ENV)
         self.assertEqual(rc, 0)
         fetch.assert_called_once()
         emit.assert_called_once_with(self.FAKE_VALUE)
+        # The value path is not routed through metadata first.
+        probe.assert_not_called()
         self.assertNotIn("DENIED", stderr)
         self.assertEqual(stdout, "")
 
@@ -341,6 +391,81 @@ class RawResolutionTrustBoundaryTests(unittest.TestCase):
         emit.assert_not_called()
         self.assertIn("FAIL", stderr)
         self.assertNotIn("DENIED", stderr)
+
+    # --- F/G/H: metadata failures map to the EXISTING canonical vocabulary ---
+
+    @staticmethod
+    def _runner(returncode: int, stdout: str = "", stderr: str = "") -> Any:
+        def run(_cmd: list[str], **_kwargs: Any) -> Any:
+            return SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
+
+        return run
+
+    def test_metadata_object_not_found(self) -> None:
+        """F: describe-secret ResourceNotFoundException -> NOT_FOUND."""
+        runner = self._runner(255, stderr="An error occurred (ResourceNotFoundException)")
+        self.assertEqual(resolve.probe_ref(self.REF, "us-east-1", runner=runner), "NOT_FOUND")
+
+    def test_metadata_empty_arn_is_not_found(self) -> None:
+        self.assertEqual(
+            resolve.probe_ref(self.REF, "us-east-1", runner=self._runner(0, stdout="None")),
+            "NOT_FOUND",
+        )
+
+    def test_aws_cli_unavailable(self) -> None:
+        """G: missing binary keeps its own canonical code, not a generic error."""
+
+        def missing(_cmd: list[str], **_kwargs: Any) -> Any:
+            raise FileNotFoundError(2, "No such file or directory: 'aws'")
+
+        self.assertEqual(
+            resolve.probe_ref(self.REF, "us-east-1", runner=missing), "AWS_CLI_NOT_FOUND"
+        )
+
+    def test_provider_timeout(self) -> None:
+        def slow(_cmd: list[str], **_kwargs: Any) -> Any:
+            raise subprocess.TimeoutExpired(cmd="aws", timeout=6)
+
+        self.assertEqual(resolve.probe_ref(self.REF, "us-east-1", runner=slow), "TIMEOUT")
+
+    def test_provider_auth_failure_maps_to_canonical_code_without_leaking_stderr(self) -> None:
+        """H: auth/access-denied has no dedicated code here; it canonicalises."""
+        leak = "AccessDeniedException: User arn:aws:iam::1234:user/svc is not authorized"
+        runner = self._runner(255, stderr=leak)
+        code = resolve.probe_ref(self.REF, "us-east-1", runner=runner)
+        self.assertEqual(code, "RESOLUTION_ERROR")
+        self.assertIn(code, resolve._KNOWN_ERROR_CODES)
+        # Provider stderr is canonicalised away, never returned to the caller.
+        self.assertNotIn("arn:aws:iam", code)
+        self.assertNotIn("AccessDenied", code)
+
+    # --- I: field membership is an inventory question ------------------------
+
+    def test_field_membership_comes_from_registry_not_provider(self) -> None:
+        """The registry declares keys, so an undeclared field fails without AWS."""
+        registry = resolve.load_registry(self.registry_path)
+        self.assertTrue(resolve.ref_registered(registry, "openclaw-igorbot/github#token"))
+        self.assertFalse(resolve.ref_registered(registry, "openclaw-igorbot/github#nope"))
+
+        # End to end: an undeclared field is rejected before any provider call.
+        with mock.patch.dict(os.environ, self.MODEL_ENV, clear=True):
+            with mock.patch.object(resolve, "fetch_secret_string") as fetch:
+                with mock.patch.object(resolve, "probe_secret_metadata") as probe:
+                    with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                        rc = resolve.main(
+                            [
+                                "--ref",
+                                "openclaw-igorbot/github#nope",
+                                "--check",
+                                "--registry",
+                                str(self.registry_path),
+                            ]
+                        )
+                        stdout = out.getvalue()
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL", stdout)
+        fetch.assert_not_called()
+        probe.assert_not_called()
 
 
 class PortAwsToInfisicalTests(unittest.TestCase):

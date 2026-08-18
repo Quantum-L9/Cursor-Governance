@@ -6,12 +6,21 @@ ID format:
   secret_id             → whole SecretString (plain or JSON text)
 
 Never writes a resolved secret value to stderr or logs.
-  --check   verify resolution; print OK/FAIL + ref only; exit 0/1
+  --check   verify status; print OK/FAIL only; exit 0/1
   --ref     single ref to resolve (required)
   default   print value to stdout only (for programmatic capture)
 
-TRUST BOUNDARY. The two modes are not equally available. ``--check`` is a status
-probe that returns no secret material, so it stays reachable from every surface.
+WHAT ``--check`` MEANS. The governed reference is registered and provisioned
+according to the inventory, and its backing Secrets Manager object is reachable
+through a non-value-bearing probe (``describe-secret``). It does NOT mean the
+current ``SecretString`` was fetched and the requested field was observed inside
+it — proving that requires the value, which is a trusted-surface operation.
+Field membership is therefore an inventory question, answered by
+:func:`ref_registered` against the registry entry's declared ``keys``.
+
+TRUST BOUNDARY. The two modes are not equally available. ``--check`` never
+retrieves ``SecretString`` or ``SecretBinary``, so no secret byte enters the
+process and it stays reachable from every surface.
 Raw resolution is trusted-operator-only and is guarded by
 :func:`surface_trust.require_trusted`, which refuses any caller running inside a
 model-controlled runtime — including one that sets ``L9_GOVERNANCE_SURFACE`` to
@@ -185,20 +194,79 @@ def fetch_secret_string(
     return value, None
 
 
-def _resolve_ref_unguarded(
+def probe_secret_metadata(
+    secret_id: str,
+    region: str,
+    *,
+    runner: Any = subprocess.run,
+) -> str | None:
+    """Reachability probe. Returns a canonical error code, or None when reachable.
+
+    NON-VALUE-BEARING by construction: ``describe-secret`` returns metadata only.
+    The Secrets Manager API has no parameter that would make it emit
+    ``SecretString`` or ``SecretBinary``, so no secret byte can enter this
+    process through this path even if the response were mishandled. ``--query
+    ARN`` narrows the response further, to one identifier the registry already
+    names.
+
+    This is the counterpart of :func:`fetch_secret_string`, and the two are kept
+    as separate functions on purpose: one retrieves the value, one does not, and
+    no flag turns either into the other.
+    """
+    try:
+        proc = runner(
+            [
+                "aws",
+                "secretsmanager",
+                "describe-secret",
+                "--secret-id",
+                secret_id,
+                "--region",
+                region,
+                "--query",
+                "ARN",
+                "--output",
+                "text",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=AWS_CALL_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return "TIMEOUT"
+    except FileNotFoundError:
+        return "AWS_CLI_NOT_FOUND"
+
+    if proc.returncode != 0:
+        stderr = proc.stderr or ""
+        if "ResourceNotFoundException" in stderr:
+            return "NOT_FOUND"
+        # Auth, access-denied, region and transport failures all land here.
+        # The repository's canonical vocabulary has no finer code, and provider
+        # stderr is deliberately not surfaced (see _canonical_error).
+        return "RESOLUTION_ERROR"
+
+    arn = (proc.stdout or "").strip()
+    if not arn or arn == "None":
+        return "NOT_FOUND"
+    return None
+
+
+def resolve_ref(
     ref_id: str,
     region: str,
     *,
     runner: Any = subprocess.run,
+    surface: str | None = None,
 ) -> tuple[str | None, str | None]:
-    """Internal resolution. NOT a public door — it returns secret material.
+    """Resolve a ref to its VALUE. The only value-bearing path in this module.
 
-    Two callers exist and they are not equivalent: :func:`probe_ref` discards the
-    value and returns a status code, so it needs no trust check; :func:`resolve_ref`
-    hands the value back, so it is guarded. Keeping the trust check off this
-    function is what lets ``--check`` remain available to model-controlled
-    surfaces without opening the value path to them.
+    Guarded: a caller inside a model-controlled runtime raises ``PermissionError``
+    here even if it reached this module by direct import rather than through the
+    CLI. The boundary is enforced at the value path, not only at the entrypoint,
+    and there is no unguarded sibling of this function to reach around it.
     """
+    require_trusted(surface)
     secret_id, field = split_id(ref_id)
     raw_value, fetch_error = fetch_secret_string(secret_id, region, runner=runner)
     if fetch_error is not None:
@@ -215,32 +283,30 @@ def _resolve_ref_unguarded(
     return str(parsed[field]), None
 
 
-def resolve_ref(
-    ref_id: str,
-    region: str,
-    *,
-    runner: Any = subprocess.run,
-    surface: str | None = None,
-) -> tuple[str | None, str | None]:
-    """Resolve a ref to its VALUE. Guarded — the guard is why this wrapper exists.
-
-    A caller inside a model-controlled runtime raises ``PermissionError`` here
-    even if it reached this module by direct import rather than through the CLI.
-    The boundary is enforced at the value path, not only at the entrypoint.
-    """
-    require_trusted(surface)
-    return _resolve_ref_unguarded(ref_id, region, runner=runner)
-
-
 def probe_ref(
     ref_id: str,
     region: str,
     *,
     runner: Any = subprocess.run,
 ) -> str | None:
-    """Return a canonical error code, or None on success. Never returns secret material."""
-    _value, error = _resolve_ref_unguarded(ref_id, region, runner=runner)
-    del _value
+    """Return a canonical error code, or None on success. Never fetches the value.
+
+    Status probing asks whether the backing provider object is reachable. It does
+    NOT ask what the object contains, so it calls :func:`probe_secret_metadata`
+    and never :func:`fetch_secret_string`. Discarding a fetched value after the
+    fact would not satisfy the boundary — on a model-controlled surface the bytes
+    must not be delivered into the process at all.
+
+    Field membership is answered by the registry (:func:`ref_registered`, which
+    matches the ref's field against the entry's declared ``keys``), not by the
+    provider. Confirming that the *stored* JSON currently carries that field
+    requires the value, so it belongs to :func:`resolve_ref` on a trusted surface.
+
+    Fails closed: an inconclusive metadata probe returns its canonical error. No
+    path here falls back to value retrieval.
+    """
+    secret_id, _field = split_id(ref_id)
+    error = probe_secret_metadata(secret_id, region, runner=runner)
     if error is None:
         return None
     return _canonical_error(error)
@@ -252,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Verify resolve without printing the secret value",
+        help="Status only: registry + non-value-bearing provider reachability probe",
     )
     parser.add_argument(
         "--registry",
