@@ -34,6 +34,15 @@ Inbound requests are authenticated with :mod:`broker_identity`, authorized
 against ``ops/secrets/capabilities.yaml``, executed against a FIXED upstream
 contract the caller cannot influence, and sanitized on the way out.
 
+MCP facade: POST ``/mcp`` (capability selected by ``X-Capability-Id`` header)
+and POST ``/mcp/graphiti`` (bounded memory tools: ``search_memory`` ->
+``graphiti.query``, ``write_governed`` -> ``graphiti.write_governed``) speak
+the MCP JSON-RPC handshake (``initialize`` / ``tools/list`` / ``tools/call``)
+so Claude Code ``.mcp.json`` servers can point at this broker while the bearer
+stays beyond the trust boundary. A session without a verifiable platform
+identity gets an honest 401 — the surface reports memory DEGRADED instead of
+pasting a static secret.
+
 Run:
   capability_broker.py serve --audience ccpool_<environment> --port 8787
   capability_broker.py preflight     # report posture without serving
@@ -559,6 +568,46 @@ class Broker:
         self.audit.append(entry)
 
 
+# Bounded memory tools exposed by the /mcp/graphiti MCP endpoint. Each tool
+# maps to exactly one registered capability; the caller never supplies the
+# capability id, the credential, or the upstream host.
+_GRAPHITI_MCP_TOOLS: dict[str, dict[str, str]] = {
+    "search_memory": {"capability": "graphiti.query", "param": "query"},
+    "write_governed": {"capability": "graphiti.write_governed", "param": "episode"},
+}
+
+_GRAPHITI_MCP_TOOLS_LIST: list[dict[str, Any]] = [
+    {
+        "name": "search_memory",
+        "description": (
+            "Search the repository's Graphiti memory namespace. Brokered "
+            "graphiti.query: the credential stays beyond the trust boundary."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Memory search query text."},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "write_governed",
+        "description": (
+            "Governed memory write through the brokered front door; requires a "
+            "held conflict-checked phase-lock (graphiti.write_governed)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "episode": {"type": "string", "description": "One atomic memory fact."},
+            },
+            "required": ["episode"],
+        },
+    },
+]
+
+
 class _Handler(BaseHTTPRequestHandler):
     broker: Broker
 
@@ -581,55 +630,8 @@ class _Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "no such route; this broker exposes no secret-read API"})
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path == "/mcp":
-            # MCP protocol proxy — transforms MCP JSON-RPC calls into capability invocations
-            try:
-                length = int(self.headers.get("Content-Length") or 0)
-                body = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
-
-                # MCP clients send the capability ID in X-Capability-Id header
-                capability_id = self.headers.get("X-Capability-Id")
-                if not capability_id:
-                    self._send(
-                        400,
-                        {
-                            "jsonrpc": "2.0",
-                            "id": body.get("id"),
-                            "error": {"code": -32600, "message": "missing X-Capability-Id header"},
-                        },
-                    )
-                    return
-
-                claims = self.broker.authenticate(self.headers.get("Authorization"))
-
-                # Transform MCP request into capability invocation
-                # MCP sends: {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {...}}
-                result = self.broker.handle(
-                    claims, {"capability": capability_id, "params": body.get("params", {})}
-                )
-
-                # Return in MCP JSON-RPC 2.0 envelope
-                self._send(
-                    200, {"jsonrpc": "2.0", "id": body.get("id"), "result": result["result"]}
-                )
-            except BrokerError as exc:
-                self._send(
-                    exc.status,
-                    {
-                        "jsonrpc": "2.0",
-                        "id": body.get("id") if "body" in locals() else None,
-                        "error": {"code": exc.status, "message": exc.message},
-                    },
-                )
-            except (ValueError, KeyError) as exc:
-                self._send(
-                    400,
-                    {
-                        "jsonrpc": "2.0",
-                        "id": body.get("id") if "body" in locals() else None,
-                        "error": {"code": -32600, "message": f"malformed MCP request: {exc}"},
-                    },
-                )
+        if self.path == "/mcp" or self.path.startswith("/mcp/"):
+            self._handle_mcp()
             return
 
         if self.path != "/capability":
@@ -644,6 +646,178 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(exc.status, {"error": exc.message})
         except (ValueError, KeyError):
             self._send(400, {"error": "malformed request"})
+
+    # -- MCP facade -----------------------------------------------------------
+    # Claude Code points its .mcp.json servers at ${L9_CAPABILITY_BROKER_URL}
+    # (/mcp with an X-Capability-Id header, or /mcp/graphiti for memory). MCP
+    # clients speak JSON-RPC 2.0 over POST and require the initialize /
+    # tools/list handshake before tools/call; answering only tools/call leaves
+    # every server marked failed. This facade implements that handshake and
+    # maps tools/call onto the same Broker.handle() capability path as
+    # /capability. Sessions without a verifiable platform identity get an
+    # honest 401 — memory then reports DEGRADED instead of pretending.
+
+    def _mcp_read_body(self) -> tuple[dict[str, Any] | None, BrokerError | None]:
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            if length <= 0:
+                return {}, None
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            if not isinstance(body, dict):
+                return None, BrokerError(400, "MCP request body must be a JSON object")
+            return body, None
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
+            return None, BrokerError(400, f"malformed MCP request: {exc}")
+
+    def _mcp_send_rpc(
+        self,
+        request_id: Any,
+        result: Any = None,
+        error: tuple[int, str] | None = None,
+    ) -> None:
+        if request_id is None:
+            # JSON-RPC notification: no response envelope.
+            self.send_response(202)
+            self.end_headers()
+            return
+        envelope: dict[str, Any] = {"jsonrpc": "2.0", "id": request_id}
+        if error is not None:
+            envelope["error"] = {"code": error[0], "message": error[1]}
+        else:
+            envelope["result"] = result
+        self._send(200, envelope)
+
+    def _mcp_capability(self) -> str:
+        """Capability id for this MCP endpoint: header form (/mcp) or path form."""
+        if self.path == "/mcp":
+            capability_id = (self.headers.get("X-Capability-Id") or "").strip()
+            if not capability_id:
+                raise BrokerError(400, "missing X-Capability-Id header")
+            return capability_id
+        segment = self.path[len("/mcp/") :].strip()
+        if segment == "graphiti":
+            return "graphiti.query"
+        raise BrokerError(404, f"no MCP endpoint for '{segment}'; known: /mcp/graphiti")
+
+    def _handle_mcp(self) -> None:
+        body, parse_error = self._mcp_read_body()
+        if parse_error is not None:
+            # JSON-RPC parse error: the request id is unknowable, so the
+            # envelope carries id=null with the standard -32700 code.
+            self._send(
+                200,
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32700, "message": parse_error.message},
+                },
+            )
+            return
+        request_id = (body or {}).get("id")
+        assert body is not None  # parse_error is None only when body is a dict
+
+        method = str(body.get("method") or "")
+        params = body.get("params") or {}
+
+        if method == "notifications/initialized":
+            self._mcp_send_rpc(request_id)
+            return
+        if method == "ping":
+            self._mcp_send_rpc(request_id, result={})
+            return
+
+        # initialize carries only static server info, so it answers without an
+        # identity assertion; capability-bearing methods below do not.
+        if method == "initialize":
+            result = {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {"tools": {"listChanged": False}},
+                "serverInfo": {"name": "l9-capability-broker", "version": "1.0"},
+            }
+            self._mcp_send_rpc(request_id, result=result)
+            return
+
+        # Every capability-bearing MCP method operates on an authenticated
+        # session. A missing or unverifiable platform identity is an honest
+        # 401 — the client marks the server unavailable and the surface
+        # reports memory/capabilities DEGRADED rather than pasting a static
+        # secret.
+        try:
+            claims = self.broker.authenticate(self.headers.get("Authorization"))
+        except BrokerError as exc:
+            self._send(exc.status, {"error": exc.message})
+            return
+
+        try:
+            if method == "tools/list":
+                self._mcp_send_rpc(request_id, result=self._mcp_tools_list())
+                return
+            if method == "tools/call":
+                self._mcp_send_rpc(request_id, result=self._mcp_tools_call(claims, params))
+                return
+            self._mcp_send_rpc(
+                request_id,
+                error=(-32601, f"method not found: {method or '<missing>'}"),
+            )
+        except BrokerError as exc:
+            self._mcp_send_rpc(
+                request_id,
+                error=(-32602 if exc.status == 400 else exc.status, exc.message),
+            )
+        except (ValueError, KeyError) as exc:
+            self._mcp_send_rpc(request_id, error=(-32602, f"invalid params: {exc}"))
+
+    def _mcp_tools_list(self) -> dict[str, Any]:
+        if self.path == "/mcp":
+            # Header-form endpoints (GitHub, Context7, ...): one generic invoke
+            # tool; per-capability param validation happens in validate_params.
+            return {
+                "tools": [
+                    {
+                        "name": "invoke",
+                        "description": (
+                            "Invoke the capability named by the X-Capability-Id "
+                            "header of this MCP server."
+                        ),
+                        "inputSchema": {
+                            "type": "object",
+                            "additionalProperties": True,
+                        },
+                    }
+                ]
+            }
+        if self.path == "/mcp/graphiti":
+            return {"tools": _GRAPHITI_MCP_TOOLS_LIST}
+        raise BrokerError(404, f"no MCP endpoint for '{self.path}'")
+
+    def _mcp_tools_call(
+        self, claims: broker_identity.SessionClaims, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        name = str((params or {}).get("name") or "")
+        arguments = (params or {}).get("arguments") or {}
+
+        if self.path == "/mcp":
+            if name != "invoke":
+                raise BrokerError(400, f"unknown tool '{name}'; only 'invoke' is exposed")
+            capability_id = self._mcp_capability()
+            payload: dict[str, Any] = {"capability": capability_id, "params": arguments}
+        else:
+            if self.path != "/mcp/graphiti":
+                raise BrokerError(404, f"no MCP endpoint for '{self.path}'")
+            tool = _GRAPHITI_MCP_TOOLS.get(name)
+            if tool is None:
+                raise BrokerError(400, f"unknown tool '{name}' for /mcp/graphiti")
+            capability_id = tool["capability"]
+            payload = {
+                "capability": capability_id,
+                "params": {tool["param"]: arguments.get(tool["param"])},
+            }
+
+        result = self.broker.handle(claims, payload)
+        return {
+            "content": [{"type": "text", "text": json.dumps(result.get("result", {}))}],
+            "isError": False,
+        }
 
     def log_message(self, fmt: str, *args: Any) -> None:
         """Access logs carry method and path only — never headers, never bodies."""

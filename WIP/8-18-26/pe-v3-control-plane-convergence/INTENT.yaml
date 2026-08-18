@@ -1,0 +1,117 @@
+# Operator front-door record. The authoritative campaign definition is the
+# hand-authored CAMPAIGN_SOURCE.yaml beside this file (immutable once admitted).
+# Do NOT run skills/l9-pe-campaign-activate/scripts/compile_activation_files.py
+# over this intent: the seed compiler flattens the nine-wave structure into
+# W0/W1 and would overwrite the rich source. Admission is drop-in of the
+# CAMPAIGN_SOURCE.yaml + source-integrity-receipt.json pair plus the four host
+# file patches, after operator authorization and memory phase-lock.
+#
+# Source documents: WIP/8-18-26/PE PRogram Executio .md (microscope verdict),
+# WIP/PROGRAM EXECUTION PIPELINE/PE-PE 1.md (v3 architecture).
+
+campaign_id: pe-v3-control-plane-convergence
+title: PE v3 Control Plane Convergence - Containment, Semantic Conservation, Exact Identity, Bound Authority
+owner: Igor Beylin
+
+plan_status: Ready
+
+objective: >-
+  Reconstruct Program Execution and subordinate Autonomy so that no authority-bearing
+  transition can occur from a caller-supplied semantic label. Every transition must be
+  derived from canonical immutable semantics, exact content identity, admissible
+  claim-scoped proof, current principal authority, and one linearizable state/event commit.
+  C0 contains the live front-door authority leaks before the S1-S8 reconstruction.
+
+problem_statement: >-
+  The live v2 control plane lets run_campaign.py mint and consume merge plus terminal
+  authority, lets task PR creation bypass the sanctioned make pr surface, and lets
+  Autonomy tool_hook authorize arbitrary shells as test.run via caller-supplied
+  capability labels. Beyond containment, v2 semantics weaken across every boundary:
+  compiler shortcuts drop governing laws, dirty trees verify as HEAD, evidence IDs
+  substitute across claims, actor strings confer authority, gates accept caller PASS,
+  and handoff is disconnected from final repository generations.
+
+target_state: >-
+  C0 closed: the runner cannot merge, close authoritatively, push, or open PRs; task
+  publishing flows through the sanctioned stacked make pr surface; Autonomy classifies
+  commands through a fail-closed semantic broker. S1-S8 green: semantic conservation
+  round-trip proven, immutable candidates and repository generations, claim-scoped
+  evidence admissibility, principal-and-grant authority, linearizable transactions with
+  fencing, derived gates, generation-aware replan and retry, promotion-wired completion,
+  advisory convergence handoff with observed rollback proof and owner verdict receipt,
+  v2-to-v3 migration, full vertical conformance, and shadow self-host convergence.
+  Terminal state is activation-ready; activation is a separate follow-on campaign.
+
+target:
+  repository_id: Quantum-L9/Cursor-Governance
+  source_of_truth: environment/program-execution
+  adapter: git
+
+tasks:
+  - title: C0 containment and baseline freeze
+    objective: >-
+      Freeze the implementation baseline at 7517f377 with a detached immutable
+      orchestrator checkout; disarm runner merge and terminal authority; route task
+      publishing through the sanctioned stacked make pr surface; build the fail-closed
+      Autonomy command broker.
+    paths:
+      - environment/program-execution/scripts/run_campaign.py
+      - ops/scripts/open_pr_after_gate.sh
+      - autonomy/adapters
+  - title: S1 semantic conservation
+    objective: >-
+      Canonical Semantic Model plus semantic-conservation compiler, atomic
+      receipt-backed acceptance, typed domain splits, and measured evidence collectors.
+    paths:
+      - environment/program-execution/compiler
+      - environment/program-execution/scripts
+  - title: S2 exact identity and genealogy
+    objective: >-
+      Repository generations, immutable candidate snapshots, promotion receipts, and
+      generation-bound reconciliation, leases, and contracts.
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec
+  - title: S3 proof admissibility
+    objective: >-
+      Evidence requirements versus artifacts, claim-scoped admissibility, append-only
+      authority artifacts, and acceptance claims as executable proof obligations.
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec
+  - title: S4 principal authority
+    objective: >-
+      Executable authority registry, principal contexts with immutable grants, and
+      approvals, decisions, and Unknowns rebuilt around authority.
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec
+  - title: S5 linearizable runtime
+    objective: >-
+      Transactional unit of work with canonical events, CAS versions and idempotency,
+      lease fencing, centralized hard-stop kernel, Autonomy atomicity, capacity, and
+      invalidation, the PE to Autonomy execution bridge, and the crash and concurrency
+      recovery suite.
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec
+      - autonomy/runtime
+      - environment/program-execution/integrations
+  - title: S6 execution semantics
+    objective: >-
+      Inverted derived gates, constrained verifier with unified path semantics,
+      generation-aware fail-closed replan, executable retry policy with automatic
+      cleanup, and promotion wired into scheduling.
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec
+      - autonomy/runtime
+  - title: S7 owner closeout
+    objective: >-
+      Provisional convergence report, final handoff with exact lineage and observed
+      rollback proof, owner verdict receipt with principal enforcement, and INCONCLUSIVE
+      terminal semantics.
+    paths:
+      - environment/program-execution/core/program-execution-controller-template/scripts/pec
+  - title: S8 conformance and migration
+    objective: >-
+      v2-to-v3 migration with legacy_v2 provenance, full adversarial vertical
+      conformance with fault injection, shadow and self-host fixture convergence, and
+      documentation, spec, and runtime parity audit.
+    paths:
+      - environment/program-execution
