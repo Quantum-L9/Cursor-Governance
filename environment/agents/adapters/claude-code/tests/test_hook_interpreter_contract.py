@@ -145,7 +145,12 @@ class HookInterpreterBindingTests(unittest.TestCase):
                         Path(locked).resolve(),
                         "hook did not run on the governance-locked interpreter",
                     )
-                    if ambient:
+                    # When the test's own interpreter is also PATH's python3
+                    # (CI runners), locked == ambient by construction and the
+                    # inequality is unprovable. The locked-path proof is the
+                    # assertEqual above; assert only what the environment can
+                    # actually falsify.
+                    if ambient and Path(locked).resolve() != Path(ambient).resolve():
                         self.assertNotEqual(
                             Path(chosen).resolve(),
                             Path(ambient).resolve(),
