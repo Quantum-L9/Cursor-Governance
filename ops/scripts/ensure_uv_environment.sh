@@ -50,7 +50,9 @@ current=""
 [ -f "$STATE_FILE" ] && current="$(cat "$STATE_FILE")"
 
 if [ "$current" = "$expected" ] && [ -x "$GOV_ROOT/.venv/bin/python3" ]; then
-  echo "UV: cached locked environment"
+  # Diagnostic, not a machine result: stdout in this chain is the sessionStart
+  # JSON payload, so every human-readable line must go to stderr (F-08).
+  echo "UV: cached locked environment" >&2
   exit 0
 fi
 
@@ -61,7 +63,9 @@ fi
 
 (
   cd "$GOV_ROOT"
-  uv sync --locked --extra dev
+  # uv writes its resolution report to stdout; that stream is the machine
+  # payload upstream, so hand its human output to stderr (F-08).
+  uv sync --locked --extra dev >&2
 )
 
 if [ ! -x "$GOV_ROOT/.venv/bin/python3" ]; then
@@ -73,4 +77,4 @@ mkdir -p "$(dirname "$STATE_FILE")"
 tmp="${STATE_FILE}.tmp.$$"
 printf '%s\n' "$expected" > "$tmp"
 mv "$tmp" "$STATE_FILE"
-echo "UV: synchronized locked environment"
+echo "UV: synchronized locked environment" >&2
