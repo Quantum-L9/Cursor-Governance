@@ -47,18 +47,85 @@ def workspace_root(explicit: str | None = None) -> Path:
     return _validated_git_root(candidate)
 
 
+def _hook_home_sentinels() -> frozenset[Path]:
+    """Hook process dirs that are never a repo workspace (Cursor/Claude homes)."""
+    home = Path.home().resolve()
+    return frozenset({home, home / ".cursor", home / ".claude"})
+
+
+def _cursor_project_slug(root: Path) -> str:
+    return "-".join(root.resolve().parts).lstrip("-")
+
+
+def _usable_dir(raw: object) -> Path | None:
+    if not raw:
+        return None
+    try:
+        path = Path(str(raw)).expanduser().resolve()
+    except OSError:
+        return None
+    if path in _hook_home_sentinels() or not path.is_dir():
+        return None
+    return path
+
+
+def _event_workspace_roots(event: dict[str, Any]) -> list[Path]:
+    raw = event.get("workspace_roots") or event.get("workspaceRoots") or []
+    if not isinstance(raw, list):
+        return []
+    out: list[Path] = []
+    for item in raw:
+        path = _usable_dir(item)
+        if path is not None and path not in out:
+            out.append(path)
+    return out
+
+
+def _pick_event_workspace(event: dict[str, Any], candidates: list[Path]) -> Path | None:
+    """Prefer the root that matches this conversation's Cursor project folder."""
+    if not candidates:
+        return None
+    transcript = str(event.get("transcript_path") or "").replace("/", "-")
+    for cand in candidates:
+        slug = _cursor_project_slug(cand)
+        if slug and slug in transcript:
+            return cand
+    ssot = _usable_dir(Path.home() / ".cursor-governance")
+    if ssot is not None:
+        for cand in candidates:
+            if cand == ssot:
+                return cand
+    return candidates[0]
+
+
 def workspace_from_event(event: dict[str, Any]) -> Path:
-    """Resolve workspace from a Claude/Cursor hook event, else cwd git root."""
+    """Resolve workspace from a Claude/Cursor hook event, else cwd git root.
+
+    Cursor beforeShellExecution often sends ``cwd=""`` and the real checkout in
+    ``workspace_roots``. Empty cwd must not fall through to the hook process
+    cwd (``~/.cursor`` / ``~/.claude``), which is not a git work tree.
+    """
     tool_input = event.get("tool_input") or {}
+    explicit: Path | None = None
     if isinstance(tool_input, dict):
         for key in ("cwd", "working_directory", "workspace"):
-            val = tool_input.get(key)
-            if val:
-                return Path(str(val)).expanduser().resolve()
-    for key in ("cwd", "working_directory", "workspace"):
-        val = event.get(key)
-        if val:
-            return Path(str(val)).expanduser().resolve()
+            explicit = _usable_dir(tool_input.get(key))
+            if explicit is not None:
+                break
+    if explicit is None:
+        for key in ("cwd", "working_directory", "workspace"):
+            explicit = _usable_dir(event.get(key))
+            if explicit is not None:
+                break
+    candidates: list[Path] = []
+    if explicit is not None:
+        candidates.append(explicit)
+    for root in _event_workspace_roots(event):
+        if root not in candidates:
+            candidates.append(root)
+    picked = _pick_event_workspace(event, candidates)
+    if picked is not None:
+        return picked
     return workspace_root()
 
 
