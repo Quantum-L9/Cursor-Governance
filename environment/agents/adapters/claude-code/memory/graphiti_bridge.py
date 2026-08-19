@@ -4,6 +4,11 @@
 Single egress for agent episodic memory (CANONICAL_LAW §8 / ADR-0005 / §2.1):
 all Claude lifecycle hooks call ``ops/graphiti/graphiti_memory_client.py`` via the
 governance locked venv. No HTTP ``L9_MEMORY_*`` client. No second store.
+
+The bridge deliberately exposes no phase-lock surface. ``conflicts`` returns
+*evidence* an agent may reason about; it is not a repository mutex, and nothing
+here can mint repository-write permission
+(rules/96-multi-agent-main-bound-execution.mdc, E7/E8).
 """
 
 from __future__ import annotations
@@ -115,10 +120,6 @@ def conflicts(*, workspace: Path, session_id: str) -> dict[str, Any]:
     return run_graphiti(["conflicts"], workspace=workspace, session_id=session_id)
 
 
-def phase_lock(*, workspace: Path, session_id: str) -> dict[str, Any]:
-    return run_graphiti(["phase-lock"], workspace=workspace, session_id=session_id)
-
-
 def write_episode(
     body: str,
     *,
@@ -146,17 +147,3 @@ def write_episode(
         session_id=session_id,
         timeout=90.0,
     )
-
-
-def phase_lock_satisfied(session_id: str) -> bool:
-    """True when Cursor Graphiti state shows gmp:phase_lock for this session."""
-    if not session_id:
-        return False
-    path = Path.home() / ".cursor" / "graphiti-state" / f"{session_id}.json"
-    if not path.is_file():
-        return False
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-    return "gmp:phase_lock" in (data.get("memory_satisfied_for") or [])

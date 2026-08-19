@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -118,6 +119,12 @@ class FailClosedTests(unittest.TestCase):
         Exercised with `make push`: a git/gh command is exempt from evaluation
         entirely, so it can no longer reach — or need — this failure path.
         """
+        # The premise is that NO workspace can be resolved. workspace_root()
+        # consults L9_L4_WORKSPACE and WS before falling back to cwd, and `make`
+        # exports WS -- so inheriting the ambient environment let the workspace
+        # resolve, the gate reach publish-path classification, and this test fail
+        # under `make pr` while passing in a bare shell. Control the inputs.
+        env = {k: v for k, v in os.environ.items() if k not in ("WS", "L9_L4_WORKSPACE")}
         with tempfile.TemporaryDirectory() as non_repo:
             proc = subprocess.run(
                 [sys.executable, str(GATE_PATH), "claude"],
@@ -125,6 +132,7 @@ class FailClosedTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 cwd=non_repo,
+                env=env,
                 timeout=60,
                 check=False,
             )

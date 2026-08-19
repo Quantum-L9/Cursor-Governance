@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-18T01:56:13Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-18T23:11:04Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **64** |
-| `alwaysApply: true` | **28** |
+| Total MDC files | **65** |
+| `alwaysApply: true` | **29** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **64** |
+| Explicit stable IDs | **65** |
 | Derived compatibility IDs | **0** |
 | Deprecated rules | **0** |
 
@@ -41,11 +41,11 @@ Generated: `2026-08-18T01:56:13Z`. Source: `rules/*.mdc`.
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
 | `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 102 | `b3c89ed62772` |
-| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 79 | `3dac52c010fb` |
+| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 85 | `9f0288253b25` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
-| `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 76 | `d715d26e5161` |
+| `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 85 | `e65dba887391` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
@@ -79,8 +79,9 @@ Generated: `2026-08-18T01:56:13Z`. Source: `rules/*.mdc`.
 | `93-c1-server-protection.mdc` | `l9.rule.93.c1.server.protection` | global | git | always | 88 | `a89e589b42cb` |
 | `94-deployment-prohibition.mdc` | `l9.rule.94.deployment.prohibition` | global | deployment | always | 23 | `95043be2ba11` |
 | `95-test-fix-policy.mdc` | `l9.rule.testing.integrity` | global | testing | always | 57 | `cbf9a0e89a3d` |
+| `96-multi-agent-main-bound-execution.mdc` | `l9.rule.96.multi.agent.main.bound.execution` | global | git | always | 129 | `4c3da47effd7` |
 | `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 37 | `381364ee74a4` |
-| `98-graphiti-memory-gate.mdc` | `l9.rule.graphiti.memory.gate` | global | memory | always | 39 | `2d2dc233b222` |
+| `98-graphiti-memory-gate.mdc` | `l9.rule.graphiti.memory.gate` | global | memory | always | 48 | `557a495cb0ca` |
 | `99-no-auto-commit.mdc` | `l9.rule.git.mutation-gate` | global | git | always | 41 | `a66549b17594` |
 
 ## Notes

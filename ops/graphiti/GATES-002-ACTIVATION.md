@@ -36,9 +36,12 @@ Restart Cursor. Rollback: set to `0`.
 
 ## GMP under gates
 
+Gather conflict evidence before locking a plan. Conflicts inform the plan; they
+do not gate the edit, and no phase-lock is required to mutate the repository
+(`rules/96-multi-agent-main-bound-execution`, E7).
+
 ```bash
 python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py conflicts
-python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py phase-lock
 ```
 
 ## Tests
