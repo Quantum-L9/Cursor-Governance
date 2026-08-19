@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -37,7 +38,7 @@ def run_gate(script: Path, repo: Path, base: str, **env: str) -> subprocess.Comp
     environ = {**os.environ, "PATH": os.environ.get("PATH", "")}
     environ.update(env)
     return subprocess.run(
-        ["python3", str(script), "--workspace", str(repo), "--base", base],
+        [sys.executable, str(script), "--workspace", str(repo), "--base", base],
         capture_output=True,
         text=True,
         check=False,

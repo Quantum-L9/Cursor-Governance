@@ -96,7 +96,11 @@ def telemetry_failure(what: str) -> int:
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    try:
+        return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        # Missing binary (typically `gh` off PATH) is telemetry failure, not a crash.
+        return subprocess.CompletedProcess(cmd, 127, "", "not found")
 
 
 def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
