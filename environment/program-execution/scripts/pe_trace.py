@@ -37,6 +37,42 @@ SUMMARY_MD_FILENAME = "run-summary.md"
 # Bounded diagnostic tail; telemetry stores evidence, not transcripts.
 MAX_ERROR_MESSAGE = 2000
 
+REDACTED = "<redacted>"
+
+# Fields a trace record may carry beyond the fixed envelope. Deny-by-default:
+# a key absent from this set never reaches disk -- only its name does, under
+# `redacted_keys`. Every entry is a closed verdict enum, an identifier the
+# campaign itself minted, or a count. Never free text, a filesystem path, a
+# command line, or an upstream payload: those are the shapes that carry
+# credentials, and no amount of pattern matching makes them safe to persist.
+SAFE_METADATA_FIELDS = frozenset(
+    {
+        # Operational shape of the span.
+        "stage",
+        "attempt",
+        "duration",
+        "exit_code",
+        "count",
+        "cache_status",
+        "validation_count",
+        "propagated",
+        # Verdict enums, campaign-minted identifiers, and counts.
+        "verdict",
+        "kernel_verdict",
+        "gate_id",
+        "evidence_id",
+        "repository",
+        "revision",
+        "command_count",
+        "host_repo",
+    }
+)
+
+# Allowlisted values are identifiers, enums, and counts. Anything longer is
+# not one of those, whatever its key says, so it is dropped rather than cut.
+MAX_SAFE_VALUE = 200
+MAX_REDACTED_KEY = 64
+
 STATUS_STARTED = "STARTED"
 STATUS_PASSED = "PASSED"
 STATUS_FAILED = "FAILED"
@@ -134,13 +170,196 @@ def fingerprint(*parts: Any) -> str:
     return digest.hexdigest()
 
 
-def _bounded(value: Any) -> str | None:
+# -- redaction ----------------------------------------------------------
+#
+# Two layers, and the order matters. The allowlisted record structure is the
+# actual control: a value that never enters the record cannot leak from it.
+# The pattern sweep below is a backstop for the one field that must stay
+# human-readable -- the diagnostic message -- and for the case a field is
+# later widened carelessly. A leak means the structure is wrong, not that the
+# sweep needs another regex.
+#
+# Unlike the capability broker, which drops a response whole when a credential
+# survives its sanitizer, telemetry redacts and keeps writing: tracing is
+# never a gate (see module docstring), and a dropped run teaches nothing.
+
+_REGISTERED_SECRETS: set[str] = set()
+
+# Below this length, masking by equality would redact ordinary prose.
+MIN_REGISTERED_SECRET = 8
+
+
+def register_secret_value(value: Any) -> None:
+    """Register a live credential so the sanitizer can mask it by equality.
+
+    Pattern matching cannot recognise an opaque high-entropy token that
+    carries no vendor prefix and sits in no `NAME=value` shape. Equality can,
+    but only against a value someone already holds -- so the trusted caller
+    that resolved the secret registers it here. `pe_trace` never resolves one
+    itself and never persists the registry.
+    """
+    if not isinstance(value, str):
+        return
+    text = value.strip()
+    if len(text) >= MIN_REGISTERED_SECRET:
+        _REGISTERED_SECRETS.add(text)
+
+
+def clear_registered_secrets() -> None:
+    """Forget every registered value. For test isolation."""
+    _REGISTERED_SECRETS.clear()
+
+
+_SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    # PEM private key blocks, before anything else can chop them up.
+    (
+        re.compile(r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----"),
+        REDACTED,
+    ),
+    # Credential-bearing URL: scheme://user:password@host -- keep the scheme
+    # and the host, which are the diagnostic part, drop the userinfo.
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^\s/:@]+:[^\s/@]+@"), r"\1" + REDACTED + "@"),
+    # Authorization / Proxy-Authorization headers in header or JSON form. The
+    # value runs to a quote, delimiter, or end of line -- deliberately *not*
+    # to the first space, because `Bearer <token>` contains one and stopping
+    # there would redact the scheme and publish the credential.
+    (
+        re.compile(r"(?i)\b((?:proxy-)?authorization)[\"']?\s*[:=]\s*[\"']?[^\"',;}\n]+"),
+        r"\1=" + REDACTED,
+    ),
+    # A bare auth scheme anywhere: `Bearer <token>`, `Basic <blob>`.
+    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}"), r"\1 " + REDACTED),
+    # Vendor-shaped keys, recognisable without any surrounding context.
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}"), REDACTED),
+    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"), REDACTED),
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{16,}"), REDACTED),
+    (re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{10,}"), REDACTED),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), REDACTED),
+    (re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"), REDACTED),
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"), REDACTED),
+    # Environment-style assignment whose *name* declares it a credential.
+    (
+        re.compile(
+            r"(?i)\b([A-Za-z0-9_]*"
+            r"(?:SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|CREDENTIAL|PRIVATE_?KEY|ACCESS_?KEY)"
+            r"[A-Za-z0-9_]*)[\"']?\s*[:=]\s*[\"']?[^\s\"',;&]+"
+        ),
+        r"\1=" + REDACTED,
+    ),
+)
+
+
+def sanitize_text(value: Any) -> str | None:
+    """Mask every credential shape this module knows how to recognise.
+
+    Registered values go first: they are exact, and masking them before the
+    patterns run means a token that also matches a pattern is not partially
+    rewritten into something the equality check no longer sees.
+    """
     if value is None:
         return None
-    text = str(value).strip()
+    text = str(value)
+    if not text:
+        return None
+    for secret in sorted(_REGISTERED_SECRETS, key=len, reverse=True):
+        text = text.replace(secret, REDACTED)
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def _bounded(value: Any) -> str | None:
+    """Sanitize, then bound. Never the reverse: truncating first would leave
+    the prefix of a secret that the sweep no longer recognises."""
+    text = sanitize_text(value)
+    if text is None:
+        return None
+    text = text.strip()
     if not text:
         return None
     return text[:MAX_ERROR_MESSAGE]
+
+
+class _Drop:
+    """Sentinel distinguishing "dropped" from a legitimately stored None."""
+
+    __slots__ = ()
+
+
+_DROP = _Drop()
+
+
+def _safe_scalar(value: Any) -> Any:
+    """Return the value if it is a persistable scalar, else `_DROP`.
+
+    Containers are always dropped. That is what closes the nested-metadata
+    vector: a dict or list value has no safe rendering here, so it never
+    reaches the record regardless of how its key is spelled.
+    """
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        text = sanitize_text(value)
+        if text is None:
+            return _DROP
+        text = text.strip()
+        if not text or len(text) > MAX_SAFE_VALUE:
+            return _DROP
+        return text
+    return _DROP
+
+
+def build_safe_metadata(raw: Any) -> dict[str, Any]:
+    """Project caller metadata onto the allowlist.
+
+    Returns only approved keys carrying persistable scalars. Rejected keys are
+    reported by *name* under `redacted_keys` so a failure stays diagnosable --
+    names are identifiers written in this repo's source, and are sanitized and
+    bounded anyway in case one was ever built from data.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    safe: dict[str, Any] = {}
+    dropped: list[str] = []
+    for key in sorted(raw, key=str):
+        name = str(key)
+        if name not in SAFE_METADATA_FIELDS:
+            dropped.append(name)
+            continue
+        value = _safe_scalar(raw[key])
+        if isinstance(value, _Drop):
+            dropped.append(name)
+            continue
+        safe[name] = value
+    if dropped:
+        safe["redacted_keys"] = [(sanitize_text(name) or "")[:MAX_REDACTED_KEY] for name in dropped]
+    return safe
+
+
+def _sanitize_deep(value: Any) -> Any:
+    """Recursively sanitize string leaves and mapping keys.
+
+    Structure-preserving on purpose: sweeping the serialized JSON text instead
+    would risk a replacement eating a delimiter and writing a line the
+    harvester cannot parse.
+    """
+    if isinstance(value, str):
+        return sanitize_text(value)
+    if isinstance(value, dict):
+        return {
+            (sanitize_text(key) if isinstance(key, str) else key): _sanitize_deep(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_sanitize_deep(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_deep(item) for item in value)
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    # Anything else is what `json.dumps(default=str)` would stringify on the
+    # way out -- do it here instead, so the sweep sees the text that would
+    # otherwise reach disk unexamined.
+    return sanitize_text(value)
 
 
 class ExecutionTrace:
@@ -276,10 +495,18 @@ class ExecutionTrace:
         input_fingerprint: str | None = None,
         cache_status: str | None = None,
         error_code: str | None = None,
+        error_class: str | None = None,
         error_message: str | None = None,
         duration_ms: int | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Build one trace record and emit it.
+
+        `error_message` and `metadata` are the caller's raw inputs; they are
+        not what gets persisted. The record carries the allowlisted projection
+        of them -- `safe_message` and `safe_metadata` -- so a credential in an
+        upstream string has no field to land in.
+        """
         record = {
             "schema": EVENT_SCHEMA,
             "event_id": f"EVT-{uuid.uuid4().hex[:16]}",
@@ -296,8 +523,9 @@ class ExecutionTrace:
             "input_fingerprint": input_fingerprint,
             "cache_status": cache_status,
             "error_code": error_code,
-            "error_message": _bounded(error_message),
-            "metadata": metadata or {},
+            "error_class": error_class,
+            "safe_message": _bounded(error_message),
+            "safe_metadata": build_safe_metadata(metadata),
         }
         self._emit(record)
         return record
@@ -360,7 +588,11 @@ class ExecutionTrace:
                     or getattr(exc, "error_code", None)
                     or type(exc).__name__
                 ),
-                error_message=str(carrier.pop("error_message", None) or exc),
+                # The class name is a source-level identifier and is always
+                # safe to keep; the message is not, so it goes through the
+                # sanitizer and lands in `safe_message`, never verbatim.
+                error_class=type(exc).__name__,
+                error_message=carrier.pop("error_message", None) or str(exc),
                 duration_ms=self._elapsed_ms(started),
                 metadata=carrier,
             )
@@ -398,7 +630,13 @@ class ExecutionTrace:
         if self._disabled or self._path is None:
             return
         try:
-            line = json.dumps(record, sort_keys=True, default=str, ensure_ascii=False)
+            # Last line of defence, immediately before the bytes hit disk. The
+            # allowlist above is what actually keeps credentials out of the
+            # record; this catches anything a future field, or a caller-set
+            # error_code, smuggles past it.
+            line = json.dumps(
+                _sanitize_deep(record), sort_keys=True, default=str, ensure_ascii=False
+            )
             with open(self._path, "a", encoding="utf-8") as handle:
                 handle.write(line + "\n")
                 handle.flush()
@@ -530,7 +768,16 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
             if isinstance(fp, str) and fp:
                 by_fingerprint.setdefault((operation, fp), []).append(event)
 
-        propagated = bool((event.get("metadata") or {}).get("propagated"))
+        # `relocate` appends to an events.jsonl that a previous run left in
+        # place, so one file can hold records written on both sides of the
+        # rename. Read-side fallback only -- nothing is ever written under the
+        # legacy key again. Without it, every pre-rename FAILED record reads
+        # as non-propagated and the summary counts one root cause per nesting
+        # level instead of one.
+        carrier = event.get("safe_metadata")
+        if carrier is None:
+            carrier = event.get("metadata")
+        propagated = bool((carrier or {}).get("propagated"))
         if status == STATUS_FAILED and not propagated:
             code = str(event.get("error_code") or "UNKNOWN_ERROR")
             failure = summary["failure_counts"].setdefault(
@@ -758,11 +1005,16 @@ def write_summary(workspace: Path, summary: dict[str, Any]) -> dict[str, Path]:
     telemetry.mkdir(parents=True, exist_ok=True)
     json_path = telemetry / SUMMARY_JSON_FILENAME
     md_path = telemetry / SUMMARY_MD_FILENAME
+    # Same last line of defence as the JSONL append. The summary is derived
+    # from events that were already sanitized on the way in, so this should be
+    # a no-op -- it is here so that stops being an assumption. The markdown is
+    # swept as text because it is rendered prose, not a structure.
+    safe_summary = _sanitize_deep(summary)
     json_path.write_text(
-        json.dumps(summary, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        json.dumps(safe_summary, indent=2, sort_keys=True, default=str, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    md_path.write_text(render_summary_markdown(summary), encoding="utf-8")
+    md_path.write_text(sanitize_text(render_summary_markdown(safe_summary)) or "", encoding="utf-8")
     return {"json": json_path, "markdown": md_path}
 
 

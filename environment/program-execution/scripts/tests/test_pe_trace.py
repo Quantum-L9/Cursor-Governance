@@ -64,7 +64,8 @@ class TraceWriterTest(unittest.TestCase):
         events = self.events()
         self.assertEqual([item["status"] for item in events], ["STARTED", "FAILED"])
         self.assertEqual(events[1]["error_code"], "ValueError")
-        self.assertEqual(events[1]["error_message"], "bad source")
+        self.assertEqual(events[1]["error_class"], "ValueError")
+        self.assertEqual(events[1]["safe_message"], "bad source")
         self.assertEqual(events[1]["duration_ms"], 1000)
 
     def test_trace_failure_reraises_original_exception(self) -> None:
@@ -101,17 +102,21 @@ class TraceWriterTest(unittest.TestCase):
                 "input_fingerprint",
                 "cache_status",
                 "error_code",
-                "error_message",
-                "metadata",
+                "error_class",
+                "safe_message",
+                "safe_metadata",
             ):
                 self.assertIn(field, record)
+            # The pre-allowlist field names must not survive anywhere.
+            self.assertNotIn("error_message", record)
+            self.assertNotIn("metadata", record)
 
     def test_error_message_is_bounded(self) -> None:
         trace = self.mod.ExecutionTrace(self.workspace, "demo-v1")
         with self.assertRaises(RuntimeError):
             with trace.span("validation", "validation_command"):
                 raise RuntimeError("x" * 5000)
-        self.assertEqual(len(self.events()[1]["error_message"]), 2000)
+        self.assertEqual(len(self.events()[1]["safe_message"]), 2000)
 
     def test_buffered_events_flush_on_bind(self) -> None:
         trace = self.mod.ExecutionTrace()
@@ -263,8 +268,8 @@ os.kill(os.getpid(), 9)
                     raise ValueError("boom")
         failed = [item for item in self.events() if item["status"] == "FAILED"]
         self.assertEqual([item["operation"] for item in failed], ["worker_write", "execute"])
-        self.assertFalse(failed[0]["metadata"]["propagated"])
-        self.assertTrue(failed[1]["metadata"]["propagated"])
+        self.assertFalse(failed[0]["safe_metadata"]["propagated"])
+        self.assertTrue(failed[1]["safe_metadata"]["propagated"])
 
     def test_span_prefers_an_exception_supplied_error_code(self) -> None:
         class Coded(RuntimeError):
@@ -302,8 +307,9 @@ class HarvesterTest(unittest.TestCase):
             "input_fingerprint": None,
             "cache_status": None,
             "error_code": None,
-            "error_message": None,
-            "metadata": {},
+            "error_class": None,
+            "safe_message": None,
+            "safe_metadata": {},
         }
         with open(telemetry / "events.jsonl", "a", encoding="utf-8") as handle:
             for index, record in enumerate(records):
@@ -458,7 +464,13 @@ class HarvesterTest(unittest.TestCase):
         self.assertEqual(failures["TASK_NOT_SUBMITTED"]["tasks"], ["TASK-001", "TASK-002"])
         self.assertEqual(failures["VALIDATION_MISSING"]["count"], 1)
 
-    def test_harvester_ignores_propagated_failures(self) -> None:
+    def test_harvester_reads_propagated_from_pre_rename_records(self) -> None:
+        """One events.jsonl can span the rename, because `relocate` appends.
+
+        A pre-rename record carries `metadata`, not `safe_metadata`. If the
+        harvester ignored it, every legacy propagated failure would be counted
+        as its own root cause.
+        """
         self.write_events(
             [
                 {
@@ -466,6 +478,7 @@ class HarvesterTest(unittest.TestCase):
                     "error_code": "PEC_PREPARE_FAILED",
                     "task_id": "TASK-001",
                     "duration_ms": 100,
+                    "safe_metadata": None,
                     "metadata": {"propagated": False},
                 },
                 {
@@ -474,7 +487,32 @@ class HarvesterTest(unittest.TestCase):
                     "error_code": "PEC_PREPARE_FAILED",
                     "task_id": "TASK-001",
                     "duration_ms": 900,
+                    "safe_metadata": None,
                     "metadata": {"propagated": True},
+                },
+            ]
+        )
+        summary = self.mod.harvest_trace(self.workspace)
+        self.assertEqual(summary["failure_counts"]["PEC_PREPARE_FAILED"]["count"], 1)
+        self.assertEqual(summary["per_task"]["TASK-001"]["failures"], 1)
+
+    def test_harvester_ignores_propagated_failures(self) -> None:
+        self.write_events(
+            [
+                {
+                    "status": "FAILED",
+                    "error_code": "PEC_PREPARE_FAILED",
+                    "task_id": "TASK-001",
+                    "duration_ms": 100,
+                    "safe_metadata": {"propagated": False},
+                },
+                {
+                    "status": "FAILED",
+                    "operation": "execute",
+                    "error_code": "PEC_PREPARE_FAILED",
+                    "task_id": "TASK-001",
+                    "duration_ms": 900,
+                    "safe_metadata": {"propagated": True},
                 },
             ]
         )
@@ -605,6 +643,186 @@ class HarvesterTest(unittest.TestCase):
         ):
             self.assertIn(heading, body)
         self.assertIn("TASK_NOT_SUBMITTED", body)
+
+
+# A value that must never survive to disk. Distinctive enough that a single
+# occurrence anywhere under telemetry/ is unambiguous evidence of a leak.
+SENTINEL = "L9_TEST_SECRET_DO_NOT_PERSIST_7f31"
+
+
+class SecretRedactionTest(unittest.TestCase):
+    """No injection path may write a live credential into persisted telemetry.
+
+    The allowlisted record structure is the control being tested; the pattern
+    sweep is the backstop. Both are exercised: `test_no_injection_vector...`
+    registers the sentinel the way a campaign registers a resolved credential,
+    while `test_shaped_credentials...` registers nothing, so only the patterns
+    can save it.
+    """
+
+    def setUp(self) -> None:
+        self.mod = load_module("pe_trace_redaction_under_test", TRACE_SCRIPT)
+        self._tmp = tempfile.TemporaryDirectory()
+        self.workspace = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        self.addCleanup(self.mod.clear_registered_secrets)
+
+    def generated_files(self) -> list[Path]:
+        """Every file the trace produced, found by walking -- not by name."""
+        return sorted(path for path in (self.workspace / "telemetry").rglob("*") if path.is_file())
+
+    def occurrences(self, needle: str) -> dict[str, int]:
+        return {
+            path.name: path.read_text(encoding="utf-8", errors="replace").count(needle)
+            for path in self.generated_files()
+        }
+
+    def inject_every_vector(self, secret: str) -> None:
+        """Push `secret` through all six paths a value can reach the trace by."""
+        trace = self.mod.ExecutionTrace(self.workspace, "demo-v1")
+
+        # 1. Exception message -- the raw `str(exc)` path.
+        with self.assertRaises(RuntimeError):
+            with trace.span("compile", "compile_campaign_source"):
+                raise RuntimeError(f"upstream rejected credential {secret}")
+
+        # 2. Flat metadata, under a key that is not on the allowlist.
+        trace.event("TASK_ELIGIBLE", "task", "task_eligible", metadata={"api_key": secret})
+
+        # 3. Nested metadata, under a key that *is* on the allowlist -- the
+        #    container itself has no safe rendering, so the whole value goes.
+        trace.event(
+            "TASK_ELIGIBLE",
+            "task",
+            "task_eligible",
+            metadata={"count": 1, "verdict": {"headers": {"x-api-key": secret}}},
+        )
+
+        # 3b. The secret as a metadata *key*, which is reported by name.
+        trace.event("TASK_ELIGIBLE", "task", "task_eligible", metadata={secret: "value"})
+
+        # 4. Credential-bearing URL.
+        trace.event(
+            "OPERATION_FAILED",
+            "task_prepare",
+            "task_worktree_create",
+            status="FAILED",
+            error_code="CLONE_FAILED",
+            error_message=f"clone failed for https://svc-account:{secret}@github.com/o/r.git",
+        )
+
+        # 5. Authorization header.
+        trace.event(
+            "OPERATION_FAILED",
+            "gate",
+            "gate_check",
+            status="FAILED",
+            error_code="HTTP_401",
+            error_message=f'curl -H "Authorization: Bearer {secret}" https://api.example.com',
+        )
+
+        # 6. Environment-style assignment.
+        trace.event(
+            "OPERATION_FAILED",
+            "validation",
+            "validation_command",
+            status="FAILED",
+            error_code="VALIDATION_COMMAND_FAILED",
+            error_message=f"env was GITHUB_TOKEN={secret} PATH=/usr/bin",
+        )
+
+        self.mod.harvest_and_write(self.workspace)
+
+    def test_no_injection_vector_persists_a_registered_secret(self) -> None:
+        self.mod.register_secret_value(SENTINEL)
+        self.inject_every_vector(SENTINEL)
+
+        found = self.occurrences(SENTINEL)
+        # The scan must have actually read the artifacts it claims are clean.
+        self.assertIn("events.jsonl", found)
+        self.assertIn("run-summary.json", found)
+        self.assertIn("run-summary.md", found)
+        self.assertEqual(sum(found.values()), 0, f"sentinel survived to disk: {found}")
+
+    def test_trace_stays_useful_after_redaction(self) -> None:
+        """Redaction must cost the secret, not the diagnosis."""
+        self.mod.register_secret_value(SENTINEL)
+        self.inject_every_vector(SENTINEL)
+        events = self.mod.read_events(self.workspace)
+
+        failed = [item for item in events if item["status"] == "FAILED"]
+        self.assertEqual(
+            [item["error_code"] for item in failed],
+            ["RuntimeError", "CLONE_FAILED", "HTTP_401", "VALIDATION_COMMAND_FAILED"],
+        )
+        # The exception's class survives, and its message survives around the
+        # hole where the credential was.
+        self.assertEqual(failed[0]["error_class"], "RuntimeError")
+        self.assertIn("upstream rejected credential", failed[0]["safe_message"])
+        self.assertIn("<redacted>", failed[0]["safe_message"])
+        # A credential-bearing URL keeps the host, which is the diagnostic part.
+        self.assertIn("github.com/o/r.git", failed[1]["safe_message"])
+        # Allowlisted scalars pass through; rejected keys are named, not valued.
+        nested = [item for item in events if item.get("safe_metadata", {}).get("count") == 1]
+        self.assertEqual(nested[0]["safe_metadata"]["count"], 1)
+        self.assertEqual(nested[0]["safe_metadata"]["redacted_keys"], ["verdict"])
+
+    def test_shaped_credentials_are_masked_without_registration(self) -> None:
+        """The pattern sweep must stand on its own, with an empty registry."""
+        cases = {
+            "url": "clone https://user:hunter2primary@github.com/o/r.git failed",
+            "bearer": 'curl -H "Authorization: Bearer abcdef0123456789xyz" https://api',
+            "env": "env had AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCY",
+            "query": "GET /v1/items?api_key=6f1b9c2d4e8a0b3c5d7e9f1a",
+            "github": "remote rejected: ghp_ABCdef0123456789ABCdef0123456789abcd",
+            "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.dBjftJeZ4CVPmB92K27uhbUJU1p1r",
+        }
+        leaked = {}
+        for name, message in cases.items():
+            cleaned = self.mod.sanitize_text(message)
+            for fragment in (
+                "hunter2primary",
+                "abcdef0123456789xyz",
+                "wJalrXUtnFEMIK7MDENGbPxRfiCY",
+                "6f1b9c2d4e8a0b3c5d7e9f1a",
+                "ghp_ABCdef0123456789ABCdef0123456789abcd",
+                "dBjftJeZ4CVPmB92K27uhbUJU1p1r",
+            ):
+                if fragment in message and fragment in cleaned:
+                    leaked[name] = cleaned
+        self.assertEqual(leaked, {}, f"pattern sweep missed: {leaked}")
+
+    def test_persisted_jsonl_stays_parseable_after_redaction(self) -> None:
+        """Redaction must not corrupt the line the harvester has to read."""
+        self.mod.register_secret_value(SENTINEL)
+        self.inject_every_vector(SENTINEL)
+        raw = (self.workspace / "telemetry" / "events.jsonl").read_text(encoding="utf-8")
+        lines = [line for line in raw.splitlines() if line.strip()]
+        self.assertTrue(lines)
+        for line in lines:
+            json.loads(line)  # raises if a replacement ate a delimiter
+        summary_path = self.workspace / "telemetry" / "run-summary.json"
+        json.loads(summary_path.read_text(encoding="utf-8"))
+
+    def test_containers_never_reach_safe_metadata(self) -> None:
+        trace = self.mod.ExecutionTrace(self.workspace, "demo-v1")
+        trace.event(
+            "TASK_ELIGIBLE",
+            "task",
+            "task_eligible",
+            metadata={
+                "exit_code": 0,
+                "count": ["a", "list"],
+                "verdict": {"a": "dict"},
+                "stage": "prepare",
+            },
+        )
+        safe = self.mod.read_events(self.workspace)[0]["safe_metadata"]
+        self.assertEqual(safe["exit_code"], 0)
+        self.assertEqual(safe["stage"], "prepare")
+        self.assertNotIn("count", safe)
+        self.assertNotIn("verdict", safe)
+        self.assertEqual(safe["redacted_keys"], ["count", "verdict"])
 
 
 if __name__ == "__main__":
