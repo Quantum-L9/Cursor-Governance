@@ -1643,14 +1643,18 @@ def run_declared_validations(
     so the worker runs them first and records the real exit codes.
     """
     results: list[dict[str, Any]] = []
-    for command in commands:
+    for index, command in enumerate(commands, start=1):
         with traced(
             trace,
             "validation",
             "validation_command",
             task_id=task_id,
             attempt_number=attempt_number,
-            metadata={"command": command, "resolved_cwd": str(worktree)},
+            # Position, not text. A contract-declared command line can carry a
+            # token in a flag, and the resolved cwd is a machine path; neither
+            # belongs in a persisted trace. `count` still says which of the
+            # declared commands this span is.
+            metadata={"count": index, "validation_count": len(commands)},
         ) as span:
             completed = subprocess.run(  # noqa: S602 - contract-declared command
                 ["bash", "-lc", command],
@@ -1664,8 +1668,12 @@ def run_declared_validations(
             span["exit_code"] = completed.returncode
             tail = ((completed.stdout or "") + (completed.stderr or "")).strip()[-2000:]
             if completed.returncode != 0:
+                # The exit code and the error code go to telemetry; the output
+                # tail does not. It is unbounded third-party text -- the exact
+                # shape that leaks a credential echoed by a failing command.
+                # It still reaches the attempt receipt below, which pec verify
+                # compares against and which is not a persisted trace.
                 span["error_code"] = "VALIDATION_COMMAND_FAILED"
-                span["error_message"] = tail
         results.append(
             {
                 "command": command,

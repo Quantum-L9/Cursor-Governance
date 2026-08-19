@@ -929,14 +929,18 @@ class RunCampaignTests(unittest.TestCase):
                 self.assertEqual(task["attempts"], 1)
                 self.assertIsNotNone(task["eligible_to_first_write_ms"])
 
-    def test_validation_commands_record_exit_code_and_cwd(self) -> None:
+    def test_validation_commands_record_exit_code_not_command_text(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             worktree = Path(raw)
             _git_init(worktree)
             trace = self.mod.pe_trace.ExecutionTrace(worktree, "demo-activate-v1")
             results = self.mod.run_declared_validations(
                 worktree,
-                ["python3 -c 'print(0)'", "python3 -c 'raise SystemExit(3)'"],
+                [
+                    "python3 -c 'print(0)'",
+                    'python3 -c \'import sys; sys.stderr.write("boom-detail"); '
+                    "raise SystemExit(3)'",
+                ],
                 trace=trace,
                 task_id="TASK-001",
             )
@@ -948,10 +952,20 @@ class RunCampaignTests(unittest.TestCase):
             ]
             self.assertEqual([item["status"] for item in spans], ["PASSED", "FAILED"])
             self.assertEqual(spans[1]["error_code"], "VALIDATION_COMMAND_FAILED")
-            self.assertEqual(spans[0]["metadata"]["exit_code"], 0)
-            self.assertEqual(spans[1]["metadata"]["exit_code"], 3)
-            self.assertEqual(spans[0]["metadata"]["resolved_cwd"], str(worktree))
+            self.assertEqual(spans[0]["safe_metadata"]["exit_code"], 0)
+            self.assertEqual(spans[1]["safe_metadata"]["exit_code"], 3)
             self.assertEqual(spans[0]["task_id"], "TASK-001")
+            # Position identifies which declared command this span is; the
+            # command text and the resolved cwd are deliberately not persisted.
+            self.assertEqual(spans[0]["safe_metadata"]["count"], 1)
+            self.assertEqual(spans[0]["safe_metadata"]["validation_count"], 2)
+            for span in spans:
+                self.assertNotIn("resolved_cwd", span["safe_metadata"])
+                self.assertNotIn("command", span["safe_metadata"])
+            # The failing command's output tail reaches the attempt receipt,
+            # never the trace.
+            self.assertIsNone(spans[1]["safe_message"])
+            self.assertIn("boom-detail", results[1]["evidence"])
 
     def test_campaign_failure_still_generates_summary(self) -> None:
         """A campaign that dies mid-preparation still leaves a harvestable trace."""
@@ -992,9 +1006,10 @@ class RunCampaignTests(unittest.TestCase):
                 [item["operation"] for item in failed],
                 ["compile_campaign_source", "campaign_run"],
             )
-            self.assertEqual(failed[0]["error_message"], "compile blew up")
-            self.assertFalse(failed[0]["metadata"]["propagated"])
-            self.assertTrue(failed[1]["metadata"]["propagated"])
+            self.assertEqual(failed[0]["safe_message"], "compile blew up")
+            self.assertEqual(failed[0]["error_class"], "RuntimeError")
+            self.assertFalse(failed[0]["safe_metadata"]["propagated"])
+            self.assertTrue(failed[1]["safe_metadata"]["propagated"])
 
     def test_trace_command_harvests_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
