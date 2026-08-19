@@ -939,7 +939,7 @@ class RunCampaignTests(unittest.TestCase):
                 [
                     "python3 -c 'print(0)'",
                     'python3 -c \'import sys; sys.stderr.write("boom-detail"); '
-                    "raise SystemExit(3)'",
+                    + "raise SystemExit(3)'",
                 ],
                 trace=trace,
                 task_id="TASK-001",
