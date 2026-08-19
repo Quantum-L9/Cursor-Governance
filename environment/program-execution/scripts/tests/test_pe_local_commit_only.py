@@ -23,15 +23,23 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
 
-from test_pe_smoke_campaign import (  # type: ignore[import-not-found]
+# `run_conformance.py` loads this file by path under a synthetic module name, so
+# the sibling test modules below are not importable by name unless their own
+# directory is on sys.path. pytest inserts it automatically; conformance does not.
+_TESTS_DIR = Path(__file__).resolve().parent
+if str(_TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TESTS_DIR))
+
+from test_pe_smoke_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _worker_command,
 )
-from test_run_campaign import (  # type: ignore[import-not-found]
+from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     READY_SEED,
     _dump,
     _git_init,

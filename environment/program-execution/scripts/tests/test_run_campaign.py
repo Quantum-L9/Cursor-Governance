@@ -865,26 +865,34 @@ class RunCampaignTests(unittest.TestCase):
             self.assertNotEqual(before, self.mod.blueprint_fingerprint(blueprint))
 
     def test_campaign_run_creates_events_jsonl(self) -> None:
-        """A real close-through run leaves telemetry the harvester can read."""
+        """A real close-through run leaves telemetry the harvester can read.
+
+        Publication moved out of autonomous execution, so driving the chain
+        through `close` opens the release transition explicitly -- the same
+        setup `test_two_task_fixture_reaches_completed` uses. The subject here
+        is the telemetry the run emits, not the release gate itself, which keeps
+        its own coverage in the refusal tests.
+        """
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw) / "host")
             l9 = Path(raw) / "l9"
             target = l9 / "program-worktrees" / "demo-activate-v1"
             target.mkdir(parents=True)
             _git_init(target)
-            self.mod.run_campaign(
-                root / "intent.yaml",
-                until="close",
-                primary=Path(raw) / "primary",
-                repo_root=root,
-                l9_root=l9,
-                hooks=self.mod.Hooks(
-                    context7_stack=_stack_ok,
-                    write_task_output=_write_task_output,
-                    compile_activation=self.activate.compile_activation,
-                    make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
-                ),
-            )
+            with patch.dict(os.environ, {"L9_PE_RELEASE_AUTHORIZED": "test release transition"}):
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                        make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
+                    ),
+                )
             workspace = l9 / "programs/demo-activate-v1"
             events_path = workspace / "telemetry/events.jsonl"
             self.assertTrue(events_path.is_file())
