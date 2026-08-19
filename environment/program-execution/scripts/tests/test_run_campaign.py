@@ -812,6 +812,223 @@ class RunCampaignTests(unittest.TestCase):
                 ["python3 -c 'print(0)'"],
             )
 
+    def test_blueprint_fingerprint_survives_recompilation(self) -> None:
+        """A recompiled Blueprint must fingerprint alike, or no repeat is ever seen."""
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = Path(raw) / "blueprint"
+            (blueprint / "schemas").mkdir(parents=True)
+            (blueprint / "PROGRAM.yaml").write_text(
+                "campaign_id: demo-activate-v1\nsnapshot_at: '2026-08-18T18:00:00+00:00'\n",
+                encoding="utf-8",
+            )
+            (blueprint / "MANIFEST.yaml").write_text(
+                "files:\n- path: PROGRAM.yaml\n  sha256: " + ("a" * 64) + "\n",
+                encoding="utf-8",
+            )
+            before = self.mod.blueprint_fingerprint(blueprint)
+
+            # Recompile: same program, new emission stamp, new derived digest.
+            (blueprint / "PROGRAM.yaml").write_text(
+                "campaign_id: demo-activate-v1\nsnapshot_at: '2026-08-18T19:45:12+00:00'\n",
+                encoding="utf-8",
+            )
+            (blueprint / "MANIFEST.yaml").write_text(
+                "files:\n- path: PROGRAM.yaml\n  sha256: " + ("b" * 64) + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(before, self.mod.blueprint_fingerprint(blueprint))
+
+            # A real content change must still register.
+            (blueprint / "PROGRAM.yaml").write_text(
+                "campaign_id: other-campaign-v1\nsnapshot_at: '2026-08-18T19:45:12+00:00'\n",
+                encoding="utf-8",
+            )
+            self.assertNotEqual(before, self.mod.blueprint_fingerprint(blueprint))
+
+    def test_campaign_run_creates_events_jsonl(self) -> None:
+        """A real close-through run leaves telemetry the harvester can read."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            self.mod.run_campaign(
+                root / "intent.yaml",
+                until="close",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                    make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
+                ),
+            )
+            workspace = l9 / "programs/demo-activate-v1"
+            events_path = workspace / "telemetry/events.jsonl"
+            self.assertTrue(events_path.is_file())
+            self.assertTrue((workspace / "telemetry/run-summary.json").is_file())
+            self.assertTrue((workspace / "telemetry/run-summary.md").is_file())
+
+            events = [json.loads(line) for line in events_path.read_text().splitlines() if line]
+            self.assertEqual({item["schema"] for item in events}, {"pe.execution-trace.v1"})
+            self.assertEqual(len({item["run_id"] for item in events}), 1)
+            operations = {item["operation"] for item in events}
+            for operation in (
+                "campaign_run",
+                "input_classification",
+                "compile_campaign_source",
+                "blueprint_validation",
+                "acceptance",
+                "pec_bootstrap",
+                "arm",
+                "execute",
+                "close",
+                "validation_command",
+                "pec_verify",
+            ):
+                self.assertIn(operation, operations)
+            lifecycle = {item["event_type"] for item in events}
+            for event_type in (
+                "TASK_ELIGIBLE",
+                "TASK_SELECTED",
+                "TASK_WORKTREE_READY",
+                "TASK_WORKER_STARTED",
+                "TASK_FIRST_WRITE",
+                "TASK_VALIDATION_STARTED",
+                "TASK_VALIDATION_FINISHED",
+                "TASK_VERIFY_STARTED",
+                "TASK_VERIFY_FINISHED",
+                "TASK_COMPLETED",
+            ):
+                self.assertIn(event_type, lifecycle)
+
+            summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
+            self.assertEqual(summary["campaign_id"], "demo-activate-v1")
+            self.assertEqual(summary["task_counts"], {"completed": 2, "attempted": 2})
+            self.assertIsNotNone(summary["timing"]["time_to_first_write_ms"])
+            self.assertGreater(summary["timing"]["preparation_ms"], 0)
+            # The campaign_run span is the wall clock, not a preparation cost.
+            self.assertLess(summary["timing"]["preparation_ms"], summary["wall_clock_ms"])
+            campaign_run = [
+                item
+                for item in events
+                if item["operation"] == "campaign_run" and item["status"] == "PASSED"
+            ]
+            self.assertEqual([item["category"] for item in campaign_run], ["campaign"])
+            self.assertEqual(summary["operation_counts"]["compile_campaign_source"], 1)
+            self.assertEqual(summary["operation_counts"]["pec_bootstrap"], 1)
+            self.assertEqual(summary["operation_counts"]["pec_verify"], 2)
+            self.assertEqual(summary["operation_counts"]["validation_command"], 2)
+            self.assertEqual(summary["failure_counts"], {})
+            for task_id in ("TASK-001", "TASK-002"):
+                task = summary["per_task"][task_id]
+                self.assertTrue(task["completed"])
+                self.assertEqual(task["attempts"], 1)
+                self.assertIsNotNone(task["eligible_to_first_write_ms"])
+
+    def test_validation_commands_record_exit_code_not_command_text(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw)
+            _git_init(worktree)
+            trace = self.mod.pe_trace.ExecutionTrace(worktree, "demo-activate-v1")
+            results = self.mod.run_declared_validations(
+                worktree,
+                [
+                    "python3 -c 'print(0)'",
+                    'python3 -c \'import sys; sys.stderr.write("boom-detail"); '
+                    + "raise SystemExit(3)'",
+                ],
+                trace=trace,
+                task_id="TASK-001",
+            )
+            self.assertEqual([item["exit_code"] for item in results], [0, 3])
+            spans = [
+                item
+                for item in self.mod.pe_trace.read_events(worktree)
+                if item["operation"] == "validation_command" and item["status"] != "STARTED"
+            ]
+            self.assertEqual([item["status"] for item in spans], ["PASSED", "FAILED"])
+            self.assertEqual(spans[1]["error_code"], "VALIDATION_COMMAND_FAILED")
+            self.assertEqual(spans[0]["safe_metadata"]["exit_code"], 0)
+            self.assertEqual(spans[1]["safe_metadata"]["exit_code"], 3)
+            self.assertEqual(spans[0]["task_id"], "TASK-001")
+            # Position identifies which declared command this span is; the
+            # command text and the resolved cwd are deliberately not persisted.
+            self.assertEqual(spans[0]["safe_metadata"]["count"], 1)
+            self.assertEqual(spans[0]["safe_metadata"]["validation_count"], 2)
+            for span in spans:
+                self.assertNotIn("resolved_cwd", span["safe_metadata"])
+                self.assertNotIn("command", span["safe_metadata"])
+            # The failing command's output tail reaches the attempt receipt,
+            # never the trace.
+            self.assertIsNone(spans[1]["safe_message"])
+            self.assertIn("boom-detail", results[1]["evidence"])
+
+    def test_campaign_failure_still_generates_summary(self) -> None:
+        """A campaign that dies mid-preparation still leaves a harvestable trace."""
+
+        def _explode(source: Path, blueprint: Path) -> None:
+            raise RuntimeError("compile blew up")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            with self.assertRaises(RuntimeError):
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        compile_activation=self.activate.compile_activation,
+                        compile_source=_explode,
+                    ),
+                )
+            workspace = l9 / "programs/demo-activate-v1"
+            self.assertTrue((workspace / "telemetry/events.jsonl").is_file())
+            summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
+            self.assertTrue((workspace / "telemetry/run-summary.md").is_file())
+            # One root cause, counted once, even though it unwound through
+            # the enclosing campaign_run span as well.
+            self.assertEqual(summary["failure_counts"]["RuntimeError"]["count"], 1)
+            events = [
+                json.loads(line)
+                for line in (workspace / "telemetry/events.jsonl").read_text().splitlines()
+                if line
+            ]
+            failed = [item for item in events if item["status"] == "FAILED"]
+            self.assertEqual(
+                [item["operation"] for item in failed],
+                ["compile_campaign_source", "campaign_run"],
+            )
+            self.assertEqual(failed[0]["safe_message"], "compile blew up")
+            self.assertEqual(failed[0]["error_class"], "RuntimeError")
+            self.assertFalse(failed[0]["safe_metadata"]["propagated"])
+            self.assertTrue(failed[1]["safe_metadata"]["propagated"])
+
+    def test_trace_command_harvests_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            trace = self.mod.pe_trace.ExecutionTrace(workspace, "demo-activate-v1")
+            with trace.span("compile", "compile_campaign_source", input_fingerprint="abc"):
+                pass
+            with trace.span("compile", "compile_campaign_source", input_fingerprint="abc"):
+                pass
+            self.assertEqual(self.mod.main(["trace", "--workspace", str(workspace)]), 0)
+            summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
+            self.assertEqual(summary["repeated_operations"][0]["executions"], 2)
+            self.assertEqual(summary["repeated_operations"][0]["extra_executions"], 1)
+            self.assertTrue((workspace / "telemetry/run-summary.md").is_file())
+
+    def test_trace_command_reports_missing_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            self.assertEqual(self.mod.main(["trace", "--workspace", raw]), 2)
+
     def test_until_stages_unchanged(self) -> None:
         self.assertEqual(
             self.mod.UNTIL_STAGES,
