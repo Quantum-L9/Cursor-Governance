@@ -9,3 +9,4 @@ campaign_ids:
   - l9-devpack-program-execution-hardening
   - l9-ecosystem-fix-plan
   - pe-v3-hardening
+  - pe-router-capability-safety-v4
