@@ -54,8 +54,8 @@ fixed argv allowlist (never a shell string), redacts token-shaped output, and co
 `--output` to the working tree:
 
 ```bash
-python3 scripts/debt_audit.py --output debt-baseline.json          # auto-detect
-python3 scripts/debt_audit.py --output debt-baseline.json --language mixed
+"${GOV_PY:-$PWD/.venv/bin/python}" scripts/debt_audit.py --output debt-baseline.json
+"${GOV_PY:-$PWD/.venv/bin/python}" scripts/debt_audit.py --output debt-baseline.json --language mixed
 ```
 
 The snapshot records: `head_sha`, detected `languages`, `tool_versions`, the repository

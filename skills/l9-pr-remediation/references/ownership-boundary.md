@@ -6,8 +6,8 @@ role: ownership_boundary
 tags: [pr, ownership, codebase, ci-pipeline]
 owner: igor_beylin
 status: active
-version: 3.1.0
-updated: 2026-08-16
+version: 3.2.0
+updated: 2026-08-18
 /L9_META -->
 
 # Ownership Boundary
@@ -39,7 +39,7 @@ Read-only surfaces (never edit here):
 
 Interpreter, arch, ABI, or venv failure (cryptography native-ext import, Rosetta miniconda on arm64, broken SSOT `.venv`). Not a source defect.
 
-**Action:** run the venv preflight once ([run-contract.md](run-contract.md)). Export `UV_PYTHON`. Do not edit source. Do not unpin lock pins. Do not symlink a failing SSOT venv. Continue every independent codebase cluster.
+**Action:** run the venv preflight once ([run-contract.md](run-contract.md)). Export `UV_PYTHON` to uv-managed **native** CPython. Do not use `uv python find --system` (conda `base` wins). Do not edit source. Do not unpin lock pins. Do not symlink a failing SSOT venv. Do not edit the Makefile from this skill. Continue every independent codebase cluster.
 
 ## HUMAN
 

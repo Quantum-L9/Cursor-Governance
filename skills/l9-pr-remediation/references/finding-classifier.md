@@ -6,8 +6,8 @@ role: finding_classifier
 tags: [pr, classification, triage, severity]
 owner: igor_beylin
 status: active
-version: 3.2.0
-updated: 2026-08-16
+version: 3.4.0
+updated: 2026-08-18
 /L9_META -->
 
 # Finding Classifier
@@ -26,7 +26,7 @@ Classify each ingested finding by **ownership first**, then severity and fix str
 | **HUMAN** | no | Reply + resolve; do not merge that PR; continue other clusters |
 | **FALSE_POSITIVE** | no | Reply with evidence; resolve |
 
-See [ownership-boundary.md](ownership-boundary.md). Unknown ownership → do not edit that cluster.
+See [ownership-boundary.md](ownership-boundary.md). Unknown ownership **or** unverified root cause → do not edit that cluster. `disposition: fix` requires a root cause traced to current source or CI logs, with a confidence of `high` or `medium`. `low` / `Unknown` → `defer` or `note_*`, not a patch.
 
 ## Severity Classification
 
@@ -110,7 +110,7 @@ classified_findings:
 execution_plan:
   cycle_scope: [list of finding IDs to fix this cycle]
   estimated_files: [list of files to modify]
-  local_verify_commands: [Makefile target + every pre-commit hook + leftover workflow commands]
+  local_verify_commands: [make pr-check + cited-path checks]
 ```
 
 Promote this object into the full ledger in [remediation-plan.md](remediation-plan.md) (`disposition` + `status` on every finding) before any edit.
@@ -120,5 +120,5 @@ Promote this object into the full ledger in [remediation-plan.md](remediation-pl
 The plan MUST include ALL findings from the census. Do NOT plan to fix one finding at a time, and do not edit until every finding has a disposition.
 1. Fix all blocking findings.
 2. Fix all actionable findings (including validated code-review agent items).
-3. Run Makefile + every `.pre-commit-config.yaml` hook + leftover local commands.
-4. Commit once. Push once. Remote CI is confirmation, not a second planning loop.
+3. Run `make pr-check` + cited/planned path checks. Do not run every pre-commit hook or every workflow `run:`.
+4. Commit once. Sanctioned publish once (`PR_REMEDIATE=0 make pr`). Remote CI is confirmation, not a second planning loop.
