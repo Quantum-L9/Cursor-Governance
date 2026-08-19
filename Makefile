@@ -491,6 +491,7 @@ program-execution-core-validate:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/core/scripts/validate_pair.py 		$(PE_ROOT)/core --mode template
 	$(MAKE) program-execution-campaign-schema
 	$(MAKE) program-execution-campaign-compile
+	$(MAKE) program-execution-campaign-promotion
 
 program-execution-adapters:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
@@ -555,7 +556,14 @@ claude-deepseek-verify:
 	./scripts/verify-routing.sh
 
 .PHONY: program-execution-campaign-schema program-execution-campaign-compile
+.PHONY: program-execution-campaign-promotion
 .PHONY: program-execution-controller-tests
+## Campaign promotion must be mechanically valid and portable before it lands.
+program-execution-campaign-promotion:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/scripts/validate_campaign_promotion.py
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B -m unittest \
+		$(PE_ROOT)/scripts/tests/test_validate_campaign_promotion.py
+
 program-execution-campaign-schema:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B -m unittest \
 		$(PE_ROOT)/conformance/test_campaign_source_schema.py

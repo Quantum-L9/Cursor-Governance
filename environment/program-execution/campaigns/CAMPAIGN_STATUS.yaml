@@ -34,6 +34,3 @@ campaigns:
     lifecycle: in_progress
     notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; agents must stop and ask, never forge it
     launched_by: make campaign
-    pec_workspace: /Users/macm2/.l9/programs/pe-router-capability-safety-v4
-    blueprint: /Users/macm2/.l9/blueprints/pe-router-capability-safety-v4
-    worktree: /Users/macm2/.l9/program-worktrees/pe-router-capability-safety-v4
