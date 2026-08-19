@@ -145,6 +145,21 @@ def test_child_git_repo_does_not_collapse_to_workspace(tmp_path: Path):
     assert result["readonly"] is False
 
 
+def test_home_does_not_inherit_sibling_child_repos(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_home = (tmp_path / "home-user").resolve()
+    for name in ("Cursor-Governance", "Website-Bot"):
+        child = fake_home / name
+        child.mkdir(parents=True)
+        (child / ".git").mkdir()
+    monkeypatch.setattr(group_resolver.Path, "home", classmethod(lambda cls: fake_home))
+    result = group_resolver.resolve_group_id(fake_home)
+    assert result["group_id"] == "igor-workspace"
+    assert result["method"] == "fallback_readonly"
+    assert result["readonly"] is True
+
+
 def test_no_match_falls_back_readonly_workspace():
     result = group_resolver.resolve_group_id(Path("/tmp/unrelated"))
     assert result["group_id"] == "igor-workspace"

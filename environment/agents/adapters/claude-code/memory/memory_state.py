@@ -51,24 +51,43 @@ def _git_toplevel(start: Path) -> Path | None:
     return None
 
 
+def _non_workspace_ancestors() -> frozenset[Path]:
+    """``$HOME`` and IDE homes are never a session workspace.
+
+    ``$HOME/.l9/memory`` exists as the machine isolate store. Walking to it
+    made every checkout resolve as home, then ``resolve_group_id($HOME)``
+    scanned sibling repos and returned no ``group_id``.
+    """
+    home = Path.home().resolve()
+    return frozenset({home, home / ".cursor", home / ".claude"})
+
+
 def workspace_root() -> Path:
     """Resolve the session workspace root that anchors ``.l9/memory``.
 
     ``CLAUDE_PROJECT_DIR`` / ``CURSOR_PROJECT_DIR`` (harness project dir) always
-    wins. When unset, if both a workspace and a nested repo carry ``.l9/memory``,
-    use the *outermost* ancestor so a lock acquired from a subrepo is visible to
-    the gate. If no ancestor has ``.l9/memory``, use the active git toplevel,
-    else cwd.
+    wins. When unset, if both a workspace and a nested path carry ``.l9/memory``,
+    use the *outermost* ancestor that is not ``$HOME`` / ``~/.cursor`` /
+    ``~/.claude`` and that stays inside the current git toplevel (a parent
+    clone with its own ``.l9/memory`` is a different workspace). If no
+    ancestor has ``.l9/memory``, use the active git toplevel, else cwd.
     """
     for key in ("CLAUDE_PROJECT_DIR", "CURSOR_PROJECT_DIR"):
         env = os.environ.get(key)
         if env:
             return Path(env).resolve()
     cwd = Path.cwd().resolve()
-    found: list[Path] = [base for base in (cwd, *cwd.parents) if (base / ".l9" / "memory").is_dir()]
+    skip = _non_workspace_ancestors()
+    found = [
+        base
+        for base in (cwd, *cwd.parents)
+        if (base / ".l9" / "memory").is_dir() and base not in skip
+    ]
+    toplevel = _git_toplevel(cwd)
+    if toplevel is not None:
+        found = [base for base in found if base == toplevel or toplevel in base.parents]
     if found:
         return found[-1]
-    toplevel = _git_toplevel(cwd)
     if toplevel is not None:
         return toplevel
     return cwd

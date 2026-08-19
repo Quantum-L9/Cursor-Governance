@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 CLAUDE_DIR = Path(__file__).resolve().parent.parent
 GATE = CLAUDE_DIR / "hooks" / "memory_gate.py"
@@ -248,6 +249,43 @@ class WorkspaceRootTests(unittest.TestCase):
         bare = Path(tempfile.mkdtemp()).resolve()
         os.chdir(bare)
         self.assertEqual(st.workspace_root(), bare)
+
+    def test_home_l9_memory_is_not_a_workspace_anchor(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+        fake_home = Path(tempfile.mkdtemp()).resolve()
+        (fake_home / ".l9" / "memory").mkdir(parents=True)
+        repo = fake_home / "Website-Bot"
+        repo.mkdir()
+        os.chdir(repo)
+        with mock.patch.object(st.Path, "home", return_value=fake_home):
+            self.assertEqual(st.workspace_root(), repo)
+            self.assertNotEqual(st.workspace_root(), fake_home)
+
+    def test_outermost_skips_home_keeps_workspace(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+        fake_home = Path(tempfile.mkdtemp()).resolve()
+        (fake_home / ".l9" / "memory").mkdir(parents=True)
+        workspace = fake_home / "ws"
+        (workspace / ".l9" / "memory").mkdir(parents=True)
+        nested = workspace / "vendor" / "lib"
+        (nested / ".l9" / "memory").mkdir(parents=True)
+        os.chdir(nested)
+        with mock.patch.object(st.Path, "home", return_value=fake_home):
+            self.assertEqual(st.workspace_root(), workspace)
+
+    def test_does_not_walk_into_parent_git_clone(self) -> None:
+        os.environ.pop("CLAUDE_PROJECT_DIR", None)
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+        outer = Path(tempfile.mkdtemp()).resolve()
+        (outer / ".l9" / "memory").mkdir(parents=True)
+        inner = outer / "Cursor-Governance"
+        (inner / ".l9" / "memory").mkdir(parents=True)
+        for repo in (outer, inner):
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+        os.chdir(inner)
+        self.assertEqual(st.workspace_root(), inner)
 
 
 class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
