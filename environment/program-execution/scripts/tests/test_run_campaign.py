@@ -123,6 +123,14 @@ def _load(name: str, path: Path):
     return module
 
 
+_GIT_IDENTITY = (
+    "-c",
+    "user.email=test@example.com",
+    "-c",
+    "user.name=Test",
+)
+
+
 def _write_task_output(worktree: Path, rel: str, title: str) -> str:
     path = worktree / rel
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -132,7 +140,19 @@ def _write_task_output(worktree: Path, rel: str, title: str) -> str:
     )
     subprocess.run(["git", "-C", str(worktree), "add", "--", rel], check=True, capture_output=True)
     subprocess.run(
-        ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
+        [
+            "git",
+            "-C",
+            str(worktree),
+            # The worktree under test is created by the PE controller, not by
+            # `_git_init`, so it carries no committer identity and CI runners
+            # have no global one either. Bind it per-invocation: the fixture
+            # owns the commit, so it must supply the identity that commit needs.
+            *_GIT_IDENTITY,
+            "commit",
+            "-m",
+            f"pec: {Path(rel).stem} output",
+        ],
         check=True,
         capture_output=True,
     )
