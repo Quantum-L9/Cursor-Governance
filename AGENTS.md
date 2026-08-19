@@ -899,3 +899,151 @@ generally safe overlap remedy):
    renegotiate scope.** `PR_STACK=auto` creates the exact topology item 1
    denies at merge time, so it is no longer the second-choice remedy —
    use it only when the parent will be merged with `--merge`.
+
+<!-- AGENTS_OPERATING_DIGEST_2026_08_18_V1 -->
+## Operating digest (2026-08-18) — live reading rule + remaining drift
+
+This block is the **live operating digest**. Where earlier body text or dated
+appends conflict, **this block wins**. Do not execute superseded merge,
+activation, interpreter, pin, or path bullets from §§2.0–2.3 / §6.
+
+Authority order is unchanged: `CANONICAL_LAW.md` >
+`ops/autonomy/surface_profile.yaml` > this file > skills.
+
+### Activation (live)
+
+1. One automatic mechanism: `ops/hooks/session_start_bootstrap.sh`, installed
+   as a real file at `~/.cursor/hooks/session-start-bootstrap.sh`.
+   `sessionStart` timeout is **60s** (not 30s).
+2. Step 1 is foreground `governance_activate_fresh.sh` **before** resolving
+   the SSOT. Tip authority is GitHub `origin/main`. `governance_sync.sh` is
+   on-demand bidirectional reconcile only — it is **not** the sessionStart
+   tip-activation step.
+3. SessionStart does **not** scaffold or excerpt `memory-bank/`. Resume SSOT
+   is Graphiti (`inject` / PICKUP / hydration).
+4. Combined `additional_context` is sectioned markdown (Governance / Runtime /
+   Graphiti hydrate / Code-graph / Plan audit). Exit 0 always.
+5. Auto-wire targets: consumer `.cursor-commands`, `.cursor/plans` →
+   `~/.cursor/plans`, and the `l9-governance` plugin when missing. SSOT must
+   **not** self-alias `.cursor-commands`.
+6. `git worktree add` does not fire sessionStart. Wire once with
+   `ops/scripts/worktree_add_wired.sh` or
+   `ops/scripts/ensure_workspace_wired.sh`.
+7. On-demand full sequence: `make -C "$HOME/.cursor-governance" start WS="$(pwd)"`.
+
+### Autonomy and merge (resolved)
+
+1. Shared autonomy brain is `ops/autonomy/` (Cursor-primary). Provider-neutral
+   bounded-concurrency runtime is
+   `environment/program-execution/peer_execution/autonomy/`.
+2. Claude Code pack home is `environment/agents/adapters/claude-code/`.
+   `environment/claude-code/` does **not** exist. The pack also has **no**
+   `autonomy/` subdirectory — do not teach
+   `environment/agents/adapters/claude-code/autonomy/` as a live path.
+3. L4: local commits only through program/contract execution, then
+   `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md`, then
+   `make improve IMPROVE_RECORD=1` (or `l4-begin` / `l4-record-kernels` /
+   `l4-authorize`). An L4 release receipt does **not** authorize merge.
+4. Launching a program or clicking Build is **not** merge authorization
+   (supersedes `L4_PROGRAM_BUILD_IMPLIES_MERGE_V1`).
+5. Campaigns and `make pr` end **green + merge-ready**. They do not merge.
+6. Invoking **`/l9-pr-remediation` (Converge)** **is** merge authorization for
+   **all open PRs**. Write the receipt with the locked interpreter:
+
+   ```bash
+   "$HOME/.cursor-governance/.venv/bin/python" \
+     ops/autonomy/authorize_merge.py --repo <owner/name> --all-open
+   ```
+
+   Then converge each PR and merge oldest first, stack-safe (squash/rebase
+   denied when the head is the base of an open PR). `/pr` is Diagnose-only.
+7. Force-push, hard-reset, and `--admin` stay denied.
+8. Overlap remedy: commit into the same-agent open PR, else wait, else
+   renegotiate scope. Use `PR_STACK=auto` only when the parent will merge
+   with `--merge`.
+9. Cursor remains ask-first except campaign packet / explicit L4 program.
+   Adapter surfaces with `L9_AUTONOMY_ENABLED=true` may scoped-commit locally
+   without per-action ask; they still publish only via `make pr`.
+
+### Publish path (capability graph)
+
+1. **PUBLIC** verbs: `improve`, `pr-check`, `pr`. **INTERNAL**: `pr-preflight`,
+   `precommit`, `precommit-repo`. This repo has no git `pre-commit` hook.
+2. Single path to GitHub = `make pr` after L4 release. Raw `git push` /
+   `gh pr create` / `gh pr edit` are denied at every phase.
+3. Default Makefile `PR_REMEDIATE=1` (after open, emit `L9_AGENT_REQUIRED`).
+   Campaign and L4 authorize-release publish **MUST** use
+   `PR_REMEDIATE=0 make pr`.
+4. Handoff path is `.l9/pr/pr-remediation-handoff.json`. Live rule stem is
+   `48-make-pr-remediation` (`rules/48-make-pr-remediation.mdc`).
+5. Skill-pack remediation cap is **3** (`skills/l9-pr-remediation`).
+   `ops/autonomy/surface_profile.yaml` lists `max_cycles: 5`. When executing
+   the skill, follow the skill pack (3) until that profile key is aligned.
+
+### Interpreter
+
+Makefile recipes MUST call `$(PYTHON)` / `$(RUFF)` / `$(MYPY)` from
+`.venv` (`make venv` → `uv sync --locked --extra dev`; `make gov-python`
+probes imports). Manual Graphiti / secrets / L4 / `authorize_merge.py` /
+`sync_generated_artifacts.py` / `port_aws_to_infisical.py` MUST use
+`"$HOME/.cursor-governance/.venv/bin/python"` (or a `make` target). Bare
+`python3` in older bullets — including later dated append examples — is
+historical. `ModuleNotFoundError: No module named 'yaml'` means the wrong
+interpreter.
+
+### Toolchain pins (live — supersedes §2.3 table and “sdk wins” sentence)
+
+SSOT: [`requirements.txt`](requirements.txt) + `uv.lock`. Keep
+`pyproject.toml` `[project.optional-dependencies] dev` and
+`.pre-commit-config.yaml` ruff `rev` in lockstep.
+
+Live authority comment in `requirements.txt`: ruff / mypy / pytest match
+**l9-ci-core** `install-consumer-ci`. Other analysis tools follow l9-ci-sdk
+when it pins them. Core still owns gitleaks / bandit / pip-audit (sdk omits).
+Do not treat the older “when sdk and core disagree, sdk wins” sentence as live.
+
+| Tool | Version | Install | Source |
+|---|---|---|---|
+| ruff | `0.16.1` | `make venv` | `requirements.txt`; pre-commit `rev: v0.16.1` |
+| mypy | `2.3.0` | same | `requirements.txt` |
+| pytest | `9.1.1` | same | `requirements.txt` |
+| pytest-cov | `7.1.0` | same | `requirements.txt` |
+| types-PyYAML | `6.0.12.20260724` | same | `requirements.txt` |
+| bandit | `1.9.4` | same / `uvx` | `requirements.txt` (was 1.8.6 in §2.3) |
+| pip-audit | `2.10.1` | same / `uvx` | `requirements.txt` (was 2.9.0 in §2.3) |
+| gitleaks | `8.24.3` | `brew install gitleaks` | comment in `requirements.txt` |
+| semgrep | `>=1.100.0,<2.0.0` | brew / pip / `uvx` | sdk SemgrepVersionPolicy |
+| pre-commit | latest stable | pipx / pip / brew | framework only; not a commit hook here |
+| uv | `>=0.8.0` | https://docs.astral.sh/uv/ | `[tool.uv] required-version` |
+
+Do not `uv pip install` past the lockfile for the default toolchain.
+
+### Consumer Makefile
+
+There is **no** `tools/l9_repo/` tree and **no** `Makefile.template` in this
+repo. Consumers that only need governance `pr` use the two-line delegate
+already shown in §2.2. Do **not** copy this repo’s fat Makefile.
+
+### Workspace kinds
+
+`ops/scripts/lib/workspace_kind.sh`: `ssot` | `ssot_checkout` | `consumer`
+(identity files, not a `$HOME/.l9/gov-worktrees/` prefix). `ssot_checkout`
+`make pr` / `symlinks-check` must not require consumer IDE wiring.
+
+### Generated formatter block
+
+The `BEGIN L9 FORMATTER OWNERSHIP` block is generated from
+`environment/ide/policy.json` by `ops/scripts/adapters/agentdocs.sh`.
+Do not hand-edit it. Policy `biome_default.description` is one comma-joined
+sentence; sessionStart `install_ide_profile` may rewrite the committed
+line wrap. If that is the only dirty hunk, restore `AGENTS.md` from HEAD
+unless `policy.json` changed.
+
+### Still accurate (do not re-derive)
+
+§1 mission, §4 symlink law (`CANONICAL_LAW.md` §1–3 authoritative), §5 change
+policy, §8 principle, PE adapter-layer lease rule, root-file append-only
+protection, WIP corpus on main, Infisical + AWS secrets rules (values never
+in git/logs/chat), closed-chat S3 archive, KERNEL pack new-branch default,
+plan-audit display-only, stack-safe sessionEnd hygiene, Graphiti image pin
+`zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone`.
