@@ -65,7 +65,7 @@
           "admin merge",
           "force push"
         ],
-        "note": "Invoking /l9-pr-remediation authorizes ordinary merge of all open PRs in the target repo after Converge (green + mergeable, bottom-up). Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
+        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (green + mergeable, oldest-first, stack-safe). Verify with make pr-check; publish with PR_REMEDIATE=0 make pr. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -1061,12 +1061,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 min preflight, remediate the open set, then a conflict-aware merge train. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 makefile pr-check then pr, remediate the open set, then a stack-safe oldest-first merge train. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable and then merges them (ordinary squash). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
+      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable via make pr-check then PR_REMEDIATE=0 make pr, then merges them oldest-first and stack-safe (squash only when unstacked). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1226,6 +1226,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "f5fa73c19595346ba7d62b62f43e61ac8a4d655cb75e4cb713eae1bf0caa9067",
-  "source_skill_corpus_sha256": "e8fc4c6a9a5ea745418b7d1a1ca5b0aca4253917f7bd56ec12f7e5b732d04937"
+  "source_manifest_sha256": "6b85255abef604f2a36689768a8cac3dd1048a72b53662e6f256300e1ad581ca",
+  "source_skill_corpus_sha256": "caf429aa1f99dabaea227985b2e241c6bfe3f07cdef271762df6d346614a16ce"
 }

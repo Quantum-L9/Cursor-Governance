@@ -6,8 +6,8 @@ role: fix_engine
 tags: [pr, fix, code, methodology, local-verify, batch]
 owner: igor_beylin
 status: active
-version: 3.3.0
-updated: 2026-08-16
+version: 3.5.0
+updated: 2026-08-18
 /L9_META -->
 
 # Fix Engine
@@ -22,9 +22,10 @@ Apply fixes for classified **codebase** findings. Independent clusters run concu
 - MUST read the target file before editing.
 - MUST understand the surrounding context (imports, types, dependencies).
 - MUST NOT change code unrelated to the finding.
+- MUST NOT invent a fix when `root_cause` is `Unknown` or confidence is `low`.
 - MUST NOT introduce new warnings or errors.
 - MUST NOT edit until the [remediation plan](remediation-plan.md) has a disposition for every census finding.
-- MUST NOT commit or push until ALL planned codebase fixes are applied AND Makefile + every pre-commit hook (when present) passed.
+- MUST NOT commit or push until ALL planned codebase fixes are applied AND `make pr-check` (when a Makefile exists) plus cited/planned path checks passed.
 - MUST use the smallest diff that resolves the finding.
 - MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
@@ -47,64 +48,50 @@ rg -i "<error class or key phrase>" \
 
 ## Gate Discovery (MANDATORY FIRST STEP)
 
-Before applying any fixes, enumerate ALL CI gates that can fail:
+When a Makefile exists, the public local gate **is** `pr-check`. Do not build a second suite from every workflow `run:`.
 
 ```bash
-# Read all workflow files
-find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs cat
+# PUBLIC verbs
+test -f Makefile && { grep -E '^(pr-check|pr|improve):' Makefile || true; }
 ```
-
-Extract every `run:` command from steps that can produce a non-zero exit. Build the **local verify command list**:
 
 ```yaml
 local_verify_commands:
-  - name: "type-check"
-    command: "npx tsc --noEmit"
-    source: ".github/workflows/build-and-validate.yml:step:Type check"
-  - name: "lint"
-    command: "npx eslint . --max-warnings 0"
-    source: ".github/workflows/build-and-validate.yml:step:Lint"
-  - name: "test"
-    command: "npx vitest run"
-    source: ".github/workflows/build-and-validate.yml:step:Test"
-  - name: "build"
-    command: "npm run build"
-    source: ".github/workflows/build-and-validate.yml:step:Build"
-  - name: "pipeline-dry"
-    command: "npm run pipeline:dry"
-    source: ".github/workflows/build-and-validate.yml:step:Pipeline dry run"
-  - name: "validate"
-    command: "node scripts/verify-launch-env.mjs --ci"
-    source: ".github/workflows/build-and-validate.yml:step:Verify env"
+  - name: "pr-check"
+    command: "UV_PYTHON=<native> make pr-check"
+    source: "Makefile:pr-check"
 ```
 
-Also check (these outrank ad-hoc command lists when present):
-- `Makefile` targets: `agent-check`, `pr-check`, `check`, `ci`, `validate`, `test`
-- `.pre-commit-config.yaml` — record hook ids that cover cited/planned paths; all-files pre-commit is not the default
-- `package.json` scripts section for `lint`, `typecheck`, `test`, `build`, `validate`
-- Any additional hooks in `.husky/` or `.git/hooks/` (must still run; never `--no-verify`)
+Also record (do not all-run unless no Makefile `pr-check`):
+- `.pre-commit-config.yaml` hook ids that cover **cited/planned** paths; all-files pre-commit is not the default and is not the public gate
+- `package.json` scripts only as leftover fallback when no `pr-check`
+- Workflow `run:` commands only when no Makefile `pr` / `pr-check` exists (see [run-contract.md](run-contract.md))
+
+Never `--no-verify`. Never `pre-commit install`. Never `make precommit` as shipping verify.
 
 ## Fix Strategies by Type
 
 ### Lint Fixes
 
 ```bash
-# Try auto-fix first
-npx eslint --fix {file}        # JS/TS
+# Try auto-fix first — use the repo's owned formatter only
+npx eslint --fix {file}        # JS/TS when eslint owns the file
 ruff check --fix {file}         # Python
-npx biome check --apply {file}  # Biome
+npx biome check --write {file}  # JS/TS/JSON when biome owns the file
 ```
 
 If auto-fix fails, read the rule documentation and apply manually.
 
 ### Format Fixes
 
+Use the workspace formatter owner (see `AGENTS.md` formatter table). Do not reformat a file with a competing tool. Format-on-save for Markdown is off in this host so governance docs do not churn — do not `prettier --write` Markdown unless the finding is a Markdown format gate.
+
 ```bash
-npx prettier --write {file}
-ruff format {file}
+ruff format {file}              # Python only
+npx biome check --write {file}  # when biome owns the language
 ```
 
-Format fixes are always safe — apply without further analysis.
+Format fixes are **not** always safe. A cross-owner reformat is a protocol violation.
 
 ### Type-Check Fixes
 
@@ -153,11 +140,11 @@ NEVER delete a failing test unless the feature it tests was intentionally remove
 After applying ALL planned fixes, run the verify stack in [remediation-plan.md](remediation-plan.md). Do not commit on a subset.
 
 ```bash
-# 1) Makefile primary gate with cached UV_PYTHON (required when Makefile exists)
-make pr-check   # or agent-check | check | ci | validate — first discovered
+# 1) Makefile public gate with cached UV_PYTHON (required when Makefile exists)
+UV_PYTHON="$UV_PYTHON" make pr-check
 
 # 2) Cited/planned paths (even if the default toolchain excludes them)
-# 3) Leftover workflow run: commands not covered by (1)
+# 3) Workflow run: leftover ONLY when no Makefile pr-check exists
 ```
 
 ### Verification Rules
@@ -171,8 +158,8 @@ make pr-check   # or agent-check | check | ci | validate — first discovered
 
 ### What "locally" means
 
-- Run the exact same command CI runs (from workflow YAML `run:` field).
-- Use the same Node/Python version if possible.
+- When a Makefile exists, run `make pr-check` — not a reconstructed list of CI `run:` lines.
+- Use the locked `.venv` interpreter / cached native `UV_PYTHON`.
 - If a command requires env vars that are secrets (API keys), check if it has a `--ci` or `--skip-secrets` flag.
 - If a command requires external services (database, API), check if it has a dry-run or mock mode.
 
@@ -184,7 +171,7 @@ make pr-check   # or agent-check | check | ci | validate — first discovered
 │                                                          │
 │  0. RUN_CONTRACT + this PR's plan (no edits)             │
 │  1. Apply fix for every planned cluster + companions     │
-│  2. make <primary-gate> with cached UV_PYTHON            │
+│  2. UV_PYTHON=… make pr-check                            │
 │  3. Verify cited/planned paths                           │
 │  4. Fix any new failures from 2-3                        │
 │  5. Re-run 2-3 until green                               │
@@ -212,7 +199,7 @@ Fixes:
 - {finding-id}: {one-line description}
 - {finding-id}: {one-line description}
 
-Local verify: make {target} + pre-commit ({hook ids}) passed
+Local verify: make pr-check + cited-path checks passed
 Deferred:
 - {finding-id}: {reason}
 
@@ -221,11 +208,11 @@ Remediation-Cycle: {repo}#{pr}/cycle-1
 
 ## Rollback Protocol
 
-If a fix introduces a NEW CI failure that didn't exist before:
+If a fix introduces a NEW local-verify failure that didn't exist before (still uncommitted):
 
-1. `git diff HEAD~1` — identify the problematic change.
+1. `git diff` (working tree vs HEAD) — identify the problematic hunk. Do not use `HEAD~1` unless that commit was this cycle's single remediation commit.
 2. Revert only that specific change.
 3. Mark the original finding as `deferred` with reason: "fix causes regression".
-4. Re-run local verify to confirm revert is clean.
-5. Continue with remaining fixes.
-6. Report the regression in the convergence block.
+4. Re-run `make pr-check` to confirm revert is clean.
+5. Continue with remaining planned fixes.
+6. Report the regression in the convergence block. Never `--no-verify`. Never invent a passing result.
