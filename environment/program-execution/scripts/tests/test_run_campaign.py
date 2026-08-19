@@ -956,6 +956,63 @@ class RunCampaignTests(unittest.TestCase):
                 self.assertEqual(task["attempts"], 1)
                 self.assertIsNotNone(task["eligible_to_first_write_ms"])
 
+    def test_default_repo_root_derives_write_root_from_l9(self) -> None:
+        """`main()` runs with repo_root=None; the isolate stage must not crash.
+
+        The write_root default is the production entry path: the Makefile
+        `campaign` target does not pass --repo-root, and every other test in
+        this module passes repo_root= explicitly, so a dropped default here
+        would leave the whole suite green while every real CLI run dies with
+        UnboundLocalError.
+
+        When repo_root is None the primary IS the host repo, so this models
+        production: primary is a real git repo with an origin the isolate
+        stage can fetch.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            primary = _host_repo(Path(raw) / "primary")
+            _git_init(primary)
+            # The production primary's main contains the whole host repo, so the
+            # isolated worktree inherits the policy files the compile step
+            # patches. Include them in the init commit.
+            subprocess.run(["git", "add", "-A"], cwd=primary, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", "init", "--amend", "--no-edit"],
+                cwd=primary,
+                check=True,
+                capture_output=True,
+            )
+            origin = Path(raw) / "origin.git"
+            origin.mkdir()
+            subprocess.run(["git", "init", "--bare", str(origin)], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "remote", "add", "origin", str(origin)],
+                cwd=primary,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "push", "origin", "HEAD:main"], cwd=primary, check=True, capture_output=True
+            )
+            l9 = Path(raw) / "l9"
+            report = self.mod.run_campaign(
+                primary / "intent.yaml",
+                until="execute",
+                primary=primary,
+                # repo_root left None, worktree left None -- the main() shape.
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                    make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
+                ),
+            )
+            self.assertEqual(
+                str(report.worktree),
+                str((l9 / "gov-worktrees" / "demo-activate-v1").resolve()),
+            )
+
     def test_validation_commands_record_exit_code_not_command_text(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             worktree = Path(raw)

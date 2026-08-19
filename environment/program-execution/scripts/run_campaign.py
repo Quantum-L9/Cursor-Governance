@@ -2859,6 +2859,7 @@ def _run_campaign_stages(
         if repo_root is not None:
             write_root = repo_root.resolve()
         else:
+            write_root = (worktree or (l9_home / "gov-worktrees" / campaign_id)).resolve()
             with traced(trace, "workspace", "isolate_worktree"):
                 write_root = isolate_worktree(
                     primary,
