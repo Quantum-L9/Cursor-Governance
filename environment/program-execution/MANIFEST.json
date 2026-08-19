@@ -411,7 +411,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "b24b1d99e94b31b270ee7627ae4f9af23cc508e0e1a8258809ad86eee9f837ad"
+      "sha256": "43ffb5fb366c06fb29e6d9b6a734677714dc7a570fe5f3a687124b7bba42ba3f"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -1594,6 +1594,10 @@
       "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
     },
     {
+      "path": "scripts/pe_trace.py",
+      "sha256": "ad173b3ac5e913140974c6e617a2629403c1f56371ccefcb63d6e2581e8f5cb2"
+    },
+    {
       "path": "scripts/peer_execution_cli.py",
       "sha256": "5f9877f0080d56929d0c29e03955407335cec1127e9c81addac25cf146d86c4d"
     },
@@ -1627,7 +1631,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "09793159259d5dadf346c21fa38a9e32f0102628a97e9a70203b3c995910150c"
+      "sha256": "e99ac95b20c16709c56d16416707c6d3f01f90281c7d1c8a6f83a4a1f69d2d22"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1658,12 +1662,16 @@
       "sha256": "2fba804a87e897217cb652e61e4f71381e29995483f748f0bb6ebfe36fd22886"
     },
     {
+      "path": "scripts/tests/test_pe_trace.py",
+      "sha256": "dafc51b650a2263511d866c90acb185ccf32f0e5807e6f2b205dbabdf08eb7bb"
+    },
+    {
       "path": "scripts/tests/test_replay_campaign.py",
       "sha256": "c37f928bb85e80236f3171f0ccca8b29cb9e309d39f0936ed3d896b8560f9b09"
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "246201d0ec8f25d19f376c4cb00735686d72fc252f09deb6c32e38932caab7b1"
+      "sha256": "455fcab8fa80aa3b7439d800d34150bc9c63084ee9986f218e70589a4cc7a456"
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
