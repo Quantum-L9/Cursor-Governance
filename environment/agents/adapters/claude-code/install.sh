@@ -79,6 +79,17 @@ downgrade() { # $1=step-var-name $2=new-status $3=reason
   fi
 }
 
+# --- Workspace sanity: never wire a directory that is not a git repository ----
+# A caller that resolves the wrong workspace (e.g. the PARENT of the checkout)
+# would otherwise produce a complete .claude/ tree the editor never loads, and
+# still report settings/skills/rules READY. Fail loud in the receipt instead.
+if ! git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
+  warn "workspace $WORKSPACE is not a git repository - refusing to wire project artifacts"
+  downgrade STATUS_SETTINGS BLOCKED "workspace is not a git repository"
+  downgrade STATUS_SKILLS BLOCKED "workspace is not a git repository"
+  downgrade STATUS_RULES BLOCKED "workspace is not a git repository"
+fi
+
 # An unexpanded literal '$HOME' reaches us from .env-format environment fields,
 # which perform no shell expansion. Refuse it rather than creating that directory.
 case "$GOV_DIR" in

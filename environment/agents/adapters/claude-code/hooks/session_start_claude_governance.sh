@@ -183,11 +183,28 @@ except (OSError, ValueError):
 remote = os.environ.get("CLAUDE_CODE_REMOTE") == "true"
 print("surface: %s" % d.get("surface", "?"))
 print("execution: %s" % ("anthropic-cloud" if remote else "local"))
-print("governance: %s" % (d.get("governance_revision", "?")[:8] or "?"))
+# The receipt is written at INSTALL time and never refreshed, so its revision and
+# workspace can both be stale. Label the revision and compare it against live git;
+# compare the wired workspace against the project dir of this session. Without these
+# two lines a receipt written for another directory reports READY for artifacts that
+# Claude Code never loads.
+live = os.environ.get("LIVE_GOV_REV", "")
+rec = d.get("governance_revision", "?") or "?"
+stale = bool(live) and not rec.startswith(live)
+print("governance (at install): %s%s"
+      % (rec[:8], ("  STALE — live is %s" % live) if stale else ""))
+ws = d.get("workspace", "?")
+proj = os.environ.get("PROJECT_DIR", "") or ws
+if ws != proj:
+    print("WARN: bootstrap wired %s, but this project is %s — .claude mirrors may be missing"
+          % (ws, proj))
 print("bootstrap: %s" % d.get("shared_bootstrap", "?"))
 print("settings: %s" % d.get("settings", "?"))
 print("capability broker: %s" % d.get("capabilities", "?"))
-print("memory: %s%s" % (d.get("memory", "?"),
+# "memory" here is the BROKERED MCP plane only. The Graphiti CLI front door is
+# reported separately by memory_prefetch.py and is frequently healthy while this
+# reads DEGRADED. Qualify the label so the two do not contradict each other.
+print("memory (brokered MCP): %s%s" % (d.get("memory", "?"),
     " — no broker-authenticated cloud identity" if d.get("memory") == "DEGRADED" else ""))
 print("skills: %s" % d.get("skills", "?"))
 print("rules: %s" % d.get("rules", "?"))
@@ -203,8 +220,9 @@ print("rules: %s" % d.get("rules", "?"))
   LINES+=("L9 Claude environment: receipt unreadable — see $receipt")
 }
 
-# PY was resolved above for the autonomy profile block; reuse it.
-emit_bootstrap_status "$PY"
+# PY was resolved above for the autonomy profile block; reuse it. LIVE_GOV_REV and
+# PROJECT_DIR let the projection flag a stale receipt / a wrong wired workspace.
+LIVE_GOV_REV="${sha:-}" PROJECT_DIR="$WORKSPACE" emit_bootstrap_status "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

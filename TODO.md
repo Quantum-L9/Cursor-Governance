@@ -330,3 +330,50 @@ Keep shipping through `make improve` → `make pr-check` → `make pr`.
       convenience only — not CI, not `make pr`.
 - [ ] Later: retire `make push: precommit backup` and Claude `pre-commit install`
       teaching once the owner is yaml.
+
+## Program Execution MANIFEST.json — enforcement suspended (2026-08-19)
+
+- [ ] **Re-design and restore Program Execution MANIFEST.json enforcement**
+      (deferred; post-velocity-window). Automatic generation and CI enforcement
+      of `environment/program-execution/MANIFEST.json` were temporarily disabled
+      on 2026-08-19 to remove PR merge friction. The current design hashes a
+      broad mutable Program Execution source tree, causing write amplification,
+      branch divergence, merge conflicts, and stale-generated-artifact failures.
+      Before re-enabling, identify the manifest's actual consumers and integrity
+      requirements; reduce or redefine its input surface, or move generation to
+      an explicit build/release boundary; add deterministic generation tests;
+      verify that normal source edits do not create unnecessary cross-branch
+      churn; then restore automatic generation and CI enforcement.
+      - Suspended surfaces: `sync_generated_artifacts.py` (now opt-in via
+        `--pe-manifest`), the `paths` list in
+        `.github/workflows/governance-self-check.yml`, and the
+        "Program Execution manifest integrity" step in
+        `.github/workflows/peer-execution.yml`.
+      - Still available: `environment/program-execution/scripts/generate_manifest.py`
+        and `validate_manifest.py` (the latter still runs under
+        `make program-execution-conformance`, which is manual, not the PR gate).
+
+## Claude Code startup/bootstrap — deferred items (2026-08-19)
+
+The startup/bootstrap forensic audit fixed the wiring and reporting defects
+(SB-01 pre-commit git hook, SB-02 workspace misdirection, SB-03/SB-04 stale
+receipt projection, SB-06 dependency-cache honesty, SB-07 memory label). Two
+findings were deliberately left open:
+
+- [ ] **Memory write-back: sticky idempotency** (`MEM-01`, HIGH). In
+      `ops/graphiti/hydration/close_session.py:88`, `already_closed()` returns
+      True on `or data.get("status") == "closed"`, so once a session has closed
+      successfully even once, every later Stop hook returns `idempotent_skip`
+      with 0 writes regardless of new content. Evidence:
+      `.l9/memory/closes/<session>.json` shows one close with `write_count: 2`,
+      after which every writeback receipt reads `writes: 0`. Consequence
+      (`MEM-02`): the store only ever captures the first turn of a session, so
+      hydrate returns self-referential PICKUP boilerplate instead of real resume
+      state. Needs its own plan — the fix is not a one-line guard removal, since
+      the head-hash path must still suppress genuine duplicate Stop events.
+- [ ] **Capability broker URL** (`SB-05`). `L9_CAPABILITY_BROKER_URL` is unset in
+      cloud sessions, so every MCP server in `.mcp.json` has an unresolvable URL
+      and the brokered plane (including the `graphiti-memory` front door) never
+      connects. Decide whether cloud sessions must carry it; if it stays
+      optional, name the concrete lost capabilities in the startup banner rather
+      than reporting a bare `DEGRADED`.
