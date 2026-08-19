@@ -335,6 +335,43 @@ def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
         print("  OK: web/setup.sh pins governance to $HOME/.cursor-governance")
 
 
+def check_session_deps_installs_no_git_hook(failures: list[str]) -> None:
+    """The session-deps helper warms pre-commit environments; it never installs a hook.
+
+    ``pre-commit install`` writes ``.git/hooks/pre-commit``, which runs the whole
+    catalog without the surface-aware SKIP list that ``ops/scripts/run_pr_precommit.sh``
+    applies. On any non-cursor surface ``symlinks-check`` then fails and every
+    ``git commit`` is rejected. ``run_pr_precommit.sh`` states the rule in as many
+    words; nothing asserted it until this check.
+    """
+    helper = HERE / "hooks" / "session_deps_cloud.sh"
+    if not helper.is_file():
+        return
+    text = helper.read_text(encoding="utf-8")
+    # Match an INVOCATION, not the word inside a warning message: skip comments and
+    # anything appearing after an `echo` on the same line.
+    pattern = re.compile(r"pre-commit install(?!-hooks)\b")
+    offenders = []
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        match = pattern.search(line)
+        if not match:
+            continue
+        echo_at = line.find("echo")
+        if echo_at != -1 and echo_at < match.start():
+            continue
+        offenders.append(line.strip())
+    if offenders:
+        _fail(
+            "session_deps_cloud.sh must not run 'pre-commit install' (installs a git "
+            f"commit hook this repo forbids); use 'pre-commit install-hooks': {offenders}",
+            failures,
+        )
+    else:
+        print("  OK: session_deps_cloud.sh warms hook environments without installing a git hook")
+
+
 def check_dependency_policy(failures: list[str]) -> None:
     """uv.lock is the only source of dependency and interpreter versions.
 
@@ -635,6 +672,7 @@ def main() -> int:
     check_cross_file_secret_contract(failures)
     check_cross_file_chain_prohibitions(failures)
     check_setup_linux_sandbox_hygiene(failures)
+    check_session_deps_installs_no_git_hook(failures)
     check_dependency_policy(failures)
     check_installer_health_contract(failures)
     check_publish_path_alignment(failures)
