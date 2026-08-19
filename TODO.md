@@ -330,3 +330,25 @@ Keep shipping through `make improve` → `make pr-check` → `make pr`.
       convenience only — not CI, not `make pr`.
 - [ ] Later: retire `make push: precommit backup` and Claude `pre-commit install`
       teaching once the owner is yaml.
+
+## Program Execution MANIFEST.json — enforcement suspended (2026-08-19)
+
+- [ ] **Re-design and restore Program Execution MANIFEST.json enforcement**
+      (deferred; post-velocity-window). Automatic generation and CI enforcement
+      of `environment/program-execution/MANIFEST.json` were temporarily disabled
+      on 2026-08-19 to remove PR merge friction. The current design hashes a
+      broad mutable Program Execution source tree, causing write amplification,
+      branch divergence, merge conflicts, and stale-generated-artifact failures.
+      Before re-enabling, identify the manifest's actual consumers and integrity
+      requirements; reduce or redefine its input surface, or move generation to
+      an explicit build/release boundary; add deterministic generation tests;
+      verify that normal source edits do not create unnecessary cross-branch
+      churn; then restore automatic generation and CI enforcement.
+      - Suspended surfaces: `sync_generated_artifacts.py` (now opt-in via
+        `--pe-manifest`), the `paths` list in
+        `.github/workflows/governance-self-check.yml`, and the
+        "Program Execution manifest integrity" step in
+        `.github/workflows/peer-execution.yml`.
+      - Still available: `environment/program-execution/scripts/generate_manifest.py`
+        and `validate_manifest.py` (the latter still runs under
+        `make program-execution-conformance`, which is manual, not the PR gate).
