@@ -23,12 +23,21 @@ Active only when `GRAPHITI_WRITE_GATES=1` in `~/.cursor/graphiti.env`.
 When active:
 
 - Write/Shell/Task denied until task in `memory_satisfied_for` or fresh prefetch
-- GMP prompts require `gmp:phase_lock` in satisfied list after prefetch + conflicts check
 
 Default (`GRAPHITI_WRITE_GATES=0`): advisory prefetch only — no Write blocking.
 
+**Hydration only.** The gate MUST NOT require `gmp:phase_lock` (or any lock) as
+a condition of repository mutation. Repository-write authority comes from a
+dedicated worktree, a branch off fetched `origin/main`, and the publication
+gate — see `96-multi-agent-main-bound-execution` (E7). The permitted shape is
+`fresh hydration? yes → continue; no → hydrate, then continue`, never
+`hydration → conflicts → phase-lock → edit permission`.
+
+A memory conflict is evidence to reason about, not a repository mutex: it never
+revokes another agent's authority to edit code (E10).
+
 Runbook: `ops/graphiti/GATES-002-ACTIVATION.md`
 
-Must cite Graphiti prefetch episode names and run `graphiti_memory_client.py conflicts` before plan lock.
+Cite Graphiti prefetch episode names when planning. `graphiti_memory_client.py conflicts` informs the plan; it does not gate the edit.
 
 <!-- generated-from: rules/98-graphiti-memory-gate.mdc; do-not-edit -->

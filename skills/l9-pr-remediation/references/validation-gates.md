@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: validation_gates
-tags: [pr, validation, enforcement, checkpoints, artifacts]
+tags: [pr, validation, enforcement, checkpoints, artifacts, makefile]
 owner: igor_beylin
 status: active
-version: 3.2.0
-updated: 2026-08-16
+version: 3.4.0
+updated: 2026-08-18
 /L9_META -->
 
 # Validation Gates (Enforcement Layer)
@@ -19,38 +19,40 @@ Prevent protocol violations with lightweight **inline** proofs at each step (log
 ## Gate Architecture
 
 ```text
-Step 2 ──→ [GATE A] ──→ Step 3-4 ──→ [GATE B] ──→ Step 5 ──→ [GATE C] ──→ Step 6 ──→ [GATE D] ──→ Step 7 ──→ [GATE E] ──→ Step 7.5 ──→ [GATE F] ──→ Step 8
+P_cmd ──→ [GATE A] ──→ ingest/classify ──→ [GATE B] ──→ fix ──→ [GATE C]
+  ──→ make pr-check ──→ [GATE D] ──→ commit + make pr ──→ [GATE E]
+  ──→ replies ──→ [GATE F] ──→ poll (no merge)
 ```
 
 Each gate requires a specific artifact. If the artifact is missing or invalid, the agent MUST NOT proceed.
 
-## Gate A: Gate Discovery Complete
+## Gate A: Command surface discovered
 
-**After Step 2 (Discover CI gates)**
+**After `P_cmd`**
 
 Required artifact:
 ```yaml
-# MUST be produced and logged before proceeding
 gate_registry:
-  total_gates: {integer >= 1}
-  gates:
-    - name: "{gate_name}"
-      command: "{exact command}"
-      source: "{workflow_file}:{step_name}"
-      can_run_locally: true | false
-      requires_secrets: true | false
+  makefile: true
+  public:
+    verify: "make pr-check"
+    publish: "PR_REMEDIATE=0 make pr"
+    improve: "make improve"   # optional
+  leftover_workflow_run: []   # only when makefile pr-check is absent
 ```
 
 Validation:
-- [ ] `total_gates >= 1` (every repo has at least one CI step)
-- [ ] Every gate has a `command` field (not empty)
-- [ ] Every gate has a `source` traced to a workflow file
+- [ ] When a Makefile exists, `verify` is `make pr-check` and `publish` is `PR_REMEDIATE=0 make pr`
+- [ ] INTERNAL targets (`pr-preflight`, `precommit`, `pr-full`) are not the cached shipping verbs
+- [ ] Workflow `run:` leftover is empty when `pr-check` exists
 
-**STOP if:** No workflow files found → ask user if CI is configured.
+**STOP if:** Makefile has `pr` but the agent cached `git push`.
+
+Repos with no Makefile and no workflows: ask whether CI is configured; record `Unknown`.
 
 ## Gate B: Ingestion and Classification Complete
 
-**After Steps 3-4 (Ingest + Classify)**
+**After ingest + classify**
 
 Required artifact:
 ```yaml
@@ -64,113 +66,105 @@ classified_findings:
 execution_plan:
   cycle_scope: ["{finding-id}", ...]
   estimated_files: ["{file_path}", ...]
-  local_verify_commands: ["{command}", ...]
-  makefile_targets: ["{target}", ...]
+  local_verify_commands: ["UV_PYTHON=… make pr-check"]
+  makefile_targets: ["pr-check"]
   cited_paths: ["{file_path}", ...]
 ```
 
 Validation:
 - [ ] This PR's ingest covers failed CI + humans + bots + code-review agents (lazy scanners)
-- [ ] Every finding has `id`, `source`, `ownership`, `disposition`, `evidence` ([remediation-plan.md](remediation-plan.md))
-- [ ] `total >= 1` (if 0 findings, nothing to fix — skip to convergence)
-- [ ] `cycle_scope` is non-empty (at least one finding to fix) **or** all dispositions are reply/defer/note
+- [ ] Every finding has `id`, `source`, `ownership`, `disposition`, `evidence`, `root_cause` ([remediation-plan.md](remediation-plan.md))
+- [ ] Every `disposition: fix` has confidence `high` or `medium` (not `Unknown`)
+- [ ] If `total == 0` and CI is green: conversation-only path — skip to replies / MERGE_TRAIN, **do not** treat as “already merged”
+- [ ] `cycle_scope` is non-empty **or** all dispositions are reply/defer/note
 - [ ] `cited_paths` lists every finding path (verified even if the default toolchain excludes it)
-- [ ] `makefile_targets` lists the discovered make gate when a Makefile exists
+- [ ] `makefile_targets` is `pr-check` when a Makefile exists
 - [ ] No file edits have been made yet
 
 **STOP if:** Plan is incomplete — do not patch.
 
-**STOP if:** Total findings is 0 AND CI is green → already converged, emit report.
-
 ## Gate C: All Fixes Applied (Pre-Verify)
 
-**After Step 5 (Apply ALL fixes)**
+**After applying planned `disposition: fix` clusters**
 
 Required artifact:
 ```bash
-# Run and capture output
 git diff --stat
 ```
 
 Validation:
-- [ ] `git diff --stat` shows changes (non-empty diff)
-- [ ] Number of files changed is reasonable (≤ `estimated_files` count + 2 tolerance)
+- [ ] If `cycle_scope` has `fix` items: `git diff --stat` is non-empty
+- [ ] If `cycle_scope` is reply-only: empty diff is OK — skip to Gate F
+- [ ] Number of files changed is reasonable (≤ `estimated_files` count + companions + hook autofix tolerance)
 - [ ] No unrelated files modified (compare against `estimated_files`)
 - [ ] ALL findings in `cycle_scope` have been addressed (internal tracking)
 
-**STOP if:** Diff is empty → no fixes were actually applied. Re-read findings and try again.
+**STOP if:** Diff is empty **and** `fix` items remain.
 
 ## Gate D: Local Verify Passed (CRITICAL GATE)
 
-**After Step 6 (Local verify)**
+**After `make pr-check`**
 
 Required artifact:
 ```yaml
 local_verify_log:
   iteration: {integer}  # which attempt (1-5)
   timestamp: "{ISO}"
-  gates_run: {integer}
-  gates_passed: {integer}
-  all_green: true
-  results:
-    - gate: "{gate_name}"
-      command: "{command}"
-      exit_code: 0
-      duration_ms: {integer}
-    - gate: "{gate_name}"
-      command: "{command}"
-      exit_code: 0
-      duration_ms: {integer}
+  command: "UV_PYTHON=<native> make pr-check"
+  exit_code: 0
+  cited_paths_checked: true
+  result: Passed | Failed | Unknown
 ```
 
 Validation:
-- [ ] `all_green: true` (every gate exit code is 0)
-- [ ] Makefile primary target ran when a Makefile exists (cached UV_PYTHON)
+- [ ] `result: Passed` before commit on a code-changing PR
+- [ ] Remote CI is not recorded here (independent later)
+- [ ] Makefile `pr-check` ran when a Makefile exists (cached `UV_PYTHON`)
 - [ ] cited/planned paths were checked even if the default toolchain excludes them
-- [ ] `gates_run == gate_registry.total_gates` (no gates skipped)
-- [ ] `iteration <= 5` (max local verify attempts not exceeded)
-- [ ] Every gate from the registry appears in results
+- [ ] `iteration <= 5`
 - [ ] Commit will not use `--no-verify`
+- [ ] Did **not** require `pre-commit --all-files` or replay every workflow `run:`
 
-**STOP if:** `all_green: false` after iteration 5 → defer problematic findings, re-run verify on remaining.
-**STOP if:** `gates_run < gate_registry.total_gates` → missing gates, re-run ALL.
+**STOP if:** `result` is not `Passed` after iteration 5 → defer problematic findings, re-run verify on remaining.
 
-**This is the ONLY gate that blocks push. If this artifact doesn't show all_green: true, pushing is a protocol violation.**
+**This gate blocks commit and sanctioned publish.** Conversation-only PRs skip D when there is no diff.
 
-## Gate E: Single Commit, Single Push
+## Gate E: Single Commit, Single Publish
 
-**After Step 7 (Commit and push)**
+**After commit + `PR_REMEDIATE=0 make pr`**
 
 Required artifact:
 ```yaml
 push_record:
   commit_sha: "{full_sha}"
-  commit_message: "{conventional commit message}"
+  commit_message: "fix(pr-remediation): resolve {count} findings"
   files_in_commit: {integer}
-  push_count_this_cycle: 1
+  publish_count_this_cycle: 1
+  publish_command: "PR_REMEDIATE=0 make pr"
   branch: "{branch_name}"
-  pushed_at: "{ISO timestamp}"
+  published_at: "{ISO timestamp}"
 ```
 
 Validation:
-- [ ] `push_count_this_cycle == 1` (protocol violation if > 1)
+- [ ] `publish_count_this_cycle == 1`
 - [ ] `commit_sha` is a valid 40-char hex string
-- [ ] Commit message follows convention: `fix(pr-remediation): cycle {N} — ...`
+- [ ] Commit message follows `fix(pr-remediation): resolve {count} findings` plus `Remediation-Cycle:` trailer
 - [ ] `git log --oneline HEAD~1..HEAD` returns exactly 1 line
+- [ ] Publish was not raw `git push`
 
-**STOP if:** Push failed → check auth, remote, branch protection. Ask user if needed.
+**STOP if:** Publish failed → check auth, remote, branch protection. Ask user if needed.
 
 ## Gate F: Review Replies Complete
 
-**After Step 7.5 (Reply to review threads)**
+**After reply + resolve**
 
 Required artifact:
 ```yaml
 reply_record:
-  threads_total: {integer}
+  threads_total: {integer}          # paginated reviewThreads
   threads_replied: {integer}
   threads_resolved: {integer}
-  issues_created: {integer}  # for deferred items
+  human_deferred_issues: {integer}  # HUMAN Deferred only
   batch_summary_posted: true
   reply_breakdown:
     fixed: {count}
@@ -181,9 +175,10 @@ reply_record:
 
 Validation:
 - [ ] `threads_replied == threads_total` (every thread got a reply)
-- [ ] Every `github-code-quality[bot]` / Copilot thread is in that reply set ([code-review-agents.md](code-review-agents.md))
+- [ ] Pagination complete (`hasNextPage` false)
+- [ ] Every `github-code-quality[bot]` / Copilot thread is in that reply set
 - [ ] `threads_resolved == threads_total` (every thread resolved, any author; HUMAN still resolved)
-- [ ] `issues_created >= deferred_count` (every deferred item has an issue)
+- [ ] HUMAN Deferred items have a linked issue; other defers do not require an issue
 - [ ] `batch_summary_posted: true`
 - [ ] Every reply follows canonical format (Format A/B/C/D)
 
@@ -192,12 +187,14 @@ Validation:
 ## Protocol Violation Detection
 
 If at ANY point the agent:
-- Pushes without Gate D artifact showing `all_green: true` → **VIOLATION: push-before-verify**
-- Makes more than 1 push per cycle → **VIOLATION: multi-push**
-- Commits per-finding or pushes to probe CI → **VIOLATION: not-one-and-done**
+- Publishes without Gate D `result: Passed` on a code-changing PR → **VIOLATION: publish-before-verify**
+- Makes more than 1 publish per cycle → **VIOLATION: multi-push**
+- Commits per-finding or publishes to probe CI → **VIOLATION: not-one-and-done**
 - Edits before the plan gate → **VIOLATION: patch-before-plan**
-- Skips the Makefile primary gate, cited-path verify, or uses `--no-verify` → **VIOLATION: skipped-local-verify**
-- Skips Gate A (no gate registry built) → **VIOLATION: blind-fixing**
+- Skips `make pr-check`, cited-path verify, or uses `--no-verify` → **VIOLATION: skipped-local-verify**
+- Uses `make precommit` / `--all-files` as the public gate → **VIOLATION: wrong-makefile-verb**
+- Merges from Diagnose or emits `gh pr merge` in Diagnose YNP → **VIOLATION: diagnose-merge**
+- Squash-merges a stack parent or `update-branch` after parent squash → **VIOLATION: stack-unsafe**
 - Leaves threads unresolved after Step 7.5 → **VIOLATION: silent-fix**
 
 Violations MUST be:

@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate autonomy-policy-embed autonomy-policy-check agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
@@ -60,11 +60,10 @@ $(_GOV_PYTHON_REQ): gov-python
 endif
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate autonomy-policy-embed autonomy-policy-check agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
-	@echo "  make autonomy-policy-embed / autonomy-policy-check — re-embed autonomy JSON policies into policy_loader.py"
 	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
@@ -235,8 +234,12 @@ autonomy-contracts-validate:
 	$(PYTHON) ops/scripts/validate_autonomy_contracts.py
 
 ## Validate the Claude Code bounded-concurrency autonomy runtime (contracts + unit tests).
-autonomy-validate: autonomy-contracts-validate autonomy-policy-check
+autonomy-validate: autonomy-contracts-validate
 	$(PYTHON) environment/program-execution/peer_execution/autonomy/validate_autonomy.py
+
+autonomy-validate: autonomy-policy-check
+
+.PHONY: autonomy-policy-embed autonomy-policy-check
 
 ## Re-embed autonomy/policies + examples + golden specs into autonomy/policy_loader.py.
 ## The JSON files are the source of truth; the module is generated (no runtime file I/O).

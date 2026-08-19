@@ -1,8 +1,13 @@
-"""Publish-path enforcement: `make pr` is the only sanctioned route to GitHub.
+"""Publish-path classification: `make pr` is the sanctioned route to GitHub.
 
 L4 governs *when* remote work may happen; this governs *how*. A raw `git push`
-or `gh pr create` skips the Makefile checkers entirely, so it stays denied even
-when the workspace is release_authorized.
+or `gh pr create` skips the Makefile checkers entirely, so the classifier keeps
+reporting it — that report is what a policy engine acts on.
+
+Enforcement is a separate question. `git` and `gh` are exempt from every gate
+(see test_git_execution_exemption.py), so `command_bypasses_publish_path` still
+names them while `evaluate` allows them. `make push` and the MCP push/PR tools
+are not git/gh executables and stay denied.
 """
 
 from __future__ import annotations
@@ -107,19 +112,34 @@ def test_heredoc_body_is_data_not_a_push() -> None:
     assert gate.command_bypasses_publish_path(command) is None
 
 
-def test_release_authorized_does_not_permit_a_raw_push(
+def test_non_git_publish_bypass_stays_denied(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The core invariant: L4 authorization is not a licence to skip the checkers."""
+    """L4 authorization is not a licence to skip the checkers.
+
+    `make push` reaches GitHub without running them and is not a git/gh
+    executable, so the gate still denies it even when release is authorized.
+    """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
 
-    reason = gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path)
+    reason = gate.evaluate("Bash", {"command": "make push"}, root=tmp_path)
     assert reason is not None
     assert "make pr" in reason
 
     # ...while the sanctioned path is untouched by this rule.
     assert gate.evaluate("Bash", {"command": "PR_REMEDIATE=0 make pr"}, root=tmp_path) is None
+
+
+def test_raw_git_push_is_reported_but_not_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Policy still names it; the gate no longer blocks it."""
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+
+    assert gate.command_bypasses_publish_path("git push origin main") == "git push"
+    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) is None
 
 
 def test_mcp_push_tools_denied_even_when_release_authorized(
@@ -136,11 +156,15 @@ def test_mcp_push_tools_denied_even_when_release_authorized(
 def test_human_override_restores_prior_behaviour(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Breakglass is human/ops only, and hands control back to the L4 check."""
+    """Breakglass is human/ops only, and hands control back to the L4 check.
+
+    Exercised through `make push`: git/gh never reach the publish-path rule at
+    all now, so the override's remaining subject is the non-git bypass forms.
+    """
     monkeypatch.setenv(gate.PUBLISH_PATH_OVERRIDE_ENV, "incident-1234")
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
-    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) is None
+    assert gate.evaluate("Bash", {"command": "make push"}, root=tmp_path) is None
 
     # Override does not bypass L4 itself — an unauthorized workspace still denies.
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
-    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) == "L4 denied"
+    assert gate.evaluate("Bash", {"command": "make push"}, root=tmp_path) == "L4 denied"

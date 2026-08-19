@@ -615,3 +615,33 @@ as a product consumer that must present `.cursor-commands`.
    `.cursor-commands`, `.cursor/plans`, `.cursor/governance`, or an IDE
    profile stamp. Machine-global hooks stay fail-closed. SSOT tip / dirty /
    unpushed is WARN-only on `ssot_checkout`.
+
+## 8.1 Memory does not gate repository mutation (2026-08-18) — supersedes §8 phase-lock wording
+
+The **L9 Multi-Agent Main-Bound Execution Contract**
+(`rules/96-multi-agent-main-bound-execution.mdc`) is binding for every agent
+performing repository mutation. It separates authorities that must never be
+substituted for one another:
+
+| Concern | Authority |
+|---|---|
+| Shared knowledge | Graphiti / canonical L9 memory |
+| Repository isolation | dedicated git worktree |
+| Canonical task ancestry | fetched `origin/main` |
+| Publication | sanctioned `make pr` path |
+| Collision detection | git diff + `merge-tree` + CI |
+| Integration | PR merge into `main` |
+
+Consequences that supersede earlier §8 phrasing:
+
+1. A Graphiti phase-lock MUST NOT authorize, deny, or serialize ordinary
+   repository mutation. `gmp:phase_lock` is not write permission.
+2. Agent-facing `--force` memory-lock functionality MUST NOT exist;
+   `environment/agents/adapters/claude-code/hooks/memory_lock.py` is removed.
+3. The only permitted memory gate is fresh-hydration
+   (`memory-enforcement.contract.json` v2.0.0).
+4. Ordinary tasks start via `ops/scripts/agent_worktree_start.sh` from fetched
+   `origin/main`; publication refreshes main and fails closed when the collision
+   state cannot be determined.
+
+Memory conflicts remain useful evidence. They are not repository locks.

@@ -72,13 +72,12 @@ class CleanStartupTests(unittest.TestCase):
                 0,
             )
             contract = st.load_contract()
+            # Hydration is the only precondition on a governed write. This block
+            # used to also mint a phase-lock artifact, because the gate required
+            # one; repository-write authority now comes from worktree/branch
+            # isolation and the publication gate instead
+            # (rules/96-multi-agent-main-bound-execution, E7).
             st.write_receipt(contract, session_id, {"namespaces": ["cursor-governance"]})
-            st.write_lock(contract, "cursor-governance", session_id, "sig")
-            lock_path = st.lock_path(contract, "cursor-governance")
-            lock = json.loads(lock_path.read_text(encoding="utf-8"))
-            lock["transport"] = "cursor-graphiti-phase-lock"
-            lock["granted"] = True
-            lock_path.write_text(json.dumps(lock) + "\n", encoding="utf-8")
             gate = subprocess.run(
                 [sys.executable, str(GATE)],
                 input=json.dumps(

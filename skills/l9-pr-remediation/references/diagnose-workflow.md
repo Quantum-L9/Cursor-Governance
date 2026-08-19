@@ -6,8 +6,8 @@ role: diagnose_workflow
 tags: [pr, diagnose, review, blockers, readiness]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-08-16
+version: 1.4.0
+updated: 2026-08-18
 /L9_META -->
 
 # Diagnose Workflow (read-only)
@@ -42,8 +42,8 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 3. **Optional policy** — if present, load `config/policies/pr_merge_policy.yaml`, `config/policies/protected_files.yaml`, `.github/pr_review_config.yaml` for size/protected notes. Skip with `Unknown` when absent.
 4. **Optional angles** — when user asks for focused review, load [review-angles.md](review-angles.md).
 5. **Synthesize blockers** — from unresolved reviews (humans + all bots + code-review agents), failing checks + failed-job logs, protected files, merge conflicts. Also list file-overlap across other open PRs (advisory). For Converge, after `RUN_CONTRACT`, ingest only the PR about to be edited.
-6. **Present inline** — format below. Load `l9-ynp` for yes/no/proceed when useful.
-7. **Merge** — only after explicit user confirm; load [merge-advise.md](merge-advise.md). Diagnose itself does not merge.
+6. **Present inline** — format below. Load `l9-ynp` for yes/no/proceed when useful. Diagnose YNP must not emit `gh pr merge`.
+7. **Stop.** Diagnose never merges. If the user wants merge, tell them to invoke `/l9-pr-remediation` (Converge). Load [merge-advise.md](merge-advise.md) only as advise.
 
 ## Inline output
 
@@ -59,7 +59,14 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 - **Code-review agents:** {github-code-quality / Copilot comment count, unanswered count}
 
 ### CI / Checks
-- {pass/fail/pending summary}
+- {pass/fail/pending summary — only from `gh pr checks` / run logs this run}
+
+### State (Diagnose First)
+- **Observed:** {head SHA, mergeable, failing checks, unresolved thread count}
+- **Expected:** {required checks success, zero unresolved threads, stack-safe}
+- **Root cause:** {verified cause or Unknown}
+- **Unknowns:** {list or none}
+- **Evidence:** {commands actually run}
 
 ### Protected Surface (if policy present)
 - `{path}` — {note}
@@ -73,12 +80,13 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 ### Merge Warnings ({count})
 | # | Warning | Source | Notes |
 
-**Merge Verdict:** MERGE | MERGE WITH CONDITIONS | BLOCKED
+**Merge Verdict:** READY | READY WITH CONDITIONS | BLOCKED
+(Diagnose verdict is advisory. It is not merge authority.)
 
 ### YNP
-**YES:** Merge PR (after confirm)
+**YES:** Ready for Converge (`/l9-pr-remediation`) — do not merge from Diagnose
 **NO:** Block — list resolutions
-**PROCEED:** `gh pr merge {number} --squash --delete-branch`
+**PROCEED:** stay in Diagnose; if merge is wanted, invoke `/l9-pr-remediation`
 ```
 
 ## Enforcement
@@ -86,6 +94,7 @@ GATE: review comments fetched before any verdict. Attribute `github-code-quality
 | Rule | Severity |
 |------|----------|
 | Skip review comments | HIGH — block verdict |
-| Commit/push during Diagnose | CRITICAL |
+| Commit/push/merge during Diagnose | CRITICAL |
+| Emit `gh pr merge` from Diagnose YNP | CRITICAL |
 | Alignment/gap/deep-eval theater | HIGH — do not emit |
 | Manual file write from PR diff | CRITICAL — see merge-advise.md |

@@ -14,7 +14,8 @@
     "hooks",
     "preconditions",
     "governed_writes",
-    "operator_override"
+    "operator_override",
+    "repository_authority"
   ],
   "properties": {
     "$schema": {
@@ -92,8 +93,7 @@
       "additionalProperties": false,
       "required": [
         "root",
-        "session_ttl_seconds",
-        "lock_ttl_seconds"
+        "session_ttl_seconds"
       ],
       "properties": {
         "root": {
@@ -102,14 +102,7 @@
         "session_receipt_glob": {
           "type": "string"
         },
-        "lock_glob": {
-          "type": "string"
-        },
         "session_ttl_seconds": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "lock_ttl_seconds": {
           "type": "integer",
           "minimum": 1
         }
@@ -142,14 +135,10 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "session_prefetch",
-        "phase_lock"
+        "session_prefetch"
       ],
       "properties": {
         "session_prefetch": {
-          "$ref": "#/definitions/precondition"
-        },
-        "phase_lock": {
           "$ref": "#/definitions/precondition"
         }
       }
@@ -205,11 +194,11 @@
             "type": "array",
             "items": {
               "enum": [
-                "session_prefetch",
-                "phase_lock"
+                "session_prefetch"
               ]
             },
-            "minItems": 1
+            "minItems": 1,
+            "description": "Repository-write authority comes from Git isolation, not memory state. 'phase_lock' is deliberately not a legal value."
           },
           "fail_mode": {
             "enum": [
@@ -255,6 +244,45 @@
         },
         "note": {
           "type": "string"
+        }
+      }
+    },
+    "repository_authority": {
+      "type": "object",
+      "description": "Authorities that must not be substituted for one another (rules/96-multi-agent-main-bound-execution.mdc).",
+      "required": [
+        "repository_isolation",
+        "collision_detection",
+        "prohibited"
+      ],
+      "properties": {
+        "note": {
+          "type": "string"
+        },
+        "shared_knowledge": {
+          "type": "string"
+        },
+        "repository_isolation": {
+          "type": "string"
+        },
+        "task_ancestry": {
+          "type": "string"
+        },
+        "publication": {
+          "type": "string"
+        },
+        "collision_detection": {
+          "type": "string"
+        },
+        "integration": {
+          "type": "string"
+        },
+        "prohibited": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
         }
       }
     }

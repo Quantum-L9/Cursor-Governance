@@ -14,6 +14,22 @@ sys.path.insert(0, str(MEM))
 import graphiti_bridge as gb  # noqa: E402
 import memory_state as st  # noqa: E402
 
+#: Receipt key suffix. Reuses st.write_receipt (the existing mechanism) under a
+#: distinct id so this never overwrites the SessionStart prefetch receipt that
+#: memory_gate reads to authorise governed writes.
+WRITEBACK_RECEIPT_SUFFIX = ".writeback"
+
+
+def _record(contract: dict, session_id: str, **fields: object) -> None:
+    """Persist the write-back outcome. Never the gate's prefetch receipt."""
+    try:
+        st.write_receipt(contract, f"{session_id}{WRITEBACK_RECEIPT_SUFFIX}", dict(fields))
+    except OSError as exc:
+        print(
+            f"memory-writeback: could not persist status ({type(exc).__name__})",
+            file=sys.stderr,
+        )
+
 
 def main() -> int:
     try:
@@ -27,6 +43,9 @@ def main() -> int:
     except (OSError, json.JSONDecodeError):
         return 0
     if not st.fresh_receipt(contract, session_id):
+        # A policy skip: this session never prefetched, so there is nothing to
+        # close. Recorded so it stays distinguishable from a runtime failure.
+        _record(contract, session_id, status="skipped_no_prefetch")
         return 0
 
     workspace = st.workspace_root()
@@ -50,16 +69,54 @@ def main() -> int:
             dry_run=False,
         )
         status = report.get("status")
+        writes = len(report.get("writes") or [])
         warn_n = len(report.get("warnings") or [])
         print(
-            f"memory-writeback: status={status} writes={len(report.get('writes') or [])} "
-            f"warnings={warn_n}",
+            f"memory-writeback: status={status} writes={writes} warnings={warn_n}",
             file=sys.stderr,
         )
         # Do not echo warning text — may carry secret-adjacent skip reasons
         # (CodeQL clear-text-logging).
-    except Exception as exc:  # fail-open
-        print(f"memory-writeback: skipped ({type(exc).__name__})", file=sys.stderr)
+        _record(
+            contract,
+            session_id,
+            status="ran",
+            close_status=str(status),
+            writes=writes,
+            warnings=warn_n,
+        )
+    except ModuleNotFoundError as exc:
+        # The F-13 failure: the hook reached this line on an interpreter without
+        # the locked dependencies, so write-back never ran. Previously this was
+        # printed as "skipped" and was indistinguishable from a healthy policy
+        # skip, which is how a permanently dead PICKUP path stayed invisible.
+        print(
+            f"memory-writeback: RUNTIME FAILURE — missing module {exc.name!r}; "
+            "write-back did NOT run (expected the locked governance interpreter)",
+            file=sys.stderr,
+        )
+        _record(
+            contract,
+            session_id,
+            status="runtime_error",
+            error="ModuleNotFoundError",
+            missing_module=str(exc.name),
+            interpreter=sys.executable,
+        )
+    except Exception as exc:  # noqa: BLE001 - hook contract is fail-open
+        print(
+            f"memory-writeback: RUNTIME FAILURE ({type(exc).__name__}); write-back did NOT run",
+            file=sys.stderr,
+        )
+        _record(
+            contract,
+            session_id,
+            status="runtime_error",
+            error=type(exc).__name__,
+            interpreter=sys.executable,
+        )
+    # Exit 0 either way: the Stop hook contract is fail-open and must not block
+    # session termination. Observability lives in the receipt, not the exit code.
     return 0
 
 

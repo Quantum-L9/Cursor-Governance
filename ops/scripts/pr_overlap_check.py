@@ -6,17 +6,35 @@ the L4 release check and `git push`. Detects whether the current branch
 textually conflicts with any already-open PR in the same repo, BEFORE the push,
 and blocks with routing instructions.
 
-Failure policy:
-  * fail-open on missing telemetry (gh absent, gh api failure, unparseable
-    base) — the gate must never brick `make pr` on network loss;
-  * fail-open on precision (textual probe unavailable), fail-closed on the
-    decision (filename overlap without a probe still blocks);
+Collision detection is decided from Git state (invariant E5): the caller
+refreshes the base ref, and this gate evaluates the task branch against the
+*current* origin/main plus every open PR targeting it — not against the task's
+original BASE_SHA. Same-file overlap alone is never a collision; the
+`git merge-tree` probe distinguishes disjoint hunks from a real conflict.
+
+Failure policy (invariant E6 — "unable to determine collision state = publication
+denied"):
+  * **autonomous publication fails CLOSED on missing telemetry.** gh absent, a
+    gh api failure, an unresolvable repo identity or unreadable changed-file
+    set all mean the collision state is unknown, and an unknown collision state
+    is not publishable. Local isolated work stays valid: only the push is
+    blocked;
+  * fail-open on precision, fail-closed on the decision: a filename overlap
+    whose textual probe is unavailable still blocks;
   * fail-closed on a detected non-generated textual conflict.
+
+An interactive human run keeps the old fail-open behaviour, because a person can
+see the WARN and judge it. Autonomy is detected from L9_AUTONOMY_ENABLED /
+CI / a non-tty stdin, and is overridable both ways:
+
+  PR_OVERLAP_TELEMETRY=closed   always deny on undeterminable state
+  PR_OVERLAP_TELEMETRY=open     degrade to WARN (state a justification)
 
 Modes via PR_OVERLAP env: block (default, exit 1) | warn (exit 0 + WARN) |
 ignore (skip). PR_STACK=auto: instead of blocking on an unambiguous single open
 PR chain, print `STACK_BASE=<head-branch>` and exit 0 — open_pr_after_gate.sh
-then re-resolves the PR base to that head (never main).
+then re-resolves the PR base to that head (never main). Automatic stacking is
+therefore opt-in only: under ordinary main-bound execution the base stays main.
 """
 
 from __future__ import annotations
@@ -41,8 +59,48 @@ except Exception as exc:  # pragma: no cover — degraded interpreter without ya
     GENERATED_PATH_PREFIXES = ()
 
 
+def autonomous_publication() -> bool:
+    """True when no human is watching this publish decision.
+
+    Under autonomy an undeterminable collision state must deny (E6); an
+    interactive operator may instead read the WARN and decide.
+    """
+    if os.environ.get("L9_AUTONOMY_ENABLED", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    if os.environ.get("CI", "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    try:
+        return not sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        return True
+
+
+def telemetry_failure(what: str) -> int:
+    """Handle an undeterminable collision state.
+
+    Returns the process exit code: 1 (deny) under autonomous publication or an
+    explicit PR_OVERLAP_TELEMETRY=closed, else 0 with a WARN.
+    """
+    policy = os.environ.get("PR_OVERLAP_TELEMETRY", "").strip().lower()
+    if policy == "open":
+        print(f"WARN: {what} — overlap gate skipped (PR_OVERLAP_TELEMETRY=open)")
+        return 0
+    if policy == "closed" or autonomous_publication():
+        print(f"BLOCK: {what} — collision state undeterminable, so publication is denied (E6).")
+        print("  Local work is unaffected: only the push is blocked.")
+        print("  Restore telemetry (gh auth/network), then re-run make pr.")
+        print("  A human may override with a stated justification: PR_OVERLAP_TELEMETRY=open")
+        return 1
+    print(f"WARN: {what} — overlap gate skipped (interactive run, fail-open)")
+    return 0
+
+
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    try:
+        return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        # Missing binary (typically `gh` off PATH) is telemetry failure, not a crash.
+        return subprocess.CompletedProcess(cmd, 127, "", "not found")
 
 
 def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -139,11 +197,37 @@ def pr_files(slug: str, number: int) -> list[str] | None:
     return [line for line in result.stdout.splitlines() if line]
 
 
+_DEEPENED: set[str] = set()
+
+
+def ensure_probe_history(repo: Path) -> None:
+    """Unshallow a shallow clone once, so the merge probe has a common ancestor.
+
+    Cloud sessions hand agents a shallow clone. The probe then dies with
+    "refusing to merge unrelated histories", is reported unavailable, and every
+    filename overlap blocks -- so the merge analysis invariant E5 requires would
+    never actually run where agents actually run. Deepening costs a few seconds
+    and is idempotent per process.
+    """
+    key = str(repo)
+    if key in _DEEPENED:
+        return
+    _DEEPENED.add(key)
+    if git(repo, "rev-parse", "--is-shallow-repository").stdout.strip() != "true":
+        return
+    result = git(repo, "fetch", "--quiet", "--unshallow", "origin")
+    if result.returncode == 0:
+        print("NOTE: deepened shallow clone so the textual merge probe can run")
+    else:
+        print("WARN: could not unshallow the clone — textual probe may be unavailable")
+
+
 def merge_tree_conflicts(repo: Path, pr_number: int) -> list[str] | None:
     """Fetch pull/<N>/head and probe with git merge-tree --write-tree (needs
     git >= 2.38). Returns conflicting paths, [] for a clean merge, or None when
     the probe is unavailable (fetch/unsupported git) — callers degrade to
     filename-overlap blocking."""
+    ensure_probe_history(repo)
     fetch = git(repo, "fetch", "--quiet", "origin", f"pull/{pr_number}/head")
     if fetch.returncode != 0:
         return None
@@ -210,26 +294,20 @@ def main() -> int:
     repo = args.workspace.resolve()
 
     if not gh_available():
-        print("WARN: gh CLI unavailable — PR overlap gate skipped (fail-open)")
-        return 0
+        return telemetry_failure("gh CLI unavailable")
 
     branch = current_branch(repo)
     changed = changed_files(repo, args.base)
     if changed is None:
-        print(
-            f"WARN: cannot compute changed files vs {args.base} — overlap gate skipped (fail-open)"
-        )
-        return 0
+        return telemetry_failure(f"cannot compute changed files vs {args.base}")
 
     slug = resolve_repo_slug(repo)
     if not slug:
-        print("WARN: cannot resolve owner/repo — overlap gate skipped (fail-open)")
-        return 0
+        return telemetry_failure("cannot resolve repository identity (owner/repo)")
 
     prs = open_prs(slug)
     if prs is None:
-        print("WARN: could not list open PRs (gh api failed) — overlap gate skipped (fail-open)")
-        return 0
+        return telemetry_failure("could not enumerate open PRs (gh api failed)")
 
     candidates = [pr for pr in prs if pr["head"] != branch]
     if not candidates:
@@ -242,9 +320,10 @@ def main() -> int:
         number = int(pr["number"])
         files = pr_files(slug, number)
         if files is None:
-            print(
-                f"WARN: could not fetch file list for PR #{number} — precision degraded (fail-open)"
-            )
+            # Unknown file set for a live open PR is an unknown collision state.
+            rc = telemetry_failure(f"could not fetch file list for PR #{number}")
+            if rc:
+                return rc
             continue
         common = sorted(set(changed) & set(files))
         common = [path for path in common if not is_generated_prefix_path(path)]
@@ -264,7 +343,25 @@ def main() -> int:
             entry["note"] = "textual probe unavailable (fetch or merge-tree failed)"
             blockers[number] = entry
             continue
-        real = sorted({path for path in conflicts if not is_generated_prefix_path(path)})
+        # A conflict in a file this branch never touched cannot be caused by
+        # publishing this branch: it is the other PR's conflict with main, and
+        # integration is serialized through main anyway. Counting it here blocks
+        # an agent for a collision that is not its own -- the same
+        # false-positive class as treating same-file overlap as a collision.
+        changed_set = set(changed)
+        real = sorted(
+            {
+                path
+                for path in conflicts
+                if not is_generated_prefix_path(path) and path in changed_set
+            }
+        )
+        foreign = sorted(set(conflicts) - changed_set)
+        if foreign and not real:
+            print(
+                f"NOTE: PR #{number} conflicts with main in {len(foreign)} file(s) this branch "
+                "does not touch — not this branch's collision"
+            )
         if real:
             entry["conflicts"] = real
             blockers[number] = entry

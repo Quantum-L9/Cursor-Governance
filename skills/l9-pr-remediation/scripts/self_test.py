@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 4.0.0. Stdlib only."""
+"""Contract tests for l9-pr-remediation 4.2.0. Stdlib only."""
 
 from __future__ import annotations
 
@@ -27,30 +27,33 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_version_and_map() -> None:
-    _need(SKILL, "version: 4.0.0", "SKILL.md")
+    _need(SKILL, "version: 4.2.0", "SKILL.md")
+    _need(SKILL, "Kernel bind", "SKILL.md")
+    _need(SKILL, "Diagnose First", "SKILL.md")
+    _need(SKILL, "Passed` / `Failed` / `Unknown", "SKILL.md")
     _need(SKILL, "references/run-contract.md", "SKILL.md")
     _need(SKILL, "scripts/self_test.py", "SKILL.md")
     if "run-contract.md" not in REFS:
         _fail("references/run-contract.md missing")
+    if not (ROOT / "agents" / "meta.yaml").is_file():
+        _fail("agents/meta.yaml missing")
 
 
-def test_merge_train() -> None:
-    _need(SKILL, "FIRST_MERGE_GATE", "SKILL.md")
-    _need(SKILL, "MERGE_TRAIN", "SKILL.md")
-    _need(SKILL, "REMEDIATE_ALL", "SKILL.md")
-    _need(SKILL, "oldest_created_at_default: false", "SKILL.md")
-    for label, text in (("SKILL.md", SKILL), ("merge-advise.md", REFS["merge-advise.md"])):
-        _forbid(text, "oldest first", label)
-        _forbid(text, "older-to-newer", label)
-    _need(REFS["run-contract.md"], "FIRST_MERGE_GATE", "run-contract.md")
-    _need(REFS["convergence-loop.md"], "FIRST_MERGE_GATE", "convergence-loop.md")
-
-
-def test_command_surface() -> None:
+def test_makefile_surface() -> None:
+    _need(SKILL, "make pr-check", "SKILL.md")
     _need(SKILL, "PR_REMEDIATE=0 make pr", "SKILL.md")
+    _need(SKILL, "make improve", "SKILL.md")
+    _need(SKILL, "makefile_primary: pr-check", "SKILL.md")
+    _need(REFS["run-contract.md"], "make pr-check", "run-contract.md")
     _need(REFS["run-contract.md"], "PR_REMEDIATE=0 make pr", "run-contract.md")
     _need(REFS["fix-engine.md"], "sanctioned publish", "fix-engine.md")
     _need(REFS["remediation-plan.md"], "sanctioned publish", "remediation-plan.md")
+    _forbid(SKILL, "pre-commit run --all-files", "SKILL.md")
+    _forbid(REFS["remediation-plan.md"], "pre-commit run --all-files", "remediation-plan.md")
+    _need(SKILL, "require_precommit_all_files: false", "SKILL.md")
+    _need(SKILL, "require_precommit_all_hooks: false", "SKILL.md")
+    _need(REFS["convergence-loop.md"], "require_precommit_all_hooks: false", "convergence-loop.md")
+    _forbid(REFS["fix-engine.md"], "find .github/workflows", "fix-engine.md")
     for label, text in (
         ("fix-engine.md", REFS["fix-engine.md"]),
         ("remediation-plan.md", REFS["remediation-plan.md"]),
@@ -72,38 +75,74 @@ def test_command_surface() -> None:
         _fail("fix-engine.md still instructs git push (ONE push)")
     if "git push origin main" in REFS["merge-advise.md"]:
         _fail("merge-advise.md still instructs git push origin main")
-    _need(REFS["run-contract.md"], "git add -u", "run-contract.md")  # listed as forbidden
+    _need(REFS["run-contract.md"], "git add -u", "run-contract.md")
+
+
+def test_merge_train() -> None:
+    _need(SKILL, "FIRST_MERGE_GATE", "SKILL.md")
+    _need(SKILL, "MERGE_TRAIN", "SKILL.md")
+    _need(SKILL, "REMEDIATE_ALL", "SKILL.md")
+    _need(SKILL, "oldest_created_at_default: true", "SKILL.md")
+    _need(SKILL, "oldest `createdAt` first", "SKILL.md")
+    _need(SKILL, "stack-safe", "SKILL.md")
+    _need(REFS["merge-advise.md"], "oldest `createdAt` first", "merge-advise.md")
+    _need(REFS["merge-advise.md"], "stack-safe", "merge-advise.md")
+    _need(REFS["run-contract.md"], "FIRST_MERGE_GATE", "run-contract.md")
+    _need(REFS["run-contract.md"], "oldest `createdAt` first", "run-contract.md")
+    _need(REFS["convergence-loop.md"], "FIRST_MERGE_GATE", "convergence-loop.md")
+    _forbid(REFS["merge-advise.md"], "git checkout main", "merge-advise.md")
+    _need(SKILL, "Never `gh pr update-branch` after a squash of a parent", "SKILL.md")
+
+
+def test_diagnose_never_merges() -> None:
+    _need(SKILL, "**never** commit/push/merge", "SKILL.md")
+    _forbid(REFS["diagnose-workflow.md"], "gh pr merge {number}", "diagnose-workflow.md")
+    _need(REFS["diagnose-workflow.md"], "Diagnose never merges", "diagnose-workflow.md")
+    _need(REFS["merge-advise.md"], "Never merge", "merge-advise.md")
 
 
 def test_venv() -> None:
     rc = REFS["run-contract.md"]
     _need(rc, "UV_PYTHON", "run-contract.md")
     _need(rc, "ENVIRONMENT", "run-contract.md")
+    _need(rc, "uv python find --system", "run-contract.md")
+    _need(rc, "conda", "run-contract.md")
     _need(SKILL, "ENVIRONMENT", "SKILL.md")
     _need(REFS["ownership-boundary.md"], "## ENVIRONMENT", "ownership-boundary.md")
     _need(REFS["finding-classifier.md"], "ENVIRONMENT", "finding-classifier.md")
     _forbid(rc, "pip install cryptography==", "run-contract.md")
     _need(rc, "symlink a failing SSOT venv", "run-contract.md")
     _need(rc, ".cursor-commands/.venv", "run-contract.md")
+    _need(rc, "ensure_gov_python.sh", "run-contract.md")
+
+
+def test_no_gate_weakening() -> None:
+    _forbid(REFS["convergence-loop.md"], "continue-on-error", "convergence-loop.md")
+    _need(SKILL, "Never add `continue-on-error`", "SKILL.md")
 
 
 def test_conversations() -> None:
     _need(SKILL, "isResolved: false", "SKILL.md")
     _need(SKILL, "any author", "SKILL.md")
+    _need(SKILL, "Paginate threads", "SKILL.md")
     _forbid(SKILL, "leave true human-decision threads open", "SKILL.md")
     _forbid(REFS["ownership-boundary.md"], "leave the thread open", "ownership-boundary.md")
     _forbid(REFS["review-replies.md"], "except open HUMAN decisions", "review-replies.md")
     _forbid(REFS["validation-gates.md"], "except open HUMAN decisions", "validation-gates.md")
     _need(REFS["code-review-agents.md"], "isResolved", "code-review-agents.md")
+    _need(REFS["review-replies.md"], "hasNextPage", "review-replies.md")
+    _need(REFS["review-replies.md"], "HUMAN Deferred", "review-replies.md")
 
 
 def test_fast_path() -> None:
     _need(SKILL, "Min preflight", "SKILL.md")
-    _need(SKILL, "require_precommit_all_files: false", "SKILL.md")
-    _forbid(SKILL, "pre-commit run --all-files", "SKILL.md")
-    _forbid(REFS["remediation-plan.md"], "pre-commit run --all-files", "remediation-plan.md")
     _need(REFS["validation-gates.md"], "cited", "validation-gates.md")
     _need(REFS["signal-ingestion.md"], "$PWD", "signal-ingestion.md")
+    _need(REFS["signal-ingestion.md"], "make pr-check", "signal-ingestion.md")
+    _need(REFS["run-contract.md"], "P_diag", "run-contract.md")
+    _need(REFS["diagnose-workflow.md"], "Root cause", "diagnose-workflow.md")
+    _forbid(REFS["convergence-loop.md"], "CI SHOULD pass", "convergence-loop.md")
+    _need(REFS["finding-classifier.md"], "unverified root cause", "finding-classifier.md")
 
 
 def test_ci_and_poll() -> None:
@@ -127,9 +166,11 @@ def test_counters() -> None:
 
 def main() -> None:
     test_version_and_map()
+    test_makefile_surface()
     test_merge_train()
-    test_command_surface()
+    test_diagnose_never_merges()
     test_venv()
+    test_no_gate_weakening()
     test_conversations()
     test_fast_path()
     test_ci_and_poll()

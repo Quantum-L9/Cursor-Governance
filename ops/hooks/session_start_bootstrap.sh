@@ -176,8 +176,13 @@ GC="$GLOBAL_COMMANDS"
 # plan audit, and the additional_context JSON envelope.
 SHARED_BOOTSTRAP="$GC/ops/scripts/bootstrap_agent_environment.sh"
 if [ -f "$SHARED_BOOTSTRAP" ]; then
+  # F-10: the surface is a runtime fact, not a constant. Hard-coding `cursor`
+  # mis-attributed every warning, receipt and identity check on every other
+  # surface, and wrote a phantom Cursor readiness receipt during a Claude Code
+  # bootstrap. Default stays `cursor` for a genuine Cursor session with no
+  # variable set.
   bash "$SHARED_BOOTSTRAP" \
-    --surface cursor \
+    --surface "${L9_GOVERNANCE_SURFACE:-cursor}" \
     --governance "$GC" \
     --workspace "${REPO:-$PWD}" \
     --quiet || true
