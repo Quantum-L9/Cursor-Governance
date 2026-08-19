@@ -464,3 +464,35 @@ Before ANY execution task:
 **Rule:** Never park WIP to /tmp or scratch-hold | restore-all at make pr start/end | vault is non-WIP only
 **Date Added:** 2026-08-12
 
+## Never probe a baseline by stashing a live worktree (2026-08-18)
+
+**Incident.** Mid-GMP, to check whether a test failure predated the change, an
+agent ran `git stash push` on the shared working clone, ran the test, then
+`git stash pop`. The pop reported "No stash entries found": a concurrent
+governance reconciler had reset the clone in between. Every tracked edit of a
+26-file change was gone; only untracked new files survived. Redoing the work
+cost more than the question was worth.
+
+**Rules.**
+
+- Do not `git stash` on a live/shared worktree. Rule 49 already bans
+  `checkout`/`reset`/`revert` there for exactly this reason; `stash` is the same
+  hazard wearing a friendlier name.
+- To compare against a baseline, read the old content instead of moving the
+  tree: `git show <sha>:<path>`, or run the test in a throwaway clone.
+- Commit early. An uncommitted multi-file change is the only thing a reset can
+  destroy; a commit object survives even a hard reset and is recoverable by SHA
+  from the reflog.
+
+## A test that runs the SessionStart hook can reset your clone (2026-08-18)
+
+`tests/ops/autonomy/test_surface_profile.py::test_session_start_emits_profile`
+symlinks `$HOME/.cursor-governance` to the live checkout and runs the real
+SessionStart hook. Inside a cloud session it inherited `CLAUDE_CODE_REMOTE=true`,
+so the hook's governance refresh -- correctly treating a cloud governance clone
+as ephemeral -- ran `git checkout -f -B main origin/main` on the *developer's*
+working tree, mid-suite. Symptom: unrelated tests "fail" because their files
+vanish partway through the run.
+
+Fixed by clearing the flag for that subprocess. **When a test executes a real
+lifecycle hook, give it a disposable tree, never a pointer to the live one.**

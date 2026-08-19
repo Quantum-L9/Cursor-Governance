@@ -395,13 +395,31 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     fail "before-submit-skill-router.py missing under ~/.cursor/hooks"
   fi
-  GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
-  if [ -f "$GATE_LIB" ] && grep -q "gmp:phase_lock" "$GATE_LIB"; then
-    pass "GMP gate matcher present in graphiti_gate_lib.py"
+  # The gate must NOT deny on a memory marker: repository-write authority comes
+  # from worktree/branch isolation and the publication gate, never from a
+  # phase-lock (rules/96-multi-agent-main-bound-execution, E7). This check used
+  # to assert the opposite -- that graphiti_gate_lib.py contained
+  # "gmp:phase_lock" -- so it must not be satisfied by the comment that now
+  # explains the removal. Match executable code only.
+  # Inspect the copy being changed. In a governance checkout the workspace IS
+  # the source of truth for this file, and $GC points at the installed SSOT
+  # clone -- which still carries the previous revision until this work merges.
+  # Gating a pre-PR check on the installed clone would make every governance
+  # change unable to publish the fix it contains. Consumer repos have no local
+  # copy and fall back to $GC as before.
+  GATE_LIB="$WORKSPACE/ops/graphiti/graphiti_gate_lib.py"
+  [ -f "$GATE_LIB" ] || GATE_LIB="$GC/ops/graphiti/graphiti_gate_lib.py"
+  if [ ! -f "$GATE_LIB" ]; then
+    fail "graphiti_gate_lib.py missing"
+  elif grep -v '^[[:space:]]*#' "$GATE_LIB" | grep -q "gmp:phase_lock"; then
+    fail "graphiti_gate_lib.py still gates writes on gmp:phase_lock (E7 violation)"
   else
-    fail "GMP gate matcher missing"
+    pass "graphiti gate is hydration-only (no phase-lock write gate)"
   fi
-  if bash "$GC/ops/graphiti/test_gate_e2e_full.sh" >/dev/null 2>&1; then
+  # Same reasoning as GATE_LIB above: prefer the workspace copy of the self-test.
+  E2E_FULL="$WORKSPACE/ops/graphiti/test_gate_e2e_full.sh"
+  [ -f "$E2E_FULL" ] || E2E_FULL="$GC/ops/graphiti/test_gate_e2e_full.sh"
+  if bash "$E2E_FULL" >/dev/null 2>&1; then
     pass "graphiti gate E2E full self-test"
   elif bash "$GC/ops/graphiti/test_gate_e2e.sh" >/dev/null 2>&1; then
     pass "graphiti gate E2E self-test (minimal)"

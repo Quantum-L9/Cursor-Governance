@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Deny mid-execution git push / PR create until L4 release is authorized.
+"""Deny mid-execution PR create until L4 release is authorized.
 
 Also enforces shared-worktree isolation (scoop/revert/switch/reset of foreign
 dirty files) via ``worktree_isolation_gate``.
+
+``git`` and ``gh`` shell commands are EXEMPT from every denial below — see
+``git_execution_exemption``. The classifiers here still report a raw publish or
+an isolation violation, so a policy engine can say "you bypassed `make pr`"
+after the fact; this gate no longer turns that report into a blocked command.
+Governed non-git commands and the MCP GitHub write tools are unaffected.
 
 Claude Code PreToolUse adapter:
   environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
@@ -42,6 +48,10 @@ from command_parse import (  # noqa: E402
     split_segments,
     strip_heredoc_bodies,
     wrapper_subcommands,
+)
+from git_execution_exemption import (  # noqa: E402
+    event_is_git_or_gh,
+    payload_is_git_or_gh,
 )
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
@@ -223,7 +233,14 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
     release receipt — otherwise the session-root check applies unchanged.
     Dynamic path tokens never widen the gate (extract_named_roots ignores
     them), so unknown targets stay fail-closed.
+
+    A git/gh shell command short-circuits to allow before any of that: the
+    exemption is the first thing evaluated, so no state lookup, classifier, or
+    authorization check can produce a denial for one.
     """
+    if event_is_git_or_gh(tool_name, tool_input):
+        return None
+
     if tool_name in DENY_MCP_TOOLS or tool_name.endswith("create_pull_request"):
         # An MCP push/PR call can never be the sanctioned publish path — it does
         # not run the Makefile checkers — so it is denied regardless of L4 phase.
@@ -285,18 +302,53 @@ def _emit_cursor(permission: str, message: str | None = None) -> int:
     return 0
 
 
+#: Denial reason used when the gate cannot complete a policy evaluation.
+#: A caller sees a denial; stderr keeps the detail needed to diagnose it.
+INTERNAL_EVALUATION_ERROR = (
+    "INTERNAL_EVALUATION_ERROR: the execution gate could not complete a policy "
+    "evaluation for this command, so it denied it. This is a gate fault, not a "
+    "policy decision about the command. See the hook's stderr for the failure."
+)
+
+
+def _fail_closed_note(exc: BaseException) -> None:
+    """Record why evaluation failed. Never the gate's decision channel."""
+    print(
+        f"local_execution_gate: evaluation failed ({type(exc).__name__}: {exc}); failing closed",
+        file=sys.stderr,
+    )
+
+
 def main_claude() -> int:
+    raw = sys.stdin.read()
+    # Answered before parsing, and outside the fail-closed handler below: for a
+    # git/gh command, execution permission must not depend on this gate being
+    # able to evaluate anything at all.
+    if payload_is_git_or_gh(raw):
+        return 0
     try:
-        event = json.load(sys.stdin)
+        event = json.loads(raw)
     except json.JSONDecodeError:
+        # Deliberate and unchanged: an unparseable event is a malformed
+        # invocation, not a failed evaluation, and a hook must not brick a
+        # session over one. Everything past this point is security evaluation
+        # and fails closed instead.
         return 0
     if not isinstance(event, dict):
         return 0
-    tool_name = str(event.get("tool_name", ""))
-    tool_input = event.get("tool_input") or {}
-    if not isinstance(tool_input, dict):
-        tool_input = {}
-    reason = evaluate(tool_name, tool_input, root=workspace_from_event(event))
+    try:
+        tool_name = str(event.get("tool_name", ""))
+        tool_input = event.get("tool_input") or {}
+        if not isinstance(tool_input, dict):
+            tool_input = {}
+        reason = evaluate(tool_name, tool_input, root=workspace_from_event(event))
+    except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
+        # Workspace resolution, policy loading and command evaluation all land
+        # here. Previously an exception propagated as a traceback and a non-zero
+        # exit, which PreToolUse treats as non-blocking — a crash in a gate whose
+        # whole purpose is to fail closed became an accidental permit (F-11).
+        _fail_closed_note(exc)
+        return _deny_claude(INTERNAL_EVALUATION_ERROR)
     if reason:
         return _deny_claude(reason)
     return 0
@@ -370,23 +422,30 @@ def effective_root(command: str, root: Path) -> Path:
 
 
 def main_cursor_shell() -> int:
+    raw = sys.stdin.read()
+    if payload_is_git_or_gh(raw):
+        return _emit_cursor("allow")
     try:
-        event = json.load(sys.stdin)
+        event = json.loads(raw)
     except json.JSONDecodeError:
         return _emit_cursor("allow")
     if not isinstance(event, dict):
         return _emit_cursor("allow")
-    command = str(event.get("command") or event.get("full_command") or "")
-    root = effective_root(command, workspace_from_event(event))
-    iso = command_violates_worktree_isolation(command, root=root)
-    if iso:
-        return _emit_cursor("deny", iso)
-    bypass = command_bypasses_publish_path(command)
-    if bypass and not _publish_path_override():
-        return _emit_cursor("deny", _publish_deny_reason(bypass))
-    if not command_is_remote_mutation(command):
-        return _emit_cursor("allow")
-    allowed, reason = release_allows_remote(root)
+    try:
+        command = str(event.get("command") or event.get("full_command") or "")
+        root = effective_root(command, workspace_from_event(event))
+        iso = command_violates_worktree_isolation(command, root=root)
+        if iso:
+            return _emit_cursor("deny", iso)
+        bypass = command_bypasses_publish_path(command)
+        if bypass and not _publish_path_override():
+            return _emit_cursor("deny", _publish_deny_reason(bypass))
+        if not command_is_remote_mutation(command):
+            return _emit_cursor("allow")
+        allowed, reason = release_allows_remote(root)
+    except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
+        _fail_closed_note(exc)
+        return _emit_cursor("deny", INTERNAL_EVALUATION_ERROR)
     if allowed:
         return _emit_cursor("allow")
     return _emit_cursor("deny", reason)

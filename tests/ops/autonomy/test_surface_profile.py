@@ -37,6 +37,16 @@ def test_session_start_emits_profile(tmp_path: Path) -> None:
     Point HOME at a temp tree whose `.cursor-governance` symlinks to this
     checkout so the test proves the branch tip, not whatever is checked out
     in the developer's live clone.
+
+    ``CLAUDE_CODE_REMOTE`` is cleared deliberately. The symlink above resolves
+    to the live working tree, and in a cloud session the hook's governance
+    refresh treats that tree as an ephemeral artifact and runs
+    ``git checkout -f -B main origin/main`` on it -- so inheriting the cloud
+    flag made this test destroy the in-flight branch and uncommitted work of
+    whoever ran the suite. The hook is right (cloud clones are ephemeral); the
+    test must not hand it a live checkout to reset. Clearing the flag also
+    exercises the local-checkout path, which is the one whose reported
+    ``governance SSOT`` / doctrine text this test actually asserts on.
     """
     home = tmp_path / "home"
     home.mkdir()
@@ -59,6 +69,7 @@ def test_session_start_emits_profile(tmp_path: Path) -> None:
             **os.environ,
             "HOME": str(home),
             "CLAUDE_PROJECT_DIR": str(tmp_path),
+            "CLAUDE_CODE_REMOTE": "",
         },
         check=False,
     )

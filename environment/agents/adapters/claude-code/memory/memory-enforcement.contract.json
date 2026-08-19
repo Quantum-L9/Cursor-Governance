@@ -1,9 +1,9 @@
 {
   "$schema": "./memory-enforcement.schema.json",
   "contract": "l9.claude-code.memory-enforcement",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "status": "enforced",
-  "summary": "Memory prefetch and conflict-checked phase-locks are preconditions for governed writes on the Claude Code surface. Single front door: Cursor Graphiti (ops/graphiti/graphiti_memory_client.py) via thin hooks. Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door.",
+  "summary": "Memory hydration is a precondition for governed writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state: a Graphiti phase-lock neither authorizes, denies, nor serializes ordinary repository mutation. Single front door: Cursor Graphiti (ops/graphiti/graphiti_memory_client.py) via thin hooks. Enforced at PreToolUse. Operator-only breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS. No ENFORCEMENT=off side door.",
   "memory": {
     "front_door": "ops/graphiti/graphiti_memory_client.py",
     "bridge": "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
@@ -19,15 +19,14 @@
       "L9_MEMORY_CLIENT_TOKEN",
       "environment/agents/adapters/claude-code/memory/memory_client.py",
       "l9-shared-memory@memory.quantumaipartners.com",
-      "L9_MEMORY_ENFORCEMENT=off"
+      "L9_MEMORY_ENFORCEMENT=off",
+      "environment/agents/adapters/claude-code/hooks/memory_lock.py"
     ]
   },
   "state": {
     "root": ".l9/memory",
     "session_receipt_glob": ".l9/memory/receipts/*.json",
-    "lock_glob": ".l9/memory/locks/*.json",
-    "session_ttl_seconds": 86400,
-    "lock_ttl_seconds": 3600
+    "session_ttl_seconds": 86400
   },
   "enforcement_point": "PreToolUse",
   "hooks": {
@@ -54,23 +53,15 @@
     "session_prefetch": {
       "id": "session_prefetch",
       "satisfied_by": "a session receipt under state.session_receipt_glob whose session_id matches the current session and whose age is < state.session_ttl_seconds",
-      "established_by": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py"
-    },
-    "phase_lock": {
-      "id": "phase_lock",
-      "satisfied_by": "a lock artifact under state.lock_glob for at least one required namespace, conflict-checked, unexpired (< state.lock_ttl_seconds), and bound to the current session",
-      "established_by": "environment/agents/adapters/claude-code/hooks/memory_lock.py acquire --namespace <ns> --task <text>",
-      "verifies_against": [
-        "graphiti conflicts",
-        "graphiti phase-lock",
-        "local lock transport=cursor-graphiti-phase-lock"
-      ]
+      "established_by": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
+      "gate_shape": "fresh hydration? yes -> continue; no -> hydrate, then continue",
+      "note": "The ONLY permitted memory precondition on repository mutation. There is no conflicts -> phase-lock -> edit-permission chain."
     }
   },
   "governed_writes": [
     {
       "id": "edit-authority-files",
-      "description": "Edits to governance-authority paths require prefetch and a conflict-checked phase-lock.",
+      "description": "Edits to governance-authority paths require that memory was hydrated this session. Isolation and collision safety are Git's job (worktree + branch + publication gate).",
       "match": {
         "tools": [
           "Edit",
@@ -92,8 +83,7 @@
         ]
       },
       "requires": [
-        "session_prefetch",
-        "phase_lock"
+        "session_prefetch"
       ],
       "fail_mode": "closed"
     },
@@ -117,7 +107,7 @@
     },
     {
       "id": "git-mutation",
-      "description": "Local history mutation and publication require prefetch and a phase-lock.",
+      "description": "Local history mutation and publication require session hydration only. Push/PR routing is governed by L4 and the publication gate, never by memory lock state.",
       "match": {
         "tools": [
           "Bash"
@@ -127,14 +117,13 @@
         ]
       },
       "requires": [
-        "session_prefetch",
-        "phase_lock"
+        "session_prefetch"
       ],
       "fail_mode": "closed"
     },
     {
       "id": "external-write",
-      "description": "External GitHub writes (PR create/update, merge, direct file push) require prefetch and a phase-lock.",
+      "description": "External GitHub writes require session hydration only; collision safety comes from the publication overlap gate.",
       "match": {
         "tools": [
           "mcp__github__create_pull_request",
@@ -146,8 +135,7 @@
         ]
       },
       "requires": [
-        "session_prefetch",
-        "phase_lock"
+        "session_prefetch"
       ],
       "fail_mode": "closed"
     }
@@ -155,6 +143,21 @@
   "operator_override": {
     "env": "L9_MEMORY_ENFORCEMENT_BREAKGLASS",
     "agent_settable": false,
-    "note": "Admin/operator-only key to the back door. Non-empty reason allows governed writes and appends .l9/memory/overrides.jsonl. Agents cannot set this for their own hooks. There is no L9_MEMORY_ENFORCEMENT=off escape hatch."
+    "note": "Admin/operator-only key to the back door. Non-empty reason allows governed writes and appends .l9/memory/overrides.jsonl. Agents cannot set this for their own hooks. There is no L9_MEMORY_ENFORCEMENT=off escape hatch and no agent-facing force-lock."
+  },
+  "repository_authority": {
+    "note": "Distinct authorities that MUST NOT be substituted for one another; see rules/96-multi-agent-main-bound-execution.mdc.",
+    "shared_knowledge": "Graphiti / canonical L9 memory",
+    "repository_isolation": "dedicated worktree (ops/scripts/agent_worktree_start.sh)",
+    "task_ancestry": "fetched origin/main",
+    "publication": "make pr -> ops/scripts/open_pr_after_gate.sh",
+    "collision_detection": "diff + merge-tree probe + CI (ops/scripts/pr_overlap_check.py)",
+    "integration": "PR merge into main",
+    "prohibited": [
+      "gmp:phase_lock as repository-write permission",
+      "agent-facing --force memory-lock acquisition",
+      "memory conflict as a repository-wide mutation lock",
+      "branch identity as the memory namespace"
+    ]
   }
 }

@@ -40,13 +40,50 @@ class FrontDoorTests(unittest.TestCase):
     def test_bridge_exists(self) -> None:
         self.assertTrue((MEM / "graphiti_bridge.py").is_file())
 
-    def test_hooks_call_bridge_not_http_client(self) -> None:
-        for name in (
-            "memory_prefetch.py",
-            "memory_lock.py",
-            "memory_writeback.py",
-            "memory_gate.py",
-        ):
+    def test_agent_force_lock_interface_absent(self) -> None:
+        """E8: no agent-facing Graphiti force-lock interface may exist.
+
+        ``memory_lock.py acquire --force`` used to mint repository-write
+        permission out of memory state, and ``--force`` let an agent do it over
+        a reported conflict. Both are prohibited by the L9 Multi-Agent
+        Main-Bound Execution Contract, so the hook is deleted rather than
+        softened.
+        """
+        self.assertFalse((HOOKS / "memory_lock.py").exists())
+        # Prose may *state* the prohibition (the prefetch hook tells agents no
+        # phase-lock is accepted). What must not exist is code that acquires,
+        # checks, or forces one -- so match invocation forms, not the word.
+        forbidden = (
+            '"phase-lock"',  # CLI subcommand argument
+            "'phase-lock'",
+            "gmp:phase_lock",  # satisfied-marker lookup
+            "phase_lock_satisfied",
+            "gb.phase_lock",
+            "write_lock",
+            "read_lock",
+            "--force",
+        )
+        for path in HOOKS.glob("*.py"):
+            src = path.read_text(encoding="utf-8")
+            code = "\n".join(line for line in src.splitlines() if not line.strip().startswith("#"))
+            for bad in forbidden:
+                self.assertNotIn(bad, code, f"{path.name}: {bad}")
+
+    def test_bridge_exposes_no_phase_lock(self) -> None:
+        """E7: the bridge cannot mint repository-write permission."""
+        src = (MEM / "graphiti_bridge.py").read_text(encoding="utf-8")
+        self.assertNotIn("def phase_lock", src)
+        self.assertNotIn("phase_lock_satisfied", src)
+
+    def test_memory_hooks_call_bridge_not_http_client(self) -> None:
+        """Hooks that reach the memory store go through the bridge.
+
+        ``memory_gate.py`` is deliberately absent from this list: since the
+        phase-lock decoupling it consults local hydration receipts only and
+        needs no memory transport at all. It is covered by
+        :meth:`test_no_hook_uses_an_http_side_door` below.
+        """
+        for name in ("memory_prefetch.py", "memory_writeback.py"):
             path = HOOKS / name
             src = path.read_text(encoding="utf-8")
             imports = _imports(path)
@@ -54,6 +91,13 @@ class FrontDoorTests(unittest.TestCase):
             self.assertIn("graphiti_bridge", src, name)
             for bad in FORBIDDEN_SUBSTRINGS:
                 self.assertNotIn(bad, src, name)
+
+    def test_no_hook_uses_an_http_side_door(self) -> None:
+        for path in HOOKS.glob("memory_*.py"):
+            src = path.read_text(encoding="utf-8")
+            self.assertNotIn("memory_client", _imports(path), path.name)
+            for bad in FORBIDDEN_SUBSTRINGS:
+                self.assertNotIn(bad, src, path.name)
 
     def test_bridge_targets_graphiti_cli(self) -> None:
         src = (MEM / "graphiti_bridge.py").read_text(encoding="utf-8")

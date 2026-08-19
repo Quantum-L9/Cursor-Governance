@@ -18,6 +18,7 @@ from l4_local import (  # noqa: E402
     begin,
     record_kernels,
     release_allows_remote,
+    workspace_from_event,
 )
 from local_execution_gate import evaluate  # noqa: E402
 
@@ -46,15 +47,21 @@ def test_begin_kernels_authorize_allows_push(
     assert "release_authorized" in reason
 
 
-def test_gate_denies_git_push(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gate_denies_mid_execution_remote_mutation(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """L4 still gates remote mutation — but not by blocking git itself.
+
+    `git push` is exempt from execution denial
+    (ops/autonomy/git_execution_exemption.py), so the L4 remote gate is pinned
+    here on `make pr`, the sanctioned publish path it actually governs.
+    """
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    reason = evaluate(
-        "Bash",
-        {"command": "git push -u origin HEAD"},
-        root=stacked_repo,
-    )
+    reason = evaluate("Bash", {"command": "make pr"}, root=stacked_repo)
     assert reason is not None
+
+    assert evaluate("Bash", {"command": "git push -u origin HEAD"}, root=stacked_repo) is None
 
 
 def test_gate_allows_local_commit(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -71,6 +78,18 @@ def test_breakglass_allows(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "human override")
     allowed, _ = release_allows_remote(stacked_repo)
     assert allowed
+
+
+def test_workspace_from_event_uses_workspace_roots_when_cwd_empty(
+    stacked_repo: Path,
+) -> None:
+    """Cursor beforeShellExecution often sends cwd="" and the checkout in workspace_roots."""
+    event = {
+        "cwd": "",
+        "workspace_roots": [str(stacked_repo)],
+        "transcript_path": "unused",
+    }
+    assert workspace_from_event(event) == stacked_repo.resolve()
 
 
 def test_cli_check_remote_exit_codes(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
