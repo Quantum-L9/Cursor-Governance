@@ -41,7 +41,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | `/wire` | Governance wiring or component wire-up |
 | `/confirm-wiring` | Verify full wiring |
 | `/pr` | PR analysis, gaps, merge blockers (Diagnose only) |
-| `/l9-pr-remediation` | Converge all open PRs to green, then merge |
+| `/l9-pr-remediation` | Converge via make pr-check / make pr, then stack-safe oldest-first merge |
 | `/gap-analysis` | Gaps vs target state |
 | `/inspect` | External code gate before import |
 | `/index` | Export repo indexes |

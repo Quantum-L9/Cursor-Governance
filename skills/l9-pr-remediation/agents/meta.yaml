@@ -1,0 +1,7 @@
+# Adapter display metadata for this Skill pack.
+# Canonical path: agents/meta.yaml (never agents/openai.yaml).
+# Keep discovery triggers in SKILL.md frontmatter; this file is display-only.
+interface:
+  display_name: "L9 PR Remediation"
+  short_description: "Diagnose or converge PRs via make pr-check / make pr, then a stack-safe oldest-first merge train."
+  brand_color: "#1F6FEB"

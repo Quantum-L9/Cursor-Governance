@@ -105,7 +105,7 @@ files:
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
 - path: scripts/pec/preflight.py
-  sha256: 899874dafca632b12ae65b8635d438a37f7d10e86450a6b9b14ab92d7c7400f5
+  sha256: 1729d0ac106874adf2f7e2b63196766fad1ed1f124990036cdf4fbce3e8d54e0
 - path: scripts/pec/replan.py
   sha256: cf1c947f1a138695dc8b8d6dc17398fb864a58f0512471fa8454fcb9c40c7fff
 - path: scripts/pec/state.py
@@ -137,7 +137,7 @@ files:
 - path: scripts/tests/test_ledger_tamper.py
   sha256: c471659035072ed2ba5e22c7fbb2ea75c13e6aae6751e1e176c9a066e027f5a0
 - path: scripts/tests/test_pe_clean_startup.py
-  sha256: 2789c266730617dfa717d43d8dc7c7788505e136fb546149a3168ed1c4e89c8c
+  sha256: 6aeb90005d5ba0e36a3f93932ef9a8715f9bd9479a723b2ba7d2ce4ef5ccd9cf
 - path: scripts/tests/test_pipeline_assembly_fill.py
   sha256: 049b123332df14b8c666532411b7086a3bfeff6396fd89e792b88c555ab3c549
 - path: scripts/tests/test_preflight.py

@@ -42,28 +42,40 @@ cat > "$TEST_STATE" <<JSON
 JSON
 expect "pre_tool allow" "$(run_gate pre_tool_use '{"conversation_id":"e2e-test","tool_name":"Write"}')" allow
 
-# --- GMP matcher ---
+# --- GMP prompts are gated on hydration only (E7) ---
+# A GMP-shaped prompt used to be denied until gmp:phase_lock appeared in
+# memory_satisfied_for, which made a memory marker into repository-write
+# permission. GMP freezes the authorized edit *scope*, not repository
+# ownership, so a hydrated session may proceed without any lock.
 cat > "$TEST_STATE" <<JSON
 {"group_id":"sandbox-test","prefetch_ts":"2099-01-01T00:00:00Z","task_signature":"abc123","memory_satisfied_for":["abc123"],"cache_ttl_minutes":30}
 JSON
-expect "gmp deny no lock" "$(run_gate pre_tool_use '{"conversation_id":"e2e-test","tool_name":"Write","prompt":"GMP Phase 0 TODO plan lock"}')" deny
+expect "gmp allow on hydration alone" "$(run_gate pre_tool_use '{"conversation_id":"e2e-test","tool_name":"Write","prompt":"GMP Phase 0 TODO plan lock"}')" allow
 
-cat > "$TEST_STATE" <<JSON
-{"group_id":"sandbox-test","prefetch_ts":"2099-01-01T00:00:00Z","task_signature":"abc123","memory_satisfied_for":["abc123","gmp:phase_lock"],"cache_ttl_minutes":30}
-JSON
-expect "gmp allow with lock" "$(run_gate pre_tool_use '{"conversation_id":"e2e-test","tool_name":"Write","prompt":"GMP Phase 0"}')" allow
-
-# --- shell ---
+# ...and the gate still enforces: no hydration, no write.
 cat > "$TEST_STATE" <<JSON
 {"group_id":"sandbox-test","prefetch_ts":"2000-01-01T00:00:00Z","task_signature":"abc123","memory_satisfied_for":[],"cache_ttl_minutes":30}
 JSON
-expect "shell commit deny" "$(run_gate shell '{"conversation_id":"e2e-test","command":"git commit -m x"}')" deny
+expect "gmp deny without hydration" "$(run_gate pre_tool_use '{"conversation_id":"e2e-test","tool_name":"Write","prompt":"GMP Phase 0"}')" deny
+
+# --- shell ---
+# git/gh execution is exempt from memory state by design: memory governs writes
+# to the repository, not whether git may run (ops/autonomy/git_execution_exemption,
+# landed with "Loosen git and gh execution governance"). This block previously
+# expected an unhydrated `git commit` to be denied, an expectation the exemption
+# had already made stale -- so the whole self-test failed and callers silently
+# fell back to the minimal one. Assert the exemption instead.
+cat > "$TEST_STATE" <<JSON
+{"group_id":"sandbox-test","prefetch_ts":"2000-01-01T00:00:00Z","task_signature":"abc123","memory_satisfied_for":[],"cache_ttl_minutes":30}
+JSON
+expect "shell git exempt without hydration" "$(run_gate shell '{"conversation_id":"e2e-test","command":"git commit -m x"}')" allow
 expect "shell ls allow" "$(run_gate shell '{"conversation_id":"e2e-test","command":"ls -la"}')" allow
+expect "shell make push deny" "$(run_gate shell '{"conversation_id":"e2e-test","command":"make push"}')" deny
 
 cat > "$TEST_STATE" <<JSON
 {"group_id":"sandbox-test","prefetch_ts":"2099-01-01T00:00:00Z","task_signature":"abc123","memory_satisfied_for":["abc123"],"cache_ttl_minutes":30}
 JSON
-expect "shell commit allow" "$(run_gate shell '{"conversation_id":"e2e-test","command":"git commit -m x"}')" allow
+expect "shell make push allow when hydrated" "$(run_gate shell '{"conversation_id":"e2e-test","command":"make push"}')" allow
 
 # --- subagent ---
 cat > "$TEST_STATE" <<JSON

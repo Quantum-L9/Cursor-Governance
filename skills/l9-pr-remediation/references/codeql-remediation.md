@@ -42,9 +42,9 @@ tree, and is **fail-closed on incomplete pagination** (a next page after the cap
 `BLOCKED`, never a smaller-than-real set):
 
 ```bash
-python3 scripts/codeql_fetch.py --owner OWNER --repo REPO \
-  --ref refs/heads/main --output codeql-alerts-before.json
-# For a PR head: --ref refs/pull/<number>/head
+# TEMPLATE — substitute owner/repo/ref from the current PR head
+"${GOV_PY:-$PWD/.venv/bin/python}" scripts/codeql_fetch.py --owner "$OWNER" --repo "$REPO" \
+  --ref "$HEAD_REF" --output codeql-alerts-before.json
 ```
 
 The snapshot records, per alert: `alert_number`/URL, `rule_id`, CWE tags,

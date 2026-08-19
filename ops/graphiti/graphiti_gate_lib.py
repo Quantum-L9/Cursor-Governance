@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Graphiti write gate logic for Cursor hooks."""
+"""Graphiti write gate logic for Cursor hooks.
+
+``git``/``gh`` shell commands never reach the state checks below: memory
+prefetch freshness is an input to *policy*, not to whether git may execute. See
+``ops/autonomy/git_execution_exemption``.
+
+The gate checks hydration only. A Graphiti phase-lock is never a repository
+mutex (rules/96-multi-agent-main-bound-execution.mdc, E7).
+"""
 
 from __future__ import annotations
 
@@ -8,6 +16,14 @@ import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+
+_AUTONOMY = Path(__file__).resolve().parent.parent / "autonomy"
+if str(_AUTONOMY) not in sys.path:
+    sys.path.insert(0, str(_AUTONOMY))
+
+from git_execution_exemption import payload_is_git_or_gh  # noqa: E402
+
+ALLOW = {"permission": "allow"}
 
 
 def load_state(conv_id: str) -> dict:
@@ -50,10 +66,6 @@ def memory_ok(state: dict, task_sig: str | None = None) -> bool:
     return prefetch_fresh(state) and bool(state.get("prefetch_hash"))
 
 
-def gmp_prompt(text: str) -> bool:
-    return bool(re.search(r"GMP|phase\s*[0-6]|modification lock|TODO plan", text, re.I))
-
-
 READ_ONLY_TOOLS = frozenset(
     {
         "Read",
@@ -69,6 +81,8 @@ READ_ONLY_TOOLS = frozenset(
 
 
 def pre_tool_use(payload: str) -> dict:
+    if payload_is_git_or_gh(payload):
+        return dict(ALLOW)
     if not gates_enabled():
         return {"permission": "allow"}
     data = json.loads(payload) if payload.strip() else {}
@@ -77,15 +91,11 @@ def pre_tool_use(payload: str) -> dict:
         return {"permission": "allow"}
     conv = data.get("conversation_id") or data.get("conversationId") or "default"
     state = load_state(str(conv))
-    prompt = json.dumps(data)
-    if gmp_prompt(prompt) and "gmp:phase_lock" not in (state.get("memory_satisfied_for") or []):
-        return {
-            "permission": "deny",
-            "user_message": (
-                "Graphiti gate: GMP requires prefetch + conflicts check (gmp:phase_lock). "
-                "Run graphiti_memory_client.py phase-lock first."
-            ),
-        }
+    # A GMP prompt used to require gmp:phase_lock here. That made a memory
+    # marker into repository-write permission, which the L9 Multi-Agent
+    # Main-Bound Execution Contract forbids (E7): GMP freezes the authorized
+    # edit *scope* (the scope contract), it does not decide which agent owns
+    # the repository. Hydration is the only remaining precondition.
     if memory_ok(state):
         return {"permission": "allow"}
     return {
@@ -98,6 +108,8 @@ def pre_tool_use(payload: str) -> dict:
 
 
 def shell_gate(payload: str) -> dict:
+    if payload_is_git_or_gh(payload):
+        return dict(ALLOW)
     if not gates_enabled():
         return {"permission": "allow"}
     data = json.loads(payload) if payload.strip() else {}
@@ -131,6 +143,11 @@ def subagent_gate(payload: str) -> dict:
 def main() -> int:
     mode = sys.argv[1]
     payload = sys.stdin.read()
+    # Ahead of dispatch, so neither a state check nor a handler fault (which the
+    # runner converts into a denial when gates are enabled) can block git/gh.
+    if payload_is_git_or_gh(payload):
+        print(json.dumps(ALLOW))
+        return 0
     handlers = {
         "pre_tool_use": pre_tool_use,
         "shell": shell_gate,

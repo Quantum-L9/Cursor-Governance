@@ -73,9 +73,32 @@ if [[ "$branch" == "main" || "$branch" == "master" ]]; then
   exit 1
 fi
 
+# Pre-publication base refresh (L9 Multi-Agent Main-Bound Execution Contract
+# §11 / invariant E5). The branch must be evaluated against the CURRENT
+# origin/main, not against the SHA the task started from — other agents merge
+# while this one works. Fetch failure means the collision state cannot be
+# determined, which denies publication (§14 / E6) without touching local work.
+echo "--- refresh base ($PR_BASE) ---"
+if ! git fetch origin "$BASE_REF"; then
+  echo "FAIL: cannot fetch origin/$BASE_REF — current-main collision state is"
+  echo "      undeterminable, so publication is denied. Local work is unaffected."
+  exit 1
+fi
+
 if ! git rev-parse --verify "$PR_BASE" >/dev/null 2>&1; then
   echo "FAIL: missing base ref $PR_BASE (fetch or set PR_BASE)"
   exit 1
+fi
+
+# Main-bound execution gate (E2/E3/E4): ancestry, no direct main push, PR
+# targets main unless an exception is explicitly authorized.
+_MAIN_BOUND_GATE="$GOV_ROOT/ops/scripts/main_bound_check.py"
+if [[ -f "$_MAIN_BOUND_GATE" ]]; then
+  echo "--- main-bound execution gate ---"
+  if ! python3 "$_MAIN_BOUND_GATE" --workspace "$WS" --base "$PR_BASE"; then
+    echo "FAIL: main-bound execution gate blocked publication"
+    exit 1
+  fi
 fi
 
 ahead="$(git rev-list --count "${PR_BASE}..HEAD" 2>/dev/null || echo 0)"
@@ -108,10 +131,12 @@ if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
 fi
 
 # PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1) — fail-closed pre-push check
-# against already-open PRs. Absent on older governance tips (consumer repos):
-# skip silently. gh/network loss fails open with a WARN inside the gate; a
-# detected non-generated textual conflict blocks. PR_STACK=auto re-resolves
-# the base to the overlapping open PR's head (never main).
+# against already-open PRs, evaluated against the base just refreshed above.
+# Absent on older governance tips (consumer repos): skip silently. Under
+# autonomous publication an undeterminable collision state (gh/network loss)
+# now DENIES rather than warning (§14 / E6); an interactive operator still gets
+# the WARN. A detected non-generated textual conflict blocks. PR_STACK=auto
+# re-resolves the base to the overlapping open PR's head (never main).
 _OVERLAP_GATE="$GOV_ROOT/ops/scripts/pr_overlap_check.py"
 if [[ -f "$_OVERLAP_GATE" ]]; then
   echo "--- PR overlap gate (PR_OVERLAP=${PR_OVERLAP:-block}) ---"

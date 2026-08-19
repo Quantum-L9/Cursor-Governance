@@ -6,27 +6,26 @@ role: convergence_loop
 tags: [pr, convergence, loop, polling, ci, local-verify]
 owner: igor_beylin
 status: active
-version: 3.2.0
-updated: 2026-08-16
+version: 3.4.0
+updated: 2026-08-18
 /L9_META -->
 
 # Convergence Loop
 
 ## Purpose
 
-After pushing the **single** planned commit (which has ALREADY passed Makefile + pre-commit + leftover local verify), short-poll CI to confirm, check for new reviews, then decide: converge, exceptional next cycle, or early stop.
+After publishing the **single** planned commit (which has ALREADY passed `make pr-check` + cited-path verify), short-poll CI to confirm, check for new reviews, then decide: converge, exceptional next cycle, or early stop.
 
 A second cycle is **not** the normal path. It is only for signals that did not exist at census time. See [remediation-plan.md](remediation-plan.md).
 
-## Key Principle: Local-First Verification
+## Key Principle: Local-First, Independently Confirmed
 
-Remote CI polling is a **CONFIRMATION** step, not a **DISCOVERY** step.
+`make pr-check` is the local gate. Remote CI is an **independent** confirmation, not a discovery loop and not implied by local `Passed`.
 
-- ALL failures MUST be caught by local verify BEFORE push.
-- If remote CI finds something local verify missed, that's a protocol failure.
+- Do not publish while local verify is `Failed` or `Unknown`.
+- If remote CI finds something local verify missed, classify the delta (`CODEBASE` / `ENVIRONMENT` / `CI_PIPELINE`). That is not automatic protocol failure.
 - Document any local/remote delta as a finding for the next cycle.
-
-This means: after push, CI SHOULD pass. Polling is to confirm and to catch environment-specific deltas (secrets, services, OS differences).
+- Status vocabulary: `Passed` / `Failed` / `Skipped` / `Unknown` / `NotApplicable`. Do not claim remote `Passed` until `gh run view` (or equivalent) shows it on the exact head SHA.
 
 ## Loop Architecture
 
@@ -34,8 +33,8 @@ This means: after push, CI SHOULD pass. Polling is to confirm and to catch envir
 ┌─────────────────────────────────────────────────────────┐
 │              REMEDIATION CYCLE                            │
 │                                                          │
-│  census → plan (GATE) → fix ALL → make+pre-commit (GATE) │
-│  commit (ONE) → push (ONE)                               │
+│  census → plan (GATE) → fix ALL → make pr-check (GATE)   │
+│  commit (ONE) → sanctioned publish (ONE)                 │
 │                                                          │
 └──────────────────────┬───────────────────────────────────┘
                        │
@@ -61,7 +60,7 @@ This means: after push, CI SHOULD pass. Polling is to confirm and to catch envir
 
 ### Polling CI Status
 
-After push, poll for CI completion:
+After sanctioned publish, poll for CI completion:
 
 ```bash
 # Get the latest run on the PR branch
@@ -95,9 +94,9 @@ If CI fails despite local verify passing:
    - Missing system dependencies
    - Network-dependent steps (API calls, package installs)
    - Race conditions in parallel jobs
-3. If fixable locally → fix, re-verify, push (counts as same cycle if within the commit).
-4. If environment-only → add `continue-on-error` or skip condition, verify, push.
-5. If unfixable → defer with reason "CI environment delta".
+3. If fixable locally in **source** → fix, re-verify, one more sanctioned publish (counts as the exceptional next cycle if already published).
+4. If environment-only → classify `ENVIRONMENT` or `CI_PIPELINE`. Note it. **Do not** edit workflows to skip or weaken the failing job.
+5. If unfixable → defer with reason "CI environment delta". Do not merge that PR.
 
 ## Convergence Gate
 
@@ -161,8 +160,9 @@ ci_gates_discovered: {integer}
 local_verify_iterations: {integer}  # total across all cycles
 local_verify_green_before_every_push: true | false
 
-ci_status: success | failure
-new_comments_after_final_push: {integer}
+local_verify: Passed | Failed | Unknown
+remote_ci: Passed | Failed | Unknown
+new_comments_after_final_publish: {integer}
 
 deferred_items:
   - id: "review-7"
@@ -173,7 +173,7 @@ deferred_items:
 protocol_violations:
   - "None" | list of any batch/verify violations that occurred
 
-minimum_safe_next_action: "merged" | "manual review of deferred items" | "run another cycle manually"
+minimum_safe_next_action: "wait_first_merge_gate" | "merge_train_oldest_first" | "manual review of deferred items" | "run another cycle"
 ```
 
 ## Stop Conditions
@@ -201,6 +201,10 @@ auto_fix_nits: true           # clear one-line nits; skip only true product fork
 skip_bot_discussions: true     # skip non-actionable chatter from non-CRA bots only; NEVER skip github-code-quality or Copilot
 parallel_clusters: true        # always parallelize independent clusters
 forbid_no_verify: true
-require_precommit_all_hooks: true
+require_precommit_all_hooks: false
+require_precommit_all_files: false
 prefer_makefile: true
+makefile_primary: pr-check
+oldest_created_at_default: true
+stack_safe: true
 ```

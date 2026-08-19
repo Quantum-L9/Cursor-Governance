@@ -6,8 +6,8 @@ role: remediation_plan
 tags: [pr, plan, preflight, tracking, one-commit, makefile]
 owner: igor_beylin
 status: active
-version: 2.0.0
-updated: 2026-08-16
+version: 2.2.0
+updated: 2026-08-18
 /L9_META -->
 
 # Remediation Plan (this PR → one commit)
@@ -66,8 +66,10 @@ remediation_plan:
       ownership: CODEBASE | CI_PIPELINE | ENVIRONMENT | HUMAN | FALSE_POSITIVE
       disposition: fix | reply_ack | reply_disagree | defer | already_fixed | note_pipeline | note_environment
       cluster: "{root-cause id}"
+      root_cause: "{verified cause or Unknown}"
+      confidence: high | medium | low | Unknown
       status: pending | done
-      evidence: "{why this disposition}"
+      evidence: "{observed command or file:line that justifies this disposition}"
 
   clusters:
     - id: "{root-cause}"
@@ -91,7 +93,8 @@ remediation_plan:
 **Plan gate (blocks edits):**
 
 - [ ] `RUN_CONTRACT` exists for the run
-- [ ] Every ingested finding on **this** PR has `ownership` + `disposition` + `evidence`
+- [ ] Every ingested finding on **this** PR has `ownership` + `disposition` + `evidence` + `root_cause` (or `Unknown`)
+- [ ] Every `disposition: fix` has `confidence` of `high` or `medium` and a cited-file read at the current head
 - [ ] Every `fix` item is in a cluster with files + action
 - [ ] Companion list is complete when touching `pec/*`, `skills/*`, or `rules/*`
 - [ ] `verify.makefile_targets` lists the discovered make gate when a Makefile exists
@@ -102,33 +105,34 @@ Companion miss is a plan-gate failure. Cursor-Governance: skill edits → `sync_
 
 ## 3. Local verify (blocks commit)
 
-Discover, then run. Makefile primary is the gate. Also check cited/planned paths. Do not require `pre-commit --all-files`.
+Discover, then run. When a Makefile exists, **`make pr-check` is the public quality gate**. Also check cited/planned paths. Do not require `pre-commit --all-files`. Do not invoke INTERNAL `precommit` / `pr-preflight` / `pr-full`.
 
 ### Discover
 
 ```bash
 ls Makefile Makefile.am 2>/dev/null
-make -qp 2>/dev/null | awk -F: '/^[a-zA-Z0-9][^$#\/\t=]*:([^=]|$)/ {print $1}' | sort -u
+# PUBLIC verbs only when present: pr-check, pr, improve
 ```
 
-Prefer: `pr-check`, `agent-check`, `check`, `ci`, `validate`.
+Prefer: `pr-check` (verify), then `pr` (publish). `improve` is optional kernels, not verify.
 
 ### Run (blocking)
 
 ```bash
-# export cached UV_PYTHON first
-make pr-check
+# export cached UV_PYTHON first (uv-managed native CPython; never --system)
+UV_PYTHON="$UV_PYTHON" make pr-check
 # plus the relevant hook/compiler on cited/planned paths
 ```
 
 Rules:
 
-1. If a Makefile exists, run the discovered primary target with cached `UV_PYTHON`.
+1. If a Makefile exists, local verify **is** `make pr-check` with cached `UV_PYTHON`.
 2. Cited/planned paths get a real check even when `pyproject` / ruff excludes them (WIP/CQ case).
 3. Re-run after any verify-fix. Do not commit on a partial green.
 4. **Never** `git commit --no-verify` / `--no-gpg-sign`.
-5. Native-ext import fail is `ENVIRONMENT`, not a lock-pin or source edit.
+5. Native-ext import fail is `ENVIRONMENT`, not a lock-pin or source edit. Do not use `uv python find --system`.
 6. Local verify iterations ≤ 5. Still one commit at the end.
+7. Do not replay every workflow `run:` when `pr-check` exists.
 
 ### No Makefile
 
@@ -142,7 +146,7 @@ After `verify.all_green: true` and every `fix` cluster is `done`:
 git add <planned files only>
 git commit -m "fix(pr-remediation): resolve {count} findings"
 # sanctioned publish from RUN_CONTRACT — this host:
-PR_REMEDIATE=0 make pr
+UV_PYTHON="$UV_PYTHON" PR_REMEDIATE=0 make pr
 ```
 
 - Exactly one new commit on the branch for this remediation.

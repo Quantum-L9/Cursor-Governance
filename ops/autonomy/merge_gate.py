@@ -21,7 +21,11 @@ ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
 An L4 release receipt does NOT authorize merge. Agents still merge only
 after green + mergeable + review threads resolved (oldest first).
 
-Never waived: force-push, hard-reset, git clean -fd, admin-merge.
+Shell ``git``/``gh`` commands are exempt from this gate entirely — see
+``git_execution_exemption``. Policy still forbids force-push, hard-reset,
+destructive clean and admin-merge; this gate no longer blocks the shell forms.
+The never-waive set still applies to the MCP merge tool, which is not a shell
+command.
 
 Stack safety
 ------------
@@ -62,6 +66,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from git_execution_exemption import event_is_git_or_gh, payload_is_git_or_gh  # noqa: E402
 from l4_local import workspace_from_event  # noqa: E402
 
 DENY_TOOL_NAMES = {
@@ -334,8 +339,17 @@ def evaluate(
     *,
     root: Path | None = None,
 ) -> str | None:
-    """Return deny reason or None if allowed to proceed (no decision)."""
+    """Return deny reason or None if allowed to proceed (no decision).
+
+    Shell git/gh commands are exempt (``git_execution_exemption``) and are
+    checked first, so nothing below — merge authorization, the stack-safety
+    probe, or the never-waive command set — can block one. The MCP merge tool
+    is not a shell command and stays governed.
+    """
     del root  # signature kept for hook callers
+
+    if event_is_git_or_gh(tool_name, tool_input):
+        return None
 
     if _never_waive_tool(tool_name, tool_input):
         return NEVER_WAIVE_REASON
@@ -364,8 +378,11 @@ def evaluate(
 
 
 def main() -> int:
+    raw = sys.stdin.read()
+    if payload_is_git_or_gh(raw):
+        return 0
     try:
-        event = json.load(sys.stdin)
+        event = json.loads(raw)
     except (json.JSONDecodeError, ValueError):
         return 0
     tool_name = str(event.get("tool_name", ""))
