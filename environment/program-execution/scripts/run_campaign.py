@@ -59,8 +59,16 @@ UNTIL_ALIASES = {"merge": "close", "bootstrap": "arm"}
 STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
+ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 FIRST_TASK_ID = "TASK-001"
 PE_MODE_ENV = "L9_PE_MODE"
+# Autonomous Program Execution is local-commit-only. It prepares, executes,
+# validates, verifies, and commits — then stops. Pushing a branch, opening or
+# updating a pull request, and merging are release actions, not campaign
+# stages, and only run under an explicit governed release transition.
+PE_RELEASE_ENV = "L9_PE_RELEASE_AUTHORIZED"
+AUTONOMOUS_LAST_STAGE = "execute"
+PUBLICATION_STAGES = ("pr", "close")
 PREPARATION_STAGES = (
     "stack_proof",
     "isolate",
@@ -97,6 +105,86 @@ class CampaignError(RuntimeError):
     def __init__(self, message: str, *, exit_code: int = 2) -> None:
         super().__init__(message)
         self.exit_code = exit_code
+
+
+def release_authorized() -> bool:
+    """True only under an explicit governed release transition.
+
+    Publication is deliberately not a campaign stage. An autonomous run leaves
+    the work as local commits; a human or `/l9-pr-remediation` carries it to the
+    remote under its own authority.
+    """
+    return bool(os.environ.get(PE_RELEASE_ENV, "").strip())
+
+
+def refuse_publication(action: str) -> None:
+    """Fail closed on any remote publication outside a release transition."""
+    if release_authorized():
+        return
+    raise CampaignError(
+        f"autonomous Program Execution is local-commit-only; refusing to {action}. "
+        f"Campaign execution ends at '{AUTONOMOUS_LAST_STAGE}' with local commits. "
+        f"Publication is a separate governed release transition (set "
+        f"{PE_RELEASE_ENV}=<reason>); merge authority belongs to /l9-pr-remediation."
+    )
+
+
+_PUBLICATION_GIT_SUBCOMMANDS = frozenset({"push"})
+_PUBLICATION_GH_PR_SUBCOMMANDS = frozenset({"create", "merge", "edit", "ready", "close", "reopen"})
+_MUTATING_HTTP_METHODS = frozenset({"POST", "PATCH", "PUT", "DELETE"})
+
+
+def _git_subcommand(rest: list[str]) -> str:
+    """First non-option token, skipping the global options that take a value."""
+    index = 0
+    while index < len(rest):
+        token = rest[index]
+        if token in {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token
+    return ""
+
+
+def publication_command(cmd: list[str]) -> str | None:
+    """Name the remote-publication action a command performs, else None.
+
+    Every campaign subprocess funnels through `run_cmd`, so classifying here
+    catches a publication path added anywhere on the execution path — including
+    one added later by a refactor that forgets this boundary exists.
+    """
+    argv = [str(part) for part in cmd]
+    if not argv:
+        return None
+    exe = Path(argv[0]).name
+    rest = argv[1:]
+    if exe == "git" and _git_subcommand(rest) in _PUBLICATION_GIT_SUBCOMMANDS:
+        return "push a branch to a remote"
+    if exe == "gh":
+        if rest[:1] == ["pr"] and len(rest) >= 2 and rest[1] in _PUBLICATION_GH_PR_SUBCOMMANDS:
+            return f"run gh pr {rest[1]}"
+        if rest[:1] == ["api"]:
+            for index, token in enumerate(rest):
+                if token in {"-X", "--method"} and index + 1 < len(rest):
+                    if rest[index + 1].upper() in _MUTATING_HTTP_METHODS:
+                        return "mutate GitHub through the REST API"
+        return None
+    if exe == "make":
+        for token in rest:
+            if token.startswith("-") or ENV_ASSIGN_RE.match(token):
+                continue
+            if token == "pr":
+                return "invoke the make pr publish path"
+        return None
+    # Merge authorization is a publication act wherever it is spawned from.
+    if any(Path(part).name == "authorize_campaign_merge.py" for part in argv):
+        return "write a merge authorization receipt"
+    if any(Path(part).name == "authorize_merge.py" for part in argv):
+        return "write a merge authorization receipt"
+    return None
 
 
 @dataclass
@@ -183,6 +271,11 @@ def run_cmd(
     cwd: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    # Single choke point: no campaign subprocess reaches a remote unless a
+    # governed release transition is open.
+    action = publication_command(cmd)
+    if action is not None:
+        refuse_publication(action)
     child_env = os.environ.copy() if env is None else dict(env)
     child_env.setdefault("L9_CAMPAIGN_TUNNEL", "1")
     try:
@@ -1027,6 +1120,7 @@ def default_arm(
 
 
 def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
+    refuse_publication("open a host pull request")
     env = os.environ.copy()
     env["PR_BASE"] = f"origin/campaign/{campaign_id}"
     refuse_unstacked_pr_base(env["PR_BASE"])
@@ -1066,6 +1160,7 @@ def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
 
 
 def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
+    refuse_publication("authorize and merge a pull request")
     auth = run_cmd(
         [
             sys.executable,
@@ -1798,6 +1893,9 @@ def maybe_open_task_pr(
     campaign_id: str,
     item: dict[str, Any],
 ) -> dict[str, Any] | None:
+    # Opening a task PR is publication by definition — gate it ahead of the
+    # hook so an injected opener cannot route around the boundary either.
+    refuse_publication("open a task pull request")
     if hooks.open_task_pr is not None:
         return hooks.open_task_pr(worktree, campaign_id, item)
     if hooks.make_pr is not None:
@@ -2117,6 +2215,7 @@ def require_remote_campaign_branch(worktree: Path, campaign_id: str) -> None:
 
 
 def push_integration_branch(worktree: Path, campaign_id: str) -> None:
+    refuse_publication("push the campaign integration branch")
     if not is_git_repo(worktree):
         raise CampaignError("host worktree is not a git checkout; cannot push campaign branch")
     branch = f"campaign/{campaign_id}"
@@ -2148,6 +2247,7 @@ def default_close(
     merge_recorded: bool,
 ) -> dict[str, Any]:
     if merge_recorded:
+        refuse_publication("merge recorded stack pull requests")
         for number in recorded_stack_pr_numbers(workspace):
             status_fn = hooks.pr_status or default_pr_status
             status = status_fn(host_repo, number)
@@ -2260,13 +2360,16 @@ def resume_live_campaign(
         executed = all_required_tasks_completed(pec_workspace)
     report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
     report.stages_completed.append("execute")
+    commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
+        log("campaign complete: local commits only; publication is a release transition")
         return report
     if not executed:
         raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
-    commit_host_emit(write_root, campaign_id)
+    refuse_publication("publish the campaign")
     if hooks.make_pr is None:
-        push_integration_branch(write_root, campaign_id)
+        pusher = hooks.push_integration or push_integration_branch
+        pusher(write_root, campaign_id)
     make_pr = hooks.make_pr or default_make_pr
     pr_result = make_pr(write_root, campaign_id)
     report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
@@ -2294,7 +2397,7 @@ def resume_live_campaign(
 def run_campaign(
     intent_path: Path,
     *,
-    until: str = "merge",
+    until: str = AUTONOMOUS_LAST_STAGE,
     primary: Path | None = None,
     worktree: Path | None = None,
     repo_root: Path | None = None,
@@ -2596,13 +2699,8 @@ def run_campaign(
     )
     report.program_blockers = default_program_blockers(campaign_id, armed=True)
     report.stages_completed.append("arm")
-    if should_run(until, "execute"):
-        pusher = hooks.push_integration
-        if pusher is None and hooks.make_pr is None:
-            pusher = push_integration_branch
-        if pusher is not None:
-            log(f"push {campaign_id} integration branch before execute")
-            pusher(write_root, campaign_id)
+    # No pre-execution push. Execution is local: the integration branch reaches
+    # a remote only through the release transition below, never to set up work.
     if not should_run(until, "execute"):
         return report
 
@@ -2634,7 +2732,9 @@ def run_campaign(
     )
     report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
     report.stages_completed.append("execute")
+    commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
+        log("campaign complete: local commits only; publication is a release transition")
         return report
 
     if not executed:
@@ -2642,9 +2742,10 @@ def run_campaign(
             "refuse host-only merge before all tasks COMPLETED",
             exit_code=2,
         )
-    commit_host_emit(write_root, campaign_id)
+    refuse_publication("publish the campaign")
     if hooks.make_pr is None:
-        push_integration_branch(write_root, campaign_id)
+        pusher = hooks.push_integration or push_integration_branch
+        pusher(write_root, campaign_id)
     make_pr = hooks.make_pr or default_make_pr
     pr_result = make_pr(write_root, campaign_id)
     report.host_pr = str(pr_result.get("url") or pr_result.get("output") or "")
@@ -2690,7 +2791,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--until",
         choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
-        default="close",
+        default=AUTONOMOUS_LAST_STAGE,
+        help=(
+            "Last stage to run. Autonomous execution ends at "
+            f"'{AUTONOMOUS_LAST_STAGE}' with local commits; {PUBLICATION_STAGES} "
+            f"require the release transition ({PE_RELEASE_ENV})"
+        ),
     )
     parser.add_argument("--primary", type=Path, default=None)
     parser.add_argument("--worktree", type=Path, default=None)
@@ -2727,13 +2833,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 def refuse_live_until_shortcut(until: str) -> None:
     resolved = UNTIL_ALIASES.get(until, until)
-    if resolved == "close":
+    if resolved in PUBLICATION_STAGES:
+        # Reaching a publication stage at all requires the release transition.
+        refuse_publication(f"run the campaign through '{resolved}'")
+        return
+    if resolved == AUTONOMOUS_LAST_STAGE:
         return
     if os.environ.get("L9_CAMPAIGN_UNTIL_DEBUG") == "1":
         return
     raise CampaignError(
-        "CAMPAIGN_UNTIL is not a live campaign path; make campaign runs "
-        "through close. Set L9_CAMPAIGN_UNTIL_DEBUG=1 only for runner tests."
+        "CAMPAIGN_UNTIL is not a live campaign path; make campaign runs through "
+        f"'{AUTONOMOUS_LAST_STAGE}' and stops at local commits. "
+        "Set L9_CAMPAIGN_UNTIL_DEBUG=1 only for runner tests."
     )
 
 

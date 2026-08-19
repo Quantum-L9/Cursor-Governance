@@ -89,13 +89,15 @@ start:
 .PHONY: campaign
 ## Activate a PE campaign from a memo .md or an activate YAML.
 ## INTENT= required (brief.md or seed.yaml). No campaign_id required for memos.
-## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|pr|merge (default merge).
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|execute (default execute).
+## Local-commit-only: prepare, execute, validate, verify, commit, STOP. The pr and
+## merge stages are a separate governed release transition, not a campaign stage.
 ## Does not implement target-repo tasks or close the ledger after a host-only merge.
 campaign:
 	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
 	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
 	  --intent "$(INTENT)" \
-	  --until "$(or $(CAMPAIGN_UNTIL),merge)" \
+	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
 	  $(CAMPAIGN_ARGS)
 
 .PHONY: campaign-check-input

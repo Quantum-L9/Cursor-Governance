@@ -108,7 +108,11 @@ class PeSmokeCampaignTests(unittest.TestCase):
         raw: Path,
         *,
         fast: bool = True,
-        until: str = "close",
+        # Execution certification is a local-only concern: the campaign runs to
+        # the autonomous boundary and stops at its commits. Publication is a
+        # separate release transition and is certified in
+        # test_pe_local_commit_only.py.
+        until: str = "execute",
         campaign_source: bool = False,
     ):
         root = _host_repo(raw / "host")
@@ -133,10 +137,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 repo_root=root,
                 l9_root=l9,
                 fast=fast,
-                hooks=self.mod.Hooks(
-                    context7_stack=_stack_ok,
-                    make_pr=lambda worktree, campaign_id: {"number": 1, "url": "https://x.test/1"},
-                ),
+                hooks=self.mod.Hooks(context7_stack=_stack_ok),
             )
             return report, l9, time.monotonic() - started
         l9 = raw / "l9"
@@ -154,7 +155,6 @@ class PeSmokeCampaignTests(unittest.TestCase):
             hooks=self.mod.Hooks(
                 context7_stack=_stack_ok,
                 compile_activation=self.activate.compile_activation,
-                make_pr=lambda worktree, campaign_id: {"number": 1, "url": "https://x.test/1"},
             ),
         )
         return report, l9, time.monotonic() - started

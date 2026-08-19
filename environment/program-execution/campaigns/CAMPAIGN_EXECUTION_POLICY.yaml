@@ -13,13 +13,28 @@ closeout:
   next_campaign: first execute_order whose lifecycle is not complete or cancelled
   leaving_in_progress_after_merge_or_converged: defect
 
+# Autonomous campaign execution is LOCAL-COMMIT-ONLY. It inspects, edits
+# isolated task worktrees, runs validations, verifies, and commits — then stops.
+# It never pushes, opens or updates a PR, or merges. Publication below describes
+# the separate governed release transition, which an autonomous run does not enter.
+execution:
+  local_commit_only: true
+  completion_boundary: prepare -> execute -> validate -> verify -> local commits -> STOP
+  push: forbidden
+  pull_request: forbidden
+  merge: forbidden
+  release_transition_env: L9_PE_RELEASE_AUTHORIZED
+
 publish:
+  autonomous: forbidden
+  requires_release_transition: true
   required_command: PR_REMEDIATE=0 make pr
   require_makefile_checkers: true
   raw_gh_pr_create: forbidden
-  # Campaigns publish via make pr and MUST end green + merge-ready.
-  # They do not merge. Invoking /l9-pr-remediation authorizes merge of
-  # every open PR in the target repo after Converge.
+  # Publication is a release transition, not a campaign stage. Campaign runs end
+  # at local commits. When a release transition does publish, it MUST end green +
+  # merge-ready and still does not merge. Invoking /l9-pr-remediation authorizes
+  # merge of every open PR in the target repo after Converge.
   remediate: true
   remediate_max_cycles: 5
   halt_before_merge: true
@@ -113,8 +128,10 @@ owner:
   authority_id: AUTH-001
   terminal_verdict: CONVERGED
   declared_at: "2026-08-14T21:28:53Z"
+  # Ceiling for AUTONOMOUS execution. Push and pull_request moved to the release
+  # transition; merge remains /l9-pr-remediation's alone.
   authorization_ceiling:
     commit: true
-    push: true
-    pull_request: true
+    push: false
+    pull_request: false
     merge: false

@@ -195,13 +195,20 @@ class RunCampaignTests(unittest.TestCase):
         cls.activate = _load("compile_activation_under_test", ACTIVATE)
 
     def test_cli_refuses_until_shortcut(self) -> None:
-        self.mod.refuse_live_until_shortcut("close")
-        self.mod.refuse_live_until_shortcut("merge")
+        """The live path runs to the autonomous boundary — no short, no long."""
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("L9_CAMPAIGN_UNTIL_DEBUG", None)
+            os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
+            # Stopping early is still a shortcut around the live path.
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.refuse_live_until_shortcut("activate")
             self.assertIn("CAMPAIGN_UNTIL is not a live campaign path", str(ctx.exception))
+            # Running past it is publication, which autonomy may not do.
+            for stage in ("pr", "close", "merge"):
+                with self.assertRaises(self.mod.CampaignError) as ctx:
+                    self.mod.refuse_live_until_shortcut(stage)
+                self.assertIn("local-commit-only", str(ctx.exception))
+            self.mod.refuse_live_until_shortcut("execute")
         with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
             self.mod.refuse_live_until_shortcut("activate")
 
@@ -234,7 +241,8 @@ class RunCampaignTests(unittest.TestCase):
                 self.mod.require_remote_campaign_branch(root, "demo-activate-v1")
             self.assertIn("remote campaign/demo-activate-v1 missing", str(ctx.exception))
 
-    def test_pushes_campaign_branch_before_execute(self) -> None:
+    def test_does_not_push_campaign_branch_before_execute(self) -> None:
+        """Execution is local: nothing reaches a remote to set the work up."""
         order: list[str] = []
 
         def emit(intent: Path, repo_root: Path) -> dict[str, object]:
@@ -276,7 +284,8 @@ class RunCampaignTests(unittest.TestCase):
                     close=lambda workspace, campaign_id: order.append("close") or {},
                 ),
             )
-        self.assertEqual(order[:2], ["push", "execute"])
+        self.assertEqual(order, ["execute"])
+        self.assertNotIn("push", order)
 
     def test_write_and_commit_output_refuses_stub(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -773,6 +782,12 @@ class RunCampaignTests(unittest.TestCase):
         )
 
     def test_two_task_fixture_reaches_completed(self) -> None:
+        """The full path, publication included, under a governed release.
+
+        Publication moved out of autonomous execution; it was not deleted. This
+        drives the whole chain through `close` with the release transition open,
+        so the release path keeps its end-to-end coverage.
+        """
         opened: list[str] = []
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw) / "host")
@@ -780,21 +795,23 @@ class RunCampaignTests(unittest.TestCase):
             target = l9 / "program-worktrees" / "demo-activate-v1"
             target.mkdir(parents=True)
             _git_init(target)
-            report = self.mod.run_campaign(
-                root / "intent.yaml",
-                until="close",
-                primary=Path(raw) / "primary",
-                repo_root=root,
-                l9_root=l9,
-                hooks=self.mod.Hooks(
-                    context7_stack=_stack_ok,
-                    write_task_output=_write_task_output,
-                    compile_activation=self.activate.compile_activation,
-                    make_pr=lambda worktree, campaign_id: (
-                        opened.append(campaign_id) or {"number": 7, "url": "https://example.test/7"}
+            with patch.dict(os.environ, {"L9_PE_RELEASE_AUTHORIZED": "test release transition"}):
+                report = self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                        make_pr=lambda worktree, campaign_id: (
+                            opened.append(campaign_id)
+                            or {"number": 7, "url": "https://example.test/7"}
+                        ),
                     ),
-                ),
-            )
+                )
             self.assertEqual(opened, ["demo-activate-v1"])
             self.assertIn("execute", report.stages_completed)
             self.assertIn("close", report.stages_completed)
@@ -1310,8 +1327,6 @@ class CampaignInputRoutingTests(unittest.TestCase):
                     [
                         "--intent",
                         str(bad),
-                        "--until",
-                        "close",
                         "--repo-root",
                         str(root),
                         "--l9-root",

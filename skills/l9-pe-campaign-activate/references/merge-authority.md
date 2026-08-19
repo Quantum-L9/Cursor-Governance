@@ -16,6 +16,11 @@ Do not use this file as a campaign front door. Start and finish the
 campaign with `make campaign INTENT=`. These commands apply only to
 STACK.json PRs the runner already opened.
 
+Autonomous campaign execution is local-commit-only and opens no PRs: a run
+ends at `execute` with its local commits. PRs referenced here come from the
+governed release transition (`L9_PE_RELEASE_AUTHORIZED`). Merge authority
+below is unchanged by that boundary.
+
 Purpose: this skill's merge step. Standing campaign policy still says
 `merge: false` for ordinary agents. Invoking **this skill** is the operator
 act that authorizes merge of **one** PR.
