@@ -110,19 +110,16 @@ def _next_action(
             ],
         }
     if token == "lock_identity_mismatch":
+        # Repository-write authority no longer comes from a memory lock, so the
+        # remedy is to re-hydrate this session, not to acquire one (E7/E8).
         return {
             "command": "python3",
             "args": [
-                "environment/agents/adapters/claude-code/hooks/memory_lock.py",
-                "acquire",
-                "--namespace",
-                "cursor-governance",
+                "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
                 "--session-id",
                 os.environ.get("CURSOR_CONVERSATION_ID")
                 or os.environ.get("CLAUDE_SESSION_ID")
                 or "REQUIRED",
-                "--task",
-                "align lock identity",
             ],
         }
     if token == "repository_not_reconciled":

@@ -37,9 +37,10 @@ Resolve and record before any fix:
 Use `scripts/sonar_fetch.py` (stdlib, secret-safe) to produce `sonarcloud-issues-before.json`:
 
 ```bash
-python scripts/sonar_fetch.py \
-  --project Quantum-L9_Cursor-Governance --organization quantum-l9 \
-  --pull-request 64 --output sonarcloud-issues-before.json
+# TEMPLATE — substitute project/org/PR from sonar-project.properties + the current PR
+"${GOV_PY:-$PWD/.venv/bin/python}" scripts/sonar_fetch.py \
+  --project "$SONAR_PROJECT_KEY" --organization "$SONAR_ORG" \
+  --pull-request "$PR_NUMBER" --output sonarcloud-issues-before.json
   # --output must stay under $PWD; never /tmp
 # branch analysis instead of a PR: --branch main
 ```

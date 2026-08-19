@@ -38,10 +38,20 @@ def _git_toplevel(cwd: Path) -> Path | None:
 
 
 def _child_git_roots(cwd: Path) -> list[Path]:
-    """Immediate child directories that are git work trees."""
+    """Immediate child directories that are git work trees.
+
+    ``$HOME`` is never a workspace: scanning its child clones matches every
+    sibling repo and returns an ambiguous ``group_id``.
+    """
+    try:
+        resolved = cwd.resolve()
+        if resolved == Path.home().resolve():
+            return []
+    except OSError:
+        return []
     roots: list[Path] = []
     try:
-        for child in cwd.iterdir():
+        for child in resolved.iterdir():
             if child.is_dir() and (child / ".git").exists():
                 roots.append(child.resolve())
     except OSError:

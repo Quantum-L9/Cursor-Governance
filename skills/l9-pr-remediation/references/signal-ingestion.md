@@ -6,8 +6,8 @@ role: signal_ingestion
 tags: [pr, ci, review, ingestion, github-api, gate-discovery]
 owner: igor_beylin
 status: active
-version: 2.2.0
-updated: 2026-08-16
+version: 2.3.0
+updated: 2026-08-18
 /L9_META -->
 
 # Signal Ingestion
@@ -28,7 +28,7 @@ contract, security-hotspot policy, and the local-fix-is-not-remote-closure rule)
 Lazy: run only when Sonar is configured **and** the check is failing or blocking. Write `--output` under `$PWD` (never `/tmp`). Path-blocked fetch does not block Converge when that check is green.
 
 ```bash
-python scripts/sonar_fetch.py \
+"${GOV_PY:-$PWD/.venv/bin/python}" scripts/sonar_fetch.py \
   --project "$(sed -n 's/^sonar.projectKey=//p' sonar-project.properties)" \
   --organization "$(sed -n 's/^sonar.organization=//p' sonar-project.properties)" \
   --pull-request <PR_NUMBER> --output sonarcloud-issues-before.json
@@ -40,7 +40,10 @@ classify → fix → validate gates as CI and review signals.
 
 ## Gate Discovery (FIRST — before CI log ingestion)
 
-### Step 0: Parse workflow YAML
+When a Makefile exists, skip reconstructing a local suite from workflow YAML.
+Record `make pr-check` / `make pr` and continue to CI log ingestion.
+
+### Step 0: Parse workflow YAML (fallback only — no Makefile `pr-check`)
 
 ```bash
 # List all workflow files
@@ -86,14 +89,14 @@ Also check `package.json` scripts for additional gates:
 cat package.json | grep -A1 '"scripts"'
 ```
 
-**Makefile + pre-commit (required when present)** — these are the primary local-verify surfaces, not optional extras. Record every Makefile gate target (`agent-check`, `pr-check`, `check`, `ci`, `validate`, `test`) and **every** hook `id` in `.pre-commit-config.yaml`. See [remediation-plan.md](remediation-plan.md).
+**Makefile PUBLIC verbs (required when present)** — `pr-check` is the local-verify surface, `pr` is publish, `improve` is optional kernels. Record those. Do not treat INTERNAL `precommit` / `pr-preflight` / `pr-full` as the gate. Hook ids in `.pre-commit-config.yaml` are recorded only for **cited/planned** paths. See [remediation-plan.md](remediation-plan.md).
 
 ```bash
-test -f Makefile && make -qp 2>/dev/null | awk -F: '/^[a-zA-Z0-9][^$#\/\t=]*:([^=]|$)/ {print $1}' | sort -u
+test -f Makefile && grep -E '^(pr-check|pr|improve):' Makefile
 test -f .pre-commit-config.yaml && grep -E '^[[:space:]]+- id:' .pre-commit-config.yaml
 ```
 
-This gate registry is used by the fix-engine for local verification. A census that lists CI failures but omits Makefile/pre-commit hooks is incomplete.
+A census that lists CI failures but omits `make pr-check` when a Makefile exists is incomplete. Workflow `run:` replay is leftover fallback only when no `pr-check` exists.
 
 ## CI Signal Ingestion
 
@@ -218,9 +221,9 @@ When a review comment references the same file+line as a CI error, merge into on
 ## Ingestion Completeness Check
 
 After ingestion, verify:
-- [ ] All workflow files read and gates registered
-- [ ] Makefile primary target recorded when a Makefile exists
-- [ ] Every `.pre-commit-config.yaml` hook `id` recorded when the file exists
+- [ ] Makefile PUBLIC verbs recorded when a Makefile exists (`pr-check` / `pr`)
+- [ ] Workflow `run:` leftover recorded only when no `pr-check`
+- [ ] Cited/planned-path hook ids recorded (not all-files as the gate)
 - [ ] All CI failures mapped to a gate in the registry
 - [ ] All unresolved review threads captured
 - [ ] All inline suggestions captured with file+line

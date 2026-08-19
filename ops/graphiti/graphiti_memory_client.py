@@ -772,7 +772,18 @@ def _append_satisfied(key: str) -> dict:
 
 
 def cmd_phase_lock(_args: argparse.Namespace) -> int:
-    """Run conflicts check and mark gmp:phase_lock in session state."""
+    """Run conflicts check and mark gmp:phase_lock in session state.
+
+    **Memory-snapshot lease only.** This marker records that a conflicts check
+    ran for the session; it is NOT repository-write permission. Nothing in the
+    repository-mutation path reads it: code edits, commits, branch pushes, and
+    PR creation are governed by worktree/branch isolation and the publication
+    gate (rules/96-multi-agent-main-bound-execution.mdc, E7). The only remaining
+    consumer is the brokered `graphiti.write_governed` capability, which gates a
+    *memory* write -- the one use §6 of that contract permits.
+
+    Do not reintroduce this marker as a precondition on repository writes.
+    """
     load_env()
     rc = cmd_conflicts(_args)
     if rc != 0:

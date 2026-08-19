@@ -241,6 +241,54 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertIn("PR_STACK=auto", result.stdout)
         self.assertIn("PR_OVERLAP=ignore", result.stdout)
 
+    def test_conflict_outside_our_changed_files_does_not_block(self) -> None:
+        """A conflict in a file this branch never touched is not this branch's.
+
+        Their PR conflicts with main in other.txt while both PRs also touch
+        shared.txt disjointly. Publishing our branch cannot cause their
+        other.txt conflict -- each PR merges into main separately -- so the gate
+        must report it and proceed rather than blocking us for their collision.
+        """
+        fake = FakeGh(
+            Path(tempfile.mkdtemp(prefix="l9-gh-")),
+            pulls="1\tfeat-theirs\tmain\n",
+            files={"1": "shared.txt\nother.txt\n"},
+        )
+        bare, work, env = _init_world()
+
+        # main gains other.txt, then moves it on -- their branch will diverge.
+        (work / "other.txt").write_text("alpha\n", encoding="utf-8")
+        _commit(work, env, "add other")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+
+        def their_change(repo: Path) -> None:
+            (repo / "shared.txt").write_text(
+                SHARED_BASE.replace("line4", "line4-theirs"), encoding="utf-8"
+            )
+            (repo / "other.txt").write_text("theirs\n", encoding="utf-8")
+
+        sha = _branch_from(work, env, "main", "feat-theirs", their_change)
+        subprocess.run(
+            ["git", "update-ref", "refs/pull/1/head", sha], cwd=bare, env=env, check=True
+        )
+
+        # main moves other.txt again, so their PR now conflicts with main there.
+        _run(["git", "checkout", "-q", "main"], work, env)
+        (work / "other.txt").write_text("omega\n", encoding="utf-8")
+        _commit(work, env, "move other")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+
+        # our branch touches shared.txt only, disjointly from theirs
+        _run(["git", "checkout", "-q", "-b", "feat-ours"], work, env)
+        (work / "shared.txt").write_text(
+            SHARED_BASE.replace("line2", "line2-ours"), encoding="utf-8"
+        )
+        _commit(work, env, "ours")
+
+        result = _gate(work, fake.env(env))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("does not touch", result.stdout)
+
     def test_disjoint_hunks_pass_with_note(self) -> None:
         fake = FakeGh(
             Path(tempfile.mkdtemp(prefix="l9-gh-")),
@@ -270,15 +318,41 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("overlap gate skipped", result.stdout)
 
-    def test_gh_unavailable_fails_open(self) -> None:
+    def test_gh_unavailable_denies_autonomous_publication(self) -> None:
+        """E6: no gh means no collision state, and no collision state means no push.
+
+        This gate used to skip itself whenever it could not see GitHub -- switching
+        off at exactly the moment an autonomous agent could overwrite a sibling's
+        work. Under autonomy it now blocks; only the push is affected.
+        """
         bare, work, env = _init_world()
         fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={}, unavailable=True)
-        result = _gate(work, fake.env(env))
-        self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("WARN: gh CLI unavailable", result.stdout)
+        gate_env = {**fake.env(env), "L9_AUTONOMY_ENABLED": "true"}
+        result = _gate(work, gate_env)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("gh CLI unavailable", result.stdout)
+        self.assertIn("publication is denied", result.stdout)
+        self.assertIn("Local work is unaffected", result.stdout)
 
-    def test_gh_api_failure_fails_open(self) -> None:
-        """gh present but the pulls call fails (network loss) — must not brick make pr."""
+    def test_gh_unavailable_may_be_overridden_explicitly(self) -> None:
+        """A human may accept the risk, but must say so."""
+        bare, work, env = _init_world()
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={}, unavailable=True)
+        gate_env = {
+            **fake.env(env),
+            "L9_AUTONOMY_ENABLED": "true",
+            "PR_OVERLAP_TELEMETRY": "open",
+        }
+        result = _gate(work, gate_env)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("PR_OVERLAP_TELEMETRY=open", result.stdout)
+
+    def test_gh_api_failure_denies_autonomous_publication(self) -> None:
+        """gh present but the pulls call fails (network loss).
+
+        The open-PR set is unknown, so overlap is unknown, so publication is
+        denied under autonomy (E6) rather than proceeding blind.
+        """
         shimdir = Path(tempfile.mkdtemp(prefix="l9-gh-"))
         shim = shimdir / "gh"
         shim.write_text(
@@ -292,9 +366,11 @@ class PrOverlapCheckTests(unittest.TestCase):
         bare, work, env = _init_world()
         gate_env = _git_env(str(shimdir))
         gate_env["FAKE_SLUG"] = SLUG
+        gate_env["L9_AUTONOMY_ENABLED"] = "true"
         result = _gate(work, gate_env)
-        self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("WARN: could not list open PRs", result.stdout)
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("could not enumerate open PRs", result.stdout)
+        self.assertIn("publication is denied", result.stdout)
 
     def test_auto_stack_single_pr_prints_stack_base(self) -> None:
         fake = FakeGh(

@@ -361,6 +361,25 @@ if [ -z "$REMOTE_SHA" ]; then
   exit 0
 fi
 
+# An operator-placed symlink at $CLONE (dev overlay, or a checkout under test
+# like the CI SessionStart contract test) is not an owned disposable cache.
+# Never clone over it or ff-pull it: inspect and report drift only. This is
+# the same rule the PE environment contract states for developer checkouts.
+if [ -L "$CLONE" ] && layout_ok "$CLONE"; then
+  LOCAL_SHA="$(local_head)"
+  if [ -n "$LOCAL_SHA" ] && [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
+    ACTION="fresh"
+    DETAIL="operator_checkout_at_tip"
+  else
+    ACTION="degraded"
+    DETAIL="operator_checkout_diverged"
+  fi
+  heal_wiring
+  write_receipt
+  emit_status
+  exit 0
+fi
+
 if ! ssot_valid; then
   if bootstrap_missing; then
     ACTION="swapped"

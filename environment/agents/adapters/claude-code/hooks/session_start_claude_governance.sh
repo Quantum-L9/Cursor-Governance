@@ -50,14 +50,63 @@ LINES=()
 LINES+=("L9 Governance — Claude Code session")
 LINES+=("workspace: $WORKSPACE")
 
+# --- Cloud-only governance refresh (CLAUDE_CODE_REMOTE=true) -----------------
+# Anthropic documents CLAUDE_CODE_REMOTE=true as the supported discriminator
+# for cloud-session-only setup. In cloud, the governance clone is an ephemeral
+# environment artifact: refresh it from origin/main so every session starts on
+# the current tip, and record the exact revision. On a local developer
+# checkout (CLI / Desktop) NEVER reset — inspect and report only.
+CLOUD_REFRESH_LOG="$HOME/.l9/claude/gov-refresh.log"
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  if GOV=$(resolve_governance_dir); then
+    mkdir -p "$(dirname "$CLOUD_REFRESH_LOG")"
+    GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
+    GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
+    if git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
+      if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
+        echo "fresh $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+        LINES+=("governance refresh: cloud session — reset ephemeral clone to origin/$GOV_BRANCH")
+      else
+        echo "reset-failed $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+        LINES+=("governance refresh: WARN reset to origin/$GOV_BRANCH failed — reusing clone")
+      fi
+    else
+      echo "fetch-failed $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+      LINES+=("governance refresh: WARN fetch origin/$GOV_BRANCH failed — reusing clone (may be stale)")
+    fi
+    # Per-session, per-repository dependency work (consumer workspace toolchain
+    # + pre-commit warm) moved out of the cached account Setup script.
+    DEPS_HELPER="$GOV/environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh"
+    if [ -f "$DEPS_HELPER" ]; then
+      DEPS_LINE=$(bash "$DEPS_HELPER" --workspace "$WORKSPACE" 2>&1 | tail -1)
+      LINES+=("session deps: ${DEPS_LINE:-unknown}")
+    fi
+  fi
+fi
+
 if GOV=$(resolve_governance_dir); then
   LINES+=("governance SSOT: $GOV (GitHub Quantum-L9/Cursor-Governance)")
   if [ -d "$GOV/.git" ]; then
     br=$(git -C "$GOV" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
     sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
-    LINES+=("governance rev: ${br}@${sha}")
-    if [ "$br" != "main" ] && [ "$br" != "autonomy-surface-parity" ]; then
-      LINES+=("WARN: governance clone is not on main — web/setup.sh should sync origin/main")
+    if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+      # Local/Desktop: this is a developer checkout — SessionStart NEVER resets
+      # it. Report revision and drift against origin/main instead.
+      LINES+=("governance rev: ${br}@${sha} (local checkout — SessionStart never resets it)")
+      if [ "$br" != "main" ]; then
+        LINES+=("WARN: governance checkout is not on main (branch: $br) — drift is expected for in-flight work; report only")
+      fi
+      if git -C "$GOV" fetch --depth 1 origin main >/dev/null 2>&1; then
+        local_sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
+        remote_sha=$(git -C "$GOV" rev-parse --short FETCH_HEAD 2>/dev/null || echo "?")
+        if [ "$local_sha" = "$remote_sha" ]; then
+          LINES+=("governance drift: none (HEAD == origin/main @$local_sha)")
+        else
+          LINES+=("governance drift: local @$local_sha vs origin/main @$remote_sha")
+        fi
+      fi
+    else
+      LINES+=("governance rev: ${br}@${sha}")
     fi
   fi
   LINES+=("authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts")
@@ -110,7 +159,52 @@ fi
 # memory-bank/ retired — resume from Graphiti inject/PICKUP only (no T0 excerpt)
 
 # --- Memory: single front door = Cursor Graphiti (CANONICAL_LAW §8)
-LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / phase-lock / write); no L9_MEMORY_HTTP side door; memory-bank retired")
+LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / write); no L9_MEMORY_HTTP side door; memory-bank retired; memory never gates repository writes")
+
+# --- L9 Claude environment status (from the installer receipt) --------------
+# The canonical installer writes ~/.l9/claude/bootstrap-state.json
+# (schema l9.claude-bootstrap.v1). Project it compactly so the model — and the
+# operator on mobile — sees what is actually available instead of discovering
+# bootstrap breakage when a later memory or publish operation fails.
+emit_bootstrap_status() {
+  local receipt="$HOME/.l9/claude/bootstrap-state.json"
+  if [ ! -f "$receipt" ]; then
+    LINES+=("L9 Claude environment: bootstrap receipt absent — run 'make claude-install' once")
+    return 0
+  fi
+  local py="$1"
+  if [ -n "$py" ] && command -v "$py" >/dev/null 2>&1; then
+    local block
+    block=$(CLAUDE_CODE_REMOTE="${CLAUDE_CODE_REMOTE:-false}" "$py" -c 'import json,sys,os
+try:
+    d = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(1)
+remote = os.environ.get("CLAUDE_CODE_REMOTE") == "true"
+print("surface: %s" % d.get("surface", "?"))
+print("execution: %s" % ("anthropic-cloud" if remote else "local"))
+print("governance: %s" % (d.get("governance_revision", "?")[:8] or "?"))
+print("bootstrap: %s" % d.get("shared_bootstrap", "?"))
+print("settings: %s" % d.get("settings", "?"))
+print("capability broker: %s" % d.get("capabilities", "?"))
+print("memory: %s%s" % (d.get("memory", "?"),
+    " — no broker-authenticated cloud identity" if d.get("memory") == "DEGRADED" else ""))
+print("skills: %s" % d.get("skills", "?"))
+print("rules: %s" % d.get("rules", "?"))
+' "$receipt" 2>/dev/null || true)
+    if [ -n "$block" ]; then
+      LINES+=("--- L9 Claude environment ---")
+      while IFS= read -r line || [ -n "$line" ]; do
+        LINES+=("$line")
+      done <<< "$block"
+      return 0
+    fi
+  fi
+  LINES+=("L9 Claude environment: receipt unreadable — see $receipt")
+}
+
+# PY was resolved above for the autonomy profile block; reuse it.
+emit_bootstrap_status "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

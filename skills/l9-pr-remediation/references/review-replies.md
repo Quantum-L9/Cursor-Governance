@@ -6,22 +6,22 @@ role: review_replies
 tags: [pr, review, replies, threads, resolution, leverage]
 owner: igor_beylin
 status: active
-version: 2.2.0
-updated: 2026-08-16
+version: 2.3.0
+updated: 2026-08-18
 /L9_META -->
 
 # Review Reply Protocol
 
 ## Purpose
 
-After pushing fixes, reply to every review thread with a canonical response that resolves the thread, creates downstream leverage (searchable decisions, backlog items, bot training signal), and leaves the PR in a clean state for merge.
+After sanctioned publish, reply to every review thread with a canonical response that resolves the thread. Do not treat replies as proof the PR is mergeable.
 
 ## Non-Negotiable Rules
 
 1. **Every thread gets a reply.** No silent fixes. No ignored comments. This includes every [code-review agent](code-review-agents.md) thread (`github-code-quality[bot]`, Copilot) — volume, Note severity, and `skip_bot_discussions` are not exemptions.
 2. **Replies follow canonical format.** No freeform prose — structured responses only.
 3. **Resolve threads after replying.** Unresolved threads block merge perception.
-4. **Deferred items get linked issues.** Never defer without creating a trackable artifact.
+4. **HUMAN Deferred items get linked issues.** Other defers (already-fixed, out-of-diff nits marked defer) do not require a GitHub issue. Never invent issues for bot chatter.
 5. **Batch summary posted as final PR comment.** One comment summarizing all actions taken.
 
 ## Canonical Reply Formats
@@ -163,6 +163,7 @@ gh api graphql -f query='
     repository(owner: $owner, name: $repo) {
       pullRequest(number: $pr) {
         reviewThreads(first: 100) {
+          pageInfo { hasNextPage endCursor }
           nodes {
             id
             isResolved
@@ -178,8 +179,10 @@ gh api graphql -f query='
 ```
 
 Match threads to findings by comment body content, then resolve using the `id` field.
+Repeat with `after: $cursor` until `pageInfo.hasNextPage` is false. A first-page-only
+query is a protocol failure when more than 100 threads exist.
 
-### Create a deferred issue
+### Create a deferred issue (HUMAN Deferred only)
 
 ```bash
 gh issue create --repo {owner}/{repo} \
@@ -237,7 +240,7 @@ Each reply creates specific downstream value:
 ## Ordering
 
 1. Reply to all **Fixed** threads first (quick, no decisions needed).
-2. Create issues for **Deferred** items, then reply with links.
+2. Create issues for **HUMAN Deferred** items only, then reply with links.
 3. Reply to **Acknowledged** threads.
 4. Reply to **Disagreed** threads (most thought required).
 5. Post the batch summary comment last.
@@ -249,6 +252,7 @@ Before proceeding to convergence check:
 - [ ] Every unresolved thread has a reply posted
 - [ ] Every `github-code-quality[bot]` / Copilot thread has a canonical reply
 - [ ] Every thread is resolved (via GraphQL mutation), including HUMAN (do not merge that PR until decided)
-- [ ] Every deferred item has a linked issue
+- [ ] Every HUMAN Deferred item has a linked issue
+- [ ] Review-thread pagination complete (`hasNextPage` false)
 - [ ] Batch summary comment posted on the PR
 - [ ] Reply count matches finding count

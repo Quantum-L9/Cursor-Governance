@@ -223,10 +223,10 @@ claude-settings-check:
 	$(PYTHON) ops/scripts/reconcile_claude_settings.py --root "$(CURDIR)" --check \
 		$(if $(WS),--workspace "$(WS)",)
 
-## Validate the Claude Code environment adapter and proactive skill activation.
-## Heals the settings triad first (idempotent), then runs structural validation.
+## Canonical Claude environment doctor: full adapter install check (read-only,
+## reports drift per the health accumulator) + the structural/contract validator.
 claude-env:
-	$(MAKE) claude-settings
+	$(MAKE) claude-install-check
 	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py
 
 ## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).

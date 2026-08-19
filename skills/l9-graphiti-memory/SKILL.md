@@ -63,7 +63,6 @@ Config: `~/.cursor/graphiti.env` (copy from `ops/graphiti/graphiti.env.example`)
 "$GRAPHITI_PY" "$CLIENT" resolve
 "$GRAPHITI_PY" "$CLIENT" search "query" --limit 5
 "$GRAPHITI_PY" "$CLIENT" conflicts
-"$GRAPHITI_PY" "$CLIENT" phase-lock
 "$GRAPHITI_PY" "$CLIENT" inject "current task"
 "$GRAPHITI_PY" "$CLIENT" write "durable fact…" --kind lesson
 "$GRAPHITI_PY" "$CLIENT" write "PICKUP|date=…|task=…|files=…|next=…|blocker=…|gmps=…|outcome=…" --kind pickup_context
@@ -104,12 +103,23 @@ When a durable doctrine, lesson, or ADR delta lands in-repo, write it to Graphit
 
 ## GMP Phase 0
 
-Run `conflicts` then `phase-lock` before GMP file edits when gates on:
+Run `conflicts` to gather evidence before locking a plan:
 
 ```bash
 "$GRAPHITI_PY" "$CLIENT" conflicts
-"$GRAPHITI_PY" "$CLIENT" phase-lock
 ```
+
+**Conflicts are evidence, never a repository mutex.** A reported conflict may
+mean an assumption is disputed and needs more evidence; it does not prohibit
+unrelated source mutation, and it never revokes another agent's write authority.
+
+Do **not** acquire a phase-lock before GMP file edits. Repository-write
+authority comes from a dedicated worktree
+(`ops/scripts/agent_worktree_start.sh`), a branch off fetched `origin/main`, and
+the publication gate — not from memory state. GMP freezes the authorized edit
+*scope* (the scope contract); it does not decide repository ownership. See
+`rules/96-multi-agent-main-bound-execution.mdc` (E7/E8). There is no
+agent-facing force-lock.
 
 ## GATES-002 activation
 
