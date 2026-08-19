@@ -190,16 +190,15 @@ class ResourceClassLintTests(unittest.TestCase):
         declared = load_policy("resource-classes")["classes"]
         used = {item["resource_class"] for item in load_example("w7-actions.json")["actions"]}
         self.assertTrue(used <= set(declared), msg=f"undeclared classes: {used - set(declared)}")
-        self.assertTrue(
-            {
-                "repository_recon",
-                "context_compile",
-                "synthesis",
-                "verification",
-                "review",
-            }
-            <= used
-        )
+        expected = {
+            "repository_recon",
+            "context_compile",
+            "synthesis",
+            "verification",
+            "review",
+        }
+        missing = expected - used
+        self.assertSetEqual(set(), missing, msg=f"missing required resource classes: {missing}")
 
 
 class BackgroundRoleTests(unittest.TestCase):
